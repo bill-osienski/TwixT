@@ -1,0 +1,9 @@
+python3 ./scripts/train_value.py \
+  --input selfplay.json \
+  --output assets/value-model.json \
+  --epochs 1500 \
+  --lr 0.01 \
+  --standardize \
+  --l2 1e-4 \
+  --gamma 0.997 \
+  --seed 42

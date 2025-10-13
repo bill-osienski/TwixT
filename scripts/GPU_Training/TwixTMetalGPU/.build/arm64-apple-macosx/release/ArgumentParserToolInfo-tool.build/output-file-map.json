@@ -1,0 +1,13 @@
+{
+  "": {
+    "dependencies": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo-tool.build/ArgumentParserToolInfo.d",
+    "object": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo-tool.build/ArgumentParserToolInfo.o",
+    "swift-dependencies": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo-tool.build/master.swiftdeps"
+  },
+  "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/checkouts/swift-argument-parser/Sources/ArgumentParserToolInfo/ToolInfo.swift": {
+    "object": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo-tool.build/ToolInfo.swift.o",
+    "swiftmodule": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo-tool.build/ToolInfo~partial.swiftmodule",
+    "swift-dependencies": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo-tool.build/ToolInfo.swiftdeps",
+    "diagnostics": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo-tool.build/ToolInfo.dia"
+  }
+}

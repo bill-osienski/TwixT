@@ -1,0 +1,45 @@
+{
+  "valueModelScale": 600,
+  "rewards": {
+    "general": {
+      "friendlyConnection": 12,
+      "opponentConnection": 35,
+      "friendlyDistance": 3,
+      "opponentDistance": 12,
+      "goalDistance": 1.2,
+      "centerBias": 0.5,
+      "isolated": 10,
+      "redGlobalMultiplier": 1.0,
+      "blackGlobalScale": 0.93,
+      "redBaseBonus": 115,
+      "blackBasePenalty": 300,
+      "lateGameStart": 60,
+      "lateGamePressure": 0
+    },
+    "edge": {
+      "radius": 3,
+      "offense": {
+        "gapDecay": 23,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "finishPenaltyBase": 2050,
+        "connectorTargetBonus": 500,
+        "redFinishExtra": 1700,
+        "redSpanGainMultiplier": 2.0,
+        "redGapDecayMultiplier": 1.3,
+        "redFinishPenaltyFactor": 0.8,
+        "blackFinishScaleMultiplier": 1.01,
+        "blackSpanGainMultiplier": 1.05,
+        "blackDoubleCoverageScale": 0.87,
+        "firstEdgeTouchBlack": 560,
+        "firstEdgeTouchRed": 530,
+        "redDoubleCoverageBonus": 150
+      },
+      "defense": {
+        "blockBonus": 900,
+        "missPenalty": 350
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "ingested": 2,
+  "nextGameNumber": 75,
+  "lastCommitAt": "2025-10-12T23:19:19.946Z",
+  "perCoreOffsets": {
+    "1": 35205,
+    "2": 35205
+  }
+}
