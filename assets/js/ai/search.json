@@ -9,10 +9,10 @@
       "goalDistance": 1.2,
       "centerBias": 0.5,
       "isolated": 10,
-      "redGlobalMultiplier": 1.0,
-      "blackGlobalScale": 0.93,
-      "redBaseBonus": 115,
-      "blackBasePenalty": 300,
+      "redGlobalMultiplier": 1,
+      "blackGlobalScale": 1,
+      "redBaseBonus": 0,
+      "blackBasePenalty": 0,
       "lateGameStart": 60,
       "lateGamePressure": 0
     },
@@ -23,23 +23,33 @@
         "connectorBonus": 620,
         "finishThreshold": 4,
         "finishBonusBase": 3400,
-        "finishPenaltyBase": 2050,
+        "finishPenaltyBase": 1181,
         "connectorTargetBonus": 500,
-        "redFinishExtra": 1700,
-        "redSpanGainMultiplier": 2.0,
-        "redGapDecayMultiplier": 1.3,
-        "redFinishPenaltyFactor": 0.8,
-        "blackFinishScaleMultiplier": 1.01,
-        "blackSpanGainMultiplier": 1.05,
-        "blackDoubleCoverageScale": 0.87,
-        "firstEdgeTouchBlack": 560,
-        "firstEdgeTouchRed": 530,
-        "redDoubleCoverageBonus": 150
+        "doubleCoverageBase": 2400,
+        "spanGainBase": 180,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redSpanGainMultiplier": 1,
+        "redGapDecayMultiplier": 1,
+        "redFinishPenaltyFactor": 0.6,
+        "blackFinishScaleMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "blackDoubleCoverageScale": 0.6,
+        "firstEdgeTouchBlack": 455,
+        "firstEdgeTouchRed": 420,
+        "redDoubleCoverageBonus": 1500
       },
       "defense": {
         "blockBonus": 900,
         "missPenalty": 350
       }
+    }
+  },
+  "debug": {
+    "performance": {
+      "sealedLane": true,
+      "sealedLaneLogEvery": 0
     }
   }
 }

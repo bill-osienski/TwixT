@@ -1,0 +1,24 @@
+{
+  "lastSuggested": "2025-11-03T02:17:49.652Z",
+  "plannedSweep": {
+    "hashes": [
+      "a21077dc24a3cecb378e023c35cf5b987f896540",
+      "05285397f5cd1e592cc7b18daa72d16b88b481d6",
+      "7214b093cf5f63759297da92d7da0533fcf1c6bd"
+    ],
+    "generatedAt": "2025-11-03T02:17:49.652Z"
+  },
+  "validationStreaks": {
+    "2e161adf34171c19a1dae9461dd9897c6dcfda72": 0,
+    "03e1e6e553aa28e911279861e467dd11d680eaf2": 0,
+    "e171462123c022140529e9f887064519bbed1fb9": 0,
+    "c128a65b04eaa46dc672ba310f3738d4f7460d87": 0
+  },
+  "successfulConfigs": {},
+  "lastProcessedSweep": "2025-11-02T21:05:39.327Z",
+  "pendingValidation": [
+    "17a524e0e7b31009281d334306df986e53125eff",
+    "a21077dc24a3cecb378e023c35cf5b987f896540",
+    "27830a009989259a9d4dd56daa320c4e48d1f30f"
+  ]
+}

@@ -69,23 +69,77 @@ async function gracefulShutdown(signal = 'SIGINT', runDir = null) {
 program
   .option('-g, --games <number>', 'total number of self-play games', '60')
   .option('-d, --depth <number>', 'search depth per side', '3')
+  .option('-w, --workers <number>', 'number of worker processes', '12')
+  .option('--depth-config <config>',
+    'comma-separated depth plan, e.g. "2:100,3:80" (runs batches sequentially)')
   .option('--verbose', 'print progress to stdout', false);
 
 program.parse(process.argv);
 const opts = program.opts();
 
-const TOTAL_GAMES  = parseInt(opts.games, 10) || 60;
+const TOTAL_GAMES_RAW = parseInt(opts.games, 10) || 60;
+const TOTAL_GAMES  = TOTAL_GAMES_RAW;
+if (TOTAL_GAMES % 2 !== 0) {
+  throw new Error('Total games must be even to balance starting colours.');
+}
 const SEARCH_DEPTH = parseInt(opts.depth, 10) || 3;
 const VERBOSE      = !!opts.verbose;
-const WORKERS      = 12;
+const WORKERS      = Math.max(1, parseInt(opts.workers, 10) || 12);
+
+function parseDepthConfig(raw) {
+  if (!raw) return null;
+  const batches = [];
+  for (const segment of raw.split(',')) {
+    const trimmed = segment.trim();
+    if (!trimmed) continue;
+    const [depthStr, gamesStr] = trimmed.split(':');
+    const depth = parseInt(depthStr, 10);
+    const games = parseInt(gamesStr, 10);
+    if (!Number.isFinite(depth) || depth <= 0 || !Number.isFinite(games) || games <= 0) {
+      throw new Error(`Invalid depth-config entry "${segment}". Expected format depth:games with positive integers.`);
+    }
+    if (games % 2 !== 0) {
+      throw new Error(`Depth batch "${segment}" must have an even number of games to balance starting colours.`);
+    }
+    batches.push({ depth, games });
+  }
+  if (batches.length === 0) {
+    throw new Error('depth-config did not contain any valid depth:games pairs.');
+  }
+  return batches;
+}
+
+function buildBalancedStartPlan(count) {
+  if (count % 2 !== 0) {
+    throw new Error('Balanced start plan requires an even game count.');
+  }
+  const half = count / 2;
+  const plan = [];
+  for (let i = 0; i < half; i++) plan.push('red');
+  for (let i = 0; i < half; i++) plan.push('black');
+  for (let i = plan.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [plan[i], plan[j]] = [plan[j], plan[i]];
+  }
+  return plan;
+}
 
 // ---------------- Main ----------------
-async function main() {
+async function runBatch(totalGames, depth, runLabel) {
+  workerProcs.length = 0;
+  workerResults.clear();
+  consolidatorProc = null;
+  shuttingDown = false;
+  aborted = false;
+  const activeWorkerIds = [];
+
   const runId  = Date.now().toString();
   const runDir = path.join('temp', `run-${runId}`);
 
-  console.log(`Starting parallel self-play: ${TOTAL_GAMES} games across ${WORKERS} workers`);
+  console.log(`\n=== Starting batch${runLabel ? ` ${runLabel}` : ''}: depth ${depth}, ${totalGames} games across ${WORKERS} workers ===`);
   console.log(`Run ID: ${runId}`);
+
+  const startPlan = buildBalancedStartPlan(totalGames);
 
   // Initialize/read selfplay.json
   let gameData;
@@ -104,8 +158,8 @@ async function main() {
   }
 
   // Precise work distribution (e.g., 61 games → 5 get 10, 1 gets 11)
-  const base  = Math.floor(TOTAL_GAMES / WORKERS);
-  const extra = TOTAL_GAMES % WORKERS;
+  const base  = Math.floor(totalGames / WORKERS);
+  const extra = totalGames % WORKERS;
 
   // Create run directory
   await fs.mkdir(runDir, { recursive: true });
@@ -120,7 +174,7 @@ async function main() {
   consolidatorProc = spawn(process.execPath, [
     path.join(scriptsDir, 'consolidator.js'),
     `--run-id=${runId}`,
-    `--target-games=${TOTAL_GAMES}`,
+    `--target-games=${totalGames}`,
     `--workers=${WORKERS}`
   ], {
     stdio: VERBOSE ? 'inherit' : 'pipe',
@@ -128,21 +182,33 @@ async function main() {
   });
 
   // Spawn worker processes
-  console.log(`Spawning ${WORKERS} worker processes...`);
+  console.log(`Spawning up to ${WORKERS} worker processes...`);
   for (let i = 1; i <= WORKERS; i++) {
     const gamesForWorker = base + (i <= extra ? 1 : 0);
+    if (gamesForWorker === 0) {
+      if (VERBOSE) {
+        console.log(`  Worker ${i}: skipped (no games assigned in this batch)`);
+      }
+      continue;
+    }
     console.log(`  Worker ${i}: ${gamesForWorker} games`);
+
+    const workerPlan = startPlan.splice(0, gamesForWorker);
 
     const proc = spawn(process.execPath, [
       path.join(scriptsDir, 'selfPlay.js'),
       '-g', gamesForWorker.toString(),
-      '-d', SEARCH_DEPTH.toString(),
+      '-d', depth.toString(),
       '--verbose',
       `--core-id=${i}`,
       `--run-id=${runId}`
     ], {
       stdio: VERBOSE ? 'inherit' : 'pipe',
-      cwd: projectRoot
+      cwd: projectRoot,
+      env: {
+        ...process.env,
+        START_PLAN: workerPlan.join(',')
+      }
     });
 
     // Record exit details (code & signal)
@@ -158,9 +224,15 @@ async function main() {
     });
 
     workerProcs.push(proc);
+    activeWorkerIds.push(i);
   }
 
-  // Wait for ALL workers to exit (success or error)
+  if (workerProcs.length === 0) {
+    console.log('No workers were launched for this batch (no games assigned). Skipping to next batch.');
+    return;
+  }
+
+  // Wait for ALL active workers to exit (success or error)
   console.log('Waiting for all workers to complete...');
   await Promise.all(workerProcs.map(p => waitCloseOrError(p)));
 
@@ -171,7 +243,7 @@ async function main() {
   }
 
   // Assess worker outcomes (only 0 = success)
-  const results = Array.from({ length: WORKERS }, (_, idx) => workerResults.get(idx + 1) || { code: 1, signal: null });
+  const results = activeWorkerIds.map(id => workerResults.get(id) || { code: 1, signal: null });
   const failedWorkers = results.filter(r => r.code !== 0);
   const allOk = failedWorkers.length === 0;
 
@@ -185,37 +257,53 @@ async function main() {
       consolidatorExitCode = consolidatorProc.exitCode;
       console.log(`Consolidator already exited with code ${consolidatorExitCode}`);
     } else {
-
-    let consolidatorExitCode = 0;
-    await new Promise(resolve => {
-      consolidatorProc.once('close', (code) => {
-        consolidatorExitCode = code ?? 1;
-        console.log(`Consolidator exited with code ${code}`);
-        resolve();
+      await new Promise(resolve => {
+        consolidatorProc.once('close', (code) => {
+          consolidatorExitCode = code ?? 1;
+          console.log(`Consolidator exited with code ${code}`);
+          resolve();
+        });
+        consolidatorProc.once('error', (err) => {
+          consolidatorExitCode = 1;
+          console.error(`Consolidator process error:`, err);
+          resolve();
+        });
       });
-      consolidatorProc.once('error', (err) => {
-        consolidatorExitCode = 1;
-        console.error(`Consolidator process error:`, err);
-        resolve();
-      });
-    });
     }
 
     if (consolidatorExitCode === 0) {
       console.log('✅ Parallel self-play complete! Check selfplay.json for results.');
-      process.exitCode = 0;
     } else {
       console.error('Consolidator failed.');
-      process.exitCode = 1;
+      throw new Error('Consolidator failed');
     }
   } else {
     console.error(`Process failures detected: ${failedWorkers.length}/${WORKERS} workers failed.`);
     console.error('Skipping consolidator.');
+    throw new Error('One or more workers failed');
+  }
+}
+
+async function main() {
+  try {
+    const depthPlan = parseDepthConfig(opts.depthConfig);
+    if (depthPlan && depthPlan.length > 0) {
+      for (let i = 0; i < depthPlan.length; i++) {
+        const batch = depthPlan[i];
+        await runBatch(batch.games, batch.depth, `${i + 1}/${depthPlan.length}`);
+      }
+      console.log('\nAll depth batches completed successfully.');
+    } else {
+      await runBatch(TOTAL_GAMES, SEARCH_DEPTH);
+    }
+    process.exitCode = 0;
+  } catch (err) {
+    console.error('Error in parallel self-play:', err.message ?? err);
     process.exitCode = 1;
   }
 }
 
-main().catch(err => {
-  console.error('Error in parallel self-play:', err);
-  process.exit(1);
-});
+main();
+if (TOTAL_GAMES % 2 !== 0) {
+  throw new Error('Total games must be even to balance starting colours.');
+}

@@ -25,8 +25,8 @@ final class TwixTSwiftAI {
         self.valueModel = valueModel
     }
 
-    func chooseMove(game: GameState, depth: Int) -> GameState.Move? {
-        guard let detail = bestMoveDetail(game: game, depth: depth) else {
+    func chooseMove(game: GameState, depth: Int, preferredMoves: [GameState.Move] = []) -> GameState.Move? {
+        guard let detail = bestMoveDetail(game: game, depth: depth, preferredMoves: preferredMoves) else {
             lastDetail = nil
             return nil
         }
@@ -36,7 +36,7 @@ final class TwixTSwiftAI {
 
     // MARK: - Core search
 
-    private func bestMoveDetail(game: GameState, depth: Int) -> MoveDetail? {
+    private func bestMoveDetail(game: GameState, depth: Int, preferredMoves: [GameState.Move]) -> MoveDetail? {
         let moves = game.getValidMoves()
         guard !moves.isEmpty else { return nil }
 
@@ -64,7 +64,26 @@ final class TwixTSwiftAI {
             opponentTrailing: opponentFrontier.trailing
         )
 
-        let candidates = ordered.isEmpty ? moves : ordered
+        let validMoveSet = Set(moves)
+        var seen = Set<GameState.Move>()
+        var candidates: [GameState.Move] = []
+
+        for move in preferredMoves where validMoveSet.contains(move) {
+            if seen.insert(move).inserted {
+                candidates.append(move)
+            }
+        }
+
+        let fallback = ordered.isEmpty ? moves : ordered
+        for move in fallback {
+            if seen.insert(move).inserted {
+                candidates.append(move)
+            }
+        }
+
+        if candidates.isEmpty {
+            candidates = moves
+        }
 
         var best: MoveDetail?
         for move in candidates {
@@ -81,6 +100,7 @@ final class TwixTSwiftAI {
                 opponentConnectors: opponentFrontier.connectors,
                 opponentTrailing: opponentFrontier.trailing
             ) {
+                // Optional debug logging can be added here if needed.
                 if let current = best {
                     if detail.totalScore > current.totalScore {
                         best = detail
@@ -158,7 +178,7 @@ final class TwixTSwiftAI {
             )
         }
 
-        let totalScore = minimaxScore + immediateScore * 5.0 + positionScore * 0.1 + heuristicScore
+        let totalScore = minimaxScore + immediateScore * 5.0 + positionScore * 0.1
 
         return MoveDetail(
             move: move,
@@ -255,11 +275,13 @@ final class TwixTSwiftAI {
         opponentUrgentOverride: Bool? = nil
     ) -> MovePriorityResult {
         var accumulator = FeatureAccumulator()
+        var score = 0.0
         let general = config.general
         let offense = config.edge.offense
         let defense = config.edge.defense
 
         let boardSize = GameState.boardSize
+        let boardLimit = GameState.boardSize - 1
         let moveCoord = GameState.Coord(row: move.row, col: move.col)
         let friendlyTargetSet = friendlyConnectorTargets?.positions ?? []
         let opponentTargetSet = opponentConnectorTargets?.positions ?? []
@@ -267,101 +289,87 @@ final class TwixTSwiftAI {
         let friendlyConnections = countConnections(game: game, move: move, color: player)
         let opponentConnections = countConnections(game: game, move: move, color: opponent)
 
-        var score = 0.0
-
-        let friendlyConnectionScore = Double(friendlyConnections) * Double(general.friendlyConnection)
-        accumulator.capture("friendlyConnections", friendlyConnectionScore)
-        score += friendlyConnectionScore
-
-        let opponentConnectionScore = Double(opponentConnections) * Double(general.opponentConnection)
-        accumulator.capture("opponentConnections", opponentConnectionScore)
-        score += opponentConnectionScore
-
-        if let friendlyDist = minDistance(move: move, pegs: friendlyPegs) {
-            let bonus = max(0.0, 10.0 - friendlyDist) * Double(general.friendlyDistance)
-            accumulator.capture("friendlyDistance", bonus)
-            score += bonus
+        func addFeature(_ key: String, _ value: Double) {
+            guard value != 0 else { return }
+            accumulator.capture(key, value)
+            score += value
         }
 
-        if let opponentDist = minDistance(move: move, pegs: opponentPegs) {
-            let bonus = max(0.0, 10.0 - opponentDist) * Double(general.opponentDistance)
-            accumulator.capture("opponentDistance", bonus)
-            score += bonus
+        addFeature("friendlyConnections", Double(friendlyConnections) * Double(general.friendlyConnection))
+        addFeature("opponentConnections", Double(opponentConnections) * Double(general.opponentConnection))
+
+        let friendlyDist = minDistance(move: move, pegs: friendlyPegs)
+        if let friendlyDist = friendlyDist {
+            addFeature("friendlyDistance", max(0.0, 10.0 - friendlyDist) * Double(general.friendlyDistance))
         }
 
-        let goalDistance: Double
-        if player == .red {
-            goalDistance = Double(min(move.row, boardSize - 1 - move.row))
-        } else {
-            goalDistance = Double(min(move.col, boardSize - 1 - move.col))
+        let opponentDist = minDistance(move: move, pegs: opponentPegs)
+        if let opponentDist = opponentDist {
+            addFeature("opponentDistance", max(0.0, 10.0 - opponentDist) * Double(general.opponentDistance))
         }
-        let goalBonus = max(0.0, 12.0 - goalDistance) * Double(general.goalDistance)
-        accumulator.capture("goalDistance", goalBonus)
-        score += goalBonus
+
+        let goalDistance = player == .red
+            ? Double(min(move.row, boardSize - 1 - move.row))
+            : Double(min(move.col, boardSize - 1 - move.col))
+        addFeature("goalDistance", max(0.0, 12.0 - goalDistance) * Double(general.goalDistance))
 
         let center = Double(boardSize - 1) / 2.0
         let centerDist = abs(Double(move.row) - center) + abs(Double(move.col) - center)
-        let centerBias = max(0.0, 16.0 - centerDist) * Double(general.centerBias)
-        accumulator.capture("centerBias", centerBias)
-        score += centerBias
+        addFeature("centerBias", max(0.0, 16.0 - centerDist) * Double(general.centerBias))
 
-        if friendlyPegs.isEmpty && opponentPegs.isEmpty {
-            accumulator.capture("isolatedBonus", Double(general.isolated))
-            score += Double(general.isolated)
+        if friendlyDist == nil && opponentDist == nil {
+            addFeature("isolatedBonus", Double(general.isolated))
         }
 
         if friendlyTargetSet.contains(moveCoord) {
-            let bonus = Double(offense.connectorTargetBonus)
-            accumulator.capture("edgeConnectorTarget", bonus)
-            score += bonus
+            addFeature("edgeConnectorTarget", Double(offense.connectorTargetBonus))
         }
 
         var blockedOpponentConnector = false
         if opponentTargetSet.contains(moveCoord) {
-            let bonus = Double(defense.blockBonus)
-            accumulator.capture("edgeDefenseBlock", bonus)
-            score += bonus
+            addFeature("edgeDefenseBlock", Double(defense.blockBonus))
             blockedOpponentConnector = true
         }
 
-        let opponentUrgent = opponentUrgentOverride ?? {
+        var opponentUrgent = opponentUrgentOverride ?? {
             let spanValue = opponent == .red ? opponentMetrics.maxRowSpan : opponentMetrics.maxColSpan
             return spanValue >= max(6, boardSize / 4) || opponentMetrics.largestComponent.count >= 6
         }()
+        if opponentMetrics.largestComponent.isEmpty {
+            opponentUrgent = false
+        }
 
         if !opponentMetrics.largestComponent.isEmpty {
             let distToChain = distance(move: moveCoord, component: opponentMetrics.largestComponent)
-            let bonus = max(0.0, 12.0 - Double(distToChain)) * (opponentUrgent ? 30.0 : 15.0)
-            accumulator.capture("chainProximity", bonus)
-            score += bonus
+            addFeature("chainProximity", max(0.0, 12.0 - Double(distToChain)) * (opponentUrgent ? 30.0 : 15.0))
         }
 
         if !opponentFrontier.isEmpty {
-            let proximity = distance(move: moveCoord, cells: opponentFrontier)
-            let bonus = max(0.0, 10.0 - Double(proximity)) * (opponentUrgent ? 23.0 : 12.0)
-            accumulator.capture("frontierProximity", bonus)
-            score += bonus
+            let dist = distance(move: moveCoord, cells: opponentFrontier)
+            if dist != Int.max {
+                addFeature("frontierProximity", max(0.0, 10.0 - Double(dist)) * (opponentUrgent ? 35.0 : 16.0))
+                if dist == 0 {
+                    addFeature("frontierCapture", opponentUrgent ? 550.0 : 220.0)
+                }
+            }
         }
 
-        if opponentConnectors.contains(moveCoord) {
-            let bonus = Double(offense.connectorBonus)
-            accumulator.capture("frontierCapture", bonus)
-            score += bonus
-        } else if !opponentConnectors.isEmpty {
-            let proximity = distance(move: moveCoord, cells: opponentConnectors)
-            let bonus = max(0.0, 12.0 - Double(proximity)) * 18.0
-            accumulator.capture("connectorProximity", bonus)
-            score += bonus
+        if !opponentConnectors.isEmpty {
+            let dist = distance(move: moveCoord, cells: opponentConnectors)
+            if dist != Int.max {
+                addFeature("connectorProximity", max(0.0, 8.0 - Double(dist)) * (opponentUrgent ? 55.0 : 30.0))
+                if dist == 0 {
+                    addFeature("connectorCapture", opponentUrgent ? 700.0 : 320.0)
+                }
+            }
         }
 
-        if opponentTrailing.contains(moveCoord) {
-            accumulator.capture("connectorCapture", 180.0)
-            score += 180.0
-        } else if !opponentTrailing.isEmpty {
-            let proximity = distance(move: moveCoord, cells: opponentTrailing)
-            let penalty = Double(proximity) * 9.0
-            accumulator.capture("trailingPenalty", -penalty)
-            score -= penalty
+        if !opponentTrailing.isEmpty {
+            let dist = distance(move: moveCoord, cells: opponentTrailing)
+            if dist != Int.max {
+                let penalty = max(0.0, 6.0 - Double(dist)) * 6.0
+                addFeature("trailingPenalty", -penalty)
+            }
         }
 
         var simulated = game
@@ -369,56 +377,67 @@ final class TwixTSwiftAI {
 
         let opponentThreatAfter = connectivityScore(game: simulated, player: opponent)
         let threatReduction = opponentThreatBefore - opponentThreatAfter
-        if threatReduction > 0 {
-            let bonus = threatReduction * 140.0
-            accumulator.capture("threatReduction", bonus)
-            score += bonus
-        } else {
-            let penalty = opponentUrgent ? 600.0 : 250.0
-            accumulator.capture("noThreatReduction", -penalty)
-            score -= penalty
+        if !opponentMetrics.largestComponent.isEmpty && game.moveCount > 1 {
+            if threatReduction > 0 {
+                addFeature("threatReduction", threatReduction * 140.0)
+            } else {
+                addFeature("noThreatReduction", -(opponentUrgent ? 600.0 : 250.0))
+            }
         }
 
         let postMetrics = componentMetrics(game: simulated, player: player)
-        let boardLimit = boardSize - 1
+
+        let postLargest = postMetrics.largestComponent
+        var postMinR = Int.max
+        var postMaxR = Int.min
+        var postMinC = Int.max
+        var postMaxC = Int.min
+        for coord in postLargest {
+            postMinR = min(postMinR, coord.row)
+            postMaxR = max(postMaxR, coord.row)
+            postMinC = min(postMinC, coord.col)
+            postMaxC = max(postMaxC, coord.col)
+        }
+
+        let friendlyLargest = friendlyMetrics.largestComponent
+        var friendlyMinR = Int.max
+        var friendlyMaxR = Int.min
+        var friendlyMinC = Int.max
+        var friendlyMaxC = Int.min
+        for coord in friendlyLargest {
+            friendlyMinR = min(friendlyMinR, coord.row)
+            friendlyMaxR = max(friendlyMaxR, coord.row)
+            friendlyMinC = min(friendlyMinC, coord.col)
+            friendlyMaxC = max(friendlyMaxC, coord.col)
+        }
 
         if player == .black {
             let newLeft = postMetrics.touchesLeft && !friendlyMetrics.touchesLeft
             let newRight = postMetrics.touchesRight && !friendlyMetrics.touchesRight
             if newLeft || newRight {
-                let bonus = Double(offense.firstEdgeTouchBlack)
-                accumulator.capture("firstEdgeTouch", bonus)
-                score += bonus
+                addFeature("firstEdgeTouch", Double(offense.firstEdgeTouchBlack))
             }
         } else {
             let newTop = postMetrics.touchesTop && !friendlyMetrics.touchesTop
             let newBottom = postMetrics.touchesBottom && !friendlyMetrics.touchesBottom
             if newTop || newBottom {
-                let bonus = Double(offense.firstEdgeTouchRed)
-                accumulator.capture("firstEdgeTouch", bonus)
-                score += bonus
+                addFeature("firstEdgeTouch", Double(offense.firstEdgeTouchRed))
             }
         }
 
         if player == .black {
             let hadBoth = friendlyMetrics.touchesLeft && friendlyMetrics.touchesRight
             let hasBoth = postMetrics.touchesLeft && postMetrics.touchesRight
-            let spansBoth = postMetrics.largestComponent.contains { $0.col <= 0 } &&
-                postMetrics.largestComponent.contains { $0.col >= boardLimit }
-            if hasBoth && !hadBoth && spansBoth {
-                let bonus = 2400.0 * Double(offense.blackDoubleCoverageScale)
-                accumulator.capture("doubleEdgeCoverage", bonus)
-                score += bonus
+            let componentSpansBoth = !postLargest.isEmpty && postMinC <= 0 && postMaxC >= boardLimit
+            if hasBoth && !hadBoth && componentSpansBoth {
+                addFeature("doubleEdgeCoverage", 2400.0 * Double(offense.blackDoubleCoverageScale))
             }
         } else {
             let hadBoth = friendlyMetrics.touchesTop && friendlyMetrics.touchesBottom
             let hasBoth = postMetrics.touchesTop && postMetrics.touchesBottom
-            let spansBoth = postMetrics.largestComponent.contains { $0.row <= 0 } &&
-                postMetrics.largestComponent.contains { $0.row >= boardLimit }
-            if hasBoth && !hadBoth && spansBoth {
-                let bonus = 2400.0 + Double(offense.redDoubleCoverageBonus)
-                accumulator.capture("doubleEdgeCoverage", bonus)
-                score += bonus
+            let componentSpansBoth = !postLargest.isEmpty && postMinR <= 0 && postMaxR >= boardLimit
+            if hasBoth && !hadBoth && componentSpansBoth {
+                addFeature("doubleEdgeCoverage", 2400.0 + Double(offense.redDoubleCoverageBonus))
             }
         }
 
@@ -430,37 +449,44 @@ final class TwixTSwiftAI {
             if player == .red && (postMetrics.touchesTop || postMetrics.touchesBottom) {
                 multiplier *= Double(offense.redSpanGainMultiplier)
             }
-            let bonus = Double(spanGain) * multiplier
-            accumulator.capture("spanGain", bonus)
-            score += bonus
+            addFeature("spanGain", Double(spanGain) * multiplier)
         }
 
-        let (prevMin, prevMax, postMin, postMax): (Int, Int, Int, Int) = {
-            if player == .red {
-                return (
-                    friendlyMetrics.minRow ?? boardLimit,
-                    friendlyMetrics.maxRow ?? 0,
-                    postMetrics.minRow ?? boardLimit,
-                    postMetrics.maxRow ?? 0
-                )
-            } else {
-                return (
-                    friendlyMetrics.minCol ?? boardLimit,
-                    friendlyMetrics.maxCol ?? 0,
-                    postMetrics.minCol ?? boardLimit,
-                    postMetrics.maxCol ?? 0
-                )
-            }
-        }()
+        let prevMinAxis: Int
+        let prevMaxAxis: Int
+        let postMinAxis: Int
+        let postMaxAxis: Int
+        if player == .red {
+            prevMinAxis = friendlyLargest.isEmpty ? (friendlyMetrics.minRow ?? boardLimit) : friendlyMinR
+            prevMaxAxis = friendlyLargest.isEmpty ? (friendlyMetrics.maxRow ?? 0) : friendlyMaxR
+            postMinAxis = postLargest.isEmpty ? (postMetrics.minRow ?? boardLimit) : postMinR
+            postMaxAxis = postLargest.isEmpty ? (postMetrics.maxRow ?? 0) : postMaxR
+        } else {
+            prevMinAxis = friendlyLargest.isEmpty ? (friendlyMetrics.minCol ?? boardLimit) : friendlyMinC
+            prevMaxAxis = friendlyLargest.isEmpty ? (friendlyMetrics.maxCol ?? 0) : friendlyMaxC
+            postMinAxis = postLargest.isEmpty ? (postMetrics.minCol ?? boardLimit) : postMinC
+            postMaxAxis = postLargest.isEmpty ? (postMetrics.maxCol ?? 0) : postMaxC
+        }
 
-        let gapBefore = max(0, prevMin) + max(0, boardLimit - prevMax)
-        let gapAfter = max(0, postMin) + max(0, boardLimit - postMax)
+        let gapBefore = max(0, prevMinAxis) + max(0, boardLimit - prevMaxAxis)
+        let gapAfter = max(0, postMinAxis) + max(0, boardLimit - postMaxAxis)
         let gapImprovement = gapBefore - gapAfter
         if gapImprovement > 0 {
             let multiplier = Double(offense.gapDecay) * (player == .red ? Double(offense.redGapDecayMultiplier) : 1.0)
-            let bonus = Double(gapImprovement) * multiplier
-            accumulator.capture("edgeGapReduction", bonus)
-            score += bonus
+            addFeature("edgeGapReduction", Double(gapImprovement) * multiplier)
+        }
+
+        if !postLargest.isEmpty {
+            let lcTouchesTop = postMinR <= 1
+            let lcTouchesBottom = postMaxR >= boardLimit - 1
+            let lcTouchesLeft = postMinC <= 1
+            let lcTouchesRight = postMaxC >= boardLimit - 1
+            let redSpans = lcTouchesTop && lcTouchesBottom
+            let blackSpans = lcTouchesLeft && lcTouchesRight
+            if (player == .red && redSpans) || (player == .black && blackSpans) {
+                let base = Double(offense.finishBonusBase) * 2.0 * (player == .black ? Double(offense.blackFinishScaleMultiplier) : 1.0)
+                addFeature("largestComponentSpanComplete", base)
+            }
         }
 
         let touchesBothPost = player == .red
@@ -479,106 +505,60 @@ final class TwixTSwiftAI {
                 if player == .red {
                     bonusBase += Double(offense.redFinishExtra)
                 }
-                accumulator.capture("edgeFinishAdvance", bonusBase)
-                score += bonusBase
+                addFeature("edgeFinishAdvance", bonusBase)
             } else {
                 let penaltyBase = Double(offense.finishPenaltyBase) + Double(gapAfter) * 150.0
                 let penalty = penaltyBase * (player == .red ? Double(offense.redFinishPenaltyFactor) : 1.0)
-                accumulator.capture("edgeFinishStall", -penalty)
-                score -= penalty
+                addFeature("edgeFinishStall", -penalty)
             }
         }
 
-        if !blockedOpponentConnector && !touchesBothPost {
-            let defensePenalty = Double(defense.missPenalty) * (opponentUrgent ? 1.4 : 1.0)
-            accumulator.capture("edgeDefenseMiss", -defensePenalty)
-            score -= defensePenalty
+        if let opponentTargets = opponentConnectorTargets,
+           !opponentTargets.positions.isEmpty,
+           !blockedOpponentConnector,
+           !touchesBothPost,
+           game.moveCount > 1 {
+            let defensePenalty = Double(defense.missPenalty) * (opponentUrgent ? 1.5 : 1.0)
+            addFeature("edgeDefenseMiss", -defensePenalty)
         }
 
         let opponentPostMetrics = componentMetrics(game: simulated, player: opponent)
         let opponentSpanBefore = opponent == .red ? opponentMetrics.maxRowSpan : opponentMetrics.maxColSpan
         let opponentSpanAfter = opponent == .red ? opponentPostMetrics.maxRowSpan : opponentPostMetrics.maxColSpan
-        if opponentSpanAfter < opponentSpanBefore {
-            let bonus = Double(opponentSpanBefore - opponentSpanAfter) * 200.0
-            accumulator.capture("opponentSpanReduction", bonus)
-            score += bonus
-        } else {
-            accumulator.capture("noSpanReductionPenalty", -400.0)
-            score -= 400.0
+        let spanReduction = opponentSpanBefore - opponentSpanAfter
+        if spanReduction > 0 {
+            addFeature("opponentSpanReduction", Double(spanReduction) * 120.0)
+        } else if opponentUrgent {
+            addFeature("noSpanReductionPenalty", -400.0)
         }
 
         if opponent == .black &&
             opponentPostMetrics.touchesLeft && opponentPostMetrics.touchesRight &&
             !(opponentMetrics.touchesLeft && opponentMetrics.touchesRight) {
-            accumulator.capture("blackSpanUpgradePenalty", -500.0)
-            score -= 500.0
+            addFeature("blackSpanUpgradePenalty", -500.0)
         }
 
         if opponent == .red &&
             opponentPostMetrics.touchesTop && opponentPostMetrics.touchesBottom &&
             !(opponentMetrics.touchesTop && opponentMetrics.touchesBottom) {
-            accumulator.capture("redSpanUpgradePenalty", -500.0)
-            score -= 500.0
+            addFeature("redSpanUpgradePenalty", -500.0)
         }
 
         if opponent == .red &&
             opponentMetrics.touchesBottom && !opponentMetrics.touchesTop {
             let topBias = max(0.0, Double(boardSize - move.row)) * 12.0
-            accumulator.capture("topBias", topBias)
-            score += topBias
+            addFeature("topBias", topBias)
             if let minRow = opponentMetrics.minRow {
-                let bonus = max(0.0, Double(minRow - move.row)) * 150.0
-                accumulator.capture("aboveMinRowBonus", bonus)
-                score += bonus
-                let penalty = max(0.0, Double(move.row - minRow)) * 90.0
-                accumulator.capture("belowMinRowPenalty", -penalty)
-                score -= penalty
+                addFeature("aboveMinRowBonus", max(0.0, Double(minRow - move.row)) * 150.0)
+                addFeature("belowMinRowPenalty", -max(0.0, Double(move.row - minRow)) * 90.0)
             }
         } else if opponent == .red &&
                     opponentMetrics.touchesTop && !opponentMetrics.touchesBottom {
             let bottomBias = max(0.0, Double(move.row)) * 12.0
-            accumulator.capture("bottomBias", bottomBias)
-            score += bottomBias
+            addFeature("bottomBias", bottomBias)
             if let maxRow = opponentMetrics.maxRow {
-                let bonus = max(0.0, Double(move.row - maxRow)) * 150.0
-                accumulator.capture("belowMaxRowBonus", bonus)
-                score += bonus
-                let penalty = max(0.0, Double(maxRow - move.row)) * 90.0
-                accumulator.capture("aboveMaxRowPenalty", -penalty)
-                score -= penalty
-            }
-        }
-
-        if player == .red {
-            let bonus = Double(general.redBaseBonus)
-            accumulator.capture("redBaseBonus", bonus)
-            score += bonus
-        } else {
-            let penalty = Double(general.blackBasePenalty)
-            accumulator.capture("blackBasePenalty", -penalty)
-            score -= penalty
-        }
-
-        if player == .red, general.redGlobalMultiplier != 1.0 {
-            let delta = score * (Double(general.redGlobalMultiplier) - 1.0)
-            accumulator.capture("redGlobalMultiplier", delta)
-            score += delta
-        }
-
-        if player == .black, general.blackGlobalScale != 1.0 {
-            let delta = score * (Double(general.blackGlobalScale) - 1.0)
-            accumulator.capture("blackGlobalScale", delta)
-            score += delta
-        }
-
-        let lateStart = Int(general.lateGameStart)
-        let latePressure = Double(general.lateGamePressure)
-        if latePressure > 0 {
-            let lateTurns = (game.moveCount + 1) - lateStart
-            if lateTurns > 0 {
-                let penalty = Double(lateTurns) * latePressure
-                accumulator.capture("lateGamePressure", -penalty)
-                score -= penalty
+                addFeature("belowMaxRowBonus", max(0.0, Double(move.row - maxRow)) * 150.0)
+                addFeature("aboveMaxRowPenalty", -max(0.0, Double(maxRow - move.row)) * 90.0)
             }
         }
 
@@ -601,9 +581,32 @@ final class TwixTSwiftAI {
             }
         }
 
+        if player == .red {
+            addFeature("redBaseBonus", Double(general.redBaseBonus))
+            if general.redGlobalMultiplier != 1.0 {
+                let delta = score * (Double(general.redGlobalMultiplier) - 1.0)
+                addFeature("redGlobalMultiplier", delta)
+            }
+        } else {
+            addFeature("blackBasePenalty", -Double(general.blackBasePenalty))
+            if general.blackGlobalScale != 1.0 {
+                let delta = score * (Double(general.blackGlobalScale) - 1.0)
+                addFeature("blackGlobalScale", delta)
+            }
+        }
+
+        let lateStart = Int(general.lateGameStart)
+        let latePressure = Double(general.lateGamePressure)
+        if latePressure > 0 {
+            let lateTurns = (game.moveCount + 1) - lateStart
+            if lateTurns > 0 {
+                addFeature("lateGamePressure", -Double(lateTurns) * latePressure)
+            }
+        }
+
         return MovePriorityResult(
             score: score,
-            features: accumulator.snapshot,
+            features: captureDetails ? accumulator.snapshot : [:],
             featureContext: featureContext,
             valueModel: valueResult
         )
@@ -627,12 +630,42 @@ final class TwixTSwiftAI {
         var betaVar = beta
         var bestScore = isMaximizing ? -Double.infinity : Double.infinity
 
-        let moves = game.getValidMoves()
-        if moves.isEmpty {
+        let allMoves = game.getValidMoves()
+        if allMoves.isEmpty {
             return evaluatePosition(game: game, player: rootPlayer)
         }
 
-        for move in moves {
+        let currentPlayer = game.currentPlayer
+        let opponent = currentPlayer.opponent
+        let opponentThreat = connectivityScore(game: game, player: opponent)
+        let friendlyMetrics = componentMetrics(game: game, player: currentPlayer)
+        let friendlyConnectorTargets = computeConnectorTargets(game: game, player: currentPlayer, metrics: friendlyMetrics)
+        let opponentFrontierData = computeFrontier(game: game, player: opponent)
+        let opponentConnectorTargets = computeConnectorTargets(
+            game: game,
+            player: opponent,
+            metrics: opponentFrontierData.metrics
+        )
+
+        let orderedMoves = orderMoves(
+            game: game,
+            moves: allMoves,
+            player: currentPlayer,
+            depth: depth,
+            opponent: opponent,
+            opponentThreatBefore: opponentThreat,
+            friendlyMetrics: friendlyMetrics,
+            friendlyConnectorTargets: friendlyConnectorTargets,
+            opponentConnectorTargets: opponentConnectorTargets,
+            opponentMetrics: opponentFrontierData.metrics,
+            opponentFrontier: opponentFrontierData.frontier,
+            opponentConnectors: opponentFrontierData.connectors,
+            opponentTrailing: opponentFrontierData.trailing
+        )
+
+        let candidates = orderedMoves.isEmpty ? allMoves : orderedMoves
+
+        for move in candidates {
             var simulated = game
             guard simulated.placePeg(row: move.row, col: move.col) else { continue }
 
@@ -672,7 +705,32 @@ final class TwixTSwiftAI {
             if r < 0 || r >= GameState.boardSize || c < 0 || c >= GameState.boardSize { continue }
             let idx = game.boardIndex(row: r, col: c)
             if game.board[idx] == player.rawValue {
-                score += 100.0
+                let fromCoord = GameState.Coord(row: move.row, col: move.col)
+                let toCoord = GameState.Coord(row: r, col: c)
+                if bridgeWouldCross(game: game, from: fromCoord, to: toCoord) {
+                    continue
+                }
+
+                let distance = abs(move.row - r) + abs(move.col - c)
+                score += 100.0 + Double(distance) * 5.0
+                if player == .black {
+                    let spansBoard = (min(move.col, c) <= 3 && max(move.col, c) >= GameState.boardSize - 4)
+                    let wideSpan = abs(move.col - c) > 10
+                    if spansBoard {
+                        score += 300.0
+                    } else if wideSpan {
+                        score += 150.0
+                    }
+                } else {
+                    let spansBoard = (min(move.row, r) <= 3 && max(move.row, r) >= GameState.boardSize - 4)
+                    let wideSpan = abs(move.row - r) > 10
+                    if spansBoard {
+                        score += 300.0
+                    } else if wideSpan {
+                        score += 150.0
+                    }
+                }
+
                 connectionCount += 1
             }
         }
@@ -708,6 +766,69 @@ final class TwixTSwiftAI {
         }
 
         return score
+    }
+
+    private func bridgeWouldCross(game: GameState, from: GameState.Coord, to: GameState.Coord) -> Bool {
+        for bridge in game.bridges {
+            let existingFrom = GameState.Coord(row: Int(bridge.fromRow), col: Int(bridge.fromCol))
+            let existingTo = GameState.Coord(row: Int(bridge.toRow), col: Int(bridge.toCol))
+
+            if from == existingFrom || from == existingTo || to == existingFrom || to == existingTo {
+                continue
+            }
+
+            if segmentsIntersect(
+                x1: from.col, y1: from.row,
+                x2: to.col, y2: to.row,
+                x3: existingFrom.col, y3: existingFrom.row,
+                x4: existingTo.col, y4: existingTo.row
+            ) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func segmentsIntersect(
+        x1: Int, y1: Int,
+        x2: Int, y2: Int,
+        x3: Int, y3: Int,
+        x4: Int, y4: Int
+    ) -> Bool {
+        func orientation(_ ax: Int, _ ay: Int, _ bx: Int, _ by: Int, _ cx: Int, _ cy: Int) -> Int {
+            let value = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+            if value > 0 { return 1 }
+            if value < 0 { return -1 }
+            return 0
+        }
+
+        func onSegment(_ ax: Int, _ ay: Int, _ bx: Int, _ by: Int, _ cx: Int, _ cy: Int) -> Bool {
+            return min(ax, bx) <= cx && cx <= max(ax, bx) &&
+                min(ay, by) <= cy && cy <= max(ay, by)
+        }
+
+        let o1 = orientation(x1, y1, x2, y2, x3, y3)
+        let o2 = orientation(x1, y1, x2, y2, x4, y4)
+        let o3 = orientation(x3, y3, x4, y4, x1, y1)
+        let o4 = orientation(x3, y3, x4, y4, x2, y2)
+
+        if o1 != o2 && o3 != o4 {
+            let touchesEndpoint =
+                (o1 == 0 && onSegment(x1, y1, x2, y2, x3, y3)) ||
+                (o2 == 0 && onSegment(x1, y1, x2, y2, x4, y4)) ||
+                (o3 == 0 && onSegment(x3, y3, x4, y4, x1, y1)) ||
+                (o4 == 0 && onSegment(x3, y3, x4, y4, x2, y2))
+            return !touchesEndpoint
+        }
+
+        if o1 == 0 && onSegment(x1, y1, x2, y2, x3, y3) {
+            return !(x3 == x1 && y3 == y1) && !(x3 == x2 && y3 == y2)
+        }
+        if o2 == 0 && onSegment(x1, y1, x2, y2, x4, y4) {
+            return !(x4 == x1 && y4 == y1) && !(x4 == x2 && y4 == y2)
+        }
+
+        return false
     }
 
     private func evaluatePosition(game: GameState, player: GameState.Player) -> Double {

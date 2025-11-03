@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(open TwixT.html)"
+      "Bash(open TwixT.html)",
+      "Bash(timeout 2 node:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

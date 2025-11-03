@@ -28,6 +28,18 @@
     "swift-dependencies": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/SelfPlayEngine.swiftdeps",
     "diagnostics": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/SelfPlayEngine.dia"
   },
+  "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/TwixTSwiftAI.swift": {
+    "object": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/TwixTSwiftAI.swift.o",
+    "swiftmodule": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/TwixTSwiftAI~partial.swiftmodule",
+    "swift-dependencies": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/TwixTSwiftAI.swiftdeps",
+    "diagnostics": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/TwixTSwiftAI.dia"
+  },
+  "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/ValueModelEvaluator.swift": {
+    "object": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/ValueModelEvaluator.swift.o",
+    "swiftmodule": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/ValueModelEvaluator~partial.swiftmodule",
+    "swift-dependencies": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/ValueModelEvaluator.swiftdeps",
+    "diagnostics": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/ValueModelEvaluator.dia"
+  },
   "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/main.swift": {
     "object": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/main.swift.o",
     "swiftmodule": "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/main~partial.swiftmodule",

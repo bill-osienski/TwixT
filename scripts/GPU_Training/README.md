@@ -23,6 +23,65 @@ cd /Users/bill/Desktop/Twixt_Game
 node scripts/GPU_Training/selfPlayGPU.js --games 480 --workers 6 --depth 3
 ```
 
+### Parallel CPU self-play (`selfPlayParallel.js`)
+
+Use this script to spin up multiple Node.js workers on the CPU-only engine (the same AI that powers the browser client) without touching the Swift/Metal worker.
+
+#### Key options
+
+| Argument | Short | Default | Description |
+|----------|-------|---------|-------------|
+| `--games <number>` | `-g` | `60` | Total number of games when using a single depth |
+| `--depth <number>` | `-d` | `3` | Search depth for single-depth runs |
+| `--depth-config <config>` | - | - | Comma-separated batches, e.g. `"2:100,3:80"` |
+| `--workers <number>` | `-w` | `12` | Worker processes (defaults to logical cores) |
+| `--verbose` | — | `false` | Stream worker output directly to the console |
+
+Use either `--games/--depth` or `--depth-config`. When `--depth-config` is supplied, batches execute sequentially, but each batch fans out across all requested workers.
+
+> **Starting colour balance:** `selfPlayParallel.js` now alternates the opening colour (Red/Black) for every game.  
+> – `--games` values must be even.  
+> – Every entry in `--depth-config` must specify an even game count.  
+> This guarantees a 50/50 split of red vs black starts in the generated traces.
+
+#### Examples
+
+Run 120 depth‑2 games across 12 workers:
+```bash
+node scripts/selfPlayParallel.js --games 120 --depth 2 --workers 12
+```
+
+Run 100 d2 games followed by 80 d3 games (all cores reused for each batch):
+```bash
+node scripts/selfPlayParallel.js --depth-config "2:100,3:80" --workers 12
+```
+
+Lower core count for a lighter session:
+```bash
+node scripts/selfPlayParallel.js --games 40 --depth 3 --workers 6 --verbose
+```
+
+Each batch appends to the shared `selfplay.json`, so GPU and CPU orchestrators feed the same training corpus.
+
+> **Tip:** If a batch has fewer games than workers, idle workers are now skipped automatically. You may still find it clearer to match `--workers` to (or under) the smallest batch size so logs align with the actual work being done.
+
+#### Tracking sealed-lane search costs
+
+When investigating runtime regressions in the CPU engine, enable the sealed-lane profiler in `assets/js/ai/search.json`:
+
+```json
+{
+  "debug": {
+    "performance": {
+      "sealedLane": true,
+      "sealedLaneLogEvery": 0
+    }
+  }
+}
+```
+
+With the flag on, summary counters accumulate on `globalThis.__TwixTSealedLaneStats` (or `window.__TwixTSealedLaneStats` in the browser). Call `reset()` on that object between batches to clear the totals. Set `sealedLaneLogEvery` to a positive number if you want periodic console summaries during long runs.
+
 ## Command Line Arguments
 
 ### selfPlayGPU.js Options

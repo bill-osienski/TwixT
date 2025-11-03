@@ -5,7 +5,7 @@ import Foundation
 struct HeuristicsConfig: Codable {
     let general: GeneralHeuristics
     let edge: EdgeHeuristics
-    let valueModelScale: Float
+    let valueModelScale: Double
 
     /// Wrapper for JavaScript format compatibility
     private struct RewardsWrapper: Codable {
@@ -19,19 +19,19 @@ struct HeuristicsConfig: Codable {
     }
 
     struct GeneralHeuristics: Codable {
-        let friendlyConnection: Float
-        let opponentConnection: Float
-        let friendlyDistance: Float
-        let opponentDistance: Float
-        let goalDistance: Float
-        let centerBias: Float
-        let isolated: Float
-        let redGlobalMultiplier: Float
-        let blackGlobalScale: Float
-        let redBaseBonus: Float
-        let blackBasePenalty: Float
-        let lateGameStart: Float
-        let lateGamePressure: Float
+        let friendlyConnection: Double
+        let opponentConnection: Double
+        let friendlyDistance: Double
+        let opponentDistance: Double
+        let goalDistance: Double
+        let centerBias: Double
+        let isolated: Double
+        let redGlobalMultiplier: Double
+        let blackGlobalScale: Double
+        let redBaseBonus: Double
+        let blackBasePenalty: Double
+        let lateGameStart: Double
+        let lateGamePressure: Double
     }
 
     struct EdgeHeuristics: Codable {
@@ -40,27 +40,27 @@ struct HeuristicsConfig: Codable {
         let defense: DefenseHeuristics
 
         struct OffenseHeuristics: Codable {
-            let gapDecay: Float
-            let connectorBonus: Float
-            let finishThreshold: Float
-            let finishBonusBase: Float
-            let finishPenaltyBase: Float
-            let connectorTargetBonus: Float
-            let redFinishExtra: Float
-            let redSpanGainMultiplier: Float
-            let redGapDecayMultiplier: Float
-            let redFinishPenaltyFactor: Float
-            let blackFinishScaleMultiplier: Float
-            let blackSpanGainMultiplier: Float
-            let blackDoubleCoverageScale: Float
-            let firstEdgeTouchBlack: Float
-            let firstEdgeTouchRed: Float
-            let redDoubleCoverageBonus: Float
+            let gapDecay: Double
+            let connectorBonus: Double
+            let finishThreshold: Double
+            let finishBonusBase: Double
+            let finishPenaltyBase: Double
+            let connectorTargetBonus: Double
+            let redFinishExtra: Double
+            let redSpanGainMultiplier: Double
+            let redGapDecayMultiplier: Double
+            let redFinishPenaltyFactor: Double
+            let blackFinishScaleMultiplier: Double
+            let blackSpanGainMultiplier: Double
+            let blackDoubleCoverageScale: Double
+            let firstEdgeTouchBlack: Double
+            let firstEdgeTouchRed: Double
+            let redDoubleCoverageBonus: Double
         }
 
         struct DefenseHeuristics: Codable {
-            let blockBonus: Float
-            let missPenalty: Float
+            let blockBonus: Double
+            let missPenalty: Double
         }
     }
 
@@ -75,7 +75,7 @@ struct HeuristicsConfig: Codable {
             return HeuristicsConfig(
                 general: wrapper.rewards.general,
                 edge: wrapper.rewards.edge,
-                valueModelScale: wrapper.valueModelScale
+                valueModelScale: Double(wrapper.valueModelScale)
             )
         }
 

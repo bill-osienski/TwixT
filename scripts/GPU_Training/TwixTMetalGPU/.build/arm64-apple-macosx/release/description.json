@@ -354,6 +354,7 @@
         "-emit-objc-header",
         "-emit-objc-header-path",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParser-tool.build/include/ArgumentParser-Swift.h",
+        "-color-diagnostics",
         "-swift-version",
         "5",
         "-enable-experimental-feature",
@@ -921,6 +922,7 @@
         "-emit-objc-header",
         "-emit-objc-header-path",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParser.build/include/ArgumentParser-Swift.h",
+        "-color-diagnostics",
         "-swift-version",
         "5",
         "-enable-experimental-feature",
@@ -1244,6 +1246,7 @@
         "-emit-objc-header",
         "-emit-objc-header-path",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo-tool.build/include/ArgumentParserToolInfo-Swift.h",
+        "-color-diagnostics",
         "-swift-version",
         "5",
         "-I",
@@ -1325,6 +1328,7 @@
         "-emit-objc-header",
         "-emit-objc-header-path",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo.build/include/ArgumentParserToolInfo-Swift.h",
+        "-color-diagnostics",
         "-swift-version",
         "5",
         "-I",
@@ -1387,6 +1391,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/TwixTSwiftAI.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/ValueModelEvaluator.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/main.swift"
         },
         {
@@ -1418,6 +1430,8 @@
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/HeuristicsConfig.swift.o",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/MetalAI.swift.o",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/SelfPlayEngine.swift.o",
+        "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/TwixTSwiftAI.swift.o",
+        "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/ValueModelEvaluator.swift.o",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/main.swift.o",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/resource_bundle_accessor.swift.o"
       ],
@@ -1439,6 +1453,7 @@
         "-entry-point-function-name",
         "-Xfrontend",
         "TwixTMetalGPU_main",
+        "-color-diagnostics",
         "-swift-version",
         "6",
         "-enable-upcoming-feature",
@@ -1487,6 +1502,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/TwixTSwiftAI.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/ValueModelEvaluator.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/main.swift.o"
         },
         {
@@ -1504,6 +1527,8 @@
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/HeuristicsConfig.swift",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/MetalAI.swift",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/SelfPlayEngine.swift",
+        "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/TwixTSwiftAI.swift",
+        "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/ValueModelEvaluator.swift",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/main.swift",
         "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/DerivedSources/resource_bundle_accessor.swift"
       ],
@@ -1570,6 +1595,7 @@
         "-entry-point-function-name",
         "-Xfrontend",
         "generate_docc_reference_main",
+        "-color-diagnostics",
         "-swift-version",
         "5",
         "-I",
@@ -1679,6 +1705,7 @@
         "-entry-point-function-name",
         "-Xfrontend",
         "generate_docc_reference_main",
+        "-color-diagnostics",
         "-swift-version",
         "5",
         "-I",
@@ -1923,6 +1950,7 @@
         "-entry-point-function-name",
         "-Xfrontend",
         "generate_manual_main",
+        "-color-diagnostics",
         "-swift-version",
         "5",
         "-I",
@@ -2302,6 +2330,7 @@
         "-entry-point-function-name",
         "-Xfrontend",
         "generate_manual_main",
+        "-color-diagnostics",
         "-swift-version",
         "5",
         "-I",
@@ -2564,6 +2593,7 @@
       "-emit-objc-header",
       "-emit-objc-header-path",
       "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParser.build/include/ArgumentParser-Swift.h",
+      "-color-diagnostics",
       "-swift-version",
       "5",
       "-enable-experimental-feature",
@@ -2614,6 +2644,7 @@
       "-emit-objc-header",
       "-emit-objc-header-path",
       "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/ArgumentParserToolInfo-tool.build/include/ArgumentParserToolInfo-Swift.h",
+      "-color-diagnostics",
       "-swift-version",
       "5",
       "-I",
@@ -2648,6 +2679,8 @@
       "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/HeuristicsConfig.swift",
       "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/MetalAI.swift",
       "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/SelfPlayEngine.swift",
+      "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/TwixTSwiftAI.swift",
+      "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/ValueModelEvaluator.swift",
       "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/main.swift",
       "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/DerivedSources/resource_bundle_accessor.swift",
       "-I",
@@ -2669,6 +2702,7 @@
       "-entry-point-function-name",
       "-Xfrontend",
       "TwixTMetalGPU_main",
+      "-color-diagnostics",
       "-swift-version",
       "6",
       "-enable-upcoming-feature",
@@ -2726,6 +2760,7 @@
       "-entry-point-function-name",
       "-Xfrontend",
       "generate_docc_reference_main",
+      "-color-diagnostics",
       "-swift-version",
       "5",
       "-I",
@@ -2803,6 +2838,7 @@
       "-entry-point-function-name",
       "-Xfrontend",
       "generate_manual_main",
+      "-color-diagnostics",
       "-swift-version",
       "5",
       "-I",
@@ -3321,6 +3357,14 @@
         {
           "kind" : "file",
           "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/SelfPlayEngine.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/TwixTSwiftAI.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/Sources/TwixTMetalGPU/ValueModelEvaluator.swift"
         },
         {
           "kind" : "file",
@@ -4977,6 +5021,14 @@
         {
           "kind" : "file",
           "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/SelfPlayEngine.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/TwixTSwiftAI.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/bill/Desktop/TwixT_Game/scripts/GPU_Training/TwixTMetalGPU/.build/arm64-apple-macosx/release/TwixTMetalGPU.build/ValueModelEvaluator.swift.o"
         },
         {
           "kind" : "file",

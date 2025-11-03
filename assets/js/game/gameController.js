@@ -35,10 +35,14 @@ export default class GameController {
   }
 
   setupEventListeners() {
+    console.log('Setting up event listeners...');
+
     // Mode selection buttons
     const twoP = document.getElementById('two-player-mode');
+    console.log('2 Player button:', twoP);
     if (twoP) {
       twoP.addEventListener('click', () => {
+        console.log('2 Player mode clicked!');
         this.startGame(false);
       });
     }
@@ -213,6 +217,16 @@ export default class GameController {
     // Only construct AI if we actually need it
     this.ai = isAI ? new TwixTAI(this.game) : null;
 
+    // Randomize starting player
+    const startsBlack = Math.random() < 0.5;
+    if (startsBlack) {
+      this.game.startingPlayer = 'black';
+      this.game.currentPlayer = 'black';
+    } else {
+      this.game.startingPlayer = 'red';
+      this.game.currentPlayer = 'red';
+    }
+
     this.moveLog = [];
     this.renderer.updateBoard();
     this.updateUI();
@@ -221,10 +235,19 @@ export default class GameController {
     const playerName = document.getElementById('player-name');
     if (playerName) {
       if (isAI) {
-        playerName.textContent = `Red (Human vs ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} AI)`;
+        const diffLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+        const starter = startsBlack ? `Black (${diffLabel} AI)` : 'Red (Human)';
+        playerName.textContent = `Red (Human) vs Black (${diffLabel} AI) – ${starter} starts`;
       } else {
-        playerName.textContent = 'Red (Human vs Human)';
+        playerName.textContent = startsBlack
+          ? 'Black moves first (Human vs Human)'
+          : 'Red moves first (Human vs Human)';
       }
+    }
+
+    // If AI should open, trigger immediately
+    if (isAI && startsBlack && this.game.aiPlayer === 'black') {
+      setTimeout(() => this.makeAIMove(), 300);
     }
   }
 

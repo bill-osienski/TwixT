@@ -11,6 +11,7 @@ export default class TwixTGame {
     this.gameOver = false;
     this.winner = null;
     this.moveCount = 0;
+    this.startingPlayer = 'red';
 
     // AI settings
     this.isAIGame = false;
@@ -282,12 +283,15 @@ export default class TwixTGame {
     this.gameOver = false;
     this.winner = null;
     this.moveCount = 0;
+    this.startingPlayer = 'red';
   }
 
   // AI Configuration
   setGameMode(isAI, difficulty = 'medium') {
     this.isAIGame = isAI;
     this.aiDifficulty = difficulty;
+    // AI will always play the opposite colour from the human
+    this.aiPlayer = isAI ? 'black' : null;
   }
 
   // Get all valid moves for current player

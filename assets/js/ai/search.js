@@ -38,6 +38,312 @@ const REWARDS = Object.freeze({
     })
 });
 
+const sealedLaneLogEveryRaw = config?.debug?.performance?.sealedLaneLogEvery;
+const DEBUG_OPTIONS = Object.freeze({
+    performance: Object.freeze({
+        sealedLane: !!(config?.debug?.performance?.sealedLane),
+        sealedLaneLogEvery: Number.isFinite(sealedLaneLogEveryRaw) && sealedLaneLogEveryRaw > 0
+            ? Math.floor(sealedLaneLogEveryRaw)
+            : 0
+    })
+});
+
+const SEALED_LANE_DEBUG = {
+    enabled: DEBUG_OPTIONS.performance.sealedLane,
+    logEvery: DEBUG_OPTIONS.performance.sealedLaneLogEvery,
+    stats: (() => {
+        const stats = {
+            enabled: DEBUG_OPTIONS.performance.sealedLane,
+            calls: 0,
+            openPaths: 0,
+            sealed: 0,
+            totalMs: 0,
+            maxMs: 0,
+            bridgeChecks: 0,
+            bridgeCacheMisses: 0,
+            nodesVisited: 0,
+            enqueued: 0,
+            reasons: Object.create(null),
+            reset() {
+                this.calls = 0;
+                this.openPaths = 0;
+                this.sealed = 0;
+                this.totalMs = 0;
+                this.maxMs = 0;
+                this.bridgeChecks = 0;
+                this.bridgeCacheMisses = 0;
+                this.nodesVisited = 0;
+                this.enqueued = 0;
+                for (const key of Object.keys(this.reasons)) {
+                    delete this.reasons[key];
+                }
+            }
+        };
+        return stats;
+    })()
+};
+
+if (SEALED_LANE_DEBUG.enabled && typeof globalThis !== 'undefined') {
+    globalThis.__TwixTSealedLaneStats = SEALED_LANE_DEBUG.stats;
+}
+
+const HEURISTIC_STATS = (() => {
+    if (typeof globalThis === 'undefined') return null;
+    if (!globalThis.__TwixTAIStats) {
+        globalThis.__TwixTAIStats = { perDepth: Object.create(null) };
+        if (typeof process !== 'undefined' && process?.on && !process.__TwixTAIStatsHooked) {
+            process.__TwixTAIStatsHooked = true;
+            process.once('exit', () => {
+                try {
+                    const stats = globalThis.__TwixTAIStats;
+                    if (!stats) return;
+                    const summary = {};
+                    for (const [depth, entries] of Object.entries(stats.perDepth || {})) {
+                        summary[depth] = {};
+                        for (const [key, value] of Object.entries(entries)) {
+                            summary[depth][key] = {
+                                red: { count: value.red.count, sum: value.red.sum },
+                                black: { count: value.black.count, sum: value.black.sum }
+                            };
+                        }
+                    }
+                    if (Object.keys(summary).length) {
+                        console.info('[TwixTAI] heuristic stats', JSON.stringify(summary));
+                    }
+                } catch {
+                    // ignore logging issues during shutdown
+                }
+            });
+        }
+    }
+    return globalThis.__TwixTAIStats;
+})();
+
+const now = typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? () => performance.now()
+    : () => Date.now();
+
+if (SEALED_LANE_DEBUG.enabled &&
+    typeof process !== 'undefined' &&
+    process?.on &&
+    !process.__twixtSealedLaneExitHooked) {
+
+    process.__twixtSealedLaneExitHooked = true;
+    process.once('exit', () => {
+        const stats = SEALED_LANE_DEBUG.stats;
+        const avgMs = stats.calls ? stats.totalMs / stats.calls : 0;
+        const summary = {
+            calls: stats.calls,
+            openPaths: stats.openPaths,
+            sealed: stats.sealed,
+            avgMs,
+            maxMs: stats.maxMs,
+            bridgeChecks: stats.bridgeChecks,
+            bridgeCacheMisses: stats.bridgeCacheMisses,
+            nodesVisited: stats.nodesVisited,
+            enqueued: stats.enqueued,
+            reasons: { ...stats.reasons }
+        };
+        const logger = (typeof console !== 'undefined' && console.info) ? console.info : null;
+        if (logger) {
+            logger('[TwixTAI] sealed lane summary', summary);
+        }
+    });
+}
+
+function isLegalPlacementForPlayer(game, player, row, col) {
+    const boardSize = game.boardSize;
+    if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) {
+        return false;
+    }
+    if (game.board[row][col] !== null) {
+        return false;
+    }
+    const onTopOrBottom = row === 0 || row === boardSize - 1;
+    const onLeftOrRight = col === 0 || col === boardSize - 1;
+    if (onTopOrBottom && onLeftOrRight) {
+        return false;
+    }
+    if (player === 'red') {
+        return !(col === 0 || col === boardSize - 1);
+    }
+    return !(row === 0 || row === boardSize - 1);
+}
+
+function isGoalEdgeCoordinate(player, row, col, boardSize) {
+    if (player === 'red') {
+        if (row !== 0 && row !== boardSize - 1) {
+            return false;
+        }
+        return col > 0 && col < boardSize - 1;
+    }
+    if (col !== 0 && col !== boardSize - 1) {
+        return false;
+    }
+    return row > 0 && row < boardSize - 1;
+}
+
+function hasReachableGoalEdge(game, player, metrics) {
+    const component = metrics?.largestComponent;
+    if (!component || component.length === 0) {
+        if (SEALED_LANE_DEBUG.enabled) {
+            const stats = SEALED_LANE_DEBUG.stats;
+            stats.calls++;
+            stats.sealed++;
+            stats.reasons.emptyComponent = (stats.reasons.emptyComponent || 0) + 1;
+        }
+        return false;
+    }
+
+    const boardSize = game.boardSize;
+    const board = game.board;
+    const canCheckCross = typeof game?.bridgesCross === 'function';
+    const targetSet = new Set();
+
+    if (player === 'red') {
+        if (!metrics.touchesTop) targetSet.add(0);
+        if (!metrics.touchesBottom) targetSet.add(boardSize - 1);
+    } else {
+        if (!metrics.touchesLeft) targetSet.add(0);
+        if (!metrics.touchesRight) targetSet.add(boardSize - 1);
+    }
+
+    const track = SEALED_LANE_DEBUG.enabled;
+    const startTime = track ? now() : 0;
+    let localBridgeChecks = 0;
+    let localCacheMisses = 0;
+    let localVisited = 0;
+    let localEnqueued = 0;
+
+    const finish = (value, reason) => {
+        if (track) {
+            const elapsed = now() - startTime;
+            const stats = SEALED_LANE_DEBUG.stats;
+            stats.calls++;
+            if (value) {
+                stats.openPaths++;
+            } else {
+                stats.sealed++;
+            }
+            stats.totalMs += elapsed;
+            if (elapsed > stats.maxMs) {
+                stats.maxMs = elapsed;
+            }
+            stats.bridgeChecks += localBridgeChecks;
+            stats.bridgeCacheMisses += localCacheMisses;
+            stats.nodesVisited += localVisited;
+            stats.enqueued += localEnqueued;
+            stats.reasons[reason] = (stats.reasons[reason] || 0) + 1;
+
+            if (SEALED_LANE_DEBUG.logEvery &&
+                stats.calls % SEALED_LANE_DEBUG.logEvery === 0 &&
+                typeof console !== 'undefined' &&
+                typeof console.info === 'function') {
+
+                const avgMs = stats.calls ? stats.totalMs / stats.calls : 0;
+                console.info('[TwixTAI] sealed lane stats', {
+                    calls: stats.calls,
+                    openPaths: stats.openPaths,
+                    sealed: stats.sealed,
+                    avgMs,
+                    maxMs: stats.maxMs,
+                    bridgeChecks: stats.bridgeChecks,
+                    bridgeCacheMisses: stats.bridgeCacheMisses
+                });
+            }
+        }
+        return value;
+    };
+
+    if (targetSet.size === 0) {
+        return finish(true, 'alreadyTouching');
+    }
+
+    const visited = new Set();
+    const queue = [];
+    let head = 0;
+
+    const enqueue = (row, col, type) => {
+        const key = `${type}:${row}:${col}`;
+        if (visited.has(key)) return;
+        visited.add(key);
+        queue.push({ row, col, type });
+        if (track) localEnqueued++;
+    };
+
+    const bridgesCross = (r1, c1, r2, c2) => {
+        if (!canCheckCross) {
+            return false;
+        }
+        if (track) localBridgeChecks++;
+        const lowRow = r1 < r2 || (r1 === r2 && c1 <= c2);
+        const key = lowRow
+            ? `${r1}:${c1}|${r2}:${c2}`
+            : `${r2}:${c2}|${r1}:${c1}`;
+        if (bridgesCross.cache.has(key)) {
+            return bridgesCross.cache.get(key);
+        }
+        if (track) localCacheMisses++;
+        const crosses = game.bridgesCross(r1, c1, r2, c2);
+        bridgesCross.cache.set(key, crosses);
+        return crosses;
+    };
+    bridgesCross.cache = new Map();
+
+    for (const peg of component) {
+        enqueue(peg.row, peg.col, 'peg');
+    }
+
+    while (head < queue.length) {
+        const current = queue[head++];
+        const { row, col, type } = current;
+        if (track) localVisited++;
+
+        if (player === 'red') {
+            if (targetSet.has(row) && isGoalEdgeCoordinate(player, row, col, boardSize)) {
+                if (type === 'peg' || (type === 'empty' && isLegalPlacementForPlayer(game, player, row, col))) {
+                    return finish(true, 'goalReachable');
+                }
+            }
+        } else if (targetSet.has(col) && isGoalEdgeCoordinate(player, row, col, boardSize)) {
+            if (type === 'peg' || (type === 'empty' && isLegalPlacementForPlayer(game, player, row, col))) {
+                return finish(true, 'goalReachable');
+            }
+        }
+
+        if (type === 'empty' && !isLegalPlacementForPlayer(game, player, row, col)) {
+            continue;
+        }
+
+        for (const [dr, dc] of KNIGHT_OFFSETS) {
+            const nr = row + dr;
+            const nc = col + dc;
+
+            if (nr < 0 || nr >= boardSize || nc < 0 || nc >= boardSize) {
+                continue;
+            }
+
+            const occupant = board[nr][nc];
+            let nextType = null;
+            if (occupant === null) {
+                nextType = 'empty';
+            } else if (occupant === player) {
+                nextType = 'peg';
+            } else {
+                continue;
+            }
+
+            if (bridgesCross(row, col, nr, nc)) {
+                continue;
+            }
+
+            enqueue(nr, nc, nextType);
+        }
+    }
+
+    return finish(false, 'sealed');
+}
+
 function computeConnectorTargets(game, player, metrics) {
     if (!metrics || !metrics.largestComponent || metrics.largestComponent.length === 0) {
         return null;
@@ -84,6 +390,21 @@ export default class TwixTAI {
         this.game = game;
         this.player = player ?? (game && typeof game.aiPlayer === 'string' ? game.aiPlayer : null);
         this.rootDepth = 0;
+        this.sealedLaneCache = new Map();
+        this.recordStat = (key, playerSide, amount = 1) => {
+            if (!HEURISTIC_STATS || !this.rootDepth) {
+                return;
+            }
+            const depthKey = String(this.rootDepth);
+            const perDepth = HEURISTIC_STATS.perDepth[depthKey] ||= Object.create(null);
+            const entry = perDepth[key] ||= {
+                red: { count: 0, sum: 0 },
+                black: { count: 0, sum: 0 }
+            };
+            const bucket = playerSide === 'red' ? entry.red : entry.black;
+            bucket.count += 1;
+            bucket.sum += amount;
+        };
         if (typeof window !== 'undefined') {
             if (window.TwixTAI_DEBUG === undefined) {
                 window.TwixTAI_DEBUG = false;
@@ -286,8 +607,11 @@ export default class TwixTAI {
                   ((touchesLeft && maxC >= N - 2) || (touchesRight && minC <= 1));
 
                 if (redNearFinish || blackNearFinish) {
-                  if (typeof capture === 'function') capture('nearSpanFinish', 2500);
-                  finishBonus = 2500; // adjust to 3000–3500 if needed later
+                  const nearFinishBonus = REWARDS.edge.offense.nearFinishBonus ?? 0;
+                  if (nearFinishBonus !== 0) {
+                    if (typeof capture === 'function') capture('nearSpanFinish', nearFinishBonus);
+                    finishBonus = nearFinishBonus;
+                  }
                 }
               }
             }
@@ -636,12 +960,12 @@ export default class TwixTAI {
           const success = this.game.placePeg(move.row, move.col);
           if (success) {
             // Threat reduction (existing)
-            if (opponentThreatBefore > 0) {
-              const threatAfter = connectivityScore(this.game, opponent);
-              const threatReduction = opponentThreatBefore - threatAfter;
-              if (threatReduction > 0) {
-                const bonus = threatReduction * 140;
-                if (typeof capture === 'function') capture('threatReduction', bonus);
+          if (opponentThreatBefore > 0 && this.game.moveCount > 1) {
+            const threatAfter = connectivityScore(this.game, opponent);
+            const threatReduction = opponentThreatBefore - threatAfter;
+            if (threatReduction > 0) {
+              const bonus = threatReduction * 140;
+              if (typeof capture === 'function') capture('threatReduction', bonus);
                 score += bonus;
               } else {
                 const penalty = opponentUrgent ? 600 : 250;
@@ -675,71 +999,10 @@ export default class TwixTAI {
                 }
               }
 
-              // ---- A) First-time edge touch bonus (newly touching your own goal edge) ----
-              if (player === 'black') {
-                const newLeft  = postMetrics.touchesLeft  && !friendlyMetrics.touchesLeft;
-                const newRight = postMetrics.touchesRight && !friendlyMetrics.touchesRight;
-                if (newLeft || newRight) {
-                  const touchBonus = REWARDS.edge.offense.firstEdgeTouchBlack;
-                  if (touchBonus !== 0) {
-                    if (typeof capture === 'function') capture('firstEdgeTouch', touchBonus);
-                    score += touchBonus;
-                  }
-                }
-              } else { // red
-                const newTop    = postMetrics.touchesTop    && !friendlyMetrics.touchesTop;
-                const newBottom = postMetrics.touchesBottom && !friendlyMetrics.touchesBottom;
-                if (newTop || newBottom) {
-                  const touchBonus = REWARDS.edge.offense.firstEdgeTouchRed;
-                  if (touchBonus !== 0) {
-                    if (typeof capture === 'function') capture('firstEdgeTouch', touchBonus);
-                    score += touchBonus;
-                  }
-                }
-              }
-
-              // ---- B) Double-edge coverage upgrade (touch both goal edges for the first time) ----
-              if (player === 'black') {
-                const hadBoth = friendlyMetrics.touchesLeft && friendlyMetrics.touchesRight;
-                const hasBoth = postMetrics.touchesLeft && postMetrics.touchesRight;
-                const componentSpansBoth =
-                  postLargest.length > 0 &&
-                  postMinC <= 0 &&
-                  postMaxC >= boardLimit;
-                if (hasBoth && !hadBoth && componentSpansBoth) {
-                  const coverageBonus = 2400 * REWARDS.edge.offense.blackDoubleCoverageScale;
-                  if (typeof capture === 'function') capture('doubleEdgeCoverage', coverageBonus);
-                  score += coverageBonus;
-                }
-              } else {
-                const hadBoth = friendlyMetrics.touchesTop && friendlyMetrics.touchesBottom;
-                const hasBoth = postMetrics.touchesTop && postMetrics.touchesBottom;
-                const componentSpansBoth =
-                  postLargest.length > 0 &&
-                  postMinR <= 0 &&
-                  postMaxR >= boardLimit;
-                if (hasBoth && !hadBoth && componentSpansBoth) {
-                  const coverageBonus = 2400 + REWARDS.edge.offense.redDoubleCoverageBonus;
-                  if (typeof capture === 'function') capture('doubleEdgeCoverage', coverageBonus);
-                  score += coverageBonus;
-                }
-              }
-
-              // Existing span gain bonus
               const goalSpanBefore = player === 'red' ? friendlyMetrics.maxRowSpan : friendlyMetrics.maxColSpan;
               const goalSpanAfter  = player === 'red' ? postMetrics.maxRowSpan    : postMetrics.maxColSpan;
               const spanGain = goalSpanAfter - goalSpanBefore;
-              if (spanGain > 0) {
-                let multiplier = 180 * (player === 'black' ? REWARDS.edge.offense.blackSpanGainMultiplier : 1);
-                if (player === 'red' && (postMetrics.touchesTop || postMetrics.touchesBottom)) {
-                  multiplier *= REWARDS.edge.offense.redSpanGainMultiplier;
-                }
-                const bonus = spanGain * multiplier;
-                if (typeof capture === 'function') capture('spanGain', bonus);
-                score += bonus;
-              }
 
-              // ---- C) Reduce edge gap bonus (encourage spanning across board) ----
               const prevMinAxis = player === 'red'
                 ? (Number.isFinite(friendlyMinR) ? friendlyMinR : (friendlyMetrics.minRow ?? boardLimit))
                 : (Number.isFinite(friendlyMinC) ? friendlyMinC : (friendlyMetrics.minCol ?? boardLimit));
@@ -761,61 +1024,160 @@ export default class TwixTAI {
               const gapAfter  = postGapFront + postGapBack;
               const gapImprovement = gapBefore - gapAfter;
 
-              if (gapImprovement > 0) {
-                const gapMultiplier = REWARDS.edge.offense.gapDecay * (player === 'red' ? REWARDS.edge.offense.redGapDecayMultiplier : 1);
-                const gapBonus = gapImprovement * gapMultiplier;
-                if (typeof capture === 'function') capture('edgeGapReduction', gapBonus);
-                score += gapBonus;
-              }
-
-              // ---- C) Largest-component span completion bonus (requires bridges spanning both edges) ----
-              if (postLargest.length > 0) {
-                const lcTouchesTop    = (postMinR <= 1);
-                const lcTouchesBottom = (postMaxR >= boardLimit - 1);
-                const lcTouchesLeft   = (postMinC <= 1);
-                const lcTouchesRight  = (postMaxC >= boardLimit - 1);
-
-                const redSpans   = lcTouchesTop && lcTouchesBottom;
-                const blackSpans = lcTouchesLeft && lcTouchesRight;
-
-                if ((player === 'red' && redSpans) || (player === 'black' && blackSpans)) {
-                  const spanCompleteBonus = REWARDS.edge.offense.finishBonusBase * 2 * (player === 'black' ? REWARDS.edge.offense.blackFinishScaleMultiplier : 1);
-                  if (typeof capture === 'function') capture('largestComponentSpanComplete', spanCompleteBonus);
-                  score += spanCompleteBonus;
-                }
-              }
-
-              // ---- D) Encourage finishing once both edges are touched ----
               const touchesBothPost = player === 'red'
                 ? (postMetrics.touchesTop && postMetrics.touchesBottom)
                 : (postMetrics.touchesLeft && postMetrics.touchesRight);
               const nearFinish = gapAfter <= REWARDS.edge.offense.finishThreshold;
+              let finishLaneOpen = true;
 
-              if (touchesBothPost || nearFinish) {
-                const progressMade = spanGain > 0 || gapImprovement > 0;
-                const finishScaleBase = Math.max(0, REWARDS.edge.offense.finishBonusBase - gapAfter * 150);
-                if (progressMade) {
-                  let bonusBase = REWARDS.edge.offense.connectorBonus + finishScaleBase;
-                  if (player === 'black') {
-                    bonusBase *= REWARDS.edge.offense.blackFinishScaleMultiplier;
-                  }
-                  if (player === 'red') {
-                    bonusBase += REWARDS.edge.offense.redFinishExtra;
-                  }
-                  if (typeof capture === 'function') capture('edgeFinishAdvance', bonusBase);
-                  score += bonusBase;
+              if (nearFinish && !touchesBothPost) {
+                const bounds = {
+                  minR: Number.isFinite(postMinR) ? postMinR : null,
+                  maxR: Number.isFinite(postMaxR) ? postMaxR : null,
+                  minC: Number.isFinite(postMinC) ? postMinC : null,
+                  maxC: Number.isFinite(postMaxC) ? postMaxC : null
+                };
+                const cacheKey = this.getSealedLaneCacheKey(player, postMetrics, bounds);
+                if (cacheKey && this.sealedLaneCache && this.sealedLaneCache.has(cacheKey)) {
+                  finishLaneOpen = this.sealedLaneCache.get(cacheKey);
                 } else {
-                  const penaltyBase = REWARDS.edge.offense.finishPenaltyBase + gapAfter * 150;
-                  const penalty = penaltyBase * (player === 'red' ? REWARDS.edge.offense.redFinishPenaltyFactor : 1);
-                  if (typeof capture === 'function') capture('edgeFinishStall', -penalty);
-                  score -= penalty;
+                  finishLaneOpen = hasReachableGoalEdge(this.game, player, postMetrics);
+                  if (cacheKey && this.sealedLaneCache) {
+                    this.sealedLaneCache.set(cacheKey, finishLaneOpen);
+                  }
                 }
+              }
+
+              if (finishLaneOpen) {
+                // ---- A) First-time edge touch bonus (newly touching your own goal edge) ----
+                if (player === 'black') {
+                  const newLeft  = postMetrics.touchesLeft  && !friendlyMetrics.touchesLeft;
+                  const newRight = postMetrics.touchesRight && !friendlyMetrics.touchesRight;
+                  if (newLeft || newRight) {
+                    const touchBonus = REWARDS.edge.offense.firstEdgeTouchBlack;
+                    if (touchBonus !== 0) {
+                      if (typeof capture === 'function') capture('firstEdgeTouch', touchBonus);
+                      score += touchBonus;
+                      this.recordStat('firstEdgeTouch', player, touchBonus);
+                    }
+                  }
+                } else { // red
+                  const newTop    = postMetrics.touchesTop    && !friendlyMetrics.touchesTop;
+                  const newBottom = postMetrics.touchesBottom && !friendlyMetrics.touchesBottom;
+                  if (newTop || newBottom) {
+                    const touchBonus = REWARDS.edge.offense.firstEdgeTouchRed;
+                    if (touchBonus !== 0) {
+                      if (typeof capture === 'function') capture('firstEdgeTouch', touchBonus);
+                      score += touchBonus;
+                      this.recordStat('firstEdgeTouch', player, touchBonus);
+                    }
+                  }
+                }
+
+                // ---- B) Double-edge coverage upgrade (touch both goal edges for the first time) ----
+                if (player === 'black') {
+                  const hadBoth = friendlyMetrics.touchesLeft && friendlyMetrics.touchesRight;
+                  const hasBoth = postMetrics.touchesLeft && postMetrics.touchesRight;
+                  const componentSpansBoth =
+                    postLargest.length > 0 &&
+                    postMinC <= 0 &&
+                    postMaxC >= boardLimit;
+                  if (hasBoth && !hadBoth && componentSpansBoth) {
+                    const coverageBonus = REWARDS.edge.offense.doubleCoverageBase * REWARDS.edge.offense.blackDoubleCoverageScale;
+                    if (typeof capture === 'function') capture('doubleEdgeCoverage', coverageBonus);
+                    score += coverageBonus;
+                    this.recordStat('doubleEdgeCoverage', player, coverageBonus);
+                  }
+                } else {
+                  const hadBoth = friendlyMetrics.touchesTop && friendlyMetrics.touchesBottom;
+                  const hasBoth = postMetrics.touchesTop && postMetrics.touchesBottom;
+                  const componentSpansBoth =
+                    postLargest.length > 0 &&
+                    postMinR <= 0 &&
+                    postMaxR >= boardLimit;
+                  if (hasBoth && !hadBoth && componentSpansBoth) {
+                    const coverageBonus = REWARDS.edge.offense.doubleCoverageBase + REWARDS.edge.offense.redDoubleCoverageBonus;
+                    if (typeof capture === 'function') capture('doubleEdgeCoverage', coverageBonus);
+                    score += coverageBonus;
+                    this.recordStat('doubleEdgeCoverage', player, coverageBonus);
+                  }
+                }
+
+                if (spanGain > 0) {
+                  let multiplier = REWARDS.edge.offense.spanGainBase * (player === 'black' ? REWARDS.edge.offense.blackSpanGainMultiplier : 1);
+                  if (player === 'red' && (postMetrics.touchesTop || postMetrics.touchesBottom)) {
+                    multiplier *= REWARDS.edge.offense.redSpanGainMultiplier;
+                  }
+                  const bonus = spanGain * multiplier;
+                  if (typeof capture === 'function') capture('spanGain', bonus);
+                  score += bonus;
+                  this.recordStat('spanGain', player, bonus);
+                }
+
+                if (gapImprovement > 0) {
+                  const gapMultiplier = REWARDS.edge.offense.gapDecay * (player === 'red' ? REWARDS.edge.offense.redGapDecayMultiplier : 1);
+                  const gapBonus = gapImprovement * gapMultiplier;
+                  if (typeof capture === 'function') capture('edgeGapReduction', gapBonus);
+                  score += gapBonus;
+                  this.recordStat('edgeGapReduction', player, gapBonus);
+                }
+
+                if (postLargest.length > 0) {
+                  const lcTouchesTop    = (postMinR <= 1);
+                  const lcTouchesBottom = (postMaxR >= boardLimit - 1);
+                  const lcTouchesLeft   = (postMinC <= 1);
+                  const lcTouchesRight  = (postMaxC >= boardLimit - 1);
+
+                  const redSpans   = lcTouchesTop && lcTouchesBottom;
+                  const blackSpans = lcTouchesLeft && lcTouchesRight;
+
+                  if ((player === 'red' && redSpans) || (player === 'black' && blackSpans)) {
+                    const spanCompleteBonus = REWARDS.edge.offense.finishBonusBase * 2 * (player === 'black' ? REWARDS.edge.offense.blackFinishScaleMultiplier : 1);
+                    if (typeof capture === 'function') capture('largestComponentSpanComplete', spanCompleteBonus);
+                    score += spanCompleteBonus;
+                    this.recordStat('largestComponentSpanComplete', player, spanCompleteBonus);
+                  }
+                }
+
+                if (touchesBothPost || nearFinish) {
+                  const progressMade = spanGain > 0 || gapImprovement > 0;
+                  const finishScaleBase = Math.max(0, REWARDS.edge.offense.finishBonusBase - gapAfter * REWARDS.edge.offense.finishGapSlope);
+                  if (progressMade) {
+                    let bonusBase = REWARDS.edge.offense.connectorBonus + finishScaleBase;
+                    if (this.rootDepth >= 3 && player === 'red') {
+                      bonusBase += REWARDS.general.redDepth3Bonus ?? 0;
+                      if (REWARDS.general.redDepth3Bonus) {
+                        this.recordStat('redDepth3BonusApplied', player, REWARDS.general.redDepth3Bonus);
+                      }
+                    }
+                    if (player === 'black') {
+                      bonusBase *= REWARDS.edge.offense.blackFinishScaleMultiplier;
+                    }
+                    if (player === 'red') {
+                      bonusBase += REWARDS.edge.offense.redFinishExtra;
+                    }
+                    if (typeof capture === 'function') capture('edgeFinishAdvance', bonusBase);
+                    score += bonusBase;
+                    this.recordStat('edgeFinishAdvance', player, bonusBase);
+                  } else {
+                    const penaltyBase = REWARDS.edge.offense.finishPenaltyBase + gapAfter * REWARDS.edge.offense.finishGapSlope;
+                    const penalty = penaltyBase * (player === 'red' ? REWARDS.edge.offense.redFinishPenaltyFactor : 1);
+                    if (typeof capture === 'function') capture('edgeFinishStall', -penalty);
+                    score -= penalty;
+                    this.recordStat('edgeFinishStall', player, -penalty);
+                  }
+                }
+              } else if (typeof capture === 'function') {
+                capture('finishLaneSealed', 0);
+                this.recordStat('finishLaneSealed', player, 1);
               }
 
               if (opponentConnectorSet && opponentConnectorSet.size > 0 && !blockedOpponentConnector && !touchesBothPost) {
                 const defensePenalty = REWARDS.edge.defense.missPenalty * (opponentUrgent ? 1.5 : 1);
-                if (typeof capture === 'function') capture('edgeDefenseMiss', -defensePenalty);
-                score -= defensePenalty;
+                if (this.game.moveCount > 1) {
+                  if (typeof capture === 'function') capture('edgeDefenseMiss', -defensePenalty);
+                  score -= defensePenalty;
+                }
               }
 
               // (Removed old +400 span-complete blocks)
@@ -1011,6 +1373,30 @@ export default class TwixTAI {
 
     moveKey(move) {
         return `${move.row}:${move.col}`;
+    }
+
+    getSealedLaneCacheKey(player, postMetrics, bounds) {
+        if (!postMetrics || !bounds) return null;
+        const {
+            touchesTop = false,
+            touchesBottom = false,
+            touchesLeft = false,
+            touchesRight = false,
+            largestComponent = []
+        } = postMetrics;
+        const { minR, maxR, minC, maxC } = bounds;
+        return [
+            player,
+            minR ?? 'n',
+            maxR ?? 'n',
+            minC ?? 'n',
+            maxC ?? 'n',
+            touchesTop ? 1 : 0,
+            touchesBottom ? 1 : 0,
+            touchesLeft ? 1 : 0,
+            touchesRight ? 1 : 0,
+            largestComponent.length || 0
+        ].join('|');
     }
 
     debugSnapshot() {

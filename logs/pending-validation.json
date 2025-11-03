@@ -1,0 +1,158 @@
+{
+  "generatedAt": "2025-11-03T01:42:56.318Z",
+  "recommendations": [
+    {
+      "configHash": "17a524e0e7b31009281d334306df986e53125eff",
+      "sweepTimestamp": "2025-10-28T14:04:42.370Z",
+      "score": 1,
+      "metrics": {
+        "score": 1,
+        "totalGames": 20,
+        "totalRed": 9,
+        "totalBlack": 10,
+        "totalDraw": 1,
+        "parity": 1,
+        "depth2": {
+          "red": 5,
+          "black": 5,
+          "draw": 0,
+          "total": 10,
+          "imbalance": 0,
+          "redRate": 0.5
+        },
+        "depth3": {
+          "red": 4,
+          "black": 5,
+          "draw": 1,
+          "total": 10,
+          "imbalance": 1,
+          "redRate": 0.4
+        }
+      },
+      "combo": {
+        "firstEdgeRed": 430,
+        "firstEdgeBlack": 445,
+        "finishPenalty": 1181,
+        "gapDecay": 23,
+        "redFinishPenaltyFactor": 0.75,
+        "blackFinishScaleMultiplier": 1,
+        "spanGainBase": 180,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      }
+    },
+    {
+      "configHash": "a21077dc24a3cecb378e023c35cf5b987f896540",
+      "sweepTimestamp": "2025-10-28T14:04:42.370Z",
+      "score": 1,
+      "metrics": {
+        "score": 1,
+        "totalGames": 20,
+        "totalRed": 9,
+        "totalBlack": 10,
+        "totalDraw": 1,
+        "parity": 1,
+        "depth2": {
+          "red": 5,
+          "black": 5,
+          "draw": 0,
+          "total": 10,
+          "imbalance": 0,
+          "redRate": 0.5
+        },
+        "depth3": {
+          "red": 4,
+          "black": 5,
+          "draw": 1,
+          "total": 10,
+          "imbalance": 1,
+          "redRate": 0.4
+        }
+      },
+      "combo": {
+        "firstEdgeRed": 430,
+        "firstEdgeBlack": 450,
+        "finishPenalty": 1181,
+        "gapDecay": 23,
+        "redFinishPenaltyFactor": 0.8,
+        "blackFinishScaleMultiplier": 1,
+        "spanGainBase": 180,
+        "redSpanGainMultiplier": 1.1,
+        "blackSpanGainMultiplier": 0.9,
+        "redDoubleCoverageBonus": 600,
+        "blackDoubleCoverageScale": 0.9,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      }
+    },
+    {
+      "configHash": "27830a009989259a9d4dd56daa320c4e48d1f30f",
+      "sweepTimestamp": "2025-10-31T18:18:23.489Z",
+      "score": 1,
+      "metrics": {
+        "score": 1,
+        "totalGames": 20,
+        "totalRed": 10,
+        "totalBlack": 9,
+        "totalDraw": 1,
+        "parity": 1,
+        "depth2": {
+          "red": 5,
+          "black": 4,
+          "draw": 1,
+          "total": 10,
+          "imbalance": 1,
+          "redRate": 0.5
+        },
+        "depth3": {
+          "red": 5,
+          "black": 5,
+          "draw": 0,
+          "total": 10,
+          "imbalance": 0,
+          "redRate": 0.5
+        }
+      },
+      "combo": {
+        "firstEdgeRed": 430,
+        "firstEdgeBlack": 455,
+        "finishPenalty": 1181,
+        "gapDecay": 23,
+        "redFinishPenaltyFactor": 0.6,
+        "blackFinishScaleMultiplier": 1,
+        "spanGainBase": 180,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      }
+    }
+  ]
+}

@@ -19,7 +19,15 @@ program
 program.parse(process.argv);
 const opts = program.opts();
 
-const GAME_COUNT   = parseInt(opts.games, 10) || 10;
+const GAME_COUNT_RAW = parseInt(opts.games, 10) || 10;
+const GAME_COUNT = GAME_COUNT_RAW;
+const START_PLAN = process.env.START_PLAN
+  ? process.env.START_PLAN.split(',').filter(Boolean)
+  : null;
+const usePlan = Array.isArray(START_PLAN) && START_PLAN.length === GAME_COUNT;
+if (START_PLAN && !usePlan) {
+  console.warn('[selfPlay] START_PLAN provided but length mismatch; falling back to alternating starts.');
+}
 const SEARCH_DEPTH = parseInt(opts.depth, 10) || 3;
 const OUTPUT_FILE  = opts.output;
 const VERBOSE      = !!opts.verbose;
@@ -139,14 +147,22 @@ function playGame(gameNumber) {
     stalled: false
   };
 
-  // Start with red
-  game.currentPlayer = 'red';
-  game.aiPlayer = 'black';
+  // Randomize starting color (tracks for analysis)
+  const startsBlack = usePlan
+    ? START_PLAN[gameNumber - 1] === 'black'
+    : (gameNumber % 2 === 0);
+  game.startingPlayer = startsBlack ? 'black' : 'red';
+  game.currentPlayer = game.startingPlayer;
   game.isAIGame = true;
 
+  // Record for trace consumers
+  const startingPlayer = game.startingPlayer;
+
   // Allow extra room for AI endgames; human play usually ends earlier
-  const maxMoves = 220;
-  const stallLimit = 40;
+  const maxMovesEnv = Number.parseInt(process.env.MAX_MOVES ?? '', 10);
+  const maxMoves = Number.isFinite(maxMovesEnv) && maxMovesEnv > 0 ? maxMovesEnv : 220;
+  const stallLimitEnv = Number.parseInt(process.env.STALL_LIMIT ?? '', 10);
+  const stallLimit = Number.isFinite(stallLimitEnv) && stallLimitEnv > 0 ? stallLimitEnv : 40;
   let stagnationCounter = 0;
   let stalled = false;
   const progressState = {
@@ -170,7 +186,10 @@ function playGame(gameNumber) {
       move,
       board: cloneBoard(game.board), // kept in-memory for counts; pruned on write
       heuristics: ai.lastChosenFeatures || {},
-      featureContext: ai.lastChosenContext || null,
+      featureContext: {
+        ...(ai.lastChosenContext || {}),
+        startingPlayer
+      },
       valueModel: ai.lastChosenValueModel || null,
       heuristicScore: ai.lastChosenHeuristicScore ?? null,
       // lastMoveTrace intentionally omitted from persisted data
@@ -228,6 +247,7 @@ function playGame(gameNumber) {
   // Detect draw if we hit maxMoves without a winner
   const draw = stalled || !game.gameOver;
   const summary = summarizeGame(game, draw);
+  summary.startingPlayer = startingPlayer;
   if (stalled) summary.stalled = true;
   gameTrace.summary = summary;
   gameTrace.stalled = stalled;
@@ -268,7 +288,8 @@ function playGame(gameNumber) {
             createdAt: new Date().toISOString(),
             aborted: false,
             draw: isDraw,
-            stalled
+            stalled,
+            startingPlayer: trace.summary?.startingPlayer ?? 'red'
           }
         };
 

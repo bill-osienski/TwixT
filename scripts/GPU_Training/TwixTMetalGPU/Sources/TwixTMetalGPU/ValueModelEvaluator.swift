@@ -8,7 +8,7 @@ struct ValueModelEvaluator: Codable {
         let logit: Double?
     }
 
-    private struct Preproc: Codable {
+    struct Preproc: Codable {
         let standardize: Bool
         let mean: [Double]?
         let std: [Double]?

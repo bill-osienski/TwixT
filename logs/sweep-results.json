@@ -1,0 +1,3812 @@
+{
+  "sweeps": [
+    {
+      "timestamp": "2025-10-28T02:23:37.010Z",
+      "totalCombos": 16,
+      "combos": [
+        {
+          "index": 1,
+          "total": 16,
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1,
+          "blackSpanMult": 1,
+          "redDoubleCov": 0,
+          "blackDoubleCovScale": 1,
+          "depth2": {
+            "red": 3,
+            "black": 6,
+            "draw": 1
+          },
+          "depth3": {
+            "red": 5,
+            "black": 4,
+            "draw": 1
+          },
+          "score": 4,
+          "configHash": "68b9adf9710e520b48efb7de6f12fc0ecc2087f9"
+        },
+        {
+          "index": 2,
+          "total": 16,
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1,
+          "blackSpanMult": 1,
+          "redDoubleCov": 600,
+          "blackDoubleCovScale": 0.9,
+          "depth2": {
+            "red": 5,
+            "black": 5,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 4,
+            "black": 5,
+            "draw": 1
+          },
+          "score": 1,
+          "configHash": "68b9adf9710e520b48efb7de6f12fc0ecc2087f9"
+        },
+        {
+          "index": 3,
+          "total": 16,
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1.05,
+          "blackSpanMult": 0.95,
+          "redDoubleCov": 0,
+          "blackDoubleCovScale": 1,
+          "depth2": {
+            "red": 4,
+            "black": 6,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 4,
+            "black": 5,
+            "draw": 1
+          },
+          "score": 3,
+          "configHash": "68b9adf9710e520b48efb7de6f12fc0ecc2087f9"
+        },
+        {
+          "index": 4,
+          "total": 16,
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1.05,
+          "blackSpanMult": 0.95,
+          "redDoubleCov": 600,
+          "blackDoubleCovScale": 0.9,
+          "depth2": {
+            "red": 4,
+            "black": 5,
+            "draw": 1
+          },
+          "depth3": {
+            "red": 3,
+            "black": 6,
+            "draw": 1
+          },
+          "score": 4,
+          "configHash": "68b9adf9710e520b48efb7de6f12fc0ecc2087f9"
+        },
+        {
+          "index": 5,
+          "total": 16,
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1201,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1,
+          "blackSpanMult": 1,
+          "redDoubleCov": 0,
+          "blackDoubleCovScale": 1,
+          "depth2": {
+            "red": 5,
+            "black": 5,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 4,
+            "black": 5,
+            "draw": 1
+          },
+          "score": 1,
+          "configHash": "adf26e952c32f211dc935c1dffe8ea4d86f74c09"
+        },
+        {
+          "index": 6,
+          "total": 16,
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1201,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1,
+          "blackSpanMult": 1,
+          "redDoubleCov": 600,
+          "blackDoubleCovScale": 0.9,
+          "depth2": {
+            "red": 3,
+            "black": 7,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 4,
+            "black": 5,
+            "draw": 1
+          },
+          "score": 5,
+          "configHash": "adf26e952c32f211dc935c1dffe8ea4d86f74c09"
+        },
+        {
+          "index": 7,
+          "total": 16,
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1201,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1.05,
+          "blackSpanMult": 0.95,
+          "redDoubleCov": 0,
+          "blackDoubleCovScale": 1,
+          "depth2": {
+            "red": 7,
+            "black": 3,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 6,
+            "black": 4,
+            "draw": 0
+          },
+          "score": 6,
+          "configHash": "adf26e952c32f211dc935c1dffe8ea4d86f74c09"
+        },
+        {
+          "index": 8,
+          "total": 16,
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1201,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1.05,
+          "blackSpanMult": 0.95,
+          "redDoubleCov": 600,
+          "blackDoubleCovScale": 0.9,
+          "depth2": {
+            "red": 6,
+            "black": 4,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 5,
+            "black": 5,
+            "draw": 0
+          },
+          "score": 2,
+          "configHash": "adf26e952c32f211dc935c1dffe8ea4d86f74c09"
+        },
+        {
+          "index": 9,
+          "total": 16,
+          "firstEdgeRed": 440,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1,
+          "blackSpanMult": 1,
+          "redDoubleCov": 0,
+          "blackDoubleCovScale": 1,
+          "depth2": {
+            "red": 5,
+            "black": 4,
+            "draw": 1
+          },
+          "depth3": {
+            "red": 3,
+            "black": 6,
+            "draw": 1
+          },
+          "score": 4,
+          "configHash": "83a3f96d50e45b365178e64a3c12066bda72df82"
+        },
+        {
+          "index": 10,
+          "total": 16,
+          "firstEdgeRed": 440,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1,
+          "blackSpanMult": 1,
+          "redDoubleCov": 600,
+          "blackDoubleCovScale": 0.9,
+          "depth2": {
+            "red": 3,
+            "black": 7,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 1,
+            "black": 6,
+            "draw": 3
+          },
+          "score": 9,
+          "configHash": "83a3f96d50e45b365178e64a3c12066bda72df82"
+        },
+        {
+          "index": 11,
+          "total": 16,
+          "firstEdgeRed": 440,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1.05,
+          "blackSpanMult": 0.95,
+          "redDoubleCov": 0,
+          "blackDoubleCovScale": 1,
+          "depth2": {
+            "red": 7,
+            "black": 3,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 5,
+            "black": 5,
+            "draw": 0
+          },
+          "score": 4,
+          "configHash": "83a3f96d50e45b365178e64a3c12066bda72df82"
+        },
+        {
+          "index": 12,
+          "total": 16,
+          "firstEdgeRed": 440,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1.05,
+          "blackSpanMult": 0.95,
+          "redDoubleCov": 600,
+          "blackDoubleCovScale": 0.9,
+          "depth2": {
+            "red": 8,
+            "black": 2,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 2,
+            "black": 5,
+            "draw": 3
+          },
+          "score": 9,
+          "configHash": "83a3f96d50e45b365178e64a3c12066bda72df82"
+        },
+        {
+          "index": 13,
+          "total": 16,
+          "firstEdgeRed": 440,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1201,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1,
+          "blackSpanMult": 1,
+          "redDoubleCov": 0,
+          "blackDoubleCovScale": 1,
+          "depth2": {
+            "red": 1,
+            "black": 9,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 5,
+            "black": 5,
+            "draw": 0
+          },
+          "score": 8,
+          "configHash": "d5df56c18eedd90ec212dbdcd02c6931067d0875"
+        },
+        {
+          "index": 14,
+          "total": 16,
+          "firstEdgeRed": 440,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1201,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1,
+          "blackSpanMult": 1,
+          "redDoubleCov": 600,
+          "blackDoubleCovScale": 0.9,
+          "depth2": {
+            "red": 4,
+            "black": 6,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 4,
+            "black": 5,
+            "draw": 1
+          },
+          "score": 3,
+          "configHash": "d5df56c18eedd90ec212dbdcd02c6931067d0875"
+        },
+        {
+          "index": 15,
+          "total": 16,
+          "firstEdgeRed": 440,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1201,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1.05,
+          "blackSpanMult": 0.95,
+          "redDoubleCov": 0,
+          "blackDoubleCovScale": 1,
+          "depth2": {
+            "red": 3,
+            "black": 7,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 2,
+            "black": 5,
+            "draw": 3
+          },
+          "score": 7,
+          "configHash": "d5df56c18eedd90ec212dbdcd02c6931067d0875"
+        },
+        {
+          "index": 16,
+          "total": 16,
+          "firstEdgeRed": 440,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1201,
+          "gapDecay": 23,
+          "redPenaltyFactor": 0.8,
+          "blackFinishScale": 1,
+          "spanBase": 180,
+          "redSpanMult": 1.05,
+          "blackSpanMult": 0.95,
+          "redDoubleCov": 600,
+          "blackDoubleCovScale": 0.9,
+          "depth2": {
+            "red": 6,
+            "black": 4,
+            "draw": 0
+          },
+          "depth3": {
+            "red": 3,
+            "black": 5,
+            "draw": 2
+          },
+          "score": 4,
+          "configHash": "d5df56c18eedd90ec212dbdcd02c6931067d0875"
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-10-28T14:04:42.370Z",
+      "combos": [
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "44eb2f96d5b34680ec3835d7a425486d9b226cc9"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "8e3ccbce611a65ad1b52588891dd8033088f40e6"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "94576182517e193ea450afdbeb053a69eb53b60f"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "ce9807a6eebc37df625382870f7a48bf52770c9d"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "0e593eb6b975a1477f148e259011d2f7a6b22635"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "6cd9937f806554af8ea8b56d658e57519bb5ddd2"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "493d30ad6722a6dde8547848a69faa6eddacd72f"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "2585ddd8bb600ae221551474b49513198f2d787c"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "590fab70b495e253333b730da9cff26794d0a35c"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "d7cc627ade76bbd20a05855a5a668f053ef4c1f6"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "e7832dd5dfb264ee65fa5e463d069fb1e225d7f3"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "088b7b17ddda908ce06845c47a3f3a037a54d327"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 5,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "03e8cc048d0eacd3ac913cfd755cb0c58aa14141"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "e0020df5d255ad4d6df2fb7aba936b3e2e3f5052"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "cd983b58d578578806934bf02433deba7c18f62e"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "608e79b9df837947beaf9e2fc847777e3995a312"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "fd4b8d85fdc84d07345521ca40f48eba518c2cef"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "e128217eadb418ca31d359f99c9513872eccd62e"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "7ef974f47980aa6a85a3690a491ac5eb6fe45400"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "07f4e91111a12e42c971725488e9b8a4e832fa63"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "18ec656c10905559fee8313f9413710c5d186df9"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "1e33d9cc970e344b8ab2ca52c81521068b146d2e"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "0d92391cb72a1075d0a84641e07133f0c544ffc3"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "cdef6b8f6b2fda909369fe27f3a598eabfccd68b"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "f3ebeda14523f72d7ed9d1755abbce78f21dbeb0"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "9ac83c155497d0a8de60613a01e5985be2e2db8e"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "ee81b5cbe5467b34f8ddf82ab7d04a42ad0f20b7"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "f22f8c468dda21733259dd492ef85c3b7b298c93"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 7,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "0352789df55a57d82de426c6bc82d42a0dff4830"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 5,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "edc9df175c51891cb561b0177fa60460cca8a347"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "bdf359ba6cfe52c8d98942dc65fc520a160235d3"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 5,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "d07e0febcf7561c270d0ea07a93fe6dfcac9725f"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 600,
+          "blackDoubleCoverageScale": 0.9,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 2,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 3,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "6983135bcbae9f45760c6b5adff345e678f1986f"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "8e7e7b55f1545c192fe159931b783ab745a19088"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 9,
+          "configHash": "f694828e4e9a54385e8a2fb79dd774e8e24fcf54"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.8,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 10,
+              "black": 0,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 5,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 13,
+          "configHash": "91245fc1b186ba0b976a0aff7afdece1b0dfaaa3"
+        }
+      ],
+      "totalCombos": 36
+    },
+    {
+      "timestamp": "2025-10-29T10:20:16.607Z",
+      "combos": [
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "b017525a497313be4c96ce196c0e0fa6a36ec200"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "2585ddd8bb600ae221551474b49513198f2d787c"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "3a318f1e6d7c984d7068d32d0c1ec68d994ee05f"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "7fbcfec418f4dc6bda8511ef1437b13f3a0637d7"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "5225dcb4011712e817887f5a2d6035f26e270e3a"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "15d5a7c9416822eb8b7ab0f6bdff9a6e7afdaa7b"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "d07e0febcf7561c270d0ea07a93fe6dfcac9725f"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 4,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "6ee2c15c9afd42ebf3b12d5eb0fd5abbe33cfd21"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "db344d056940cad6e75795f79371dcd47684a57b"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 3,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "d7881c2d9ad6f8998486f6692166714e00e3103f"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "6fae275328a506df829695a6cca8a9790a6407af"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "f694828e4e9a54385e8a2fb79dd774e8e24fcf54"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "b8f1a457419d9c8cebc7000b3ec6485115f14934"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "6a700380ccc90359b532af1f5195de0f6c931fd7"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "1190fc58f62c96c7e9b08bc265e5161b01548971"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 2,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "369e469a8f6c8d65fbffe2b17ead965803efa2b6"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "6150f2880135904609e233185ccf125a0f1ecba5"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "f3ebeda14523f72d7ed9d1755abbce78f21dbeb0"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "053b1a1e006f1f81f90d668e02eef5a54b9d7c15"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "fce34f4391e2db9b36c658a994cbcd27018f632d"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "65a4152857d1e6ec46ccdc0a76770a38ca38e331"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "c9bd0c2bad1953cf3b19dbf4ab2c5984c793a7df"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "5e0feb43ee2d3428d90d77e31e1ae2b63182fdd7"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 2,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 11,
+          "configHash": "5d75d3bf62eb21734e1e0ba7cae207e9bef14352"
+        }
+      ],
+      "totalCombos": 24
+    },
+    {
+      "timestamp": "2025-10-31T18:18:23.489Z",
+      "combos": [
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 2,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 5,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 2,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 6,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 1,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 1200,
+          "blackDoubleCoverageScale": 0.7,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 1,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 9,
+          "configHash": null
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.65,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.2,
+          "blackSpanGainMultiplier": 0.8,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 10,
+              "black": 0,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 13,
+          "configHash": null
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-11-02T21:05:39.327Z",
+      "combos": [
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "22ea700ab5f550e1f4bad789f338d2037e2c39d5"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "9aa1ca8bd21423e5b43e7cf27247e1f1c9d295ba"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "2eeabb104d18d8c19e0f4c41454d6f4946744cc3"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "eb931fa7f9bb5e9a95d4f497e9e3843e493bee12"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 3,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "72d6126293ae14f2d8628a2d58ee87013fe37b16"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "a5dd845df0d8d61dafdd65d90984989a3bc21601"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "955794e7a66f128b4605313027b7c74f5757b369"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "184d21a8c1b413c5841c525b50a69237717d8195"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 7,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "0ec753fe90098203919a6026aac5b5a84d349a5f"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "cf95d64e0323f93669e554b3efc14e8dfcd213c2"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "c6f094a7d0bcd9a5ff2f08879aaaa143c5e10d36"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "c9fa1364603a95de0bf3482c003ede6ec7ddc782"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "27b39fb84fbef8c49cd3973d5b22ecda114ac221"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "3604cad049b5e6d204c1e7b74c805d9e229cd74c"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "04759627278b5a4331f290e13d049d80339a90ae"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "cf6cee95d143218c517560a0289dd0fdcd28e861"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "0c7cc9734e8c592548998622ded7e0bce4d596c0"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "a7f14f5074fa7936e034b921d16d479a3411dc30"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 1,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "84487e8263a5fb89686bb1d7fd9d741b9f5ec95e"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "8484836fc5e7167925bfa84b686b193aad164d33"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "f5a343ffb5a6bac3b17e2cc600d9a24102fa598a"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 7,
+              "black": 2,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 9,
+          "configHash": "a83b2d2250fa50508403be7ef1ad05faaca4e00b"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 1,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 11,
+          "configHash": "b0a48aefc2433d99e7b854b97f092ef54ca9060e"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 0,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 11,
+          "configHash": "c0a5bbb0f85c157371374e88b6b0744690c4a23f"
+        }
+      ]
+    }
+  ]
+}

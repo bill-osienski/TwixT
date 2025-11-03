@@ -27,7 +27,8 @@ class SelfPlayEngine {
         var game = GameState()
         var moves: [MoveTrace] = []
 
-        let maxMoves = 220
+        let env = ProcessInfo.processInfo.environment
+        let maxMoves = env["MAX_MOVES"].flatMap { Int($0) }.flatMap { $0 > 0 ? $0 : nil } ?? 220
         var turnCount = 0
 
         if verbose {
@@ -37,8 +38,21 @@ class SelfPlayEngine {
         while turnCount < maxMoves && !game.gameOver {
             let player = game.currentPlayer
 
-            // Choose move using Swift search (parity with JS)
-            guard let bestMove = searchAI.chooseMove(game: game, depth: searchDepth) else {
+            var preferredMoves: [GameState.Move] = []
+            if let metalAI = ai {
+                if let gpuRanking = try? metalAI.evaluateMoves(game: game) {
+                    preferredMoves = gpuRanking
+                        .sorted { $0.score > $1.score }
+                        .map { $0.move }
+                }
+            }
+
+            // Choose move using Swift search (parity with JS) with optional GPU ordering
+            guard let bestMove = searchAI.chooseMove(
+                game: game,
+                depth: searchDepth,
+                preferredMoves: preferredMoves
+            ) else {
                 if verbose {
                     print("[Game \(gameNumber)] No valid moves available")
                 }
