@@ -1107,9 +1107,6 @@ def command_update(args: argparse.Namespace) -> None:
     else:
         print("No outstanding configs require validation.")
 
-    else:
-        print("No outstanding configs require validation.")
-
 
 def apply_combo_to_search(combo: Dict[str, Any], config: Dict[str, Any]) -> None:
     offense = ensure_offense(config)
