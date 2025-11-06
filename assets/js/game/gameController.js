@@ -158,8 +158,7 @@ export default class GameController {
       }
 
       // Force a repaint (keeps your original behavior)
-      // eslint-disable-next-line no-unused-expressions
-      undoButton.offsetHeight;
+      void undoButton.offsetHeight;
     }
   }
 

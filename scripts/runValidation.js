@@ -194,7 +194,6 @@ function runValidation(options) {
   ensureDir(logsDir);
 
   const timestamp = new Date().toISOString();
-  const label = options.label ?? `validation-${timestamp}`;
 
   const logFileName =
     options.log && !options.log.includes('/') && !options.log.includes('\\')

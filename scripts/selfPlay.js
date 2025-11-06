@@ -241,7 +241,7 @@ function playGame(gameNumber) {
           advanced = true;
         }
       }
-    } catch (_) {
+    } catch {
       // If component metrics fail, ignore and continue without breaking.
     }
 

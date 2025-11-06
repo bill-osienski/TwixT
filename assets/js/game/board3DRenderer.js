@@ -83,13 +83,9 @@ export default class Board3DRenderer {
     this.createBoard();
     this.scene.add(this.boardGroup);
 
-    // Track mouse down/up to prevent drag-and-release from placing pieces
-    let mouseDownTime = 0;
-    let mouseDownPos = { x: 0, y: 0 };
-
     this.renderer.domElement.addEventListener('mousedown', (event) => {
-      mouseDownTime = Date.now();
-      mouseDownPos = { x: event.clientX, y: event.clientY };
+      this.mouseDownTime = Date.now();
+      this.mouseDownPosition = { x: event.clientX, y: event.clientY };
     });
 
     // LEFT CLICK HANDLER FOR PIECE PLACEMENT ONLY
@@ -191,7 +187,7 @@ export default class Board3DRenderer {
     const tableGeometry = new THREE.CylinderGeometry(20, 20, 1);
     const tableMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
 
-    const woodTexture = new THREE.TextureLoader().load(
+    new THREE.TextureLoader().load(
       'assets/modernWood1.jpg',
       (texture) => {
         texture.wrapS = THREE.RepeatWrapping;

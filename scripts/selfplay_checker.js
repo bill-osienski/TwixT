@@ -339,7 +339,6 @@ function main() {
       return aNum - bNum;
     })
     .map(([depth, b]) => {
-      const decided = Math.max(1, b.redWins + b.blackWins); // avoid /0 in rate when printing
       const nonDrawGames = b.games - b.draws || 0;
       const redRate = nonDrawGames
         ? +((100 * b.redWins) / nonDrawGames).toFixed(1)

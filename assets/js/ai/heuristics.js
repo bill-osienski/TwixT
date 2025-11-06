@@ -85,7 +85,7 @@ export function evaluatePosition(game, player) {
         score -= 40 * (gapLeft + gapRight);
       }
     }
-  } catch (_) {
+  } catch {
     // If componentMetrics isn't available for some reason, just skip the term.
   }
 
