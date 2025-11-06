@@ -5,21 +5,21 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const scriptsDir = __dirname;            // This file is in scripts/ directory
+const scriptsDir = __dirname; // This file is in scripts/ directory
 const projectRoot = path.dirname(__dirname); // Parent directory (project root)
 
 // ---------------- State ----------------
 const workerProcs = [];
 let consolidatorProc = null;
-let shuttingDown = false;   // controls one-time shutdown sequence
-let aborted = false;        // indicates we received a terminating signal
+let shuttingDown = false; // controls one-time shutdown sequence
+let aborted = false; // indicates we received a terminating signal
 
 // Track worker outcomes (index -> { code, signal })
 const workerResults = new Map();
 
 // ---------------- Helpers ----------------
 function waitCloseOrError(child) {
-  return new Promise(res => {
+  return new Promise((res) => {
     child.once('close', res);
     child.once('error', res);
   });
@@ -33,31 +33,43 @@ async function gracefulShutdown(signal = 'SIGINT', runDir = null) {
 
   // 1) Stop workers first so temp files stop growing
   for (const p of workerProcs) {
-    try { p.kill('SIGTERM'); } catch {}
+    try {
+      p.kill('SIGTERM');
+    } catch {}
   }
   await Promise.race([
-    Promise.all(workerProcs.map(p => waitCloseOrError(p))),
-    new Promise(res => setTimeout(res, 3000))
+    Promise.all(workerProcs.map((p) => waitCloseOrError(p))),
+    new Promise((res) => setTimeout(res, 3000)),
   ]);
   // SIGKILL any stragglers
   for (const p of workerProcs) {
-    if (p.exitCode === null) { try { p.kill('SIGKILL'); } catch {} }
+    if (p.exitCode === null) {
+      try {
+        p.kill('SIGKILL');
+      } catch {}
+    }
   }
 
   // 2) Write sentinel so consolidator knows no more writers are coming
   if (runDir) {
-    try { await fs.writeFile(path.join(runDir, 'writers.done'), ''); } catch {}
+    try {
+      await fs.writeFile(path.join(runDir, 'writers.done'), '');
+    } catch {}
   }
 
   // 3) Ask consolidator to finalize and exit
   if (consolidatorProc) {
-    try { consolidatorProc.kill('SIGINT'); } catch {}
+    try {
+      consolidatorProc.kill('SIGINT');
+    } catch {}
     await Promise.race([
       waitCloseOrError(consolidatorProc),
-      new Promise(res => setTimeout(res, 5000))
+      new Promise((res) => setTimeout(res, 5000)),
     ]);
     if (consolidatorProc.exitCode === null) {
-      try { consolidatorProc.kill('SIGKILL'); } catch {}
+      try {
+        consolidatorProc.kill('SIGKILL');
+      } catch {}
     }
   }
 
@@ -70,21 +82,23 @@ program
   .option('-g, --games <number>', 'total number of self-play games', '60')
   .option('-d, --depth <number>', 'search depth per side', '3')
   .option('-w, --workers <number>', 'number of worker processes', '12')
-  .option('--depth-config <config>',
-    'comma-separated depth plan, e.g. "2:100,3:80" (runs batches sequentially)')
+  .option(
+    '--depth-config <config>',
+    'comma-separated depth plan, e.g. "2:100,3:80" (runs batches sequentially)'
+  )
   .option('--verbose', 'print progress to stdout', false);
 
 program.parse(process.argv);
 const opts = program.opts();
 
 const TOTAL_GAMES_RAW = parseInt(opts.games, 10) || 60;
-const TOTAL_GAMES  = TOTAL_GAMES_RAW;
+const TOTAL_GAMES = TOTAL_GAMES_RAW;
 if (TOTAL_GAMES % 2 !== 0) {
   throw new Error('Total games must be even to balance starting colours.');
 }
 const SEARCH_DEPTH = parseInt(opts.depth, 10) || 3;
-const VERBOSE      = !!opts.verbose;
-const WORKERS      = Math.max(1, parseInt(opts.workers, 10) || 12);
+const VERBOSE = !!opts.verbose;
+const WORKERS = Math.max(1, parseInt(opts.workers, 10) || 12);
 
 function parseDepthConfig(raw) {
   if (!raw) return null;
@@ -95,16 +109,27 @@ function parseDepthConfig(raw) {
     const [depthStr, gamesStr] = trimmed.split(':');
     const depth = parseInt(depthStr, 10);
     const games = parseInt(gamesStr, 10);
-    if (!Number.isFinite(depth) || depth <= 0 || !Number.isFinite(games) || games <= 0) {
-      throw new Error(`Invalid depth-config entry "${segment}". Expected format depth:games with positive integers.`);
+    if (
+      !Number.isFinite(depth) ||
+      depth <= 0 ||
+      !Number.isFinite(games) ||
+      games <= 0
+    ) {
+      throw new Error(
+        `Invalid depth-config entry "${segment}". Expected format depth:games with positive integers.`
+      );
     }
     if (games % 2 !== 0) {
-      throw new Error(`Depth batch "${segment}" must have an even number of games to balance starting colours.`);
+      throw new Error(
+        `Depth batch "${segment}" must have an even number of games to balance starting colours.`
+      );
     }
     batches.push({ depth, games });
   }
   if (batches.length === 0) {
-    throw new Error('depth-config did not contain any valid depth:games pairs.');
+    throw new Error(
+      'depth-config did not contain any valid depth:games pairs.'
+    );
   }
   return batches;
 }
@@ -133,10 +158,12 @@ async function runBatch(totalGames, depth, runLabel) {
   aborted = false;
   const activeWorkerIds = [];
 
-  const runId  = Date.now().toString();
+  const runId = Date.now().toString();
   const runDir = path.join('temp', `run-${runId}`);
 
-  console.log(`\n=== Starting batch${runLabel ? ` ${runLabel}` : ''}: depth ${depth}, ${totalGames} games across ${WORKERS} workers ===`);
+  console.log(
+    `\n=== Starting batch${runLabel ? ` ${runLabel}` : ''}: depth ${depth}, ${totalGames} games across ${WORKERS} workers ===`
+  );
   console.log(`Run ID: ${runId}`);
 
   const startPlan = buildBalancedStartPlan(totalGames);
@@ -145,41 +172,49 @@ async function runBatch(totalGames, depth, runLabel) {
   let gameData;
   try {
     gameData = JSON.parse(await fs.readFile('selfplay.json', 'utf8'));
-    console.log(`Found existing selfplay.json with ${gameData.gameCount} games`);
+    console.log(
+      `Found existing selfplay.json with ${gameData.gameCount} games`
+    );
   } catch {
     gameData = {
       generatedAt: new Date().toISOString(),
       gameCount: 0,
       searchDepth: SEARCH_DEPTH,
-      games: []
+      games: [],
     };
     await fs.writeFile('selfplay.json', JSON.stringify(gameData, null, 2));
     console.log('Created new selfplay.json');
   }
 
   // Precise work distribution (e.g., 61 games → 5 get 10, 1 gets 11)
-  const base  = Math.floor(totalGames / WORKERS);
+  const base = Math.floor(totalGames / WORKERS);
   const extra = totalGames % WORKERS;
 
   // Create run directory
   await fs.mkdir(runDir, { recursive: true });
 
   // Ensure Ctrl+C shuts everything down cleanly
-  ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(sig => {
-    process.once(sig, () => { void gracefulShutdown(sig, runDir); });
+  ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach((sig) => {
+    process.once(sig, () => {
+      void gracefulShutdown(sig, runDir);
+    });
   });
 
   // Spawn consolidator first
   console.log('Starting consolidator...');
-  consolidatorProc = spawn(process.execPath, [
-    path.join(scriptsDir, 'consolidator.js'),
-    `--run-id=${runId}`,
-    `--target-games=${totalGames}`,
-    `--workers=${WORKERS}`
-  ], {
-    stdio: VERBOSE ? 'inherit' : 'pipe',
-    cwd: projectRoot
-  });
+  consolidatorProc = spawn(
+    process.execPath,
+    [
+      path.join(scriptsDir, 'consolidator.js'),
+      `--run-id=${runId}`,
+      `--target-games=${totalGames}`,
+      `--workers=${WORKERS}`,
+    ],
+    {
+      stdio: VERBOSE ? 'inherit' : 'pipe',
+      cwd: projectRoot,
+    }
+  );
 
   // Spawn worker processes
   console.log(`Spawning up to ${WORKERS} worker processes...`);
@@ -195,21 +230,27 @@ async function runBatch(totalGames, depth, runLabel) {
 
     const workerPlan = startPlan.splice(0, gamesForWorker);
 
-    const proc = spawn(process.execPath, [
-      path.join(scriptsDir, 'selfPlay.js'),
-      '-g', gamesForWorker.toString(),
-      '-d', depth.toString(),
-      '--verbose',
-      `--core-id=${i}`,
-      `--run-id=${runId}`
-    ], {
-      stdio: VERBOSE ? 'inherit' : 'pipe',
-      cwd: projectRoot,
-      env: {
-        ...process.env,
-        START_PLAN: workerPlan.join(',')
+    const proc = spawn(
+      process.execPath,
+      [
+        path.join(scriptsDir, 'selfPlay.js'),
+        '-g',
+        gamesForWorker.toString(),
+        '-d',
+        depth.toString(),
+        '--verbose',
+        `--core-id=${i}`,
+        `--run-id=${runId}`,
+      ],
+      {
+        stdio: VERBOSE ? 'inherit' : 'pipe',
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          START_PLAN: workerPlan.join(','),
+        },
       }
-    });
+    );
 
     // Record exit details (code & signal)
     proc.once('exit', (code, signal) => {
@@ -228,13 +269,15 @@ async function runBatch(totalGames, depth, runLabel) {
   }
 
   if (workerProcs.length === 0) {
-    console.log('No workers were launched for this batch (no games assigned). Skipping to next batch.');
+    console.log(
+      'No workers were launched for this batch (no games assigned). Skipping to next batch.'
+    );
     return;
   }
 
   // Wait for ALL active workers to exit (success or error)
   console.log('Waiting for all workers to complete...');
-  await Promise.all(workerProcs.map(p => waitCloseOrError(p)));
+  await Promise.all(workerProcs.map((p) => waitCloseOrError(p)));
 
   // If we were aborted, gracefulShutdown already handled sentinel & consolidator
   if (aborted) {
@@ -243,8 +286,10 @@ async function runBatch(totalGames, depth, runLabel) {
   }
 
   // Assess worker outcomes (only 0 = success)
-  const results = activeWorkerIds.map(id => workerResults.get(id) || { code: 1, signal: null });
-  const failedWorkers = results.filter(r => r.code !== 0);
+  const results = activeWorkerIds.map(
+    (id) => workerResults.get(id) || { code: 1, signal: null }
+  );
+  const failedWorkers = results.filter((r) => r.code !== 0);
   const allOk = failedWorkers.length === 0;
 
   if (allOk) {
@@ -255,9 +300,11 @@ async function runBatch(totalGames, depth, runLabel) {
     let consolidatorExitCode = 0;
     if (consolidatorProc.exitCode !== null) {
       consolidatorExitCode = consolidatorProc.exitCode;
-      console.log(`Consolidator already exited with code ${consolidatorExitCode}`);
+      console.log(
+        `Consolidator already exited with code ${consolidatorExitCode}`
+      );
     } else {
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         consolidatorProc.once('close', (code) => {
           consolidatorExitCode = code ?? 1;
           console.log(`Consolidator exited with code ${code}`);
@@ -272,13 +319,17 @@ async function runBatch(totalGames, depth, runLabel) {
     }
 
     if (consolidatorExitCode === 0) {
-      console.log('✅ Parallel self-play complete! Check selfplay.json for results.');
+      console.log(
+        '✅ Parallel self-play complete! Check selfplay.json for results.'
+      );
     } else {
       console.error('Consolidator failed.');
       throw new Error('Consolidator failed');
     }
   } else {
-    console.error(`Process failures detected: ${failedWorkers.length}/${WORKERS} workers failed.`);
+    console.error(
+      `Process failures detected: ${failedWorkers.length}/${WORKERS} workers failed.`
+    );
     console.error('Skipping consolidator.');
     throw new Error('One or more workers failed');
   }
@@ -290,7 +341,11 @@ async function main() {
     if (depthPlan && depthPlan.length > 0) {
       for (let i = 0; i < depthPlan.length; i++) {
         const batch = depthPlan[i];
-        await runBatch(batch.games, batch.depth, `${i + 1}/${depthPlan.length}`);
+        await runBatch(
+          batch.games,
+          batch.depth,
+          `${i + 1}/${depthPlan.length}`
+        );
       }
       console.log('\nAll depth batches completed successfully.');
     } else {

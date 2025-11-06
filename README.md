@@ -34,7 +34,7 @@ Use `autoTune.py` to manage sweep batches and validation runs end-to-end:
 - `python3 autoTune.py update` → fold the new sweep data into `logs/sweep-results.json` and queue validation targets.
 - `python3 autoTune.py validate --hash <configHash>` → swap `assets/js/ai/search.json`, run `scripts/runValidation.js`, and append results to `logs/validation-results.json`.
 - `python3 autoTune.py report` → summarize top sweep scores, validation balance, and pending work.
-- `python3 autoTune.py loop` → run the whole cycle continuously until a config hits the balance goal or five consecutive cycles show no improvement. Ctrl+C finishes the current cycle before stopping.
+- `python3 autoTune.py loop` → run the whole cycle continuously. The loop now prioritises previously successful hashes, schedules up to eight validations per sweep (using eight workers), automatically persists the first configuration that achieves two consecutive ≤ 3 splits to `assets/js/ai/search.json`, and exits either on success or after plateau validations clear the remaining score ≤ 2 backlog. Ctrl+C cancels the current sweep without writing partial data.
 - Individual knobs that fail to improve their best sweep score for five consecutive cycles are frozen automatically; the loop keeps the best value found and focuses exploration on the remaining knobs.
 
 The legacy `node scripts/tuneBaseline.js` entry point still works for one-off manual sweeps, but the Python wrapper keeps history consistent and tracks config hashes automatically. More detail lives in `docs/baseline-tuning.md`.
@@ -43,7 +43,7 @@ The legacy `node scripts/tuneBaseline.js` entry point still works for one-off ma
 
 - Search parameters live in `assets/js/ai/search.json`.
 - `autoTune.py suggest` analyzes your sweep history to find knobs with strong score trends, prioritizes under-tested ranges, and only falls back to random exploration when it runs out of data-informed candidates.
-- The validation loop considers a config “balanced” once it records two consecutive 60/60 runs where each depth stays within ±3 wins (with ≤6 draws). Those hashes are skipped from future queues automatically.
+- The validation loop considers a config “balanced” once it records two consecutive 60/60 runs where each depth stays within ±3 wins (with ≤6 draws). The first such hash is written to `assets/js/ai/search.json` automatically and the loop exits; failed hashes are excluded from future queues.
 - Validation batches can be run directly with:
   ```
   node scripts/runValidation.js --depth-config=2:60,3:60 --workers=10 --log=validation.log

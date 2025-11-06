@@ -20,9 +20,14 @@ function stableStringify(value) {
     return '[' + value.map((v) => stableStringify(v)).join(',') + ']';
   }
   if (value && typeof value === 'object') {
-    return '{' +
-      Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',') +
-      '}';
+    return (
+      '{' +
+      Object.keys(value)
+        .sort()
+        .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+        .join(',') +
+      '}'
+    );
   }
   return JSON.stringify(value);
 }
@@ -38,14 +43,14 @@ const OPTIONAL_OFFENSE_KEYS = [
   'finishGapSlope',
   'nearFinishBonus',
   'redFinishExtra',
-  'redGapDecayMultiplier'
+  'redGapDecayMultiplier',
 ];
 
 function parseArgs(argv) {
   const options = {
     log: null,
     depthConfig: DEFAULT_DEPTH_CONFIG,
-    workers: DEFAULT_WORKERS
+    workers: DEFAULT_WORKERS,
   };
 
   for (const arg of argv) {
@@ -53,7 +58,7 @@ function parseArgs(argv) {
     const [key, rawValue] = arg.slice(2).split('=', 2);
     const value = rawValue ?? 'true';
     switch (key) {
-            case 'log':
+      case 'log':
         options.log = value;
         break;
       case 'depth-config':
@@ -104,7 +109,7 @@ function aggregateHeuristics(logText) {
         if (!totals[name]) {
           totals[name] = {
             red: { count: 0, sum: 0 },
-            black: { count: 0, sum: 0 }
+            black: { count: 0, sum: 0 },
           };
         }
         if (val.red) {
@@ -157,7 +162,7 @@ function snapshotConfig() {
     redSpanGainMultiplier: offense.redSpanGainMultiplier,
     blackSpanGainMultiplier: offense.blackSpanGainMultiplier,
     redDoubleCoverageBonus: offense.redDoubleCoverageBonus,
-    blackDoubleCoverageScale: offense.blackDoubleCoverageScale
+    blackDoubleCoverageScale: offense.blackDoubleCoverageScale,
   };
   for (const key of OPTIONAL_OFFENSE_KEYS) {
     snapshot[key] = offense[key];
@@ -175,7 +180,7 @@ function computeConfigHash(config) {
     redSpanGainMultiplier: config.redSpanGainMultiplier,
     blackSpanGainMultiplier: config.blackSpanGainMultiplier,
     redDoubleCoverageBonus: config.redDoubleCoverageBonus,
-    blackDoubleCoverageScale: config.blackDoubleCoverageScale
+    blackDoubleCoverageScale: config.blackDoubleCoverageScale,
   };
   for (const key of OPTIONAL_OFFENSE_KEYS) {
     payload[key] = config[key];
@@ -213,18 +218,20 @@ function runValidation(options) {
     `"${options.depthConfig}"`,
     '--workers',
     String(options.workers),
-    '--verbose'
+    '--verbose',
   ].join(' ');
 
   console.log(`Running validation batch: ${command}`);
   const output = execSync(command, {
     cwd: projectRoot,
     stdio: 'pipe',
-    maxBuffer: 1024 * 1024 * 10 // 10 MB
+    maxBuffer: 1024 * 1024 * 10, // 10 MB
   }).toString('utf8');
 
   fs.writeFileSync(logFilePath, output);
-  console.log(`Validation log written to ${path.relative(projectRoot, logFilePath)}`);
+  console.log(
+    `Validation log written to ${path.relative(projectRoot, logFilePath)}`
+  );
 
   const runIdMatch = output.match(/Run ID:\s*(\d+)/);
   const runId = runIdMatch ? runIdMatch[1] : null;
@@ -254,14 +261,14 @@ function runValidation(options) {
     configHash,
     command: {
       depthConfig: options.depthConfig,
-      workers: options.workers
+      workers: options.workers,
     },
     config: configSnapshot,
     gamesRecorded: segment.length,
     wins: statsOverall,
     depth2: statsDepth2,
     depth3: statsDepth3,
-    heuristics
+    heuristics,
   };
 
   const validationSummaryPath = path.join(logsDir, 'validation-results.json');

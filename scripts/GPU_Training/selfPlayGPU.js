@@ -16,7 +16,13 @@ const scriptsDir = __dirname;
 const projectRoot = path.dirname(path.dirname(__dirname));
 
 // Path to compiled Swift binary (in current directory)
-const SWIFT_BINARY = path.join(__dirname, 'TwixTMetalGPU', '.build', 'release', 'twixt-metal-worker');
+const SWIFT_BINARY = path.join(
+  __dirname,
+  'TwixTMetalGPU',
+  '.build',
+  'release',
+  'twixt-metal-worker'
+);
 
 // ---------------- State ----------------
 const workerProcs = [];
@@ -29,7 +35,7 @@ const workerResults = new Map();
 
 // ---------------- Helpers ----------------
 function waitCloseOrError(child) {
-  return new Promise(res => {
+  return new Promise((res) => {
     child.once('close', res);
     child.once('error', res);
   });
@@ -43,32 +49,44 @@ async function gracefulShutdown(signal = 'SIGINT', runDir = null) {
 
   // Stop workers
   for (const p of workerProcs) {
-    try { p.kill('SIGTERM'); } catch {}
+    try {
+      p.kill('SIGTERM');
+    } catch {}
   }
   await Promise.race([
-    Promise.all(workerProcs.map(p => waitCloseOrError(p))),
-    new Promise(res => setTimeout(res, 3000))
+    Promise.all(workerProcs.map((p) => waitCloseOrError(p))),
+    new Promise((res) => setTimeout(res, 3000)),
   ]);
 
   // SIGKILL stragglers
   for (const p of workerProcs) {
-    if (p.exitCode === null) { try { p.kill('SIGKILL'); } catch {} }
+    if (p.exitCode === null) {
+      try {
+        p.kill('SIGKILL');
+      } catch {}
+    }
   }
 
   // Write sentinel
   if (runDir) {
-    try { await fs.writeFile(path.join(runDir, 'writers.done'), ''); } catch {}
+    try {
+      await fs.writeFile(path.join(runDir, 'writers.done'), '');
+    } catch {}
   }
 
   // Stop consolidator
   if (consolidatorProc) {
-    try { consolidatorProc.kill('SIGINT'); } catch {}
+    try {
+      consolidatorProc.kill('SIGINT');
+    } catch {}
     await Promise.race([
       waitCloseOrError(consolidatorProc),
-      new Promise(res => setTimeout(res, 5000))
+      new Promise((res) => setTimeout(res, 5000)),
     ]);
     if (consolidatorProc.exitCode === null) {
-      try { consolidatorProc.kill('SIGKILL'); } catch {}
+      try {
+        consolidatorProc.kill('SIGKILL');
+      } catch {}
     }
   }
 
@@ -80,8 +98,15 @@ async function gracefulShutdown(signal = 'SIGINT', runDir = null) {
 program
   .option('-g, --games <number>', 'total number of self-play games', '60')
   .option('-d, --depth <number>', 'search depth per side', '3')
-  .option('-w, --workers <number>', 'number of GPU workers (default: 6, each uses GPU)', '6')
-  .option('--depth-config <config>', 'multiple depths as "depth:games,depth:games" (e.g., "2:240,3:240")')
+  .option(
+    '-w, --workers <number>',
+    'number of GPU workers (default: 6, each uses GPU)',
+    '6'
+  )
+  .option(
+    '--depth-config <config>',
+    'multiple depths as "depth:games,depth:games" (e.g., "2:240,3:240")'
+  )
   .option('--verbose', 'print progress to stdout', false)
   .option('--build', 'build Swift binary before running', false);
 
@@ -97,18 +122,20 @@ let depthConfigs = [];
 if (opts.depthConfig) {
   // Parse "2:240,3:240" format
   try {
-    depthConfigs = opts.depthConfig.split(',').map(pair => {
+    depthConfigs = opts.depthConfig.split(',').map((pair) => {
       const [depth, games] = pair.trim().split(':');
       return {
         depth: parseInt(depth, 10),
-        games: parseInt(games, 10)
+        games: parseInt(games, 10),
       };
     });
-    if (depthConfigs.some(c => isNaN(c.depth) || isNaN(c.games))) {
+    if (depthConfigs.some((c) => isNaN(c.depth) || isNaN(c.games))) {
       throw new Error('Invalid depth-config format');
     }
   } catch (err) {
-    console.error('✗ Error parsing --depth-config. Expected format: "depth:games,depth:games"');
+    console.error(
+      '✗ Error parsing --depth-config. Expected format: "depth:games,depth:games"'
+    );
     console.error('  Example: "2:240,3:240"');
     process.exit(1);
   }
@@ -149,7 +176,13 @@ async function main() {
 
   // Check for value-mode.json
   const valueModelPath = path.join(projectRoot, 'value-mode.json');
-  const searchConfigPath = path.join(projectRoot, 'assets', 'js', 'ai', 'search.json');
+  const searchConfigPath = path.join(
+    projectRoot,
+    'assets',
+    'js',
+    'ai',
+    'search.json'
+  );
 
   try {
     await fs.access(valueModelPath);
@@ -169,7 +202,7 @@ async function main() {
     console.log(`  Depth:       ${depthConfigs[0].depth}`);
   } else {
     console.log(`  Depth Config:`);
-    depthConfigs.forEach(c => {
+    depthConfigs.forEach((c) => {
       console.log(`    - Depth ${c.depth}: ${c.games} games`);
     });
   }
@@ -180,13 +213,15 @@ async function main() {
   let gameData;
   try {
     gameData = JSON.parse(await fs.readFile(selfplayPath, 'utf8'));
-    console.log(`Found existing selfplay.json with ${gameData.gameCount} games`);
+    console.log(
+      `Found existing selfplay.json with ${gameData.gameCount} games`
+    );
   } catch {
     gameData = {
       generatedAt: new Date().toISOString(),
       gameCount: 0,
       searchDepth: depthConfigs[0].depth,
-      games: []
+      games: [],
     };
     await fs.writeFile(selfplayPath, JSON.stringify(gameData, null, 2));
     console.log('Created new selfplay.json');
@@ -196,22 +231,31 @@ async function main() {
   await fs.mkdir(runDir, { recursive: true });
 
   // Setup shutdown handlers
-  ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(sig => {
-    process.once(sig, () => { void gracefulShutdown(sig, runDir); });
+  ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach((sig) => {
+    process.once(sig, () => {
+      void gracefulShutdown(sig, runDir);
+    });
   });
 
   // Spawn consolidator
   console.log('Starting consolidator...');
-  const consolidatorPath = path.join(path.dirname(scriptsDir), 'consolidator.js');
-  consolidatorProc = spawn(process.execPath, [
-    consolidatorPath,
-    `--run-id=${runId}`,
-    `--target-games=${totalGames}`,
-    `--workers=${WORKERS * depthConfigs.length}`  // Total workers across all depths
-  ], {
-    stdio: VERBOSE ? 'inherit' : 'pipe',
-    cwd: projectRoot
-  });
+  const consolidatorPath = path.join(
+    path.dirname(scriptsDir),
+    'consolidator.js'
+  );
+  consolidatorProc = spawn(
+    process.execPath,
+    [
+      consolidatorPath,
+      `--run-id=${runId}`,
+      `--target-games=${totalGames}`,
+      `--workers=${WORKERS * depthConfigs.length}`, // Total workers across all depths
+    ],
+    {
+      stdio: VERBOSE ? 'inherit' : 'pipe',
+      cwd: projectRoot,
+    }
+  );
 
   // Spawn GPU workers for each depth configuration
   let workerIdCounter = 1;
@@ -222,7 +266,9 @@ async function main() {
 
     if (depthConfigs.length > 1) {
       console.log(`\n${'═'.repeat(60)}`);
-      console.log(`Depth ${depth}: Spawning ${WORKERS} workers for ${games} games`);
+      console.log(
+        `Depth ${depth}: Spawning ${WORKERS} workers for ${games} games`
+      );
       console.log('═'.repeat(60));
     } else {
       console.log(`\nSpawning ${WORKERS} GPU worker processes...\n`);
@@ -236,28 +282,44 @@ async function main() {
       const gamesForWorker = base + (i <= extra ? 1 : 0);
       const workerId = workerIdCounter++;
 
-      console.log(`  GPU Worker ${workerId}: ${gamesForWorker} games @ depth ${depth}`);
+      console.log(
+        `  GPU Worker ${workerId}: ${gamesForWorker} games @ depth ${depth}`
+      );
 
-      const proc = spawn(SWIFT_BINARY, [
-        '-g', gamesForWorker.toString(),
-        '-d', depth.toString(),
-        '--core-id', workerId.toString(),
-        '--run-id', runId,
-        '--value-model', valueModelPath,
-        '--heuristics-config', searchConfigPath,
-        ...(VERBOSE ? ['--verbose'] : [])
-      ], {
-        stdio: VERBOSE ? 'inherit' : 'pipe',
-        cwd: projectRoot
-      });
+      const proc = spawn(
+        SWIFT_BINARY,
+        [
+          '-g',
+          gamesForWorker.toString(),
+          '-d',
+          depth.toString(),
+          '--core-id',
+          workerId.toString(),
+          '--run-id',
+          runId,
+          '--value-model',
+          valueModelPath,
+          '--heuristics-config',
+          searchConfigPath,
+          ...(VERBOSE ? ['--verbose'] : []),
+        ],
+        {
+          stdio: VERBOSE ? 'inherit' : 'pipe',
+          cwd: projectRoot,
+        }
+      );
 
       // Capture output for debugging
       if (!VERBOSE) {
         proc.stdout?.on('data', (data) => {
-          console.log(`[GPU Worker ${workerId} D${depth}] ${data.toString().trim()}`);
+          console.log(
+            `[GPU Worker ${workerId} D${depth}] ${data.toString().trim()}`
+          );
         });
         proc.stderr?.on('data', (data) => {
-          console.error(`[GPU Worker ${workerId} D${depth} ERROR] ${data.toString().trim()}`);
+          console.error(
+            `[GPU Worker ${workerId} D${depth} ERROR] ${data.toString().trim()}`
+          );
         });
       }
 
@@ -265,9 +327,13 @@ async function main() {
         workerResults.set(workerId, { code, signal });
         if (VERBOSE || code !== 0) {
           if (signal) {
-            console.log(`GPU Worker ${workerId} (D${depth}) exited via signal ${signal}`);
+            console.log(
+              `GPU Worker ${workerId} (D${depth}) exited via signal ${signal}`
+            );
           } else {
-            console.log(`GPU Worker ${workerId} (D${depth}) exited with code ${code}`);
+            console.log(
+              `GPU Worker ${workerId} (D${depth}) exited with code ${code}`
+            );
           }
         }
       });
@@ -282,7 +348,7 @@ async function main() {
 
   // Wait for all workers
   console.log('Waiting for GPU workers to complete...');
-  await Promise.all(workerProcs.map(p => waitCloseOrError(p)));
+  await Promise.all(workerProcs.map((p) => waitCloseOrError(p)));
 
   if (aborted) {
     return;
@@ -290,10 +356,11 @@ async function main() {
 
   // Check results
   const totalWorkers = WORKERS * depthConfigs.length;
-  const results = Array.from({ length: totalWorkers }, (_, idx) =>
-    workerResults.get(idx + 1) || { code: 1, signal: null }
+  const results = Array.from(
+    { length: totalWorkers },
+    (_, idx) => workerResults.get(idx + 1) || { code: 1, signal: null }
   );
-  const failedWorkers = results.filter(r => r.code !== 0);
+  const failedWorkers = results.filter((r) => r.code !== 0);
   const allOk = failedWorkers.length === 0;
 
   if (allOk) {
@@ -305,9 +372,11 @@ async function main() {
     let consolidatorExitCode = 0;
     if (consolidatorProc.exitCode !== null) {
       consolidatorExitCode = consolidatorProc.exitCode;
-      console.log(`Consolidator already exited with code ${consolidatorExitCode}`);
+      console.log(
+        `Consolidator already exited with code ${consolidatorExitCode}`
+      );
     } else {
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         consolidatorProc.once('close', (code) => {
           consolidatorExitCode = code ?? 1;
           console.log(`Consolidator exited with code ${code}`);
@@ -333,7 +402,9 @@ async function main() {
       process.exitCode = 1;
     }
   } else {
-    console.error(`\n✗ ${failedWorkers.length}/${totalWorkers} GPU workers failed`);
+    console.error(
+      `\n✗ ${failedWorkers.length}/${totalWorkers} GPU workers failed`
+    );
     console.error('Skipping consolidator');
     process.exitCode = 1;
   }
@@ -346,7 +417,7 @@ async function buildSwiftProject() {
   return new Promise((resolve, reject) => {
     const proc = spawn('swift', ['build', '-c', 'release'], {
       cwd: swiftDir,
-      stdio: 'inherit'
+      stdio: 'inherit',
     });
 
     proc.on('close', (code) => {
@@ -362,7 +433,7 @@ async function buildSwiftProject() {
   });
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('\n✗ Error in GPU self-play:', err);
   process.exit(1);
 });

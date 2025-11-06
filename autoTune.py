@@ -88,6 +88,12 @@ PARITY_THRESHOLD = 3
 DRAW_THRESHOLD = 6
 SUCCESS_VALIDATION_STREAK = 2
 OVERALL_STALL_CYCLES = 5
+VALIDATION_SCORE_CUTOFF = 2
+PLATEAU_SCORE_CUTOFF = 2
+VALIDATION_MAX_PER_CYCLE = 8
+VALIDATION_PARALLEL_WORKERS = 8
+PLATEAU_VALIDATION_WORKERS = 10
+KNOB_STALL_CYCLES = 5
 
 def compute_config_hash(combo: Dict[str, Any]) -> str:
     payload = {key: combo[key] for key in HASH_KEYS}
@@ -158,19 +164,27 @@ def extract_combo_from_config(config: Dict[str, Any]) -> Dict[str, Any]:
     return combo
 
 
+def _prefer_keys(entry: Dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = entry.get(key)
+        if value is not None:
+            return value
+    return None
+
+
 def combo_from_log(entry: Dict[str, Any]) -> Dict[str, Any]:
     combo = {
-        "firstEdgeRed": entry.get("firstEdgeRed"),
-        "firstEdgeBlack": entry.get("firstEdgeBlack"),
-        "finishPenalty": entry.get("finishPenalty"),
-        "gapDecay": entry.get("gapDecay"),
-        "redFinishPenaltyFactor": entry.get("redFinishPenaltyFactor"),
-        "blackFinishScaleMultiplier": entry.get("blackFinishScaleMultiplier"),
-        "spanGainBase": entry.get("spanGainBase") or entry.get("spanBase"),
-        "redSpanGainMultiplier": entry.get("redSpanGainMultiplier") or entry.get("redSpanMult"),
-        "blackSpanGainMultiplier": entry.get("blackSpanGainMultiplier") or entry.get("blackSpanMult"),
-        "redDoubleCoverageBonus": entry.get("redDoubleCoverageBonus") or entry.get("redDoubleCov"),
-        "blackDoubleCoverageScale": entry.get("blackDoubleCoverageScale") or entry.get("blackDoubleCovScale"),
+        "firstEdgeRed": _prefer_keys(entry, "firstEdgeRed"),
+        "firstEdgeBlack": _prefer_keys(entry, "firstEdgeBlack"),
+        "finishPenalty": _prefer_keys(entry, "finishPenalty"),
+        "gapDecay": _prefer_keys(entry, "gapDecay"),
+        "redFinishPenaltyFactor": _prefer_keys(entry, "redFinishPenaltyFactor"),
+        "blackFinishScaleMultiplier": _prefer_keys(entry, "blackFinishScaleMultiplier"),
+        "spanGainBase": _prefer_keys(entry, "spanGainBase", "spanBase"),
+        "redSpanGainMultiplier": _prefer_keys(entry, "redSpanGainMultiplier", "redSpanMult"),
+        "blackSpanGainMultiplier": _prefer_keys(entry, "blackSpanGainMultiplier", "blackSpanMult"),
+        "redDoubleCoverageBonus": _prefer_keys(entry, "redDoubleCoverageBonus", "redDoubleCov"),
+        "blackDoubleCoverageScale": _prefer_keys(entry, "blackDoubleCoverageScale", "blackDoubleCovScale"),
     }
     combo["connectorBonus"] = entry.get("connectorBonus")
     combo["finishThreshold"] = entry.get("finishThreshold")
@@ -315,6 +329,9 @@ def combo_with_defaults(combo: Dict[str, Any], defaults: Dict[str, Any]) -> Dict
             default_value = defaults.get(key)
             if default_value is not None:
                 result[key] = default_value
+    for knob in KNOB_SPECS.keys():
+        if result.get(knob) is None and defaults.get(knob) is not None:
+            result[knob] = defaults[knob]
     if result.get("blackFinishScaleMultiplier") is None:
         result["blackFinishScaleMultiplier"] = defaults.get("blackFinishScaleMultiplier", 1.0)
     if result.get("spanGainBase") is None:
@@ -607,6 +624,7 @@ def select_base_combo(
 
 
 def command_suggest(args: argparse.Namespace) -> None:
+    dry_run = getattr(args, "dry_run", False)
     rng = random.Random(args.seed if args.seed is not None else random.randrange(1 << 30))
     sweeps = load_sweeps()
     search_config = load_search_config()
@@ -753,37 +771,71 @@ def command_suggest(args: argparse.Namespace) -> None:
         "requested": requested,
         "combos": wishlist,
     }
-    write_json(NEXT_SWEEP_PATH, payload)
-
-    state["lastSuggested"] = payload["generatedAt"]
-    state["plannedSweep"] = {
-        "hashes": [c["configHash"] for c in wishlist],
-        "generatedAt": payload["generatedAt"],
-    }
-    save_state(state)
-
-    print(f"Wrote {len(wishlist)} combos to {NEXT_SWEEP_PATH.relative_to(PROJECT_ROOT)}")
+    if dry_run:
+        print(f"[dry-run] Would write {len(wishlist)} combos to {NEXT_SWEEP_PATH.relative_to(PROJECT_ROOT)}")
+    else:
+        write_json(NEXT_SWEEP_PATH, payload)
+        state["lastSuggested"] = payload["generatedAt"]
+        state["plannedSweep"] = {
+            "hashes": [c["configHash"] for c in wishlist],
+            "generatedAt": payload["generatedAt"],
+        }
+        save_state(state)
+        print(f"Wrote {len(wishlist)} combos to {NEXT_SWEEP_PATH.relative_to(PROJECT_ROOT)}")
     for idx, combo in enumerate(wishlist, 1):
         print(f"[{idx:02d}] {combo['origin']:>7} {combo['configHash'][:8]}  {render_combo(combo)}")
 
 
-def command_sweep(_args: argparse.Namespace) -> None:
+def command_sweep(args: Optional[argparse.Namespace] = None) -> bool:
+    dry_run = getattr(args, "dry_run", False) if args else False
+    stop_flag = getattr(args, "stop_requested", False) if args else False
+    if dry_run:
+        print("[dry-run] Skipping tuneBaseline.js")
+        return True
     cmd = ["node", "scripts/tuneBaseline.js"]
     print("Running:", " ".join(cmd))
     try:
-        subprocess.run(cmd, cwd=PROJECT_ROOT, check=True)
+        result = subprocess.run(cmd, cwd=PROJECT_ROOT, check=False)
+        if result.returncode == 0:
+            return True
+        if stop_flag or result.returncode == 1:
+            print("[loop] Sweep aborted before completion.")
+            return False
+        raise subprocess.CalledProcessError(result.returncode, cmd)
     except subprocess.CalledProcessError as exc:
+        if exc.returncode < 0 or stop_flag:
+            print(f"[loop] Sweep aborted (return code {exc.returncode}).")
+            return False
         raise SystemExit(exc.returncode)
 
 
-def recommend_for_validation(entries: List[Dict[str, Any]], limit: int, validated_hashes: set[str]) -> List[Dict[str, Any]]:
-    filtered = [
-        entry for entry in entries
-        if entry["configHash"] and entry["configHash"] not in validated_hashes
-    ]
-    filtered.sort(key=lambda entry: (entry.get("score", 1_000_000), entry["timestamp"]))
+def recommend_for_validation(
+    entries: List[Dict[str, Any]],
+    limit: int,
+    validated_hashes: set[str],
+    streaks: Dict[str, int],
+    validation_counts: Dict[str, int],
+) -> List[Dict[str, Any]]:
+    filtered: List[Dict[str, Any]] = []
+    for entry in entries:
+        cfg_hash = entry.get("configHash")
+        score = entry.get("score")
+        if not cfg_hash or cfg_hash in validated_hashes:
+            continue
+        if score is None or score > VALIDATION_SCORE_CUTOFF:
+            continue
+        if streaks.get(cfg_hash, 0) == 0 and validation_counts.get(cfg_hash, 0) > 0:
+            continue
+        filtered.append(entry)
+    filtered.sort(
+        key=lambda entry: (
+            0 if streaks.get(entry.get("configHash"), 0) > 0 else 1,
+            entry.get("score", 1_000_000),
+            entry["timestamp"],
+        )
+    )
     recommendations: List[Dict[str, Any]] = []
-    for entry in filtered:
+    for entry in filtered[:limit]:
         metrics = compute_metrics(entry)
         if metrics["totalGames"] <= 0:
             continue
@@ -796,12 +848,80 @@ def recommend_for_validation(entries: List[Dict[str, Any]], limit: int, validate
                 "combo": entry["combo"],
             }
         )
-        if len(recommendations) >= limit:
-            break
     return recommendations
 
 
+def compute_validation_counts(
+    validations: List[Dict[str, Any]],
+    defaults: Dict[str, Any],
+) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for run in validations:
+        config_hash = run.get("configHash")
+        if not config_hash:
+            continue
+        normalized_hash = config_hash
+        config_snapshot = run.get("config") or {}
+        if config_snapshot:
+            payload = {}
+            for key in HASH_KEYS:
+                value = config_snapshot.get(key)
+                if value is None:
+                    value = defaults.get(key)
+                payload[key] = value
+            normalized_hash = compute_config_hash(payload)
+        if normalized_hash:
+            counts[normalized_hash] = counts.get(normalized_hash, 0) + 1
+    return counts
+
+
+def outstanding_validation_hashes(
+    score_cutoff: int,
+) -> Tuple[List[str], Dict[str, int], Dict[str, int]]:
+    defaults = offense_snapshot(load_search_config())
+    validations = load_validations()
+    streaks = compute_validation_streaks(validations, defaults)
+    counts = compute_validation_counts(validations, defaults)
+    sweeps = load_sweeps()
+    flattened = flatten_sweeps(sweeps, defaults)
+    best_by_hash: Dict[str, Dict[str, Any]] = {}
+    for entry in flattened:
+        score = entry.get("score")
+        config_hash = entry.get("configHash")
+        timestamp = entry.get("timestamp")
+        if config_hash is None or score is None:
+            continue
+        if score > score_cutoff:
+            continue
+        current = best_by_hash.get(config_hash)
+        if (
+            current is None
+            or score < current["score"]
+            or (score == current["score"] and timestamp > current["timestamp"])
+        ):
+            best_by_hash[config_hash] = {"score": score, "timestamp": timestamp}
+    outstanding: List[Tuple[int, float, str, str]] = []
+    for cfg_hash, info in best_by_hash.items():
+        streak = streaks.get(cfg_hash, 0)
+        if streak >= SUCCESS_VALIDATION_STREAK:
+            continue
+        if counts.get(cfg_hash, 0) > 0 and streak == 0:
+            continue
+        outstanding.append(
+            (
+                -streak,
+                info["score"],
+                info["timestamp"],
+                cfg_hash,
+            )
+        )
+    outstanding.sort()
+    ordered = [cfg_hash for _, _, _, cfg_hash in outstanding]
+    return ordered, streaks, counts
+
+
 def command_update(args: argparse.Namespace) -> None:
+    dry_run = getattr(args, "dry_run", False)
     sweeps = load_sweeps()
     state = load_state()
     last_processed = state.get("lastProcessedSweep")
@@ -818,10 +938,14 @@ def command_update(args: argparse.Namespace) -> None:
     flattened = flatten_sweeps(new_sweeps, baseline_defaults)
     validated_runs = load_validations()
     streaks = compute_validation_streaks(validated_runs, baseline_defaults)
-    normalized_validated_hashes = set(streaks.keys())
-    original_validated_hashes = {run.get("configHash") for run in validated_runs if run.get("configHash")}
+    counts = compute_validation_counts(validated_runs, baseline_defaults)
     successful_hashes = {hash_value for hash_value, streak in streaks.items() if streak >= SUCCESS_VALIDATION_STREAK}
-    skip_hashes = normalized_validated_hashes.union(original_validated_hashes).union(successful_hashes)
+    failed_hashes = {
+        hash_value
+        for hash_value, total in counts.items()
+        if total > 0 and streaks.get(hash_value, 0) == 0
+    }
+    skip_hashes = successful_hashes.union(failed_hashes)
     prune_validated_pending(skip_hashes)
 
     knob_best_entries: Dict[str, Dict[str, Any]] = {}
@@ -878,12 +1002,26 @@ def command_update(args: argparse.Namespace) -> None:
     state["successfulConfigs"] = {hash_value: streaks[hash_value] for hash_value in successful_hashes}
 
     prev_best_score = state.get("bestScore")
+    prev_best_hashes = set(state.get("bestScoreHashes", []))
     if best_score_cycle is not None:
+        current_best_hashes = {
+            entry.get("configHash")
+            for entry in flattened
+            if entry.get("configHash") and entry.get("score") == best_score_cycle
+        }
+        improvement = False
         if prev_best_score is None or best_score_cycle < prev_best_score:
+            improvement = True
+        elif current_best_hashes and current_best_hashes - prev_best_hashes:
+            improvement = True
+        if improvement:
             state["bestScore"] = best_score_cycle
+            state["bestScoreHashes"] = sorted(current_best_hashes)
             state["cyclesSinceScoreImprovement"] = 0
         else:
             state["cyclesSinceScoreImprovement"] = state.get("cyclesSinceScoreImprovement", 0) + 1
+    else:
+        state.setdefault("bestScoreHashes", sorted(prev_best_hashes))
 
     prev_best_streak = state.get("bestStreak", 0)
     if current_best_streak > prev_best_streak:
@@ -892,16 +1030,54 @@ def command_update(args: argparse.Namespace) -> None:
     else:
         state["cyclesSinceStreakImprovement"] = state.get("cyclesSinceStreakImprovement", 0) + 1
 
-    recommendations = recommend_for_validation(flattened, args.limit, skip_hashes)
+    validation_counts: Dict[str, int] = {}
+    for run in validated_runs:
+        config_hash = run.get("configHash")
+        if not config_hash:
+            continue
+        normalized_hash = config_hash
+        config_snapshot = run.get("config") or {}
+        if config_snapshot:
+            payload = {}
+            for key in HASH_KEYS:
+                value = config_snapshot.get(key)
+                if value is None:
+                    value = baseline_defaults.get(key)
+                payload[key] = value
+            normalized_hash = compute_config_hash(payload)
+        if normalized_hash:
+            validation_counts[normalized_hash] = validation_counts.get(normalized_hash, 0) + 1
+
+    eligible_hashes = {
+        hash_value
+        for hash_value, streak in streaks.items()
+        if streak >= SUCCESS_VALIDATION_STREAK
+    }
+    failed_hashes = {
+        hash_value
+        for hash_value, count in validation_counts.items()
+        if count > 0 and streaks.get(hash_value, 0) == 0
+    }
+    skip_hashes = eligible_hashes.union(successful_hashes).union(failed_hashes)
+
+    validation_limit = min(VALIDATION_MAX_PER_CYCLE, max(args.limit, VALIDATION_MAX_PER_CYCLE))
+    recommendations = recommend_for_validation(flattened, validation_limit, skip_hashes, streaks, counts)
     pending_payload = {
         "generatedAt": iso_now(),
         "recommendations": recommendations,
     }
-    write_json(PENDING_VALIDATION_PATH, pending_payload)
+    if dry_run:
+        generated = pending_payload.get("generatedAt")
+        print(f"[dry-run] Would update pending-validation.json at {generated} with {len(recommendations)} entries")
+    else:
+        write_json(PENDING_VALIDATION_PATH, pending_payload)
 
-    state["lastProcessedSweep"] = latest_timestamp
-    state["pendingValidation"] = [entry["configHash"] for entry in recommendations]
-    save_state(state)
+    if dry_run:
+        print("[dry-run] Would update autoTune-state with new sweep metadata")
+    else:
+        state["lastProcessedSweep"] = latest_timestamp
+        state["pendingValidation"] = [entry["configHash"] for entry in recommendations]
+        save_state(state)
 
     print(f"Processed {len(new_sweeps)} new sweep batch(es). Latest timestamp: {latest_timestamp}")
     for entry in flattened:
@@ -931,6 +1107,9 @@ def command_update(args: argparse.Namespace) -> None:
     else:
         print("No outstanding configs require validation.")
 
+    else:
+        print("No outstanding configs require validation.")
+
 
 def apply_combo_to_search(combo: Dict[str, Any], config: Dict[str, Any]) -> None:
     offense = ensure_offense(config)
@@ -951,9 +1130,17 @@ def apply_combo_to_search(combo: Dict[str, Any], config: Dict[str, Any]) -> None
 
 def find_combo_by_hash(config_hash: str) -> Optional[Dict[str, Any]]:
     sweeps = load_sweeps()
+    baseline_defaults = offense_snapshot(load_search_config())
     for sweep in reversed(sweeps):
         for entry in sweep.get("combos", []):
-            if entry.get("configHash") == config_hash:
+            stored_hash = entry.get("configHash")
+            if stored_hash == config_hash:
+                result = dict(entry)
+                result["timestamp"] = sweep.get("timestamp")
+                return result
+            combo_data = combo_with_defaults(combo_from_log(entry), baseline_defaults)
+            normalized_hash = compute_config_hash(to_hash_payload(combo_data))
+            if normalized_hash == config_hash:
                 result = dict(entry)
                 result["timestamp"] = sweep.get("timestamp")
                 return result
@@ -1003,6 +1190,8 @@ def prune_validated_pending(validated_hashes: set[str]) -> None:
 
 
 def command_validate(args: argparse.Namespace) -> None:
+    dry_run = getattr(args, "dry_run", False)
+    stop_flag = getattr(args, "stop_requested", False)
     config_hash = args.hash
     if not config_hash:
         pending = load_json(PENDING_VALIDATION_PATH, {}).get("recommendations", [])
@@ -1029,11 +1218,21 @@ def command_validate(args: argparse.Namespace) -> None:
     if args.log:
         cmd.append(f"--log={args.log}")
 
+    if dry_run:
+        print(f"[dry-run] Would run validation for {config_hash[:8]} with command: {' '.join(cmd)}")
+        if not args.persist:
+            print("[dry-run] Would restore previous search.json after validation.")
+        print("[dry-run] Would remove hash from pending queue.")
+        return
+
     print("Running:", " ".join(cmd))
     try:
         subprocess.run(cmd, cwd=PROJECT_ROOT, check=True)
     except subprocess.CalledProcessError as exc:
         save_search_config(original_config)
+        if exc.returncode < 0 or stop_flag:
+            print(f"[loop] Validation aborted for {config_hash[:8]} (return code {exc.returncode}).")
+            return
         raise SystemExit(exc.returncode)
 
     if not args.persist:
@@ -1043,14 +1242,24 @@ def command_validate(args: argparse.Namespace) -> None:
     remove_pending_hash(config_hash)
 
 
-def aggregate_validation_runs(runs: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def aggregate_validation_runs(runs: Iterable[Dict[str, Any]], defaults: Optional[Dict[str, Any]] = None) -> Dict[str, Dict[str, Any]]:
     aggregated: Dict[str, Dict[str, Any]] = {}
     for run in runs:
-        config_hash = run.get("configHash")
-        if not config_hash:
+        original_hash = run.get("configHash")
+        if not original_hash:
             continue
+        config_snapshot = run.get("config") or {}
+        normalized_hash = original_hash
+        if config_snapshot:
+            payload = {}
+            for key in HASH_KEYS:
+                value = config_snapshot.get(key)
+                if value is None and defaults is not None:
+                    value = defaults.get(key)
+                payload[key] = value
+            normalized_hash = compute_config_hash(payload)
         bucket = aggregated.setdefault(
-            config_hash,
+            normalized_hash,
             {
                 "games": 0,
                 "red": 0,
@@ -1059,8 +1268,10 @@ def aggregate_validation_runs(runs: Iterable[Dict[str, Any]]) -> Dict[str, Dict[
                 "depth2": {"red": 0, "black": 0, "draw": 0},
                 "depth3": {"red": 0, "black": 0, "draw": 0},
                 "runs": 0,
+                "originalHashes": set(),
             },
         )
+        bucket["originalHashes"].add(original_hash)
         bucket["games"] += run.get("gamesRecorded", 0)
         wins = run.get("wins", {})
         bucket["red"] += wins.get("red", 0)
@@ -1071,7 +1282,12 @@ def aggregate_validation_runs(runs: Iterable[Dict[str, Any]]) -> Dict[str, Dict[
             for side in ("red", "black", "draw"):
                 bucket[depth_key][side] += depth_data.get(side, 0)
         bucket["runs"] += 1
-    return aggregated
+    # Convert sets to sorted lists for stable output
+    final: Dict[str, Dict[str, Any]] = {}
+    for key, value in aggregated.items():
+        value["originalHashes"] = sorted(value["originalHashes"])
+        final[key] = value
+    return final
 
 
 def validation_run_meets_goal(run: Dict[str, Any]) -> bool:
@@ -1114,6 +1330,7 @@ def compute_validation_streaks(runs: List[Dict[str, Any]], defaults: Optional[Di
 
 def command_loop(args: argparse.Namespace) -> None:
     stop_requested = False
+    dry_run = getattr(args, "dry_run", False)
 
     def handle_sigint(signum, frame):
         nonlocal stop_requested
@@ -1121,7 +1338,7 @@ def command_loop(args: argparse.Namespace) -> None:
             print("\n[loop] Second interrupt received. Exiting immediately.")
             raise SystemExit(130)
         stop_requested = True
-        print("\n[loop] Stop requested. Finishing current cycle before exiting...")
+        print("\n[loop] Stop requested. Attempting to cancel the current sweep...")
 
     previous_handler = signal.signal(signal.SIGINT, handle_sigint)
 
@@ -1140,6 +1357,7 @@ def command_loop(args: argparse.Namespace) -> None:
                 exploit=args.exploit,
                 seed=seed_value,
                 allow_duplicates=False,
+                dry_run=dry_run,
             )
             try:
                 command_suggest(suggest_args)
@@ -1147,14 +1365,16 @@ def command_loop(args: argparse.Namespace) -> None:
                 print(f"[loop] Suggest stage failed with exit code {exc.code}. Stopping loop.")
                 return
 
-            sweep_args = argparse.Namespace()
+            sweep_args = argparse.Namespace(dry_run=dry_run, stop_requested=stop_requested)
             try:
-                command_sweep(sweep_args)
+                sweep_ok = command_sweep(sweep_args)
             except SystemExit as exc:
                 print(f"[loop] Sweep stage failed with exit code {exc.code}. Stopping loop.")
                 return
+            if not sweep_ok:
+                break
 
-            update_args = argparse.Namespace(limit=args.limit)
+            update_args = argparse.Namespace(limit=args.limit, dry_run=dry_run)
             try:
                 command_update(update_args)
             except SystemExit as exc:
@@ -1173,34 +1393,88 @@ def command_loop(args: argparse.Namespace) -> None:
                     validate_args = argparse.Namespace(
                         hash=hash_value,
                         depth_config=args.depth_config,
-                        workers=args.workers,
+                        workers=str(VALIDATION_PARALLEL_WORKERS),
                         log=log_name,
                         persist=args.persist,
+                        dry_run=dry_run,
+                        stop_requested=stop_requested,
                     )
                     try:
                         command_validate(validate_args)
                     except SystemExit as exc:
                         print(f"[loop] Validation for {hash_value[:8]} failed with exit code {exc.code}. Stopping loop.")
                         return
+                    if stop_requested:
+                        break
             else:
                 print("[loop] No pending validations after update.")
+
+            if dry_run:
+                print("[dry-run] Completed simulated cycle.")
+                break
 
             state = load_state()
             successful_configs = state.get("successfulConfigs", {})
             if successful_configs:
                 print("\n[loop] Validation goal reached by:")
-                for hash_value, streak in successful_configs.items():
-                    print(f"  {hash_value[:8]} streak={streak}")
+                winning_hashes = sorted(successful_configs.keys())
+                for hash_value in winning_hashes:
+                    print(f"  {hash_value[:8]} streak={successful_configs[hash_value]}")
+                # Persist the first winning configuration to search.json
+                winner = winning_hashes[0]
+                record = find_combo_by_hash(winner)
+                if record:
+                    combo = combo_with_defaults(combo_from_log(record), offense_snapshot(load_search_config()))
+                    config = load_search_config()
+                    apply_combo_to_search(combo, config)
+                    save_search_config(config)
+                    print(f"\n[loop] Persisted winning config {winner[:8]} to {SEARCH_PATH.relative_to(PROJECT_ROOT)}")
+                    print("Knob values:")
+                    for key, value in combo.items():
+                        if key in HASH_KEYS:
+                            print(f"  {key} = {value}")
+                else:
+                    print("[loop] Warning: could not locate winning combo details to persist.")
                 break
 
             stall_score = state.get("cyclesSinceScoreImprovement", 0)
             stall_streak = state.get("cyclesSinceStreakImprovement", 0)
             best_streak = state.get("bestStreak", 0)
             if best_streak < SUCCESS_VALIDATION_STREAK and max(stall_score, stall_streak) >= OVERALL_STALL_CYCLES:
-                print(
-                    f"\n[loop] No improvement in sweep score or validation streak for {OVERALL_STALL_CYCLES} cycles. "
-                    "Consider expanding knob ranges or adjusting the tuning strategy."
-                )
+                plateau_hashes, _, _ = outstanding_validation_hashes(PLATEAU_SCORE_CUTOFF)
+                plateau_hashes = [h for h in plateau_hashes if h not in state.get("successfulConfigs", {})]
+                if plateau_hashes:
+                    print(
+                        f"\n[loop] Plateau detected after {OVERALL_STALL_CYCLES} cycles without improvement.\n"
+                        "Validating remaining high-scoring configurations before exiting..."
+                    )
+                    while plateau_hashes and not state.get("successfulConfigs") and not stop_requested:
+                        target_hash = plateau_hashes.pop(0)
+                        log_name = f"{args.log_prefix}-plateau-{target_hash[:8]}.log"
+                        validate_args = argparse.Namespace(
+                            hash=target_hash,
+                            depth_config=args.depth_config,
+                            workers=str(PLATEAU_VALIDATION_WORKERS),
+                            log=log_name,
+                            persist=args.persist,
+                            dry_run=dry_run,
+                            stop_requested=stop_requested,
+                        )
+                        try:
+                            command_validate(validate_args)
+                        except SystemExit as exc:
+                            print(f"[loop] Validation for {target_hash[:8]} failed with exit code {exc.code}. Stopping loop.")
+                            return
+                        state = load_state()
+                        plateau_hashes, _, _ = outstanding_validation_hashes(VALIDATION_SCORE_CUTOFF)
+                        plateau_hashes = [h for h in plateau_hashes if h not in state.get("successfulConfigs", {})]
+                    if not state.get("successfulConfigs"):
+                        print("[loop] Plateau validation backlog cleared. Exiting.")
+                else:
+                    print(
+                        f"\n[loop] No improvement in sweep score or validation streak for {OVERALL_STALL_CYCLES} cycles. "
+                        "Consider expanding knob ranges or adjusting the tuning strategy."
+                    )
                 break
 
             if args.max_cycles is not None and cycle >= args.max_cycles:
@@ -1219,7 +1493,7 @@ def command_report(_args: argparse.Namespace) -> None:
     baseline_defaults = offense_snapshot(load_search_config())
     flattened = flatten_sweeps(sweeps, baseline_defaults)
     validations = load_validations()
-    aggregated_validations = aggregate_validation_runs(validations)
+    aggregated_validations = aggregate_validation_runs(validations, baseline_defaults)
     streaks = compute_validation_streaks(validations, baseline_defaults)
     successful_hashes = {hash_value for hash_value, streak in streaks.items() if streak >= SUCCESS_VALIDATION_STREAK}
 
@@ -1317,6 +1591,7 @@ def build_parser() -> argparse.ArgumentParser:
     loop_parser.add_argument("--log-prefix", default="loop-validation", help="Prefix for validation log files")
     loop_parser.add_argument("--persist", action="store_true", help="Keep last validated config in search.json")
     loop_parser.add_argument("--max-cycles", type=int, default=None, help="Optional cap on loop iterations")
+    loop_parser.add_argument("--dry-run", action="store_true", help="Simulate the loop without running sweeps or validations")
     loop_parser.set_defaults(func=command_loop)
 
     return parser

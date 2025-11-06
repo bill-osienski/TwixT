@@ -24,7 +24,7 @@ const merged = {
   gameCompleted: 0,
   searchDepth: null,
   games: [],
-  sources: []
+  sources: [],
 };
 
 function coerceNumber(value) {
@@ -60,18 +60,15 @@ for (const input of inputs) {
       generatedAt: data?.generatedAt ?? null,
       searchDepth: data?.searchDepth ?? null,
       requested: data?.gameRequested ?? null,
-      completed: data?.gameCompleted ?? games.length
-    }
+      completed: data?.gameCompleted ?? games.length,
+    },
   });
 }
 
 merged.gameCount = merged.games.length;
 
 try {
-  await fs.writeFile(
-    options.output,
-    JSON.stringify(merged, null, 2)
-  );
+  await fs.writeFile(options.output, JSON.stringify(merged, null, 2));
   console.log(`Combined ${merged.gameCount} games into ${options.output}`);
 } catch (err) {
   console.error(`Failed to write "${options.output}":`, err?.message || err);

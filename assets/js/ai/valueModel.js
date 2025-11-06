@@ -22,13 +22,14 @@
 }
 */
 
-const isBrowser = typeof window !== "undefined" && typeof window.document !== "undefined";
+const isBrowser =
+  typeof window !== 'undefined' && typeof window.document !== 'undefined';
 
 // Where to look by default
-const DEFAULT_BROWSER_PATH = "/assets/value-model.json";
+const DEFAULT_BROWSER_PATH = '/assets/value-model.json';
 const NODE_CANDIDATES = [
-  "value-model.json",            // project root
-  "assets/value-model.json"      // assets folder
+  'value-model.json', // project root
+  'assets/value-model.json', // assets folder
 ];
 
 let _model = null;
@@ -36,17 +37,22 @@ let _lastSource = null;
 
 // ---------- I/O helpers ----------
 async function readTextNode(path) {
-  const fs = await import("fs/promises");
-  return fs.readFile(path, "utf8");
+  const fs = await import('fs/promises');
+  return fs.readFile(path, 'utf8');
 }
 
 async function pathExistsNode(path) {
-  const fs = await import("fs/promises");
-  try { await fs.stat(path); return true; } catch { return false; }
+  const fs = await import('fs/promises');
+  try {
+    await fs.stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function fetchTextBrowser(url) {
-  const res = await fetch(url, { cache: "no-cache" });
+  const res = await fetch(url, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
   return res.text();
 }
@@ -61,7 +67,7 @@ async function readModelSource(pathOrUrl) {
   // Node:
   if (pathOrUrl) {
     if (/^https?:\/\//i.test(pathOrUrl)) {
-      const { default: fetch } = await import("node-fetch");
+      const { default: fetch } = await import('node-fetch');
       const res = await fetch(pathOrUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status} for ${pathOrUrl}`);
       return await res.json();
@@ -81,17 +87,17 @@ async function readModelSource(pathOrUrl) {
 
   // Last resort: browser-style default (useful if running under a server)
   try {
-    const txt = await readTextNode(DEFAULT_BROWSER_PATH.replace(/^\//, "")); // "assets/value-model.json"
+    const txt = await readTextNode(DEFAULT_BROWSER_PATH.replace(/^\//, '')); // "assets/value-model.json"
     return JSON.parse(txt);
   } catch {
-    throw new Error("value-model.json not found in project root or assets/");
+    throw new Error('value-model.json not found in project root or assets/');
   }
 }
 
 // ---------- math helpers ----------
 function sigmoid(z) {
   if (z < -35) return 1e-15;
-  if (z >  35) return 1 - 1e-15;
+  if (z > 35) return 1 - 1e-15;
   return 1 / (1 + Math.exp(-z));
 }
 
@@ -99,7 +105,7 @@ function sigmoid(z) {
 function applyPreproc(x, preproc) {
   if (!preproc || !preproc.standardize) return x;
   const mu = preproc.mean || null;
-  const sd = preproc.std  || null;
+  const sd = preproc.std || null;
   if (!mu || !sd || mu.length !== x.length || sd.length !== x.length) {
     // Model says standardize but mu/std are missing or wrong length—fallback safely
     return x;
@@ -119,10 +125,7 @@ function buildFeatureVector(model, heuristics = {}, featureContext = {}) {
   for (let i = 0; i < keys.length; i++) {
     const k = keys[i];
     // numbers may arrive as strings; coerce safely
-    let v =
-      heuristics[k] ??
-      featureContext[k] ??
-      0;
+    let v = heuristics[k] ?? featureContext[k] ?? 0;
     if (v == null || Number.isNaN(+v)) v = 0;
     x[i] = +v;
   }
@@ -135,7 +138,7 @@ export async function ensureValueModelLoaded(pathOrUrl) {
   const payload = await readModelSource(pathOrUrl);
   validateModel(payload);
   _model = payload;
-  _lastSource = pathOrUrl || "(auto)";
+  _lastSource = pathOrUrl || '(auto)';
   return _model;
 }
 
@@ -149,13 +152,17 @@ export function getLoadedModel() {
 
 // Optional, lazy loader used by search.js. Safe if the file is missing.
 let _loadPromise = null;
-export async function maybeLoadValueModel(pathOrUrl = '/assets/value-model.json') {
+export async function maybeLoadValueModel(
+  pathOrUrl = '/assets/value-model.json'
+) {
   if (isModelLoaded()) return getLoadedModel();
   if (_loadPromise) return _loadPromise;
 
   _loadPromise = ensureValueModelLoaded(pathOrUrl)
     .catch(() => null) // swallow errors so human-vs-human still works
-    .finally(() => { _loadPromise = null; });
+    .finally(() => {
+      _loadPromise = null;
+    });
 
   return _loadPromise;
 }
@@ -182,27 +189,38 @@ export function evaluateValueModel(heuristics = {}, featureContext = {}) {
     z += w[i + 1] * x[i];
   }
   const p = sigmoid(z);
-  return { probability: p, logit: z, adjustment: (p - 0.5) };
+  return { probability: p, logit: z, adjustment: p - 0.5 };
 }
 
 // ---------- validation ----------
 function validateModel(m) {
-  if (!m || typeof m !== "object") {
-    throw new Error("Invalid value model: not an object.");
+  if (!m || typeof m !== 'object') {
+    throw new Error('Invalid value model: not an object.');
   }
   if (!Array.isArray(m.weights) || m.weights.length < 2) {
     throw new Error("Invalid value model: missing usable 'weights'.");
   }
-  if (!Array.isArray(m.feature_keys) || m.feature_keys.length !== (m.weights.length - 1)) {
-    throw new Error("Invalid value model: 'feature_keys' must align with weights (minus bias).");
+  if (
+    !Array.isArray(m.feature_keys) ||
+    m.feature_keys.length !== m.weights.length - 1
+  ) {
+    throw new Error(
+      "Invalid value model: 'feature_keys' must align with weights (minus bias)."
+    );
   }
   // Optional preproc fields are fine; if present, lengths should match feature_keys.
   if (m.preproc && m.preproc.standardize) {
     const mu = m.preproc.mean;
     const sd = m.preproc.std;
-    if (!Array.isArray(mu) || !Array.isArray(sd) ||
-        mu.length !== m.feature_keys.length || sd.length !== m.feature_keys.length) {
-      throw new Error("Invalid value model: preproc.mean/std must match feature_keys length.");
+    if (
+      !Array.isArray(mu) ||
+      !Array.isArray(sd) ||
+      mu.length !== m.feature_keys.length ||
+      sd.length !== m.feature_keys.length
+    ) {
+      throw new Error(
+        'Invalid value model: preproc.mean/std must match feature_keys length.'
+      );
     }
   }
 }
@@ -212,5 +230,5 @@ export default {
   isModelLoaded,
   getLoadedModel,
   maybeLoadValueModel,
-  evaluateValueModel
+  evaluateValueModel,
 };

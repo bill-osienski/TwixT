@@ -1,24 +1,133 @@
 {
-  "lastSuggested": "2025-11-03T02:17:49.652Z",
+  "lastSuggested": "2025-11-06T01:27:59.818Z",
   "plannedSweep": {
     "hashes": [
-      "a21077dc24a3cecb378e023c35cf5b987f896540",
+      "ff16219f8fe13f9693cddf479b871099be32d8f2",
+      "a46ec7a3fc627b76fc414a41ad8e7eb06924381f",
       "05285397f5cd1e592cc7b18daa72d16b88b481d6",
-      "7214b093cf5f63759297da92d7da0533fcf1c6bd"
+      "f4486f375b6de9cb0d670247d8f6a0810ef4f917",
+      "74391532918c523a8b53d3d69a67d5848102d693",
+      "b460b156ff408552a4231d3755c3261c4d35d969",
+      "f30aec88e9beb4928daa57a45e71e4f6a22f8a36",
+      "9f0a38f63f001f70b8432c1fa278e9769bf6300f",
+      "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4",
+      "cecc7b46ce5cc47caebc1e472c346f4c845d1453",
+      "14fcc572d6a42e2de9dbb741214a5091f833eb25",
+      "dd16771a8d2b03a543a02cbfefed03938d0092a8",
+      "dc7491433278ba395ed02ff6a040c343d7c48324",
+      "b662c89317045dcbf60a5fb5760a669eed1712da",
+      "7dd65f77f435919810e955bb5727213557f0f998",
+      "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6",
+      "23f864ab0ba30db124748440156b5ea27dbec241",
+      "0f41af519dcc973ad51540cfc9c73c38794e50ab",
+      "674b747f24070e05363463f8d9fe37f893144fb4",
+      "4c4baa97149ec7f51bb999cda7088edf4fd99726",
+      "c5f541ee34657dc369f22f88655a5187dace2952",
+      "d63d84863dd61ebd0fe79e3d1741347155ed25cc",
+      "6664459cb68ce1a7391a62b0cd43c03d33e4d663",
+      "62f1804116651b7ebc5d917def3c8359e4158fad"
     ],
-    "generatedAt": "2025-11-03T02:17:49.652Z"
+    "generatedAt": "2025-11-06T01:27:59.818Z"
   },
   "validationStreaks": {
     "2e161adf34171c19a1dae9461dd9897c6dcfda72": 0,
     "03e1e6e553aa28e911279861e467dd11d680eaf2": 0,
     "e171462123c022140529e9f887064519bbed1fb9": 0,
-    "c128a65b04eaa46dc672ba310f3738d4f7460d87": 0
+    "c128a65b04eaa46dc672ba310f3738d4f7460d87": 0,
+    "5c39d5e9e244600ab1230d937c8421943b95cd65": 0,
+    "069166346dfa28fd2af2640c4380cb742e941222": 0,
+    "fac876f5a7eb280ad841ab854bcc76376266c5c4": 0,
+    "8ef1ebaef51efccdfa8495e46fdbf75f025a9f55": 0,
+    "96c31e46aff29a65f8a20b47c54297f7fdd7f6c6": 0,
+    "7f68ea82991c99df4f9537b331aa1393b83ecd6c": 0,
+    "0f84de18c863c31b952b3aee83b0770a8ed19795": 0,
+    "cc52979edf590b9360d6b37f67dbf74a68b99457": 0,
+    "02cfd48a6f9ff15fe4bc66c1e82ab0f122259768": 0,
+    "93cf53ee44146255403d6f8d8d78e2affa9e8777": 0,
+    "c4a63dc6c82e180b07b5de832a5d30d06bf10d34": 0,
+    "6d867e84286c1e8d36e198e3c8633a9ded8abced": 0,
+    "2846908784518901debc76e1207e4472f7b1e9a8": 0,
+    "6d018aa578fb03151820e38ea887b34c89b017a2": 0,
+    "80976e4adb0a427b1f537edd4a356f5ed0c11c4f": 0,
+    "fe4a18c42222c5c2811d36a1e8aaa438cd6c9a9f": 0,
+    "a4a33e659efe29bf916107b5d3cbbe8585894a86": 0,
+    "d0ab168b95b1684248eb8c4b97dd9ab0d5fdcaa7": 0,
+    "0e8afccc081a05e8a32724e8e5e443b2b681799e": 0,
+    "79ca15d7dec0a71802e74437da3b963f58595829": 0,
+    "0d76140caed4d472918c3186db49f0d5da336a27": 0,
+    "a21077dc24a3cecb378e023c35cf5b987f896540": 0,
+    "7214b093cf5f63759297da92d7da0533fcf1c6bd": 0,
+    "078b8bcd239ad958f14cecd9769a91d305535e21": 1,
+    "366c28d35aec637d99d7473c5bc6dc35bc2103cf": 0,
+    "995fbaf43047f30012c1d09f7565ef2ab3b21b2d": 0,
+    "5d44e49497aade31a887f7ad67214e3797ab52c6": 0,
+    "d20079018c2674c623ac5e39edcbbeb4ab36db4e": 0,
+    "ff323d4e4bee1b22d93c3df500fe2d5ab024efad": 0,
+    "9f36c640194633df15dba36de6a864fc9a7301e7": 0,
+    "423e6fe5903666fd890efc460c1be47a14ec43bc": 0
   },
   "successfulConfigs": {},
-  "lastProcessedSweep": "2025-11-02T21:05:39.327Z",
-  "pendingValidation": [
-    "17a524e0e7b31009281d334306df986e53125eff",
-    "a21077dc24a3cecb378e023c35cf5b987f896540",
-    "27830a009989259a9d4dd56daa320c4e48d1f30f"
-  ]
+  "lastProcessedSweep": "2025-11-05T19:05:28.348Z",
+  "pendingValidation": [],
+  "knobStats": {
+    "firstEdgeRed": {
+      "bestScore": 0,
+      "bestValue": 415,
+      "cyclesSinceImprovement": 0,
+      "frozen": false
+    },
+    "firstEdgeBlack": {
+      "bestScore": 0,
+      "bestValue": 455,
+      "cyclesSinceImprovement": 0,
+      "frozen": false
+    },
+    "finishPenalty": {
+      "bestScore": 0,
+      "bestValue": 1181,
+      "cyclesSinceImprovement": 0,
+      "frozen": true
+    },
+    "redFinishPenaltyFactor": {
+      "bestScore": 0,
+      "bestValue": 0.2,
+      "cyclesSinceImprovement": 0,
+      "frozen": false
+    },
+    "blackFinishScaleMultiplier": {
+      "bestScore": 0,
+      "bestValue": 1,
+      "cyclesSinceImprovement": 0,
+      "frozen": true
+    },
+    "redSpanGainMultiplier": {
+      "bestScore": 0,
+      "bestValue": 1,
+      "cyclesSinceImprovement": 0,
+      "frozen": false
+    },
+    "blackSpanGainMultiplier": {
+      "bestScore": 0,
+      "bestValue": 1,
+      "cyclesSinceImprovement": 0,
+      "frozen": false
+    },
+    "redDoubleCoverageBonus": {
+      "bestScore": 0,
+      "bestValue": 1500,
+      "cyclesSinceImprovement": 0,
+      "frozen": false
+    },
+    "blackDoubleCoverageScale": {
+      "bestScore": 0,
+      "bestValue": 1,
+      "cyclesSinceImprovement": 0,
+      "frozen": false
+    }
+  },
+  "bestScore": 99999,
+  "cyclesSinceScoreImprovement": 0,
+  "cyclesSinceStreakImprovement": 0,
+  "bestStreak": 1,
+  "bestScoreHashes": []
 }

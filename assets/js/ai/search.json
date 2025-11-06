@@ -30,15 +30,15 @@
         "finishGapSlope": 150,
         "nearFinishBonus": 2500,
         "redFinishExtra": 0,
-        "redSpanGainMultiplier": 1,
+        "redSpanGainMultiplier": 1.1,
         "redGapDecayMultiplier": 1,
-        "redFinishPenaltyFactor": 0.6,
+        "redFinishPenaltyFactor": 0.2,
         "blackFinishScaleMultiplier": 1,
         "blackSpanGainMultiplier": 1,
-        "blackDoubleCoverageScale": 0.6,
+        "blackDoubleCoverageScale": 1,
         "firstEdgeTouchBlack": 455,
-        "firstEdgeTouchRed": 420,
-        "redDoubleCoverageBonus": 1500
+        "firstEdgeTouchRed": 415,
+        "redDoubleCoverageBonus": 0
       },
       "defense": {
         "blockBonus": 900,

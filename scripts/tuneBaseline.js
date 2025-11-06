@@ -22,6 +22,8 @@ const projectRoot = path.resolve(__dirname, '..');
 const searchPath = path.join(projectRoot, 'assets/js/ai/search.json');
 const selfPlayPath = path.join(projectRoot, 'selfplay.json');
 const tempDir = path.join(projectRoot, 'temp');
+const logsDir = path.join(projectRoot, 'logs');
+const nextSweepPath = path.join(logsDir, 'next-sweep.json');
 
 const originalConfig = JSON.parse(fs.readFileSync(searchPath, 'utf8'));
 
@@ -33,6 +35,9 @@ const redFinishPenaltyFactorBase = edgeOffense.redFinishPenaltyFactor;
 const blackFinishScaleMultiplierBase = edgeOffense.blackFinishScaleMultiplier;
 const redSpanGainMultiplierBase = edgeOffense.redSpanGainMultiplier;
 const blackSpanGainMultiplierBase = edgeOffense.blackSpanGainMultiplier;
+const redDoubleCoverageBonusBase = edgeOffense.redDoubleCoverageBonus ?? 0;
+const blackDoubleCoverageScaleBase =
+  edgeOffense.blackDoubleCoverageScale ?? 1.0;
 const OPTIONAL_OFFENSE_KEYS = [
   'connectorBonus',
   'finishThreshold',
@@ -42,7 +47,7 @@ const OPTIONAL_OFFENSE_KEYS = [
   'finishGapSlope',
   'nearFinishBonus',
   'redFinishExtra',
-  'redGapDecayMultiplier'
+  'redGapDecayMultiplier',
 ];
 const optionalOffenseDefaults = OPTIONAL_OFFENSE_KEYS.reduce((acc, key) => {
   acc[key] = edgeOffense[key];
@@ -52,41 +57,53 @@ const optionalOffenseDefaults = OPTIONAL_OFFENSE_KEYS.reduce((acc, key) => {
 const firstEdgePairs = [
   { red: 415, black: 455 },
   { red: 420, black: 455 },
-  { red: 420, black: 460 }
+  { red: 420, black: 460 },
 ];
 const finishPenaltyOptions = [1181];
 const gapDecayOptions = [gapDecayBase];
 const stallOptions = [
   {
-    redFinishPenaltyFactor: Number((redFinishPenaltyFactorBase - 0.2).toFixed(2)),
-    blackFinishScaleMultiplier: Number(blackFinishScaleMultiplierBase.toFixed(2))
+    redFinishPenaltyFactor: Number(
+      (redFinishPenaltyFactorBase - 0.2).toFixed(2)
+    ),
+    blackFinishScaleMultiplier: Number(
+      blackFinishScaleMultiplierBase.toFixed(2)
+    ),
   },
   {
-    redFinishPenaltyFactor: Number((redFinishPenaltyFactorBase - 0.15).toFixed(2)),
-    blackFinishScaleMultiplier: Number(blackFinishScaleMultiplierBase.toFixed(2))
-  }
+    redFinishPenaltyFactor: Number(
+      (redFinishPenaltyFactorBase - 0.15).toFixed(2)
+    ),
+    blackFinishScaleMultiplier: Number(
+      blackFinishScaleMultiplierBase.toFixed(2)
+    ),
+  },
 ];
 const spanOptions = [
   {
     spanGainBase: spanGainBase,
     redSpanGainMultiplier: Number(redSpanGainMultiplierBase.toFixed(2)),
-    blackSpanGainMultiplier: Number(blackSpanGainMultiplierBase.toFixed(2))
+    blackSpanGainMultiplier: Number(blackSpanGainMultiplierBase.toFixed(2)),
   },
   {
     spanGainBase: spanGainBase,
-    redSpanGainMultiplier: Number((redSpanGainMultiplierBase + 0.15).toFixed(2)),
-    blackSpanGainMultiplier: Number((blackSpanGainMultiplierBase - 0.15).toFixed(2))
-  }
+    redSpanGainMultiplier: Number(
+      (redSpanGainMultiplierBase + 0.15).toFixed(2)
+    ),
+    blackSpanGainMultiplier: Number(
+      (blackSpanGainMultiplierBase - 0.15).toFixed(2)
+    ),
+  },
 ];
 const doubleCoverageOptions = [
   {
     redDoubleCoverageBonus: 0,
-    blackDoubleCoverageScale: 1.0
+    blackDoubleCoverageScale: 1.0,
   },
   {
     redDoubleCoverageBonus: 1500,
-    blackDoubleCoverageScale: 0.6
-  }
+    blackDoubleCoverageScale: 0.6,
+  },
 ];
 
 function stableStringify(value) {
@@ -116,7 +133,7 @@ function computeConfigHash(combo) {
     redSpanGainMultiplier: combo.redSpanGainMultiplier,
     blackSpanGainMultiplier: combo.blackSpanGainMultiplier,
     redDoubleCoverageBonus: combo.redDoubleCoverageBonus,
-    blackDoubleCoverageScale: combo.blackDoubleCoverageScale
+    blackDoubleCoverageScale: combo.blackDoubleCoverageScale,
   };
   for (const key of OPTIONAL_OFFENSE_KEYS) {
     payload[key] = combo[key];
@@ -125,34 +142,137 @@ function computeConfigHash(combo) {
   return crypto.createHash('sha1').update(json).digest('hex');
 }
 
-const combos = [];
-for (const firstEdge of firstEdgePairs) {
-  for (const finishPenalty of finishPenaltyOptions) {
-    for (const gapDecay of gapDecayOptions) {
-      for (const stall of stallOptions) {
-        for (const span of spanOptions) {
-          for (const coverage of doubleCoverageOptions) {
-            const entry = {
-              firstEdge,
-              finishPenalty,
-              gapDecay,
-              redFinishPenaltyFactor: stall.redFinishPenaltyFactor,
-              blackFinishScaleMultiplier: stall.blackFinishScaleMultiplier,
-              spanGainBase: span.spanGainBase,
-              redSpanGainMultiplier: span.redSpanGainMultiplier,
-              blackSpanGainMultiplier: span.blackSpanGainMultiplier,
-              redDoubleCoverageBonus: coverage.redDoubleCoverageBonus,
-              blackDoubleCoverageScale: coverage.blackDoubleCoverageScale
-            };
-            for (const key of OPTIONAL_OFFENSE_KEYS) {
-              entry[key] = optionalOffenseDefaults[key];
+function coerceNumber(value, fallback) {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
+  }
+  const asNumber = Number(value);
+  return Number.isFinite(asNumber) ? asNumber : fallback;
+}
+
+function applyOptionalDefaults(target, source) {
+  for (const key of OPTIONAL_OFFENSE_KEYS) {
+    if (
+      Object.prototype.hasOwnProperty.call(source, key) &&
+      source[key] !== undefined &&
+      source[key] !== null
+    ) {
+      target[key] = source[key];
+    } else if (!Object.prototype.hasOwnProperty.call(target, key)) {
+      target[key] = optionalOffenseDefaults[key];
+    }
+  }
+}
+
+function buildDefaultCombos() {
+  const defaults = [];
+  for (const firstEdge of firstEdgePairs) {
+    for (const finishPenalty of finishPenaltyOptions) {
+      for (const gapDecay of gapDecayOptions) {
+        for (const stall of stallOptions) {
+          for (const span of spanOptions) {
+            for (const coverage of doubleCoverageOptions) {
+              const entry = {
+                firstEdge,
+                finishPenalty,
+                gapDecay,
+                redFinishPenaltyFactor: stall.redFinishPenaltyFactor,
+                blackFinishScaleMultiplier: stall.blackFinishScaleMultiplier,
+                spanGainBase: span.spanGainBase,
+                redSpanGainMultiplier: span.redSpanGainMultiplier,
+                blackSpanGainMultiplier: span.blackSpanGainMultiplier,
+                redDoubleCoverageBonus: coverage.redDoubleCoverageBonus,
+                blackDoubleCoverageScale: coverage.blackDoubleCoverageScale,
+                origin: 'grid',
+              };
+              applyOptionalDefaults(entry, {});
+              defaults.push(entry);
             }
-            combos.push(entry);
           }
         }
       }
     }
   }
+  return defaults;
+}
+
+function loadPlannedCombos() {
+  if (!fs.existsSync(nextSweepPath)) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(fs.readFileSync(nextSweepPath, 'utf8'));
+    const planned = Array.isArray(payload.combos) ? payload.combos : [];
+    if (!planned.length) {
+      return null;
+    }
+    const mapped = planned.map((raw) => {
+      const firstEdgeRed = coerceNumber(
+        raw.firstEdgeRed ?? raw.firstEdge?.red,
+        edgeOffense.firstEdgeTouchRed
+      );
+      const firstEdgeBlack = coerceNumber(
+        raw.firstEdgeBlack ?? raw.firstEdge?.black,
+        edgeOffense.firstEdgeTouchBlack
+      );
+      const entry = {
+        firstEdge: { red: firstEdgeRed, black: firstEdgeBlack },
+        finishPenalty: coerceNumber(
+          raw.finishPenalty ?? raw.finishPenaltyBase,
+          finishPenaltyBase
+        ),
+        gapDecay: coerceNumber(raw.gapDecay, gapDecayBase),
+        redFinishPenaltyFactor: coerceNumber(
+          raw.redFinishPenaltyFactor,
+          redFinishPenaltyFactorBase
+        ),
+        blackFinishScaleMultiplier: coerceNumber(
+          raw.blackFinishScaleMultiplier,
+          blackFinishScaleMultiplierBase
+        ),
+        spanGainBase: coerceNumber(raw.spanGainBase, spanGainBase),
+        redSpanGainMultiplier: coerceNumber(
+          raw.redSpanGainMultiplier,
+          redSpanGainMultiplierBase
+        ),
+        blackSpanGainMultiplier: coerceNumber(
+          raw.blackSpanGainMultiplier,
+          blackSpanGainMultiplierBase
+        ),
+        redDoubleCoverageBonus: coerceNumber(
+          raw.redDoubleCoverageBonus,
+          redDoubleCoverageBonusBase
+        ),
+        blackDoubleCoverageScale: coerceNumber(
+          raw.blackDoubleCoverageScale,
+          blackDoubleCoverageScaleBase
+        ),
+        origin: raw.origin || 'plan',
+        sourceSweep: raw.sourceSweep || null,
+      };
+      applyOptionalDefaults(entry, raw);
+      if (raw.configHash) {
+        entry.configHash = raw.configHash;
+      }
+      return entry;
+    });
+    console.log(
+      `Loaded ${mapped.length} combos from ${path.relative(projectRoot, nextSweepPath)}`
+    );
+    return mapped;
+  } catch (err) {
+    console.warn(
+      `Failed to parse ${path.relative(projectRoot, nextSweepPath)}. Falling back to default grid.`,
+      err
+    );
+    return null;
+  }
+}
+
+let combos = loadPlannedCombos();
+if (!combos) {
+  combos = buildDefaultCombos();
+  console.log(`Using default sweep grid (${combos.length} combos).`);
 }
 
 function writeConfig(config) {
@@ -172,10 +292,11 @@ function cleanOutputs() {
 }
 
 function runSelfPlay() {
-  const cmd = 'node scripts/selfPlayParallel.js --depth-config "2:10,3:10" --workers 10 --verbose';
+  const cmd =
+    'node scripts/selfPlayParallel.js --depth-config "2:10,3:10" --workers 10 --verbose';
   execSync(cmd, {
     cwd: projectRoot,
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
 }
 
@@ -204,7 +325,7 @@ function evaluateSelfPlay() {
   const depth3Games = games.slice(half);
   return {
     depth2: tallyGames(depth2Games),
-    depth3: tallyGames(depth3Games)
+    depth3: tallyGames(depth3Games),
   };
 }
 
@@ -254,9 +375,10 @@ for (let i = 0; i < combos.length; i++) {
   writeConfig(candidate);
   cleanOutputs();
 
+  const originLabel = combo.origin ? `[${combo.origin}] ` : '';
   console.log(
-    `Combo ${i + 1}/${combos.length}: ` +
-    `firstEdgeRed=${combo.firstEdge.red}, firstEdgeBlack=${combo.firstEdge.black}, finishPenalty=${combo.finishPenalty}, gapDecay=${combo.gapDecay}, ` +
+    `Combo ${i + 1}/${combos.length}: ${originLabel}` +
+      `firstEdgeRed=${combo.firstEdge.red}, firstEdgeBlack=${combo.firstEdge.black}, finishPenalty=${combo.finishPenalty}, gapDecay=${combo.gapDecay}, ` +
       `redPenaltyFactor=${combo.redFinishPenaltyFactor}, blackFinishScale=${combo.blackFinishScaleMultiplier}, ` +
       `spanBase=${combo.spanGainBase}, redSpanMult=${combo.redSpanGainMultiplier}, blackSpanMult=${combo.blackSpanGainMultiplier}, ` +
       `redDoubleCov=${combo.redDoubleCoverageBonus}, blackDoubleCovScale=${combo.blackDoubleCoverageScale}`
@@ -265,16 +387,21 @@ for (let i = 0; i < combos.length; i++) {
 
   const evaluation = evaluateSelfPlay();
   const score = scoreResult(evaluation);
-  const configHash = computeConfigHash(combo);
+  const configHash = combo.configHash || computeConfigHash(combo);
   results.push({ combo, evaluation, score, configHash });
 
-  console.log(`  Depth2: red=${evaluation.depth2.red}, black=${evaluation.depth2.black}, draw=${evaluation.depth2.draw}`);
-  console.log(`  Depth3: red=${evaluation.depth3.red}, black=${evaluation.depth3.black}, draw=${evaluation.depth3.draw}`);
+  console.log(
+    `  Depth2: red=${evaluation.depth2.red}, black=${evaluation.depth2.black}, draw=${evaluation.depth2.draw}`
+  );
+  console.log(
+    `  Depth3: red=${evaluation.depth3.red}, black=${evaluation.depth3.black}, draw=${evaluation.depth3.draw}`
+  );
   console.log(`  Score (lower is better): ${score}\n`);
 }
 
 writeConfig(originalConfig);
 
+const completedAllCombos = results.length === combos.length;
 results.sort((a, b) => a.score - b.score);
 
 console.log('\n=== Sweep complete ===\n');
@@ -286,14 +413,25 @@ for (const { combo, evaluation, score } of results.slice(0, 10)) {
       `spanBase=${combo.spanGainBase}, redSpanMult=${combo.redSpanGainMultiplier}, blackSpanMult=${combo.blackSpanGainMultiplier}, ` +
       `redDoubleCov=${combo.redDoubleCoverageBonus}, blackDoubleCovScale=${combo.blackDoubleCoverageScale}, score=${score}, configHash=${computeConfigHash(combo)}`
   );
-  console.log(`  Depth2 => ${evaluation.depth2.red}-${evaluation.depth2.black}-${evaluation.depth2.draw}`);
-  console.log(`  Depth3 => ${evaluation.depth3.red}-${evaluation.depth3.black}-${evaluation.depth3.draw}\n`);
+  console.log(
+    `  Depth2 => ${evaluation.depth2.red}-${evaluation.depth2.black}-${evaluation.depth2.draw}`
+  );
+  console.log(
+    `  Depth3 => ${evaluation.depth3.red}-${evaluation.depth3.black}-${evaluation.depth3.draw}\n`
+  );
 }
 
 console.log('Original search.json restored.');
 
+if (!completedAllCombos) {
+  console.warn(
+    `Sweep aborted: completed ${results.length} of ${combos.length} combos. ` +
+      'Partial results were discarded.'
+  );
+  process.exit(1);
+}
+
 try {
-  const logsDir = path.join(projectRoot, 'logs');
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir);
   }
@@ -322,11 +460,13 @@ try {
       }, {}),
       evaluation,
       score,
-      configHash
-    }))
+      configHash,
+    })),
   });
   fs.writeFileSync(consolidatedPath, JSON.stringify(consolidated, null, 2));
-  console.log(`Sweep results appended to ${path.relative(projectRoot, consolidatedPath)}`);
+  console.log(
+    `Sweep results appended to ${path.relative(projectRoot, consolidatedPath)}`
+  );
 } catch (err) {
   console.error('Failed to write sweep log:', err);
 }

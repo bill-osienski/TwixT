@@ -1,351 +1,392 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TwixT 3D Game</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        overflow: hidden;
+        color: #fff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+
+      #game-container {
+        width: 100%;
+        max-width: 1200px;
+        height: 90vh;
+        position: relative;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 20px;
+        padding: 20px;
+      }
+
+      #canvas {
+        width: 100%;
+        height: 70%;
+        border-radius: 15px;
+        position: relative;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      .ui-overlay {
+        padding: 20px 0;
+      }
+
+      .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .game-title {
+        font-size: 2rem;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .game-status {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        padding: 10px 20px;
+        border-radius: 25px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .current-player {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      .player-red {
+        background: #ff4757;
+        box-shadow: 0 0 10px #ff4757;
+      }
+      .player-black {
+        background: #111;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
         }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            overflow: hidden;
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        50% {
+          transform: scale(1.2);
         }
+      }
 
-        #game-container {
-            width: 100%;
-            max-width: 1200px;
-            height: 90vh;
-            position: relative;
-            background: rgba(0,0,0,0.2);
-            border-radius: 20px;
-            padding: 20px;
+      .controls {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 20px;
+      }
+
+      button {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-weight: 600;
+      }
+
+      button:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      button:disabled {
+        opacity: 0.3 !important;
+        cursor: not-allowed !important;
+        background: rgba(100, 100, 100, 0.2) !important;
+      }
+
+      button:not(:disabled) {
+        opacity: 1 !important;
+        cursor: pointer !important;
+      }
+
+      .winner-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.95);
+        padding: 50px;
+        border-radius: 20px;
+        text-align: center;
+        display: none;
+        backdrop-filter: blur(20px);
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        z-index: 10000;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+        min-width: 300px;
+      }
+
+      .winner-modal.show {
+        display: block !important;
+        animation: fadeIn 0.5s;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -45%);
         }
-
-        #canvas {
-            width: 100%;
-            height: 70%;
-            border-radius: 15px;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            overflow: hidden;
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%);
         }
+      }
 
-        .ui-overlay {
-            padding: 20px 0;
-        }
+      .winner-text {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+        font-weight: bold;
+      }
 
-        .game-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
+      .three-canvas {
+        width: 100%;
+        height: 100%;
+      }
 
-        .game-title {
-            font-size: 2rem;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
+      .instructions {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        max-width: 250px;
+        line-height: 1.5;
+        display: none;
+      }
 
-        .game-status {
-            background: rgba(255,255,255,0.2);
-            backdrop-filter: blur(10px);
-            padding: 10px 20px;
-            border-radius: 25px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+      .instructions.show {
+        display: block;
+      }
 
-        .current-player {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
+      .move-indicator {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-top: 5px;
+      }
 
-        .player-red { background: #ff4757; box-shadow: 0 0 10px #ff4757; }
-        .player-black { background: #111; box-shadow: 0 0 10px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); }
+      /* Game Mode Selection Modals */
+      .game-mode-modal,
+      .difficulty-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+      }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-        }
+      .modal-content {
+        background: rgba(0, 0, 0, 0.9);
+        padding: 40px;
+        border-radius: 20px;
+        text-align: center;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+        max-width: 500px;
+        width: 90%;
+      }
 
-        .controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 20px;
-        }
+      .modal-content h2 {
+        font-size: 2rem;
+        margin-bottom: 30px;
+        color: white;
+      }
 
-        button {
-            background: rgba(255,255,255,0.2);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
+      .mode-buttons,
+      .difficulty-buttons {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        width: 100%;
+      }
 
-        button:hover:not(:disabled) {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
+      .mode-button,
+      .difficulty-button {
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 20px 25px;
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+        min-width: 180px;
+      }
 
-        button:disabled {
-            opacity: 0.3 !important;
-            cursor: not-allowed !important;
-            background: rgba(100,100,100,0.2) !important;
-        }
+      .mode-button:hover,
+      .difficulty-button:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      }
 
-        button:not(:disabled) {
-            opacity: 1 !important;
-            cursor: pointer !important;
-        }
+      .mode-button h3,
+      .difficulty-button h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.3rem;
+      }
 
-        .winner-modal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95);
-            padding: 50px;
-            border-radius: 20px;
-            text-align: center;
-            display: none;
-            backdrop-filter: blur(20px);
-            border: 3px solid rgba(255,255,255,0.3);
-            z-index: 10000;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-            min-width: 300px;
-        }
+      .mode-button p,
+      .difficulty-button p {
+        margin: 0;
+        opacity: 0.8;
+        font-size: 0.9rem;
+      }
 
-        .winner-modal.show {
-            display: block !important;
-            animation: fadeIn 0.5s;
-        }
+      .difficulty-button.easy {
+        border-color: #27ae60;
+      }
+      .difficulty-button.medium {
+        border-color: #f39c12;
+      }
+      .difficulty-button.hard {
+        border-color: #e74c3c;
+      }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translate(-50%, -45%); }
-            to { opacity: 1; transform: translate(-50%, -50%); }
-        }
-
-        .winner-text {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-
-        .three-canvas {
-            width: 100%;
-            height: 100%;
-        }
-
-        .instructions {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            max-width: 250px;
-            line-height: 1.5;
-            display: none;
-        }
-
-        .instructions.show {
-            display: block;
-        }
-
-        .move-indicator {
-            font-size: 0.9rem;
-            opacity: 0.8;
-            margin-top: 5px;
-        }
-
-        /* Game Mode Selection Modals */
-        .game-mode-modal, .difficulty-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-        }
-
-        .modal-content {
-            background: rgba(0,0,0,0.9);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            border: 3px solid rgba(255,255,255,0.3);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-            max-width: 500px;
-            width: 90%;
-        }
-
-        .modal-content h2 {
-            font-size: 2rem;
-            margin-bottom: 30px;
-            color: white;
-        }
-
-        .mode-buttons, .difficulty-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-            width: 100%;
-        }
-
-        .mode-button, .difficulty-button {
-            background: rgba(255,255,255,0.1);
-            border: 2px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 20px 25px;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s;
-            min-width: 180px;
-        }
-
-        .mode-button:hover, .difficulty-button:hover {
-            background: rgba(255,255,255,0.2);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-        }
-
-        .mode-button h3, .difficulty-button h3 {
-            margin: 0 0 10px 0;
-            font-size: 1.3rem;
-        }
-
-        .mode-button p, .difficulty-button p {
-            margin: 0;
-            opacity: 0.8;
-            font-size: 0.9rem;
-        }
-
-        .difficulty-button.easy { border-color: #27ae60; }
-        .difficulty-button.medium { border-color: #f39c12; }
-        .difficulty-button.hard { border-color: #e74c3c; }
-
-        .difficulty-button.easy:hover { background: rgba(39, 174, 96, 0.2); }
-        .difficulty-button.medium:hover { background: rgba(243, 156, 18, 0.2); }
-        .difficulty-button.hard:hover { background: rgba(231, 76, 60, 0.2); }
+      .difficulty-button.easy:hover {
+        background: rgba(39, 174, 96, 0.2);
+      }
+      .difficulty-button.medium:hover {
+        background: rgba(243, 156, 18, 0.2);
+      }
+      .difficulty-button.hard:hover {
+        background: rgba(231, 76, 60, 0.2);
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div id="game-container">
-        <div class="ui-overlay">
-            <div class="game-header">
-                <h1 class="game-title">TwixT</h1>
-                <div class="game-status" role="status" aria-live="polite">
-                    <span>Current Player:</span>
-                    <span class="current-player player-red" id="current-player"></span>
-                    <span id="player-name">Red</span>
-                </div>
-            </div>
+      <div class="ui-overlay">
+        <div class="game-header">
+          <h1 class="game-title">TwixT</h1>
+          <div class="game-status" role="status" aria-live="polite">
+            <span>Current Player:</span>
+            <span class="current-player player-red" id="current-player"></span>
+            <span id="player-name">Red</span>
+          </div>
         </div>
+      </div>
 
-        <div id="canvas">
-            <canvas class="three-canvas" id="three-canvas"></canvas>
+      <div id="canvas">
+        <canvas class="three-canvas" id="three-canvas"></canvas>
+      </div>
+
+      <div class="controls">
+        <button id="new-game" aria-label="Start new game">New Game</button>
+        <button id="undo" aria-label="Undo last move">Undo</button>
+        <button id="help" aria-label="Toggle help">Help</button>
+      </div>
+
+      <!-- Game Mode Selection Modal -->
+      <div class="game-mode-modal" id="game-mode-modal" style="display: flex">
+        <div class="modal-content">
+          <h2>Select Game Mode</h2>
+          <div class="mode-buttons">
+            <button id="two-player-mode" class="mode-button">
+              <h3>2 Player Mode</h3>
+              <p>Play against another human</p>
+            </button>
+            <button id="one-player-mode" class="mode-button">
+              <h3>1 Player Mode</h3>
+              <p>Play against AI</p>
+            </button>
+          </div>
         </div>
+      </div>
 
-        <div class="controls">
-            <button id="new-game" aria-label="Start new game">New Game</button>
-            <button id="undo" aria-label="Undo last move">Undo</button>
-            <button id="help" aria-label="Toggle help">Help</button>
+      <!-- AI Difficulty Selection Modal -->
+      <div class="difficulty-modal" id="difficulty-modal" style="display: none">
+        <div class="modal-content">
+          <h2>Select AI Difficulty</h2>
+          <div class="difficulty-buttons">
+            <button id="easy-ai" class="difficulty-button easy">
+              <h3>Easy</h3>
+              <p>Good for beginners</p>
+            </button>
+            <button id="medium-ai" class="difficulty-button medium">
+              <h3>Medium</h3>
+              <p>Balanced challenge</p>
+            </button>
+            <button id="hard-ai" class="difficulty-button hard">
+              <h3>Hard</h3>
+              <p>Strategic opponent</p>
+            </button>
+          </div>
         </div>
+      </div>
 
-        <!-- Game Mode Selection Modal -->
-        <div class="game-mode-modal" id="game-mode-modal" style="display: flex;">
-            <div class="modal-content">
-                <h2>Select Game Mode</h2>
-                <div class="mode-buttons">
-                    <button id="two-player-mode" class="mode-button">
-                        <h3>2 Player Mode</h3>
-                        <p>Play against another human</p>
-                    </button>
-                    <button id="one-player-mode" class="mode-button">
-                        <h3>1 Player Mode</h3>
-                        <p>Play against AI</p>
-                    </button>
-                </div>
-            </div>
-        </div>
+      <div class="move-indicator" id="move-count"></div>
 
-        <!-- AI Difficulty Selection Modal -->
-        <div class="difficulty-modal" id="difficulty-modal" style="display: none;">
-            <div class="modal-content">
-                <h2>Select AI Difficulty</h2>
-                <div class="difficulty-buttons">
-                    <button id="easy-ai" class="difficulty-button easy">
-                        <h3>Easy</h3>
-                        <p>Good for beginners</p>
-                    </button>
-                    <button id="medium-ai" class="difficulty-button medium">
-                        <h3>Medium</h3>
-                        <p>Balanced challenge</p>
-                    </button>
-                    <button id="hard-ai" class="difficulty-button hard">
-                        <h3>Hard</h3>
-                        <p>Strategic opponent</p>
-                    </button>
-                </div>
-            </div>
-        </div>
+      <div class="instructions" id="instructions">
+        <strong>How to Play:</strong><br />
+        • Red must cross from top goal line to bottom goal line<br />
+        • Black must cross from left goal line to right goal line<br />
+        • Click empty holes to place pegs<br />
+        • Pegs connect via knight's moves<br />
+        • Bridges cannot cross<br />
+        • First to cross their goal lines wins!<br /><br />
+        <strong>Keyboard:</strong><br />
+        • U - Undo move<br />
+        • N - New game<br />
+        • H - Toggle help
+      </div>
 
-        <div class="move-indicator" id="move-count"></div>
-
-
-        <div class="instructions" id="instructions">
-            <strong>How to Play:</strong><br>
-            • Red must cross from top goal line to bottom goal line<br>
-            • Black must cross from left goal line to right goal line<br>
-            • Click empty holes to place pegs<br>
-            • Pegs connect via knight's moves<br>
-            • Bridges cannot cross<br>
-            • First to cross their goal lines wins!<br><br>
-            <strong>Keyboard:</strong><br>
-            • U - Undo move<br>
-            • N - New game<br>
-            • H - Toggle help
-        </div>
-
-        <div class="winner-modal" id="winner-modal" role="dialog" aria-labelledby="winner-text">
-            <div class="winner-text" id="winner-text"></div>
-            <button id="play-again">Play Again</button>
-        </div>
+      <div
+        class="winner-modal"
+        id="winner-modal"
+        role="dialog"
+        aria-labelledby="winner-text"
+      >
+        <div class="winner-text" id="winner-text"></div>
+        <button id="play-again">Play Again</button>
+      </div>
     </div>
 
     <script type="module" src="./assets/js/main.js?v=dev-003"></script>
-</body>
+  </body>
 </html>

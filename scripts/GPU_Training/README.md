@@ -29,13 +29,13 @@ Use this script to spin up multiple Node.js workers on the CPU-only engine (the 
 
 #### Key options
 
-| Argument | Short | Default | Description |
-|----------|-------|---------|-------------|
-| `--games <number>` | `-g` | `60` | Total number of games when using a single depth |
-| `--depth <number>` | `-d` | `3` | Search depth for single-depth runs |
-| `--depth-config <config>` | - | - | Comma-separated batches, e.g. `"2:100,3:80"` |
-| `--workers <number>` | `-w` | `12` | Worker processes (defaults to logical cores) |
-| `--verbose` | — | `false` | Stream worker output directly to the console |
+| Argument                  | Short | Default | Description                                     |
+| ------------------------- | ----- | ------- | ----------------------------------------------- |
+| `--games <number>`        | `-g`  | `60`    | Total number of games when using a single depth |
+| `--depth <number>`        | `-d`  | `3`     | Search depth for single-depth runs              |
+| `--depth-config <config>` | -     | -       | Comma-separated batches, e.g. `"2:100,3:80"`    |
+| `--workers <number>`      | `-w`  | `12`    | Worker processes (defaults to logical cores)    |
+| `--verbose`               | —     | `false` | Stream worker output directly to the console    |
 
 Use either `--games/--depth` or `--depth-config`. When `--depth-config` is supplied, batches execute sequentially, but each batch fans out across all requested workers.
 
@@ -47,16 +47,19 @@ Use either `--games/--depth` or `--depth-config`. When `--depth-config` is suppl
 #### Examples
 
 Run 120 depth‑2 games across 12 workers:
+
 ```bash
 node scripts/selfPlayParallel.js --games 120 --depth 2 --workers 12
 ```
 
 Run 100 d2 games followed by 80 d3 games (all cores reused for each batch):
+
 ```bash
 node scripts/selfPlayParallel.js --depth-config "2:100,3:80" --workers 12
 ```
 
 Lower core count for a lighter session:
+
 ```bash
 node scripts/selfPlayParallel.js --games 40 --depth 3 --workers 6 --verbose
 ```
@@ -86,14 +89,14 @@ With the flag on, summary counters accumulate on `globalThis.__TwixTSealedLaneSt
 
 ### selfPlayGPU.js Options
 
-| Argument | Short | Default | Description |
-|----------|-------|---------|-------------|
-| `--games <number>` | `-g` | `60` | Total number of self-play games to generate (single depth mode) |
-| `--depth <number>` | `-d` | `3` | Search depth per side (single depth mode) |
-| `--depth-config <config>` | - | - | Multiple depths as `"depth:games,depth:games"` (e.g., `"2:240,3:240"`) |
-| `--workers <number>` | `-w` | `6` | Number of parallel GPU workers per depth |
-| `--verbose` | - | `false` | Print detailed progress to stdout |
-| `--build` | - | `false` | Build Swift binary automatically if not found |
+| Argument                  | Short | Default | Description                                                            |
+| ------------------------- | ----- | ------- | ---------------------------------------------------------------------- |
+| `--games <number>`        | `-g`  | `60`    | Total number of self-play games to generate (single depth mode)        |
+| `--depth <number>`        | `-d`  | `3`     | Search depth per side (single depth mode)                              |
+| `--depth-config <config>` | -     | -       | Multiple depths as `"depth:games,depth:games"` (e.g., `"2:240,3:240"`) |
+| `--workers <number>`      | `-w`  | `6`     | Number of parallel GPU workers per depth                               |
+| `--verbose`               | -     | `false` | Print detailed progress to stdout                                      |
+| `--build`                 | -     | `false` | Build Swift binary automatically if not found                          |
 
 **Note:** Use either `--games`/`--depth` (single depth) OR `--depth-config` (multiple depths), not both.
 
@@ -102,16 +105,19 @@ With the flag on, summary counters accumulate on `globalThis.__TwixTSealedLaneSt
 **Single Depth Mode:**
 
 Quick test (2 games, depth 2):
+
 ```bash
 node scripts/GPU_Training/selfPlayGPU.js --games 2 --workers 2 --depth 2 --verbose
 ```
 
 Standard training batch (480 games, depth 3):
+
 ```bash
 node scripts/GPU_Training/selfPlayGPU.js --games 480 --workers 6 --depth 3
 ```
 
 Large batch (1000 games, depth 4):
+
 ```bash
 node scripts/GPU_Training/selfPlayGPU.js --games 1000 --workers 8 --depth 4 --build
 ```
@@ -119,21 +125,25 @@ node scripts/GPU_Training/selfPlayGPU.js --games 1000 --workers 8 --depth 4 --bu
 **Multiple Depth Mode:**
 
 Balanced mix of depth 2 and 3 (240 games each):
+
 ```bash
 node scripts/GPU_Training/selfPlayGPU.js --depth-config "2:240,3:240" --workers 6
 ```
 
 Quick multi-depth test:
+
 ```bash
 node scripts/GPU_Training/selfPlayGPU.js --depth-config "2:4,3:4" --workers 2 --verbose
 ```
 
 Three depths for varied training (300 games at d2, 400 at d3, 300 at d4):
+
 ```bash
 node scripts/GPU_Training/selfPlayGPU.js --depth-config "2:300,3:400,4:300" --workers 6
 ```
 
 **Why use multiple depths?**
+
 - Training diversity: Mix of fast/weak (d2) and slow/strong (d3-d4) games
 - Better generalization for the AI
 - Recommended ratio: 40-50% depth 2, 50-60% depth 3+
@@ -200,22 +210,22 @@ The system uses these configuration files (automatically loaded):
 
 **Single Depth:**
 
-| Use Case | Games | Workers | Depth | Time (approx) |
-|----------|-------|---------|-------|---------------|
-| Quick test | 10 | 2 | 2 | ~2 minutes |
-| Small batch | 60 | 4 | 3 | ~15 minutes |
-| Standard batch | 480 | 6 | 3 | ~2 hours |
-| Large batch | 1000 | 8 | 4 | ~8 hours |
+| Use Case       | Games | Workers | Depth | Time (approx) |
+| -------------- | ----- | ------- | ----- | ------------- |
+| Quick test     | 10    | 2       | 2     | ~2 minutes    |
+| Small batch    | 60    | 4       | 3     | ~15 minutes   |
+| Standard batch | 480   | 6       | 3     | ~2 hours      |
+| Large batch    | 1000  | 8       | 4     | ~8 hours      |
 
 **Multiple Depths (Recommended for Training):**
 
-| Use Case | Depth Config | Workers | Total Games | Time (approx) |
-|----------|--------------|---------|-------------|---------------|
-| Quick test | `"2:4,3:4"` | 2 | 8 | ~3 minutes |
-| Small batch | `"2:30,3:30"` | 4 | 60 | ~20 minutes |
-| Standard batch | `"2:240,3:240"` | 6 | 480 | ~3 hours |
-| Large balanced | `"2:400,3:600"` | 6 | 1000 | ~6 hours |
-| Three depths | `"2:200,3:400,4:200"` | 6 | 800 | ~8 hours |
+| Use Case       | Depth Config          | Workers | Total Games | Time (approx) |
+| -------------- | --------------------- | ------- | ----------- | ------------- |
+| Quick test     | `"2:4,3:4"`           | 2       | 8           | ~3 minutes    |
+| Small batch    | `"2:30,3:30"`         | 4       | 60          | ~20 minutes   |
+| Standard batch | `"2:240,3:240"`       | 6       | 480         | ~3 hours      |
+| Large balanced | `"2:400,3:600"`       | 6       | 1000        | ~6 hours      |
+| Three depths   | `"2:200,3:400,4:200"` | 6       | 800         | ~8 hours      |
 
 ### Worker Count Guidelines
 
@@ -226,29 +236,32 @@ The system uses these configuration files (automatically loaded):
 
 ### Depth Guidelines
 
-| Depth | Strength | Speed | Recommended For |
-|-------|----------|-------|-----------------|
-| 2 | Basic | Fast | Testing, debugging |
-| 3 | Good | Moderate | Standard training |
-| 4 | Strong | Slow | High-quality training |
-| 5+ | Very strong | Very slow | Advanced training |
+| Depth | Strength    | Speed     | Recommended For       |
+| ----- | ----------- | --------- | --------------------- |
+| 2     | Basic       | Fast      | Testing, debugging    |
+| 3     | Good        | Moderate  | Standard training     |
+| 4     | Strong      | Slow      | High-quality training |
+| 5+    | Very strong | Very slow | Advanced training     |
 
 ## Troubleshooting
 
 ### Swift Binary Not Found
 
 **Error:**
+
 ```
 ✗ Swift binary not found at: /Users/bill/Desktop/Twixt_Game/scripts/GPU_Training/TwixTMetalGPU/.build/release/twixt-metal-worker
 ```
 
 **Solution:**
+
 ```bash
 cd /Users/bill/Desktop/Twixt_Game/scripts/GPU_Training
 ./build-gpu.sh
 ```
 
 Or use `--build` flag:
+
 ```bash
 node scripts/GPU_Training/selfPlayGPU.js --games 60 --workers 6 --depth 3 --build
 ```
@@ -256,6 +269,7 @@ node scripts/GPU_Training/selfPlayGPU.js --games 60 --workers 6 --depth 3 --buil
 ### value-mode.json Not Found
 
 **Warning:**
+
 ```
 ⚠️  value-mode.json not found at: /Users/bill/Desktop/Twixt_Game/value-mode.json
    GPU workers will use heuristics from search.json only
@@ -266,12 +280,14 @@ node scripts/GPU_Training/selfPlayGPU.js --games 60 --workers 6 --depth 3 --buil
 ### Metal Initialization Failed
 
 **Error:**
+
 ```
 [MetalAI] Metal initialization failed: ...
 [TwixTMetalWorker] Continuing with CPU-based evaluation
 ```
 
 **Solution:** The system automatically falls back to CPU evaluation. This is slower but still works. Check that:
+
 - You're running on Apple Silicon (M1/M2/M3)
 - macOS is up to date
 - Metal is supported (`system_profiler SPDisplaysDataType | grep Metal`)
@@ -291,12 +307,12 @@ Edit `/Users/bill/Desktop/Twixt_Game/assets/js/ai/search.json` to adjust AI beha
   "valueModelScale": 600,
   "rewards": {
     "general": {
-      "friendlyConnection": 12,      // Higher = more clustering
-      "opponentConnection": 35,      // Higher = more defensive
-      "goalDistance": 1.2,           // Higher = rush to edges
-      "centerBias": 0.5,             // Higher = favor center
-      "redGlobalMultiplier": 1.18,   // Adjust red strength
-      "blackGlobalScale": 0.82       // Adjust black strength
+      "friendlyConnection": 12, // Higher = more clustering
+      "opponentConnection": 35, // Higher = more defensive
+      "goalDistance": 1.2, // Higher = rush to edges
+      "centerBias": 0.5, // Higher = favor center
+      "redGlobalMultiplier": 1.18, // Adjust red strength
+      "blackGlobalScale": 0.82 // Adjust black strength
     }
   }
 }
@@ -311,6 +327,7 @@ For detailed tuning guide, see: `/Users/bill/Desktop/TwixT_Game Claude/HEURISTIC
 ### During Run
 
 With `--verbose` flag, you'll see:
+
 ```
 [Core 1] Playing game 5/10
 [Game 5] Turn 30, red to move
@@ -322,12 +339,14 @@ With `--verbose` flag, you'll see:
 ### After Completion
 
 Check game count:
+
 ```bash
 cd /Users/bill/Desktop/Twixt_Game
 grep "gameCount" selfplay.json
 ```
 
 Analyze results:
+
 ```bash
 # Win rates
 grep -o '"winner":"[^"]*"' selfplay.json | sort | uniq -c
@@ -380,6 +399,7 @@ cd /Users/bill/Desktop/Twixt_Game/scripts/GPU_Training/TwixTMetalGPU
 ### Custom Paths
 
 The orchestrator expects this directory structure:
+
 ```
 /Users/bill/Desktop/Twixt_Game/
 ├── assets/js/ai/search.json          (heuristics)
@@ -397,6 +417,7 @@ The orchestrator expects this directory structure:
 ## Support
 
 For issues or questions:
+
 1. Check the troubleshooting section above
 2. Run with `--verbose` to see detailed output
 3. Check temp files in `temp/run-{timestamp}/` for worker errors

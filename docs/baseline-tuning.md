@@ -49,6 +49,7 @@ Run all commands from the project root with Python 3 available on `PATH`.
    ```
 
    Temporarily installs the candidate in `assets/js/ai/search.json`, runs `scripts/runValidation.js`, appends the aggregate split (with heuristic counters) to `logs/validation-results.json`, then restores the previous config unless `--persist` is set. Omitting `--hash` uses the first pending recommendation.
+   The automation filters out hashes that already failed a long run, prioritises candidates that have already passed once, and schedules up to eight validations per sweep (by default with eight workers). If a hash completes two consecutive 60/60 runs with acceptable parity and draws, autoTune persists that configuration to `assets/js/ai/search.json` automatically and stops the loop.
 
 5. **Review progress**
 
@@ -59,7 +60,12 @@ Run all commands from the project root with Python 3 available on `PATH`.
    Prints the best-scoring sweep entries, validation balances per config hash, and any outstanding validation queue.
    Once a config records two consecutive 60/60 validations with per-depth parity ≤ 3 wins (and ≤ 6 draws), autoTune marks it as meeting the balance goal and removes it from future validation queues.
 
-Repeat the cycle: suggest → sweep → update → validate → report. For unattended runs, launch `python3 autoTune.py loop` with your preferred flags; the loop finishes the current cycle on Ctrl+C, halts automatically when a configuration hits the validation streak goal, and also exits if five consecutive cycles make no progress so you can reconsider the search space.
+Repeat the cycle: suggest → sweep → update → validate → report. For unattended runs, launch `python3 autoTune.py loop` with your preferred flags. The loop now:
+
+- Finishes the current cycle on Ctrl+C without writing partial sweep data.
+- Validates up to eight high-scoring hashes per cycle, prioritising any hash that already has one successful 60/60 run.
+- Automatically persists the first configuration that achieves the validation streak goal (two consecutive ≤ 3 splits) to `assets/js/ai/search.json`, prints its knob values, and exits.
+- Detects plateaus after five cycles with no score/streak improvement, validates the remaining score ≤ 2 candidates using 10 workers, and then exits cleanly if no hash passes.
 
 Each knob is tracked independently; if a knob’s best sweep score fails to improve for five cycles it is frozen at its best value so future searches concentrate on the remaining degrees of freedom.
 

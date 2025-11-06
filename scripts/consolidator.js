@@ -20,7 +20,9 @@ if (!runId) {
 
 const runDir = path.join('temp', `run-${runId}`);
 
-console.log(`Consolidator starting for run ${runId}, target: ${targetGames} games`);
+console.log(
+  `Consolidator starting for run ${runId}, target: ${targetGames} games`
+);
 
 // --- Helpers ---------------------------------------------------------------
 
@@ -35,7 +37,10 @@ function toLeanMoves(moves) {
     const ctx = m.featureContext ? { ...m.featureContext } : {};
 
     // Ensure peg counts exist; if missing and a board snapshot exists, compute them
-    if ((ctx.playerPegCount == null || ctx.opponentPegCount == null) && Array.isArray(m.board)) {
+    if (
+      (ctx.playerPegCount == null || ctx.opponentPegCount == null) &&
+      Array.isArray(m.board)
+    ) {
       let playerCount = 0;
       let oppCount = 0;
       for (const row of m.board) {
@@ -75,7 +80,7 @@ async function readNew(jsonlPath, offsetPath) {
   const stream = createReadStream(jsonlPath, {
     start: lastOffset,
     end: stats.size - 1,
-    encoding: 'utf8'
+    encoding: 'utf8',
   });
 
   let buffer = '';
@@ -100,7 +105,7 @@ async function checkAllOffsetsAtEOF(workers, runDir) {
     const offsetPath = path.join(runDir, `temp-core-${coreId}.offset`);
     const [st, off] = await Promise.all([
       fs.stat(jsonlPath).catch(() => ({ size: 0 })),
-      fs.readFile(offsetPath, 'utf8').catch(() => '0')
+      fs.readFile(offsetPath, 'utf8').catch(() => '0'),
     ]);
     if (st.size > parseInt(off, 10)) return false;
   }
@@ -119,7 +124,7 @@ async function main() {
       generatedAt: new Date().toISOString(),
       gameCount: 0,
       searchDepth: 3,
-      games: []
+      games: [],
     };
   }
 
@@ -132,13 +137,15 @@ async function main() {
   const processedGames = new Set();
   for (const game of mainData.games) {
     if (game.meta) {
-      processedGames.add(`${game.meta.runId}-${game.meta.coreId}-${game.meta.seq}`);
+      processedGames.add(
+        `${game.meta.runId}-${game.meta.coreId}-${game.meta.seq}`
+      );
     }
   }
 
   const toCommit = [];
   const pendingUpto = {}; // Track byte positions for two-phase commit
-  let lastCommitAt = 0;   // wall-clock of last commit
+  let lastCommitAt = 0; // wall-clock of last commit
 
   // Atomic batch commit with safety; compact output (no pretty-print)
   async function maybeCommit(force = false) {
@@ -175,19 +182,28 @@ async function main() {
       const offsetPath = path.join(runDir, `temp-core-${coreId}.offset`);
       await fs.writeFile(offsetPath, String(upto));
     }
-    Object.keys(pendingUpto).forEach(k => delete pendingUpto[k]);
+    Object.keys(pendingUpto).forEach((k) => delete pendingUpto[k]);
 
     // Update run.meta.json (small file; pretty ok)
     const metaPath = path.join(runDir, 'run.meta.json');
-    await fs.writeFile(metaPath, JSON.stringify({
-      ingested: mainData.gameCount - initialCount,
-      nextGameNumber,
-      lastCommitAt: new Date().toISOString(),
-      perCoreOffsets: snapshotOffsets
-    }, null, 2));
+    await fs.writeFile(
+      metaPath,
+      JSON.stringify(
+        {
+          ingested: mainData.gameCount - initialCount,
+          nextGameNumber,
+          lastCommitAt: new Date().toISOString(),
+          perCoreOffsets: snapshotOffsets,
+        },
+        null,
+        2
+      )
+    );
 
     lastCommitAt = Date.now();
-    console.log(`Committed ${batch.length} games, total: ${mainData.gameCount}`);
+    console.log(
+      `Committed ${batch.length} games, total: ${mainData.gameCount}`
+    );
   }
 
   // Polling loop
@@ -214,7 +230,9 @@ async function main() {
             // Normalize to lean moves (defensive — in case workers didn't prune)
             if (Array.isArray(game.moves)) {
               // Only transform if heavy fields likely present
-              const hasHeavy = game.moves.some(m => m && (m.board || m.lastMoveTrace));
+              const hasHeavy = game.moves.some(
+                (m) => m && (m.board || m.lastMoveTrace)
+              );
               game.moves = hasHeavy ? toLeanMoves(game.moves) : game.moves;
             }
 
@@ -222,7 +240,6 @@ async function main() {
             game.gameNumber = nextGameNumber++;
             processedGames.add(gameKey);
             toCommit.push(game);
-
           } catch (err) {
             // Quarantine corrupt line
             const badPath = path.join(runDir, `temp-core-${coreId}.bad`);
@@ -233,7 +250,12 @@ async function main() {
       }
 
       // Batch commit logic: commit frequently to keep memory steady
-      const writersFinished = await fs.access(path.join(runDir, 'writers.done')).then(() => true, () => false);
+      const writersFinished = await fs
+        .access(path.join(runDir, 'writers.done'))
+        .then(
+          () => true,
+          () => false
+        );
       const committed = mainData.gameCount - initialCount;
       const targetReached = committed >= parseInt(targetGames, 10);
 
@@ -243,7 +265,11 @@ async function main() {
       }
 
       // Commit if writers finished or if >1s since last commit, or buffer >= 2
-      if (toCommit.length >= 2 || writersFinished || (Date.now() - lastCommitAt > 1000 && toCommit.length > 0)) {
+      if (
+        toCommit.length >= 2 ||
+        writersFinished ||
+        (Date.now() - lastCommitAt > 1000 && toCommit.length > 0)
+      ) {
         await maybeCommit(true);
       }
 
@@ -277,7 +303,7 @@ async function main() {
   });
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Error in consolidator:', err);
   process.exit(1);
 });

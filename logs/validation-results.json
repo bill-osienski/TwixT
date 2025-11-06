@@ -463,6 +463,4136 @@
           }
         }
       }
+    },
+    {
+      "timestamp": "2025-11-03T22:53:00.323Z",
+      "runId": "1762210380365",
+      "configHash": "5c39d5e9e244600ab1230d937c8421943b95cd65",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.2,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 45,
+        "black": 60,
+        "draw": 15
+      },
+      "depth2": {
+        "red": 24,
+        "black": 32,
+        "draw": 4
+      },
+      "depth3": {
+        "red": 21,
+        "black": 28,
+        "draw": 11
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 4878105,
+              "sum": 2024413575
+            },
+            "black": {
+              "count": 8814590,
+              "sum": 4010638450
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2363183,
+              "sum": 424243901
+            },
+            "black": {
+              "count": 2385704,
+              "sum": 427697650
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1636846,
+              "sum": 408879180
+            },
+            "black": {
+              "count": 1673980,
+              "sum": 441447660
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 114279884,
+              "sum": -54171203839.665085
+            },
+            "black": {
+              "count": 55546634,
+              "sum": -162332917954
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 496883,
+              "sum": 1082506560
+            },
+            "black": {
+              "count": 366949,
+              "sum": 936455130
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 440929,
+              "sum": 2998317200
+            },
+            "black": {
+              "count": 646588,
+              "sum": 4396798400
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1578,
+              "sum": 3787200
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-03T23:23:20.242Z",
+      "runId": "1762212200296",
+      "configHash": "069166346dfa28fd2af2640c4380cb742e941222",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.2,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 51,
+        "black": 61,
+        "draw": 8
+      },
+      "depth2": {
+        "red": 27,
+        "black": 32,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 24,
+        "black": 29,
+        "draw": 7
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 5338859,
+              "sum": 2242320780
+            },
+            "black": {
+              "count": 8016914,
+              "sum": 3647695870
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2362593,
+              "sum": 424851055
+            },
+            "black": {
+              "count": 2559602,
+              "sum": 432576985
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1640495,
+              "sum": 408996180
+            },
+            "black": {
+              "count": 1661326,
+              "sum": 439129620
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 96065520,
+              "sum": -48672834645.87776
+            },
+            "black": {
+              "count": 55142568,
+              "sum": -159707150508
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 505123,
+              "sum": 1091468760
+            },
+            "black": {
+              "count": 386518,
+              "sum": 995420010
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 362788,
+              "sum": 2466958400
+            },
+            "black": {
+              "count": 1172220,
+              "sum": 7971096000
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 2028,
+              "sum": 2920320
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-03T23:57:30.354Z",
+      "runId": "1762214250414",
+      "configHash": "fac876f5a7eb280ad841ab854bcc76376266c5c4",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 460,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.2,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 52,
+        "black": 63,
+        "draw": 5
+      },
+      "depth2": {
+        "red": 23,
+        "black": 36,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 29,
+        "black": 27,
+        "draw": 4
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 4317819,
+              "sum": 1813483980
+            },
+            "black": {
+              "count": 8854539,
+              "sum": 4073087940
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2334334,
+              "sum": 423875602
+            },
+            "black": {
+              "count": 2378480,
+              "sum": 427293126
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 122554355,
+              "sum": -59096580417.19429
+            },
+            "black": {
+              "count": 50299874,
+              "sum": -148187921794
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1603808,
+              "sum": 401224680
+            },
+            "black": {
+              "count": 1679669,
+              "sum": 448389720
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 555299,
+              "sum": 1211388030
+            },
+            "black": {
+              "count": 354687,
+              "sum": 897722790
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 429008,
+              "sum": 2917254400
+            },
+            "black": {
+              "count": 787400,
+              "sum": 5354320000
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1913,
+              "sum": 2754720
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T03:46:05.367Z",
+      "runId": "1762227965408",
+      "configHash": "8ef1ebaef51efccdfa8495e46fdbf75f025a9f55",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.25,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.15,
+        "blackSpanGainMultiplier": 0.85,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 67,
+        "black": 43,
+        "draw": 10
+      },
+      "depth2": {
+        "red": 44,
+        "black": 15,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 23,
+        "black": 28,
+        "draw": 9
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 5329393,
+              "sum": 2238345060
+            },
+            "black": {
+              "count": 8319680,
+              "sum": 3785454400
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2507207,
+              "sum": 429595886
+            },
+            "black": {
+              "count": 2229855,
+              "sum": 423899269
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 95699997,
+              "sum": -61344936951.75
+            },
+            "black": {
+              "count": 54737557,
+              "sum": -163714118717
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1763325,
+              "sum": 502068663
+            },
+            "black": {
+              "count": 1495114,
+              "sum": 345214053
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 510878,
+              "sum": 1094666010
+            },
+            "black": {
+              "count": 368354,
+              "sum": 920033580
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 333292,
+              "sum": 2266385600
+            },
+            "black": {
+              "count": 745527,
+              "sum": 5069583600
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 682,
+              "sum": 1636800
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T04:16:44.353Z",
+      "runId": "1762229804409",
+      "configHash": "96c31e46aff29a65f8a20b47c54297f7fdd7f6c6",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 460,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.25,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 47,
+        "black": 58,
+        "draw": 15
+      },
+      "depth2": {
+        "red": 30,
+        "black": 30,
+        "draw": 0
+      },
+      "depth3": {
+        "red": 17,
+        "black": 28,
+        "draw": 15
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 5082673,
+              "sum": 2134722660
+            },
+            "black": {
+              "count": 9955403,
+              "sum": 4579485380
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2472863,
+              "sum": 429129538
+            },
+            "black": {
+              "count": 2496700,
+              "sum": 431503943
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1685246,
+              "sum": 421266600
+            },
+            "black": {
+              "count": 1797233,
+              "sum": 481099140
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 143711576,
+              "sum": -81348328751.5
+            },
+            "black": {
+              "count": 58492634,
+              "sum": -167308134004
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 548060,
+              "sum": 1170226050
+            },
+            "black": {
+              "count": 356250,
+              "sum": 907724850
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 265621,
+              "sum": 1806222800
+            },
+            "black": {
+              "count": 676084,
+              "sum": 4597371200
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 2302,
+              "sum": 5524800
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T04:54:10.410Z",
+      "runId": "1762232050476",
+      "configHash": "7f68ea82991c99df4f9537b331aa1393b83ecd6c",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.2,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.15,
+        "blackSpanGainMultiplier": 0.85,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 73,
+        "black": 37,
+        "draw": 10
+      },
+      "depth2": {
+        "red": 46,
+        "black": 11,
+        "draw": 3
+      },
+      "depth3": {
+        "red": 27,
+        "black": 26,
+        "draw": 7
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 4515641,
+              "sum": 1873991015
+            },
+            "black": {
+              "count": 8853118,
+              "sum": 4028168690
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2357788,
+              "sum": 423919578
+            },
+            "black": {
+              "count": 2403574,
+              "sum": 429041586
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1619599,
+              "sum": 465433857
+            },
+            "black": {
+              "count": 1672060,
+              "sum": 377499195
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 118971537,
+              "sum": -58467338929.33701
+            },
+            "black": {
+              "count": 48823907,
+              "sum": -141951331717
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 584522,
+              "sum": 1291673940
+            },
+            "black": {
+              "count": 339164,
+              "sum": 874041930
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 474044,
+              "sum": 3223499200
+            },
+            "black": {
+              "count": 807932,
+              "sum": 5493937600
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 614,
+              "sum": 884160
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T07:00:28.481Z",
+      "runId": "1762239628522",
+      "configHash": "0f84de18c863c31b952b3aee83b0770a8ed19795",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.05,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.15,
+        "blackSpanGainMultiplier": 0.85,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 75,
+        "black": 43,
+        "draw": 2
+      },
+      "depth2": {
+        "red": 53,
+        "black": 5,
+        "draw": 2
+      },
+      "depth3": {
+        "red": 22,
+        "black": 38,
+        "draw": 0
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 1481336,
+              "sum": 622161120
+            },
+            "black": {
+              "count": 5172602,
+              "sum": 2353533910
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1932047,
+              "sum": 411187698
+            },
+            "black": {
+              "count": 1796175,
+              "sum": 407188918
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 121506450,
+              "sum": -19930889396.316586
+            },
+            "black": {
+              "count": 56714075,
+              "sum": -164817711475
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1216869,
+              "sum": 354045861
+            },
+            "black": {
+              "count": 1089623,
+              "sum": 245278278
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 963204,
+              "sum": 1786879980
+            },
+            "black": {
+              "count": 414509,
+              "sum": 1081687980
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 580576,
+              "sum": 3947916800
+            },
+            "black": {
+              "count": 1034613,
+              "sum": 7035368400
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1082,
+              "sum": 1558080
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T07:08:44.194Z",
+      "runId": "1762240124248",
+      "configHash": "cc52979edf590b9360d6b37f67dbf74a68b99457",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.3,
+        "blackSpanGainMultiplier": 0.7,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 86,
+        "black": 32,
+        "draw": 2
+      },
+      "depth2": {
+        "red": 53,
+        "black": 5,
+        "draw": 2
+      },
+      "depth3": {
+        "red": 33,
+        "black": 27,
+        "draw": 0
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 1086769,
+              "sum": 451009135
+            },
+            "black": {
+              "count": 4897417,
+              "sum": 2228324735
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1944452,
+              "sum": 411769644
+            },
+            "black": {
+              "count": 1663999,
+              "sum": 401803031
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 122686364,
+              "sum": 0
+            },
+            "black": {
+              "count": 54395481,
+              "sum": -164876251461
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1263482,
+              "sum": 428006124
+            },
+            "black": {
+              "count": 971865,
+              "sum": 175145417.99999997
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 1035895,
+              "sum": 2028638400
+            },
+            "black": {
+              "count": 354036,
+              "sum": 920289570
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 1277364,
+              "sum": 8686075200
+            },
+            "black": {
+              "count": 1148244,
+              "sum": 7808059200
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 127,
+              "sum": 304800
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T07:16:23.362Z",
+      "runId": "1762240583420",
+      "configHash": "02cfd48a6f9ff15fe4bc66c1e82ab0f122259768",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.3,
+        "blackSpanGainMultiplier": 0.7,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 89,
+        "black": 29,
+        "draw": 2
+      },
+      "depth2": {
+        "red": 55,
+        "black": 4,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 34,
+        "black": 25,
+        "draw": 1
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 1760607,
+              "sum": 730651905
+            },
+            "black": {
+              "count": 5103657,
+              "sum": 2322163935
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1983123,
+              "sum": 413292543
+            },
+            "black": {
+              "count": 1825372,
+              "sum": 407896720
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 121691978,
+              "sum": 0
+            },
+            "black": {
+              "count": 54042304,
+              "sum": -164111708774
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1284673,
+              "sum": 432989010
+            },
+            "black": {
+              "count": 1131995,
+              "sum": 201857543.99999997
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 1021042,
+              "sum": 2006074140
+            },
+            "black": {
+              "count": 342967,
+              "sum": 887965440
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 1300235,
+              "sum": 8841598000
+            },
+            "black": {
+              "count": 989078,
+              "sum": 6725730400
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 129,
+              "sum": 185760
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T13:51:17.883Z",
+      "runId": "1762264277923",
+      "configHash": "93cf53ee44146255403d6f8d8d78e2affa9e8777",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.15,
+        "blackSpanGainMultiplier": 0.85,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 94,
+        "black": 23,
+        "draw": 3
+      },
+      "depth2": {
+        "red": 57,
+        "black": 1,
+        "draw": 2
+      },
+      "depth3": {
+        "red": 37,
+        "black": 22,
+        "draw": 1
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 997346,
+              "sum": 413898590
+            },
+            "black": {
+              "count": 4688442,
+              "sum": 2133241110
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1909609,
+              "sum": 411164514
+            },
+            "black": {
+              "count": 1743551,
+              "sum": 407241910
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 129113416,
+              "sum": 0
+            },
+            "black": {
+              "count": 53886546,
+              "sum": -169192313976
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1222569,
+              "sum": 372279869.99999994
+            },
+            "black": {
+              "count": 946776,
+              "sum": 210700890
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 1036264,
+              "sum": 2083980480
+            },
+            "black": {
+              "count": 327733,
+              "sum": 801289860
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 1397984,
+              "sum": 9506291200
+            },
+            "black": {
+              "count": 728071,
+              "sum": 4950882800
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T14:00:27.806Z",
+      "runId": "1762264827855",
+      "configHash": "c4a63dc6c82e180b07b5de832a5d30d06bf10d34",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.05,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.3,
+        "blackSpanGainMultiplier": 0.7,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 78,
+        "black": 40,
+        "draw": 2
+      },
+      "depth2": {
+        "red": 55,
+        "black": 3,
+        "draw": 2
+      },
+      "depth3": {
+        "red": 23,
+        "black": 37,
+        "draw": 0
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 1913102,
+              "sum": 793937330
+            },
+            "black": {
+              "count": 5510359,
+              "sum": 2507213345
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1966540,
+              "sum": 413109486
+            },
+            "black": {
+              "count": 1886040,
+              "sum": 412726168
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 118904585,
+              "sum": -19679165101.62435
+            },
+            "black": {
+              "count": 51965643,
+              "sum": -151655892333
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1250549,
+              "sum": 413047170
+            },
+            "black": {
+              "count": 1157438,
+              "sum": 218142161.99999997
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 938159,
+              "sum": 1759482930
+            },
+            "black": {
+              "count": 378818,
+              "sum": 992685660
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 829396,
+              "sum": 5639892800
+            },
+            "black": {
+              "count": 1068105,
+              "sum": 7263114000
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 869,
+              "sum": 2085600
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T14:13:02.693Z",
+      "runId": "1762265582748",
+      "configHash": "6d867e84286c1e8d36e198e3c8633a9ded8abced",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.05,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.3,
+        "blackSpanGainMultiplier": 0.7,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 74,
+        "black": 39,
+        "draw": 7
+      },
+      "depth2": {
+        "red": 53,
+        "black": 3,
+        "draw": 4
+      },
+      "depth3": {
+        "red": 21,
+        "black": 36,
+        "draw": 3
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 2003742,
+              "sum": 831552930
+            },
+            "black": {
+              "count": 5698082,
+              "sum": 2592627310
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1960957,
+              "sum": 412163289
+            },
+            "black": {
+              "count": 1913947,
+              "sum": 413814942
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1231758,
+              "sum": 404206668
+            },
+            "black": {
+              "count": 1168861,
+              "sum": 216948941.99999997
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 123940927,
+              "sum": -20130086830.89182
+            },
+            "black": {
+              "count": 59899831,
+              "sum": -169455362411
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 930499,
+              "sum": 1679862630
+            },
+            "black": {
+              "count": 390277,
+              "sum": 1011510090
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 320526,
+              "sum": 2179576800
+            },
+            "black": {
+              "count": 1063267,
+              "sum": 7230215600
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1103,
+              "sum": 1588320
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T16:04:51.316Z",
+      "runId": "1762272291360",
+      "configHash": "2846908784518901debc76e1207e4472f7b1e9a8",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.05,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.15,
+        "blackSpanGainMultiplier": 0.85,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 75,
+        "black": 40,
+        "draw": 5
+      },
+      "depth2": {
+        "red": 58,
+        "black": 1,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 17,
+        "black": 39,
+        "draw": 4
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 1835336,
+              "sum": 761664440
+            },
+            "black": {
+              "count": 5728100,
+              "sum": 2606285500
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1979239,
+              "sum": 413072870
+            },
+            "black": {
+              "count": 1967719,
+              "sum": 413044373
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1254040,
+              "sum": 364702914
+            },
+            "black": {
+              "count": 1234562,
+              "sum": 276846768
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 130714568,
+              "sum": -20529526529.73464
+            },
+            "black": {
+              "count": 54147946,
+              "sum": -158855155676
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 945787,
+              "sum": 1738311390
+            },
+            "black": {
+              "count": 389784,
+              "sum": 1004937480
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 462934,
+              "sum": 3147951200
+            },
+            "black": {
+              "count": 987132,
+              "sum": 6712497600
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 837,
+              "sum": 1205280
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T16:22:13.741Z",
+      "runId": "1762273333791",
+      "configHash": "6d018aa578fb03151820e38ea887b34c89b017a2",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 460,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.05,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.15,
+        "blackSpanGainMultiplier": 0.85,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 75,
+        "black": 42,
+        "draw": 3
+      },
+      "depth2": {
+        "red": 53,
+        "black": 5,
+        "draw": 2
+      },
+      "depth3": {
+        "red": 22,
+        "black": 37,
+        "draw": 1
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 2726166,
+              "sum": 1144989720
+            },
+            "black": {
+              "count": 5997560,
+              "sum": 2758877600
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1948731,
+              "sum": 411128841
+            },
+            "black": {
+              "count": 1988197,
+              "sum": 414471523
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 122417595,
+              "sum": -19664671738.955017
+            },
+            "black": {
+              "count": 54239692,
+              "sum": -155483094002
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1236966,
+              "sum": 358554087
+            },
+            "black": {
+              "count": 1258364,
+              "sum": 282536379
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 900756,
+              "sum": 1653220320
+            },
+            "black": {
+              "count": 393609,
+              "sum": 1044244380
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 470261,
+              "sum": 3197774800
+            },
+            "black": {
+              "count": 1676516,
+              "sum": 11400308800
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1761,
+              "sum": 2535840
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T16:43:31.141Z",
+      "runId": "1762274611198",
+      "configHash": "80976e4adb0a427b1f537edd4a356f5ed0c11c4f",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.05,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.15,
+        "blackSpanGainMultiplier": 0.85,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 80,
+        "black": 38,
+        "draw": 2
+      },
+      "depth2": {
+        "red": 57,
+        "black": 3,
+        "draw": 0
+      },
+      "depth3": {
+        "red": 23,
+        "black": 35,
+        "draw": 2
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 1913171,
+              "sum": 793965965
+            },
+            "black": {
+              "count": 5942695,
+              "sum": 2703926225
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2012698,
+              "sum": 413627768
+            },
+            "black": {
+              "count": 2018933,
+              "sum": 420080855
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1295158,
+              "sum": 373249890
+            },
+            "black": {
+              "count": 1233796,
+              "sum": 275950188
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 131999718,
+              "sum": -21128811804.876793
+            },
+            "black": {
+              "count": 52934565,
+              "sum": -154568768265
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 992475,
+              "sum": 1832132850
+            },
+            "black": {
+              "count": 372696,
+              "sum": 968222220
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 589994,
+              "sum": 4011959200
+            },
+            "black": {
+              "count": 974395,
+              "sum": 6625886000
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 706,
+              "sum": 1694400
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T18:22:28.609Z",
+      "runId": "1762280548650",
+      "configHash": "fe4a18c42222c5c2811d36a1e8aaa438cd6c9a9f",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.05,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.3,
+        "blackSpanGainMultiplier": 0.7,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 79,
+        "black": 34,
+        "draw": 7
+      },
+      "depth2": {
+        "red": 51,
+        "black": 6,
+        "draw": 3
+      },
+      "depth3": {
+        "red": 28,
+        "black": 28,
+        "draw": 4
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 2794115,
+              "sum": 1173528300
+            },
+            "black": {
+              "count": 6714735,
+              "sum": 3055204425
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2013760,
+              "sum": 415090890
+            },
+            "black": {
+              "count": 2005292,
+              "sum": 416124464
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 120778237,
+              "sum": -19573399844.973457
+            },
+            "black": {
+              "count": 45456078,
+              "sum": -135383092518
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1287327,
+              "sum": 419030928
+            },
+            "black": {
+              "count": 1245604,
+              "sum": 229860413.99999997
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 918361,
+              "sum": 1693790670
+            },
+            "black": {
+              "count": 317759,
+              "sum": 816954030
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 452335,
+              "sum": 3075878000
+            },
+            "black": {
+              "count": 772101,
+              "sum": 5250286800
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 583,
+              "sum": 839520
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T18:49:20.505Z",
+      "runId": "1762282160558",
+      "configHash": "a4a33e659efe29bf916107b5d3cbbe8585894a86",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.15,
+        "blackSpanGainMultiplier": 0.85,
+        "redDoubleCoverageBonus": null,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 93,
+        "black": 24,
+        "draw": 3
+      },
+      "depth2": {
+        "red": 59,
+        "black": 0,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 34,
+        "black": 24,
+        "draw": 2
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 959798,
+              "sum": 403115160
+            },
+            "black": {
+              "count": 4501109,
+              "sum": 2048004595
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1923635,
+              "sum": 411778890
+            },
+            "black": {
+              "count": 1766378,
+              "sum": 407008828
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 132442284,
+              "sum": 0
+            },
+            "black": {
+              "count": 58703447,
+              "sum": -184674978757
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1235499,
+              "sum": 375417782.99999994
+            },
+            "black": {
+              "count": 1068793,
+              "sum": 240862545
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 1062595,
+              "sum": 2115884100
+            },
+            "black": {
+              "count": 362557,
+              "sum": 884156340
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 1299903,
+              "sum": 8839340400
+            },
+            "black": {
+              "count": 758679,
+              "sum": 5159017200
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T19:03:36.703Z",
+      "runId": "1762283016763",
+      "configHash": "d0ab168b95b1684248eb8c4b97dd9ab0d5fdcaa7",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.15,
+        "blackSpanGainMultiplier": 0.85,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 94,
+        "black": 24,
+        "draw": 2
+      },
+      "depth2": {
+        "red": 60,
+        "black": 0,
+        "draw": 0
+      },
+      "depth3": {
+        "red": 34,
+        "black": 24,
+        "draw": 2
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 1723153,
+              "sum": 723724260
+            },
+            "black": {
+              "count": 5103389,
+              "sum": 2322041995
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 1990149,
+              "sum": 413740951
+            },
+            "black": {
+              "count": 1778915,
+              "sum": 406850358
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1307126,
+              "sum": 388758267
+            },
+            "black": {
+              "count": 1068142,
+              "sum": 238232934
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 130668709,
+              "sum": 0
+            },
+            "black": {
+              "count": 55887121,
+              "sum": -172548346601
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 1022334,
+              "sum": 2054164380
+            },
+            "black": {
+              "count": 358125,
+              "sum": 894075900
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 1415063,
+              "sum": 9622428400
+            },
+            "black": {
+              "count": 792335,
+              "sum": 5387878000
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-04T20:18:20.317Z",
+      "runId": "1762287500356",
+      "configHash": "0e8afccc081a05e8a32724e8e5e443b2b681799e",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 460,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.05,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.3,
+        "blackSpanGainMultiplier": 0.7,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 74,
+        "black": 41,
+        "draw": 5
+      },
+      "depth2": {
+        "red": 55,
+        "black": 4,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 19,
+        "black": 37,
+        "draw": 4
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 2185650,
+              "sum": 917973000
+            },
+            "black": {
+              "count": 5953227,
+              "sum": 2738484420
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2037749,
+              "sum": 414153180
+            },
+            "black": {
+              "count": 1896020,
+              "sum": 411257618
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1306632,
+              "sum": 422037630
+            },
+            "black": {
+              "count": 1176027,
+              "sum": 219591665.99999997
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 125824707,
+              "sum": -20111484467.142593
+            },
+            "black": {
+              "count": 54006459,
+              "sum": -156998430129
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 935685,
+              "sum": 1665167700
+            },
+            "black": {
+              "count": 384608,
+              "sum": 992496360
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 299455,
+              "sum": 2036294000
+            },
+            "black": {
+              "count": 912209,
+              "sum": 6203021200
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 781,
+              "sum": 1124640
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T00:56:05.463Z",
+      "runId": "1762304165505",
+      "configHash": "79ca15d7dec0a71802e74437da3b963f58595829",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.2,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 1000,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 47,
+        "black": 65,
+        "draw": 8
+      },
+      "depth2": {
+        "red": 17,
+        "black": 40,
+        "draw": 3
+      },
+      "depth3": {
+        "red": 30,
+        "black": 25,
+        "draw": 5
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 5988250,
+              "sum": 2485123750
+            },
+            "black": {
+              "count": 8057067,
+              "sum": 3665965485
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2418145,
+              "sum": 426469680
+            },
+            "black": {
+              "count": 2306638,
+              "sum": 425751137
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1704627,
+              "sum": 431974080
+            },
+            "black": {
+              "count": 1559416,
+              "sum": 411124140
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 91026285,
+              "sum": -47262841968.77692
+            },
+            "black": {
+              "count": 49913118,
+              "sum": -151659599058
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 528357,
+              "sum": 1152913140
+            },
+            "black": {
+              "count": 326450,
+              "sum": 824821800
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 337043,
+              "sum": 2291892400
+            },
+            "black": {
+              "count": 1002040,
+              "sum": 6813872000
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 2325,
+              "sum": 5580000
+            }
+          },
+          "finishLaneSealed": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 748,
+              "sum": 748
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T01:20:51.799Z",
+      "runId": "1762305651849",
+      "configHash": "0d76140caed4d472918c3186db49f0d5da336a27",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.2,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 0,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 42,
+        "black": 67,
+        "draw": 11
+      },
+      "depth2": {
+        "red": 16,
+        "black": 42,
+        "draw": 2
+      },
+      "depth3": {
+        "red": 26,
+        "black": 25,
+        "draw": 9
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 5226907,
+              "sum": 2169166405
+            },
+            "black": {
+              "count": 10023212,
+              "sum": 4560561460
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2417574,
+              "sum": 425706770
+            },
+            "black": {
+              "count": 2509967,
+              "sum": 432195231
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 123012841,
+              "sum": -59244428460.93581
+            },
+            "black": {
+              "count": 52615319,
+              "sum": -153799396639
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1694367,
+              "sum": 424310040
+            },
+            "black": {
+              "count": 1801399,
+              "sum": 479471400
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 543870,
+              "sum": 1175845050
+            },
+            "black": {
+              "count": 350153,
+              "sum": 885560610
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 395479,
+              "sum": 2689257200
+            },
+            "black": {
+              "count": 950722,
+              "sum": 6464909600
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 2076,
+              "sum": 4982400
+            }
+          },
+          "finishLaneSealed": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 590,
+              "sum": 590
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T01:55:08.048Z",
+      "runId": "1762307708110",
+      "configHash": "a21077dc24a3cecb378e023c35cf5b987f896540",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 430,
+        "firstEdgeTouchBlack": 450,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.8,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.1,
+        "blackSpanGainMultiplier": 0.9,
+        "redDoubleCoverageBonus": 600,
+        "blackDoubleCoverageScale": 0.9,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 56,
+        "black": 55,
+        "draw": 9
+      },
+      "depth2": {
+        "red": 34,
+        "black": 26,
+        "draw": 0
+      },
+      "depth3": {
+        "red": 22,
+        "black": 29,
+        "draw": 9
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 5242018,
+              "sum": 2254067740
+            },
+            "black": {
+              "count": 7836465,
+              "sum": 3526409250
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2534163,
+              "sum": 432781616
+            },
+            "black": {
+              "count": 2147540,
+              "sum": 420134790
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 90510913,
+              "sum": -188988346811.0375
+            },
+            "black": {
+              "count": 54591619,
+              "sum": -151679888339
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1714286,
+              "sum": 470876796
+            },
+            "black": {
+              "count": 1436336,
+              "sum": 349433676
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 545412,
+              "sum": 1149453240
+            },
+            "black": {
+              "count": 355256,
+              "sum": 920207520
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 199949,
+              "sum": 1359653200
+            },
+            "black": {
+              "count": 754069,
+              "sum": 5127669200
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1574,
+              "sum": 3399840
+            }
+          },
+          "finishLaneSealed": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 2056,
+              "sum": 2056
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T05:40:23.493Z",
+      "runId": "1762321223533",
+      "configHash": "7214b093cf5f63759297da92d7da0533fcf1c6bd",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 425,
+        "firstEdgeTouchBlack": 445,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.8,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.1,
+        "blackSpanGainMultiplier": 0.9,
+        "redDoubleCoverageBonus": 800,
+        "blackDoubleCoverageScale": 0.85,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 57,
+        "black": 54,
+        "draw": 9
+      },
+      "depth2": {
+        "red": 32,
+        "black": 26,
+        "draw": 2
+      },
+      "depth3": {
+        "red": 25,
+        "black": 28,
+        "draw": 7
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 6554790,
+              "sum": 2785785750
+            },
+            "black": {
+              "count": 8166414,
+              "sum": 3634054230
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2460266,
+              "sum": 428259885
+            },
+            "black": {
+              "count": 2244698,
+              "sum": 425653272
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1738413,
+              "sum": 475241850
+            },
+            "black": {
+              "count": 1540524,
+              "sum": 370288584
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 88495296,
+              "sum": -180862354267.71692
+            },
+            "black": {
+              "count": 56956093,
+              "sum": -158788326233
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 475637,
+              "sum": 1024801440
+            },
+            "black": {
+              "count": 364963,
+              "sum": 946256610
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 278764,
+              "sum": 1895595200
+            },
+            "black": {
+              "count": 840585,
+              "sum": 5715978000
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1597,
+              "sum": 3257880
+            }
+          },
+          "finishLaneSealed": {
+            "red": {
+              "count": 39,
+              "sum": 39
+            },
+            "black": {
+              "count": 0,
+              "sum": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T06:19:27.945Z",
+      "runId": "1762323568000",
+      "configHash": "078b8bcd239ad958f14cecd9769a91d305535e21",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 430,
+        "firstEdgeTouchBlack": 450,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.75,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.1,
+        "blackSpanGainMultiplier": 0.9,
+        "redDoubleCoverageBonus": 600,
+        "blackDoubleCoverageScale": 0.9,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 56,
+        "black": 58,
+        "draw": 6
+      },
+      "depth2": {
+        "red": 30,
+        "black": 29,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 26,
+        "black": 29,
+        "draw": 5
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 5279242,
+              "sum": 2270074060
+            },
+            "black": {
+              "count": 7176425,
+              "sum": 3229391250
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2443561,
+              "sum": 427003395
+            },
+            "black": {
+              "count": 2076888,
+              "sum": 417545450
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1716500,
+              "sum": 473570640.00000006
+            },
+            "black": {
+              "count": 1370451,
+              "sum": 333732312
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 85146197,
+              "sum": -168578663967.75
+            },
+            "black": {
+              "count": 63808181,
+              "sum": -178718226961
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 469906,
+              "sum": 1006289520
+            },
+            "black": {
+              "count": 410428,
+              "sum": 1043990310
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 222787,
+              "sum": 1514951600
+            },
+            "black": {
+              "count": 762177,
+              "sum": 5182803600
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1321,
+              "sum": 2853360
+            }
+          },
+          "finishLaneSealed": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 475,
+              "sum": 475
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T06:43:35.043Z",
+      "runId": "1762325015102",
+      "configHash": "366c28d35aec637d99d7473c5bc6dc35bc2103cf",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.2,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 0,
+        "blackDoubleCoverageScale": 0.8,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 52,
+        "black": 59,
+        "draw": 9
+      },
+      "depth2": {
+        "red": 28,
+        "black": 32,
+        "draw": 0
+      },
+      "depth3": {
+        "red": 24,
+        "black": 27,
+        "draw": 9
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 4255207,
+              "sum": 1765910905
+            },
+            "black": {
+              "count": 8265843,
+              "sum": 3760958565
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2339710,
+              "sum": 424310946
+            },
+            "black": {
+              "count": 2352806,
+              "sum": 426971517
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 118293693,
+              "sum": -57501670645.62214
+            },
+            "black": {
+              "count": 54231890,
+              "sum": -160013627590
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1583256,
+              "sum": 396748440
+            },
+            "black": {
+              "count": 1627330,
+              "sum": 433313460
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 568019,
+              "sum": 1244761530
+            },
+            "black": {
+              "count": 375951,
+              "sum": 953521920
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 507955,
+              "sum": 3454094000
+            },
+            "black": {
+              "count": 1176340,
+              "sum": 7999112000
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1942,
+              "sum": 3728640
+            }
+          },
+          "finishLaneSealed": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 422,
+              "sum": 422
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T09:32:25.730Z",
+      "runId": "1762335145774",
+      "configHash": "995fbaf43047f30012c1d09f7565ef2ab3b21b2d",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 460,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.4,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 1500,
+        "blackDoubleCoverageScale": 0.6,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 58,
+        "black": 57,
+        "draw": 5
+      },
+      "depth2": {
+        "red": 32,
+        "black": 28,
+        "draw": 0
+      },
+      "depth3": {
+        "red": 26,
+        "black": 29,
+        "draw": 5
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 4579488,
+              "sum": 1923384960
+            },
+            "black": {
+              "count": 8489583,
+              "sum": 3905208180
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2412426,
+              "sum": 426163711
+            },
+            "black": {
+              "count": 2381787,
+              "sum": 428021007
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1634353,
+              "sum": 407828160
+            },
+            "black": {
+              "count": 1681892,
+              "sum": 453936060
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 116955107,
+              "sum": -115806260704.01114
+            },
+            "black": {
+              "count": 59899595,
+              "sum": -167556070345
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 545858,
+              "sum": 1135901910
+            },
+            "black": {
+              "count": 394995,
+              "sum": 1011116400
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 260312,
+              "sum": 1770121600
+            },
+            "black": {
+              "count": 922433,
+              "sum": 6272544400
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1734,
+              "sum": 2496960
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T09:57:46.489Z",
+      "runId": "1762336666543",
+      "configHash": "5d44e49497aade31a887f7ad67214e3797ab52c6",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.7,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 0,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 61,
+        "black": 47,
+        "draw": 12
+      },
+      "depth2": {
+        "red": 38,
+        "black": 21,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 23,
+        "black": 26,
+        "draw": 11
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 6659278,
+              "sum": 2763600370
+            },
+            "black": {
+              "count": 9663375,
+              "sum": 4396835625
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2588790,
+              "sum": 432934773
+            },
+            "black": {
+              "count": 2507951,
+              "sum": 430852629
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1809483,
+              "sum": 451993500
+            },
+            "black": {
+              "count": 1810019,
+              "sum": 475383960
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 103598365,
+              "sum": -178432763960.68555
+            },
+            "black": {
+              "count": 46762916,
+              "sum": -133326148546
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 514068,
+              "sum": 1090340010
+            },
+            "black": {
+              "count": 282067,
+              "sum": 730275540
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 323372,
+              "sum": 2198929600
+            },
+            "black": {
+              "count": 796533,
+              "sum": 5416424400
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 103,
+              "sum": 247200
+            },
+            "black": {
+              "count": 1826,
+              "sum": 4382400
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T10:24:49.077Z",
+      "runId": "1762338289138",
+      "configHash": "d20079018c2674c623ac5e39edcbbeb4ab36db4e",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 430,
+        "firstEdgeTouchBlack": 445,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.75,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 0,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 54,
+        "black": 55,
+        "draw": 11
+      },
+      "depth2": {
+        "red": 30,
+        "black": 27,
+        "draw": 3
+      },
+      "depth3": {
+        "red": 24,
+        "black": 28,
+        "draw": 8
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 4641023,
+              "sum": 1995639890
+            },
+            "black": {
+              "count": 7684791,
+              "sum": 3419731995
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2442968,
+              "sum": 432381416
+            },
+            "black": {
+              "count": 2323087,
+              "sum": 424952830
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 110539221,
+              "sum": -205500938663.25
+            },
+            "black": {
+              "count": 64469807,
+              "sum": -176476584817
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1634298,
+              "sum": 412365780
+            },
+            "black": {
+              "count": 1601143,
+              "sum": 417850560
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 548866,
+              "sum": 1178898120
+            },
+            "black": {
+              "count": 354141,
+              "sum": 891971820
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 439238,
+              "sum": 2986818400
+            },
+            "black": {
+              "count": 712591,
+              "sum": 4845618800
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1930,
+              "sum": 4632000
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T14:16:01.707Z",
+      "runId": "1762352161749",
+      "configHash": "ff323d4e4bee1b22d93c3df500fe2d5ab024efad",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 450,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.2,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 0,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 49,
+        "black": 64,
+        "draw": 7
+      },
+      "depth2": {
+        "red": 17,
+        "black": 42,
+        "draw": 1
+      },
+      "depth3": {
+        "red": 32,
+        "black": 22,
+        "draw": 6
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 5314939,
+              "sum": 2205699685
+            },
+            "black": {
+              "count": 8698606,
+              "sum": 3914372700
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2456278,
+              "sum": 427337999
+            },
+            "black": {
+              "count": 2418373,
+              "sum": 428989169
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 118702542,
+              "sum": -57840496838.601555
+            },
+            "black": {
+              "count": 58821697,
+              "sum": -168243973007
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1719623,
+              "sum": 432531360
+            },
+            "black": {
+              "count": 1701891,
+              "sum": 447202800
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 575296,
+              "sum": 1267735170
+            },
+            "black": {
+              "count": 352678,
+              "sum": 893633160
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 637211,
+              "sum": 4333034800
+            },
+            "black": {
+              "count": 1462310,
+              "sum": 9943708000
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 2677,
+              "sum": 6424800
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T14:39:00.070Z",
+      "runId": "1762353540126",
+      "configHash": "9f36c640194633df15dba36de6a864fc9a7301e7",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 425,
+        "firstEdgeTouchBlack": 450,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.7,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 1000,
+        "blackDoubleCoverageScale": 0.8,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 53,
+        "black": 60,
+        "draw": 7
+      },
+      "depth2": {
+        "red": 31,
+        "black": 29,
+        "draw": 0
+      },
+      "depth3": {
+        "red": 22,
+        "black": 31,
+        "draw": 7
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 5711209,
+              "sum": 2427263825
+            },
+            "black": {
+              "count": 7895988,
+              "sum": 3553194600
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2417197,
+              "sum": 426219877
+            },
+            "black": {
+              "count": 2284755,
+              "sum": 424345929
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1687221,
+              "sum": 422385300
+            },
+            "black": {
+              "count": 1556942,
+              "sum": 413796240
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 89410659,
+              "sum": -160412010475.0912
+            },
+            "black": {
+              "count": 55270751,
+              "sum": -158713827181
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 479560,
+              "sum": 1020792900
+            },
+            "black": {
+              "count": 355521,
+              "sum": 942252720
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 308772,
+              "sum": 2099649600
+            },
+            "black": {
+              "count": 2668669,
+              "sum": 18146949200
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 2018,
+              "sum": 3874560
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T14:58:30.496Z",
+      "runId": "1762354710556",
+      "configHash": "423e6fe5903666fd890efc460c1be47a14ec43bc",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 425,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.65,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 0,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 47,
+        "black": 62,
+        "draw": 11
+      },
+      "depth2": {
+        "red": 25,
+        "black": 35,
+        "draw": 0
+      },
+      "depth3": {
+        "red": 22,
+        "black": 27,
+        "draw": 11
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 4926842,
+              "sum": 2093907850
+            },
+            "black": {
+              "count": 9209202,
+              "sum": 4190186910
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2391444,
+              "sum": 427068899
+            },
+            "black": {
+              "count": 2412034,
+              "sum": 428822143
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1618655,
+              "sum": 406974240
+            },
+            "black": {
+              "count": 1689425,
+              "sum": 452120400
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 129362637,
+              "sum": -199558268631.1482
+            },
+            "black": {
+              "count": 55890388,
+              "sum": -155687939078
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 525367,
+              "sum": 1101414540
+            },
+            "black": {
+              "count": 348909,
+              "sum": 893752080
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 391820,
+              "sum": 2664376000
+            },
+            "black": {
+              "count": 756007,
+              "sum": 5140847600
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 2354,
+              "sum": 5649600
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T19:05:28.404Z",
+      "runId": "1762369528446",
+      "configHash": "d707d7b4d5dab265409e933c0778a647b1031b51",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 425,
+        "firstEdgeTouchBlack": 450,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.7,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1.1,
+        "blackSpanGainMultiplier": 0.9,
+        "redDoubleCoverageBonus": 0,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 54,
+        "black": 57,
+        "draw": 9
+      },
+      "depth2": {
+        "red": 33,
+        "black": 27,
+        "draw": 0
+      },
+      "depth3": {
+        "red": 21,
+        "black": 30,
+        "draw": 9
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 8587413,
+              "sum": 3649650525
+            },
+            "black": {
+              "count": 9033295,
+              "sum": 4064982750
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2652882,
+              "sum": 439190060
+            },
+            "black": {
+              "count": 2497968,
+              "sum": 434310955
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1933495,
+              "sum": 536962824
+            },
+            "black": {
+              "count": 1638289,
+              "sum": 389894634
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 71995229,
+              "sum": -134913363630.25945
+            },
+            "black": {
+              "count": 52850180,
+              "sum": -148438109980
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 437181,
+              "sum": 953025420
+            },
+            "black": {
+              "count": 347897,
+              "sum": 912481890
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 513400,
+              "sum": 3491120000
+            },
+            "black": {
+              "count": 1269555,
+              "sum": 8632974000
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 403,
+              "sum": 967200
+            },
+            "black": {
+              "count": 2425,
+              "sum": 5820000
+            }
+          },
+          "finishLaneSealed": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 748,
+              "sum": 748
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T20:03:02.089Z",
+      "runId": "1762372982143",
+      "configHash": "335b6ccdd47cefe3775e2d24e20afba57a3e3107",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.3,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 0,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 52,
+        "black": 56,
+        "draw": 12
+      },
+      "depth2": {
+        "red": 33,
+        "black": 25,
+        "draw": 2
+      },
+      "depth3": {
+        "red": 19,
+        "black": 31,
+        "draw": 10
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 4711159,
+              "sum": 1955130985
+            },
+            "black": {
+              "count": 8346584,
+              "sum": 3797695720
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2369393,
+              "sum": 424999681
+            },
+            "black": {
+              "count": 2317866,
+              "sum": 425143983
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 103883238,
+              "sum": -77580102986.10663
+            },
+            "black": {
+              "count": 50187756,
+              "sum": -141659392536
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1624662,
+              "sum": 410688720
+            },
+            "black": {
+              "count": 1611485,
+              "sum": 429028200
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 497308,
+              "sum": 1069042560
+            },
+            "black": {
+              "count": 344965,
+              "sum": 911531850
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 307043,
+              "sum": 2087892400
+            },
+            "black": {
+              "count": 1686968,
+              "sum": 11471382400
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 2190,
+              "sum": 5256000
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T20:27:02.437Z",
+      "runId": "1762374422499",
+      "configHash": "1f7ae9b346106eee50e5d42d6194d6669d9eb118",
+      "command": {
+        "depthConfig": "2:60,3:60",
+        "workers": 10
+      },
+      "config": {
+        "firstEdgeTouchRed": 420,
+        "firstEdgeTouchBlack": 455,
+        "finishPenaltyBase": 1181,
+        "redFinishPenaltyFactor": 0.2,
+        "blackFinishScaleMultiplier": 1,
+        "redSpanGainMultiplier": 1,
+        "blackSpanGainMultiplier": 1,
+        "redDoubleCoverageBonus": 0,
+        "blackDoubleCoverageScale": 1,
+        "connectorBonus": 620,
+        "finishThreshold": 4,
+        "finishBonusBase": 3400,
+        "connectorTargetBonus": 500,
+        "doubleCoverageBase": 2400,
+        "finishGapSlope": 150,
+        "nearFinishBonus": 2500,
+        "redFinishExtra": 0,
+        "redGapDecayMultiplier": 1
+      },
+      "gamesRecorded": 120,
+      "wins": {
+        "red": 42,
+        "black": 67,
+        "draw": 11
+      },
+      "depth2": {
+        "red": 14,
+        "black": 43,
+        "draw": 3
+      },
+      "depth3": {
+        "red": 28,
+        "black": 24,
+        "draw": 8
+      },
+      "heuristics": {
+        "entryCount": 20,
+        "totals": {
+          "firstEdgeTouch": {
+            "red": {
+              "count": 4528401,
+              "sum": 1901928420
+            },
+            "black": {
+              "count": 8561092,
+              "sum": 3895296860
+            }
+          },
+          "edgeGapReduction": {
+            "red": {
+              "count": 2347973,
+              "sum": 423772631
+            },
+            "black": {
+              "count": 2455467,
+              "sum": 430248971
+            }
+          },
+          "edgeFinishStall": {
+            "red": {
+              "count": 121697532,
+              "sum": -58757800375.25131
+            },
+            "black": {
+              "count": 55835697,
+              "sum": -156313759557
+            }
+          },
+          "spanGain": {
+            "red": {
+              "count": 1631853,
+              "sum": 408285360
+            },
+            "black": {
+              "count": 1759589,
+              "sum": 465268140
+            }
+          },
+          "edgeFinishAdvance": {
+            "red": {
+              "count": 576626,
+              "sum": 1301011470
+            },
+            "black": {
+              "count": 353180,
+              "sum": 904099200
+            }
+          },
+          "largestComponentSpanComplete": {
+            "red": {
+              "count": 1105462,
+              "sum": 7517141600
+            },
+            "black": {
+              "count": 887363,
+              "sum": 6034068400
+            }
+          },
+          "doubleEdgeCoverage": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1828,
+              "sum": 4387200
+            }
+          },
+          "finishLaneSealed": {
+            "red": {
+              "count": 0,
+              "sum": 0
+            },
+            "black": {
+              "count": 1707,
+              "sum": 1707
+            }
+          }
+        }
+      }
     }
   ]
 }

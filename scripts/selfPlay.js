@@ -26,30 +26,35 @@ const START_PLAN = process.env.START_PLAN
   : null;
 const usePlan = Array.isArray(START_PLAN) && START_PLAN.length === GAME_COUNT;
 if (START_PLAN && !usePlan) {
-  console.warn('[selfPlay] START_PLAN provided but length mismatch; falling back to alternating starts.');
+  console.warn(
+    '[selfPlay] START_PLAN provided but length mismatch; falling back to alternating starts.'
+  );
 }
 const SEARCH_DEPTH = parseInt(opts.depth, 10) || 3;
-const OUTPUT_FILE  = opts.output;
-const VERBOSE      = !!opts.verbose;
-const CORE_ID      = opts.coreId;
-const RUN_ID       = opts.runId;
+const OUTPUT_FILE = opts.output;
+const VERBOSE = !!opts.verbose;
+const CORE_ID = opts.coreId;
+const RUN_ID = opts.runId;
 
 const traces = [];
 
 // ---------------- Signal-aware shutdown ----------------
-let stopRequested = false;  // break safely between turns/games
-let aborted = false;        // for final logging/exit code
+let stopRequested = false; // break safely between turns/games
+let aborted = false; // for final logging/exit code
 
 function requestShutdown(signal = 'SIGINT') {
   if (aborted) return;
   aborted = true;
   stopRequested = true;
-  if (VERBOSE) console.log(`[selfPlay] received ${signal}, will stop after current move/game…`);
+  if (VERBOSE)
+    console.log(
+      `[selfPlay] received ${signal}, will stop after current move/game…`
+    );
   // 130 = Ctrl+C (SIGINT), 143 = SIGTERM
-  process.exitCode = (signal === 'SIGINT') ? 130 : 143;
+  process.exitCode = signal === 'SIGINT' ? 130 : 143;
 }
 
-process.once('SIGINT',  () => requestShutdown('SIGINT'));
+process.once('SIGINT', () => requestShutdown('SIGINT'));
 process.once('SIGTERM', () => requestShutdown('SIGTERM'));
 process.once('SIGQUIT', () => requestShutdown('SIGQUIT'));
 
@@ -67,7 +72,9 @@ if (process.platform === 'darwin') {
 
 const cleanupCaffeinate = () => {
   if (caffeinateProc) {
-    try { caffeinateProc.kill('SIGTERM'); } catch {}
+    try {
+      caffeinateProc.kill('SIGTERM');
+    } catch {}
     caffeinateProc = null;
     if (VERBOSE) console.log('[selfPlay] caffeinate stopped');
   }
@@ -88,7 +95,7 @@ function createAI(game, player) {
 }
 
 function cloneBoard(board) {
-  return board.map(row => [...row]);
+  return board.map((row) => [...row]);
 }
 
 function summarizeGame(game, draw = false) {
@@ -97,7 +104,7 @@ function summarizeGame(game, draw = false) {
     totalMoves: game.moveCount,
     winner: draw ? null : game.winner,
     gameOver: draw ? false : game.gameOver,
-    draw
+    draw,
   };
 }
 
@@ -110,7 +117,10 @@ function toLeanMoves(moves) {
     const ctx = m.featureContext ? { ...m.featureContext } : {};
 
     // Ensure peg counts exist; if missing, compute from board snapshot
-    if ((ctx.playerPegCount == null || ctx.opponentPegCount == null) && Array.isArray(m.board)) {
+    if (
+      (ctx.playerPegCount == null || ctx.opponentPegCount == null) &&
+      Array.isArray(m.board)
+    ) {
       let playerCount = 0;
       let oppCount = 0;
       for (const row of m.board) {
@@ -144,13 +154,13 @@ function playGame(gameNumber) {
     gameNumber,
     moves: [],
     summary: null,
-    stalled: false
+    stalled: false,
   };
 
   // Randomize starting color (tracks for analysis)
   const startsBlack = usePlan
     ? START_PLAN[gameNumber - 1] === 'black'
-    : (gameNumber % 2 === 0);
+    : gameNumber % 2 === 0;
   game.startingPlayer = startsBlack ? 'black' : 'red';
   game.currentPlayer = game.startingPlayer;
   game.isAIGame = true;
@@ -160,14 +170,16 @@ function playGame(gameNumber) {
 
   // Allow extra room for AI endgames; human play usually ends earlier
   const maxMovesEnv = Number.parseInt(process.env.MAX_MOVES ?? '', 10);
-  const maxMoves = Number.isFinite(maxMovesEnv) && maxMovesEnv > 0 ? maxMovesEnv : 220;
+  const maxMoves =
+    Number.isFinite(maxMovesEnv) && maxMovesEnv > 0 ? maxMovesEnv : 220;
   const stallLimitEnv = Number.parseInt(process.env.STALL_LIMIT ?? '', 10);
-  const stallLimit = Number.isFinite(stallLimitEnv) && stallLimitEnv > 0 ? stallLimitEnv : 40;
+  const stallLimit =
+    Number.isFinite(stallLimitEnv) && stallLimitEnv > 0 ? stallLimitEnv : 40;
   let stagnationCounter = 0;
   let stalled = false;
   const progressState = {
     red: { span: 0, touchesTop: false, touchesBottom: false },
-    black: { span: 0, touchesLeft: false, touchesRight: false }
+    black: { span: 0, touchesLeft: false, touchesRight: false },
   };
 
   for (let turn = 0; turn < maxMoves && !stopRequested; turn++) {
@@ -188,7 +200,7 @@ function playGame(gameNumber) {
       heuristics: ai.lastChosenFeatures || {},
       featureContext: {
         ...(ai.lastChosenContext || {}),
-        startingPlayer
+        startingPlayer,
       },
       valueModel: ai.lastChosenValueModel || null,
       heuristicScore: ai.lastChosenHeuristicScore ?? null,
@@ -260,14 +272,19 @@ function playGame(gameNumber) {
     try {
       await ensureValueModelLoaded();
     } catch (err) {
-      console.warn('[selfPlay] Value model unavailable, continuing without it:', err?.message || err);
+      console.warn(
+        '[selfPlay] Value model unavailable, continuing without it:',
+        err?.message || err
+      );
     }
 
     let completedGames = 0;
 
     for (let i = 1; i <= GAME_COUNT && !stopRequested; i++) {
       if (VERBOSE) {
-        const gameLabel = CORE_ID ? `Core ${CORE_ID}: Game ${i}` : `Playing self-game ${i}`;
+        const gameLabel = CORE_ID
+          ? `Core ${CORE_ID}: Game ${i}`
+          : `Playing self-game ${i}`;
         console.log(`${gameLabel} / ${GAME_COUNT}`);
       }
 
@@ -289,11 +306,15 @@ function playGame(gameNumber) {
             aborted: false,
             draw: isDraw,
             stalled,
-            startingPlayer: trace.summary?.startingPlayer ?? 'red'
-          }
+            startingPlayer: trace.summary?.startingPlayer ?? 'red',
+          },
         };
 
-        const tempPath = path.join('temp', `run-${RUN_ID}`, `temp-core-${CORE_ID}.jsonl`);
+        const tempPath = path.join(
+          'temp',
+          `run-${RUN_ID}`,
+          `temp-core-${CORE_ID}.jsonl`
+        );
         const line = JSON.stringify(gameData) + '\n';
 
         await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
@@ -326,7 +347,7 @@ function playGame(gameNumber) {
         gameCompleted: traces.length,
         searchDepth: SEARCH_DEPTH,
         aborted,
-        games: traces
+        games: traces,
       };
       await fs.promises.writeFile(outputPath, JSON.stringify(payload, null, 2));
       if (VERBOSE) {
@@ -343,13 +364,13 @@ function playGame(gameNumber) {
     }
 
     if (VERBOSE) {
-      if (aborted) console.log('[selfPlay] shutdown complete (aborted by signal).');
+      if (aborted)
+        console.log('[selfPlay] shutdown complete (aborted by signal).');
       else console.log('[selfPlay] all requested games completed.');
     }
 
     cleanupCaffeinate();
     process.exit(process.exitCode ?? 0);
-
   } catch (err) {
     console.error('[selfPlay] fatal error:', err?.stack || err);
     cleanupCaffeinate();

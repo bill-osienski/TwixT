@@ -55,7 +55,7 @@ export default class TwixTGame {
     this.moveHistory.push({
       type: 'peg',
       peg,
-      bridges: []
+      bridges: [],
     });
 
     const newBridges = this.createBridges(row, col);
@@ -71,116 +71,146 @@ export default class TwixTGame {
     return true;
   }
 
-    /** Build bridges from the newly placed peg at (row,col). */
-    createBridges(row, col) {
-      const newBridges = [];
-      const player = this.currentPlayer;
+  /** Build bridges from the newly placed peg at (row,col). */
+  createBridges(row, col) {
+    const newBridges = [];
+    const player = this.currentPlayer;
 
-      // Knight offsets (TwixT bridge geometry)
-      const KNIGHT_MOVES = [
-        [-2, -1], [-2, 1], [-1, -2], [-1, 2],
-        [ 1, -2], [ 1, 2], [ 2, -1], [ 2, 1]
-      ];
+    // Knight offsets (TwixT bridge geometry)
+    const KNIGHT_MOVES = [
+      [-2, -1],
+      [-2, 1],
+      [-1, -2],
+      [-1, 2],
+      [1, -2],
+      [1, 2],
+      [2, -1],
+      [2, 1],
+    ];
 
-      for (const [dr, dc] of KNIGHT_MOVES) {
-        const r2 = row + dr;
-        const c2 = col + dc;
+    for (const [dr, dc] of KNIGHT_MOVES) {
+      const r2 = row + dr;
+      const c2 = col + dc;
 
-        // In-bounds and same player's peg at the other end?
-        if (r2 < 0 || r2 >= this.boardSize || c2 < 0 || c2 >= this.boardSize) continue;
-        if (this.board[r2][c2] !== player) continue;
+      // In-bounds and same player's peg at the other end?
+      if (r2 < 0 || r2 >= this.boardSize || c2 < 0 || c2 >= this.boardSize)
+        continue;
+      if (this.board[r2][c2] !== player) continue;
 
-        // Already have this exact bridge (either direction)?
-        const exists = this.bridges.some(b =>
-          (b.from.row === row && b.from.col === col && b.to.row === r2 && b.to.col === c2) ||
-          (b.from.row === r2  && b.from.col === c2  && b.to.row === row && b.to.col === col)
-        );
-        if (exists) continue;
+      // Already have this exact bridge (either direction)?
+      const exists = this.bridges.some(
+        (b) =>
+          (b.from.row === row &&
+            b.from.col === col &&
+            b.to.row === r2 &&
+            b.to.col === c2) ||
+          (b.from.row === r2 &&
+            b.from.col === c2 &&
+            b.to.row === row &&
+            b.to.col === col)
+      );
+      if (exists) continue;
 
-        // Forbid crossings with ANY existing bridge (own or opponent)
-        if (this.bridgesCross(row, col, r2, c2)) continue;
+      // Forbid crossings with ANY existing bridge (own or opponent)
+      if (this.bridgesCross(row, col, r2, c2)) continue;
 
-        // Create and record the new bridge
-        const bridge = { from: { row, col }, to: { row: r2, col: c2 }, player };
-        this.bridges.push(bridge);
-        newBridges.push(bridge);
-      }
-
-      return newBridges;
+      // Create and record the new bridge
+      const bridge = { from: { row, col }, to: { row: r2, col: c2 }, player };
+      this.bridges.push(bridge);
+      newBridges.push(bridge);
     }
 
-    /** Return true if candidate (r1,c1)-(r2,c2) would cross any existing bridge. */
-    bridgesCross(r1, c1, r2, c2) {
-      const a1x = c1, a1y = r1;
-      const a2x = c2, a2y = r2;
+    return newBridges;
+  }
 
-      for (const br of this.bridges) {
-        // Sharing an endpoint is legal, not a crossing
-        const sharesEndpoint =
-          (a1x === br.from.col && a1y === br.from.row) ||
-          (a1x === br.to.col   && a1y === br.to.row)   ||
-          (a2x === br.from.col && a2y === br.from.row) ||
-          (a2x === br.to.col   && a2y === br.to.row);
-        if (sharesEndpoint) continue;
+  /** Return true if candidate (r1,c1)-(r2,c2) would cross any existing bridge. */
+  bridgesCross(r1, c1, r2, c2) {
+    const a1x = c1,
+      a1y = r1;
+    const a2x = c2,
+      a2y = r2;
 
-        if (this.lineSegmentsIntersect(
-          a1x, a1y, a2x, a2y,
-          br.from.col, br.from.row, br.to.col, br.to.row
-        )) {
-          return true;
-        }
+    for (const br of this.bridges) {
+      // Sharing an endpoint is legal, not a crossing
+      const sharesEndpoint =
+        (a1x === br.from.col && a1y === br.from.row) ||
+        (a1x === br.to.col && a1y === br.to.row) ||
+        (a2x === br.from.col && a2y === br.from.row) ||
+        (a2x === br.to.col && a2y === br.to.row);
+      if (sharesEndpoint) continue;
+
+      if (
+        this.lineSegmentsIntersect(
+          a1x,
+          a1y,
+          a2x,
+          a2y,
+          br.from.col,
+          br.from.row,
+          br.to.col,
+          br.to.row
+        )
+      ) {
+        return true;
       }
-      return false;
+    }
+    return false;
+  }
+
+  /** Robust segment–segment intersection; endpoint touching is NOT a crossing. */
+  lineSegmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+    function orient(ax, ay, bx, by, cx, cy) {
+      const abx = bx - ax,
+        aby = by - ay;
+      const acx = cx - ax,
+        acy = cy - ay;
+      const v = abx * acy - aby * acx;
+      return v > 0 ? 1 : v < 0 ? -1 : 0;
+    }
+    function onSegment(ax, ay, bx, by, cx, cy) {
+      return (
+        Math.min(ax, bx) <= cx &&
+        cx <= Math.max(ax, bx) &&
+        Math.min(ay, by) <= cy &&
+        cy <= Math.max(ay, by)
+      );
     }
 
-    /** Robust segment–segment intersection; endpoint touching is NOT a crossing. */
-    lineSegmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
-      function orient(ax, ay, bx, by, cx, cy) {
-        const abx = bx - ax, aby = by - ay;
-        const acx = cx - ax, acy = cy - ay;
-        const v = abx * acy - aby * acx;
-        return v > 0 ? 1 : v < 0 ? -1 : 0;
-      }
-      function onSegment(ax, ay, bx, by, cx, cy) {
-        return Math.min(ax, bx) <= cx && cx <= Math.max(ax, bx) &&
-               Math.min(ay, by) <= cy && cy <= Math.max(ay, by);
-      }
+    const o1 = orient(x1, y1, x2, y2, x3, y3);
+    const o2 = orient(x1, y1, x2, y2, x4, y4);
+    const o3 = orient(x3, y3, x4, y4, x1, y1);
+    const o4 = orient(x3, y3, x4, y4, x2, y2);
 
-      const o1 = orient(x1, y1, x2, y2, x3, y3);
-      const o2 = orient(x1, y1, x2, y2, x4, y4);
-      const o3 = orient(x3, y3, x4, y4, x1, y1);
-      const o4 = orient(x3, y3, x4, y4, x2, y2);
-
-      // Proper intersection (exclude endpoint-only touching)
-      if (o1 !== o2 && o3 !== o4) {
-        const endpointTouch =
-          (o1 === 0 && onSegment(x1, y1, x2, y2, x3, y3)) ||
-          (o2 === 0 && onSegment(x1, y1, x2, y2, x4, y4)) ||
-          (o3 === 0 && onSegment(x3, y3, x4, y4, x1, y1)) ||
-          (o4 === 0 && onSegment(x3, y3, x4, y4, x2, y2));
-        return !endpointTouch;
-      }
-
-      // Collinear overlaps beyond shared endpoints count as crossing
-      if (o1 === 0 && onSegment(x1, y1, x2, y2, x3, y3)) {
-        const shares = (x3 === x1 && y3 === y1) || (x3 === x2 && y3 === y2);
-        return !shares;
-      }
-      if (o2 === 0 && onSegment(x1, y1, x2, y2, x4, y4)) {
-        const shares = (x4 === x1 && y4 === y1) || (x4 === x2 && y4 === y2);
-        return !shares;
-      }
-      if (o3 === 0 && onSegment(x3, y3, x4, y4, x1, y1)) {
-        const shares = (x1 === x3 && y1 === y3) || (x1 === x4 && y1 === y4);
-        return !shares;
-      }
-      if (o4 === 0 && onSegment(x3, y3, x4, y4, x2, y2)) {
-        const shares = (x2 === x3 && y2 === y3) || (x2 === x4 && y2 === y4);
-        return !shares;
-      }
-
-      return false;
+    // Proper intersection (exclude endpoint-only touching)
+    if (o1 !== o2 && o3 !== o4) {
+      const endpointTouch =
+        (o1 === 0 && onSegment(x1, y1, x2, y2, x3, y3)) ||
+        (o2 === 0 && onSegment(x1, y1, x2, y2, x4, y4)) ||
+        (o3 === 0 && onSegment(x3, y3, x4, y4, x1, y1)) ||
+        (o4 === 0 && onSegment(x3, y3, x4, y4, x2, y2));
+      return !endpointTouch;
     }
+
+    // Collinear overlaps beyond shared endpoints count as crossing
+    if (o1 === 0 && onSegment(x1, y1, x2, y2, x3, y3)) {
+      const shares = (x3 === x1 && y3 === y1) || (x3 === x2 && y3 === y2);
+      return !shares;
+    }
+    if (o2 === 0 && onSegment(x1, y1, x2, y2, x4, y4)) {
+      const shares = (x4 === x1 && y4 === y1) || (x4 === x2 && y4 === y2);
+      return !shares;
+    }
+    if (o3 === 0 && onSegment(x3, y3, x4, y4, x1, y1)) {
+      const shares = (x1 === x3 && y1 === y3) || (x1 === x4 && y1 === y4);
+      return !shares;
+    }
+    if (o4 === 0 && onSegment(x3, y3, x4, y4, x2, y2)) {
+      const shares = (x2 === x3 && y2 === y3) || (x2 === x4 && y2 === y4);
+      return !shares;
+    }
+
+    return false;
+  }
 
   checkWin(player) {
     if (player === 'red') {

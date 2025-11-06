@@ -39,17 +39,20 @@ Root files:
 ## Quick Start
 
 ### 1. Build GPU Worker
+
 ```bash
 cd /Users/bill/Desktop/TwixT_Game\ Claude
 ./build-gpu.sh
 ```
 
 ### 2. Test Setup
+
 ```bash
 ./test-gpu.sh
 ```
 
 ### 3. Run GPU Training
+
 ```bash
 # GPU-accelerated (recommended)
 node scripts/selfPlayGPU.js --games 100 --workers 6 --depth 3
@@ -59,6 +62,7 @@ node scripts/selfPlayParallel.js -g 100 -d 3
 ```
 
 ### 4. Train Model
+
 ```bash
 python3 scripts/train_value.py \
   --input selfplay.json \
@@ -77,22 +81,26 @@ python3 scripts/train_value.py \
 ## Usage Examples
 
 ### Basic Training Run
+
 ```bash
 node scripts/selfPlayGPU.js --games 60 --workers 6 --depth 3
 ```
 
 ### Overnight Training
+
 ```bash
 caffeinate -i node scripts/selfPlayGPU.js --games 5000 --workers 8 --depth 3
 ```
 
 ### Background Execution
+
 ```bash
 nohup node scripts/selfPlayGPU.js --games 1000 --workers 6 --depth 3 > training.log 2>&1 &
 tail -f training.log
 ```
 
 ### Benchmark GPU vs CPU
+
 ```bash
 cd TwixTMetalGPU
 make benchmark
@@ -101,6 +109,7 @@ make benchmark
 ## Monitoring
 
 ### GPU Usage
+
 ```bash
 # Terminal 1: Run training
 node scripts/selfPlayGPU.js --games 100 --workers 6 --verbose
@@ -110,6 +119,7 @@ sudo powermetrics --samplers gpu_power -i 1000
 ```
 
 ### Activity Monitor
+
 1. Open Activity Monitor
 2. Window → GPU History
 3. Should see 70-90% utilization during training
@@ -117,18 +127,21 @@ sudo powermetrics --samplers gpu_power -i 1000
 ## Building
 
 ### Quick Build
+
 ```bash
 cd TwixTMetalGPU
 make build
 ```
 
 ### Manual Build
+
 ```bash
 cd TwixTMetalGPU
 swift build -c release
 ```
 
 ### Clean Build
+
 ```bash
 cd TwixTMetalGPU
 make clean
@@ -138,17 +151,20 @@ make build
 ## Troubleshooting
 
 ### "Swift not found"
+
 ```bash
 xcode-select --install
 ```
 
 ### "Binary not found"
+
 ```bash
 cd TwixTMetalGPU
 swift build -c release
 ```
 
 ### Low Performance
+
 - Check GPU utilization (should be 70-90%)
 - Reduce worker count if too high
 - Verify release build (not debug)
@@ -163,11 +179,13 @@ swift build -c release
 ## Configuration
 
 ### Worker Count (GPU)
+
 - **M3 (18 cores)**: 6-8 workers
 - **M3 Pro (18 cores)**: 8-12 workers
 - **M3 Max (40 cores)**: 12-18 workers
 
 ### Search Depth
+
 - **2**: Fast, lower quality (2-3 min / 100 games)
 - **3**: Balanced (recommended) (4-6 min / 100 games)
 - **4**: High quality, slow (10-15 min / 100 games)

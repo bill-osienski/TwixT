@@ -126,11 +126,15 @@ export default class GameController {
     const moveCount = document.getElementById('move-count');
 
     if (this.game.currentPlayer === 'red') {
-      if (playerIndicator) playerIndicator.className = 'current-player player-red';
-      if (playerName) playerName.textContent = 'Red (Cross Goal Lines: Top ↔ Bottom)';
+      if (playerIndicator)
+        playerIndicator.className = 'current-player player-red';
+      if (playerName)
+        playerName.textContent = 'Red (Cross Goal Lines: Top ↔ Bottom)';
     } else {
-      if (playerIndicator) playerIndicator.className = 'current-player player-black';
-      if (playerName) playerName.textContent = 'Black (Cross Goal Lines: Left ↔ Right)';
+      if (playerIndicator)
+        playerIndicator.className = 'current-player player-black';
+      if (playerName)
+        playerName.textContent = 'Black (Cross Goal Lines: Left ↔ Right)';
     }
 
     if (moveCount) moveCount.textContent = `Move ${this.game.moveCount}`;
@@ -235,7 +239,8 @@ export default class GameController {
     const playerName = document.getElementById('player-name');
     if (playerName) {
       if (isAI) {
-        const diffLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+        const diffLabel =
+          difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
         const starter = startsBlack ? `Black (${diffLabel} AI)` : 'Red (Human)';
         playerName.textContent = `Red (Human) vs Black (${diffLabel} AI) – ${starter} starts`;
       } else {
@@ -348,10 +353,12 @@ export default class GameController {
       source,
       player,
       row,
-      col
+      col,
     };
     this.moveLog.push(entry);
 
-    console.log(`[Move ${entry.move}] ${player.toUpperCase()} (${source}) -> (${row}, ${col})`);
+    console.log(
+      `[Move ${entry.move}] ${player.toUpperCase()} (${source}) -> (${row}, ${col})`
+    );
   }
 }
