@@ -1574,6 +1574,12 @@ def command_loop(args: argparse.Namespace) -> None:
         print("\n[loop] Stop requested. Attempting to cancel the current sweep...")
 
     previous_handler = signal.signal(signal.SIGINT, handle_sigint)
+    if getattr(args, "reset_stall", False):
+        state = load_state()
+        state["cyclesSinceScoreImprovement"] = 0
+        state["cyclesSinceStreakImprovement"] = 0
+        save_state(state)
+        print("[loop] Stall counters reset.")
 
     cycle = 0
     try:
@@ -1952,6 +1958,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="Simulate the loop without running sweeps or validations",
+    )
+    loop_parser.add_argument(
+        "--reset-stall",
+        action="store_true",
+        help="Reset stall counters before starting the loop",
     )
     loop_parser.set_defaults(func=command_loop)
 
