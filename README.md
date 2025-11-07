@@ -56,7 +56,21 @@ The legacy `node scripts/tuneBaseline.js` entry point still works for one-off ma
   node scripts/startServer.js
   ```
   then open `http://localhost:8080/TwixT.html`.
+- CI runs `npm run lint`, `npm run typecheck`, and `npm test` on every push. Locally you can mirror that plus the Python hygiene checks (`ruff check autoTune.py`, `black --check autoTune.py`) before submitting changes.
 - Train the logistic-regression value model from self-play traces:
-  ```
+
+```
   python scripts/train_value.py --help
-  ```
+```
+
+## Standalone Game Bundle
+
+If you want to ship the playable game (including the 1-player AI) without any of the automation scripts, keep only the browser assets and the tuned configuration:
+
+- `TwixT.html`
+- `assets/js/**` (all AI and game modules)
+- `assets/modernWood1.jpg`
+- `assets/value-model.json` (optional, but recommended once you have trained one; the AI falls back to heuristics if it is missing)
+- `assets/js/ai/search.json` should already contain your desired knob settings before you copy the files.
+
+Everything else (logs/, scripts/, docs/, autoTune.py, etc.) can be omitted. Because `TwixT.html` loads ES modules, host the bundle behind any static server (for example, from the bundle root run `npx serve .` or drop it into GitHub Pages/S3). Opening the HTML file directly from disk will hit CORS restrictions in most browsers.

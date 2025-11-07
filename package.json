@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node scripts/startServer.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/smoke.test.mjs",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "typecheck": "eslint . --max-warnings=0"
   },
   "keywords": [],
   "author": "",
