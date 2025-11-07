@@ -716,7 +716,9 @@ def save_state(state: Dict[str, Any]) -> None:
     write_json(STATE_PATH, state)
 
 
-def reset_stall_state(state: Dict[str, Any], *, thaw_knobs: bool = False) -> Dict[str, Any]:
+def reset_stall_state(
+    state: Dict[str, Any], *, thaw_knobs: bool = False
+) -> Dict[str, Any]:
     state["cyclesSinceScoreImprovement"] = 0
     state["cyclesSinceStreakImprovement"] = 0
     if thaw_knobs:
