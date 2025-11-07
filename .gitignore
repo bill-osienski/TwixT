@@ -12,10 +12,6 @@ temp/
 __pycache__/
 *.pyc
 
-# Logs
-logs/
-*.log
-
 # OS files
 .DS_Store
 Thumbs.db
@@ -30,9 +26,9 @@ Thumbs.db
 .env
 .env.local
 
-# Auto-tune scratch files
+# Auto-tune temporary data
 logs/loop-validation-*.log
 logs/loop-validation-plateau-*.log
 logs/next-sweep.json
-temp/
+
 scripts/GPU_Training/
