@@ -10,7 +10,8 @@ node_modules/
 # Temporary files
 temp/
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
 
 # OS files
 .DS_Store

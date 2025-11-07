@@ -63,7 +63,7 @@ Run all commands from the project root with Python 3 available on `PATH`.
 Repeat the cycle: suggest → sweep → update → validate → report. For unattended runs, launch `python3 autoTune.py loop` with your preferred flags. Helpful options:
 
 - `--exploit 0` to skip replaying historical hashes and rely entirely on the trend/validation weighting.
-- `--reset-stall` to zero the plateau counters when restarting after a manual cleanup.
+- `--reset-stall` to zero the plateau counters and thaw any knobs that previously froze themselves after a plateau.
 - `--workers 10` (default) to keep 60/60 batches fast; plateau backlogs also use 10 workers automatically.
 
 The loop now:

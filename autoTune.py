@@ -716,6 +716,23 @@ def save_state(state: Dict[str, Any]) -> None:
     write_json(STATE_PATH, state)
 
 
+def reset_stall_state(state: Dict[str, Any], *, thaw_knobs: bool = False) -> Dict[str, Any]:
+    state["cyclesSinceScoreImprovement"] = 0
+    state["cyclesSinceStreakImprovement"] = 0
+    if thaw_knobs:
+        knob_stats = state.get("knobStats", {})
+        for knob, stats in knob_stats.items():
+            stats["cyclesSinceImprovement"] = 0
+            stats["frozen"] = False
+        state["knobStats"] = knob_stats
+        planned = state.get("plannedSweep", {})
+        planned["hashes"] = []
+        planned["generatedAt"] = None
+        state["plannedSweep"] = planned
+    save_state(state)
+    return state
+
+
 def select_base_combo(
     baseline_combo: Dict[str, Any],
     baseline_defaults: Dict[str, Any],
@@ -1576,10 +1593,8 @@ def command_loop(args: argparse.Namespace) -> None:
     previous_handler = signal.signal(signal.SIGINT, handle_sigint)
     if getattr(args, "reset_stall", False):
         state = load_state()
-        state["cyclesSinceScoreImprovement"] = 0
-        state["cyclesSinceStreakImprovement"] = 0
-        save_state(state)
-        print("[loop] Stall counters reset.")
+        reset_stall_state(state, thaw_knobs=True)
+        print("[loop] Stall counters reset and knobs thawed.")
 
     cycle = 0
     try:
