@@ -11527,6 +11527,4831 @@
           "configHash": "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6"
         }
       ]
+    },
+    {
+      "timestamp": "2025-11-06T05:39:25.114Z",
+      "combos": [
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 0,
+          "configHash": "0f41af519dcc973ad51540cfc9c73c38794e50ab"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "05285397f5cd1e592cc7b18daa72d16b88b481d6"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 0.75,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 4,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "3ac9f0a9ec076a7efc97d0e178d1453b9c267cfc"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 3,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "23f864ab0ba30db124748440156b5ea27dbec241"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "f30aec88e9beb4928daa57a45e71e4f6a22f8a36"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.4,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "f4486f375b6de9cb0d670247d8f6a0810ef4f917"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.4,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 4,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "74391532918c523a8b53d3d69a67d5848102d693"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "b460b156ff408552a4231d3755c3261c4d35d969"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 7,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "9f0a38f63f001f70b8432c1fa278e9769bf6300f"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.55,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "5a9692e029862d2f74c30fffe14cfb909b3b29cc"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "dd16771a8d2b03a543a02cbfefed03938d0092a8"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.95,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "674b747f24070e05363463f8d9fe37f893144fb4"
+        },
+        {
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 7,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 3,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "c5f541ee34657dc369f22f88655a5187dace2952"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 7,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "ff16219f8fe13f9693cddf479b871099be32d8f2"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 7,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "a46ec7a3fc627b76fc414a41ad8e7eb06924381f"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "cecc7b46ce5cc47caebc1e472c346f4c845d1453"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 7,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "14fcc572d6a42e2de9dbb741214a5091f833eb25"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.9,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 8,
+              "black": 1,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "b662c89317045dcbf60a5fb5760a669eed1712da"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.95,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 6,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 2,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "dc7491433278ba395ed02ff6a040c343d7c48324"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 7,
+              "black": 1,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.05,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 2,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "7dd65f77f435919810e955bb5727213557f0f998"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 0.7,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "4c4baa97149ec7f51bb999cda7088edf4fd99726"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 0.7,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.95,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 1,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 1,
+              "black": 9,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 16,
+          "configHash": "d63d84863dd61ebd0fe79e3d1741347155ed25cc"
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-11-06T10:18:05.182Z",
+      "combos": [
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "14fcc572d6a42e2de9dbb741214a5091f833eb25"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "b460b156ff408552a4231d3755c3261c4d35d969"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "9f0a38f63f001f70b8432c1fa278e9769bf6300f"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "cecc7b46ce5cc47caebc1e472c346f4c845d1453"
+        },
+        {
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "c5f541ee34657dc369f22f88655a5187dace2952"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 900,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 2,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "eaa0ec165e7763b9387f9c0b2d6158a7330a4a0e"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1800,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "ea56a808d898c232fedc4c52cb0536957fb619e3"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "23f864ab0ba30db124748440156b5ea27dbec241"
+        },
+        {
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.8,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "074fefa8de4b53069820563aefa3649d8376d0ac"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 100,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "e3c9147ae9e2cddc210540b63e5a6993e9778ab0"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "f30aec88e9beb4928daa57a45e71e4f6a22f8a36"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 1,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1600,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "c4053ad5ee12c2bf8680461eec01f2c52a99db05"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.4,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 6,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "f4486f375b6de9cb0d670247d8f6a0810ef4f917"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.6,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "a46ec7a3fc627b76fc414a41ad8e7eb06924381f"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.95,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 3,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 7,
+              "black": 1,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "dc7491433278ba395ed02ff6a040c343d7c48324"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 400,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "210a9ecc780f2b432f8b272de3646471d2a8b099"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.9,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 8,
+              "black": 1,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "b662c89317045dcbf60a5fb5760a669eed1712da"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.4,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 1,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 3,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 9,
+          "configHash": "74391532918c523a8b53d3d69a67d5848102d693"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 1,
+              "black": 8,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 10,
+          "configHash": "ff16219f8fe13f9693cddf479b871099be32d8f2"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.05,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 8,
+              "black": 0,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 10,
+          "configHash": "7dd65f77f435919810e955bb5727213557f0f998"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 1,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 2,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 12,
+          "configHash": "05285397f5cd1e592cc7b18daa72d16b88b481d6"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 0.75,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 10,
+              "black": 0,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 5,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 13,
+          "configHash": "3ac9f0a9ec076a7efc97d0e178d1453b9c267cfc"
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-11-06T16:22:37.569Z",
+      "combos": [
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1000,
+          "blackDoubleCoverageScale": 0.8,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 0,
+          "configHash": "9f0a38f63f001f70b8432c1fa278e9769bf6300f"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 0,
+          "configHash": "b5c900e95c22ba58ac292b9bd6f6a556649862cb"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.4,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "f4486f375b6de9cb0d670247d8f6a0810ef4f917"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.65,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "0fec2d28e23f11d202bd69557137f49aaf7b64c8"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 900,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "eaa0ec165e7763b9387f9c0b2d6158a7330a4a0e"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "4b3fb3fb342f60abc2215327a16f2ecdd5a52e35"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 3,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "05285397f5cd1e592cc7b18daa72d16b88b481d6"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.25,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "f30aec88e9beb4928daa57a45e71e4f6a22f8a36"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 6,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "dd16771a8d2b03a543a02cbfefed03938d0092a8"
+        },
+        {
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "c5f541ee34657dc369f22f88655a5187dace2952"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.55,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 3,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "cecc7b46ce5cc47caebc1e472c346f4c845d1453"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.05,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 0,
+              "draw": 5,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "7dd65f77f435919810e955bb5727213557f0f998"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 3,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "23f864ab0ba30db124748440156b5ea27dbec241"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 900,
+          "blackDoubleCoverageScale": 0.8,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "298f16ba7e77bc14237ba05a415bbfaa2b5a33af"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 3,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "5bc34f12d3953f5aa4e0a1a51a78186eda416c22"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 6,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "53410c073b1ec81cea573dfba389e5553e76aa5f"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.9,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 2,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "b662c89317045dcbf60a5fb5760a669eed1712da"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.95,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 2,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 7,
+              "black": 1,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 9,
+          "configHash": "dc7491433278ba395ed02ff6a040c343d7c48324"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.75,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 1,
+              "black": 6,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 9,
+          "configHash": "d03038686a5f67a6d09445c140b7c130bbf0c4b2"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 10,
+          "configHash": "14fcc572d6a42e2de9dbb741214a5091f833eb25"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 0.75,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 1,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 7,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 13,
+          "configHash": "3ac9f0a9ec076a7efc97d0e178d1453b9c267cfc"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 10,
+              "black": 0,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 14,
+          "configHash": "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6"
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-11-06T22:24:39.768Z",
+      "combos": [
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.65,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "0fec2d28e23f11d202bd69557137f49aaf7b64c8"
+        },
+        {
+          "firstEdgeRed": 435,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "c5f541ee34657dc369f22f88655a5187dace2952"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 465,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "5a10de7677d599c15c4c3d4bbe44d84c023cfa3d"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.55,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "14fcc572d6a42e2de9dbb741214a5091f833eb25"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "53410c073b1ec81cea573dfba389e5553e76aa5f"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 5,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "4b3fb3fb342f60abc2215327a16f2ecdd5a52e35"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1800,
+          "blackDoubleCoverageScale": 0.65,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "57a50e303d30373b8c2b2e863448a7b422bb80a9"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "cecc7b46ce5cc47caebc1e472c346f4c845d1453"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "a06122044173a1372b1b06164878bbec59652c75"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 5,
+          "configHash": "dd16771a8d2b03a543a02cbfefed03938d0092a8"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.9,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 8,
+              "black": 1,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "b662c89317045dcbf60a5fb5760a669eed1712da"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1800,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 5,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "ea56a808d898c232fedc4c52cb0536957fb619e3"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.75,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 7,
+              "black": 2,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 7,
+          "configHash": "d03038686a5f67a6d09445c140b7c130bbf0c4b2"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 1,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "5bc34f12d3953f5aa4e0a1a51a78186eda416c22"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 1,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "2abd1435813044126dc87a55ee98e9d9c6db21f5"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "8ba4d939128b6930a0bd46a1eb12f69c76177f21"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.95,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 2,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "674b747f24070e05363463f8d9fe37f893144fb4"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.05,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 1,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 9,
+          "configHash": "7dd65f77f435919810e955bb5727213557f0f998"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 0,
+              "black": 10,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 10,
+          "configHash": "23f864ab0ba30db124748440156b5ea27dbec241"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 0.75,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 1,
+              "black": 6,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 11,
+          "configHash": "3ac9f0a9ec076a7efc97d0e178d1453b9c267cfc"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.95,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 8,
+              "black": 0,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 12,
+          "configHash": "dc7491433278ba395ed02ff6a040c343d7c48324"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 8,
+              "black": 1,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 13,
+          "configHash": "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6"
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-11-07T03:28:08.684Z",
+      "combos": [
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.55,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 0,
+          "configHash": "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 465,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.65,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 1,
+          "configHash": "ab6c979b9b15b7a3870f3df12ccff8679ac70d44"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 4,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "cecc7b46ce5cc47caebc1e472c346f4c845d1453"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 2,
+          "configHash": "4b3fb3fb342f60abc2215327a16f2ecdd5a52e35"
+        },
+        {
+          "firstEdgeRed": 430,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.1,
+          "blackSpanGainMultiplier": 0.9,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 4,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "14fcc572d6a42e2de9dbb741214a5091f833eb25"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 450,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.7,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "dd16771a8d2b03a543a02cbfefed03938d0092a8"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 3,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "53410c073b1ec81cea573dfba389e5553e76aa5f"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 1500,
+          "blackDoubleCoverageScale": 0.6,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 6,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "a06122044173a1372b1b06164878bbec59652c75"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 5,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "8ba4d939128b6930a0bd46a1eb12f69c76177f21"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.35,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 3,
+          "configHash": "a0d5c44a8e84f55eb7b35268644c0631e6809ae3"
+        },
+        {
+          "firstEdgeRed": 420,
+          "firstEdgeBlack": 460,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "2abd1435813044126dc87a55ee98e9d9c6db21f5"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 445,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.75,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 800,
+          "blackDoubleCoverageScale": 0.85,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 6,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "0a5eaebd4ce68c0515de9c680313f455e15d4319"
+        },
+        {
+          "firstEdgeRed": 425,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "23f864ab0ba30db124748440156b5ea27dbec241"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.25,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "6664459cb68ce1a7391a62b0cd43c03d33e4d663"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.5,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 6,
+              "black": 4,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 4,
+          "configHash": "c9affee7a38b7e856e77af7e4ddcd312aa950c30"
+        },
+        {
+          "firstEdgeRed": 410,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 5,
+              "black": 5,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 7,
+              "black": 1,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 6,
+          "configHash": "dce6e49daf6f974a5901934c2e452717f751f20b"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 0.95,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 5,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "674b747f24070e05363463f8d9fe37f893144fb4"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.05,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 7,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 7,
+              "black": 3,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 8,
+          "configHash": "7dd65f77f435919810e955bb5727213557f0f998"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.9,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 4,
+              "black": 4,
+              "draw": 2,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 9,
+              "black": 0,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 9,
+          "configHash": "b662c89317045dcbf60a5fb5760a669eed1712da"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 0.95,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 3,
+              "black": 4,
+              "draw": 3,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 9,
+              "black": 0,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 10,
+          "configHash": "dc7491433278ba395ed02ff6a040c343d7c48324"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.45,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.15,
+          "blackSpanGainMultiplier": 0.85,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 9,
+              "black": 1,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 3,
+              "black": 6,
+              "draw": 1,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 11,
+          "configHash": "5bc34f12d3953f5aa4e0a1a51a78186eda416c22"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1.3,
+          "blackSpanGainMultiplier": 1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 8,
+              "black": 2,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 12,
+          "configHash": "62f1804116651b7ebc5d917def3c8359e4158fad"
+        },
+        {
+          "firstEdgeRed": 415,
+          "firstEdgeBlack": 455,
+          "finishPenalty": 1181,
+          "gapDecay": 23,
+          "redFinishPenaltyFactor": 0.2,
+          "blackFinishScaleMultiplier": 1,
+          "spanGainBase": 180,
+          "redSpanGainMultiplier": 1,
+          "blackSpanGainMultiplier": 1.1,
+          "redDoubleCoverageBonus": 0,
+          "blackDoubleCoverageScale": 1,
+          "connectorBonus": 620,
+          "finishThreshold": 4,
+          "finishBonusBase": 3400,
+          "connectorTargetBonus": 500,
+          "doubleCoverageBase": 2400,
+          "finishGapSlope": 150,
+          "nearFinishBonus": 2500,
+          "redFinishExtra": 0,
+          "redGapDecayMultiplier": 1,
+          "evaluation": {
+            "depth2": {
+              "red": 2,
+              "black": 8,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            },
+            "depth3": {
+              "red": 10,
+              "black": 0,
+              "draw": 0,
+              "redStarts": 5,
+              "blackStarts": 5
+            }
+          },
+          "score": 16,
+          "configHash": "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6"
+        }
+      ]
     }
   ]
 }

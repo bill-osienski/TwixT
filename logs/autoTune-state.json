@@ -1,33 +1,33 @@
 {
-  "lastSuggested": "2025-11-06T01:27:59.818Z",
+  "lastSuggested": "2025-11-07T00:52:14.028Z",
   "plannedSweep": {
     "hashes": [
-      "ff16219f8fe13f9693cddf479b871099be32d8f2",
-      "a46ec7a3fc627b76fc414a41ad8e7eb06924381f",
-      "05285397f5cd1e592cc7b18daa72d16b88b481d6",
-      "f4486f375b6de9cb0d670247d8f6a0810ef4f917",
-      "74391532918c523a8b53d3d69a67d5848102d693",
-      "b460b156ff408552a4231d3755c3261c4d35d969",
-      "f30aec88e9beb4928daa57a45e71e4f6a22f8a36",
-      "9f0a38f63f001f70b8432c1fa278e9769bf6300f",
+      "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f",
       "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4",
       "cecc7b46ce5cc47caebc1e472c346f4c845d1453",
       "14fcc572d6a42e2de9dbb741214a5091f833eb25",
       "dd16771a8d2b03a543a02cbfefed03938d0092a8",
-      "dc7491433278ba395ed02ff6a040c343d7c48324",
-      "b662c89317045dcbf60a5fb5760a669eed1712da",
+      "5bc34f12d3953f5aa4e0a1a51a78186eda416c22",
+      "53410c073b1ec81cea573dfba389e5553e76aa5f",
+      "a06122044173a1372b1b06164878bbec59652c75",
+      "2abd1435813044126dc87a55ee98e9d9c6db21f5",
+      "8ba4d939128b6930a0bd46a1eb12f69c76177f21",
+      "674b747f24070e05363463f8d9fe37f893144fb4",
+      "0a5eaebd4ce68c0515de9c680313f455e15d4319",
       "7dd65f77f435919810e955bb5727213557f0f998",
       "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6",
+      "dc7491433278ba395ed02ff6a040c343d7c48324",
+      "b662c89317045dcbf60a5fb5760a669eed1712da",
       "23f864ab0ba30db124748440156b5ea27dbec241",
-      "0f41af519dcc973ad51540cfc9c73c38794e50ab",
-      "674b747f24070e05363463f8d9fe37f893144fb4",
-      "4c4baa97149ec7f51bb999cda7088edf4fd99726",
-      "c5f541ee34657dc369f22f88655a5187dace2952",
-      "d63d84863dd61ebd0fe79e3d1741347155ed25cc",
+      "4b3fb3fb342f60abc2215327a16f2ecdd5a52e35",
+      "ab6c979b9b15b7a3870f3df12ccff8679ac70d44",
       "6664459cb68ce1a7391a62b0cd43c03d33e4d663",
-      "62f1804116651b7ebc5d917def3c8359e4158fad"
+      "62f1804116651b7ebc5d917def3c8359e4158fad",
+      "dce6e49daf6f974a5901934c2e452717f751f20b",
+      "a0d5c44a8e84f55eb7b35268644c0631e6809ae3",
+      "c9affee7a38b7e856e77af7e4ddcd312aa950c30"
     ],
-    "generatedAt": "2025-11-06T01:27:59.818Z"
+    "generatedAt": "2025-11-07T00:52:14.028Z"
   },
   "validationStreaks": {
     "2e161adf34171c19a1dae9461dd9897c6dcfda72": 0,
@@ -57,30 +57,47 @@
     "0d76140caed4d472918c3186db49f0d5da336a27": 0,
     "a21077dc24a3cecb378e023c35cf5b987f896540": 0,
     "7214b093cf5f63759297da92d7da0533fcf1c6bd": 0,
-    "078b8bcd239ad958f14cecd9769a91d305535e21": 1,
+    "078b8bcd239ad958f14cecd9769a91d305535e21": 0,
     "366c28d35aec637d99d7473c5bc6dc35bc2103cf": 0,
     "995fbaf43047f30012c1d09f7565ef2ab3b21b2d": 0,
     "5d44e49497aade31a887f7ad67214e3797ab52c6": 0,
     "d20079018c2674c623ac5e39edcbbeb4ab36db4e": 0,
     "ff323d4e4bee1b22d93c3df500fe2d5ab024efad": 0,
     "9f36c640194633df15dba36de6a864fc9a7301e7": 0,
-    "423e6fe5903666fd890efc460c1be47a14ec43bc": 0
+    "423e6fe5903666fd890efc460c1be47a14ec43bc": 0,
+    "d707d7b4d5dab265409e933c0778a647b1031b51": 0,
+    "335b6ccdd47cefe3775e2d24e20afba57a3e3107": 0,
+    "1f7ae9b346106eee50e5d42d6194d6669d9eb118": 0,
+    "0f41af519dcc973ad51540cfc9c73c38794e50ab": 0,
+    "ff16219f8fe13f9693cddf479b871099be32d8f2": 0,
+    "a46ec7a3fc627b76fc414a41ad8e7eb06924381f": 0,
+    "74391532918c523a8b53d3d69a67d5848102d693": 0,
+    "b460b156ff408552a4231d3755c3261c4d35d969": 0,
+    "b5c900e95c22ba58ac292b9bd6f6a556649862cb": 0,
+    "9f0a38f63f001f70b8432c1fa278e9769bf6300f": 0,
+    "f30aec88e9beb4928daa57a45e71e4f6a22f8a36": 0,
+    "f4486f375b6de9cb0d670247d8f6a0810ef4f917": 0,
+    "05285397f5cd1e592cc7b18daa72d16b88b481d6": 0,
+    "3ac9f0a9ec076a7efc97d0e178d1453b9c267cfc": 0,
+    "0fec2d28e23f11d202bd69557137f49aaf7b64c8": 0,
+    "c5f541ee34657dc369f22f88655a5187dace2952": 0,
+    "5a10de7677d599c15c4c3d4bbe44d84c023cfa3d": 0
   },
   "successfulConfigs": {},
-  "lastProcessedSweep": "2025-11-05T19:05:28.348Z",
+  "lastProcessedSweep": "2025-11-07T03:28:08.684Z",
   "pendingValidation": [],
   "knobStats": {
     "firstEdgeRed": {
       "bestScore": 0,
       "bestValue": 415,
-      "cyclesSinceImprovement": 0,
-      "frozen": false
+      "cyclesSinceImprovement": 5,
+      "frozen": true
     },
     "firstEdgeBlack": {
       "bestScore": 0,
       "bestValue": 455,
-      "cyclesSinceImprovement": 0,
-      "frozen": false
+      "cyclesSinceImprovement": 5,
+      "frozen": true
     },
     "finishPenalty": {
       "bestScore": 0,
@@ -91,8 +108,8 @@
     "redFinishPenaltyFactor": {
       "bestScore": 0,
       "bestValue": 0.2,
-      "cyclesSinceImprovement": 0,
-      "frozen": false
+      "cyclesSinceImprovement": 5,
+      "frozen": true
     },
     "blackFinishScaleMultiplier": {
       "bestScore": 0,
@@ -103,31 +120,33 @@
     "redSpanGainMultiplier": {
       "bestScore": 0,
       "bestValue": 1,
-      "cyclesSinceImprovement": 0,
-      "frozen": false
+      "cyclesSinceImprovement": 5,
+      "frozen": true
     },
     "blackSpanGainMultiplier": {
       "bestScore": 0,
       "bestValue": 1,
-      "cyclesSinceImprovement": 0,
-      "frozen": false
+      "cyclesSinceImprovement": 5,
+      "frozen": true
     },
     "redDoubleCoverageBonus": {
       "bestScore": 0,
       "bestValue": 1500,
-      "cyclesSinceImprovement": 0,
-      "frozen": false
+      "cyclesSinceImprovement": 5,
+      "frozen": true
     },
     "blackDoubleCoverageScale": {
       "bestScore": 0,
       "bestValue": 1,
-      "cyclesSinceImprovement": 0,
-      "frozen": false
+      "cyclesSinceImprovement": 5,
+      "frozen": true
     }
   },
-  "bestScore": 99999,
+  "bestScore": 0,
   "cyclesSinceScoreImprovement": 0,
-  "cyclesSinceStreakImprovement": 0,
+  "cyclesSinceStreakImprovement": 5,
   "bestStreak": 1,
-  "bestScoreHashes": []
+  "bestScoreHashes": [
+    "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f"
+  ]
 }
