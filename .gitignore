@@ -29,3 +29,10 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Auto-tune scratch files
+logs/loop-validation-*.log
+logs/loop-validation-plateau-*.log
+logs/next-sweep.json
+temp/
+scripts/GPU_Training/
