@@ -34,7 +34,7 @@ Use `autoTune.py` to manage sweep batches and validation runs end-to-end:
 - `python3 autoTune.py update` → fold the new sweep data into `logs/sweep-results.json` and queue validation targets.
 - `python3 autoTune.py validate --hash <configHash>` → swap `assets/js/ai/search.json`, run `scripts/runValidation.js`, and append results to `logs/validation-results.json`.
 - `python3 autoTune.py report` → summarize top sweep scores, validation balance, and pending work.
-- `python3 autoTune.py loop` → run the whole cycle continuously. The loop now prioritises previously successful hashes, schedules up to eight validations per sweep (using eight workers), automatically persists the first configuration that achieves two consecutive ≤ 3 splits to `assets/js/ai/search.json`, and exits either on success or after plateau validations clear the remaining score ≤ 2 backlog. Ctrl+C cancels the current sweep without writing partial data.
+- `python3 autoTune.py loop` → run the whole cycle continuously. The planner now mines the entire sweep + validation history, weighting validation parity (depth 3 counts double) when proposing new knobs. The loop prioritises hashes with existing streaks, queues up to five 60/60 runs per cycle (default 10 workers), finishes the in-flight sweep on Ctrl+C, automatically persists the first configuration that achieves two consecutive ≤ 3 splits to `assets/js/ai/search.json`, and exits when either a winner is found or the plateau backlog (score ≤ 2) is cleared. Add `--reset-stall` if you want to zero the stall counters at startup, and drop the exploit quota with `--exploit 0` if you only want trend-driven combos.
 - Individual knobs that fail to improve their best sweep score for five consecutive cycles are frozen automatically; the loop keeps the best value found and focuses exploration on the remaining knobs.
 
 The legacy `node scripts/tuneBaseline.js` entry point still works for one-off manual sweeps, but the Python wrapper keeps history consistent and tracks config hashes automatically. More detail lives in `docs/baseline-tuning.md`.
@@ -50,13 +50,13 @@ The legacy `node scripts/tuneBaseline.js` entry point still works for one-off ma
   ```
   The script snapshots `search.json`, runs `selfPlayParallel`, parses the console heuristic stats, and appends a summary to `logs/validation-results.json`. Override depth plans, worker count, or log filename as needed.
 - Self-play batches can be driven via `node scripts/selfPlayParallel.js`.
-- GPU training utilities reside under `scripts/GPU_Training/` if you want to generate or evaluate value-model data.
+- GPU training utilities reside under `scripts/GPU_Training/`; they are ignored by default in Git. If you need to keep local experiments, remove the ignore rule or copy the files elsewhere.
 - Launch the browser client locally with:
   ```
   node scripts/startServer.js
   ```
   then open `http://localhost:8080/TwixT.html`.
-- CI runs `npm run lint`, `npm run typecheck`, and `npm test` on every push. Locally you can mirror that plus the Python hygiene checks (`ruff check autoTune.py`, `black --check autoTune.py`) before submitting changes.
+- CI runs `npm run lint`, `npm run typecheck`, and `npm test` on every push. Locally mirror that plus the Python hygiene checks (`ruff check autoTune.py`, `black --check autoTune.py`). Prettier ignores the large log JSONs (`logs/*.json`, `selfplay.json`) to avoid heap issues; format code/docs only.
 - Train the logistic-regression value model from self-play traces:
 
 ```

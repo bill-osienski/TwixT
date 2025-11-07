@@ -24,7 +24,7 @@ Run all commands from the project root with Python 3 available on `PATH`.
    ```
 
    Writes `logs/next-sweep.json` and records the plan in `logs/autoTune-state.json`. The script blends best historical configs with neighborhood exploration. Customize the batch size or RNG seed as needed.
-   The planner now mines the existing sweep log for knobs that correlate strongly with better scores, suggests nearby values for those trends, and fills remaining slots with under-sampled ranges before resorting to random exploration.
+   The planner now mines the entire sweep + validation history. Validation runs carry extra weight (depth‑3 parity counts double, draws add a small penalty), so knob trends reflect long-run parity rather than short 10/10 noise. You can disable replay of the “best 12” by starting the loop with `--exploit 0` when you only want validation-weighted suggestions.
 
 2. **Run the sweep**
 
@@ -49,7 +49,7 @@ Run all commands from the project root with Python 3 available on `PATH`.
    ```
 
    Temporarily installs the candidate in `assets/js/ai/search.json`, runs `scripts/runValidation.js`, appends the aggregate split (with heuristic counters) to `logs/validation-results.json`, then restores the previous config unless `--persist` is set. Omitting `--hash` uses the first pending recommendation.
-   The automation filters out hashes that already failed a long run, prioritises candidates that have already passed once, and schedules up to eight validations per sweep (by default with eight workers). If a hash completes two consecutive 60/60 runs with acceptable parity and draws, autoTune persists that configuration to `assets/js/ai/search.json` automatically and stops the loop.
+   The automation filters out hashes that already failed a long run, prioritises candidates that have already passed once (streak ≥ 1), and schedules up to five validations per sweep (default 10 workers). Validation candidates are ranked by streak → depth‑3 parity → depth‑2 parity → weighted parity → sweep score, so depth‑3 balance takes precedence. If a hash completes two consecutive 60/60 runs with acceptable parity and draws, autoTune persists that configuration to `assets/js/ai/search.json` automatically and stops the loop.
 
 5. **Review progress**
 
@@ -60,12 +60,18 @@ Run all commands from the project root with Python 3 available on `PATH`.
    Prints the best-scoring sweep entries, validation balances per config hash, and any outstanding validation queue.
    Once a config records two consecutive 60/60 validations with per-depth parity ≤ 3 wins (and ≤ 6 draws), autoTune marks it as meeting the balance goal and removes it from future validation queues.
 
-Repeat the cycle: suggest → sweep → update → validate → report. For unattended runs, launch `python3 autoTune.py loop` with your preferred flags. The loop now:
+Repeat the cycle: suggest → sweep → update → validate → report. For unattended runs, launch `python3 autoTune.py loop` with your preferred flags. Helpful options:
+
+- `--exploit 0` to skip replaying historical hashes and rely entirely on the trend/validation weighting.
+- `--reset-stall` to zero the plateau counters when restarting after a manual cleanup.
+- `--workers 10` (default) to keep 60/60 batches fast; plateau backlogs also use 10 workers automatically.
+
+The loop now:
 
 - Finishes the current cycle on Ctrl+C without writing partial sweep data.
 - Validates up to eight high-scoring hashes per cycle, prioritising any hash that already has one successful 60/60 run.
 - Automatically persists the first configuration that achieves the validation streak goal (two consecutive ≤ 3 splits) to `assets/js/ai/search.json`, prints its knob values, and exits.
-- Detects plateaus after five cycles with no score/streak improvement, validates the remaining score ≤ 2 candidates using 10 workers, and then exits cleanly if no hash passes.
+- Detects plateaus after five cycles with no score/streak improvement (ties at score 0 reset the counter automatically), validates the remaining score ≤ 2 candidates using 10 workers, and then exits cleanly if no hash passes.
 
 Each knob is tracked independently; if a knob’s best sweep score fails to improve for five cycles it is frozen at its best value so future searches concentrate on the remaining degrees of freedom.
 

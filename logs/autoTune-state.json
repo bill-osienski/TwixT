@@ -1,33 +1,8 @@
 {
-  "lastSuggested": "2025-11-07T00:52:14.028Z",
+  "lastSuggested": "2025-11-07T18:47:06.334Z",
   "plannedSweep": {
-    "hashes": [
-      "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f",
-      "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4",
-      "cecc7b46ce5cc47caebc1e472c346f4c845d1453",
-      "14fcc572d6a42e2de9dbb741214a5091f833eb25",
-      "dd16771a8d2b03a543a02cbfefed03938d0092a8",
-      "5bc34f12d3953f5aa4e0a1a51a78186eda416c22",
-      "53410c073b1ec81cea573dfba389e5553e76aa5f",
-      "a06122044173a1372b1b06164878bbec59652c75",
-      "2abd1435813044126dc87a55ee98e9d9c6db21f5",
-      "8ba4d939128b6930a0bd46a1eb12f69c76177f21",
-      "674b747f24070e05363463f8d9fe37f893144fb4",
-      "0a5eaebd4ce68c0515de9c680313f455e15d4319",
-      "7dd65f77f435919810e955bb5727213557f0f998",
-      "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6",
-      "dc7491433278ba395ed02ff6a040c343d7c48324",
-      "b662c89317045dcbf60a5fb5760a669eed1712da",
-      "23f864ab0ba30db124748440156b5ea27dbec241",
-      "4b3fb3fb342f60abc2215327a16f2ecdd5a52e35",
-      "ab6c979b9b15b7a3870f3df12ccff8679ac70d44",
-      "6664459cb68ce1a7391a62b0cd43c03d33e4d663",
-      "62f1804116651b7ebc5d917def3c8359e4158fad",
-      "dce6e49daf6f974a5901934c2e452717f751f20b",
-      "a0d5c44a8e84f55eb7b35268644c0631e6809ae3",
-      "c9affee7a38b7e856e77af7e4ddcd312aa950c30"
-    ],
-    "generatedAt": "2025-11-07T00:52:14.028Z"
+    "hashes": [],
+    "generatedAt": "2025-11-07T18:47:06.334Z"
   },
   "validationStreaks": {
     "2e161adf34171c19a1dae9461dd9897c6dcfda72": 0,
@@ -81,10 +56,25 @@
     "3ac9f0a9ec076a7efc97d0e178d1453b9c267cfc": 0,
     "0fec2d28e23f11d202bd69557137f49aaf7b64c8": 0,
     "c5f541ee34657dc369f22f88655a5187dace2952": 0,
-    "5a10de7677d599c15c4c3d4bbe44d84c023cfa3d": 0
+    "5a10de7677d599c15c4c3d4bbe44d84c023cfa3d": 0,
+    "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f": 0,
+    "ab6c979b9b15b7a3870f3df12ccff8679ac70d44": 0,
+    "dd16771a8d2b03a543a02cbfefed03938d0092a8": 0,
+    "5bc34f12d3953f5aa4e0a1a51a78186eda416c22": 0,
+    "a06122044173a1372b1b06164878bbec59652c75": 0,
+    "0e3971e06bdd85369dfae4b10452f0ffb0fb74c7": 0,
+    "47aea6a2476a3d7d758f093943ee17225cf9ad8d": 0,
+    "519acb664ff838378850d28f0ee159efe31b4cc2": 0,
+    "2abd1435813044126dc87a55ee98e9d9c6db21f5": 0,
+    "53410c073b1ec81cea573dfba389e5553e76aa5f": 0,
+    "8ba4d939128b6930a0bd46a1eb12f69c76177f21": 0,
+    "674b747f24070e05363463f8d9fe37f893144fb4": 0,
+    "14fcc572d6a42e2de9dbb741214a5091f833eb25": 0,
+    "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4": 0,
+    "4b3fb3fb342f60abc2215327a16f2ecdd5a52e35": 0,
+    "cecc7b46ce5cc47caebc1e472c346f4c845d1453": 0
   },
   "successfulConfigs": {},
-  "lastProcessedSweep": "2025-11-07T03:28:08.684Z",
   "pendingValidation": [],
   "knobStats": {
     "firstEdgeRed": {
@@ -144,9 +134,20 @@
   },
   "bestScore": 0,
   "cyclesSinceScoreImprovement": 0,
-  "cyclesSinceStreakImprovement": 5,
+  "cyclesSinceStreakImprovement": 1,
   "bestStreak": 1,
   "bestScoreHashes": [
-    "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f"
-  ]
+    "0d76140caed4d472918c3186db49f0d5da336a27",
+    "0f41af519dcc973ad51540cfc9c73c38794e50ab",
+    "1f7ae9b346106eee50e5d42d6194d6669d9eb118",
+    "335b6ccdd47cefe3775e2d24e20afba57a3e3107",
+    "995fbaf43047f30012c1d09f7565ef2ab3b21b2d",
+    "9f0a38f63f001f70b8432c1fa278e9769bf6300f",
+    "b5c900e95c22ba58ac292b9bd6f6a556649862cb",
+    "d707d7b4d5dab265409e933c0778a647b1031b51",
+    "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f",
+    "ff16219f8fe13f9693cddf479b871099be32d8f2",
+    "ff323d4e4bee1b22d93c3df500fe2d5ab024efad"
+  ],
+  "lastProcessedSweep": "2025-11-07T03:28:08.684Z"
 }
