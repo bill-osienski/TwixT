@@ -36,11 +36,12 @@ Use `autoTune.py` to manage sweep batches and validation runs end-to-end:
 - `python3 autoTune.py report` → summarize top sweep scores, validation balance, and pending work.
 - `python3 autoTune.py loop` → run the whole cycle continuously. The planner now mines the entire sweep + validation history, weighting validation parity (depth 3 counts double) when proposing new knobs. The loop prioritises hashes with existing streaks, queues up to five 60/60 runs per cycle (default 10 workers), finishes the in-flight sweep on Ctrl+C, automatically persists the first configuration that achieves two consecutive ≤ 3 splits to `assets/js/ai/search.json`, and exits when either a winner is found or the plateau backlog (score ≤ 2) is cleared. Add `--reset-stall` if you want to zero the stall counters and thaw previously frozen knobs at startup, and drop the exploit quota with `--exploit 0` if you only want trend-driven combos. Each sweep’s 24 combos are now split across
   - a soft-best “distributional” sampler (roughly a cross-entropy method over the top configs),
-  - a niche hill-climb stage that perturbs several different elite styles while enforcing a minimum knob-distance between them,
+  - a niche hill-climb stage that perturbs several different elite styles while enforcing a minimum knob-distance between them and keeping each tweak within roughly ±5 % of the parent knob values,
   - classic best-value recombinations,
   - trend-based nudges,
   - targeted exploration of under-sampled ranges,
   - and a mutate/random tail for diversity.
+    The soft-best pool itself is half “recent elites” (best hashes from the last few sweeps) and half “all-time champions,” with a stability gate (minimum sweep games or at least one long validation) so lucky single batches don’t dominate the distribution.
 - Individual knobs that fail to improve their best sweep score for five consecutive cycles are frozen automatically; the loop keeps the best value found and focuses exploration on the remaining knobs.
 
 The legacy `node scripts/tuneBaseline.js` entry point still works for one-off manual sweeps, but the Python wrapper keeps history consistent and tracks config hashes automatically. More detail lives in `docs/baseline-tuning.md`.

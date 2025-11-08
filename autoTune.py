@@ -14,7 +14,7 @@ import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 import signal
 
 
@@ -103,9 +103,22 @@ VALIDATION_TREND_WEIGHT = 3.0
 VALIDATION_DRAW_WEIGHT = 0.25
 SOFT_BEST_POOL_SIZE = 12
 SOFT_BEST_MIN_VARIANCE = 0.05
+SOFT_BEST_RECENT_SWEEPS = 6
+SOFT_BEST_RECENT_TARGET = 6
+SOFT_BEST_LEGEND_TARGET = 6
+SOFT_BEST_MIN_SWEEP_GAMES = 40
 NICHE_DISTANCE_THRESHOLD = 0.08
 NICHE_TOP_CHAMPIONS = 6
 NICHE_HILL_ATTEMPTS = 5
+NICHE_MAX_NORMALIZED_DELTA = 0.05
+COARSE_NICHE_KNOBS = {
+    "firstEdgeRed",
+    "firstEdgeBlack",
+    "redFinishPenaltyFactor",
+    "redSpanGainMultiplier",
+    "blackSpanGainMultiplier",
+}
+MUTATE_MIN_COUNT = 3
 CATEGORY_WEIGHTS: List[Tuple[str, int]] = [
     ("soft_best", 5),
     ("niche", 4),
@@ -316,6 +329,30 @@ def combo_distance(a: Dict[str, Any], b: Dict[str, Any]) -> float:
     if not diffs:
         return 0.0
     return sum(diffs) / len(diffs)
+
+
+def entry_total_games(entry: Dict[str, Any]) -> int:
+    evaluation = entry.get("evaluation") or {}
+    depth2 = evaluation.get("depth2") or {}
+    depth3 = evaluation.get("depth3") or {}
+    return (
+        int(depth2.get("red", 0) or 0)
+        + int(depth2.get("black", 0) or 0)
+        + int(depth2.get("draw", 0) or 0)
+        + int(depth3.get("red", 0) or 0)
+        + int(depth3.get("black", 0) or 0)
+        + int(depth3.get("draw", 0) or 0)
+    )
+
+
+def soft_best_eligible(
+    entry: Dict[str, Any], validation_counts: Dict[str, int]
+) -> bool:
+    games = entry_total_games(entry)
+    if games >= SOFT_BEST_MIN_SWEEP_GAMES:
+        return True
+    cfg_hash = entry.get("configHash")
+    return bool(cfg_hash and validation_counts.get(cfg_hash, 0) > 0)
 
 
 def score_weight(score: Optional[float]) -> float:
@@ -609,9 +646,31 @@ def generate_best_value_variants(
     return variants
 
 
+def _pick_ordered_pool(
+    entries: Sequence[Dict[str, Any]],
+    target: int,
+    taken_hashes: Set[str],
+    validation_counts: Dict[str, int],
+) -> List[Dict[str, Any]]:
+    picked: List[Dict[str, Any]] = []
+    for entry in entries:
+        if len(picked) >= target:
+            break
+        cfg_hash = entry.get("configHash")
+        if not cfg_hash or cfg_hash in taken_hashes:
+            continue
+        if not soft_best_eligible(entry, validation_counts):
+            continue
+        picked.append(entry)
+        taken_hashes.add(cfg_hash)
+    return picked
+
+
 def generate_soft_best_variants(
     base_combo: Dict[str, Any],
     history_entries: Sequence[Dict[str, Any]],
+    validation_counts: Dict[str, int],
+    recent_timestamps: Set[str],
     rng: random.Random,
     max_count: int,
     active_knobs: Sequence[str],
@@ -622,7 +681,36 @@ def generate_soft_best_variants(
     scored.sort(
         key=lambda entry: (entry.get("score", float("inf")), entry.get("timestamp", ""))
     )
-    pool = scored[: max(SOFT_BEST_POOL_SIZE, max_count)]
+    taken_hashes: Set[str] = set()
+    recent_entries = [
+        entry for entry in scored if entry.get("timestamp") in recent_timestamps
+    ]
+    pool: List[Dict[str, Any]] = []
+    if recent_entries:
+        pool.extend(
+            _pick_ordered_pool(
+                recent_entries, SOFT_BEST_RECENT_TARGET, taken_hashes, validation_counts
+            )
+        )
+    pool.extend(
+        _pick_ordered_pool(
+            scored,
+            SOFT_BEST_LEGEND_TARGET,
+            taken_hashes,
+            validation_counts,
+        )
+    )
+    if len(pool) < max(SOFT_BEST_POOL_SIZE, max_count):
+        pool.extend(
+            _pick_ordered_pool(
+                scored,
+                max(SOFT_BEST_POOL_SIZE, max_count) - len(pool),
+                taken_hashes,
+                validation_counts,
+            )
+        )
+    if not pool:
+        return []
     distributions: Dict[str, Dict[Any, float]] = {}
     for entry in pool:
         combo = entry.get("combo") or {}
@@ -685,7 +773,7 @@ def hill_climb_step(
     if not active_knobs:
         return None
     candidate = dict(source_combo)
-    change_count = rng.randint(1, min(2, len(active_knobs)))
+    change_count = 1
     changed = False
     for knob in rng.sample(list(active_knobs), change_count):
         spec = KNOB_SPECS[knob]
@@ -703,11 +791,18 @@ def hill_climb_step(
         if direction == 0:
             direction = rng.choice([-1, 1])
         new_idx = idx + direction
-        if new_idx < 0 or new_idx >= len(values):
-            new_idx = idx - direction
-        if 0 <= new_idx < len(values) and values[new_idx] != current:
-            candidate[knob] = values[new_idx]
-            changed = True
+        if not (0 <= new_idx < len(values)):
+            continue
+        new_value = values[new_idx]
+        if new_value == current:
+            continue
+        normalized_current = normalize_knob_value(knob, current)
+        normalized_new = normalize_knob_value(knob, new_value)
+        delta = abs(normalized_new - normalized_current)
+        if delta > NICHE_MAX_NORMALIZED_DELTA and knob not in COARSE_NICHE_KNOBS:
+            continue
+        candidate[knob] = new_value
+        changed = True
     if not changed:
         return None
     return candidate
@@ -755,26 +850,45 @@ def generate_underexplored_variants(
 ) -> List[Tuple[Dict[str, Any], str]]:
     variants: List[Tuple[Dict[str, Any], str]] = []
     knob_order = [knob for knob in KNOB_SPECS.keys() if knob in active_knobs]
-    rng.shuffle(knob_order)
-    for knob in knob_order:
-        if len(variants) >= max_count:
-            break
-        spec = KNOB_SPECS[knob]
-        data = trends.get(knob)
-        candidates: List[Any] = []
-        if data:
-            candidates.extend([val for val in data.under_sampled if val is not None])
-        else:
-            candidates.extend(spec.values)
-        if not candidates:
-            continue
-        rng.shuffle(candidates)
-        for value in candidates:
-            if len(variants) >= max_count:
+    if not knob_order:
+        return variants
+    attempts = 0
+    max_attempts = max_count * 4
+    while len(variants) < max_count and attempts < max_attempts:
+        attempts += 1
+        prioritized = [
+            knob
+            for knob in knob_order
+            if trends.get(knob) and trends[knob].under_sampled
+        ]
+        pool = prioritized if prioritized else knob_order
+        change_knob_count = min(len(pool), rng.choice([1, 2]))
+        selected_knobs = rng.sample(pool, change_knob_count)
+        candidate = dict(base_combo)
+        changed = False
+        for knob in selected_knobs:
+            spec = KNOB_SPECS[knob]
+            data = trends.get(knob)
+            candidates: List[Any] = []
+            if data and data.under_sampled:
+                candidates.extend(
+                    [val for val in data.under_sampled if val is not None]
+                )
+            else:
+                candidates.extend(spec.values)
+            if not candidates:
+                continue
+            rng.shuffle(candidates)
+            for value in candidates:
+                if candidate.get(knob) == value:
+                    continue
+                candidate[knob] = value
+                changed = True
                 break
-            candidate = dict(base_combo)
-            candidate[knob] = value
-            variants.append((candidate, f"explore:{knob}"))
+        if not changed:
+            continue
+        label = "explore:" + ",".join(selected_knobs)
+        variants.append((candidate, label))
     return variants
 
 
@@ -1007,7 +1121,9 @@ def command_suggest(args: argparse.Namespace) -> None:
     requested = args.count
     wishlist: List[Dict[str, Any]] = []
     seen_hashes: set[str] = set()
+    mutate_success = 0
     validation_streaks = compute_validation_streaks(validations, baseline_defaults)
+    validation_counts = compute_validation_counts(validations, baseline_defaults)
     validated_hashes: set[str] = set(validation_streaks.keys())
     validated_hashes.update(
         run.get("configHash") for run in validations if run.get("configHash")
@@ -1030,7 +1146,7 @@ def command_suggest(args: argparse.Namespace) -> None:
         score: Optional[float] = None,
         source: Optional[str] = None,
     ) -> bool:
-        nonlocal wishlist, seen_hashes
+        nonlocal wishlist, seen_hashes, mutate_success
         materialized = combo_with_defaults(candidate_combo, baseline_defaults)
         for knob, value in frozen_values.items():
             materialized[knob] = value
@@ -1052,6 +1168,8 @@ def command_suggest(args: argparse.Namespace) -> None:
         enriched["sourceSweep"] = source
         wishlist.append(enriched)
         seen_hashes.add(hash_value)
+        if origin.startswith("mutate"):
+            mutate_success += 1
         return True
 
     requested = args.count
@@ -1084,10 +1202,25 @@ def command_suggest(args: argparse.Namespace) -> None:
         entry for entry in flattened_sorted if entry.get("score") is not None
     ][:NICHE_TOP_CHAMPIONS]
 
+    timestamp_values = sorted(
+        {
+            entry.get("timestamp")
+            for entry in history_entries
+            if entry.get("timestamp") is not None
+        }
+    )
+    recent_timestamps = set(timestamp_values[-SOFT_BEST_RECENT_SWEEPS:])
+
     soft_quota = category_quota.get("soft_best", 0)
     if soft_quota > 0:
         soft_variants = generate_soft_best_variants(
-            base_combo, analytics_entries, rng, soft_quota * 3, active_knobs
+            base_combo,
+            analytics_entries,
+            validation_counts,
+            recent_timestamps,
+            rng,
+            soft_quota * 3,
+            active_knobs,
         )
         for combo, origin in soft_variants:
             if len(wishlist) >= requested or soft_quota <= 0:
@@ -1161,8 +1294,21 @@ def command_suggest(args: argparse.Namespace) -> None:
                 explore_quota -= 1
         category_quota["explore"] = explore_quota
 
+    forced_attempts = 0
+    while (
+        mutate_success < MUTATE_MIN_COUNT
+        and len(wishlist) < requested
+        and active_knobs
+        and forced_attempts < MUTATE_MIN_COUNT * 5
+    ):
+        forced_attempts += 1
+        candidate = mutate_combo(base_combo, rng, active_knobs)
+        append_candidate(candidate, "mutate")
+
     filler_attempts = 0
-    mutate_quota = category_quota.get("filler", 0)
+    mutate_quota = max(
+        category_quota.get("filler", 0), MUTATE_MIN_COUNT - mutate_success
+    )
     while len(wishlist) < requested:
         if not active_knobs:
             break
