@@ -36,8 +36,8 @@ Use `autoTune.py` to manage sweep batches and validation runs end-to-end:
 - `python3 autoTune.py report` → summarize top sweep scores, validation balance, and pending work.
 - `python3 autoTune.py loop` → run the whole cycle continuously. The planner now mines the entire sweep + validation history, weighting validation parity (depth 3 counts double) when proposing new knobs. The loop prioritises hashes with existing streaks, queues up to five 60/60 runs per cycle (default 10 workers), finishes the in-flight sweep on Ctrl+C, automatically persists the first configuration that achieves two consecutive ≤ 3 splits to `assets/js/ai/search.json`, and exits when either a winner is found or the plateau backlog (score ≤ 2) is cleared. Add `--reset-stall` if you want to zero the stall counters and thaw previously frozen knobs at startup, and drop the exploit quota with `--exploit 0` if you only want trend-driven combos. Each sweep’s 24 combos are now split across
   - a soft-best “distributional” sampler (roughly a cross-entropy method over the top configs),
-  - a niche hill-climb stage that perturbs several different elite styles while enforcing a minimum knob-distance between them and keeping each tweak within roughly ±5 % of the parent knob values,
-  - classic best-value recombinations,
+  - a niche hill-climb stage that perturbs several different elite styles while enforcing a minimum knob-distance between them, keeping each tweak within roughly ±5 % of the parent knob values (single-step exceptions for coarse knobs), and retrying each slot several times before yielding it back to the general planner,
+  - classic best-value recombinations (capped at four per sweep so they don’t crowd out diversity),
   - trend-based nudges,
   - targeted exploration of under-sampled ranges,
   - and a mutate/random tail for diversity.

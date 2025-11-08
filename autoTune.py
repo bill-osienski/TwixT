@@ -110,6 +110,7 @@ SOFT_BEST_MIN_SWEEP_GAMES = 40
 NICHE_DISTANCE_THRESHOLD = 0.08
 NICHE_TOP_CHAMPIONS = 6
 NICHE_HILL_ATTEMPTS = 5
+NICHE_SLOT_RETRIES = 6
 NICHE_MAX_NORMALIZED_DELTA = 0.05
 COARSE_NICHE_KNOBS = {
     "firstEdgeRed",
@@ -118,6 +119,7 @@ COARSE_NICHE_KNOBS = {
     "redSpanGainMultiplier",
     "blackSpanGainMultiplier",
 }
+BEST_MAX_COUNT = 4
 BUCKET_NAMES = ["soft-best", "niche", "trend", "best", "explore", "mutate", "other"]
 MUTATE_MIN_COUNT = 3
 CATEGORY_WEIGHTS: List[Tuple[str, int]] = [
@@ -845,32 +847,41 @@ def generate_niche_hill_climb_variants(
     champions: Sequence[Dict[str, Any]],
     trends: Dict[str, KnobTrend],
     rng: random.Random,
-    max_count: int,
+    required_count: int,
+    slot_retries: int,
     active_knobs: Sequence[str],
 ) -> List[Tuple[Dict[str, Any], str]]:
     variants: List[Tuple[Dict[str, Any], str]] = []
-    if not champions or not active_knobs:
+    if not champions or not active_knobs or required_count <= 0:
         return variants
+    pool = [champ for champ in champions if champ.get("combo")]
+    if not pool:
+        return variants
+    rng.shuffle(pool)
     niche_centers: List[Dict[str, Any]] = []
-    for champion in champions:
-        if len(variants) >= max_count:
-            break
-        attempts = 0
+    champion_index = 0
+    while len(variants) < required_count and pool:
+        champion = pool[champion_index % len(pool)]
+        champion_index += 1
         source_combo = champion.get("combo") or {}
-        while attempts < NICHE_HILL_ATTEMPTS and len(variants) < max_count:
+        success = False
+        attempts = 0
+        while attempts < slot_retries:
             attempts += 1
             candidate = hill_climb_step(source_combo, trends, rng, active_knobs)
             if not candidate:
                 continue
-            is_too_close = any(
+            if any(
                 combo_distance(candidate, center) < NICHE_DISTANCE_THRESHOLD
                 for center in niche_centers
-            )
-            if is_too_close:
+            ):
                 continue
             variants.append((candidate, f"niche:{champion.get('configHash', '')[:4]}"))
             niche_centers.append(candidate)
+            success = True
             break
+        if not success:
+            pool.remove(champion)
     return variants
 
 
@@ -1275,6 +1286,8 @@ def command_suggest(args: argparse.Namespace) -> None:
     )
     recent_timestamps = set(timestamp_values[-SOFT_BEST_RECENT_SWEEPS:])
 
+    bucket_counts = {bucket: 0 for bucket in BUCKET_NAMES}
+
     soft_quota = category_quota.get("soft_best", 0)
     if soft_quota > 0:
         soft_variants = generate_soft_best_variants(
@@ -1290,18 +1303,25 @@ def command_suggest(args: argparse.Namespace) -> None:
             if len(wishlist) >= requested or soft_quota <= 0:
                 break
             if append_candidate(combo, origin):
+                bucket_counts["soft-best"] += 1
                 soft_quota -= 1
         category_quota["soft_best"] = soft_quota
 
     niche_quota = category_quota.get("niche", 0)
     if niche_quota > 0:
         niche_variants = generate_niche_hill_climb_variants(
-            champion_entries, trends, rng, niche_quota * 2, active_knobs
+            champion_entries,
+            trends,
+            rng,
+            niche_quota,
+            NICHE_SLOT_RETRIES,
+            active_knobs,
         )
         for combo, origin in niche_variants:
             if len(wishlist) >= requested or niche_quota <= 0:
                 break
             if append_candidate(combo, origin):
+                bucket_counts["niche"] += 1
                 niche_quota -= 1
         category_quota["niche"] = niche_quota
 
@@ -1313,21 +1333,29 @@ def command_suggest(args: argparse.Namespace) -> None:
             if len(wishlist) >= requested or trend_quota <= 0:
                 break
             if append_candidate(combo, origin):
+                bucket_counts["trend"] += 1
                 trend_quota -= 1
         category_quota["trend"] = trend_quota
 
-    best_quota = category_quota.get("best", 0)
+    best_quota = min(category_quota.get("best", 0), BEST_MAX_COUNT)
+    best_added = 0
     if best_quota > 0:
         best_variants = generate_best_value_variants(
             base_combo, trends, best_quota * 2, active_knobs
         )
         for combo, origin in best_variants:
-            if len(wishlist) >= requested or best_quota <= 0:
+            if (
+                len(wishlist) >= requested
+                or best_quota <= 0
+                or best_added >= BEST_MAX_COUNT
+            ):
                 break
             if append_candidate(combo, origin):
                 best_quota -= 1
+                best_added += 1
+                bucket_counts["best"] += 1
         category_quota["best"] = best_quota
-        if best_variants:
+        if best_variants and best_added < BEST_MAX_COUNT:
             ranked_choices: List[Tuple[float, int, str, Any]] = []
             for knob, data in trends.items():
                 if knob not in active_knobs or not data.top_values:
@@ -1345,7 +1373,11 @@ def command_suggest(args: argparse.Namespace) -> None:
                     combined[knob] = value
                     changed = True
             if changed:
-                append_candidate(combined, "best:mixed")
+                if best_added < BEST_MAX_COUNT and append_candidate(
+                    combined, "best:mixed"
+                ):
+                    bucket_counts["best"] += 1
+                    best_added += 1
 
     explore_quota = category_quota.get("explore", 0)
     if explore_quota > 0:
@@ -1355,6 +1387,8 @@ def command_suggest(args: argparse.Namespace) -> None:
             if len(wishlist) >= requested or explore_quota <= 0:
                 break
             if append_candidate(combo, origin):
+                bucket = get_bucket_from_origin(origin)
+                bucket_counts[bucket] += 1
                 explore_quota -= 1
         category_quota["explore"] = explore_quota
 
@@ -1367,7 +1401,8 @@ def command_suggest(args: argparse.Namespace) -> None:
     ):
         forced_attempts += 1
         candidate = mutate_combo(base_combo, rng, active_knobs)
-        append_candidate(candidate, "mutate")
+        if append_candidate(candidate, "mutate"):
+            bucket_counts["mutate"] += 1
 
     filler_attempts = 0
     mutate_quota = max(
@@ -1386,6 +1421,8 @@ def command_suggest(args: argparse.Namespace) -> None:
             candidate = random_combo(rng, base_combo, active_knobs)
             origin = "random"
         if append_candidate(candidate, origin):
+            bucket = get_bucket_from_origin(origin)
+            bucket_counts[bucket] += 1
             continue
         filler_attempts += 1
         if filler_attempts >= requested * 5:
