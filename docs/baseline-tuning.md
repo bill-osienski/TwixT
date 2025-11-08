@@ -66,6 +66,8 @@ Repeat the cycle: suggest → sweep → update → validate → report. For unat
 - `--reset-stall` to zero the plateau counters and thaw any knobs that previously froze themselves after a plateau.
 - `--workers 10` (default) to keep 60/60 batches fast; plateau backlogs also use 10 workers automatically.
 
+Each 24-combo sweep is split across a soft-best distribution sampler (builds a probability distribution over the top configs), a niche hill-climb stage that perturbs several elite “styles” while enforcing minimum knob distance, classic best-value recombinations, validation-weighted trend moves, under-sampled exploration, and a mutate/random tail for diversity. That mix keeps multiple TwixT playstyles alive while still following the strongest parity signals from the logs.
+
 The loop now:
 
 - Finishes the current cycle on Ctrl+C without writing partial sweep data.

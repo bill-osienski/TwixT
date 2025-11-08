@@ -101,6 +101,19 @@ DEPTH3_PARITY_WEIGHT = 2.0
 DEPTH3_VALIDATION_MAX_PARITY = 6
 VALIDATION_TREND_WEIGHT = 3.0
 VALIDATION_DRAW_WEIGHT = 0.25
+SOFT_BEST_POOL_SIZE = 12
+SOFT_BEST_MIN_VARIANCE = 0.05
+NICHE_DISTANCE_THRESHOLD = 0.08
+NICHE_TOP_CHAMPIONS = 6
+NICHE_HILL_ATTEMPTS = 5
+CATEGORY_WEIGHTS: List[Tuple[str, int]] = [
+    ("soft_best", 5),
+    ("niche", 4),
+    ("best", 4),
+    ("trend", 4),
+    ("explore", 4),
+    ("filler", 3),
+]
 
 
 def compute_config_hash(combo: Dict[str, Any]) -> str:
@@ -274,6 +287,60 @@ def build_values(min_val: float, max_val: float, step: float) -> List[Any]:
         else:
             result.append(round(val, 4))
     return result
+
+
+def normalize_knob_value(knob: str, value: Any) -> float:
+    spec = KNOB_SPECS.get(knob)  # type: ignore[name-defined]
+    if not spec or not spec.values:
+        return 0.0
+    target = value
+    if target not in spec.values:
+        target = nearest_value(spec.values, target)  # type: ignore[name-defined]
+    if len(spec.values) == 1:
+        return 0.0
+    idx = spec.values.index(target)
+    return idx / (len(spec.values) - 1)
+
+
+def combo_distance(a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    diffs: List[float] = []
+    for knob in KNOB_SPECS.keys():  # type: ignore[name-defined]
+        if knob not in a or knob not in b:
+            continue
+        diffs.append(
+            abs(
+                normalize_knob_value(knob, a[knob])
+                - normalize_knob_value(knob, b[knob])
+            )
+        )
+    if not diffs:
+        return 0.0
+    return sum(diffs) / len(diffs)
+
+
+def score_weight(score: Optional[float]) -> float:
+    if score is None:
+        return 0.0
+    return 1.0 / (1.0 + max(0.0, float(score)))
+
+
+def allocate_category_quota(remaining: int) -> Dict[str, int]:
+    if remaining <= 0:
+        return {name: 0 for name, _ in CATEGORY_WEIGHTS}
+    total_weight = sum(weight for _, weight in CATEGORY_WEIGHTS)
+    quotas: Dict[str, int] = {}
+    accumulated = 0
+    for name, weight in CATEGORY_WEIGHTS:
+        share = (remaining * weight) // total_weight
+        quotas[name] = share
+        accumulated += share
+    leftover = remaining - accumulated
+    for name, _ in CATEGORY_WEIGHTS:
+        if leftover <= 0:
+            break
+        quotas[name] += 1
+        leftover -= 1
+    return quotas
 
 
 KNOB_SPECS: Dict[str, KnobSpec] = {
@@ -539,6 +606,145 @@ def generate_best_value_variants(
         candidate = dict(base_combo)
         candidate[knob] = value
         variants.append((candidate, f"best:{knob}"))
+    return variants
+
+
+def generate_soft_best_variants(
+    base_combo: Dict[str, Any],
+    history_entries: Sequence[Dict[str, Any]],
+    rng: random.Random,
+    max_count: int,
+    active_knobs: Sequence[str],
+) -> List[Tuple[Dict[str, Any], str]]:
+    scored = [entry for entry in history_entries if entry.get("score") is not None]
+    if not scored or not active_knobs:
+        return []
+    scored.sort(
+        key=lambda entry: (entry.get("score", float("inf")), entry.get("timestamp", ""))
+    )
+    pool = scored[: max(SOFT_BEST_POOL_SIZE, max_count)]
+    distributions: Dict[str, Dict[Any, float]] = {}
+    for entry in pool:
+        combo = entry.get("combo") or {}
+        weight = score_weight(entry.get("score"))
+        if weight <= 0:
+            weight = 0.1
+        for knob in active_knobs:
+            value = combo.get(knob)
+            if value is None:
+                continue
+            bucket = distributions.setdefault(knob, {})
+            bucket[value] = bucket.get(value, 0.0) + weight
+    normalized: Dict[str, Dict[Any, float]] = {}
+    for knob, counts in distributions.items():
+        if not counts:
+            continue
+        spec = KNOB_SPECS[knob]
+        if len(counts) == 1 and len(spec.values) > 1:
+            only_value = next(iter(counts))
+            base_weight = counts[only_value]
+            idx = spec.values.index(nearest_value(spec.values, only_value))
+            neighbors: List[int] = []
+            if idx > 0:
+                neighbors.append(idx - 1)
+            if idx < len(spec.values) - 1:
+                neighbors.append(idx + 1)
+            for neighbor_idx in neighbors:
+                neighbor_value = spec.values[neighbor_idx]
+                counts.setdefault(
+                    neighbor_value,
+                    max(base_weight * SOFT_BEST_MIN_VARIANCE, 0.05),
+                )
+        normalized[knob] = counts
+    if not normalized:
+        return []
+    variants: List[Tuple[Dict[str, Any], str]] = []
+    attempts = 0
+    max_attempts = max_count * 4
+    while len(variants) < max_count and attempts < max_attempts:
+        attempts += 1
+        candidate = dict(base_combo)
+        for knob, counts in normalized.items():
+            values = list(counts.keys())
+            weights = [counts[val] for val in values]
+            total = sum(weights)
+            if total <= 0:
+                continue
+            choice = rng.choices(values, weights=weights, k=1)[0]
+            candidate[knob] = choice
+        variants.append((candidate, "soft-best"))
+    return variants
+
+
+def hill_climb_step(
+    source_combo: Dict[str, Any],
+    trends: Dict[str, KnobTrend],
+    rng: random.Random,
+    active_knobs: Sequence[str],
+) -> Optional[Dict[str, Any]]:
+    if not active_knobs:
+        return None
+    candidate = dict(source_combo)
+    change_count = rng.randint(1, min(2, len(active_knobs)))
+    changed = False
+    for knob in rng.sample(list(active_knobs), change_count):
+        spec = KNOB_SPECS[knob]
+        values = spec.values
+        if not values:
+            continue
+        current = candidate.get(knob, values[0])
+        if current not in values:
+            current = nearest_value(values, current)
+        idx = values.index(current)
+        trend = trends.get(knob)
+        direction = 0
+        if trend and abs(trend.slope) >= TREND_SLOPE_THRESHOLD:
+            direction = -1 if trend.slope > 0 else 1
+        if direction == 0:
+            direction = rng.choice([-1, 1])
+        new_idx = idx + direction
+        if new_idx < 0 or new_idx >= len(values):
+            new_idx = idx - direction
+        if 0 <= new_idx < len(values) and values[new_idx] != current:
+            candidate[knob] = values[new_idx]
+            changed = True
+    if not changed:
+        return None
+    return candidate
+
+
+def generate_niche_hill_climb_variants(
+    champions: Sequence[Dict[str, Any]],
+    trends: Dict[str, KnobTrend],
+    rng: random.Random,
+    max_count: int,
+    active_knobs: Sequence[str],
+) -> List[Tuple[Dict[str, Any], str]]:
+    variants: List[Tuple[Dict[str, Any], str]] = []
+    if not champions or not active_knobs:
+        return variants
+    niche_centers: List[Dict[str, Any]] = []
+    for champion in champions:
+        if len(variants) >= max_count:
+            break
+        attempts = 0
+        source_combo = champion.get("combo") or {}
+        while attempts < NICHE_HILL_ATTEMPTS and len(variants) < max_count:
+            attempts += 1
+            candidate = hill_climb_step(source_combo, trends, rng, active_knobs)
+            if not candidate:
+                continue
+            is_too_close = any(
+                combo_distance(candidate, center) < NICHE_DISTANCE_THRESHOLD
+                for center in niche_centers
+            )
+            if is_too_close:
+                continue
+            variants.append(
+                (candidate, f"niche:{champion.get('configHash', '')[:4]}")
+            )
+            niche_centers.append(candidate)
+            break
     return variants
 
 
@@ -875,8 +1081,37 @@ def command_suggest(args: argparse.Namespace) -> None:
         )
 
     remaining = requested - len(wishlist)
-    if remaining > 0:
-        trend_quota = max(0, min(remaining, max(2, requested // 4)))
+    category_quota = allocate_category_quota(remaining)
+    champion_entries = [
+        entry for entry in flattened_sorted if entry.get("score") is not None
+    ][:NICHE_TOP_CHAMPIONS]
+
+    soft_quota = category_quota.get("soft_best", 0)
+    if soft_quota > 0:
+        soft_variants = generate_soft_best_variants(
+            base_combo, analytics_entries, rng, soft_quota * 3, active_knobs
+        )
+        for combo, origin in soft_variants:
+            if len(wishlist) >= requested or soft_quota <= 0:
+                break
+            if append_candidate(combo, origin):
+                soft_quota -= 1
+        category_quota["soft_best"] = soft_quota
+
+    niche_quota = category_quota.get("niche", 0)
+    if niche_quota > 0:
+        niche_variants = generate_niche_hill_climb_variants(
+            champion_entries, trends, rng, niche_quota * 2, active_knobs
+        )
+        for combo, origin in niche_variants:
+            if len(wishlist) >= requested or niche_quota <= 0:
+                break
+            if append_candidate(combo, origin):
+                niche_quota -= 1
+        category_quota["niche"] = niche_quota
+
+    trend_quota = category_quota.get("trend", 0)
+    if trend_quota > 0:
         for combo, origin in generate_trend_variants(
             base_combo, trends, rng, trend_quota * 2, active_knobs
         ):
@@ -884,10 +1119,10 @@ def command_suggest(args: argparse.Namespace) -> None:
                 break
             if append_candidate(combo, origin):
                 trend_quota -= 1
+        category_quota["trend"] = trend_quota
 
-    remaining = requested - len(wishlist)
-    if remaining > 0:
-        best_quota = max(0, min(remaining, max(2, requested // 4)))
+    best_quota = category_quota.get("best", 0)
+    if best_quota > 0:
         best_variants = generate_best_value_variants(
             base_combo, trends, best_quota * 2, active_knobs
         )
@@ -896,12 +1131,11 @@ def command_suggest(args: argparse.Namespace) -> None:
                 break
             if append_candidate(combo, origin):
                 best_quota -= 1
+        category_quota["best"] = best_quota
         if best_variants:
             ranked_choices: List[Tuple[float, int, str, Any]] = []
             for knob, data in trends.items():
-                if knob not in active_knobs:
-                    continue
-                if not data.top_values:
+                if knob not in active_knobs or not data.top_values:
                     continue
                 best_value = data.top_values[0]
                 stats = data.value_stats.get(best_value)
@@ -918,9 +1152,8 @@ def command_suggest(args: argparse.Namespace) -> None:
             if changed:
                 append_candidate(combined, "best:mixed")
 
-    remaining = requested - len(wishlist)
-    if remaining > 0:
-        explore_quota = max(0, min(remaining, max(2, requested // 4)))
+    explore_quota = category_quota.get("explore", 0)
+    if explore_quota > 0:
         for combo, origin in generate_underexplored_variants(
             base_combo, trends, rng, explore_quota * 2, active_knobs
         ):
@@ -928,14 +1161,19 @@ def command_suggest(args: argparse.Namespace) -> None:
                 break
             if append_candidate(combo, origin):
                 explore_quota -= 1
+        category_quota["explore"] = explore_quota
 
     filler_attempts = 0
+    mutate_quota = category_quota.get("filler", 0)
     while len(wishlist) < requested:
         if not active_knobs:
             break
-        if rng.random() < 0.6:
+        use_mutate = mutate_quota > 0 or rng.random() < 0.6
+        if use_mutate:
             candidate = mutate_combo(base_combo, rng, active_knobs)
             origin = "mutate"
+            if mutate_quota > 0:
+                mutate_quota -= 1
         else:
             candidate = random_combo(rng, base_combo, active_knobs)
             origin = "random"
