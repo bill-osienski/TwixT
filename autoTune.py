@@ -478,7 +478,8 @@ def random_combo(
 
 
 def get_bucket_from_origin(origin: Optional[str]) -> str:
-    token = (origin or "").strip().split()[0]
+    parts = (origin or "").strip().split()
+    token = parts[0] if parts else ""
     for bucket in BUCKET_NAMES:
         if not token and bucket == "other":
             return bucket
