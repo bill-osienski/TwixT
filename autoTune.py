@@ -938,6 +938,7 @@ def generate_underexplored_variants(
 
 
 def update_bucket_stats(state: Dict[str, Any], sweep: Dict[str, Any]) -> None:
+    planned_origins = state.get("plannedOrigins") or {}
     combos = sweep.get("combos", [])
     scored = [combo for combo in combos if isinstance(combo.get("score"), (int, float))]
     if not scored:
@@ -953,7 +954,10 @@ def update_bucket_stats(state: Dict[str, Any], sweep: Dict[str, Any]) -> None:
     top10_cut = max(1, math.ceil(0.10 * total))
     top25_cut = max(1, math.ceil(0.25 * total))
     for idx, combo in enumerate(scored, start=1):
-        bucket = get_bucket_from_origin(combo.get("origin"))
+        origin = combo.get("origin")
+        if not origin and combo.get("configHash"):
+            origin = planned_origins.get(combo["configHash"])
+        bucket = get_bucket_from_origin(origin)
         stats = bucket_stats.setdefault(bucket, new_bucket_counter())
         stats["total"] += 1
         stats["sum_rank"] += idx
@@ -1451,6 +1455,12 @@ def command_suggest(args: argparse.Namespace) -> None:
         print(
             f"Wrote {len(wishlist)} combos to {NEXT_SWEEP_PATH.relative_to(PROJECT_ROOT)}"
         )
+    planned_origins = {
+        combo["configHash"]: combo.get("origin")
+        for combo in wishlist
+        if combo.get("configHash")
+    }
+    state["plannedOrigins"] = planned_origins
     for idx, combo in enumerate(wishlist, 1):
         print(
             f"[{idx:02d}] {combo['origin']:>7} {combo['configHash'][:8]}  {render_combo(combo)}"
@@ -1637,6 +1647,12 @@ def command_update(args: argparse.Namespace) -> None:
     all_flattened = flatten_sweeps(sweeps, baseline_defaults)
     for sweep in new_sweeps:
         update_bucket_stats(state, sweep)
+        planned = state.get("plannedOrigins")
+        if isinstance(planned, dict):
+            for combo in sweep.get("combos", []):
+                cfg_hash = combo.get("configHash")
+                if cfg_hash and cfg_hash in planned:
+                    planned.pop(cfg_hash, None)
     validated_runs = load_validations()
     streaks = compute_validation_streaks(validated_runs, baseline_defaults)
     counts = compute_validation_counts(validated_runs, baseline_defaults)
