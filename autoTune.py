@@ -740,9 +740,7 @@ def generate_niche_hill_climb_variants(
             )
             if is_too_close:
                 continue
-            variants.append(
-                (candidate, f"niche:{champion.get('configHash', '')[:4]}")
-            )
+            variants.append((candidate, f"niche:{champion.get('configHash', '')[:4]}"))
             niche_centers.append(candidate)
             break
     return variants
