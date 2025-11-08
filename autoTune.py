@@ -1440,6 +1440,11 @@ def command_suggest(args: argparse.Namespace) -> None:
         "requested": requested,
         "combos": wishlist,
     }
+    planned_origins = {
+        combo["configHash"]: combo.get("origin")
+        for combo in wishlist
+        if combo.get("configHash")
+    }
     if dry_run:
         print(
             f"[dry-run] Would write {len(wishlist)} combos to {NEXT_SWEEP_PATH.relative_to(PROJECT_ROOT)}"
@@ -1451,16 +1456,11 @@ def command_suggest(args: argparse.Namespace) -> None:
             "hashes": [c["configHash"] for c in wishlist],
             "generatedAt": payload["generatedAt"],
         }
+        state["plannedOrigins"] = planned_origins
         save_state(state)
         print(
             f"Wrote {len(wishlist)} combos to {NEXT_SWEEP_PATH.relative_to(PROJECT_ROOT)}"
         )
-    planned_origins = {
-        combo["configHash"]: combo.get("origin")
-        for combo in wishlist
-        if combo.get("configHash")
-    }
-    state["plannedOrigins"] = planned_origins
     for idx, combo in enumerate(wishlist, 1):
         print(
             f"[{idx:02d}] {combo['origin']:>7} {combo['configHash'][:8]}  {render_combo(combo)}"
