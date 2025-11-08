@@ -118,6 +118,7 @@ COARSE_NICHE_KNOBS = {
     "redSpanGainMultiplier",
     "blackSpanGainMultiplier",
 }
+BUCKET_NAMES = ["soft-best", "niche", "trend", "best", "explore", "mutate", "other"]
 MUTATE_MIN_COUNT = 3
 CATEGORY_WEIGHTS: List[Tuple[str, int]] = [
     ("soft_best", 5),
@@ -472,6 +473,38 @@ def random_combo(
         spec = KNOB_SPECS[knob]
         result[knob] = rng.choice(spec.values)
     return result
+
+
+def get_bucket_from_origin(origin: Optional[str]) -> str:
+    token = (origin or "").strip().split()[0]
+    for bucket in BUCKET_NAMES:
+        if not token and bucket == "other":
+            return bucket
+        if token == bucket or token.startswith(f"{bucket}:"):
+            return bucket
+    return "other"
+
+
+def new_bucket_counter() -> Dict[str, Any]:
+    return {
+        "total": 0,
+        "top10": 0,
+        "top25": 0,
+        "wins": 0,
+        "sum_rank": 0,
+        "best_rank": None,
+    }
+
+
+def ensure_bucket_stats(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    stats = state.get("bucketStats")
+    if not isinstance(stats, dict):
+        stats = {}
+    for bucket in BUCKET_NAMES:
+        if not isinstance(stats.get(bucket), dict):
+            stats[bucket] = new_bucket_counter()
+    state["bucketStats"] = stats
+    return stats
 
 
 def combo_with_defaults(
@@ -890,6 +923,37 @@ def generate_underexplored_variants(
         label = "explore:" + ",".join(selected_knobs)
         variants.append((candidate, label))
     return variants
+
+
+def update_bucket_stats(state: Dict[str, Any], sweep: Dict[str, Any]) -> None:
+    combos = sweep.get("combos", [])
+    scored = [combo for combo in combos if isinstance(combo.get("score"), (int, float))]
+    if not scored:
+        return
+    scored.sort(
+        key=lambda combo: (
+            combo.get("score", float("inf")),
+            combo.get("configHash") or "",
+        )
+    )
+    bucket_stats = ensure_bucket_stats(state)
+    total = len(scored)
+    top10_cut = max(1, math.ceil(0.10 * total))
+    top25_cut = max(1, math.ceil(0.25 * total))
+    for idx, combo in enumerate(scored, start=1):
+        bucket = get_bucket_from_origin(combo.get("origin"))
+        stats = bucket_stats.setdefault(bucket, new_bucket_counter())
+        stats["total"] += 1
+        stats["sum_rank"] += idx
+        if idx <= top10_cut:
+            stats["top10"] += 1
+        if idx <= top25_cut:
+            stats["top25"] += 1
+        if idx == 1:
+            stats["wins"] += 1
+        best_rank = stats.get("best_rank")
+        if best_rank is None or idx < best_rank:
+            stats["best_rank"] = idx
 
 
 def to_hash_payload(combo: Dict[str, Any]) -> Dict[str, Any]:
@@ -1533,6 +1597,8 @@ def command_update(args: argparse.Namespace) -> None:
     baseline_defaults = offense_snapshot(load_search_config())
     flattened = flatten_sweeps(new_sweeps, baseline_defaults)
     all_flattened = flatten_sweeps(sweeps, baseline_defaults)
+    for sweep in new_sweeps:
+        update_bucket_stats(state, sweep)
     validated_runs = load_validations()
     streaks = compute_validation_streaks(validated_runs, baseline_defaults)
     counts = compute_validation_counts(validated_runs, baseline_defaults)
@@ -1725,6 +1791,24 @@ def command_update(args: argparse.Namespace) -> None:
             )
     else:
         print("No outstanding configs require validation.")
+
+    bucket_stats = state.get("bucketStats", {})
+    if bucket_stats:
+        print("\nBucket promotion summary (lifetime):")
+        for bucket in BUCKET_NAMES:
+            stats = bucket_stats.get(bucket)
+            if not stats or not stats.get("total"):
+                continue
+            total = stats["total"]
+            top10_rate = stats["top10"] / total * 100
+            top25_rate = stats["top25"] / total * 100
+            avg_rank = stats["sum_rank"] / total
+            best_rank = stats.get("best_rank")
+            print(
+                f"  {bucket:<8} top10={top10_rate:5.1f}% "
+                f"top25={top25_rate:5.1f}% wins={stats['wins']:>3} "
+                f"best={best_rank or '-'} avg_rank={avg_rank:.1f}"
+            )
 
 
 def apply_combo_to_search(combo: Dict[str, Any], config: Dict[str, Any]) -> None:

@@ -41,6 +41,7 @@ Use `autoTune.py` to manage sweep batches and validation runs end-to-end:
   - trend-based nudges,
   - targeted exploration of under-sampled ranges,
   - and a mutate/random tail for diversity.
+    The loop also keeps lifetime promotion stats per bucket (top‑10/top‑25 hit rates, wins, best rank), printed after every `update`, so you can see which samplers are contributing the most and adjust their weights later if needed.
     The soft-best pool itself is half “recent elites” (best hashes from the last few sweeps) and half “all-time champions,” with a stability gate (minimum sweep games or at least one long validation) so lucky single batches don’t dominate the distribution.
 - Individual knobs that fail to improve their best sweep score for five consecutive cycles are frozen automatically; the loop keeps the best value found and focuses exploration on the remaining knobs.
 
