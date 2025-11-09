@@ -1,8 +1,33 @@
 {
-  "lastSuggested": "2025-11-07T18:47:06.334Z",
+  "lastSuggested": "2025-11-09T14:43:06.333Z",
   "plannedSweep": {
-    "hashes": [],
-    "generatedAt": "2025-11-07T18:47:06.334Z"
+    "hashes": [
+      "9c1e5b37d0f45b50ad36378440a335b35427a16a",
+      "8b04478c74d36167081a65f3ed8c835834589d7c",
+      "3c565b43ed4f4e7d27e5fb5f4a146952e314e804",
+      "46c8ce0d8dc9c7f7c3fee78ab1a3392432044f35",
+      "48cbc2389783ac8fd1b72ce9adf2bcbc6cb863d8",
+      "7dd65f77f435919810e955bb5727213557f0f998",
+      "17808a965fbd7734375b9f12cc679813af17622a",
+      "3d2ae2e2612e2543365bc12fd4e3ab1e58f9a79b",
+      "10e673ff693bacd7441cd8fde2a78f5b629f0698",
+      "4e34380d5533cae43380d13fde2b4bffe13d33d8",
+      "6c9f6c3d759b703c0307a319ab6d80854ee73090",
+      "97d4a6a06bc3b04c665ccb1857f4b23042fa5fe3",
+      "85bc91282d4deadef68ce0de96c8e98dbb2fdf47",
+      "e318f4cc48eee1c9cdb72de7347291c50d85727e",
+      "eb2e2a7e75e825931a430be01b4dfcbc479d1a29",
+      "a6487bf1809a1cc7776ffb6139ed9482068d5738",
+      "91f9df5c3118cd8029b737b9509c06b9386ad114",
+      "ee2e031faa7c26987377441653f48487c0efae78",
+      "053a54f7d1e5dad1e32d12d00a79cba4700d15a4",
+      "e3083b9063f65c78d250ec9123c86893b790bf4c",
+      "9e1a7d05097e3b3aab2aff3e641c75f7507927f0",
+      "bd3d1206abc768126eff751f7795d5666bcab691",
+      "f83fc2d0f43d7563364ab01b65d33e8397af06fd",
+      "f986f17e948cba10eec79d6168bde5ad80035c49"
+    ],
+    "generatedAt": "2025-11-09T14:43:06.333Z"
   },
   "validationStreaks": {
     "2e161adf34171c19a1dae9461dd9897c6dcfda72": 0,
@@ -72,82 +97,190 @@
     "14fcc572d6a42e2de9dbb741214a5091f833eb25": 0,
     "408c6c7dc6dac84fd1e5fb6cf95fad3d5f8e8dd4": 0,
     "4b3fb3fb342f60abc2215327a16f2ecdd5a52e35": 0,
-    "cecc7b46ce5cc47caebc1e472c346f4c845d1453": 0
+    "cecc7b46ce5cc47caebc1e472c346f4c845d1453": 0,
+    "e7cc0134532dbc51d684aae714f753192eead692": 0,
+    "eb544aa51b7b8fd0bfe68c66397b80e5a5f7071d": 0,
+    "d03038686a5f67a6d09445c140b7c130bbf0c4b2": 0,
+    "a7d72e42c77d8b1e6dae809dcec58630f8f025ad": 0,
+    "c4053ad5ee12c2bf8680461eec01f2c52a99db05": 0,
+    "51f20a540e73769a71f0cdbb2763bf3d85be6a6a": 0,
+    "6c500987bf61e8a26a17b0cee27b9eada012662a": 0,
+    "48a9b18124bf70c02ece8d3ce7ea6421337f93ac": 0,
+    "3ea3a6647e46e214560b2c44edbeea31b99c9ee0": 0,
+    "fb58e8651d96af0a2a00216d5db09bcf0fea1519": 0,
+    "81aff5d0b2acf573b3307eb12e91bb540842a8a1": 0,
+    "4e49605bd289fd7e313ee11360329467a94e98ad": 0,
+    "08e4d05f10e101b844d46f3350122e10707b4726": 0,
+    "f81133a13a52e8ef0c0797857cc838481bd6628a": 0,
+    "d0d4529984c69cceeaafbd2e6e598415d0100276": 0,
+    "0c27f5b9515200d32f04783050863d87a4f96d0d": 0,
+    "a37ae54237e52a3707985b5e87e30a9253398382": 0,
+    "abd06c048684716344ded76472bfa43c3eb7eba2": 0,
+    "098efbad1c9002676ad0612e9017635d858b8234": 0,
+    "39a4b66b7f4a6c7932cb16d77b2042a0d7bb2ca2": 0,
+    "822f6316ebd705c4f9430246e033c01977ca9ad8": 0,
+    "f015a8c2ce656630ae5b31cda0ad5d19e689559f": 0,
+    "c1b3ac5acb508ade00e5e9b92810ff7fb1808c1b": 0,
+    "4321fb015bbeb3d73c614892f109bd27faee51a7": 0,
+    "e9bbea2285d31696fe9ea1edeb0d9139f079c0eb": 0
   },
   "successfulConfigs": {},
-  "pendingValidation": [],
+  "pendingValidation": [
+    "eb2e2a7e75e825931a430be01b4dfcbc479d1a29",
+    "10e673ff693bacd7441cd8fde2a78f5b629f0698",
+    "ee2e031faa7c26987377441653f48487c0efae78",
+    "f83fc2d0f43d7563364ab01b65d33e8397af06fd",
+    "3d2ae2e2612e2543365bc12fd4e3ab1e58f9a79b"
+  ],
   "knobStats": {
     "firstEdgeRed": {
       "bestScore": 0,
       "bestValue": 415,
-      "cyclesSinceImprovement": 5,
-      "frozen": true
+      "cyclesSinceImprovement": 4,
+      "frozen": false
     },
     "firstEdgeBlack": {
       "bestScore": 0,
       "bestValue": 455,
-      "cyclesSinceImprovement": 5,
-      "frozen": true
+      "cyclesSinceImprovement": 4,
+      "frozen": false
     },
     "finishPenalty": {
       "bestScore": 0,
       "bestValue": 1181,
-      "cyclesSinceImprovement": 0,
-      "frozen": true
+      "cyclesSinceImprovement": 4,
+      "frozen": false
     },
     "redFinishPenaltyFactor": {
       "bestScore": 0,
       "bestValue": 0.2,
-      "cyclesSinceImprovement": 5,
-      "frozen": true
+      "cyclesSinceImprovement": 4,
+      "frozen": false
     },
     "blackFinishScaleMultiplier": {
       "bestScore": 0,
       "bestValue": 1,
-      "cyclesSinceImprovement": 0,
-      "frozen": true
+      "cyclesSinceImprovement": 4,
+      "frozen": false
     },
     "redSpanGainMultiplier": {
       "bestScore": 0,
       "bestValue": 1,
-      "cyclesSinceImprovement": 5,
-      "frozen": true
+      "cyclesSinceImprovement": 4,
+      "frozen": false
     },
     "blackSpanGainMultiplier": {
       "bestScore": 0,
       "bestValue": 1,
-      "cyclesSinceImprovement": 5,
-      "frozen": true
+      "cyclesSinceImprovement": 4,
+      "frozen": false
     },
     "redDoubleCoverageBonus": {
       "bestScore": 0,
       "bestValue": 1500,
-      "cyclesSinceImprovement": 5,
-      "frozen": true
+      "cyclesSinceImprovement": 4,
+      "frozen": false
     },
     "blackDoubleCoverageScale": {
       "bestScore": 0,
       "bestValue": 1,
-      "cyclesSinceImprovement": 5,
-      "frozen": true
+      "cyclesSinceImprovement": 4,
+      "frozen": false
     }
   },
   "bestScore": 0,
   "cyclesSinceScoreImprovement": 0,
-  "cyclesSinceStreakImprovement": 1,
+  "cyclesSinceStreakImprovement": 4,
   "bestStreak": 1,
   "bestScoreHashes": [
-    "0d76140caed4d472918c3186db49f0d5da336a27",
-    "0f41af519dcc973ad51540cfc9c73c38794e50ab",
-    "1f7ae9b346106eee50e5d42d6194d6669d9eb118",
-    "335b6ccdd47cefe3775e2d24e20afba57a3e3107",
-    "995fbaf43047f30012c1d09f7565ef2ab3b21b2d",
-    "9f0a38f63f001f70b8432c1fa278e9769bf6300f",
-    "b5c900e95c22ba58ac292b9bd6f6a556649862cb",
-    "d707d7b4d5dab265409e933c0778a647b1031b51",
-    "dbeaaa273796dd66cc4b8f7e062fb3119dfd2d9f",
-    "ff16219f8fe13f9693cddf479b871099be32d8f2",
-    "ff323d4e4bee1b22d93c3df500fe2d5ab024efad"
+    "eb2e2a7e75e825931a430be01b4dfcbc479d1a29"
   ],
-  "lastProcessedSweep": "2025-11-07T03:28:08.684Z"
+  "lastProcessedSweep": "2025-11-09T17:25:34.767Z",
+  "bucketStats": {
+    "soft-best": {
+      "total": 0,
+      "top10": 0,
+      "top25": 0,
+      "wins": 0,
+      "sum_rank": 0,
+      "best_rank": null,
+      "evalSamples": 0,
+      "sumDepth2Parity": 0.0,
+      "sumDepth3Parity": 0.0,
+      "sumDraws": 0.0
+    },
+    "niche": {
+      "total": 0,
+      "top10": 0,
+      "top25": 0,
+      "wins": 0,
+      "sum_rank": 0,
+      "best_rank": null,
+      "evalSamples": 0,
+      "sumDepth2Parity": 0.0,
+      "sumDepth3Parity": 0.0,
+      "sumDraws": 0.0
+    },
+    "trend": {
+      "total": 0,
+      "top10": 0,
+      "top25": 0,
+      "wins": 0,
+      "sum_rank": 0,
+      "best_rank": null,
+      "evalSamples": 0,
+      "sumDepth2Parity": 0.0,
+      "sumDepth3Parity": 0.0,
+      "sumDraws": 0.0
+    },
+    "best": {
+      "total": 0,
+      "top10": 0,
+      "top25": 0,
+      "wins": 0,
+      "sum_rank": 0,
+      "best_rank": null,
+      "evalSamples": 0,
+      "sumDepth2Parity": 0.0,
+      "sumDepth3Parity": 0.0,
+      "sumDraws": 0.0
+    },
+    "explore": {
+      "total": 0,
+      "top10": 0,
+      "top25": 0,
+      "wins": 0,
+      "sum_rank": 0,
+      "best_rank": null,
+      "evalSamples": 0,
+      "sumDepth2Parity": 0.0,
+      "sumDepth3Parity": 0.0,
+      "sumDraws": 0.0
+    },
+    "mutate": {
+      "total": 0,
+      "top10": 0,
+      "top25": 0,
+      "wins": 0,
+      "sum_rank": 0,
+      "best_rank": null,
+      "evalSamples": 0,
+      "sumDepth2Parity": 0.0,
+      "sumDepth3Parity": 0.0,
+      "sumDraws": 0.0
+    },
+    "other": {
+      "total": 0,
+      "top10": 0,
+      "top25": 0,
+      "wins": 0,
+      "sum_rank": 0,
+      "best_rank": null,
+      "evalSamples": 0,
+      "sumDepth2Parity": 0.0,
+      "sumDepth3Parity": 0.0,
+      "sumDraws": 0.0
+    }
+  },
+  "plannedOrigins": {}
 }

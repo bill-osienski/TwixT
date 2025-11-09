@@ -101,6 +101,7 @@ DEPTH3_PARITY_WEIGHT = 2.0
 DEPTH3_VALIDATION_MAX_PARITY = 6
 VALIDATION_TREND_WEIGHT = 3.0
 VALIDATION_DRAW_WEIGHT = 0.25
+SWEEP_TREND_DRAW_WEIGHT = VALIDATION_DRAW_WEIGHT
 SOFT_BEST_POOL_SIZE = 12
 SOFT_BEST_MIN_VARIANCE = 0.05
 SOFT_BEST_RECENT_SWEEPS = 6
@@ -496,6 +497,10 @@ def new_bucket_counter() -> Dict[str, Any]:
         "wins": 0,
         "sum_rank": 0,
         "best_rank": None,
+        "evalSamples": 0,
+        "sumDepth2Parity": 0.0,
+        "sumDepth3Parity": 0.0,
+        "sumDraws": 0.0,
     }
 
 
@@ -504,8 +509,13 @@ def ensure_bucket_stats(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     if not isinstance(stats, dict):
         stats = {}
     for bucket in BUCKET_NAMES:
-        if not isinstance(stats.get(bucket), dict):
+        bucket_stats = stats.get(bucket)
+        if not isinstance(bucket_stats, dict):
             stats[bucket] = new_bucket_counter()
+        else:
+            template = new_bucket_counter()
+            for key, value in template.items():
+                bucket_stats.setdefault(key, value)
     state["bucketStats"] = stats
     return stats
 
@@ -547,7 +557,7 @@ def analyze_knob_trends(
     combined_samples: List[Tuple[Dict[str, Any], float, float]] = []
     for entry in entries:
         combo = entry.get("combo") or {}
-        score = entry.get("score")
+        score = sweep_trend_metric(entry)
         if score is None:
             continue
         combined_samples.append((combo, float(score), 1.0))
@@ -970,6 +980,38 @@ def update_bucket_stats(state: Dict[str, Any], sweep: Dict[str, Any]) -> None:
         best_rank = stats.get("best_rank")
         if best_rank is None or idx < best_rank:
             stats["best_rank"] = idx
+        evaluation = combo.get("evaluation")
+        if evaluation:
+            metrics = compute_metrics(
+                {
+                    "evaluation": evaluation,
+                    "score": combo.get("score"),
+                }
+            )
+            if metrics["totalGames"] > 0:
+                stats["evalSamples"] = stats.get("evalSamples", 0) + 1
+                stats["sumDepth2Parity"] = stats.get("sumDepth2Parity", 0.0) + metrics[
+                    "depth2Parity"
+                ]
+                stats["sumDepth3Parity"] = stats.get("sumDepth3Parity", 0.0) + metrics[
+                    "depth3Parity"
+                ]
+                stats["sumDraws"] = stats.get("sumDraws", 0.0) + metrics["totalDraw"]
+
+
+
+def rebuild_bucket_stats(state: Dict[str, Any], sweeps: List[Dict[str, Any]]) -> None:
+    original_planned = state.get("plannedOrigins")
+    state["bucketStats"] = {
+        bucket: new_bucket_counter() for bucket in BUCKET_NAMES
+    }
+    state["plannedOrigins"] = {}
+    for sweep in sweeps:
+        update_bucket_stats(state, sweep)
+    if original_planned is not None:
+        state["plannedOrigins"] = original_planned
+    else:
+        state.pop("plannedOrigins", None)
 
 
 def to_hash_payload(combo: Dict[str, Any]) -> Dict[str, Any]:
@@ -1077,6 +1119,23 @@ def compute_metrics(combo_entry: Dict[str, Any]) -> Dict[str, Any]:
         "depth2": depth2,
         "depth3": depth3,
     }
+
+
+def sweep_trend_metric(entry: Dict[str, Any]) -> Optional[float]:
+    metrics = compute_metrics(entry)
+    if metrics["totalGames"] > 0:
+        return (
+            metrics["depth2Parity"]
+            + DEPTH3_PARITY_WEIGHT * metrics["depth3Parity"]
+            + SWEEP_TREND_DRAW_WEIGHT * metrics["totalDraw"]
+        )
+    score = entry.get("score")
+    if score is None:
+        return None
+    try:
+        return float(score)
+    except (TypeError, ValueError):
+        return None
 
 
 def validation_parity_metric(run: Dict[str, Any]) -> float:
@@ -1630,6 +1689,10 @@ def command_update(args: argparse.Namespace) -> None:
     dry_run = getattr(args, "dry_run", False)
     sweeps = load_sweeps()
     state = load_state()
+    rebuild_requested = getattr(args, "rebuild_telemetry", False)
+    if rebuild_requested:
+        rebuild_bucket_stats(state, sweeps)
+        print("Bucket telemetry rebuilt from full sweep history.")
     last_processed = state.get("lastProcessedSweep")
     new_sweeps = [
         sweep
@@ -1637,12 +1700,14 @@ def command_update(args: argparse.Namespace) -> None:
         if not last_processed
         or parse_iso(sweep.get("timestamp", "")) > parse_iso(last_processed)
     ]
+    baseline_defaults = offense_snapshot(load_search_config())
     if not new_sweeps:
         print("No new sweep results to process.")
+        if rebuild_requested:
+            save_state(state)
         return
 
     latest_timestamp = new_sweeps[-1].get("timestamp")
-    baseline_defaults = offense_snapshot(load_search_config())
     flattened = flatten_sweeps(new_sweeps, baseline_defaults)
     all_flattened = flatten_sweeps(sweeps, baseline_defaults)
     for sweep in new_sweeps:
@@ -1858,10 +1923,28 @@ def command_update(args: argparse.Namespace) -> None:
             top25_rate = stats["top25"] / total * 100
             avg_rank = stats["sum_rank"] / total
             best_rank = stats.get("best_rank")
+            eval_samples = stats.get("evalSamples", 0)
+            avg_d2 = (
+                stats.get("sumDepth2Parity", 0.0) / eval_samples
+                if eval_samples
+                else None
+            )
+            avg_d3 = (
+                stats.get("sumDepth3Parity", 0.0) / eval_samples
+                if eval_samples
+                else None
+            )
+            avg_draws = (
+                stats.get("sumDraws", 0.0) / eval_samples if eval_samples else None
+            )
+            d2_text = f"{avg_d2:4.1f}" if avg_d2 is not None else " -- "
+            d3_text = f"{avg_d3:4.1f}" if avg_d3 is not None else " -- "
+            draw_text = f"{avg_draws:4.1f}" if avg_draws is not None else " -- "
             print(
                 f"  {bucket:<8} top10={top10_rate:5.1f}% "
                 f"top25={top25_rate:5.1f}% wins={stats['wins']:>3} "
-                f"best={best_rank or '-'} avg_rank={avg_rank:.1f}"
+                f"best={best_rank or '-'} avg_rank={avg_rank:.1f} "
+                f"d2={d2_text} d3={d3_text} draw={draw_text}"
             )
 
 
@@ -2418,6 +2501,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=5,
         help="Number of configs to queue for validation (default: 5)",
+    )
+    update_parser.add_argument(
+        "--rebuild-telemetry",
+        action="store_true",
+        help="Recompute bucket telemetry from the full sweep history before processing new results",
     )
     update_parser.set_defaults(func=command_update)
 

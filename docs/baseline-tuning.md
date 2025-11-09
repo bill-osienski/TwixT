@@ -40,7 +40,7 @@ Run all commands from the project root with Python 3 available on `PATH`.
    python3 autoTune.py update [--limit K]
    ```
 
-   Scans for unprocessed sweeps, computes quick parity metrics, and writes the top `K` config hashes into `logs/pending-validation.json`.
+   Scans for unprocessed sweeps, computes quick parity metrics, and writes the top `K` config hashes into `logs/pending-validation.json`. Add `--rebuild-telemetry` if you need to recompute the lifetime bucket stats from the entire sweep history (helpful after telemetry/schema changes); the command rebuilds the summary before examining new sweeps.
 
 4. **Validate promising configs**
 
@@ -66,7 +66,7 @@ Repeat the cycle: suggest → sweep → update → validate → report. For unat
 - `--reset-stall` to zero the plateau counters and thaw any knobs that previously froze themselves after a plateau.
 - `--workers 10` (default) to keep 60/60 batches fast; plateau backlogs also use 10 workers automatically.
 
-Each 24-combo sweep is split across a soft-best distribution sampler (builds a probability distribution over the top configs), a niche hill-climb stage that perturbs several elite “styles” while enforcing minimum knob distance and a ±5 % knob-span cap per tweak (coarse knobs get a single-step exception and each slot retries several times before giving up), classic best-value recombinations (hard-capped at four per sweep), validation-weighted trend moves, under-sampled exploration, and a mutate/random tail for diversity. The soft-best pool always combines recent elites (best hashes from the latest sweeps) with a handful of all-time champions, and it only admits configs that have logged enough sweep games or at least one long validation, so noisy one-off batches don’t distort the distribution. The loop also tracks lifetime promotion stats per bucket (top‑10/top‑25 hit rates, wins, best rank), prints them after every `update`, and persists them to `logs/autoTune-state.json`, giving you a quick feel for which samplers deserve more or fewer slots. That mix keeps multiple TwixT playstyles alive while still following the strongest parity signals from the logs.
+Each 24-combo sweep is split across a soft-best distribution sampler (builds a probability distribution over the top configs), a niche hill-climb stage that perturbs several elite “styles” while enforcing minimum knob distance and a ±5 % knob-span cap per tweak (coarse knobs get a single-step exception and each slot retries several times before giving up), classic best-value recombinations (hard-capped at four per sweep), validation-weighted trend moves, under-sampled exploration, and a mutate/random tail for diversity. The soft-best pool always combines recent elites (best hashes from the latest sweeps) with a handful of all-time champions, and it only admits configs that have logged enough sweep games or at least one long validation, so noisy one-off batches don’t distort the distribution. The loop also tracks lifetime promotion stats per bucket (top‑10/top‑25 hit rates, wins, best rank), prints them after every `update`, and persists them to `logs/autoTune-state.json`, giving you a quick feel for which samplers deserve more or fewer slots. Each bucket now records average depth‑2 parity, depth‑3 parity, and draw rates as well, so you can immediately spot which samplers are pushing depth‑3 toward balance. That mix keeps multiple TwixT playstyles alive while still following the strongest parity signals from the logs.
 
 The loop now:
 
@@ -76,6 +76,8 @@ The loop now:
 - Detects plateaus after five cycles with no score/streak improvement (ties at score 0 reset the counter automatically), validates the remaining score ≤ 2 candidates using 10 workers, and then exits cleanly if no hash passes.
 
 Each knob is tracked independently; if a knob’s best sweep score fails to improve for five cycles it is frozen at its best value so future searches concentrate on the remaining degrees of freedom.
+
+Bucket telemetry persists to `logs/autoTune-state.json`; if you ever need to regenerate the historical averages after a change, run `python3 autoTune.py update --rebuild-telemetry` once to backfill from every sweep log. The `update` command prints the per-bucket averages after each run so you can track which sampler family is paying off.
 
 ## Manual Fallback (Legacy)
 
