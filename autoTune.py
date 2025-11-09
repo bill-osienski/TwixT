@@ -990,21 +990,18 @@ def update_bucket_stats(state: Dict[str, Any], sweep: Dict[str, Any]) -> None:
             )
             if metrics["totalGames"] > 0:
                 stats["evalSamples"] = stats.get("evalSamples", 0) + 1
-                stats["sumDepth2Parity"] = stats.get("sumDepth2Parity", 0.0) + metrics[
-                    "depth2Parity"
-                ]
-                stats["sumDepth3Parity"] = stats.get("sumDepth3Parity", 0.0) + metrics[
-                    "depth3Parity"
-                ]
+                stats["sumDepth2Parity"] = (
+                    stats.get("sumDepth2Parity", 0.0) + metrics["depth2Parity"]
+                )
+                stats["sumDepth3Parity"] = (
+                    stats.get("sumDepth3Parity", 0.0) + metrics["depth3Parity"]
+                )
                 stats["sumDraws"] = stats.get("sumDraws", 0.0) + metrics["totalDraw"]
-
 
 
 def rebuild_bucket_stats(state: Dict[str, Any], sweeps: List[Dict[str, Any]]) -> None:
     original_planned = state.get("plannedOrigins")
-    state["bucketStats"] = {
-        bucket: new_bucket_counter() for bucket in BUCKET_NAMES
-    }
+    state["bucketStats"] = {bucket: new_bucket_counter() for bucket in BUCKET_NAMES}
     state["plannedOrigins"] = {}
     for sweep in sweeps:
         update_bucket_stats(state, sweep)
