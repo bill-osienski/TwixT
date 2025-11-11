@@ -1387,7 +1387,7 @@ def command_suggest(args: argparse.Namespace) -> None:
             materialized[knob] = value
         if not combo_has_all_knobs(materialized):
             return None
-        return materialized, compute_config_hash(materialized)
+        return materialized, compute_config_hash(to_hash_payload(materialized))
 
     parent_norm = normalize_combo(base_combo)
     if not parent_norm:

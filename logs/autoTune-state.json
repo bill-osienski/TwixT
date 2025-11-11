@@ -1,33 +1,33 @@
 {
-  "lastSuggested": "2025-11-10T16:07:38.325Z",
+  "lastSuggested": "2025-11-11T01:42:24.737Z",
   "plannedSweep": {
     "hashes": [
-      "870592edccec2b0594e531cad45ec4a6b4fa65d3",
-      "3c99f48fa52f8468f2a066c41aed1029a7c24d4b",
+      "58c52eec76434b68f81d2a961c7a36d9eedda95d",
       "804b68afb936bed8c3a16f3988d1f1c9fe083a2f",
+      "99fff0d3f4a042eb398cf078aa93d5964518af28",
       "23f864ab0ba30db124748440156b5ea27dbec241",
-      "63ee1c18315cda1c096f6c4828ce91d4b3a462cf",
-      "db6bf4fd04078f4b79d2d009efce4a0c6ba2160f",
-      "d2d97a4c327fc078aea750c23d65460a0c1a0359",
-      "ee951a4b33653015da66ab73cce9fb00d00b9a1d",
-      "7dd65f77f435919810e955bb5727213557f0f998",
+      "e8e77f1607b66edbb2a58c5ca6a3225df4ee7830",
+      "ddda83627ff7e5c0d4c6a7b8bb92f6715a795913",
+      "6a9b64c71c4a212feedd09d66aa3af7d9e81098c",
+      "3ea3a6647e46e214560b2c44edbeea31b99c9ee0",
       "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6",
+      "7dd65f77f435919810e955bb5727213557f0f998",
+      "b662c89317045dcbf60a5fb5760a669eed1712da",
       "dc7491433278ba395ed02ff6a040c343d7c48324",
-      "62feefdbbba566075241c4b4dd430646a4d552c0",
-      "c9affee7a38b7e856e77af7e4ddcd312aa950c30",
-      "a430cf2fc112559e5ab95d134e39502995f9b38d",
       "dbe2cc83fa769fee830fa3f2b88581e88a5bd585",
       "eb544aa51b7b8fd0bfe68c66397b80e5a5f7071d",
-      "5a9692e029862d2f74c30fffe14cfb909b3b29cc",
-      "6096957f96b640ae736d27d191ee5219c7758164",
-      "6c500987bf61e8a26a17b0cee27b9eada012662a",
-      "0c52b6d123ed174f2ac8a841165ccfe25c2b6f81",
-      "e82ce47bd93779c2293c2c6ada116343c7918fc3",
-      "21d8932dfd1591cdd1ad16e2c281011e44649f62",
-      "072cf70dd6ab7a68d5cabd836eefe43666d08376",
-      "c1872675dc4aa93fe86a4205f9fb8bf116a4e047"
+      "a214b518fcb7079c8ad98398d845fb92f103cb8e",
+      "a0d5c44a8e84f55eb7b35268644c0631e6809ae3",
+      "20f6cc0c7ef4524685c2528f763fbcc894ad425f",
+      "e26ddeabc4869806ca3876094a031c5ac2bb55dc",
+      "e7cc0134532dbc51d684aae714f753192eead692",
+      "2d66dfff1a4742b4fd1613bfd5e17d93e912341b",
+      "a7d72e42c77d8b1e6dae809dcec58630f8f025ad",
+      "23125a504e9bddd6b77c223a96ce830cecb9c7bf",
+      "c63d23308399aa0691ac3e057e16f40fd4be8977",
+      "e3c9147ae9e2cddc210540b63e5a6993e9778ab0"
     ],
-    "generatedAt": "2025-11-10T16:07:38.325Z"
+    "generatedAt": "2025-11-11T01:42:24.737Z"
   },
   "validationStreaks": {
     "2e161adf34171c19a1dae9461dd9897c6dcfda72": 0,
@@ -266,5 +266,32 @@
       "sumDraws": 0.0
     }
   },
-  "plannedOrigins": {}
+  "plannedOrigins": {
+    "58c52eec76434b68f81d2a961c7a36d9eedda95d": "soft-best",
+    "804b68afb936bed8c3a16f3988d1f1c9fe083a2f": "soft-best",
+    "99fff0d3f4a042eb398cf078aa93d5964518af28": "soft-best",
+    "23f864ab0ba30db124748440156b5ea27dbec241": "soft-best",
+    "e8e77f1607b66edbb2a58c5ca6a3225df4ee7830": "soft-best",
+    "ddda83627ff7e5c0d4c6a7b8bb92f6715a795913": "niche:1f7a",
+    "6a9b64c71c4a212feedd09d66aa3af7d9e81098c": "niche:d707",
+    "3ea3a6647e46e214560b2c44edbeea31b99c9ee0": "niche:995f",
+    "87ece5c11b38c6f096ca86d0772a8c0ed595ddd6": "trend:blackSpanGainMultiplier",
+    "7dd65f77f435919810e955bb5727213557f0f998": "trend:blackSpanGainMultiplier",
+    "b662c89317045dcbf60a5fb5760a669eed1712da": "trend:redSpanGainMultiplier",
+    "dc7491433278ba395ed02ff6a040c343d7c48324": "trend:redSpanGainMultiplier",
+    "dbe2cc83fa769fee830fa3f2b88581e88a5bd585": "best:blackFinishScaleMultiplier",
+    "eb544aa51b7b8fd0bfe68c66397b80e5a5f7071d": "best:redDoubleCoverageBonus",
+    "a214b518fcb7079c8ad98398d845fb92f103cb8e": "best:firstEdgeRed",
+    "a0d5c44a8e84f55eb7b35268644c0631e6809ae3": "best:redFinishPenaltyFactor",
+    "20f6cc0c7ef4524685c2528f763fbcc894ad425f": "explore:redDoubleCoverageBonus",
+    "e26ddeabc4869806ca3876094a031c5ac2bb55dc": "explore:redDoubleCoverageBonus",
+    "e7cc0134532dbc51d684aae714f753192eead692": "explore:redDoubleCoverageBonus",
+    "2d66dfff1a4742b4fd1613bfd5e17d93e912341b": "explore:redDoubleCoverageBonus",
+    "a7d72e42c77d8b1e6dae809dcec58630f8f025ad": "mutate",
+    "23125a504e9bddd6b77c223a96ce830cecb9c7bf": "mutate",
+    "c63d23308399aa0691ac3e057e16f40fd4be8977": "mutate",
+    "e3c9147ae9e2cddc210540b63e5a6993e9778ab0": "mutate"
+  },
+  "hashRegistry": {},
+  "lastSweepId": 0
 }

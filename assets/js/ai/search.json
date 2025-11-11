@@ -32,7 +32,7 @@
         "redFinishExtra": 0,
         "redSpanGainMultiplier": 1,
         "redGapDecayMultiplier": 1,
-        "redFinishPenaltyFactor": 0,
+        "redFinishPenaltyFactor": 0.2,
         "blackFinishScaleMultiplier": 1,
         "blackSpanGainMultiplier": 1,
         "blackDoubleCoverageScale": 1,
