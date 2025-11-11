@@ -11,6 +11,7 @@ import math
 import json
 import random
 import subprocess
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -121,7 +122,16 @@ COARSE_NICHE_KNOBS = {
     "blackSpanGainMultiplier",
 }
 BEST_MAX_COUNT = 4
-BUCKET_NAMES = ["soft-best", "niche", "trend", "best", "explore", "mutate", "other"]
+BUCKET_NAMES = [
+    "soft-best",
+    "niche",
+    "trend",
+    "best",
+    "explore",
+    "mutate",
+    "anchor",
+    "other",
+]
 MUTATE_MIN_COUNT = 3
 CATEGORY_WEIGHTS: List[Tuple[str, int]] = [
     ("soft_best", 5),
@@ -132,11 +142,108 @@ CATEGORY_WEIGHTS: List[Tuple[str, int]] = [
     ("filler", 3),
 ]
 
+HASH_STATUS_UNTESTED = "UNTESTED"
+HASH_STATUS_SHORTLIST = "SHORTLIST"
+HASH_STATUS_VALIDATING = "VALIDATING"
+HASH_STATUS_STABLE = "STABLE"
+HASH_STATUS_RETIRED = "RETIRED"
+FINAL_STATUSES = {
+    HASH_STATUS_STABLE,
+    HASH_STATUS_RETIRED,
+    HASH_STATUS_VALIDATING,
+}
+
+SHORTLIST_SCORE_THRESHOLD = 2
+MAX_TEN10_SWEEPS_PER_SHORTLIST = 3
+RETIRE_SCORE_THRESHOLD = 6
+RETIRE_AFTER_SWEEPS = 3
+ANCHOR_SLOTS_PER_SWEEP = 2
+ANCHOR_COOLOFF_SWEEPS = 4
+MUTATION_MAX_ATTEMPTS = 8
+
 
 def compute_config_hash(combo: Dict[str, Any]) -> str:
     payload = {key: combo[key] for key in HASH_KEYS}
     serialized = stable_serialize(payload)
     return hashlib.sha1(serialized.encode("utf-8")).hexdigest()
+
+
+def default_hash_record() -> Dict[str, Any]:
+    return {
+        "status": HASH_STATUS_UNTESTED,
+        "ten10_sweeps": 0,
+        "shortlist_sweeps": 0,
+        "score_last": None,
+        "score_best": None,
+        "games_d2": 0,
+        "games_d3": 0,
+        "last_sweep_id": 0,
+        "last_score_timestamp": None,
+        "validations_requested": 0,
+        "validation_runs": 0,
+    }
+
+
+def ensure_hash_registry(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    registry = state.get("hashRegistry")
+    if not isinstance(registry, dict):
+        registry = {}
+        state["hashRegistry"] = registry
+    return registry
+
+
+def evaluation_game_counts(evaluation: Dict[str, Any]) -> Tuple[int, int]:
+    depth2 = evaluation.get("depth2") or {}
+    depth3 = evaluation.get("depth3") or {}
+    total_d2 = sum(depth2.get(side, 0) or 0 for side in ("red", "black", "draw"))
+    total_d3 = sum(depth3.get(side, 0) or 0 for side in ("red", "black", "draw"))
+    return total_d2, total_d3
+
+
+def set_hash_status(record: Dict[str, Any], status: str) -> None:
+    record["status"] = status
+
+
+def promote_to_shortlist(record: Dict[str, Any]) -> None:
+    if record.get("status") != HASH_STATUS_SHORTLIST:
+        record["shortlist_sweeps"] = 0
+    record["status"] = HASH_STATUS_SHORTLIST
+
+
+def increment_shortlist_sweep(record: Dict[str, Any]) -> None:
+    record["shortlist_sweeps"] = record.get("shortlist_sweeps", 0) + 1
+
+
+def should_schedule_hash(
+    hash_value: Optional[str],
+    bucket: str,
+    registry: Dict[str, Dict[str, Any]],
+    sweep_seen: Set[str],
+    allow_duplicates: bool,
+    sweep_id: int,
+) -> bool:
+    if not hash_value:
+        return True
+    if not allow_duplicates and hash_value in sweep_seen:
+        return False
+    record = registry.get(hash_value)
+    if not record:
+        return True
+    status = record.get("status", HASH_STATUS_UNTESTED)
+    if status == HASH_STATUS_RETIRED:
+        return False
+    if status == HASH_STATUS_VALIDATING:
+        return False
+    if status == HASH_STATUS_STABLE:
+        if bucket in {"soft-best", "best", "anchor"}:
+            last_seen = record.get("last_sweep_id", 0)
+            if sweep_id - last_seen >= ANCHOR_COOLOFF_SWEEPS:
+                return True
+        return False
+    if status == HASH_STATUS_SHORTLIST:
+        if record.get("shortlist_sweeps", 0) >= MAX_TEN10_SWEEPS_PER_SHORTLIST:
+            return False
+    return True
 
 
 def iso_now() -> str:
@@ -1258,12 +1365,10 @@ def command_suggest(args: argparse.Namespace) -> None:
     wishlist: List[Dict[str, Any]] = []
     seen_hashes: set[str] = set()
     mutate_success = 0
+    hash_registry = ensure_hash_registry(state)
+    next_sweep_id = state.get("lastSweepId", 0) + 1
     validation_streaks = compute_validation_streaks(validations, baseline_defaults)
     validation_counts = compute_validation_counts(validations, baseline_defaults)
-    validated_hashes: set[str] = set(validation_streaks.keys())
-    validated_hashes.update(
-        run.get("configHash") for run in validations if run.get("configHash")
-    )
     history_entries = flattened
     analytics_entries = [
         entry for entry in history_entries if entry.get("score") is not None
@@ -1275,6 +1380,21 @@ def command_suggest(args: argparse.Namespace) -> None:
     for knob, value in frozen_values.items():
         base_combo[knob] = value
 
+    def normalize_combo(
+        raw_combo: Dict[str, Any],
+    ) -> Optional[Tuple[Dict[str, Any], str]]:
+        materialized = combo_with_defaults(raw_combo, baseline_defaults)
+        for knob, value in frozen_values.items():
+            materialized[knob] = value
+        if not combo_has_all_knobs(materialized):
+            return None
+        return materialized, compute_config_hash(materialized)
+
+    parent_norm = normalize_combo(base_combo)
+    if not parent_norm:
+        raise SystemExit("Baseline combo missing required knobs after normalization.")
+    parent_materialized, parent_hash = parent_norm
+
     def append_candidate(
         candidate_combo: Dict[str, Any],
         origin: str,
@@ -1283,16 +1403,21 @@ def command_suggest(args: argparse.Namespace) -> None:
         source: Optional[str] = None,
     ) -> bool:
         nonlocal wishlist, seen_hashes, mutate_success
-        materialized = combo_with_defaults(candidate_combo, baseline_defaults)
-        for knob, value in frozen_values.items():
-            materialized[knob] = value
-        if not combo_has_all_knobs(materialized):
+        norm = normalize_combo(candidate_combo)
+        if not norm:
             return False
+        materialized, combo_hash = norm
         enriched = attach_hash(materialized)
         hash_value = enriched["configHash"]
-        if hash_value in validated_hashes:
-            return False
-        if hash_value in seen_hashes and not args.allow_duplicates:
+        bucket = get_bucket_from_origin(origin)
+        if not should_schedule_hash(
+            hash_value,
+            bucket,
+            hash_registry,
+            seen_hashes,
+            bool(args.allow_duplicates),
+            next_sweep_id,
+        ):
             return False
         if hash_value in seen_hashes and args.allow_duplicates:
             origin = f"{origin}-dup"
@@ -1308,6 +1433,39 @@ def command_suggest(args: argparse.Namespace) -> None:
             mutate_success += 1
         return True
 
+    def schedule_anchor_configs(limit: int) -> None:
+        if limit <= 0:
+            return
+        candidates: List[Tuple[float, str]] = []
+        for cfg_hash, record in hash_registry.items():
+            if record.get("status") != HASH_STATUS_STABLE:
+                continue
+            last_seen = record.get("last_sweep_id", 0)
+            if next_sweep_id - last_seen < ANCHOR_COOLOFF_SWEEPS:
+                continue
+            best_score = record.get("score_best")
+            metric = (
+                best_score if isinstance(best_score, (int, float)) else float("inf")
+            )
+            candidates.append((metric, cfg_hash))
+        candidates.sort()
+        for _, cfg_hash in candidates:
+            if len(wishlist) >= requested or limit <= 0:
+                break
+            entry = find_combo_by_hash(cfg_hash)
+            if not entry:
+                continue
+            combo = combo_with_defaults(combo_from_log(entry), baseline_defaults)
+            if not combo_has_all_knobs(combo):
+                continue
+            if append_candidate(
+                combo,
+                "anchor",
+                score=entry.get("score"),
+                source=entry.get("timestamp"),
+            ):
+                limit -= 1
+
     requested = args.count
     exploitation_target = max(0, min(args.exploit, requested))
     flattened_sorted = sorted(
@@ -1321,16 +1479,16 @@ def command_suggest(args: argparse.Namespace) -> None:
         if len(wishlist) >= exploitation_target:
             break
         hash_value = entry.get("configHash")
-        if (
-            not hash_value
-            or hash_value in validated_hashes
-            or hash_value in seen_hashes
-        ):
+        if not hash_value or hash_value in seen_hashes:
             continue
         combo = entry["combo"]
         append_candidate(
             combo, "exploit", score=entry.get("score"), source=entry.get("timestamp")
         )
+
+    anchor_quota = min(ANCHOR_SLOTS_PER_SWEEP, requested - len(wishlist))
+    if anchor_quota > 0:
+        schedule_anchor_configs(anchor_quota)
 
     remaining = requested - len(wishlist)
     category_quota = allocate_category_quota(remaining)
@@ -1461,9 +1619,21 @@ def command_suggest(args: argparse.Namespace) -> None:
         and forced_attempts < MUTATE_MIN_COUNT * 5
     ):
         forced_attempts += 1
-        candidate = mutate_combo(base_combo, rng, active_knobs)
-        if append_candidate(candidate, "mutate"):
-            bucket_counts["mutate"] += 1
+        appended = False
+        for _ in range(MUTATION_MAX_ATTEMPTS):
+            candidate = mutate_combo(base_combo, rng, active_knobs)
+            norm = normalize_combo(candidate)
+            if not norm:
+                continue
+            _, candidate_hash = norm
+            if candidate_hash == parent_hash:
+                continue
+            if append_candidate(candidate, "mutate"):
+                bucket_counts["mutate"] += 1
+                appended = True
+                break
+        if not appended:
+            continue
 
     filler_attempts = 0
     mutate_quota = max(
@@ -1474,17 +1644,30 @@ def command_suggest(args: argparse.Namespace) -> None:
             break
         use_mutate = mutate_quota > 0 or rng.random() < 0.6
         if use_mutate:
-            candidate = mutate_combo(base_combo, rng, active_knobs)
-            origin = "mutate"
-            if mutate_quota > 0:
-                mutate_quota -= 1
+            appended = False
+            for _ in range(MUTATION_MAX_ATTEMPTS):
+                candidate = mutate_combo(base_combo, rng, active_knobs)
+                norm = normalize_combo(candidate)
+                if not norm:
+                    continue
+                _, candidate_hash = norm
+                if candidate_hash == parent_hash:
+                    continue
+                if append_candidate(candidate, "mutate"):
+                    bucket_counts["mutate"] += 1
+                    appended = True
+                    break
+            if appended:
+                if mutate_quota > 0:
+                    mutate_quota -= 1
+                continue
         else:
             candidate = random_combo(rng, base_combo, active_knobs)
             origin = "random"
-        if append_candidate(candidate, origin):
-            bucket = get_bucket_from_origin(origin)
-            bucket_counts[bucket] += 1
-            continue
+            if append_candidate(candidate, origin):
+                bucket = get_bucket_from_origin(origin)
+                bucket_counts[bucket] += 1
+                continue
         filler_attempts += 1
         if filler_attempts >= requested * 5:
             break
@@ -1707,7 +1890,61 @@ def command_update(args: argparse.Namespace) -> None:
     latest_timestamp = new_sweeps[-1].get("timestamp")
     flattened = flatten_sweeps(new_sweeps, baseline_defaults)
     all_flattened = flatten_sweeps(sweeps, baseline_defaults)
+    hash_registry = ensure_hash_registry(state)
+    next_sweep_id = state.get("lastSweepId", 0)
+    sweep_replay_summaries: List[Tuple[str, int, int, Counter[str]]] = []
     for sweep in new_sweeps:
+        sweep_timestamp = sweep.get("timestamp")
+        next_sweep_id += 1
+        combos = sweep.get("combos", [])
+        unique_count = 0
+        reused_count = 0
+        reused_by_status: Counter[str] = Counter()
+        for combo in combos:
+            cfg_hash = combo.get("configHash")
+            if not cfg_hash:
+                continue
+            record = hash_registry.setdefault(cfg_hash, default_hash_record())
+            prev_sweeps = record.get("ten10_sweeps", 0)
+            if prev_sweeps > 0:
+                reused_count += 1
+                reused_by_status[record.get("status", HASH_STATUS_UNTESTED)] += 1
+            else:
+                unique_count += 1
+            record["ten10_sweeps"] = record.get("ten10_sweeps", 0) + 1
+            record["last_sweep_id"] = next_sweep_id
+            record["last_score_timestamp"] = sweep_timestamp
+            score = combo.get("score")
+            if isinstance(score, (int, float)):
+                record["score_last"] = score
+                best = record.get("score_best")
+                if best is None or score < best:
+                    record["score_best"] = score
+            evaluation = combo.get("evaluation") or {}
+            games_d2, games_d3 = evaluation_game_counts(evaluation)
+            record["games_d2"] = record.get("games_d2", 0) + games_d2
+            record["games_d3"] = record.get("games_d3", 0) + games_d3
+            prev_status = record.get("status", HASH_STATUS_UNTESTED)
+            if prev_status not in FINAL_STATUSES:
+                strong_score = isinstance(score, (int, float)) and (
+                    score <= SHORTLIST_SCORE_THRESHOLD
+                )
+                if strong_score and prev_status != HASH_STATUS_SHORTLIST:
+                    promote_to_shortlist(record)
+                elif not strong_score:
+                    best_value = record.get("score_best")
+                    best_value = best_value if best_value is not None else float("inf")
+                    if (
+                        record.get("ten10_sweeps", 0) >= RETIRE_AFTER_SWEEPS
+                        and best_value >= RETIRE_SCORE_THRESHOLD
+                    ):
+                        set_hash_status(record, HASH_STATUS_RETIRED)
+            current_status = record.get("status", HASH_STATUS_UNTESTED)
+            if current_status == HASH_STATUS_SHORTLIST:
+                if prev_status == HASH_STATUS_SHORTLIST:
+                    increment_shortlist_sweep(record)
+                elif prev_status != HASH_STATUS_SHORTLIST:
+                    record["shortlist_sweeps"] = 1
         update_bucket_stats(state, sweep)
         planned = state.get("plannedOrigins")
         if isinstance(planned, dict):
@@ -1715,6 +1952,14 @@ def command_update(args: argparse.Namespace) -> None:
                 cfg_hash = combo.get("configHash")
                 if cfg_hash and cfg_hash in planned:
                     planned.pop(cfg_hash, None)
+        sweep_replay_summaries.append(
+            (
+                sweep_timestamp or "(unknown)",
+                unique_count,
+                reused_count,
+                reused_by_status,
+            )
+        )
     validated_runs = load_validations()
     streaks = compute_validation_streaks(validated_runs, baseline_defaults)
     counts = compute_validation_counts(validated_runs, baseline_defaults)
@@ -1729,6 +1974,15 @@ def command_update(args: argparse.Namespace) -> None:
         if total > 0 and streaks.get(hash_value, 0) == 0
     }
     skip_hashes = successful_hashes.union(failed_hashes)
+    for hash_value, total in counts.items():
+        record = hash_registry.setdefault(hash_value, default_hash_record())
+        record["validation_runs"] = total
+    for hash_value in successful_hashes:
+        record = hash_registry.setdefault(hash_value, default_hash_record())
+        set_hash_status(record, HASH_STATUS_STABLE)
+    for hash_value in failed_hashes:
+        record = hash_registry.setdefault(hash_value, default_hash_record())
+        set_hash_status(record, HASH_STATUS_RETIRED)
     prune_validated_pending(skip_hashes)
 
     knob_best_entries: Dict[str, Dict[str, Any]] = {}
@@ -1787,6 +2041,8 @@ def command_update(args: argparse.Namespace) -> None:
                 stats["cyclesSinceImprovement"] = (
                     stats.get("cyclesSinceImprovement", 0) + 1
                 )
+                if stats.get("bestScore") == 0:
+                    stats["cyclesSinceImprovement"] = 0
                 if stats["cyclesSinceImprovement"] >= KNOB_STALL_CYCLES:
                     stats["frozen"] = True
         knob_stats[knob] = stats
@@ -1814,12 +2070,7 @@ def command_update(args: argparse.Namespace) -> None:
             improvement = True
         elif current_best_hashes and current_best_hashes - prev_best_hashes:
             improvement = True
-        elif (
-            prev_best_score == best_score_cycle == 0
-            and current_best_hashes
-            and prev_best_hashes
-            and current_best_hashes == prev_best_hashes
-        ):
+        elif prev_best_score == best_score_cycle == 0:
             improvement = True
         if improvement:
             state["bestScore"] = best_score_cycle
@@ -1859,6 +2110,14 @@ def command_update(args: argparse.Namespace) -> None:
     recommendations = recommend_for_validation(
         all_flattened, validation_limit, skip_hashes, streaks, counts
     )
+    for rec in recommendations:
+        cfg_hash = rec.get("configHash")
+        if not cfg_hash:
+            continue
+        record = hash_registry.setdefault(cfg_hash, default_hash_record())
+        if record.get("status") != HASH_STATUS_STABLE:
+            set_hash_status(record, HASH_STATUS_VALIDATING)
+        record["validations_requested"] = record.get("validations_requested", 0) + 1
     pending_payload = {
         "generatedAt": iso_now(),
         "recommendations": recommendations,
@@ -1876,7 +2135,21 @@ def command_update(args: argparse.Namespace) -> None:
     else:
         state["lastProcessedSweep"] = latest_timestamp
         state["pendingValidation"] = [entry["configHash"] for entry in recommendations]
+        state["lastSweepId"] = next_sweep_id
+        state["hashRegistry"] = hash_registry
         save_state(state)
+
+    if sweep_replay_summaries:
+        print("\nSweep replay summary:")
+        for ts, unique_count, reused_count, reused_by_status in sweep_replay_summaries:
+            detail = ", ".join(
+                f"{status}:{count}"
+                for status, count in sorted(reused_by_status.items())
+                if count
+            )
+            if not detail:
+                detail = "—"
+            print(f"  {ts}: unique={unique_count} reused={reused_count} ({detail})")
 
     print(
         f"Processed {len(new_sweeps)} new sweep batch(es). Latest timestamp: {latest_timestamp}"
