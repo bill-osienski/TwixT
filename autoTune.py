@@ -1367,7 +1367,6 @@ def command_suggest(args: argparse.Namespace) -> None:
     mutate_success = 0
     hash_registry = ensure_hash_registry(state)
     next_sweep_id = state.get("lastSweepId", 0) + 1
-    validation_streaks = compute_validation_streaks(validations, baseline_defaults)
     validation_counts = compute_validation_counts(validations, baseline_defaults)
     history_entries = flattened
     analytics_entries = [
