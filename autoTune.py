@@ -532,9 +532,7 @@ KNOB_SPECS: Dict[str, KnobSpec] = {
 
 CORRELATION_FEATURES: Tuple[str, ...] = tuple(
     dict.fromkeys(
-        list(KNOB_SPECS.keys())
-        + ["spanGainBase", "gapDecay"]
-        + OPTIONAL_OFFENSE_KEYS
+        list(KNOB_SPECS.keys()) + ["spanGainBase", "gapDecay"] + OPTIONAL_OFFENSE_KEYS
     )
 )
 
@@ -596,16 +594,13 @@ class RidgeModelResult:
             depth=int(payload.get("depth", 0) or 0),
             intercept=float(payload.get("intercept", 0.0) or 0.0),
             coefficients={
-                str(k): float(v)
-                for k, v in (payload.get("coefficients") or {}).items()
+                str(k): float(v) for k, v in (payload.get("coefficients") or {}).items()
             },
             feature_means={
-                str(k): float(v)
-                for k, v in (payload.get("featureMeans") or {}).items()
+                str(k): float(v) for k, v in (payload.get("featureMeans") or {}).items()
             },
             feature_stds={
-                str(k): float(v)
-                for k, v in (payload.get("featureStds") or {}).items()
+                str(k): float(v) for k, v in (payload.get("featureStds") or {}).items()
             },
             r2=float(payload.get("r2", 0.0) or 0.0),
             sample_count=int(payload.get("sampleCount", 0) or 0),
@@ -1758,11 +1753,7 @@ def command_suggest(args: argparse.Namespace) -> None:
                     bucket_counts["best"] += 1
                     best_added += 1
 
-    if (
-        correlation_models
-        and best_added < BEST_MAX_COUNT
-        and len(wishlist) < requested
-    ):
+    if correlation_models and best_added < BEST_MAX_COUNT and len(wishlist) < requested:
         guided_limit = min(
             BEST_MAX_COUNT - best_added,
             requested - len(wishlist),
@@ -2583,7 +2574,11 @@ def command_validate(args: argparse.Namespace) -> None:
     try:
         results = load_json(VALIDATION_LOG, {"runs": []}).get("runs", [])
         run_data = next(
-            (entry for entry in reversed(results) if entry.get("configHash") == config_hash),
+            (
+                entry
+                for entry in reversed(results)
+                if entry.get("configHash") == config_hash
+            ),
             None,
         )
         if run_data:
@@ -2602,9 +2597,9 @@ def command_validate(args: argparse.Namespace) -> None:
                 streaks[normalized_hash] = streaks.get(normalized_hash, 0) + 1
                 if streaks[normalized_hash] >= SUCCESS_VALIDATION_STREAK:
                     record["status"] = HASH_STATUS_STABLE
-                    state.setdefault("successfulConfigs", {})[
-                        normalized_hash
-                    ] = streaks[normalized_hash]
+                    state.setdefault("successfulConfigs", {})[normalized_hash] = (
+                        streaks[normalized_hash]
+                    )
                 else:
                     record["status"] = HASH_STATUS_SHORTLIST
             else:
@@ -2719,9 +2714,7 @@ def _parse_timestamp(value: Optional[str]) -> Optional[datetime]:
         return None
 
 
-def _build_cycle_boundaries(
-    sweeps: List[Dict[str, Any]]
-) -> List[Tuple[int, datetime]]:
+def _build_cycle_boundaries(sweeps: List[Dict[str, Any]]) -> List[Tuple[int, datetime]]:
     boundaries: List[Tuple[int, datetime]] = []
     for idx, sweep in enumerate(sweeps, start=1):
         ts = _parse_timestamp(sweep.get("timestamp"))
@@ -2831,7 +2824,9 @@ def build_model_samples(
         if not combo_raw:
             continue
         knobs = _normalized_knob_values(combo_raw, defaults)
-        normalized_hash = compute_config_hash(to_hash_payload(combo_with_defaults(combo_raw, defaults)))
+        normalized_hash = compute_config_hash(
+            to_hash_payload(combo_with_defaults(combo_raw, defaults))
+        )
         for depth_key, depth in (("depth2", 2), ("depth3", 3)):
             depth_stats = run.get(depth_key) or {}
             red = int(depth_stats.get("red", 0) or 0)
@@ -3005,11 +3000,7 @@ def compute_hash_performance_summary(
             baseline = baseline_mean if baseline_mean is not None else 0.0
             delta = mean - baseline
             stderr = stats.get("stderr")
-            ci_upper = (
-                delta + AUTO_DROP_CI_Z * stderr
-                if stderr is not None
-                else delta
-            )
+            ci_upper = delta + AUTO_DROP_CI_Z * stderr if stderr is not None else delta
             stats["delta"] = delta
             stats["ciUpper"] = ci_upper
     return summary
@@ -3082,9 +3073,7 @@ def apply_hash_performance_policies(
     if not isinstance(hashes, dict):
         return [], []
     baseline_hash = performance_summary.get("baselineHash")
-    auto_candidates, soft_candidates = evaluate_hash_performance(
-        hashes, baseline_hash
-    )
+    auto_candidates, soft_candidates = evaluate_hash_performance(hashes, baseline_hash)
     registry = ensure_hash_registry(state)
     auto_map = state.setdefault("autoDroppedHashes", {})
     soft_map = state.setdefault("softFlaggedHashes", {})
@@ -3156,9 +3145,7 @@ def _solve_linear_system(
         return []
     augmented = [row[:] + [vector[idx]] for idx, row in enumerate(matrix)]
     for col in range(size):
-        pivot_row = max(
-            range(col, size), key=lambda r: abs(augmented[r][col])
-        )
+        pivot_row = max(range(col, size), key=lambda r: abs(augmented[r][col]))
         pivot_val = augmented[pivot_row][col]
         if abs(pivot_val) <= 1e-12:
             return None
@@ -3190,7 +3177,9 @@ def _fit_ridge_model(
     total_weight = sum(sample.weight for sample in depth_samples)
     if total_weight <= 0:
         return None
-    intercept = sum(sample.weight * sample.bias for sample in depth_samples) / total_weight
+    intercept = (
+        sum(sample.weight * sample.bias for sample in depth_samples) / total_weight
+    )
     feature_vectors: List[List[float]] = []
     for sample in depth_samples:
         vector = []
@@ -3219,7 +3208,9 @@ def _fit_ridge_model(
         coefficients = {key: 0.0 for key in CORRELATION_FEATURES}
         coef_vector = [0.0 for _ in CORRELATION_FEATURES]
     else:
-        coefficients = {key: value for key, value in zip(CORRELATION_FEATURES, solution)}
+        coefficients = {
+            key: value for key, value in zip(CORRELATION_FEATURES, solution)
+        }
         coef_vector = solution
     ss_tot = 0.0
     ss_res = 0.0
@@ -3234,7 +3225,9 @@ def _fit_ridge_model(
     r2 = 0.0
     if ss_tot > 1e-9:
         r2 = max(0.0, 1.0 - ss_res / ss_tot)
-    feature_means = {key: stats.get("mean", 0.0) for key, stats in feature_stats.items()}
+    feature_means = {
+        key: stats.get("mean", 0.0) for key, stats in feature_stats.items()
+    }
     feature_stds = {
         key: stats.get("std", 1.0) or 1.0 for key, stats in feature_stats.items()
     }
@@ -3262,15 +3255,15 @@ def build_correlation_report(
     validations = load_validations()
     search_config = load_search_config()
     defaults = offense_snapshot(search_config)
-    baseline_combo = combo_with_defaults(extract_combo_from_config(search_config), defaults)
+    baseline_combo = combo_with_defaults(
+        extract_combo_from_config(search_config), defaults
+    )
     baseline_hash = compute_config_hash(to_hash_payload(baseline_combo))
     samples, summary = build_model_samples(
         sweeps, validations, defaults, window_cycles, tau, phase_weights
     )
     if not samples:
-        raise ValueError(
-            "No correlation samples available in the selected window."
-        )
+        raise ValueError("No correlation samples available in the selected window.")
     feature_stats = _compute_feature_stats(samples)
     models: Dict[str, Optional[RidgeModelResult]] = {}
     for depth in (2, 3):
@@ -3308,7 +3301,9 @@ def build_correlation_report(
         "diagnostics": {
             "depth2": {
                 "modelR2": models["depth2"].r2 if models.get("depth2") else None,
-                "sampleCount": models["depth2"].sample_count if models.get("depth2") else 0,
+                "sampleCount": (
+                    models["depth2"].sample_count if models.get("depth2") else 0
+                ),
                 "baselineBias": (
                     hash_summary.get(baseline_hash, {})
                     .get("depth2", {})
@@ -3317,7 +3312,9 @@ def build_correlation_report(
             },
             "depth3": {
                 "modelR2": models["depth3"].r2 if models.get("depth3") else None,
-                "sampleCount": models["depth3"].sample_count if models.get("depth3") else 0,
+                "sampleCount": (
+                    models["depth3"].sample_count if models.get("depth3") else 0
+                ),
                 "baselineBias": (
                     hash_summary.get(baseline_hash, {})
                     .get("depth3", {})
@@ -3342,9 +3339,7 @@ def ensure_correlation_report(force_rebuild: bool = False) -> Dict[str, Any]:
     return report
 
 
-def hydrate_correlation_models(
-    report: Dict[str, Any]
-) -> Dict[str, RidgeModelResult]:
+def hydrate_correlation_models(report: Dict[str, Any]) -> Dict[str, RidgeModelResult]:
     models: Dict[str, RidgeModelResult] = {}
     model_payloads = (report.get("models") or {}) if isinstance(report, dict) else {}
     for depth_key in ("depth2", "depth3"):
@@ -3406,9 +3401,7 @@ def annotate_entries_with_bias(
         entry["predictedBiasScore"] = biases.get("total")
 
 
-def _shift_discrete_value(
-    knob: str, combo: Dict[str, Any], step: int
-) -> Optional[Any]:
+def _shift_discrete_value(knob: str, combo: Dict[str, Any], step: int) -> Optional[Any]:
     spec = KNOB_SPECS.get(knob)
     if not spec or not spec.values:
         return None
@@ -3461,7 +3454,11 @@ def generate_model_guided_variants(
         return []
     variants: List[Tuple[Dict[str, Any], str]] = []
     ranked = sorted(
-        ((knob, influence) for knob, influence in gradient.items() if knob in active_knobs),
+        (
+            (knob, influence)
+            for knob, influence in gradient.items()
+            if knob in active_knobs
+        ),
         key=lambda item: abs(item[1]),
         reverse=True,
     )
@@ -3494,7 +3491,11 @@ def generate_single_knob_probes(
         return []
     probes: List[Tuple[Dict[str, Any], str]] = []
     ranked = sorted(
-        ((knob, influence) for knob, influence in gradient.items() if knob in active_knobs),
+        (
+            (knob, influence)
+            for knob, influence in gradient.items()
+            if knob in active_knobs
+        ),
         key=lambda item: abs(item[1]),
         reverse=True,
     )
