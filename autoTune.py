@@ -27,6 +27,14 @@ NEXT_SWEEP_PATH = LOGS_DIR / "next-sweep.json"
 STATE_PATH = LOGS_DIR / "autoTune-state.json"
 PENDING_VALIDATION_PATH = LOGS_DIR / "pending-validation.json"
 SEARCH_PATH = PROJECT_ROOT / "assets/js/ai/search.json"
+CORRELATION_REPORT_PATH = LOGS_DIR / "correlation-state.json"
+CORRELATION_WINDOW_CYCLES = 20
+CORRELATION_DECAY_TAU = 5.0
+CORRELATION_RIDGE_LAMBDA = 0.5
+CORRELATION_PHASE_WEIGHTS = {
+    "combo": 0.2,
+    "validation": 1.0,
+}
 
 
 def load_json(path: Path, default: Any) -> Any:
@@ -160,6 +168,11 @@ RETIRE_AFTER_SWEEPS = 3
 ANCHOR_SLOTS_PER_SWEEP = 2
 ANCHOR_COOLOFF_SWEEPS = 4
 MUTATION_MAX_ATTEMPTS = 8
+AUTO_DROP_WEIGHT_THRESHOLD = 500.0
+AUTO_DROP_DELTA_THRESHOLD = -0.03
+AUTO_DROP_CI_Z = 1.96
+SOFT_FLAG_WEIGHT_THRESHOLD = 300.0
+SOFT_FLAG_DELTA_THRESHOLD = -0.02
 
 
 def compute_config_hash(combo: Dict[str, Any]) -> str:
@@ -243,6 +256,8 @@ def should_schedule_hash(
     if status == HASH_STATUS_SHORTLIST:
         if record.get("shortlist_sweeps", 0) >= MAX_TEN10_SWEEPS_PER_SHORTLIST:
             return False
+    if record.get("softFlagged") and bucket not in {"explore", "mutate", "other"}:
+        return False
     return True
 
 
@@ -514,6 +529,88 @@ KNOB_SPECS: Dict[str, KnobSpec] = {
         "blackDoubleCoverageScale", build_values(0.55, 1.0, 0.05)
     ),
 }
+
+CORRELATION_FEATURES: Tuple[str, ...] = tuple(
+    dict.fromkeys(
+        list(KNOB_SPECS.keys())
+        + ["spanGainBase", "gapDecay"]
+        + OPTIONAL_OFFENSE_KEYS
+    )
+)
+
+
+@dataclass
+class ModelSample:
+    depth: int
+    cycle: int
+    phase: str
+    config_hash: str
+    timestamp: str
+    knobs: Dict[str, float]
+    bias: float
+    weight: float
+    red: int
+    black: int
+    draw: int
+    games: int
+
+
+@dataclass
+class RidgeModelResult:
+    depth: int
+    intercept: float
+    coefficients: Dict[str, float]
+    feature_means: Dict[str, float]
+    feature_stds: Dict[str, float]
+    r2: float
+    sample_count: int
+    effective_weight: float
+
+    def predict_bias(self, knobs: Dict[str, Any]) -> float:
+        features = []
+        for key in CORRELATION_FEATURES:
+            value = float(knobs.get(key, 0.0) or 0.0)
+            mean = self.feature_means.get(key, 0.0)
+            std = self.feature_stds.get(key, 1.0) or 1.0
+            features.append((value - mean) / std)
+        prediction = self.intercept
+        for value, key in zip(features, CORRELATION_FEATURES):
+            prediction += value * self.coefficients.get(key, 0.0)
+        return prediction
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "depth": self.depth,
+            "intercept": self.intercept,
+            "coefficients": self.coefficients,
+            "featureMeans": self.feature_means,
+            "featureStds": self.feature_stds,
+            "r2": self.r2,
+            "sampleCount": self.sample_count,
+            "effectiveWeight": self.effective_weight,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Dict[str, Any]) -> "RidgeModelResult":
+        return cls(
+            depth=int(payload.get("depth", 0) or 0),
+            intercept=float(payload.get("intercept", 0.0) or 0.0),
+            coefficients={
+                str(k): float(v)
+                for k, v in (payload.get("coefficients") or {}).items()
+            },
+            feature_means={
+                str(k): float(v)
+                for k, v in (payload.get("featureMeans") or {}).items()
+            },
+            feature_stds={
+                str(k): float(v)
+                for k, v in (payload.get("featureStds") or {}).items()
+            },
+            r2=float(payload.get("r2", 0.0) or 0.0),
+            sample_count=int(payload.get("sampleCount", 0) or 0),
+            effective_weight=float(payload.get("effectiveWeight", 0.0) or 0.0),
+        )
 
 
 def nearest_value(values: Sequence[Any], target: Any) -> Any:
@@ -1361,6 +1458,30 @@ def command_suggest(args: argparse.Namespace) -> None:
         baseline_combo_raw[knob] = value
     validations = load_validations()
     validation_samples = build_validation_trend_samples(validations, baseline_defaults)
+    correlation_report: Optional[Dict[str, Any]] = None
+    correlation_models: Dict[str, RidgeModelResult] = {}
+    try:
+        correlation_report = ensure_correlation_report(force_rebuild=True)
+        correlation_models = hydrate_correlation_models(correlation_report)
+        dropped_hashes, flagged_hashes = apply_hash_performance_policies(
+            state, (correlation_report or {}).get("hashPerformance")
+        )
+        if dropped_hashes:
+            formatted = ", ".join(
+                f"{entry['hash'][:8]}({','.join(entry['depths'])})"
+                for entry in dropped_hashes[:5]
+            )
+            suffix = "..." if len(dropped_hashes) > 5 else ""
+            print(f"[correlate] Auto-dropped hashes: {formatted}{suffix}")
+        if flagged_hashes:
+            formatted = ", ".join(
+                f"{entry['hash'][:8]}({','.join(entry['depths'])})"
+                for entry in flagged_hashes[:5]
+            )
+            suffix = "..." if len(flagged_hashes) > 5 else ""
+            print(f"[correlate] Soft-flagged hashes: {formatted}{suffix}")
+    except Exception:
+        correlation_models = {}
     requested = args.count
     wishlist: List[Dict[str, Any]] = []
     seen_hashes: set[str] = set()
@@ -1369,6 +1490,7 @@ def command_suggest(args: argparse.Namespace) -> None:
     next_sweep_id = state.get("lastSweepId", 0) + 1
     validation_counts = compute_validation_counts(validations, baseline_defaults)
     history_entries = flattened
+    annotate_entries_with_bias(history_entries, baseline_defaults, correlation_models)
     analytics_entries = [
         entry for entry in history_entries if entry.get("score") is not None
     ]
@@ -1426,6 +1548,12 @@ def command_suggest(args: argparse.Namespace) -> None:
         else:
             enriched.setdefault("score", None)
         enriched["sourceSweep"] = source
+        if correlation_models:
+            bias_info = predict_combo_biases(
+                materialized, baseline_defaults, correlation_models
+            )
+            if bias_info:
+                enriched["predictedBias"] = bias_info
         wishlist.append(enriched)
         seen_hashes.add(hash_value)
         if origin.startswith("mutate"):
@@ -1465,15 +1593,21 @@ def command_suggest(args: argparse.Namespace) -> None:
             ):
                 limit -= 1
 
-    requested = args.count
     exploitation_target = max(0, min(args.exploit, requested))
-    flattened_sorted = sorted(
-        history_entries,
-        key=lambda entry: (
-            entry.get("score", float("inf")),
-            entry.get("timestamp", ""),
-        ),
-    )
+
+    def history_sort_key(entry: Dict[str, Any]) -> Tuple[float, float, str]:
+        bias_score = entry.get("predictedBiasScore")
+        bias_component = (
+            float(bias_score) if isinstance(bias_score, (int, float)) else float("inf")
+        )
+        score_component = (
+            float(entry.get("score"))
+            if isinstance(entry.get("score"), (int, float))
+            else float("inf")
+        )
+        return (bias_component, score_component, entry.get("timestamp", ""))
+
+    flattened_sorted = sorted(history_entries, key=history_sort_key)
     for entry in flattened_sorted:
         if len(wishlist) >= exploitation_target:
             break
@@ -1517,6 +1651,12 @@ def command_suggest(args: argparse.Namespace) -> None:
             soft_quota * 3,
             active_knobs,
         )
+        if correlation_models:
+            soft_variants.sort(
+                key=lambda item: correlation_bias_score(
+                    item[0], baseline_defaults, correlation_models
+                )
+            )
         for combo, origin in soft_variants:
             if len(wishlist) >= requested or soft_quota <= 0:
                 break
@@ -1535,6 +1675,12 @@ def command_suggest(args: argparse.Namespace) -> None:
             NICHE_SLOT_RETRIES,
             active_knobs,
         )
+        if correlation_models:
+            niche_variants.sort(
+                key=lambda item: correlation_bias_score(
+                    item[0], baseline_defaults, correlation_models
+                )
+            )
         for combo, origin in niche_variants:
             if len(wishlist) >= requested or niche_quota <= 0:
                 break
@@ -1545,9 +1691,18 @@ def command_suggest(args: argparse.Namespace) -> None:
 
     trend_quota = category_quota.get("trend", 0)
     if trend_quota > 0:
-        for combo, origin in generate_trend_variants(
-            base_combo, trends, rng, trend_quota * 2, active_knobs
-        ):
+        trend_variants = list(
+            generate_trend_variants(
+                base_combo, trends, rng, trend_quota * 2, active_knobs
+            )
+        )
+        if correlation_models:
+            trend_variants.sort(
+                key=lambda item: correlation_bias_score(
+                    item[0], baseline_defaults, correlation_models
+                )
+            )
+        for combo, origin in trend_variants:
             if len(wishlist) >= requested or trend_quota <= 0:
                 break
             if append_candidate(combo, origin):
@@ -1561,6 +1716,12 @@ def command_suggest(args: argparse.Namespace) -> None:
         best_variants = generate_best_value_variants(
             base_combo, trends, best_quota * 2, active_knobs
         )
+        if correlation_models:
+            best_variants.sort(
+                key=lambda item: correlation_bias_score(
+                    item[0], baseline_defaults, correlation_models
+                )
+            )
         for combo, origin in best_variants:
             if (
                 len(wishlist) >= requested
@@ -1597,7 +1758,45 @@ def command_suggest(args: argparse.Namespace) -> None:
                     bucket_counts["best"] += 1
                     best_added += 1
 
+    if (
+        correlation_models
+        and best_added < BEST_MAX_COUNT
+        and len(wishlist) < requested
+    ):
+        guided_limit = min(
+            BEST_MAX_COUNT - best_added,
+            requested - len(wishlist),
+        )
+        guided_variants = generate_model_guided_variants(
+            base_combo,
+            baseline_defaults,
+            correlation_models,
+            active_knobs,
+            guided_limit,
+        )
+        for combo, origin in guided_variants:
+            if len(wishlist) >= requested:
+                break
+            if append_candidate(combo, origin):
+                best_added += 1
+                bucket_counts["best"] += 1
+
     explore_quota = category_quota.get("explore", 0)
+    probe_count = 0
+    if explore_quota > 0 and correlation_models:
+        for combo, origin in generate_single_knob_probes(
+            base_combo,
+            baseline_defaults,
+            correlation_models,
+            active_knobs,
+            limit=2,
+        ):
+            if len(wishlist) >= requested or explore_quota <= 0:
+                break
+            if append_candidate(combo, origin):
+                bucket_counts["explore"] += 1
+                explore_quota -= 1
+                probe_count += 1
     if explore_quota > 0:
         for combo, origin in generate_underexplored_variants(
             base_combo, trends, rng, explore_quota * 2, active_knobs
@@ -2255,18 +2454,37 @@ def find_combo_by_hash(config_hash: str) -> Optional[Dict[str, Any]]:
 
 def remove_pending_hash(config_hash: str) -> None:
     state = load_state()
-    pending = state.get("pendingValidation", [])
-    if config_hash in pending:
-        pending = [hash_value for hash_value in pending if hash_value != config_hash]
-        state["pendingValidation"] = pending
+    changed = remove_pending_hash_from_state(state, config_hash)
+    if changed:
         save_state(state)
+    prune_pending_validation_file(config_hash)
+
+
+def remove_pending_hash_from_state(state: Dict[str, Any], config_hash: str) -> bool:
+    pending = state.get("pendingValidation")
+    if not isinstance(pending, list) or not pending:
+        return False
+    filtered = [hash_value for hash_value in pending if hash_value != config_hash]
+    if len(filtered) == len(pending):
+        return False
+    state["pendingValidation"] = filtered
+    return True
+
+
+def prune_pending_validation_file(config_hash: str) -> None:
+    if not PENDING_VALIDATION_PATH.exists():
+        return
     data = load_json(PENDING_VALIDATION_PATH, {})
-    recs = data.get("recommendations", [])
-    recs = [entry for entry in recs if entry.get("configHash") != config_hash]
-    if recs:
-        data["recommendations"] = recs
+    recs = data.get("recommendations")
+    if not isinstance(recs, list):
+        return
+    new_recs = [entry for entry in recs if entry.get("configHash") != config_hash]
+    if len(new_recs) == len(recs):
+        return
+    if new_recs:
+        data["recommendations"] = new_recs
         write_json(PENDING_VALIDATION_PATH, data)
-    elif PENDING_VALIDATION_PATH.exists():
+    else:
         PENDING_VALIDATION_PATH.unlink()
 
 
@@ -2361,6 +2579,43 @@ def command_validate(args: argparse.Namespace) -> None:
 
     remove_pending_hash(config_hash)
 
+    # Update hash registry / streaks immediately so future scheduling reflects this run
+    try:
+        results = load_json(VALIDATION_LOG, {"runs": []}).get("runs", [])
+        run_data = next(
+            (entry for entry in reversed(results) if entry.get("configHash") == config_hash),
+            None,
+        )
+        if run_data:
+            state = load_state()
+            registry = ensure_hash_registry(state)
+            normalized_hash = config_hash
+            config_snapshot = run_data.get("config") or {}
+            if config_snapshot:
+                payload = {key: config_snapshot.get(key) for key in HASH_KEYS}
+                normalized_hash = compute_config_hash(payload)
+            passed = validation_run_meets_goal(run_data)
+            record = registry.setdefault(normalized_hash, default_hash_record())
+            record["validation_runs"] = record.get("validation_runs", 0) + 1
+            streaks = state.setdefault("validationStreaks", {})
+            if passed:
+                streaks[normalized_hash] = streaks.get(normalized_hash, 0) + 1
+                if streaks[normalized_hash] >= SUCCESS_VALIDATION_STREAK:
+                    record["status"] = HASH_STATUS_STABLE
+                    state.setdefault("successfulConfigs", {})[
+                        normalized_hash
+                    ] = streaks[normalized_hash]
+                else:
+                    record["status"] = HASH_STATUS_SHORTLIST
+            else:
+                streaks[normalized_hash] = 0
+                record["status"] = HASH_STATUS_RETIRED
+            registry[normalized_hash] = record
+            state["hashRegistry"] = registry
+            save_state(state)
+    except Exception:
+        pass
+
 
 def aggregate_validation_runs(
     runs: Iterable[Dict[str, Any]], defaults: Optional[Dict[str, Any]] = None
@@ -2450,6 +2705,819 @@ def compute_validation_streaks(
         else:
             streaks[normalized_hash] = 0
     return streaks
+
+
+def _parse_timestamp(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    cleaned = value
+    if cleaned.endswith("Z"):
+        cleaned = cleaned[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(cleaned)
+    except ValueError:
+        return None
+
+
+def _build_cycle_boundaries(
+    sweeps: List[Dict[str, Any]]
+) -> List[Tuple[int, datetime]]:
+    boundaries: List[Tuple[int, datetime]] = []
+    for idx, sweep in enumerate(sweeps, start=1):
+        ts = _parse_timestamp(sweep.get("timestamp"))
+        if ts is None:
+            continue
+        boundaries.append((idx, ts))
+    return boundaries
+
+
+def _infer_cycle_for_timestamp(
+    timestamp: Optional[datetime],
+    boundaries: List[Tuple[int, datetime]],
+    fallback_cycle: int,
+) -> int:
+    if not boundaries:
+        return max(1, fallback_cycle)
+    if timestamp is None:
+        return fallback_cycle
+    cycle = boundaries[0][0]
+    for idx, boundary_ts in boundaries:
+        if timestamp >= boundary_ts:
+            cycle = idx
+        else:
+            break
+    return cycle
+
+
+def _normalized_knob_values(
+    combo: Dict[str, Any], defaults: Dict[str, Any]
+) -> Dict[str, float]:
+    materialized = combo_with_defaults(combo, defaults)
+    values: Dict[str, float] = {}
+    for key in CORRELATION_FEATURES:
+        raw_value = materialized.get(key)
+        if raw_value is None:
+            raw_value = defaults.get(key)
+        values[key] = float(raw_value if raw_value is not None else 0.0)
+    return values
+
+
+def build_model_samples(
+    sweeps: List[Dict[str, Any]],
+    validations: List[Dict[str, Any]],
+    defaults: Dict[str, Any],
+    window_cycles: int,
+    tau: float,
+    phase_weights: Optional[Dict[str, float]] = None,
+) -> Tuple[List[ModelSample], Dict[str, Any]]:
+    boundaries = _build_cycle_boundaries(sweeps)
+    if not boundaries:
+        return [], {
+            "current_cycle": 0,
+            "cutoff_cycle": 0,
+            "phase_counts": {},
+            "depth_counts": {},
+            "total_samples": 0,
+            "effective_weight": 0.0,
+        }
+    current_cycle = boundaries[-1][0]
+    cutoff_cycle = max(1, current_cycle - window_cycles + 1)
+    phase_lookup = dict(CORRELATION_PHASE_WEIGHTS)
+    if phase_weights:
+        phase_lookup.update(phase_weights)
+
+    raw_samples: List[Dict[str, Any]] = []
+    for idx, sweep in enumerate(sweeps, start=1):
+        if idx < cutoff_cycle:
+            continue
+        timestamp = sweep.get("timestamp") or ""
+        for combo_entry in sweep.get("combos", []):
+            combo_raw = combo_from_log(combo_entry)
+            knobs = _normalized_knob_values(combo_raw, defaults)
+            payload = to_hash_payload(combo_with_defaults(combo_raw, defaults))
+            config_hash = compute_config_hash(payload)
+            evaluation = combo_entry.get("evaluation") or {}
+            for depth_key, depth in (("depth2", 2), ("depth3", 3)):
+                depth_stats = evaluation.get(depth_key) or {}
+                red = int(depth_stats.get("red", 0) or 0)
+                black = int(depth_stats.get("black", 0) or 0)
+                draw = int(depth_stats.get("draw", 0) or 0)
+                games = red + black + draw
+                if red + black <= 0 or games <= 0:
+                    continue
+                raw_samples.append(
+                    {
+                        "depth": depth,
+                        "cycle": idx,
+                        "phase": "combo",
+                        "config_hash": config_hash,
+                        "timestamp": timestamp,
+                        "knobs": knobs,
+                        "red": red,
+                        "black": black,
+                        "draw": draw,
+                        "games": games,
+                    }
+                )
+
+    for run in validations:
+        ts_str = run.get("timestamp") or ""
+        ts_dt = _parse_timestamp(ts_str)
+        cycle = _infer_cycle_for_timestamp(ts_dt, boundaries, current_cycle)
+        if cycle < cutoff_cycle:
+            continue
+        config_snapshot = run.get("config") or {}
+        combo_raw = combo_from_validation_config(config_snapshot)
+        if not combo_raw:
+            continue
+        knobs = _normalized_knob_values(combo_raw, defaults)
+        normalized_hash = compute_config_hash(to_hash_payload(combo_with_defaults(combo_raw, defaults)))
+        for depth_key, depth in (("depth2", 2), ("depth3", 3)):
+            depth_stats = run.get(depth_key) or {}
+            red = int(depth_stats.get("red", 0) or 0)
+            black = int(depth_stats.get("black", 0) or 0)
+            draw = int(depth_stats.get("draw", 0) or 0)
+            games = red + black + draw
+            if red + black <= 0 or games <= 0:
+                continue
+            raw_samples.append(
+                {
+                    "depth": depth,
+                    "cycle": cycle,
+                    "phase": "validation",
+                    "config_hash": normalized_hash,
+                    "timestamp": ts_str,
+                    "knobs": knobs,
+                    "red": red,
+                    "black": black,
+                    "draw": draw,
+                    "games": games,
+                }
+            )
+
+    samples: List[ModelSample] = []
+    phase_counts: Counter[str] = Counter()
+    depth_counts: Counter[int] = Counter()
+    effective_weight = 0.0
+
+    for entry in raw_samples:
+        age = max(0, current_cycle - entry["cycle"])
+        decay = math.exp(-age / tau) if tau > 0 else 1.0
+        phase_weight = phase_lookup.get(entry["phase"], 1.0)
+        weight = entry["games"] * phase_weight * decay
+        red = entry["red"]
+        black = entry["black"]
+        denom = red + black
+        if weight <= 0 or denom <= 0:
+            continue
+        bias = (red - black) / denom
+        sample = ModelSample(
+            depth=entry["depth"],
+            cycle=entry["cycle"],
+            phase=entry["phase"],
+            config_hash=entry["config_hash"],
+            timestamp=entry["timestamp"],
+            knobs=entry["knobs"],
+            bias=bias,
+            weight=weight,
+            red=red,
+            black=black,
+            draw=entry["draw"],
+            games=entry["games"],
+        )
+        samples.append(sample)
+        phase_counts[sample.phase] += 1
+        depth_counts[sample.depth] += 1
+        effective_weight += weight
+
+    summary = {
+        "current_cycle": current_cycle,
+        "cutoff_cycle": cutoff_cycle,
+        "phase_counts": dict(phase_counts),
+        "depth_counts": {str(k): v for k, v in depth_counts.items()},
+        "total_samples": len(samples),
+        "effective_weight": effective_weight,
+    }
+    return samples, summary
+
+
+def _compute_feature_stats(samples: List[ModelSample]) -> Dict[str, Dict[str, float]]:
+    stats: Dict[str, Dict[str, float]] = {}
+    total_weight = sum(sample.weight for sample in samples)
+    if total_weight <= 0:
+        for key in CORRELATION_FEATURES:
+            stats[key] = {"mean": 0.0, "std": 1.0}
+        return stats
+    for key in CORRELATION_FEATURES:
+        weighted_sum = 0.0
+        for sample in samples:
+            weighted_sum += sample.weight * sample.knobs.get(key, 0.0)
+        mean = weighted_sum / total_weight
+        var_sum = 0.0
+        for sample in samples:
+            diff = sample.knobs.get(key, 0.0) - mean
+            var_sum += sample.weight * diff * diff
+        std = math.sqrt(var_sum / total_weight) if var_sum > 0 else 0.0
+        if std <= 0:
+            std = 1.0
+        stats[key] = {"mean": mean, "std": std}
+    return stats
+
+
+def _init_depth_aggregate() -> Dict[str, float]:
+    return {
+        "weight": 0.0,
+        "sumBias": 0.0,
+        "sumSq": 0.0,
+        "games": 0.0,
+        "sampleCount": 0,
+    }
+
+
+def compute_hash_performance_summary(
+    samples: List[ModelSample],
+    baseline_hash: Optional[str],
+) -> Dict[str, Dict[str, Any]]:
+    aggregates: Dict[str, Dict[int, Dict[str, float]]] = {}
+    for sample in samples:
+        depth_map = aggregates.setdefault(sample.config_hash, {})
+        depth_stats = depth_map.setdefault(sample.depth, _init_depth_aggregate())
+        depth_stats["weight"] += sample.weight
+        depth_stats["sumBias"] += sample.weight * sample.bias
+        depth_stats["sumSq"] += sample.weight * sample.bias * sample.bias
+        depth_stats["games"] += sample.games
+        depth_stats["sampleCount"] += 1
+
+    summary: Dict[str, Dict[str, Any]] = {}
+    for hash_value, depth_map in aggregates.items():
+        entry: Dict[str, Any] = {}
+        for depth in (2, 3):
+            stats = depth_map.get(depth)
+            depth_key = f"depth{depth}"
+            if not stats or stats["weight"] <= 0:
+                entry[depth_key] = {
+                    "weight": 0.0,
+                    "games": 0.0,
+                    "meanBias": None,
+                    "variance": None,
+                    "stderr": None,
+                    "sampleCount": 0,
+                    "delta": None,
+                    "ciUpper": None,
+                }
+                continue
+            weight = stats["weight"]
+            mean = stats["sumBias"] / weight if weight else None
+            variance = None
+            stderr = None
+            if weight:
+                variance = max(stats["sumSq"] / weight - (mean or 0.0) ** 2, 0.0)
+                stderr = math.sqrt(variance / weight) if variance > 0 else 0.0
+            entry[depth_key] = {
+                "weight": weight,
+                "games": stats["games"],
+                "meanBias": mean,
+                "variance": variance,
+                "stderr": stderr,
+                "sampleCount": stats["sampleCount"],
+                "delta": None,
+                "ciUpper": None,
+            }
+        summary[hash_value] = entry
+
+    baseline_entry = summary.get(baseline_hash) if baseline_hash else None
+    baseline_biases = {}
+    if baseline_entry:
+        for depth_key in ("depth2", "depth3"):
+            baseline_biases[depth_key] = baseline_entry.get(depth_key, {}).get(
+                "meanBias"
+            )
+
+    for entry in summary.values():
+        for depth_key in ("depth2", "depth3"):
+            stats = entry.get(depth_key) or {}
+            mean = stats.get("meanBias")
+            baseline_mean = baseline_biases.get(depth_key)
+            if mean is None:
+                stats["delta"] = None
+                stats["ciUpper"] = None
+                continue
+            baseline = baseline_mean if baseline_mean is not None else 0.0
+            delta = mean - baseline
+            stderr = stats.get("stderr")
+            ci_upper = (
+                delta + AUTO_DROP_CI_Z * stderr
+                if stderr is not None
+                else delta
+            )
+            stats["delta"] = delta
+            stats["ciUpper"] = ci_upper
+    return summary
+
+
+def depth_meets_auto_drop(stats: Dict[str, Any]) -> bool:
+    weight = stats.get("weight", 0.0) or 0.0
+    delta = stats.get("delta")
+    if delta is None or weight < AUTO_DROP_WEIGHT_THRESHOLD:
+        return False
+    if delta > AUTO_DROP_DELTA_THRESHOLD:
+        return False
+    ci_upper = stats.get("ciUpper")
+    if ci_upper is None:
+        return delta <= AUTO_DROP_DELTA_THRESHOLD
+    return ci_upper <= 0.0
+
+
+def depth_meets_soft_flag(stats: Dict[str, Any]) -> bool:
+    weight = stats.get("weight", 0.0) or 0.0
+    delta = stats.get("delta")
+    if delta is None or weight < SOFT_FLAG_WEIGHT_THRESHOLD:
+        return False
+    return delta <= SOFT_FLAG_DELTA_THRESHOLD
+
+
+def evaluate_hash_performance(
+    summary: Dict[str, Dict[str, Any]],
+    baseline_hash: Optional[str],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    auto_candidates: List[Dict[str, Any]] = []
+    soft_candidates: List[Dict[str, Any]] = []
+    for hash_value, metrics in summary.items():
+        if hash_value == baseline_hash:
+            continue
+        auto_depths: List[str] = []
+        soft_depths: List[str] = []
+        for depth_key in ("depth2", "depth3"):
+            depth_stats = metrics.get(depth_key) or {}
+            if depth_meets_auto_drop(depth_stats):
+                auto_depths.append(depth_key)
+            elif depth_meets_soft_flag(depth_stats):
+                soft_depths.append(depth_key)
+        if auto_depths:
+            auto_candidates.append(
+                {
+                    "hash": hash_value,
+                    "depths": auto_depths,
+                    "metrics": {depth: metrics.get(depth) for depth in auto_depths},
+                }
+            )
+        elif soft_depths:
+            soft_candidates.append(
+                {
+                    "hash": hash_value,
+                    "depths": soft_depths,
+                    "metrics": {depth: metrics.get(depth) for depth in soft_depths},
+                }
+            )
+    return auto_candidates, soft_candidates
+
+
+def apply_hash_performance_policies(
+    state: Dict[str, Any],
+    performance_summary: Optional[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    if not performance_summary:
+        return [], []
+    hashes = performance_summary.get("hashes")
+    if not isinstance(hashes, dict):
+        return [], []
+    baseline_hash = performance_summary.get("baselineHash")
+    auto_candidates, soft_candidates = evaluate_hash_performance(
+        hashes, baseline_hash
+    )
+    registry = ensure_hash_registry(state)
+    auto_map = state.setdefault("autoDroppedHashes", {})
+    soft_map = state.setdefault("softFlaggedHashes", {})
+    dropped: List[Dict[str, Any]] = []
+    flagged: List[Dict[str, Any]] = []
+    changed = False
+
+    for entry in auto_candidates:
+        hash_value = entry["hash"]
+        if hash_value == baseline_hash:
+            continue
+        record = registry.setdefault(hash_value, default_hash_record())
+        record["status"] = HASH_STATUS_RETIRED
+        drop_info = {
+            "timestamp": iso_now(),
+            "depths": entry["depths"],
+            "metrics": entry.get("metrics", {}),
+        }
+        record["autoDropInfo"] = drop_info
+        auto_map[hash_value] = drop_info
+        if remove_pending_hash_from_state(state, hash_value):
+            pass
+        prune_pending_validation_file(hash_value)
+        dropped.append(entry)
+        record.pop("softFlagged", None)
+        record.pop("softFlagInfo", None)
+        soft_map.pop(hash_value, None)
+        changed = True
+
+    current_soft_hashes = {entry["hash"] for entry in soft_candidates}
+    for entry in soft_candidates:
+        hash_value = entry["hash"]
+        if hash_value == baseline_hash or any(
+            drop["hash"] == hash_value for drop in dropped
+        ):
+            continue
+        record = registry.setdefault(hash_value, default_hash_record())
+        flag_info = {
+            "timestamp": iso_now(),
+            "depths": entry["depths"],
+            "metrics": entry.get("metrics", {}),
+        }
+        record["softFlagged"] = True
+        record["softFlagInfo"] = flag_info
+        soft_map[hash_value] = flag_info
+        flagged.append(entry)
+        changed = True
+
+    for hash_value in list(soft_map.keys()):
+        if hash_value not in current_soft_hashes:
+            soft_map.pop(hash_value, None)
+            record = registry.get(hash_value)
+            if record:
+                record.pop("softFlagged", None)
+                record.pop("softFlagInfo", None)
+                changed = True
+
+    if changed:
+        state["hashRegistry"] = registry
+        save_state(state)
+    return dropped, flagged
+
+
+def _solve_linear_system(
+    matrix: List[List[float]], vector: List[float]
+) -> Optional[List[float]]:
+    size = len(vector)
+    if size == 0:
+        return []
+    augmented = [row[:] + [vector[idx]] for idx, row in enumerate(matrix)]
+    for col in range(size):
+        pivot_row = max(
+            range(col, size), key=lambda r: abs(augmented[r][col])
+        )
+        pivot_val = augmented[pivot_row][col]
+        if abs(pivot_val) <= 1e-12:
+            return None
+        if pivot_row != col:
+            augmented[col], augmented[pivot_row] = augmented[pivot_row], augmented[col]
+        pivot_val = augmented[col][col]
+        for idx in range(col, size + 1):
+            augmented[col][idx] /= pivot_val
+        for row in range(size):
+            if row == col:
+                continue
+            factor = augmented[row][col]
+            if abs(factor) <= 1e-12:
+                continue
+            for idx in range(col, size + 1):
+                augmented[row][idx] -= factor * augmented[col][idx]
+    return [augmented[i][size] for i in range(size)]
+
+
+def _fit_ridge_model(
+    samples: List[ModelSample],
+    depth: int,
+    feature_stats: Dict[str, Dict[str, float]],
+    lambda_reg: float,
+) -> Optional[RidgeModelResult]:
+    depth_samples = [sample for sample in samples if sample.depth == depth]
+    if not depth_samples:
+        return None
+    total_weight = sum(sample.weight for sample in depth_samples)
+    if total_weight <= 0:
+        return None
+    intercept = sum(sample.weight * sample.bias for sample in depth_samples) / total_weight
+    feature_vectors: List[List[float]] = []
+    for sample in depth_samples:
+        vector = []
+        for key in CORRELATION_FEATURES:
+            stats = feature_stats.get(key) or {"mean": 0.0, "std": 1.0}
+            mean = stats["mean"]
+            std = stats["std"] or 1.0
+            vector.append((sample.knobs.get(key, 0.0) - mean) / std)
+        feature_vectors.append(vector)
+    size = len(CORRELATION_FEATURES)
+    matrix = [[0.0 for _ in range(size)] for _ in range(size)]
+    rhs = [0.0 for _ in range(size)]
+    for sample, vector in zip(depth_samples, feature_vectors):
+        centered = sample.bias - intercept
+        for col in range(size):
+            rhs[col] += sample.weight * vector[col] * centered
+            for row in range(col, size):
+                value = sample.weight * vector[col] * vector[row]
+                matrix[col][row] += value
+                if row != col:
+                    matrix[row][col] += value
+    for idx in range(size):
+        matrix[idx][idx] += lambda_reg
+    solution = _solve_linear_system(matrix, rhs)
+    if solution is None:
+        coefficients = {key: 0.0 for key in CORRELATION_FEATURES}
+        coef_vector = [0.0 for _ in CORRELATION_FEATURES]
+    else:
+        coefficients = {key: value for key, value in zip(CORRELATION_FEATURES, solution)}
+        coef_vector = solution
+    ss_tot = 0.0
+    ss_res = 0.0
+    for sample, vector in zip(depth_samples, feature_vectors):
+        prediction = intercept
+        for value, coeff in zip(vector, coef_vector):
+            prediction += coeff * value
+        diff_tot = sample.bias - intercept
+        diff_res = sample.bias - prediction
+        ss_tot += sample.weight * diff_tot * diff_tot
+        ss_res += sample.weight * diff_res * diff_res
+    r2 = 0.0
+    if ss_tot > 1e-9:
+        r2 = max(0.0, 1.0 - ss_res / ss_tot)
+    feature_means = {key: stats.get("mean", 0.0) for key, stats in feature_stats.items()}
+    feature_stds = {
+        key: stats.get("std", 1.0) or 1.0 for key, stats in feature_stats.items()
+    }
+    return RidgeModelResult(
+        depth=depth,
+        intercept=intercept,
+        coefficients=coefficients,
+        feature_means=feature_means,
+        feature_stds=feature_stds,
+        r2=r2,
+        sample_count=len(depth_samples),
+        effective_weight=total_weight,
+    )
+
+
+def build_correlation_report(
+    window_cycles: int = CORRELATION_WINDOW_CYCLES,
+    tau: float = CORRELATION_DECAY_TAU,
+    lambda_reg: float = CORRELATION_RIDGE_LAMBDA,
+    phase_weights: Optional[Dict[str, float]] = None,
+) -> Dict[str, Any]:
+    sweeps = load_sweeps()
+    if not sweeps:
+        raise ValueError("Sweep history is empty; cannot build correlation models.")
+    validations = load_validations()
+    search_config = load_search_config()
+    defaults = offense_snapshot(search_config)
+    baseline_combo = combo_with_defaults(extract_combo_from_config(search_config), defaults)
+    baseline_hash = compute_config_hash(to_hash_payload(baseline_combo))
+    samples, summary = build_model_samples(
+        sweeps, validations, defaults, window_cycles, tau, phase_weights
+    )
+    if not samples:
+        raise ValueError(
+            "No correlation samples available in the selected window."
+        )
+    feature_stats = _compute_feature_stats(samples)
+    models: Dict[str, Optional[RidgeModelResult]] = {}
+    for depth in (2, 3):
+        models[f"depth{depth}"] = _fit_ridge_model(
+            samples, depth, feature_stats, lambda_reg
+        )
+    hash_summary = compute_hash_performance_summary(samples, baseline_hash)
+    auto_candidates, soft_candidates = evaluate_hash_performance(
+        hash_summary, baseline_hash
+    )
+    now = datetime.now(timezone.utc).isoformat()
+    report = {
+        "generatedAt": now,
+        "windowCycles": window_cycles,
+        "decayTau": tau,
+        "lambda": lambda_reg,
+        "currentCycle": summary["current_cycle"],
+        "cutoffCycle": summary["cutoff_cycle"],
+        "sampleSummary": {
+            "total": summary["total_samples"],
+            "effectiveWeight": summary["effective_weight"],
+            "byPhase": summary["phase_counts"],
+            "byDepth": summary["depth_counts"],
+        },
+        "models": {
+            "depth2": models["depth2"].as_dict() if models.get("depth2") else None,
+            "depth3": models["depth3"].as_dict() if models.get("depth3") else None,
+        },
+        "hashPerformance": {
+            "baselineHash": baseline_hash,
+            "hashes": hash_summary,
+            "autoDropCandidates": auto_candidates,
+            "softFlagCandidates": soft_candidates,
+        },
+        "diagnostics": {
+            "depth2": {
+                "modelR2": models["depth2"].r2 if models.get("depth2") else None,
+                "sampleCount": models["depth2"].sample_count if models.get("depth2") else 0,
+                "baselineBias": (
+                    hash_summary.get(baseline_hash, {})
+                    .get("depth2", {})
+                    .get("meanBias")
+                ),
+            },
+            "depth3": {
+                "modelR2": models["depth3"].r2 if models.get("depth3") else None,
+                "sampleCount": models["depth3"].sample_count if models.get("depth3") else 0,
+                "baselineBias": (
+                    hash_summary.get(baseline_hash, {})
+                    .get("depth3", {})
+                    .get("meanBias")
+                ),
+            },
+            "autoDrops": len(auto_candidates),
+            "softFlags": len(soft_candidates),
+        },
+    }
+    return report
+
+
+def ensure_correlation_report(force_rebuild: bool = False) -> Dict[str, Any]:
+    report: Optional[Dict[str, Any]] = None
+    if not force_rebuild and CORRELATION_REPORT_PATH.exists():
+        report = load_json(CORRELATION_REPORT_PATH, None)
+        if isinstance(report, dict) and report.get("models"):
+            return report
+    report = build_correlation_report()
+    write_json(CORRELATION_REPORT_PATH, report)
+    return report
+
+
+def hydrate_correlation_models(
+    report: Dict[str, Any]
+) -> Dict[str, RidgeModelResult]:
+    models: Dict[str, RidgeModelResult] = {}
+    model_payloads = (report.get("models") or {}) if isinstance(report, dict) else {}
+    for depth_key in ("depth2", "depth3"):
+        payload = model_payloads.get(depth_key)
+        if isinstance(payload, dict):
+            models[depth_key] = RidgeModelResult.from_dict(payload)
+    return models
+
+
+def predict_combo_biases(
+    combo: Dict[str, Any],
+    defaults: Dict[str, Any],
+    models: Dict[str, RidgeModelResult],
+) -> Optional[Dict[str, float]]:
+    if not models:
+        return None
+    knobs = _normalized_knob_values(combo, defaults)
+    biases: Dict[str, float] = {}
+    total = 0.0
+    for depth_key in ("depth2", "depth3"):
+        model = models.get(depth_key)
+        if not model:
+            continue
+        bias = model.predict_bias(knobs)
+        biases[depth_key] = bias
+        total += abs(bias)
+    if not biases:
+        return None
+    biases["total"] = total
+    return biases
+
+
+def correlation_bias_score(
+    combo: Dict[str, Any],
+    defaults: Dict[str, Any],
+    models: Dict[str, RidgeModelResult],
+) -> float:
+    biases = predict_combo_biases(combo, defaults, models)
+    if not biases:
+        return float("inf")
+    return biases.get("total", float("inf"))
+
+
+def annotate_entries_with_bias(
+    entries: Iterable[Dict[str, Any]],
+    defaults: Dict[str, Any],
+    models: Dict[str, RidgeModelResult],
+) -> None:
+    if not models:
+        return
+    for entry in entries:
+        combo = entry.get("combo")
+        if not combo:
+            continue
+        biases = predict_combo_biases(combo, defaults, models)
+        if not biases:
+            continue
+        entry["predictedBias"] = biases
+        entry["predictedBiasScore"] = biases.get("total")
+
+
+def _shift_discrete_value(
+    knob: str, combo: Dict[str, Any], step: int
+) -> Optional[Any]:
+    spec = KNOB_SPECS.get(knob)
+    if not spec or not spec.values:
+        return None
+    current = combo.get(knob)
+    if current not in spec.values:
+        current = nearest_value(spec.values, current)
+    idx = spec.values.index(current)
+    new_idx = max(0, min(len(spec.values) - 1, idx + step))
+    if new_idx == idx:
+        return None
+    return spec.values[new_idx]
+
+
+def compute_model_gradient(
+    combo: Dict[str, Any],
+    defaults: Dict[str, Any],
+    models: Dict[str, RidgeModelResult],
+) -> Dict[str, float]:
+    gradient: Dict[str, float] = {}
+    if not models:
+        return gradient
+    knobs = _normalized_knob_values(combo, defaults)
+    for depth_key in ("depth2", "depth3"):
+        model = models.get(depth_key)
+        if not model:
+            continue
+        bias = model.predict_bias(knobs)
+        if abs(bias) < 1e-3:
+            continue
+        direction = 1.0 if bias > 0 else -1.0
+        weight = abs(bias)
+        for knob, coeff in model.coefficients.items():
+            if knob not in KNOB_SPECS:
+                continue
+            gradient[knob] = gradient.get(knob, 0.0) + coeff * direction * weight
+    return gradient
+
+
+def generate_model_guided_variants(
+    base_combo: Dict[str, Any],
+    defaults: Dict[str, Any],
+    models: Dict[str, RidgeModelResult],
+    active_knobs: Sequence[str],
+    limit: int,
+) -> List[Tuple[Dict[str, Any], str]]:
+    if not models or limit <= 0:
+        return []
+    gradient = compute_model_gradient(base_combo, defaults, models)
+    if not gradient:
+        return []
+    variants: List[Tuple[Dict[str, Any], str]] = []
+    ranked = sorted(
+        ((knob, influence) for knob, influence in gradient.items() if knob in active_knobs),
+        key=lambda item: abs(item[1]),
+        reverse=True,
+    )
+    for knob, influence in ranked:
+        if knob not in KNOB_SPECS:
+            continue
+        step = -1 if influence > 0 else 1
+        new_value = _shift_discrete_value(knob, base_combo, step)
+        if new_value is None:
+            continue
+        variant = dict(base_combo)
+        variant[knob] = new_value
+        variants.append((variant, f"best:model:{knob}"))
+        if len(variants) >= limit:
+            break
+    return variants
+
+
+def generate_single_knob_probes(
+    base_combo: Dict[str, Any],
+    defaults: Dict[str, Any],
+    models: Dict[str, RidgeModelResult],
+    active_knobs: Sequence[str],
+    limit: int,
+) -> List[Tuple[Dict[str, Any], str]]:
+    if not models or limit <= 0:
+        return []
+    gradient = compute_model_gradient(base_combo, defaults, models)
+    if not gradient:
+        return []
+    probes: List[Tuple[Dict[str, Any], str]] = []
+    ranked = sorted(
+        ((knob, influence) for knob, influence in gradient.items() if knob in active_knobs),
+        key=lambda item: abs(item[1]),
+        reverse=True,
+    )
+    weights = {"depth2": 1.0, "depth3": 1.0}
+    for knob, influence in ranked:
+        if len(probes) >= limit:
+            break
+        model_biases = predict_combo_biases(base_combo, defaults, models)
+        if not model_biases:
+            break
+        combined_sign = 0.0
+        for depth_key, bias in model_biases.items():
+            if depth_key not in weights or depth_key == "total":
+                continue
+            combined_sign += weights[depth_key] * (1 if bias > 0 else -1) * influence
+        step = -1 if combined_sign > 0 else 1
+        new_value = _shift_discrete_value(knob, base_combo, step)
+        if new_value is None:
+            continue
+        variant = dict(base_combo)
+        variant[knob] = new_value
+        probes.append((variant, f"explore:probe:{knob}"))
+    return probes
 
 
 def command_loop(args: argparse.Namespace) -> None:
@@ -2732,6 +3800,59 @@ def command_report(_args: argparse.Namespace) -> None:
                 f"timestamp={entry.get('sweepTimestamp')}"
             )
 
+    correlation_report = load_json(CORRELATION_REPORT_PATH, None)
+    if isinstance(correlation_report, dict):
+        print("\nCorrelation diagnostics:")
+        print(
+            f" generated={correlation_report.get('generatedAt')} "
+            f"window={correlation_report.get('windowCycles')} cycles"
+        )
+        diagnostics = correlation_report.get("diagnostics", {})
+        for depth_key in ("depth2", "depth3"):
+            depth_diag = diagnostics.get(depth_key, {})
+            print(
+                f"  {depth_key}: r2={depth_diag.get('modelR2')} "
+                f"samples={depth_diag.get('sampleCount')} "
+                f"baselineBias={depth_diag.get('baselineBias')}"
+            )
+        hash_perf = correlation_report.get("hashPerformance", {})
+        auto_candidates = hash_perf.get("autoDropCandidates") or []
+        soft_candidates = hash_perf.get("softFlagCandidates") or []
+        if auto_candidates:
+            print(
+                "  Auto-drop candidates:",
+                ", ".join(
+                    f"{entry['hash'][:8]}({','.join(entry['depths'])})"
+                    for entry in auto_candidates[:5]
+                ),
+            )
+        if soft_candidates:
+            print(
+                "  Soft-flag candidates:",
+                ", ".join(
+                    f"{entry['hash'][:8]}({','.join(entry['depths'])})"
+                    for entry in soft_candidates[:5]
+                ),
+            )
+
+
+def command_correlate(args: argparse.Namespace) -> None:
+    try:
+        report = build_correlation_report(
+            window_cycles=args.window,
+            tau=args.tau,
+            lambda_reg=args.lambda_reg,
+        )
+    except ValueError as exc:
+        raise SystemExit(str(exc))
+    if args.print_report or args.dry_run:
+        print(json.dumps(report, indent=2))
+    if args.dry_run:
+        return
+    output_path = Path(args.output) if args.output else CORRELATION_REPORT_PATH
+    write_json(output_path, report)
+    print(f"[correlate] Wrote correlation report to {output_path}")
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="TwixT heuristic auto tuner")
@@ -2804,6 +3925,46 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "report", help="Summarize sweep and validation status"
     ).set_defaults(func=command_report)
+
+    correlate_parser = subparsers.add_parser(
+        "correlate", help="Build correlation models and diagnostics"
+    )
+    correlate_parser.add_argument(
+        "--window",
+        type=int,
+        default=CORRELATION_WINDOW_CYCLES,
+        help="Number of recent cycles to include (default: 20)",
+    )
+    correlate_parser.add_argument(
+        "--tau",
+        type=float,
+        default=CORRELATION_DECAY_TAU,
+        help="Exponential decay constant in cycles (default: 5.0)",
+    )
+    correlate_parser.add_argument(
+        "--lambda",
+        dest="lambda_reg",
+        type=float,
+        default=CORRELATION_RIDGE_LAMBDA,
+        help="Ridge regularization value (default: 0.5)",
+    )
+    correlate_parser.add_argument(
+        "--output",
+        default=str(CORRELATION_REPORT_PATH),
+        help=f"Report output path (default: {CORRELATION_REPORT_PATH})",
+    )
+    correlate_parser.add_argument(
+        "--print",
+        dest="print_report",
+        action="store_true",
+        help="Print the correlation report JSON to stdout",
+    )
+    correlate_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Skip writing the report file (implies --print)",
+    )
+    correlate_parser.set_defaults(func=command_correlate)
 
     loop_parser = subparsers.add_parser("loop", help="Run continuous auto-tuning cycle")
     loop_parser.add_argument(

@@ -32,12 +32,12 @@
         "redFinishExtra": 0,
         "redSpanGainMultiplier": 1,
         "redGapDecayMultiplier": 1,
-        "redFinishPenaltyFactor": 0.2,
+        "redFinishPenaltyFactor": 0.4,
         "blackFinishScaleMultiplier": 1,
-        "blackSpanGainMultiplier": 1,
-        "blackDoubleCoverageScale": 1,
+        "blackSpanGainMultiplier": 1.05,
+        "blackDoubleCoverageScale": 0.85,
         "firstEdgeTouchBlack": 455,
-        "firstEdgeTouchRed": 415,
+        "firstEdgeTouchRed": 420,
         "redDoubleCoverageBonus": 0
       },
       "defense": {
