@@ -79,19 +79,19 @@ The loop now:
 
 Every configuration hash now carries a lifecycle status inside `logs/autoTune-state.json`:
 
-| Status | Meaning | Scheduler behavior |
-|--------|---------|--------------------|
-| `UNTESTED` | Seen in sweeps but not yet validated. | Eligible for all buckets and can appear in validation queue once its sweep score ≤ 2. |
-| `SHORTLIST` | High-performing hash awaiting validation. | Allowed up to 3 exploitation sweeps (`MAX_TEN10_SWEEPS_PER_SHORTLIST`) before it must be validated or dropped. |
-| `VALIDATING` | Currently queued/running a 60/60. | Removed from sweeps until validation finishes. |
-| `STABLE` | Passed the streak goal (two consecutive ≤ 3/≤ 3 runs). | Never re-run except via explicit anchor slots after a cool-off window. |
-| `RETIRED` | Failed validation or exceeded the retry limit with poor scores. | Never scheduled again (still tracked for telemetry). |
+| Status       | Meaning                                                         | Scheduler behavior                                                                                             |
+| ------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `UNTESTED`   | Seen in sweeps but not yet validated.                           | Eligible for all buckets and can appear in validation queue once its sweep score ≤ 2.                          |
+| `SHORTLIST`  | High-performing hash awaiting validation.                       | Allowed up to 3 exploitation sweeps (`MAX_TEN10_SWEEPS_PER_SHORTLIST`) before it must be validated or dropped. |
+| `VALIDATING` | Currently queued/running a 60/60.                               | Removed from sweeps until validation finishes.                                                                 |
+| `STABLE`     | Passed the streak goal (two consecutive ≤ 3/≤ 3 runs).          | Never re-run except via explicit anchor slots after a cool-off window.                                         |
+| `RETIRED`    | Failed validation or exceeded the retry limit with poor scores. | Never scheduled again (still tracked for telemetry).                                                           |
 
 `command_update` rebuilds the validation plan after each sweep, and every `validate` call updates the streak/registry immediately so streaked hashes jump to the front of the queue without waiting a full cycle:
 
 1. All hashes with streak ≥ 1 are queued first.
 2. Remaining hashes with sweep score ≤ 2 fill the rest of the `--limit` slots (default 5).
-3. When both stall counters hit 5 cycles with no improvement, the loop drains *all* remaining score ≤ 2 hashes (plateau mode) before exiting.
+3. When both stall counters hit 5 cycles with no improvement, the loop drains _all_ remaining score ≤ 2 hashes (plateau mode) before exiting.
 
 Each knob is tracked independently; if a knob’s best sweep score fails to improve for five cycles it is frozen at its best value so future searches concentrate on the remaining degrees of freedom.
 

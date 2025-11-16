@@ -1,6 +1,7 @@
 # Correlation-Driven Tuning TODO
 
 ## Core Implementation
+
 1. **Data extraction + weighting** ✅ _implemented via `build_model_samples` and helpers_
    - Parse last 20 cycles of combo + validation logs.
    - For each hash/depth sample compute wins, draws, games, and age = current_cycle − sample_cycle.
@@ -24,6 +25,7 @@
    - Emit per-cycle reports: coefficient trends, predicted vs actual parity by depth, hashes flagged/dropped with stats.
 
 ## Risk Mitigations
+
 - Offline backtest on historical cycles before live use.
 - Shadow mode logging for several cycles prior to enabling control.
 - Unit/regression tests with synthetic data.
