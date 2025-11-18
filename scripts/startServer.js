@@ -3,12 +3,13 @@ import { readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { exec } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, '..');
 
-const PORT = 8080;
+const PORT = 5500;
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -50,9 +51,26 @@ const server = createServer(async (req, res) => {
   }
 });
 
+// Open browser automatically
+function openBrowser(url) {
+  const start =
+    process.platform === 'darwin'
+      ? 'open'
+      : process.platform === 'win32'
+        ? 'start'
+        : 'xdg-open';
+
+  exec(`${start} ${url}`);
+}
+
 server.listen(PORT, () => {
+  const url = `http://localhost:${PORT}`;
   console.log(`\n🎮 TwixT Game Server Running!`);
-  console.log(`\n   Local:    http://localhost:${PORT}`);
+  console.log(`\n   Local:    ${url}`);
   console.log(`   Network:  http://127.0.0.1:${PORT}`);
-  console.log(`\n   Press Ctrl+C to stop the server\n`);
+  console.log(`\n   Opening browser...\n`);
+  console.log(`   Press Ctrl+C to stop the server\n`);
+
+  // Open browser after a short delay to ensure server is ready
+  setTimeout(() => openBrowser(url), 500);
 });

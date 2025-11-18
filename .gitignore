@@ -27,9 +27,8 @@ Thumbs.db
 .env
 .env.local
 
-# Auto-tune temporary data
-logs/loop-validation-*.log
-logs/loop-validation-plateau-*.log
-logs/next-sweep.json
+# Auto-tune logs and temporary data
+logs/
+selfplay.json
 
 scripts/GPU_Training/

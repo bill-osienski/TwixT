@@ -15,7 +15,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple, Callable
 import signal
 
 
@@ -1588,6 +1588,22 @@ def command_suggest(args: argparse.Namespace) -> None:
             ):
                 limit -= 1
 
+    allow_duplicates = bool(getattr(args, "allow_duplicates", False))
+
+    def can_schedule_probe(candidate_combo: Dict[str, Any]) -> bool:
+        norm = normalize_combo(candidate_combo)
+        if not norm:
+            return False
+        _, candidate_hash = norm
+        return should_schedule_hash(
+            candidate_hash,
+            "explore",
+            hash_registry,
+            seen_hashes,
+            allow_duplicates,
+            next_sweep_id,
+        )
+
     exploitation_target = max(0, min(args.exploit, requested))
 
     def history_sort_key(entry: Dict[str, Any]) -> Tuple[float, float, str]:
@@ -1775,12 +1791,14 @@ def command_suggest(args: argparse.Namespace) -> None:
     explore_quota = category_quota.get("explore", 0)
     probe_count = 0
     if explore_quota > 0 and correlation_models:
+        probe_limit = max(4, explore_quota * 2)
         for combo, origin in generate_single_knob_probes(
             base_combo,
             baseline_defaults,
             correlation_models,
             active_knobs,
-            limit=2,
+            limit=probe_limit,
+            schedule_predicate=can_schedule_probe,
         ):
             if len(wishlist) >= requested or explore_quota <= 0:
                 break
@@ -3483,6 +3501,7 @@ def generate_single_knob_probes(
     models: Dict[str, RidgeModelResult],
     active_knobs: Sequence[str],
     limit: int,
+    schedule_predicate: Optional[Callable[[Dict[str, Any]], bool]] = None,
 ) -> List[Tuple[Dict[str, Any], str]]:
     if not models or limit <= 0:
         return []
@@ -3512,12 +3531,17 @@ def generate_single_knob_probes(
                 continue
             combined_sign += weights[depth_key] * (1 if bias > 0 else -1) * influence
         step = -1 if combined_sign > 0 else 1
-        new_value = _shift_discrete_value(knob, base_combo, step)
-        if new_value is None:
-            continue
-        variant = dict(base_combo)
-        variant[knob] = new_value
-        probes.append((variant, f"explore:probe:{knob}"))
+        working_combo = dict(base_combo)
+        while len(probes) < limit:
+            new_value = _shift_discrete_value(knob, working_combo, step)
+            if new_value is None:
+                break
+            working_combo[knob] = new_value
+            variant = dict(working_combo)
+            if schedule_predicate and not schedule_predicate(variant):
+                continue
+            probes.append((variant, f"explore:probe:{knob}"))
+            break
     return probes
 
 
