@@ -1,5 +1,7 @@
 .venv/
 logs/autoTune-state.json
+logs/correlation-state.json
+logs/next-sweep.json
 logs/sweep-results.json
 logs/validation-results.json
 selfplay.json
