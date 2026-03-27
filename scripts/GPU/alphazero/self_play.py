@@ -43,6 +43,9 @@ DRAW_UNKNOWN = "terminal_unknown"
 # Resign constant (game ended by resignation - has winner, not a draw)
 RESIGN = "resign"
 
+# Adjudication constant (game hit max_moves; winner assigned by final MCTS eval)
+ADJUDICATED = "adjudicated"
+
 
 def opponent(player: str) -> str:
     """Return opponent color."""
@@ -302,6 +305,14 @@ class GameRecord:
     flush_full: int = 0
     flush_stall: int = 0
     flush_tail: int = 0
+    # Resign gate stats (per-game, aggregated by trainer)
+    rg_checks_red: int = 0
+    rg_checks_black: int = 0
+    rg_value_hits_red: int = 0
+    rg_value_hits_black: int = 0
+    rg_eligible_red: int = 0
+    rg_eligible_black: int = 0
+    rg_top1_samples: Tuple[float, ...] = ()
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -342,6 +353,12 @@ def play_game(
     resign_k: int = 8,
     resign_min_visits: int = 200,
     resign_min_top1_share: float = 0.0,  # Optional: require top move support
+    # Adjudication-at-timeout parameters (disabled by default)
+    adjudicate_enabled: bool = False,
+    adjudicate_min_ply: int = 120,
+    adjudicate_threshold: float = 0.90,
+    adjudicate_min_visits: int = 200,
+    adjudicate_min_top1_share: float = 0.0,
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -360,6 +377,11 @@ def play_game(
         resign_k: Resign if K of last W checks meet condition (default: 8)
         resign_min_visits: Require root.visit_count >= this (default: 200)
         resign_min_top1_share: Require top move's visit share >= this (default: 0.0 = disabled)
+        adjudicate_enabled: Enable timeout adjudication (default: False)
+        adjudicate_min_ply: Don't adjudicate before this ply (default: 120)
+        adjudicate_threshold: Absolute root_value threshold for adjudication (default: 0.90)
+        adjudicate_min_visits: Require root.visit_count >= this (default: 200)
+        adjudicate_min_top1_share: Require top move's visit share >= this (default: 0.0 = disabled)
 
     Returns:
         GameRecord with all positions and outcomes assigned
@@ -391,11 +413,13 @@ def play_game(
     resigned_by: Optional[str] = None
     winner: Optional[str] = None
     draw_reason: Optional[str] = None
-    # Resign debug counters
-    resign_checks = 0
-    resign_condition_hits = 0
-    max_window_hits = 0
-    min_root_value_after_min_ply = float('inf')
+    adj_root_value = None   # Final MCTS eval at cap (for diagnostics)
+    adj_top1_share = None   # Top-1 visit share at cap (for diagnostics)
+    # Resign gate breakdown (by to_move color)
+    rg_checks_red = 0;    rg_checks_black = 0
+    rg_value_hits_red = 0; rg_value_hits_black = 0   # visits>=min AND value<=threshold
+    rg_eligible_red = 0;   rg_eligible_black = 0     # value+visits+share all passed
+    rg_top1_samples = []   # top1_share values on value_hits only (for percentiles)
 
     positions = []
     move_history = []
@@ -411,30 +435,47 @@ def play_game(
         # root_value is from state.to_move perspective:
         #   +1 = to_move winning, -1 = to_move losing
         if resign_enabled and ply >= resign_min_ply:
-            resign_checks += 1
-            min_root_value_after_min_ply = min(min_root_value_after_min_ply, root_value)
+            is_red = (state.to_move == "red")
+            if is_red:
+                rg_checks_red += 1
+            else:
+                rg_checks_black += 1
 
-            # Optional: require top move has enough support (avoid noisy resigns)
-            if resign_min_top1_share > 0:
+            # Always compute top1_share on value hits (for distribution tracking)
+            value_visits_ok = (root.visit_count >= resign_min_visits
+                               and root_value <= resign_threshold)
+
+            if value_visits_ok:
                 total_visits = sum(visit_counts.values())
                 top1_visits = max(visit_counts.values()) if visit_counts else 0
                 top1_share = top1_visits / total_visits if total_visits > 0 else 0
-                share_ok = top1_share >= resign_min_top1_share
-            else:
-                share_ok = True
+                rg_top1_samples.append(top1_share)
 
-            condition_met = (root.visit_count >= resign_min_visits
-                             and root_value <= resign_threshold
-                             and share_ok)
-            resign_window_hits.append(1 if condition_met else 0)
+                if is_red:
+                    rg_value_hits_red += 1
+                else:
+                    rg_value_hits_black += 1
+
+                # Share gate
+                if resign_min_top1_share > 0:
+                    share_ok = top1_share >= resign_min_top1_share
+                else:
+                    share_ok = True
+
+                condition_met = share_ok
+            else:
+                condition_met = False
+
             if condition_met:
-                resign_condition_hits += 1
+                if is_red:
+                    rg_eligible_red += 1
+                else:
+                    rg_eligible_black += 1
+
+            resign_window_hits.append(1 if condition_met else 0)
             window_sum = sum(resign_window_hits)
-            if window_sum > max_window_hits:
-                max_window_hits = window_sum
 
             if window_sum >= resign_k:
-                # Set winner/draw_reason immediately before break
                 resigned_by = state.to_move
                 winner = opponent(resigned_by)
                 draw_reason = RESIGN
@@ -509,7 +550,39 @@ def play_game(
             # No winner - determine draw reason
             # Check ply first (authoritative for timeout)
             if is_timeout:
-                draw_reason = DRAW_TIMEOUT
+                # INVARIANT: adjudicate only when winner is None
+                # (guaranteed here by outer `if winner is None:` guard)
+                draw_reason = None  # Reset before adjudication attempt
+                # --- ADJUDICATE TIMEOUT (optional) ---
+                if adjudicate_enabled and ply >= adjudicate_min_ply:
+                    # Run a final deterministic search at the cap state
+                    adj_visit_counts, adj_root_value, adj_root = mcts.search_from_root(
+                        root, add_noise=False, ply=ply
+                    )
+
+                    # Confidence gates
+                    visits_ok = (adj_root.visit_count >= adjudicate_min_visits)
+
+                    if adjudicate_min_top1_share > 0 and adj_visit_counts:
+                        total_visits = sum(adj_visit_counts.values())
+                        top1_visits = max(adj_visit_counts.values())
+                        adj_top1_share = (top1_visits / total_visits) if total_visits > 0 else 0.0
+                        top1_ok = (adj_top1_share >= adjudicate_min_top1_share)
+                    else:
+                        top1_ok = True
+
+                    # Decide winner if confident enough
+                    if visits_ok and top1_ok:
+                        if adj_root_value >= adjudicate_threshold:
+                            winner = state.to_move
+                            draw_reason = ADJUDICATED
+                        elif adj_root_value <= -adjudicate_threshold:
+                            winner = opponent(state.to_move)
+                            draw_reason = ADJUDICATED
+
+                # Fall back to timeout if not adjudicated (or adjudication disabled/skipped)
+                if draw_reason is None:
+                    draw_reason = DRAW_TIMEOUT
             elif is_terminal:
                 # State is terminal but no winner - why?
                 if not state.legal_moves():
@@ -533,10 +606,9 @@ def play_game(
         last_moves = move_history[-10:] if len(move_history) >= 10 else move_history
         print(f"  TIMEOUT: plies={ply}, last10={last_moves}")
 
-    # Resign debug (only if resign was enabled and we checked at least once)
-    if resign_enabled and resign_checks > 0:
-        min_val_str = f"{min_root_value_after_min_ply:.2f}" if min_root_value_after_min_ply != float('inf') else "n/a"
-        print(f"  RESIGN_DEBUG: checks={resign_checks} hits={resign_condition_hits} maxW={max_window_hits} min_root={min_val_str}")
+    if draw_reason == ADJUDICATED and adj_root_value is not None:
+        top1_str = f", top1={adj_top1_share:.2f}" if adj_top1_share is not None else ""
+        print(f"  ADJUDICATED: plies={ply}, winner={winner}, root_value={adj_root_value:.3f}{top1_str}")
 
     return GameRecord(
         positions=positions,
@@ -556,6 +628,13 @@ def play_game(
         flush_full=mcts._flush_full,
         flush_stall=mcts._flush_stall,
         flush_tail=mcts._flush_tail,
+        rg_checks_red=rg_checks_red,
+        rg_checks_black=rg_checks_black,
+        rg_value_hits_red=rg_value_hits_red,
+        rg_value_hits_black=rg_value_hits_black,
+        rg_eligible_red=rg_eligible_red,
+        rg_eligible_black=rg_eligible_black,
+        rg_top1_samples=tuple(rg_top1_samples),
     )
 
 
