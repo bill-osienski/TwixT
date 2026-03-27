@@ -39,7 +39,7 @@ python -m scripts.GPU.alphazero.train [OPTIONS]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--simulations` | int | per-size table | MCTS simulations per move. If omitted, uses `SIMS_TABLE` (8:400, 10:400, 12:300, 16:200, 20:150, 24:400). CLI value overrides the table for all sizes |
-| `--max-moves` | int | 200 | Base max moves per game. In practice, curriculum overrides this with `MAX_MOVES_TABLE` (8:90, 10:110, 12:160, 16:200, 20:250, 24:340) |
+| `--max-moves` | int | 200 | Base max moves per game. In practice, curriculum overrides this with `MAX_MOVES_TABLE` (8:90, 10:110, 12:160, 16:200, 20:250, 24:380) |
 | `--mcts-eval-batch-size` | int | 14 | Leaves per NN batch. Reduced from 16 to prevent Metal GPU hangs |
 | `--mcts-pending-virtual-visits` | int | 8 | Virtual visits added to pending leaves (prevents dogpiling) |
 | `--mcts-stall-flush-sims` | int | 16 | Flush pending batch if no new leaf found in N sims. `0` = disabled |
@@ -138,6 +138,31 @@ RESIGN_DEBUG: checks=172 hits=0 maxW=4 min_root=-0.86
 - `min_root`: lowest root value observed after min_ply
 
 **Training impact**: Resigned games produce decisive outcomes (winner ≠ draw), so positions get ±1 value labels instead of 0. This strengthens the value target distribution and reduces timeout draws.
+
+## Adjudication
+
+Converts timeout draws into decisive outcomes when the final position is clearly won/lost.
+When a game hits `max_moves` without a terminal winner, one final deterministic MCTS search evaluates the position.
+If the root value exceeds the threshold (and confidence gates pass), a winner is assigned.
+Disabled by default (conservative).
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--adjudicate-enabled` | flag | off | Enable timeout adjudication |
+| `--adjudicate-min-ply` | int | 120 | Don't adjudicate before this ply (same unit as max_moves) |
+| `--adjudicate-threshold` | float | 0.90 | Adjudicate when |root_value| >= this |
+| `--adjudicate-min-visits` | int | 200 | Require root visits >= this |
+| `--adjudicate-min-top1-share` | float | 0.0 | Require top move's visit share >= this (0 = disabled) |
+
+**Units**: `adjudicate-min-ply` is measured in plies (one ply = one player's move), the same unit as `max-moves`.
+
+**Example**: `--adjudicate-enabled --adjudicate-threshold 0.92 --adjudicate-min-ply 160`
+
+**Validation**: min_ply >= 0, threshold in [0, 1], min_visits >= 1, top1_share in [0, 1]
+
+**Note**: Adjudication uses the last MCTS root (tree-reused from the final game move) with `add_noise=False` for a deterministic evaluation. The root_value is from `state.to_move` perspective: if `root_value >= +T`, current player wins; if `root_value <= -T`, opponent wins.
+
+**Training impact**: Adjudicated games produce decisive outcomes (winner != draw), so positions get +/-1 value labels instead of 0. This strengthens the value target distribution and reduces timeout draws without raising max_moves. In saved replays, `meta.reason = "adjudicated"` distinguishes these from normal wins.
 
 ## Mirror Augmentation
 
