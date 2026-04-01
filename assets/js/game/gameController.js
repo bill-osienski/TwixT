@@ -2,6 +2,9 @@
 import TwixTGame from './twixtGame.js';
 import Board3DRenderer from './board3DRenderer.js';
 import TwixTAI from '../ai/search.js';
+import { alphaZero } from '../ai/alphaZeroClient.js';
+import { winBar } from '../ui/winBar.js';
+import { gameRecorder } from '../ui/gameRecorder.js';
 
 export default class GameController {
   constructor() {
@@ -10,6 +13,11 @@ export default class GameController {
 
     // IMPORTANT: don't construct AI yet; wait until user picks 1-Player mode.
     this.ai = null;
+
+    // AlphaZero integration
+    this.alphaZero = alphaZero;
+    this.winBar = winBar;
+    this.useAlphaZero = false; // Will be set based on server availability
 
     this.moveLog = [];
     this.init();
@@ -31,7 +39,28 @@ export default class GameController {
       undoButton.setAttribute('disabled', 'disabled');
     }
 
+    // Check AlphaZero availability
+    this._checkAlphaZero();
+
     this.updateUI();
+  }
+
+  async _checkAlphaZero() {
+    try {
+      const available = await this.alphaZero.checkAvailability();
+      this.useAlphaZero = available;
+      if (available) {
+        console.log('AlphaZero server detected - using neural network AI');
+        // Enable win bar when AlphaZero is available
+        this.winBar.setEnabled(true);
+      } else {
+        console.log('AlphaZero server not available - using heuristic AI');
+        this.winBar.setEnabled(false);
+      }
+    } catch (err) {
+      console.log('AlphaZero check failed:', err.message);
+      this.useAlphaZero = false;
+    }
   }
 
   setupEventListeners() {
@@ -206,7 +235,7 @@ export default class GameController {
     if (diff) diff.style.display = 'flex';
   }
 
-  startGame(isAI, difficulty = 'medium') {
+  async startGame(isAI, difficulty = 'medium') {
     // Hide modals
     const mode = document.getElementById('game-mode-modal');
     const diff = document.getElementById('difficulty-modal');
@@ -234,6 +263,13 @@ export default class GameController {
     this.renderer.updateBoard();
     this.updateUI();
 
+    // Reset win bar for new game
+    if (this.winBar) {
+      this.winBar.clear();
+      // Enable win bar only when AlphaZero is available
+      this.winBar.setEnabled(this.useAlphaZero);
+    }
+
     // Update UI to show game mode
     const playerName = document.getElementById('player-name');
     if (playerName) {
@@ -249,6 +285,17 @@ export default class GameController {
       }
     }
 
+    // Start recording if enabled and 1-Player mode
+    if (isAI && gameRecorder.isEnabled) {
+      await gameRecorder.startRecording(this.game, difficulty, this.alphaZero);
+    }
+
+    // If human goes first, trigger precompute for the first move
+    if (isAI && gameRecorder.state === 'RECORDING' && this.game.currentPlayer !== this.game.aiPlayer) {
+      gameRecorder.markTurnStart();
+      gameRecorder.precomputeAnalysis(this.game, this.alphaZero);
+    }
+
     // If AI should open, trigger immediately
     if (isAI && startsBlack && this.game.aiPlayer === 'black') {
       setTimeout(() => this.makeAIMove(), 300);
@@ -260,22 +307,58 @@ export default class GameController {
   }
 
   // Handle player move and trigger AI if needed
-  onPlayerMove(success) {
-    if (
-      success &&
-      this.game.isAIGame &&
-      this.game.currentPlayer === this.game.aiPlayer &&
-      !this.game.gameOver
-    ) {
-      // Delay AI move slightly for better UX
-      setTimeout(() => {
-        this.makeAIMove();
-      }, 500);
+  async onPlayerMove(success) {
+    if (success) {
+      // Update win bar after player move
+      this._updateWinBar();
+
+      // Finalize recording if human just won
+      if (this.game.gameOver && this.game.winner) {
+        if (gameRecorder.state === 'RECORDING') {
+          const saveResult = await gameRecorder.finalize(this.game, this.alphaZero);
+          if (saveResult?.ok) {
+            console.log('Game saved:', saveResult.path);
+          } else {
+            console.warn('Game save failed:', saveResult?.error);
+          }
+        }
+      }
+
+      if (
+        this.game.isAIGame &&
+        this.game.currentPlayer === this.game.aiPlayer &&
+        !this.game.gameOver
+      ) {
+        // Delay AI move slightly for better UX
+        setTimeout(() => {
+          this.makeAIMove();
+        }, 500);
+      }
     }
   }
 
-  // Make AI move
-  makeAIMove() {
+  // Update win bar with current position evaluation
+  async _updateWinBar() {
+    if (!this.winBar.isEnabled() || !this.useAlphaZero) return;
+    if (this.game.gameOver) {
+      // Show final result (already in Red's perspective)
+      const valueRed = this.game.winner === 'red' ? 1 : -1;
+      this.winBar.updateRed(valueRed);
+      return;
+    }
+
+    try {
+      const valueRed = await this.alphaZero.evaluate(this.game);
+      if (valueRed !== null) {
+        this.winBar.updateRed(valueRed);
+      }
+    } catch (err) {
+      // Silently ignore evaluation errors
+    }
+  }
+
+  // Make AI move - uses AlphaZero when available, falls back to heuristics
+  async makeAIMove() {
     if (
       this.game.gameOver ||
       !this.game.isAIGame ||
@@ -284,27 +367,92 @@ export default class GameController {
       return;
     }
 
-    if (!this.ai) return; // guard
+    // Cancel any previous in-flight request
+    this.alphaZero.cancelLast();
 
-    const move = this.ai.getBestMove();
+    const isRecording = gameRecorder.state === 'RECORDING';
+    let move, source, result;
+
+    // Try AlphaZero first if available
+    if (this.useAlphaZero) {
+      try {
+        result = await this.alphaZero.getMove(
+          this.game,
+          this.game.aiDifficulty,
+          { includeVisits: isRecording }
+        );
+        move = result.move;
+        source = result.source;
+
+        // Update win bar with Red-perspective value from server
+        if (
+          result.valueRed !== null &&
+          result.valueRed !== undefined &&
+          this.winBar.isEnabled()
+        ) {
+          this.winBar.updateRed(result.valueRed);
+        }
+      } catch (err) {
+        console.warn('AlphaZero failed, falling back to heuristics:', err);
+        this.useAlphaZero = false;
+      }
+    }
+
+    // Fall back to heuristic AI
+    if (!move) {
+      if (!this.ai) return; // guard
+      move = this.ai.getBestMove();
+      source = 'heuristics';
+    }
+
     if (move) {
       const player = this.game.currentPlayer;
       const success = this.game.placePeg(move.row, move.col);
       if (success) {
-        this.recordMove('ai', player, move.row, move.col);
+        this.recordMove(source, player, move.row, move.col);
+
+        // Record AI move in GameRecorder
+        if (isRecording && result?.visits) {
+          const aiPacket = gameRecorder.buildAIMovePacket(this.game, result);
+          gameRecorder.recordMove(this.game, 'alphazero', player, move.row, move.col, aiPacket);
+        }
+
         this.renderer.updateBoard();
         this.updateUI();
 
         // Check for AI win
         if (this.game.gameOver && this.game.winner) {
+          // Finalize recording before showing winner
+          if (gameRecorder.state === 'RECORDING') {
+            const saveResult = await gameRecorder.finalize(this.game, this.alphaZero);
+            if (saveResult?.ok) {
+              console.log('Game saved:', saveResult.path);
+            } else {
+              console.warn('Game save failed:', saveResult?.error);
+            }
+          }
           setTimeout(() => this.showWinner(), 200);
+        }
+
+        // After AI move, if it's human's turn, trigger precompute
+        if (gameRecorder.state === 'RECORDING' && !this.game.gameOver) {
+          gameRecorder.markTurnStart();
+          gameRecorder.precomputeAnalysis(this.game, this.alphaZero);
         }
       }
     }
   }
 
   undo() {
+    // Cancel any in-flight AI request (user is undoing during AI thinking)
+    this.alphaZero.cancelLast();
+
     if (this.game.undo()) {
+      // Truncate recorded moves to match the new game state
+      if (gameRecorder.state === 'RECORDING') {
+        gameRecorder.truncateToMove(this.game.moveCount);
+      }
+
       this.renderer.updateBoard();
 
       // Direct UI update - same as in 3D renderer
@@ -346,6 +494,11 @@ export default class GameController {
 
   recordMove(source, player, row, col) {
     if (!this.moveLog) this.moveLog = [];
+
+    // Record human moves in GameRecorder (AI moves are recorded in makeAIMove)
+    if (source === 'human' && gameRecorder.state === 'RECORDING') {
+      gameRecorder.recordMove(this.game, 'human', player, row, col);
+    }
 
     const entry = {
       move: this.moveLog.length + 1,
