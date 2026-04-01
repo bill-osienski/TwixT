@@ -19,14 +19,19 @@ import express from 'express';
 import cors from 'cors';
 import WebSocket, { WebSocketServer } from 'ws';
 import { execSync } from 'child_process';
+import { writeFile, rename, readdir, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
 import { AlphaZeroInference } from './inference.js';
 import { MCTS } from './mcts.js';
 import { TwixtState } from './gameLogic.js';
 import { BoardMovesCache } from './cache.js';
 
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Global instances
 let inference = null;
@@ -302,6 +307,51 @@ app.post('/api/analyze-position', async (req, res) => {
       state_hash_server: stateHashServer,
       elapsed_ms: Date.now() - t0,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Save a completed game to disk atomically.
+ * Writes to logs/human-games/ with a filename of the form:
+ *   manual_YYYY-MM-DD_NNN_GAMEID.json
+ *
+ * Request body: full game JSON object with a nested game.game_id field.
+ *
+ * Response:
+ *   - ok: true
+ *   - path: relative path to the saved file
+ */
+app.post('/api/save-game', async (req, res) => {
+  const game = req.body;
+  if (!game || !game.game || !game.game.game_id) {
+    return res.status(400).json({ error: 'invalid game JSON' });
+  }
+
+  // Hardcoded output dir -- never accept client-provided path
+  const gamesDir = join(__dirname, '..', 'logs', 'human-games');
+  await mkdir(gamesDir, { recursive: true });
+
+  // Build filename: manual_YYYY-MM-DD_NNN_GAMEID.json
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10);
+  const gameIdShort = game.game.game_id.slice(-6);
+
+  // Find next NNN for today
+  const existing = await readdir(gamesDir).catch(() => []);
+  const todayFiles = existing.filter(f => f.startsWith(`manual_${dateStr}_`));
+  const nnn = String(todayFiles.length + 1).padStart(3, '0');
+
+  const filename = `manual_${dateStr}_${nnn}_${gameIdShort}.json`;
+  const tmpPath = join(gamesDir, `${filename}.tmp`);
+  const finalPath = join(gamesDir, filename);
+
+  try {
+    // Atomic write: tmp then rename
+    await writeFile(tmpPath, JSON.stringify(game, null, 2));
+    await rename(tmpPath, finalPath);
+    res.json({ ok: true, path: `logs/human-games/${filename}` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
