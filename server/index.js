@@ -459,6 +459,7 @@ wss.on('connection', (ws) => {
 
       // Echo toMove back so client doesn't have to track state
       const toMove = msg.state.to_move;
+      const includeVisits = msg.includeVisits === true;
 
       try {
         const result = await computeBestMove(msg.state, difficulty, {
@@ -472,7 +473,32 @@ wss.on('connection', (ws) => {
         // Double-check abort before sending result
         if (controller.signal.aborted || cs.activeId !== id) return;
 
-        safeSend({ type: 'bestmove', id, toMove, ...result });
+        // Build the response object
+        const response = {
+          type: 'bestmove',
+          id,
+          toMove,
+          move: result.move,
+          evalToMove: result.evalToMove,
+          rootValue: result.rootValue,
+          valueRed: result.valueRed,
+          elapsed: result.elapsed,
+          nSimulations: result.nSimulations,
+        };
+
+        // Add visit data only when requested
+        if (includeVisits && result.visits) {
+          response.visits = result.visits; // { "row,col": count }
+          response.n_legal_moves = Object.keys(result.visits).length;
+          // Compute topk_shares
+          const total = Object.values(result.visits).reduce((a, b) => a + b, 0);
+          const shares = Object.values(result.visits)
+            .map((v) => (total > 0 ? v / total : 0))
+            .sort((a, b) => b - a);
+          response.topk_shares = shares.slice(0, 5);
+        }
+
+        safeSend(response);
         if (cs.activeId === id) cs.activeId = null;
       } catch (e) {
         if (!controller.signal.aborted) {
@@ -515,6 +541,12 @@ async function computeBestMove(stateDict, difficulty = 'medium', opts = {}) {
   const moveKey = mcts.selectMove(visitCounts, moveTemp);
   const [row, col] = moveKey.split(',').map(Number);
 
+  // Convert visitCounts Map to plain object
+  const visits = {};
+  for (const [key, count] of visitCounts) {
+    visits[key] = count;
+  }
+
   // Convert to Red's perspective on server
   const evalToMove = gameState.toMove;
   const valueRed = evalToMove === 'red' ? rootValue : -rootValue;
@@ -527,6 +559,7 @@ async function computeBestMove(stateDict, difficulty = 'medium', opts = {}) {
     valueRed: valueRedClamped, // Red perspective (for bar)
     elapsed: Date.now() - t0,
     nSimulations: nSims,
+    visits,
   };
 }
 
