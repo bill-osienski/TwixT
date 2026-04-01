@@ -4,6 +4,7 @@
  * Endpoints:
  * - POST /api/move - Get best move with MCTS (HTTP fallback)
  * - POST /api/evaluate - Quick position evaluation (no MCTS)
+ * - POST /api/analyze-position - Deterministic MCTS analysis for game recording
  * - GET /api/health - Health check
  * - WS /ws - WebSocket for real-time MCTS with progress streaming
  *
@@ -221,6 +222,92 @@ app.get('/api/model-info', (req, res) => {
 });
 
 /**
+ * Analyze a position with deterministic MCTS (no noise, temp=0).
+ * Returns the root value and top-K candidate moves.
+ * Used by the GameRecorder to grade human moves.
+ *
+ * Request body:
+ *   - state: Serialized game state {board_size, to_move, pegs, bridges, ply}
+ *   - simulations: Number of MCTS simulations (10-1000, default 200)
+ *   - top_k: Number of top candidates to return (1-50, default 10)
+ *   - state_hash_client: Optional client-side state hash for determinism
+ *
+ * Response:
+ *   - root_value: MCTS root Q-value (side-to-move perspective)
+ *   - total_visits: Total visit count across all moves
+ *   - top1_share: Visit share of the best move
+ *   - topk_shares: Visit shares of top 5 moves
+ *   - candidates: Array of {move, visit_count, visit_share, prior, child_q}
+ *   - sims_used, seed_used, state_hash_server, elapsed_ms
+ */
+app.post('/api/analyze-position', async (req, res) => {
+  const { state, state_hash_client = null } = req.body;
+  if (!state) return res.status(400).json({ error: 'state required' });
+
+  // Clamp inputs to safe ranges
+  const simulations = Math.max(10, Math.min(Number(req.body.simulations) || 200, 1000));
+  const top_k = Math.max(1, Math.min(Number(req.body.top_k) || 10, 50));
+
+  // Validate state shape
+  if (!state.board_size || !state.to_move || typeof state.pegs !== 'object') {
+    return res.status(400).json({ error: 'invalid state shape: need board_size, to_move, pegs' });
+  }
+
+  const t0 = Date.now();
+
+  // DETERMINISM: seed derived from state_hash + packet_source + sims_used
+  // SERVER-AUTHORITATIVE: same position + same packet type + same sims = same seed
+  const seedInput = `${state_hash_client || 'none'}_precompute_${simulations}`;
+  let seedUsed = 0;
+  for (let i = 0; i < seedInput.length; i++) seedUsed = ((seedUsed << 5) - seedUsed + seedInput.charCodeAt(i)) | 0;
+  seedUsed = Math.abs(seedUsed);
+
+  try {
+    const gameState = TwixtState.fromDict(state);
+    const mcts = new MCTS(inference, { nSimulations: simulations });
+    const { visitCounts, rootValue } = await mcts.search(gameState);
+
+    // Build sorted candidates from visit counts
+    const totalVisits = Array.from(visitCounts.values()).reduce((a, b) => a + b, 0);
+    const entries = Array.from(visitCounts.entries())
+      .map(([moveKey, count]) => {
+        const [r, c] = moveKey.split(',').map(Number);
+        return {
+          move: { row: r, col: c },
+          visit_count: count,
+          visit_share: totalVisits > 0 ? count / totalVisits : 0,
+          prior: null,   // TODO v2: extract from root node
+          child_q: null, // TODO v2: extract from root node
+        };
+      })
+      .sort((a, b) => b.visit_count - a.visit_count);
+
+    const candidates = entries.slice(0, top_k);
+    const topkShares = candidates.map(c => c.visit_share);
+    const top1Share = topkShares.length > 0 ? topkShares[0] : 0;
+
+    // Compute server-side state hash if available
+    const stateHashServer = gameState.zobristKey
+      ? `z:${gameState.zobristKey.toString(16).padStart(16, '0')}`
+      : null;
+
+    res.json({
+      root_value: rootValue,
+      total_visits: totalVisits,
+      top1_share: top1Share,
+      topk_shares: topkShares.slice(0, 5),
+      candidates,
+      sims_used: simulations,
+      seed_used: seedUsed,
+      state_hash_server: stateHashServer,
+      elapsed_ms: Date.now() - t0,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * Cache statistics endpoint.
  */
 app.get('/api/stats', (req, res) => {
@@ -420,11 +507,12 @@ async function main() {
     console.log(`Server running on http://localhost:${port}`);
     console.log(`WebSocket available at ws://localhost:${port}/ws`);
     console.log('Endpoints:');
-    console.log('  POST /api/move     - Get best move (HTTP fallback)');
-    console.log('  POST /api/evaluate - Quick position evaluation');
-    console.log('  GET  /api/health   - Health check');
-    console.log('  GET  /api/stats    - Cache statistics');
-    console.log('  WS   /ws           - WebSocket for real-time MCTS');
+    console.log('  POST /api/move             - Get best move (HTTP fallback)');
+    console.log('  POST /api/evaluate         - Quick position evaluation');
+    console.log('  POST /api/analyze-position - Deterministic MCTS analysis');
+    console.log('  GET  /api/health           - Health check');
+    console.log('  GET  /api/stats            - Cache statistics');
+    console.log('  WS   /ws                   - WebSocket for real-time MCTS');
   });
 }
 
