@@ -136,6 +136,29 @@ export default class GameController {
       });
     }
 
+    // REC toggle
+    const recBtn = document.getElementById('rec-toggle');
+    const recDot = document.getElementById('rec-dot');
+    const analysisEl = document.getElementById('analysis-status');
+
+    if (recBtn) {
+      // Init state from recorder
+      if (gameRecorder.isEnabled) recDot.classList.add('active');
+
+      recBtn.addEventListener('click', () => {
+        const nowEnabled = gameRecorder.toggle();
+        recDot.classList.toggle('active', nowEnabled);
+      });
+
+      // Analysis status callback
+      gameRecorder.onAnalysisStatusChange = (status) => {
+        analysisEl.textContent = status === 'analyzing' ? 'Analyzing...'
+          : status === 'ready' ? 'Ready'
+          : '';
+        analysisEl.className = `analysis-status ${status}`;
+      };
+    }
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'u' || e.key === 'U') {
@@ -233,6 +256,11 @@ export default class GameController {
     const diff = document.getElementById('difficulty-modal');
     if (mode) mode.style.display = 'none';
     if (diff) diff.style.display = 'flex';
+
+    const recordingNote = document.getElementById('recording-note');
+    if (recordingNote) {
+      recordingNote.style.display = gameRecorder.isEnabled ? 'block' : 'none';
+    }
   }
 
   async startGame(isAI, difficulty = 'medium') {

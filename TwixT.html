@@ -106,6 +106,10 @@
         margin-top: 20px;
       }
 
+      .controls a {
+        text-decoration: none;
+      }
+
       button {
         background: rgba(255, 255, 255, 0.2);
         backdrop-filter: blur(10px);
@@ -117,6 +121,27 @@
         cursor: pointer;
         transition: all 0.3s;
         font-weight: 600;
+      }
+
+      #replay-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.3s;
+      }
+
+      #replay-link:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
       }
 
       button:hover:not(:disabled) {
@@ -297,6 +322,41 @@
       .difficulty-button.hard:hover {
         background: rgba(231, 76, 60, 0.2);
       }
+
+      .rec-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #666;
+        margin-right: 4px;
+        vertical-align: middle;
+      }
+
+      .rec-dot.active {
+        background: #ff3333;
+        animation: pulse-rec 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse-rec {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+
+      .analysis-status {
+        font-size: 0.75rem;
+        color: #999;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+
+      .analysis-status.analyzing {
+        color: #ffaa00;
+      }
+
+      .analysis-status.ready {
+        color: #44cc44;
+      }
     </style>
   </head>
   <body>
@@ -316,10 +376,20 @@
         <canvas class="three-canvas" id="three-canvas"></canvas>
       </div>
 
+      <!-- Win Bar (AlphaZero position evaluation) -->
+      <div id="win-bar"></div>
+
       <div class="controls">
         <button id="new-game" aria-label="Start new game">New Game</button>
         <button id="undo" aria-label="Undo last move">Undo</button>
         <button id="help" aria-label="Toggle help">Help</button>
+        <a id="replay-link" href="Replay.html" aria-label="Open replay viewer"
+          >Replay</a
+        >
+        <button id="rec-toggle" aria-label="Toggle game recording" title="Record game">
+          <span id="rec-dot" class="rec-dot"></span> REC
+        </button>
+        <span id="analysis-status" class="analysis-status"></span>
       </div>
 
       <!-- Game Mode Selection Modal -->
@@ -335,6 +405,10 @@
               <h3>1 Player Mode</h3>
               <p>Play against AI</p>
             </button>
+            <a id="replay-link-modal" class="mode-button" href="Replay.html">
+              <h3>Replay</h3>
+              <p>Visual replay viewer</p>
+            </a>
           </div>
         </div>
       </div>
@@ -357,6 +431,9 @@
               <p>Strategic opponent</p>
             </button>
           </div>
+          <p id="recording-note" class="recording-note" style="display:none; font-size:0.8rem; color:#aaa; margin-top:8px;">
+            Recording enabled &mdash; game will be saved when complete
+          </p>
         </div>
       </div>
 
