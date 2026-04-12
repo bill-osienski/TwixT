@@ -38,6 +38,7 @@ import numpy as np
 from .network import AlphaZeroNetwork, create_network
 from .curriculum import CurriculumManager
 from .game_saver import GameSaver
+from .opening_diagnostics import aggregate_opening_diagnostics, compute_diagnostic_end_ply
 
 
 class MainModule(nn.Module):
@@ -66,7 +67,7 @@ MAX_MOVES_TABLE = {
     12: 160,
     16: 200,
     20: 250,
-    24: 420,
+    24: 380,
 }
 
 # Per-size simulation counts (balances quality vs throughput)
@@ -977,6 +978,7 @@ def run_parallel_selfplay(
     adjudicate_threshold: float = 0.90,
     adjudicate_min_visits: int = 200,
     adjudicate_min_top1_share: float = 0.0,
+    adjudicate_debug: bool = False,
 ) -> Tuple[
     List["GameRecord"],  # All game records (for stats)
     List["PositionRecord"],  # New positions (for sanity stats)
@@ -1091,6 +1093,7 @@ def run_parallel_selfplay(
                 "adjudicate_threshold": adjudicate_threshold,
                 "adjudicate_min_visits": adjudicate_min_visits,
                 "adjudicate_min_top1_share": adjudicate_min_top1_share,
+                "adjudicate_debug": adjudicate_debug,
             },
         )
         p.start()
@@ -1123,6 +1126,13 @@ def run_parallel_selfplay(
     adjudicated_games = 0
     adjudicated_red_wins = 0
     adjudicated_black_wins = 0
+    adj_blocked_ply = 0
+    adj_blocked_threshold = 0
+    adj_blocked_visits = 0
+    adj_blocked_top1 = 0
+    adj_attempts = 0
+    adj_abs_rv_samples = []   # for percentiles
+    adj_top1_samples = []     # for percentiles
 
     # MCTS stats accumulators
     total_backups = 0
@@ -1141,6 +1151,7 @@ def run_parallel_selfplay(
     rg_value_hits_red = 0; rg_value_hits_black = 0
     rg_eligible_red = 0;   rg_eligible_black = 0
     rg_top1_all = []       # collect all top1_share samples across games
+    all_opening_diagnostics = []
 
     # Helper to process stats queue messages
     def process_stats_message(msg):
@@ -1149,6 +1160,8 @@ def run_parallel_selfplay(
         nonlocal timeout_draws, board_full_draws, state_cap_draws, unknown_draws
         nonlocal resign_games, resigned_by_red, resigned_by_black
         nonlocal adjudicated_games, adjudicated_red_wins, adjudicated_black_wins
+        nonlocal adj_blocked_ply, adj_blocked_threshold, adj_blocked_visits, adj_blocked_top1
+        nonlocal adj_attempts, adj_abs_rv_samples, adj_top1_samples
         nonlocal total_backups, total_nn_calls, total_expand_calls, total_nn_batches
         nonlocal total_waiters, total_unique_leaves, max_waiters
         nonlocal total_flush_full, total_flush_stall, total_flush_tail
@@ -1156,6 +1169,7 @@ def run_parallel_selfplay(
         nonlocal rg_value_hits_red, rg_value_hits_black
         nonlocal rg_eligible_red, rg_eligible_black
         nonlocal rg_top1_all
+        nonlocal all_opening_diagnostics
 
         if isinstance(msg, dict) and msg.get("type") == "server_error":
             raise RuntimeError(f"InferenceServer crashed: {msg.get('error')}")
@@ -1198,6 +1212,22 @@ def run_parallel_selfplay(
                 elif msg.winner == "black":
                     adjudicated_black_wins += 1
 
+            # Adjudication diagnostics aggregation
+            if msg.adj_attempted:
+                adj_attempts += 1
+                if msg.adj_abs_rv is not None:
+                    adj_abs_rv_samples.append(msg.adj_abs_rv)
+                if msg.adj_top1 is not None:
+                    adj_top1_samples.append(msg.adj_top1)
+                if msg.adj_blocked_by == "ply":
+                    adj_blocked_ply += 1
+                elif msg.adj_blocked_by == "threshold":
+                    adj_blocked_threshold += 1
+                elif msg.adj_blocked_by == "visits":
+                    adj_blocked_visits += 1
+                elif msg.adj_blocked_by == "top1":
+                    adj_blocked_top1 += 1
+
             # MCTS stats aggregation
             total_backups += msg.total_backups
             total_nn_calls += msg.nn_calls
@@ -1223,6 +1253,10 @@ def run_parallel_selfplay(
             draw_reason = msg.draw_reason if msg.winner is None else None
             curriculum.record_game(msg.winner, draw_reason)
 
+            # Collect opening diagnostics for sidecar aggregation
+            if msg.opening_diagnostics:
+                all_opening_diagnostics.append(list(msg.opening_diagnostics))
+
             # Save game replay if enabled
             if game_saver is not None and msg.move_history is not None:
                 # Map draw_reason int back to string (0=None, 1-4=draw reasons, 5=resign)
@@ -1243,6 +1277,8 @@ def run_parallel_selfplay(
                     draw_reason=draw_reason_str,
                     start_player=msg.start_player,
                     resigned_by=resigned_by,
+                    opening_diagnostics=list(msg.opening_diagnostics) if msg.opening_diagnostics else None,
+                    opening_diagnostics_meta=msg.opening_diagnostics_meta,
                 )
 
             if games_completed % 5 == 0:
@@ -1366,6 +1402,13 @@ def run_parallel_selfplay(
         "adjudicated_games": adjudicated_games,
         "adjudicated_red_wins": adjudicated_red_wins,
         "adjudicated_black_wins": adjudicated_black_wins,
+        "adj_attempts": adj_attempts,
+        "adj_blocked_ply": adj_blocked_ply,
+        "adj_blocked_threshold": adj_blocked_threshold,
+        "adj_blocked_visits": adj_blocked_visits,
+        "adj_blocked_top1": adj_blocked_top1,
+        "adj_abs_rv_samples": adj_abs_rv_samples,
+        "adj_top1_samples": adj_top1_samples,
         "total_plies": total_plies,
         # MCTS stats aggregated from workers
         "total_backups": total_backups,
@@ -1456,6 +1499,7 @@ def train(
     adjudicate_threshold: float = 0.90,
     adjudicate_min_visits: int = 200,
     adjudicate_min_top1_share: float = 0.0,
+    adjudicate_debug: bool = False,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -1657,10 +1701,12 @@ def train(
     print(f"  Workers: {n_workers}" + (" (parallel)" if n_workers > 1 else " (sequential)"))
     print(f"  Save games: {save_games}")
 
+    # Games directory (used for both game replays and per-iteration stats sidecars)
+    games_dir = Path(__file__).parent.parent / "logs" / "games"
+
     # Initialize game saver for replay files
     game_saver = None
     if save_games:
-        games_dir = Path(__file__).parent.parent / "logs" / "games"
         game_saver = GameSaver(
             games_dir=games_dir,
             max_games_per_iter=999999,  # Effectively unlimited
@@ -1794,11 +1840,19 @@ def train(
         adjudicated_games = 0
         adjudicated_red_wins = 0
         adjudicated_black_wins = 0
+        adj_blocked_ply = 0
+        adj_blocked_threshold = 0
+        adj_blocked_visits = 0
+        adj_blocked_top1 = 0
+        adj_attempts = 0
+        adj_abs_rv_samples = []
+        adj_top1_samples = []
         # Resign gate aggregation
         rg_checks_red = 0;    rg_checks_black = 0
         rg_value_hits_red = 0; rg_value_hits_black = 0
         rg_eligible_red = 0;   rg_eligible_black = 0
         rg_top1_all = []
+        all_opening_diagnostics = []  # Collect per-game diagnostic lists for sidecar aggregation
         total_nn_calls = 0
         total_expand_calls = 0
         total_nn_batches = 0
@@ -1842,6 +1896,7 @@ def train(
                     adjudicate_threshold=adjudicate_threshold,
                     adjudicate_min_visits=adjudicate_min_visits,
                     adjudicate_min_top1_share=adjudicate_min_top1_share,
+                    adjudicate_debug=adjudicate_debug,
                 )
 
                 # Unpack stats
@@ -1860,6 +1915,13 @@ def train(
                 adjudicated_games = parallel_stats.get("adjudicated_games", 0)
                 adjudicated_red_wins = parallel_stats.get("adjudicated_red_wins", 0)
                 adjudicated_black_wins = parallel_stats.get("adjudicated_black_wins", 0)
+                adj_attempts = parallel_stats.get("adj_attempts", 0)
+                adj_blocked_ply = parallel_stats.get("adj_blocked_ply", 0)
+                adj_blocked_threshold = parallel_stats.get("adj_blocked_threshold", 0)
+                adj_blocked_visits = parallel_stats.get("adj_blocked_visits", 0)
+                adj_blocked_top1 = parallel_stats.get("adj_blocked_top1", 0)
+                adj_abs_rv_samples = parallel_stats.get("adj_abs_rv_samples", [])
+                adj_top1_samples = parallel_stats.get("adj_top1_samples", [])
                 total_plies = parallel_stats["total_plies"]
                 # MCTS stats not available in parallel mode
                 total_backups = parallel_stats.get("total_backups", 0)
@@ -1920,6 +1982,7 @@ def train(
                         adjudicate_threshold=adjudicate_threshold,
                         adjudicate_min_visits=adjudicate_min_visits,
                         adjudicate_min_top1_share=adjudicate_min_top1_share,
+                        adjudicate_debug=adjudicate_debug,
                     )
                     game_dur = time.perf_counter() - game_t0
                     game_plies_list.append(game.n_moves)
@@ -1974,6 +2037,22 @@ def train(
                         elif game.winner == "black":
                             adjudicated_black_wins += 1
 
+                    # Adjudication diagnostics aggregation
+                    if game.adj_attempted:
+                        adj_attempts += 1
+                        if game.adj_abs_rv is not None:
+                            adj_abs_rv_samples.append(game.adj_abs_rv)
+                        if game.adj_top1 is not None:
+                            adj_top1_samples.append(game.adj_top1)
+                        if game.adj_blocked_by == "ply":
+                            adj_blocked_ply += 1
+                        elif game.adj_blocked_by == "threshold":
+                            adj_blocked_threshold += 1
+                        elif game.adj_blocked_by == "visits":
+                            adj_blocked_visits += 1
+                        elif game.adj_blocked_by == "top1":
+                            adj_blocked_top1 += 1
+
                     # Resign gate aggregation
                     rg_checks_red += game.rg_checks_red
                     rg_checks_black += game.rg_checks_black
@@ -1986,6 +2065,10 @@ def train(
                     # Always record to curriculum (draw_reason is None for wins)
                     curriculum.record_game(game.winner, game.draw_reason)
 
+                    # Collect opening diagnostics for sidecar aggregation
+                    if game.opening_diagnostics:
+                        all_opening_diagnostics.append(game.opening_diagnostics)
+
                     # Save game replay if enabled
                     if game_saver is not None and game.move_history:
                         move_history_tuple = tuple(tuple(m) for m in game.move_history)
@@ -1996,6 +2079,8 @@ def train(
                             draw_reason=game.draw_reason,
                             start_player=game.start_player,
                             resigned_by=game.resigned_by,
+                            opening_diagnostics=game.opening_diagnostics if game.opening_diagnostics else None,
+                            opening_diagnostics_meta=game.opening_diagnostics_meta,
                         )
 
                     # Flush MLX graph and clear caches after each game
@@ -2034,6 +2119,13 @@ def train(
                 print(f"    Resign: {resign_games} (by_red={resigned_by_red}, by_black={resigned_by_black})")
             if adjudicated_games > 0 or (adjudicate_enabled and timeout_draws > 0):
                 print(f"    Adjudicated: {adjudicated_games} (red_wins={adjudicated_red_wins}, black_wins={adjudicated_black_wins}, remaining_timeouts={timeout_draws})")
+                if adj_attempts > 0:
+                    print(f"    Adjudication blocks: ply={adj_blocked_ply} thr={adj_blocked_threshold} visits={adj_blocked_visits} top1={adj_blocked_top1} (attempts={adj_attempts})")
+                    if adj_abs_rv_samples:
+                        import numpy as np
+                        rv_arr = np.array(adj_abs_rv_samples)
+                        t1_arr = np.array(adj_top1_samples) if adj_top1_samples else np.array([0.0])
+                        print(f"    Adj stats: abs_rv p50={np.median(rv_arr):.3f} p90={np.percentile(rv_arr, 90):.3f} top1 p50={np.median(t1_arr):.3f} p10={np.percentile(t1_arr, 10):.3f}")
             rg_checks = rg_checks_red + rg_checks_black
             if rg_checks > 0:
                 rg_vhits = rg_value_hits_red + rg_value_hits_black
@@ -2223,6 +2315,99 @@ def train(
                 consecutive_saturation_iters += 1
             else:
                 consecutive_saturation_iters = 0
+
+            # --- Write per-iteration stats sidecar (atomic) ---
+            _total_games = red_wins + black_wins + draws
+            _total_decisive = red_wins + black_wins
+            _red_natural = red_wins - resigned_by_black - adjudicated_red_wins
+            _black_natural = black_wins - resigned_by_red - adjudicated_black_wins
+
+            _bal_red = round(red_wins / _total_decisive * 100, 1) if _total_decisive > 0 else 0.0
+            _bal_black = round(black_wins / _total_decisive * 100, 1) if _total_decisive > 0 else 0.0
+            _bal_draw = round(draws / _total_games * 100, 1) if _total_games > 0 else 0.0
+
+            _rg_checks = rg_checks_red + rg_checks_black
+            _rg_vhits = rg_value_hits_red + rg_value_hits_black
+            _rg_elig = rg_eligible_red + rg_eligible_black
+
+            _adj_stats = {}
+            if adj_abs_rv_samples:
+                _rv = np.array(adj_abs_rv_samples)
+                _t1 = np.array(adj_top1_samples) if adj_top1_samples else np.array([0.0])
+                _adj_stats = {
+                    "abs_root_value": {"p50": round(float(np.percentile(_rv, 50)), 3), "p90": round(float(np.percentile(_rv, 90)), 3)},
+                    "top1_share": {"p50": round(float(np.percentile(_t1, 50)), 3), "p10": round(float(np.percentile(_t1, 10)), 3)},
+                }
+
+            _rg_top1 = {}
+            if rg_top1_all:
+                _arr = np.array(rg_top1_all)
+                _rg_top1 = {
+                    "p50": round(float(np.percentile(_arr, 50)), 2),
+                    "p90": round(float(np.percentile(_arr, 90)), 2),
+                    "p99": round(float(np.percentile(_arr, 99)), 2),
+                }
+
+            _sidecar = {
+                "iteration": iteration,
+                "games_per_iter": games_generated,
+                "results": {"red_wins": red_wins, "black_wins": black_wins, "draws": draws},
+                "draw_breakdown": {"timeout": timeout_draws, "board_full": board_full_draws, "state_cap": state_cap_draws, "unknown": unknown_draws},
+                "termination": {"win": _red_natural + _black_natural, "resign": resign_games, "adjudicated": adjudicated_games, "timeout": timeout_draws},
+                "termination_by_winner": {
+                    "red": {"win": _red_natural, "resign": resigned_by_black, "adjudicated": adjudicated_red_wins},
+                    "black": {"win": _black_natural, "resign": resigned_by_red, "adjudicated": adjudicated_black_wins},
+                    "draw": {"timeout": timeout_draws},
+                },
+                "avg_plies": round(avg_plies, 1),
+                "balance": {"red_pct": _bal_red, "black_pct": _bal_black, "draw_pct": _bal_draw, "decisive_games": _total_decisive, "window": f"{len(recent_red_dominant)}/{BALANCE_WINDOW}"},
+                "targets": {"z_pos": z_stats.get("z_count_pos", 0), "z_zero": z_stats.get("z_count_zero", 0), "z_neg": z_stats.get("z_count_neg", 0)},
+                "adjudication": {
+                    "attempts": adj_attempts, "adjudicated": adjudicated_games, "red_wins": adjudicated_red_wins, "black_wins": adjudicated_black_wins, "remaining_timeouts": timeout_draws,
+                    "blocks": {"ply": adj_blocked_ply, "threshold": adj_blocked_threshold, "visits": adj_blocked_visits, "top1": adj_blocked_top1},
+                    "stats": _adj_stats,
+                },
+                "resign": {"total": resign_games, "by_red": resigned_by_red, "by_black": resigned_by_black},
+                "resign_gate": {
+                    "checks": _rg_checks, "red_checks": rg_checks_red, "black_checks": rg_checks_black,
+                    "value_hits": _rg_vhits, "red_value_hits": rg_value_hits_red, "black_value_hits": rg_value_hits_black,
+                    "blocked_by_top1": _rg_vhits - _rg_elig, "red_blocked_by_top1": rg_value_hits_red - rg_eligible_red, "black_blocked_by_top1": rg_value_hits_black - rg_eligible_black,
+                    "eligible_hits": _rg_elig, "red_eligible_hits": rg_eligible_red, "black_eligible_hits": rg_eligible_black,
+                    "top1_share_on_value_hits": _rg_top1, "min_top1_share": resign_min_top1_share,
+                },
+                "compute": {"buffer_size": len(buffer), "backups": total_backups, "leaf_evals": total_nn_calls, "nn_batches": total_nn_batches},
+            }
+
+            # Aggregate opening diagnostics into sidecar
+            if all_opening_diagnostics:
+                _diag_end, _diag_floor_used = compute_diagnostic_end_ply(
+                    iter_mcts_config.root_edge_band_penalty_ply,
+                    iter_mcts_config.root_near_corner_penalty_ply,
+                )
+                _sidecar["opening_penalty_diagnostics"] = aggregate_opening_diagnostics(
+                    all_game_diagnostics=all_opening_diagnostics,
+                    diagnostic_end_ply=_diag_end,
+                    extra_plies=2,
+                    floor_min_ply=4,
+                    used_floor=_diag_floor_used,
+                    games_total_iter=games_generated,
+                )
+
+            games_dir.mkdir(parents=True, exist_ok=True)
+            _tmp = games_dir / f"iter_{iteration:04d}_stats.json.tmp"
+            _final = games_dir / f"iter_{iteration:04d}_stats.json"
+            try:
+                with open(_tmp, "w", encoding="utf-8") as _sf:
+                    json.dump(_sidecar, _sf, indent=2)
+                os.replace(_tmp, _final)
+            except Exception as e:
+                print(f"  WARNING: failed to write stats sidecar: {e}")
+                try:
+                    if _tmp.exists():
+                        _tmp.unlink()
+                except Exception:
+                    pass
+
         else:
             avg_plies = 0
             avg_batch = 0
