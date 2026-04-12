@@ -64,6 +64,7 @@ def self_play_worker_main(
     adjudicate_threshold: float = 0.90,
     adjudicate_min_visits: int = 200,
     adjudicate_min_top1_share: float = 0.0,
+    adjudicate_debug: bool = False,
 ) -> None:
     """Worker process entry point.
 
@@ -94,6 +95,7 @@ def self_play_worker_main(
             resign_window, resign_k, resign_min_visits, resign_min_top1_share,
             adjudicate_enabled, adjudicate_min_ply, adjudicate_threshold,
             adjudicate_min_visits, adjudicate_min_top1_share,
+            adjudicate_debug,
         )
     except (KeyboardInterrupt, BrokenPipeError, EOFError, RuntimeError):
         # Graceful exit on interrupt, queue closure, or evaluator timeout
@@ -129,6 +131,7 @@ def _worker_loop(
     adjudicate_threshold: float,
     adjudicate_min_visits: int,
     adjudicate_min_top1_share: float,
+    adjudicate_debug: bool,
 ) -> None:
     """Inner worker loop (extracted for clean exception handling)."""
     import time
@@ -172,6 +175,7 @@ def _worker_loop(
             adjudicate_threshold=adjudicate_threshold,
             adjudicate_min_visits=adjudicate_min_visits,
             adjudicate_min_top1_share=adjudicate_min_top1_share,
+            adjudicate_debug=adjudicate_debug,
         )
         games_played += 1
 
@@ -226,6 +230,13 @@ def _worker_loop(
                 rg_eligible_red=game.rg_eligible_red,
                 rg_eligible_black=game.rg_eligible_black,
                 rg_top1_samples=game.rg_top1_samples,
+                adj_attempted=game.adj_attempted,
+                adj_blocked_by=game.adj_blocked_by,
+                adj_abs_rv=game.adj_abs_rv,
+                adj_top1=game.adj_top1,
+                adj_total_visits=game.adj_total_visits,
+                opening_diagnostics=tuple(game.opening_diagnostics),
+                opening_diagnostics_meta=game.opening_diagnostics_meta,
             ))
 
         # Periodic stats

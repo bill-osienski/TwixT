@@ -25,6 +25,8 @@ def save_game_replay(
     draw_reason: Optional[str] = None,
     start_player: str = "red",
     resigned_by: Optional[str] = None,
+    opening_diagnostics: Optional[list] = None,
+    opening_diagnostics_meta: Optional[dict] = None,
 ) -> Path:
     """Save a single game in replay-compatible format.
 
@@ -104,6 +106,10 @@ def save_game_replay(
         "meta": meta,
     }
 
+    if opening_diagnostics:
+        record["opening_diagnostics"] = opening_diagnostics
+        record["opening_diagnostics_meta"] = opening_diagnostics_meta
+
     # Save with iteration/game naming
     filename = f"iter_{iteration:04d}_game_{game_idx:03d}.json"
     filepath = games_dir / filename
@@ -153,6 +159,8 @@ class GameSaver:
         draw_reason: Optional[str] = None,
         start_player: str = "red",
         resigned_by: Optional[str] = None,
+        opening_diagnostics: Optional[list] = None,
+        opening_diagnostics_meta: Optional[dict] = None,
     ) -> Optional[Path]:
         """Save game if we haven't reached the limit for this iteration.
 
@@ -180,6 +188,8 @@ class GameSaver:
             draw_reason=draw_reason,
             start_player=start_player,
             resigned_by=resigned_by,
+            opening_diagnostics=opening_diagnostics,
+            opening_diagnostics_meta=opening_diagnostics_meta,
         )
 
         self._games_saved_this_iter += 1

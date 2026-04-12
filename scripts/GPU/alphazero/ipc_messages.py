@@ -88,3 +88,12 @@ class GameComplete:
     rg_eligible_red: int = 0
     rg_eligible_black: int = 0
     rg_top1_samples: Tuple[float, ...] = ()
+    # Adjudication diagnostics
+    adj_attempted: bool = False
+    adj_blocked_by: Optional[str] = None  # "ply", "threshold", "visits", "top1", or None
+    adj_abs_rv: Optional[float] = None
+    adj_top1: Optional[float] = None
+    adj_total_visits: Optional[int] = None
+    # Opening penalty diagnostics (per-root records for diagnostic window)
+    opening_diagnostics: Tuple[dict, ...] = ()
+    opening_diagnostics_meta: Optional[dict] = None
