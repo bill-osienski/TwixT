@@ -93,7 +93,9 @@ Mass always sums to ~1.0 across the three buckets.
 | **penalized** | `root.priors` | Post-root-adjustment priors (includes Dirichlet noise + penalties). In code comments: "post-root-adjustment priors" |
 | **visit** | `visit_counts` | What MCTS search chose (final visit distribution) |
 
-Note: "penalized" includes both noise and penalties. Noise is random and washes out in aggregation. The diagnostic value is comparing model output vs search input vs search output.
+Note: "penalized" includes both Dirichlet noise and penalties — it is not penalty-only. Noise is random and washes out in aggregation. The diagnostic value is comparing model output vs search input vs search output.
+
+**Code comment convention:** In all code comments and docstrings, refer to the penalized stage as "post-root-adjustment priors" to avoid implying it is penalty-only. JSON field names remain `penalized_*` for readability.
 
 ## Per-Game JSON Schema
 
@@ -109,6 +111,8 @@ Note: "penalized" includes both noise and penalties. Noise is random and washes 
 }
 ```
 
+`used_floor` is `true` if `max(root_edge_band_penalty_ply, root_near_corner_penalty_ply) < floor_min_ply`, otherwise `false`. Deterministic, not interpretive.
+
 ### Per-Root Records (array, one per ply in window)
 
 ```json
@@ -123,6 +127,7 @@ Note: "penalized" includes both noise and penalties. Noise is random and washes 
       "near_corner_radius": 3,
       "near_corner_penalty": 2.0
     },
+    "legal_moves_total": 142,
     "legal_move_counts": {"near_corner": 8, "edge_band": 14, "interior": 120},
     "raw_mass": {"near_corner": 0.35, "edge_band": 0.20, "interior": 0.45},
     "penalized_mass": {"near_corner": 0.10, "edge_band": 0.12, "interior": 0.78},
@@ -229,9 +234,9 @@ For plies where `penalties_active` is false (post-penalty window), include:
 }
 ```
 
-Computed as: `mean_visit_mass[region] at this ply` minus `mean_visit_mass[region] at last active ply`.
+Computed as: `mean_visit_mass[region] at this ply` minus `mean_visit_mass[region] at last penalty-active ply`.
 
-Positive values indicate mass flowing back to edge/corner after penalties stop (rebound).
+Rebound is based on **visit_mass** (post-search behavior), not raw or penalized mass. This is the right measure because it compares what search actually chose after penalties ended vs what search chose while penalties were still active. Positive values indicate mass flowing back to edge/corner after penalties stop.
 
 ### Aggregation Rules
 
@@ -240,7 +245,7 @@ Positive values indicate mass flowing back to edge/corner after penalties stop (
 | `n` | Count of games where that player moved at that ply |
 | `mean_*_mass` | Arithmetic mean across games |
 | `mean_penalty_shift` | `mean_penalized_mass - mean_raw_mass` per region |
-| `*_top1_region_pct` | Fraction of games where top-1 move was in that region (sums to 1.0, denominator = n) |
+| `*_top1_region_pct` | Fraction of games where top-1 move was in that region (sums to 1.0, denominator = n). All three `*_top1_region_pct` fields use the same `n`. Missing values must not occur for recorded plies. |
 | `mean_legal_counts` | Arithmetic mean of legal move counts per region |
 | `rebound_vs_last_active` | Difference in mean_visit_mass vs last penalty-active ply |
 | `all_diagnostic_plies` | Aggregate of all per-ply entries (weighted by n) |
