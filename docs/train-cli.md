@@ -228,6 +228,9 @@ Training starts on small boards and promotes to larger sizes when win-rate crite
 |------|------|---------|-------------|
 | `--opening-debug` | flag | off | Log opening move diagnostics (top-K moves, visit counts, priors, tie info). Output appears in self-play workers for the first 16 games, plies 0-1. Also enables `[OPENNOISE] Boosted` log lines when opening noise boost is active |
 | `--no-save-games` | flag | off | Disable saving game replays to `scripts/GPU/logs/games/` |
+| `--games-dir` | str | None | Override games output directory. Default: `scripts/GPU/logs/games/`. Useful for test runs to avoid overwriting real training data |
+
+**See also:** [`docs/analysis-metrics-guide.md`](analysis-metrics-guide.md) for how to interpret the output files (game JSON, sidecar stats, analyzer summary/CSVs).
 
 ## Environment Variables
 
