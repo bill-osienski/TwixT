@@ -349,18 +349,25 @@ Weighted average across all diagnostic plies per color. Quick summary for iterat
 
 ### Training knobs most commonly tuned
 
-| Knob | What it does | Typical range |
-|------|-------------|---------------|
-| `--root-edge-band-penalty` | Edge penalty strength | 0.5 - 3.0 |
-| `--root-edge-band-penalty-ply` | Plies where edge penalty applies | 8 - 20 |
-| `--root-edge-band-width` | Edge band width in cells | 1 - 3 |
-| `--root-near-corner-penalty` | Corner penalty strength | 1.0 - 4.0 |
-| `--root-near-corner-penalty-ply` | Plies where corner penalty applies | 8 - 20 |
-| `--root-near-corner-radius` | Corner region Chebyshev radius | 2 - 4 |
-| `--resign-threshold` | How negative before resign | -0.99 to -0.90 |
-| `--resign-min-ply` | Earliest resign ply | 40 - 120 |
-| `--adjudicate-threshold` | Min |root_value| for adjudication | 0.85 - 0.95 |
-| `--max-moves` | Game length cap (per-size table) | Via `MAX_MOVES_TABLE` |
+| Knob | What it does | Typical range | Current tuned value |
+|------|-------------|---------------|---------------------|
+| `--root-edge-band-penalty` | Edge penalty strength (lambda) | 0.3 - 2.0 | 0.75 |
+| `--root-edge-band-penalty-ply` | Plies where edge penalty applies | 8 - 20 | 16 |
+| `--root-edge-band-width` | Edge band width in cells | 1 - 3 | 2 |
+| `--root-near-corner-penalty` | Corner penalty strength (lambda) | 0.1 - 1.5 | 0.30 |
+| `--root-near-corner-penalty-ply` | Plies where corner penalty applies | 8 - 20 | 14 |
+| `--root-near-corner-radius` | Corner region Chebyshev radius | 2 - 4 | 3 |
+| `--resign-threshold` | How negative before resign | -0.99 to -0.90 | -0.945 |
+| `--resign-min-ply` | Earliest resign ply | 40 - 120 | 80 |
+| `--resign-k` | K of last W checks must meet threshold | 2 - 8 | 4 |
+| `--resign-min-top1-share` | Min top-1 visit share to resign | 0.0 - 0.15 | 0.102 |
+| `--adjudicate-threshold` | Min \|root_value\| for adjudication | 0.20 - 0.95 | 0.25 |
+| `--adjudicate-min-ply` | Earliest adjudication ply | 120 - 380 | 340 |
+| `--adjudicate-min-top1-share` | Min top-1 share to adjudicate | 0.0 - 0.20 | 0.13 |
+| `--value-lr-scale` | Value head LR multiplier | 0.001 - 0.1 | 0.0025 |
+| `--value-grad-max-norm` | Max gradient norm for value head | 0.05 - 0.5 | 0.05 |
+| `--simulations` | MCTS sims per move (or per-size table) | 150 - 800 | 400 |
+| `--max-moves` | Game length cap (per-size table) | Via `MAX_MOVES_TABLE` | 380 (size 24) |
 
 ### Analyzer knobs
 
