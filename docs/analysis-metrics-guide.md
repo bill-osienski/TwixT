@@ -43,7 +43,7 @@ Reference for all metrics produced by the training pipeline and replay analyzer.
 **Purpose:** Distinguish why games draw. High `timeout` means games aren't resolving — consider adjusting `max_moves` or enabling adjudication.
 
 **Knobs:**
-- `--max-moves` — maximum plies per game (per-size table: `MAX_MOVES_TABLE` in trainer.py)
+- `MAX_MOVES_TABLE` in trainer.py — per-size max plies (overrides `--max-moves` CLI arg)
 - `--adjudicate-enabled` — convert timeout draws to decisive outcomes
 
 ### termination
@@ -80,7 +80,7 @@ Same as `termination` but split by which player won (red/black/draw). Useful for
 Average game length in plies (half-moves). Shorter games generally indicate stronger, more decisive play. Watch for sudden increases — may indicate the model has regressed or the board size increased via curriculum.
 
 **Knobs:**
-- `--max-moves` — caps game length
+- `MAX_MOVES_TABLE` in trainer.py — caps game length per board size (not a CLI arg; edit the table directly)
 - Curriculum progression — larger boards naturally produce longer games
 
 ---
@@ -367,7 +367,7 @@ Weighted average across all diagnostic plies per color. Quick summary for iterat
 | `--value-lr-scale` | Value head LR multiplier | 0.001 - 0.1 | 0.0025 |
 | `--value-grad-max-norm` | Max gradient norm for value head | 0.05 - 0.5 | 0.05 |
 | `--simulations` | MCTS sims per move (or per-size table) | 150 - 800 | 400 |
-| `--max-moves` | Game length cap (per-size table) | Via `MAX_MOVES_TABLE` | 380 (size 24) |
+| `MAX_MOVES_TABLE` | Game length cap per board size (edit in trainer.py, not a CLI arg) | 8:90 10:110 12:160 16:200 20:250 24:380 | 380 (size 24) |
 
 ### Opening exploration knobs
 
