@@ -369,6 +369,32 @@ Weighted average across all diagnostic plies per color. Quick summary for iterat
 | `--simulations` | MCTS sims per move (or per-size table) | 150 - 800 | 400 |
 | `--max-moves` | Game length cap (per-size table) | Via `MAX_MOVES_TABLE` | 380 (size 24) |
 
+### Opening exploration knobs
+
+These affect opening diversity and the `penalized_mass` in diagnostics (noise is part of post-root-adjustment).
+
+| Knob | What it does | Typical range | Current tuned value |
+|------|-------------|---------------|---------------------|
+| `--opening-noise-ply` | Boosted Dirichlet noise for plies < this | 0 - 16 | 10 |
+| `--opening-dirichlet-alpha` | Dirichlet alpha during boost window | 0.3 - 1.5 | 0.7 |
+| `--opening-dirichlet-eps` | Noise mixing weight during boost window | 0.25 - 0.75 | 0.50 |
+| `--dirichlet-alpha` | Default Dirichlet alpha (outside boost) | 0.1 - 0.5 | 0.3 (default) |
+| `--dirichlet-eps` | Default noise mixing weight | 0.1 - 0.35 | 0.25 (default) |
+
+### Training configuration knobs
+
+These affect overall training dynamics and indirectly affect all metrics.
+
+| Knob | What it does | Current tuned value |
+|------|-------------|---------------------|
+| `--curriculum-sizes` | Board sizes for curriculum progression | 24 (single size) |
+| `--n-workers` | Parallel self-play workers | 10 |
+| `--mirror-prob` | Probability of mirror augmentation per position | 0.5 |
+| `--games-per-iter` | Games per training iteration | 100 |
+| `--train-steps` | Gradient updates per iteration | 200 |
+| `--lr` | Base learning rate | 0.001 (default) |
+| `--l2` | L2 regularization weight | 0.0001 (default) |
+
 ### Analyzer knobs
 
 | Knob | What it does | Default |
