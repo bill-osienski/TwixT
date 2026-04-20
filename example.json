@@ -1,0 +1,193 @@
+{
+  "format_version": "twixt_manual_game_v1",
+  "game": {
+    "game_id": "manual_2026-04-01_001",
+    "created_utc": "2026-04-01T12:34:56Z",
+    "notes": "Manual play recorded; AI packets logged deterministically post-hoc.",
+    "rules": {
+      "game": "twixt",
+      "active_size": 24,
+      "board_size": 24,
+      "encoding": "rc_tuple",
+      "max_plies_limit": 420
+    },
+    "model": {
+      "checkpoint_path": "checkpoints/alphazero-fresh/model_iter_0799.safetensors",
+      "model_iter": 799,
+      "network": { "hidden": 128, "blocks": 6 },
+      "training_run_id": "optional_run_id_string"
+    },
+    "mcts": {
+      "simulations": 400,
+      "eval_batch_size": 14,
+      "stall_flush_sims": 48,
+      "virtual_visits": 8,
+      "add_noise_policy": {
+        "opening_noise_ply": 10,
+        "dirichlet_alpha": 0.7,
+        "dirichlet_eps": 0.5
+      },
+      "selection": {
+        "mode": "argmax_visits",
+        "temperature": 0.0
+      }
+    },
+    "openings": {
+      "mirror_prob": 0.5,
+      "root_edge_band_penalty": { "value": 0.75, "width": 2, "plies": 16 },
+      "root_near_corner_penalty": { "value": 0.30, "radius": 3, "plies": 14 }
+    },
+    "termination": {
+      "winner": null,
+      "reason": null,
+      "final_ply": null
+    }
+  },
+
+  "moves": [
+    {
+      "ply": 0,
+      "to_move": "red",
+      "move_played": { "r": 12, "c": 12 },
+      "move_source": "human",
+      "state": {
+        "ply_in_state": 0,
+        "state_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "legal_moves_count": 576,
+        "max_plies_limit": 420
+      }
+    },
+    {
+      "ply": 1,
+      "to_move": "black",
+      "move_played": { "r": 11, "c": 11 },
+      "move_source": "human",
+      "state": {
+        "ply_in_state": 1,
+        "state_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "legal_moves_count": 575,
+        "max_plies_limit": 420
+      }
+    }
+  ],
+
+  "analysis_packets": [
+    {
+      "ply": 1,
+      "to_move": "black",
+      "analysis_source": "posthoc",
+      "analysis_mode": "deterministic_mcts",
+      "determinism": {
+        "add_noise": false,
+        "seed": 42,
+        "temperature": 0.0
+      },
+      "state_ref": {
+        "state_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+
+      "root": {
+        "root_value": -0.237,
+        "abs_root_value": 0.237,
+        "total_visits": 400,
+        "top1_share": 0.182,
+        "topk_shares": [0.182, 0.141, 0.103, 0.061, 0.047]
+      },
+
+      "chosen_move_eval": {
+        "move_played": { "r": 11, "c": 11 },
+        "was_top1_by_visits": false,
+        "rank_by_visits": 3,
+        "chosen_visit_count": 41,
+        "chosen_visit_share": 0.103,
+        "delta_vs_best_share": 0.079
+      },
+
+      "candidates_topN": [
+        {
+          "rank": 1,
+          "move": { "r": 10, "c": 12 },
+          "visit_count": 73,
+          "visit_share": 0.182,
+          "prior": 0.0412,
+          "child_q": -0.198
+        },
+        {
+          "rank": 2,
+          "move": { "r": 12, "c": 10 },
+          "visit_count": 56,
+          "visit_share": 0.141,
+          "prior": 0.0367,
+          "child_q": -0.212
+        },
+        {
+          "rank": 3,
+          "move": { "r": 11, "c": 11 },
+          "visit_count": 41,
+          "visit_share": 0.103,
+          "prior": 0.0289,
+          "child_q": -0.241
+        },
+        {
+          "rank": 4,
+          "move": { "r": 13, "c": 12 },
+          "visit_count": 24,
+          "visit_share": 0.061,
+          "prior": 0.0215,
+          "child_q": -0.205
+        },
+        {
+          "rank": 5,
+          "move": { "r": 9, "c": 11 },
+          "visit_count": 19,
+          "visit_share": 0.047,
+          "prior": 0.0181,
+          "child_q": -0.233
+        }
+      ],
+
+      "gates": {
+        "conversion_gate": {
+          "enabled": true,
+          "threshold_abs_root_value": 0.80,
+          "ok": false
+        },
+        "top1_gate": {
+          "enabled": true,
+          "min_top1_share": 0.10,
+          "ok": true
+        },
+        "visits_gate": {
+          "enabled": true,
+          "min_total_visits": 200,
+          "ok": true
+        }
+      },
+
+      "tags": [
+        "uncertain",
+        "human_diverged_from_ai"
+      ]
+    }
+  ],
+
+  "checkpoints": [
+    {
+      "type": "snap",
+      "ply": 0,
+      "state_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "type": "snap",
+      "ply": 20,
+      "state_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  ],
+
+  "final": {
+    "winner": null,
+    "reason": null,
+    "final_ply": null,
+    "notes": "Fill these when the manual game ends: winner in {red,black}, reason in {win,resign,timeout,adjudicated,manual_stop}."
+  }
+}
