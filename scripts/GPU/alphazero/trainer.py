@@ -38,7 +38,12 @@ import numpy as np
 from .network import AlphaZeroNetwork, create_network
 from .curriculum import CurriculumManager
 from .game_saver import GameSaver
-from .opening_diagnostics import aggregate_opening_diagnostics, compute_diagnostic_end_ply
+from .opening_diagnostics import (
+    aggregate_opening_diagnostics,
+    aggregate_root_child_details,
+    build_early_override_summary,
+    compute_diagnostic_end_ply,
+)
 
 
 class MainModule(nn.Module):
@@ -261,7 +266,10 @@ if TYPE_CHECKING:
     from .self_play import GameRecord, PositionRecord
 
 # Import draw reason constants for tracking
-from .self_play import DRAW_TIMEOUT, DRAW_BOARD_FULL, DRAW_STATE_CAP, DRAW_UNKNOWN, RESIGN, ADJUDICATED
+from .self_play import (
+    DRAW_TIMEOUT, DRAW_BOARD_FULL, DRAW_STATE_CAP, DRAW_UNKNOWN, RESIGN, ADJUDICATED,
+    CHILD_DETAIL_PLIES,
+)
 
 
 def flatten_params(params, prefix=""):
@@ -338,6 +346,11 @@ CSV_FIELDNAMES = [
     # Value head classification diagnostics (balanced accuracy, MCC)
     "v_label_pos", "v_label_neg", "v_maj_baseline", "v_bal_acc", "v_mcc",
     "v_cm_tp", "v_cm_tn", "v_cm_fp", "v_cm_fn",
+    # Phase 4: per-game replay contribution cap
+    "replay_cap_enabled", "replay_cap_max", "replay_cap_endgame_keep",
+    "replay_cap_games_capped", "replay_cap_capped_rate",
+    "replay_cap_total_orig", "replay_cap_total_kept",
+    "replay_cap_mean_orig", "replay_cap_mean_kept", "replay_cap_kept_fraction",
 ]
 
 
@@ -979,6 +992,9 @@ def run_parallel_selfplay(
     adjudicate_min_visits: int = 200,
     adjudicate_min_top1_share: float = 0.0,
     adjudicate_debug: bool = False,
+    # Phase 4: per-game replay contribution cap
+    max_positions_per_game: Optional[int] = None,
+    endgame_keep_positions: int = 16,
 ) -> Tuple[
     List["GameRecord"],  # All game records (for stats)
     List["PositionRecord"],  # New positions (for sanity stats)
@@ -1094,6 +1110,9 @@ def run_parallel_selfplay(
                 "adjudicate_min_visits": adjudicate_min_visits,
                 "adjudicate_min_top1_share": adjudicate_min_top1_share,
                 "adjudicate_debug": adjudicate_debug,
+                # Phase 4: per-game replay cap
+                "max_positions_per_game": max_positions_per_game,
+                "endgame_keep_positions": endgame_keep_positions,
             },
         )
         p.start()
@@ -1150,8 +1169,27 @@ def run_parallel_selfplay(
     rg_checks_red = 0;    rg_checks_black = 0
     rg_value_hits_red = 0; rg_value_hits_black = 0
     rg_eligible_red = 0;   rg_eligible_black = 0
-    rg_top1_all = []       # collect all top1_share samples across games
+    rg_top1_all = []       # collect all top1_range samples across games
     all_opening_diagnostics = []
+
+    # Phase 4: per-game replay cap aggregation (IPC path)
+    total_positions_original = 0
+    total_positions_kept = 0
+    games_capped = 0
+    # Per-length-bucket accounting (edges in plies): [0,40), [40,80), [80,120),
+    # [120,160), [160,200), [200, inf). Each bucket stores [games, sum_original,
+    # sum_kept].
+    _PLY_BUCKET_EDGES = (40, 80, 120, 160, 200)
+    _n_buckets = len(_PLY_BUCKET_EDGES) + 1
+    ply_bucket_games = [0] * _n_buckets
+    ply_bucket_positions_original = [0] * _n_buckets
+    ply_bucket_positions_kept = [0] * _n_buckets
+
+    def _ply_bucket_index(n_moves: int) -> int:
+        for i, edge in enumerate(_PLY_BUCKET_EDGES):
+            if n_moves < edge:
+                return i
+        return _n_buckets - 1
 
     # Helper to process stats queue messages
     def process_stats_message(msg):
@@ -1170,12 +1208,31 @@ def run_parallel_selfplay(
         nonlocal rg_eligible_red, rg_eligible_black
         nonlocal rg_top1_all
         nonlocal all_opening_diagnostics
+        nonlocal total_positions_original, total_positions_kept, games_capped
 
         if isinstance(msg, dict) and msg.get("type") == "server_error":
             raise RuntimeError(f"InferenceServer crashed: {msg.get('error')}")
         elif isinstance(msg, GameComplete):
             games_completed += 1
             total_plies += msg.n_moves
+
+            # Phase 4: replay cap accounting
+            # Older messages may lack these fields (default to 0) → treat as uncapped.
+            n_orig = getattr(msg, "n_positions_original", 0) or 0
+            n_kept = getattr(msg, "n_positions_kept", 0) or 0
+            # If both are 0 (message produced before cap was threaded), fall
+            # back to n_positions so the totals stay meaningful.
+            if n_orig == 0 and n_kept == 0:
+                n_orig = msg.n_positions
+                n_kept = msg.n_positions
+            total_positions_original += n_orig
+            total_positions_kept += n_kept
+            if n_kept < n_orig:
+                games_capped += 1
+            _bi = _ply_bucket_index(msg.n_moves)
+            ply_bucket_games[_bi] += 1
+            ply_bucket_positions_original[_bi] += n_orig
+            ply_bucket_positions_kept[_bi] += n_kept
 
             # Track results
             if msg.winner == "red":
@@ -1428,6 +1485,20 @@ def run_parallel_selfplay(
         "rg_eligible_red": rg_eligible_red,
         "rg_eligible_black": rg_eligible_black,
         "rg_top1_all": rg_top1_all,
+        # Phase 4: replay cap stats
+        "total_positions_original": total_positions_original,
+        "total_positions_kept": total_positions_kept,
+        "games_capped": games_capped,
+        "ply_bucket_edges": list(_PLY_BUCKET_EDGES),
+        "ply_bucket_games": list(ply_bucket_games),
+        "ply_bucket_positions_original": list(ply_bucket_positions_original),
+        "ply_bucket_positions_kept": list(ply_bucket_positions_kept),
+        # Pre-existing bug fix: `all_opening_diagnostics` accumulated from
+        # GameComplete IPC messages was previously dropped at function exit,
+        # so parallel-worker runs never wrote opening_penalty_diagnostics /
+        # root_child_diagnostics into the sidecar. Return the list so the
+        # outer train() loop can feed it into the sidecar aggregation.
+        "all_opening_diagnostics": list(all_opening_diagnostics),
     }
 
     return games_records, new_positions, stats
@@ -1467,6 +1538,7 @@ def train(
     n_workers: int = 1,
     # Game replay saving
     save_games: bool = True,  # True = save all games to logs/games/, False = disabled
+    games_dir_override: Optional[str] = None,  # Override games output directory
     # MCTS exploration tuning (None = use MCTSConfig defaults)
     dirichlet_alpha: Optional[float] = None,
     dirichlet_eps: Optional[float] = None,
@@ -1485,6 +1557,9 @@ def train(
     root_near_corner_penalty: Optional[float] = None,
     root_near_corner_penalty_ply: Optional[int] = None,
     root_near_corner_radius: Optional[int] = None,
+    # Phase 2: early-only near-corner penalty override (ply 0..early_plies-1)
+    root_near_corner_penalty_early: Optional[float] = None,
+    root_near_corner_penalty_early_plies: Optional[int] = None,
     # Resign parameters (conservative defaults = disabled)
     resign_enabled: bool = False,
     resign_min_ply: int = 80,
@@ -1500,6 +1575,9 @@ def train(
     adjudicate_min_visits: int = 200,
     adjudicate_min_top1_share: float = 0.0,
     adjudicate_debug: bool = False,
+    # Phase 4: per-game replay contribution cap (0/None disables)
+    max_positions_per_game: Optional[int] = None,
+    endgame_keep_positions: int = 16,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -1595,6 +1673,11 @@ def train(
         mcts_exploration_overrides["root_near_corner_penalty_ply"] = root_near_corner_penalty_ply
     if root_near_corner_radius is not None:
         mcts_exploration_overrides["root_near_corner_radius"] = root_near_corner_radius
+    # Phase 2: early-only near-corner override
+    if root_near_corner_penalty_early is not None:
+        mcts_exploration_overrides["root_near_corner_penalty_early"] = root_near_corner_penalty_early
+    if root_near_corner_penalty_early_plies is not None:
+        mcts_exploration_overrides["root_near_corner_penalty_early_plies"] = root_near_corner_penalty_early_plies
 
     # Default MCTS config (overridden per iteration with curriculum-scaled values)
     default_sims = mcts_simulations if mcts_simulations is not None else 400
@@ -1702,7 +1785,10 @@ def train(
     print(f"  Save games: {save_games}")
 
     # Games directory (used for both game replays and per-iteration stats sidecars)
-    games_dir = Path(__file__).parent.parent / "logs" / "games"
+    if games_dir_override:
+        games_dir = Path(games_dir_override)
+    else:
+        games_dir = Path(__file__).parent.parent / "logs" / "games"
 
     # Initialize game saver for replay files
     game_saver = None
@@ -1870,6 +1956,29 @@ def train(
         game_durations = []  # Per-game wall times
         interrupted = False
 
+        # Phase 4: per-game replay cap accounting (iteration-level).
+        # The parallel path populates these via parallel_stats; the sequential
+        # path accumulates them inline from game records. Either way these
+        # feed the sidecar + CSV.
+        total_positions_original_iter = 0
+        total_positions_kept_iter = 0
+        games_capped_iter = 0
+        # Phase 1 (2026-04-19): replay-cap termination-type breakdown
+        positions_by_termination_iter = {"win": 0, "resign": 0, "adjudicated": 0, "timeout": 0}
+        positions_in_short_games_iter = 0   # games with n_moves <= 80
+        positions_in_long_games_iter = 0    # games with n_moves > 200
+        _PLY_BUCKET_EDGES_ITER = (40, 80, 120, 160, 200)
+        _n_buckets_iter = len(_PLY_BUCKET_EDGES_ITER) + 1
+        ply_bucket_games_iter = [0] * _n_buckets_iter
+        ply_bucket_positions_original_iter = [0] * _n_buckets_iter
+        ply_bucket_positions_kept_iter = [0] * _n_buckets_iter
+
+        def _ply_bucket_index_iter(n_moves: int) -> int:
+            for i, edge in enumerate(_PLY_BUCKET_EDGES_ITER):
+                if n_moves < edge:
+                    return i
+            return _n_buckets_iter - 1
+
         if n_workers > 1:
             # === PARALLEL SELF-PLAY ===
             try:
@@ -1897,6 +2006,8 @@ def train(
                     adjudicate_min_visits=adjudicate_min_visits,
                     adjudicate_min_top1_share=adjudicate_min_top1_share,
                     adjudicate_debug=adjudicate_debug,
+                    max_positions_per_game=max_positions_per_game,
+                    endgame_keep_positions=endgame_keep_positions,
                 )
 
                 # Unpack stats
@@ -1941,6 +2052,22 @@ def train(
                 rg_eligible_red = parallel_stats.get("rg_eligible_red", 0)
                 rg_eligible_black = parallel_stats.get("rg_eligible_black", 0)
                 rg_top1_all = parallel_stats.get("rg_top1_all", [])
+                # Phase 4: pull replay-cap stats from parallel stats
+                total_positions_original_iter = parallel_stats.get("total_positions_original", 0)
+                total_positions_kept_iter = parallel_stats.get("total_positions_kept", 0)
+                games_capped_iter = parallel_stats.get("games_capped", 0)
+                ply_bucket_games_iter = parallel_stats.get("ply_bucket_games", ply_bucket_games_iter)
+                ply_bucket_positions_original_iter = parallel_stats.get(
+                    "ply_bucket_positions_original", ply_bucket_positions_original_iter
+                )
+                ply_bucket_positions_kept_iter = parallel_stats.get(
+                    "ply_bucket_positions_kept", ply_bucket_positions_kept_iter
+                )
+                # Pull opening-diagnostics accumulated inside the parallel loop
+                # (previously dropped, causing empty sidecar opening/root_child blocks).
+                _par_od = parallel_stats.get("all_opening_diagnostics", [])
+                if _par_od:
+                    all_opening_diagnostics.extend(_par_od)
 
             except KeyboardInterrupt:
                 print(f"\n\nInterrupted during parallel self-play!")
@@ -1983,6 +2110,8 @@ def train(
                         adjudicate_min_visits=adjudicate_min_visits,
                         adjudicate_min_top1_share=adjudicate_min_top1_share,
                         adjudicate_debug=adjudicate_debug,
+                        max_positions_per_game=max_positions_per_game,
+                        endgame_keep_positions=endgame_keep_positions,
                     )
                     game_dur = time.perf_counter() - game_t0
                     game_plies_list.append(game.n_moves)
@@ -1991,6 +2120,40 @@ def train(
                     new_positions.extend(game.positions)  # Collect for sanity stats
                     games_generated += 1
                     positions_added += len(game.positions)
+
+                    # Phase 4: per-game replay cap accounting.
+                    # n_positions_original may be 0 on older records; fall back
+                    # to live positions count in that case.
+                    _n_orig = game.n_positions_original or len(game.positions)
+                    _n_kept = game.n_positions_kept or len(game.positions)
+                    total_positions_original_iter += _n_orig
+                    total_positions_kept_iter += _n_kept
+                    if _n_kept < _n_orig:
+                        games_capped_iter += 1
+                    _bi = _ply_bucket_index_iter(game.n_moves)
+                    ply_bucket_games_iter[_bi] += 1
+                    ply_bucket_positions_original_iter[_bi] += _n_orig
+                    ply_bucket_positions_kept_iter[_bi] += _n_kept
+                    # Phase 1 (2026-04-19): termination-type classification.
+                    # Map game outcome to a bucket so we can see which kinds of
+                    # games dominate the training set.
+                    # - winner + RESIGN draw_reason → "resign"
+                    # - winner + ADJUDICATED draw_reason → "adjudicated"
+                    # - winner with no draw_reason → "win" (natural in-game terminal)
+                    # - no winner (DRAW_TIMEOUT / DRAW_BOARD_FULL / DRAW_STATE_CAP / DRAW_UNKNOWN) → "timeout"
+                    if game.winner and game.draw_reason == RESIGN:
+                        _term = "resign"
+                    elif game.winner and game.draw_reason == ADJUDICATED:
+                        _term = "adjudicated"
+                    elif game.winner:
+                        _term = "win"
+                    else:
+                        _term = "timeout"
+                    positions_by_termination_iter[_term] += _n_kept
+                    if game.n_moves <= 80:
+                        positions_in_short_games_iter += _n_kept
+                    elif game.n_moves > 200:
+                        positions_in_long_games_iter += _n_kept
                     total_nn_calls += game.nn_calls
                     total_expand_calls += game.expand_calls
                     total_nn_batches += game.nn_batches
@@ -2122,7 +2285,6 @@ def train(
                 if adj_attempts > 0:
                     print(f"    Adjudication blocks: ply={adj_blocked_ply} thr={adj_blocked_threshold} visits={adj_blocked_visits} top1={adj_blocked_top1} (attempts={adj_attempts})")
                     if adj_abs_rv_samples:
-                        import numpy as np
                         rv_arr = np.array(adj_abs_rv_samples)
                         t1_arr = np.array(adj_top1_samples) if adj_top1_samples else np.array([0.0])
                         print(f"    Adj stats: abs_rv p50={np.median(rv_arr):.3f} p90={np.percentile(rv_arr, 90):.3f} top1 p50={np.median(t1_arr):.3f} p10={np.percentile(t1_arr, 10):.3f}")
@@ -2376,6 +2538,28 @@ def train(
                     "top1_share_on_value_hits": _rg_top1, "min_top1_share": resign_min_top1_share,
                 },
                 "compute": {"buffer_size": len(buffer), "backups": total_backups, "leaf_evals": total_nn_calls, "nn_batches": total_nn_batches},
+                "replay_cap": {
+                    "enabled": bool(max_positions_per_game and max_positions_per_game > 0),
+                    "max_positions_per_game": int(max_positions_per_game) if max_positions_per_game else 0,
+                    "endgame_keep_positions": int(endgame_keep_positions),
+                    "games_total": games_generated,
+                    "games_capped": games_capped_iter,
+                    "capped_rate": (games_capped_iter / games_generated) if games_generated else 0.0,
+                    "total_positions_original": total_positions_original_iter,
+                    "total_positions_kept": total_positions_kept_iter,
+                    "mean_positions_original": (total_positions_original_iter / games_generated) if games_generated else 0.0,
+                    "mean_positions_kept": (total_positions_kept_iter / games_generated) if games_generated else 0.0,
+                    "kept_fraction": (total_positions_kept_iter / total_positions_original_iter) if total_positions_original_iter else 1.0,
+                    "positions_by_termination": dict(positions_by_termination_iter),
+                    "positions_in_short_games": positions_in_short_games_iter,
+                    "positions_in_long_games": positions_in_long_games_iter,
+                    "by_length_bucket": {
+                        "edges_ply": list(_PLY_BUCKET_EDGES_ITER),
+                        "games": list(ply_bucket_games_iter),
+                        "positions_original": list(ply_bucket_positions_original_iter),
+                        "positions_kept": list(ply_bucket_positions_kept_iter),
+                    },
+                },
             }
 
             # Aggregate opening diagnostics into sidecar
@@ -2391,6 +2575,19 @@ def train(
                     floor_min_ply=4,
                     used_floor=_diag_floor_used,
                     games_total_iter=games_generated,
+                )
+                # Phase 1: root-child diagnostics rollup (ply 0 .. CHILD_DETAIL_PLIES-1)
+                _sidecar["root_child_diagnostics"] = aggregate_root_child_details(
+                    all_game_diagnostics=all_opening_diagnostics,
+                    child_detail_max_ply=CHILD_DETAIL_PLIES,
+                )
+                # Phase 2 required #3: compact early-override summary block
+                # Combines mass (from opening diagnostics) + best-by-*
+                # (from root-child diagnostics) for the critical ply 0-1 window.
+                _sidecar["early_override_summary"] = build_early_override_summary(
+                    opd_aggregate=_sidecar["opening_penalty_diagnostics"],
+                    rcd_aggregate=_sidecar["root_child_diagnostics"],
+                    early_plies=CHILD_DETAIL_PLIES,
                 )
 
             games_dir.mkdir(parents=True, exist_ok=True)
@@ -2643,7 +2840,7 @@ def train(
 
         # Compute timing metrics
         self_play_wall_s = selfplay_end - selfplay_start
-        train_wall_s = train_end - train_start if train_steps_per_iteration > 0 else 0.0
+        train_wall_s = train_end - train_start if (train_steps_per_iteration or 0) > 0 else 0.0
         iter_wall_s = iter_end - iter_start
         positions_per_sec = positions_added / self_play_wall_s if self_play_wall_s > 0 else 0.0
 
@@ -2772,6 +2969,27 @@ def train(
             **z_stats,
             **pi_stats,
             **v_stats,
+
+            # Phase 4: per-game replay contribution cap
+            "replay_cap_enabled": int(bool(max_positions_per_game and max_positions_per_game > 0)),
+            "replay_cap_max": int(max_positions_per_game) if max_positions_per_game else 0,
+            "replay_cap_endgame_keep": int(endgame_keep_positions),
+            "replay_cap_games_capped": int(games_capped_iter),
+            "replay_cap_capped_rate": round(
+                (games_capped_iter / games_generated) if games_generated else 0.0, 4
+            ),
+            "replay_cap_total_orig": int(total_positions_original_iter),
+            "replay_cap_total_kept": int(total_positions_kept_iter),
+            "replay_cap_mean_orig": round(
+                (total_positions_original_iter / games_generated) if games_generated else 0.0, 2
+            ),
+            "replay_cap_mean_kept": round(
+                (total_positions_kept_iter / games_generated) if games_generated else 0.0, 2
+            ),
+            "replay_cap_kept_fraction": round(
+                (total_positions_kept_iter / total_positions_original_iter)
+                if total_positions_original_iter else 1.0, 4
+            ),
         }
 
         # Write metrics to CSV (append-only)

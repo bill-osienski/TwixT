@@ -38,3 +38,31 @@ def test_value_calibration_bucket_classification():
     state = TwixtState(active_size=8)
     cat = classify_position(state, ply=0, game_n_moves=100, min_size=8)
     assert cat == "balanced_no_winning_structure"
+
+
+def test_replay_cap_has_termination_breakdown():
+    """After aggregation, replay-cap stats include positions_by_termination breakdown."""
+    from scripts.GPU.alphazero.trainer import ReplayBuffer
+    # The test is a simple integration check: once the feature lands, a sidecar
+    # will carry these keys. For now, we check the aggregator helper directly.
+    try:
+        from scripts.twixt_replay_analyzer import aggregate_replay_cap
+    except ImportError:
+        import pytest
+        pytest.skip("aggregate_replay_cap not importable")
+    rcap_by_iter = {
+        100: {
+            "enabled": True, "max_positions_per_game": 64,
+            "games_capped": 5, "games_total": 10,
+            "total_positions_original": 500, "total_positions_kept": 300,
+            "positions_by_termination": {"win": 80, "resign": 180, "adjudicated": 30, "timeout": 10},
+            "positions_in_short_games": 50, "positions_in_long_games": 250,
+            "by_length_bucket": {"edges_ply": [40, 80, 120, 160, 200],
+                                 "games": [1, 2, 3, 2, 1, 1],
+                                 "positions_original": [50, 100, 150, 100, 60, 40],
+                                 "positions_kept": [50, 100, 90, 40, 15, 5]},
+        }
+    }
+    agg = aggregate_replay_cap(rcap_by_iter)
+    # Must carry the new keys through aggregation
+    assert "total_positions_by_termination" in agg or "positions_by_termination" in str(agg)

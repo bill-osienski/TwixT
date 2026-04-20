@@ -46,6 +46,17 @@ try:
         write_opening_by_ply_csv,
         write_opening_per_game_csv,
         format_opening_diagnostics_report,
+        # Phase 1: root-child diagnostics (optional — absent on older sidecars)
+        extract_sidecar_root_child_diagnostics,
+        aggregate_sidecar_root_child_diagnostics,
+        aggregate_replay_root_child_diagnostics,
+        write_root_child_by_ply_csv,
+        write_root_child_per_game_csv,
+        build_root_child_summary,
+        format_root_child_report,
+        # Phase 2: early-override summary (optional — pre-Phase-2 data yields empty)
+        build_early_override_summary,
+        format_early_override_report,
     )
     _HAS_OD_ANALYZER = True
 except ImportError:
@@ -63,6 +74,38 @@ except Exception:
 # -----------------------------
 # Loading utilities
 # -----------------------------
+
+def _derive_out_suffix(out_dir: str, override: Optional[str] = None) -> str:
+    """Compute the filename suffix applied to all output artifacts.
+
+    Convention: the analyzer writes one set of files per output dir. Naming
+    them with the iteration range (e.g. `summary_945-949.json`) makes it
+    trivial to keep multiple runs side-by-side and grep by range.
+
+    Precedence:
+      - If `override` is provided (from `--out-suffix`), use it verbatim
+        (stripped of surrounding whitespace and underscores). An empty
+        override means "no suffix" (files land as `summary.json`, etc.).
+      - Otherwise derive from the basename of out_dir. A trailing `_Replay`
+        (case-insensitive) is stripped so `Replays/945-949_Replay/` yields
+        suffix `945-949` — matching the user's historical naming.
+
+    Returns an empty string to mean "no suffix".
+    """
+    if override is not None:
+        return override.strip().strip("_")
+    base = os.path.basename(os.path.normpath(out_dir)) if out_dir else ""
+    if base.lower().endswith("_replay"):
+        base = base[: -len("_replay")]
+    return base
+
+
+def _suffixed(name: str, ext: str, suffix: str) -> str:
+    """Compose a filename as `{name}_{suffix}.{ext}` (or `{name}.{ext}` if no suffix)."""
+    if suffix:
+        return f"{name}_{suffix}.{ext}"
+    return f"{name}.{ext}"
+
 
 def _iter_json_blobs_from_path(path: str) -> Iterable[Tuple[str, bytes]]:
     """
@@ -258,6 +301,277 @@ def aggregate_sidecars(sidecars: Dict[int, dict]) -> dict:
 
 
 # -----------------------------
+# Phase 4: Replay-cap helpers (sidecar `replay_cap` block)
+# -----------------------------
+#
+# The trainer writes a per-iteration `replay_cap` block when per-game replay
+# contribution capping is enabled (and emits a disabled marker block when it is
+# not). The block is fully optional — older sidecars won't have it. These
+# helpers extract, aggregate across iterations, produce a CSV, and format a
+# short report section.
+
+
+def extract_sidecar_replay_cap(sidecars: Dict[int, dict]) -> Dict[int, dict]:
+    """Extract `replay_cap` blocks from sidecars (iteration -> block).
+
+    Older sidecars without the block are silently skipped.
+    """
+    out: Dict[int, dict] = {}
+    for it, sc in sidecars.items():
+        blk = sc.get("replay_cap")
+        if blk and isinstance(blk, dict):
+            out[it] = blk
+    return out
+
+
+def _bucket_label(edges: List[int], idx: int) -> str:
+    """Pretty label for a length bucket given its edges list.
+
+    edges = [40, 80, 120, 160, 200] → labels for 6 buckets:
+        "0-39", "40-79", "80-119", "120-159", "160-199", "200+"
+    """
+    if idx == 0:
+        return f"0-{edges[0]-1}" if edges else "0+"
+    if idx >= len(edges):
+        return f"{edges[-1]}+"
+    return f"{edges[idx-1]}-{edges[idx]-1}"
+
+
+def aggregate_replay_cap(rcap_by_iter: Dict[int, dict]) -> dict:
+    """Roll replay-cap blocks up into a single dict for the report + summary.
+
+    Sums counts across iterations; takes the latest iteration's cap config
+    (enabled / max / endgame_keep) as the "current" setting — this mirrors how
+    `aggregate_sidecars` treats latest-snapshot fields.
+    """
+    if not rcap_by_iter:
+        return {}
+
+    # Find a bucket-edges vector (prefer the latest iteration's)
+    latest_it = max(rcap_by_iter.keys())
+    latest = rcap_by_iter[latest_it]
+    edges = list((latest.get("by_length_bucket") or {}).get("edges_ply") or [])
+    n_buckets = len(edges) + 1 if edges else 0
+
+    total_games = 0
+    total_games_capped = 0
+    total_orig = 0
+    total_kept = 0
+    any_enabled = False
+    bucket_games = [0] * n_buckets
+    bucket_orig = [0] * n_buckets
+    bucket_kept = [0] * n_buckets
+    edge_variants: set = set()
+    # Phase 1 (2026-04-19): termination-type + length-split accumulators.
+    total_positions_by_termination = {"win": 0, "resign": 0, "adjudicated": 0, "timeout": 0}
+    total_positions_in_short_games = 0
+    total_positions_in_long_games = 0
+
+    for it in sorted(rcap_by_iter.keys()):
+        blk = rcap_by_iter[it]
+        if blk.get("enabled"):
+            any_enabled = True
+        total_games += int(blk.get("games_total", 0) or 0)
+        total_games_capped += int(blk.get("games_capped", 0) or 0)
+        total_orig += int(blk.get("total_positions_original", 0) or 0)
+        total_kept += int(blk.get("total_positions_kept", 0) or 0)
+        bt = blk.get("positions_by_termination") or {}
+        for term in total_positions_by_termination:
+            total_positions_by_termination[term] += int(bt.get(term, 0) or 0)
+        total_positions_in_short_games += int(blk.get("positions_in_short_games", 0) or 0)
+        total_positions_in_long_games += int(blk.get("positions_in_long_games", 0) or 0)
+        blb = blk.get("by_length_bucket") or {}
+        blb_edges = tuple(blb.get("edges_ply") or ())
+        if blb_edges:
+            edge_variants.add(blb_edges)
+        g = blb.get("games") or []
+        o = blb.get("positions_original") or []
+        k = blb.get("positions_kept") or []
+        # Align buckets with the latest-iteration edge vector. If edges shifted
+        # across iterations, drop the mismatched ones and flag it.
+        if tuple(blb_edges) == tuple(edges) and len(g) == n_buckets:
+            for i in range(n_buckets):
+                bucket_games[i] += int(g[i] or 0)
+                bucket_orig[i] += int(o[i] or 0)
+                bucket_kept[i] += int(k[i] or 0)
+
+    edges_mismatch = len(edge_variants) > 1
+
+    return {
+        "enabled_latest": bool(latest.get("enabled")),
+        "any_enabled": any_enabled,
+        "max_positions_per_game_latest": int(latest.get("max_positions_per_game", 0) or 0),
+        "endgame_keep_positions_latest": int(latest.get("endgame_keep_positions", 0) or 0),
+        "edges_mismatch_across_iters": edges_mismatch,
+        "games_total": total_games,
+        "games_capped": total_games_capped,
+        "capped_rate": round(total_games_capped / total_games, 4) if total_games else 0.0,
+        "total_positions_original": total_orig,
+        "total_positions_kept": total_kept,
+        "kept_fraction": round(total_kept / total_orig, 4) if total_orig else 1.0,
+        "total_positions_by_termination": total_positions_by_termination,
+        "total_positions_in_short_games": total_positions_in_short_games,
+        "total_positions_in_long_games": total_positions_in_long_games,
+        "by_length_bucket": {
+            "edges_ply": edges,
+            "labels": [_bucket_label(edges, i) for i in range(n_buckets)],
+            "games": bucket_games,
+            "positions_original": bucket_orig,
+            "positions_kept": bucket_kept,
+            "kept_fraction_per_bucket": [
+                round(bucket_kept[i] / bucket_orig[i], 4) if bucket_orig[i] else 1.0
+                for i in range(n_buckets)
+            ],
+        },
+    }
+
+
+def write_replay_cap_by_iter_csv(
+    out_dir: str,
+    rcap_by_iter: Dict[int, dict],
+    suffix: str = "",
+) -> Optional[str]:
+    """Write replay_cap_by_iter.csv — one row per iteration.
+
+    Args:
+        suffix: if non-empty, output is `replay_cap_by_iter_{suffix}.csv`
+                (enables side-by-side comparison of multiple ranges).
+
+    Returns the file path, or None if no iteration carries a replay_cap block
+    (older run — caller can skip the section silently).
+    """
+    if not rcap_by_iter:
+        return None
+
+    # Use the latest iteration's bucket edges to decide column layout (the
+    # aggregator already flags cross-iteration edge drift; we just keep a
+    # consistent header).
+    latest_it = max(rcap_by_iter.keys())
+    latest = rcap_by_iter[latest_it]
+    edges = list((latest.get("by_length_bucket") or {}).get("edges_ply") or [])
+    n_buckets = len(edges) + 1 if edges else 0
+    labels = [_bucket_label(edges, i) for i in range(n_buckets)]
+
+    header = [
+        "iteration", "enabled", "max_positions_per_game", "endgame_keep_positions",
+        "games_total", "games_capped", "capped_rate",
+        "total_positions_original", "total_positions_kept",
+        "mean_positions_original", "mean_positions_kept", "kept_fraction",
+    ]
+    for lb in labels:
+        header.append(f"bucket_games_{lb}")
+    for lb in labels:
+        header.append(f"bucket_orig_{lb}")
+    for lb in labels:
+        header.append(f"bucket_kept_{lb}")
+
+    path = os.path.join(out_dir, _suffixed("replay_cap_by_iter", "csv", suffix))
+    rows = []
+    for it in sorted(rcap_by_iter.keys()):
+        blk = rcap_by_iter[it]
+        blb = blk.get("by_length_bucket") or {}
+        g = blb.get("games") or []
+        o = blb.get("positions_original") or []
+        k = blb.get("positions_kept") or []
+        # Only line-up buckets when this iter's edges match the header edges
+        aligned = tuple(blb.get("edges_ply") or ()) == tuple(edges) and len(g) == n_buckets
+        row = [
+            it,
+            int(bool(blk.get("enabled"))),
+            int(blk.get("max_positions_per_game", 0) or 0),
+            int(blk.get("endgame_keep_positions", 0) or 0),
+            int(blk.get("games_total", 0) or 0),
+            int(blk.get("games_capped", 0) or 0),
+            blk.get("capped_rate", ""),
+            int(blk.get("total_positions_original", 0) or 0),
+            int(blk.get("total_positions_kept", 0) or 0),
+            blk.get("mean_positions_original", ""),
+            blk.get("mean_positions_kept", ""),
+            blk.get("kept_fraction", ""),
+        ]
+        for i in range(n_buckets):
+            row.append(g[i] if aligned and i < len(g) else "")
+        for i in range(n_buckets):
+            row.append(o[i] if aligned and i < len(o) else "")
+        for i in range(n_buckets):
+            row.append(k[i] if aligned and i < len(k) else "")
+        rows.append(row)
+
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(header)
+        w.writerows(rows)
+    return path
+
+
+def format_replay_cap_report(rcap_summary: dict) -> List[str]:
+    """Format a concise replay-cap section for report.txt.
+
+    Empty input (no sidecar had the block) → one "not available" line.
+    """
+    lines: List[str] = []
+    lines.append("Replay-cap Engagement (Phase 4)")
+    lines.append("=" * 31)
+    if not rcap_summary:
+        lines.append(
+            "Not available (sidecars from this run predate the replay_cap block)."
+        )
+        lines.append("")
+        return lines
+
+    if not rcap_summary.get("any_enabled"):
+        lines.append(
+            "Replay cap was disabled across all iterations in this range. "
+            "Every game contributed every position — long games still dominate."
+        )
+        lines.append("")
+        return lines
+
+    lines.append(
+        f"Cap (latest iter): max_positions_per_game="
+        f"{rcap_summary['max_positions_per_game_latest']}, "
+        f"endgame_keep={rcap_summary['endgame_keep_positions_latest']}"
+    )
+    lines.append(
+        f"Totals: games={rcap_summary['games_total']:,} "
+        f"capped={rcap_summary['games_capped']:,} "
+        f"({rcap_summary['capped_rate']:.1%}) | "
+        f"positions produced={rcap_summary['total_positions_original']:,} "
+        f"kept={rcap_summary['total_positions_kept']:,} "
+        f"({rcap_summary['kept_fraction']:.1%})"
+    )
+
+    blb = rcap_summary.get("by_length_bucket") or {}
+    labels = blb.get("labels") or []
+    games = blb.get("games") or []
+    orig = blb.get("positions_original") or []
+    kept = blb.get("positions_kept") or []
+    kfpb = blb.get("kept_fraction_per_bucket") or []
+    if labels:
+        lines.append("By game-length bucket (ply count):")
+        lines.append(
+            "  " + f"{'bucket':>12}  {'games':>8}  {'orig pos':>10}  "
+                   f"{'kept pos':>10}  {'kept_frac':>10}"
+        )
+        for i, lb in enumerate(labels):
+            g = games[i] if i < len(games) else 0
+            o = orig[i] if i < len(orig) else 0
+            k = kept[i] if i < len(kept) else 0
+            kf = kfpb[i] if i < len(kfpb) else 1.0
+            lines.append(
+                "  " + f"{lb:>12}  {g:>8,}  {o:>10,}  {k:>10,}  "
+                       f"{kf:>10.1%}"
+            )
+    if rcap_summary.get("edges_mismatch_across_iters"):
+        lines.append(
+            "  NOTE: bucket edges differ across iterations in this range — "
+            "bucket rows aggregate only iterations matching the latest edge vector."
+        )
+    lines.append("")
+    return lines
+
+
+# -----------------------------
 # Feature extraction
 # -----------------------------
 
@@ -416,8 +730,12 @@ def analyze(replays: List[dict],
             run_config: Optional[dict] = None,
             meta: Optional[dict] = None,
             sidecars: Optional[Dict[int, dict]] = None,
-            no_plots: bool = False) -> None:
+            no_plots: bool = False,
+            dump_root_child_per_game: bool = False,
+            out_suffix: Optional[str] = None) -> None:
     os.makedirs(out_dir, exist_ok=True)
+    # Compute once — every output artifact shares this suffix.
+    suffix = _derive_out_suffix(out_dir, override=out_suffix)
     buckets = _ply_buckets(buckets_spec)
 
     rows: List[ReplayRow] = []
@@ -600,7 +918,7 @@ def analyze(replays: List[dict],
     # -----------------------------
     # Write summary CSV
     # -----------------------------
-    summary_csv = os.path.join(out_dir, "replay_summary.csv")
+    summary_csv = os.path.join(out_dir, _suffixed("replay_summary", "csv", suffix))
     with open(summary_csv, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["source", "iteration", "winner", "reason", "starting_player", "n_moves",
@@ -611,11 +929,16 @@ def analyze(replays: List[dict],
             "red_first_is_edge_band_b1", "black_first_is_edge_band_b1",
             "red_first_is_edge_band_b2", "black_first_is_edge_band_b2"])
         for r in rows:
+            # Pre-existing bug: the row-write previously omitted the `_b1`
+            # pair, so the CSV misaligned by two columns — the `_b1` header
+            # carried `_b2` values and the `_b2` columns came out blank.
+            # Row order MUST exactly match the header (18 fields).
             w.writerow([r.source, r.iteration, r.winner, r.reason, r.starting, r.n_moves,
             r.red_first, r.black_first,
             r.red_first_is_corner, r.black_first_is_corner,
             r.red_first_is_exact_edge, r.black_first_is_exact_edge,
             r.red_first_is_near_corner_r2, r.black_first_is_near_corner_r2,
+            r.red_first_is_edge_band_b1, r.black_first_is_edge_band_b1,
             r.red_first_is_edge_band_b2, r.black_first_is_edge_band_b2])
 
     # -----------------------------
@@ -770,6 +1093,55 @@ def analyze(replays: List[dict],
             od_summary_dict = build_opening_diagnostics_summary(
                 od_aggregate, n, games_with_od, od_source)
             od_by_ply_dict = build_opening_diagnostics_by_ply(od_aggregate)
+
+    # --- Phase 1: root-child diagnostics --------------------------------------
+    # Prefer per-game records when present — they're the authoritative source
+    # and side-step two failure modes of the sidecar path:
+    #   (a) pre-IPC-fix runs emit per-game records but no sidecar block
+    #   (b) partial / stale sidecars (e.g. a small test block) would otherwise
+    #       shadow a large pool of per-game data
+    # Only fall back to the sidecar aggregate when per-game records are absent
+    # (e.g. analyzer fed only a zipped summary).
+    rcd_aggregate: dict = {}
+    rcd_summary_dict: dict = {}
+    rcd_source: str = "none"
+    if _HAS_OD_ANALYZER:
+        if od_all_diag_lists:
+            rcd_aggregate = aggregate_replay_root_child_diagnostics(
+                od_all_diag_lists, child_detail_max_ply=2,
+            )
+            if rcd_aggregate:
+                rcd_source = "replay"
+        if not rcd_aggregate and relevant_sidecars:
+            rcd_by_iter = extract_sidecar_root_child_diagnostics(relevant_sidecars)
+            if rcd_by_iter:
+                rcd_aggregate = aggregate_sidecar_root_child_diagnostics(rcd_by_iter)
+                rcd_source = "sidecar"
+        if rcd_aggregate:
+            rcd_summary_dict = build_root_child_summary(rcd_aggregate)
+            rcd_summary_dict["source"] = rcd_source
+
+    # --- Phase 4: replay-cap engagement (sidecar-only, optional) ------------
+    # NOT gated on use_sidecar: see the comment above. Per-iteration replay_cap
+    # blocks are self-describing and useful even under partial coverage.
+    rcap_by_iter: Dict[int, dict] = {}
+    rcap_summary_dict: dict = {}
+    if relevant_sidecars:
+        rcap_by_iter = extract_sidecar_replay_cap(relevant_sidecars)
+        if rcap_by_iter:
+            rcap_summary_dict = aggregate_replay_cap(rcap_by_iter)
+
+    # --- Phase 2: early-override summary (combines mass + best-by-* signals)
+    # Built only when we have at least the opening-diagnostics aggregate —
+    # the best-by-* columns fill in only if the root-child aggregate is also
+    # present. Pre-Phase-2 runs get an empty dict, which the formatter handles.
+    early_override_summary_dict: dict = {}
+    if _HAS_OD_ANALYZER and od_aggregate:
+        early_override_summary_dict = build_early_override_summary(
+            opd_aggregate=od_aggregate,
+            rcd_aggregate=rcd_aggregate if rcd_aggregate else None,
+            early_plies=2,
+        )
 
     # --- Build summary from sidecar or fallback ---
     if use_sidecar:
@@ -926,9 +1298,17 @@ def analyze(replays: List[dict],
         ],
         "opening_diagnostics_summary": od_summary_dict,
         "opening_diagnostics_by_ply": od_by_ply_dict,
+        # Phase 1: root-child diagnostics (ply 0–1). Empty when sidecars predate
+        # the feature or no record carries `root_summary`.
+        "root_child_diagnostics_summary": rcd_summary_dict,
+        # Phase 4: replay-cap engagement. Empty when sidecars predate the feature.
+        "replay_cap_summary": rcap_summary_dict,
+        # Phase 2: compact ply 0-1 view combining mass and best-by-* signals
+        # with the run's near-corner config echoed inline.
+        "early_override_summary": early_override_summary_dict,
     }
 
-    summary_json = os.path.join(out_dir, "summary.json")
+    summary_json = os.path.join(out_dir, _suffixed("summary", "json", suffix))
     with open(summary_json, "w") as f:
         json.dump(summary, f, indent=2)
 
@@ -938,13 +1318,29 @@ def analyze(replays: List[dict],
             "iteration_min": summary.get("iteration_min"),
             "iteration_max": summary.get("iteration_max"),
         }
-        _od_csv1 = write_opening_summary_csv(out_dir, od_summary_dict, _od_iter_info)
-        _od_csv2 = write_opening_by_ply_csv(out_dir, od_by_ply_dict)
+        _od_csv1 = write_opening_summary_csv(out_dir, od_summary_dict, _od_iter_info, suffix=suffix)
+        _od_csv2 = write_opening_by_ply_csv(out_dir, od_by_ply_dict, suffix=suffix)
         print(f"[OK] wrote: {_od_csv1}")
         print(f"[OK] wrote: {_od_csv2}")
         if od_per_game_records:
-            _od_csv3 = write_opening_per_game_csv(out_dir, od_per_game_records)
+            _od_csv3 = write_opening_per_game_csv(out_dir, od_per_game_records, suffix=suffix)
             print(f"[OK] wrote: {_od_csv3}")
+
+    # --- Phase 1: root_child_by_ply.csv (+ optional per-game dump) ---
+    if _HAS_OD_ANALYZER and rcd_aggregate:
+        _rcd_csv = write_root_child_by_ply_csv(out_dir, rcd_aggregate, suffix=suffix)
+        if _rcd_csv:
+            print(f"[OK] wrote: {_rcd_csv}")
+        if dump_root_child_per_game and od_per_game_records:
+            _rcd_pg = write_root_child_per_game_csv(out_dir, od_per_game_records, suffix=suffix)
+            if _rcd_pg:
+                print(f"[OK] wrote: {_rcd_pg}")
+
+    # --- Phase 4: replay_cap_by_iter.csv ---
+    if rcap_by_iter:
+        _rc_csv = write_replay_cap_by_iter_csv(out_dir, rcap_by_iter, suffix=suffix)
+        if _rc_csv:
+            print(f"[OK] wrote: {_rc_csv}")
 
     # -----------------------------
     # Heatmap figures
@@ -973,7 +1369,7 @@ def analyze(replays: List[dict],
     # -----------------------------
     # Text report
     # -----------------------------
-    report_path = os.path.join(out_dir, "report.txt")
+    report_path = os.path.join(out_dir, _suffixed("report", "txt", suffix))
     lines = []
     lines.append("Twixt Replay Analyzer Report")
     lines.append("="*30)
@@ -1079,6 +1475,20 @@ def analyze(replays: List[dict],
     if _HAS_OD_ANALYZER and od_summary_dict:
         lines.extend(format_opening_diagnostics_report(od_summary_dict, od_by_ply_dict, od_warnings))
 
+    # Phase 1 (root-child at ply 0–1). Emits a graceful "not available" if
+    # the sidecars in this range pre-date root_child_diagnostics.
+    if _HAS_OD_ANALYZER:
+        lines.extend(format_root_child_report(rcd_summary_dict))
+
+    # Phase 2 (early-override summary at ply 0–1). The compact "is the early
+    # override working?" view — mass + best-by-* disagreement deltas with the
+    # run config echoed inline.
+    if _HAS_OD_ANALYZER:
+        lines.extend(format_early_override_report(early_override_summary_dict))
+
+    # Phase 4 (replay-cap engagement). Same backward-compat behavior.
+    lines.extend(format_replay_cap_report(rcap_summary_dict))
+
     lines.append("Outputs:")
     lines.append(f"  - {os.path.abspath(summary_csv)}")
     lines.append(f"  - {os.path.abspath(summary_json)}")
@@ -1125,6 +1535,16 @@ def main():
                     help="Additional metadata as JSON object string, or @path/to.json. Merged into summary.json under meta.")
     ap.add_argument("--no-plots", dest="no_plots", action="store_true",
                     help="Disable PNG plot generation (still writes replay_summary.csv and summary.json).")
+    ap.add_argument("--dump-root-child-per-game", dest="dump_root_child_per_game",
+                    action="store_true",
+                    help="Additionally emit root_child_per_game.csv (large — one row "
+                         "per (game, ply<2, child)). Useful for case-by-case inspection.")
+    ap.add_argument("--out-suffix", dest="out_suffix", default=None,
+                    help="Suffix appended to all output filenames (e.g. "
+                         "`945-949` yields summary_945-949.json, report_945-949.txt, "
+                         "replay_summary_945-949.csv, ...). Default: basename of "
+                         "--out with a trailing `_Replay` stripped. Pass an empty "
+                         "string to disable suffixing.")
 
     args = ap.parse_args()
 
@@ -1183,6 +1603,8 @@ def main():
         meta=meta,
         sidecars=sidecars,
         no_plots=no_plots,
+        dump_root_child_per_game=bool(args.dump_root_child_per_game),
+        out_suffix=args.out_suffix,
     )
 
 
