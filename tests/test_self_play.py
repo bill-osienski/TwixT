@@ -37,7 +37,6 @@ def test_position_record():
     assert np.allclose(restored.board_tensor, board)
 
     print("PASS: PositionRecord serialization")
-    return True
 
 
 def test_game_record():
@@ -80,7 +79,6 @@ def test_game_record():
     assert restored.move_history == [(5, 5), (6, 6)]
 
     print("PASS: GameRecord serialization")
-    return True
 
 
 def test_play_single_game():
@@ -127,7 +125,6 @@ def test_play_single_game():
             assert pos.outcome == -1.0, "Loser position should have outcome -1"
 
     print(f"PASS: Single game ({game.n_moves} moves, winner={game.winner})")
-    return True
 
 
 def test_play_multiple_games():
@@ -160,7 +157,6 @@ def test_play_multiple_games():
         assert game.winner in ("red", "black", None), f"Game {i}: invalid winner"
 
     print(f"PASS: Multiple games (3 games generated)")
-    return True
 
 
 def test_reproducibility():
@@ -200,7 +196,6 @@ def test_reproducibility():
     assert g1.move_history == g2.move_history, "Move histories should match"
 
     print("PASS: Reproducibility with same seed")
-    return True
 
 
 def test_to_move_explicit():
@@ -239,7 +234,6 @@ def test_to_move_explicit():
         expected_player = "black" if expected_player == "red" else "red"
 
     print("PASS: to_move stored explicitly and alternates correctly")
-    return True
 
 
 def test_visit_counts_raw():
@@ -278,7 +272,6 @@ def test_visit_counts_raw():
         assert count >= 0, "Visit count should be non-negative"
 
     print(f"PASS: Visit counts are raw integers (total={total_visits})")
-    return True
 
 
 def test_adjudication_wiring():
@@ -327,7 +320,6 @@ def test_adjudication_wiring():
         assert game.winner in ("red", "black", None)
 
     print(f"PASS: Adjudication wiring (moves={game.n_moves}, winner={game.winner}, reason={game.draw_reason})")
-    return True
 
 
 def test_adjudication_disabled_by_default():
@@ -353,7 +345,6 @@ def test_adjudication_disabled_by_default():
     assert game.draw_reason != ADJUDICATED, "Adjudication should not fire when disabled"
 
     print(f"PASS: Adjudication disabled by default (reason={game.draw_reason})")
-    return True
 
 
 def main():
@@ -380,8 +371,8 @@ def main():
 
     for test in tests:
         try:
-            if test():
-                passed += 1
+            test()  # passes if no exception; assertions raise on failure
+            passed += 1
         except Exception as e:
             print(f"FAIL: {test.__name__} - {e}")
             import traceback
@@ -399,6 +390,21 @@ def main():
     else:
         print("Gate FAILED: Self-play tests failed")
         return 1
+
+
+def test_position_record_has_ply_and_game_n_moves():
+    """After play_game, each position carries ply + game_n_moves."""
+    import numpy as np
+    from scripts.GPU.alphazero.self_play import PositionRecord
+    from scripts.GPU.alphazero.game.twixt_state import NUM_CHANNELS
+    # Check dataclass has the new fields
+    pos = PositionRecord(
+        board_tensor=np.zeros((24, 24, NUM_CHANNELS), dtype=np.float32),
+        to_move="red", legal_moves=[(0, 0)], visit_counts=[1], active_size=24,
+        ply=5, game_n_moves=100,
+    )
+    assert pos.ply == 5
+    assert pos.game_n_moves == 100
 
 
 if __name__ == "__main__":

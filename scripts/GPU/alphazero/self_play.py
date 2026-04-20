@@ -21,7 +21,11 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from .mcts import MCTS, MCTSConfig, MCTSNode, encode_move, decode_move
-from .opening_diagnostics import build_root_diagnostic, compute_diagnostic_end_ply
+from .opening_diagnostics import (
+    build_root_diagnostic,
+    build_root_child_details,
+    compute_diagnostic_end_ply,
+)
 from .evaluator import Evaluator
 from .game import (
     TwixtState, DIRECTION_TO_CHANNEL,
@@ -34,6 +38,13 @@ _OPENING_DEBUG = os.environ.get("TWIXT_OPENING_DEBUG", "").strip().lower() in ("
 _OPENING_DEBUG_GAMES = 16   # Only log for game_id < this
 _OPENING_DEBUG_PLIES = 2    # Only log for ply < this (0 and 1)
 _OPENING_DEBUG_TOPK = 12    # Show top-K moves
+
+# --- Phase 1: Root-child diagnostics (deep per-child inspection at early plies) ---
+# For ply < CHILD_DETAIL_PLIES we attach `root_summary` + `top_children` to the
+# per-root diagnostic record. These fields reveal exactly why the search chose
+# what it did (q vs u vs score vs ties). Unconditional on penalties; cheap.
+CHILD_DETAIL_PLIES = 2      # Attach child details for ply in [0, 1]
+CHILD_DETAIL_TOPK = 10      # Top-K children (by visits) to include
 
 # Draw reason constants (used in GameRecord, curriculum, trainer)
 DRAW_TIMEOUT = "timeout_selfplay"
@@ -51,6 +62,63 @@ ADJUDICATED = "adjudicated"
 def opponent(player: str) -> str:
     """Return opponent color."""
     return "black" if player == "red" else "red"
+
+
+# --- Phase 4: Per-game replay contribution cap ---
+
+def apply_game_position_cap(
+    positions: List["PositionRecord"],
+    max_positions_per_game: Optional[int],
+    endgame_keep_positions: int,
+    rng: random.Random,
+) -> Tuple[List["PositionRecord"], int, int]:
+    """Cap the positions that a single game contributes to replay.
+
+    Long games flood the buffer (every position gets the same outcome label),
+    which lets a few drifting games dominate training signal. This helper
+    enforces a per-game cap:
+      - if `max_positions_per_game` is None or <= 0: no-op (pass through)
+      - if len(positions) <= cap: no-op
+      - else: keep the last `endgame_keep_positions` unconditionally (protects
+              conversion/endgame supervision), then uniformly sample the
+              remainder from the earlier positions to fill the quota.
+
+    Positions are assumed to be in ply order (mirror augmentations, when
+    enabled, are interleaved adjacent to their original — preserved by the
+    index-based logic below).
+
+    Args:
+        positions: list of PositionRecord (in play order).
+        max_positions_per_game: cap (None/<=0 disables).
+        endgame_keep_positions: positions at the tail to keep unconditionally.
+        rng: random.Random used for uniform sampling (reproducible per seed).
+
+    Returns:
+        (kept_positions, n_original, n_kept) where n_kept == len(kept).
+    """
+    n_orig = len(positions)
+    if max_positions_per_game is None or max_positions_per_game <= 0:
+        return list(positions), n_orig, n_orig
+    if n_orig <= max_positions_per_game:
+        return list(positions), n_orig, n_orig
+
+    ek = max(0, min(endgame_keep_positions, max_positions_per_game, n_orig))
+    remainder_quota = max_positions_per_game - ek
+    endgame_start = n_orig - ek
+    earlier = positions[:endgame_start]
+    endgame = positions[endgame_start:]
+
+    if remainder_quota >= len(earlier):
+        # Quota covers all earlier positions; keep everything up to cap
+        kept = list(earlier) + list(endgame)
+    elif remainder_quota <= 0:
+        kept = list(endgame)
+    else:
+        idxs = rng.sample(range(len(earlier)), remainder_quota)
+        idxs.sort()  # preserve play order
+        kept = [earlier[i] for i in idxs] + list(endgame)
+
+    return kept, n_orig, len(kept)
 
 # --- Horizontal mirror augmentation ---
 try:
@@ -233,6 +301,8 @@ class PositionRecord:
         visit_counts: Raw visit counts (same order as legal_moves)
         outcome: +1 if to_move won, -1 if lost, 0 draw (set after game ends)
         active_size: Curriculum board size (for training with masked pooling)
+        ply: Ply at which this position occurred (0 = first move)
+        game_n_moves: Total plies played in the source game (set in outcome loop)
     """
 
     board_tensor: np.ndarray  # (H, W, C) numpy array - NHWC format
@@ -241,6 +311,8 @@ class PositionRecord:
     visit_counts: List[int]
     outcome: Optional[float] = None
     active_size: int = 24  # Curriculum board size
+    ply: int = 0                        # ply at which this position occurred
+    game_n_moves: Optional[int] = None  # total plies in the source game (set in outcome loop)
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -251,6 +323,8 @@ class PositionRecord:
             "visit_counts": self.visit_counts,
             "outcome": self.outcome,
             "active_size": self.active_size,
+            "ply": self.ply,
+            "game_n_moves": self.game_n_moves,
         }
 
     @classmethod
@@ -263,6 +337,8 @@ class PositionRecord:
             visit_counts=d["visit_counts"],
             outcome=d["outcome"],
             active_size=d.get("active_size", 24),
+            ply=d.get("ply", 0),
+            game_n_moves=d.get("game_n_moves"),
         )
 
 
@@ -323,6 +399,11 @@ class GameRecord:
     # Opening penalty diagnostics (per-root records for diagnostic window plies)
     opening_diagnostics: List[dict] = field(default_factory=list)
     opening_diagnostics_meta: Optional[dict] = None
+    # Phase 4: per-game replay cap diagnostics
+    # n_positions_original = positions produced before cap (includes mirrors)
+    # n_positions_kept     = positions retained after cap (what trainer sees)
+    n_positions_original: int = 0
+    n_positions_kept: int = 0
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -370,6 +451,9 @@ def play_game(
     adjudicate_min_visits: int = 200,
     adjudicate_min_top1_share: float = 0.0,
     adjudicate_debug: bool = False,
+    # Phase 4: per-game replay cap (0/None disables; cap applied before returning)
+    max_positions_per_game: Optional[int] = None,
+    endgame_keep_positions: int = 16,
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -454,7 +538,7 @@ def play_game(
 
         # Build opening diagnostic record if within window
         if ply < _diag_end_ply and root.priors_raw is not None:
-            _opening_diags.append(build_root_diagnostic(
+            _rec = build_root_diagnostic(
                 ply=ply,
                 side_to_move=state.to_move,
                 visit_counts=visit_counts,
@@ -467,8 +551,24 @@ def play_game(
                 corner_penalty=cfg.root_near_corner_penalty,
                 edge_penalty_ply=cfg.root_edge_band_penalty_ply,
                 corner_penalty_ply=cfg.root_near_corner_penalty_ply,
+                corner_penalty_early=cfg.root_near_corner_penalty_early,
+                corner_penalty_early_plies=cfg.root_near_corner_penalty_early_plies,
                 decode_fn=decode_move,
-            ))
+            )
+            # Attach deep per-child details for the earliest plies only
+            if ply < CHILD_DETAIL_PLIES:
+                _child = build_root_child_details(
+                    root=root,
+                    c_puct=cfg.c_puct,
+                    board_size=active_size,
+                    band_width=cfg.root_edge_band_width,
+                    corner_radius=cfg.root_near_corner_radius,
+                    top_k=CHILD_DETAIL_TOPK,
+                    decode_fn=decode_move,
+                )
+                _rec["root_summary"] = _child["root_summary"]
+                _rec["top_children"] = _child["top_children"]
+            _opening_diags.append(_rec)
 
         # --- RESIGN CHECK (after search, before move selection) ---
         # root_value is from state.to_move perspective:
@@ -536,6 +636,7 @@ def play_game(
                 legal_moves=moves,
                 visit_counts=counts,  # Raw counts, not normalized
                 active_size=active_size,  # Store for training with masked pooling
+                ply=ply,  # Ply at which this position occurred
             )
         )
 
@@ -551,6 +652,7 @@ def play_game(
                     legal_moves=m_moves,
                     visit_counts=m_counts,
                     active_size=active_size,
+                    ply=ply,  # Mirror shares the same ply as the primary
                 )
             )
 
@@ -687,6 +789,17 @@ def play_game(
             pos.outcome = 1.0  # Player at this position won
         else:
             pos.outcome = -1.0  # Player at this position lost
+        pos.game_n_moves = ply  # ply is the total plies played in this game
+
+    # Phase 4: apply per-game replay cap (no-op if disabled / game short enough)
+    # MUST run AFTER outcome assignment so kept positions already carry outcomes.
+    n_positions_original = len(positions)
+    positions, _n_orig, n_positions_kept = apply_game_position_cap(
+        positions,
+        max_positions_per_game=max_positions_per_game,
+        endgame_keep_positions=endgame_keep_positions,
+        rng=rng,
+    )
 
     # Diagnostic: print timeout trace
     if draw_reason == DRAW_TIMEOUT:
@@ -729,12 +842,25 @@ def play_game(
         rg_top1_samples=tuple(rg_top1_samples),
         opening_diagnostics=_opening_diags,
         opening_diagnostics_meta={
-            "version": 1,
+            "version": 3,
             "diagnostic_end_ply": _diag_end_ply,
             "extra_plies_after_penalty": 2,
             "floor_min_ply": 4,
             "used_floor": _diag_used_floor,
+            "child_detail_plies": CHILD_DETAIL_PLIES,
+            "child_detail_topk": CHILD_DETAIL_TOPK,
+            # Phase 2: run-level near-corner config echo (required #1).
+            # Individual per-root records also carry their own `config` block;
+            # this top-level copy exists so consumers can read the run setup
+            # without scanning the per-ply records.
+            "near_corner_penalty": cfg.root_near_corner_penalty,
+            "near_corner_penalty_ply": cfg.root_near_corner_penalty_ply,
+            "near_corner_penalty_early": cfg.root_near_corner_penalty_early,
+            "near_corner_penalty_early_plies": cfg.root_near_corner_penalty_early_plies,
+            "near_corner_radius": cfg.root_near_corner_radius,
         },
+        n_positions_original=n_positions_original,
+        n_positions_kept=n_positions_kept,
     )
 
 
@@ -747,6 +873,8 @@ def play_games(
     add_noise: bool = True,
     progress_callback=None,
     active_size: int = 24,
+    max_positions_per_game: Optional[int] = None,
+    endgame_keep_positions: int = 16,
 ) -> List[GameRecord]:
     """Play multiple self-play games.
 
@@ -782,6 +910,8 @@ def play_games(
             active_size=active_size,
             start_player=start_player,
             game_id=i,
+            max_positions_per_game=max_positions_per_game,
+            endgame_keep_positions=endgame_keep_positions,
         )
         games.append(game)
 
