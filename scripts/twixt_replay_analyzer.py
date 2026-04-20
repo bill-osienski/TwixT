@@ -62,6 +62,29 @@ try:
 except ImportError:
     _HAS_OD_ANALYZER = False
 
+# Phase 1 (connectivity-retrain): connectivity diagnostics + value calibration.
+# Import lazily; fall back gracefully if the modules are unavailable so the
+# analyzer still runs on environments that haven't pulled the new modules.
+try:
+    # Resolve via repo-root package path so the analyzer works when run as a
+    # bare script (sys.path has `scripts/` rather than the repo root).
+    import sys as _sys
+    import os as _os
+    _REPO_ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    if _REPO_ROOT not in _sys.path:
+        _sys.path.insert(0, _REPO_ROOT)
+    from scripts.GPU.alphazero.connectivity_diagnostics import (
+        aggregate_connectivity_by_ply,
+        compute_position_connectivity,
+    )
+    from scripts.GPU.alphazero.value_calibration import (
+        aggregate_calibration,
+        classify_position,
+    )
+    _HAS_PHASE1_DIAG = True
+except ImportError:
+    _HAS_PHASE1_DIAG = False
+
 import numpy as np
 try:
     import matplotlib.pyplot as plt  # type: ignore
@@ -688,6 +711,55 @@ def _kl(p: np.ndarray, q: np.ndarray, eps: float = 1e-12) -> float:
 
 
 # -----------------------------
+# Phase 1 (connectivity-retrain) report formatters
+# -----------------------------
+
+def format_connectivity_diagnostics_report(summary: dict, rows: list) -> List[str]:
+    """Render the connectivity-diagnostics section for the text report.
+
+    Emits a small preview (first few rows) and points at the CSV for the full
+    table. Always renders a section header so section presence is a stable
+    grep target (e.g. the E2E smoke test checks for "Connectivity Diagnostics").
+    """
+    lines = []
+    lines.append("Connectivity Diagnostics (Phase 1)")
+    lines.append("=" * 40)
+    if not rows:
+        lines.append("  (not available — Phase 1 diagnostics require connectivity_diagnostics module)")
+        lines.append("")
+        return lines
+    lines.append(f"  Rows: {len(rows)}")
+    # Print first few rows as a summary; keep it small
+    for row in rows[:8]:
+        lines.append(f"  - {row}")
+    if len(rows) > 8:
+        lines.append(f"  ... {len(rows) - 8} more rows in connectivity_by_ply.csv")
+    lines.append("")
+    return lines
+
+
+def format_value_calibration_report(summary: dict) -> List[str]:
+    """Render the value-calibration section for the text report.
+
+    Only populated when `--calibrate --calibrate-weights` is passed. Current
+    Phase 1 scaffold reports stub status; a follow-up task wires the full
+    checkpoint-loading + scoring loop.
+    """
+    lines = []
+    lines.append("Value Head Calibration by Position Type (Phase 1)")
+    lines.append("=" * 50)
+    if not summary:
+        lines.append("  (not available — pass --calibrate --calibrate-weights <path>)")
+        lines.append("")
+        return lines
+    lines.append(f"  Status: {summary.get('status', 'unknown')}")
+    if "note" in summary:
+        lines.append(f"  Note: {summary['note']}")
+    lines.append("")
+    return lines
+
+
+# -----------------------------
 # Main analysis
 # -----------------------------
 
@@ -732,7 +804,10 @@ def analyze(replays: List[dict],
             sidecars: Optional[Dict[int, dict]] = None,
             no_plots: bool = False,
             dump_root_child_per_game: bool = False,
-            out_suffix: Optional[str] = None) -> None:
+            out_suffix: Optional[str] = None,
+            calibrate: bool = False,
+            calibrate_weights: Optional[str] = None,
+            no_connectivity: bool = False) -> None:
     os.makedirs(out_dir, exist_ok=True)
     # Compute once — every output artifact shares this suffix.
     suffix = _derive_out_suffix(out_dir, override=out_suffix)
@@ -1143,6 +1218,48 @@ def analyze(replays: List[dict],
             early_plies=2,
         )
 
+    # --- Phase 1 (connectivity-retrain): connectivity diagnostics ----------
+    # Replays the move history of every game, computes per-position
+    # connectivity stats (goal-touching components, largest component size),
+    # and aggregates by (ply bucket, outcome). Runs unconditionally when the
+    # module is importable; gated by --no-connectivity for cost-sensitive runs.
+    connectivity_rows: List[dict] = []
+    connectivity_summary: dict = {}
+    value_calibration_summary: dict = {}
+
+    if _HAS_PHASE1_DIAG and not no_connectivity:
+        # Ply buckets are intentionally distinct from --ply-buckets (heatmaps):
+        # wider buckets yield tighter per-bucket confidence at the cost of
+        # finer phase resolution. Matches the cadence in the design spec.
+        phase1_ply_buckets = [
+            (1, 40, "ply_1_40"),
+            (41, 80, "ply_41_80"),
+            (81, 120, "ply_81_120"),
+            (121, 10_000, "ply_121+"),
+        ]
+        try:
+            connectivity_rows = aggregate_connectivity_by_ply(
+                replays, phase1_ply_buckets,
+            )
+            connectivity_summary = {"n_rows": len(connectivity_rows)}
+        except Exception as _e:
+            # Defensive: one malformed replay should not take down the whole
+            # analyzer. Report an empty summary so downstream writers skip.
+            connectivity_rows = []
+            connectivity_summary = {"n_rows": 0, "error": str(_e)}
+
+    # --- Phase 1 (connectivity-retrain): value calibration scaffold -------
+    # Stub only for this task: full checkpoint load + scoring loop is a
+    # follow-up. Enforced CLI contract: --calibrate requires --calibrate-weights
+    # (argparse-side in main()), and the stub payload records that state so
+    # the summary.json / report make the "scaffold" status obvious.
+    if _HAS_PHASE1_DIAG and calibrate:
+        value_calibration_summary = {
+            "status": "not_implemented",
+            "note": "Phase 1 scaffold — full scoring loop to be added in a follow-up",
+            "weights": calibrate_weights,
+        }
+
     # --- Build summary from sidecar or fallback ---
     if use_sidecar:
         results_val = sc_agg["results"]
@@ -1306,6 +1423,12 @@ def analyze(replays: List[dict],
         # Phase 2: compact ply 0-1 view combining mass and best-by-* signals
         # with the run's near-corner config echoed inline.
         "early_override_summary": early_override_summary_dict,
+        # Phase 1 (connectivity-retrain): connectivity diagnostics summary.
+        # Empty dict when the module is unavailable or --no-connectivity is set.
+        "connectivity_diagnostics": connectivity_summary,
+        # Phase 1 (connectivity-retrain): value-calibration summary.
+        # Populated only when --calibrate is passed (stub payload this task).
+        "value_calibration": value_calibration_summary if calibrate else {},
     }
 
     summary_json = os.path.join(out_dir, _suffixed("summary", "json", suffix))
@@ -1335,6 +1458,20 @@ def analyze(replays: List[dict],
             _rcd_pg = write_root_child_per_game_csv(out_dir, od_per_game_records, suffix=suffix)
             if _rcd_pg:
                 print(f"[OK] wrote: {_rcd_pg}")
+
+    # --- Phase 1 (connectivity-retrain): connectivity_by_ply.csv ---
+    if connectivity_rows:
+        connectivity_csv_path = os.path.join(
+            out_dir,
+            _suffixed("connectivity_by_ply", "csv", suffix),
+        )
+        with open(connectivity_csv_path, "w", newline="") as f:
+            keys = list(connectivity_rows[0].keys())
+            w = csv.DictWriter(f, fieldnames=keys)
+            w.writeheader()
+            for row in connectivity_rows:
+                w.writerow(row)
+        print(f"[OK] wrote: {connectivity_csv_path}")
 
     # --- Phase 4: replay_cap_by_iter.csv ---
     if rcap_by_iter:
@@ -1486,6 +1623,18 @@ def analyze(replays: List[dict],
     if _HAS_OD_ANALYZER:
         lines.extend(format_early_override_report(early_override_summary_dict))
 
+    # Phase 1 (connectivity-retrain): connectivity diagnostics.
+    # Always on when the module is available; gated on --no-connectivity to
+    # skip the compute path on cost-sensitive runs. Canonical report order:
+    # root-child → early-override → connectivity → replay-cap.
+    if _HAS_PHASE1_DIAG:
+        lines.extend(format_connectivity_diagnostics_report(connectivity_summary, connectivity_rows))
+
+    # Phase 1 (connectivity-retrain): value calibration (scaffold).
+    # Gated on --calibrate; --calibrate-weights enforced upstream in main().
+    if _HAS_PHASE1_DIAG and calibrate:
+        lines.extend(format_value_calibration_report(value_calibration_summary))
+
     # Phase 4 (replay-cap engagement). Same backward-compat behavior.
     lines.extend(format_replay_cap_report(rcap_summary_dict))
 
@@ -1546,7 +1695,32 @@ def main():
                          "--out with a trailing `_Replay` stripped. Pass an empty "
                          "string to disable suffixing.")
 
+    # Phase 1 (connectivity-retrain) CLI flags — spec Section 9.5.
+    ap.add_argument("--probes", default=None,
+                    help="Path to probe-eval sidecar data (reserved — not yet wired).")
+    ap.add_argument("--calibrate", action="store_true", default=False,
+                    help="Run value-calibration by position type "
+                         "(requires --calibrate-weights). Currently a scaffold — "
+                         "full scoring loop is a follow-up task.")
+    ap.add_argument("--calibrate-weights", dest="calibrate_weights", default=None,
+                    help="Explicit weights path for --calibrate. REQUIRED when "
+                         "--calibrate is set (formal-runs contract, spec §9.2).")
+    ap.add_argument("--calibration-sample", dest="calibration_sample", type=int, default=1000,
+                    help="Number of positions to sample for calibration (default 1000).")
+    ap.add_argument("--calibration-bins", dest="calibration_bins", type=int, default=5,
+                    help="Reliability-diagram bin count (default 5).")
+    ap.add_argument("--winning-structure-min-size", dest="winning_structure_min_size",
+                    type=int, default=8,
+                    help="Threshold for classify_position winning-structure bucket (default 8).")
+    ap.add_argument("--no-connectivity", dest="no_connectivity", action="store_true", default=False,
+                    help="Skip connectivity diagnostics (saves time on large runs).")
+
     args = ap.parse_args()
+
+    # Enforce --calibrate requires --calibrate-weights (design spec §9.2).
+    # Non-zero exit via ap.error — keeps error handling consistent with argparse.
+    if args.calibrate and not args.calibrate_weights:
+        ap.error("--calibrate requires --calibrate-weights <path> for formal runs")
 
     run_config = None
     if args.run_config:
@@ -1605,6 +1779,9 @@ def main():
         no_plots=no_plots,
         dump_root_child_per_game=bool(args.dump_root_child_per_game),
         out_suffix=args.out_suffix,
+        calibrate=bool(args.calibrate),
+        calibrate_weights=args.calibrate_weights,
+        no_connectivity=bool(args.no_connectivity),
     )
 
 

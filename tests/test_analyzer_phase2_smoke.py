@@ -66,3 +66,45 @@ def test_replay_cap_has_termination_breakdown():
     agg = aggregate_replay_cap(rcap_by_iter)
     # Must carry the new keys through aggregation
     assert "total_positions_by_termination" in agg or "positions_by_termination" in str(agg)
+
+
+def test_analyzer_emits_phase1_sections(tmp_path):
+    """Full analyzer run against real logs produces all new CSVs + sections.
+
+    Scoped to a single iteration's games (glob `iter_0000_game_*.json`) rather
+    than the full `scripts/GPU/logs/games` directory: the real logs dir carries
+    tens of thousands of games and 2+ GB of data, which is not a smoke-test
+    workload. The connectivity-diagnostics compute path replays every move of
+    every game, so running on the full dir would take hours. A single iteration
+    gives us the same E2E signal — CSV emission, section header, non-zero exit —
+    in under 10 seconds.
+    """
+    import subprocess
+    import os
+    import glob
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    # Resolve the repo root so the test works from any cwd (pytest may invoke
+    # from the repo root or from tests/ depending on harness).
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    pattern = os.path.join(repo_root, "scripts/GPU/logs/games/iter_0000_game_*.json")
+    game_files = sorted(glob.glob(pattern))
+    assert game_files, f"fixture missing: no games match {pattern}"
+    python_bin = os.path.join(repo_root, ".venv/bin/python")
+    analyzer = os.path.join(repo_root, "scripts/twixt_replay_analyzer.py")
+    result = subprocess.run(
+        [python_bin, analyzer,
+         "--input", *game_files,
+         "--out", str(out_dir),
+         "--no-plots",
+         "--out-suffix", "smoke"],
+        capture_output=True, text=True, cwd=repo_root,
+    )
+    assert result.returncode == 0, result.stderr
+    # New artifacts exist
+    files = sorted(os.listdir(out_dir))
+    assert any("connectivity_by_ply" in f for f in files), f"missing connectivity csv: {files}"
+    # Report section present
+    report_path = out_dir / "report_smoke.txt"
+    text = report_path.read_text()
+    assert "Connectivity Diagnostics" in text
