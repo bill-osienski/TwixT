@@ -62,7 +62,18 @@ CHANNEL_RED_BOTTOM_DIST = 20
 CHANNEL_BLACK_LEFT_DIST = 21
 CHANNEL_BLACK_RIGHT_DIST = 22
 CHANNEL_MOVE_NUMBER = 23
-NUM_CHANNELS = 24
+# Phase 2 connectivity channels (see spec 2026-04-19)
+CHANNEL_RED_CONN_TOP = 24
+CHANNEL_RED_CONN_BOTTOM = 25
+CHANNEL_RED_CONN_BOTH = 26
+CHANNEL_BLACK_CONN_LEFT = 27
+CHANNEL_BLACK_CONN_RIGHT = 28
+CHANNEL_BLACK_CONN_BOTH = 29
+
+# Pre-Phase-2 channel count, preserved for backward-compat with iter-0999
+# (24-channel) checkpoints. See to_tensor_v1() below.
+NUM_CHANNELS_V1 = 24
+NUM_CHANNELS = 30
 
 
 def _canonical_bridge(p1: Pos, p2: Pos) -> Bridge:
@@ -635,10 +646,10 @@ class TwixtState:
         )
 
     def to_tensor(self) -> np.ndarray:
-        """Convert state to 24-channel tensor for neural network input.
+        """Convert state to 30-channel tensor for neural network input.
 
         Returns:
-            numpy array of shape (24, 24, 24) = (channels, rows, cols)
+            numpy array of shape (30, 24, 24) = (channels, rows, cols)
 
         CURRICULUM NOTE:
             - Playable region is [0, active_size) × [0, active_size)
@@ -656,6 +667,12 @@ class TwixtState:
             21: Black left edge distance (normalized 0-1, closer to col 0 = higher)
             22: Black right edge distance (normalized 0-1, closer to col active_size-1 = higher)
             23: Move number / game phase (ply / MAX_PLIES, normalized 0-1)
+            24: Red connected to top edge (1 on pegs whose component touches row 0)
+            25: Red connected to bottom edge (1 on pegs whose component touches row active-1)
+            26: Red connected to both edges (1 on pegs whose component touches top AND bottom)
+            27: Black connected to left edge (1 on pegs whose component touches col 0)
+            28: Black connected to right edge (1 on pegs whose component touches col active-1)
+            29: Black connected to both edges (1 on pegs whose component touches left AND right)
 
         Link encoding: For each link, mark 1 at BOTH endpoints in the
         appropriate direction channel. This makes links visible from either end.
@@ -723,7 +740,32 @@ class TwixtState:
         # Channel 23: Move number / game phase (fill only active region)
         tensor[CHANNEL_MOVE_NUMBER, :active, :active] = self.ply / MAX_PLIES
 
+        # Channels 24-29: Connectivity masks (Phase 2 — see spec 2026-04-19)
+        # Uses the same connectivity graph as winner() for feature/game-logic parity.
+        m_red_top, m_red_bot, m_red_both = self.connectivity_masks("red")
+        m_blk_left, m_blk_right, m_blk_both = self.connectivity_masks("black")
+        tensor[CHANNEL_RED_CONN_TOP, :active, :active] = m_red_top
+        tensor[CHANNEL_RED_CONN_BOTTOM, :active, :active] = m_red_bot
+        tensor[CHANNEL_RED_CONN_BOTH, :active, :active] = m_red_both
+        tensor[CHANNEL_BLACK_CONN_LEFT, :active, :active] = m_blk_left
+        tensor[CHANNEL_BLACK_CONN_RIGHT, :active, :active] = m_blk_right
+        tensor[CHANNEL_BLACK_CONN_BOTH, :active, :active] = m_blk_both
+
         # IMPORTANT: Regions outside active_size are already zeros (from np.zeros)
         # This is intentional for consistent curriculum training
 
         return tensor
+
+
+def to_tensor_v1(state: "TwixtState") -> np.ndarray:
+    """Produce a 24-channel tensor matching the pre-Phase-2 layout.
+
+    Used by probe_eval.py and any other tool that needs to evaluate a
+    24-channel checkpoint using the current codebase. The output matches
+    exactly what the pre-Phase-2 to_tensor() would have produced:
+    channels 0-23 only, no connectivity channels.
+    """
+    # Build the full 30-channel tensor, then slice off the last 6.
+    # Safe because channels 0-23 are identical in both formats.
+    full = state.to_tensor()
+    return full[:NUM_CHANNELS_V1].copy()
