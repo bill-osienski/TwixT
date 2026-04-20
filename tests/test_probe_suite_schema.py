@@ -46,3 +46,75 @@ def test_sampler_produces_candidates_json(tmp_path):
         assert "source_ply" in cand
         assert "active_size" in cand
         assert cand["active_size"] == 24  # default filter
+
+
+# --- Schema validation tests (fire only when tests/probes/twixt_probes.json exists) ---
+
+TWIXT_PROBES_PATH = "tests/probes/twixt_probes.json"
+
+REQUIRED_FIELDS = {
+    "id", "category", "confidence", "side_to_move",
+    "expected_value_sign", "active_size", "move_history",
+    "source_game", "source_ply",
+}
+VALID_CATEGORIES = {
+    "near_win_red", "near_win_black",
+    "blocked_or_trap", "false_positive_connectivity",
+    "dense_but_disconnected",
+    "central_win", "edge_corner_legitimate", "symmetric_sanity",
+}
+VALID_CONFIDENCE = {"forced", "strong_advantage"}  # unclear_do_not_use discarded
+VALID_SIDES = {"red", "black"}
+
+
+def test_probe_suite_file_well_formed():
+    """If twixt_probes.json exists, it must parse and have a list of probes."""
+    if not os.path.exists(TWIXT_PROBES_PATH):
+        import pytest
+        pytest.skip(f"{TWIXT_PROBES_PATH} not yet committed (Phase 0 pending)")
+    data = json.loads(open(TWIXT_PROBES_PATH).read())
+    assert isinstance(data, dict)
+    assert "probes" in data
+    assert isinstance(data["probes"], list)
+    assert len(data["probes"]) >= 50  # minimum curated size
+    assert len(data["probes"]) <= 120  # sanity upper bound
+
+
+def test_probe_suite_schema_valid():
+    """Every probe has required fields + valid enum values."""
+    if not os.path.exists(TWIXT_PROBES_PATH):
+        import pytest
+        pytest.skip(f"{TWIXT_PROBES_PATH} not yet committed")
+    data = json.loads(open(TWIXT_PROBES_PATH).read())
+    for p in data["probes"]:
+        missing = REQUIRED_FIELDS - set(p.keys())
+        assert not missing, f"probe {p.get('id')} missing: {missing}"
+        assert p["category"] in VALID_CATEGORIES, f"bad category: {p['category']}"
+        assert p["confidence"] in VALID_CONFIDENCE, f"bad confidence: {p['confidence']}"
+        assert p["side_to_move"] in VALID_SIDES
+        assert p["expected_value_sign"] in (-1, 0, 1)
+        assert 8 <= p["active_size"] <= 24
+        assert isinstance(p["move_history"], list)
+        if "mirror_of" in p and p["mirror_of"] is not None:
+            assert isinstance(p["mirror_of"], str)  # must be a probe id
+
+
+def test_probe_suite_reconstruction():
+    """Every probe's move_history replays to a valid state matching auxiliary metadata."""
+    if not os.path.exists(TWIXT_PROBES_PATH):
+        import pytest
+        pytest.skip(f"{TWIXT_PROBES_PATH} not yet committed")
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    data = json.loads(open(TWIXT_PROBES_PATH).read())
+    for p in data["probes"]:
+        state = TwixtState(active_size=p["active_size"])
+        for move in p["move_history"]:
+            r, c = int(move[0]), int(move[1])
+            state = state.apply_move((r, c))
+        # ply should match len(move_history)
+        if "ply" in p:
+            assert len(p["move_history"]) == p["ply"], \
+                f"probe {p['id']} ply={p['ply']} but move_history has {len(p['move_history'])} moves"
+        # side_to_move should match state.to_move
+        assert state.to_move == p["side_to_move"], \
+            f"probe {p['id']} replay to_move={state.to_move} != declared {p['side_to_move']}"
