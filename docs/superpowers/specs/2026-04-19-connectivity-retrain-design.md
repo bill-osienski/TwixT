@@ -36,12 +36,12 @@ Clean retrain from scratch. Launch one training run that is both "the validation
 
 | Phase | Name | Purpose | Stop condition |
 |---|---|---|---|
-| 0 | Probe suite build | Script candidate generation → user curation → commit `tests/probes/twixt_probes.json` **and** run iter-0999 baseline scoring | 50–80 curated probes committed + baseline CSV + baseline summary committed |
+| 0 | Probe suite build | Script candidate generation (default filter: 24×24 + recent-regime games) → user curation → commit `tests/probes/twixt_probes.json` **and** run iter-0999 baseline scoring with explicit `--weights` path, committing artifacts to `tests/probes/baselines/` | 50–80 curated probes committed + baseline CSV + baseline summary committed at `tests/probes/baselines/iter_0999_fresh_24ch.{csv,json}` |
 | 1 | Diagnostic infra | Probe runner, connectivity-aware replay diagnostics, value calibration by position type, replay-composition extensions. | Telemetry outputs verified on iter-0999 checkpoint |
 | 2 | Architecture + training changes | Add 6 connectivity channels (24→30), bump `value_weight` 0.25→0.5, add progress-weighted value loss | Unit tests pass + 8×8 curriculum smoke run succeeds |
-| 3 | Staged validation retrain | Launch fresh-weights training using existing self-play knobs. Full probe suite every 25 iters; forced-tier NN-only probe sample every iter. | Gate evaluable at ≥150 iters; mandatory at 300 iters |
+| 3 | Staged validation retrain | Launch fresh-weights training using existing self-play knobs. Full probe suite on iter 0, every `--probe-full-every` iters (default 25), and always on the final iteration; forced-tier NN-only probe sample every iter. **Runs may be chunked (start / stop / resume) — gate evaluates on the cumulative iteration count of the same checkpoint lineage, not a single invocation.** | Gate evaluable at cumulative ≥150 iters; mandatory at cumulative 300 iters |
 | 4 | Gate evaluation | Apply probe / replay-value / health gates (Section 7) | PROMOTE or ABORT |
-| 5 | Full retrain | Training run continues uninterrupted past the gate (no restart — Phase 3 and Phase 5 are the same run; "promotion" means "don't stop at 150–300 iters, keep going"). Target ≥1000 iters for feature parity with iter-0999. | Training stabilizes or stopped manually |
+| 5 | Full retrain | Same checkpoint lineage as Phase 3 — training continues (possibly across multiple resume invocations) to ≥1000 cumulative iters for feature parity with iter-0999. **"Promotion" means "this lineage passed the gate; keep training it." Not "start a new run."** | Training stabilizes or stopped manually |
 
 **Invariant across phases 0–2.** Iter-0999 checkpoint is untouched. Existing self-play regime stays constant: replay cap 64 / endgame keep 16, adjudication threshold 0.20, resign settings, near-corner penalty 0.60 for ply<14 with early 0.90 for ply<2, edge-band penalty 0.75 for ply<16, curriculum sizes/thresholds.
 
@@ -176,10 +176,19 @@ Phase 3 invocation uses the same `train.py` CLI as today, adding only `--value-w
 
 ### 7.2 Cadence & duration
 
-- Full probe suite: every 25 iters
+**Probe cadence** (applies whether run is continuous or chunked):
+
+- Full probe suite fires at **iter 0** (weight-init baseline), **every `--probe-full-every` iters** (default 25), and **always at the final iteration of each invocation**
 - `forced`-tier NN-only sample (cheap, 10–20 forward passes): every iter
-- Gate evaluable at ≥150 iters, mandatory by 300 iters
-- If ≥150 iters reached but gate fails: continue to 300, re-evaluate. If still fails at 300: halt, report, spec update required before next attempt.
+- Rationale: short exploratory runs (e.g. 10 iters) still get at least two full-suite snapshots (iter 0 + final)
+
+**Gate semantics:**
+
+- Gate applies to **cumulative iterations on a single checkpoint lineage**, not to a single command invocation. A staged run that does `10 + 50 + 90` iters across three resumes has 150 cumulative iters and is gate-eligible.
+- If cumulative iters **< 150**: gate is **not evaluated**; the run is treated as exploratory-only. Probe/calibration artifacts still emit for inspection.
+- If cumulative iters **≥ 150 and ≤ 300**: gate evaluates on every subsequent full-probe-suite snapshot. First PASS promotes; first FAIL at or past iter 300 aborts.
+- If cumulative iters **> 300** without a PASS: halt, report, spec update required before the next attempt.
+- Tracking: trainer writes cumulative iter count to the checkpoint metadata JSON (`iteration` field already exists). Analyzer + gate evaluator read that field, not the number of iters in the most recent invocation.
 
 ## 8. Probe suite (Phase 0)
 
@@ -245,10 +254,13 @@ Target curated size: 50–80 (some categories may end up at category min; `uncle
 
 ### 8.5 Curation workflow
 
-1. **Sampler** (`scripts/build_probe_candidates.py`) reads `scripts/GPU/logs/games/*.json`, applies per-category heuristic rules (using the Section 5 connectivity routine), emits `tests/probes/candidates.json` with ~150–250 candidates grouped by category, each with annotated heuristic reason.
-2. **User review pass** (~30–60 min): assigns confidence tiers, edits notes, discards `unclear_do_not_use` entries, caps per-category counts.
+1. **Sampler** (`scripts/build_probe_candidates.py`) reads `scripts/GPU/logs/games/*.json` and applies per-category heuristic rules (using the Section 5 connectivity routine) to produce ~150–250 candidates.
+   - **Default source filter**: only games with `active_size == 24` and `iteration ≥ --min-source-iter` (default 900 — i.e. current-regime: post-replay-cap, post-opening-penalty-tuning). This avoids polluting the pool with pre-regime games on smaller curriculum boards.
+   - Override flags: `--any-size` (skip size filter), `--min-source-iter N` (widen or narrow regime window), `--source-iter-range M N` (explicit window).
+   - Output: `tests/probes/candidates.json` grouped by category, each entry annotated with source game, source ply, matched heuristic reason.
+2. **User review pass** (~30–60 min): assigns confidence tiers, edits notes, discards `unclear_do_not_use` entries, caps per-category counts. Reviewer-disagreement rule defaults to `unclear_do_not_use` (see 8.4).
 3. **Final commit**: `tests/probes/twixt_probes.json` + `README.md`.
-4. **Baseline scoring**: run probe evaluator against iter-0999. Commit `checkpoints/alphazero-fresh/probe_eval_iter_0999_baseline.csv` and `_baseline.json` to the repo.
+4. **Baseline scoring**: run probe evaluator against iter-0999 with **explicit `--weights` path** (never implicit "latest" for a formal baseline). Commit to the immutable baselines dir (see 11.4).
 
 ### 8.6 Evaluator
 
@@ -263,6 +275,8 @@ python -m scripts.GPU.alphazero.probe_eval \
 ```
 
 **Dual-format contract:** the runner must auto-detect `NUM_CHANNELS` from the checkpoint (or checkpoint metadata) and instantiate the matching network. A single runner supports both 24-channel (iter-0999 and earlier) and 30-channel (retrain onward) checkpoints. This is a hard requirement — baseline scoring and staged-retrain scoring must use the same tool.
+
+**Checkpoint-selection rule:** For any formal use (gate evaluation, baseline scoring, cross-run comparisons) the evaluator requires an **explicit `--weights` path**. An implicit "use latest checkpoint in the dir" convenience is only permitted for ad hoc interactive analysis, and the runner must print the resolved path before proceeding so the user can verify. Rationale: multiple adjacent experiments (staged, fresh, promoted) make "latest" a workflow-dependent trap; formal artifacts must name their inputs.
 
 Per probe, records:
 
@@ -350,7 +364,9 @@ Re-bucketed value-head sanity stats, covering the blind-spot categories.
 - `value_calibration_bins_<suffix>.csv` — per-bucket calibration-bin detail
 - `report.txt` section: `Value Head Calibration by Position Type`
 
-**Module:** new file `scripts/GPU/alphazero/value_calibration.py`. Requires loading a checkpoint and scoring positions — not free. Gated behind `--calibrate` flag; uses latest checkpoint in checkpoint dir unless `--calibrate-weights <path>` given. Sample size via `--calibration-sample N` (default 1000).
+**Module:** new file `scripts/GPU/alphazero/value_calibration.py`. Requires loading a checkpoint and scoring positions — not free. Gated behind `--calibrate` flag. Sample size via `--calibration-sample N` (default 1000).
+
+**Checkpoint-selection rule:** for any formal analyzer run (gate evaluation, per-iteration sidecar, baseline comparisons) `--calibrate-weights <path>` is **required**. Implicit "latest checkpoint in dir" is only allowed for ad hoc interactive runs, and the runner must echo the resolved path. Same rationale as 8.6.
 
 ### 9.3 Search-vs-NN disagreement
 
@@ -455,10 +471,16 @@ checkpoints/alphazero-v2/                                    # promoted retrain 
 
 ### 11.4 Committed baseline artifacts
 
+Baselines live **outside** `checkpoints/` so they're not co-mingled with mutable training outputs. Baselines are **immutable references** once committed — any change requires a deliberate update to `tests/probes/baselines/README.md` and a new dated baseline filename.
+
 ```
-checkpoints/alphazero-fresh/probe_eval_iter_0999_baseline.csv
-checkpoints/alphazero-fresh/probe_eval_iter_0999_baseline.json
+tests/probes/baselines/
+  README.md                              # describes each baseline (weights used, probe suite rev, date)
+  iter_0999_fresh_24ch.csv               # iter-0999 baseline (24-channel format)
+  iter_0999_fresh_24ch.json              # corresponding summary
 ```
+
+Filenames encode the checkpoint identity, not just the iteration number, so future baselines (e.g. a new reference point from the retrained model) don't clash.
 
 ## 12. Rollout risks & mitigations
 
@@ -478,13 +500,34 @@ checkpoints/alphazero-fresh/probe_eval_iter_0999_baseline.json
 The retrain is successful iff all of:
 
 1. Phase 0 probe suite committed with 50–80 entries covering 8 categories
-2. Phase 0 iter-0999 baseline scored and committed
+2. Phase 0 iter-0999 baseline scored with explicit `--weights` path and committed to `tests/probes/baselines/`
 3. Phases 1–2 deliverables pass all tests (Section 10)
-4. Phase 3 staged retrain reaches ≥150 iters without health-guard failures
+4. Phase 3 staged retrain reaches cumulative ≥150 iters (across one or more invocations on the same checkpoint lineage) without health-guard failures
 5. Phase 4 gate evaluation returns PROMOTE
-6. Phase 5 full retrain reaches ≥1000 iters with value-head signal sustained
+6. Phase 5 full retrain reaches cumulative ≥1000 iters with value-head signal sustained
 
 The retrain is a failure iff Phase 4 returns ABORT and analysis does not yield a clear next-spec direction. That triggers a re-scope: possibly new channel design (Option B/C), possibly a different training change (e.g. auxiliary moves-to-win head), possibly probe suite revision.
+
+## 13.1 Design principles carried forward
+
+These aren't deliverables — they're meta-lessons from the iter-999 blind-spot and earlier misses, embedded here so subsequent specs don't forget them:
+
+1. **Three layers of diagnostics.** Generic ML telemetry is not enough for Twixt. The retrain must produce all three layers simultaneously:
+   - **Layer 1 — Aggregate self-play health:** avg plies, resign/adjudication rates, replay composition, value-head sanity stats. (We had this.)
+   - **Layer 2 — Twixt-specific structural diagnostics:** connectivity buckets, goal-touching components, component sizes, value calibration by position type. (We only partially had this.)
+   - **Layer 3 — Fixed regression probes:** forced near-wins, traps, false-positive connectivity, symmetry checks. (We didn't have this at all.)
+
+2. **Treat bucketed/probe failures as higher priority than global averages.** "Healthy averages, broken tails" was the exact failure mode. A probe failure or connectivity-bucket failure is a stronger signal than a fractional improvement in a global metric.
+
+3. **Watch for search-compensating-for-NN-weaknesses.** Even after the retrain, log NN vs MCTS per probe so we can tell when search is masking a value-head blind spot rather than curing it.
+
+4. **Watch for over-learning the training regime.** The model can learn "shaped self-play world" instead of "Twixt itself." Probe suite uses curated ground truth, not self-play outcomes, specifically to catch this.
+
+5. **Track side-to-move / color asymmetries.** Prior runs showed occasional red/black asymmetry in sanity stats. Keep color buckets separate in every diagnostic.
+
+6. **JS/Python tensor parity is core protection, not hygiene.** As the input tensor gets more semantic, drift between Python training code and JS browser code becomes a much worse failure mode. Parity tests are mandatory, not optional.
+
+7. **Design for chunked runs, not one-shot runs.** Users resume training, inspect, resume again. Gate semantics must use cumulative checkpoint-lineage iters, not per-invocation iters. Formal analyses require explicit `--weights` paths. Baselines are immutable references kept outside mutable checkpoint dirs.
 
 ## 14. Next step
 
