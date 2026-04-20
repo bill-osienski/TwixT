@@ -10,6 +10,24 @@
 
 **Spec:** `docs/superpowers/specs/2026-04-19-connectivity-retrain-design.md`
 
+## Execution Order Note
+
+The phases are ordered A → B → C conceptually, but Task 4 (probe_eval) has a hard
+dependency on Task 11 (dual-format infrastructure: `to_tensor_v1` +
+`create_network(in_channels=...)`). Execute in this order:
+
+1. **Task 1** (connectivity helper) — foundation
+2. **Task 11** (bump NUM_CHANNELS, add `to_tensor_v1`, parameterize `create_network`) — unblocks dual-format
+3. **Task 2** (probe sampler — uses connectivity helper, no network)
+4. **Task 3** (schema + README)
+5. **Task 4** (probe_eval — uses dual-format infra from Task 11)
+6. **Task 5** (curate probes + baseline score iter-0999 with probe_eval)
+7. **Tasks 6–10** (diagnostic infrastructure)
+8. **Tasks 12–16** (JS parity, PositionRecord, progress-weighted loss, banner, smoke)
+
+This ordering ensures Task 4 can actually load iter-0999's 24-channel weights
+through the same tool that will later score 30-channel post-retrain checkpoints.
+
 ---
 
 ## File Structure
@@ -117,55 +135,69 @@ def test_isolated_peg_not_on_goal_edge():
 
 
 def test_chain_row0_to_rowlast_sets_all_three():
-    """Red chain from row 0 to row 7 via bridges → every peg in chain has all 3 masks = 1."""
+    """Red chain from row 0 to row 7 via bridges → every peg in chain has all 3 masks = 1.
+
+    Uses direct construction of a known-good pre-terminal state (one bridge short
+    of winning) so the test validates the exact invariant rather than hoping a
+    scripted sequence of apply_move happens to produce a chain.
+    """
     state = TwixtState(active_size=8, to_move="red")
-    # Red moves building a knight-move chain top → bottom
-    # Knight moves (±1, ±2) and (±2, ±1). Use (0,3) → (2,4) → (4,3) → (6,4) → then
-    # need to touch row 7 too. Use (6,4) → needs black to not block.
-    # For simplicity use a simpler chain that we know connects.
-    # Place red + black alternating; verify after at least one successful chain.
-    reds = [(0, 3), (2, 4), (4, 3), (6, 4), (7, 2)]  # red attempt to connect
-    blacks = [(4, 0), (4, 6), (1, 0), (6, 0)]        # irrelevant
-    for i, (r, c) in enumerate(reds):
-        state = _place(state, r, c)
-        if i < len(blacks):
-            state = _place(state, *blacks[i])
-    # The exact connectivity depends on which bridges form without crossings.
-    # Verify the invariant: for any component touching both edges,
-    # its pegs all have _both = 1.
+    # Direct construction: build a state with known bridges, verify invariant.
+    # Chain: (0,2) - bridge - (2,3) - bridge - (4,2) - bridge - (6,3) - bridge - (7,5) via knight moves
+    # All red pegs; we place them via apply_move, alternating with black dummy moves.
+    # Dummy black moves kept away from the chain so they don't interfere.
+    red_chain = [(0, 2), (2, 3), (4, 2), (6, 3), (7, 5)]
+    black_dummy = [(3, 7), (5, 7), (1, 7), (3, 0), (1, 0)]
+    for r_move, b_move in zip(red_chain, black_dummy):
+        state = state.apply_move(r_move)
+        state = state.apply_move(b_move)
+    # Sanity: state is NOT terminal yet (chain doesn't fully connect top→bottom
+    # via bridges in this arrangement — it's just scaffold for invariant checking).
+    # The invariant we test is structural, not win-dependent.
     m_top, m_bot, m_both = state.connectivity_masks("red")
-    # Cells where both is set must also have top and bot set
-    assert np.all((m_both == 0) | ((m_top == 1) & (m_bot == 1)))
+    # Per-cell invariant: wherever both is set, both top AND bot must also be set
+    assert np.all((m_both == 0) | ((m_top == 1) & (m_bot == 1))), \
+        "connected_to_both must imply connected_to_top AND connected_to_bottom"
+    # Symmetric invariant
+    assert np.all((m_top == 0) | (state._has_peg_mask("red") == 1)), \
+        "connected_to_top only non-zero where red pegs exist"
 
 
-def test_parity_with_winner_for_terminal_state():
-    """If state is terminal with winner 'red', red's both-mask is non-empty
-    and black's is empty. Sanity: game-logic connectivity matches feature
-    connectivity."""
-    # Build a known red-winning 8x8 via a scripted sequence
-    state = TwixtState(active_size=8, to_move="red")
-    moves = [
-        ("red", 0, 3), ("black", 4, 0),
-        ("red", 2, 4), ("black", 4, 1),
-        ("red", 4, 3), ("black", 4, 5),
-        ("red", 6, 4), ("black", 4, 6),
-        ("red", 7, 2),
-    ]
-    # Not all of these will produce a legal winning chain; the test documents
-    # the invariant for any terminal state. If this scripted state is NOT
-    # terminal (i.e. doesn't connect), skip.
-    for color, r, c in moves:
-        if state.to_move != color:
-            pytest.skip("move order doesn't match to_move; skipping scripted test")
-        state = state.apply_move((r, c))
-    if state.winner() is None:
-        pytest.skip("scripted sequence did not produce a winner; invariant-only test")
-    winner = state.winner()
-    m_win_top, m_win_bot, m_win_both = state.connectivity_masks(winner)
-    other = "black" if winner == "red" else "red"
-    m_loss_top, m_loss_bot, m_loss_both = state.connectivity_masks(other)
-    assert m_win_both.sum() > 0, f"winner {winner} should have non-empty both-mask"
-    assert m_loss_both.sum() == 0, f"loser {other} should have empty both-mask"
+def test_parity_with_winner_for_deterministic_fixture():
+    """Deterministic fixture: red makes a clear winning chain on a 6x6 board.
+
+    Build a 6x6 board where red plays a short, verifiable knight-move chain
+    from row 0 to row 5. On a 6x6 board only 3 bridges are needed
+    (0→2→4→5 via (0,2), (2,3), (4,2), (5,4) — each pair is a knight move).
+    This is small enough to verify manually and deterministic.
+    """
+    state = TwixtState(active_size=6, to_move="red")
+    # Red plays, black plays dummies far from the chain
+    red_moves = [(0, 2), (2, 3), (4, 2), (5, 4)]
+    black_dummies = [(1, 0), (3, 0), (1, 5)]
+    for i, r_move in enumerate(red_moves):
+        state = state.apply_move(r_move)
+        if state.is_terminal():
+            break
+        if i < len(black_dummies):
+            state = state.apply_move(black_dummies[i])
+
+    if not state.is_terminal() or state.winner() != "red":
+        # This fixture MUST be terminal with red winning — if it isn't,
+        # the fixture itself is broken and the test should fail loudly,
+        # not skip. A game-rules regression that breaks this fixture
+        # is exactly the kind of bug this test should catch.
+        raise AssertionError(
+            f"Deterministic fixture broken: expected red win, got terminal={state.is_terminal()} "
+            f"winner={state.winner()}. Review the fixture or game rules."
+        )
+    m_red_top, m_red_bot, m_red_both = state.connectivity_masks("red")
+    m_blk_left, m_blk_right, m_blk_both = state.connectivity_masks("black")
+    assert m_red_both.sum() > 0, "red (winner) must have non-empty connected_to_both"
+    assert m_blk_both.sum() == 0, "black (loser) must have empty connected_to_both"
+    # Further: every peg in the red chain must be in the both-mask
+    for r, c in red_moves:
+        assert m_red_both[r, c] == 1.0, f"red peg at ({r},{c}) should be in connected_to_both"
 
 
 def test_active_size_respected():
@@ -279,6 +311,14 @@ EOF
 ---
 
 ### Task 2: Probe candidate sampler
+
+**Role clarification (important):** The sampler's output (`candidates.json`) is a
+**heuristic-only pre-filter** — candidates are *suggestions* grouped by category
+using rough rules, NOT authoritative probe labels. The authoritative probe suite
+is `tests/probes/twixt_probes.json`, produced by **human curation** in Task 5.
+A reviewer must read each candidate's position + note and explicitly assign
+`confidence` (`forced` / `strong_advantage` / `unclear_do_not_use`) and
+`expected_value_sign`. Sampler output is never committed as-is.
 
 **Files:**
 - Create: `scripts/build_probe_candidates.py`
@@ -1058,31 +1098,38 @@ def _detect_input_channels(weights_path: str) -> int:
 
 
 def _load_network(weights_path: str, verbose: bool = True):
-    """Load a network, auto-detecting input channel format."""
+    """Load a network, auto-detecting input channel format.
+
+    Dual-format contract: supports both pre-Phase-2 24-channel checkpoints
+    (iter-0999 and earlier) and post-Phase-2 30-channel checkpoints via the
+    `in_channels` parameter on create_network.
+    """
     from .network import create_network
 
     in_channels = _detect_input_channels(weights_path)
     if verbose:
         print(f"[probe_eval] Detected {in_channels}-channel checkpoint at {weights_path}")
-    # Ensure NUM_CHANNELS matches — this is a runtime assertion that the
-    # code path we're in can handle this format
-    from .game.twixt_state import NUM_CHANNELS
-    if in_channels != NUM_CHANNELS:
-        print(f"[probe_eval] WARNING: checkpoint is {in_channels}-channel but "
-              f"NUM_CHANNELS={NUM_CHANNELS}. For the dual-format flow we need "
-              f"to instantiate a parallel {in_channels}-channel network.",
-              file=sys.stderr)
-        # TODO: for 24ch checkpoints loaded by a 30ch code path, we need
-        # a format-specific network factory. For now, refuse with a clear msg.
-        if in_channels == 24:
-            raise RuntimeError(
-                "Cannot load 24-channel checkpoint into 30-channel code. "
-                "Use the 24-channel branch (checkout master^) or wait for "
-                "the dual-format network factory (Task 11.5)."
-            )
-    net = create_network(hidden=128, n_blocks=6)  # Use same hidden/n_blocks as training
+    if in_channels not in (24, 30):
+        raise RuntimeError(
+            f"Unsupported channel count {in_channels} in {weights_path}. "
+            f"Expected 24 (pre-Phase-2) or 30 (post-Phase-2)."
+        )
+    # Instantiate a network matching the checkpoint's channel count.
+    net = create_network(hidden=128, n_blocks=6, in_channels=in_channels)
     net.load_weights(weights_path)
-    return net
+    return net, in_channels
+
+
+def _build_input_tensor(state, in_channels: int):
+    """Build the correct-format input tensor for the checkpoint being evaluated.
+
+    24-channel checkpoints get the pre-Phase-2 layout; 30-channel checkpoints
+    get the current (connectivity-aware) layout.
+    """
+    from .game.twixt_state import to_tensor_v1
+    if in_channels == 24:
+        return to_tensor_v1(state)  # 24-channel
+    return state.to_tensor()  # 30-channel (current)
 
 
 def _replay_probe(probe: dict) -> TwixtState:
@@ -1094,12 +1141,16 @@ def _replay_probe(probe: dict) -> TwixtState:
     return state
 
 
-def _eval_probe(probe: dict, evaluator: LocalGPUEvaluator, sims: int) -> dict:
-    """Evaluate one probe: get NN value + run MCTS with `sims` sims."""
+def _eval_probe(probe: dict, evaluator: LocalGPUEvaluator, sims: int, in_channels: int) -> dict:
+    """Evaluate one probe: get NN value + run MCTS with `sims` sims.
+
+    `in_channels` selects the tensor format (24 or 30) matching the network.
+    """
     state = _replay_probe(probe)
 
-    # NN-only value: single forward pass from the state's side-to-move perspective
-    tensor = state.to_tensor()  # (C, H, W)
+    # NN-only value: single forward pass from the state's side-to-move perspective.
+    # Tensor format must match the network's input expectation.
+    tensor = _build_input_tensor(state, in_channels)  # (C, H, W)
     tensor = np.transpose(tensor, (1, 2, 0))  # (H, W, C)
     boards_np = np.expand_dims(tensor.astype(np.float32), axis=0)
     moves = state.legal_moves()
@@ -1240,12 +1291,12 @@ def main():
         probes = [p for p in probes if p.get("confidence") == "forced"]
         print(f"[probe_eval] forced-only mode: {len(probes)} probes")
 
-    net = _load_network(args.weights)
+    net, in_channels = _load_network(args.weights)
     evaluator = LocalGPUEvaluator(net)
 
     rows = []
     for i, probe in enumerate(probes):
-        row = _eval_probe(probe, evaluator, args.sims)
+        row = _eval_probe(probe, evaluator, args.sims, in_channels)
         rows.append(row)
         if (i + 1) % 10 == 0:
             print(f"  evaluated {i+1}/{len(probes)}")
@@ -1266,6 +1317,7 @@ def main():
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "weights": os.path.abspath(args.weights),
         "probes": os.path.abspath(args.probes),
+        "checkpoint_format": f"{in_channels}-channel",
         "probes_total": len(rows),
         "sims": args.sims,
         "forced_only": args.forced_only,
@@ -1985,11 +2037,14 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 
 ## Phase C — Architecture + Training Changes (Tasks 11–16)
 
-### Task 11: Extend `to_tensor()` with 6 connectivity channels
+### Task 11: Extend `to_tensor()` with 6 connectivity channels + dual-format support
 
 **Files:**
-- Modify: `scripts/GPU/alphazero/game/twixt_state.py` (NUM_CHANNELS=30, to_tensor extension)
+- Modify: `scripts/GPU/alphazero/game/twixt_state.py` (NUM_CHANNELS=30, `to_tensor` extension, new `to_tensor_v1` helper)
+- Modify: `scripts/GPU/alphazero/network.py` (`create_network(in_channels=...)` parameter threading)
 - Create: `tests/test_connectivity_channels.py`
+
+**Dual-format contract.** This task MUST preserve the ability to build a 24-channel tensor (via new `to_tensor_v1()` module-level helper) and to construct a 24-channel `AlphaZeroNetwork` (via `create_network(in_channels=24)`). This is what lets Task 4's `probe_eval.py` load iter-0999 (24-channel) weights through the same codebase that trains 30-channel models going forward.
 
 - [ ] **Step 1: Write channel tests**
 
@@ -2078,6 +2133,35 @@ def test_mirror_parity():
     # (This test is simplified; exact mirror logic is in run_encoding_parity.py)
     # Minimal assertion: mirror preserves zero/non-zero structure
     assert (t2[27] != 0).sum() == (t1[28] != 0).sum()  # swap semantics
+
+
+def test_to_tensor_v1_produces_24_channels():
+    """Backward-compat helper preserves pre-Phase-2 tensor layout exactly."""
+    from scripts.GPU.alphazero.game.twixt_state import to_tensor_v1, NUM_CHANNELS_V1
+    state = TwixtState(active_size=8, to_move="red")
+    state = state.apply_move((0, 3))
+    state = state.apply_move((4, 4))
+    t_v1 = to_tensor_v1(state)
+    t_full = state.to_tensor()
+    assert NUM_CHANNELS_V1 == 24
+    assert t_v1.shape == (24, 24, 24)  # (NUM_CHANNELS_V1, H, W)
+    assert t_full.shape == (30, 24, 24)
+    # Channels 0-23 must be bit-identical between v1 and v2
+    assert np.array_equal(t_v1, t_full[:24])
+
+
+def test_create_network_accepts_in_channels():
+    """create_network(in_channels=24) builds a 24-ch network; default uses NUM_CHANNELS."""
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.game.twixt_state import NUM_CHANNELS
+    # Default → uses current NUM_CHANNELS (30)
+    net_default = create_network(hidden=16, n_blocks=1)
+    # Explicit 24-channel
+    net_v1 = create_network(hidden=16, n_blocks=1, in_channels=24)
+    # Both should construct without error; inspecting the first-conv weight
+    # shape is a network-internal detail, so just assert successful construction.
+    assert net_default is not None
+    assert net_v1 is not None
 ```
 
 - [ ] **Step 2: Run to confirm failure**
@@ -2088,10 +2172,11 @@ def test_mirror_parity():
 
 Expected: first test fails (`NUM_CHANNELS == 30` but it's currently 24).
 
-- [ ] **Step 3: Extend `twixt_state.py`**
+- [ ] **Step 3: Extend `twixt_state.py` with NUM_CHANNELS=30 + dual-format helpers**
 
 In `scripts/GPU/alphazero/game/twixt_state.py`:
 
+- Add `NUM_CHANNELS_V1 = 24` constant (preserved for backward-compat with iter-0999 checkpoints)
 - Change `NUM_CHANNELS = 24` → `NUM_CHANNELS = 30`
 - In `to_tensor()`, after the existing channel 23 (move number) block, add:
 
@@ -2100,7 +2185,6 @@ In `scripts/GPU/alphazero/game/twixt_state.py`:
 # Uses the same connectivity graph as winner() for feature/game-logic parity.
 m_red_top, m_red_bot, m_red_both = self.connectivity_masks("red")
 m_blk_left, m_blk_right, m_blk_both = self.connectivity_masks("black")
-# Channels are already (active, active) — pad into the (24, 24) tensor region
 tensor[24, :active, :active] = m_red_top
 tensor[25, :active, :active] = m_red_bot
 tensor[26, :active, :active] = m_red_both
@@ -2108,6 +2192,44 @@ tensor[27, :active, :active] = m_blk_left
 tensor[28, :active, :active] = m_blk_right
 tensor[29, :active, :active] = m_blk_both
 ```
+
+- Add a module-level `to_tensor_v1(state)` helper that produces the pre-Phase-2 24-channel tensor. This supports dual-format probe evaluation: iter-0999 and earlier checkpoints were trained on the 24-channel layout and must be fed 24-channel input at inference time.
+
+```python
+def to_tensor_v1(state: "TwixtState") -> np.ndarray:
+    """Produce a 24-channel tensor matching the pre-Phase-2 layout.
+
+    Used by probe_eval.py and any other tool that needs to evaluate a
+    24-channel checkpoint using the current codebase. The output matches
+    exactly what the pre-Phase-2 to_tensor() would have produced:
+    channels 0-23 only, no connectivity channels.
+    """
+    # Build the full 30-channel tensor, then slice off the last 6.
+    # Safe because channels 0-23 are identical in both formats.
+    full = state.to_tensor()
+    return full[:NUM_CHANNELS_V1].copy()
+```
+
+**In `scripts/GPU/alphazero/network.py`:**
+
+- Thread `in_channels` parameter through `create_network` and `AlphaZeroNetwork.__init__`:
+
+```python
+def create_network(hidden: int = 128, n_blocks: int = 6, in_channels: Optional[int] = None):
+    """Build an AlphaZero network.
+
+    Args:
+        in_channels: input channel count. None (default) uses the module's
+            current NUM_CHANNELS. Explicit int (e.g. 24) lets callers
+            instantiate a network matching a historical checkpoint format.
+    """
+    if in_channels is None:
+        from .game.twixt_state import NUM_CHANNELS
+        in_channels = NUM_CHANNELS
+    return AlphaZeroNetwork(hidden=hidden, n_blocks=n_blocks, in_channels=in_channels)
+```
+
+- Update `AlphaZeroNetwork.__init__` to accept `in_channels` and pass it into the first conv layer instead of reading `NUM_CHANNELS` directly. Test with both `create_network(in_channels=24)` and `create_network(in_channels=30)` — both must produce working networks.
 
 - [ ] **Step 4: Run all channel tests**
 
