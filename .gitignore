@@ -35,3 +35,16 @@ logs/human-games/*
 runs/
 selfplay.json
 selfplay-trace.json
+
+# Training / analysis outputs (should have been ignored from day 1)
+Replays/
+checkpoints/
+runs/
+scripts/GPU/logs/
+
+# Claude harness scratch
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
+# Pytest cache
+.pytest_cache/
