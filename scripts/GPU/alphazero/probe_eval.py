@@ -14,7 +14,7 @@ import json
 import os
 import random
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 import numpy as np
 import mlx.core as mx
@@ -104,18 +104,6 @@ def _default_create_network_param(name: str):
     return sig.parameters[name].default
 
 
-def _build_input_tensor(state, in_channels: int):
-    """Build the correct-format input tensor for the checkpoint being evaluated.
-
-    24-channel checkpoints get the pre-Phase-2 layout; 30-channel checkpoints
-    get the current (connectivity-aware) layout.
-    """
-    from .game.twixt_state import to_tensor_v1
-    if in_channels == 24:
-        return to_tensor_v1(state)  # 24-channel
-    return state.to_tensor()  # 30-channel (current)
-
-
 def _replay_probe(probe: dict) -> TwixtState:
     """Replay a probe's move_history from an empty state."""
     state = TwixtState(active_size=probe["active_size"])
@@ -125,16 +113,17 @@ def _replay_probe(probe: dict) -> TwixtState:
     return state
 
 
-def _eval_probe(probe: dict, evaluator: LocalGPUEvaluator, sims: int, in_channels: int) -> dict:
+def _eval_probe(probe: dict, evaluator: LocalGPUEvaluator, sims: int) -> dict:
     """Evaluate one probe: get NN value + run MCTS with `sims` sims.
 
-    `in_channels` selects the tensor format (24 or 30) matching the network.
+    The evaluator builds the input tensor in the correct 24ch / 30ch format
+    based on its network's `in_channels`.
     """
     state = _replay_probe(probe)
 
     # NN-only value: single forward pass from the state's side-to-move perspective.
-    # Tensor format must match the network's input expectation.
-    tensor = _build_input_tensor(state, in_channels)  # (C, H, W)
+    # Tensor format is selected by the evaluator to match the network's input.
+    tensor = evaluator.build_input_tensor(state)  # (C, H, W)
     tensor = np.transpose(tensor, (1, 2, 0))  # (H, W, C)
     boards_np = np.expand_dims(tensor.astype(np.float32), axis=0)
     moves = state.legal_moves()
@@ -223,15 +212,23 @@ def _aggregate(rows: list[dict]) -> dict:
         n = len(bucket)
         if n == 0:
             return {"n": 0}
-        return {
+        # Did MCTS actually run? (sims=0 mode leaves mcts_root_value as None)
+        any_mcts = any(r.get("mcts_root_value") is not None for r in bucket)
+        stats = {
             "n": n,
             "sign_correct_nn_rate": pct([r["sign_correct_nn"] for r in bucket], n),
-            "sign_correct_mcts_rate": pct([r["sign_correct_mcts"] for r in bucket], n),
             "median_nn_magnitude": round(median([r["nn_magnitude"] for r in bucket]), 3),
             "magnitude_in_band_rate": pct([r["magnitude_in_band"] for r in bucket], n),
-            "search_corrected_rate": pct([r["search_corrected"] for r in bucket], n),
-            "both_wrong_rate": pct([r["both_wrong"] for r in bucket], n),
         }
+        if any_mcts:
+            stats["sign_correct_mcts_rate"] = pct([r["sign_correct_mcts"] for r in bucket], n)
+            stats["search_corrected_rate"] = pct([r["search_corrected"] for r in bucket], n)
+            stats["both_wrong_rate"] = pct([r["both_wrong"] for r in bucket], n)
+        else:
+            stats["sign_correct_mcts_rate"] = None
+            stats["search_corrected_rate"] = None
+            stats["both_wrong_rate"] = None
+        return stats
 
     by_category = {}
     for cat in {r["category"] for r in rows}:
@@ -289,7 +286,7 @@ def main():
 
     rows = []
     for i, probe in enumerate(probes):
-        row = _eval_probe(probe, evaluator, args.sims, in_channels)
+        row = _eval_probe(probe, evaluator, args.sims)
         rows.append(row)
         if (i + 1) % 10 == 0:
             print(f"  evaluated {i+1}/{len(probes)}")
@@ -307,7 +304,7 @@ def main():
     # Write aggregate JSON
     agg = _aggregate(rows)
     agg_meta = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "weights": os.path.abspath(args.weights),
         "probes": os.path.abspath(args.probes),
         "checkpoint_format": f"{in_channels}-channel",

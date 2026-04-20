@@ -64,7 +64,7 @@ tier, default to `unclear_do_not_use`. Do not force resolution.
 | `category` | yes | one of the categories above |
 | `confidence` | yes | `forced` or `strong_advantage` (never `unclear_do_not_use` in the committed suite) |
 | `side_to_move` | yes | whose turn it is in the replayed state |
-| `expected_value_sign` | yes | +1 = red winning, -1 = black winning, 0 = balanced. Always evaluated from `side_to_move` perspective (flip sign if needed) |
+| `expected_value_sign` | yes | +1 = red winning, -1 = black winning, 0 = balanced. **Always evaluated from red's perspective, regardless of `side_to_move`.** probe_eval sign-flips the network's output when `side_to_move == black` so sign comparison is uniform. |
 | `expected_value_min` | optional | gate's magnitude check: `|nn_value| >= this` |
 | `expected_value_max` | optional | upper bound on magnitude |
 | `active_size` | yes | curriculum size; 24 for production probes |
