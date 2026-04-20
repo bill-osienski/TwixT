@@ -290,7 +290,11 @@ Ensure the `Tuple` import is present at top of file (it should be — check impo
 .venv/bin/python -m pytest tests/test_connectivity_masks.py -v
 ```
 
-Expected: all 6 tests pass. Some may `skip` if scripted sequences don't produce winners — that's fine; the skipped tests still validate the invariant structure.
+Expected: all 6 tests pass. No skips — the deterministic 6×6 fixture in
+`test_parity_with_winner_for_deterministic_fixture` is designed to terminate
+with `red` winning; if the test fails because the fixture doesn't terminate,
+that indicates a game-rules regression (or a bad fixture), which is the
+signal we want to catch loudly.
 
 - [ ] **Step 5: Commit**
 
@@ -1097,12 +1101,25 @@ def _detect_input_channels(weights_path: str) -> int:
     raise RuntimeError(f"Could not detect input channel count from {weights_path}")
 
 
-def _load_network(weights_path: str, verbose: bool = True):
+def _load_network(
+    weights_path: str,
+    hidden: int | None = None,
+    n_blocks: int | None = None,
+    verbose: bool = True,
+):
     """Load a network, auto-detecting input channel format.
 
     Dual-format contract: supports both pre-Phase-2 24-channel checkpoints
     (iter-0999 and earlier) and post-Phase-2 30-channel checkpoints via the
     `in_channels` parameter on create_network.
+
+    Architecture (hidden / n_blocks): defaults inherited from
+    `create_network()` — currently 128 and 6 respectively. These ARE the
+    locked canonical training architecture for both 24ch and 30ch runs
+    (see Task 15 trainer defaults). Override via `--hidden` / `--n-blocks`
+    if a checkpoint from a future architecture variant needs to be evaluated.
+    Both values are also echoed into the aggregate JSON metadata so any
+    mismatch is visible in artifacts.
     """
     from .network import create_network
 
@@ -1114,10 +1131,32 @@ def _load_network(weights_path: str, verbose: bool = True):
             f"Unsupported channel count {in_channels} in {weights_path}. "
             f"Expected 24 (pre-Phase-2) or 30 (post-Phase-2)."
         )
-    # Instantiate a network matching the checkpoint's channel count.
-    net = create_network(hidden=128, n_blocks=6, in_channels=in_channels)
+    # Instantiate using create_network defaults unless caller overrides.
+    # Do NOT duplicate the hidden=128, n_blocks=6 literals here — a future
+    # architecture bump should change the default in one place (create_network)
+    # and have it flow through to all evaluators.
+    kwargs = {"in_channels": in_channels}
+    if hidden is not None:
+        kwargs["hidden"] = hidden
+    if n_blocks is not None:
+        kwargs["n_blocks"] = n_blocks
+    net = create_network(**kwargs)
+    # Resolve the actual hidden / n_blocks used so we can echo them in metadata
+    actual_hidden = hidden if hidden is not None else _default_create_network_param("hidden")
+    actual_n_blocks = n_blocks if n_blocks is not None else _default_create_network_param("n_blocks")
+    if verbose:
+        print(f"[probe_eval] Network architecture: hidden={actual_hidden}, n_blocks={actual_n_blocks}")
     net.load_weights(weights_path)
-    return net, in_channels
+    return net, in_channels, actual_hidden, actual_n_blocks
+
+
+def _default_create_network_param(name: str):
+    """Introspect create_network's default for a named param. Used to echo
+    the actual architecture in metadata when the user didn't override."""
+    import inspect
+    from .network import create_network
+    sig = inspect.signature(create_network)
+    return sig.parameters[name].default
 
 
 def _build_input_tensor(state, in_channels: int):
@@ -1272,6 +1311,13 @@ def main():
     ap.add_argument("--out", required=True, help="Output CSV path")
     ap.add_argument("--forced-only", action="store_true",
                     help="Evaluate only forced-tier probes (cheap per-iter sampling mode)")
+    # Architecture overrides — defaults inherited from create_network() so
+    # one canonical source of truth. Only override when evaluating a
+    # non-canonical architecture variant.
+    ap.add_argument("--hidden", type=int, default=None,
+                    help="Override hidden channel count (default: create_network default)")
+    ap.add_argument("--n-blocks", type=int, default=None,
+                    help="Override residual block count (default: create_network default)")
     args = ap.parse_args()
 
     if not os.path.exists(args.weights):
@@ -1291,7 +1337,9 @@ def main():
         probes = [p for p in probes if p.get("confidence") == "forced"]
         print(f"[probe_eval] forced-only mode: {len(probes)} probes")
 
-    net, in_channels = _load_network(args.weights)
+    net, in_channels, hidden, n_blocks = _load_network(
+        args.weights, hidden=args.hidden, n_blocks=args.n_blocks
+    )
     evaluator = LocalGPUEvaluator(net)
 
     rows = []
@@ -1318,6 +1366,7 @@ def main():
         "weights": os.path.abspath(args.weights),
         "probes": os.path.abspath(args.probes),
         "checkpoint_format": f"{in_channels}-channel",
+        "network_architecture": {"hidden": hidden, "n_blocks": n_blocks},
         "probes_total": len(rows),
         "sims": args.sims,
         "forced_only": args.forced_only,
@@ -2613,6 +2662,16 @@ EOF
 **Files:**
 - Modify: `scripts/GPU/alphazero/trainer.py` (default in `train()`)
 - Modify: `scripts/GPU/alphazero/train.py` (new CLI flags + banner)
+
+**Architecture invariant (locked):** `create_network`'s defaults —
+`hidden=128`, `n_blocks=6` — are the canonical training architecture for
+both the legacy 24-channel runs (iter-0999) and the Phase 2 retrain (30ch).
+Changing either default is a **spec-level architecture change** and requires
+a new spec + re-baselining. `probe_eval.py` (Task 4) and
+`value_calibration.py` (Task 7) read these defaults via `create_network()`
+without duplicating the literals, so any future bump flows through in one
+place. If you find a literal `hidden=128` or `n_blocks=6` outside
+`network.py::create_network` during implementation, DRY it.
 
 - [ ] **Step 1: Write test**
 
