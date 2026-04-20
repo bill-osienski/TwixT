@@ -189,21 +189,30 @@ def _classify_candidates(game: dict, game_path: str, categories_wanted: set) -> 
                     })
 
         # edge_corner_legitimate: winner-path positions where win happens
-        # despite edge/corner placement (pegs in outermost row/col)
+        # despite edge/corner placement (pegs in outermost row/col).
+        # Gate on the game's recorded winner rather than is_terminal() -- most
+        # real games end via resign, so is_terminal() is False at end-of-replay
+        # for many games. If the game JSON says winner=red/black, that side won.
         if "edge_corner_legitimate" in categories_wanted:
-            if winner in ("red", "black") and is_terminal:
-                # Check winning-side pegs: how many are edge/corner cells
+            if winner in ("red", "black"):
+                # Winning-side pegs: how many are edge/corner cells
                 winning_pegs = [(rr, cc) for (rr, cc), col in state.pegs.items() if col == winner]
                 outer = sum(1 for (rr, cc) in winning_pegs
                             if rr == 0 or rr == active - 1 or cc == 0 or cc == active - 1)
-                if winning_pegs and outer / len(winning_pegs) >= 0.3:
+                if winning_pegs and outer / len(winning_pegs) >= 0.05:
                     # Take a mid-game snapshot, not terminal
                     snapshot_ply = max(10, ply - 4)
+                    # Derive side_to_move by replaying to the snapshot ply so we
+                    # don't assume red-starts parity (breaks for black-started games).
+                    snap_state = TwixtState(active_size=active, to_move=start_player)
+                    for (rr, cc) in move_seq[:snapshot_ply]:
+                        snap_state = snap_state.apply_move((rr, cc))
+                    side_to_move_snapshot = snap_state.to_move
                     candidates.append({
                         "category": "edge_corner_legitimate",
                         "ply": snapshot_ply,
                         "move_history": move_seq[:snapshot_ply],
-                        "side_to_move": "red" if snapshot_ply % 2 == 0 else "black",  # depends on start
+                        "side_to_move": side_to_move_snapshot,
                         "active_size": active,
                         "source_game": game_path,
                         "source_ply": snapshot_ply,
@@ -279,12 +288,20 @@ def main():
     by_category: dict[str, list[dict]] = defaultdict(list)
     wanted = set(CATEGORIES) - {"symmetric_sanity"}  # added last
     for iter_num, fp in game_files:
-        with open(fp) as f:
-            game = json.load(f)
+        try:
+            with open(fp) as f:
+                game = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"[WARN] skipping {fp}: {e}", file=sys.stderr)
+            continue
         meta = game.get("meta") or {}
         if not _size_filter(meta, args.any_size):
             continue
-        cands = _classify_candidates(game, fp, wanted)
+        try:
+            cands = _classify_candidates(game, fp, wanted)
+        except Exception as e:
+            print(f"[WARN] {fp} classify failed: {e}", file=sys.stderr)
+            continue
         for c in cands:
             by_category[c["category"]].append(c)
         # Early termination: stop once every primary category has reached

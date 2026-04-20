@@ -4,6 +4,8 @@ import subprocess
 import tempfile
 import os
 
+import pytest
+
 
 def test_sampler_cli_help():
     """Sampler CLI should respond to --help without error."""
@@ -16,6 +18,7 @@ def test_sampler_cli_help():
     assert "--min-source-iter" in result.stdout
 
 
+@pytest.mark.slow
 def test_sampler_produces_candidates_json(tmp_path):
     """Sampler against the current logs/games should produce non-empty candidates.json
     with required fields per candidate."""
