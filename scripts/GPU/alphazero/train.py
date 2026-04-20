@@ -142,6 +142,31 @@ def main():
         default=0.5,
         help="Max gradient norm for value head (default: 0.5)",
     )
+    parser.add_argument(
+        "--value-weight",
+        type=float,
+        default=None,
+        help="Override value loss weight (default 0.5 from train())",
+    )
+    parser.add_argument(
+        "--progress-weighted-value-loss",
+        dest="progress_weighted",
+        action="store_true",
+        default=True,
+        help="Use progress-weighted value loss (default ON)",
+    )
+    parser.add_argument(
+        "--no-progress-weighted-value-loss",
+        dest="progress_weighted",
+        action="store_false",
+        help="Disable progress-weighted value loss (use unweighted MSE)",
+    )
+    parser.add_argument(
+        "--progress-weight-floor",
+        type=float,
+        default=0.25,
+        help="Progress-weighted value loss floor [0, 1] (default 0.25)",
+    )
 
     # Buffer settings
     parser.add_argument(
@@ -195,6 +220,12 @@ def main():
         action="store_true",
         help="Disable saving game replays to scripts/GPU/logs/games/",
     )
+    parser.add_argument(
+        "--games-dir",
+        type=str,
+        default=None,
+        help="Override games output directory (default: scripts/GPU/logs/games/)",
+    )
 
     # Diagnostics
     parser.add_argument(
@@ -232,6 +263,16 @@ def main():
         help="Apply near-corner penalty for ply < this value")
     parser.add_argument("--root-near-corner-radius", type=int, default=None,
         help="Near-corner Chebyshev radius (MCTSConfig default: 2)")
+    # Phase 2: early-only near-corner override — stronger penalty for ply 0 / 1
+    # while the broader window uses --root-near-corner-penalty. Both args must
+    # be > 0 for the override to take effect.
+    parser.add_argument("--root-near-corner-penalty-early", type=float, default=None,
+        help="Early-override near-corner penalty λ_early used for ply < "
+             "--root-near-corner-penalty-early-plies. Replaces the baseline "
+             "penalty during the early window; baseline applies after.")
+    parser.add_argument("--root-near-corner-penalty-early-plies", type=int, default=None,
+        help="Apply --root-near-corner-penalty-early for ply < this value "
+             "(0 disables the override regardless of --root-near-corner-penalty-early).")
 
     # Curriculum learning
     parser.add_argument(
@@ -286,6 +327,17 @@ def main():
         help="Require root visits >= this to adjudicate (default: 200)")
     parser.add_argument("--adjudicate-min-top1-share", type=float, default=0.0,
         help="Require top move's visit share >= this to adjudicate (default: 0 = disabled)")
+    parser.add_argument("--adjudicate-debug", action="store_true",
+        help="Print per-timeout ADJ_DEBUG lines showing gate results")
+
+    # Phase 4: per-game replay contribution cap (disabled by default)
+    parser.add_argument("--max-positions-per-game", type=int, default=0,
+        help="Cap positions a single game contributes to replay (0 = disabled). "
+             "Long games get sub-sampled so they do not dominate training.")
+    parser.add_argument("--endgame-keep-positions", type=int, default=16,
+        help="When capping a game's positions, keep this many tail positions "
+             "unconditionally (protects endgame/conversion supervision). "
+             "Only takes effect when --max-positions-per-game > 0. Default: 16")
 
     args = parser.parse_args()
 
@@ -343,6 +395,34 @@ def main():
     if args.root_near_corner_radius is not None and args.root_near_corner_radius >= 12:
         parser.error("--root-near-corner-radius must be < 12 for a 24x24 board")
 
+    # Phase 2: early-only near-corner override validation.
+    # The two args travel together: either both >0 (active) or at least one 0
+    # (inactive). We warn rather than error on half-set values so users can
+    # script experiments by toggling a single flag.
+    if args.root_near_corner_penalty_early is not None and args.root_near_corner_penalty_early < 0:
+        parser.error("--root-near-corner-penalty-early must be >= 0")
+    if args.root_near_corner_penalty_early_plies is not None and args.root_near_corner_penalty_early_plies < 0:
+        parser.error("--root-near-corner-penalty-early-plies must be >= 0")
+    _early_pen_set = (args.root_near_corner_penalty_early or 0) > 0
+    _early_plies_set = (args.root_near_corner_penalty_early_plies or 0) > 0
+    if _early_pen_set != _early_plies_set:
+        print("[WARN] early near-corner override: one of "
+              "--root-near-corner-penalty-early / "
+              "--root-near-corner-penalty-early-plies is set to 0 — the "
+              "override will have no effect. Set both > 0 to activate.")
+    # Sanity: if the early window extends past the baseline window, the early
+    # penalty effectively sets policy for the whole window. That is legal but
+    # usually unintended — flag it.
+    if (
+        _early_pen_set and _early_plies_set
+        and args.root_near_corner_penalty_ply is not None
+        and args.root_near_corner_penalty_early_plies > args.root_near_corner_penalty_ply
+    ):
+        print(f"[WARN] early near-corner override window "
+              f"({args.root_near_corner_penalty_early_plies}) is larger than "
+              f"the baseline window ({args.root_near_corner_penalty_ply}) — "
+              f"the baseline value will never apply.")
+
     # Validate resign parameters
     if args.resign_min_ply < 0:
         parser.error("--resign-min-ply must be >= 0")
@@ -371,6 +451,18 @@ def main():
     if not (0.0 <= args.adjudicate_min_top1_share <= 1.0):
         parser.error("--adjudicate-min-top1-share must be in [0, 1]")
 
+    # Validate replay cap parameters (Phase 4)
+    if args.max_positions_per_game < 0:
+        parser.error("--max-positions-per-game must be >= 0 (0 = disabled)")
+    if args.endgame_keep_positions < 0:
+        parser.error("--endgame-keep-positions must be >= 0")
+    if (args.max_positions_per_game > 0
+            and args.endgame_keep_positions > args.max_positions_per_game):
+        parser.error(
+            "--endgame-keep-positions must be <= --max-positions-per-game "
+            "when the cap is enabled"
+        )
+
     # Mutual exclusion check
     if args.resume and args.load_weights:
         parser.error("Cannot use both --resume and --load-weights")
@@ -392,11 +484,32 @@ def main():
     print(f"  Batch size: {args.batch_size}")
     print(f"  MCTS simulations: {args.simulations}")
     print(f"  MCTS: eval_batch={args.mcts_eval_batch_size}, virtual_visits={args.mcts_pending_virtual_visits}, stall_flush={args.mcts_stall_flush_sims}")
-    print(f"  Max moves/game: {args.max_moves}")
+    from scripts.GPU.alphazero.trainer import MAX_MOVES_TABLE
+    max_moves_str = ", ".join(f"{s}:{MAX_MOVES_TABLE.get(s, '?')}" for s in curriculum_sizes)
+    print(f"  Max moves/game: {max_moves_str} (per curriculum size)")
     print(f"  Network: hidden={args.hidden}, blocks={args.blocks}")
     print(f"  Learning rate: {args.lr}")
     print(f"  L2 weight: {args.l2}")
     print(f"  Buffer size: {args.buffer_size}")
+    if args.max_positions_per_game > 0:
+        print(f"  Replay cap: max {args.max_positions_per_game} positions/game "
+              f"(endgame keep: {args.endgame_keep_positions})")
+    else:
+        print(f"  Replay cap: disabled (all positions from every game)")
+    # Echo near-corner penalty windows (baseline + optional early override)
+    if args.root_near_corner_penalty is not None or args.root_near_corner_penalty_early is not None:
+        base_pen = args.root_near_corner_penalty or 0.0
+        base_ply = args.root_near_corner_penalty_ply or 0
+        early_pen = args.root_near_corner_penalty_early or 0.0
+        early_plies = args.root_near_corner_penalty_early_plies or 0
+        parts = [f"  Near-corner penalty:"]
+        if base_pen > 0 and base_ply > 0:
+            parts.append(f"baseline λ={base_pen} for ply<{base_ply}")
+        if early_pen > 0 and early_plies > 0:
+            parts.append(f"early λ={early_pen} for ply<{early_plies}")
+        if len(parts) == 1:
+            parts.append("inactive (half-set — see warning above)")
+        print(" ".join(parts))
     print(f"  Checkpoint dir: {args.checkpoint_dir}")
     print(f"  Curriculum sizes: {curriculum_sizes}")
     print(f"  Workers: {args.n_workers}")
@@ -410,7 +523,7 @@ def main():
     print()
 
     # Run training
-    network = train(
+    train_kwargs = dict(
         n_iterations=args.iterations,
         games_per_iteration=args.games_per_iter,
         train_steps_per_iteration=args.train_steps,
@@ -422,6 +535,8 @@ def main():
         value_lr_scale=args.value_lr_scale,
         value_grad_max_norm=args.value_grad_max_norm,
         l2_weight=args.l2,
+        progress_weighted=args.progress_weighted,
+        progress_weight_floor=args.progress_weight_floor,
         hidden=args.hidden,
         n_blocks=args.blocks,
         max_moves=args.max_moves,
@@ -441,6 +556,7 @@ def main():
         n_workers=args.n_workers,
         # Game replay saving (default: enabled)
         save_games=not args.no_save_games,
+        games_dir_override=args.games_dir,
         # MCTS exploration tuning (None = use MCTSConfig defaults)
         dirichlet_alpha=args.dirichlet_alpha,
         dirichlet_eps=args.dirichlet_eps,
@@ -459,6 +575,9 @@ def main():
         root_near_corner_penalty=args.root_near_corner_penalty,
         root_near_corner_penalty_ply=args.root_near_corner_penalty_ply,
         root_near_corner_radius=args.root_near_corner_radius,
+        # Phase 2: early-only near-corner override
+        root_near_corner_penalty_early=args.root_near_corner_penalty_early,
+        root_near_corner_penalty_early_plies=args.root_near_corner_penalty_early_plies,
         # Resign parameters
         resign_enabled=args.resign_enabled,
         resign_min_ply=args.resign_min_ply,
@@ -473,7 +592,15 @@ def main():
         adjudicate_threshold=args.adjudicate_threshold,
         adjudicate_min_visits=args.adjudicate_min_visits,
         adjudicate_min_top1_share=args.adjudicate_min_top1_share,
+        adjudicate_debug=args.adjudicate_debug,
+        # Phase 4: per-game replay contribution cap
+        max_positions_per_game=(args.max_positions_per_game if args.max_positions_per_game > 0 else None),
+        endgame_keep_positions=args.endgame_keep_positions,
     )
+    # Conditional override: None means "use default from train() (0.5)"
+    if args.value_weight is not None:
+        train_kwargs["value_weight"] = args.value_weight
+    network = train(**train_kwargs)
 
     print()
     print("Training finished!")

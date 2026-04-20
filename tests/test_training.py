@@ -351,6 +351,26 @@ def test_mini_training_run():
     print("PASS: Mini training run")
 
 
+def test_train_default_value_weight_is_half():
+    """Default value_weight is 0.5 in train() signature."""
+    import inspect
+    from scripts.GPU.alphazero.trainer import train
+    sig = inspect.signature(train)
+    assert sig.parameters["value_weight"].default == 0.5
+
+
+def test_train_cli_has_progress_weighted_flag():
+    """CLI exposes --progress-weighted-value-loss and --progress-weight-floor and --value-weight."""
+    import subprocess
+    result = subprocess.run(
+        [".venv/bin/python", "scripts/GPU/alphazero/train.py", "--help"],
+        capture_output=True, text=True,
+    )
+    assert "--progress-weighted-value-loss" in result.stdout
+    assert "--progress-weight-floor" in result.stdout
+    assert "--value-weight" in result.stdout
+
+
 def main():
     """Run all tests."""
     print("=" * 60)
@@ -367,6 +387,8 @@ def main():
         test_replay_buffer_overflow,
         test_checkpoint_save_load,
         test_mini_training_run,
+        test_train_default_value_weight_is_half,
+        test_train_cli_has_progress_weighted_flag,
     ]
 
     passed = 0

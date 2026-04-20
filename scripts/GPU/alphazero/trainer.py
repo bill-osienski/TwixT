@@ -790,10 +790,10 @@ def alphazero_loss_batch(
     network: AlphaZeroNetwork,
     positions: List["PositionRecord"],
     l2_weight: float = 1e-4,
-    value_weight: float = 0.25,
+    value_weight: float = 0.5,
     max_moves_cap: int = 512,
     active_size: int = 24,
-    progress_weighted: bool = False,
+    progress_weighted: bool = True,
     progress_weight_floor: float = 0.25,
 ) -> Tuple[mx.array, mx.array, mx.array, mx.array]:
     """Batched policy + value + L2 loss (vectorized, no loops).
@@ -805,10 +805,10 @@ def alphazero_loss_batch(
         network: AlphaZero network
         positions: List of training positions
         l2_weight: L2 regularization weight
-        value_weight: Weight for value loss (default 0.25 to reduce dominance)
+        value_weight: Weight for value loss (default 0.5; Phase 2 bump from 0.25)
         max_moves_cap: Maximum moves per position (512 for TwixT)
         active_size: Curriculum board size for masked pooling
-        progress_weighted: If True, use progress-weighted value loss (default False)
+        progress_weighted: If True, use progress-weighted value loss (default True; Phase 2)
         progress_weight_floor: Floor weight for earliest plies when progress_weighted=True
 
     Returns:
@@ -870,11 +870,11 @@ def train_step(
     opt_value: optim.Optimizer,
     batch: List["PositionRecord"],
     l2_weight: float = 1e-4,
-    value_weight: float = 0.25,
+    value_weight: float = 0.5,
     max_moves_cap: int = 512,
     active_size: int = 24,
     value_grad_max_norm: float = 0.5,
-    progress_weighted: bool = False,
+    progress_weighted: bool = True,
     progress_weight_floor: float = 0.25,
 ) -> Tuple[float, float, float, float]:
     """Single training step with two optimizers and separate gradient clipping.
@@ -890,11 +890,11 @@ def train_step(
         opt_value: Optimizer for value head (typically lower LR)
         batch: List of training positions
         l2_weight: L2 regularization weight
-        value_weight: Weight for value loss (default 0.25)
+        value_weight: Weight for value loss (default 0.5; Phase 2 bump from 0.25)
         max_moves_cap: Maximum moves per position
         active_size: Curriculum board size for masked pooling
         value_grad_max_norm: Max grad norm for value head (default 0.5)
-        progress_weighted: If True, use progress-weighted value loss (default False)
+        progress_weighted: If True, use progress-weighted value loss (default True; Phase 2)
         progress_weight_floor: Floor weight for earliest plies (default 0.25)
 
     Returns:
@@ -1568,8 +1568,8 @@ def train(
     value_lr_scale: float = 0.1,
     value_grad_max_norm: float = 0.5,
     l2_weight: float = 1e-4,
-    value_weight: float = 0.25,
-    progress_weighted: bool = False,
+    value_weight: float = 0.5,
+    progress_weighted: bool = True,
     progress_weight_floor: float = 0.25,
     hidden: int = 128,
     n_blocks: int = 6,
@@ -1832,6 +1832,7 @@ def train(
     print(f"  Learning rate: {learning_rate} (value head: {value_lr})")
     print(f"  Value grad max norm: {value_grad_max_norm}")
     print(f"  Value weight: {value_weight} (target, warmup applies)")
+    print(f"  Value weight: {value_weight} (progress_weighted={progress_weighted}, floor={progress_weight_floor})")  # Phase 2 banner
     print(f"  Curriculum sizes: {curriculum_sizes}")
     print(f"  Starting active_size: {curriculum.active_size}")
     print(f"  Sims policy: {'CLI override' if mcts_simulations else 'SIMS_TABLE'}")
