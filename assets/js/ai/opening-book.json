@@ -1,0 +1,13 @@
+{
+  "board_size": 24,
+  "generated_at": "2025-01-15T00:00:00Z",
+  "key_format": "b:<size>|s:<start>|<p><row>,<col>|...",
+  "plies": [],
+  "positions": {},
+  "stats": {
+    "min_visits": 0,
+    "positions": 0,
+    "top_k": 0
+  },
+  "version": 1
+}

@@ -9,6 +9,82 @@ const KNIGHT_MOVES = [
   [2, 1],
 ];
 
+// =============================================================================
+// Connected Components Cache
+// =============================================================================
+// LRU cache using Zobrist hash (game.zKey) for O(1) key computation.
+// Each cache entry stores [metricsForRed, metricsForBlack].
+//
+// MEMORY NOTE: Each entry contains arrays of peg objects (components, largestComponent).
+// At 20k entries, this caused OOM after 7 games at depth 3. Reduced to 5k for stability.
+// The cache is cleared between games via clearComponentCache().
+
+const CC_CACHE_MAX_SIZE = 5000;
+
+class CCCache {
+  constructor(maxSize) {
+    this.maxSize = maxSize;
+    this.cache = new Map(); // BigInt -> [metricsRed | null, metricsBlack | null]
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+
+  get(game, player) {
+    const key = game.zKey;
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    // Move to end (LRU)
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+
+    const idx = player === 'red' ? 0 : 1;
+    return entry[idx];
+  }
+
+  set(game, player, metrics) {
+    const key = game.zKey;
+    const idx = player === 'red' ? 0 : 1;
+
+    let entry = this.cache.get(key);
+    if (entry) {
+      // Update existing entry and move to end
+      this.cache.delete(key);
+      entry[idx] = metrics;
+      this.cache.set(key, entry);
+    } else {
+      // New entry - evict oldest if at capacity
+      if (this.cache.size >= this.maxSize) {
+        const oldest = this.cache.keys().next().value;
+        this.cache.delete(oldest);
+      }
+      entry = [null, null];
+      entry[idx] = metrics;
+      this.cache.set(key, entry);
+    }
+  }
+}
+
+const _ccCache = new CCCache(CC_CACHE_MAX_SIZE);
+
+function getCachedComponentMetrics(game, player) {
+  return _ccCache.get(game, player);
+}
+
+function setCachedComponentMetrics(game, player, metrics) {
+  _ccCache.set(game, player, metrics);
+}
+
+/**
+ * Clear the component metrics cache.
+ * Call this between games to prevent memory accumulation during long selfplay runs.
+ */
+export function clearComponentCache() {
+  _ccCache.clear();
+}
+
 export function evaluatePosition(game, player) {
   if (game.gameOver) {
     return game.winner === player ? 10000 : -10000;
@@ -379,6 +455,10 @@ function isValidPlacementForPlayer(game, player, row, col) {
 }
 
 export function componentMetrics(game, player) {
+  // Check cache first (keyed by ccRevision for collision-free caching)
+  const cached = getCachedComponentMetrics(game, player);
+  if (cached) return cached;
+
   const components = findConnectedComponents(game, player);
   const boardSize = game.boardSize;
 
@@ -422,7 +502,7 @@ export function componentMetrics(game, player) {
     if (maxCol === boardSize - 1) touchesRight = true;
   }
 
-  return {
+  const result = {
     components,
     maxRowSpan,
     maxColSpan,
@@ -436,6 +516,11 @@ export function componentMetrics(game, player) {
     minCol: minColOverall === boardSize ? null : minColOverall,
     maxCol: maxColOverall === -1 ? null : maxColOverall,
   };
+
+  // Cache the result (keyed by ccRevision)
+  setCachedComponentMetrics(game, player, result);
+
+  return result;
 }
 
 export function computeFrontier(game, player) {
@@ -513,4 +598,75 @@ export function computeFrontier(game, player) {
   }
 
   return { frontier, metrics, connectors, trailing };
+}
+
+/**
+ * Extract positional features for value model evaluation.
+ * These features describe the overall game state, not move-specific scoring.
+ *
+ * @param {Object} game - TwixT game instance
+ * @param {string} player - Player perspective ('red' or 'black')
+ * @returns {Object} Feature dict matching value model's feature_keys
+ */
+export function extractPositionalFeatures(game, player) {
+  const opponent = player === 'red' ? 'black' : 'red';
+  const features = {};
+
+  // Connected paths (connectivity scores)
+  features.friendly_connected_paths = connectivityScore(game, player);
+  features.opponent_connected_paths = connectivityScore(game, opponent);
+
+  // Potential connections
+  features.friendly_potential = evaluatePotentialConnections(game, player);
+  features.opponent_potential = evaluatePotentialConnections(game, opponent);
+
+  // Edge progress
+  features.friendly_edge_progress = evaluateEdgeProgress(game, player);
+  features.opponent_edge_progress = evaluateEdgeProgress(game, opponent);
+
+  // Peg counts
+  const playerPegs = game.pegs.filter((p) => p.player === player);
+  const opponentPegs = game.pegs.filter((p) => p.player === opponent);
+  features.friendly_pegs = playerPegs.length;
+  features.opponent_pegs = opponentPegs.length;
+
+  // Component metrics
+  const friendlyMetrics = componentMetrics(game, player);
+  const opponentMetrics = componentMetrics(game, opponent);
+
+  features.friendly_max_row_span = friendlyMetrics.maxRowSpan;
+  features.friendly_max_col_span = friendlyMetrics.maxColSpan;
+  features.opponent_max_row_span = opponentMetrics.maxRowSpan;
+  features.opponent_max_col_span = opponentMetrics.maxColSpan;
+
+  features.friendly_component_count = friendlyMetrics.components.length;
+  features.opponent_component_count = opponentMetrics.components.length;
+
+  features.friendly_largest_size = friendlyMetrics.largestComponent.length;
+  features.opponent_largest_size = opponentMetrics.largestComponent.length;
+
+  // Edge touches
+  features.friendly_touches_top = friendlyMetrics.touchesTop ? 1.0 : 0.0;
+  features.friendly_touches_bottom = friendlyMetrics.touchesBottom ? 1.0 : 0.0;
+  features.friendly_touches_left = friendlyMetrics.touchesLeft ? 1.0 : 0.0;
+  features.friendly_touches_right = friendlyMetrics.touchesRight ? 1.0 : 0.0;
+
+  features.opponent_touches_top = opponentMetrics.touchesTop ? 1.0 : 0.0;
+  features.opponent_touches_bottom = opponentMetrics.touchesBottom ? 1.0 : 0.0;
+  features.opponent_touches_left = opponentMetrics.touchesLeft ? 1.0 : 0.0;
+  features.opponent_touches_right = opponentMetrics.touchesRight ? 1.0 : 0.0;
+
+  // Move count
+  features.move_count = game.moveCount || 0;
+
+  // Total bridges
+  features.total_bridges = game.bridges.length;
+
+  // Frontier analysis
+  const frontier = computeFrontier(game, player);
+  features.frontier_size = frontier.frontier.length;
+  features.connector_count = frontier.connectors.length;
+  features.trailing_count = frontier.trailing.length;
+
+  return features;
 }
