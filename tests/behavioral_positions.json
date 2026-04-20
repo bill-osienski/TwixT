@@ -1,0 +1,74 @@
+{
+  "positions": [
+    {
+      "name": "opening_empty",
+      "board_size": 24,
+      "moves": [],
+      "current_player": "red",
+      "depth": 2
+    },
+    {
+      "name": "early_2",
+      "board_size": 24,
+      "moves": [
+        { "player": "red", "row": 11, "col": 11 },
+        { "player": "black", "row": 12, "col": 13 }
+      ],
+      "current_player": "red",
+      "depth": 2
+    },
+    {
+      "name": "early_4",
+      "board_size": 24,
+      "moves": [
+        { "player": "red", "row": 11, "col": 11 },
+        { "player": "black", "row": 12, "col": 13 },
+        { "player": "red", "row": 10, "col": 12 },
+        { "player": "black", "row": 13, "col": 12 }
+      ],
+      "current_player": "red",
+      "depth": 2
+    },
+    {
+      "name": "mid_6",
+      "board_size": 24,
+      "moves": [
+        { "player": "red", "row": 11, "col": 11 },
+        { "player": "black", "row": 12, "col": 13 },
+        { "player": "red", "row": 10, "col": 12 },
+        { "player": "black", "row": 13, "col": 12 },
+        { "player": "red", "row": 9, "col": 10 },
+        { "player": "black", "row": 14, "col": 11 }
+      ],
+      "current_player": "red",
+      "depth": 2
+    },
+    {
+      "name": "side_pressure",
+      "board_size": 24,
+      "moves": [
+        { "player": "red", "row": 5, "col": 10 },
+        { "player": "black", "row": 10, "col": 5 },
+        { "player": "red", "row": 6, "col": 12 },
+        { "player": "black", "row": 12, "col": 6 },
+        { "player": "red", "row": 7, "col": 8 },
+        { "player": "black", "row": 8, "col": 7 }
+      ],
+      "current_player": "red",
+      "depth": 2
+    },
+    {
+      "name": "black_to_move",
+      "board_size": 24,
+      "moves": [
+        { "player": "red", "row": 11, "col": 11 },
+        { "player": "black", "row": 12, "col": 13 },
+        { "player": "red", "row": 10, "col": 12 }
+      ],
+      "current_player": "black",
+      "depth": 2
+    }
+  ],
+  "top_k": 5,
+  "score_delta": 500
+}

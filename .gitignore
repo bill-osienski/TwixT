@@ -48,3 +48,7 @@ scripts/GPU/logs/
 
 # Pytest cache
 .pytest_cache/
+
+# ONNX model weights (large binary — use LFS or upload separately if needed)
+*.onnx
+*.onnx.data
