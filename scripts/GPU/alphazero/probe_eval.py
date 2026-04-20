@@ -1,0 +1,327 @@
+"""Probe evaluator — run the curated probe suite against a checkpoint.
+
+Produces per-probe CSV + aggregate JSON. Supports both 24-channel (iter-999
+and earlier) and 30-channel (post-retrain) networks via auto-detection of
+the checkpoint's first-conv-layer input channel count.
+
+Formal runs require an explicit --weights path. Interactive "latest
+checkpoint" convenience mode prints the resolved path before proceeding.
+"""
+from __future__ import annotations
+import argparse
+import csv
+import json
+import os
+import random
+import sys
+from datetime import datetime
+
+import numpy as np
+import mlx.core as mx
+
+from .game.twixt_state import TwixtState
+from .mcts import MCTS, MCTSConfig
+from .local_evaluator import LocalGPUEvaluator
+
+
+def _detect_input_channels(weights_path: str) -> int:
+    """Inspect a safetensors checkpoint to learn the first conv layer's input channels.
+
+    Uses MLX's loader (no safetensors package dependency). The encoder's first
+    conv weight is stored as (out_channels, kH, kW, in_channels) in MLX NHWC.
+    """
+    weights = mx.load(weights_path)
+    # Canonical first-conv key for this architecture
+    key = "encoder.conv1.weight"
+    if key not in weights:
+        raise RuntimeError(
+            f"Could not find {key} in {weights_path}; cannot auto-detect input channels."
+        )
+    shape = weights[key].shape
+    if len(shape) != 4:
+        raise RuntimeError(
+            f"Expected 4D conv weight at {key}, got shape {shape}."
+        )
+    # MLX NHWC: (out_channels, kH, kW, in_channels)
+    return shape[-1]
+
+
+def _load_network(
+    weights_path: str,
+    hidden: int | None = None,
+    n_blocks: int | None = None,
+    verbose: bool = True,
+):
+    """Load a network, auto-detecting input channel format.
+
+    Dual-format contract: supports both pre-Phase-2 24-channel checkpoints
+    (iter-0999 and earlier) and post-Phase-2 30-channel checkpoints via the
+    `in_channels` parameter on create_network.
+
+    Architecture (hidden / n_blocks): defaults inherited from
+    `create_network()` — currently 128 and 6 respectively. These ARE the
+    locked canonical training architecture for both 24ch and 30ch runs
+    (see Task 15 trainer defaults). Override via `--hidden` / `--n-blocks`
+    if a checkpoint from a future architecture variant needs to be evaluated.
+    Both values are also echoed into the aggregate JSON metadata so any
+    mismatch is visible in artifacts.
+    """
+    from .network import create_network
+
+    in_channels = _detect_input_channels(weights_path)
+    if verbose:
+        print(f"[probe_eval] Detected {in_channels}-channel checkpoint at {weights_path}")
+    if in_channels not in (24, 30):
+        raise RuntimeError(
+            f"Unsupported channel count {in_channels} in {weights_path}. "
+            f"Expected 24 (pre-Phase-2) or 30 (post-Phase-2)."
+        )
+    # Instantiate using create_network defaults unless caller overrides.
+    # Do NOT duplicate the hidden=128, n_blocks=6 literals here — a future
+    # architecture bump should change the default in one place (create_network)
+    # and have it flow through to all evaluators.
+    kwargs = {"in_channels": in_channels}
+    if hidden is not None:
+        kwargs["hidden"] = hidden
+    if n_blocks is not None:
+        kwargs["n_blocks"] = n_blocks
+    net = create_network(**kwargs)
+    # Resolve the actual hidden / n_blocks used so we can echo them in metadata
+    actual_hidden = hidden if hidden is not None else _default_create_network_param("hidden")
+    actual_n_blocks = n_blocks if n_blocks is not None else _default_create_network_param("n_blocks")
+    if verbose:
+        print(f"[probe_eval] Network architecture: hidden={actual_hidden}, n_blocks={actual_n_blocks}")
+    net.load_weights(weights_path)
+    return net, in_channels, actual_hidden, actual_n_blocks
+
+
+def _default_create_network_param(name: str):
+    """Introspect create_network's default for a named param. Used to echo
+    the actual architecture in metadata when the user didn't override."""
+    import inspect
+    from .network import create_network
+    sig = inspect.signature(create_network)
+    return sig.parameters[name].default
+
+
+def _build_input_tensor(state, in_channels: int):
+    """Build the correct-format input tensor for the checkpoint being evaluated.
+
+    24-channel checkpoints get the pre-Phase-2 layout; 30-channel checkpoints
+    get the current (connectivity-aware) layout.
+    """
+    from .game.twixt_state import to_tensor_v1
+    if in_channels == 24:
+        return to_tensor_v1(state)  # 24-channel
+    return state.to_tensor()  # 30-channel (current)
+
+
+def _replay_probe(probe: dict) -> TwixtState:
+    """Replay a probe's move_history from an empty state."""
+    state = TwixtState(active_size=probe["active_size"])
+    for move in probe["move_history"]:
+        r, c = int(move[0]), int(move[1])
+        state = state.apply_move((r, c))
+    return state
+
+
+def _eval_probe(probe: dict, evaluator: LocalGPUEvaluator, sims: int, in_channels: int) -> dict:
+    """Evaluate one probe: get NN value + run MCTS with `sims` sims.
+
+    `in_channels` selects the tensor format (24 or 30) matching the network.
+    """
+    state = _replay_probe(probe)
+
+    # NN-only value: single forward pass from the state's side-to-move perspective.
+    # Tensor format must match the network's input expectation.
+    tensor = _build_input_tensor(state, in_channels)  # (C, H, W)
+    tensor = np.transpose(tensor, (1, 2, 0))  # (H, W, C)
+    boards_np = np.expand_dims(tensor.astype(np.float32), axis=0)
+    moves = state.legal_moves()
+    move_rows_np = np.array([[m[0] for m in moves]], dtype=np.int32)
+    move_cols_np = np.array([[m[1] for m in moves]], dtype=np.int32)
+    move_mask_np = np.ones((1, len(moves)), dtype=np.float32)
+    priors_np, values_np = evaluator.infer(
+        boards_np, move_rows_np, move_cols_np, move_mask_np, state.active_size
+    )
+    nn_value = float(values_np[0])  # From side_to_move perspective
+
+    # MCTS: run sims; root_value also from side_to_move perspective
+    mcts_root_value = None
+    mcts_top_move = None
+    mcts_top_share = None
+    if sims > 0:
+        cfg = MCTSConfig(n_simulations=sims)
+        mcts = MCTS(evaluator, cfg, rng=random.Random(42))
+        visit_counts, root_value = mcts.search(state, add_noise=False)
+        mcts_root_value = float(root_value)
+        if visit_counts:
+            top = max(visit_counts.items(), key=lambda kv: kv[1])
+            mcts_top_move = list(top[0])
+            total = sum(visit_counts.values())
+            mcts_top_share = top[1] / total if total > 0 else 0.0
+
+    # Convert to red-perspective for consistency (spec convention)
+    if state.to_move == "black":
+        nn_value = -nn_value
+        if mcts_root_value is not None:
+            mcts_root_value = -mcts_root_value
+
+    # Score against expected
+    exp_sign = probe.get("expected_value_sign", 0)
+    sign_correct_nn = int((exp_sign > 0 and nn_value > 0) or
+                          (exp_sign < 0 and nn_value < 0) or
+                          (exp_sign == 0 and abs(nn_value) < 0.1))
+    sign_correct_mcts = 0
+    if mcts_root_value is not None:
+        sign_correct_mcts = int((exp_sign > 0 and mcts_root_value > 0) or
+                                (exp_sign < 0 and mcts_root_value < 0) or
+                                (exp_sign == 0 and abs(mcts_root_value) < 0.1))
+
+    # Magnitude checks
+    min_mag = probe.get("expected_value_min")
+    max_mag = probe.get("expected_value_max")
+    mag_ok = True
+    if min_mag is not None:
+        mag_ok = mag_ok and abs(nn_value) >= min_mag
+    if max_mag is not None:
+        mag_ok = mag_ok and abs(nn_value) <= max_mag
+
+    # Search-corrected / both-wrong flags
+    search_corrected = int(sign_correct_mcts == 1 and sign_correct_nn == 0)
+    both_wrong = int(sign_correct_mcts == 0 and sign_correct_nn == 0)
+
+    return {
+        "probe_id": probe["id"],
+        "category": probe["category"],
+        "confidence": probe["confidence"],
+        "expected_value_sign": exp_sign,
+        "nn_value": round(nn_value, 4),
+        "mcts_root_value": round(mcts_root_value, 4) if mcts_root_value is not None else None,
+        "mcts_top_move": mcts_top_move,
+        "mcts_top_share": round(mcts_top_share, 4) if mcts_top_share is not None else None,
+        "sign_correct_nn": sign_correct_nn,
+        "sign_correct_mcts": sign_correct_mcts,
+        "nn_magnitude": round(abs(nn_value), 4),
+        "magnitude_in_band": int(mag_ok),
+        "search_corrected": search_corrected,
+        "both_wrong": both_wrong,
+    }
+
+
+def _aggregate(rows: list[dict]) -> dict:
+    """Per-tier and per-category aggregation."""
+    from statistics import median
+    def pct(xs, n):
+        return round(sum(xs) / n, 3) if n else 0.0
+
+    forced = [r for r in rows if r["confidence"] == "forced"]
+    strong = [r for r in rows if r["confidence"] == "strong_advantage"]
+    overall = rows
+
+    def bucket_stats(bucket):
+        n = len(bucket)
+        if n == 0:
+            return {"n": 0}
+        return {
+            "n": n,
+            "sign_correct_nn_rate": pct([r["sign_correct_nn"] for r in bucket], n),
+            "sign_correct_mcts_rate": pct([r["sign_correct_mcts"] for r in bucket], n),
+            "median_nn_magnitude": round(median([r["nn_magnitude"] for r in bucket]), 3),
+            "magnitude_in_band_rate": pct([r["magnitude_in_band"] for r in bucket], n),
+            "search_corrected_rate": pct([r["search_corrected"] for r in bucket], n),
+            "both_wrong_rate": pct([r["both_wrong"] for r in bucket], n),
+        }
+
+    by_category = {}
+    for cat in {r["category"] for r in rows}:
+        by_category[cat] = bucket_stats([r for r in rows if r["category"] == cat])
+
+    return {
+        "forced": bucket_stats(forced),
+        "strong_advantage": bucket_stats(strong),
+        "overall": bucket_stats(overall),
+        "by_category": by_category,
+    }
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Evaluate a model against the probe suite.")
+    ap.add_argument("--weights", required=True,
+                    help="Path to .safetensors checkpoint. REQUIRED for formal runs.")
+    ap.add_argument("--probes", default="tests/probes/twixt_probes.json",
+                    help="Path to probe suite JSON")
+    ap.add_argument("--sims", type=int, default=200,
+                    help="MCTS sims per probe (0 to skip MCTS and do NN-only)")
+    ap.add_argument("--out", required=True, help="Output CSV path")
+    ap.add_argument("--forced-only", action="store_true",
+                    help="Evaluate only forced-tier probes (cheap per-iter sampling mode)")
+    # Architecture overrides — defaults inherited from create_network() so
+    # one canonical source of truth. Only override when evaluating a
+    # non-canonical architecture variant.
+    ap.add_argument("--hidden", type=int, default=None,
+                    help="Override hidden channel count (default: create_network default)")
+    ap.add_argument("--n-blocks", type=int, default=None,
+                    help="Override residual block count (default: create_network default)")
+    args = ap.parse_args()
+
+    if not os.path.exists(args.weights):
+        print(f"[ERROR] weights file not found: {args.weights}", file=sys.stderr)
+        sys.exit(2)
+    if not os.path.exists(args.probes):
+        print(f"[ERROR] probes file not found: {args.probes}", file=sys.stderr)
+        sys.exit(2)
+
+    print(f"[probe_eval] weights: {os.path.abspath(args.weights)}")
+    print(f"[probe_eval] probes:  {os.path.abspath(args.probes)}")
+    print(f"[probe_eval] sims:    {args.sims}")
+
+    probes_data = json.loads(open(args.probes).read())
+    probes = probes_data.get("probes") or probes_data.get("candidates") or []
+    if args.forced_only:
+        probes = [p for p in probes if p.get("confidence") == "forced"]
+        print(f"[probe_eval] forced-only mode: {len(probes)} probes")
+
+    net, in_channels, hidden, n_blocks = _load_network(
+        args.weights, hidden=args.hidden, n_blocks=args.n_blocks
+    )
+    evaluator = LocalGPUEvaluator(net)
+
+    rows = []
+    for i, probe in enumerate(probes):
+        row = _eval_probe(probe, evaluator, args.sims, in_channels)
+        rows.append(row)
+        if (i + 1) % 10 == 0:
+            print(f"  evaluated {i+1}/{len(probes)}")
+
+    # Write CSV
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
+    with open(args.out, "w", newline="") as f:
+        if rows:
+            w = csv.DictWriter(f, fieldnames=rows[0].keys())
+            w.writeheader()
+            for r in rows:
+                w.writerow(r)
+    print(f"[probe_eval] wrote per-probe CSV: {args.out}")
+
+    # Write aggregate JSON
+    agg = _aggregate(rows)
+    agg_meta = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "weights": os.path.abspath(args.weights),
+        "probes": os.path.abspath(args.probes),
+        "checkpoint_format": f"{in_channels}-channel",
+        "network_architecture": {"hidden": hidden, "n_blocks": n_blocks},
+        "probes_total": len(rows),
+        "sims": args.sims,
+        "forced_only": args.forced_only,
+        "aggregate": agg,
+    }
+    json_out = args.out.rsplit(".", 1)[0] + ".json"
+    with open(json_out, "w") as f:
+        json.dump(agg_meta, f, indent=2)
+    print(f"[probe_eval] wrote aggregate JSON: {json_out}")
+
+
+if __name__ == "__main__":
+    main()

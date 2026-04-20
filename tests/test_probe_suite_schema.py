@@ -118,3 +118,29 @@ def test_probe_suite_reconstruction():
         # side_to_move should match state.to_move
         assert state.to_move == p["side_to_move"], \
             f"probe {p['id']} replay to_move={state.to_move} != declared {p['side_to_move']}"
+
+
+def test_probe_eval_help():
+    """probe_eval CLI responds to --help."""
+    result = subprocess.run(
+        [".venv/bin/python", "-m", "scripts.GPU.alphazero.probe_eval", "--help"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--weights" in result.stdout
+    assert "--probes" in result.stdout
+    assert "--sims" in result.stdout
+    assert "--out" in result.stdout
+
+
+def test_probe_eval_rejects_missing_weights():
+    """Formal runs require --weights; without it, eval exits non-zero."""
+    result = subprocess.run(
+        [".venv/bin/python", "-m", "scripts.GPU.alphazero.probe_eval",
+         "--probes", "tests/probes/twixt_probes.json",
+         "--sims", "10",
+         "--out", "/tmp/_probe_test.csv"],
+        capture_output=True, text=True,
+    )
+    # Should fail because --weights is required
+    assert result.returncode != 0, "probe_eval should reject formal run without --weights"
