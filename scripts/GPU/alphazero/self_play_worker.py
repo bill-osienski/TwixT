@@ -65,6 +65,9 @@ def self_play_worker_main(
     adjudicate_min_visits: int = 200,
     adjudicate_min_top1_share: float = 0.0,
     adjudicate_debug: bool = False,
+    # Phase 4: per-game replay cap (None/0 disables)
+    max_positions_per_game: Optional[int] = None,
+    endgame_keep_positions: int = 16,
 ) -> None:
     """Worker process entry point.
 
@@ -96,6 +99,7 @@ def self_play_worker_main(
             adjudicate_enabled, adjudicate_min_ply, adjudicate_threshold,
             adjudicate_min_visits, adjudicate_min_top1_share,
             adjudicate_debug,
+            max_positions_per_game, endgame_keep_positions,
         )
     except (KeyboardInterrupt, BrokenPipeError, EOFError, RuntimeError):
         # Graceful exit on interrupt, queue closure, or evaluator timeout
@@ -132,6 +136,9 @@ def _worker_loop(
     adjudicate_min_visits: int,
     adjudicate_min_top1_share: float,
     adjudicate_debug: bool,
+    # Phase 4: per-game replay cap
+    max_positions_per_game: Optional[int],
+    endgame_keep_positions: int,
 ) -> None:
     """Inner worker loop (extracted for clean exception handling)."""
     import time
@@ -176,6 +183,8 @@ def _worker_loop(
             adjudicate_min_visits=adjudicate_min_visits,
             adjudicate_min_top1_share=adjudicate_min_top1_share,
             adjudicate_debug=adjudicate_debug,
+            max_positions_per_game=max_positions_per_game,
+            endgame_keep_positions=endgame_keep_positions,
         )
         games_played += 1
 
@@ -237,6 +246,8 @@ def _worker_loop(
                 adj_total_visits=game.adj_total_visits,
                 opening_diagnostics=tuple(game.opening_diagnostics),
                 opening_diagnostics_meta=game.opening_diagnostics_meta,
+                n_positions_original=game.n_positions_original,
+                n_positions_kept=game.n_positions_kept,
             ))
 
         # Periodic stats

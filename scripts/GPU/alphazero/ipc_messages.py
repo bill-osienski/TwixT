@@ -97,3 +97,6 @@ class GameComplete:
     # Opening penalty diagnostics (per-root records for diagnostic window)
     opening_diagnostics: Tuple[dict, ...] = ()
     opening_diagnostics_meta: Optional[dict] = None
+    # Phase 4: per-game replay cap diagnostics
+    n_positions_original: int = 0
+    n_positions_kept: int = 0
