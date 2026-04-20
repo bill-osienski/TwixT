@@ -28,14 +28,27 @@ Thumbs.db
 .env.local
 
 # Auto-tune logs and temporary data
-# Ignore all logs except the state/results files
 logs/*
-!logs/autoTune-state.json
-!logs/correlation-state.json
-!logs/next-sweep.json
-!logs/sweep-results.json
-!logs/validation-results.json
-
+!logs/human-games/
+logs/human-games/*
+!logs/human-games/.gitkeep
+runs/
 selfplay.json
+selfplay-trace.json
 
-scripts/GPU_Training/
+# Training / analysis outputs (should have been ignored from day 1)
+Replays/
+checkpoints/
+runs/
+scripts/GPU/logs/
+
+# Claude harness scratch
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
+# Pytest cache
+.pytest_cache/
+
+# ONNX model weights (large binary — use LFS or upload separately if needed)
+*.onnx
+*.onnx.data

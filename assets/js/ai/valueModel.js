@@ -34,6 +34,7 @@ const NODE_CANDIDATES = [
 
 let _model = null;
 let _lastSource = null;
+let _loadPromise = null;
 
 // ---------- I/O helpers ----------
 async function readTextNode(path) {
@@ -150,8 +151,16 @@ export function getLoadedModel() {
   return _model;
 }
 
+/**
+ * Clear the loaded value model (useful for testing pure heuristics).
+ */
+export function clearValueModel() {
+  _model = null;
+  _lastSource = null;
+  _loadPromise = null;
+}
+
 // Optional, lazy loader used by search.js. Safe if the file is missing.
-let _loadPromise = null;
 export async function maybeLoadValueModel(
   pathOrUrl = '/assets/value-model.json'
 ) {

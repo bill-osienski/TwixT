@@ -1,113 +1,152 @@
 # TwixT Game AI
 
-This workspace hosts the TwixT board game implementation and its search heuristics. The AI defaults to medium-depth play with a blend of handcrafted scoring and a lightweight value model.
+A TwixT board game implementation with AlphaZero-style neural network AI featuring real-time evaluation and WebSocket communication.
 
 ## Quick Start
 
-**Requirements:**
+### Requirements
 
-- Node.js (v14 or later)
+- **Node.js** v18+ (for game server and AI inference)
+- **Python 3.10+** (for training and ONNX export)
 - Modern web browser (Chrome, Firefox, Safari, Edge)
-- Supported platforms: Windows, macOS, Linux
 
-**Technical Stack:**
-
-- **Frontend:** Three.js r128 (3D graphics & texture loading, MIT license), OrbitControls (camera manipulation), vanilla JavaScript (ES modules)
-- **Assets:** Wood texture by ForKotLow (CC0 license, OpenGameArt)
-- **Backend:** Node.js native HTTP server (no external web framework dependencies)
-- **Dependencies:** commander ^11.1.0 (CLI parsing for training scripts)
-- **Dev Tools:** ESLint ^9.39.1, Prettier ^3.6.2
-
-**To play the game:**
+### Installation
 
 ```bash
+# Install Node.js dependencies
 npm install
+
+# Install Python dependencies (for training/export)
+pip install -r requirements.txt
+```
+
+### Running the Game
+
+```bash
 npm start
 ```
 
-The server will start on port 5500 and automatically open your browser to the game.
+This starts:
+- **Game server** on http://localhost:5500 (opens browser automatically)
+- **AI server** on http://localhost:3001 (if ONNX model exists)
 
-## AI Training Pipeline
+### First-Time Setup: Export the AI Model
 
-The game includes a computer opponent for 1-player mode, powered by a hybrid AI combining traditional game-tree search with machine learning. The training pipeline optimizes this AI through automated self-play and parallel hyperparameter tuning.
-
-**Training Requirements:**
-
-- Python 3.7+ (uses standard library only - no external ML frameworks)
-- Dev tools: black >=24.10.0, ruff >=0.6.7 (optional, for code quality)
-
-**Architecture:**
-
-The AI uses **minimax search** with **alpha-beta pruning** at configurable depths (typically 2-3 plies). Evaluation is based on:
-
-- Handcrafted heuristics (bridge connectivity, lane control, edge threats)
-- A lightweight **logistic regression value model** trained on self-play game states
-
-**Training Flow:**
-
-```
-autoTune.py → tuneBaseline.js → selfPlayParallel.js
-```
-
-1. **autoTune.py** - Orchestrates hyperparameter optimization using:
-   - **Cross-Entropy Method (CEM)** for sampling promising parameter distributions
-   - **Hill-climbing** for local optimization around elite configurations
-   - **Trend analysis** to identify which parameters correlate with stronger play
-   - Parallel validation across multiple search depths
-
-2. **tuneBaseline.js** - Executes parameter sweeps:
-   - Tests 24 candidate configurations per sweep
-   - Uses multi-process parallelization to run games concurrently
-   - Tracks win rates, game lengths, and heuristic performance metrics
-
-3. **selfPlayParallel.js** - Game engine:
-   - Runs AI vs AI matches with different parameter sets
-   - Supports parallel worker pools for efficient batch processing
-   - Generates game state data for training the value model
-
-The system automatically identifies winning configurations and persists them to `assets/js/ai/search.json`. The process runs thousands of games to statistically validate improvements before adopting new parameters.
-
-**Quick Commands:**
+The AI server requires an ONNX model exported from a trained checkpoint:
 
 ```bash
-# Run automated training (recommended)
-python3 autoTune.py loop
-
-# Train the logistic regression value model
-python scripts/train_value.py --help
-
-# Manual parameter sweep
-node scripts/tuneBaseline.js
-
-# Direct self-play batch
-node scripts/selfPlayParallel.js
+python3 -m scripts.GPU.alphazero.export_onnx --weights checkpoints/alphazero-fresh/model_iter_0168.safetensors --output server/model.onnx
 ```
 
-See `docs/baseline-tuning.md` for detailed documentation.
+After exporting, `npm start` will automatically use the model.
+
+## Architecture
+
+### Frontend
+- **Three.js r128** - 3D board rendering
+- **Vanilla JavaScript** (ES modules)
+- **WebSocket client** - Real-time AI communication with live evaluation bar
+
+### Backend
+- **Express.js** - HTTP API endpoints
+- **WebSocket server** - Real-time MCTS progress streaming
+- **ONNX Runtime** - Neural network inference
+
+### AI System
+- **AlphaZero-style MCTS** with neural network policy/value heads
+- **Live evaluation bar** - Shows win probability during AI thinking
+- **Request cancellation** - Undo during AI move cancels computation
+- **Fallback to heuristics** - Works without AI server (weaker play)
+
+## AI Training (AlphaZero)
+
+The AI uses Monte Carlo Tree Search guided by a neural network trained via self-play.
+
+### Training Requirements
+
+```bash
+pip install -r requirements.txt
+# Requires: mlx, safetensors, numpy, torch, onnx
+```
+
+### Training Commands
+
+```bash
+# Start/resume AlphaZero training
+python3 -m scripts.GPU.alphazero.train --iterations 200 --games 50
+
+# Export trained model to ONNX for the game server
+python3 -m scripts.GPU.alphazero.export_onnx --weights checkpoints/alphazero-fresh/model_iter_XXXX.safetensors --output server/model.onnx
+```
+
+### Training Features
+
+- **Curriculum learning** - Starts on 8x8, progresses to 24x24
+- **Parallel self-play** - Multi-process game generation
+- **GPU inference server** - Batched neural network evaluation
+- **Automatic checkpointing** - Saves model every iteration
+
+See `docs/alphazero-twixt.md` for detailed training documentation.
 
 ## Development
 
-- **AI Parameters:** `assets/js/ai/search.json`
-- **Testing:** `npm test` - Runs smoke tests
-- **Linting:** `npm run lint` or `npm run lint:fix`
-- **Type Checking:** `npm run typecheck`
-- **CI:** Runs lint, typecheck, and tests on every push. Also checks Python code with `ruff` and `black`.
+### Scripts
 
-## Advanced Topics
-
-**Sealed-Lane Performance Instrumentation**
-
-Toggle performance profiling in `assets/js/ai/search.json`:
-
-```json
-{
-  "debug": {
-    "performance": {
-      "sealedLane": true,
-      "sealedLaneLogEvery": 0
-    }
-  }
-}
+```bash
+npm start          # Start game + AI servers
+npm run server     # Start AI server only
+npm test           # Run smoke tests
+npm run lint       # Check code style
+npm run lint:fix   # Auto-fix style issues
 ```
 
-Access stats via `window.__TwixTSealedLaneStats` in the browser console. Use for comparing search performance before/after heuristic changes.
+### Project Structure
+
+```
+assets/js/
+├── ai/              # AI clients and heuristics
+│   ├── alphaZeroClient.js  # WebSocket client for AI server
+│   └── search.js           # Fallback heuristic AI
+├── game/            # Game logic and rendering
+└── ui/              # UI components (win bar, etc.)
+
+server/
+├── index.js         # Express + WebSocket server
+├── mcts.js          # Monte Carlo Tree Search
+├── inference.js     # ONNX model loading
+└── model.onnx       # Exported neural network
+
+scripts/GPU/alphazero/
+├── train.py         # Main training loop
+├── self_play.py     # Game generation
+├── network.py       # Neural network (MLX)
+└── export_onnx.py   # ONNX export
+```
+
+### Configuration
+
+- **AI Parameters:** `assets/js/ai/search.json`
+- **Difficulty levels:** easy (100 sims), medium (400 sims), hard (800 sims)
+
+## Replay Viewer
+
+Open `Replay.html` via the local server to load and step through saved games:
+
+```bash
+npm start
+# Navigate to http://localhost:5500/Replay.html
+```
+
+## Troubleshooting
+
+### AI server not starting
+- Ensure `server/model.onnx` exists (run the export command above)
+- Check that port 3001 is not in use
+
+### "AlphaZero server not available" in browser
+- The game falls back to heuristic AI (weaker but functional)
+- Start the AI server: `npm run server`
+
+### Python import errors
+- Activate your virtual environment: `source .venv/bin/activate`
+- Install dependencies: `pip install -r requirements.txt`

@@ -1,0 +1,74 @@
+- [x] Milestone 1: Python/GPU parity removal + training mode split
+- [x] Add explicit modes: training (stochastic) and debug (deterministic)
+- [x] Remove JS-parity tie-breaks and lexicographic constraints from training
+- [x] Ensure red/black symmetry in evaluation/heuristics or make symmetry explicit
+- [x] Add balanced color assignment + opening diversity in self-play loop
+- [x] Acceptance: training mode yields non-degenerate red/black results
+- [x] Acceptance: throughput improves vs parity-constrained mode
+- [x] Acceptance: debug deterministic mode remains for primitive tests
+- [x] Add training-only adjacent clump penalty to reduce random clusters
+- [x] Add training-only edge-push bonus toward missing goal edges
+- [x] Add training-only wrong-half penalty when missing goal edges
+- [x] Add training-only global span gain bonus to encourage crossing
+- [x] Scale training first-edge bonus to encourage touching both edges
+- [x] Reduce depth-2 temperature to avoid stochastic edge avoidance
+- [x] Increase depth-2 opening diversity and decay edge-push after both edges
+- [x] Boost edge-push after first edge to avoid one-edge stalls
+- [x] Add opening-phase center bias with early edge suppression
+- [x] Add second-edge bonus to prevent edge-sticking
+- [x] Add uniform opening plies for depth-2 to diversify starts
+- [x] Gate edge bonuses on real connectivity and devalue isolated edge chasing
+- [x] Gate edge bonuses on minimum component size
+- [x] Add training edge-progress reward toward missing edges
+- [x] Reward bridge creation and component growth in training
+- [x] Penalize chasing sealed lanes in training
+- [x] Adaptive sampling: top-K after opening; sealed-lane gating; finish bonus disabled when sealed
+- [x] Add retreat penalties and score-band sampling after midgame
+- [x] Add early opening edge-forbid to diversify starts
+- [x] Guarded sampling: score band + chain-progress filter + deterministic on open lanes
+- [x] Guarded sampling: force defensive moves when opponent is urgent
+- [x] Add corridor-based defense gating when opponent span grows
+- [x] Add ladder alignment reward to favor straight chain extension
+
+- [ ] Milestone 2: JS track is interactive-only
+- [x] Ensure no JS self-play is called from scripts or UI
+- [ ] Keep DSU/rollback + heuristic search tuned for shallow depth (1-2)
+- [x] Verify startServer uses only interactive search
+- [x] Acceptance: no JS self-play scripts in active use
+- [x] Acceptance: JS move latency 50-150ms on curated suite
+- [ ] Acceptance: no OOM/forced-GC needed for normal play
+
+- [x] Milestone 3: Bridge v1 (opening book)
+- [x] Implement Python exporter for opening book (plies 0-12, top-K)
+- [x] Store book as JSON under assets
+- [x] Load book in JS; prefer book move if entry exists
+- [x] Acceptance: JS uses book early, falls back cleanly after ply 12
+- [x] Acceptance: book lookup adds <5ms per move
+- [x] Acceptance: book file metadata supports refresh/versioning
+
+- [ ] Milestone 4: Behavioral regression tests
+- [x] Create curated position suite (early/mid/late, both colors)
+- [x] Add test: JS move within Python top-K or within eval delta
+- [x] Record deltas as regression trend
+- [ ] Acceptance: suite passes with current heuristics
+- [ ] Acceptance: failures represent meaningful divergence
+
+- [ ] Milestone 5: Performance + stability guardrails
+- [x] Add JS latency benchmark for curated suite
+- [x] Add Python self-play throughput benchmark (games/hour)
+- [ ] Gate changes on these metrics
+- [x] Acceptance: JS avg move time 50-150ms; max within agreed cap
+- [ ] Acceptance: Python throughput improves after parity removal
+
+- [ ] Milestone 6: Training telemetry + replay durability
+- [ ] Ensure per-depth bias is recorded independently (no aggregate-only parity)
+- [ ] Ensure every run logs knobs, hash, seed, depth, and per-depth bias
+- [ ] Ensure full move lists are recorded for replay (per-game JSON)
+- [ ] Add a stable schema for extra telemetry (feature keys) without breaking hashes
+- [ ] Acceptance: replay viewer can load any recorded game
+- [ ] Acceptance: knobs can be recovered from hash for any run
+
+- [ ] Opening book JSON schema (v1) documented
+- [ ] Include version, generated_at, plies, board_size, hash_algo
+- [ ] Include per-position: side_to_move, ply, top_k (move/prior/value/visits)
+- [ ] Include stats: positions, games, top_k

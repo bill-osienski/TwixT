@@ -20,7 +20,12 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .mcts import MCTS, MCTSConfig, MCTSNode, encode_move
+from .mcts import MCTS, MCTSConfig, MCTSNode, encode_move, decode_move
+from .opening_diagnostics import (
+    build_root_diagnostic,
+    build_root_child_details,
+    compute_diagnostic_end_ply,
+)
 from .evaluator import Evaluator
 from .game import (
     TwixtState, DIRECTION_TO_CHANNEL,
@@ -34,6 +39,13 @@ _OPENING_DEBUG_GAMES = 16   # Only log for game_id < this
 _OPENING_DEBUG_PLIES = 2    # Only log for ply < this (0 and 1)
 _OPENING_DEBUG_TOPK = 12    # Show top-K moves
 
+# --- Phase 1: Root-child diagnostics (deep per-child inspection at early plies) ---
+# For ply < CHILD_DETAIL_PLIES we attach `root_summary` + `top_children` to the
+# per-root diagnostic record. These fields reveal exactly why the search chose
+# what it did (q vs u vs score vs ties). Unconditional on penalties; cheap.
+CHILD_DETAIL_PLIES = 2      # Attach child details for ply in [0, 1]
+CHILD_DETAIL_TOPK = 10      # Top-K children (by visits) to include
+
 # Draw reason constants (used in GameRecord, curriculum, trainer)
 DRAW_TIMEOUT = "timeout_selfplay"
 DRAW_BOARD_FULL = "terminal_board_full"
@@ -43,10 +55,70 @@ DRAW_UNKNOWN = "terminal_unknown"
 # Resign constant (game ended by resignation - has winner, not a draw)
 RESIGN = "resign"
 
+# Adjudication constant (game hit max_moves; winner assigned by final MCTS eval)
+ADJUDICATED = "adjudicated"
+
 
 def opponent(player: str) -> str:
     """Return opponent color."""
     return "black" if player == "red" else "red"
+
+
+# --- Phase 4: Per-game replay contribution cap ---
+
+def apply_game_position_cap(
+    positions: List["PositionRecord"],
+    max_positions_per_game: Optional[int],
+    endgame_keep_positions: int,
+    rng: random.Random,
+) -> Tuple[List["PositionRecord"], int, int]:
+    """Cap the positions that a single game contributes to replay.
+
+    Long games flood the buffer (every position gets the same outcome label),
+    which lets a few drifting games dominate training signal. This helper
+    enforces a per-game cap:
+      - if `max_positions_per_game` is None or <= 0: no-op (pass through)
+      - if len(positions) <= cap: no-op
+      - else: keep the last `endgame_keep_positions` unconditionally (protects
+              conversion/endgame supervision), then uniformly sample the
+              remainder from the earlier positions to fill the quota.
+
+    Positions are assumed to be in ply order (mirror augmentations, when
+    enabled, are interleaved adjacent to their original — preserved by the
+    index-based logic below).
+
+    Args:
+        positions: list of PositionRecord (in play order).
+        max_positions_per_game: cap (None/<=0 disables).
+        endgame_keep_positions: positions at the tail to keep unconditionally.
+        rng: random.Random used for uniform sampling (reproducible per seed).
+
+    Returns:
+        (kept_positions, n_original, n_kept) where n_kept == len(kept).
+    """
+    n_orig = len(positions)
+    if max_positions_per_game is None or max_positions_per_game <= 0:
+        return list(positions), n_orig, n_orig
+    if n_orig <= max_positions_per_game:
+        return list(positions), n_orig, n_orig
+
+    ek = max(0, min(endgame_keep_positions, max_positions_per_game, n_orig))
+    remainder_quota = max_positions_per_game - ek
+    endgame_start = n_orig - ek
+    earlier = positions[:endgame_start]
+    endgame = positions[endgame_start:]
+
+    if remainder_quota >= len(earlier):
+        # Quota covers all earlier positions; keep everything up to cap
+        kept = list(earlier) + list(endgame)
+    elif remainder_quota <= 0:
+        kept = list(endgame)
+    else:
+        idxs = rng.sample(range(len(earlier)), remainder_quota)
+        idxs.sort()  # preserve play order
+        kept = [earlier[i] for i in idxs] + list(endgame)
+
+    return kept, n_orig, len(kept)
 
 # --- Horizontal mirror augmentation ---
 try:
@@ -229,6 +301,8 @@ class PositionRecord:
         visit_counts: Raw visit counts (same order as legal_moves)
         outcome: +1 if to_move won, -1 if lost, 0 draw (set after game ends)
         active_size: Curriculum board size (for training with masked pooling)
+        ply: Ply at which this position occurred (0 = first move)
+        game_n_moves: Total plies played in the source game (set in outcome loop)
     """
 
     board_tensor: np.ndarray  # (H, W, C) numpy array - NHWC format
@@ -237,6 +311,8 @@ class PositionRecord:
     visit_counts: List[int]
     outcome: Optional[float] = None
     active_size: int = 24  # Curriculum board size
+    ply: int = 0                        # ply at which this position occurred
+    game_n_moves: Optional[int] = None  # total plies in the source game (set in outcome loop)
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -247,6 +323,8 @@ class PositionRecord:
             "visit_counts": self.visit_counts,
             "outcome": self.outcome,
             "active_size": self.active_size,
+            "ply": self.ply,
+            "game_n_moves": self.game_n_moves,
         }
 
     @classmethod
@@ -259,6 +337,8 @@ class PositionRecord:
             visit_counts=d["visit_counts"],
             outcome=d["outcome"],
             active_size=d.get("active_size", 24),
+            ply=d.get("ply", 0),
+            game_n_moves=d.get("game_n_moves"),
         )
 
 
@@ -302,6 +382,28 @@ class GameRecord:
     flush_full: int = 0
     flush_stall: int = 0
     flush_tail: int = 0
+    # Adjudication diagnostics (per-game, aggregated by trainer)
+    adj_attempted: bool = False           # timeout + adjudicate_enabled
+    adj_blocked_by: Optional[str] = None  # "ply", "threshold", "visits", "top1", or None if eligible
+    adj_abs_rv: Optional[float] = None
+    adj_top1: Optional[float] = None
+    adj_total_visits: Optional[int] = None
+    # Resign gate stats (per-game, aggregated by trainer)
+    rg_checks_red: int = 0
+    rg_checks_black: int = 0
+    rg_value_hits_red: int = 0
+    rg_value_hits_black: int = 0
+    rg_eligible_red: int = 0
+    rg_eligible_black: int = 0
+    rg_top1_samples: Tuple[float, ...] = ()
+    # Opening penalty diagnostics (per-root records for diagnostic window plies)
+    opening_diagnostics: List[dict] = field(default_factory=list)
+    opening_diagnostics_meta: Optional[dict] = None
+    # Phase 4: per-game replay cap diagnostics
+    # n_positions_original = positions produced before cap (includes mirrors)
+    # n_positions_kept     = positions retained after cap (what trainer sees)
+    n_positions_original: int = 0
+    n_positions_kept: int = 0
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -342,6 +444,16 @@ def play_game(
     resign_k: int = 8,
     resign_min_visits: int = 200,
     resign_min_top1_share: float = 0.0,  # Optional: require top move support
+    # Adjudication-at-timeout parameters (disabled by default)
+    adjudicate_enabled: bool = False,
+    adjudicate_min_ply: int = 120,
+    adjudicate_threshold: float = 0.90,
+    adjudicate_min_visits: int = 200,
+    adjudicate_min_top1_share: float = 0.0,
+    adjudicate_debug: bool = False,
+    # Phase 4: per-game replay cap (0/None disables; cap applied before returning)
+    max_positions_per_game: Optional[int] = None,
+    endgame_keep_positions: int = 16,
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -360,6 +472,11 @@ def play_game(
         resign_k: Resign if K of last W checks meet condition (default: 8)
         resign_min_visits: Require root.visit_count >= this (default: 200)
         resign_min_top1_share: Require top move's visit share >= this (default: 0.0 = disabled)
+        adjudicate_enabled: Enable timeout adjudication (default: False)
+        adjudicate_min_ply: Don't adjudicate before this ply (default: 120)
+        adjudicate_threshold: Absolute root_value threshold for adjudication (default: 0.90)
+        adjudicate_min_visits: Require root.visit_count >= this (default: 200)
+        adjudicate_min_top1_share: Require top move's visit share >= this (default: 0.0 = disabled)
 
     Returns:
         GameRecord with all positions and outcomes assigned
@@ -368,6 +485,13 @@ def play_game(
     rng = rng or random.Random()
 
     mcts = MCTS(evaluator, mcts_config, rng)
+
+    # Compute opening diagnostics window
+    cfg = mcts.config
+    _diag_end_ply, _diag_used_floor = compute_diagnostic_end_ply(
+        cfg.root_edge_band_penalty_ply, cfg.root_near_corner_penalty_ply,
+    )
+    _opening_diags: List[dict] = []
 
     # Determine starting player (random if not specified)
     if start_player is None:
@@ -391,11 +515,16 @@ def play_game(
     resigned_by: Optional[str] = None
     winner: Optional[str] = None
     draw_reason: Optional[str] = None
-    # Resign debug counters
-    resign_checks = 0
-    resign_condition_hits = 0
-    max_window_hits = 0
-    min_root_value_after_min_ply = float('inf')
+    adj_root_value = None     # Final MCTS eval at cap (for diagnostics)
+    adj_top1_share = None     # Top-1 visit share at cap (for diagnostics)
+    adj_attempted = False     # Whether adjudication was attempted (timeout + enabled)
+    adj_blocked_by = None     # "ply", "threshold", "visits", "top1", or None if eligible
+    adj_total_visits = None   # Total search visits at cap
+    # Resign gate breakdown (by to_move color)
+    rg_checks_red = 0;    rg_checks_black = 0
+    rg_value_hits_red = 0; rg_value_hits_black = 0   # visits>=min AND value<=threshold
+    rg_eligible_red = 0;   rg_eligible_black = 0     # value+visits+share all passed
+    rg_top1_samples = []   # top1_share values on value_hits only (for percentiles)
 
     positions = []
     move_history = []
@@ -407,34 +536,85 @@ def play_game(
             root, add_noise=add_noise, ply=ply
         )
 
+        # Build opening diagnostic record if within window
+        if ply < _diag_end_ply and root.priors_raw is not None:
+            _rec = build_root_diagnostic(
+                ply=ply,
+                side_to_move=state.to_move,
+                visit_counts=visit_counts,
+                priors_raw=root.priors_raw,
+                priors_adjusted=root.priors,
+                board_size=active_size,
+                band_width=cfg.root_edge_band_width,
+                corner_radius=cfg.root_near_corner_radius,
+                edge_penalty=cfg.root_edge_band_penalty,
+                corner_penalty=cfg.root_near_corner_penalty,
+                edge_penalty_ply=cfg.root_edge_band_penalty_ply,
+                corner_penalty_ply=cfg.root_near_corner_penalty_ply,
+                corner_penalty_early=cfg.root_near_corner_penalty_early,
+                corner_penalty_early_plies=cfg.root_near_corner_penalty_early_plies,
+                decode_fn=decode_move,
+            )
+            # Attach deep per-child details for the earliest plies only
+            if ply < CHILD_DETAIL_PLIES:
+                _child = build_root_child_details(
+                    root=root,
+                    c_puct=cfg.c_puct,
+                    board_size=active_size,
+                    band_width=cfg.root_edge_band_width,
+                    corner_radius=cfg.root_near_corner_radius,
+                    top_k=CHILD_DETAIL_TOPK,
+                    decode_fn=decode_move,
+                )
+                _rec["root_summary"] = _child["root_summary"]
+                _rec["top_children"] = _child["top_children"]
+            _opening_diags.append(_rec)
+
         # --- RESIGN CHECK (after search, before move selection) ---
         # root_value is from state.to_move perspective:
         #   +1 = to_move winning, -1 = to_move losing
         if resign_enabled and ply >= resign_min_ply:
-            resign_checks += 1
-            min_root_value_after_min_ply = min(min_root_value_after_min_ply, root_value)
+            is_red = (state.to_move == "red")
+            if is_red:
+                rg_checks_red += 1
+            else:
+                rg_checks_black += 1
 
-            # Optional: require top move has enough support (avoid noisy resigns)
-            if resign_min_top1_share > 0:
+            # Always compute top1_share on value hits (for distribution tracking)
+            value_visits_ok = (root.visit_count >= resign_min_visits
+                               and root_value <= resign_threshold)
+
+            if value_visits_ok:
                 total_visits = sum(visit_counts.values())
                 top1_visits = max(visit_counts.values()) if visit_counts else 0
                 top1_share = top1_visits / total_visits if total_visits > 0 else 0
-                share_ok = top1_share >= resign_min_top1_share
-            else:
-                share_ok = True
+                rg_top1_samples.append(top1_share)
 
-            condition_met = (root.visit_count >= resign_min_visits
-                             and root_value <= resign_threshold
-                             and share_ok)
-            resign_window_hits.append(1 if condition_met else 0)
+                if is_red:
+                    rg_value_hits_red += 1
+                else:
+                    rg_value_hits_black += 1
+
+                # Share gate
+                if resign_min_top1_share > 0:
+                    share_ok = top1_share >= resign_min_top1_share
+                else:
+                    share_ok = True
+
+                condition_met = share_ok
+            else:
+                condition_met = False
+
             if condition_met:
-                resign_condition_hits += 1
+                if is_red:
+                    rg_eligible_red += 1
+                else:
+                    rg_eligible_black += 1
+
+            resign_window_hits.append(1 if condition_met else 0)
             window_sum = sum(resign_window_hits)
-            if window_sum > max_window_hits:
-                max_window_hits = window_sum
 
             if window_sum >= resign_k:
-                # Set winner/draw_reason immediately before break
                 resigned_by = state.to_move
                 winner = opponent(resigned_by)
                 draw_reason = RESIGN
@@ -456,6 +636,7 @@ def play_game(
                 legal_moves=moves,
                 visit_counts=counts,  # Raw counts, not normalized
                 active_size=active_size,  # Store for training with masked pooling
+                ply=ply,  # Ply at which this position occurred
             )
         )
 
@@ -471,6 +652,7 @@ def play_game(
                     legal_moves=m_moves,
                     visit_counts=m_counts,
                     active_size=active_size,
+                    ply=ply,  # Mirror shares the same ply as the primary
                 )
             )
 
@@ -509,7 +691,87 @@ def play_game(
             # No winner - determine draw reason
             # Check ply first (authoritative for timeout)
             if is_timeout:
-                draw_reason = DRAW_TIMEOUT
+                # INVARIANT: adjudicate only when winner is None
+                # (guaranteed here by outer `if winner is None:` guard)
+                draw_reason = None  # Reset before adjudication attempt
+                # --- ADJUDICATE TIMEOUT (optional) ---
+                if adjudicate_enabled:
+                    # Fresh root for adjudication (no tree reuse -- cumulative
+                    # q_value/visit_count from the game loop would be stale).
+                    # Must remove max_plies_limit because at timeout the state
+                    # has ply >= max_plies_limit, making is_terminal() True and
+                    # preventing any search (all sims short-circuit immediately).
+                    adj_state = state.copy()
+                    adj_state.max_plies_limit = None
+                    adj_root0 = MCTSNode(state=adj_state)
+                    adj_visit_counts, adj_root_value, adj_root = mcts.search_from_root(
+                        adj_root0, add_noise=False, ply=ply
+                    )
+
+                    # Compute from fresh search results (not cumulative root)
+                    total_visits = sum(adj_visit_counts.values()) if adj_visit_counts else 0
+                    top1_visits = max(adj_visit_counts.values()) if adj_visit_counts else 0
+                    adj_top1_share = (top1_visits / total_visits) if total_visits > 0 else 0.0
+
+                    # Compute ALL gates explicitly (even if disabled)
+                    ply_ok = (ply >= adjudicate_min_ply)
+                    thr_ok = (abs(adj_root_value) >= adjudicate_threshold)
+                    visits_ok = (total_visits >= adjudicate_min_visits)
+                    top1_ok = (adj_top1_share >= adjudicate_min_top1_share) if adjudicate_min_top1_share > 0 else True
+                    eligible = ply_ok and thr_ok and visits_ok and top1_ok
+
+                    # Deterministic "first failure" label
+                    if not ply_ok:
+                        blocked_by = "ply"
+                    elif not thr_ok:
+                        blocked_by = "threshold"
+                    elif not visits_ok:
+                        blocked_by = "visits"
+                    elif not top1_ok:
+                        blocked_by = "top1"
+                    else:
+                        blocked_by = None
+
+                    # Winner mapping (for debug, even if not eligible)
+                    if adj_root_value >= adjudicate_threshold:
+                        winner_if = state.to_move
+                    elif adj_root_value <= -adjudicate_threshold:
+                        winner_if = opponent(state.to_move)
+                    else:
+                        winner_if = None
+
+                    # ADJ_DEBUG (only when --adjudicate-debug)
+                    if adjudicate_debug:
+                        status = "ELIGIBLE" if eligible else f"BLOCKED({blocked_by})"
+                        wif = f" winner_if={winner_if}" if winner_if else ""
+                        print(
+                            f"  ADJ_DEBUG: ply={ply} to_move={state.to_move} "
+                            f"rv={adj_root_value:.3f} abs={abs(adj_root_value):.3f} "
+                            f"total={total_visits} top1={adj_top1_share:.3f} "
+                            f"| req: minply={adjudicate_min_ply} thr={adjudicate_threshold} "
+                            f"minv={adjudicate_min_visits} mintop1={adjudicate_min_top1_share} "
+                            f"| ok: ply={'Y' if ply_ok else 'N'} thr={'Y' if thr_ok else 'N'} "
+                            f"v={'Y' if visits_ok else 'N'} t1={'Y' if top1_ok else 'N'} "
+                            f"=> {status}{wif}"
+                        )
+
+                    # Store diagnostics for GameRecord / trainer aggregation
+                    adj_attempted = True
+                    adj_blocked_by = blocked_by
+                    adj_total_visits = total_visits
+
+                    # Decide winner if all gates pass
+                    if eligible:
+                        if adj_root_value >= adjudicate_threshold:
+                            winner = state.to_move
+                            draw_reason = ADJUDICATED
+                        elif adj_root_value <= -adjudicate_threshold:
+                            winner = opponent(state.to_move)
+                            draw_reason = ADJUDICATED
+
+                # Fall back to timeout if not adjudicated (or adjudication disabled/skipped)
+                if draw_reason is None:
+                    draw_reason = DRAW_TIMEOUT
             elif is_terminal:
                 # State is terminal but no winner - why?
                 if not state.legal_moves():
@@ -527,16 +789,26 @@ def play_game(
             pos.outcome = 1.0  # Player at this position won
         else:
             pos.outcome = -1.0  # Player at this position lost
+        pos.game_n_moves = ply  # ply is the total plies played in this game
+
+    # Phase 4: apply per-game replay cap (no-op if disabled / game short enough)
+    # MUST run AFTER outcome assignment so kept positions already carry outcomes.
+    n_positions_original = len(positions)
+    positions, _n_orig, n_positions_kept = apply_game_position_cap(
+        positions,
+        max_positions_per_game=max_positions_per_game,
+        endgame_keep_positions=endgame_keep_positions,
+        rng=rng,
+    )
 
     # Diagnostic: print timeout trace
     if draw_reason == DRAW_TIMEOUT:
         last_moves = move_history[-10:] if len(move_history) >= 10 else move_history
         print(f"  TIMEOUT: plies={ply}, last10={last_moves}")
 
-    # Resign debug (only if resign was enabled and we checked at least once)
-    if resign_enabled and resign_checks > 0:
-        min_val_str = f"{min_root_value_after_min_ply:.2f}" if min_root_value_after_min_ply != float('inf') else "n/a"
-        print(f"  RESIGN_DEBUG: checks={resign_checks} hits={resign_condition_hits} maxW={max_window_hits} min_root={min_val_str}")
+    if draw_reason == ADJUDICATED and adj_root_value is not None:
+        top1_str = f", top1={adj_top1_share:.2f}" if adj_top1_share is not None else ""
+        print(f"  ADJUDICATED: plies={ply}, to_move={state.to_move}, winner={winner}, root_value={adj_root_value:.3f}{top1_str}")
 
     return GameRecord(
         positions=positions,
@@ -556,6 +828,39 @@ def play_game(
         flush_full=mcts._flush_full,
         flush_stall=mcts._flush_stall,
         flush_tail=mcts._flush_tail,
+        adj_attempted=adj_attempted,
+        adj_blocked_by=adj_blocked_by,
+        adj_abs_rv=abs(adj_root_value) if adj_root_value is not None else None,
+        adj_top1=adj_top1_share,
+        adj_total_visits=adj_total_visits,
+        rg_checks_red=rg_checks_red,
+        rg_checks_black=rg_checks_black,
+        rg_value_hits_red=rg_value_hits_red,
+        rg_value_hits_black=rg_value_hits_black,
+        rg_eligible_red=rg_eligible_red,
+        rg_eligible_black=rg_eligible_black,
+        rg_top1_samples=tuple(rg_top1_samples),
+        opening_diagnostics=_opening_diags,
+        opening_diagnostics_meta={
+            "version": 3,
+            "diagnostic_end_ply": _diag_end_ply,
+            "extra_plies_after_penalty": 2,
+            "floor_min_ply": 4,
+            "used_floor": _diag_used_floor,
+            "child_detail_plies": CHILD_DETAIL_PLIES,
+            "child_detail_topk": CHILD_DETAIL_TOPK,
+            # Phase 2: run-level near-corner config echo (required #1).
+            # Individual per-root records also carry their own `config` block;
+            # this top-level copy exists so consumers can read the run setup
+            # without scanning the per-ply records.
+            "near_corner_penalty": cfg.root_near_corner_penalty,
+            "near_corner_penalty_ply": cfg.root_near_corner_penalty_ply,
+            "near_corner_penalty_early": cfg.root_near_corner_penalty_early,
+            "near_corner_penalty_early_plies": cfg.root_near_corner_penalty_early_plies,
+            "near_corner_radius": cfg.root_near_corner_radius,
+        },
+        n_positions_original=n_positions_original,
+        n_positions_kept=n_positions_kept,
     )
 
 
@@ -568,6 +873,8 @@ def play_games(
     add_noise: bool = True,
     progress_callback=None,
     active_size: int = 24,
+    max_positions_per_game: Optional[int] = None,
+    endgame_keep_positions: int = 16,
 ) -> List[GameRecord]:
     """Play multiple self-play games.
 
@@ -603,6 +910,8 @@ def play_games(
             active_size=active_size,
             start_player=start_player,
             game_id=i,
+            max_positions_per_game=max_positions_per_game,
+            endgame_keep_positions=endgame_keep_positions,
         )
         games.append(game)
 

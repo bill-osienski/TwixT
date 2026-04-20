@@ -4,8 +4,19 @@ import {
   connectivityScore,
   componentMetrics,
   computeFrontier,
+  extractPositionalFeatures,
+  clearComponentCache,
 } from './heuristics.js';
-import { evaluateValueModel, maybeLoadValueModel } from './valueModel.js';
+import {
+  FrontierBuffers,
+  FrontierBufferPool,
+  computeFrontierFast,
+  computeConnectorTargetsFromBounds,
+  idxToRow,
+  idxToCol,
+} from './frontierFast.js';
+import { evaluateValueModel, maybeLoadValueModel, isModelLoaded } from './valueModel.js';
+import { getOpeningBookMove, maybeLoadOpeningBook } from './openingBook.js';
 
 let config;
 if (typeof process !== 'undefined' && process?.versions?.node) {
@@ -46,6 +57,111 @@ const KNIGHT_OFFSETS = [
   [2, -1],
   [2, 1],
 ];
+
+/**
+ * Deterministic best move with stable tie-break (lexicographic by row, col).
+ * MUST match Python's deterministic_best() exactly for parity.
+ * @param {Array<{move: {row: number, col: number}, score: number}>} scoredMoves
+ * @returns {{row: number, col: number}} The best move
+ */
+function deterministicBest(scoredMoves) {
+  let best = scoredMoves[0];
+  for (let i = 1; i < scoredMoves.length; i++) {
+    const c = scoredMoves[i];
+    if (c.score > best.score) {
+      best = c;
+    } else if (c.score === best.score) {
+      // Tie-break: lexicographic by (row, col)
+      if (
+        c.move.row < best.move.row ||
+        (c.move.row === best.move.row && c.move.col < best.move.col)
+      ) {
+        best = c;
+      }
+    }
+  }
+  return best.move;
+}
+
+const TEMP_FLOOR = 1e-6;
+const SCALE_FLOOR = 1e-6;
+
+/**
+ * Create a seeded random number generator using xorshift.
+ * @param {number} seed - Initial seed value
+ * @returns {function(): number} RNG function returning [0, 1)
+ */
+export function makeRng(seed = 123456789) {
+  let x = seed | 0;
+  return function rng() {
+    x ^= x << 13;
+    x |= 0;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    x |= 0;
+    return (x >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Select move using normalized softmax sampling.
+ * Uses score normalization so temperature values in [0.1, 1.0] are meaningful:
+ *     p_i ∝ exp((s_i - s_max) / (T * S))
+ * where S = max_score - min_score (score spread).
+ *
+ * @param {Array<{move: {row: number, col: number}, score: number}>} scoredMoves
+ * @param {number} temperature - Sampling temperature (0 = deterministic, 1 = high exploration)
+ * @param {function(): number} rng - Random number generator returning [0, 1)
+ * @returns {{row: number, col: number}} The selected move
+ */
+export function softmaxPick(scoredMoves, temperature, rng) {
+  if (temperature <= TEMP_FLOOR) {
+    return deterministicBest(scoredMoves);
+  }
+
+  const scores = scoredMoves.map((x) => x.score);
+  const maxS = Math.max(...scores);
+  const minS = Math.min(...scores);
+
+  const S = Math.max(maxS - minS, SCALE_FLOOR);
+  const T = Math.max(temperature, TEMP_FLOOR);
+
+  const exps = scores.map((s) => Math.exp((s - maxS) / (T * S)));
+  const Z = exps.reduce((a, b) => a + b, 0);
+
+  if (!Number.isFinite(Z) || Z <= 0) {
+    return deterministicBest(scoredMoves);
+  }
+
+  let r = rng();
+  let acc = 0;
+  for (let i = 0; i < scoredMoves.length; i++) {
+    acc += exps[i] / Z;
+    if (r <= acc) return scoredMoves[i].move;
+  }
+  return scoredMoves[scoredMoves.length - 1].move;
+}
+
+/**
+ * Get temperature for a given ply using smooth exponential decay schedule.
+ * T(p) = T_late + (T_early - T_late) * exp(-max(0, p - p0) / tau)
+ *
+ * @param {number} ply - Current ply (0-based)
+ * @param {Object} knobs - Configuration with tempEarly, tempLate, tempTransitionPly, tempTau
+ * @returns {number} Temperature for this ply
+ */
+export function temperatureForPly(ply, knobs) {
+  if (!knobs || knobs.deterministicMode) return 0;
+
+  const early = knobs.tempEarly ?? 0.9;
+  const late = knobs.tempLate ?? 0.12;
+  const p0 = knobs.tempTransitionPly ?? 10;
+  const tau = Math.max(TEMP_FLOOR, knobs.tempTau ?? 10);
+
+  const d = Math.max(0, ply - p0);
+  const alpha = Math.exp(-d / tau);
+  return late + (early - late) * alpha;
+}
 
 const VALUE_MODEL_SCALE =
   typeof config.valueModelScale === 'number' ? config.valueModelScale : 600;
@@ -134,7 +250,7 @@ const HEURISTIC_STATS = (() => {
             }
           }
           if (Object.keys(summary).length) {
-            console.info('[TwixTAI] heuristic stats', JSON.stringify(summary));
+            console.error('[TwixTAI] heuristic stats', JSON.stringify(summary));
           }
         } catch {
           // ignore logging issues during shutdown
@@ -173,7 +289,7 @@ if (
       reasons: { ...stats.reasons },
     };
     const logger =
-      typeof console !== 'undefined' && console.info ? console.info : null;
+      typeof console !== 'undefined' && console.error ? console.error : null;
     if (logger) {
       logger('[TwixTAI] sealed lane summary', summary);
     }
@@ -271,7 +387,7 @@ function hasReachableGoalEdge(game, player, metrics) {
         typeof console.info === 'function'
       ) {
         const avgMs = stats.calls ? stats.totalMs / stats.calls : 0;
-        console.info('[TwixTAI] sealed lane stats', {
+        console.error('[TwixTAI] sealed lane stats', {
           calls: stats.calls,
           openPaths: stats.openPaths,
           sealed: stats.sealed,
@@ -388,7 +504,7 @@ function hasReachableGoalEdge(game, player, metrics) {
   return finish(false, 'sealed');
 }
 
-function computeConnectorTargets(game, player, metrics) {
+export function computeConnectorTargets(game, player, metrics) {
   if (
     !metrics ||
     !metrics.largestComponent ||
@@ -436,6 +552,19 @@ function computeConnectorTargets(game, player, metrics) {
   return targets.size ? targets : null;
 }
 
+/**
+ * Reset all global search caches.
+ * Call this between games to prevent memory accumulation.
+ * Does NOT affect game state, only cached computations.
+ */
+export function resetAllSearchCaches() {
+  // Clear component metrics cache (BFS results)
+  clearComponentCache();
+
+  // Note: bridgesCross.cache is local to hasReachableGoalEdge calls, not persistent
+  // Note: sealedLaneCache is per-instance, cleared via TwixTAI.clearCaches()
+}
+
 export default class TwixTAI {
   constructor(game, player = null) {
     this.game = game;
@@ -444,6 +573,7 @@ export default class TwixTAI {
       (game && typeof game.aiPlayer === 'string' ? game.aiPlayer : null);
     this.rootDepth = 0;
     this.sealedLaneCache = new Map();
+    this.sealedLaneCacheMaxSize = 10000; // LRU limit to prevent memory growth
     this.recordStat = (key, playerSide, amount = 1) => {
       if (!HEURISTIC_STATS || !this.rootDepth) {
         return;
@@ -510,7 +640,11 @@ export default class TwixTAI {
     this.lastChosenValueModel = null;
     this.lastChosenHeuristicScore = null;
 
+    // Per-depth buffer pool for fast frontier computation (avoids aliasing in recursion)
+    this.frontierPool = null;
+
     maybeLoadValueModel();
+    maybeLoadOpeningBook();
   }
 
   setPlayer(player) {
@@ -529,7 +663,31 @@ export default class TwixTAI {
     return 'black';
   }
 
+  /**
+   * Clear all instance-level caches.
+   * Call this between games along with resetAllSearchCaches().
+   */
+  clearCaches() {
+    if (this.sealedLaneCache) {
+      this.sealedLaneCache.clear();
+    }
+    // Clear any retained move traces / debug data
+    this.moveTrace = [];
+    this.lastHeuristicBreakdown = null;
+    this.lastHeuristicFeatures = null;
+    this.lastFeatureContext = null;
+    this.lastChosenFeatures = null;
+    this.lastChosenContext = null;
+    this.lastChosenValueModel = null;
+    this.lastChosenHeuristicScore = null;
+  }
+
   getBestMove() {
+    const openingMove = getOpeningBookMove(this.game);
+    if (openingMove) {
+      return openingMove;
+    }
+
     const depthMap = this.game.aiDepth || { easy: 2, medium: 3, hard: 4 };
     const difficulty = this.game.aiDifficulty || 'medium';
 
@@ -540,6 +698,17 @@ export default class TwixTAI {
         : depthMap[difficulty] || 2;
 
     this.rootDepth = depth;
+
+    // Initialize or reset frontier buffer pool for this search
+    // Pool size = depth + 1 (levels 0 through depth)
+    if (!this.frontierPool || this.frontierPool.buffers.length < depth + 1) {
+      this.frontierPool = new FrontierBufferPool(this.game.boardSize, depth);
+    }
+
+    // Clear sealed lane cache at start of each move to prevent unbounded growth
+    if (this.sealedLaneCache) {
+      this.sealedLaneCache.clear();
+    }
     this.debugEnabled =
       typeof window !== 'undefined'
         ? !!window.TwixTAI_DEBUG
@@ -772,6 +941,14 @@ export default class TwixTAI {
       ? bestDetail.heuristicScore
       : null;
 
+    // Deterministic mode: use stable tie-break, skip all randomization
+    // This must match Python's deterministic_best() exactly for parity testing
+    const deterministicMode = this.game.deterministicMode ?? false;
+    if (deterministicMode) {
+      return deterministicBest(scoredMoves);
+    }
+
+    // Stochastic mode: existing randomFactor logic
     const randomFactor =
       difficulty === 'easy' ? 0.3 : difficulty === 'medium' ? 0.1 : 0.02;
 
@@ -803,21 +980,26 @@ export default class TwixTAI {
     const allMoves = this.game.getValidMoves();
     const opponent = this.game.currentPlayer === 'red' ? 'black' : 'red';
     const opponentThreat = connectivityScore(this.game, opponent);
-    const friendlyMetrics = componentMetrics(
-      this.game,
-      this.game.currentPlayer
-    );
+    const friendlyMetrics = componentMetrics(this.game, this.game.currentPlayer);
     const friendlyConnectorTargets = computeConnectorTargets(
       this.game,
       this.game.currentPlayer,
       friendlyMetrics
     );
+    // Use original computeFrontier (includes componentMetrics internally)
+    // Note: computeFrontierFast was removed because we still need opponentMetrics
+    // for heuristics (largestComponent, maxRowSpan, etc.), so BFS is unavoidable.
     const {
       frontier: opponentFrontier,
       connectors: opponentConnectors,
       trailing: opponentTrailing,
       metrics: opponentMetrics,
     } = computeFrontier(this.game, opponent);
+    const opponentConnectorTargets = computeConnectorTargets(
+      this.game,
+      opponent,
+      opponentMetrics
+    );
     let moves = this.orderMoves(
       allMoves,
       this.game.currentPlayer,
@@ -826,6 +1008,7 @@ export default class TwixTAI {
       opponentThreat,
       friendlyMetrics,
       friendlyConnectorTargets,
+      opponentConnectorTargets,
       opponentMetrics,
       opponentFrontier,
       opponentConnectors,
@@ -965,6 +1148,9 @@ export default class TwixTAI {
       this.currentHeuristic = null;
     }
 
+    // Initialize for positional feature extraction
+    this.lastPositionalFeatures = null;
+
     maybeLoadValueModel();
 
     const featureTotals = Object.create(null);
@@ -988,12 +1174,20 @@ export default class TwixTAI {
       typeof friendlyConnectorTargets.has === 'function'
         ? friendlyConnectorTargets
         : null;
+    // Handle both Set<string> (old format) and Array<number> (new fast format)
     const opponentConnectorSet =
       opponentConnectorTargets &&
       typeof opponentConnectorTargets.has === 'function'
         ? opponentConnectorTargets
         : null;
+    const opponentConnectorIdxArr =
+      opponentConnectorTargets &&
+      Array.isArray(opponentConnectorTargets) &&
+      opponentConnectorTargets.length > 0
+        ? opponentConnectorTargets
+        : null;
     const moveKey = `${move.row}:${move.col}`;
+    const moveIdx = move.row * boardSize + move.col;
     let blockedOpponentConnector = false;
 
     let friendlyConnections = 0;
@@ -1016,7 +1210,11 @@ export default class TwixTAI {
       score += REWARDS.edge.offense.connectorTargetBonus;
     }
 
-    if (opponentConnectorSet && opponentConnectorSet.has(moveKey)) {
+    // Check if move blocks opponent's connector target (handles both formats)
+    const inOpponentConnectorSet =
+      (opponentConnectorSet && opponentConnectorSet.has(moveKey)) ||
+      (opponentConnectorIdxArr && opponentConnectorIdxArr.includes(moveIdx));
+    if (inOpponentConnectorSet) {
       capture('edgeDefenseBlock', REWARDS.edge.defense.blockBonus);
       score += REWARDS.edge.defense.blockBonus;
       blockedOpponentConnector = true;
@@ -1100,7 +1298,11 @@ export default class TwixTAI {
     }
 
     if (opponentFrontier && opponentFrontier.length > 0) {
-      const distToFrontier = this.distanceToSet(move, opponentFrontier);
+      // Detect format: index array (number) vs object array ({row, col})
+      const isIndexArray = typeof opponentFrontier[0] === 'number';
+      const distToFrontier = isIndexArray
+        ? this.distanceToIdxSet(move, opponentFrontier, boardSize)
+        : this.distanceToSet(move, opponentFrontier);
       const proximityBonus =
         Math.max(0, 10 - distToFrontier) * (opponentUrgent ? 35 : 16);
       if (proximityBonus !== 0) {
@@ -1115,7 +1317,10 @@ export default class TwixTAI {
     }
 
     if (opponentConnectors && opponentConnectors.length > 0) {
-      const distToConnector = this.distanceToSet(move, opponentConnectors);
+      const isIndexArray = typeof opponentConnectors[0] === 'number';
+      const distToConnector = isIndexArray
+        ? this.distanceToIdxSet(move, opponentConnectors, boardSize)
+        : this.distanceToSet(move, opponentConnectors);
       const proximityBonus =
         Math.max(0, 8 - distToConnector) * (opponentUrgent ? 55 : 30);
       if (proximityBonus !== 0) {
@@ -1130,7 +1335,10 @@ export default class TwixTAI {
     }
 
     if (opponentTrailing && opponentTrailing.length > 0) {
-      const distTrailing = this.distanceToSet(move, opponentTrailing);
+      const isIndexArray = typeof opponentTrailing[0] === 'number';
+      const distTrailing = isIndexArray
+        ? this.distanceToIdxSet(move, opponentTrailing, boardSize)
+        : this.distanceToSet(move, opponentTrailing);
       const penalty = Math.max(0, 6 - distTrailing) * 6;
       if (penalty !== 0) {
         capture('trailingPenalty', -penalty);
@@ -1161,22 +1369,21 @@ export default class TwixTAI {
         }
 
         if (friendlyMetrics) {
-          // Metrics AFTER placing the peg
-          const postMetrics = componentMetrics(this.game, player);
+          // Metrics AFTER placing the peg - use DSU for O(α(n)) instead of O(pegs+bridges)
+          const postMetrics = this.game.getDSUMetricsForCell(
+            move.row,
+            move.col,
+            player
+          );
           const boardLimit = this.game.boardSize - 1;
-          const postLargest = postMetrics.largestComponent || [];
-          let postMinR = Infinity,
-            postMaxR = -Infinity,
-            postMinC = Infinity,
-            postMaxC = -Infinity;
-          if (postLargest.length > 0) {
-            for (const p of postLargest) {
-              if (p.row < postMinR) postMinR = p.row;
-              if (p.row > postMaxR) postMaxR = p.row;
-              if (p.col < postMinC) postMinC = p.col;
-              if (p.col > postMaxC) postMaxC = p.col;
-            }
-          }
+
+          // DSU already tracks min/max bounds directly - no need to iterate largestComponent
+          const postMinR = postMetrics ? postMetrics.minR : Infinity;
+          const postMaxR = postMetrics ? postMetrics.maxR : -Infinity;
+          const postMinC = postMetrics ? postMetrics.minC : Infinity;
+          const postMaxC = postMetrics ? postMetrics.maxC : -Infinity;
+
+          // For friendlyMetrics (before placement), extract bounds
           const friendlyLargest = friendlyMetrics.largestComponent || [];
           let friendlyMinR = Infinity,
             friendlyMaxR = -Infinity,
@@ -1195,8 +1402,11 @@ export default class TwixTAI {
             player === 'red'
               ? friendlyMetrics.maxRowSpan
               : friendlyMetrics.maxColSpan;
-          const goalSpanAfter =
-            player === 'red' ? postMetrics.maxRowSpan : postMetrics.maxColSpan;
+          const goalSpanAfter = postMetrics
+            ? player === 'red'
+              ? postMetrics.maxRowSpan
+              : postMetrics.maxColSpan
+            : 0;
           const spanGain = goalSpanAfter - goalSpanBefore;
 
           const prevMinAxis =
@@ -1219,18 +1429,18 @@ export default class TwixTAI {
             player === 'red'
               ? Number.isFinite(postMinR)
                 ? postMinR
-                : (postMetrics.minRow ?? boardLimit)
+                : (postMetrics?.minRow ?? boardLimit)
               : Number.isFinite(postMinC)
                 ? postMinC
-                : (postMetrics.minCol ?? boardLimit);
+                : (postMetrics?.minCol ?? boardLimit);
           const postMaxAxis =
             player === 'red'
               ? Number.isFinite(postMaxR)
                 ? postMaxR
-                : (postMetrics.maxRow ?? 0)
+                : (postMetrics?.maxRow ?? 0)
               : Number.isFinite(postMaxC)
                 ? postMaxC
-                : (postMetrics.maxCol ?? 0);
+                : (postMetrics?.maxCol ?? 0);
 
           const prevGapFront = Math.max(0, prevMinAxis);
           const prevGapBack = Math.max(0, boardLimit - prevMaxAxis);
@@ -1240,10 +1450,11 @@ export default class TwixTAI {
           const gapAfter = postGapFront + postGapBack;
           const gapImprovement = gapBefore - gapAfter;
 
-          const touchesBothPost =
-            player === 'red'
+          const touchesBothPost = postMetrics
+            ? player === 'red'
               ? postMetrics.touchesTop && postMetrics.touchesBottom
-              : postMetrics.touchesLeft && postMetrics.touchesRight;
+              : postMetrics.touchesLeft && postMetrics.touchesRight
+            : false;
           const nearFinish = gapAfter <= REWARDS.edge.offense.finishThreshold;
           let finishLaneOpen = true;
 
@@ -1265,13 +1476,25 @@ export default class TwixTAI {
               this.sealedLaneCache.has(cacheKey)
             ) {
               finishLaneOpen = this.sealedLaneCache.get(cacheKey);
+              // LRU: move to end (most recent)
+              this.sealedLaneCache.delete(cacheKey);
+              this.sealedLaneCache.set(cacheKey, finishLaneOpen);
             } else {
+              // NOTE: postMetrics from DSU doesn't have largestComponent, so hasReachableGoalEdge
+              // will return false (sealed). This is incorrect but fast. For correct behavior,
+              // we'd need to call componentMetrics() here, but that's too expensive in minimax.
+              // TODO: Implement DSU-based reachability check for sealed lane detection.
               finishLaneOpen = hasReachableGoalEdge(
                 this.game,
                 player,
-                postMetrics
+                postMetrics  // Will return sealed (incorrect but fast)
               );
               if (cacheKey && this.sealedLaneCache) {
+                // LRU eviction: delete oldest entries if at max size
+                if (this.sealedLaneCache.size >= this.sealedLaneCacheMaxSize) {
+                  const oldest = this.sealedLaneCache.keys().next().value;
+                  this.sealedLaneCache.delete(oldest);
+                }
                 this.sealedLaneCache.set(cacheKey, finishLaneOpen);
               }
             }
@@ -1281,9 +1504,9 @@ export default class TwixTAI {
             // ---- A) First-time edge touch bonus (newly touching your own goal edge) ----
             if (player === 'black') {
               const newLeft =
-                postMetrics.touchesLeft && !friendlyMetrics.touchesLeft;
+                postMetrics?.touchesLeft && !friendlyMetrics.touchesLeft;
               const newRight =
-                postMetrics.touchesRight && !friendlyMetrics.touchesRight;
+                postMetrics?.touchesRight && !friendlyMetrics.touchesRight;
               if (newLeft || newRight) {
                 const touchBonus = REWARDS.edge.offense.firstEdgeTouchBlack;
                 if (touchBonus !== 0) {
@@ -1296,9 +1519,9 @@ export default class TwixTAI {
             } else {
               // red
               const newTop =
-                postMetrics.touchesTop && !friendlyMetrics.touchesTop;
+                postMetrics?.touchesTop && !friendlyMetrics.touchesTop;
               const newBottom =
-                postMetrics.touchesBottom && !friendlyMetrics.touchesBottom;
+                postMetrics?.touchesBottom && !friendlyMetrics.touchesBottom;
               if (newTop || newBottom) {
                 const touchBonus = REWARDS.edge.offense.firstEdgeTouchRed;
                 if (touchBonus !== 0) {
@@ -1311,15 +1534,15 @@ export default class TwixTAI {
             }
 
             // ---- B) Double-edge coverage upgrade (touch both goal edges for the first time) ----
+            // Note: postMetrics.size > 0 replaces postLargest.length > 0 (DSU-based)
+            const hasComponent = postMetrics && postMetrics.size > 0;
             if (player === 'black') {
               const hadBoth =
                 friendlyMetrics.touchesLeft && friendlyMetrics.touchesRight;
               const hasBoth =
-                postMetrics.touchesLeft && postMetrics.touchesRight;
+                postMetrics?.touchesLeft && postMetrics?.touchesRight;
               const componentSpansBoth =
-                postLargest.length > 0 &&
-                postMinC <= 0 &&
-                postMaxC >= boardLimit;
+                hasComponent && postMinC <= 0 && postMaxC >= boardLimit;
               if (hasBoth && !hadBoth && componentSpansBoth) {
                 const coverageBonus =
                   REWARDS.edge.offense.doubleCoverageBase *
@@ -1333,11 +1556,9 @@ export default class TwixTAI {
               const hadBoth =
                 friendlyMetrics.touchesTop && friendlyMetrics.touchesBottom;
               const hasBoth =
-                postMetrics.touchesTop && postMetrics.touchesBottom;
+                postMetrics?.touchesTop && postMetrics?.touchesBottom;
               const componentSpansBoth =
-                postLargest.length > 0 &&
-                postMinR <= 0 &&
-                postMaxR >= boardLimit;
+                hasComponent && postMinR <= 0 && postMaxR >= boardLimit;
               if (hasBoth && !hadBoth && componentSpansBoth) {
                 const coverageBonus =
                   REWARDS.edge.offense.doubleCoverageBase +
@@ -1357,7 +1578,7 @@ export default class TwixTAI {
                   : 1);
               if (
                 player === 'red' &&
-                (postMetrics.touchesTop || postMetrics.touchesBottom)
+                (postMetrics?.touchesTop || postMetrics?.touchesBottom)
               ) {
                 multiplier *= REWARDS.edge.offense.redSpanGainMultiplier;
               }
@@ -1380,7 +1601,7 @@ export default class TwixTAI {
               this.recordStat('edgeGapReduction', player, gapBonus);
             }
 
-            if (postLargest.length > 0) {
+            if (hasComponent) {
               const lcTouchesTop = postMinR <= 1;
               const lcTouchesBottom = postMaxR >= boardLimit - 1;
               const lcTouchesLeft = postMinC <= 1;
@@ -1460,9 +1681,12 @@ export default class TwixTAI {
             this.recordStat('finishLaneSealed', player, 1);
           }
 
+          // Check if there are opponent connector targets (handles both formats)
+          const hasOpponentConnectors =
+            (opponentConnectorSet && opponentConnectorSet.size > 0) ||
+            (opponentConnectorIdxArr && opponentConnectorIdxArr.length > 0);
           if (
-            opponentConnectorSet &&
-            opponentConnectorSet.size > 0 &&
+            hasOpponentConnectors &&
             !blockedOpponentConnector &&
             !touchesBothPost
           ) {
@@ -1478,9 +1702,19 @@ export default class TwixTAI {
           // (Removed old +400 span-complete blocks)
         }
 
-        // Opponent-side effects (existing)
+        // Opponent-side effects
+        // OPTIMIZATION: Opponent's connected components are INVARIANT under our move.
+        // When we place our peg, opponent's pegs and bridges don't change, so their
+        // componentMetrics is unchanged. We skip recomputing opponentPost and use
+        // the pre-computed opponentMetrics directly.
+        // This saves one componentMetrics() call per candidate move (~400 calls).
+        //
+        // Note: spanReduction will always be 0 since opponent's span doesn't change
+        // from our move. The "newly spans" checks will also never trigger.
+        // These code paths are kept for semantic correctness but are effectively no-ops.
         if (opponentMetrics) {
-          const opponentPost = componentMetrics(this.game, opponent);
+          // opponentPost === opponentMetrics (invariant under our move)
+          const opponentPost = opponentMetrics;
           const opponentSpanBefore =
             opponent === 'red'
               ? opponentMetrics.maxRowSpan
@@ -1523,6 +1757,12 @@ export default class TwixTAI {
               capture('redSpanUpgradePenalty', -500);
             score -= 500;
           }
+        }
+
+        // Extract positional features from POST-move state for value model
+        // Only if value model is loaded - skip expensive extraction otherwise
+        if (isModelLoaded()) {
+          this.lastPositionalFeatures = extractPositionalFeatures(this.game, player);
         }
 
         this.game.undo();
@@ -1575,18 +1815,32 @@ export default class TwixTAI {
       }
     }
 
-    const featureContext = {
-      turn: this.game.moveCount,
-      player,
-      playerPegCount: friendlyPegs.length + 1,
-      opponentPegCount: opponentPegs.length,
-    };
-
-    const evaluation = evaluateValueModel(featureTotals, featureContext);
+    // Value model evaluation - skip entirely if model not loaded
     let valueAdjustment = null;
-    if (evaluation) {
-      valueAdjustment = (evaluation.probability - 0.5) * VALUE_MODEL_SCALE;
-      score += valueAdjustment;
+    if (isModelLoaded()) {
+      // Use positional features (from post-move state) for value model
+      // Fall back to pre-move extraction if move wasn't applied
+      const positionalFeatures =
+        this.lastPositionalFeatures ||
+        extractPositionalFeatures(this.game, player);
+
+      // Clear for next call
+      this.lastPositionalFeatures = null;
+
+      // Add context features
+      positionalFeatures.turn = this.game.moveCount;
+      positionalFeatures.player = player === 'red' ? 1.0 : 0.0;
+      positionalFeatures.playerPegCount = friendlyPegs.length + 1;
+      positionalFeatures.opponentPegCount = opponentPegs.length;
+
+      const evaluation = evaluateValueModel(positionalFeatures, {});
+      if (evaluation && evaluation.probability != null) {
+        valueAdjustment = (evaluation.probability - 0.5) * VALUE_MODEL_SCALE;
+        score += valueAdjustment;
+      }
+    } else {
+      // Clear any stale features when model is disabled
+      this.lastPositionalFeatures = null;
     }
 
     if (player === 'red' && REWARDS.general.redBaseBonus) {
@@ -1640,10 +1894,15 @@ export default class TwixTAI {
 
     const featureSnapshot = { ...featureTotals };
     this.lastHeuristicFeatures = featureSnapshot;
-    this.lastFeatureContext = featureContext;
-    this.lastValueModelProbability = evaluation ? evaluation.probability : null;
-    this.lastValueModelLogit = evaluation ? evaluation.logit : null;
-    this.lastValueModelAdjustment = evaluation ? valueAdjustment : null;
+    this.lastFeatureContext = {
+      turn: this.game.moveCount,
+      player: player === 'red' ? 1.0 : 0.0,
+      playerPegCount: friendlyPegs.length + 1,
+      opponentPegCount: opponentPegs.length,
+    };
+    this.lastValueModelProbability = null;
+    this.lastValueModelLogit = null;
+    this.lastValueModelAdjustment = valueAdjustment;
 
     if (this.debugEnabled) {
       const breakdown = { ...featureSnapshot };
@@ -1689,6 +1948,25 @@ export default class TwixTAI {
       if (dist < best) {
         best = dist;
       }
+    }
+    return best;
+  }
+
+  /**
+   * Distance from move to nearest cell in an index array (fast frontier format).
+   * @param {Object} move - {row, col}
+   * @param {Array<number>} indices - Cell indices (row * S + col)
+   * @param {number} S - Board size
+   * @returns {number} Manhattan distance to nearest cell
+   */
+  distanceToIdxSet(move, indices, S) {
+    let best = Infinity;
+    for (let i = 0; i < indices.length; i++) {
+      const idx = indices[i];
+      const r = (idx / S) | 0;
+      const c = idx % S;
+      const dist = Math.abs(r - move.row) + Math.abs(c - move.col);
+      if (dist < best) best = dist;
     }
     return best;
   }

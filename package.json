@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node scripts/startServer.js",
+    "server": "node server/index.js",
     "test": "node --test tests/smoke.test.mjs",
+    "test:server": "node --test server/test_server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "eslint . --max-warnings=0"
@@ -15,7 +17,11 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "commander": "^11.1.0"
+    "commander": "^11.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "onnxruntime-node": "^1.20.0",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "eslint": "^9.39.1",

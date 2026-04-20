@@ -1,0 +1,24 @@
+# AlphaZero TwixT game implementation
+from .twixt_state import (
+    TwixtState,
+    BOARD_SIZE,
+    MAX_PLIES,
+    NUM_CHANNELS,
+    DIRECTION_TO_CHANNEL,
+    CHANNEL_RED_LINKS_START,
+    CHANNEL_BLACK_LINKS_START,
+    CHANNEL_BLACK_LEFT_DIST,
+    CHANNEL_BLACK_RIGHT_DIST,
+)
+
+__all__ = [
+    "TwixtState",
+    "BOARD_SIZE",
+    "MAX_PLIES",
+    "NUM_CHANNELS",
+    "DIRECTION_TO_CHANNEL",
+    "CHANNEL_RED_LINKS_START",
+    "CHANNEL_BLACK_LINKS_START",
+    "CHANNEL_BLACK_LEFT_DIST",
+    "CHANNEL_BLACK_RIGHT_DIST",
+]

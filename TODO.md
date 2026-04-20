@@ -1,5 +1,10 @@
 # Correlation-Driven Tuning TODO
 
+## Two-Track Architecture Checklist
+
+- Primary tracking lives in `docs/implementation-checklist.md`.
+- Behavioral regression suite added in `tests/test_behavioral_regression.py`.
+
 ## Core Implementation
 
 1. **Data extraction + weighting** ✅ _implemented via `build_model_samples` and helpers_
