@@ -25,6 +25,7 @@ export class GameRecorder {
     this._packetCounter = 0;
     this._lastTurnStart = null;
     this._alphaZeroRef = null;
+    this._lastPrecomputeHash = null;  // state_hash of the last precompute position
   }
 
   // --- Toggle ---
@@ -73,6 +74,7 @@ export class GameRecorder {
 
     const stateHash = this._getStateHash(game);
     if (!stateHash) return;
+    this._lastPrecomputeHash = stateHash;
 
     // Check cache (keyed by state_hash, not ply)
     if (this.analysisCache.has(stateHash)) {
@@ -199,8 +201,11 @@ export class GameRecorder {
     };
 
     // Attach precompute analysis for human moves
-    if (source === 'human' && stateHash) {
-      const cached = this.analysisCache.get(stateHash);
+    // Use _lastPrecomputeHash (the hash BEFORE the move was placed) because
+    // game.zKey has already changed by the time recordMove is called
+    const preHash = source === 'human' ? this._lastPrecomputeHash : null;
+    if (source === 'human' && preHash) {
+      const cached = this.analysisCache.get(preHash);
       if (cached && cached.status === 'completed') {
         // Compute chosen_move_eval
         const chosenEval = this._computeChosenMoveEval(cached, row, col);

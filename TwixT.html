@@ -368,6 +368,10 @@
             <span>Current Player:</span>
             <span class="current-player player-red" id="current-player"></span>
             <span id="player-name">Red</span>
+            <span id="rec-status-bar" style="display:none; margin-left: 16px;">
+              <span class="rec-dot active" style="width:6px;height:6px;"></span>
+              <span id="analysis-status-game" class="analysis-status" style="font-size:0.75rem;"></span>
+            </span>
           </div>
         </div>
       </div>
@@ -377,7 +381,10 @@
       </div>
 
       <!-- Win Bar (AlphaZero position evaluation) -->
+      <div style="font-size:10px; color:#666; padding:2px 8px;">NN Eval (single forward pass)</div>
       <div id="win-bar"></div>
+      <div style="font-size:10px; color:#666; padding:2px 8px; margin-top:4px;">MCTS Eval (search-based)</div>
+      <div id="win-bar-mcts"></div>
 
       <div class="controls">
         <button id="new-game" aria-label="Start new game">New Game</button>
@@ -386,10 +393,6 @@
         <a id="replay-link" href="Replay.html" aria-label="Open replay viewer"
           >Replay</a
         >
-        <button id="rec-toggle" aria-label="Toggle game recording" title="Record game">
-          <span id="rec-dot" class="rec-dot"></span> REC
-        </button>
-        <span id="analysis-status" class="analysis-status"></span>
       </div>
 
       <!-- Game Mode Selection Modal -->
@@ -409,6 +412,13 @@
               <h3>Replay</h3>
               <p>Visual replay viewer</p>
             </a>
+          </div>
+          <div id="rec-toggle-modal" style="margin-top: 20px; text-align: center;">
+            <button id="rec-toggle" aria-label="Toggle game recording" title="Record game"
+              style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
+              <span id="rec-dot" class="rec-dot"></span> REC
+            </button>
+            <span id="analysis-status" class="analysis-status"></span>
           </div>
         </div>
       </div>

@@ -11,7 +11,7 @@ function initGame() {
 
   try {
     console.log('Creating GameController...');
-    new GameController();
+    window.gameController = new GameController();
     console.log('GameController created successfully');
   } catch (error) {
     console.error('Error creating GameController:', error);

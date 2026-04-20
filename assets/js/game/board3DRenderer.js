@@ -109,6 +109,12 @@ export default class Board3DRenderer {
 
       if (intersects.length > 0) {
         const { row, col } = intersects[0].object.userData;
+
+        // Block clicks when it's the AI's turn
+        if (this.game.isAIGame && this.game.currentPlayer === this.game.aiPlayer) {
+          return; // AI is thinking, ignore click
+        }
+
         const placingPlayer = this.game.currentPlayer;
 
         if (this.game.placePeg(row, col)) {

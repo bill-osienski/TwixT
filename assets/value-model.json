@@ -1,0 +1,65 @@
+{
+  "type": "logistic_regression",
+  "generatedAt": "2024-12-24T00:00:00Z",
+  "description": "Stub value model for integration testing. Weights are placeholders.",
+  "feature_keys": [
+    "friendly_connected_paths",
+    "opponent_connected_paths",
+    "friendly_potential",
+    "opponent_potential",
+    "friendly_edge_progress",
+    "opponent_edge_progress",
+    "friendly_pegs",
+    "opponent_pegs",
+    "friendly_max_row_span",
+    "friendly_max_col_span",
+    "opponent_max_row_span",
+    "opponent_max_col_span",
+    "friendly_component_count",
+    "opponent_component_count",
+    "friendly_largest_size",
+    "opponent_largest_size",
+    "friendly_touches_top",
+    "friendly_touches_bottom",
+    "friendly_touches_left",
+    "friendly_touches_right",
+    "opponent_touches_top",
+    "opponent_touches_bottom",
+    "opponent_touches_left",
+    "opponent_touches_right",
+    "move_count",
+    "total_bridges",
+    "frontier_size",
+    "connector_count",
+    "trailing_count"
+  ],
+  "weights": [
+    0.0,
+    0.001, -0.001,
+    0.0005, -0.0005,
+    0.001, -0.001,
+    0.01, -0.01,
+    0.005, 0.0,
+    -0.005, 0.0,
+    -0.01, 0.01,
+    0.02, -0.02,
+    0.1, 0.1, 0.0, 0.0,
+    -0.1, -0.1, 0.0, 0.0,
+    -0.001,
+    0.002,
+    0.001,
+    0.002,
+    0.001
+  ],
+  "preproc": {
+    "standardize": false,
+    "mean": null,
+    "std": null
+  },
+  "params": {
+    "note": "Stub model - not trained on real data"
+  },
+  "metrics": {
+    "note": "Placeholder for actual training metrics"
+  }
+}
