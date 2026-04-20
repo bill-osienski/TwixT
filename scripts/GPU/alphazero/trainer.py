@@ -758,6 +758,34 @@ def make_padded_batch(
     )
 
 
+def _compute_progress_weighted_value_loss(
+    values: mx.array,
+    outcomes: mx.array,
+    plies: np.ndarray,        # (B,) int32
+    game_n_moves: np.ndarray, # (B,) int32
+    floor: float = 0.25,
+) -> mx.array:
+    """Progress-weighted value loss with normalized weighted mean.
+
+    weight_i = floor + (1 - floor) * progress_i
+    progress_i = clip(ply_i / max(game_n_moves_i - 1, 1), 0, 1)
+    loss = sum(w * err^2) / sum(w)   (normalized weighted mean)
+
+    Edge case: game_n_moves <= 1 -> denominator clamp yields progress = 1.0.
+    Edge case: sum(w) == 0 -> fallback to unweighted mean (shouldn't happen in
+    practice since floor > 0 is the typical case).
+    """
+    denom = np.maximum(game_n_moves - 1, 1).astype(np.float32)
+    progress = np.clip(plies.astype(np.float32) / denom, 0.0, 1.0)
+    weights_np = floor + (1.0 - floor) * progress
+    weights = mx.array(weights_np)
+    err_sq = (values - outcomes) ** 2
+    total_w = mx.sum(weights)
+    if float(total_w) == 0.0:
+        return mx.mean(err_sq)  # fallback; shouldn't happen with floor>=0
+    return mx.sum(weights * err_sq) / total_w
+
+
 def alphazero_loss_batch(
     network: AlphaZeroNetwork,
     positions: List["PositionRecord"],
@@ -765,6 +793,8 @@ def alphazero_loss_batch(
     value_weight: float = 0.25,
     max_moves_cap: int = 512,
     active_size: int = 24,
+    progress_weighted: bool = False,
+    progress_weight_floor: float = 0.25,
 ) -> Tuple[mx.array, mx.array, mx.array, mx.array]:
     """Batched policy + value + L2 loss (vectorized, no loops).
 
@@ -778,6 +808,8 @@ def alphazero_loss_batch(
         value_weight: Weight for value loss (default 0.25 to reduce dominance)
         max_moves_cap: Maximum moves per position (512 for TwixT)
         active_size: Curriculum board size for masked pooling
+        progress_weighted: If True, use progress-weighted value loss (default False)
+        progress_weight_floor: Floor weight for earliest plies when progress_weighted=True
 
     Returns:
         Tuple of (total_loss, policy_loss, value_loss, l2_loss)
@@ -788,6 +820,15 @@ def alphazero_loss_batch(
     """
     boards, move_rows, move_cols, move_mask, target_pi, outcomes = make_padded_batch(
         positions, max_moves_cap=max_moves_cap
+    )
+
+    # Extract ply / game_n_moves from positions for progress-weighted mode.
+    # Old records default ply=0, game_n_moves=None; `or 1` keeps np int happy.
+    plies_np = np.array(
+        [getattr(p, "ply", 0) for p in positions], dtype=np.int32
+    )
+    game_n_moves_np = np.array(
+        [getattr(p, "game_n_moves", None) or 1 for p in positions], dtype=np.int32
     )
 
     # Single batched forward pass with curriculum active_size
@@ -801,8 +842,13 @@ def alphazero_loss_batch(
     policy_loss = -mx.sum(target_pi * log_probs, axis=1)  # (B,)
     policy_loss = mx.mean(policy_loss)
 
-    # Value loss: MSE (RAW, unweighted for diagnostics)
-    value_loss = mx.mean((values - outcomes) ** 2)
+    # Value loss: progress-weighted or plain MSE (RAW, unweighted for diagnostics)
+    if progress_weighted:
+        value_loss = _compute_progress_weighted_value_loss(
+            values, outcomes, plies_np, game_n_moves_np, floor=progress_weight_floor
+        )
+    else:
+        value_loss = mx.mean((values - outcomes) ** 2)
 
     # L2 regularization (still loops but over params, not positions)
     l2_loss = mx.array(0.0)
@@ -828,6 +874,8 @@ def train_step(
     max_moves_cap: int = 512,
     active_size: int = 24,
     value_grad_max_norm: float = 0.5,
+    progress_weighted: bool = False,
+    progress_weight_floor: float = 0.25,
 ) -> Tuple[float, float, float, float]:
     """Single training step with two optimizers and separate gradient clipping.
 
@@ -846,6 +894,8 @@ def train_step(
         max_moves_cap: Maximum moves per position
         active_size: Curriculum board size for masked pooling
         value_grad_max_norm: Max grad norm for value head (default 0.5)
+        progress_weighted: If True, use progress-weighted value loss (default False)
+        progress_weight_floor: Floor weight for earliest plies (default 0.25)
 
     Returns:
         Tuple of (total_loss, policy_loss, value_loss, l2_loss) as floats
@@ -858,6 +908,8 @@ def train_step(
             value_weight=value_weight,
             max_moves_cap=max_moves_cap,
             active_size=active_size,
+            progress_weighted=progress_weighted,
+            progress_weight_floor=progress_weight_floor,
         )
 
     # value_and_grad differentiates first element (total_loss)
@@ -1517,6 +1569,8 @@ def train(
     value_grad_max_norm: float = 0.5,
     l2_weight: float = 1e-4,
     value_weight: float = 0.25,
+    progress_weighted: bool = False,
+    progress_weight_floor: float = 0.25,
     hidden: int = 128,
     n_blocks: int = 6,
     max_moves: int = 200,
@@ -2675,6 +2729,8 @@ def train(
                             value_weight=curr_value_weight,
                             active_size=active_size,
                             value_grad_max_norm=value_grad_max_norm,
+                            progress_weighted=progress_weighted,
+                            progress_weight_floor=progress_weight_floor,
                         )
 
                         # Sums first, then steps_done (ensures denominator matches included samples)
