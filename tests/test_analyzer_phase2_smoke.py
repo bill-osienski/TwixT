@@ -108,3 +108,34 @@ def test_analyzer_emits_phase1_sections(tmp_path):
     report_path = out_dir / "report_smoke.txt"
     text = report_path.read_text()
     assert "Connectivity Diagnostics" in text
+
+
+def test_analyzer_full_flow_with_new_sections(tmp_path):
+    """Verify the full analyzer emits report with all Phase 1 sections in order."""
+    import subprocess
+    import glob
+    out = tmp_path / "out"
+    out.mkdir()
+    # Scope input to a small subset (same rationale as
+    # test_analyzer_emits_phase1_sections — 81K games in logs/games)
+    small_inputs = sorted(glob.glob("scripts/GPU/logs/games/iter_0000_game_*.json"))[:4]
+    if not small_inputs:
+        import pytest
+        pytest.skip("No sample games available for E2E test")
+    result = subprocess.run(
+        [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
+         "--input", *small_inputs,
+         "--out", str(out),
+         "--no-plots",
+         "--out-suffix", "e2e"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    report = (out / "report_e2e.txt").read_text()
+    # Canonical order (sections may be empty/not-available; headers must appear)
+    idx_conn = report.find("Connectivity Diagnostics")
+    idx_rcap = report.find("Replay-cap Engagement")
+    assert idx_conn >= 0, "missing Connectivity Diagnostics header"
+    assert idx_rcap >= 0, "missing Replay-cap Engagement header"
+    # Canonical order: connectivity BEFORE replay-cap
+    assert idx_conn < idx_rcap, f"connectivity section must appear before replay-cap (got {idx_conn} vs {idx_rcap})"
