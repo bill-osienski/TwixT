@@ -258,6 +258,7 @@ def export_to_onnx(
     output_path: str,
     hidden: int = 128,
     n_blocks: int = 6,
+    in_channels: int = None,
 ) -> None:
     """Export MLX model to ONNX.
 
@@ -266,11 +267,16 @@ def export_to_onnx(
         output_path: Path for .onnx file
         hidden: Hidden channels (must match mlx_model)
         n_blocks: Number of residual blocks (must match mlx_model)
+        in_channels: Input channel count (defaults to NUM_CHANNELS from twixt_state).
+            Override for dual-format exports (e.g. in_channels=24 for pre-Phase-2 weights).
     """
     import mlx.core as mx
+    if in_channels is None:
+        from .game.twixt_state import NUM_CHANNELS
+        in_channels = NUM_CHANNELS
 
     # Create PyTorch model with matching architecture
-    pytorch_model = OnnxAlphaZero(hidden=hidden, n_blocks=n_blocks)
+    pytorch_model = OnnxAlphaZero(hidden=hidden, n_blocks=n_blocks, in_channels=in_channels)
     pytorch_model.eval()
 
     # Flatten and convert MLX parameters
@@ -279,8 +285,8 @@ def export_to_onnx(
     # Copy weights
     convert_weights(mlx_params, pytorch_model)
 
-    # Create dummy inputs for tracing
-    board = torch.randn(1, 24, 24, 24)  # NCHW: (batch, channels, height, width)
+    # Create dummy inputs for tracing — shape matches the constructed network
+    board = torch.randn(1, in_channels, 24, 24)  # NCHW
     move_rows = torch.zeros(512, dtype=torch.long)
     move_cols = torch.zeros(512, dtype=torch.long)
     move_mask = torch.zeros(512, dtype=torch.float32)
