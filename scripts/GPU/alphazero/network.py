@@ -1,11 +1,11 @@
 """AlphaZero network with dual policy/value heads.
 
 Architecture:
-- BoardEncoder: CNN + 6 ResBlocks (24-channel input, 128 hidden)
+- BoardEncoder: CNN + 6 ResBlocks (NUM_CHANNELS input, 128 hidden)
 - PolicyHead: Gather-based, outputs one logit per legal move
 - ValueHead: Predicts win probability in [-1, 1]
 
-Input: (B, H, W, C) tensor where C=24 channels (MLX channels-last format)
+Input: (B, H, W, C) tensor where C=NUM_CHANNELS (MLX channels-last format)
 Output: policy logits (N,) and value scalar
 
 TENSOR LAYOUT CONTRACT:
@@ -39,6 +39,13 @@ CH_RED_BOTTOM = 20
 CH_BLACK_LEFT = 21
 CH_BLACK_RIGHT = 22
 CH_PHASE = 23
+# Connectivity channels (Task 11, NUM_CHANNELS=30)
+CH_RED_CONN_TOP = 24
+CH_RED_CONN_BOTTOM = 25
+CH_RED_CONN_BOTH = 26
+CH_BLACK_CONN_LEFT = 27
+CH_BLACK_CONN_RIGHT = 28
+CH_BLACK_CONN_BOTH = 29
 
 # 90° CW rotation: (dr, dc) → (dc, -dr)
 # LINK_PERM_CW[old_channel] = new_channel
@@ -73,7 +80,7 @@ def canonicalize_batch(
     For black-to-move: rotate 90° CW, swap colors, permute link channels
 
     Args:
-        boards: (B, H, W, C) tensor, H=W=24, C=24
+        boards: (B, H, W, C) tensor, H=W=24, C=NUM_CHANNELS
         move_rows: (B, M) legal move row coords
         move_cols: (B, M) legal move col coords
         move_mask: (B, M) valid move mask (1=valid, 0=padded)
@@ -137,6 +144,12 @@ def canonicalize_batch(
     #   new 21 = old 20  (red-bottom dist -> opp-left)
     #   new 22 = old 19  (red-top dist -> opp-right)
     #   new 23 = old 23  (phase unchanged)
+    #   new 24 = old 27  (black_conn_left -> current_conn_top)
+    #   new 25 = old 28  (black_conn_right -> current_conn_bottom)
+    #   new 26 = old 29  (black_conn_both -> current_conn_both)
+    #   new 27 = old 25  (red_conn_bottom -> opp_conn_left)
+    #   new 28 = old 24  (red_conn_top -> opp_conn_right)
+    #   new 29 = old 26  (red_conn_both -> opp_conn_both)
 
     # Pegs: swap red/black
     ch_pegs = mx.concatenate([
@@ -165,6 +178,22 @@ def canonicalize_batch(
     # Phase unchanged
     ch_phase = boards_rot[:, :, :, CH_PHASE:CH_PHASE + 1]
 
+    # Connectivity channels remapped (same semantics as distance swap):
+    # new 24 (current_conn_top)    <- old 27 (black_conn_left), rotated
+    # new 25 (current_conn_bottom) <- old 28 (black_conn_right), rotated
+    # new 26 (current_conn_both)   <- old 29 (black_conn_both), rotated
+    # new 27 (opp_conn_left)       <- old 25 (red_conn_bottom), rotated
+    # new 28 (opp_conn_right)      <- old 24 (red_conn_top), rotated
+    # new 29 (opp_conn_both)       <- old 26 (red_conn_both), rotated
+    ch_conn = mx.concatenate([
+        boards_rot[:, :, :, CH_BLACK_CONN_LEFT:CH_BLACK_CONN_LEFT + 1],    # new 24
+        boards_rot[:, :, :, CH_BLACK_CONN_RIGHT:CH_BLACK_CONN_RIGHT + 1],  # new 25
+        boards_rot[:, :, :, CH_BLACK_CONN_BOTH:CH_BLACK_CONN_BOTH + 1],    # new 26
+        boards_rot[:, :, :, CH_RED_CONN_BOTTOM:CH_RED_CONN_BOTTOM + 1],    # new 27
+        boards_rot[:, :, :, CH_RED_CONN_TOP:CH_RED_CONN_TOP + 1],          # new 28
+        boards_rot[:, :, :, CH_RED_CONN_BOTH:CH_RED_CONN_BOTH + 1],        # new 29
+    ], axis=3)
+
     # Assemble canonical board
     boards_black_canon = mx.concatenate([
         ch_pegs,       # 0-1
@@ -173,6 +202,7 @@ def canonicalize_batch(
         ch_18,         # 18
         ch_dists,      # 19-22
         ch_phase,      # 23
+        ch_conn,       # 24-29
     ], axis=3)
 
     # Step 3: Select per-sample using mx.where (no branching)
@@ -219,13 +249,13 @@ class ResBlock(nn.Module):
 
 
 class BoardEncoder(nn.Module):
-    """CNN encoder for board state (24-channel input).
+    """CNN encoder for board state.
 
     Architecture:
     - Initial conv 3x3 with batch norm
     - N residual blocks (default 6)
 
-    Input: (B, H, W, C) where C=24 (channels-last)
+    Input: (B, H, W, C) where C=in_channels (channels-last, NHWC)
     Output: (B, H, W, hidden) feature maps (channels-last)
     """
 
@@ -447,7 +477,7 @@ class ValueHead(nn.Module):
 
 
 class AlphaZeroNetwork(nn.Module):
-    """Combined network with shared encoder (24-channel input).
+    """Combined network with shared encoder (in_channels defaults to NUM_CHANNELS).
 
     Architecture:
     - Shared BoardEncoder (CNN + ResBlocks)
