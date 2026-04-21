@@ -1280,6 +1280,10 @@ def run_parallel_selfplay(
     total_positions = 0
     games_completed = 0
     total_plies = 0
+    # Per-game accumulators for percentile/timing stats (parallel-mode parity
+    # with the sequential path which populates these inline at line 2299-2300).
+    game_plies_acc: list = []
+    game_durations_acc: list = []
 
     # Result tracking
     red_wins = 0
@@ -1367,6 +1371,9 @@ def run_parallel_selfplay(
         elif isinstance(msg, GameComplete):
             games_completed += 1
             total_plies += msg.n_moves
+            # Per-game stats for parallel-mode percentile parity with sequential path
+            game_plies_acc.append(int(msg.n_moves))
+            game_durations_acc.append(float(msg.wall_time_s))
 
             # Phase 4: replay cap accounting
             # Older messages may lack these fields (default to 0) → treat as uncapped.
@@ -1619,6 +1626,11 @@ def run_parallel_selfplay(
         "adj_abs_rv_samples": adj_abs_rv_samples,
         "adj_top1_samples": adj_top1_samples,
         "total_plies": total_plies,
+        # Per-game accumulators (parallel-mode parity with sequential path —
+        # outer loop assigns these to game_plies_list / game_durations so the
+        # existing percentile code at the per-iter sanity block sees real data)
+        "game_plies_list": game_plies_acc,
+        "game_durations": game_durations_acc,
         # MCTS stats aggregated from workers
         "total_backups": total_backups,
         "total_nn_calls": total_nn_calls,
@@ -2216,6 +2228,10 @@ def train(
                 adj_abs_rv_samples = parallel_stats.get("adj_abs_rv_samples", [])
                 adj_top1_samples = parallel_stats.get("adj_top1_samples", [])
                 total_plies = parallel_stats["total_plies"]
+                # Per-game ply/timing lists from parallel workers (drives
+                # p95_plies / max_plies_observed / avg_game_seconds / p95_game_seconds)
+                game_plies_list = parallel_stats.get("game_plies_list", [])
+                game_durations = parallel_stats.get("game_durations", [])
                 # MCTS stats not available in parallel mode
                 total_backups = parallel_stats.get("total_backups", 0)
                 total_nn_calls = parallel_stats.get("total_nn_calls", 0)

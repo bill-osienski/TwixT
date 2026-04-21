@@ -63,6 +63,7 @@ class GameComplete:
     draw_reason: int  # 0=none, 1=timeout, 2=board_full, 3=state_cap, 4=unknown, 5=resign, 6=adjudicated
     n_moves: int
     n_positions: int
+    wall_time_s: float  # per-game wall-clock duration (seconds)
 
     # MCTS stats (per game)
     nn_calls: int

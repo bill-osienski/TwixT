@@ -12,6 +12,7 @@ from __future__ import annotations
 import random
 import signal
 import sys
+import time
 from typing import Any, List, Optional
 
 from .ipc_messages import WorkerStats, WorkerDone, GameComplete
@@ -161,7 +162,8 @@ def _worker_loop(
         game_seed = (seed ^ (gid * 0x9E3779B1)) & 0x7FFFFFFF
         game_rng = random.Random(game_seed)
 
-        # Generate one game
+        # Generate one game (timed for parallel-mode percentile stats)
+        game_t0 = time.perf_counter()
         game = play_game(
             evaluator=evaluator,
             mcts_config=mcts_config,
@@ -220,6 +222,7 @@ def _worker_loop(
                 draw_reason=draw_reason_int,
                 n_moves=game.n_moves,
                 n_positions=len(game.positions),
+                wall_time_s=time.perf_counter() - game_t0,
                 nn_calls=game.nn_calls,
                 expand_calls=game.expand_calls,
                 nn_batches=game.nn_batches,
