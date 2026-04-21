@@ -229,6 +229,18 @@ Training starts on small boards and promotes to larger sizes when win-rate crite
 | `--opening-debug` | flag | off | Log opening move diagnostics (top-K moves, visit counts, priors, tie info). Output appears in self-play workers for the first 16 games, plies 0-1. Also enables `[OPENNOISE] Boosted` log lines when opening noise boost is active |
 | `--no-save-games` | flag | off | Disable saving game replays to `scripts/GPU/logs/games/` |
 | `--games-dir` | str | None | Override games output directory. Default: `scripts/GPU/logs/games/`. Useful for test runs to avoid overwriting real training data |
+| `--probes-path` | str | `tests/probes/twixt_probes.json` | Path to curated probe suite JSON for the per-iter inline forced-tier eval. If the file does not exist, the trainer prints a one-line skip notice at startup and the per-iter `Probe (forced, NN-only)` block is suppressed. Activates automatically when the file appears. Recommended range: leave at default unless you maintain multiple probe sets |
+| `--probes-inline-disable` | flag | off | Hard-disable the per-iter inline probe eval entirely (overrides `--probes-path`). Use when probes file is intentionally absent or for max throughput. The connectivity-aware sanity subsection is unaffected |
+
+**Per-iter observability surfaces** (always-on, no flags required):
+
+- **`Sanity by connectivity:`** subsection appended to the existing `Sanity` block. Buckets sampled positions via tensor channels 24-29 into `winning_structure` (largest goal-touching component ≥8 pegs OR pegs touching both goal edges) vs `no_winning_structure`. Reports per-bucket `n`, `sign_agree`, `median |v|`. Tells you whether the value head is reading the new connectivity channels correctly. Renders silently for 24-channel checkpoints (channels 24-29 absent).
+- **`Probe (forced, NN-only):`** block printed after the Sanity block when `--probes-path` resolves to a real file containing forced-tier probes matching the current `active_size`. Reports per-iter `sign_correct/n`, `median |v|`, `delta vs prev iter`, and `rolling(5 prior)` averages. Cost: ~50-100ms (~24 forward passes).
+
+**Sidecar JSON additions** (per-iteration, written to `checkpoints/<dir>/iteration_<N>.json`):
+
+- `sanity_by_connectivity`: `{winning_structure: {n, sign_agree, median_abs_v}, no_winning_structure: {…}, winning_size_threshold}`. `null` for 24-channel checkpoints.
+- `forced_probe_summary`: `{n, n_skipped_size, sign_correct, sign_correct_pct, median_abs_v, delta_sign_correct_pct, delta_median_abs_v, rolling5_sign_correct_pct, rolling5_median_abs_v}`. `null` when probe file missing or eval disabled.
 
 **See also:** [`docs/analysis-metrics-guide.md`](analysis-metrics-guide.md) for how to interpret the output files (game JSON, sidecar stats, analyzer summary/CSVs).
 
