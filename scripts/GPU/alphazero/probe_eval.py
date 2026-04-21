@@ -198,6 +198,99 @@ def _eval_probe(probe: dict, evaluator: LocalGPUEvaluator, sims: int) -> dict:
     }
 
 
+def run_forced_probes_inline(
+    network,
+    probes: list[dict],
+    active_size: int | None = None,
+) -> dict:
+    """Evaluate forced-tier probes against an in-memory network (NN-only, no MCTS).
+
+    Designed for trainer-side per-iteration invocation — no disk I/O, no
+    process spawning. Uses the same NN-forward path as _eval_probe but skips
+    MCTS entirely (the `sims=0` branch).
+
+    Args:
+        network: AlphaZeroNetwork instance (already initialized / trained)
+        probes: list of probe dicts (pre-filtered to confidence=='forced')
+        active_size: if set, only evaluate probes whose active_size matches
+            (skip probes that don't apply to the current curriculum size)
+
+    Returns:
+        Dict with aggregates:
+          - n (int): probes evaluated (post active_size filter)
+          - n_skipped_size (int): probes skipped because active_size mismatch
+          - sign_correct (int): count of NN-correct probes
+          - sign_correct_pct (float): sign_correct / n, or None if n==0
+          - median_abs_v (float): median of |nn_value|, or None if n==0
+          - nn_values (list[float]): per-probe NN values (red-perspective)
+          - expected_signs (list[int]): per-probe expected sign
+    """
+    # Filter by active_size if requested
+    applicable = probes
+    n_skipped_size = 0
+    if active_size is not None:
+        applicable = [p for p in probes if p.get("active_size") == active_size]
+        n_skipped_size = len(probes) - len(applicable)
+
+    if not applicable:
+        return {
+            "n": 0,
+            "n_skipped_size": n_skipped_size,
+            "sign_correct": 0,
+            "sign_correct_pct": None,
+            "median_abs_v": None,
+            "nn_values": [],
+            "expected_signs": [],
+        }
+
+    evaluator = LocalGPUEvaluator(network)
+    nn_values: list[float] = []
+    expected_signs: list[int] = []
+    sign_correct = 0
+
+    for probe in applicable:
+        state = _replay_probe(probe)
+        tensor = evaluator.build_input_tensor(state)
+        tensor = np.transpose(tensor, (1, 2, 0))
+        boards_np = np.expand_dims(tensor.astype(np.float32), axis=0)
+        moves = state.legal_moves()
+        move_rows_np = np.array([[m[0] for m in moves]], dtype=np.int32)
+        move_cols_np = np.array([[m[1] for m in moves]], dtype=np.int32)
+        move_mask_np = np.ones((1, len(moves)), dtype=np.float32)
+        _, values_np = evaluator.infer(
+            boards_np, move_rows_np, move_cols_np, move_mask_np, state.active_size
+        )
+        nn_value = float(values_np[0])
+        # Red-perspective convention (matches _eval_probe)
+        if state.to_move == "black":
+            nn_value = -nn_value
+        nn_values.append(nn_value)
+
+        exp_sign = probe.get("expected_value_sign", 0)
+        expected_signs.append(exp_sign)
+        if (exp_sign > 0 and nn_value > 0) or \
+           (exp_sign < 0 and nn_value < 0) or \
+           (exp_sign == 0 and abs(nn_value) < 0.1):
+            sign_correct += 1
+
+    n = len(applicable)
+    abs_values = sorted(abs(v) for v in nn_values)
+    median_abs_v = abs_values[n // 2] if n else None
+    # Use simple midpoint (not interpolated median) — matches probe_eval CSV convention
+    if n >= 2 and n % 2 == 0:
+        median_abs_v = 0.5 * (abs_values[n // 2 - 1] + abs_values[n // 2])
+
+    return {
+        "n": n,
+        "n_skipped_size": n_skipped_size,
+        "sign_correct": sign_correct,
+        "sign_correct_pct": round(sign_correct / n, 4) if n else None,
+        "median_abs_v": round(median_abs_v, 4) if median_abs_v is not None else None,
+        "nn_values": [round(v, 4) for v in nn_values],
+        "expected_signs": expected_signs,
+    }
+
+
 def _aggregate(rows: list[dict]) -> dict:
     """Per-tier and per-category aggregation."""
     from statistics import median
