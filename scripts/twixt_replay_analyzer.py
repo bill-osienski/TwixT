@@ -262,6 +262,13 @@ def aggregate_sidecars(sidecars: Dict[int, dict]) -> dict:
         "avg_plies": 0.0,
         # Latest snapshot
         "balance": {},
+        # Phase 2 (2026-04-19 connectivity retrain): per-iter value-head sign-agree
+        # by connectivity bucket + inline forced-probe summary. Collected as
+        # per-iter rows (for CSV + trend reports) + latest snapshot.
+        "sanity_by_connectivity_by_iter": [],   # list of per-iter rows
+        "sanity_by_connectivity_latest": {},    # latest iter's snapshot dict
+        "forced_probe_by_iter": [],             # list of per-iter rows
+        "forced_probe_latest": {},              # latest iter's snapshot dict
     }
 
     total_plies_w = 0.0
@@ -299,6 +306,40 @@ def aggregate_sidecars(sidecars: Dict[int, dict]) -> dict:
         total_plies_w += sc.get("avg_plies", 0.0) * gpi
         total_games_w += gpi
 
+        # Phase 2: per-iter connectivity-bucketed sanity (optional — absent on
+        # pre-Phase-2 sidecars, None on 24-channel checkpoints).
+        sbc = sc.get("sanity_by_connectivity")
+        if sbc:
+            ws = sbc.get("winning_structure", {}) or {}
+            nws = sbc.get("no_winning_structure", {}) or {}
+            agg["sanity_by_connectivity_by_iter"].append({
+                "iteration": it,
+                "winning_n": ws.get("n"),
+                "winning_sign_agree": ws.get("sign_agree"),
+                "winning_median_abs_v": ws.get("median_abs_v"),
+                "no_winning_n": nws.get("n"),
+                "no_winning_sign_agree": nws.get("sign_agree"),
+                "no_winning_median_abs_v": nws.get("median_abs_v"),
+                "winning_size_threshold": sbc.get("winning_size_threshold"),
+            })
+
+        # Phase 2: per-iter inline forced-probe (optional — None when probe file
+        # missing or when the per-iter inline eval is disabled).
+        fps = sc.get("forced_probe_summary")
+        if fps:
+            agg["forced_probe_by_iter"].append({
+                "iteration": it,
+                "n": fps.get("n"),
+                "n_skipped_size": fps.get("n_skipped_size"),
+                "sign_correct": fps.get("sign_correct"),
+                "sign_correct_pct": fps.get("sign_correct_pct"),
+                "median_abs_v": fps.get("median_abs_v"),
+                "delta_sign_correct_pct": fps.get("delta_sign_correct_pct"),
+                "delta_median_abs_v": fps.get("delta_median_abs_v"),
+                "rolling5_sign_correct_pct": fps.get("rolling5_sign_correct_pct"),
+                "rolling5_median_abs_v": fps.get("rolling5_median_abs_v"),
+            })
+
         if it == latest_it:
             agg["games_per_iter"] = gpi
             agg["balance"] = {"window": sc.get("balance", {}).get("window", "n/a")}
@@ -306,6 +347,11 @@ def aggregate_sidecars(sidecars: Dict[int, dict]) -> dict:
             agg["adjudication"]["stats"] = adj.get("stats", {})
             agg["resign_gate"]["top1_share_on_value_hits"] = rg.get("top1_share_on_value_hits", {})
             agg["resign_gate"]["min_top1_share"] = rg.get("min_top1_share", 0.0)
+            # Phase 2: latest-iter snapshots of the new blocks
+            if sbc:
+                agg["sanity_by_connectivity_latest"] = sbc
+            if fps:
+                agg["forced_probe_latest"] = fps
 
     agg["avg_plies"] = round(total_plies_w / total_games_w, 1) if total_games_w > 0 else 0.0
 
@@ -734,6 +780,126 @@ def format_connectivity_diagnostics_report(summary: dict, rows: list) -> List[st
         lines.append(f"  - {row}")
     if len(rows) > 8:
         lines.append(f"  ... {len(rows) - 8} more rows in connectivity_by_ply.csv")
+    lines.append("")
+    return lines
+
+
+def format_sanity_by_connectivity_report(by_iter: list, latest: dict) -> List[str]:
+    """Render the per-iter value-head sign-agree by connectivity-bucket section.
+
+    Source: `sanity_by_connectivity` block written by the trainer per iteration
+    (from Phase 2 connectivity-retrain). Shows latest snapshot + trend over
+    recent iters. Degrades silently if no sidecar carries the block (pre-Phase-2
+    data or disabled inline eval).
+    """
+    lines = []
+    lines.append("Value Head Sanity by Connectivity Bucket (Phase 2)")
+    lines.append("=" * 55)
+    if not by_iter and not latest:
+        lines.append("  (not available — no sanity_by_connectivity data in sidecars)")
+        lines.append("")
+        return lines
+
+    # Latest-snapshot summary
+    ws = (latest or {}).get("winning_structure", {}) or {}
+    nws = (latest or {}).get("no_winning_structure", {}) or {}
+    thr = (latest or {}).get("winning_size_threshold", 8)
+    lines.append(f"  Latest iter (threshold: largest_component>={thr} OR n_goal_touching>=2):")
+    def _fmt_bucket(b):
+        n = b.get("n", 0)
+        if n == 0:
+            return "(n=0)"
+        sa = b.get("sign_agree")
+        mv = b.get("median_abs_v")
+        sa_s = f"{sa:.1%}" if sa is not None else "n/a"
+        mv_s = f"{mv:.3f}" if mv is not None else "n/a"
+        return f"(n={n}): sign_agree={sa_s}, median |v|={mv_s}"
+    lines.append(f"    winning_structure    {_fmt_bucket(ws)}")
+    lines.append(f"    no_winning_structure {_fmt_bucket(nws)}")
+
+    # Trend across iters (last 10 in a compact table)
+    if by_iter:
+        trend = by_iter[-10:]
+        lines.append("")
+        lines.append(f"  Trend (last {len(trend)} iters):")
+        lines.append(f"    {'iter':>5} {'win_n':>6} {'win_SA':>8} {'win_|v|':>8} {'nw_n':>5} {'nw_SA':>8} {'nw_|v|':>8}")
+        for row in trend:
+            def _p(x, pct=False):
+                if x is None:
+                    return "n/a"
+                return f"{x:.1%}" if pct else f"{x:.3f}"
+            lines.append(
+                f"    {row['iteration']:>5} "
+                f"{row.get('winning_n') or 0:>6} "
+                f"{_p(row.get('winning_sign_agree'), pct=True):>8} "
+                f"{_p(row.get('winning_median_abs_v')):>8} "
+                f"{row.get('no_winning_n') or 0:>5} "
+                f"{_p(row.get('no_winning_sign_agree'), pct=True):>8} "
+                f"{_p(row.get('no_winning_median_abs_v')):>8}"
+            )
+        lines.append(f"  ... full per-iter table: sanity_by_connectivity_by_iter.csv")
+    lines.append("")
+    return lines
+
+
+def format_forced_probe_report(by_iter: list, latest: dict) -> List[str]:
+    """Render the per-iter inline forced-probe section (Phase 2).
+
+    Source: `forced_probe_summary` block written by the trainer per iteration.
+    Populated only when tests/probes/twixt_probes.json exists. Degrades to a
+    "(not available)" stub line otherwise.
+    """
+    lines = []
+    lines.append("Forced-Tier Probe Sign-Agree (Phase 2)")
+    lines.append("=" * 45)
+    if not by_iter and not latest:
+        lines.append("  (not available — no forced_probe_summary data in sidecars;")
+        lines.append("   either probes file absent or inline eval disabled)")
+        lines.append("")
+        return lines
+
+    n = (latest or {}).get("n")
+    sc = (latest or {}).get("sign_correct")
+    sc_pct = (latest or {}).get("sign_correct_pct")
+    mv = (latest or {}).get("median_abs_v")
+    r5_pct = (latest or {}).get("rolling5_sign_correct_pct")
+    r5_mv = (latest or {}).get("rolling5_median_abs_v")
+    lines.append("  Latest iter:")
+    if n and n > 0:
+        sc_pct_s = f"{sc_pct:.1%}" if sc_pct is not None else "n/a"
+        mv_s = f"{mv:.3f}" if mv is not None else "n/a"
+        lines.append(f"    n={n}, sign_correct={sc}/{n} ({sc_pct_s}), median |v|={mv_s}")
+        if r5_pct is not None:
+            r5_mv_s = f"{r5_mv:.3f}" if r5_mv is not None else "n/a"
+            lines.append(f"    rolling(5 prior): sign={r5_pct:.1%}, median |v|={r5_mv_s}")
+    else:
+        lines.append(f"    n=0 (no probes matched active_size at this iter)")
+
+    # Trend
+    if by_iter:
+        trend = by_iter[-10:]
+        lines.append("")
+        lines.append(f"  Trend (last {len(trend)} iters):")
+        lines.append(f"    {'iter':>5} {'n':>4} {'sc':>4} {'sc%':>8} {'|v|':>8} {'delta_sc%':>10} {'rolling5_sc%':>13}")
+        for row in trend:
+            def _p(x, pct=False):
+                if x is None:
+                    return "n/a"
+                return f"{x:.1%}" if pct else f"{x:.3f}"
+            def _d(x):
+                if x is None:
+                    return "n/a"
+                return f"{x*100:+.1f}pp"
+            lines.append(
+                f"    {row['iteration']:>5} "
+                f"{row.get('n') or 0:>4} "
+                f"{row.get('sign_correct') or 0:>4} "
+                f"{_p(row.get('sign_correct_pct'), pct=True):>8} "
+                f"{_p(row.get('median_abs_v')):>8} "
+                f"{_d(row.get('delta_sign_correct_pct')):>10} "
+                f"{_p(row.get('rolling5_sign_correct_pct'), pct=True):>13}"
+            )
+        lines.append(f"  ... full per-iter table: forced_probe_by_iter.csv")
     lines.append("")
     return lines
 
@@ -1429,6 +1595,18 @@ def analyze(replays: List[dict],
         # Phase 1 (connectivity-retrain): value-calibration summary.
         # Populated only when --calibrate is passed (stub payload this task).
         "value_calibration": value_calibration_summary if calibrate else {},
+        # Phase 2: per-iter sanity-by-connectivity trend + latest snapshot.
+        # Empty if no sidecar carried sanity_by_connectivity.
+        "sanity_by_connectivity": {
+            "by_iter": sc_agg.get("sanity_by_connectivity_by_iter", []) if use_sidecar else [],
+            "latest": sc_agg.get("sanity_by_connectivity_latest", {}) if use_sidecar else {},
+        },
+        # Phase 2: inline forced-probe trend + latest snapshot.
+        # Empty if probes file was absent or eval disabled in the run.
+        "forced_probe": {
+            "by_iter": sc_agg.get("forced_probe_by_iter", []) if use_sidecar else [],
+            "latest": sc_agg.get("forced_probe_latest", {}) if use_sidecar else {},
+        },
     }
 
     summary_json = os.path.join(out_dir, _suffixed("summary", "json", suffix))
@@ -1472,6 +1650,34 @@ def analyze(replays: List[dict],
             for row in connectivity_rows:
                 w.writerow(row)
         print(f"[OK] wrote: {connectivity_csv_path}")
+
+    # --- Phase 2: per-iter sidecar-sourced connectivity/probe trends ---
+    if use_sidecar:
+        sbc_rows = sc_agg.get("sanity_by_connectivity_by_iter", [])
+        if sbc_rows:
+            sbc_csv_path = os.path.join(
+                out_dir,
+                _suffixed("sanity_by_connectivity_by_iter", "csv", suffix),
+            )
+            with open(sbc_csv_path, "w", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=list(sbc_rows[0].keys()))
+                w.writeheader()
+                for row in sbc_rows:
+                    w.writerow(row)
+            print(f"[OK] wrote: {sbc_csv_path}")
+
+        fps_rows = sc_agg.get("forced_probe_by_iter", [])
+        if fps_rows:
+            fps_csv_path = os.path.join(
+                out_dir,
+                _suffixed("forced_probe_by_iter", "csv", suffix),
+            )
+            with open(fps_csv_path, "w", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=list(fps_rows[0].keys()))
+                w.writeheader()
+                for row in fps_rows:
+                    w.writerow(row)
+            print(f"[OK] wrote: {fps_csv_path}")
 
     # --- Phase 4: replay_cap_by_iter.csv ---
     if rcap_by_iter:
@@ -1626,9 +1832,23 @@ def analyze(replays: List[dict],
     # Phase 1 (connectivity-retrain): connectivity diagnostics.
     # Always on when the module is available; gated on --no-connectivity to
     # skip the compute path on cost-sensitive runs. Canonical report order:
-    # root-child → early-override → connectivity → replay-cap.
+    # root-child → early-override → connectivity → sanity-by-connectivity →
+    # forced-probe → replay-cap.
     if _HAS_PHASE1_DIAG:
         lines.extend(format_connectivity_diagnostics_report(connectivity_summary, connectivity_rows))
+
+    # Phase 2: per-iter value-head sign-agree by connectivity bucket + inline
+    # forced-probe trends from sidecars. Rendered unconditionally (stubs
+    # gracefully when sidecars lack the new blocks).
+    if use_sidecar:
+        lines.extend(format_sanity_by_connectivity_report(
+            sc_agg.get("sanity_by_connectivity_by_iter", []),
+            sc_agg.get("sanity_by_connectivity_latest", {}),
+        ))
+        lines.extend(format_forced_probe_report(
+            sc_agg.get("forced_probe_by_iter", []),
+            sc_agg.get("forced_probe_latest", {}),
+        ))
 
     # Phase 1 (connectivity-retrain): value calibration (scaffold).
     # Gated on --calibrate; --calibrate-weights enforced upstream in main().
