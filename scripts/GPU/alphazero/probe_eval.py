@@ -303,6 +303,85 @@ def run_forced_probes_inline(
     }
 
 
+def extract_forced_probes_from_games(
+    games: list[dict],
+    active_size: int = 24,
+    k_plies: int = 2,
+    winner_reasons: frozenset = frozenset({"win"}),
+    dedupe_exact: bool = True,
+    dedupe_mirror: bool = True,
+    max_probes: int | None = None,
+) -> list[dict]:
+    """Extract near-terminal forced probes from parsed game JSONs.
+
+    See spec §4.1 for full semantics. This is the shared primitive used by
+    both the analyzer (replay-derived probe scoring) and the bootstrap
+    probe suite generator.
+    """
+    probes: list[dict] = []
+
+    for game in games:
+        meta = game.get("meta") or {}
+        if meta.get("board_size") != active_size:
+            continue
+        if meta.get("reason") not in winner_reasons:
+            continue
+        winner = game.get("winner")
+        if winner not in ("red", "black"):
+            continue
+
+        moves_list = game.get("moves") or []
+        n_moves = len(moves_list)
+        if n_moves < k_plies + 1:
+            continue
+
+        # Build move_history as list of [r, c] pairs (ply-ordered).
+        move_history = [list(m["move"]) for m in moves_list]
+        source_game_basename = game.get("id") or f"iter_{meta.get('iteration', 0):04d}_game_{meta.get('game_idx', 0):03d}"
+        source_iteration = meta.get("iteration", 0)
+        category = f"near_win_{winner}"
+
+        # Perspective convention (shared with run_forced_probes_inline and
+        # _eval_probe): expected_value_sign is stored in RED-PERSPECTIVE.
+        #   +1 = red wins from red's point of view
+        #   -1 = black wins from red's point of view
+        # The scoring code converts raw nn_value to red-perspective by negating
+        # it when state.to_move == "black" (probe_eval.py:264-266), so this
+        # comparison is apples-to-apples.
+        expected_value_sign = +1 if winner == "red" else -1
+        starting_player = game.get("starting_player") or "red"
+
+        # Emit K probes at plies n_moves-1, n_moves-2, ..., n_moves-k_plies (down to 0).
+        for k in range(1, k_plies + 1):
+            ply = n_moves - k
+            if ply < 0:
+                continue
+            # Side-to-move at this ply: starting_player if ply%2==0 else the other.
+            side_to_move = starting_player if ply % 2 == 0 else ("black" if starting_player == "red" else "red")
+            probe = {
+                "id": f"{source_game_basename}_ply{ply:03d}_{winner}",
+                "category": category,
+                "confidence": "forced",
+                "side_to_move": side_to_move,
+                "expected_value_sign": expected_value_sign,
+                "active_size": active_size,
+                "ply": ply,
+                "move_history": move_history[:ply],
+                "source_game": source_game_basename,
+                "source_ply": ply,
+                "_source_iteration": source_iteration,  # sort-only; stripped before return
+            }
+            probes.append(probe)
+
+    # Dedup (exact + mirror) will be added in Task 4.
+    # Sort + truncate will be added in Task 5.
+
+    # Strip internal sort-only keys before returning.
+    for p in probes:
+        p.pop("_source_iteration", None)
+    return probes
+
+
 def _aggregate(rows: list[dict]) -> dict:
     """Per-tier and per-category aggregation."""
     from statistics import median

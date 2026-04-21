@@ -223,3 +223,78 @@ def test_load_network_for_scoring_matches_private_loader(tmp_path):
     assert pub[1] == priv[1] == 30   # in_channels
     assert pub[2] == priv[2]         # hidden
     assert pub[3] == priv[3]         # n_blocks
+
+
+# ---------- extract_forced_probes_from_games ----------
+
+def _make_game_dict(iteration=29, game_idx=0, n_moves=40, winner="red",
+                   reason="win", board_size=24, moves=None):
+    """Minimal parsed-game-JSON shape matching what load_replays produces.
+
+    Moves list: [{"player": "red"/"black", "move": [r, c]}, ...]
+    """
+    if moves is None:
+        # Generate n_moves of alternating moves at arbitrary (but legal-looking) cells.
+        moves = []
+        for i in range(n_moves):
+            player = "red" if i % 2 == 0 else "black"
+            moves.append({"player": player, "move": [(i * 3) % board_size, (i * 5) % board_size]})
+    return {
+        "id": f"iter_{iteration:04d}_game_{game_idx:03d}",
+        "meta": {
+            "board_size": board_size,
+            "iteration": iteration,
+            "game_idx": game_idx,
+            "reason": reason,
+            "n_moves": n_moves,
+            "starting_player": "red",
+        },
+        "moves": moves,
+        "winner": winner,
+        "starting_player": "red",
+    }
+
+
+def test_extract_forced_probes_basic_two_per_game():
+    """A single natural-win game at size 24 yields 2 probes (K=2: plies n_moves-1 and n_moves-2)."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    game = _make_game_dict(iteration=29, game_idx=0, n_moves=40, winner="red")
+    probes = extract_forced_probes_from_games([game], active_size=24, k_plies=2)
+    assert len(probes) == 2
+    plies = sorted(p["ply"] for p in probes)
+    assert plies == [38, 39]  # n_moves-2 and n_moves-1
+
+
+def test_extract_forced_probes_category_from_winner_not_side_to_move():
+    """Category is based on eventual winner, independent of side_to_move."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    # Red wins, 40 moves. At ply 38 (even index after starting red), side-to-move
+    # alternates. Category must be 'near_win_red' for BOTH probes regardless of stm.
+    game = _make_game_dict(iteration=29, n_moves=40, winner="red")
+    probes = extract_forced_probes_from_games([game], active_size=24)
+    assert all(p["category"] == "near_win_red" for p in probes)
+    # Now black wins: both probes are near_win_black.
+    game_b = _make_game_dict(iteration=29, n_moves=40, winner="black")
+    probes_b = extract_forced_probes_from_games([game_b], active_size=24)
+    assert all(p["category"] == "near_win_black" for p in probes_b)
+
+
+def test_extract_forced_probes_deterministic_ids():
+    """IDs have the form {basename}_ply{ply:03d}_{winner} and are stable across reruns."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    game = _make_game_dict(iteration=29, game_idx=42, n_moves=40, winner="red")
+    probes_1 = extract_forced_probes_from_games([game], active_size=24)
+    probes_2 = extract_forced_probes_from_games([game], active_size=24)
+    ids_1 = sorted(p["id"] for p in probes_1)
+    ids_2 = sorted(p["id"] for p in probes_2)
+    assert ids_1 == ids_2
+    assert "iter_0029_game_042_ply038_red" in ids_1
+    assert "iter_0029_game_042_ply039_red" in ids_1
+
+
+def test_extract_forced_probes_confidence_field_forced():
+    """Every emitted probe has confidence='forced'."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    game = _make_game_dict(iteration=29, n_moves=40, winner="red")
+    probes = extract_forced_probes_from_games([game], active_size=24)
+    assert all(p["confidence"] == "forced" for p in probes)
