@@ -95,6 +95,18 @@ def _load_network(
     return net, in_channels, actual_hidden, actual_n_blocks
 
 
+def load_network_for_scoring(weights_path: str, verbose: bool = False):
+    """Public wrapper over _load_network.
+
+    Provides a stable import symbol for the trainer, analyzer, and bootstrap
+    generator to share. Returns (network, in_channels, hidden, n_blocks) with
+    auto-detection of 24-channel vs 30-channel checkpoints.
+
+    See _load_network for full docstring.
+    """
+    return _load_network(weights_path, hidden=None, n_blocks=None, verbose=verbose)
+
+
 def _default_create_network_param(name: str):
     """Introspect create_network's default for a named param. Used to echo
     the actual architecture in metadata when the user didn't override."""

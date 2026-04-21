@@ -192,3 +192,34 @@ def test_run_forced_probes_inline_evaluates_matching_probe():
     assert out["sign_correct"] in (0, 1)
     assert out["sign_correct_pct"] in (0.0, 1.0)
     assert out["median_abs_v"] is not None
+
+
+# ---------- load_network_for_scoring (public wrapper over _load_network) ----------
+
+def test_load_network_for_scoring_public_symbol_exists():
+    """The public wrapper is importable under the expected name."""
+    from scripts.GPU.alphazero.probe_eval import load_network_for_scoring
+    assert callable(load_network_for_scoring)
+
+
+def test_load_network_for_scoring_matches_private_loader(tmp_path):
+    """Public wrapper delegates to _load_network and returns the same shape."""
+    from scripts.GPU.alphazero.probe_eval import (
+        load_network_for_scoring, _load_network,
+    )
+    # Fixture uses create_network defaults so it matches the wrapper's
+    # no-override load path. _load_network only auto-detects in_channels
+    # (24 vs 30); hidden and n_blocks fall through to create_network
+    # defaults when the caller passes None.
+    from scripts.GPU.alphazero.network import create_network
+    net = create_network(in_channels=30)
+    weights_path = tmp_path / "fixture.safetensors"
+    net.save_weights(str(weights_path))
+
+    pub = load_network_for_scoring(str(weights_path), verbose=False)
+    priv = _load_network(str(weights_path), verbose=False)
+    # Both return 4-tuples: (net, in_channels, hidden, n_blocks)
+    assert len(pub) == 4
+    assert pub[1] == priv[1] == 30   # in_channels
+    assert pub[2] == priv[2]         # hidden
+    assert pub[3] == priv[3]         # n_blocks
