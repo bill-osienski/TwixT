@@ -77,14 +77,17 @@ def test_load_network_for_scoring_matches_private_loader(tmp_path):
     from scripts.GPU.alphazero.probe_eval import (
         load_network_for_scoring, _load_network,
     )
-    # Build a tiny network and save it to disk as a safetensors fixture.
+    # Fixture uses create_network defaults so it matches the wrapper's
+    # no-override load path. _load_network only auto-detects in_channels
+    # (24 vs 30); hidden and n_blocks fall through to create_network
+    # defaults when the caller passes None.
     from scripts.GPU.alphazero.network import create_network
-    net = create_network(in_channels=30, hidden=8, n_blocks=1)
+    net = create_network(in_channels=30)
     weights_path = tmp_path / "fixture.safetensors"
     net.save_weights(str(weights_path))
 
     pub = load_network_for_scoring(str(weights_path), verbose=False)
-    priv = _load_network(str(weights_path), hidden=8, n_blocks=1, verbose=False)
+    priv = _load_network(str(weights_path), verbose=False)
     # Both return 4-tuples: (net, in_channels, hidden, n_blocks)
     assert len(pub) == 4
     assert pub[1] == priv[1] == 30   # in_channels
