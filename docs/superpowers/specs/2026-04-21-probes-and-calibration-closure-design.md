@@ -387,7 +387,7 @@ Emits the full dict from §4.3 under top-level key `value_calibration`:
 
 ### 6.5 New CSV outputs in `--out` directory
 
-- `replay_probe_per_probe_<suffix>.csv` — one row per probe: `id, category, source_game, source_ply, expected_value_sign, nn_value, sign_correct_nn, nn_magnitude`
+- `replay_probe_per_probe_<suffix>.csv` — one row per probe: `id, category, source_game, source_ply, expected_value_sign, nn_value, sign_correct, nn_magnitude`. Field `sign_correct` matches the aggregate's naming (NN-only mode; `_nn` / `_mcts` disambiguation from `_eval_probe`'s CSV is not needed here since no MCTS pass is run).
 - `value_calibration_by_bucket_<suffix>.csv` — one row per bucket: `bucket, natural_count, sampled_count, sign_agree, mse, pred_mean, outcome_mean`
 
 Output naming follows the existing `<name>_<suffix>.csv` pattern (e.g., `sanity_by_connectivity_by_iter_21-30.csv`).
