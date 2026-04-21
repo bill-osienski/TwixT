@@ -298,3 +298,31 @@ def test_extract_forced_probes_confidence_field_forced():
     game = _make_game_dict(iteration=29, n_moves=40, winner="red")
     probes = extract_forced_probes_from_games([game], active_size=24)
     assert all(p["confidence"] == "forced" for p in probes)
+
+
+def test_extract_forced_probes_natural_wins_only():
+    """Resigns, adjudicated games, draws, and timeouts produce zero probes."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    for bad_reason in ("resign", "adjudicated", "timeout", "board_full", "state_cap", "unknown"):
+        game = _make_game_dict(iteration=29, n_moves=40, winner="red", reason=bad_reason)
+        probes = extract_forced_probes_from_games([game], active_size=24)
+        assert probes == [], f"reason={bad_reason!r} should yield zero probes"
+
+
+def test_extract_forced_probes_active_size_filter():
+    """Games at wrong board size produce zero probes."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    game_16 = _make_game_dict(iteration=29, n_moves=40, winner="red", board_size=16)
+    assert extract_forced_probes_from_games([game_16], active_size=24) == []
+    # But size 24 games still work.
+    game_24 = _make_game_dict(iteration=29, n_moves=40, winner="red", board_size=24)
+    assert len(extract_forced_probes_from_games([game_24], active_size=24)) == 2
+
+
+def test_extract_forced_probes_invalid_winner_skipped():
+    """Games with winner None, 'draw', or any unexpected value are skipped."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    for bad_winner in (None, "draw", "", "unknown"):
+        game = _make_game_dict(iteration=29, n_moves=40, winner=bad_winner)
+        probes = extract_forced_probes_from_games([game], active_size=24)
+        assert probes == [], f"winner={bad_winner!r} should yield zero probes"
