@@ -351,6 +351,14 @@ CSV_FIELDNAMES = [
     "replay_cap_games_capped", "replay_cap_capped_rate",
     "replay_cap_total_orig", "replay_cap_total_kept",
     "replay_cap_mean_orig", "replay_cap_mean_kept", "replay_cap_kept_fraction",
+    # Phase 2: connectivity-bucketed sanity (flattened from sanity_by_connectivity dict;
+    # nested form lives in iteration_<N>.json under sanity_by_connectivity)
+    "sbc_winning_n", "sbc_winning_sign_agree", "sbc_winning_median_abs_v",
+    "sbc_no_winning_n", "sbc_no_winning_sign_agree", "sbc_no_winning_median_abs_v",
+    # Phase 2: inline forced-probe summary (flattened; nested form in iteration_<N>.json)
+    "fps_n", "fps_sign_correct", "fps_sign_correct_pct", "fps_median_abs_v",
+    "fps_delta_sign_correct_pct", "fps_delta_median_abs_v",
+    "fps_rolling5_sign_correct_pct", "fps_rolling5_median_abs_v",
 ]
 
 
@@ -3245,7 +3253,26 @@ def train(
             # Sanity stats
             **z_stats,
             **pi_stats,
-            **v_stats,
+            # v_stats spread carefully: nested 'sanity_by_connectivity' is flattened
+            # into sbc_* keys below (CSV can't hold nested dicts). The full nested
+            # version lives in the iteration JSON via _sidecar.
+            **{k: v for k, v in v_stats.items() if k != "sanity_by_connectivity"},
+            # Phase 2: connectivity-bucketed sanity (flattened scalars)
+            "sbc_winning_n": (v_stats.get("sanity_by_connectivity") or {}).get("winning_structure", {}).get("n"),
+            "sbc_winning_sign_agree": (v_stats.get("sanity_by_connectivity") or {}).get("winning_structure", {}).get("sign_agree"),
+            "sbc_winning_median_abs_v": (v_stats.get("sanity_by_connectivity") or {}).get("winning_structure", {}).get("median_abs_v"),
+            "sbc_no_winning_n": (v_stats.get("sanity_by_connectivity") or {}).get("no_winning_structure", {}).get("n"),
+            "sbc_no_winning_sign_agree": (v_stats.get("sanity_by_connectivity") or {}).get("no_winning_structure", {}).get("sign_agree"),
+            "sbc_no_winning_median_abs_v": (v_stats.get("sanity_by_connectivity") or {}).get("no_winning_structure", {}).get("median_abs_v"),
+            # Phase 2: inline forced-probe (flattened scalars; None when probe file missing/disabled)
+            "fps_n": (forced_probe_summary or {}).get("n"),
+            "fps_sign_correct": (forced_probe_summary or {}).get("sign_correct"),
+            "fps_sign_correct_pct": (forced_probe_summary or {}).get("sign_correct_pct"),
+            "fps_median_abs_v": (forced_probe_summary or {}).get("median_abs_v"),
+            "fps_delta_sign_correct_pct": (forced_probe_summary or {}).get("delta_sign_correct_pct"),
+            "fps_delta_median_abs_v": (forced_probe_summary or {}).get("delta_median_abs_v"),
+            "fps_rolling5_sign_correct_pct": (forced_probe_summary or {}).get("rolling5_sign_correct_pct"),
+            "fps_rolling5_median_abs_v": (forced_probe_summary or {}).get("rolling5_median_abs_v"),
 
             # Phase 4: per-game replay contribution cap
             "replay_cap_enabled": int(bool(max_positions_per_game and max_positions_per_game > 0)),
