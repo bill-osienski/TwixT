@@ -338,6 +338,14 @@ def main():
         help="When capping a game's positions, keep this many tail positions "
              "unconditionally (protects endgame/conversion supervision). "
              "Only takes effect when --max-positions-per-game > 0. Default: 16")
+    # Phase 2: inline forced-probe per-iter eval (additive observability)
+    parser.add_argument("--probes-path", type=str, default="tests/probes/twixt_probes.json",
+        help="Path to curated probe suite JSON (Phase 2). Per-iter forced-tier "
+             "NN-only eval runs against this. If missing, the Probe block is "
+             "silently skipped (Phase 0 of spec may not be done yet).")
+    parser.add_argument("--probes-inline-disable", action="store_true",
+        help="Disable per-iter inline forced-probe eval entirely. "
+             "Use when probes file is intentionally absent or for max throughput.")
 
     args = parser.parse_args()
 
@@ -596,6 +604,9 @@ def main():
         # Phase 4: per-game replay contribution cap
         max_positions_per_game=(args.max_positions_per_game if args.max_positions_per_game > 0 else None),
         endgame_keep_positions=args.endgame_keep_positions,
+        # Phase 2: inline forced-probe eval
+        probes_path=args.probes_path,
+        probes_inline_disable=args.probes_inline_disable,
     )
     # Conditional override: None means "use default from train() (0.5)"
     if args.value_weight is not None:

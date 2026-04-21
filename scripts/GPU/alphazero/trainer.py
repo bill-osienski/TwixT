@@ -430,6 +430,59 @@ def summarize_z(positions: List["PositionRecord"]) -> dict:
     }
 
 
+def _classify_position_from_tensor(
+    board_tensor: np.ndarray, winning_size_threshold: int = 8
+) -> str:
+    """Bucket a position into 'winning_structure' or 'no_winning_structure'.
+
+    Uses channels 24-29 (Phase 2 connectivity masks) directly — no state
+    reconstruction needed. Mirrors the intent of
+    value_calibration.classify_position but operates on the raw NHWC tensor
+    so it can be applied during training without rebuilding TwixtState.
+
+    Channel layout (from twixt_state.py):
+        24: red_connected_to_top
+        25: red_connected_to_bottom
+        26: red_connected_to_both    (terminal-only when nonzero)
+        27: black_connected_to_left
+        28: black_connected_to_right
+        29: black_connected_to_both  (terminal-only when nonzero)
+
+    Bucket rule (matches spec §9.2 intent):
+        winning_structure  = either color has a goal-touching component AND
+                             (≥winning_size_threshold pegs in that component
+                              OR pegs touching both goal edges).
+
+    For pre-Phase-2 24-channel tensors (no channels 24-29) returns
+    "unknown" — caller should drop these from per-bucket aggregates.
+    """
+    # NHWC tensor: (H, W, C). Channel access via [..., ch]
+    if board_tensor.ndim != 3 or board_tensor.shape[-1] < 30:
+        return "unknown"
+    # Sums over H,W of each connectivity channel
+    s_red_top = float(np.sum(board_tensor[..., 24]))
+    s_red_bot = float(np.sum(board_tensor[..., 25]))
+    s_blk_left = float(np.sum(board_tensor[..., 27]))
+    s_blk_right = float(np.sum(board_tensor[..., 28]))
+    # "winning structure" approximation:
+    #   - >= threshold pegs in any single goal-touching mask, OR
+    #   - both goal-edge masks for one color are non-empty (two
+    #     goal-touching components, or one component touching both)
+    red_winning = (
+        s_red_top >= winning_size_threshold
+        or s_red_bot >= winning_size_threshold
+        or (s_red_top > 0 and s_red_bot > 0)
+    )
+    black_winning = (
+        s_blk_left >= winning_size_threshold
+        or s_blk_right >= winning_size_threshold
+        or (s_blk_left > 0 and s_blk_right > 0)
+    )
+    if red_winning or black_winning:
+        return "winning_structure"
+    return "no_winning_structure"
+
+
 def summarize_policy_sanity(positions: List["PositionRecord"]) -> dict:
     """Check structural validity of policy targets."""
     mismatched, all_zero, negative, empty_legal, empty_visits = 0, 0, 0, 0, 0
@@ -568,6 +621,43 @@ def summarize_value_sanity(
     # Correlation-like signal: mean(z * v) for non-draws (direction agreement)
     zv_corr = float(np.mean(z_np[non_draw_mask] * v_np[non_draw_mask])) if non_draw_n > 0 else 0.0
 
+    # === Connectivity-bucketed sanity (Phase 2 connectivity feedback) ===
+    # Bucket each sampled position by board_tensor connectivity channels and
+    # report sign_agree + median |v| per bucket. Skips silently for 24-channel
+    # tensors (pre-Phase-2 checkpoints) — those return "unknown".
+    bucket_idx = {"winning_structure": [], "no_winning_structure": []}
+    for i, rec in enumerate(sample):
+        bucket = _classify_position_from_tensor(rec.board_tensor)
+        if bucket in bucket_idx:
+            bucket_idx[bucket].append(i)
+
+    def _bucket_stats(idxs):
+        if not idxs:
+            return {"n": 0, "sign_agree": None, "median_abs_v": None}
+        z_b = z_np[idxs]
+        v_b = v_np[idxs]
+        non_draw_b = z_b != 0
+        if int(non_draw_b.sum()) == 0:
+            sign_agree_b = None
+        else:
+            pred_sign_b = np.where(v_b[non_draw_b] > eps, 1.0,
+                                   np.where(v_b[non_draw_b] < -eps, -1.0, 0.0))
+            true_sign_b = np.sign(z_b[non_draw_b])
+            sign_agree_b = float(np.mean(pred_sign_b == true_sign_b))
+        abs_v = np.abs(v_b)
+        median_abs = float(np.median(abs_v)) if abs_v.size > 0 else None
+        return {
+            "n": len(idxs),
+            "sign_agree": sign_agree_b,
+            "median_abs_v": median_abs,
+        }
+
+    sanity_by_connectivity = {
+        "winning_structure": _bucket_stats(bucket_idx["winning_structure"]),
+        "no_winning_structure": _bucket_stats(bucket_idx["no_winning_structure"]),
+        "winning_size_threshold": 8,
+    }
+
     return {
         "v_sample_n": n,
         "v_pred_mean": v_mean,
@@ -596,6 +686,8 @@ def summarize_value_sanity(
         "v_cm_tn": tn,
         "v_cm_fp": fp,
         "v_cm_fn": fn,
+        # Phase 2 connectivity-bucketed sanity (channels 24-29)
+        "sanity_by_connectivity": sanity_by_connectivity,
     }
 
 
@@ -1632,6 +1724,9 @@ def train(
     # Phase 4: per-game replay contribution cap (0/None disables)
     max_positions_per_game: Optional[int] = None,
     endgame_keep_positions: int = 16,
+    # Phase 2: inline forced-probe per-iter eval (additive observability)
+    probes_path: str = "tests/probes/twixt_probes.json",
+    probes_inline_disable: bool = False,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -1780,6 +1875,30 @@ def train(
     value_history: deque = deque(maxlen=VALUE_WINDOW)  # {eligible, level, trigger, p99, sat}
     value_warn_streak = 0  # consecutive warn/crit eligible iters
     value_instability_active = False  # noise control: only print rolling warning once per streak
+
+    # Phase 2: load forced-tier probes once at startup; skipped silently if file
+    # missing (Phase 0 of spec — probe suite curation — may not be done yet).
+    forced_probes: List[dict] = []
+    probes_load_status: str = "disabled"
+    if not probes_inline_disable:
+        if os.path.exists(probes_path):
+            try:
+                with open(probes_path) as _pf:
+                    _probes_data = json.load(_pf)
+                _all_probes = _probes_data.get("probes") or _probes_data.get("candidates") or []
+                forced_probes = [p for p in _all_probes if p.get("confidence") == "forced"]
+                probes_load_status = f"loaded ({len(forced_probes)} forced probes from {probes_path})"
+            except Exception as _e:
+                probes_load_status = f"failed to parse {probes_path}: {_e}"
+        else:
+            probes_load_status = (
+                f"probes file not found at {probes_path} "
+                "(Phase 0 not yet committed; per-iter Probe block will be skipped)"
+            )
+    print(f"  Inline forced-probe eval: {probes_load_status}")
+
+    # Rolling window of recent forced-probe stats for delta + rolling-5 output
+    forced_probe_history: deque = deque(maxlen=5)  # last 5 iters of {sign_correct_pct, median_abs_v}
 
     start_iteration = 0
     master_rng = random.Random(seed)
@@ -2454,9 +2573,106 @@ def train(
             print(f"    v pretanh: range=[{v_stats.get('v_pre_min',0):.2f},{v_stats.get('v_pre_max',0):.2f}], "
                   f"p99={v_stats.get('v_pre_abs_p99',0):.2f}, frac_sat={v_stats.get('v_frac_sat',0):.3f}, "
                   f"zv_corr={v_stats.get('v_zv_corr',0):.3f} (n={v_stats.get('v_non_draw_n',0)})")
+            # Phase 2 connectivity-bucketed sanity (channels 24-29)
+            sbc = v_stats.get("sanity_by_connectivity", {})
+            if sbc:
+                ws = sbc.get("winning_structure", {})
+                ns = sbc.get("no_winning_structure", {})
+                ws_n = ws.get("n", 0)
+                ns_n = ns.get("n", 0)
+                if ws_n + ns_n > 0:
+                    print(f"    Sanity by connectivity (threshold: largest_component>={sbc.get('winning_size_threshold', 8)} "
+                          f"OR n_goal_touching>=2):")
+                    def _fmt(b, n):
+                        if n == 0:
+                            return "(n=0)"
+                        sa = b.get("sign_agree")
+                        mv = b.get("median_abs_v")
+                        sa_s = f"{sa:.1%}" if sa is not None else "n/a"
+                        mv_s = f"{mv:.3f}" if mv is not None else "n/a"
+                        return f"(n={n}): sign_agree={sa_s}, median |v|={mv_s}"
+                    print(f"      winning_structure    {_fmt(ws, ws_n)}")
+                    print(f"      no_winning_structure {_fmt(ns, ns_n)}")
+                else:
+                    # 24-channel checkpoint or empty sample — silent skip
+                    pass
             if v_stats.get('v_z_batch_mismatch', 0) > 0:
                 print(f"    v WARNING: z_batch_mismatch={v_stats['v_z_batch_mismatch']} "
                       "(make_padded_batch outcomes differ from rec.outcome!)")
+
+            # Phase 2: inline forced-probe NN-only eval (additive observability)
+            forced_probe_summary: Optional[dict] = None
+            if probes_inline_disable:
+                pass  # explicitly disabled
+            elif not forced_probes:
+                # File missing or empty — print a one-line stub so the row exists
+                # for log-grep continuity, but only on the first iter to avoid spam.
+                if iteration == start_iteration:
+                    print(f"  Probe (forced, NN-only): (skipped — {probes_load_status})")
+            else:
+                from .probe_eval import run_forced_probes_inline
+                _probe_res = run_forced_probes_inline(
+                    network, forced_probes, active_size=active_size
+                )
+                if _probe_res["n"] == 0:
+                    print(f"  Probe (forced, NN-only): (skipped: no probes for "
+                          f"active_size={active_size}, {_probe_res['n_skipped_size']} probes "
+                          f"available at other sizes)")
+                else:
+                    sc = _probe_res["sign_correct"]
+                    n = _probe_res["n"]
+                    sc_pct = _probe_res["sign_correct_pct"] or 0.0
+                    mv = _probe_res["median_abs_v"]
+                    # Rolling-5 (excludes current iter; window updated below)
+                    rolling = list(forced_probe_history)
+                    if rolling:
+                        r_pcts = [r["sign_correct_pct"] for r in rolling
+                                 if r.get("sign_correct_pct") is not None]
+                        r_mvs = [r["median_abs_v"] for r in rolling
+                                if r.get("median_abs_v") is not None]
+                        roll_pct = sum(r_pcts) / len(r_pcts) if r_pcts else None
+                        roll_mv = sum(r_mvs) / len(r_mvs) if r_mvs else None
+                    else:
+                        roll_pct = None
+                        roll_mv = None
+                    # Delta vs immediately-prior iter
+                    if rolling:
+                        prev = rolling[-1]
+                        prev_pct = prev.get("sign_correct_pct")
+                        prev_mv = prev.get("median_abs_v")
+                        delta_pct = (sc_pct - prev_pct) if prev_pct is not None else None
+                        delta_mv = (mv - prev_mv) if (mv is not None and prev_mv is not None) else None
+                    else:
+                        delta_pct = None
+                        delta_mv = None
+
+                    print(f"  Probe (forced, NN-only, n={n}):")
+                    mv_s = f"{mv:.3f}" if mv is not None else "n/a"
+                    print(f"    sign_correct={sc}/{n} ({sc_pct:.1%}), median |v|={mv_s}")
+                    if delta_pct is not None:
+                        d_pct_s = f"{delta_pct*100:+.1f}pp"
+                        d_mv_s = f"{delta_mv:+.3f}" if delta_mv is not None else "n/a"
+                        print(f"    delta vs prev: sign {d_pct_s}, |v| {d_mv_s}")
+                    if roll_pct is not None:
+                        roll_mv_s = f"{roll_mv:.3f}" if roll_mv is not None else "n/a"
+                        print(f"    rolling(5 prior): sign={roll_pct:.1%}, median |v|={roll_mv_s}")
+
+                    # Build summary dict for sidecar (after print — uses pre-update rolling)
+                    forced_probe_summary = {
+                        "n": n,
+                        "n_skipped_size": _probe_res["n_skipped_size"],
+                        "sign_correct": sc,
+                        "sign_correct_pct": sc_pct,
+                        "median_abs_v": mv,
+                        "delta_sign_correct_pct": delta_pct,
+                        "delta_median_abs_v": delta_mv,
+                        "rolling5_sign_correct_pct": roll_pct,
+                        "rolling5_median_abs_v": roll_mv,
+                    }
+                    # Update rolling window AFTER reading prev
+                    forced_probe_history.append(
+                        {"sign_correct_pct": sc_pct, "median_abs_v": mv}
+                    )
             # Warn on ANY structural policy issue
             pi_has_issues = any(pi_stats.get(k, 0) > 0 for k in [
                 'pi_len_mismatch_frac', 'pi_all_zero_frac', 'pi_negative_frac',
@@ -2593,6 +2809,10 @@ def train(
                     "top1_share_on_value_hits": _rg_top1, "min_top1_share": resign_min_top1_share,
                 },
                 "compute": {"buffer_size": len(buffer), "backups": total_backups, "leaf_evals": total_nn_calls, "nn_batches": total_nn_batches},
+                # Phase 2 connectivity-bucketed sanity (None/empty for 24-channel checkpoints)
+                "sanity_by_connectivity": v_stats.get("sanity_by_connectivity"),
+                # Phase 2 inline forced-probe summary (None when probes file missing/disabled)
+                "forced_probe_summary": forced_probe_summary,
                 "replay_cap": {
                     "enabled": bool(max_positions_per_game and max_positions_per_game > 0),
                     "max_positions_per_game": int(max_positions_per_game) if max_positions_per_game else 0,
