@@ -47,7 +47,7 @@ Four ordered commits per spec §8.3. Each commit passes `pytest` standalone (int
 3. **Commit 3 (Tasks 12–18):** Analyzer wiring + end-to-end test.
 4. **Commit 4 (Tasks 19–20):** Integration test + pytest marker config.
 
-Each task below produces exactly one commit.
+Code-changing tasks produce exactly one commit each. Pure verification tasks (Tasks 7 and 18) may produce no commit when all verification steps pass cleanly — they add commits only if a regression surfaces and needs a fix.
 
 ---
 
@@ -227,6 +227,16 @@ Expected: FAIL with `ImportError: cannot import name 'extract_forced_probes_from
 
 - [ ] **Step 3: Implement the function — minimal version passing the 4 tests**
 
+**Perspective convention (important — do not skip):**
+
+All value numbers in the probe pipeline are stored in **red-perspective**:
+- `expected_value_sign = +1` means "red wins from red's point of view"
+- `expected_value_sign = -1` means "black wins from red's point of view"
+- The network's raw `nn_value` is naturally in `state.to_move` perspective; the existing `run_forced_probes_inline` (at `scripts/GPU/alphazero/probe_eval.py:264-266`) negates it when `state.to_move == "black"` so the sign-match comparison against `expected_value_sign` is apples-to-apples in red-perspective.
+- The existing `_eval_probe` function at `probe_eval.py:153-157` does the identical conversion, so the bootstrap generator, inline trainer calls, and the analyzer's replay_probe_scoring all share the same perspective contract.
+
+Therefore the implementation sets `expected_value_sign = +1 if winner == "red" else -1`, and the comment in the code reflects the convention explicitly so future readers don't have to rediscover it.
+
 Append to `scripts/GPU/alphazero/probe_eval.py` (after `run_forced_probes_inline`):
 
 ```python
@@ -268,7 +278,13 @@ def extract_forced_probes_from_games(
         source_iteration = meta.get("iteration", 0)
         category = f"near_win_{winner}"
 
-        # Sign convention: red wins → expected_value_sign = +1 from red's perspective; black wins → -1.
+        # Perspective convention (shared with run_forced_probes_inline and
+        # _eval_probe): expected_value_sign is stored in RED-PERSPECTIVE.
+        #   +1 = red wins from red's point of view
+        #   -1 = black wins from red's point of view
+        # The scoring code converts raw nn_value to red-perspective by negating
+        # it when state.to_move == "black" (probe_eval.py:264-266), so this
+        # comparison is apples-to-apples.
         expected_value_sign = +1 if winner == "red" else -1
         starting_player = game.get("starting_player") or "red"
 
