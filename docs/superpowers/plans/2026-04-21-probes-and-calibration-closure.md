@@ -2019,7 +2019,7 @@ def test_analyzer_emits_value_calibration(tmp_path):
     ckpt_dir.mkdir()
     _write_fake_checkpoint(ckpt_dir, iteration=30, in_channels=30)
 
-    out_dir = tmp_path / "out"
+    out_dir = tmp_path / "test_range_Replay"
     result = subprocess.run(
         [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
          "--input", str(games_dir),
@@ -2142,7 +2142,7 @@ def test_analyzer_emits_replay_probe_per_probe_csv(tmp_path):
     ckpt_dir.mkdir()
     _write_fake_checkpoint(ckpt_dir, iteration=30)
 
-    out_dir = tmp_path / "out"
+    out_dir = tmp_path / "test_range_Replay"
     subprocess.run(
         [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
          "--input", str(games_dir),
@@ -2175,7 +2175,7 @@ def test_analyzer_emits_value_calibration_by_bucket_csv(tmp_path):
     ckpt_dir.mkdir()
     _write_fake_checkpoint(ckpt_dir, iteration=30)
 
-    out_dir = tmp_path / "out"
+    out_dir = tmp_path / "test_range_Replay"
     subprocess.run(
         [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
          "--input", str(games_dir),
@@ -2330,7 +2330,7 @@ def test_analyzer_report_contains_new_sections(tmp_path):
     ckpt_dir.mkdir()
     _write_fake_checkpoint(ckpt_dir, iteration=30)
 
-    out_dir = tmp_path / "out"
+    out_dir = tmp_path / "test_range_Replay"
     subprocess.run(
         [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
          "--input", str(games_dir),
