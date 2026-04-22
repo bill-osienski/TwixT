@@ -117,11 +117,26 @@ def _default_create_network_param(name: str):
 
 
 def _replay_probe(probe: dict) -> TwixtState:
-    """Replay a probe's move_history from an empty state."""
-    state = TwixtState(active_size=probe["active_size"])
-    for move in probe["move_history"]:
+    """Replay a probe's move_history from an empty state.
+
+    The initial `to_move` is taken from the probe's `starting_player` field
+    (defaults to "red" for probes predating the schema update — see the
+    bootstrap suite generator and extract_forced_probes_from_games, which
+    now emit this field explicitly). Side-to-move alternates with each
+    applied move, so mismatched starting_player produces illegal-move
+    errors — we raise loudly with the probe id rather than mask.
+    """
+    starting_player = probe.get("starting_player", "red")
+    state = TwixtState(active_size=probe["active_size"], to_move=starting_player)
+    for ply_idx, move in enumerate(probe["move_history"]):
         r, c = int(move[0]), int(move[1])
-        state = state.apply_move((r, c))
+        try:
+            state = state.apply_move((r, c))
+        except ValueError as e:
+            raise ValueError(
+                f"probe {probe.get('id', '<unknown>')!r} failed to replay at "
+                f"ply {ply_idx} move=({r}, {c}) starting_player={starting_player!r}: {e}"
+            ) from e
     return state
 
 
@@ -376,6 +391,11 @@ def extract_forced_probes_from_games(
                 "move_history": move_history[:ply],
                 "source_game": source_game_basename,
                 "source_ply": ply,
+                # starting_player required by _replay_probe to correctly
+                # initialize TwixtState.to_move — games that began with
+                # black would otherwise fail replay when re-constructed
+                # with the default red-starts assumption.
+                "starting_player": starting_player,
                 "_source_iteration": source_iteration,  # sort-only; stripped before return
             }
             probes.append(probe)

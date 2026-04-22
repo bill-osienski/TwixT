@@ -71,19 +71,29 @@ VALID_CONFIDENCE = {"forced", "strong_advantage"}  # unclear_do_not_use discarde
 VALID_SIDES = {"red", "black"}
 
 
-def _load_gate_suite_or_skip():
-    """Load the probe file and skip the test if the file is missing OR is the
-    bootstrap rule-selected suite (not the formal §7 gate suite)."""
+def _load_probes_or_skip():
+    """Load the committed probes file; skip if missing."""
     import pytest
     if not os.path.exists(TWIXT_PROBES_PATH):
         pytest.skip(f"{TWIXT_PROBES_PATH} not yet committed (Phase 0 pending)")
-    data = json.loads(open(TWIXT_PROBES_PATH).read())
+    return json.loads(open(TWIXT_PROBES_PATH).read())
+
+
+def _load_gate_suite_or_skip():
+    """Load the probe file and skip if it's the bootstrap (not the §7 gate suite).
+
+    Used only for tests whose assertions are gate-suite-specific (e.g., probe
+    count 50..120). Schema correctness + reconstructability apply to any
+    shape-valid probe file, so those tests use _load_probes_or_skip instead.
+    """
+    import pytest
+    data = _load_probes_or_skip()
     meta = data.get("meta") or {}
     if meta.get("not_gate_suite") is True:
         pytest.skip(
             f"{TWIXT_PROBES_PATH} is flagged not_gate_suite=True "
-            f"(type={meta.get('type')!r}); these tests apply to the formal "
-            f"§7 curated gate suite only. See tests/probes/README.md."
+            f"(type={meta.get('type')!r}); this test asserts gate-suite-specific "
+            f"constraints only. See tests/probes/README.md."
         )
     return data
 
@@ -99,8 +109,9 @@ def test_probe_suite_file_well_formed():
 
 
 def test_probe_suite_schema_valid():
-    """Every probe has required fields + valid enum values."""
-    data = _load_gate_suite_or_skip()
+    """Every probe has required fields + valid enum values (applies to any
+    committed probe file, bootstrap or curated gate suite)."""
+    data = _load_probes_or_skip()
     for p in data["probes"]:
         missing = REQUIRED_FIELDS - set(p.keys())
         assert not missing, f"probe {p.get('id')} missing: {missing}"
@@ -115,17 +126,16 @@ def test_probe_suite_schema_valid():
 
 
 def test_probe_suite_reconstruction():
-    """Every probe's move_history replays to a valid state matching auxiliary metadata.
-
-    Applies only to the formal §7 curated gate suite, which is assumed to
-    use red-starts convention. The bootstrap suite may include probes from
-    black-started games, for which a TwixtState(active_size=N) replay from
-    red-starts would fail.
+    """Every probe's move_history replays to a valid state matching auxiliary
+    metadata. Applies to any committed probe file. Probes may include a
+    `starting_player` field to signal black-starts; older probes without it
+    default to red-starts.
     """
-    data = _load_gate_suite_or_skip()
+    data = _load_probes_or_skip()
     from scripts.GPU.alphazero.game.twixt_state import TwixtState
     for p in data["probes"]:
-        state = TwixtState(active_size=p["active_size"])
+        starting_player = p.get("starting_player", "red")
+        state = TwixtState(active_size=p["active_size"], to_move=starting_player)
         for move in p["move_history"]:
             r, c = int(move[0]), int(move[1])
             state = state.apply_move((r, c))

@@ -444,6 +444,67 @@ def test_extract_forced_probes_max_probes_none_returns_all_sorted():
     assert probes[0]["source_game"].startswith("iter_0030")
 
 
+def test_extract_forced_probes_emits_starting_player():
+    """Every probe carries a starting_player field. _replay_probe needs it to
+    initialize TwixtState.to_move correctly for black-started games."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    # A black-started game.
+    moves = []
+    for i in range(40):
+        # Alternate turns: black, red, black, red, ...
+        player = "black" if i % 2 == 0 else "red"
+        moves.append({"player": player, "move": [(i * 3) % 24, (i * 5) % 24]})
+    game = {
+        "id": "iter_0029_game_000",
+        "meta": {"board_size": 24, "iteration": 29, "game_idx": 0,
+                 "reason": "win", "n_moves": 40, "starting_player": "black"},
+        "moves": moves,
+        "winner": "black",
+        "starting_player": "black",
+    }
+    probes = extract_forced_probes_from_games([game], active_size=24)
+    assert len(probes) == 2
+    for p in probes:
+        assert p["starting_player"] == "black"
+
+
+def test_replay_probe_honors_starting_player():
+    """_replay_probe must read starting_player and initialize state.to_move
+    accordingly. Without this, a black-started probe's move_history replay
+    crashes with 'Illegal move' because red-by-default can't play black's
+    goal-edge cells."""
+    from scripts.GPU.alphazero.probe_eval import _replay_probe
+    # Construct a probe mimicking a black-started game with a move red couldn't
+    # legally make (col 0 is black's goal edge — red can't play there).
+    probe = {
+        "id": "synthetic_blackstart_probe",
+        "active_size": 24,
+        "starting_player": "black",
+        # ply 0: black plays col 0 (its own goal edge — legal for black,
+        # illegal for red). If _replay_probe honors starting_player this
+        # replays cleanly.
+        "move_history": [[5, 0]],
+    }
+    state = _replay_probe(probe)
+    # After 1 move from black-starts, it's red's turn.
+    assert state.to_move == "red"
+
+
+def test_replay_probe_raises_on_illegal_move_with_probe_id():
+    """If replay fails, the error message includes the probe id and ply
+    index — makes data-integrity bugs obvious rather than silent."""
+    from scripts.GPU.alphazero.probe_eval import _replay_probe
+    probe = {
+        "id": "synthetic_bad_probe",
+        "active_size": 24,
+        "starting_player": "red",
+        # Illegal for red: col 0 is black's goal edge.
+        "move_history": [[5, 0]],
+    }
+    with pytest.raises(ValueError, match="synthetic_bad_probe.*ply 0.*starting_player='red'"):
+        _replay_probe(probe)
+
+
 def test_extract_forced_probes_accepts_row_col_schema():
     """Real game JSONs use the canonical 'row'/'col' keys (per
     scripts/GPU/replay/format.py). The legacy synthetic fixture schema
