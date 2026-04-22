@@ -254,3 +254,41 @@ def test_analyzer_emits_value_calibration_by_bucket_csv(tmp_path):
     assert expected.issubset(set(rows[0].keys()))
     # Should have at least one row per represented bucket.
     assert len(rows) >= 1
+
+
+def test_analyzer_report_contains_new_sections(tmp_path):
+    """report_<suffix>.txt contains populated (not '(not available)') sections
+    for both replay_probe_scoring and value_calibration."""
+    import subprocess
+
+    games_dir = tmp_path / "Replays" / "test_range"
+    games_dir.mkdir(parents=True)
+    for i in range(6):
+        _write_fake_replay(games_dir, iteration=29, game_idx=i, winner="red")
+        _write_fake_replay(games_dir, iteration=29, game_idx=100 + i, winner="black")
+
+    ckpt_dir = tmp_path / "checkpoints"
+    ckpt_dir.mkdir()
+    _write_fake_checkpoint(ckpt_dir, iteration=30)
+
+    out_dir = tmp_path / "test_range_Replay"
+    subprocess.run(
+        [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
+         "--input", str(games_dir),
+         "--out", str(out_dir),
+         "--checkpoint-dir", str(ckpt_dir),
+         "--calibration-samples-per-bucket", "5",
+         "--calibration-max-total", "100",
+         "--no-plots"],
+        capture_output=True, text=True, check=True,
+    )
+    report = (out_dir / "report_test_range.txt").read_text()
+    assert "Replay-Derived Probe Scoring" in report
+    assert "Value Head Calibration by Position Type" in report
+    # New report must NOT contain the old "(not available)" placeholders for these.
+    rps_section_idx = report.find("Replay-Derived Probe Scoring")
+    cal_section_idx = report.find("Value Head Calibration by Position Type")
+    assert "(not available" not in report[rps_section_idx:rps_section_idx + 500]
+    assert "(not available" not in report[cal_section_idx:cal_section_idx + 500]
+    # Stratified disclaimer present in calibration header.
+    assert "stratified" in report[cal_section_idx:cal_section_idx + 600].lower()

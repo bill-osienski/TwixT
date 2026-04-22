@@ -1017,22 +1017,70 @@ def format_forced_probe_report(by_iter: list, latest: dict) -> List[str]:
 
 
 def format_value_calibration_report(summary: dict) -> List[str]:
-    """Render the value-calibration section for the text report.
-
-    Only populated when `--calibrate --calibrate-weights` is passed. Current
-    Phase 1 scaffold reports stub status; a follow-up task wires the full
-    checkpoint-loading + scoring loop.
-    """
+    """Render the value-calibration section for the text report."""
     lines = []
     lines.append("Value Head Calibration by Position Type (Phase 1)")
     lines.append("=" * 50)
     if not summary:
-        lines.append("  (not available — pass --calibrate --calibrate-weights <path>)")
+        lines.append("  (not available — pass --weights <path> or place checkpoint")
+        lines.append("   under checkpoints/<subdir>/ matching max(meta.iteration)+1)")
         lines.append("")
         return lines
-    lines.append(f"  Status: {summary.get('status', 'unknown')}")
-    if "note" in summary:
-        lines.append(f"  Note: {summary['note']}")
+    lines.append(f"  Weights: {summary.get('weights', '?')}")
+    lines.append(f"  Stratified: True (per-bucket target N={summary.get('samples_per_bucket_target', '?')})")
+    lines.append("  NOTE: per-bucket calibration is phase-stratified; 'overall' row is a")
+    lines.append("        stratified aggregate, NOT population-weighted.")
+    lines.append("")
+    lines.append("  Natural vs. sampled distribution:")
+    natural = summary.get("natural_distribution") or {}
+    sampled = summary.get("sampled_distribution") or {}
+    lines.append(f"    {'bucket':<34}{'natural':>10}{'sampled':>10}")
+    for bucket in sorted(natural.keys()):
+        lines.append(f"    {bucket:<34}{natural[bucket]:>10}{sampled.get(bucket, 0):>10}")
+    lines.append("")
+    lines.append("  Per-bucket stats:")
+    buckets_stats = (summary.get("aggregate") or {}).get("buckets") or {}
+    lines.append(f"    {'bucket':<34}{'n':>6}{'sign_agree':>12}{'mse':>10}")
+    for bucket in sorted(buckets_stats.keys()):
+        s = buckets_stats[bucket]
+        n = s.get("n", 0)
+        sa = s.get("sign_agree", "")
+        mse = s.get("mse", "")
+        lines.append(f"    {bucket:<34}{n:>6}{sa!s:>12}{mse!s:>10}")
+    lines.append("")
+    return lines
+
+
+def format_replay_probe_scoring_report(summary: dict) -> List[str]:
+    """Render the replay_probe_scoring section for the text report."""
+    lines = []
+    lines.append("Replay-Derived Probe Scoring (end-of-chunk snapshot)")
+    lines.append("=" * 50)
+    if not summary:
+        lines.append("  (not available — pass --weights <path> or place checkpoint")
+        lines.append("   under checkpoints/<subdir>/ matching max(meta.iteration)+1)")
+        lines.append("")
+        return lines
+    if summary.get("probe_count", 0) == 0:
+        lines.append(f"  (no probes extracted — {summary.get('skipped_reason', 'unknown')})")
+        lines.append("")
+        return lines
+    lines.append(f"  Source: {summary.get('source', '?')} (NOT spec §7 curated gate suite)")
+    lines.append(f"  Weights: {summary.get('weights', '?')}")
+    lines.append(f"  Checkpoint in_channels: {summary.get('checkpoint_in_channels', '?')}")
+    lines.append(f"  Probe count: {summary.get('probe_count', 0)}")
+    n = summary.get("n", 0)
+    sc = summary.get("sign_correct", 0)
+    sc_pct = summary.get("sign_correct_pct", 0.0)
+    mv = summary.get("median_abs_v", None)
+    mv_s = f"{mv:.3f}" if mv is not None else "n/a"
+    lines.append(f"  Overall: sign_correct={sc}/{n} ({sc_pct:.1%}), median |v|={mv_s}")
+    lines.append("")
+    lines.append("  By category:")
+    for cat in sorted((summary.get("by_category") or {}).keys()):
+        c = summary["by_category"][cat]
+        pct = c.get("sign_correct_pct") or 0.0
+        lines.append(f"    {cat:<20} n={c.get('n',0):>5}  sign_correct={pct:.1%}  median |v|={c.get('median_abs_v','?')}")
     lines.append("")
     return lines
 
@@ -2084,10 +2132,12 @@ def analyze(replays: List[dict],
             sc_agg.get("forced_probe_latest", {}),
         ))
 
-    # Phase 1 (connectivity-retrain): value calibration (scaffold).
-    # Gated on --calibrate; --calibrate-weights enforced upstream in main().
-    if _HAS_PHASE1_DIAG and calibrate:
+    # Phase 1 (connectivity-retrain): value calibration + replay-derived
+    # probe scoring. Both render unconditionally (formatter stubs gracefully
+    # when the summary dict is empty, e.g. no checkpoint resolved).
+    if _HAS_PHASE1_DIAG:
         lines.extend(format_value_calibration_report(value_calibration_summary))
+        lines.extend(format_replay_probe_scoring_report(replay_probe_scoring))
 
     # Phase 4 (replay-cap engagement). Same backward-compat behavior.
     lines.extend(format_replay_cap_report(rcap_summary_dict))
