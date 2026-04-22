@@ -99,3 +99,108 @@ def aggregate_calibration(samples: List[dict], n_bins: int = 5) -> dict:
         out["buckets"][bucket] = _summary(rows)
     out["overall"] = _summary(samples)
     return out
+
+
+def score_samples_against_checkpoint(
+    replays: List[dict],
+    network,
+    samples_per_bucket: int = 200,
+    max_total: int = 2000,
+    min_size: int = 8,
+) -> dict:
+    """Phase-stratified calibration scoring.
+
+    See spec §4.3 for full semantics. Pre-pass classifies every position in
+    the replay pool; sample pass fills per-bucket caps in alphabetical
+    order, halting when max_total binds; score pass runs NN forward for each
+    sampled position and feeds the results to aggregate_calibration.
+    """
+    import random
+    import numpy as np
+    from .local_evaluator import LocalGPUEvaluator
+    from .game.twixt_state import TwixtState
+
+    # ---- Pre-pass: enumerate & classify every position ----
+    # Positions are (game_idx, ply) pairs. classify_position needs TwixtState
+    # + ply + game_n_moves.
+    by_bucket_positions: dict[str, list[tuple[int, int]]] = {}
+    natural_distribution: dict[str, int] = {}
+
+    for g_idx, game in enumerate(replays):
+        moves = game.get("moves") or []
+        n_moves = len(moves)
+        # Reconstruct state ply-by-ply so we classify each intermediate state.
+        state = TwixtState(active_size=game.get("meta", {}).get("board_size", 24))
+        for ply in range(n_moves):
+            bucket = classify_position(state, ply, n_moves, min_size=min_size)
+            natural_distribution[bucket] = natural_distribution.get(bucket, 0) + 1
+            by_bucket_positions.setdefault(bucket, []).append((g_idx, ply))
+            # Advance state for next ply.
+            mv = moves[ply]["move"]
+            state = state.apply_move((int(mv[0]), int(mv[1])))
+
+    # ---- Sample pass: per-bucket caps, stable alphabetical order, halt on max_total ----
+    rng = random.Random(42)  # deterministic sampling for reproducibility
+    sampled_distribution: dict[str, int] = {b: 0 for b in natural_distribution}
+    sampled_positions: list[tuple[str, int, int]] = []  # (bucket, game_idx, ply)
+    cumulative = 0
+
+    for bucket in sorted(natural_distribution.keys()):
+        if cumulative >= max_total:
+            break  # budget exhausted — remaining buckets get sampled=0
+        bucket_pool = by_bucket_positions[bucket]
+        cap = min(samples_per_bucket, len(bucket_pool), max_total - cumulative)
+        if cap <= 0:
+            continue
+        chosen = rng.sample(bucket_pool, cap)
+        for g_idx, ply in chosen:
+            sampled_positions.append((bucket, g_idx, ply))
+        sampled_distribution[bucket] = cap
+        cumulative += cap
+
+    # ---- Score pass: forward-pass each sampled position ----
+    evaluator = LocalGPUEvaluator(network)
+    samples: list[dict] = []
+
+    for bucket, g_idx, ply in sampled_positions:
+        game = replays[g_idx]
+        moves = game["moves"]
+        state = TwixtState(active_size=game.get("meta", {}).get("board_size", 24))
+        for i in range(ply):
+            mv = moves[i]["move"]
+            state = state.apply_move((int(mv[0]), int(mv[1])))
+        tensor = evaluator.build_input_tensor(state)
+        tensor = np.transpose(tensor, (1, 2, 0))
+        boards_np = np.expand_dims(tensor.astype(np.float32), axis=0)
+        legal = state.legal_moves()
+        move_rows_np = np.array([[m[0] for m in legal]], dtype=np.int32)
+        move_cols_np = np.array([[m[1] for m in legal]], dtype=np.int32)
+        move_mask_np = np.ones((1, len(legal)), dtype=np.float32)
+        _, values_np = evaluator.infer(
+            boards_np, move_rows_np, move_cols_np, move_mask_np, state.active_size
+        )
+        nn_value = float(values_np[0])
+        # Red-perspective convention.
+        if state.to_move == "black":
+            nn_value = -nn_value
+        # Outcome in red-perspective: +1 red wins, -1 black wins, 0 draw.
+        winner = game.get("winner")
+        if winner == "red":
+            outcome = 1.0
+        elif winner == "black":
+            outcome = -1.0
+        else:
+            outcome = 0.0
+        samples.append({"bucket": bucket, "nn_value": nn_value, "outcome": outcome})
+
+    aggregate = aggregate_calibration(samples, n_bins=5)
+
+    return {
+        "samples_per_bucket_target": samples_per_bucket,
+        "max_total": max_total,
+        "natural_distribution": natural_distribution,
+        "sampled_distribution": sampled_distribution,
+        "stratified": True,
+        "overall_note": "stratified aggregate, not population-weighted",
+        "aggregate": aggregate,
+    }
