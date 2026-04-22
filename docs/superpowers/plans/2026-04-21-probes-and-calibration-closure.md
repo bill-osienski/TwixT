@@ -673,15 +673,29 @@ from scripts.GPU.alphazero.network import create_network
 
 def _make_game_for_calibration(n_moves=40, winner="red", board_size=24):
     """Parsed-game JSON with enough moves for classify_position to produce
-    a mix of buckets across plies."""
+    a mix of buckets across plies.
+
+    Generates a scatter pattern but skips positions that are illegal for the
+    current player (corners / opponent-edge / duplicates).
+    """
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+
     moves = []
-    for i in range(n_moves):
-        player = "red" if i % 2 == 0 else "black"
-        # Scatter moves across the board so replayed states have varied connectivity.
-        moves.append({"player": player, "move": [(i * 7) % board_size, (i * 11) % board_size]})
+    state = TwixtState(active_size=board_size)
+    max_i = n_moves * 20  # safety: avoid infinite loop if board fills
+    i = 0
+    while len(moves) < n_moves and i < max_i:
+        r = (i * 7) % board_size
+        c = (i * 11) % board_size
+        i += 1
+        if not state.is_valid_placement(r, c):
+            continue
+        player = state.to_move
+        moves.append({"player": player, "move": [r, c]})
+        state = state.apply_move((r, c))
     return {
         "id": f"iter_0029_game_{n_moves:03d}",
-        "meta": {"board_size": board_size, "iteration": 29, "reason": "win", "n_moves": n_moves},
+        "meta": {"board_size": board_size, "iteration": 29, "reason": "win", "n_moves": len(moves)},
         "moves": moves,
         "winner": winner,
         "starting_player": "red",
