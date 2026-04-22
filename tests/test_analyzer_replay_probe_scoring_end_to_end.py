@@ -185,3 +185,72 @@ def test_analyzer_emits_value_calibration(tmp_path):
     assert "aggregate" in cal
     # Not the old stub.
     assert cal.get("status") != "not_implemented"
+
+
+def test_analyzer_emits_replay_probe_per_probe_csv(tmp_path):
+    """A CSV per-probe is written alongside summary."""
+    import subprocess, csv
+
+    games_dir = tmp_path / "Replays" / "test_range"
+    games_dir.mkdir(parents=True)
+    for i in range(4):
+        _write_fake_replay(games_dir, iteration=29, game_idx=i, winner="red")
+        _write_fake_replay(games_dir, iteration=29, game_idx=100 + i, winner="black")
+
+    ckpt_dir = tmp_path / "checkpoints"
+    ckpt_dir.mkdir()
+    _write_fake_checkpoint(ckpt_dir, iteration=30)
+
+    out_dir = tmp_path / "test_range_Replay"
+    subprocess.run(
+        [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
+         "--input", str(games_dir),
+         "--out", str(out_dir),
+         "--checkpoint-dir", str(ckpt_dir),
+         "--calibration-disable",
+         "--no-plots"],
+        capture_output=True, text=True, check=True,
+    )
+    csv_path = out_dir / "replay_probe_per_probe_test_range.csv"
+    assert csv_path.exists()
+    rows = list(csv.DictReader(csv_path.open()))
+    assert len(rows) > 0
+    expected = {"id", "category", "source_game", "source_ply",
+                "expected_value_sign", "nn_value", "sign_correct", "nn_magnitude"}
+    assert expected.issubset(set(rows[0].keys()))
+
+
+def test_analyzer_emits_value_calibration_by_bucket_csv(tmp_path):
+    """A per-bucket CSV is written for calibration."""
+    import subprocess, csv
+
+    games_dir = tmp_path / "Replays" / "test_range"
+    games_dir.mkdir(parents=True)
+    for i in range(6):
+        _write_fake_replay(games_dir, iteration=29, game_idx=i, winner="red")
+        _write_fake_replay(games_dir, iteration=29, game_idx=100 + i, winner="black")
+
+    ckpt_dir = tmp_path / "checkpoints"
+    ckpt_dir.mkdir()
+    _write_fake_checkpoint(ckpt_dir, iteration=30)
+
+    out_dir = tmp_path / "test_range_Replay"
+    subprocess.run(
+        [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
+         "--input", str(games_dir),
+         "--out", str(out_dir),
+         "--checkpoint-dir", str(ckpt_dir),
+         "--probe-scoring-disable",
+         "--calibration-samples-per-bucket", "5",
+         "--calibration-max-total", "100",
+         "--no-plots"],
+        capture_output=True, text=True, check=True,
+    )
+    csv_path = out_dir / "value_calibration_by_bucket_test_range.csv"
+    assert csv_path.exists()
+    rows = list(csv.DictReader(csv_path.open()))
+    expected = {"bucket", "natural_count", "sampled_count", "sign_agree",
+                "mse", "pred_mean", "outcome_mean"}
+    assert expected.issubset(set(rows[0].keys()))
+    # Should have at least one row per represented bucket.
+    assert len(rows) >= 1

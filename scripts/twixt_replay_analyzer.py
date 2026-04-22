@@ -628,6 +628,63 @@ def write_replay_cap_by_iter_csv(
     return path
 
 
+def write_replay_probe_per_probe_csv(
+    out_dir: str, suffix: str, probes: list, scoring_result: dict,
+) -> None:
+    """Emit replay_probe_per_probe_<suffix>.csv (one row per probe)."""
+    import csv
+    path = os.path.join(out_dir, _suffixed("replay_probe_per_probe", "csv", suffix))
+    nn_values = scoring_result.get("nn_values") or []
+    expected_signs = scoring_result.get("expected_signs") or []
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=[
+            "id", "category", "source_game", "source_ply",
+            "expected_value_sign", "nn_value", "sign_correct", "nn_magnitude",
+        ])
+        w.writeheader()
+        for p, v, s in zip(probes, nn_values, expected_signs):
+            correct = int((s > 0 and v > 0) or (s < 0 and v < 0)
+                          or (s == 0 and abs(v) < 0.1))
+            w.writerow({
+                "id": p["id"],
+                "category": p["category"],
+                "source_game": p["source_game"],
+                "source_ply": p["source_ply"],
+                "expected_value_sign": s,
+                "nn_value": round(v, 4),
+                "sign_correct": correct,
+                "nn_magnitude": round(abs(v), 4),
+            })
+
+
+def write_value_calibration_by_bucket_csv(
+    out_dir: str, suffix: str, cal_summary: dict,
+) -> None:
+    """Emit value_calibration_by_bucket_<suffix>.csv (one row per bucket)."""
+    import csv
+    path = os.path.join(out_dir, _suffixed("value_calibration_by_bucket", "csv", suffix))
+    natural = cal_summary.get("natural_distribution") or {}
+    sampled = cal_summary.get("sampled_distribution") or {}
+    buckets_stats = (cal_summary.get("aggregate") or {}).get("buckets") or {}
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=[
+            "bucket", "natural_count", "sampled_count",
+            "sign_agree", "mse", "pred_mean", "outcome_mean",
+        ])
+        w.writeheader()
+        for bucket in sorted(natural.keys()):
+            stats = buckets_stats.get(bucket, {})
+            w.writerow({
+                "bucket": bucket,
+                "natural_count": natural.get(bucket, 0),
+                "sampled_count": sampled.get(bucket, 0),
+                "sign_agree": stats.get("sign_agree", ""),
+                "mse": stats.get("mse", ""),
+                "pred_mean": stats.get("pred_mean", ""),
+                "outcome_mean": stats.get("outcome_mean", ""),
+            })
+
+
 def format_replay_cap_report(rcap_summary: dict) -> List[str]:
     """Format a concise replay-cap section for report.txt.
 
@@ -1849,6 +1906,18 @@ def analyze(replays: List[dict],
         _rc_csv = write_replay_cap_by_iter_csv(out_dir, rcap_by_iter, suffix=suffix)
         if _rc_csv:
             print(f"[OK] wrote: {_rc_csv}")
+
+    # Spec §6.5: new CSVs for replay probe scoring + value calibration.
+    if replay_probe_scoring and replay_probe_scoring.get("probe_count", 0) > 0:
+        write_replay_probe_per_probe_csv(
+            out_dir, suffix,
+            probes=probes_for_scoring,
+            scoring_result=scoring_result,
+        )
+    if value_calibration_summary:
+        write_value_calibration_by_bucket_csv(
+            out_dir, suffix, value_calibration_summary
+        )
 
     # -----------------------------
     # Heatmap figures
