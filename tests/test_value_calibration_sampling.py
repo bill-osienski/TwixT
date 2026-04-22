@@ -141,3 +141,85 @@ def test_score_samples_24ch_checkpoint_no_crash(tmp_path):
     # Real buckets populate — not just 'unknown'.
     buckets = list(result["natural_distribution"].keys())
     assert any(b != "unknown" for b in buckets)
+
+
+def test_score_samples_accepts_row_col_schema(tiny_30ch_network):
+    """Real on-disk game JSONs use moves[i]['row'] + moves[i]['col'], not
+    moves[i]['move'] = [r, c]. Both schemas must work identically — this
+    regression guard catches the KeyError 'move' that surfaced in the
+    live analyzer run against real replays."""
+    from scripts.GPU.alphazero.value_calibration import score_samples_against_checkpoint
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+
+    net, _ = tiny_30ch_network
+    # Build a small legal-move game directly from a real TwixtState so the
+    # replay is well-formed, and emit moves in the row/col canonical schema.
+    state = TwixtState(active_size=24)
+    row_col_moves = []
+    n_moves = 20
+    i = 0
+    while len(row_col_moves) < n_moves and i < n_moves * 20:
+        r = (i * 7) % 24
+        c = (i * 11) % 24
+        i += 1
+        if state.is_valid_placement(r, c):
+            row_col_moves.append({
+                "player": state.to_move,
+                "row": r, "col": c,
+            })
+            state = state.apply_move((r, c))
+
+    game = {
+        "id": "iter_0029_game_000",
+        "meta": {"board_size": 24, "iteration": 29, "reason": "win",
+                 "n_moves": len(row_col_moves)},
+        "moves": row_col_moves,
+        "winner": "red",
+        "starting_player": "red",
+    }
+    result = score_samples_against_checkpoint(
+        [game], network=net, samples_per_bucket=5, max_total=50
+    )
+    # Must succeed (no KeyError) and produce real buckets.
+    assert sum(result["natural_distribution"].values()) == len(row_col_moves)
+    assert any(b != "unknown" for b in result["natural_distribution"].keys())
+
+
+def test_score_samples_honors_starting_player(tiny_30ch_network):
+    """Black-started games reconstruct correctly (TwixtState to_move must be
+    initialized from game.starting_player, matching _replay_probe)."""
+    from scripts.GPU.alphazero.value_calibration import score_samples_against_checkpoint
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+
+    net, _ = tiny_30ch_network
+    # Build a black-started game. At ply 0 TwixtState must have to_move='black'
+    # for the first move to be legal on a col=0 or col=23 cell (black's goals).
+    state = TwixtState(active_size=24, to_move="black")
+    moves = []
+    # First black move: on black's goal col (0) — illegal for red-starts default.
+    if state.is_valid_placement(5, 0):
+        moves.append({"player": "black", "row": 5, "col": 0})
+        state = state.apply_move((5, 0))
+    # Fill out with arbitrary legal moves.
+    i = 0
+    while len(moves) < 10 and i < 200:
+        r = (i * 3) % 24
+        c = 5 + (i * 7) % 14
+        i += 1
+        if state.is_valid_placement(r, c):
+            moves.append({"player": state.to_move, "row": r, "col": c})
+            state = state.apply_move((r, c))
+
+    game = {
+        "id": "iter_0029_blackstart_000",
+        "meta": {"board_size": 24, "iteration": 29, "reason": "win",
+                 "n_moves": len(moves)},
+        "moves": moves,
+        "winner": "black",
+        "starting_player": "black",   # <-- the field score_samples must honor
+    }
+    # Without the starting_player fix, this replay crashes on black's col-0 move.
+    result = score_samples_against_checkpoint(
+        [game], network=net, samples_per_bucket=5, max_total=50
+    )
+    assert sum(result["natural_distribution"].values()) == len(moves)

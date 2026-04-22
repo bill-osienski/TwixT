@@ -120,6 +120,24 @@ def score_samples_against_checkpoint(
     from .local_evaluator import LocalGPUEvaluator
     from .game.twixt_state import TwixtState
 
+    def _move_rc(m: dict) -> tuple[int, int]:
+        """Dual-schema accessor matching extract_forced_probes_from_games.
+
+        Real on-disk game JSONs (scripts/GPU/replay/format.py::Move) use
+        separate `row`/`col` fields; legacy synthetic fixtures use
+        `move: [r, c]`. Support both so calibration works on either input.
+        """
+        if "row" in m and "col" in m:
+            return int(m["row"]), int(m["col"])
+        mv = m["move"]
+        return int(mv[0]), int(mv[1])
+
+    def _game_starting_player(game: dict) -> str:
+        """Honor the game's starting_player (default 'red') so black-started
+        games reconstruct correctly — same contract as _replay_probe in
+        probe_eval.py."""
+        return game.get("starting_player") or "red"
+
     # ---- Pre-pass: enumerate & classify every position ----
     # Positions are (game_idx, ply) pairs. classify_position needs TwixtState
     # + ply + game_n_moves.
@@ -130,14 +148,17 @@ def score_samples_against_checkpoint(
         moves = game.get("moves") or []
         n_moves = len(moves)
         # Reconstruct state ply-by-ply so we classify each intermediate state.
-        state = TwixtState(active_size=game.get("meta", {}).get("board_size", 24))
+        state = TwixtState(
+            active_size=game.get("meta", {}).get("board_size", 24),
+            to_move=_game_starting_player(game),
+        )
         for ply in range(n_moves):
             bucket = classify_position(state, ply, n_moves, min_size=min_size)
             natural_distribution[bucket] = natural_distribution.get(bucket, 0) + 1
             by_bucket_positions.setdefault(bucket, []).append((g_idx, ply))
             # Advance state for next ply.
-            mv = moves[ply]["move"]
-            state = state.apply_move((int(mv[0]), int(mv[1])))
+            r, c = _move_rc(moves[ply])
+            state = state.apply_move((r, c))
 
     # ---- Sample pass: per-bucket caps, stable alphabetical order, halt on max_total ----
     rng = random.Random(42)  # deterministic sampling for reproducibility
@@ -165,10 +186,13 @@ def score_samples_against_checkpoint(
     for bucket, g_idx, ply in sampled_positions:
         game = replays[g_idx]
         moves = game["moves"]
-        state = TwixtState(active_size=game.get("meta", {}).get("board_size", 24))
+        state = TwixtState(
+            active_size=game.get("meta", {}).get("board_size", 24),
+            to_move=_game_starting_player(game),
+        )
         for i in range(ply):
-            mv = moves[i]["move"]
-            state = state.apply_move((int(mv[0]), int(mv[1])))
+            r, c = _move_rc(moves[i])
+            state = state.apply_move((r, c))
         tensor = evaluator.build_input_tensor(state)
         tensor = np.transpose(tensor, (1, 2, 0))
         boards_np = np.expand_dims(tensor.astype(np.float32), axis=0)
