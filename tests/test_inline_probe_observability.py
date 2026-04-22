@@ -442,3 +442,48 @@ def test_extract_forced_probes_max_probes_none_returns_all_sorted():
     assert len(probes) == 4
     # Still sorted: first probe is from iter 30.
     assert probes[0]["source_game"].startswith("iter_0030")
+
+
+def test_extract_forced_probes_accepts_row_col_schema():
+    """Real game JSONs use the canonical 'row'/'col' keys (per
+    scripts/GPU/replay/format.py). The legacy synthetic fixture schema
+    'move: [r, c]' must also continue to work for tests. Both schemas
+    must produce identical probe move_histories for equivalent moves."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+
+    # Build the same move sequence in both schemas.
+    row_col_moves = []
+    move_list_moves = []
+    for i in range(40):
+        r = (i * 3) % 24
+        c = (i * 5) % 24
+        row_col_moves.append({
+            "player": "red" if i % 2 == 0 else "black",
+            "row": r, "col": c,
+        })
+        move_list_moves.append({
+            "player": "red" if i % 2 == 0 else "black",
+            "move": [r, c],
+        })
+
+    base_game = {
+        "meta": {"board_size": 24, "iteration": 29, "game_idx": 0,
+                 "reason": "win", "n_moves": 40, "starting_player": "red"},
+        "winner": "red",
+        "starting_player": "red",
+    }
+    game_rc = {**base_game, "id": "iter_0029_game_000",  "moves": row_col_moves}
+    game_ml = {**base_game, "id": "iter_0029_game_000",  "moves": move_list_moves}
+
+    probes_rc = extract_forced_probes_from_games([game_rc], active_size=24)
+    probes_ml = extract_forced_probes_from_games([game_ml], active_size=24)
+
+    assert len(probes_rc) == 2
+    assert len(probes_ml) == 2
+    # Move histories must be byte-identical between schemas.
+    for p_rc, p_ml in zip(probes_rc, probes_ml):
+        assert p_rc["move_history"] == p_ml["move_history"], (
+            f"schema divergence at ply {p_rc['ply']}: "
+            f"row/col → {p_rc['move_history'][:3]}..., "
+            f"move[] → {p_ml['move_history'][:3]}..."
+        )
