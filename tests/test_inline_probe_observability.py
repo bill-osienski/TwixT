@@ -326,3 +326,74 @@ def test_extract_forced_probes_invalid_winner_skipped():
         game = _make_game_dict(iteration=29, n_moves=40, winner=bad_winner)
         probes = extract_forced_probes_from_games([game], active_size=24)
         assert probes == [], f"winner={bad_winner!r} should yield zero probes"
+
+
+def test_extract_forced_probes_exact_dedupe():
+    """Two games with byte-identical move_history yield probes dedup'd on exact match."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    # Same moves, different game id — the move_history is what gets dedup'd.
+    moves = [{"player": "red" if i % 2 == 0 else "black", "move": [i % 24, (i * 3) % 24]}
+             for i in range(40)]
+    g1 = _make_game_dict(iteration=29, game_idx=0, n_moves=40, winner="red", moves=moves)
+    g2 = _make_game_dict(iteration=29, game_idx=1, n_moves=40, winner="red", moves=moves)
+    probes = extract_forced_probes_from_games([g1, g2], active_size=24,
+                                              dedupe_exact=True, dedupe_mirror=False)
+    # Only 2 survive (one copy of each ply), not 4.
+    assert len(probes) == 2
+
+
+def test_extract_forced_probes_mirror_dedupe_horizontal():
+    """A game and its horizontal mirror (c → N-1-c) collapse to one copy."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    N = 24
+    moves = [{"player": "red" if i % 2 == 0 else "black", "move": [i % N, (i * 3) % N]}
+             for i in range(40)]
+    mirrored = [{"player": m["player"], "move": [m["move"][0], N - 1 - m["move"][1]]}
+                for m in moves]
+    g1 = _make_game_dict(iteration=29, game_idx=0, n_moves=40, winner="red", moves=moves)
+    g2 = _make_game_dict(iteration=29, game_idx=1, n_moves=40, winner="red", moves=mirrored)
+    probes = extract_forced_probes_from_games([g1, g2], active_size=24,
+                                              dedupe_exact=True, dedupe_mirror=True)
+    assert len(probes) == 2, f"horizontal mirror should collapse, got {len(probes)} probes"
+
+
+def test_extract_forced_probes_mirror_dedupe_vertical():
+    """Vertical mirror (r → N-1-r) also collapses."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    N = 24
+    moves = [{"player": "red" if i % 2 == 0 else "black", "move": [i % N, (i * 3) % N]}
+             for i in range(40)]
+    mirrored = [{"player": m["player"], "move": [N - 1 - m["move"][0], m["move"][1]]}
+                for m in moves]
+    g1 = _make_game_dict(iteration=29, game_idx=0, n_moves=40, winner="red", moves=moves)
+    g2 = _make_game_dict(iteration=29, game_idx=1, n_moves=40, winner="red", moves=mirrored)
+    probes = extract_forced_probes_from_games([g1, g2], active_size=24, dedupe_mirror=True)
+    assert len(probes) == 2
+
+
+def test_extract_forced_probes_mirror_dedupe_180_rotation():
+    """180° rotation (r → N-1-r AND c → N-1-c) also collapses."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    N = 24
+    moves = [{"player": "red" if i % 2 == 0 else "black", "move": [i % N, (i * 3) % N]}
+             for i in range(40)]
+    mirrored = [{"player": m["player"], "move": [N - 1 - m["move"][0], N - 1 - m["move"][1]]}
+                for m in moves]
+    g1 = _make_game_dict(iteration=29, game_idx=0, n_moves=40, winner="red", moves=moves)
+    g2 = _make_game_dict(iteration=29, game_idx=1, n_moves=40, winner="red", moves=mirrored)
+    probes = extract_forced_probes_from_games([g1, g2], active_size=24, dedupe_mirror=True)
+    assert len(probes) == 2
+
+
+def test_extract_forced_probes_transpose_NOT_deduped():
+    """Transpose (r,c)→(c,r) swaps red/black goals and must NOT dedup."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    N = 24
+    moves = [{"player": "red" if i % 2 == 0 else "black", "move": [i % N, (i * 3) % N]}
+             for i in range(40)]
+    transposed = [{"player": m["player"], "move": [m["move"][1], m["move"][0]]}
+                  for m in moves]
+    g1 = _make_game_dict(iteration=29, game_idx=0, n_moves=40, winner="red", moves=moves)
+    g2 = _make_game_dict(iteration=29, game_idx=1, n_moves=40, winner="red", moves=transposed)
+    probes = extract_forced_probes_from_games([g1, g2], active_size=24, dedupe_mirror=True)
+    assert len(probes) == 4, "transpose must not dedupe — goals differ"

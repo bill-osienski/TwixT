@@ -373,7 +373,31 @@ def extract_forced_probes_from_games(
             }
             probes.append(probe)
 
-    # Dedup (exact + mirror) will be added in Task 4.
+    # Dedup: exact + 4-form mirror canonical (spec §4.1).
+    if dedupe_exact or dedupe_mirror:
+        seen_keys: set = set()
+        deduped: list[dict] = []
+
+        def _canon_key(move_history: list[list[int]], N: int, use_mirror: bool) -> tuple:
+            # Always include the identity form.
+            forms = [tuple(tuple(m) for m in move_history)]
+            if use_mirror:
+                # Horizontal: (r, c) → (r, N-1-c)
+                forms.append(tuple((r, N - 1 - c) for (r, c) in move_history))
+                # Vertical: (r, c) → (N-1-r, c)
+                forms.append(tuple((N - 1 - r, c) for (r, c) in move_history))
+                # 180°: (r, c) → (N-1-r, N-1-c)
+                forms.append(tuple((N - 1 - r, N - 1 - c) for (r, c) in move_history))
+            return min(forms)  # lex-smallest is the canonical form
+
+        N = active_size
+        for p in probes:
+            key = _canon_key(p["move_history"], N, dedupe_mirror)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            deduped.append(p)
+        probes = deduped
     # Sort + truncate will be added in Task 5.
 
     # Strip internal sort-only keys before returning.
