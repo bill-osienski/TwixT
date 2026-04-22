@@ -98,6 +98,61 @@ except Exception:
 # Loading utilities
 # -----------------------------
 
+def _resolve_checkpoint_path(args, replays: List[dict]) -> Optional[str]:
+    """Resolve a checkpoint path for probe scoring + calibration.
+
+    Resolution order (spec §6.2):
+      1. args.weights if given
+      2. args.calibrate_weights (legacy fallback)
+      3. Auto-discover model_iter_{max(meta.iteration) + 1:04d}.safetensors in:
+         a. args.checkpoint_dir if given
+         b. checkpoints/<single-subdir>/ if exactly one subdir exists
+         c. current working directory
+      4. Return None if nothing found.
+    """
+    import os
+    from pathlib import Path
+
+    # 1. Explicit --weights wins.
+    explicit = getattr(args, "weights", None)
+    if explicit:
+        return explicit if os.path.exists(explicit) else None
+
+    # 2. Legacy --calibrate-weights fallback.
+    legacy = getattr(args, "calibrate_weights", None)
+    if legacy:
+        return legacy if os.path.exists(legacy) else None
+
+    # 3. Auto-discover from replays.
+    if not replays:
+        return None
+    iters = [r.get("meta", {}).get("iteration") for r in replays
+             if isinstance(r.get("meta", {}).get("iteration"), int)]
+    if not iters:
+        return None
+    max_iter = max(iters)
+    target_name = f"model_iter_{max_iter + 1:04d}.safetensors"
+
+    candidate_dirs: List[str] = []
+    explicit_dir = getattr(args, "checkpoint_dir", None)
+    if explicit_dir:
+        candidate_dirs.append(explicit_dir)
+    else:
+        # Single-subdir convention.
+        ckpt_root = Path("checkpoints")
+        if ckpt_root.is_dir():
+            subdirs = [p for p in ckpt_root.iterdir() if p.is_dir()]
+            if len(subdirs) == 1:
+                candidate_dirs.append(str(subdirs[0]))
+        candidate_dirs.append(".")  # cwd fallback
+
+    for d in candidate_dirs:
+        full = os.path.join(d, target_name)
+        if os.path.exists(full):
+            return full
+    return None
+
+
 def _derive_out_suffix(out_dir: str, override: Optional[str] = None) -> str:
     """Compute the filename suffix applied to all output artifacts.
 
