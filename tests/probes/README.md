@@ -9,6 +9,50 @@ behavior. Versioned in git; evaluated against every candidate checkpoint.
 - `candidates.json` — (gitignored) intermediate output of the sampler
 - `baselines/` — immutable baseline scoring artifacts per checkpoint
 
+## Bootstrap vs. formal gate suite
+
+The committed `twixt_probes.json` in this directory is a **bootstrap
+rule-selected forced probe suite** (flagged `"type": "bootstrap_rule_selected"`
+and `"not_gate_suite": true` in its `meta` block). It was produced
+programmatically by `scripts/build_bootstrap_probe_suite.py` from
+historical size-24 natural-win games using strict rule-based selection
+— **no human review**.
+
+This is **distinct** from the spec §7 *formal gate suite*, which requires
+two-reviewer curation, per-probe category validation, and explicit
+disagreement handling. The formal gate suite has not yet been produced.
+
+**Implications:**
+
+- The bootstrap suite is suitable for:
+  - Trainer-side inline per-iter telemetry (`forced_probe_summary`)
+  - Practical regression monitoring during training
+  - Quick sanity checks on new checkpoints
+
+- The bootstrap suite is **NOT** suitable as a substitute for the formal
+  spec §7 gate evaluation. A 94% pass rate on the bootstrap suite is
+  **not** equivalent to passing the ≥95% formal gate on a curated
+  `confidence='forced'` tier — the two use different probe-selection
+  methodologies and measure related-but-distinct quantities.
+
+- Any gate decision promoting a training lineage under the formal spec §7
+  criteria still requires the reviewed curated suite. The bootstrap suite
+  can be replaced in place by the curated suite with no code changes
+  (same file, same schema, trainer loader is methodology-agnostic).
+
+To refresh the bootstrap suite against a newer training range, re-run
+the generator:
+
+```bash
+.venv/bin/python scripts/build_bootstrap_probe_suite.py \
+    --input scripts/GPU/logs/games \
+    --source-iter-range <MIN> <MAX> \
+    --out tests/probes/twixt_probes.json
+```
+
+Reruns with identical inputs produce byte-identical output (deterministic
+probe IDs, deterministic dedup canonicalization, no wall-clock fields).
+
 ## Categories
 
 | Category | Description | Min | Max |
