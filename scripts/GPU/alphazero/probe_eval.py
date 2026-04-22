@@ -336,7 +336,14 @@ def extract_forced_probes_from_games(
             continue
 
         # Build move_history as list of [r, c] pairs (ply-ordered).
-        move_history = [list(m["move"]) for m in moves_list]
+        # Support both on-disk canonical schema (separate row/col fields; see
+        # scripts/GPU/replay/format.py::Move) and legacy tuple schema
+        # (nested `move: [r, c]`) used by some test fixtures.
+        def _move_rc(m: dict) -> list[int]:
+            if "row" in m and "col" in m:
+                return [int(m["row"]), int(m["col"])]
+            return list(m["move"])
+        move_history = [_move_rc(m) for m in moves_list]
         source_game_basename = game.get("id") or f"iter_{meta.get('iteration', 0):04d}_game_{meta.get('game_idx', 0):03d}"
         source_iteration = meta.get("iteration", 0)
         category = f"near_win_{winner}"
