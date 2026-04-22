@@ -1563,6 +1563,29 @@ def analyze(replays: List[dict],
                 "by_category": by_category,
             }
 
+    # Spec §6.4: real calibration scoring (replaces former stub).
+    if (_HAS_PHASE1_DIAG
+            and resolved_weights is not None
+            and shared_network is not None
+            and not args.calibration_disable):
+        from scripts.GPU.alphazero.value_calibration import (
+            score_samples_against_checkpoint,
+        )
+        try:
+            cal = score_samples_against_checkpoint(
+                replays,
+                network=shared_network,
+                samples_per_bucket=args.calibration_samples_per_bucket,
+                max_total=args.calibration_max_total,
+                min_size=args.winning_structure_min_size,
+            )
+            cal["weights"] = os.path.abspath(resolved_weights)
+            value_calibration_summary = cal
+        except Exception as _e:
+            print(f"[analyzer] WARNING: calibration scoring failed: {_e}",
+                  file=sys.stderr)
+            value_calibration_summary = {}
+
     # --- Build summary from sidecar or fallback ---
     if use_sidecar:
         results_val = sc_agg["results"]
@@ -1734,8 +1757,9 @@ def analyze(replays: List[dict],
         # natural-win replays in the input.
         "replay_probe_scoring": replay_probe_scoring,
         # Phase 1 (connectivity-retrain): value-calibration summary.
-        # Populated only when --calibrate is passed (stub payload this task).
-        "value_calibration": value_calibration_summary if calibrate else {},
+        # Populated when a checkpoint resolves and --calibration-disable is
+        # not set. Empty dict otherwise (including scoring-exception path).
+        "value_calibration": value_calibration_summary,
         # Phase 2: per-iter sanity-by-connectivity trend + latest snapshot.
         # Empty if no sidecar carried sanity_by_connectivity.
         "sanity_by_connectivity": {

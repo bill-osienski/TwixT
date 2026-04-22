@@ -147,3 +147,41 @@ def test_analyzer_emits_replay_probe_scoring(tmp_path):
     assert rps["n"] == rps["probe_count"]
     assert 0.0 <= rps["sign_correct_pct"] <= 1.0
     assert "by_category" in rps
+
+
+def test_analyzer_emits_value_calibration(tmp_path):
+    """Value calibration is populated (not stub) when checkpoint is available."""
+    import subprocess
+
+    games_dir = tmp_path / "Replays" / "test_range"
+    games_dir.mkdir(parents=True)
+    for i in range(8):
+        _write_fake_replay(games_dir, iteration=29, game_idx=i, winner="red")
+        _write_fake_replay(games_dir, iteration=29, game_idx=100 + i, winner="black")
+
+    ckpt_dir = tmp_path / "checkpoints"
+    ckpt_dir.mkdir()
+    _write_fake_checkpoint(ckpt_dir, iteration=30, in_channels=30)
+
+    out_dir = tmp_path / "test_range_Replay"
+    result = subprocess.run(
+        [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
+         "--input", str(games_dir),
+         "--out", str(out_dir),
+         "--checkpoint-dir", str(ckpt_dir),
+         "--probe-scoring-disable",
+         "--calibration-samples-per-bucket", "5",
+         "--calibration-max-total", "100",
+         "--no-plots"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+    summary = json.loads((out_dir / "summary_test_range.json").read_text())
+    cal = summary.get("value_calibration", {})
+    assert cal.get("stratified") is True
+    assert "natural_distribution" in cal
+    assert "sampled_distribution" in cal
+    assert "aggregate" in cal
+    # Not the old stub.
+    assert cal.get("status") != "not_implemented"
