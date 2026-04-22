@@ -87,7 +87,18 @@ def extract_forced_probes_from_games(
 
     Returns probe dicts with schema matching tests/probes/twixt_probes.json:
       {id, category, confidence='forced', side_to_move, expected_value_sign,
-       active_size, ply, move_history, source_game, source_ply}
+       active_size, ply, move_history, source_game, source_ply,
+       starting_player}
+
+    `starting_player` is REQUIRED for replayability. `_replay_probe` (the
+    private helper in probe_eval.py that reconstructs a TwixtState from a
+    probe's move_history) reads this field and initializes the state's
+    `to_move` accordingly. Without it, probes from black-started games fail
+    with "Illegal move" at the first ply because the default TwixtState
+    constructor assumes red-starts, so black's legal goal-edge moves would
+    be interpreted as red's (illegal). `_replay_probe` raises with the
+    probe id + ply index on replay failure rather than silently skipping —
+    data-integrity bugs surface loudly.
 
     Category is based on the eventual winner only:
       winner == 'red'   → 'near_win_red'
@@ -95,6 +106,12 @@ def extract_forced_probes_from_games(
 
     Side-to-move and expected_value_sign are computed from the replayed state
     independently of category.
+
+    Input game JSON `moves` field schema: accepts both canonical on-disk
+    format (`moves[i]["row"]` + `moves[i]["col"]` per
+    scripts/GPU/replay/format.py::Move) and legacy tuple format
+    (`moves[i]["move"] = [r, c]`) used by some test fixtures. When both are
+    present the row/col pair takes precedence.
 
     Filtering:
       - Only games where meta.board_size == active_size
@@ -208,18 +225,22 @@ New one-shot-but-reusable script `scripts/build_bootstrap_probe_suite.py`, separ
 --input <dir>              default: scripts/GPU/logs/games
 --source-iter-range MIN MAX   required (e.g., --source-iter-range 25 30)
 --out <path>               default: tests/probes/twixt_probes.json
---samples-per-bucket N     default: 12 (per winner class, before dedup)
---max-probes N             default: 30 (final cap)
+--samples-per-bucket N     default: 12 (per winner class, before dedup — CURRENTLY ADVISORY;
+                           the generator emits `k_plies=2` per qualifying game via the
+                           shared extract helper and does not consume this flag in its
+                           present form. Reserved for future per-bucket caps.)
+--max-probes N             default: 30 (final cap after interleave-with-balance)
 ```
 
 ### 5.2 Logic
 
-1. Scan `--input` for `iter_NNNN_game_MMM.json` files with `meta.iteration` in `[MIN, MAX]`.
+1. Scan `--input` for `iter_NNNN_game_MMM.json` files with `meta.iteration` in `[MIN, MAX]`. Missing iters inside the range contribute no games — the filter is lenient.
 2. Filter: `meta.board_size == 24` AND `meta.reason == 'win'` (natural wins only — no resign, no adjudicate, no timeout, no draw).
-3. For each qualifying game, call `extract_forced_probes_from_games` (the shared helper from §4.1) with `k_plies=2`, `winner_reasons={'win'}`, `dedupe_exact=True`, `dedupe_mirror=True`.
-4. Balance: enforce that the ratio of majority-class to minority-class count is ≤ 2:1. Concretely, if `majority_count > 2 * minority_count`, truncate majority to `2 * minority_count` using the §4.1 sort order. If the ratio is already ≤ 2:1, no truncation in this step. This keeps all minority-class probes available while preventing extreme skew.
-5. Truncate to `max_probes` using the sort order from §4.1: source iteration desc, source_ply desc, source game basename asc.
-6. Serialize to `--out` in the committed-file structure below.
+3. For each qualifying game, call `extract_forced_probes_from_games` (the shared helper from §4.1) with `k_plies=2`, `winner_reasons={'win'}`, `dedupe_exact=True`, `dedupe_mirror=True`. The helper returns probes sorted per §4.1.
+4. **Interleave-with-balance truncation.** Split the returned probes by category into `red_sorted` and `black_sorted` (both already in §4.1 canonical sort). Merge greedily into the final `balanced` list: at each step, pick the color with the better sort key AS LONG AS taking one more of that color would preserve the ≤ 2:1 balance rule (`red_count + 1 ≤ 2 * max(black_count, 1)` and symmetrically for black). Stop when `len(balanced) == --max-probes` or neither color can contribute without violating the cap. Re-sort the result by §4.1 keys for stable serialized order.
+
+   **Why this algorithm**: an earlier draft applied the balance cap first (pre-truncation) and then truncated to `max_probes`. That does nothing when the input pool is already balanced (real training data typically is, ~1:1), so the final sort-and-truncate step could still skew the output toward whichever color happened to dominate the most recent iters. Interleaving with a live balance check preserves the invariant through truncation.
+5. Serialize to `--out` in the committed-file structure below. The output always satisfies the ≤ 2:1 balance rule for any `--max-probes` ≥ 2 and any non-empty input.
 
 ### 5.3 Committed file structure
 
@@ -553,3 +574,92 @@ Each commit passes `pytest` (integration test in commit 4 only runs under its op
 - **Trainer-side auto-generated probes.** Explicitly rejected during design discussion: regression suites need stability across iterations and runs. Per-iter auto-generation would destroy that property and silently break cross-iter comparability. The trainer stays on the stable committed file.
 - **Phase-stratified calibration as the only mode.** A future follow-up could add a natural-distribution (unstratified) calibration mode as a secondary metric for when readers need population-weighted aggregates. This design emits the natural-distribution counts alongside the stratified stats, so adding unstratified later is a small additive change.
 - **Changes to the per-game `iter_NNNN_game_NNN.json` sidecars.** Those are owned by the self-play worker. All new data emitted by this design lives in the analyzer output directory or in the per-iteration stats sidecar (the latter unchanged in schema; the `forced_probe_summary` field merely starts populating with real values).
+
+## 10. Implementation notes (post-implementation revisions)
+
+This section captures design clarifications and schema additions that
+surfaced during implementation. The body of the spec above has been
+updated to match; this appendix is a chronological reference so future
+readers can see *why* the current rules exist.
+
+### 10.1 Probe schema addition: `starting_player` (§4.1)
+
+**Symptom:** During Task 19's live-trainer integration test, 16 of 30
+committed bootstrap probes failed to replay — `_replay_probe` raised
+"Illegal move (19, 23) for active_size=24, to_move=red" on a move that
+was a legal black move in the original game.
+
+**Root cause:** The spec's original §4.1 schema omitted a
+starting-player field. `_replay_probe` constructed
+`TwixtState(active_size=N)` which defaults `to_move="red"`. For probes
+from black-started games the first move was interpreted as red's,
+triggering illegal-move errors on black's legal goal-edge cells
+(col 0 or col 23).
+
+**Resolution:** Added `starting_player` as a required probe field.
+`_replay_probe` reads it (default `"red"` for backwards compat with
+any pre-schema probes) and passes it to `TwixtState(to_move=...)`.
+Replay failures now raise with the probe id + ply index for
+data-integrity visibility.
+
+**Alternative rejected:** Filter the bootstrap generator to red-started
+games only. That would have thrown away ~half the available data and
+baked a hidden red-starts assumption into the probe file format. The
+schema addition is the clean long-term fix.
+
+### 10.2 Balance-preserving truncation (§5.2)
+
+**Symptom:** Task 10's first committed bootstrap probe file was 22 red
+/ 8 black = 2.75:1, violating the ≤ 2:1 balance rule, even though the
+input pool was 476 red + 520 black (1.09:1 — well within the rule).
+
+**Root cause:** The original §5.2 algorithm applied the balance cap
+*before* truncation. On balanced input pools the cap was a no-op, and
+the subsequent sort-by-recency + truncate-to-`max_probes` step could
+still skew the final subset toward whichever color happened to
+dominate the most recent iters.
+
+**Resolution:** Replaced pre-cap + truncate with interleave-then-truncate
+(see §5.2 step 4). Regenerated probes are 20 red / 10 black = exact 2:1.
+
+### 10.3 Dual-schema support in `extract_forced_probes_from_games` (§4.1)
+
+**Symptom:** First real-data invocation of the bootstrap generator
+raised `KeyError: 'move'` in `extract_forced_probes_from_games`.
+
+**Root cause:** The function's early test fixtures used a legacy
+`moves[i]["move"] = [r, c]` schema. Real on-disk game JSONs from
+`scripts/GPU/logs/games/` use `moves[i]["row"]` + `moves[i]["col"]`
+(per `scripts/GPU/replay/format.py::Move`). The spec didn't call out
+which schema was canonical.
+
+**Resolution:** `extract_forced_probes_from_games` now accepts both.
+Row/col takes precedence when both are present. Added unit test
+coverage to lock the dual-schema contract.
+
+### 10.4 Fixture corrections in tests
+
+Multiple test fixtures prescribed in the plan generated illegal moves
+on a 24×24 board (corner/opponent-edge cells) or used tiny network
+architectures incompatible with the canonical
+`create_network` defaults that `load_network_for_scoring` instantiates.
+These were test-level bugs only — no spec change required — but the
+plan document was updated in place so future re-execution reads the
+corrected code.
+
+### 10.5 Gate-suite vs bootstrap-suite test separation
+
+**Symptom:** `tests/test_probe_suite_schema.py` was pre-existing (from
+the Phase 2 connectivity-retrain work) and assumed any committed
+`tests/probes/twixt_probes.json` would satisfy the curated §7 gate
+suite's size rule (`50 ≤ n ≤ 120`). The bootstrap suite is 30
+probes by design.
+
+**Resolution:** Split the gate-guard in that test file:
+- `test_probe_suite_file_well_formed` — gate-suite-specific; skips
+  when `meta.not_gate_suite == True`.
+- `test_probe_suite_schema_valid` — applies to any committed probe
+  file; validates field types and enums (bootstrap satisfies this).
+- `test_probe_suite_reconstruction` — applies to any committed probe
+  file; uses `p.get("starting_player", "red")` to initialize the
+  replay state (post-§10.1 schema addition).

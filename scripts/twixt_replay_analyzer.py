@@ -7,6 +7,11 @@ Reads one or more replay JSON files (or a .zip containing JSONs) and produces:
 - Opening-move and opening-sequence frequency tables
 - Heatmaps of peg placements by player and by ply buckets
 - "Diversity" / "stuck opening" indicators (entropy, top-k concentration, KL drift between windows)
+- Checkpoint-backed signals when a checkpoint is resolvable (see below):
+    * `replay_probe_scoring` — end-of-chunk sign-correct probe scoring
+      against forced probes extracted from the replay range.
+    * `value_calibration` — phase-stratified calibration of the network's
+      value head against winning-structure / early / mid / late buckets.
 
 Replay schema expected (minimal):
 {
@@ -22,9 +27,53 @@ Usage examples:
   python twixt_replay_analyzer.py --input Replay3.zip --out out/replay_report
   python twixt_replay_analyzer.py --input "logs/games/iter_0192_game_*.json" --out out/report
 
+New CLI flags (all optional, introduced by the probes-and-calibration-closure work):
+  --weights <path>                      Explicit checkpoint for probe scoring + calibration.
+                                        Skips auto-discovery.
+  --checkpoint-dir <path>               Directory to search for auto-discovered checkpoint
+                                        (overrides the checkpoints/<single-subdir>/ convention).
+  --probe-scoring-disable               Skip replay_probe_scoring entirely.
+  --calibration-disable                 Skip value_calibration entirely.
+  --calibration-samples-per-bucket N    Target samples per phase-stratified bucket (default 200).
+  --calibration-max-total N             Safety cap on total calibration forward passes (default 2000).
+
+Legacy flags retained for backwards compatibility (superseded by --weights + auto-discovery):
+  --calibrate                           Old on/off trigger; the new path auto-runs calibration
+                                        whenever a checkpoint resolves and --calibration-disable
+                                        is absent.
+  --calibrate-weights <path>            Old explicit-weights flag. If --weights is absent this
+                                        path is honored as a fallback.
+  --calibration-sample N                Legacy single-sample count — ignored by the new path.
+
+Checkpoint auto-discovery order (when --weights is omitted):
+  1. --calibrate-weights <path>         (legacy fallback)
+  2. model_iter_{max(meta.iteration) + 1:04d}.safetensors in:
+       a. --checkpoint-dir if given
+       b. checkpoints/<single-subdir>/ if exactly one subdir exists under checkpoints/
+       c. current working directory
+  First existing file wins. If no match is found, the analyzer emits a one-line warning and
+  skips the checkpoint-backed sections; all other outputs are unaffected.
+
+New summary keys emitted in summary_<suffix>.json (when a checkpoint is resolved and the
+respective -disable flag is absent):
+  - replay_probe_scoring — {source, weights, checkpoint_in_channels, selection_rules,
+    probe_count, n, sign_correct, sign_correct_pct, median_abs_v, by_category}.
+    Sourced from extract_forced_probes_from_games(replays) + run_forced_probes_inline.
+  - value_calibration — {weights, samples_per_bucket_target, max_total,
+    natural_distribution, sampled_distribution, stratified, overall_note, aggregate}.
+    Sourced from score_samples_against_checkpoint. Stratified: per-bucket cap honored,
+    alphabetical halt when max_total binds, no redistribution across buckets.
+
+Companion CSVs emitted under --out:
+  - replay_probe_per_probe_<suffix>.csv  — one row per scored probe.
+  - value_calibration_by_bucket_<suffix>.csv — one row per position-type bucket.
+
 Notes:
 - Heatmaps default to board_size from meta.board_size; fallback to --board-size.
 - "Corner" is any move with row/col in {0,1,board-2,board-1}. You can tune with --edge-pad.
+
+Reference: docs/superpowers/specs/2026-04-21-probes-and-calibration-closure-design.md
+           docs/analysis-metrics-guide.md (Analyzer knobs section)
 """
 from __future__ import annotations
 
