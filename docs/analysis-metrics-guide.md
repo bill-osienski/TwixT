@@ -397,6 +397,10 @@ These affect overall training dynamics and indirectly affect all metrics.
 
 ### Analyzer knobs
 
+Script: `scripts/twixt_replay_analyzer.py`
+
+**Geometry + drift:**
+
 | Knob | What it does | Default |
 |------|-------------|---------|
 | `--near-corner-radius` | Corner region for geometry analysis | 2 |
@@ -404,3 +408,47 @@ These affect overall training dynamics and indirectly affect all metrics.
 | `--opening-geom-kmax` | Plies for geometry rates | 4 |
 | `--window` | Games per KL drift window | 50 |
 | `--no-plots` | Skip heatmap PNG generation | off |
+
+**Checkpoint-backed probe scoring + calibration** (spec §6.1; emit populated `replay_probe_scoring` and `value_calibration` sections in `summary_*.json` when a checkpoint is resolvable):
+
+| Knob | What it does | Default |
+|------|-------------|---------|
+| `--weights` | Explicit checkpoint path for probe scoring + calibration. Skips auto-discovery. | None (auto-discover) |
+| `--checkpoint-dir` | Directory to search for auto-discovered checkpoint. | None (uses `checkpoints/<single-subdir>/` if exactly one subdir exists) |
+| `--probe-scoring-disable` | Skip `replay_probe_scoring` entirely. | off |
+| `--calibration-disable` | Skip `value_calibration` entirely. | off |
+| `--calibration-samples-per-bucket` | Target samples per phase-stratified bucket. | 200 |
+| `--calibration-max-total` | Safety cap on total calibration forward passes. | 2000 |
+
+Auto-discovery order (when `--weights` is omitted): legacy `--calibrate-weights` → `--checkpoint-dir` / `checkpoints/<single-subdir>/` / cwd, looking for `model_iter_{max(meta.iteration) + 1:04d}.safetensors`. Analyzer falls back to an empty probe/calibration section if no checkpoint is resolvable — does not fail the run.
+
+**Legacy calibration flags** (retained for backwards compatibility; `--weights` + auto-discovery supersedes them):
+
+| Knob | What it does | Default |
+|------|-------------|---------|
+| `--calibrate` | Legacy trigger for value calibration; requires `--calibrate-weights`. The new path auto-runs calibration whenever a checkpoint is resolvable and `--calibration-disable` is absent, independent of this flag. | off |
+| `--calibrate-weights` | Explicit weights path for `--calibrate`. | None |
+| `--calibration-sample` | Legacy single-sample count (ignored by the new phase-stratified path). | 1000 |
+
+### Probe suite generator
+
+Script: `scripts/build_bootstrap_probe_suite.py`
+
+Produces `tests/probes/twixt_probes.json` — a rule-selected bootstrap forced-probe suite from historical game replays. **Not** the spec §7 review-curated gate suite; see `tests/probes/README.md`.
+
+| Knob | What it does | Default |
+|------|-------------|---------|
+| `--input` | Directory containing `iter_NNNN_game_MMM.json` files. | `scripts/GPU/logs/games` |
+| `--source-iter-range MIN MAX` | Inclusive iteration range to sample from (missing iters are silently skipped). | required |
+| `--out` | Output path. | `tests/probes/twixt_probes.json` |
+| `--samples-per-bucket` | Per winner class, before dedup (currently advisory — extraction emits `k_plies=2` probes per game unconditionally). | 12 |
+| `--max-probes` | Final cap on probe count after interleave-with-balance. | 30 |
+
+Reruns with identical `--source-iter-range` produce byte-identical output (deterministic probe IDs, dedup canonicalization, no wall-clock fields). To refresh against a newer training range:
+
+```bash
+.venv/bin/python scripts/build_bootstrap_probe_suite.py \
+    --input scripts/GPU/logs/games \
+    --source-iter-range 25 30 \
+    --out tests/probes/twixt_probes.json
+```
