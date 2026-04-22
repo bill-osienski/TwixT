@@ -2268,15 +2268,18 @@ Then add call-sites right after the existing CSV writer calls (search for `write
 
 ```python
     # Spec §6.5: new CSVs for replay probe scoring + value calibration.
+    # Note: the local variable holding the derived suffix is `suffix`,
+    # not `out_suffix` — matches the existing write_replay_cap_by_iter_csv
+    # and related call-sites nearby.
     if replay_probe_scoring and replay_probe_scoring.get("probe_count", 0) > 0:
         write_replay_probe_per_probe_csv(
-            out_dir, out_suffix,
+            out_dir, suffix,
             probes=probes_for_scoring,
             scoring_result=scoring_result,
         )
     if value_calibration_summary:
         write_value_calibration_by_bucket_csv(
-            out_dir, out_suffix, value_calibration_summary
+            out_dir, suffix, value_calibration_summary
         )
 ```
 
