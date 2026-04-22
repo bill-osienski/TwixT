@@ -1978,8 +1978,9 @@ def main():
                          "(requires --calibrate-weights). Currently a scaffold — "
                          "full scoring loop is a follow-up task.")
     ap.add_argument("--calibrate-weights", dest="calibrate_weights", default=None,
-                    help="Explicit weights path for --calibrate. REQUIRED when "
-                         "--calibrate is set (formal-runs contract, spec §9.2).")
+                    help="Explicit weights path for --calibrate. Superseded "
+                         "by --weights + auto-discovery; retained for "
+                         "backwards compatibility with existing scripts.")
     ap.add_argument("--calibration-sample", dest="calibration_sample", type=int, default=1000,
                     help="Number of positions to sample for calibration (default 1000).")
     ap.add_argument("--calibration-bins", dest="calibration_bins", type=int, default=5,
@@ -1989,6 +1990,30 @@ def main():
                     help="Threshold for classify_position winning-structure bucket (default 8).")
     ap.add_argument("--no-connectivity", dest="no_connectivity", action="store_true", default=False,
                     help="Skip connectivity diagnostics (saves time on large runs).")
+
+    # Probes / calibration — spec §6.1 new flags.
+    ap.add_argument("--weights", default=None,
+                    help="Explicit checkpoint path for probe scoring + "
+                         "calibration. Skips auto-discovery. When omitted, "
+                         "the analyzer auto-discovers model_iter_{max+1}"
+                         ".safetensors in --checkpoint-dir or "
+                         "checkpoints/<single-subdir>/.")
+    ap.add_argument("--checkpoint-dir", dest="checkpoint_dir", default=None,
+                    help="Directory to search for auto-discovered checkpoint. "
+                         "When omitted, uses checkpoints/<single-subdir>/ if "
+                         "exactly one subdirectory exists under checkpoints/.")
+    ap.add_argument("--probe-scoring-disable", dest="probe_scoring_disable",
+                    action="store_true", default=False,
+                    help="Skip replay_probe_scoring entirely.")
+    ap.add_argument("--calibration-disable", dest="calibration_disable",
+                    action="store_true", default=False,
+                    help="Skip value_calibration entirely.")
+    ap.add_argument("--calibration-samples-per-bucket",
+                    dest="calibration_samples_per_bucket", type=int, default=200,
+                    help="Target samples per phase-stratified bucket (spec §4.3).")
+    ap.add_argument("--calibration-max-total", dest="calibration_max_total",
+                    type=int, default=2000,
+                    help="Safety cap on total calibration forward passes.")
 
     args = ap.parse_args()
 
