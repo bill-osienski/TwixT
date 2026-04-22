@@ -398,7 +398,18 @@ def extract_forced_probes_from_games(
             seen_keys.add(key)
             deduped.append(p)
         probes = deduped
-    # Sort + truncate will be added in Task 5.
+    # Sort: source_iteration desc, source_ply desc, source_game basename asc
+    # (tiebreaker). Always applied, even when max_probes is None, so downstream
+    # consumers (per-probe CSV) see deterministic order.
+    probes.sort(key=lambda p: (
+        -p["_source_iteration"],
+        -p["source_ply"],
+        p["source_game"],
+    ))
+
+    # Truncate to max_probes after sorting.
+    if max_probes is not None and len(probes) > max_probes:
+        probes = probes[:max_probes]
 
     # Strip internal sort-only keys before returning.
     for p in probes:

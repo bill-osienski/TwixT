@@ -397,3 +397,48 @@ def test_extract_forced_probes_transpose_NOT_deduped():
     g2 = _make_game_dict(iteration=29, game_idx=1, n_moves=40, winner="red", moves=transposed)
     probes = extract_forced_probes_from_games([g1, g2], active_size=24, dedupe_mirror=True)
     assert len(probes) == 4, "transpose must not dedupe — goals differ"
+
+
+def test_extract_forced_probes_sort_order():
+    """Sort: source_iteration desc, source_ply desc, source_game basename asc."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    # Mix two iterations; verify iter 30 comes first, then within iter, later ply first.
+    g_old = _make_game_dict(iteration=25, game_idx=0, n_moves=40, winner="red")
+    g_new = _make_game_dict(iteration=30, game_idx=0, n_moves=40, winner="red")
+    probes = extract_forced_probes_from_games([g_old, g_new], active_size=24,
+                                              dedupe_exact=False, dedupe_mirror=False)
+    # Expected order: (iter=30, ply=39), (iter=30, ply=38), (iter=25, ply=39), (iter=25, ply=38)
+    assert probes[0]["source_game"].startswith("iter_0030")
+    assert probes[0]["source_ply"] == 39
+    assert probes[1]["source_game"].startswith("iter_0030")
+    assert probes[1]["source_ply"] == 38
+    assert probes[2]["source_game"].startswith("iter_0025")
+    assert probes[2]["source_ply"] == 39
+    assert probes[3]["source_game"].startswith("iter_0025")
+    assert probes[3]["source_ply"] == 38
+
+
+def test_extract_forced_probes_max_probes_truncation():
+    """max_probes=N truncates after sorting."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    g_old = _make_game_dict(iteration=25, game_idx=0, n_moves=40, winner="red")
+    g_new = _make_game_dict(iteration=30, game_idx=0, n_moves=40, winner="red")
+    probes = extract_forced_probes_from_games([g_old, g_new], active_size=24,
+                                              dedupe_exact=False, dedupe_mirror=False,
+                                              max_probes=2)
+    assert len(probes) == 2
+    # Should keep the two most-recent-iter probes.
+    assert all(p["source_game"].startswith("iter_0030") for p in probes)
+
+
+def test_extract_forced_probes_max_probes_none_returns_all_sorted():
+    """max_probes=None returns all probes, still in sorted order."""
+    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
+    g_old = _make_game_dict(iteration=25, game_idx=0, n_moves=40, winner="red")
+    g_new = _make_game_dict(iteration=30, game_idx=0, n_moves=40, winner="red")
+    probes = extract_forced_probes_from_games([g_old, g_new], active_size=24,
+                                              dedupe_exact=False, dedupe_mirror=False,
+                                              max_probes=None)
+    assert len(probes) == 4
+    # Still sorted: first probe is from iter 30.
+    assert probes[0]["source_game"].startswith("iter_0030")
