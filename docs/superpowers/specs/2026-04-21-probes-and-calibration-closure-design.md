@@ -647,7 +647,29 @@ These were test-level bugs only — no spec change required — but the
 plan document was updated in place so future re-execution reads the
 corrected code.
 
-### 10.5 Gate-suite vs bootstrap-suite test separation
+### 10.5 `score_samples_against_checkpoint` needs the same dual-schema + starting_player fixes
+
+**Symptom:** First real-data analyzer run against 100 iter-30 games
+emitted `[analyzer] WARNING: calibration scoring failed: 'move'` and
+`summary.value_calibration` returned as `{}`. `replay_probe_scoring`
+populated correctly; only calibration was affected.
+
+**Root cause:** `score_samples_against_checkpoint` has its own replay
+loops (pre-pass classification + score-pass reconstruction) which
+independently (a) accessed `moves[ply]["move"]` directly — fine for the
+synthetic fixtures used in tests, but failed on canonical on-disk
+schema that uses `row`/`col` (see §10.3); and (b) constructed
+`TwixtState(active_size=N)` without honoring `starting_player` (same
+class of bug as §10.1). The earlier schema + starting_player fixes in
+`extract_forced_probes_from_games` / `_replay_probe` did not propagate
+to `value_calibration.py`.
+
+**Resolution:** Factored out inline helpers `_move_rc` and
+`_game_starting_player` in `score_samples_against_checkpoint` matching
+the contracts in `probe_eval.py`. Both replay loops use them. Added
+regression tests covering the real-schema path and a black-started game.
+
+### 10.6 Gate-suite vs bootstrap-suite test separation
 
 **Symptom:** `tests/test_probe_suite_schema.py` was pre-existing (from
 the Phase 2 connectivity-retrain work) and assumed any committed
