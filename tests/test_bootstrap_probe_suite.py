@@ -179,3 +179,43 @@ def test_bootstrap_balance_ratio(tmp_path):
     assert red_count <= 2 * max(black_count, 1), (
         f"balance violated: red={red_count} black={black_count}"
     )
+
+
+def test_bootstrap_balance_preserved_through_truncation(tmp_path):
+    """Balance must hold even when max_probes forces truncation of a
+    balanced pool — regression guard against the pre-fix behaviour where
+    the ≤2:1 cap was applied before sort-and-truncate, so the truncation
+    step could still skew the final subset toward one color when the most
+    recent iters happened to favor it."""
+    games_dir = tmp_path / "games"
+    games_dir.mkdir()
+    # Balanced pool (10 red + 10 black at same iter / ply depth). Red game
+    # basenames sort alphabetically before black (idx 0-9 vs 50-59), so a
+    # naive sort-then-truncate would pick all red for the top max_probes.
+    # Interleave-with-balance-cap must prevent that.
+    for i in range(10):
+        _write_fake_game(games_dir, iteration=30, game_idx=i, winner="red")
+    for i in range(10):
+        _write_fake_game(games_dir, iteration=30, game_idx=50 + i, winner="black")
+
+    out = tmp_path / "out.json"
+    subprocess.run(
+        [".venv/bin/python", "scripts/build_bootstrap_probe_suite.py",
+         "--input", str(games_dir),
+         "--source-iter-range", "30", "30",
+         "--out", str(out),
+         "--max-probes", "6"],
+        capture_output=True, text=True, check=True,
+    )
+    data = json.loads(out.read_text())
+    red_count = sum(1 for p in data["probes"] if p["category"] == "near_win_red")
+    black_count = sum(1 for p in data["probes"] if p["category"] == "near_win_black")
+    assert red_count + black_count == 6, (
+        f"expected 6 probes, got {red_count + black_count} (r={red_count} b={black_count})"
+    )
+    majority = max(red_count, black_count)
+    minority = min(red_count, black_count)
+    assert majority <= 2 * max(minority, 1), (
+        f"balance violated under truncation: {red_count}r + {black_count}b "
+        f"(majority={majority}, minority={minority})"
+    )

@@ -69,18 +69,16 @@ def main() -> int:
         max_probes=None,  # we balance and truncate below
     )
 
-    # 3. Split by category and enforce ≤ 2:1 balance.
-    red = [p for p in probes if p["category"] == "near_win_red"]
-    black = [p for p in probes if p["category"] == "near_win_black"]
-    if len(red) > 2 * max(len(black), 1):
-        red = red[: 2 * max(len(black), 1)]
-    if len(black) > 2 * max(len(red), 1):
-        black = black[: 2 * max(len(red), 1)]
-    balanced = red + black
-
-    # 4. Re-sort balanced set (per spec §4.1 order) and truncate to max_probes.
-    # extract_forced_probes_from_games already returned in sort order, but
-    # concatenation of red+black may disrupt it — re-sort by the same keys.
+    # 3. Interleave-then-truncate: balance must survive truncation.
+    # extract_forced_probes_from_games already returned each color's probes
+    # in canonical sort order. We merge red/black greedily into `balanced`,
+    # at each step taking the color with the better sort key AS LONG AS
+    # the ≤ 2:1 balance rule would still hold. Stop at max_probes.
+    #
+    # An earlier version applied a pre-truncation cap and then truncated,
+    # but the final truncation could skew the output (e.g., all top-N
+    # probes came from the same color when the most recent iters favored
+    # that color). Interleaving closes that gap.
     def _sort_key(p: dict) -> tuple:
         # Extract iteration from source_game basename 'iter_NNNN_game_MMM'.
         basename = p["source_game"]
@@ -90,9 +88,30 @@ def main() -> int:
             iter_num = 0
         return (-iter_num, -p["source_ply"], basename)
 
+    red = [p for p in probes if p["category"] == "near_win_red"]
+    black = [p for p in probes if p["category"] == "near_win_black"]
+
+    balanced: list[dict] = []
+    ri = bi = 0
+    red_count = black_count = 0
+    while len(balanced) < args.max_probes:
+        can_red = ri < len(red) and red_count + 1 <= 2 * max(black_count, 1)
+        can_black = bi < len(black) and black_count + 1 <= 2 * max(red_count, 1)
+        if not can_red and not can_black:
+            break
+        if can_red and can_black:
+            if _sort_key(red[ri]) <= _sort_key(black[bi]):
+                balanced.append(red[ri]); ri += 1; red_count += 1
+            else:
+                balanced.append(black[bi]); bi += 1; black_count += 1
+        elif can_red:
+            balanced.append(red[ri]); ri += 1; red_count += 1
+        else:
+            balanced.append(black[bi]); bi += 1; black_count += 1
+
+    # Final re-sort so serialized output is in canonical order regardless
+    # of which color was picked first during interleave.
     balanced.sort(key=_sort_key)
-    if len(balanced) > args.max_probes:
-        balanced = balanced[: args.max_probes]
 
     # 5. Serialize (no wall-clock fields).
     payload = {
