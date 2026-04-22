@@ -276,7 +276,14 @@ def extract_forced_probes_from_games(
             continue
 
         # Build move_history as list of [r, c] pairs (ply-ordered).
-        move_history = [list(m["move"]) for m in moves_list]
+        # Support both on-disk canonical schema (separate row/col fields; see
+        # scripts/GPU/replay/format.py::Move) and legacy tuple schema
+        # (nested `move: [r, c]`) used by some test fixtures.
+        def _move_rc(m: dict) -> list[int]:
+            if "row" in m and "col" in m:
+                return [int(m["row"]), int(m["col"])]
+            return list(m["move"])
+        move_history = [_move_rc(m) for m in moves_list]
         source_game_basename = game.get("id") or f"iter_{meta.get('iteration', 0):04d}_game_{meta.get('game_idx', 0):03d}"
         source_iteration = meta.get("iteration", 0)
         category = f"near_win_{winner}"
@@ -1302,18 +1309,16 @@ def main() -> int:
         max_probes=None,  # we balance and truncate below
     )
 
-    # 3. Split by category and enforce ≤ 2:1 balance.
-    red = [p for p in probes if p["category"] == "near_win_red"]
-    black = [p for p in probes if p["category"] == "near_win_black"]
-    if len(red) > 2 * max(len(black), 1):
-        red = red[: 2 * max(len(black), 1)]
-    if len(black) > 2 * max(len(red), 1):
-        black = black[: 2 * max(len(red), 1)]
-    balanced = red + black
-
-    # 4. Re-sort balanced set (per spec §4.1 order) and truncate to max_probes.
-    # extract_forced_probes_from_games already returned in sort order, but
-    # concatenation of red+black may disrupt it — re-sort by the same keys.
+    # 3. Interleave-then-truncate: balance must survive truncation.
+    # extract_forced_probes_from_games already returned each color's probes
+    # in canonical sort order. We merge red/black greedily into `balanced`,
+    # at each step taking the color with the better sort key AS LONG AS
+    # the ≤ 2:1 balance rule would still hold. Stop at max_probes.
+    #
+    # An earlier version applied a pre-truncation cap and then truncated,
+    # but the final truncation could skew the output (e.g., all top-N
+    # probes came from the same color when the most recent iters favored
+    # that color). Interleaving closes that gap.
     def _sort_key(p: dict) -> tuple:
         # Extract iteration from source_game basename 'iter_NNNN_game_MMM'.
         basename = p["source_game"]
@@ -1323,9 +1328,30 @@ def main() -> int:
             iter_num = 0
         return (-iter_num, -p["source_ply"], basename)
 
+    red = [p for p in probes if p["category"] == "near_win_red"]
+    black = [p for p in probes if p["category"] == "near_win_black"]
+
+    balanced: list[dict] = []
+    ri = bi = 0
+    red_count = black_count = 0
+    while len(balanced) < args.max_probes:
+        can_red = ri < len(red) and red_count + 1 <= 2 * max(black_count, 1)
+        can_black = bi < len(black) and black_count + 1 <= 2 * max(red_count, 1)
+        if not can_red and not can_black:
+            break
+        if can_red and can_black:
+            if _sort_key(red[ri]) <= _sort_key(black[bi]):
+                balanced.append(red[ri]); ri += 1; red_count += 1
+            else:
+                balanced.append(black[bi]); bi += 1; black_count += 1
+        elif can_red:
+            balanced.append(red[ri]); ri += 1; red_count += 1
+        else:
+            balanced.append(black[bi]); bi += 1; black_count += 1
+
+    # Final re-sort so serialized output is in canonical order regardless
+    # of which color was picked first during interleave.
     balanced.sort(key=_sort_key)
-    if len(balanced) > args.max_probes:
-        balanced = balanced[: args.max_probes]
 
     # 5. Serialize (no wall-clock fields).
     payload = {
@@ -1389,10 +1415,10 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Pre-flight — confirm source iters exist**
 
-Run: `ls scripts/GPU/logs/games/iter_002{5,6,7,8,9}_game_*.json scripts/GPU/logs/games/iter_0030_game_*.json 2>/dev/null | wc -l`
-Expected: A count > 0 (user has games for iters 25–30; per earlier analysis ~600 games exist).
+Run: `ls scripts/GPU/logs/games/iter_002{5,6,7,8,9}_game_*.json 2>/dev/null | wc -l`
+Expected: A count > 0. Iter range 25–29 inclusive should yield ~500 games (100 per iter) in the canonical run; adjust the glob if you know a different range is present.
 
-If zero, use a different `--source-iter-range` matching what's actually present. Run `ls scripts/GPU/logs/games/ | head` to inspect.
+If zero, inspect the directory: `ls scripts/GPU/logs/games/ | head`. The generator's `--source-iter-range` filter is inclusive on both ends; specifying a range that extends beyond present iters (e.g., `25 30` when only 25–29 exist) is fine — missing iters simply contribute no games.
 
 - [ ] **Step 2: Generate the probe file**
 
