@@ -1564,9 +1564,23 @@ import pytest
 
 def _write_fake_replay(dir_path: Path, iteration: int, game_idx: int,
                       n_moves: int = 30, winner: str = "red", reason: str = "win"):
-    moves = [{"player": "red" if i % 2 == 0 else "black",
-              "move": [(i * 7 + game_idx) % 24, (i * 11 + game_idx) % 24]}
-             for i in range(n_moves)]
+    # Generate legal, non-overlapping moves on a 24x24 board. Reds must avoid
+    # cols {0, 23} (and all corners); blacks must avoid rows {0, 23}. We
+    # carve out disjoint interior regions for each color, offset by game_idx
+    # so different games produce distinct move histories (keeps dedup from
+    # collapsing them to a single probe).
+    moves = []
+    for i in range(n_moves):
+        if i % 2 == 0:  # red
+            idx = i // 2
+            r = 2 + (idx + game_idx) % 10  # rows 2..11
+            c = 2 + (idx * 3 + game_idx * 7) % 20  # cols 2..21 (avoid 0, 23)
+        else:  # black
+            idx = i // 2
+            r = 14 + (idx + game_idx) % 8  # rows 14..21 (avoid 0, 23)
+            c = 1 + (idx * 3 + game_idx * 7) % 22  # cols 1..22
+        moves.append({"player": "red" if i % 2 == 0 else "black",
+                      "move": [r, c]})
     path = dir_path / f"iter_{iteration:04d}_game_{game_idx:03d}.json"
     path.write_text(json.dumps({
         "id": f"iter_{iteration:04d}_game_{game_idx:03d}",
@@ -1580,8 +1594,11 @@ def _write_fake_replay(dir_path: Path, iteration: int, game_idx: int,
 
 
 def _write_fake_checkpoint(dir_path: Path, iteration: int, in_channels: int = 30):
+    # Use create_network canonical defaults (hidden=128, n_blocks=6) so
+    # probe_eval.load_network_for_scoring (which also uses those defaults)
+    # can load the checkpoint without shape mismatches.
     from scripts.GPU.alphazero.network import create_network
-    net = create_network(in_channels=in_channels, hidden=8, n_blocks=1)
+    net = create_network(in_channels=in_channels)
     path = dir_path / f"model_iter_{iteration:04d}.safetensors"
     net.save_weights(str(path))
     return path
@@ -1825,7 +1842,7 @@ def test_analyzer_emits_replay_probe_scoring(tmp_path):
     ckpt_dir.mkdir()
     _write_fake_checkpoint(ckpt_dir, iteration=30, in_channels=30)
 
-    out_dir = tmp_path / "out"
+    out_dir = tmp_path / "test_range_Replay"
     result = subprocess.run(
         [".venv/bin/python", "scripts/twixt_replay_analyzer.py",
          "--input", str(games_dir),
