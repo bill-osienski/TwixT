@@ -28,7 +28,7 @@ Notes:
 """
 from __future__ import annotations
 
-import argparse, csv, glob, io, json, math, os, re, zipfile
+import argparse, csv, glob, io, json, math, os, re, sys, zipfile
 from dataclasses import dataclass
 from collections import Counter, defaultdict
 from typing import Dict, Iterable, List, Tuple, Optional
@@ -1028,7 +1028,8 @@ def analyze(replays: List[dict],
             out_suffix: Optional[str] = None,
             calibrate: bool = False,
             calibrate_weights: Optional[str] = None,
-            no_connectivity: bool = False) -> None:
+            no_connectivity: bool = False,
+            args: Optional[argparse.Namespace] = None) -> None:
     os.makedirs(out_dir, exist_ok=True)
     # Compute once — every output artifact shares this suffix.
     suffix = _derive_out_suffix(out_dir, override=out_suffix)
@@ -1469,17 +1470,98 @@ def analyze(replays: List[dict],
             connectivity_rows = []
             connectivity_summary = {"n_rows": 0, "error": str(_e)}
 
-    # --- Phase 1 (connectivity-retrain): value calibration scaffold -------
-    # Stub only for this task: full checkpoint load + scoring loop is a
-    # follow-up. Enforced CLI contract: --calibrate requires --calibrate-weights
-    # (argparse-side in main()), and the stub payload records that state so
-    # the summary.json / report make the "scaffold" status obvious.
-    if _HAS_PHASE1_DIAG and calibrate:
-        value_calibration_summary = {
-            "status": "not_implemented",
-            "note": "Phase 1 scaffold — full scoring loop to be added in a follow-up",
-            "weights": calibrate_weights,
-        }
+    # --- Phase 1 (connectivity-retrain): replay-derived probe scoring ------
+    # Spec §6.2: resolve checkpoint once, shared across probe scoring + calibration.
+    resolved_weights = _resolve_checkpoint_path(args, replays) if args is not None else None
+    shared_network = None
+    _in_ch = None
+    if resolved_weights is not None:
+        try:
+            from scripts.GPU.alphazero.probe_eval import load_network_for_scoring
+            shared_network, _in_ch, _h, _nb = load_network_for_scoring(
+                resolved_weights, verbose=False
+            )
+        except Exception as _e:
+            print(f"[analyzer] WARNING: failed to load checkpoint {resolved_weights}: {_e}",
+                  file=sys.stderr)
+            resolved_weights = None
+            shared_network = None
+
+    # Spec §6.3: replay-derived probe scoring.
+    replay_probe_scoring: dict = {}
+    probes_for_scoring: list = []
+    scoring_result: dict = {}
+    if (resolved_weights is not None
+            and shared_network is not None
+            and args is not None
+            and not args.probe_scoring_disable):
+        from scripts.GPU.alphazero.probe_eval import (
+            extract_forced_probes_from_games, run_forced_probes_inline,
+        )
+        probes_for_scoring = extract_forced_probes_from_games(
+            replays,
+            active_size=24,
+            k_plies=2,
+            winner_reasons=frozenset({"win"}),
+            dedupe_exact=True,
+            dedupe_mirror=True,
+            max_probes=None,
+        )
+        if not probes_for_scoring:
+            replay_probe_scoring = {
+                "source": "replay_derived",
+                "weights": os.path.abspath(resolved_weights),
+                "probe_count": 0,
+                "skipped_reason": "no_natural_wins",
+            }
+        else:
+            scoring_result = run_forced_probes_inline(
+                shared_network, probes_for_scoring, active_size=24
+            )
+            n = scoring_result["n"]
+            sign_correct = scoring_result["sign_correct"]
+            # Category breakdown.
+            by_cat: dict = {}
+            nn_values_iter = iter(scoring_result["nn_values"])
+            exp_signs_iter = iter(scoring_result["expected_signs"])
+            for p in probes_for_scoring:
+                v = next(nn_values_iter)
+                s = next(exp_signs_iter)
+                correct = int((s > 0 and v > 0) or (s < 0 and v < 0)
+                              or (s == 0 and abs(v) < 0.1))
+                cat = p["category"]
+                cat_bucket = by_cat.setdefault(cat, {
+                    "n": 0, "sign_correct": 0, "abs_v_sum": 0.0,
+                })
+                cat_bucket["n"] += 1
+                cat_bucket["sign_correct"] += correct
+                cat_bucket["abs_v_sum"] += abs(v)
+            by_category = {
+                cat: {
+                    "n": b["n"],
+                    "sign_correct_pct": round(b["sign_correct"] / b["n"], 4)
+                                       if b["n"] else None,
+                    "median_abs_v": round(b["abs_v_sum"] / b["n"], 4)
+                                   if b["n"] else None,
+                }
+                for cat, b in by_cat.items()
+            }
+            replay_probe_scoring = {
+                "source": "replay_derived",
+                "weights": os.path.abspath(resolved_weights),
+                "checkpoint_in_channels": _in_ch,
+                "selection_rules": {
+                    "k_plies": 2,
+                    "winner_reasons": ["win"],
+                    "dedup": "exact + 4-form-mirror-canonical",
+                },
+                "probe_count": len(probes_for_scoring),
+                "n": n,
+                "sign_correct": sign_correct,
+                "sign_correct_pct": scoring_result["sign_correct_pct"],
+                "median_abs_v": scoring_result["median_abs_v"],
+                "by_category": by_category,
+            }
 
     # --- Build summary from sidecar or fallback ---
     if use_sidecar:
@@ -1647,6 +1729,10 @@ def analyze(replays: List[dict],
         # Phase 1 (connectivity-retrain): connectivity diagnostics summary.
         # Empty dict when the module is unavailable or --no-connectivity is set.
         "connectivity_diagnostics": connectivity_summary,
+        # Phase 1 (connectivity-retrain): replay-derived probe scoring.
+        # Empty dict when checkpoint unavailable, scoring disabled, or no
+        # natural-win replays in the input.
+        "replay_probe_scoring": replay_probe_scoring,
         # Phase 1 (connectivity-retrain): value-calibration summary.
         # Populated only when --calibrate is passed (stub payload this task).
         "value_calibration": value_calibration_summary if calibrate else {},
@@ -2082,6 +2168,7 @@ def main():
         calibrate=bool(args.calibrate),
         calibrate_weights=args.calibrate_weights,
         no_connectivity=bool(args.no_connectivity),
+        args=args,
     )
 
 
