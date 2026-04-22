@@ -316,6 +316,11 @@ def extract_forced_probes_from_games(
                 "move_history": move_history[:ply],
                 "source_game": source_game_basename,
                 "source_ply": ply,
+                # starting_player required by _replay_probe to correctly
+                # initialize TwixtState.to_move — games that began with
+                # black would otherwise fail replay when re-constructed
+                # with the default red-starts assumption.
+                "starting_player": starting_player,
                 "_source_iteration": source_iteration,  # sort-only; stripped before return
             }
             probes.append(probe)
