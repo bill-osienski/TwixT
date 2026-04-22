@@ -1340,6 +1340,13 @@ def run_parallel_selfplay(
     ply_bucket_games = [0] * _n_buckets
     ply_bucket_positions_original = [0] * _n_buckets
     ply_bucket_positions_kept = [0] * _n_buckets
+    # Termination + length breakdown (parity with sequential path at
+    # trainer.py :2340-2354). Previously only the sequential branch
+    # populated these, leaving parallel-mode sidecars with all-zeros
+    # under replay_cap.positions_by_termination / _short / _long.
+    positions_by_termination = {"win": 0, "resign": 0, "adjudicated": 0, "timeout": 0}
+    positions_in_short_games = 0   # games with n_moves <= 80
+    positions_in_long_games = 0    # games with n_moves > 200
 
     def _ply_bucket_index(n_moves: int) -> int:
         for i, edge in enumerate(_PLY_BUCKET_EDGES):
@@ -1365,6 +1372,7 @@ def run_parallel_selfplay(
         nonlocal rg_top1_all
         nonlocal all_opening_diagnostics
         nonlocal total_positions_original, total_positions_kept, games_capped
+        nonlocal positions_by_termination, positions_in_short_games, positions_in_long_games
 
         if isinstance(msg, dict) and msg.get("type") == "server_error":
             raise RuntimeError(f"InferenceServer crashed: {msg.get('error')}")
@@ -1392,6 +1400,23 @@ def run_parallel_selfplay(
             ply_bucket_games[_bi] += 1
             ply_bucket_positions_original[_bi] += n_orig
             ply_bucket_positions_kept[_bi] += n_kept
+            # Termination-type bucket + short/long length buckets (parity
+            # with sequential path at trainer.py :2342-2354). draw_reason
+            # int encoding: 0=None, 1=timeout, 2=board_full, 3=state_cap,
+            # 4=unknown, 5=resign, 6=adjudicated.
+            if msg.winner and msg.draw_reason == 5:
+                _term = "resign"
+            elif msg.winner and msg.draw_reason == 6:
+                _term = "adjudicated"
+            elif msg.winner:
+                _term = "win"
+            else:
+                _term = "timeout"
+            positions_by_termination[_term] += n_kept
+            if msg.n_moves <= 80:
+                positions_in_short_games += n_kept
+            elif msg.n_moves > 200:
+                positions_in_long_games += n_kept
 
             # Track results
             if msg.winner == "red":
@@ -1657,6 +1682,10 @@ def run_parallel_selfplay(
         "ply_bucket_games": list(ply_bucket_games),
         "ply_bucket_positions_original": list(ply_bucket_positions_original),
         "ply_bucket_positions_kept": list(ply_bucket_positions_kept),
+        # Termination-type + length breakdown (parity with sequential path).
+        "positions_by_termination": dict(positions_by_termination),
+        "positions_in_short_games": positions_in_short_games,
+        "positions_in_long_games": positions_in_long_games,
         # Pre-existing bug fix: `all_opening_diagnostics` accumulated from
         # GameComplete IPC messages was previously dropped at function exit,
         # so parallel-worker runs never wrote opening_penalty_diagnostics /
@@ -2260,6 +2289,21 @@ def train(
                 )
                 ply_bucket_positions_kept_iter = parallel_stats.get(
                     "ply_bucket_positions_kept", ply_bucket_positions_kept_iter
+                )
+                # Termination-type + length breakdown — previously dropped in
+                # parallel mode, leaving sidecar.replay_cap.positions_by_termination
+                # / _short / _long at all-zero. See trainer.py :2342-2354 for the
+                # sequential-path logic this mirrors.
+                _par_pbt = parallel_stats.get("positions_by_termination") or {}
+                for _term in positions_by_termination_iter:
+                    positions_by_termination_iter[_term] = int(
+                        _par_pbt.get(_term, 0) or 0
+                    )
+                positions_in_short_games_iter = int(
+                    parallel_stats.get("positions_in_short_games", 0) or 0
+                )
+                positions_in_long_games_iter = int(
+                    parallel_stats.get("positions_in_long_games", 0) or 0
                 )
                 # Pull opening-diagnostics accumulated inside the parallel loop
                 # (previously dropped, causing empty sidecar opening/root_child blocks).
