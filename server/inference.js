@@ -9,6 +9,7 @@
  * This is the ONLY place Node.js does layout conversion.
  */
 import * as ort from 'onnxruntime-node';
+import { NUM_CHANNELS } from './gameLogic.js';
 
 export class AlphaZeroInference {
   constructor(modelPath) {
@@ -42,7 +43,12 @@ export class AlphaZeroInference {
       throw new Error('Model not loaded. Call load() first.');
     }
 
-    const numChannels = 24;
+    // Keep input tensor shape in sync with gameLogic.js::NUM_CHANNELS.
+    // Post-connectivity-retrain (2026-04-19) this is 30. Hardcoding would
+    // produce [1, 24, 24, 24] input, ONNX would reject with a shape
+    // mismatch, and the evaluate/analyze-position handlers would return
+    // 500 — which is exactly how this drift was caught.
+    const numChannels = NUM_CHANNELS;
     const size = 24;
 
     // CRITICAL: Convert from toTensorHWC() [H][W][C] to ONNX NCHW (1, C, H, W)
@@ -125,7 +131,12 @@ export class AlphaZeroInference {
       throw new Error('Model not loaded. Call load() first.');
     }
 
-    const numChannels = 24;
+    // Keep input tensor shape in sync with gameLogic.js::NUM_CHANNELS.
+    // Post-connectivity-retrain (2026-04-19) this is 30. Hardcoding would
+    // produce [1, 24, 24, 24] input, ONNX would reject with a shape
+    // mismatch, and the evaluate/analyze-position handlers would return
+    // 500 — which is exactly how this drift was caught.
+    const numChannels = NUM_CHANNELS;
     const size = 24;
 
     const board = new Float32Array(1 * numChannels * size * size);
