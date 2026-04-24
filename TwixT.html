@@ -380,10 +380,10 @@
         <canvas class="three-canvas" id="three-canvas"></canvas>
       </div>
 
-      <!-- Win Bar (AlphaZero position evaluation) -->
-      <div style="font-size:10px; color:#666; padding:2px 8px;">NN Eval (single forward pass)</div>
+      <!-- Win Bar (AlphaZero position evaluation — both bars use the same model) -->
+      <div style="font-size:10px; color:#666; padding:2px 8px;">AlphaZero (NN only — no search)</div>
       <div id="win-bar"></div>
-      <div style="font-size:10px; color:#666; padding:2px 8px; margin-top:4px;">MCTS Eval (search-based)</div>
+      <div style="font-size:10px; color:#666; padding:2px 8px; margin-top:4px;">AlphaZero + MCTS (~200 sims your turn, ~400 AI's turn)</div>
       <div id="win-bar-mcts"></div>
 
       <div class="controls">
