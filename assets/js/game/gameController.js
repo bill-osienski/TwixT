@@ -393,35 +393,77 @@ export default class GameController {
       return;
     }
 
-    if (!this.ai) return; // guard
+    const player = this.game.currentPlayer;
+    const difficulty = this.game.aiDifficulty || 'medium';
 
-    const move = this.ai.getBestMove();
-    if (move) {
-      const player = this.game.currentPlayer;
-      const success = this.game.placePeg(move.row, move.col);
-      if (success) {
-        this.recordMove('ai', player, move.row, move.col);
-        this.renderer.updateBoard();
-        this.updateUI();
+    // Use the AlphaZero model for AI moves. Matches the self-play training
+    // distribution (AlphaZero-vs-AlphaZero), so recordings can be compared
+    // apples-to-apples against self-play replays. alphaZero.getMove has its
+    // own heuristic fallback inside _fallbackToHeuristics when the server
+    // is unavailable, so we don't need to duplicate that here.
+    let aiResult;
+    try {
+      aiResult = await alphaZero.getMove(this.game, difficulty, { includeVisits: true });
+    } catch (err) {
+      console.warn('AlphaZero getMove failed, using local heuristic:', err);
+      if (this.ai) {
+        const hm = this.ai.getBestMove();
+        if (hm) aiResult = { move: hm, source: 'heuristics' };
+      }
+    }
 
-        // Check for AI win
-        if (this.game.gameOver && this.game.winner) {
-          const defValue = this.game.winner === 'red' ? 1 : -1;
-          this.winBarNN.updateRed(defValue);
-          this.winBarMCTS.updateRed(defValue);
-          if (gameRecorder.state === 'RECORDING') {
-            const saveResult = await gameRecorder.finalize(this.game, alphaZero);
-            if (saveResult?.ok) console.log('Game saved:', saveResult.path);
-            else console.warn('Game save failed:', saveResult?.error);
-          }
-          setTimeout(() => this.showWinner(), 200);
+    const move = aiResult?.move;
+    if (!move) return;
+    const success = this.game.placePeg(move.row, move.col);
+    if (success) {
+      // Package the AlphaZero move response as an analysis packet so the
+      // recorder captures the same grading data for AI moves that it does
+      // for human moves (root value, visit-weighted candidates, topk
+      // shares). For heuristic-fallback moves, aiAnalysis stays null; the
+      // move is still recorded.
+      let aiAnalysis = null;
+      if (aiResult.source === 'alphazero') {
+        aiAnalysis = {
+          packet_id: `p${this.game.moveCount}_ai_move`,
+          source: 'ai_move',
+          intent: 'move_selection',
+          status: 'completed',
+          determinism: { add_noise: false, temperature: 0.0 },
+          root: {
+            root_value: aiResult.value,
+            abs_root_value: aiResult.value != null ? Math.abs(aiResult.value) : null,
+            total_visits: null, // not surfaced in /ws move response
+            top1_share: null,
+            topk_shares: aiResult.topk_shares || null,
+          },
+          candidates_topN: aiResult.visits || [],
+          ai_selected_move: { row: move.row, col: move.col },
+          ai_value_red: aiResult.valueRed,
+          eval_to_move: aiResult.evalToMove,
+        };
+      }
+      this.recordMove(aiResult.source === 'alphazero' ? 'alphazero' : 'ai',
+                      player, move.row, move.col, aiAnalysis);
+      this.renderer.updateBoard();
+      this.updateUI();
+
+      // Check for AI win
+      if (this.game.gameOver && this.game.winner) {
+        const defValue = this.game.winner === 'red' ? 1 : -1;
+        this.winBarNN.updateRed(defValue);
+        this.winBarMCTS.updateRed(defValue);
+        if (gameRecorder.state === 'RECORDING') {
+          const saveResult = await gameRecorder.finalize(this.game, alphaZero);
+          if (saveResult?.ok) console.log('Game saved:', saveResult.path);
+          else console.warn('Game save failed:', saveResult?.error);
         }
+        setTimeout(() => this.showWinner(), 200);
+      }
 
-        // After AI move, trigger precompute for human's next turn
-        if (gameRecorder.state === 'RECORDING' && !this.game.gameOver) {
-          gameRecorder.markTurnStart();
-          gameRecorder.precomputeAnalysis(this.game, alphaZero);
-        }
+      // After AI move, trigger precompute for human's next turn
+      if (gameRecorder.state === 'RECORDING' && !this.game.gameOver) {
+        gameRecorder.markTurnStart();
+        gameRecorder.precomputeAnalysis(this.game, alphaZero);
       }
     }
   }
@@ -470,12 +512,15 @@ export default class GameController {
     }
   }
 
-  recordMove(source, player, row, col) {
+  recordMove(source, player, row, col, aiAnalysis = null) {
     if (!this.moveLog) this.moveLog = [];
 
-    // Record human moves in GameRecorder
-    if (source === 'human' && gameRecorder.state === 'RECORDING') {
-      gameRecorder.recordMove(this.game, 'human', player, row, col);
+    // Record all moves (human + AI) in GameRecorder when active. Previous
+    // code filtered to source==='human' and silently dropped every AI move
+    // from the recording — making every saved game half-captured (own
+    // moves only, opponent moves + their analysis missing). Fixed.
+    if (gameRecorder.state === 'RECORDING') {
+      gameRecorder.recordMove(this.game, source, player, row, col, aiAnalysis);
     }
 
     const entry = {
