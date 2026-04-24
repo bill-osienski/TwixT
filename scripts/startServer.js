@@ -44,7 +44,7 @@ function findLatestCheckpoint(checkpointDir) {
  */
 async function ensureOnnxModel() {
   const onnxPath = join(ROOT_DIR, 'server', 'model.onnx');
-  const checkpointDir = join(ROOT_DIR, 'checkpoints', 'alphazero-fresh');
+  const checkpointDir = join(ROOT_DIR, 'checkpoints', 'alphazero-v2-staged');
 
   // Check if ONNX exists and is recent
   const latestCheckpoint = findLatestCheckpoint(checkpointDir);
