@@ -728,3 +728,88 @@ def test_end_to_end_strong_advantage_runs_selector_and_writes_meta(tmp_path, mon
     assert "diversity_quality_key_order" in rules
     assert isinstance(rules["diversity_quality_key_order"], list)
     assert len(rules["diversity_quality_key_order"]) >= 6
+
+
+def test_selector_determinism_under_input_shuffle():
+    """Same admitted list in different orders must produce byte-identical
+    selector output AND identical audit deltas."""
+    from copy import deepcopy
+    import random
+
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    base_cands = [
+        _make_candidate(source_game=f"iter_{50 + g:04d}_game_{g:03d}",
+                        source_ply=40 + g * 3,
+                        category=cat, cc_size=20 + g)
+        for g in range(8)
+        for cat in ["chain_advantage_central_red", "chain_advantage_central_black"]
+    ]
+
+    rng = random.Random(42)
+    shuffled = deepcopy(base_cands)
+    rng.shuffle(shuffled)
+
+    audit_a = []
+    kept_a = _select_diverse_admitted_candidates(
+        deepcopy(base_cands), audit_a, max_probes=10, max_probes_per_game=2,
+    )
+    audit_b = []
+    kept_b = _select_diverse_admitted_candidates(
+        shuffled, audit_b, max_probes=10, max_probes_per_game=2,
+    )
+
+    # Compare by stable identity (source_game, source_ply, category).
+    def _identity(c):
+        return (c["source_game"], c["source_ply"], c["category"])
+
+    assert [_identity(k) for k in kept_a] == [_identity(k) for k in kept_b], (
+        "kept order differs between original and shuffled input"
+    )
+
+    audit_keys_a = sorted(
+        (r["source_game"], r["source_ply"], r["reason"]) for r in audit_a
+    )
+    audit_keys_b = sorted(
+        (r["source_game"], r["source_ply"], r["reason"]) for r in audit_b
+    )
+    assert audit_keys_a == audit_keys_b, "audit deltas differ between runs"
+
+
+def test_round_robin_skips_empty_without_reordering_nonempty():
+    """Only central_black (position 2) and edge_red (position 3) populated;
+    central_red (1) and edge_black (4) empty. Selector walks the canonical
+    4-tuple, skips empties, and the relative order between the two
+    non-empty categories matches [central_black, edge_red] repeating —
+    NOT alphabetical or yield-based. Spec §5.4."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    # 4 candidates each in central_black and edge_red, all from different
+    # games so per-game cap doesn't bind.
+    cands = []
+    for i in range(4):
+        cands.append(_make_candidate(
+            source_game=f"iter_{60 + i:04d}_game_001",
+            source_ply=40, category="chain_advantage_central_black",
+            cc_size=30 - i,  # decreasing so insertion-order != rank-order
+        ))
+        cands.append(_make_candidate(
+            source_game=f"iter_{70 + i:04d}_game_001",
+            source_ply=40, category="chain_advantage_edge_red",
+            cc_size=30 - i,
+        ))
+
+    audit = []
+    kept = _select_diverse_admitted_candidates(
+        cands, audit, max_probes=8, max_probes_per_game=2,
+    )
+
+    # First 4 picks should alternate central_black, edge_red, central_black,
+    # edge_red because the round-robin walks canonical order (1=skip empty,
+    # 2=central_black, 3=edge_red, 4=skip empty), and after one pass takes
+    # one from each non-empty bucket.
+    cats = [k["category"] for k in kept]
+    expected_pattern = ["chain_advantage_central_black", "chain_advantage_edge_red"] * 4
+    assert cats == expected_pattern, (
+        f"Expected canonical-order alternation, got: {cats}"
+    )
