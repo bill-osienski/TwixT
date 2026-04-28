@@ -22,6 +22,44 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+# --- Diversity selector constants and helpers ---
+
+MIN_PLY_SEPARATION_SAME_GAME = 3
+"""Same-game probes must be at least this many plies apart. Tied to the
+current K-range [3, 8]: with span 5, separation 3 admits at most 2 plies
+per game, matching the default --max-probes-per-game cap."""
+
+CATEGORY_ITERATION_ORDER = (
+    "chain_advantage_central_red",
+    "chain_advantage_central_black",
+    "chain_advantage_edge_red",
+    "chain_advantage_edge_black",
+)
+"""Fixed canonical order for round-robin category fill. Empty buckets
+are skipped at iteration time. See spec §5.4."""
+
+
+def _diversity_sort_key(cand: dict) -> tuple:
+    """Stage-2 rank key: structural-first, Phase-2 secondary, source order
+    as final determinism guarantee. Lower tuple sorts first. See spec §4.2."""
+    p1 = cand["phase1_features"]
+    p2 = cand["phase2_label"]
+    try:
+        iter_num = int(cand["source_game"].split("_")[1])
+    except (IndexError, ValueError):
+        iter_num = 0
+    return (
+        -p1["cc_size"],
+        -p1["axis_span_margin"],
+        -p1["cc_axis_span"],
+        -p2["min_top1_share"],
+        p2["value_stability"],
+        -iter_num,
+        -cand["source_ply"],
+        cand["source_game"],
+    )
+
+
 # --- Tier dispatch ---
 
 def main() -> int:
