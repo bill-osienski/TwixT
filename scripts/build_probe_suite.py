@@ -259,7 +259,27 @@ def _run_strong_advantage(args) -> int:
 
     admitted = []
     import hashlib
-    for cand in candidates:
+    import time as _time
+    n_total = len(candidates)
+    # Cadence: at small batches, every candidate; at big batches, every 5%.
+    progress_every = max(1, n_total // 20)
+    t_phase2_start = _time.time()
+    for idx, cand in enumerate(candidates):
+        if idx % progress_every == 0:
+            elapsed = _time.time() - t_phase2_start
+            n_admitted = len(admitted)
+            if idx > 0:
+                rate = idx / elapsed
+                eta_s = (n_total - idx) / rate if rate > 0 else 0.0
+                eta_str = f"ETA {eta_s/60:.1f}m" if eta_s < 3600 else f"ETA {eta_s/3600:.1f}h"
+            else:
+                eta_str = "ETA --"
+            print(
+                f"[probe_suite] Phase 2: {idx}/{n_total} labeled "
+                f"({n_admitted} admitted, {elapsed:.0f}s elapsed, {eta_str})",
+                flush=True,
+            )
+
         try:
             state = TwixtState(active_size=24, to_move=cand["starting_player"])
             for r, c in cand["move_history"]:
@@ -331,6 +351,23 @@ def _run_strong_advantage(args) -> int:
         })
         if ok:
             admitted.append(cand)
+
+    # Final Phase 2 summary so the operator sees a clean breakdown.
+    phase2_elapsed = _time.time() - t_phase2_start
+    from collections import Counter as _Counter
+    reason_breakdown = _Counter(
+        a["reason"] for a in audit if "phase2_label" in a or a["reason"] in
+        ("mcts_error", "replay_error", "admitted",
+         "sign_mismatch", "magnitude_below_threshold", "low_top1_share",
+         "unstable_value", "position_already_forced")
+    )
+    breakdown_str = ", ".join(f"{r}={n}" for r, n in reason_breakdown.most_common())
+    print(
+        f"[probe_suite] Phase 2 complete: {n_total}/{n_total} labeled "
+        f"({len(admitted)} admitted, {phase2_elapsed:.0f}s total)\n"
+        f"  Per-reason: {breakdown_str}",
+        flush=True,
+    )
 
     if not admitted:
         from collections import Counter
