@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -438,12 +439,15 @@ def _run_promote(args) -> int:
               file=sys.stderr)
         return 2
 
-    import datetime as _dt
     payload = json.loads(draft_path.read_text())
     payload["meta"]["review_mode"] = "light_review"
     payload["meta"]["reviewer"] = args.reviewer
+    # ISO 8601 UTC with explicit Z suffix; matches probe_eval.py convention
+    # (datetime.utcnow() is deprecated on Python 3.14+).
     payload["meta"]["reviewed_at_utc"] = (
-        _dt.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        datetime.now(timezone.utc)
+                .isoformat(timespec="seconds")
+                .replace("+00:00", "Z")
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w") as f:
