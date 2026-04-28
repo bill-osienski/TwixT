@@ -506,3 +506,57 @@ def test_promote_refuses_overwrite_without_force(tmp_path):
         "--reviewer", "alice", "--force", "--out", str(out),
     ])
     assert rc2 == 0
+
+
+COMMITTED_STRONG_SUITE = PROJECT_ROOT / "tests" / "probes" / "strong_advantage_probes.json"
+
+
+def _load_committed_suite():
+    if not COMMITTED_STRONG_SUITE.exists():
+        pytest.skip("committed strong_advantage_probes.json not present yet")
+    import json
+    return json.loads(COMMITTED_STRONG_SUITE.read_text())
+
+
+def test_committed_meta_block_well_formed():
+    suite = _load_committed_suite()
+    meta = suite["meta"]
+    assert meta["tier"] == "strong_advantage"
+    assert meta["not_gate_suite"] is True
+    assert meta["review_mode"] == "light_review"
+    assert isinstance(meta["reviewer"], str) and meta["reviewer"]
+    assert meta["reviewed_at_utc"].endswith("Z")
+    sha = meta["selection_rules"]["label_checkpoint_sha256"]
+    assert isinstance(sha, str) and len(sha) == 64 and all(
+        c in "0123456789abcdef" for c in sha
+    )
+
+
+def test_committed_probes_have_required_fields():
+    suite = _load_committed_suite()
+    valid_categories = {
+        "chain_advantage_central_red", "chain_advantage_central_black",
+        "chain_advantage_edge_red", "chain_advantage_edge_black",
+    }
+    for p in suite["probes"]:
+        assert p["confidence"] == "strong_advantage"
+        assert p["category"] in valid_categories
+        assert p["side_to_move"] in ("red", "black")
+        assert p["expected_value_sign"] in (-1, 1)
+        assert isinstance(p["move_history"], list)
+        # phase1_features: 5 keys
+        feats = p["phase1_features"]
+        assert set(feats.keys()) == {
+            "cc_size", "cc_axis_span", "cc_touches_own_goal",
+            "axis_span_margin", "centroid_chebyshev_from_center",
+            "forced_within_2",
+        }
+        # phase2_label: must include the 8 specified keys (additional keys
+        # like label_checkpoint added downstream are tolerated).
+        label = p["phase2_label"]
+        assert set(label.keys()) >= {
+            "mean_root_value", "value_per_run", "value_stability",
+            "min_top1_share", "label_checkpoint", "label_mcts_sims",
+            "label_mcts_repeats", "rng_seed_base",
+        }
+        assert isinstance(label["rng_seed_base"], int)
