@@ -53,6 +53,7 @@ The forced tier has no Phase 2 (positions 1–2 plies from terminal don't need M
 | `--top1-share-floor` | 0.15 | Phase 2 admission: most-visited move must hold this fraction of total visits. Higher = rejects positions where MCTS sprays visits across many continuations |
 | `--stability-cap` | 0.15 | Phase 2 admission: `max(value_per_run) - min(value_per_run) <= this`. Higher = tolerates more noise across repeated MCTS runs |
 | `--max-probes` | 30 | Final cap on admitted probes (post-filter) |
+| `--max-probes-per-game` | 2 | Maximum probes from any single source game, total across all 4 categories. Combined with the internal `MIN_PLY_SEPARATION_SAME_GAME=3` constant, no single game contributes more than 2 probes and any 2 it contributes are at least 3 plies apart in the source trajectory. Strong-advantage tier only. Default 2 is conservative; raise only if the suite is consistently undersized. |
 | `--out` | per-tier default | Output JSON path |
 | `--promote` | flag | Copy `*.draft.json` to committed file with reviewer + timestamp stamped into meta |
 | `--reviewer NAME` | required with `--promote` | Reviewer attribution recorded in `meta.reviewer` |
@@ -129,6 +130,29 @@ Phase 2 throughput is dominated by MCTS, which is dominated by NN forward passes
 - A whole-corpus run (1500+ candidates × 10k × 3) is ~50+ hours and probably unnecessary.
 
 For a first iteration: use `--label-mcts-sims 2000 --label-mcts-repeats 2` and a narrow source-iter range (e.g., 5-9 iters). If the admitted set looks healthy, optionally do a tighter run with the full budget — but the lower-budget labels are usually good enough.
+
+## Diversity selector (strong_advantage tier)
+
+After Phase 2 admits candidates, a category-aware round-robin selector walks the four `chain_advantage_*` buckets in fixed canonical order — `central_red, central_black, edge_red, edge_black` — and applies three suppression rules in precedence order before admitting each candidate:
+
+- **Rule A — `diversity_near_duplicate`.** Same `source_game` AND same `category` AND `|Δcc_size| < 2` AND `|Δaxis_span_margin| < 0.05`. The candidate is a structural near-duplicate of an already-kept sibling. Cross-category same-game pairs are NOT deduped (the category boundary is structurally meaningful).
+- **Rule B — `diversity_ply_too_close`.** Same `source_game` AND `|Δsource_ply| < 3` (any category — Rule B is category-agnostic). The candidate sits too close in the source trajectory to an already-kept sibling. The closer keeper wins; if equidistant, better Stage-2 rank wins; if still tied, smallest `source_ply` wins.
+- **Rule C — `diversity_per_game_cap`.** The source game already has `--max-probes-per-game` keepers (default 2, total across categories). The candidate is dropped to keep no single game over-represented.
+
+Each diversity-driven drop produces one audit row with the corresponding `reason`, the full `phase2_label`, and a `kept_instead_source_ply` field pointing at the keeper that triggered the drop. `reason="admitted"` rows correspond exactly 1:1 with the probes in the committed suite — Phase 1 and Phase 2 no longer write `admitted` rows; only the selector does.
+
+Within each category, candidates are ranked by a structural-first key:
+`cc_size desc → axis_span_margin desc → cc_axis_span desc → min_top1_share desc → value_stability asc → (-iter, -source_ply, source_game)`.
+Structural fields dominate so the rank is invariant to labeling-checkpoint noise; the existing `_sort_key` provides total-order determinism on full ties.
+
+The selector's configuration is recorded in `meta.selection_rules` so a reviewer can verify which policy produced the suite:
+
+- `max_probes_per_game` — the value of the CLI flag at generation time.
+- `min_ply_separation_same_game` — fixed at 3 in the current implementation (tied to the K-range `[3, 8]`).
+- `category_iteration_order` — the canonical 4-tuple the round-robin walks.
+- `diversity_quality_key_order` — the Stage-2 sort precedence above.
+
+**Audit-coverage policy:** the selector writes one audit row per candidate it considers (admitted or diversity-dropped). Once `--max-probes` is reached, remaining candidates are not visited and produce no audit row — the audit is exhaustive over considered candidates only. For a total Phase-2-admit count, see the `Phase 2 complete: ... (N admitted ...)` line printed by the generator before selection runs.
 
 ## Determinism
 
