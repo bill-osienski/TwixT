@@ -975,13 +975,17 @@ def test_quality_key_structural_priority():
 
 def test_category_round_robin_canonical_order_all_four_populated():
     """Spec §9 item 4: all 4 categories populated with 4 candidates each
-    (16 total, all from distinct games so per-game cap doesn't bind).
-    With max_probes=8, the round-robin walks the canonical 4-tuple twice
-    and admits 2 from each category in canonical order: central_red,
-    central_black, edge_red, edge_black, central_red, ..., for a total
-    of 8 probes split 2/2/2/2."""
+    (16 total, all from distinct games so per-game cap doesn't bind AND
+    Rule B does not collide cross-category). With max_probes=8, the
+    round-robin walks the canonical 4-tuple twice and admits 2 from each
+    category in canonical order: central_red, central_black, edge_red,
+    edge_black, central_red, ..., for a total of 8 probes split 2/2/2/2."""
     from scripts.build_probe_suite import _select_diverse_admitted_candidates
 
+    # Use the FULL category name as a suffix so source_game is unique per
+    # (category, game_idx). Rule B is category-agnostic, so a same-source_game
+    # collision across categories at ply 40 would trigger ply-too-close drops
+    # even with disjoint per-category indices.
     cands = []
     for game_idx in range(4):
         for cat in [
@@ -991,7 +995,7 @@ def test_category_round_robin_canonical_order_all_four_populated():
             "chain_advantage_edge_black",
         ]:
             cands.append(_make_candidate(
-                source_game=f"iter_0099_game_{game_idx:03d}_{cat[-3:]}",
+                source_game=f"iter_0099_game_{game_idx:03d}_{cat}",
                 source_ply=40, category=cat,
                 cc_size=28 - game_idx,  # rank decreases within each bucket
             ))
