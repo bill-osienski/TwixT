@@ -813,3 +813,82 @@ def test_round_robin_skips_empty_without_reordering_nonempty():
     assert cats == expected_pattern, (
         f"Expected canonical-order alternation, got: {cats}"
     )
+
+
+def test_cross_category_same_game_not_deduped():
+    """Two same-game probes with structural deltas BELOW thresholds but in
+    DIFFERENT categories. Rule A's same-category requirement prevents
+    dedupe; both kept (under cap). Spec §5.6."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    a = _make_candidate(source_game="iter_0058_game_040", source_ply=40,
+                        category="chain_advantage_central_red",
+                        cc_size=20, axis_span_margin=0.30)
+    b = _make_candidate(source_game="iter_0058_game_040", source_ply=44,  # > sep
+                        category="chain_advantage_edge_red",
+                        cc_size=21, axis_span_margin=0.31)  # Δcc=1, Δasm=0.01
+    audit = []
+
+    kept = _select_diverse_admitted_candidates(
+        [a, b], audit, max_probes=10, max_probes_per_game=2,
+    )
+
+    assert len(kept) == 2
+    assert {k["category"] for k in kept} == {
+        "chain_advantage_central_red", "chain_advantage_edge_red"
+    }
+    near_dup = [r for r in audit if r["reason"] == "diversity_near_duplicate"]
+    assert near_dup == []
+
+
+def test_sparse_category_backfill():
+    """Only central_red populated (10 candidates from 5 games, 2 per game).
+    max_probes=10, cap=2. All 10 kept; no errors; round-robin gracefully
+    skips empties."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    cands = []
+    for game_idx in range(5):
+        for ply_offset in [0, 4]:  # > separation
+            cands.append(_make_candidate(
+                source_game=f"iter_0099_game_{game_idx:03d}",
+                source_ply=40 + ply_offset,
+                category="chain_advantage_central_red",
+                cc_size=28 - game_idx - ply_offset,  # all distinct
+                axis_span_margin=0.40 - game_idx * 0.06 - ply_offset * 0.01,
+            ))
+    audit = []
+
+    kept = _select_diverse_admitted_candidates(
+        cands, audit, max_probes=10, max_probes_per_game=2,
+    )
+
+    assert len(kept) == 10
+    assert all(k["category"] == "chain_advantage_central_red" for k in kept)
+
+
+def test_edge_categories_empty_alternates_two_centrals():
+    """central_red and central_black populated, edge_* empty. Round-robin
+    alternates central_red ↔ central_black; output respects max_probes."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    cands = []
+    for game_idx in range(6):
+        for cat in ["chain_advantage_central_red", "chain_advantage_central_black"]:
+            cands.append(_make_candidate(
+                source_game=f"iter_0099_game_{game_idx:03d}_{cat[-3:]}",
+                source_ply=40,
+                category=cat,
+                cc_size=28 - game_idx,
+            ))
+    audit = []
+
+    kept = _select_diverse_admitted_candidates(
+        cands, audit, max_probes=6, max_probes_per_game=2,
+    )
+
+    assert len(kept) == 6
+    cats = [k["category"] for k in kept]
+    # First 6 picks alternate central_red, central_black, central_red, ...
+    expected = ["chain_advantage_central_red", "chain_advantage_central_black"] * 3
+    assert cats == expected
