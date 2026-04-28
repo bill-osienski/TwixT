@@ -1697,6 +1697,19 @@ def run_parallel_selfplay(
     return games_records, new_positions, stats
 
 
+def build_probe_summary_block(forced_summary, strong_advantage_summary):
+    """Assemble the tier-keyed probe_summary block for the per-iter sidecar.
+
+    Each value is the per-tier summary payload (same shape as the existing
+    forced_probe_summary), or None when that tier didn't run this iter
+    (probes file absent or inline eval disabled).
+    """
+    return {
+        "forced": forced_summary,
+        "strong_advantage": strong_advantage_summary,
+    }
+
+
 def train(
     n_iterations: int = 100,
     games_per_iteration: int = 25,
@@ -2881,6 +2894,13 @@ def train(
                 "sanity_by_connectivity": v_stats.get("sanity_by_connectivity"),
                 # Phase 2 inline forced-probe summary (None when probes file missing/disabled)
                 "forced_probe_summary": forced_probe_summary,
+                "probe_summary": build_probe_summary_block(
+                    forced_summary=forced_probe_summary,
+                    strong_advantage_summary=None,  # populated when the
+                                                    # strong_advantage inline
+                                                    # eval lands (out of scope
+                                                    # for this plan).
+                ),
                 "replay_cap": {
                     "enabled": bool(max_positions_per_game and max_positions_per_game > 0),
                     "max_positions_per_game": int(max_positions_per_game) if max_positions_per_game else 0,
