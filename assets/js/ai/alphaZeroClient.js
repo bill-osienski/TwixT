@@ -27,7 +27,11 @@ export class AlphaZeroClient {
   constructor(serverUrl = 'http://localhost:3001') {
     this.serverUrl = serverUrl;
     this.timeout = 30000; // 30 second timeout for WebSocket moves
-    this.evalTimeout = 500; // 500ms timeout for evaluations (faster for UI)
+    // Hard mode runs 800 MCTS sims and contends the single ONNX session.
+    // 500ms was too tight; the eval would AbortError every turn and the NN
+    // win-bar would freeze on its last successful value. 3000ms gives
+    // headroom; successful evals still resolve the moment the server replies.
+    this.evalTimeout = 3000;
     this.available = null; // null = unknown, true/false = checked
     this.lastCheckTime = 0;
     this.checkInterval = 30000; // Re-check availability every 30 seconds
@@ -300,11 +304,21 @@ export class AlphaZeroClient {
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.warn(`NN eval HTTP ${response.status} ${response.statusText}`);
+        return null;
+      }
 
       const data = await response.json();
       return data.valueRed; // Red-perspective value directly
-    } catch {
+    } catch (err) {
+      // Distinguish timeout/abort from network/parse failures so the next
+      // eval freeze is diagnosable from the browser console.
+      if (err?.name === 'AbortError') {
+        console.warn(`NN eval timed out after ${this.evalTimeout}ms`);
+      } else {
+        console.warn('NN eval request failed:', err?.message || err);
+      }
       return null;
     }
   }

@@ -338,8 +338,17 @@ export default class GameController {
     // Update NN bar after human move (quick single eval)
     if (this.useAlphaZero && !this.game.gameOver) {
       alphaZero.evaluate(this.game).then(valueRed => {
-        if (valueRed !== null) this.winBarNN.updateRed(valueRed);
-      }).catch(() => {});
+        if (valueRed !== null) {
+          this.winBarNN.updateRed(valueRed);
+        } else {
+          // alphaZero.evaluate() already logged the underlying reason
+          // (AbortError, HTTP status, etc); just note that the bar isn't
+          // being updated this turn so a frozen NN bar is traceable.
+          console.warn('NN bar update skipped: evaluate() returned null');
+        }
+      }).catch(err => {
+        console.warn('NN bar update failed:', err?.message || err);
+      });
     }
     // Update MCTS bar from precompute if recording captured one
     if (gameRecorder.state === 'RECORDING' && gameRecorder._lastPrecomputeHash) {
@@ -469,10 +478,15 @@ export default class GameController {
   }
 
   undo() {
-    if (gameRecorder.state === 'RECORDING') {
-      gameRecorder.truncateToMove(this.game.moveCount);
-    }
     if (this.game.undo()) {
+      // Truncate the recorder AFTER game.undo() so this.game.moveCount is the
+      // post-undo value. Calling before would keep the move that's being
+      // undone in the log (truncateToMove keeps moves[0..plyCount-1], so
+      // passing the pre-undo count is a no-op) and the next move would land
+      // beside it with a duplicated ply_in_state.
+      if (gameRecorder.state === 'RECORDING') {
+        gameRecorder.truncateToMove(this.game.moveCount);
+      }
       this.renderer.updateBoard();
 
       // Direct UI update - same as in 3D renderer
