@@ -421,3 +421,163 @@ def test_rule_c_per_game_cap_ignores_other_games():
                            category="chain_advantage_central_red")
 
     assert _find_per_game_cap_keeper(cand, [keeper_other], cap=1) is None
+
+
+def test_selector_returns_all_when_under_max_probes_and_no_rules_fire():
+    """Three structurally distinct candidates from three different games
+    in three different categories. cap=2, max_probes=10. All three kept;
+    audit gets 3 admitted rows; no diversity drops."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    cands = [
+        _make_candidate(source_game=f"iter_0001_game_{i:03d}", source_ply=50,
+                        category=cat, cc_size=20 + i)
+        for i, cat in enumerate([
+            "chain_advantage_central_red",
+            "chain_advantage_central_black",
+            "chain_advantage_edge_red",
+        ])
+    ]
+    audit = []
+
+    kept = _select_diverse_admitted_candidates(
+        cands, audit, max_probes=10, max_probes_per_game=2,
+    )
+
+    assert len(kept) == 3
+    admitted_rows = [r for r in audit if r["reason"] == "admitted"]
+    diversity_rows = [r for r in audit if r["reason"].startswith("diversity_")]
+    assert len(admitted_rows) == 3
+    assert len(diversity_rows) == 0
+
+
+def test_selector_per_game_cap_test():
+    """5 probes from one game (no near-dupes, well-separated plies) plus
+    1 from another. cap=2 → 2 from clustered game survive; 3 dropped
+    with diversity_per_game_cap; 1 from the other game survives."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    # Same game, 5 plies far enough apart to clear ply-separation,
+    # cc_size descending so they don't trip near-duplicate.
+    clustered = [
+        _make_candidate(source_game="iter_0058_game_040", source_ply=ply,
+                        category="chain_advantage_central_red", cc_size=cs)
+        for ply, cs in [(40, 28), (44, 24), (48, 20), (52, 16), (56, 12)]
+    ]
+    other = _make_candidate(source_game="iter_0058_game_041", source_ply=50,
+                            category="chain_advantage_central_red", cc_size=22)
+    audit = []
+
+    kept = _select_diverse_admitted_candidates(
+        clustered + [other], audit, max_probes=10, max_probes_per_game=2,
+    )
+
+    kept_from_clustered = [k for k in kept if k["source_game"] == "iter_0058_game_040"]
+    assert len(kept_from_clustered) == 2
+    assert other in kept
+
+    cap_drops = [r for r in audit if r["reason"] == "diversity_per_game_cap"]
+    assert len(cap_drops) == 3
+    for row in cap_drops:
+        assert row["source_game"] == "iter_0058_game_040"
+        assert row["kept_instead_source_ply"] == 40  # smallest kept ply
+
+
+def test_selector_near_duplicate_suppression():
+    """3 same-game same-category probes with cc_size=(20,21,25) and
+    axis_span_margin=(0.20,0.21,0.40). Probes with cc_size=20 and 21 are
+    duplicates; rank-2 of those is dropped with diversity_near_duplicate;
+    cc_size=25 is kept as structurally distinct."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    cands = [
+        _make_candidate(source_game="iter_0058_game_040", source_ply=40,
+                        category="chain_advantage_central_red",
+                        cc_size=20, axis_span_margin=0.20),
+        _make_candidate(source_game="iter_0058_game_040", source_ply=44,
+                        category="chain_advantage_central_red",
+                        cc_size=21, axis_span_margin=0.21),
+        _make_candidate(source_game="iter_0058_game_040", source_ply=48,
+                        category="chain_advantage_central_red",
+                        cc_size=25, axis_span_margin=0.40),
+    ]
+    audit = []
+
+    kept = _select_diverse_admitted_candidates(
+        cands, audit, max_probes=10, max_probes_per_game=3,
+    )
+
+    # cc_size=25 is rank-1 (sorts first), kept. Then cc_size=21 and 20
+    # are siblings of 25 — but Δcc_size from 25 is 4 and 5 (≥ 2), so
+    # they're NOT duplicates of 25. Walking in rank order: 25 is kept;
+    # then 21 (rank 2) is checked — Δcc from 25 is 4, not a duplicate;
+    # 21 is kept. Then 20 (rank 3) is checked — Δcc from 21 is 1 AND
+    # Δasm = 0.01 → IS a duplicate → dropped.
+    kept_cc_sizes = sorted(k["phase1_features"]["cc_size"] for k in kept)
+    assert kept_cc_sizes == [21, 25]
+
+    dup_drops = [r for r in audit if r["reason"] == "diversity_near_duplicate"]
+    assert len(dup_drops) == 1
+    assert dup_drops[0]["source_ply"] == 40  # cc_size=20 was the dropped one
+    assert dup_drops[0]["kept_instead_source_ply"] == 44  # ply of cc_size=21 keeper
+
+
+def test_selector_ply_separation():
+    """3 same-game probes, structurally distinct (no near-dupes),
+    source_ply ∈ {50, 51, 54}. cap=3 (so cap doesn't bind). Plies 50
+    and 54 kept; 51 dropped with diversity_ply_too_close."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    # Stage-2 sort wants larger cc_size first. Order them so that 50
+    # has the largest cc, then 54, then 51 — exercising the sort.
+    cands = [
+        _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                        category="chain_advantage_central_red", cc_size=28),
+        _make_candidate(source_game="iter_0058_game_040", source_ply=54,
+                        category="chain_advantage_central_red", cc_size=22),
+        _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                        category="chain_advantage_central_red", cc_size=18),
+    ]
+    audit = []
+
+    kept = _select_diverse_admitted_candidates(
+        cands, audit, max_probes=10, max_probes_per_game=3,
+    )
+
+    kept_plies = sorted(k["source_ply"] for k in kept)
+    assert kept_plies == [50, 54]
+
+    too_close = [r for r in audit if r["reason"] == "diversity_ply_too_close"]
+    assert len(too_close) == 1
+    assert too_close[0]["source_ply"] == 51
+    assert too_close[0]["kept_instead_source_ply"] == 50  # closest keeper
+
+
+def test_selector_drop_reason_precedence():
+    """Synthetic candidate that triggers BOTH diversity_near_duplicate
+    AND diversity_per_game_cap: audit reason must be near_duplicate
+    (more specific wins)."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    # Two keepers from same game at cap=2, then a third candidate that
+    # is also a near-duplicate of one of them.
+    a = _make_candidate(source_game="iter_0058_game_040", source_ply=40,
+                        category="chain_advantage_central_red",
+                        cc_size=28, axis_span_margin=0.40)
+    b = _make_candidate(source_game="iter_0058_game_040", source_ply=44,
+                        category="chain_advantage_central_red",
+                        cc_size=22, axis_span_margin=0.30)
+    # c is a near-duplicate of b (Δcc=1, Δasm=0.01) AND would exceed
+    # cap=2 if kept. Rule A fires first.
+    c = _make_candidate(source_game="iter_0058_game_040", source_ply=48,
+                        category="chain_advantage_central_red",
+                        cc_size=21, axis_span_margin=0.31)
+    audit = []
+
+    kept = _select_diverse_admitted_candidates(
+        [a, b, c], audit, max_probes=10, max_probes_per_game=2,
+    )
+
+    drop_rows = [r for r in audit if r["source_ply"] == 48]
+    assert len(drop_rows) == 1
+    assert drop_rows[0]["reason"] == "diversity_near_duplicate"

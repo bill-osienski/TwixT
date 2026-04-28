@@ -128,6 +128,115 @@ def _find_per_game_cap_keeper(cand: dict, kept: list, cap: int) -> dict | None:
     return min(from_game, key=lambda k: k["source_ply"])
 
 
+def _select_diverse_admitted_candidates(
+    admitted: list,
+    audit: list,
+    *,
+    max_probes: int,
+    max_probes_per_game: int,
+) -> list:
+    """Post-Phase-2 diversity-aware selector. Replaces the simple
+    `admitted[: max_probes]` slice with a category round-robin walk
+    applying near-duplicate, ply-separation, and per-game cap rules.
+
+    Mutates `audit` in place: appends one row per CONSIDERED candidate
+    (reason="admitted" if kept, reason="diversity_*" if dropped). Returns
+    the kept list in selection order.
+
+    Audit-coverage policy (Option A — by design): once `max_probes` is
+    reached, the round-robin terminates and any remaining post-Phase-2
+    candidates are NOT visited and therefore get NO audit row. The audit
+    is exhaustive over CONSIDERED candidates, not over ALL Phase-2
+    survivors. Rationale: an unvisited candidate is not "evicted by a
+    rule" — it simply lost the race for a finite suite slot. Tagging
+    every Phase-2 survivor with a "would have been considered next"
+    pseudo-reason adds noise without diagnostic value. Operators who
+    need a total Phase-2-admit count should derive it externally
+    (e.g., len(admitted) before this function is called), not by
+    counting audit rows.
+
+    See spec §4.2 for the algorithm and §7 for audit semantics.
+    """
+    # Stage 1: bucket by category.
+    buckets = {cat: [] for cat in CATEGORY_ITERATION_ORDER}
+    for cand in admitted:
+        cat = cand["category"]
+        if cat in buckets:
+            buckets[cat].append(cand)
+
+    # Stage 2: rank within each category.
+    for cat in buckets:
+        buckets[cat].sort(key=_diversity_sort_key)
+
+    # Build rank_index: id(cand) → rank position in its category.
+    # Used by Rule B's tie-break (better Stage-2 rank wins).
+    rank_index = {}
+    for cands in buckets.values():
+        for i, c in enumerate(cands):
+            rank_index[id(c)] = i
+
+    # Stage 3: round-robin walk with suppression rules.
+    kept = []
+    cursors = {cat: 0 for cat in CATEGORY_ITERATION_ORDER}
+
+    while len(kept) < max_probes:
+        progressed = False
+        for cat in CATEGORY_ITERATION_ORDER:
+            if len(kept) >= max_probes:
+                break
+            if cursors[cat] >= len(buckets[cat]):
+                continue
+            progressed = True
+            cand = buckets[cat][cursors[cat]]
+            cursors[cat] += 1
+
+            audit_base = {
+                "source_game": cand["source_game"],
+                "source_ply": cand["source_ply"],
+                "phase1_features": cand["phase1_features"],
+                "phase2_label": cand["phase2_label"],
+            }
+
+            # Rule A: near-duplicate.
+            keeper = _find_near_duplicate_keeper(cand, kept)
+            if keeper is not None:
+                audit.append({
+                    **audit_base,
+                    "reason": "diversity_near_duplicate",
+                    "kept_instead_source_ply": keeper["source_ply"],
+                })
+                continue
+
+            # Rule B: ply-too-close.
+            keeper = _find_ply_too_close_keeper(cand, kept, rank_index)
+            if keeper is not None:
+                audit.append({
+                    **audit_base,
+                    "reason": "diversity_ply_too_close",
+                    "kept_instead_source_ply": keeper["source_ply"],
+                })
+                continue
+
+            # Rule C: per-game cap.
+            keeper = _find_per_game_cap_keeper(cand, kept, max_probes_per_game)
+            if keeper is not None:
+                audit.append({
+                    **audit_base,
+                    "reason": "diversity_per_game_cap",
+                    "kept_instead_source_ply": keeper["source_ply"],
+                })
+                continue
+
+            # Admit.
+            kept.append(cand)
+            audit.append({**audit_base, "reason": "admitted"})
+
+        if not progressed:
+            break
+
+    return kept
+
+
 # --- Tier dispatch ---
 
 def main() -> int:
