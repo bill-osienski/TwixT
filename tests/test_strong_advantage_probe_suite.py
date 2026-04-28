@@ -363,3 +363,88 @@ def test_admission_perspective_contract_black_winner_rejects_positive_value(pass
         magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15)
     assert admitted is False
     assert reason == "sign_mismatch"
+
+
+def test_run_strong_advantage_writes_draft_with_admitted_candidates(tmp_path, monkeypatch):
+    """End-to-end on the generation path: mock candidate-extraction +
+    labeler + checkpoint loader so the test runs without disk I/O. Two
+    synthetic candidates feed in: one is admitted (high magnitude), the
+    other is rejected (low magnitude). Assert the draft lists only the
+    admitted probe.
+    """
+    import json
+    import unittest.mock as _mock
+    import scripts.build_probe_suite as bps
+
+    sample_central = {
+        "move_history": [(0, 12), (1, 0), (2, 11), (1, 1)],
+        "ply": 4, "winner": "red",
+        "category": "chain_advantage_central_red",
+        "phase1_features": {
+            "cc_size": 12, "cc_axis_span": 0.65, "cc_touches_own_goal": True,
+            "axis_span_margin": 0.20, "centroid_chebyshev_from_center": 4,
+            "forced_within_2": False,
+        },
+        "source_game": "iter_0070_game_001", "source_ply": 4,
+        "starting_player": "red",
+    }
+    sample_edge = {
+        "move_history": [(0, 1), (1, 22), (2, 0), (1, 21)],
+        "ply": 4, "winner": "red",
+        "category": "chain_advantage_edge_red",
+        "phase1_features": {
+            "cc_size": 11, "cc_axis_span": 0.60, "cc_touches_own_goal": True,
+            "axis_span_margin": 0.15, "centroid_chebyshev_from_center": 10,
+            "forced_within_2": False,
+        },
+        "source_game": "iter_0070_game_002", "source_ply": 4,
+        "starting_player": "red",
+    }
+
+    def fake_extract(games, **kw):
+        return [sample_central, sample_edge], []
+
+    def fake_labeler(state, sims, seed):
+        # TwixtState has no peg_at() — use pegs.get((r,c)).
+        if state.pegs.get((0, 12)) == "red":
+            return (0.65, 0.30)
+        return (0.20, 0.30)  # below magnitude_threshold
+
+    monkeypatch.setattr(
+        "scripts.GPU.alphazero.probe_eval.extract_strong_advantage_candidates",
+        fake_extract,
+    )
+    monkeypatch.setattr(
+        "scripts.GPU.alphazero.probe_eval._default_mcts_labeler",
+        fake_labeler,
+    )
+    monkeypatch.setattr(
+        "scripts.GPU.alphazero.probe_eval.load_network_for_scoring",
+        lambda *_a, **_kw: (_mock.MagicMock(), 30, 128, 6),
+    )
+    monkeypatch.setattr(
+        "scripts.GPU.alphazero.probe_eval._set_default_labeler_network",
+        lambda _net: None,
+    )
+    fake_ckpt = tmp_path / "fake_ckpt.safetensors"
+    fake_ckpt.write_bytes(b"stub")
+
+    out_path = tmp_path / "strong_advantage_probes.json"
+    rc = bps.main_with_args([
+        "--tier", "strong_advantage",
+        "--input", "scripts/GPU/logs/games",
+        "--source-iter-range", "70", "70",
+        "--label-checkpoint", str(fake_ckpt),
+        "--label-mcts-sims", "10",
+        "--label-mcts-repeats", "1",
+        "--magnitude-threshold", "0.45",
+        "--out", str(out_path),
+    ])
+    assert rc == 0
+    draft = out_path.with_suffix(".draft.json")
+    assert draft.exists(), f"expected draft at {draft}; out_path was {out_path}"
+
+    payload = json.loads(draft.read_text())
+    assert payload["meta"]["tier"] == "strong_advantage"
+    assert len(payload["probes"]) == 1
+    assert payload["probes"][0]["category"] == "chain_advantage_central_red"
