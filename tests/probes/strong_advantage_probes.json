@@ -1,0 +1,5749 @@
+{
+  "meta": {
+    "type": "bootstrap_rule_selected",
+    "tier": "strong_advantage",
+    "not_gate_suite": true,
+    "review_mode": "light_review",
+    "reviewer": "bill-osienski",
+    "reviewed_at_utc": "2026-04-28T17:31:27Z",
+    "generator": "scripts/build_probe_suite.py",
+    "generator_version": 1,
+    "selection_rules": {
+      "board_size": 24,
+      "winner_reasons": [
+        "win"
+      ],
+      "k_plies_from_terminal_range": [
+        3,
+        8
+      ],
+      "phase1_thresholds": {
+        "min_cc_size": 10,
+        "min_cc_axis_span": 0.55,
+        "min_axis_span_margin": 0.1,
+        "require_cc_touches_own_goal": true,
+        "exclude_forced_within_2": true
+      },
+      "phase2_thresholds": {
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "min_magnitude": 0.45,
+        "min_top1_share": 0.15,
+        "max_value_stability": 0.15,
+        "require_sign_match_source_winner": true
+      },
+      "label_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0059.safetensors",
+      "label_checkpoint_sha256": "9f24d0855372d99e081100ebc30e0b6a0e3dca66ffedfe9420fc3e7b6b4569cc",
+      "source_iter_range": [
+        57,
+        58
+      ],
+      "dedup": "exact + 4-form-mirror-canonical",
+      "category_min_count": 5
+    }
+  },
+  "probes": [
+    {
+      "id": "iter_0058_game_044_ply066_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 66,
+      "move_history": [
+        [
+          4,
+          4
+        ],
+        [
+          8,
+          5
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          7,
+          3
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          10,
+          7
+        ],
+        [
+          10,
+          13
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          10,
+          17
+        ],
+        [
+          11,
+          7
+        ],
+        [
+          12,
+          16
+        ],
+        [
+          15,
+          4
+        ],
+        [
+          10,
+          15
+        ],
+        [
+          16,
+          15
+        ],
+        [
+          8,
+          14
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          6,
+          15
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          18,
+          17
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          14,
+          2
+        ],
+        [
+          4,
+          16
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          11,
+          3
+        ],
+        [
+          14,
+          19
+        ],
+        [
+          12,
+          1
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          19,
+          18
+        ],
+        [
+          20,
+          18
+        ],
+        [
+          10,
+          0
+        ],
+        [
+          18,
+          19
+        ],
+        [
+          11,
+          22
+        ],
+        [
+          8,
+          18
+        ],
+        [
+          14,
+          5
+        ],
+        [
+          10,
+          19
+        ],
+        [
+          13,
+          3
+        ],
+        [
+          6,
+          19
+        ],
+        [
+          13,
+          7
+        ],
+        [
+          8,
+          20
+        ],
+        [
+          11,
+          13
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          20,
+          23
+        ],
+        [
+          8,
+          16
+        ],
+        [
+          6,
+          0
+        ],
+        [
+          20,
+          20
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          9,
+          13
+        ],
+        [
+          10,
+          21
+        ],
+        [
+          17,
+          13
+        ],
+        [
+          6,
+          17
+        ],
+        [
+          19,
+          6
+        ],
+        [
+          2,
+          15
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          18,
+          21
+        ],
+        [
+          8,
+          1
+        ],
+        [
+          0,
+          16
+        ],
+        [
+          1,
+          6
+        ]
+      ],
+      "source_game": "iter_0058_game_044",
+      "source_ply": 66,
+      "starting_player": "red",
+      "phase1_features": {
+        "cc_size": 27,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.1304,
+        "centroid_chebyshev_from_center": 6,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.993927,
+        "value_per_run": [
+          0.993927,
+          0.993927
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.2275,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 2980150546,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_097_ply065_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 65,
+      "move_history": [
+        [
+          19,
+          18
+        ],
+        [
+          18,
+          15
+        ],
+        [
+          18,
+          16
+        ],
+        [
+          19,
+          21
+        ],
+        [
+          18,
+          20
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          19,
+          13
+        ],
+        [
+          13,
+          16
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          17,
+          14
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          10,
+          12
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          15,
+          12
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          7,
+          11
+        ],
+        [
+          16,
+          9
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          7,
+          5
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          9,
+          4
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          8,
+          6
+        ],
+        [
+          9,
+          7
+        ],
+        [
+          21,
+          14
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          23,
+          15
+        ],
+        [
+          9,
+          3
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          10,
+          1
+        ],
+        [
+          8,
+          16
+        ],
+        [
+          10,
+          13
+        ],
+        [
+          10,
+          14
+        ],
+        [
+          9,
+          15
+        ],
+        [
+          10,
+          15
+        ],
+        [
+          11,
+          15
+        ],
+        [
+          12,
+          14
+        ],
+        [
+          8,
+          0
+        ],
+        [
+          13,
+          12
+        ],
+        [
+          7,
+          16
+        ],
+        [
+          6,
+          17
+        ],
+        [
+          10,
+          17
+        ],
+        [
+          9,
+          17
+        ],
+        [
+          5,
+          17
+        ],
+        [
+          4,
+          18
+        ],
+        [
+          10,
+          9
+        ],
+        [
+          7,
+          18
+        ],
+        [
+          11,
+          14
+        ],
+        [
+          2,
+          19
+        ],
+        [
+          8,
+          18
+        ],
+        [
+          0,
+          18
+        ],
+        [
+          11,
+          16
+        ],
+        [
+          18,
+          8
+        ],
+        [
+          13,
+          20
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          13,
+          2
+        ],
+        [
+          3,
+          20
+        ],
+        [
+          12,
+          0
+        ],
+        [
+          11,
+          13
+        ],
+        [
+          12,
+          17
+        ],
+        [
+          20,
+          7
+        ],
+        [
+          14,
+          18
+        ]
+      ],
+      "source_game": "iter_0058_game_097",
+      "source_ply": 65,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 17,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.1304,
+        "centroid_chebyshev_from_center": 3,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.976923,
+        "value_per_run": [
+          0.976923,
+          0.976923
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.7035,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 3667190029,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_097_ply064_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 64,
+      "move_history": [
+        [
+          19,
+          18
+        ],
+        [
+          18,
+          15
+        ],
+        [
+          18,
+          16
+        ],
+        [
+          19,
+          21
+        ],
+        [
+          18,
+          20
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          20,
+          15
+        ],
+        [
+          19,
+          13
+        ],
+        [
+          13,
+          16
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          17,
+          14
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          10,
+          12
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          15,
+          12
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          7,
+          11
+        ],
+        [
+          16,
+          9
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          7,
+          5
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          9,
+          4
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          8,
+          6
+        ],
+        [
+          9,
+          7
+        ],
+        [
+          21,
+          14
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          23,
+          15
+        ],
+        [
+          9,
+          3
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          10,
+          1
+        ],
+        [
+          8,
+          16
+        ],
+        [
+          10,
+          13
+        ],
+        [
+          10,
+          14
+        ],
+        [
+          9,
+          15
+        ],
+        [
+          10,
+          15
+        ],
+        [
+          11,
+          15
+        ],
+        [
+          12,
+          14
+        ],
+        [
+          8,
+          0
+        ],
+        [
+          13,
+          12
+        ],
+        [
+          7,
+          16
+        ],
+        [
+          6,
+          17
+        ],
+        [
+          10,
+          17
+        ],
+        [
+          9,
+          17
+        ],
+        [
+          5,
+          17
+        ],
+        [
+          4,
+          18
+        ],
+        [
+          10,
+          9
+        ],
+        [
+          7,
+          18
+        ],
+        [
+          11,
+          14
+        ],
+        [
+          2,
+          19
+        ],
+        [
+          8,
+          18
+        ],
+        [
+          0,
+          18
+        ],
+        [
+          11,
+          16
+        ],
+        [
+          18,
+          8
+        ],
+        [
+          13,
+          20
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          13,
+          2
+        ],
+        [
+          3,
+          20
+        ],
+        [
+          12,
+          0
+        ],
+        [
+          11,
+          13
+        ],
+        [
+          12,
+          17
+        ],
+        [
+          20,
+          7
+        ]
+      ],
+      "source_game": "iter_0058_game_097",
+      "source_ply": 64,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 17,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.1304,
+        "centroid_chebyshev_from_center": 3,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.930131,
+        "value_per_run": [
+          0.930131,
+          0.930131
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.399,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 403044942,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_068_ply063_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 63,
+      "move_history": [
+        [
+          4,
+          18
+        ],
+        [
+          21,
+          8
+        ],
+        [
+          3,
+          20
+        ],
+        [
+          5,
+          15
+        ],
+        [
+          3,
+          16
+        ],
+        [
+          3,
+          13
+        ],
+        [
+          8,
+          15
+        ],
+        [
+          6,
+          14
+        ],
+        [
+          7,
+          13
+        ],
+        [
+          20,
+          2
+        ],
+        [
+          6,
+          11
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          7,
+          9
+        ],
+        [
+          7,
+          16
+        ],
+        [
+          7,
+          17
+        ],
+        [
+          10,
+          11
+        ],
+        [
+          8,
+          7
+        ],
+        [
+          2,
+          11
+        ],
+        [
+          9,
+          17
+        ],
+        [
+          16,
+          11
+        ],
+        [
+          10,
+          19
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          8,
+          19
+        ],
+        [
+          10,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          7,
+          21
+        ],
+        [
+          2,
+          8
+        ],
+        [
+          8,
+          23
+        ],
+        [
+          12,
+          2
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          13,
+          3
+        ],
+        [
+          12,
+          6
+        ],
+        [
+          6,
+          19
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          15,
+          6
+        ],
+        [
+          13,
+          8
+        ],
+        [
+          16,
+          8
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          18,
+          9
+        ],
+        [
+          18,
+          12
+        ],
+        [
+          12,
+          3
+        ],
+        [
+          8,
+          6
+        ],
+        [
+          2,
+          22
+        ],
+        [
+          10,
+          7
+        ],
+        [
+          11,
+          21
+        ],
+        [
+          18,
+          10
+        ],
+        [
+          4,
+          23
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          12,
+          23
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          9,
+          21
+        ],
+        [
+          11,
+          9
+        ],
+        [
+          5,
+          21
+        ],
+        [
+          0,
+          7
+        ],
+        [
+          10,
+          23
+        ],
+        [
+          20,
+          11
+        ],
+        [
+          5,
+          22
+        ]
+      ],
+      "source_game": "iter_0058_game_068",
+      "source_ply": 63,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 23,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.1739,
+        "centroid_chebyshev_from_center": 5,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.978941,
+        "value_per_run": [
+          0.978941,
+          0.978941
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.635,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 1892875479,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_083_ply062_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 62,
+      "move_history": [
+        [
+          5,
+          4
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          9,
+          6
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          11,
+          10
+        ],
+        [
+          11,
+          13
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          9,
+          12
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          15,
+          13
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          11,
+          1
+        ],
+        [
+          4,
+          9
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          5,
+          13
+        ],
+        [
+          6,
+          10
+        ],
+        [
+          18,
+          10
+        ],
+        [
+          2,
+          10
+        ],
+        [
+          19,
+          8
+        ],
+        [
+          16,
+          9
+        ],
+        [
+          17,
+          8
+        ],
+        [
+          18,
+          13
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          20,
+          12
+        ],
+        [
+          16,
+          15
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          12
+        ],
+        [
+          18,
+          4
+        ],
+        [
+          20,
+          6
+        ],
+        [
+          20,
+          3
+        ],
+        [
+          15,
+          7
+        ],
+        [
+          15,
+          4
+        ],
+        [
+          13,
+          6
+        ],
+        [
+          15,
+          3
+        ],
+        [
+          12,
+          3
+        ],
+        [
+          13,
+          3
+        ],
+        [
+          13,
+          5
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          16,
+          11
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          10,
+          8
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          14,
+          7
+        ],
+        [
+          18,
+          17
+        ],
+        [
+          13,
+          1
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          11,
+          16
+        ],
+        [
+          20,
+          16
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          13,
+          14
+        ],
+        [
+          12,
+          17
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          10,
+          3
+        ]
+      ],
+      "source_game": "iter_0058_game_083",
+      "source_ply": 62,
+      "starting_player": "red",
+      "phase1_features": {
+        "cc_size": 20,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2609,
+        "centroid_chebyshev_from_center": 1,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.991733,
+        "value_per_run": [
+          0.991733,
+          0.991733
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.5365,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 3631460279,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_026_ply061_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 61,
+      "move_history": [
+        [
+          19,
+          4
+        ],
+        [
+          16,
+          4
+        ],
+        [
+          17,
+          5
+        ],
+        [
+          17,
+          2
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          14,
+          5
+        ],
+        [
+          13,
+          7
+        ],
+        [
+          9,
+          7
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          18,
+          8
+        ],
+        [
+          8,
+          11
+        ],
+        [
+          17,
+          6
+        ],
+        [
+          6,
+          12
+        ],
+        [
+          18,
+          4
+        ],
+        [
+          17,
+          11
+        ],
+        [
+          10,
+          9
+        ],
+        [
+          10,
+          12
+        ],
+        [
+          21,
+          11
+        ],
+        [
+          19,
+          10
+        ],
+        [
+          13,
+          12
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          13,
+          11
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          16,
+          15
+        ],
+        [
+          16,
+          9
+        ],
+        [
+          12,
+          10
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          20,
+          8
+        ],
+        [
+          15,
+          12
+        ],
+        [
+          14,
+          9
+        ],
+        [
+          22,
+          9
+        ],
+        [
+          18,
+          9
+        ],
+        [
+          21,
+          7
+        ],
+        [
+          21,
+          6
+        ],
+        [
+          22,
+          5
+        ],
+        [
+          9,
+          4
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          4,
+          11
+        ],
+        [
+          21,
+          3
+        ],
+        [
+          6,
+          10
+        ],
+        [
+          20,
+          5
+        ],
+        [
+          20,
+          12
+        ],
+        [
+          20,
+          13
+        ],
+        [
+          10,
+          6
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          22,
+          7
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          21,
+          14
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          19,
+          13
+        ],
+        [
+          6,
+          0
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          22,
+          1
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          20,
+          0
+        ],
+        [
+          16,
+          10
+        ]
+      ],
+      "source_game": "iter_0058_game_026",
+      "source_ply": 61,
+      "starting_player": "red",
+      "phase1_features": {
+        "cc_size": 17,
+        "cc_axis_span": 0.6957,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.1304,
+        "centroid_chebyshev_from_center": 2,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.906803,
+        "value_per_run": [
+          0.906803,
+          0.906803
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.337,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 2044252081,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_083_ply061_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 61,
+      "move_history": [
+        [
+          5,
+          4
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          9,
+          6
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          11,
+          10
+        ],
+        [
+          11,
+          13
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          9,
+          12
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          15,
+          13
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          11,
+          1
+        ],
+        [
+          4,
+          9
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          5,
+          13
+        ],
+        [
+          6,
+          10
+        ],
+        [
+          18,
+          10
+        ],
+        [
+          2,
+          10
+        ],
+        [
+          19,
+          8
+        ],
+        [
+          16,
+          9
+        ],
+        [
+          17,
+          8
+        ],
+        [
+          18,
+          13
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          20,
+          12
+        ],
+        [
+          16,
+          15
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          17,
+          12
+        ],
+        [
+          18,
+          4
+        ],
+        [
+          20,
+          6
+        ],
+        [
+          20,
+          3
+        ],
+        [
+          15,
+          7
+        ],
+        [
+          15,
+          4
+        ],
+        [
+          13,
+          6
+        ],
+        [
+          15,
+          3
+        ],
+        [
+          12,
+          3
+        ],
+        [
+          13,
+          3
+        ],
+        [
+          13,
+          5
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          16,
+          11
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          10,
+          8
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          14,
+          7
+        ],
+        [
+          18,
+          17
+        ],
+        [
+          13,
+          1
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          11,
+          16
+        ],
+        [
+          20,
+          16
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          13,
+          14
+        ],
+        [
+          12,
+          17
+        ],
+        [
+          15,
+          15
+        ]
+      ],
+      "source_game": "iter_0058_game_083",
+      "source_ply": 61,
+      "starting_player": "red",
+      "phase1_features": {
+        "cc_size": 20,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2609,
+        "centroid_chebyshev_from_center": 1,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.970573,
+        "value_per_run": [
+          0.970573,
+          0.970573
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.1635,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 937877788,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_022_ply059_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 59,
+      "move_history": [
+        [
+          4,
+          19
+        ],
+        [
+          5,
+          15
+        ],
+        [
+          8,
+          14
+        ],
+        [
+          7,
+          16
+        ],
+        [
+          9,
+          16
+        ],
+        [
+          9,
+          19
+        ],
+        [
+          9,
+          12
+        ],
+        [
+          9,
+          8
+        ],
+        [
+          12,
+          8
+        ],
+        [
+          11,
+          20
+        ],
+        [
+          7,
+          17
+        ],
+        [
+          13,
+          22
+        ],
+        [
+          11,
+          10
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          13,
+          6
+        ],
+        [
+          16,
+          6
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          6,
+          18
+        ],
+        [
+          8,
+          19
+        ],
+        [
+          3,
+          20
+        ],
+        [
+          8,
+          18
+        ],
+        [
+          7,
+          20
+        ],
+        [
+          3,
+          21
+        ],
+        [
+          4,
+          17
+        ],
+        [
+          13,
+          19
+        ],
+        [
+          13,
+          21
+        ],
+        [
+          14,
+          21
+        ],
+        [
+          15,
+          21
+        ],
+        [
+          18,
+          21
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          9,
+          21
+        ],
+        [
+          14,
+          4
+        ],
+        [
+          2,
+          18
+        ],
+        [
+          20,
+          17
+        ],
+        [
+          0,
+          17
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          14,
+          19
+        ],
+        [
+          13,
+          2
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          20,
+          14
+        ],
+        [
+          12,
+          0
+        ],
+        [
+          18,
+          15
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          17,
+          20
+        ],
+        [
+          17,
+          14
+        ],
+        [
+          17,
+          13
+        ],
+        [
+          18,
+          16
+        ],
+        [
+          15,
+          14
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          19,
+          14
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          16,
+          12
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          16,
+          0
+        ]
+      ],
+      "source_game": "iter_0058_game_022",
+      "source_ply": 59,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 26,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.3478,
+        "centroid_chebyshev_from_center": 6,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.994471,
+        "value_per_run": [
+          0.994471,
+          0.994471
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.465,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 2280760500,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_029_ply056_chain_advantage_central_black",
+      "category": "chain_advantage_central_black",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": -1,
+      "active_size": 24,
+      "ply": 56,
+      "move_history": [
+        [
+          19,
+          5
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          20,
+          7
+        ],
+        [
+          17,
+          18
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          13,
+          20
+        ],
+        [
+          11,
+          18
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          9,
+          13
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          5,
+          18
+        ],
+        [
+          15,
+          19
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          10,
+          12
+        ],
+        [
+          10,
+          15
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          9,
+          7
+        ],
+        [
+          16,
+          15
+        ],
+        [
+          14,
+          19
+        ],
+        [
+          16,
+          13
+        ],
+        [
+          5,
+          13
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          6,
+          11
+        ],
+        [
+          11,
+          21
+        ],
+        [
+          4,
+          15
+        ],
+        [
+          7,
+          9
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          5,
+          8
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          21,
+          18
+        ],
+        [
+          6,
+          20
+        ],
+        [
+          20,
+          13
+        ],
+        [
+          3,
+          17
+        ],
+        [
+          22,
+          14
+        ],
+        [
+          7,
+          22
+        ],
+        [
+          23,
+          12
+        ],
+        [
+          7,
+          12
+        ],
+        [
+          8,
+          3
+        ],
+        [
+          5,
+          23
+        ],
+        [
+          10,
+          4
+        ],
+        [
+          8,
+          14
+        ],
+        [
+          8,
+          5
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          23,
+          19
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          23,
+          2
+        ],
+        [
+          14,
+          3
+        ],
+        [
+          9,
+          22
+        ],
+        [
+          6,
+          16
+        ],
+        [
+          21,
+          20
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          17,
+          20
+        ],
+        [
+          10,
+          9
+        ],
+        [
+          15,
+          21
+        ],
+        [
+          9,
+          17
+        ],
+        [
+          13,
+          22
+        ]
+      ],
+      "source_game": "iter_0058_game_029",
+      "source_ply": 56,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 26,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2609,
+        "centroid_chebyshev_from_center": 3,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": -0.96857,
+        "value_per_run": [
+          -0.96857,
+          -0.96857
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.7345,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 464940441,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_011_ply055_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 55,
+      "move_history": [
+        [
+          4,
+          4
+        ],
+        [
+          7,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          17,
+          15
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          6,
+          12
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          19,
+          16
+        ],
+        [
+          9,
+          12
+        ],
+        [
+          9,
+          16
+        ],
+        [
+          10,
+          14
+        ],
+        [
+          15,
+          14
+        ],
+        [
+          12,
+          16
+        ],
+        [
+          12,
+          19
+        ],
+        [
+          15,
+          19
+        ],
+        [
+          14,
+          18
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          4,
+          16
+        ],
+        [
+          11,
+          14
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          11,
+          18
+        ],
+        [
+          7,
+          10
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          5,
+          9
+        ],
+        [
+          11,
+          10
+        ],
+        [
+          9,
+          9
+        ],
+        [
+          10,
+          16
+        ],
+        [
+          12,
+          7
+        ],
+        [
+          10,
+          8
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          14,
+          21
+        ],
+        [
+          10,
+          7
+        ],
+        [
+          16,
+          8
+        ],
+        [
+          16,
+          5
+        ],
+        [
+          19,
+          5
+        ],
+        [
+          14,
+          8
+        ],
+        [
+          15,
+          10
+        ],
+        [
+          16,
+          7
+        ],
+        [
+          17,
+          6
+        ],
+        [
+          3,
+          10
+        ],
+        [
+          13,
+          14
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          20,
+          3
+        ],
+        [
+          3,
+          8
+        ],
+        [
+          19,
+          1
+        ],
+        [
+          1,
+          7
+        ],
+        [
+          18,
+          3
+        ],
+        [
+          0,
+          9
+        ],
+        [
+          15,
+          23
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          18,
+          8
+        ],
+        [
+          14,
+          12
+        ],
+        [
+          16,
+          12
+        ],
+        [
+          13,
+          10
+        ],
+        [
+          12,
+          20
+        ]
+      ],
+      "source_game": "iter_0058_game_011",
+      "source_ply": 55,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 20,
+        "cc_axis_span": 0.8261,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.1739,
+        "centroid_chebyshev_from_center": 2,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.98272,
+        "value_per_run": [
+          0.98272,
+          0.98272
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.4945,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 2577575451,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_008_ply054_chain_advantage_central_black",
+      "category": "chain_advantage_central_black",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": -1,
+      "active_size": 24,
+      "ply": 54,
+      "move_history": [
+        [
+          4,
+          5
+        ],
+        [
+          4,
+          9
+        ],
+        [
+          7,
+          9
+        ],
+        [
+          7,
+          12
+        ],
+        [
+          11,
+          12
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          12,
+          10
+        ],
+        [
+          11,
+          16
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          8,
+          16
+        ],
+        [
+          9,
+          15
+        ],
+        [
+          16,
+          15
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          7,
+          14
+        ],
+        [
+          11,
+          14
+        ],
+        [
+          19,
+          18
+        ],
+        [
+          19,
+          21
+        ],
+        [
+          9,
+          13
+        ],
+        [
+          7,
+          19
+        ],
+        [
+          7,
+          18
+        ],
+        [
+          17,
+          20
+        ],
+        [
+          8,
+          20
+        ],
+        [
+          21,
+          22
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          23,
+          21
+        ],
+        [
+          9,
+          18
+        ],
+        [
+          21,
+          20
+        ],
+        [
+          12,
+          6
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          6,
+          16
+        ],
+        [
+          9,
+          1
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          18,
+          10
+        ],
+        [
+          12,
+          2
+        ],
+        [
+          23,
+          19
+        ],
+        [
+          13,
+          8
+        ],
+        [
+          21,
+          18
+        ],
+        [
+          13,
+          12
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          6,
+          20
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          10,
+          6
+        ],
+        [
+          14,
+          19
+        ],
+        [
+          9,
+          8
+        ],
+        [
+          15,
+          21
+        ],
+        [
+          6,
+          12
+        ],
+        [
+          17,
+          22
+        ],
+        [
+          5,
+          18
+        ],
+        [
+          5,
+          11
+        ],
+        [
+          11,
+          0
+        ],
+        [
+          12,
+          5
+        ]
+      ],
+      "source_game": "iter_0058_game_008",
+      "source_ply": 54,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 24,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2609,
+        "centroid_chebyshev_from_center": 2,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": -0.993519,
+        "value_per_run": [
+          -0.993519,
+          -0.993519
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.2875,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 1973847199,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_029_ply054_chain_advantage_central_black",
+      "category": "chain_advantage_central_black",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": -1,
+      "active_size": 24,
+      "ply": 54,
+      "move_history": [
+        [
+          19,
+          5
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          20,
+          7
+        ],
+        [
+          17,
+          18
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          13,
+          20
+        ],
+        [
+          11,
+          18
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          9,
+          13
+        ],
+        [
+          14,
+          14
+        ],
+        [
+          5,
+          18
+        ],
+        [
+          15,
+          19
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          10,
+          12
+        ],
+        [
+          10,
+          15
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          9,
+          7
+        ],
+        [
+          16,
+          15
+        ],
+        [
+          14,
+          19
+        ],
+        [
+          16,
+          13
+        ],
+        [
+          5,
+          13
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          6,
+          11
+        ],
+        [
+          11,
+          21
+        ],
+        [
+          4,
+          15
+        ],
+        [
+          7,
+          9
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          5,
+          8
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          21,
+          18
+        ],
+        [
+          6,
+          20
+        ],
+        [
+          20,
+          13
+        ],
+        [
+          3,
+          17
+        ],
+        [
+          22,
+          14
+        ],
+        [
+          7,
+          22
+        ],
+        [
+          23,
+          12
+        ],
+        [
+          7,
+          12
+        ],
+        [
+          8,
+          3
+        ],
+        [
+          5,
+          23
+        ],
+        [
+          10,
+          4
+        ],
+        [
+          8,
+          14
+        ],
+        [
+          8,
+          5
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          23,
+          19
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          23,
+          2
+        ],
+        [
+          14,
+          3
+        ],
+        [
+          9,
+          22
+        ],
+        [
+          6,
+          16
+        ],
+        [
+          21,
+          20
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          17,
+          20
+        ],
+        [
+          10,
+          9
+        ],
+        [
+          15,
+          21
+        ]
+      ],
+      "source_game": "iter_0058_game_029",
+      "source_ply": 54,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 21,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2609,
+        "centroid_chebyshev_from_center": 4,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": -0.96774,
+        "value_per_run": [
+          -0.96774,
+          -0.96774
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.6595,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 3473154711,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_065_ply054_chain_advantage_central_black",
+      "category": "chain_advantage_central_black",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": -1,
+      "active_size": 24,
+      "ply": 54,
+      "move_history": [
+        [
+          19,
+          4
+        ],
+        [
+          19,
+          8
+        ],
+        [
+          20,
+          2
+        ],
+        [
+          22,
+          9
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          17,
+          7
+        ],
+        [
+          13,
+          7
+        ],
+        [
+          21,
+          4
+        ],
+        [
+          16,
+          7
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          14,
+          9
+        ],
+        [
+          16,
+          11
+        ],
+        [
+          11,
+          10
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          13,
+          11
+        ],
+        [
+          8,
+          21
+        ],
+        [
+          12,
+          8
+        ],
+        [
+          13,
+          10
+        ],
+        [
+          14,
+          13
+        ],
+        [
+          14,
+          16
+        ],
+        [
+          17,
+          16
+        ],
+        [
+          16,
+          17
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          17,
+          15
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          14
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          12,
+          17
+        ],
+        [
+          15,
+          11
+        ],
+        [
+          6,
+          20
+        ],
+        [
+          16,
+          13
+        ],
+        [
+          4,
+          21
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          18,
+          18
+        ],
+        [
+          18,
+          19
+        ],
+        [
+          2,
+          20
+        ],
+        [
+          19,
+          21
+        ],
+        [
+          0,
+          21
+        ],
+        [
+          17,
+          12
+        ],
+        [
+          10,
+          22
+        ],
+        [
+          17,
+          20
+        ],
+        [
+          13,
+          4
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          8,
+          5
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          7,
+          7
+        ],
+        [
+          12,
+          21
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          17,
+          9
+        ],
+        [
+          10,
+          4
+        ],
+        [
+          4,
+          19
+        ]
+      ],
+      "source_game": "iter_0058_game_065",
+      "source_ply": 54,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 22,
+        "cc_axis_span": 0.8261,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.4783,
+        "centroid_chebyshev_from_center": 3,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": -0.986499,
+        "value_per_run": [
+          -0.986499,
+          -0.986499
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.3745,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 2160115018,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_040_ply053_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 53,
+      "move_history": [
+        [
+          4,
+          4
+        ],
+        [
+          4,
+          19
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          9,
+          6
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          3,
+          17
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          11,
+          2
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          12,
+          0
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          3,
+          21
+        ],
+        [
+          4,
+          8
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          9,
+          5
+        ],
+        [
+          13,
+          6
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          8,
+          12
+        ],
+        [
+          11,
+          12
+        ],
+        [
+          11,
+          15
+        ],
+        [
+          4,
+          15
+        ],
+        [
+          20,
+          21
+        ],
+        [
+          7,
+          10
+        ],
+        [
+          6,
+          13
+        ],
+        [
+          3,
+          13
+        ],
+        [
+          9,
+          14
+        ],
+        [
+          5,
+          11
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          11
+        ],
+        [
+          5,
+          10
+        ],
+        [
+          10,
+          3
+        ],
+        [
+          13,
+          14
+        ],
+        [
+          4,
+          23
+        ],
+        [
+          6,
+          11
+        ],
+        [
+          3,
+          9
+        ],
+        [
+          2,
+          9
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          14,
+          8
+        ],
+        [
+          16,
+          17
+        ],
+        [
+          5,
+          17
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          2,
+          11
+        ],
+        [
+          15,
+          13
+        ],
+        [
+          17,
+          12
+        ],
+        [
+          14,
+          16
+        ],
+        [
+          6,
+          9
+        ],
+        [
+          18,
+          16
+        ],
+        [
+          4,
+          10
+        ],
+        [
+          20,
+          15
+        ]
+      ],
+      "source_game": "iter_0058_game_040",
+      "source_ply": 53,
+      "starting_player": "red",
+      "phase1_features": {
+        "cc_size": 18,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.3913,
+        "centroid_chebyshev_from_center": 3,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.922777,
+        "value_per_run": [
+          0.922777,
+          0.922777
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.4845,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 3544110867,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_088_ply052_chain_advantage_central_black",
+      "category": "chain_advantage_central_black",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": -1,
+      "active_size": 24,
+      "ply": 52,
+      "move_history": [
+        [
+          4,
+          18
+        ],
+        [
+          4,
+          14
+        ],
+        [
+          7,
+          14
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          8,
+          16
+        ],
+        [
+          7,
+          10
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          11,
+          12
+        ],
+        [
+          10,
+          7
+        ],
+        [
+          13,
+          8
+        ],
+        [
+          21,
+          12
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          10,
+          14
+        ],
+        [
+          8,
+          5
+        ],
+        [
+          9,
+          12
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          13,
+          4
+        ],
+        [
+          23,
+          8
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          12,
+          8
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          12,
+          2
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          12,
+          6
+        ],
+        [
+          19,
+          21
+        ],
+        [
+          11,
+          16
+        ],
+        [
+          20,
+          10
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          17,
+          6
+        ],
+        [
+          12,
+          10
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          10,
+          6
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          9,
+          14
+        ],
+        [
+          9,
+          20
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          15,
+          13
+        ],
+        [
+          12,
+          14
+        ],
+        [
+          20,
+          21
+        ],
+        [
+          9,
+          8
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          9,
+          16
+        ],
+        [
+          3,
+          19
+        ],
+        [
+          8,
+          14
+        ],
+        [
+          6,
+          22
+        ],
+        [
+          13,
+          0
+        ],
+        [
+          11,
+          7
+        ]
+      ],
+      "source_game": "iter_0058_game_088",
+      "source_ply": 52,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 23,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.7391,
+        "centroid_chebyshev_from_center": 2,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": -0.996481,
+        "value_per_run": [
+          -0.996481,
+          -0.996481
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.519,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 1162538350,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_052_ply051_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 51,
+      "move_history": [
+        [
+          19,
+          4
+        ],
+        [
+          18,
+          7
+        ],
+        [
+          14,
+          7
+        ],
+        [
+          13,
+          10
+        ],
+        [
+          13,
+          9
+        ],
+        [
+          11,
+          9
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          19,
+          9
+        ],
+        [
+          20,
+          8
+        ],
+        [
+          17,
+          8
+        ],
+        [
+          19,
+          13
+        ],
+        [
+          18,
+          2
+        ],
+        [
+          21,
+          14
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          16,
+          11
+        ],
+        [
+          13,
+          3
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          16,
+          23
+        ],
+        [
+          17,
+          12
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          10,
+          11
+        ],
+        [
+          8,
+          7
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          11,
+          13
+        ],
+        [
+          10,
+          6
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          9,
+          8
+        ],
+        [
+          3,
+          8
+        ],
+        [
+          4,
+          9
+        ],
+        [
+          2,
+          10
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          4,
+          10
+        ],
+        [
+          3,
+          11
+        ],
+        [
+          3,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          6,
+          11
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          5,
+          7
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          6,
+          21
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          5,
+          13
+        ],
+        [
+          15,
+          11
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          6,
+          17
+        ],
+        [
+          21,
+          12
+        ],
+        [
+          5,
+          23
+        ]
+      ],
+      "source_game": "iter_0058_game_052",
+      "source_ply": 51,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 15,
+        "cc_axis_span": 0.8261,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.5652,
+        "centroid_chebyshev_from_center": 2,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.977146,
+        "value_per_run": [
+          0.977146,
+          0.977146
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.223,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 3619961368,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_055_ply051_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 51,
+      "move_history": [
+        [
+          4,
+          5
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          16,
+          19
+        ],
+        [
+          15,
+          16
+        ],
+        [
+          5,
+          7
+        ],
+        [
+          17,
+          15
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          10,
+          15
+        ],
+        [
+          5,
+          11
+        ],
+        [
+          9,
+          13
+        ],
+        [
+          3,
+          10
+        ],
+        [
+          11,
+          13
+        ],
+        [
+          9,
+          9
+        ],
+        [
+          12,
+          10
+        ],
+        [
+          7,
+          10
+        ],
+        [
+          13,
+          12
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          15,
+          7
+        ],
+        [
+          10,
+          18
+        ],
+        [
+          14,
+          5
+        ],
+        [
+          8,
+          17
+        ],
+        [
+          13,
+          3
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          14,
+          9
+        ],
+        [
+          12,
+          17
+        ],
+        [
+          5,
+          17
+        ],
+        [
+          5,
+          20
+        ],
+        [
+          2,
+          20
+        ],
+        [
+          7,
+          15
+        ],
+        [
+          14,
+          1
+        ],
+        [
+          19,
+          16
+        ],
+        [
+          15,
+          3
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          16,
+          5
+        ],
+        [
+          15,
+          18
+        ],
+        [
+          16,
+          0
+        ],
+        [
+          21,
+          17
+        ],
+        [
+          3,
+          18
+        ],
+        [
+          19,
+          18
+        ],
+        [
+          6,
+          15
+        ],
+        [
+          5,
+          14
+        ],
+        [
+          2,
+          16
+        ],
+        [
+          23,
+          16
+        ],
+        [
+          11,
+          16
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          20,
+          10
+        ],
+        [
+          10,
+          16
+        ],
+        [
+          22,
+          1
+        ],
+        [
+          6,
+          13
+        ],
+        [
+          16,
+          13
+        ]
+      ],
+      "source_game": "iter_0058_game_055",
+      "source_ply": 51,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 23,
+        "cc_axis_span": 0.8696,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2174,
+        "centroid_chebyshev_from_center": 3,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.950654,
+        "value_per_run": [
+          0.950654,
+          0.950654
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.6115,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 3278992422,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_065_ply051_chain_advantage_central_black",
+      "category": "chain_advantage_central_black",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": -1,
+      "active_size": 24,
+      "ply": 51,
+      "move_history": [
+        [
+          19,
+          4
+        ],
+        [
+          19,
+          8
+        ],
+        [
+          20,
+          2
+        ],
+        [
+          22,
+          9
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          17,
+          7
+        ],
+        [
+          13,
+          7
+        ],
+        [
+          21,
+          4
+        ],
+        [
+          16,
+          7
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          14,
+          9
+        ],
+        [
+          16,
+          11
+        ],
+        [
+          11,
+          10
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          13,
+          11
+        ],
+        [
+          8,
+          21
+        ],
+        [
+          12,
+          8
+        ],
+        [
+          13,
+          10
+        ],
+        [
+          14,
+          13
+        ],
+        [
+          14,
+          16
+        ],
+        [
+          17,
+          16
+        ],
+        [
+          16,
+          17
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          17,
+          15
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          15,
+          14
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          12,
+          17
+        ],
+        [
+          15,
+          11
+        ],
+        [
+          6,
+          20
+        ],
+        [
+          16,
+          13
+        ],
+        [
+          4,
+          21
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          18,
+          18
+        ],
+        [
+          18,
+          19
+        ],
+        [
+          2,
+          20
+        ],
+        [
+          19,
+          21
+        ],
+        [
+          0,
+          21
+        ],
+        [
+          17,
+          12
+        ],
+        [
+          10,
+          22
+        ],
+        [
+          17,
+          20
+        ],
+        [
+          13,
+          4
+        ],
+        [
+          18,
+          23
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          8,
+          5
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          7,
+          7
+        ],
+        [
+          12,
+          21
+        ],
+        [
+          11,
+          6
+        ]
+      ],
+      "source_game": "iter_0058_game_065",
+      "source_ply": 51,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 19,
+        "cc_axis_span": 0.7391,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.3913,
+        "centroid_chebyshev_from_center": 4,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": -0.95969,
+        "value_per_run": [
+          -0.95969,
+          -0.95969
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.241,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 725237527,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_090_ply051_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 51,
+      "move_history": [
+        [
+          4,
+          19
+        ],
+        [
+          4,
+          14
+        ],
+        [
+          3,
+          21
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          6,
+          15
+        ],
+        [
+          10,
+          15
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          12,
+          10
+        ],
+        [
+          10,
+          11
+        ],
+        [
+          14,
+          11
+        ],
+        [
+          8,
+          14
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          23,
+          7
+        ],
+        [
+          11,
+          12
+        ],
+        [
+          2,
+          18
+        ],
+        [
+          13,
+          13
+        ],
+        [
+          3,
+          12
+        ],
+        [
+          11,
+          17
+        ],
+        [
+          14,
+          13
+        ],
+        [
+          10,
+          6
+        ],
+        [
+          10,
+          3
+        ],
+        [
+          7,
+          3
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          8,
+          5
+        ],
+        [
+          11,
+          20
+        ],
+        [
+          10,
+          19
+        ],
+        [
+          9,
+          19
+        ],
+        [
+          15,
+          19
+        ],
+        [
+          13,
+          19
+        ],
+        [
+          8,
+          1
+        ],
+        [
+          15,
+          20
+        ],
+        [
+          16,
+          21
+        ],
+        [
+          7,
+          18
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          15,
+          18
+        ],
+        [
+          16,
+          17
+        ],
+        [
+          4,
+          17
+        ],
+        [
+          17,
+          19
+        ],
+        [
+          0,
+          17
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          6,
+          0
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          17,
+          15
+        ],
+        [
+          17,
+          14
+        ],
+        [
+          18,
+          13
+        ],
+        [
+          18,
+          12
+        ],
+        [
+          19,
+          11
+        ],
+        [
+          19,
+          10
+        ],
+        [
+          20,
+          9
+        ]
+      ],
+      "source_game": "iter_0058_game_090",
+      "source_ply": 51,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 14,
+        "cc_axis_span": 0.8261,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2609,
+        "centroid_chebyshev_from_center": 5,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.938629,
+        "value_per_run": [
+          0.938629,
+          0.938629
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.988,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 3236251605,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_040_ply050_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 50,
+      "move_history": [
+        [
+          4,
+          4
+        ],
+        [
+          4,
+          19
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          9,
+          6
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          3,
+          17
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          11,
+          2
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          12,
+          0
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          3,
+          21
+        ],
+        [
+          4,
+          8
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          9,
+          5
+        ],
+        [
+          13,
+          6
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          8,
+          12
+        ],
+        [
+          11,
+          12
+        ],
+        [
+          11,
+          15
+        ],
+        [
+          4,
+          15
+        ],
+        [
+          20,
+          21
+        ],
+        [
+          7,
+          10
+        ],
+        [
+          6,
+          13
+        ],
+        [
+          3,
+          13
+        ],
+        [
+          9,
+          14
+        ],
+        [
+          5,
+          11
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          11
+        ],
+        [
+          5,
+          10
+        ],
+        [
+          10,
+          3
+        ],
+        [
+          13,
+          14
+        ],
+        [
+          4,
+          23
+        ],
+        [
+          6,
+          11
+        ],
+        [
+          3,
+          9
+        ],
+        [
+          2,
+          9
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          14,
+          8
+        ],
+        [
+          16,
+          17
+        ],
+        [
+          5,
+          17
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          2,
+          11
+        ],
+        [
+          15,
+          13
+        ],
+        [
+          17,
+          12
+        ],
+        [
+          14,
+          16
+        ],
+        [
+          6,
+          9
+        ]
+      ],
+      "source_game": "iter_0058_game_040",
+      "source_ply": 50,
+      "starting_player": "red",
+      "phase1_features": {
+        "cc_size": 16,
+        "cc_axis_span": 0.6957,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2174,
+        "centroid_chebyshev_from_center": 4,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.895251,
+        "value_per_run": [
+          0.895251,
+          0.895251
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.4995,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 132358622,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_049_ply050_chain_advantage_central_black",
+      "category": "chain_advantage_central_black",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": -1,
+      "active_size": 24,
+      "ply": 50,
+      "move_history": [
+        [
+          19,
+          4
+        ],
+        [
+          21,
+          7
+        ],
+        [
+          17,
+          8
+        ],
+        [
+          16,
+          12
+        ],
+        [
+          13,
+          12
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          9,
+          15
+        ],
+        [
+          18,
+          11
+        ],
+        [
+          8,
+          17
+        ],
+        [
+          14,
+          13
+        ],
+        [
+          9,
+          19
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          10,
+          17
+        ],
+        [
+          10,
+          13
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          20,
+          12
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          3,
+          8
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          9
+        ],
+        [
+          2,
+          10
+        ],
+        [
+          2,
+          11
+        ],
+        [
+          11,
+          10
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          13,
+          9
+        ],
+        [
+          14,
+          8
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          21,
+          6
+        ],
+        [
+          10,
+          12
+        ],
+        [
+          1,
+          7
+        ],
+        [
+          10,
+          21
+        ],
+        [
+          16,
+          7
+        ],
+        [
+          7,
+          15
+        ],
+        [
+          10,
+          8
+        ],
+        [
+          11,
+          23
+        ],
+        [
+          12,
+          7
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          12,
+          11
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          13,
+          4
+        ],
+        [
+          3,
+          22
+        ]
+      ],
+      "source_game": "iter_0058_game_049",
+      "source_ply": 50,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 18,
+        "cc_axis_span": 0.8261,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2174,
+        "centroid_chebyshev_from_center": 1,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": -0.998581,
+        "value_per_run": [
+          -0.998581,
+          -0.998581
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.216,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 820881978,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    },
+    {
+      "id": "iter_0058_game_052_ply050_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "black",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 50,
+      "move_history": [
+        [
+          19,
+          4
+        ],
+        [
+          18,
+          7
+        ],
+        [
+          14,
+          7
+        ],
+        [
+          13,
+          10
+        ],
+        [
+          13,
+          9
+        ],
+        [
+          11,
+          9
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          19,
+          9
+        ],
+        [
+          20,
+          8
+        ],
+        [
+          17,
+          8
+        ],
+        [
+          19,
+          13
+        ],
+        [
+          18,
+          2
+        ],
+        [
+          21,
+          14
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          16,
+          11
+        ],
+        [
+          13,
+          3
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          16,
+          23
+        ],
+        [
+          17,
+          12
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          10,
+          11
+        ],
+        [
+          8,
+          7
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          11,
+          13
+        ],
+        [
+          10,
+          6
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          9,
+          8
+        ],
+        [
+          3,
+          8
+        ],
+        [
+          4,
+          9
+        ],
+        [
+          2,
+          10
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          4,
+          10
+        ],
+        [
+          3,
+          11
+        ],
+        [
+          3,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          6,
+          11
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          5,
+          7
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          6,
+          21
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          5,
+          13
+        ],
+        [
+          15,
+          11
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          6,
+          17
+        ],
+        [
+          21,
+          12
+        ]
+      ],
+      "source_game": "iter_0058_game_052",
+      "source_ply": 50,
+      "starting_player": "black",
+      "phase1_features": {
+        "cc_size": 15,
+        "cc_axis_span": 0.8261,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.5652,
+        "centroid_chebyshev_from_center": 2,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.936708,
+        "value_per_run": [
+          0.936708,
+          0.936708
+        ],
+        "value_stability": 0.0,
+        "min_top1_share": 0.42,
+        "label_mcts_sims": 2000,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 4176270263,
+        "label_checkpoint": "model_iter_0059.safetensors"
+      }
+    }
+  ]
+}

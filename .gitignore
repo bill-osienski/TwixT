@@ -52,3 +52,6 @@ scripts/GPU/logs/
 # ONNX model weights (large binary — use LFS or upload separately if needed)
 *.onnx
 *.onnx.data
+tests/probes/strong_advantage_probes.draft.json
+tests/probes/strong_advantage_probes.draft.pre-thinning.json
+tests/probes/candidates_strong_advantage.json
