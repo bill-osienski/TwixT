@@ -213,3 +213,30 @@ def test_extract_strong_advantage_candidates_skips_non_decisive_canonical():
         [draw_game], k_plies_range=(3, 8), category_min_count=0
     )
     assert candidates == []
+
+
+def test_label_candidate_with_mcts_uses_injected_labeler():
+    """The labeler signature must be (state, sims, seed) -> (root_value,
+    top1_share). Test that a stub labeler produces the expected aggregate
+    (mean_root_value, value_per_run, value_stability, min_top1_share).
+    """
+    from scripts.GPU.alphazero.probe_eval import label_candidate_with_mcts
+
+    state = _make_state([(0, 12), (1, 0), (2, 11)])
+
+    canned = [(0.6, 0.30), (0.7, 0.25), (0.5, 0.40)]
+    calls = []
+
+    def stub_labeler(state, sims, seed):
+        calls.append((sims, seed))
+        return canned[len(calls) - 1]
+
+    label = label_candidate_with_mcts(
+        state, sims=10000, repeats=3,
+        rng_seed_base=12345, labeler=stub_labeler,
+    )
+    assert calls == [(10000, 12345 ^ 0), (10000, 12345 ^ 1), (10000, 12345 ^ 2)]
+    assert label["mean_root_value"] == pytest.approx(0.6)
+    assert label["value_per_run"] == [0.6, 0.7, 0.5]
+    assert label["value_stability"] == pytest.approx(0.2)
+    assert label["min_top1_share"] == pytest.approx(0.25)

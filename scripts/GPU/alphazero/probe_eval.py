@@ -897,3 +897,95 @@ def _derive_source_game_basename(game: dict) -> str:
     # Canonical key is `game_idx` (game_saver.py:88), NOT `game_index`.
     game_idx = meta.get("game_idx", 0)
     return f"iter_{iteration:04d}_game_{game_idx:03d}"
+
+
+# ============================================================
+# Strong-advantage probe tier — Phase 2 deep-MCTS labeling
+# ============================================================
+
+def label_candidate_with_mcts(
+    state,
+    *,
+    sims: int,
+    repeats: int,
+    rng_seed_base: int,
+    labeler=None,
+) -> dict:
+    """Phase-2 deep-MCTS labeling for one candidate position.
+
+    Runs MCTS at `sims` simulations × `repeats` repeats with different RNG
+    seeds per repeat. Aggregates per-run results.
+
+    Args:
+        state: TwixtState at the candidate position.
+        sims: simulations per MCTS run.
+        repeats: number of repeated MCTS runs.
+        rng_seed_base: integer seed; per-run seed = rng_seed_base ^ repeat_idx.
+        labeler: optional callable (state, sims, seed) -> (root_value,
+            top1_share). If None, uses the production deep-MCTS labeler
+            from `_default_mcts_labeler`. Tests inject a stub here.
+
+    Returns:
+        dict with mean_root_value, value_per_run, value_stability,
+        min_top1_share, label_mcts_sims, label_mcts_repeats, rng_seed_base.
+    """
+    if labeler is None:
+        labeler = _default_mcts_labeler
+
+    values = []
+    top1_shares = []
+    for repeat_idx in range(repeats):
+        seed = rng_seed_base ^ repeat_idx
+        v, t1 = labeler(state, sims, seed)
+        values.append(v)
+        top1_shares.append(t1)
+
+    return {
+        "mean_root_value": round(sum(values) / len(values), 6),
+        "value_per_run": [round(v, 6) for v in values],
+        "value_stability": round(max(values) - min(values), 6),
+        "min_top1_share": round(min(top1_shares), 6),
+        "label_mcts_sims": sims,
+        "label_mcts_repeats": repeats,
+        "rng_seed_base": rng_seed_base,
+    }
+
+
+def _default_mcts_labeler(state, sims, seed):
+    """Production deep-MCTS labeler. Uses the network registered via
+    _set_default_labeler_network() and runs MCTS at the given sim count
+    and seed.
+
+    Returns (root_value_from_stm_perspective, top1_visit_share).
+
+    Tests should pass an explicit `labeler=` rather than rely on this.
+    """
+    if _DEFAULT_LABELER_NETWORK is None:
+        raise RuntimeError(
+            "Default MCTS labeler called without a registered network. "
+            "Either pass labeler= explicitly or call "
+            "_set_default_labeler_network() first."
+        )
+    # MCTS interface (verified against scripts/GPU/alphazero/mcts.py):
+    #   MCTS(evaluator, cfg, rng=...)   constructor
+    #   mcts.search(state, add_noise=False) -> (visit_counts dict, root_value)
+    #   visit_counts: Dict[(r, c), int]
+    #   root_value: float (from state.to_move's perspective)
+    evaluator = LocalGPUEvaluator(_DEFAULT_LABELER_NETWORK)
+    cfg = MCTSConfig(n_simulations=sims)
+    mcts = MCTS(evaluator, cfg, rng=random.Random(seed))
+    visit_counts, root_value = mcts.search(state, add_noise=False)
+    if not visit_counts:
+        return float(root_value), 0.0
+    total = sum(visit_counts.values()) or 1
+    top1 = max(visit_counts.values())
+    return float(root_value), top1 / total
+
+
+_DEFAULT_LABELER_NETWORK = None
+
+
+def _set_default_labeler_network(network) -> None:
+    """Register the production network for `_default_mcts_labeler`."""
+    global _DEFAULT_LABELER_NETWORK
+    _DEFAULT_LABELER_NETWORK = network
