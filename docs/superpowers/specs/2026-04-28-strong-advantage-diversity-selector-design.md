@@ -376,7 +376,7 @@ Rough LOC estimates:
 
 - `scripts/build_probe_suite.py`: ~80 LOC for the new `_select_diverse_admitted_candidates` helper, ~5 LOC for the argparse addition and the call site, ~10 LOC for `meta.selection_rules` enrichment.
 - `scripts/GPU/alphazero/probe_eval.py`: 1 LOC removed (the Phase-1 `admitted` audit append).
-- `tests/test_build_probe_suite.py`: ~250 LOC for the 12 unit tests.
+- `tests/test_build_probe_suite.py`: ~280 LOC for the 14 unit tests.
 - `docs/probe-suite-generation.md`: ~30 LOC documenting the new flag, the diversity rules, the audit reasons, and the regeneration that occurred.
 
 Total: ~375 LOC change, ~50% of which is tests.
