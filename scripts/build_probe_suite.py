@@ -93,6 +93,9 @@ def _find_ply_too_close_keeper(cand: dict, kept: list, rank_index: dict) -> dict
 
     rank_index: maps id(cand) to its position in its category's Stage-2
     sort order. The selector builds this once after Stage 2.
+    Precondition: rank_index must contain id(k) for every candidate in
+    kept. Missing keys raise KeyError — the selector is responsible for
+    populating rank_index for all candidates before any are moved to kept.
     See spec §4.2.
     """
     matches = [

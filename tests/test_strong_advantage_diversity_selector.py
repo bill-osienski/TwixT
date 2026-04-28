@@ -316,7 +316,10 @@ def test_rule_b_ply_too_close_ignores_category_only_game_matters():
 
 def test_rule_b_tie_break_prefers_closest_keeper():
     """Two keepers, candidate at ply 51: keeper at 50 (Δ=1) wins over
-    keeper at 49 (Δ=2)."""
+    keeper at 49 (Δ=2). The closer keeper has WORSE Stage-2 rank
+    (rank 5 vs rank 0) so this test specifically exercises that
+    distance dominates rank in the tie-break (would catch a swap of
+    fields 0 and 1 in the sort-key lambda)."""
     from scripts.build_probe_suite import _find_ply_too_close_keeper
 
     closest = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
@@ -325,7 +328,9 @@ def test_rule_b_tie_break_prefers_closest_keeper():
                               category="chain_advantage_central_red")
     cand = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
                            category="chain_advantage_central_red")
-    rank_index = {id(closest): 0, id(farther): 1, id(cand): 2}
+    # Closer keeper has WORSE rank (5) than farther keeper (0).
+    # Distance must win — otherwise farther would be returned.
+    rank_index = {id(closest): 5, id(farther): 0, id(cand): 99}
 
     assert _find_ply_too_close_keeper(cand, [farther, closest], rank_index) is closest
 
