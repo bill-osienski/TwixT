@@ -225,3 +225,33 @@ def test_rule_a_near_duplicate_returns_smallest_source_ply_when_multiple_match()
 
     # Both keepers match cand; smallest source_ply wins.
     assert _find_near_duplicate_keeper(cand, [keeper_high, keeper_low]) is keeper_low
+
+
+def test_rule_a_near_duplicate_skips_when_axis_span_margin_delta_at_threshold():
+    """|Δaxis_span_margin| < 0.05 is strict: delta == 0.05 is NOT a duplicate.
+    Symmetric to the cc_size threshold test."""
+    from scripts.build_probe_suite import _find_near_duplicate_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red",
+                             cc_size=20, axis_span_margin=0.30)
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                           category="chain_advantage_central_red",
+                           cc_size=20, axis_span_margin=0.36)  # Δasm=0.06 > 0.05
+
+    assert _find_near_duplicate_keeper(cand, [keeper]) is None
+
+
+def test_rule_a_near_duplicate_requires_both_thresholds_satisfied():
+    """Predicate uses AND, not OR: cc_size in range but axis_span_margin
+    out of range → NOT a duplicate. Catches accidental and→or change."""
+    from scripts.build_probe_suite import _find_near_duplicate_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red",
+                             cc_size=20, axis_span_margin=0.30)
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                           category="chain_advantage_central_red",
+                           cc_size=21, axis_span_margin=0.36)  # Δcc=1 (pass), Δasm=0.06 (fail)
+
+    assert _find_near_duplicate_keeper(cand, [keeper]) is None
