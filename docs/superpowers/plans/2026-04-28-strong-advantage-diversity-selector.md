@@ -89,7 +89,7 @@ def test_extract_strong_advantage_writes_no_admitted_audit_rows_in_phase1():
 - [ ] **Step 2: Run test to verify it fails**
 
 ```
-pytest tests/test_strong_advantage_probe_suite.py::test_extract_writes_audit_only_for_phase1_rejections -v
+pytest tests/test_strong_advantage_probe_suite.py::test_extract_strong_advantage_writes_no_admitted_audit_rows_in_phase1 -v
 ```
 
 Expected: FAIL with `AssertionError: Phase 1 wrote N admitted audit row(s); ...`
@@ -878,9 +878,20 @@ def _select_diverse_admitted_candidates(
     `admitted[: max_probes]` slice with a category round-robin walk
     applying near-duplicate, ply-separation, and per-game cap rules.
 
-    Mutates `audit` in place: appends one row per kept candidate
-    (reason="admitted") and one row per dropped candidate
-    (reason="diversity_*"). Returns the kept list in selection order.
+    Mutates `audit` in place: appends one row per CONSIDERED candidate
+    (reason="admitted" if kept, reason="diversity_*" if dropped). Returns
+    the kept list in selection order.
+
+    Audit-coverage policy (Option A — by design): once `max_probes` is
+    reached, the round-robin terminates and any remaining post-Phase-2
+    candidates are NOT visited and therefore get NO audit row. The audit
+    is exhaustive over CONSIDERED candidates, not over ALL Phase-2
+    survivors. Rationale: an unvisited candidate is not "evicted by a
+    rule" — it simply lost the race for a finite suite slot. Tagging
+    every Phase-2 survivor with a "would have been considered next"
+    pseudo-reason adds noise without diagnostic value. Operators
+    inspecting audit yield should use Phase-1+Phase-2 admit counts (from
+    the rejection rows that ARE present) for total-admission accounting.
 
     See spec §4.2 for the algorithm and §7 for audit semantics.
     """
@@ -1226,6 +1237,8 @@ The big integration step. Three coordinated changes:
 1. Phase-2 audit writer stops writing `reason="admitted"` rows; only writes for rejections and errors. The selector becomes the single writer of `reason="admitted"` rows (and `reason="diversity_*"` rows for evictions).
 2. Replace `admitted = admitted[: args.max_probes]` with a call to `_select_diverse_admitted_candidates`.
 3. Enrich `meta.selection_rules` in the output payload with the new diversity-related keys.
+
+**Note on the integration test's monkeypatch pattern (Step 1):** The test patches `scripts.GPU.alphazero.probe_eval.label_candidate_with_mcts`, `apply_admission_filter`, `load_network_for_scoring`, and `_set_default_labeler_network` BEFORE invoking `main_with_args`. This relies on the fact that `_run_strong_advantage` does its `from scripts.GPU.alphazero.probe_eval import (...)` lazily, *inside* the function body (build_probe_suite.py:215-221), so the import resolves the patched module attributes at call time. **If those imports are ever hoisted to module scope, this test will silently start using the real implementations and must be updated** (e.g., switch to patching `scripts.build_probe_suite.label_candidate_with_mcts` etc. instead). Worth a comment in the test if you make the change later.
 
 **Files:**
 - Modify: `scripts/build_probe_suite.py` (in `_run_strong_advantage`)
