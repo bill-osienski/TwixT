@@ -560,3 +560,52 @@ def test_committed_probes_have_required_fields():
             "label_mcts_repeats", "rng_seed_base",
         }
         assert isinstance(label["rng_seed_base"], int)
+
+
+def test_extract_strong_advantage_writes_no_admitted_audit_rows_in_phase1():
+    """Phase 1 must NOT write admitted audit rows. The Phase-2 audit row
+    (written by build_probe_suite.py's _run_strong_advantage loop, then
+    superseded by the diversity selector) is the single canonical
+    post-labeling record. See spec §7.1.
+
+    This test loads a real committed game file and runs the extractor on
+    it. The strong assertion: no audit row carries reason="admitted",
+    regardless of how many Phase-1 candidates the game produces. This
+    test passes trivially if the game produces zero candidates, but the
+    end-to-end integration test in tests/test_strong_advantage_diversity_selector.py
+    (added in Task 8) provides the load-bearing check that admitted rows
+    appear exactly once per kept probe in the final selector output.
+    """
+    import json
+    from pathlib import Path
+
+    from scripts.GPU.alphazero.probe_eval import extract_strong_advantage_candidates
+
+    project_root = Path(__file__).resolve().parent.parent
+    games_dir = project_root / "scripts" / "GPU" / "logs" / "games"
+
+    # Pick any one decisive game with iteration in the committed range.
+    games = []
+    for fp in sorted(games_dir.glob("iter_0057_game_*.json"))[:5]:
+        with open(fp) as f:
+            try:
+                g = json.load(f)
+            except json.JSONDecodeError:
+                continue
+        meta = g.get("meta") or {}
+        if (meta.get("reason") or g.get("winner_reason")) == "win":
+            g["source_game"] = fp.stem
+            games.append(g)
+        if len(games) >= 1:
+            break
+
+    assert games, "no decisive game files found in iter_0057 range — fixture missing"
+
+    candidates, audit = extract_strong_advantage_candidates(games)
+
+    admitted_audit_rows = [r for r in audit if r["reason"] == "admitted"]
+    assert admitted_audit_rows == [], (
+        f"Phase 1 wrote {len(admitted_audit_rows)} admitted audit row(s); "
+        f"after the cleanup, Phase 1 should write only rejection rows. "
+        f"Sample: {admitted_audit_rows[:2]}"
+    )

@@ -852,7 +852,6 @@ def extract_strong_advantage_candidates(
                 "starting_player": starting_player,
             }
             candidates.append(cand)
-            audit.append({**base_audit, "reason": "admitted"})
 
     def _sort_key(c: dict) -> tuple:
         try:
