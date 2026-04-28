@@ -599,8 +599,13 @@ def compute_phase1_features(state, winner: str) -> dict:
             Negative if the loser is more advanced.
           centroid_chebyshev_from_center: int — Chebyshev distance of the
             winner's CC centroid from the board center (11.5, 11.5).
-          forced_within_2: bool — True if `winner` has a forced win within
-            2 plies (delegates to the existing forced detector).
+          forced_within_2: bool — Conservative: True if `winner` has an
+            immediate (1-ply) winning move. The dict key reserves the
+            "within 2" name as a forward-compat slot — today's
+            implementation is a 1-ply scan (see is_forced_within_k for
+            the rationale). Safe direction for the admission filter
+            ("exclude already-forced"): under-reports forced positions,
+            so any borderline cases will be filtered by Phase 2 MCTS.
     """
     loser = "black" if winner == "red" else "red"
     winner_pegs = _collect_pegs(state, winner)
@@ -715,6 +720,11 @@ def is_forced_within_k(state, player: str, k: int = 1) -> bool:
     interface accepts k for forward-compat.
     """
     if state.to_move != player:
+        # Conservative: when it's not `player`'s turn, return False without
+        # considering opponent responses. For the admission filter this is
+        # safe (we under-report forced, so any borderline cases pass through
+        # to Phase 2 MCTS which catches them). A true k>=2 negamax would
+        # need to enumerate opponent replies — out of scope for v1.
         return False
     for move in state.legal_moves():
         try:

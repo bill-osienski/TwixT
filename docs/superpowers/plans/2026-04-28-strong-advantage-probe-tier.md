@@ -1316,7 +1316,9 @@ def test_run_strong_advantage_writes_draft_with_admitted_candidates(tmp_path, mo
     # move_history, the central candidate has a red peg at (0, 12) and the
     # edge candidate has a red peg at (0, 1). Use that to discriminate.
     def fake_labeler(state, sims, seed):
-        if state.peg_at(0, 12) == "red":
+        # Note: TwixtState has no peg_at() accessor — use pegs.get() instead.
+        # See Task 2.1's implementer note for the verified API surface.
+        if state.pegs.get((0, 12)) == "red":
             return (0.65, 0.30)
         return (0.20, 0.30)  # below magnitude_threshold
 
