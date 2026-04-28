@@ -240,3 +240,85 @@ def test_label_candidate_with_mcts_uses_injected_labeler():
     assert label["value_per_run"] == [0.6, 0.7, 0.5]
     assert label["value_stability"] == pytest.approx(0.2)
     assert label["min_top1_share"] == pytest.approx(0.25)
+
+
+@pytest.fixture
+def passing_candidate():
+    """A candidate whose default Phase-2 evaluation passes every clause."""
+    return {
+        "winner": "red",
+        "phase1_features": {
+            "cc_size": 14,
+            "cc_axis_span": 0.74,
+            "cc_touches_own_goal": True,
+            "axis_span_margin": 0.20,
+            "centroid_chebyshev_from_center": 4,
+            "forced_within_2": False,
+        },
+        "phase2_label": {
+            "mean_root_value": 0.62,
+            "value_per_run": [0.60, 0.65, 0.61],
+            "value_stability": 0.05,
+            "min_top1_share": 0.25,
+            "label_mcts_sims": 10000,
+            "label_mcts_repeats": 3,
+            "rng_seed_base": 1,
+        },
+    }
+
+
+def test_admission_passes_when_all_clauses_satisfied(passing_candidate):
+    from scripts.GPU.alphazero.probe_eval import apply_admission_filter
+    admitted, reason = apply_admission_filter(
+        passing_candidate,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15,
+    )
+    assert admitted is True
+    assert reason == "admitted"
+
+
+def test_admission_rejects_sign_mismatch(passing_candidate):
+    from scripts.GPU.alphazero.probe_eval import apply_admission_filter
+    passing_candidate["phase2_label"]["mean_root_value"] = -0.62
+    passing_candidate["phase2_label"]["value_per_run"] = [-0.60, -0.65, -0.61]
+    admitted, reason = apply_admission_filter(passing_candidate,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15)
+    assert admitted is False
+    assert reason == "sign_mismatch"
+
+
+def test_admission_rejects_low_magnitude(passing_candidate):
+    from scripts.GPU.alphazero.probe_eval import apply_admission_filter
+    passing_candidate["phase2_label"]["mean_root_value"] = 0.30
+    passing_candidate["phase2_label"]["value_per_run"] = [0.28, 0.32, 0.30]
+    admitted, reason = apply_admission_filter(passing_candidate,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15)
+    assert admitted is False
+    assert reason == "magnitude_below_threshold"
+
+
+def test_admission_rejects_low_top1_share(passing_candidate):
+    from scripts.GPU.alphazero.probe_eval import apply_admission_filter
+    passing_candidate["phase2_label"]["min_top1_share"] = 0.10
+    admitted, reason = apply_admission_filter(passing_candidate,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15)
+    assert admitted is False
+    assert reason == "low_top1_share"
+
+
+def test_admission_rejects_unstable_value(passing_candidate):
+    from scripts.GPU.alphazero.probe_eval import apply_admission_filter
+    passing_candidate["phase2_label"]["value_stability"] = 0.30
+    admitted, reason = apply_admission_filter(passing_candidate,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15)
+    assert admitted is False
+    assert reason == "unstable_value"
+
+
+def test_admission_rejects_already_forced(passing_candidate):
+    from scripts.GPU.alphazero.probe_eval import apply_admission_filter
+    passing_candidate["phase1_features"]["forced_within_2"] = True
+    admitted, reason = apply_admission_filter(passing_candidate,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15)
+    assert admitted is False
+    assert reason == "position_already_forced"

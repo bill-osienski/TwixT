@@ -989,3 +989,42 @@ def _set_default_labeler_network(network) -> None:
     """Register the production network for `_default_mcts_labeler`."""
     global _DEFAULT_LABELER_NETWORK
     _DEFAULT_LABELER_NETWORK = network
+
+
+# ============================================================
+# Strong-advantage probe tier — Phase 2 admission filter
+# ============================================================
+
+def apply_admission_filter(
+    candidate: dict,
+    *,
+    magnitude_threshold: float,
+    top1_share_floor: float,
+    stability_cap: float,
+) -> tuple:
+    """Phase-2 admission gate. Returns (admitted: bool, reason: str).
+
+    Reason is one of:
+      "admitted", "sign_mismatch", "magnitude_below_threshold",
+      "low_top1_share", "unstable_value", "position_already_forced".
+
+    Order of checks matters only for the audit reason — first failing
+    clause is reported. Sign-match is checked first because it's the
+    cross-check against the source-game winner.
+    """
+    label = candidate["phase2_label"]
+    feats = candidate["phase1_features"]
+    winner = candidate["winner"]
+    expected_sign = 1 if winner == "red" else -1
+
+    if (label["mean_root_value"] >= 0) != (expected_sign == 1):
+        return False, "sign_mismatch"
+    if abs(label["mean_root_value"]) < magnitude_threshold:
+        return False, "magnitude_below_threshold"
+    if label["min_top1_share"] < top1_share_floor:
+        return False, "low_top1_share"
+    if label["value_stability"] > stability_cap:
+        return False, "unstable_value"
+    if feats.get("forced_within_2"):
+        return False, "position_already_forced"
+    return True, "admitted"
