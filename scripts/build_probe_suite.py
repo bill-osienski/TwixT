@@ -117,8 +117,10 @@ def _find_ply_too_close_keeper(cand: dict, kept: list, rank_index: dict) -> dict
 
 def _find_per_game_cap_keeper(cand: dict, kept: list, cap: int) -> dict | None:
     """Rule C — Per-game cap. Returns the smallest-source_ply keeper from
-    the same game when the cap is exceeded, else None. Counted total
-    across all categories. See spec §4.2 / §5.2.
+    the same game when the cap is reached (len(from_game) >= cap), else
+    None. Counted total across all categories. The helper is called
+    BEFORE the candidate enters kept, so "reached" (not "exceeded") is
+    the firing condition. See spec §4.2 / §5.2.
     """
     from_game = [k for k in kept if k["source_game"] == cand["source_game"]]
     if len(from_game) < cap:
