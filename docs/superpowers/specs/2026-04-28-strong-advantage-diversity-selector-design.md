@@ -123,7 +123,12 @@ Drop with `reason="diversity_near_duplicate"`. `kept_instead_source_ply` = sourc
 
 (Note: Rule B does not require same category — a game's plies form a single time-series regardless of which category each ply lands in.)
 
-Drop with `reason="diversity_ply_too_close"`. `kept_instead_source_ply` = source_ply of the closest kept sibling (smallest source_ply if multiple are equidistant, deterministically).
+Drop with `reason="diversity_ply_too_close"`. `kept_instead_source_ply` is selected by tiered tie-break:
+1. Closest kept sibling (smallest `|Δsource_ply|`).
+2. If still tied (multiple equidistant), the one with the better Stage-2 rank within its category.
+3. If still tied, the one with the smallest `source_ply`.
+
+This makes the audit field point at the actually-blocking keeper rather than imposing an arbitrary older-ply bias.
 
 **Rule C — Per-game cap.** The candidate exceeds the cap if:
 - `count(kept candidates with same source_game) >= max_probes_per_game`
@@ -280,6 +285,8 @@ Existing fields are unchanged. The post-Phase-2 audit row schema becomes:
 }
 ```
 
+**All post-Phase-2 audit rows carry `phase2_label`**, including `reason="admitted"` rows for probes in the final suite — not just the diversity-drop rows. This is operationally useful for later audit tooling: a single audit traversal can correlate any Phase-2-reached candidate with its labeling outcome, regardless of whether it ultimately survived selection. (The only post-Phase-2 reasons that may legitimately lack `phase2_label` are `mcts_error` and `replay_error`, which fail before labeling completes.)
+
 Phase-1 rejection rows continue to lack `phase2_label` (they were never labeled). Their reasons are unchanged: `phase1_cc_size`, `phase1_axis_span`, `phase1_axis_span_margin`, `phase1_no_goal_touch`, `phase1_already_forced`, `category_midband`.
 
 ## 8. Edge cases
@@ -322,6 +329,8 @@ Tests live in `tests/test_build_probe_suite.py` (extend existing or add new file
 12. **`test_cross_category_same_game_not_deduped`** — two same-game probes that satisfy `|Δcc_size| < 2 AND |Δaxis_span_margin| < 0.05` BUT land in different categories (one central, one edge). Assert: both are kept (Rule A's same-category requirement prevents dedupe); per-game cap allows both since `max_probes_per_game=2`.
 
 13. **`test_meta_selection_rules_recorded`** — output payload's `meta.selection_rules` includes `max_probes_per_game`, `min_ply_separation_same_game`, `category_iteration_order`, `diversity_quality_key_order` with the expected values.
+
+14. **`test_round_robin_skips_empty_without_reordering_nonempty`** — only `central_black` and `edge_red` populated (positions 2 and 3 in the canonical 4-tuple), `central_red` and `edge_black` empty. Construct enough candidates that `max_probes` forces multiple round-robin passes. Assert: the selector walks the canonical 4-tuple, skips the two empty buckets, and the relative order between central_black and edge_red in the output matches `[central_black, edge_red]` repeating — *not* the alphabetical or yield-based order. This pins down the determinism promise that empty-skipping does not silently re-prioritize the remaining categories.
 
 ## 10. Regeneration plan for the committed suite
 
