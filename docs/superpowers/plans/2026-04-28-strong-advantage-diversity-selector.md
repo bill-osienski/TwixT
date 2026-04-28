@@ -889,9 +889,10 @@ def _select_diverse_admitted_candidates(
     survivors. Rationale: an unvisited candidate is not "evicted by a
     rule" — it simply lost the race for a finite suite slot. Tagging
     every Phase-2 survivor with a "would have been considered next"
-    pseudo-reason adds noise without diagnostic value. Operators
-    inspecting audit yield should use Phase-1+Phase-2 admit counts (from
-    the rejection rows that ARE present) for total-admission accounting.
+    pseudo-reason adds noise without diagnostic value. Operators who
+    need a total Phase-2-admit count should derive it externally
+    (e.g., len(admitted) before this function is called), not by
+    counting audit rows.
 
     See spec §4.2 for the algorithm and §7 for audit semantics.
     """
@@ -1159,14 +1160,12 @@ Append to `tests/test_strong_advantage_diversity_selector.py`:
 
 ```python
 def test_cli_accepts_max_probes_per_game_flag():
-    """argparse accepts --max-probes-per-game with int, default 2."""
-    import argparse
-    from scripts.build_probe_suite import main_with_args
+    """argparse accepts --max-probes-per-game with int, default 2.
 
-    # Helper trick: invoke argparse directly via the module's main()
-    # parser. We can't actually run main_with_args without a checkpoint,
-    # so we replicate the parser construction by importing it. Instead,
-    # parse the help output to confirm the flag is registered.
+    Inspects --help output via subprocess rather than importing the
+    parser directly, since the parser is constructed inside main()
+    and isn't exposed as a module-level object.
+    """
     import subprocess
     import sys
     from pathlib import Path
