@@ -1011,13 +1011,27 @@ def apply_admission_filter(
     Order of checks matters only for the audit reason — first failing
     clause is reported. Sign-match is checked first because it's the
     cross-check against the source-game winner.
+
+    PERSPECTIVE CONTRACT: This function expects `phase2_label.mean_root_value`
+    and `phase2_label.value_per_run` in **red-perspective** (not the
+    side-to-move perspective that `_default_mcts_labeler` produces directly).
+    The convention matches `expected_value_sign` and the rest of probe_eval.py
+    (see `_eval_probe` lines ~280-294 for the canonical normalization). The
+    Task 2.5a wiring (`_run_strong_advantage` in build_probe_suite.py) is
+    responsible for negating the labeler output when the candidate's
+    side_to_move is "black" before storing into `phase2_label`. If you call
+    this filter with raw STM-perspective values, ~half of black-to-move
+    candidates will be incorrectly flagged `sign_mismatch`.
     """
     label = candidate["phase2_label"]
     feats = candidate["phase1_features"]
     winner = candidate["winner"]
     expected_sign = 1 if winner == "red" else -1
 
-    if (label["mean_root_value"] >= 0) != (expected_sign == 1):
+    # Sign agreement: red-perspective mean_root_value should match the
+    # red-perspective expected_value_sign of the source-game winner.
+    actual_sign = 1 if label["mean_root_value"] >= 0 else -1
+    if actual_sign != expected_sign:
         return False, "sign_mismatch"
     if abs(label["mean_root_value"]) < magnitude_threshold:
         return False, "magnitude_below_threshold"

@@ -1491,6 +1491,18 @@ def _run_strong_advantage(args) -> int:
             })
             continue
 
+        # Normalize labeler output from STM-perspective to red-perspective
+        # before storing into phase2_label. apply_admission_filter (and
+        # everything downstream that compares against expected_value_sign)
+        # operates in red-perspective. The candidate's STM at this ply is
+        # `_stm_at_ply(cand)`; if black, negate the value fields.
+        stm = _stm_at_ply(cand)
+        if stm == "black":
+            label["mean_root_value"] = -label["mean_root_value"]
+            label["value_per_run"] = [-v for v in label["value_per_run"]]
+            # value_stability is max-min, sign-invariant — leave as-is.
+            # min_top1_share is a probability — sign-invariant — leave as-is.
+
         cand["phase2_label"] = label
         ok, reason = apply_admission_filter(
             cand,

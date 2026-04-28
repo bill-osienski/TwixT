@@ -322,3 +322,44 @@ def test_admission_rejects_already_forced(passing_candidate):
         magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15)
     assert admitted is False
     assert reason == "position_already_forced"
+
+
+def test_admission_perspective_contract_black_winner_passes_negative_value(passing_candidate):
+    """Documents the red-perspective contract: for a black winner, a
+    correctly red-normalized mean_root_value must be negative (red losing
+    = black winning) to be admitted.
+
+    If a future caller forgets to negate the labeler's STM-perspective
+    output for black-to-move candidates, this contract is violated and
+    the filter would silently flag valid candidates as sign_mismatch.
+    Catching that drift is the whole point of this test.
+    """
+    from scripts.GPU.alphazero.probe_eval import apply_admission_filter
+
+    # Reshape the fixture for a black-winner scenario:
+    # red-perspective values are negative (red is losing → black wins).
+    passing_candidate["winner"] = "black"
+    passing_candidate["phase2_label"]["mean_root_value"] = -0.62
+    passing_candidate["phase2_label"]["value_per_run"] = [-0.60, -0.65, -0.61]
+
+    admitted, reason = apply_admission_filter(passing_candidate,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15)
+    assert admitted is True, f"Expected admission, got reason={reason!r}"
+    assert reason == "admitted"
+
+
+def test_admission_perspective_contract_black_winner_rejects_positive_value(passing_candidate):
+    """Inverse of the above: for a black winner, a positive red-perspective
+    mean_root_value (red is winning) must be sign_mismatch — this is the
+    cross-check against the source-game outcome.
+    """
+    from scripts.GPU.alphazero.probe_eval import apply_admission_filter
+
+    passing_candidate["winner"] = "black"
+    passing_candidate["phase2_label"]["mean_root_value"] = 0.62  # POS = red winning
+    passing_candidate["phase2_label"]["value_per_run"] = [0.60, 0.65, 0.61]
+
+    admitted, reason = apply_admission_filter(passing_candidate,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15)
+    assert admitted is False
+    assert reason == "sign_mismatch"
