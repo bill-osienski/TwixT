@@ -143,6 +143,22 @@ except Exception:
     _HAS_MPL = False
 
 
+TIER_NAMES = ("forced", "strong_advantage")
+
+
+def _read_tier_summary(sc: dict, tier: str):
+    """Read a per-iter sidecar's summary for `tier`. Prefers the new
+    `probe_summary.<tier>` shape; falls back to the legacy
+    `forced_probe_summary` field for tier == "forced".
+    """
+    ps = sc.get("probe_summary") or {}
+    if tier in ps and ps[tier] is not None:
+        return ps[tier]
+    if tier == "forced":
+        return sc.get("forced_probe_summary")
+    return None
+
+
 # -----------------------------
 # Loading utilities
 # -----------------------------
@@ -371,8 +387,11 @@ def aggregate_sidecars(sidecars: Dict[int, dict]) -> dict:
         # per-iter rows (for CSV + trend reports) + latest snapshot.
         "sanity_by_connectivity_by_iter": [],   # list of per-iter rows
         "sanity_by_connectivity_latest": {},    # latest iter's snapshot dict
-        "forced_probe_by_iter": [],             # list of per-iter rows
-        "forced_probe_latest": {},              # latest iter's snapshot dict
+        # Phase 2: per-tier inline probe aggregates. Initialized for every tier
+        # in TIER_NAMES so summary.json and downstream consumers see a stable
+        # set of keys regardless of whether any sidecar carries the data yet.
+        **{f"{tier}_probe_by_iter": [] for tier in TIER_NAMES},
+        **{f"{tier}_probe_latest": {} for tier in TIER_NAMES},
     }
 
     total_plies_w = 0.0
@@ -427,21 +446,24 @@ def aggregate_sidecars(sidecars: Dict[int, dict]) -> dict:
                 "winning_size_threshold": sbc.get("winning_size_threshold"),
             })
 
-        # Phase 2: per-iter inline forced-probe (optional — None when probe file
-        # missing or when the per-iter inline eval is disabled).
-        fps = sc.get("forced_probe_summary")
-        if fps:
-            agg["forced_probe_by_iter"].append({
+        # Phase 2: per-iter inline probes, parameterized over all known tiers.
+        # Reads `probe_summary.<tier>` first (forward path) and falls back to
+        # the legacy `forced_probe_summary` for tier == "forced".
+        for tier in TIER_NAMES:
+            tps = _read_tier_summary(sc, tier)
+            if not tps:
+                continue
+            agg[f"{tier}_probe_by_iter"].append({
                 "iteration": it,
-                "n": fps.get("n"),
-                "n_skipped_size": fps.get("n_skipped_size"),
-                "sign_correct": fps.get("sign_correct"),
-                "sign_correct_pct": fps.get("sign_correct_pct"),
-                "median_abs_v": fps.get("median_abs_v"),
-                "delta_sign_correct_pct": fps.get("delta_sign_correct_pct"),
-                "delta_median_abs_v": fps.get("delta_median_abs_v"),
-                "rolling5_sign_correct_pct": fps.get("rolling5_sign_correct_pct"),
-                "rolling5_median_abs_v": fps.get("rolling5_median_abs_v"),
+                "n": tps.get("n"),
+                "n_skipped_size": tps.get("n_skipped_size"),
+                "sign_correct": tps.get("sign_correct"),
+                "sign_correct_pct": tps.get("sign_correct_pct"),
+                "median_abs_v": tps.get("median_abs_v"),
+                "delta_sign_correct_pct": tps.get("delta_sign_correct_pct"),
+                "delta_median_abs_v": tps.get("delta_median_abs_v"),
+                "rolling5_sign_correct_pct": tps.get("rolling5_sign_correct_pct"),
+                "rolling5_median_abs_v": tps.get("rolling5_median_abs_v"),
             })
 
         if it == latest_it:
@@ -454,8 +476,10 @@ def aggregate_sidecars(sidecars: Dict[int, dict]) -> dict:
             # Phase 2: latest-iter snapshots of the new blocks
             if sbc:
                 agg["sanity_by_connectivity_latest"] = sbc
-            if fps:
-                agg["forced_probe_latest"] = fps
+            for tier in TIER_NAMES:
+                tps_latest = _read_tier_summary(sc, tier)
+                if tps_latest:
+                    agg[f"{tier}_probe_latest"] = tps_latest
 
     agg["avg_plies"] = round(total_plies_w / total_games_w, 1) if total_games_w > 0 else 0.0
 
@@ -1003,18 +1027,20 @@ def format_sanity_by_connectivity_report(by_iter: list, latest: dict) -> List[st
     return lines
 
 
-def format_forced_probe_report(by_iter: list, latest: dict) -> List[str]:
-    """Render the per-iter inline forced-probe section (Phase 2).
-
-    Source: `forced_probe_summary` block written by the trainer per iteration.
-    Populated only when tests/probes/twixt_probes.json exists. Degrades to a
-    "(not available)" stub line otherwise.
+def format_tier_probe_report(tier: str, by_iter: list, latest: dict) -> List[str]:
+    """Render the per-iter inline probe section for `tier` (forced or
+    strong_advantage). Same shape as the previous forced-only formatter.
     """
+    title = {
+        "forced": "Forced-Tier Probe Sign-Agree (Phase 2)",
+        "strong_advantage": "Strong-Advantage Probe Sign-Agree (deep-MCTS labeled)",
+    }.get(tier, f"{tier} Probe Sign-Agree")
+
     lines = []
-    lines.append("Forced-Tier Probe Sign-Agree (Phase 2)")
-    lines.append("=" * 45)
+    lines.append(title)
+    lines.append("=" * len(title))
     if not by_iter and not latest:
-        lines.append("  (not available — no forced_probe_summary data in sidecars;")
+        lines.append(f"  (not available - no probe_summary.{tier} data in sidecars;")
         lines.append("   either probes file absent or inline eval disabled)")
         lines.append("")
         return lines
@@ -1036,7 +1062,6 @@ def format_forced_probe_report(by_iter: list, latest: dict) -> List[str]:
     else:
         lines.append(f"    n=0 (no probes matched active_size at this iter)")
 
-    # Trend
     if by_iter:
         trend = by_iter[-10:]
         lines.append("")
@@ -1044,12 +1069,10 @@ def format_forced_probe_report(by_iter: list, latest: dict) -> List[str]:
         lines.append(f"    {'iter':>5} {'n':>4} {'sc':>4} {'sc%':>8} {'|v|':>8} {'delta_sc%':>10} {'rolling5_sc%':>13}")
         for row in trend:
             def _p(x, pct=False):
-                if x is None:
-                    return "n/a"
+                if x is None: return "n/a"
                 return f"{x:.1%}" if pct else f"{x:.3f}"
             def _d(x):
-                if x is None:
-                    return "n/a"
+                if x is None: return "n/a"
                 return f"{x*100:+.1f}pp"
             lines.append(
                 f"    {row['iteration']:>5} "
@@ -1060,9 +1083,14 @@ def format_forced_probe_report(by_iter: list, latest: dict) -> List[str]:
                 f"{_d(row.get('delta_sign_correct_pct')):>10} "
                 f"{_p(row.get('rolling5_sign_correct_pct'), pct=True):>13}"
             )
-        lines.append(f"  ... full per-iter table: forced_probe_by_iter.csv")
+        lines.append(f"  ... full per-iter table: {tier}_probe_by_iter.csv")
     lines.append("")
     return lines
+
+
+def format_forced_probe_report(by_iter: list, latest: dict) -> List[str]:
+    """Backward-compat shim. Use format_tier_probe_report('forced', ...) instead."""
+    return format_tier_probe_report("forced", by_iter, latest)
 
 
 def format_value_calibration_report(summary: dict) -> List[str]:
@@ -1920,11 +1948,16 @@ def analyze(replays: List[dict],
             "by_iter": sc_agg.get("sanity_by_connectivity_by_iter", []) if use_sidecar else [],
             "latest": sc_agg.get("sanity_by_connectivity_latest", {}) if use_sidecar else {},
         },
-        # Phase 2: inline forced-probe trend + latest snapshot.
-        # Empty if probes file was absent or eval disabled in the run.
-        "forced_probe": {
-            "by_iter": sc_agg.get("forced_probe_by_iter", []) if use_sidecar else [],
-            "latest": sc_agg.get("forced_probe_latest", {}) if use_sidecar else {},
+        # Phase 2: inline per-tier probe trend + latest snapshot.
+        # Each tier's `by_iter` is empty if probes file was absent or eval
+        # disabled in the run. Per-tier human-friendly keys preserved during
+        # the legacy/forward dual-emit window.
+        **{
+            f"{tier}_probe": {
+                "by_iter": sc_agg.get(f"{tier}_probe_by_iter", []) if use_sidecar else [],
+                "latest": sc_agg.get(f"{tier}_probe_latest", {}) if use_sidecar else {},
+            }
+            for tier in TIER_NAMES
         },
     }
 
@@ -1985,18 +2018,19 @@ def analyze(replays: List[dict],
                     w.writerow(row)
             print(f"[OK] wrote: {sbc_csv_path}")
 
-        fps_rows = sc_agg.get("forced_probe_by_iter", [])
-        if fps_rows:
-            fps_csv_path = os.path.join(
-                out_dir,
-                _suffixed("forced_probe_by_iter", "csv", suffix),
-            )
-            with open(fps_csv_path, "w", newline="") as f:
-                w = csv.DictWriter(f, fieldnames=list(fps_rows[0].keys()))
-                w.writeheader()
-                for row in fps_rows:
-                    w.writerow(row)
-            print(f"[OK] wrote: {fps_csv_path}")
+        for tier in TIER_NAMES:
+            tier_rows = sc_agg.get(f"{tier}_probe_by_iter", [])
+            if tier_rows:
+                tier_csv_path = os.path.join(
+                    out_dir,
+                    _suffixed(f"{tier}_probe_by_iter", "csv", suffix),
+                )
+                with open(tier_csv_path, "w", newline="") as f:
+                    w = csv.DictWriter(f, fieldnames=list(tier_rows[0].keys()))
+                    w.writeheader()
+                    for row in tier_rows:
+                        w.writerow(row)
+                print(f"[OK] wrote: {tier_csv_path}")
 
     # --- Phase 4: replay_cap_by_iter.csv ---
     if rcap_by_iter:
@@ -2176,10 +2210,12 @@ def analyze(replays: List[dict],
             sc_agg.get("sanity_by_connectivity_by_iter", []),
             sc_agg.get("sanity_by_connectivity_latest", {}),
         ))
-        lines.extend(format_forced_probe_report(
-            sc_agg.get("forced_probe_by_iter", []),
-            sc_agg.get("forced_probe_latest", {}),
-        ))
+        for tier in TIER_NAMES:
+            lines.extend(format_tier_probe_report(
+                tier,
+                sc_agg.get(f"{tier}_probe_by_iter", []),
+                sc_agg.get(f"{tier}_probe_latest", {}),
+            ))
 
     # Phase 1 (connectivity-retrain): value calibration + replay-derived
     # probe scoring. Both render unconditionally (formatter stubs gracefully
