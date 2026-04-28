@@ -771,9 +771,9 @@ def extract_strong_advantage_candidates(
             `starting_player`. Sorted by (-iter, -source_ply, source_game)
             for deterministic order.
           audit: list of dicts with `source_game`, `source_ply`, `reason`,
-            and `phase1_features`. One entry per dropped candidate; the
-            audit row is also written for ADMITTED candidates with reason
-            "admitted" so the audit captures the full provenance.
+            and `phase1_features`. One entry per rejected candidate only
+            (Phase-1 rejections). Admitted candidates produce no Phase-1
+            audit row; Phase 2 is the sole writer of reason="admitted" rows.
     """
     from .game.twixt_state import TwixtState
 

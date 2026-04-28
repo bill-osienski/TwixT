@@ -603,6 +603,11 @@ def test_extract_strong_advantage_writes_no_admitted_audit_rows_in_phase1():
 
     candidates, audit = extract_strong_advantage_candidates(games)
 
+    assert candidates, (
+        "iter_0057 game produced no Phase-1 candidates — "
+        "the admitted-row assertion would pass trivially; update the fixture"
+    )
+
     admitted_audit_rows = [r for r in audit if r["reason"] == "admitted"]
     assert admitted_audit_rows == [], (
         f"Phase 1 wrote {len(admitted_audit_rows)} admitted audit row(s); "
