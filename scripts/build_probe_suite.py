@@ -185,9 +185,7 @@ def _run_strong_advantage(args) -> int:
         args.out = "tests/probes/strong_advantage_probes.json"
 
     if args.promote:
-        print("[probe_suite] ERROR: --promote not implemented yet "
-              "(lands in Task 2.5b).", file=sys.stderr)
-        return 2
+        return _run_promote(args)
 
     if args.label_checkpoint is None:
         print("[probe_suite] ERROR: --label-checkpoint required for "
@@ -414,6 +412,45 @@ def _run_strong_advantage(args) -> int:
           f"{draft_path}\n  audit: {audit_path}\n"
           f"  Next: review the draft, then run --promote --reviewer NAME "
           f"(lands in Task 2.5b).")
+    return 0
+
+
+def _run_promote(args) -> int:
+    """Promote a *.draft.json to the committed file.
+
+    Stamps meta.review_mode="light_review", meta.reviewer, and
+    meta.reviewed_at_utc. Refuses to overwrite an existing committed
+    file unless --force is passed.
+    """
+    if not args.reviewer:
+        print("[probe_suite] ERROR: --reviewer required with --promote",
+              file=sys.stderr)
+        return 2
+    out_path = Path(args.out)
+    draft_path = out_path.with_suffix(".draft.json")
+    if not draft_path.exists():
+        print(f"[probe_suite] ERROR: no draft to promote at {draft_path}",
+              file=sys.stderr)
+        return 2
+    if out_path.exists() and not args.force:
+        print(f"[probe_suite] ERROR: committed file exists: {out_path}\n"
+              f"  Pass --force to overwrite (deliberate re-promotion).",
+              file=sys.stderr)
+        return 2
+
+    import datetime as _dt
+    payload = json.loads(draft_path.read_text())
+    payload["meta"]["review_mode"] = "light_review"
+    payload["meta"]["reviewer"] = args.reviewer
+    payload["meta"]["reviewed_at_utc"] = (
+        _dt.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w") as f:
+        json.dump(payload, f, indent=2, sort_keys=False)
+        f.write("\n")
+    print(f"[probe_suite] promoted {draft_path} -> {out_path} "
+          f"(reviewer={args.reviewer})")
     return 0
 
 
