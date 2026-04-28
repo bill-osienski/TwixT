@@ -151,3 +151,77 @@ def test_diversity_sort_key_value_stability_breaks_top1_share_tie():
                         min_top1_share=0.30, value_stability=0.10)
 
     assert _diversity_sort_key(a) < _diversity_sort_key(b)
+
+
+def test_rule_a_near_duplicate_matches_same_game_same_category_close_features():
+    from scripts.build_probe_suite import _find_near_duplicate_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red",
+                             cc_size=20, axis_span_margin=0.30)
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                           category="chain_advantage_central_red",
+                           cc_size=21, axis_span_margin=0.31)  # Δcc=1, Δasm=0.01
+
+    assert _find_near_duplicate_keeper(cand, [keeper]) is keeper
+
+
+def test_rule_a_near_duplicate_skips_different_game():
+    from scripts.build_probe_suite import _find_near_duplicate_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red",
+                             cc_size=20, axis_span_margin=0.30)
+    cand = _make_candidate(source_game="iter_0058_game_999", source_ply=51,
+                           category="chain_advantage_central_red",
+                           cc_size=21, axis_span_margin=0.31)
+
+    assert _find_near_duplicate_keeper(cand, [keeper]) is None
+
+
+def test_rule_a_near_duplicate_skips_different_category():
+    """Cross-category same-game pair is NOT a near-duplicate, even when
+    structural deltas are below thresholds. Spec §5.6."""
+    from scripts.build_probe_suite import _find_near_duplicate_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red",
+                             cc_size=20, axis_span_margin=0.30)
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                           category="chain_advantage_edge_red",
+                           cc_size=21, axis_span_margin=0.31)
+
+    assert _find_near_duplicate_keeper(cand, [keeper]) is None
+
+
+def test_rule_a_near_duplicate_skips_when_cc_size_delta_at_threshold():
+    """|Δcc_size| < 2 is strict: delta == 2 is NOT a duplicate."""
+    from scripts.build_probe_suite import _find_near_duplicate_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red",
+                             cc_size=20, axis_span_margin=0.30)
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                           category="chain_advantage_central_red",
+                           cc_size=22, axis_span_margin=0.30)  # Δcc=2
+
+    assert _find_near_duplicate_keeper(cand, [keeper]) is None
+
+
+def test_rule_a_near_duplicate_returns_smallest_source_ply_when_multiple_match():
+    """Tie-break: when multiple kept candidates match, return the one
+    with the smallest source_ply."""
+    from scripts.build_probe_suite import _find_near_duplicate_keeper
+
+    keeper_low = _make_candidate(source_game="iter_0058_game_040", source_ply=48,
+                                 category="chain_advantage_central_red",
+                                 cc_size=20, axis_span_margin=0.30)
+    keeper_high = _make_candidate(source_game="iter_0058_game_040", source_ply=52,
+                                  category="chain_advantage_central_red",
+                                  cc_size=21, axis_span_margin=0.31)
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                           category="chain_advantage_central_red",
+                           cc_size=20, axis_span_margin=0.30)
+
+    # Both keepers match cand; smallest source_ply wins.
+    assert _find_near_duplicate_keeper(cand, [keeper_high, keeper_low]) is keeper_low

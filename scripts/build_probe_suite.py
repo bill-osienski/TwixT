@@ -60,6 +60,26 @@ def _diversity_sort_key(cand: dict) -> tuple:
     )
 
 
+def _find_near_duplicate_keeper(cand: dict, kept: list) -> dict | None:
+    """Rule A — Near-duplicate. Returns the matching kept candidate or None.
+
+    Same source_game AND same category AND |Δcc_size| < 2 AND
+    |Δaxis_span_margin| < 0.05. Multiple matches: smallest source_ply
+    (deterministic). See spec §4.2.
+    """
+    cand_p1 = cand["phase1_features"]
+    matches = [
+        k for k in kept
+        if k["source_game"] == cand["source_game"]
+        and k["category"] == cand["category"]
+        and abs(k["phase1_features"]["cc_size"] - cand_p1["cc_size"]) < 2
+        and abs(k["phase1_features"]["axis_span_margin"] - cand_p1["axis_span_margin"]) < 0.05
+    ]
+    if not matches:
+        return None
+    return min(matches, key=lambda k: k["source_ply"])
+
+
 # --- Tier dispatch ---
 
 def main() -> int:
