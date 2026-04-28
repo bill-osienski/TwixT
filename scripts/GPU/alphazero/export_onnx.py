@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Export MLX model to ONNX for Node.js inference.
 
-Strategy: Pad moves to 512 with -1e9 masking for invalid positions.
+Strategy: Pad moves to OnnxAlphaZero.max_moves (576 = 24*24, the true maximum
+legal moves on a 24x24 board) with -1e9 masking for invalid positions.
 
 Layout conversion:
 - MLX uses NHWC: (B, H, W, C)
@@ -46,17 +47,53 @@ class OnnxResBlock(tnn.Module):
         return torch.relu(x + residual)
 
 
+# =====================================================================
+# Canonicalization constants (mirror scripts/GPU/alphazero/network.py)
+# =====================================================================
+# Channel layout constants
+_CH_TO_MOVE = 18
+_ACTIVE_SIZE = 24  # Inference always runs on the full 24x24 board
+
+# Permutation that maps new-channel -> old-channel for the black-to-move
+# canonicalized board, matching canonicalize_batch() in network.py:
+#   new 0   <- old 1    (black pegs -> current pegs)
+#   new 1   <- old 0    (red pegs   -> opponent pegs)
+#   new 2-9 <- old 10-17 (black links, link-channel permuted by INV_LINK_PERM_CW=[2,3,4,5,6,7,0,1])
+#   new 10-17 <- old 2-9 (red links, same permutation)
+#   new 18  <- PLACEHOLDER (will be overwritten with ones)
+#   new 19  <- old 21    (black-left  -> current-top)
+#   new 20  <- old 22    (black-right -> current-bottom)
+#   new 21  <- old 20    (red-bottom  -> opp-left)
+#   new 22  <- old 19    (red-top     -> opp-right)
+#   new 23  <- old 23    (phase unchanged)
+#   new 24  <- old 27    (black_conn_left  -> current_conn_top)
+#   new 25  <- old 28    (black_conn_right -> current_conn_bottom)
+#   new 26  <- old 29    (black_conn_both  -> current_conn_both)
+#   new 27  <- old 25    (red_conn_bottom  -> opp_conn_left)
+#   new 28  <- old 24    (red_conn_top     -> opp_conn_right)
+#   new 29  <- old 26    (red_conn_both    -> opp_conn_both)
+_BLACK_CANON_CHANNEL_PERM = [
+    1, 0,
+    12, 13, 14, 15, 16, 17, 10, 11,
+    4, 5, 6, 7, 8, 9, 2, 3,
+    18,
+    21, 22, 20, 19,
+    23,
+    27, 28, 29, 25, 24, 26,
+]
+
+
 class OnnxAlphaZero(tnn.Module):
     """PyTorch model matching MLX architecture for ONNX export.
 
     Uses pad-to-512 strategy with masking for variable move counts.
-    24-channel input to match training encoding.
 
-    IMPORTANT: PyTorch uses NCHW layout. Node.js must feed (1, 24, 24, 24)
-    where dim order is (batch, channels, height, width).
+    IMPORTANT: PyTorch uses NCHW layout. Node.js feeds RAW (non-canonicalized)
+    (1, C, 24, 24) tensors; this module canonicalizes internally inside
+    forward() so it matches MLX AlphaZeroNetwork.forward_padded end-to-end.
     """
 
-    def __init__(self, hidden: int = 128, n_blocks: int = 6, max_moves: int = 512,
+    def __init__(self, hidden: int = 128, n_blocks: int = 6, max_moves: int = 576,
                  in_channels: int = None):
         super().__init__()
         self.hidden = hidden
@@ -68,6 +105,16 @@ class OnnxAlphaZero(tnn.Module):
             from .game.twixt_state import NUM_CHANNELS
             in_channels = NUM_CHANNELS
         self.in_channels = in_channels
+
+        # Register channel permutation as a buffer so it ships inside the ONNX
+        # graph (rather than being embedded as a traced Python list, which would
+        # not survive torch.onnx.export cleanly).
+        self.register_buffer(
+            "_black_channel_perm",
+            torch.tensor(_BLACK_CANON_CHANNEL_PERM, dtype=torch.long),
+            persistent=False,
+        )
+
         self.encoder_conv1 = tnn.Conv2d(in_channels, hidden, 3, padding=1)
         self.encoder_bn1 = tnn.BatchNorm2d(hidden)
 
@@ -86,54 +133,148 @@ class OnnxAlphaZero(tnn.Module):
         self.value_fc1 = tnn.Linear(2 * hidden, 256)
         self.value_fc2 = tnn.Linear(256, 1)
 
+    def _canonicalize_board(self, board: torch.Tensor, is_black: torch.Tensor) -> torch.Tensor:
+        """Port of network.canonicalize_batch for NCHW board tensors.
+
+        active_size is hardcoded to 24 (full board) because the ONNX export
+        is only used for inference, which always runs on the full 24x24 board.
+
+        Args:
+            board: (B, C, H, W) raw input (from JS toTensorHWC reshaped to NCHW)
+            is_black: (B, 1, 1, 1) bool selector; True for samples where
+                the raw input's CH_TO_MOVE encodes black-to-move.
+
+        Returns:
+            (B, C, H, W) canonicalized board:
+              - is_black==True  -> board rotated 90° CW, channels swapped to
+                current/opponent order, dist/connectivity swapped,
+                CH_TO_MOVE forced to 1.
+              - is_black==False -> only CH_TO_MOVE forced to 1 (no-op in
+                practice for red-to-move inputs); no rotation or channel swap.
+        """
+        # --- Red-fixed branch: CH_TO_MOVE forced to 1, everything else unchanged ---
+        ones_to_move = torch.ones_like(board[:, _CH_TO_MOVE:_CH_TO_MOVE + 1, :, :])
+        red_fixed = torch.cat(
+            [
+                board[:, :_CH_TO_MOVE, :, :],
+                ones_to_move,
+                board[:, _CH_TO_MOVE + 1:, :, :],
+            ],
+            dim=1,
+        )
+
+        # --- Black-canonical branch ---
+        # Step 1: 90° CW spatial rotation.
+        # NHWC CW rotation is transpose(H,W) then reverse W.
+        # NCHW equivalent: transpose(2,3) then flip(dims=[3]).
+        board_rot = board.transpose(2, 3).flip(dims=[3])
+
+        # Step 2: channel re-index via _black_channel_perm, then force ch 18=1.
+        black_canon_raw = torch.index_select(board_rot, 1, self._black_channel_perm)
+        black_canon_ones = torch.ones_like(
+            black_canon_raw[:, _CH_TO_MOVE:_CH_TO_MOVE + 1, :, :]
+        )
+        black_canon = torch.cat(
+            [
+                black_canon_raw[:, :_CH_TO_MOVE, :, :],
+                black_canon_ones,
+                black_canon_raw[:, _CH_TO_MOVE + 1:, :, :],
+            ],
+            dim=1,
+        )
+
+        return torch.where(is_black, black_canon, red_fixed)
+
+    def _canonicalize_moves(
+        self,
+        is_black: torch.Tensor,
+        move_rows: torch.Tensor,
+        move_cols: torch.Tensor,
+        move_mask: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Rotate move coordinates for black-to-move (matches canonicalize_batch).
+
+        CW rotation on coords: (r, c) -> (c, active_size - 1 - r).
+        Applied only where move_mask > 0.5 AND the sample is black-to-move.
+
+        Assumes B=1 (the ONNX export has fixed batch size 1).
+
+        Args:
+            is_black: (B, 1, 1, 1) bool — same selector used for the board.
+        """
+        # Collapse is_black to (B,) = (1,) so it broadcasts over (M,) moves.
+        is_black_scalar = is_black.view(-1)
+
+        rows_rot = move_cols
+        cols_rot = (_ACTIVE_SIZE - 1) - move_rows
+
+        rotate = (move_mask > 0.5) & is_black_scalar
+        move_rows_out = torch.where(rotate, rows_rot, move_rows)
+        move_cols_out = torch.where(rotate, cols_rot, move_cols)
+        return move_rows_out, move_cols_out
+
     def forward(
         self,
-        board: torch.Tensor,      # (1, C, H, W) = (1, 24, 24, 24) NCHW format!
-        move_rows: torch.Tensor,  # (512,) padded row indices
-        move_cols: torch.Tensor,  # (512,) padded col indices
+        board: torch.Tensor,      # (1, C, H, W) NCHW, RAW (uncanonicalized) input
+        move_rows: torch.Tensor,  # (512,) padded row indices in RAW coords
+        move_cols: torch.Tensor,  # (512,) padded col indices in RAW coords
         move_mask: torch.Tensor,  # (512,) 1.0 for valid, 0.0 for padding
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Forward pass for ONNX.
 
+        Canonicalizes the input so the network always sees "current player
+        connecting top↔bottom", matching MLX AlphaZeroNetwork.forward_padded.
+        Callers (JS server, parity tests) pass raw tensors and raw move coords.
+
         Returns:
-            policy_logits: (512,) with -1e9 for invalid moves
-            value: scalar in [-1, 1]
+            policy_logits: (512,) with -1e9 for invalid moves (in RAW move order)
+            value: scalar in [-1, 1] from the current player's perspective
         """
-        # Encode - expects NCHW input
+        # === CANONICALIZE (matches MLX forward_padded) ===
+        # Compute is_black from the RAW board before any channel rewrite —
+        # _canonicalize_board forces CH_TO_MOVE=1 in both branches, so sampling
+        # it after would collapse the selector to a constant.
+        is_black = board[:, _CH_TO_MOVE:_CH_TO_MOVE + 1, 0:1, 0:1] < 0.5  # (B,1,1,1)
+        board = self._canonicalize_board(board, is_black)
+        move_rows, move_cols = self._canonicalize_moves(
+            is_black, move_rows, move_cols, move_mask
+        )
+
+        # Encode
         x = torch.relu(self.encoder_bn1(self.encoder_conv1(board)))
         for block in self.res_blocks:
             x = block(x)
 
-        # Policy: gather features at move locations
+        # Policy: gather features at (canonicalized) move locations
         policy_feat = torch.relu(self.policy_bn(self.policy_conv(x)))  # (1, 2, 24, 24)
 
-        # Vectorized gather for better ONNX performance
-        # policy_feat is (1, 2, H, W) in NCHW format
-        # Gather at all 512 positions, then apply FC
-        # Index as policy_feat[0, :, row, col] to get (2,) per move
+        # policy_feat[0, :, row, col] -> (2,) per move; stack to (2, 512) then transpose.
         gathered = policy_feat[0, :, move_rows, move_cols]  # (2, 512)
         gathered = gathered.T  # (512, 2)
 
-        # Batch FC through all moves
         h = torch.relu(self.policy_fc(gathered))  # (512, 64)
         raw_logits = self.policy_out(h).squeeze(-1)  # (512,)
 
-        # Apply mask: -1e9 for invalid positions
         masked_logits = torch.where(
             move_mask > 0.5,
             raw_logits,
-            torch.full_like(raw_logits, -1e9)
+            torch.full_like(raw_logits, -1e9),
         )
 
-        # Value head (global pooling - layout agnostic)
-        # x is (1, C, H, W) from encoder
-        # Pool over spatial dims (2, 3) in NCHW format
-        avg_pool = torch.mean(x, dim=(2, 3))  # (B, C)
-        max_pool = torch.amax(x, dim=(2, 3))  # (B, C)
-        v = torch.cat([avg_pool, max_pool], dim=-1)  # (B, 2*C)
+        # Value head (global avg+max pool; active_size=24 makes MLX's masked
+        # pooling equivalent to this unmasked pool).
+        avg_pool = torch.mean(x, dim=(2, 3))
+        max_pool = torch.amax(x, dim=(2, 3))
+        v = torch.cat([avg_pool, max_pool], dim=-1)
 
         v = torch.relu(self.value_fc1(v))
-        value = torch.tanh(self.value_fc2(v))
+        pre = self.value_fc2(v)
+
+        # Soft pretanh clamp (matches ValueHead in network.py):
+        #   pre_clamped = 10 * tanh(pre / 10);  value = tanh(pre_clamped)
+        PRETANH_CLAMP = 10.0
+        pre_clamped = PRETANH_CLAMP * torch.tanh(pre / PRETANH_CLAMP)
+        value = torch.tanh(pre_clamped)
 
         return masked_logits, value.squeeze()
 
@@ -285,11 +426,16 @@ def export_to_onnx(
     # Copy weights
     convert_weights(mlx_params, pytorch_model)
 
-    # Create dummy inputs for tracing — shape matches the constructed network
+    # Create dummy inputs for tracing — shape matches the constructed network.
+    # Move-tensor length must follow the model's max_moves (576 = 24*24, the
+    # true maximum legal moves on a 24x24 board); the previous 512 cap was
+    # smaller than openings can produce, which made callers over-read the
+    # output buffer and contaminate priors with NaN.
+    max_moves = pytorch_model.max_moves
     board = torch.randn(1, in_channels, 24, 24)  # NCHW
-    move_rows = torch.zeros(512, dtype=torch.long)
-    move_cols = torch.zeros(512, dtype=torch.long)
-    move_mask = torch.zeros(512, dtype=torch.float32)
+    move_rows = torch.zeros(max_moves, dtype=torch.long)
+    move_cols = torch.zeros(max_moves, dtype=torch.long)
+    move_mask = torch.zeros(max_moves, dtype=torch.float32)
     move_mask[:10] = 1.0  # Pretend 10 valid moves
 
     # Export to ONNX

@@ -15,7 +15,21 @@ export class AlphaZeroInference {
   constructor(modelPath) {
     this.modelPath = modelPath;
     this.session = null;
-    this.maxMoves = 512;
+    // Must equal OnnxAlphaZero.max_moves baked into model.onnx (currently 576
+    // = 24*24, the true maximum legal moves on a 24x24 board). If a future
+    // re-export changes the export-side constant, change this in lockstep.
+    this.maxMoves = 576;
+    this._overflowWarned = false;
+  }
+
+  _warnOverflowOnce(nMoves) {
+    if (this._overflowWarned) return;
+    this._overflowWarned = true;
+    console.warn(
+      `[AlphaZeroInference] legal-move count (${nMoves}) exceeds maxMoves ` +
+        `(${this.maxMoves}); priors past the cap will be 0. Bump ONNX export ` +
+        `OnnxAlphaZero.max_moves and AlphaZeroInference.maxMoves in lockstep.`
+    );
   }
 
   async load() {
@@ -85,10 +99,14 @@ export class AlphaZeroInference {
 
     const results = await this.session.run(feeds);
 
-    // Extract logits (only for valid moves, first moves.length entries)
+    // Extract logits. CRITICAL: cap at maxMoves — the policy_logits buffer is
+    // exactly maxMoves long; reading past it returns undefined which becomes
+    // NaN downstream, poisoning every prior.
+    if (moves.length > this.maxMoves) this._warnOverflowOnce(moves.length);
+    const nValid = Math.min(moves.length, this.maxMoves);
     const allLogits = results.policy_logits.data;
     const logits = [];
-    for (let i = 0; i < moves.length; i++) {
+    for (let i = 0; i < nValid; i++) {
       logits.push(allLogits[i]);
     }
 
@@ -114,10 +132,16 @@ export class AlphaZeroInference {
       sumExp += exp;
     }
 
+    // Priors map covers every requested move (capped). Moves past nValid
+    // (only possible after the warn-once guard fires) get prior 0.
     const priors = new Map();
-    for (let i = 0; i < moves.length; i++) {
+    for (let i = 0; i < nValid; i++) {
       const key = `${moves[i][0]},${moves[i][1]}`;
       priors.set(key, exps[i] / sumExp);
+    }
+    for (let i = nValid; i < moves.length; i++) {
+      const key = `${moves[i][0]},${moves[i][1]}`;
+      priors.set(key, 0);
     }
 
     return { priors, value };
@@ -167,8 +191,11 @@ export class AlphaZeroInference {
 
     const results = await this.session.run(feeds);
 
+    // Same buffer-overread guard as evaluate(). See comment there.
+    if (moves.length > this.maxMoves) this._warnOverflowOnce(moves.length);
+    const nValid = Math.min(moves.length, this.maxMoves);
     const logits = [];
-    for (let i = 0; i < moves.length; i++) {
+    for (let i = 0; i < nValid; i++) {
       logits.push(results.policy_logits.data[i]);
     }
 

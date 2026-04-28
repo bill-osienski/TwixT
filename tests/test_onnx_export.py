@@ -16,6 +16,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # 30 after) without hardcoding.
 from scripts.GPU.alphazero.game.twixt_state import NUM_CHANNELS as _ONNX_IN_CH
 
+# Move-tensor size baked into the ONNX export. Tracks the OnnxAlphaZero
+# default (576 = 24*24, the true max legal moves on a 24x24 board) so
+# bumps to that constant don't silently drift the tests.
+import inspect as _inspect
+from scripts.GPU.alphazero.export_onnx import OnnxAlphaZero as _OnnxAZ
+_MAX_MOVES = _inspect.signature(_OnnxAZ).parameters["max_moves"].default
+
 
 def test_pytorch_model_forward():
     """Test PyTorch model forward pass works."""
@@ -27,9 +34,9 @@ def test_pytorch_model_forward():
 
     # Create inputs
     board = torch.randn(1, _ONNX_IN_CH, 24, 24)  # NCHW
-    move_rows = torch.zeros(512, dtype=torch.long)
-    move_cols = torch.zeros(512, dtype=torch.long)
-    move_mask = torch.zeros(512)
+    move_rows = torch.zeros(_MAX_MOVES, dtype=torch.long)
+    move_cols = torch.zeros(_MAX_MOVES, dtype=torch.long)
+    move_mask = torch.zeros(_MAX_MOVES)
 
     # Set some valid moves
     move_rows[:5] = torch.tensor([1, 2, 3, 4, 5])
@@ -41,14 +48,14 @@ def test_pytorch_model_forward():
         policy, value = model(board, move_rows, move_cols, move_mask)
 
     # Check shapes
-    assert policy.shape == (512,), f"Policy shape: {policy.shape}"
+    assert policy.shape == (_MAX_MOVES,), f"Policy shape: {policy.shape}"
     assert value.ndim == 0, f"Value shape: {value.shape}"
 
     # Check value range
     assert -1.0 <= float(value) <= 1.0, f"Value out of range: {float(value)}"
 
     # Check masked values are -1e9
-    assert torch.allclose(policy[5:], torch.full((507,), -1e9)), "Masked logits should be -1e9"
+    assert torch.allclose(policy[5:], torch.full((_MAX_MOVES - 5,), -1e9)), "Masked logits should be -1e9"
 
     print("PASS: PyTorch model forward pass")
 
@@ -147,9 +154,9 @@ def test_export_and_load():
 
         # Run inference
         board = np.random.randn(1, _ONNX_IN_CH, 24, 24).astype(np.float32)
-        move_rows = np.zeros(512, dtype=np.int64)
-        move_cols = np.zeros(512, dtype=np.int64)
-        move_mask = np.zeros(512, dtype=np.float32)
+        move_rows = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_cols = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_mask = np.zeros(_MAX_MOVES, dtype=np.float32)
         move_mask[:10] = 1.0
 
         policy, value = session.run(
@@ -162,7 +169,7 @@ def test_export_and_load():
             }
         )
 
-        assert policy.shape == (512,), f"Policy shape: {policy.shape}"
+        assert policy.shape == (_MAX_MOVES,), f"Policy shape: {policy.shape}"
         assert -1.0 <= float(value) <= 1.0, f"Value out of range: {float(value)}"
 
     print("PASS: Export and load")
@@ -199,9 +206,9 @@ def test_parity_simple():
         board_chw = np.transpose(board_hwc, (2, 0, 1))  # (C, H, W)
         board_onnx = board_chw[None, ...].astype(np.float32)  # (1, C, H, W)
 
-        move_rows = np.zeros(512, dtype=np.int64)
-        move_cols = np.zeros(512, dtype=np.int64)
-        move_mask = np.zeros(512, dtype=np.float32)
+        move_rows = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_cols = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_mask = np.zeros(_MAX_MOVES, dtype=np.float32)
 
         for i, (r, c) in enumerate(moves):
             move_rows[i] = r
@@ -278,9 +285,9 @@ def test_parity_multiple_boards():
 
             # ONNX forward
             board_onnx = np.transpose(board_hwc, (2, 0, 1))[None, ...].astype(np.float32)
-            move_rows = np.zeros(512, dtype=np.int64)
-            move_cols = np.zeros(512, dtype=np.int64)
-            move_mask = np.zeros(512, dtype=np.float32)
+            move_rows = np.zeros(_MAX_MOVES, dtype=np.int64)
+            move_cols = np.zeros(_MAX_MOVES, dtype=np.int64)
+            move_mask = np.zeros(_MAX_MOVES, dtype=np.float32)
 
             for i, (r, c) in enumerate(moves):
                 move_rows[i] = r
@@ -331,9 +338,9 @@ def test_masked_logits():
 
         # Only 3 valid moves
         board = np.random.randn(1, _ONNX_IN_CH, 24, 24).astype(np.float32)
-        move_rows = np.zeros(512, dtype=np.int64)
-        move_cols = np.zeros(512, dtype=np.int64)
-        move_mask = np.zeros(512, dtype=np.float32)
+        move_rows = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_cols = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_mask = np.zeros(_MAX_MOVES, dtype=np.float32)
 
         move_rows[:3] = [5, 6, 7]
         move_cols[:3] = [5, 6, 7]
@@ -387,9 +394,9 @@ def test_move_order_invariance():
         # Original move order
         moves_original = [(5, 5), (10, 10), (15, 3), (3, 15), (12, 8)]
 
-        move_rows1 = np.zeros(512, dtype=np.int64)
-        move_cols1 = np.zeros(512, dtype=np.int64)
-        move_mask1 = np.zeros(512, dtype=np.float32)
+        move_rows1 = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_cols1 = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_mask1 = np.zeros(_MAX_MOVES, dtype=np.float32)
 
         for i, (r, c) in enumerate(moves_original):
             move_rows1[i] = r
@@ -409,9 +416,9 @@ def test_move_order_invariance():
         # Shuffled move order
         moves_shuffled = [(15, 3), (5, 5), (12, 8), (3, 15), (10, 10)]
 
-        move_rows2 = np.zeros(512, dtype=np.int64)
-        move_cols2 = np.zeros(512, dtype=np.int64)
-        move_mask2 = np.zeros(512, dtype=np.float32)
+        move_rows2 = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_cols2 = np.zeros(_MAX_MOVES, dtype=np.int64)
+        move_mask2 = np.zeros(_MAX_MOVES, dtype=np.float32)
 
         for i, (r, c) in enumerate(moves_shuffled):
             move_rows2[i] = r
