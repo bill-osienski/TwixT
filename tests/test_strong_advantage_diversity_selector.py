@@ -971,3 +971,53 @@ def test_quality_key_structural_priority():
 
     assert len(kept) == 1
     assert kept[0] is high_struct
+
+
+def test_category_round_robin_canonical_order_all_four_populated():
+    """Spec §9 item 4: all 4 categories populated with 4 candidates each
+    (16 total, all from distinct games so per-game cap doesn't bind).
+    With max_probes=8, the round-robin walks the canonical 4-tuple twice
+    and admits 2 from each category in canonical order: central_red,
+    central_black, edge_red, edge_black, central_red, ..., for a total
+    of 8 probes split 2/2/2/2."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    cands = []
+    for game_idx in range(4):
+        for cat in [
+            "chain_advantage_central_red",
+            "chain_advantage_central_black",
+            "chain_advantage_edge_red",
+            "chain_advantage_edge_black",
+        ]:
+            cands.append(_make_candidate(
+                source_game=f"iter_0099_game_{game_idx:03d}_{cat[-3:]}",
+                source_ply=40, category=cat,
+                cc_size=28 - game_idx,  # rank decreases within each bucket
+            ))
+
+    audit = []
+    kept = _select_diverse_admitted_candidates(
+        cands, audit, max_probes=8, max_probes_per_game=2,
+    )
+
+    assert len(kept) == 8
+
+    # Iteration order must be the canonical 4-tuple repeating twice.
+    expected_cats = [
+        "chain_advantage_central_red",
+        "chain_advantage_central_black",
+        "chain_advantage_edge_red",
+        "chain_advantage_edge_black",
+    ] * 2
+    assert [k["category"] for k in kept] == expected_cats
+
+    # Each category contributes exactly 2 probes (8 / 4).
+    from collections import Counter
+    by_cat = Counter(k["category"] for k in kept)
+    assert all(by_cat[c] == 2 for c in [
+        "chain_advantage_central_red",
+        "chain_advantage_central_black",
+        "chain_advantage_edge_red",
+        "chain_advantage_edge_black",
+    ])
