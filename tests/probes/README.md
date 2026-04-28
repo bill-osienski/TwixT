@@ -53,6 +53,32 @@ the generator:
 Reruns with identical inputs produce byte-identical output (deterministic
 probe IDs, deterministic dedup canonicalization, no wall-clock fields).
 
+### Recovery: parity test fails because replay corpus changed
+
+`tests/test_probe_suite_forced_parity.py` regenerates the forced suite
+from the args recorded in the committed file's `meta.selection_rules`
+and asserts byte-equality. The test assumes the source replay JSONs at
+`scripts/GPU/logs/games/iter_NNNN_game_MMM.json` for the recorded
+`source_iter_range` are byte-identical to when the committed suite was
+produced.
+
+When that assumption breaks (replay files moved, deleted, or replaced
+by a fresh training run), the parity test will fail spuriously even
+though the generator code is correct. **Recovery procedure:**
+
+1. Verify the failure is corpus-replacement, not a code regression:
+   regenerate via the existing generator (or the new tier-parameterized
+   one) and confirm both produce byte-identical output to each other
+   but neither matches the committed suite.
+2. Regenerate `tests/probes/twixt_probes.json` from the current
+   on-disk replays as a **separate, deliberate data-refresh commit**
+   (not bundled with code changes). This re-establishes the byte-
+   identical baseline the parity test requires.
+3. Then re-run the parity test — it should pass against the new
+   committed baseline.
+
+Do not bypass the parity test or relax its assertion.
+
 ## Categories
 
 | Category | Description | Min | Max |
