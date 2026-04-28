@@ -20,6 +20,7 @@ def _make_candidate(
     source_game: str,
     source_ply: int,
     category: str,
+    ply: int | None = None,
     cc_size: int = 18,
     axis_span_margin: float = 0.30,
     cc_axis_span: float = 0.74,
@@ -29,13 +30,21 @@ def _make_candidate(
 ):
     """Construct a synthetic admitted candidate matching the fields the
     selector reads. Defaults pass every Phase-1 and Phase-2 gate so the
-    only thing exercised is selection logic."""
+    only thing exercised is selection logic.
+
+    Represents the candidate shape AFTER Phase-2 label injection (i.e.,
+    after `cand['phase2_label']['label_checkpoint'] = ...` runs in
+    `_run_strong_advantage`), which is what the selector sees at call time.
+
+    `ply` defaults to `source_ply` when not provided; pass an explicit
+    value if a future test needs to distinguish them.
+    """
     return {
         "source_game": source_game,
         "source_ply": source_ply,
         "category": category,
         "winner": "red" if category.endswith("_red") else "black",
-        "ply": source_ply,
+        "ply": ply if ply is not None else source_ply,
         "starting_player": "red",
         "move_history": [],  # selector doesn't touch this
         "phase1_features": {
@@ -110,4 +119,35 @@ def test_diversity_sort_key_total_order_via_source_tiebreak():
                         category="chain_advantage_central_red")
 
     # Higher iter (-iter is smaller) wins → a sorts before b.
+    assert _diversity_sort_key(a) < _diversity_sort_key(b)
+
+
+def test_diversity_sort_key_cc_axis_span_breaks_margin_tie():
+    """When cc_size and axis_span_margin both match, larger cc_axis_span wins.
+    Pins down the position of cc_axis_span in the sort tuple."""
+    from scripts.build_probe_suite import _diversity_sort_key
+
+    a = _make_candidate(source_game="iter_0001_game_001", source_ply=10,
+                        category="chain_advantage_central_red",
+                        cc_size=20, axis_span_margin=0.30, cc_axis_span=0.90)
+    b = _make_candidate(source_game="iter_0001_game_001", source_ply=10,
+                        category="chain_advantage_central_red",
+                        cc_size=20, axis_span_margin=0.30, cc_axis_span=0.60)
+
+    assert _diversity_sort_key(a) < _diversity_sort_key(b)
+
+
+def test_diversity_sort_key_value_stability_breaks_top1_share_tie():
+    """When all structural fields and min_top1_share match, lower
+    value_stability wins (more stable = better, so ascending). Pins
+    down the position of value_stability in the sort tuple."""
+    from scripts.build_probe_suite import _diversity_sort_key
+
+    a = _make_candidate(source_game="iter_0001_game_001", source_ply=10,
+                        category="chain_advantage_central_red",
+                        min_top1_share=0.30, value_stability=0.02)
+    b = _make_candidate(source_game="iter_0001_game_001", source_ply=10,
+                        category="chain_advantage_central_red",
+                        min_top1_share=0.30, value_stability=0.10)
+
     assert _diversity_sort_key(a) < _diversity_sort_key(b)
