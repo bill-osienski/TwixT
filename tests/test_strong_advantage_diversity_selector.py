@@ -260,3 +260,105 @@ def test_rule_a_near_duplicate_requires_both_thresholds_satisfied():
                            cc_size=21, axis_span_margin=0.36)  # Δcc=1 (pass), Δasm=0.06 (fail)
 
     assert _find_near_duplicate_keeper(cand, [keeper]) is None
+
+
+def test_rule_b_ply_too_close_matches_same_game_within_separation():
+    from scripts.build_probe_suite import _find_ply_too_close_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                           category="chain_advantage_central_red")
+    rank_index = {id(keeper): 0, id(cand): 1}
+
+    assert _find_ply_too_close_keeper(cand, [keeper], rank_index) is keeper
+
+
+def test_rule_b_ply_too_close_admits_at_separation_boundary():
+    """|Δsource_ply| < MIN_PLY_SEPARATION_SAME_GAME=3 is strict: Δ=3
+    is admissible, not too close."""
+    from scripts.build_probe_suite import _find_ply_too_close_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=53,  # Δ=3
+                           category="chain_advantage_central_red")
+    rank_index = {id(keeper): 0, id(cand): 1}
+
+    assert _find_ply_too_close_keeper(cand, [keeper], rank_index) is None
+
+
+def test_rule_b_ply_too_close_skips_different_game():
+    from scripts.build_probe_suite import _find_ply_too_close_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_999", source_ply=51,
+                           category="chain_advantage_central_red")
+    rank_index = {id(keeper): 0, id(cand): 1}
+
+    assert _find_ply_too_close_keeper(cand, [keeper], rank_index) is None
+
+
+def test_rule_b_ply_too_close_ignores_category_only_game_matters():
+    """Rule B is category-agnostic: same-game cross-category pair within
+    separation still triggers Rule B."""
+    from scripts.build_probe_suite import _find_ply_too_close_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                           category="chain_advantage_edge_red")
+    rank_index = {id(keeper): 0, id(cand): 1}
+
+    assert _find_ply_too_close_keeper(cand, [keeper], rank_index) is keeper
+
+
+def test_rule_b_tie_break_prefers_closest_keeper():
+    """Two keepers, candidate at ply 51: keeper at 50 (Δ=1) wins over
+    keeper at 49 (Δ=2)."""
+    from scripts.build_probe_suite import _find_ply_too_close_keeper
+
+    closest = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                              category="chain_advantage_central_red")
+    farther = _make_candidate(source_game="iter_0058_game_040", source_ply=49,
+                              category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                           category="chain_advantage_central_red")
+    rank_index = {id(closest): 0, id(farther): 1, id(cand): 2}
+
+    assert _find_ply_too_close_keeper(cand, [farther, closest], rank_index) is closest
+
+
+def test_rule_b_tie_break_uses_better_rank_when_equidistant():
+    """Two keepers equidistant from candidate (both Δ=1): the one with
+    better Stage-2 rank (lower rank_index value) wins."""
+    from scripts.build_probe_suite import _find_ply_too_close_keeper
+
+    higher_rank = _make_candidate(source_game="iter_0058_game_040", source_ply=49,
+                                  category="chain_advantage_central_red")
+    lower_rank = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                                 category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                           category="chain_advantage_central_red")
+    # higher_rank has rank 0 (better); lower_rank has rank 5 (worse).
+    rank_index = {id(higher_rank): 0, id(lower_rank): 5, id(cand): 99}
+
+    assert _find_ply_too_close_keeper(cand, [lower_rank, higher_rank], rank_index) is higher_rank
+
+
+def test_rule_b_tie_break_falls_back_to_smallest_source_ply():
+    """When equidistant AND same rank_index value (synthetic edge case
+    only achievable via test setup), smallest source_ply wins."""
+    from scripts.build_probe_suite import _find_ply_too_close_keeper
+
+    later_ply = _make_candidate(source_game="iter_0058_game_040", source_ply=51,
+                                category="chain_advantage_central_red")
+    earlier_ply = _make_candidate(source_game="iter_0058_game_040", source_ply=49,
+                                  category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                           category="chain_advantage_central_red")
+    # Force same rank_index for both keepers to exercise the final tie-break.
+    rank_index = {id(later_ply): 0, id(earlier_ply): 0, id(cand): 99}
+
+    assert _find_ply_too_close_keeper(cand, [later_ply, earlier_ply], rank_index) is earlier_ply

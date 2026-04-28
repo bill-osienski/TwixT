@@ -80,6 +80,38 @@ def _find_near_duplicate_keeper(cand: dict, kept: list) -> dict | None:
     return min(matches, key=lambda k: k["source_ply"])
 
 
+def _find_ply_too_close_keeper(cand: dict, kept: list, rank_index: dict) -> dict | None:
+    """Rule B — Ply-too-close. Returns the blocking kept candidate or None.
+
+    Same source_game AND |Δsource_ply| < MIN_PLY_SEPARATION_SAME_GAME (any
+    category — Rule B is category-agnostic).
+
+    Tiered tie-break:
+      1. Closest kept sibling (smallest |Δsource_ply|).
+      2. Better Stage-2 rank (smaller rank_index value).
+      3. Smallest source_ply.
+
+    rank_index: maps id(cand) to its position in its category's Stage-2
+    sort order. The selector builds this once after Stage 2.
+    See spec §4.2.
+    """
+    matches = [
+        k for k in kept
+        if k["source_game"] == cand["source_game"]
+        and abs(k["source_ply"] - cand["source_ply"]) < MIN_PLY_SEPARATION_SAME_GAME
+    ]
+    if not matches:
+        return None
+    return min(
+        matches,
+        key=lambda k: (
+            abs(k["source_ply"] - cand["source_ply"]),
+            rank_index[id(k)],
+            k["source_ply"],
+        ),
+    )
+
+
 # --- Tier dispatch ---
 
 def main() -> int:
