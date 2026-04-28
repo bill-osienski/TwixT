@@ -568,3 +568,159 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ============================================================
+# Strong-advantage probe tier — Phase 1 structural features
+# ============================================================
+
+def compute_phase1_features(state, winner: str) -> dict:
+    """Compute Phase-1 structural features for the eventual winner of a game.
+
+    Used by the strong_advantage probe-suite generator to filter candidate
+    positions before deep-MCTS labeling. See spec
+    docs/superpowers/specs/2026-04-28-strong-advantage-probe-tier-design.md
+    Phase 1.
+
+    Args:
+        state: TwixtState at the candidate position (winner has not yet won).
+        winner: "red" or "black" — the side that wins the source game.
+
+    Returns:
+        dict with keys:
+          cc_size: int — size of the largest same-color connected component
+            for `winner`.
+          cc_axis_span: float — fraction of `winner`'s goal axis the largest
+            CC spans. Red goal axis is rows; black is cols. Range [0, 1].
+          cc_touches_own_goal: bool — True if the largest CC touches at
+            least one of `winner`'s two goal edges.
+            (red: row 0 or row 23; black: col 0 or col 23).
+          axis_span_margin: float — winner_cc_axis_span - loser_cc_axis_span.
+            Negative if the loser is more advanced.
+          centroid_chebyshev_from_center: int — Chebyshev distance of the
+            winner's CC centroid from the board center (11.5, 11.5).
+          forced_within_2: bool — True if `winner` has a forced win within
+            2 plies (delegates to the existing forced detector).
+    """
+    loser = "black" if winner == "red" else "red"
+    winner_pegs = _collect_pegs(state, winner)
+    loser_pegs = _collect_pegs(state, loser)
+
+    win_cc, win_span = _largest_connected_component(state, winner_pegs, winner)
+    _, lose_span = _largest_connected_component(state, loser_pegs, loser)
+
+    if not win_cc:
+        return {
+            "cc_size": 0,
+            "cc_axis_span": 0.0,
+            "cc_touches_own_goal": False,
+            "axis_span_margin": -lose_span,
+            "centroid_chebyshev_from_center": 23,
+            "forced_within_2": False,
+        }
+
+    # Goal-touching: does the largest CC touch a goal-axis edge for winner?
+    if winner == "red":
+        touches = any(r == 0 or r == 23 for r, _ in win_cc)
+    else:
+        touches = any(c == 0 or c == 23 for _, c in win_cc)
+
+    # Centroid Chebyshev distance from board center (11.5, 11.5).
+    avg_r = sum(r for r, _ in win_cc) / len(win_cc)
+    avg_c = sum(c for _, c in win_cc) / len(win_cc)
+    cheb = int(round(max(abs(avg_r - 11.5), abs(avg_c - 11.5))))
+
+    return {
+        "cc_size": len(win_cc),
+        "cc_axis_span": round(win_span, 4),
+        "cc_touches_own_goal": touches,
+        "axis_span_margin": round(win_span - lose_span, 4),
+        "centroid_chebyshev_from_center": cheb,
+        "forced_within_2": is_forced_within_k(state, winner, k=2),
+    }
+
+
+def _collect_pegs(state, color: str) -> list:
+    """Return [(r, c), ...] of all pegs of `color` on the board."""
+    return [(r, c) for (r, c), col in state.pegs.items() if col == color]
+
+
+def _largest_connected_component(state, pegs: list, color: str) -> tuple:
+    """Return (cc_cells, axis_span) for the largest knight-bridged component
+    of `color`. axis_span is the fraction of `color`'s goal axis the
+    component spans (red: row range / 23; black: col range / 23).
+    """
+    if not pegs:
+        return [], 0.0
+    bridges = _bridges_for_color(state, color)
+    peg_set = set(pegs)
+    adj = {p: set() for p in pegs}
+    for a, b in bridges:
+        if a in peg_set and b in peg_set:
+            adj[a].add(b)
+            adj[b].add(a)
+
+    seen = set()
+    components = []
+    for p in pegs:
+        if p in seen:
+            continue
+        stack = [p]
+        comp = []
+        while stack:
+            x = stack.pop()
+            if x in seen:
+                continue
+            seen.add(x)
+            comp.append(x)
+            stack.extend(adj[x] - seen)
+        components.append(comp)
+
+    largest = max(components, key=len)
+    if color == "red":
+        rows = [r for r, _ in largest]
+        span = (max(rows) - min(rows)) / 23.0
+    else:
+        cols = [c for _, c in largest]
+        span = (max(cols) - min(cols)) / 23.0
+    return largest, span
+
+
+def _bridges_for_color(state, color: str) -> list:
+    """Return [(p1, p2), ...] of every knight-bridge currently held by
+    `color` on `state`.
+
+    state.bridges is a set of Bridge tuples ((r1,c1),(r2,c2)); the color
+    is determined by looking up the peg owner at one endpoint.
+    """
+    out = []
+    for p1, p2 in state.bridges:
+        if state.pegs.get(p1) == color:
+            out.append((p1, p2))
+    return out
+
+
+def is_forced_within_k(state, player: str, k: int = 1) -> bool:
+    """True if `player` (whose turn it is, or hypothetically) can force a
+    win within k plies of play.
+
+    Conservative implementation: only does a 1-ply lookahead — returns
+    True iff `player` has any legal move that immediately wins. For k>1
+    this is a lower bound (under-reports forced positions), which is
+    safe for the strong_advantage filter ("exclude already-forced") —
+    we'd rather over-admit a not-quite-forced candidate (Phase 2 MCTS
+    will filter it) than under-admit a genuinely strong-advantage one.
+
+    A future tightening can extend to a true negamax k-ply search; the
+    interface accepts k for forward-compat.
+    """
+    if state.to_move != player:
+        return False
+    for move in state.legal_moves():
+        try:
+            next_state = state.apply_move(move)
+        except Exception:
+            continue
+        if next_state.is_terminal() and next_state.winner() == player:
+            return True
+    return False
