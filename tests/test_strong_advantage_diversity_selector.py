@@ -581,3 +581,29 @@ def test_selector_drop_reason_precedence():
     drop_rows = [r for r in audit if r["source_ply"] == 48]
     assert len(drop_rows) == 1
     assert drop_rows[0]["reason"] == "diversity_near_duplicate"
+
+
+def test_cli_accepts_max_probes_per_game_flag():
+    """argparse accepts --max-probes-per-game with int, default 2.
+
+    Inspects --help output via subprocess rather than importing the
+    parser directly, since the parser is constructed inside main()
+    and isn't exposed as a module-level object.
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    project_root = Path(__file__).resolve().parent.parent
+    result = subprocess.run(
+        [sys.executable, str(project_root / "scripts" / "build_probe_suite.py"),
+         "--tier", "strong_advantage", "--help"],
+        capture_output=True, text=True, cwd=project_root,
+    )
+    assert "--max-probes-per-game" in result.stdout, (
+        f"--max-probes-per-game flag not found in --help output:\n{result.stdout}"
+    )
+    assert "default: 2" in result.stdout.lower() or "default 2" in result.stdout.lower() \
+        or "(default: 2)" in result.stdout, (
+        f"Expected default of 2 documented in --help:\n{result.stdout}"
+    )

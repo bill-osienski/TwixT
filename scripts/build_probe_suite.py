@@ -250,6 +250,10 @@ def main() -> int:
                          "strong_advantage -> tests/probes/strong_advantage_probes.json")
     ap.add_argument("--samples-per-bucket", type=int, default=12)
     ap.add_argument("--max-probes", type=int, default=30)
+    ap.add_argument("--max-probes-per-game", type=int, default=2,
+                    help="Maximum number of admitted probes from any single "
+                         "source game. Counts total across all 4 categories. "
+                         "Default 2. Strong-advantage tier only.")
 
     # strong_advantage-specific flags (ignored for forced)
     ap.add_argument("--label-checkpoint", default=None)
