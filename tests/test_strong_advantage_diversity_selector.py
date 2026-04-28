@@ -621,6 +621,13 @@ def test_end_to_end_strong_advantage_runs_selector_and_writes_meta(tmp_path, mon
     Stubs are applied to the module BEFORE main_with_args runs, so the
     function-local `from scripts.GPU.alphazero.probe_eval import ...`
     inside _run_strong_advantage picks up the stubbed callables.
+
+    INVARIANT: this test depends on _run_strong_advantage doing its
+    probe_eval imports lazily (inside the function body, not at module
+    scope). If those imports are ever hoisted, this monkeypatch pattern
+    silently bypasses the stubs and the test starts using real MCTS
+    labeling. If you hoist the imports, switch to patching
+    `scripts.build_probe_suite.label_candidate_with_mcts` etc. instead.
     """
     import json
     from pathlib import Path
@@ -686,6 +693,13 @@ def test_end_to_end_strong_advantage_runs_selector_and_writes_meta(tmp_path, mon
 
     draft = json.loads(draft_path.read_text())
     audit = json.loads(audit_path.read_text())["audit"]
+
+    # Sanity: at least one probe survived all stages — otherwise the
+    # equality assertion below would pass trivially.
+    assert len(draft["probes"]) > 0, (
+        "no probes produced — check iter_0057-58 fixture in "
+        "scripts/GPU/logs/games/"
+    )
 
     # No audit double-counting: admitted rows == probes in draft.
     admitted_rows = [r for r in audit if r["reason"] == "admitted"]

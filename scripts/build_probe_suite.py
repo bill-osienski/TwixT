@@ -576,14 +576,20 @@ def _run_strong_advantage(args) -> int:
             })
 
     # Final Phase 2 summary so the operator sees a clean breakdown.
+    # NOTE: at this point in the pipeline, audit contains only Phase-2
+    # rejection rows (the diversity selector hasn't run yet, so no
+    # reason="admitted" or reason="diversity_*" rows exist). We
+    # explicitly seed the breakdown with the Phase-2-admitted count
+    # (`len(admitted)`) so the operator sees the full picture.
     phase2_elapsed = _time.time() - t_phase2_start
     from collections import Counter as _Counter
     reason_breakdown = _Counter(
         a["reason"] for a in audit if "phase2_label" in a or a["reason"] in
-        ("mcts_error", "replay_error", "admitted",
+        ("mcts_error", "replay_error",
          "sign_mismatch", "magnitude_below_threshold", "low_top1_share",
          "unstable_value", "position_already_forced")
     )
+    reason_breakdown["admitted"] = len(admitted)
     breakdown_str = ", ".join(f"{r}={n}" for r, n in reason_breakdown.most_common())
     print(
         f"[probe_suite] Phase 2 complete: {n_total}/{n_total} labeled "
@@ -593,8 +599,10 @@ def _run_strong_advantage(args) -> int:
     )
 
     if not admitted:
+        # No reason="admitted" rows can exist in audit at this point
+        # (Phase 2 only writes rejections; the selector hasn't run).
         from collections import Counter
-        reason_counts = Counter(a["reason"] for a in audit if a["reason"] != "admitted")
+        reason_counts = Counter(a["reason"] for a in audit)
         msg = ", ".join(f"{r}: {n}" for r, n in reason_counts.most_common())
         print(f"[probe_suite] ERROR: 0 admitted probes overall.\n"
               f"  Drop reasons: {msg}", file=sys.stderr)
