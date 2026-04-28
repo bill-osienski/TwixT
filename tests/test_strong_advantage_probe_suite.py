@@ -155,3 +155,61 @@ def _interleave_with_filler(red_moves, filler_col):
         out.append(rm)
         out.append((1 + (i % 22), filler_col))  # black filler in safe column
     return out
+
+
+def test_extract_strong_advantage_candidates_reads_canonical_schema():
+    """Regression: real on-disk game records use meta.reason (not top-level
+    winner_reason) and have an `id` field. Function must extract candidates
+    from records with that schema, not just from synthetic test fixtures.
+    """
+    from scripts.GPU.alphazero.probe_eval import extract_strong_advantage_candidates
+
+    # Mirror the schema scripts/GPU/alphazero/game_saver.py emits:
+    # - top-level `id`, `winner`, `moves`, `starting_player`
+    # - `meta.reason`, `meta.iteration`, `meta.game_idx`, `meta.board_size`
+    # NO top-level `winner_reason`.
+    canonical_game = {
+        "id": "iter_0070_game_042",
+        "winner": "red",
+        "starting_player": "red",
+        "moves": [{"row": r, "col": c} for r, c in _central_red_chain()],
+        "meta": {
+            "iteration": 70,
+            "game_idx": 42,
+            "reason": "win",
+            "board_size": 24,
+        },
+    }
+    candidates, audit = extract_strong_advantage_candidates(
+        [canonical_game], k_plies_range=(3, 8), category_min_count=0
+    )
+    assert len(candidates) >= 1, (
+        f"Expected at least one candidate from canonical-schema game; got {len(candidates)}. "
+        f"Audit: {[(a.get('source_ply'), a.get('reason')) for a in audit][:10]}"
+    )
+    # source_game must be the explicit `id`, not a fallback-derived placeholder
+    assert candidates[0]["source_game"] == "iter_0070_game_042"
+
+
+def test_extract_strong_advantage_candidates_skips_non_decisive_canonical():
+    """Regression: a canonical-schema game with meta.reason != 'win' must
+    skip cleanly (zero candidates), not crash.
+    """
+    from scripts.GPU.alphazero.probe_eval import extract_strong_advantage_candidates
+
+    draw_game = {
+        "id": "iter_0070_game_099",
+        "winner": None,
+        "starting_player": "red",
+        "moves": [{"row": r, "col": c} for r, c in _central_red_chain()],
+        "meta": {
+            "iteration": 70,
+            "game_idx": 99,
+            "reason": "draw",
+            "board_size": 24,
+        },
+    }
+    candidates, audit = extract_strong_advantage_candidates(
+        [draw_game], k_plies_range=(3, 8), category_min_count=0
+    )
+    assert candidates == []

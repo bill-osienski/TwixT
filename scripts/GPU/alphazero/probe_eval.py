@@ -755,7 +755,7 @@ def extract_strong_advantage_candidates(
 
     Args:
         games: list of game-record dicts (must contain `moves`, `winner`,
-            `winner_reason`, optionally `starting_player`).
+            `meta.reason` or fallback `winner_reason`, optionally `starting_player`).
         k_plies_range: (min_K, max_K) plies before terminal to sample.
         min_cc_size, min_cc_axis_span, min_axis_span_margin: Phase-1
             heuristic thresholds.
@@ -781,7 +781,12 @@ def extract_strong_advantage_candidates(
     audit = []
 
     for game in games:
-        if game.get("winner_reason") != "win":
+        # Canonical schema (game_saver.py): meta.reason holds the win/draw/timeout
+        # status. Older fixtures may put it at top level as winner_reason — fall
+        # back for back-compat.
+        meta = game.get("meta") or {}
+        reason = meta.get("reason") or game.get("winner_reason")
+        if reason != "win":
             continue
         winner = game.get("winner")
         if winner not in ("red", "black"):
@@ -878,8 +883,17 @@ def extract_strong_advantage_candidates(
 
 
 def _derive_source_game_basename(game: dict) -> str:
-    """Best-effort recovery of the source_game basename from a game dict."""
+    """Best-effort recovery of the source_game basename from a game dict.
+
+    Prefers the explicit `id` field (canonical for production game records;
+    see scripts/GPU/alphazero/game_saver.py which stamps it as
+    'iter_NNNN_game_MMM'). Falls back to building from meta.iteration +
+    meta.game_idx if id is missing (test fixtures, older schemas).
+    """
+    if game.get("id"):
+        return game["id"]
     meta = game.get("meta") or {}
     iteration = meta.get("iteration", 0)
-    game_idx = meta.get("game_index", 0)
+    # Canonical key is `game_idx` (game_saver.py:88), NOT `game_index`.
+    game_idx = meta.get("game_idx", 0)
     return f"iter_{iteration:04d}_game_{game_idx:03d}"
