@@ -64,7 +64,7 @@ def main() -> int:
         return 2
 
 
-# --- Forced tier (lifted verbatim from build_bootstrap_probe_suite.py) ---
+# --- Forced tier (lifted from build_bootstrap_probe_suite.py) ---
 
 def _run_forced(args) -> int:
     if args.out is None:
@@ -104,6 +104,17 @@ def _run_forced(args) -> int:
         dedupe_mirror=True,
         max_probes=None,
     )
+
+    # Interleave-then-truncate: balance must survive truncation.
+    # extract_forced_probes_from_games already returned each color's probes
+    # in canonical sort order. We merge red/black greedily into `balanced`,
+    # at each step taking the color with the better sort key AS LONG AS
+    # the ≤ 2:1 balance rule would still hold. Stop at max_probes.
+    #
+    # An earlier version applied a pre-truncation cap and then truncated,
+    # but the final truncation could skew the output (e.g., all top-N
+    # probes came from the same color when the most recent iters favored
+    # that color). Interleaving closes that gap.
 
     def _sort_key(p: dict) -> tuple:
         basename = p["source_game"]

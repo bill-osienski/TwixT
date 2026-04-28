@@ -1,149 +1,19 @@
-"""Bootstrap rule-selected forced-probe suite generator.
+"""Backward-compatibility shim.
 
-Produces tests/probes/twixt_probes.json from historical game replays
-using strict rule-based selection (no human review). See the spec at
-docs/superpowers/specs/2026-04-21-probes-and-calibration-closure-design.md
-§5 for selection rules.
+The real implementation now lives in scripts/build_probe_suite.py. This
+shim preserves the existing CLI/cron invocation
+(`build_bootstrap_probe_suite.py --source-iter-range MIN MAX`) by injecting
+`--tier forced` and forwarding to the new entrypoint.
 
-The output is a rule-selected bootstrap suite, NOT the spec §7 review-
-curated gate suite. See tests/probes/README.md for the distinction.
-
-Reruns with identical --source-iter-range produce byte-identical output
-(deterministic probe IDs, deterministic dedup canonicalization, stable
-sort keys, no wall-clock fields).
+DO NOT add new flags here. Add them to build_probe_suite.py instead.
 """
 from __future__ import annotations
 
-import argparse
-import json
 import sys
 from pathlib import Path
 
-
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
-    ap.add_argument("--input", default="scripts/GPU/logs/games")
-    ap.add_argument("--source-iter-range", nargs=2, type=int, required=True,
-                    metavar=("MIN", "MAX"))
-    ap.add_argument("--out", default="tests/probes/twixt_probes.json")
-    ap.add_argument("--samples-per-bucket", type=int, default=12)
-    ap.add_argument("--max-probes", type=int, default=30)
-    args = ap.parse_args()
-
-    # Add project root to sys.path so this script can import scripts.GPU.alphazero.*
-    project_root = Path(__file__).resolve().parent.parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-
-    from scripts.GPU.alphazero.probe_eval import extract_forced_probes_from_games
-
-    min_iter, max_iter = args.source_iter_range
-    input_dir = Path(args.input)
-    if not input_dir.is_dir():
-        print(f"[bootstrap] ERROR: --input path is not a directory: {input_dir}",
-              file=sys.stderr)
-        return 2
-
-    # 1. Scan for iter_NNNN_game_MMM.json in range.
-    games: list[dict] = []
-    for fp in sorted(input_dir.glob("iter_*_game_*.json")):
-        with open(fp) as f:
-            try:
-                g = json.load(f)
-            except json.JSONDecodeError:
-                continue
-        iteration = (g.get("meta") or {}).get("iteration")
-        if iteration is None or not (min_iter <= iteration <= max_iter):
-            continue
-        games.append(g)
-
-    # 2. Extract probes via shared helper (filters: size=24, natural wins,
-    #    K=2, dedup exact+mirror).
-    probes = extract_forced_probes_from_games(
-        games,
-        active_size=24,
-        k_plies=2,
-        winner_reasons=frozenset({"win"}),
-        dedupe_exact=True,
-        dedupe_mirror=True,
-        max_probes=None,  # we balance and truncate below
-    )
-
-    # 3. Interleave-then-truncate: balance must survive truncation.
-    # extract_forced_probes_from_games already returned each color's probes
-    # in canonical sort order. We merge red/black greedily into `balanced`,
-    # at each step taking the color with the better sort key AS LONG AS
-    # the ≤ 2:1 balance rule would still hold. Stop at max_probes.
-    #
-    # An earlier version applied a pre-truncation cap and then truncated,
-    # but the final truncation could skew the output (e.g., all top-N
-    # probes came from the same color when the most recent iters favored
-    # that color). Interleaving closes that gap.
-    def _sort_key(p: dict) -> tuple:
-        # Extract iteration from source_game basename 'iter_NNNN_game_MMM'.
-        basename = p["source_game"]
-        try:
-            iter_num = int(basename.split("_")[1])
-        except (IndexError, ValueError):
-            iter_num = 0
-        return (-iter_num, -p["source_ply"], basename)
-
-    red = [p for p in probes if p["category"] == "near_win_red"]
-    black = [p for p in probes if p["category"] == "near_win_black"]
-
-    balanced: list[dict] = []
-    ri = bi = 0
-    red_count = black_count = 0
-    while len(balanced) < args.max_probes:
-        can_red = ri < len(red) and red_count + 1 <= 2 * max(black_count, 1)
-        can_black = bi < len(black) and black_count + 1 <= 2 * max(red_count, 1)
-        if not can_red and not can_black:
-            break
-        if can_red and can_black:
-            if _sort_key(red[ri]) <= _sort_key(black[bi]):
-                balanced.append(red[ri]); ri += 1; red_count += 1
-            else:
-                balanced.append(black[bi]); bi += 1; black_count += 1
-        elif can_red:
-            balanced.append(red[ri]); ri += 1; red_count += 1
-        else:
-            balanced.append(black[bi]); bi += 1; black_count += 1
-
-    # Final re-sort so serialized output is in canonical order regardless
-    # of which color was picked first during interleave.
-    balanced.sort(key=_sort_key)
-
-    # 5. Serialize (no wall-clock fields).
-    payload = {
-        "meta": {
-            "type": "bootstrap_rule_selected",
-            "not_gate_suite": True,
-            "note": ("Rule-selected bootstrap suite for trainer-side inline "
-                     "telemetry and practical regression monitoring. NOT the "
-                     "spec §7 review-curated gate suite — see "
-                     "tests/probes/README.md for the distinction."),
-            "generator": "scripts/build_bootstrap_probe_suite.py",
-            "generator_version": 1,
-            "selection_rules": {
-                "board_size": 24,
-                "winner_reasons": ["win"],
-                "k_plies_from_terminal": 2,
-                "dedup": "exact + 4-form-mirror-canonical",
-                "source_iter_range": [min_iter, max_iter],
-            },
-        },
-        "probes": balanced,
-    }
-
-    out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w") as f:
-        json.dump(payload, f, indent=2, sort_keys=False)
-        f.write("\n")
-
-    print(f"[bootstrap] wrote {len(balanced)} probes to {out_path}")
-    return 0
-
-
 if __name__ == "__main__":
-    sys.exit(main() or 0)
+    real = Path(__file__).resolve().parent / "build_probe_suite.py"
+    args = [sys.executable, str(real), "--tier", "forced", *sys.argv[1:]]
+    import os
+    os.execv(sys.executable, args)
