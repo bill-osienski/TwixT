@@ -448,3 +448,61 @@ def test_run_strong_advantage_writes_draft_with_admitted_candidates(tmp_path, mo
     assert payload["meta"]["tier"] == "strong_advantage"
     assert len(payload["probes"]) == 1
     assert payload["probes"][0]["category"] == "chain_advantage_central_red"
+
+
+def test_promote_errors_with_no_draft(tmp_path):
+    import scripts.build_probe_suite as bps
+    out = tmp_path / "x.json"
+    rc = bps.main_with_args([
+        "--tier", "strong_advantage", "--promote",
+        "--reviewer", "tester",
+        "--out", str(out),
+    ])
+    assert rc != 0
+
+
+def test_promote_writes_committed_with_reviewer_and_timestamp(tmp_path):
+    import json, datetime
+    import scripts.build_probe_suite as bps
+    out = tmp_path / "x.json"
+    draft = out.with_suffix(".draft.json")
+    draft.write_text(json.dumps({
+        "meta": {"tier": "strong_advantage", "review_mode": "draft"},
+        "probes": [],
+    }))
+    rc = bps.main_with_args([
+        "--tier", "strong_advantage", "--promote",
+        "--reviewer", "alice",
+        "--out", str(out),
+    ])
+    assert rc == 0
+    payload = json.loads(out.read_text())
+    assert payload["meta"]["review_mode"] == "light_review"
+    assert payload["meta"]["reviewer"] == "alice"
+    ts = payload["meta"]["reviewed_at_utc"]
+    # Round-trips as ISO 8601 UTC.
+    assert ts.endswith("Z")
+    datetime.datetime.fromisoformat(ts[:-1])
+
+
+def test_promote_refuses_overwrite_without_force(tmp_path):
+    import json
+    import scripts.build_probe_suite as bps
+    out = tmp_path / "x.json"
+    draft = out.with_suffix(".draft.json")
+    draft.write_text(json.dumps({
+        "meta": {"tier": "strong_advantage", "review_mode": "draft"},
+        "probes": [],
+    }))
+    out.write_text("{}")  # pre-existing committed file
+    rc1 = bps.main_with_args([
+        "--tier", "strong_advantage", "--promote",
+        "--reviewer", "alice", "--out", str(out),
+    ])
+    assert rc1 != 0  # refused
+    # With --force it succeeds
+    rc2 = bps.main_with_args([
+        "--tier", "strong_advantage", "--promote",
+        "--reviewer", "alice", "--force", "--out", str(out),
+    ])
+    assert rc2 == 0
