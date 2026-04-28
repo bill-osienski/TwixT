@@ -227,9 +227,14 @@ def test_rule_a_near_duplicate_returns_smallest_source_ply_when_multiple_match()
     assert _find_near_duplicate_keeper(cand, [keeper_high, keeper_low]) is keeper_low
 
 
-def test_rule_a_near_duplicate_skips_when_axis_span_margin_delta_at_threshold():
-    """|Δaxis_span_margin| < 0.05 is strict: delta == 0.05 is NOT a duplicate.
-    Symmetric to the cc_size threshold test."""
+def test_rule_a_near_duplicate_skips_when_axis_span_margin_delta_above_threshold():
+    """|Δaxis_span_margin| < 0.05: a delta strictly above threshold is NOT
+    a duplicate. Catches accidental swap of cc_size/axis_span_margin
+    threshold lines or relaxation of the threshold value.
+
+    Note: testing the exact-threshold case (Δ == 0.05) cleanly with
+    floats is unreliable (e.g., abs(0.35 - 0.30) == 0.0499...), so this
+    test uses Δ = 0.06 instead."""
     from scripts.build_probe_suite import _find_near_duplicate_keeper
 
     keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
