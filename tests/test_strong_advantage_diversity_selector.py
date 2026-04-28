@@ -367,3 +367,57 @@ def test_rule_b_tie_break_falls_back_to_smallest_source_ply():
     rank_index = {id(later_ply): 0, id(earlier_ply): 0, id(cand): 99}
 
     assert _find_ply_too_close_keeper(cand, [later_ply, earlier_ply], rank_index) is earlier_ply
+
+
+def test_rule_c_per_game_cap_returns_none_when_under_cap():
+    from scripts.build_probe_suite import _find_per_game_cap_keeper
+
+    keeper = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                             category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=53,
+                           category="chain_advantage_central_red")
+
+    # 1 keeper, cap=2 → not exceeded.
+    assert _find_per_game_cap_keeper(cand, [keeper], cap=2) is None
+
+
+def test_rule_c_per_game_cap_fires_when_at_cap():
+    from scripts.build_probe_suite import _find_per_game_cap_keeper
+
+    keeper_a = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                               category="chain_advantage_central_red")
+    keeper_b = _make_candidate(source_game="iter_0058_game_040", source_ply=53,
+                               category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=56,
+                           category="chain_advantage_central_red")
+
+    # 2 keepers, cap=2 → exceeded for the next candidate.
+    keeper = _find_per_game_cap_keeper(cand, [keeper_a, keeper_b], cap=2)
+    assert keeper is keeper_a  # smallest source_ply
+
+
+def test_rule_c_per_game_cap_counts_across_categories():
+    """Cap is total per game, not per (game, category). One central +
+    one edge from the same game already fills cap=2."""
+    from scripts.build_probe_suite import _find_per_game_cap_keeper
+
+    central = _make_candidate(source_game="iter_0058_game_040", source_ply=50,
+                              category="chain_advantage_central_red")
+    edge = _make_candidate(source_game="iter_0058_game_040", source_ply=53,
+                           category="chain_advantage_edge_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=56,
+                           category="chain_advantage_central_black")
+
+    keeper = _find_per_game_cap_keeper(cand, [central, edge], cap=2)
+    assert keeper is central
+
+
+def test_rule_c_per_game_cap_ignores_other_games():
+    from scripts.build_probe_suite import _find_per_game_cap_keeper
+
+    keeper_other = _make_candidate(source_game="iter_0058_game_999", source_ply=50,
+                                   category="chain_advantage_central_red")
+    cand = _make_candidate(source_game="iter_0058_game_040", source_ply=53,
+                           category="chain_advantage_central_red")
+
+    assert _find_per_game_cap_keeper(cand, [keeper_other], cap=1) is None
