@@ -607,3 +607,110 @@ def test_cli_accepts_max_probes_per_game_flag():
         or "(default: 2)" in result.stdout, (
         f"Expected default of 2 documented in --help:\n{result.stdout}"
     )
+
+
+def test_end_to_end_strong_advantage_runs_selector_and_writes_meta(tmp_path, monkeypatch):
+    """Full _run_strong_advantage with stubbed labeler, network loader,
+    and admission filter. Asserts:
+    - draft file is written
+    - audit file is written
+    - admitted audit rows count == probes in draft (no double-counting)
+    - meta.selection_rules contains the new diversity keys
+    - per-game cap is upheld
+
+    Stubs are applied to the module BEFORE main_with_args runs, so the
+    function-local `from scripts.GPU.alphazero.probe_eval import ...`
+    inside _run_strong_advantage picks up the stubbed callables.
+    """
+    import json
+    from pathlib import Path
+    from unittest.mock import MagicMock
+
+    import scripts.GPU.alphazero.probe_eval as pe
+    from scripts.build_probe_suite import main_with_args
+
+    project_root = Path(__file__).resolve().parent.parent
+
+    # Stub the labeler to return a sign-positive passing label. The
+    # generator post-normalizes to red-perspective per STM, so a positive
+    # raw value is fine for whichever side moved last.
+    def stub_label(state, sims, repeats, rng_seed_base, labeler=None):
+        return {
+            "mean_root_value": 0.95,
+            "value_per_run": [0.95, 0.95],
+            "value_stability": 0.0,
+            "min_top1_share": 0.30,
+            "label_mcts_sims": sims,
+            "label_mcts_repeats": repeats,
+            "rng_seed_base": rng_seed_base,
+        }
+    monkeypatch.setattr(pe, "label_candidate_with_mcts", stub_label)
+
+    # Stub admission filter to always pass. This decouples the
+    # integration test from the (real) sign-checking logic — the
+    # selector's behavior is the focus of this test, and the admission
+    # filter is independently covered in test_strong_advantage_probe_suite.py.
+    monkeypatch.setattr(pe, "apply_admission_filter",
+                        lambda cand, **kwargs: (True, "admitted"))
+
+    # Stub network loader. MagicMock so the subsequent .eval() call works.
+    mock_network = MagicMock()
+    monkeypatch.setattr(pe, "load_network_for_scoring",
+                        lambda path: (mock_network, 24, 128, 6))
+    monkeypatch.setattr(pe, "_set_default_labeler_network", lambda net: None)
+
+    # Fake checkpoint file: must exist (existence check), never read.
+    fake_ckpt = tmp_path / "fake.safetensors"
+    fake_ckpt.write_bytes(b"fake")
+
+    # Run against the same source range the committed file uses.
+    out_path = tmp_path / "strong_advantage_probes.json"
+    rc = main_with_args([
+        "--tier", "strong_advantage",
+        "--input", str(project_root / "scripts" / "GPU" / "logs" / "games"),
+        "--source-iter-range", "57", "58",
+        "--label-checkpoint", str(fake_ckpt),
+        "--out", str(out_path),
+        "--max-probes", "30",
+        "--max-probes-per-game", "2",
+        "--label-mcts-sims", "100",
+        "--label-mcts-repeats", "1",
+        "--force",
+    ])
+    assert rc == 0, f"generator exited {rc}"
+
+    draft_path = out_path.with_suffix(".draft.json")
+    audit_path = out_path.parent / "candidates_strong_advantage.json"
+    assert draft_path.exists(), f"draft file missing: {draft_path}"
+    assert audit_path.exists(), f"audit file missing: {audit_path}"
+
+    draft = json.loads(draft_path.read_text())
+    audit = json.loads(audit_path.read_text())["audit"]
+
+    # No audit double-counting: admitted rows == probes in draft.
+    admitted_rows = [r for r in audit if r["reason"] == "admitted"]
+    assert len(admitted_rows) == len(draft["probes"]), (
+        f"audit admitted count ({len(admitted_rows)}) != probes "
+        f"({len(draft['probes'])})"
+    )
+
+    # Per-game cap upheld.
+    from collections import Counter
+    per_game = Counter(p["source_game"] for p in draft["probes"])
+    assert all(n <= 2 for n in per_game.values()), (
+        f"per-game cap of 2 violated: {per_game.most_common(5)}"
+    )
+
+    # meta.selection_rules has the new keys.
+    rules = draft["meta"]["selection_rules"]
+    assert rules["max_probes_per_game"] == 2
+    assert rules["min_ply_separation_same_game"] == 3
+    assert rules["category_iteration_order"] == [
+        "chain_advantage_central_red",
+        "chain_advantage_central_black",
+        "chain_advantage_edge_red",
+        "chain_advantage_edge_black",
+    ]
+    assert "diversity_quality_key_order" in rules
+    assert isinstance(rules["diversity_quality_key_order"], list)
+    assert len(rules["diversity_quality_key_order"]) >= 6

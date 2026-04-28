@@ -561,15 +561,19 @@ def _run_strong_advantage(args) -> int:
             stability_cap=args.stability_cap,
         )
         cand["phase2_label"]["label_checkpoint"] = label_ckpt.name
-        audit.append({
-            "source_game": cand["source_game"],
-            "source_ply": cand["source_ply"],
-            "phase1_features": cand["phase1_features"],
-            "phase2_label": cand["phase2_label"],
-            "reason": reason,
-        })
         if ok:
+            # Admitted candidates' audit rows are written by the selector
+            # (Task 8), so they reflect the FINAL outcome (reason="admitted"
+            # for survivors, reason="diversity_*" for evictions). Spec §7.1.
             admitted.append(cand)
+        else:
+            audit.append({
+                "source_game": cand["source_game"],
+                "source_ply": cand["source_ply"],
+                "phase1_features": cand["phase1_features"],
+                "phase2_label": cand["phase2_label"],
+                "reason": reason,
+            })
 
     # Final Phase 2 summary so the operator sees a clean breakdown.
     phase2_elapsed = _time.time() - t_phase2_start
@@ -596,7 +600,12 @@ def _run_strong_advantage(args) -> int:
               f"  Drop reasons: {msg}", file=sys.stderr)
         return 1
 
-    admitted = admitted[: args.max_probes]
+    admitted = _select_diverse_admitted_candidates(
+        admitted,
+        audit,
+        max_probes=args.max_probes,
+        max_probes_per_game=args.max_probes_per_game,
+    )
 
     probes_out = []
     for cand in admitted:
@@ -652,6 +661,17 @@ def _run_strong_advantage(args) -> int:
                 "source_iter_range": [min_iter, max_iter],
                 "dedup": "exact + 4-form-mirror-canonical",
                 "category_min_count": 5,
+                "max_probes_per_game": args.max_probes_per_game,
+                "min_ply_separation_same_game": MIN_PLY_SEPARATION_SAME_GAME,
+                "category_iteration_order": list(CATEGORY_ITERATION_ORDER),
+                "diversity_quality_key_order": [
+                    "phase1_features.cc_size desc",
+                    "phase1_features.axis_span_margin desc",
+                    "phase1_features.cc_axis_span desc",
+                    "phase2_label.min_top1_share desc",
+                    "phase2_label.value_stability asc",
+                    "default_sort_key (-iter, -source_ply, source_game)",
+                ],
             },
         },
         "probes": probes_out,
