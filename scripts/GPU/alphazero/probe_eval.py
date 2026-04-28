@@ -734,3 +734,152 @@ def is_forced_within_k(state, player: str, k: int = 1) -> bool:
         if next_state.is_terminal() and next_state.winner() == player:
             return True
     return False
+
+
+def extract_strong_advantage_candidates(
+    games: list,
+    *,
+    k_plies_range: tuple = (3, 8),
+    min_cc_size: int = 10,
+    min_cc_axis_span: float = 0.55,
+    min_axis_span_margin: float = 0.10,
+    require_cc_touches_own_goal: bool = True,
+    exclude_forced_within_2: bool = True,
+    category_min_count: int = 5,
+) -> tuple:
+    """Phase-1 candidate mining for the strong_advantage probe tier.
+
+    Walks each decisive game, samples positions at terminal_ply - K for K
+    in k_plies_range (inclusive on both ends), computes structural features
+    on each, and applies the Phase-1 admission gate. See spec Phase 1.
+
+    Args:
+        games: list of game-record dicts (must contain `moves`, `winner`,
+            `winner_reason`, optionally `starting_player`).
+        k_plies_range: (min_K, max_K) plies before terminal to sample.
+        min_cc_size, min_cc_axis_span, min_axis_span_margin: Phase-1
+            heuristic thresholds.
+        require_cc_touches_own_goal, exclude_forced_within_2: gate flags.
+        category_min_count: warning threshold; if any of the 4 categories
+            ends up with fewer surviving candidates than this, a warning
+            is printed (the candidate list is returned regardless).
+
+    Returns:
+        (candidates, audit) where:
+          candidates: list of dicts with `move_history`, `ply`, `winner`,
+            `category`, `phase1_features`, `source_game`, `source_ply`,
+            `starting_player`. Sorted by (-iter, -source_ply, source_game)
+            for deterministic order.
+          audit: list of dicts with `source_game`, `source_ply`, `reason`,
+            and `phase1_features`. One entry per dropped candidate; the
+            audit row is also written for ADMITTED candidates with reason
+            "admitted" so the audit captures the full provenance.
+    """
+    from .game.twixt_state import TwixtState
+
+    candidates = []
+    audit = []
+
+    for game in games:
+        if game.get("winner_reason") != "win":
+            continue
+        winner = game.get("winner")
+        if winner not in ("red", "black"):
+            continue
+        moves_list = game.get("moves") or []
+        if not moves_list:
+            continue
+        terminal_ply = len(moves_list)
+        starting_player = game.get("starting_player", "red")
+        source_game = game.get("source_game") or _derive_source_game_basename(game)
+
+        for k in range(k_plies_range[0], k_plies_range[1] + 1):
+            target_ply = terminal_ply - k
+            if target_ply < 1:
+                continue
+
+            state = TwixtState(active_size=24, to_move=starting_player)
+            for i in range(target_ply):
+                m = moves_list[i]
+                state = state.apply_move((m["row"], m["col"]))
+
+            feats = compute_phase1_features(state, winner=winner)
+            base_audit = {
+                "source_game": source_game,
+                "source_ply": target_ply,
+                "phase1_features": feats,
+            }
+
+            if feats["cc_size"] < min_cc_size:
+                audit.append({**base_audit, "reason": "phase1_cc_size"})
+                continue
+            if feats["cc_axis_span"] < min_cc_axis_span:
+                audit.append({**base_audit, "reason": "phase1_axis_span"})
+                continue
+            if feats["axis_span_margin"] < min_axis_span_margin:
+                audit.append({**base_audit, "reason": "phase1_axis_span_margin"})
+                continue
+            if require_cc_touches_own_goal and not feats["cc_touches_own_goal"]:
+                audit.append({**base_audit, "reason": "phase1_no_goal_touch"})
+                continue
+            if exclude_forced_within_2 and feats["forced_within_2"]:
+                audit.append({**base_audit, "reason": "phase1_already_forced"})
+                continue
+
+            cheb = feats["centroid_chebyshev_from_center"]
+            if 7 <= cheb <= 8:
+                audit.append({**base_audit, "reason": "category_midband"})
+                continue
+
+            if cheb <= 6:
+                category = f"chain_advantage_central_{winner}"
+            else:  # cheb >= 9
+                category = f"chain_advantage_edge_{winner}"
+
+            cand = {
+                "move_history": [(m["row"], m["col"]) for m in moves_list[:target_ply]],
+                "ply": target_ply,
+                "winner": winner,
+                "category": category,
+                "phase1_features": feats,
+                "source_game": source_game,
+                "source_ply": target_ply,
+                "starting_player": starting_player,
+            }
+            candidates.append(cand)
+            audit.append({**base_audit, "reason": "admitted"})
+
+    def _sort_key(c: dict) -> tuple:
+        try:
+            iter_num = int(c["source_game"].split("_")[1])
+        except (IndexError, ValueError):
+            iter_num = 0
+        return (-iter_num, -c["source_ply"], c["source_game"])
+
+    candidates.sort(key=_sort_key)
+
+    for cat in [
+        "chain_advantage_central_red",
+        "chain_advantage_central_black",
+        "chain_advantage_edge_red",
+        "chain_advantage_edge_black",
+    ]:
+        n = sum(1 for c in candidates if c["category"] == cat)
+        if n < category_min_count:
+            import sys
+            print(
+                f"[probe_suite] WARNING: category {cat} has {n} candidates "
+                f"(< {category_min_count}); broaden --source-iter-range or "
+                f"relax thresholds.",
+                file=sys.stderr,
+            )
+
+    return candidates, audit
+
+
+def _derive_source_game_basename(game: dict) -> str:
+    """Best-effort recovery of the source_game basename from a game dict."""
+    meta = game.get("meta") or {}
+    iteration = meta.get("iteration", 0)
+    game_idx = meta.get("game_index", 0)
+    return f"iter_{iteration:04d}_game_{game_idx:03d}"
