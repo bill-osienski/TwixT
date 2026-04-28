@@ -892,3 +892,82 @@ def test_edge_categories_empty_alternates_two_centrals():
     # First 6 picks alternate central_red, central_black, central_red, ...
     expected = ["chain_advantage_central_red", "chain_advantage_central_black"] * 3
     assert cats == expected
+
+
+def test_audit_kept_instead_field_present_on_diversity_drops_only():
+    """diversity_* rows carry kept_instead_source_ply pointing at a real
+    keeper. admitted rows do NOT have this field."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    # Setup: clustered game forces per-game cap drops.
+    cands = [
+        _make_candidate(source_game="iter_0058_game_040", source_ply=ply,
+                        category="chain_advantage_central_red", cc_size=cs)
+        for ply, cs in [(40, 28), (44, 24), (48, 20)]
+    ]
+    audit = []
+    kept = _select_diverse_admitted_candidates(
+        cands, audit, max_probes=10, max_probes_per_game=2,
+    )
+    kept_plies = {k["source_ply"] for k in kept}
+
+    for row in audit:
+        if row["reason"].startswith("diversity_"):
+            assert "kept_instead_source_ply" in row
+            assert row["kept_instead_source_ply"] in kept_plies, (
+                f"kept_instead_source_ply={row['kept_instead_source_ply']} "
+                f"not in actually-kept plies {kept_plies}"
+            )
+        else:
+            assert row["reason"] == "admitted"
+            assert "kept_instead_source_ply" not in row
+
+
+def test_audit_admitted_count_equals_kept_count():
+    """Selector writes exactly one reason='admitted' audit row per kept
+    candidate. No double-counting."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    cands = [
+        _make_candidate(source_game=f"iter_0099_game_{i:03d}",
+                        source_ply=40,
+                        category="chain_advantage_central_red",
+                        cc_size=28 - i)
+        for i in range(5)
+    ]
+    audit = []
+    kept = _select_diverse_admitted_candidates(
+        cands, audit, max_probes=3, max_probes_per_game=1,
+    )
+
+    admitted_rows = [r for r in audit if r["reason"] == "admitted"]
+    assert len(admitted_rows) == len(kept) == 3
+
+
+def test_quality_key_structural_priority():
+    """Two same-game same-category candidates: one with higher cc_size
+    but lower min_top1_share, the other with lower cc_size but higher
+    min_top1_share, structurally far enough apart that the near-duplicate
+    rule does not fire (cc_size = (15, 25)). With max_probes_per_game=1,
+    the higher cc_size wins (structural beats Phase-2 fields)."""
+    from scripts.build_probe_suite import _select_diverse_admitted_candidates
+
+    high_struct = _make_candidate(
+        source_game="iter_0058_game_040", source_ply=40,
+        category="chain_advantage_central_red",
+        cc_size=25, min_top1_share=0.20,
+    )
+    high_phase2 = _make_candidate(
+        source_game="iter_0058_game_040", source_ply=44,
+        category="chain_advantage_central_red",
+        cc_size=15, min_top1_share=0.50,
+    )
+    audit = []
+
+    kept = _select_diverse_admitted_candidates(
+        [high_phase2, high_struct], audit,  # input order shouldn't matter
+        max_probes=10, max_probes_per_game=1,
+    )
+
+    assert len(kept) == 1
+    assert kept[0] is high_struct
