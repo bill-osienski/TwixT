@@ -79,6 +79,84 @@ though the generator code is correct. **Recovery procedure:**
 
 Do not bypass the parity test or relax its assertion.
 
+## Strong-advantage tier (`strong_advantage_probes.json`)
+
+A second bootstrap-quality probe tier that complements the forced tier by
+covering positions with a strong but not-yet-forced chain advantage. The
+file `tests/probes/strong_advantage_probes.json` is produced by the same
+generator (`scripts/build_probe_suite.py --tier strong_advantage`) and
+follows the same schema with two added per-probe blocks:
+
+- `phase1_features` — structural-dominance heuristics computed at
+  candidate-mining time (CC size, axis span, goal-touch, span margin,
+  centroid).
+- `phase2_label` — deep-MCTS label results (mean root value, per-run
+  values, value stability, top-1 visit share, label checkpoint, sim/repeat
+  budget, RNG seed).
+
+The committed `meta` block carries `tier: "strong_advantage"`,
+`review_mode: "light_review"`, `reviewer`, `reviewed_at_utc`, and the
+SHA-256 of the label checkpoint. This is **bootstrap-quality with light
+operator review**, NOT the spec §7 review-curated formal gate suite.
+
+### Generating / regenerating
+
+```bash
+.venv/bin/python scripts/build_probe_suite.py \
+    --tier strong_advantage \
+    --input scripts/GPU/logs/games \
+    --source-iter-range MIN MAX \
+    --label-checkpoint checkpoints/<path>/<file>.safetensors \
+    --label-mcts-sims 10000 \
+    --label-mcts-repeats 3 \
+    --magnitude-threshold 0.45 \
+    --top1-share-floor 0.15 \
+    --stability-cap 0.15 \
+    --max-probes 30 \
+    --out tests/probes/strong_advantage_probes.json
+```
+
+Writes `tests/probes/strong_advantage_probes.draft.json` plus an audit
+file `tests/probes/candidates_strong_advantage.json` (gitignored). After
+eyeball review, promote with:
+
+```bash
+.venv/bin/python scripts/build_probe_suite.py \
+    --tier strong_advantage \
+    --promote \
+    --reviewer "$(git config user.name)" \
+    --out tests/probes/strong_advantage_probes.json
+```
+
+`--promote` refuses to overwrite an existing committed file unless
+`--force` is passed.
+
+**Architecture limitation:** the generator currently supports only
+labeling checkpoints built with `create_network` defaults (`hidden=128`,
+`n_blocks=6`). `load_network_for_scoring` auto-detects input channels
+(24 vs 30) but does NOT auto-detect `hidden` or `n_blocks`. To label
+against a different architecture, the generator must first be extended
+with `--hidden` / `--blocks` flags (follow-up).
+
+### Telemetry path
+
+Per-iter trainer sidecars carry both:
+
+- `forced_probe_summary: {...}` — legacy field, kept for one release
+  cycle for backward compatibility with downstream readers.
+- `probe_summary: { forced: {...}, strong_advantage: {...} }` — the
+  forward path. Analyzer (`scripts/twixt_replay_analyzer.py`) prefers
+  this when present and falls through to the legacy field for the
+  `forced` tier.
+
+The replay analyzer surfaces both tiers in `summary.json`
+(`forced_probe`, `strong_advantage_probe` blocks), `report.txt`
+(parallel sections), and per-tier `<tier>_probe_by_iter.csv` files.
+
+The CSV column shape is identical across tiers, so analysis tooling
+that consumes the forced CSV today can ingest the strong-advantage CSV
+with no schema changes.
+
 ## Categories
 
 | Category | Description | Min | Max |
