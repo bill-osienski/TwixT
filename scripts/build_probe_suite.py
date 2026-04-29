@@ -16,6 +16,8 @@ Both tiers produce byte-identical output for identical inputs.
 from __future__ import annotations
 
 import argparse
+import copy
+import hashlib
 import json
 import sys
 from datetime import datetime, timezone
@@ -463,6 +465,132 @@ def _run_forced(args) -> int:
 
 # --- Strong-advantage tier ---
 
+
+def _probe_id_and_seed_base(cand: dict) -> tuple[str, int]:
+    """Compute the deterministic (probe_id, rng_seed_base) pair for a candidate.
+
+    Stable across processes because hashlib.sha256 is not subject to
+    Python's randomized hash().
+    """
+    probe_id = _probe_id_for(cand)
+    seed_base = int.from_bytes(
+        hashlib.sha256(probe_id.encode("utf-8")).digest()[:4],
+        "big",
+    )
+    return probe_id, seed_base
+
+
+def _label_one_strong_advantage_candidate(
+    cand: dict,
+    *,
+    label_ckpt_name: str,
+    sims: int,
+    repeats: int,
+    magnitude_threshold: float,
+    top1_share_floor: float,
+    stability_cap: float,
+) -> dict:
+    """Phase 2 per-candidate labeling helper. Used by both the serial loop
+    and the process-pool path.
+
+    Returns a structured result dict. See spec §7.
+    """
+    from scripts.GPU.alphazero.probe_eval import (
+        label_candidate_with_mcts,
+        apply_admission_filter,
+    )
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+
+    cand = copy.deepcopy(cand)
+    probe_id, seed_base = _probe_id_and_seed_base(cand)
+
+    # Replay candidate moves into a TwixtState.
+    try:
+        state = TwixtState(active_size=24, to_move=cand["starting_player"])
+        for r, c in cand["move_history"]:
+            state = state.apply_move((r, c))
+    except Exception as exc:
+        return {
+            "probe_id": probe_id,
+            "status": "replay_error",
+            "candidate": None,
+            "audit_row": {
+                "source_game": cand["source_game"],
+                "source_ply": cand["source_ply"],
+                "phase1_features": cand["phase1_features"],
+                "reason": "replay_error",
+            },
+            "rejection_reason": "replay_error",
+            "phase2_label": None,
+            "error_message": f"{type(exc).__name__}: {exc}",
+        }
+
+    # Run MCTS labeling.
+    try:
+        label = label_candidate_with_mcts(
+            state,
+            sims=sims,
+            repeats=repeats,
+            rng_seed_base=seed_base,
+        )
+    except Exception as exc:
+        return {
+            "probe_id": probe_id,
+            "status": "mcts_error",
+            "candidate": cand,
+            "audit_row": {
+                "source_game": cand["source_game"],
+                "source_ply": cand["source_ply"],
+                "phase1_features": cand["phase1_features"],
+                "reason": "mcts_error",
+            },
+            "rejection_reason": "mcts_error",
+            "phase2_label": None,
+            "error_message": f"{type(exc).__name__}: {exc}",
+        }
+
+    # Normalize STM perspective (red-perspective for downstream consumers).
+    stm = _stm_at_ply(cand)
+    if stm == "black":
+        label["mean_root_value"] = -label["mean_root_value"]
+        label["value_per_run"] = [-v for v in label["value_per_run"]]
+
+    cand["phase2_label"] = label
+    ok, reason = apply_admission_filter(
+        cand,
+        magnitude_threshold=magnitude_threshold,
+        top1_share_floor=top1_share_floor,
+        stability_cap=stability_cap,
+    )
+    cand["phase2_label"]["label_checkpoint"] = label_ckpt_name
+
+    if ok:
+        return {
+            "probe_id": probe_id,
+            "status": "admitted",
+            "candidate": cand,
+            "audit_row": None,
+            "rejection_reason": None,
+            "phase2_label": cand["phase2_label"],
+            "error_message": None,
+        }
+    return {
+        "probe_id": probe_id,
+        "status": "rejected",
+        "candidate": cand,
+        "audit_row": {
+            "source_game": cand["source_game"],
+            "source_ply": cand["source_ply"],
+            "phase1_features": cand["phase1_features"],
+            "phase2_label": cand["phase2_label"],
+            "reason": reason,
+        },
+        "rejection_reason": reason,
+        "phase2_label": cand["phase2_label"],
+        "error_message": None,
+    }
+
+
 def _run_strong_advantage(args) -> int:
     if args.out is None:
         args.out = "tests/probes/strong_advantage_probes.json"
@@ -540,7 +668,6 @@ def _run_strong_advantage(args) -> int:
     _set_default_labeler_network(network)
 
     admitted = []
-    import hashlib
     import time as _time
     n_total = len(candidates)
     # Cadence: at small batches, every candidate; at big batches, every 5%.
@@ -562,81 +689,33 @@ def _run_strong_advantage(args) -> int:
                 flush=True,
             )
 
-        try:
-            state = TwixtState(active_size=24, to_move=cand["starting_player"])
-            for r, c in cand["move_history"]:
-                state = state.apply_move((r, c))
-        except Exception as exc:
-            print(f"[probe_suite] WARN: state replay error on "
-                  f"{cand['source_game']} ply {cand['source_ply']}: {exc}",
-                  file=sys.stderr)
-            audit.append({
-                "source_game": cand["source_game"],
-                "source_ply": cand["source_ply"],
-                "phase1_features": cand["phase1_features"],
-                "reason": "replay_error",
-            })
-            continue
-
-        # Stable seed: SHA-256 of probe ID, first 4 bytes as big-endian int.
-        # Python's built-in hash() is process-randomized and would break
-        # byte-reproducibility across runs.
-        seed_base = int.from_bytes(
-            hashlib.sha256(_probe_id_for(cand).encode("utf-8")).digest()[:4],
-            "big",
-        )
-
-        try:
-            label = label_candidate_with_mcts(
-                state,
-                sims=args.label_mcts_sims,
-                repeats=args.label_mcts_repeats,
-                rng_seed_base=seed_base,
-            )
-        except Exception as exc:
-            print(f"[probe_suite] WARN: MCTS error on {cand['source_game']} "
-                  f"ply {cand['source_ply']}: {exc}", file=sys.stderr)
-            audit.append({
-                "source_game": cand["source_game"],
-                "source_ply": cand["source_ply"],
-                "phase1_features": cand["phase1_features"],
-                "reason": "mcts_error",
-            })
-            continue
-
-        # Normalize labeler output from STM-perspective to red-perspective
-        # before storing into phase2_label. apply_admission_filter (and
-        # everything downstream that compares against expected_value_sign)
-        # operates in red-perspective. The candidate's STM at this ply is
-        # `_stm_at_ply(cand)`; if black, negate the value fields.
-        stm = _stm_at_ply(cand)
-        if stm == "black":
-            label["mean_root_value"] = -label["mean_root_value"]
-            label["value_per_run"] = [-v for v in label["value_per_run"]]
-            # value_stability is max-min, sign-invariant — leave as-is.
-            # min_top1_share is a probability — sign-invariant — leave as-is.
-
-        cand["phase2_label"] = label
-        ok, reason = apply_admission_filter(
+        result = _label_one_strong_advantage_candidate(
             cand,
+            label_ckpt_name=label_ckpt.name,
+            sims=args.label_mcts_sims,
+            repeats=args.label_mcts_repeats,
             magnitude_threshold=args.magnitude_threshold,
             top1_share_floor=args.top1_share_floor,
             stability_cap=args.stability_cap,
         )
-        cand["phase2_label"]["label_checkpoint"] = label_ckpt.name
-        if ok:
+
+        if result["status"] == "replay_error":
+            print(f"[probe_suite] WARN: state replay error on "
+                  f"{cand['source_game']} ply {cand['source_ply']}: "
+                  f"{result['error_message']}", file=sys.stderr)
+            audit.append(result["audit_row"])
+        elif result["status"] == "mcts_error":
+            print(f"[probe_suite] WARN: MCTS error on "
+                  f"{cand['source_game']} ply {cand['source_ply']}: "
+                  f"{result['error_message']}", file=sys.stderr)
+            audit.append(result["audit_row"])
+        elif result["status"] == "admitted":
             # Admitted candidates' audit rows are written by the selector
             # (Task 8), so they reflect the FINAL outcome (reason="admitted"
             # for survivors, reason="diversity_*" for evictions). Spec §7.1.
-            admitted.append(cand)
-        else:
-            audit.append({
-                "source_game": cand["source_game"],
-                "source_ply": cand["source_ply"],
-                "phase1_features": cand["phase1_features"],
-                "phase2_label": cand["phase2_label"],
-                "reason": reason,
-            })
+            admitted.append(result["candidate"])
+        else:  # rejected
+            audit.append(result["audit_row"])
 
     # Final Phase 2 summary so the operator sees a clean breakdown.
     # NOTE: at this point in the pipeline, audit contains only Phase-2

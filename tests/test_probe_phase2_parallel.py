@@ -195,3 +195,49 @@ def test_unsafe_eval_batch_passes_with_flag():
     # Argparse accepts the combination; run fails later because the checkpoint
     # doesn't exist. The argparse error message must NOT appear.
     assert "--mcts-eval-batch-size > 14 is unsafe" not in proc.stderr
+
+
+def test_helper_returns_admitted_status_for_passing_candidate(monkeypatch, tmp_path):
+    """The extracted helper returns the same admission decision the old serial
+    loop would have written. Uses a tiny mocked labeler.
+
+    This test fails until the helper exists with the documented signature.
+    """
+    from scripts.build_probe_suite import _label_one_strong_advantage_candidate
+    from scripts.GPU.alphazero import probe_eval
+
+    def stub_labeler(state, sims, seed):
+        # Strong red-side advantage: high mean root, high top1.
+        return (0.9, 0.5)
+
+    cand = {
+        "source_game": "iter_0_game_0",
+        "source_ply": 18,
+        "ply": 18,
+        "starting_player": "red",
+        "winner": "red",
+        "category": "central_red",
+        "move_history": [(11, 11)],
+        "phase1_features": {
+            "cc_size": 12,
+            "cc_axis_span": 0.7,
+            "axis_span_margin": 0.2,
+        },
+    }
+
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub_labeler)
+
+    result = _label_one_strong_advantage_candidate(
+        cand,
+        label_ckpt_name="ckpt.safetensors",
+        sims=10,
+        repeats=2,
+        magnitude_threshold=0.45,
+        top1_share_floor=0.15,
+        stability_cap=0.15,
+    )
+    assert result["status"] == "admitted"
+    assert result["candidate"] is not None
+    assert result["candidate"]["phase2_label"]["mean_root_value"] == pytest.approx(0.9)
+    assert result["audit_row"] is None
+    assert result["error_message"] is None
