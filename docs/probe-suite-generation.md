@@ -151,6 +151,42 @@ To tune for a different machine, run `scripts/probes/benchmark_phase2_knobs.py` 
 
 `meta.phase2_run_stats` in the draft JSON records the mode, worker counts (requested and effective), MCTSConfig values, per-status counters, and borderline rerun counters for postmortem reproduction.
 
+### Tuning for different hardware
+
+The default `--label-workers 10` is the M3 Pro optimum (3.19x speedup vs. serial baseline; admitted-ID equivalent). On other Apple Silicon (M2, M4, M3 Max, etc.) or after MLX version changes, re-run the bench to find the local sweet spot. It does coordinate-descent over worker count, eval batch, and stall-flush, with a SIGTERM-then-SIGKILL watchdog that catches the documented Metal hang above `--mcts-eval-batch-size=14`.
+
+```bash
+.venv/bin/python scripts/probes/benchmark_phase2_knobs.py \
+    --input scripts/GPU/logs/games \
+    --source-iter-range 57 58 \
+    --label-checkpoint checkpoints/alphazero-v2-staged/model_iter_0059.safetensors \
+    --candidates 10 --mcts-sims 500 \
+    --workers-values 2,4,6,8,10,12 \
+    --eval-batch-values 8,12,14 \
+    --stall-flush-values 4,8,16,32 \
+    --passes 2 \
+    --report-path logs/bench-phase2-knobs.md
+```
+
+Total runtime ~5–10 min on Apple Silicon. Markdown report lands at the path you pass; the "Recommendation" section names the winning config. Update the production invocation (or the script defaults if it's a project-wide tuning) to match.
+
+To probe the unsafe Metal-hang regime intentionally on your machine, add `--include-unsafe`. The watchdog kills hung subprocesses; the poison-pill heuristic auto-skips eval-batch values larger than the first one that froze.
+
+### Verifying parallel equivalence at production sims
+
+Once the bench picks a winner, optionally confirm the answer holds at production sim count (the bench uses 500 sims for fast turnaround; production typically uses 2000+):
+
+```bash
+.venv/bin/python scripts/probes/verify_parallel_equivalence.py \
+    --input scripts/GPU/logs/games \
+    --source-iter-range 57 58 \
+    --label-checkpoint checkpoints/alphazero-v2-staged/model_iter_0059.safetensors \
+    --label-mcts-sims 2000 --label-mcts-repeats 2 \
+    --sample-candidates 20 --label-workers <winner>
+```
+
+Reports admitted-ID equivalence between serial and process modes plus per-field label tolerances (`mean_root_value`, `value_per_run`, `min_top1_share`). Useful as a single-shot sanity check after MCTS or labeler changes.
+
 ## Diversity selector (strong_advantage tier)
 
 After Phase 2 admits candidates, a category-aware round-robin selector walks the four `chain_advantage_*` buckets in fixed canonical order — `central_red, central_black, edge_red, edge_black` — and applies three suppression rules in precedence order before admitting each candidate:
