@@ -1200,11 +1200,15 @@ git commit -m "feat(probes): add Phase 2 process-pool path with worker initializ
 
 Adds --label-worker-mode=process branch in _run_strong_advantage with
 ProcessPoolExecutor (spawn context), per-worker MLX network + MCTSConfig
-via _init_label_worker. Results sorted by probe_id before aggregation
+via _init_label_worker. Results sorted by probe_id in _phase2_aggregate
 for deterministic audit ordering. Isolates per-candidate replay/MCTS
-errors so the pool survives. Mocked-labeler equivalence tests prove
-serial and process modes produce byte-identical output (modulo
-phase2_run_stats).
+errors at the helper level so the pool survives.
+
+Aggregation and process-pool smoke tests verify deterministic result
+ordering and worker initialization under spawn; helper-level tests
+cover mocked label behavior. Cross-process equivalence under real MLX
+is intentionally out of CI (covered by the manual
+verify_parallel_equivalence.py script in Task 9).
 
 Spec: docs/superpowers/specs/2026-04-28-probe-phase2-parallel-labeling-design.md §6, §8, §11"
 ```
