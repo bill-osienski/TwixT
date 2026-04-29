@@ -36,9 +36,8 @@ Two layers of determinism, treated separately:
 **Supported user contract:**
 
 - Serial mode is the strict reference path for mocked/deterministic labelers and the supported strict reproducibility mode for generated artifacts.
-- For real MLX runs, the contract is: identical admitted probe IDs, identical final committed probe IDs, identical rejection reasons for non-borderline candidates.
+- For real MLX runs, the supported target is identical admitted probe IDs, identical final committed probe IDs, and identical rejection reasons for non-borderline candidates under normal deterministic MLX behavior. Borderline rerun guards threshold-sensitive cases, but byte-identical numeric labels are not promised across machines, worker counts, or MLX versions.
 - Admission-decision drift near threshold boundaries is guarded by the borderline serial-rerun pass (§9). Candidates whose parallel-mode label is within ε of any admission threshold are re-labeled in the main process, so threshold-sensitive admission decisions are exactly the serial-reference answer.
-- Byte-identical numeric labels are not promised across machines or MLX versions for real runs.
 
 ## 5. CLI surface
 
@@ -210,6 +209,8 @@ def _init_label_worker(label_checkpoint: str, mcts_cfg_payload: dict):
 
 `MCTSConfig` crosses the process boundary as a plain dict, not as a dataclass instance.
 
+**The worker payload includes ONLY the user-tunable fields** — `eval_batch_size` and `stall_flush_sims`. It must NOT include `n_simulations`; that value is per-call and supplied through the labeler protocol's `sims` argument, then overridden onto the global config via `dataclasses.replace(...)` inside `_default_mcts_labeler`. Including `n_simulations` in the worker payload would freeze it incorrectly and is a forward-drift hazard.
+
 **Initializer failure** is unrecoverable. The first `.result()` call surfaces the exception; main aborts with:
 
 ```
@@ -261,7 +262,9 @@ cand["_borderline_rerun_audit"] = {
 }
 ```
 
-When any audit row is constructed for that candidate (Phase 2 rejection or selector audit), these fields are merged in. **The committed probe suite stores only the rerun `phase2_label`** — `_borderline_rerun_audit` never lands in the committed JSON, only in the audit file.
+When any audit row is constructed for that candidate (Phase 2 rejection or selector audit), these fields are merged in. **The committed probe suite stores only the rerun `phase2_label`** — `_borderline_rerun_audit` and `parallel_phase2_label_before_rerun` never land in the committed JSON, only in the audit file.
+
+**Implementation note:** before serializing each entry in `probes_out`, explicitly pop `_borderline_rerun_audit` (and any other private `_`-prefixed key) from the candidate dict. Asserted in `test_borderline_rerun_admitted_to_rejected` and `test_borderline_rerun_rejected_to_admitted` (§12).
 
 If a rerun flipped admission, log:
 
@@ -303,6 +306,8 @@ Same stats land in the draft JSON under a NEW `meta.phase2_run_stats` block (NOT
       "mcts_errors": 2,
       "admitted_before_diversity": 35,
       "rejected": 85,
+      "borderline_rerun_enabled": true,
+      "admission_borderline_epsilon": 0.01,
       "borderline_candidates": 6,
       "borderline_reruns": 6,
       "borderline_flips": 1,
@@ -340,8 +345,8 @@ Same stats land in the draft JSON under a NEW `meta.phase2_run_stats` block (NOT
 | `test_phase2_mcts_error_isolated` | one cand raises during MCTS | symmetric, with `reason="mcts_error"` |
 | `test_default_mcts_labeler_uses_global_config` | unit | with config global set: `cfg.eval_batch_size==X`, `cfg.stall_flush_sims==Y`, `cfg.n_simulations==sims`; without global: `MCTSConfig(n_simulations=sims)` (back-compat) |
 | `test_default_mcts_labeler_keeps_sims_authoritative` | unit | `dataclasses.replace` ensures per-call `sims` overrides any frozen value in the config |
-| `test_borderline_rerun_admitted_to_rejected` | mocked flip | flip recorded; final committed suite uses rerun label; audit has `borderline_rerun_flipped=True` |
-| `test_borderline_rerun_rejected_to_admitted` | mocked symmetric flip | same |
+| `test_borderline_rerun_admitted_to_rejected` | mocked flip | flip recorded; final committed suite uses rerun label; audit has `borderline_rerun_flipped=True`; **committed probe JSON contains no `_borderline_rerun_audit` or `parallel_phase2_label_before_rerun` keys** |
+| `test_borderline_rerun_rejected_to_admitted` | mocked symmetric flip | same, including the no-private-keys assertion on committed JSON |
 | `test_borderline_rerun_disabled` | `--no-borderline-rerun` | no reruns happen; `borderline_reruns=0` |
 | `test_borderline_rerun_serial_mode_no_op` | `--label-worker-mode=serial` with ε=0.01 | no reruns; counter=0 |
 | `test_borderline_rerun_not_triggered_for_non_borderline` | clearly admitted/rejected candidates in process mode | no reruns; counter=0 |
