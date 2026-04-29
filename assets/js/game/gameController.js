@@ -23,19 +23,16 @@ export default class GameController {
 
     this.init();
 
-    // Check AlphaZero availability and wire win bars
+    // Check AlphaZero availability and wire win bars. Both bars update
+    // exactly once per move (post-move), in onPlayerMove and makeAIMove —
+    // we deliberately do NOT stream MCTS progress updates to the bar
+    // during AI thinking. Streaming made the bar appear to "move in real
+    // time" while the AI was still calculating, which conflicted with
+    // the bar's intended semantics (current standing AFTER each move).
     alphaZero.checkAvailability().then(available => {
       this.useAlphaZero = available;
       this.winBarNN.setEnabled(available);
       this.winBarMCTS.setEnabled(available);
-      if (available) {
-        // Wire live MCTS progress updates to the MCTS bar during AI search
-        alphaZero.onProgress = (msg) => {
-          if (msg.valueEstimate !== undefined && msg.toMove) {
-            this.winBarMCTS.update(msg.valueEstimate, msg.toMove);
-          }
-        };
-      }
     }).catch(() => {});
   }
 
@@ -455,6 +452,27 @@ export default class GameController {
                       player, move.row, move.col, aiAnalysis);
       this.renderer.updateBoard();
       this.updateUI();
+
+      // Refresh both bars after the AI move (mirrors the human-move path
+      // in onPlayerMove). NN bar gets a fresh single-eval of the new
+      // position; MCTS bar snapshots the AI's MCTS root value (the
+      // search's evaluation of the position the AI chose to play into).
+      if (!this.game.gameOver) {
+        if (this.useAlphaZero) {
+          alphaZero.evaluate(this.game).then(valueRed => {
+            if (valueRed !== null) {
+              this.winBarNN.updateRed(valueRed);
+            } else {
+              console.warn('NN bar update (post-AI) skipped: evaluate() returned null');
+            }
+          }).catch(err => {
+            console.warn('NN bar update (post-AI) failed:', err?.message || err);
+          });
+        }
+        if (aiResult?.valueRed != null) {
+          this.winBarMCTS.updateRed(aiResult.valueRed);
+        }
+      }
 
       // Check for AI win
       if (this.game.gameOver && this.game.winner) {
