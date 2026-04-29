@@ -275,14 +275,14 @@ PYTHON = sys.executable
 
 
 def _run_cli(*args):
-    """Run build_probe_suite.py with given CLI args, return (returncode, stderr)."""
-    result = subprocess.run(
+    """Run build_probe_suite.py with given CLI args. Returns the full
+    CompletedProcess (rc, stdout, stderr accessible)."""
+    return subprocess.run(
         [PYTHON, str(PROBE_SCRIPT), *args],
         capture_output=True,
         text=True,
         check=False,
     )
-    return result.returncode, result.stderr
 
 
 def test_argparse_flags_present():
@@ -315,34 +315,34 @@ def test_argparse_flags_present():
 )
 def test_parallel_cli_numeric_validation(extra_args, fragment):
     """Reject negative / zero values where the spec disallows them."""
-    rc, stderr = _run_cli(
+    proc = _run_cli(
         "--tier", "strong_advantage",
         "--source-iter-range", "0", "0",
         "--label-checkpoint", "/nonexistent.safetensors",
         *extra_args,
     )
-    assert rc != 0
-    assert fragment in stderr
+    assert proc.returncode != 0
+    assert fragment in proc.stderr
 
 
 def test_unsafe_eval_batch_validation_rejects_high_value_without_flag():
     """--mcts-eval-batch-size > 14 without --allow-unsafe-eval-batch is an error."""
-    rc, stderr = _run_cli(
+    proc = _run_cli(
         "--tier", "strong_advantage",
         "--source-iter-range", "0", "0",
         "--label-checkpoint", "/nonexistent.safetensors",
         "--mcts-eval-batch-size", "32",
     )
-    assert rc != 0
-    assert "--mcts-eval-batch-size > 14 is unsafe" in stderr
-    assert "--allow-unsafe-eval-batch" in stderr
+    assert proc.returncode != 0
+    assert "--mcts-eval-batch-size > 14 is unsafe" in proc.stderr
+    assert "--allow-unsafe-eval-batch" in proc.stderr
 
 
 def test_unsafe_eval_batch_passes_with_flag():
     """--mcts-eval-batch-size > 14 with --allow-unsafe-eval-batch passes validation
     (run still fails because checkpoint doesn't exist, but past argparse).
     """
-    rc, stderr = _run_cli(
+    proc = _run_cli(
         "--tier", "strong_advantage",
         "--source-iter-range", "0", "0",
         "--label-checkpoint", "/nonexistent.safetensors",
@@ -351,7 +351,7 @@ def test_unsafe_eval_batch_passes_with_flag():
     )
     # Argparse accepts the combination; run fails later because the checkpoint
     # doesn't exist. The argparse error message must NOT appear.
-    assert "--mcts-eval-batch-size > 14 is unsafe" not in stderr
+    assert "--mcts-eval-batch-size > 14 is unsafe" not in proc.stderr
 ```
 
 - [ ] **Step 2: Run the new tests and verify they fail**
@@ -780,59 +780,173 @@ Spec: docs/superpowers/specs/2026-04-28-probe-phase2-parallel-labeling-design.md
 
 Spec §6, §8, §11.
 
-- [ ] **Step 1: Add the mode-equivalence and isolation tests**
+- [ ] **Step 1: Add the aggregation unit test, the process-pool smoke test, and the fixed init-failure test**
 
-Append to `tests/test_probe_phase2_parallel.py`:
+**Note on `spawn` workers and monkeypatch.** `multiprocessing.get_context("spawn")` workers import all modules fresh in the child process. `monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)` only affects the parent's module instance — workers will see the *original* `_default_mcts_labeler`, not the stub. Tests that need to control labeling in workers must therefore either (a) test the helper as a unit in the parent (what `test_phase2_replay_error_isolated` and `test_phase2_mcts_error_isolated` do, see Step 4), (b) test the aggregation logic on hand-crafted result lists (the `_phase2_aggregate` unit test below), or (c) replace the *worker initializer itself* with a top-level test function via late-bound module-attribute monkeypatch (the smoke test below). The implementation must reference `_init_label_worker` via the module globals (not via a local `from … import`) so the monkeypatched binding is what `ProcessPoolExecutor(initializer=...)` actually pickles.
+
+Append to `tests/test_probe_phase2_parallel.py`. Two of these reference helpers introduced in the implementation (Step 3): `_phase2_aggregate(results)` (returns the `(admitted, audit_rows)` tuple from a sorted result list) and the module-attribute lookup of `_init_label_worker`.
 
 ```python
-def _build_minimal_strong_advantage_input(tmp_path):
-    """Create a tiny --input directory with one game that yields strong-advantage
-    candidates after Phase 1 mining. Returns the path."""
-    games_dir = tmp_path / "games"
-    games_dir.mkdir()
-    # NOTE: Reuse the fixture-builder helper from
-    # tests/test_strong_advantage_probe_suite.py if one already exists.
-    # This file should import that helper rather than re-build a game from
-    # scratch. Keep input small (1-2 games, <5 candidates).
-    from tests.test_strong_advantage_probe_suite import (
-        _write_minimal_strong_advantage_game_fixture,
+# Module-level so spawn workers can pickle and import this function:
+def _init_label_worker_stub_for_tests(label_checkpoint, mcts_cfg_payload):
+    """Test-only worker initializer. Installs a deterministic stub labeler
+    in the worker process instead of loading a real network. Imported by
+    spawned children via its qualified name."""
+    from scripts.GPU.alphazero import probe_eval
+    from scripts.GPU.alphazero.mcts import MCTSConfig
+
+    def _stub(state, sims, seed):
+        return (0.6 + 0.001 * (seed % 7), 0.4 + 0.001 * (seed % 5))
+
+    probe_eval._default_mcts_labeler = _stub
+    probe_eval._set_default_labeler_network(object())
+    probe_eval._set_default_labeler_mcts_config(MCTSConfig(**mcts_cfg_payload))
+
+
+def _patch_phase1_extract(monkeypatch, candidates):
+    """Bypass real Phase 1 mining; return the given candidate list.
+    Mirrors the pattern in tests/test_strong_advantage_probe_suite.py."""
+    monkeypatch.setattr(
+        "scripts.GPU.alphazero.probe_eval.extract_strong_advantage_candidates",
+        lambda games, **kw: (list(candidates), []),
     )
-    _write_minimal_strong_advantage_game_fixture(games_dir)
-    return games_dir
 
 
-def test_phase2_serial_vs_process_mocked(tmp_path, monkeypatch):
-    """Mocked-labeler equivalence: serial and process modes produce
-    byte-identical draft + audit JSON."""
-    # Implementation note: this test patches _default_mcts_labeler to a
-    # deterministic stub before invoking _run_strong_advantage twice (once
-    # per mode) into different output directories, then compares the two
-    # *.draft.json and candidates_*.json outputs byte-for-byte.
-    # See test_run_strong_advantage_writes_draft_with_admitted_candidates
-    # in test_strong_advantage_probe_suite.py for the monkeypatch pattern.
-    pytest.skip("Implement after Task 4 plumbing; uses fixture helper from "
-                "tests/test_strong_advantage_probe_suite.py")
+_SAMPLE_CENTRAL = {
+    "move_history": [(0, 12), (1, 0), (2, 11), (1, 1)],
+    "ply": 4, "winner": "red",
+    "category": "chain_advantage_central_red",
+    "phase1_features": {
+        "cc_size": 12, "cc_axis_span": 0.65, "cc_touches_own_goal": True,
+        "axis_span_margin": 0.20, "centroid_chebyshev_from_center": 4,
+        "forced_within_2": False,
+    },
+    "source_game": "iter_0070_game_001", "source_ply": 4,
+    "starting_player": "red",
+}
+_SAMPLE_EDGE = {
+    "move_history": [(0, 1), (1, 22), (2, 0), (1, 21)],
+    "ply": 4, "winner": "red",
+    "category": "chain_advantage_edge_red",
+    "phase1_features": {
+        "cc_size": 11, "cc_axis_span": 0.60, "cc_touches_own_goal": True,
+        "axis_span_margin": 0.15, "centroid_chebyshev_from_center": 10,
+        "forced_within_2": False,
+    },
+    "source_game": "iter_0070_game_002", "source_ply": 4,
+    "starting_player": "red",
+}
 
 
-def test_phase2_process_pool_init_failure(tmp_path):
-    """Bad checkpoint path causes worker init to fail. Run aborts with a
-    clear error mentioning path/mode/workers; no draft is written."""
-    rc, stderr = _run_cli(
+def test_phase2_aggregate_sorts_by_probe_id():
+    """Hand-crafted result list (as if returned in arbitrary completion order
+    from a process pool) must be aggregated in probe_id-sorted order. This
+    test validates the aggregation logic without spawning a real pool."""
+    from scripts.build_probe_suite import _phase2_aggregate
+
+    r_a = {
+        "probe_id": "p_alpha", "status": "admitted",
+        "candidate": {"source_game": "g0", "source_ply": 4, "marker": "alpha"},
+        "audit_row": None, "rejection_reason": None,
+        "phase2_label": {"mean_root_value": 0.7},
+        "error_message": None,
+    }
+    r_b = {
+        "probe_id": "p_beta", "status": "rejected",
+        "candidate": {"source_game": "g1", "source_ply": 4, "marker": "beta"},
+        "audit_row": {"source_game": "g1", "source_ply": 4,
+                      "reason": "magnitude_below_threshold"},
+        "rejection_reason": "magnitude_below_threshold",
+        "phase2_label": {"mean_root_value": 0.1},
+        "error_message": None,
+    }
+    r_c = {
+        "probe_id": "p_gamma", "status": "replay_error",
+        "candidate": None,
+        "audit_row": {"source_game": "g2", "source_ply": 4,
+                      "reason": "replay_error"},
+        "rejection_reason": "replay_error",
+        "phase2_label": None,
+        "error_message": "ValueError: bad",
+    }
+
+    # Pass in deliberately scrambled order.
+    admitted, audit_rows = _phase2_aggregate([r_c, r_a, r_b])
+
+    assert [c["marker"] for c in admitted] == ["alpha"]
+    # Audit rows in probe_id-sorted order: alpha (no row), beta, gamma.
+    assert [a["source_game"] for a in audit_rows] == ["g1", "g2"]
+
+
+def test_phase2_process_pool_smoke(tmp_path, monkeypatch):
+    """Real ProcessPoolExecutor smoke test. Substitutes the production
+    _init_label_worker with a top-level test function via late-bound
+    module-attribute monkeypatch; that function installs a deterministic
+    stub labeler in each worker. Verifies the pool launches, all candidates
+    label, no exception escapes."""
+    import json as _json
+    import scripts.build_probe_suite as bps
+    from tests.test_probe_phase2_parallel import _init_label_worker_stub_for_tests
+
+    monkeypatch.setattr(bps, "_init_label_worker", _init_label_worker_stub_for_tests)
+    _patch_phase1_extract(monkeypatch, [_SAMPLE_CENTRAL, _SAMPLE_EDGE])
+
+    fake_ckpt = tmp_path / "fake_ckpt.safetensors"
+    fake_ckpt.write_bytes(b"stub")
+
+    out_path = tmp_path / "strong_advantage_probes.json"
+    rc = bps.main_with_args([
         "--tier", "strong_advantage",
-        "--input", str(tmp_path),  # empty -> Phase 1 yields zero candidates
-        "--source-iter-range", "0", "0",
-        "--label-checkpoint", str(tmp_path / "definitely-not-here.safetensors"),
+        "--input", "scripts/GPU/logs/games",
+        "--source-iter-range", "70", "70",
+        "--label-checkpoint", str(fake_ckpt),
+        "--label-mcts-sims", "10",
+        "--label-mcts-repeats", "1",
+        "--magnitude-threshold", "0.45",
+        "--out", str(out_path),
         "--label-worker-mode", "process",
         "--label-workers", "2",
-    )
-    assert rc != 0
-    # Either Phase 1 ERROR (no input) or worker-init ERROR — both reference
-    # the bad checkpoint. The important assertion is that we don't crash
-    # silently and that no draft file appears.
-    assert "ERROR" in stderr
-```
+        "--no-borderline-rerun",
+        "--force",
+    ])
+    assert rc == 0
 
-The two more elaborate equivalence and isolated-error tests are marked `pytest.skip` until the implementation lands; they get filled in inside this same task once `_init_label_worker` exists. Keep them in the file as placeholders so the next step's failures are scoped to the missing implementation, not the test itself.
+    draft = _json.loads(out_path.with_suffix(".draft.json").read_text())
+    stats = draft["meta"]["phase2_run_stats"]
+    assert stats["mode"] == "process"
+    assert stats["workers_effective"] == 2
+    assert stats["candidates_total"] == 2
+    assert stats["labeled"] == 2
+
+
+def test_phase2_process_pool_init_failure(tmp_path, monkeypatch):
+    """Worker init can't load the checkpoint -> first .result() raises ->
+    main aborts with a clear error mentioning path/mode/workers; no draft
+    is written. Uses the synthetic-candidate Phase-1 stub so workers
+    actually start (vs. zero candidates -> pool never created)."""
+    import scripts.build_probe_suite as bps
+    _patch_phase1_extract(monkeypatch, [_SAMPLE_CENTRAL])
+
+    bad_ckpt = tmp_path / "definitely_not_here.safetensors"
+    bad_ckpt.write_bytes(b"")  # exists, but won't load as a network
+
+    out_path = tmp_path / "strong_advantage_probes.json"
+    rc = bps.main_with_args([
+        "--tier", "strong_advantage",
+        "--input", "scripts/GPU/logs/games",
+        "--source-iter-range", "70", "70",
+        "--label-checkpoint", str(bad_ckpt),
+        "--label-mcts-sims", "10",
+        "--label-mcts-repeats", "1",
+        "--out", str(out_path),
+        "--label-worker-mode", "process",
+        "--label-workers", "2",
+        "--force",
+    ])
+    assert rc != 0
+    # Draft file MUST NOT exist on init failure.
+    assert not out_path.with_suffix(".draft.json").exists()
+```
 
 - [ ] **Step 2: Run the new tests; verify init-failure test fails for the right reason**
 
@@ -897,18 +1011,27 @@ Then, inside `_run_strong_advantage`, replace the section that begins `network, 
 
     if args.label_worker_mode == "serial":
         results = []
+        admitted_so_far = 0
         for idx, cand in enumerate(candidates):
             if idx % progress_every == 0:
-                _print_phase2_progress(idx, n_total, len(admitted),
+                _print_phase2_progress(idx, n_total, admitted_so_far,
                                        t_phase2_start)
             r = _label_one_strong_advantage_candidate(cand, **helper_kwargs)
             results.append(r)
             if r["status"] == "admitted":
-                admitted.append(r["candidate"])
+                admitted_so_far += 1
     else:  # "process"
         import multiprocessing as _mp
         from concurrent.futures import ProcessPoolExecutor, as_completed
         ctx = _mp.get_context("spawn")
+        # NOTE: the bare name `_init_label_worker` is resolved through the
+        # module globals of `scripts.build_probe_suite` at this exact moment,
+        # so tests can monkeypatch `bps._init_label_worker` to a top-level
+        # test helper and have ProcessPoolExecutor pickle the patched
+        # function (by qualified name) for the worker. Do NOT replace the
+        # bare name with `from scripts.build_probe_suite import
+        # _init_label_worker`; that would freeze the binding and break the
+        # smoke test in tests/test_probe_phase2_parallel.py.
         try:
             with ProcessPoolExecutor(
                 max_workers=args.label_workers,
@@ -938,15 +1061,15 @@ Then, inside `_run_strong_advantage`, replace the section that begins `network, 
                   f"  {type(exc).__name__}: {exc}", file=sys.stderr)
             return 1
 
-        # Deterministic order: sort by probe_id BEFORE aggregating into
-        # admitted/audit. Spec §6.
-        results.sort(key=lambda r: r["probe_id"])
-        admitted = [r["candidate"] for r in results if r["status"] == "admitted"]
-
-    # Audit rows for all non-admitted statuses, in deterministic order.
+    # NOTE: aggregation (sort by probe_id + partition) is deferred to
+    # _phase2_aggregate(), called AFTER the borderline-rerun pass added in
+    # Task 5. Until Task 5 lands, this Task 4 implementation calls it
+    # immediately. After Task 5 lands, the rerun pass runs first, then
+    # _phase2_aggregate() is called once on the post-rerun results. The
+    # function is idempotent w.r.t. already-sorted inputs.
+    admitted, new_audit_rows = _phase2_aggregate(results)
+    audit.extend(new_audit_rows)
     for r in results:
-        if r["audit_row"] is not None:
-            audit.append(r["audit_row"])
         if r["status"] == "replay_error":
             print(f"[probe_suite] WARN: state replay error: "
                   f"{r['error_message']}", file=sys.stderr)
@@ -955,7 +1078,22 @@ Then, inside `_run_strong_advantage`, replace the section that begins `network, 
                   f"{r['error_message']}", file=sys.stderr)
 ```
 
-Add this small helper just above `_run_strong_advantage` (deduplicates the progress-logging block):
+Add the aggregation helper at module level in `scripts/build_probe_suite.py`:
+
+```python
+def _phase2_aggregate(results: list[dict]) -> tuple[list, list]:
+    """Sort Phase 2 result dicts by probe_id and partition into
+    (admitted candidates, audit rows). Idempotent on already-sorted input.
+    Used by both serial and process modes, and called once AFTER the
+    borderline-rerun pass (Task 5) so post-rerun statuses drive the
+    partition. Spec §6."""
+    results.sort(key=lambda r: r["probe_id"])
+    admitted = [r["candidate"] for r in results if r["status"] == "admitted"]
+    audit_rows = [r["audit_row"] for r in results if r["audit_row"] is not None]
+    return admitted, audit_rows
+```
+
+Also add the progress helper just above `_run_strong_advantage`:
 
 ```python
 def _print_phase2_progress(idx: int, n_total: int, n_admitted: int,
@@ -975,84 +1113,9 @@ def _print_phase2_progress(idx: int, n_total: int, n_admitted: int,
     )
 ```
 
-- [ ] **Step 4: Implement the two skipped equivalence tests**
+- [ ] **Step 4: Add error-isolation tests for the helper**
 
-Replace the `test_phase2_serial_vs_process_mocked` skip with a real test. The pattern: monkeypatch `probe_eval._default_mcts_labeler` to return deterministic values keyed by candidate identity, then call `_run_strong_advantage(args)` twice, comparing draft + audit JSON byte-for-byte.
-
-```python
-def test_phase2_serial_vs_process_mocked(tmp_path, monkeypatch):
-    from scripts.GPU.alphazero import probe_eval
-    from scripts.build_probe_suite import _build_arg_parser, _run_strong_advantage
-    from tests.test_strong_advantage_probe_suite import (
-        _write_minimal_strong_advantage_game_fixture,
-    )
-
-    games_dir = tmp_path / "games"
-    games_dir.mkdir()
-    _write_minimal_strong_advantage_game_fixture(games_dir)
-
-    # Deterministic mock labeler keyed by candidate's source_ply (irrelevant
-    # to the test as long as it's stable).
-    def stub_labeler(state, sims, seed):
-        # Keyed by seed so different repeats give slightly different values.
-        v = 0.6 + 0.001 * (seed % 7)
-        t1 = 0.4 + 0.001 * (seed % 5)
-        return (v, t1)
-
-    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub_labeler)
-    # Also stub network loading so the worker init in process mode doesn't
-    # try to read a checkpoint.
-    monkeypatch.setattr(
-        probe_eval, "load_network_for_scoring",
-        lambda path: (object(), 30, 128, 6),
-    )
-    monkeypatch.setattr(probe_eval, "_set_default_labeler_network", lambda *a, **kw: None)
-    monkeypatch.setattr(probe_eval, "_set_default_labeler_mcts_config", lambda *a, **kw: None)
-
-    def run(mode, out_dir):
-        ap = _build_arg_parser()
-        args = ap.parse_args([
-            "--tier", "strong_advantage",
-            "--input", str(games_dir),
-            "--source-iter-range", "0", "0",
-            "--label-checkpoint", "fake.safetensors",  # patched above
-            "--label-mcts-sims", "10",
-            "--label-mcts-repeats", "2",
-            "--out", str(out_dir / "out.json"),
-            "--label-worker-mode", mode,
-            "--label-workers", "2" if mode == "process" else "1",
-            "--no-borderline-rerun",  # isolate the equivalence test from rerun
-            "--force",
-        ])
-        rc = _run_strong_advantage(args)
-        assert rc == 0, f"mode={mode} failed"
-
-    serial_dir = tmp_path / "serial"
-    serial_dir.mkdir()
-    process_dir = tmp_path / "process"
-    process_dir.mkdir()
-    run("serial", serial_dir)
-    run("process", process_dir)
-
-    serial_draft = (serial_dir / "out.draft.json").read_text()
-    process_draft = (process_dir / "out.draft.json").read_text()
-    serial_audit = (serial_dir / "candidates_strong_advantage.json").read_text()
-    process_audit = (process_dir / "candidates_strong_advantage.json").read_text()
-
-    # NOTE: meta.phase2_run_stats includes per-mode fields (mode, workers_*)
-    # that necessarily differ. Strip those before comparison.
-    import json as _json
-    def _strip_run_stats(blob):
-        d = _json.loads(blob)
-        d["meta"].pop("phase2_run_stats", None)
-        return _json.dumps(d, sort_keys=True)
-    assert _strip_run_stats(serial_draft) == _strip_run_stats(process_draft)
-    assert serial_audit == process_audit  # audit has no run_stats
-```
-
-If `_write_minimal_strong_advantage_game_fixture` does not exist in `tests/test_strong_advantage_probe_suite.py`, factor it out from the existing `test_run_strong_advantage_writes_draft_with_admitted_candidates` test in that file in this same step (move the fixture-building code into a top-level helper and call it from both tests).
-
-Also add error-isolation tests for the helper. Because `_label_one_strong_advantage_candidate` catches replay/MCTS errors and returns a structured result, the pool never sees an exception across the process boundary — so we test the helper directly. The pool simply calls the helper N times.
+`_label_one_strong_advantage_candidate` catches replay/MCTS errors and returns a structured result; the pool never sees an exception across the process boundary. So error-isolation is tested as a unit on the helper itself — no real pool needed. (Cross-process equivalence is covered by `test_phase2_aggregate_sorts_by_probe_id` plus `test_phase2_process_pool_smoke` in Step 1.)
 
 ```python
 def test_phase2_replay_error_isolated(monkeypatch):
@@ -1164,10 +1227,17 @@ Append to `tests/test_probe_phase2_parallel.py`:
 
 ```python
 def _make_fake_result(*, status, mean_root_value, min_top1_share=0.5,
-                     value_stability=0.0, probe_id="p0",
+                     value_stability=0.0, source_game="g0", source_ply=18,
+                     category="chain_advantage_central_red",
                      rejection_reason=None):
     """Build a result-dict shaped like _label_one_strong_advantage_candidate
-    returns. Used only by the borderline-rerun unit tests."""
+    returns. probe_id is derived from (source_game, source_ply, category) the
+    same way `_probe_id_for(cand)` derives it, so when these results are fed
+    back through `_run_borderline_reruns` (which re-runs the helper and
+    re-derives probe_id from the candidate), the spec §9 same-probe-id
+    invariant holds."""
+    from scripts.build_probe_suite import _probe_id_for
+
     label = {
         "mean_root_value": mean_root_value,
         "value_per_run": [mean_root_value, mean_root_value],
@@ -1179,14 +1249,15 @@ def _make_fake_result(*, status, mean_root_value, min_top1_share=0.5,
         "label_checkpoint": "fake.safetensors",
     }
     cand = {
-        "source_game": "g0", "source_ply": 18, "ply": 18,
+        "source_game": source_game, "source_ply": source_ply, "ply": source_ply,
         "starting_player": "red", "winner": "red",
-        "category": "central_red", "move_history": [(11, 11)],
+        "category": category, "move_history": [(11, 11)],
         "phase1_features": {
             "cc_size": 12, "cc_axis_span": 0.7, "axis_span_margin": 0.2,
         },
         "phase2_label": label,
     }
+    probe_id = _probe_id_for(cand)
     audit_row = None
     if status == "rejected":
         audit_row = {
@@ -1282,9 +1353,10 @@ def test_borderline_rerun_not_triggered_for_non_borderline(monkeypatch):
     monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
 
     results = [
-        _make_fake_result(status="admitted", mean_root_value=0.9, probe_id="p_admit"),
+        _make_fake_result(status="admitted", mean_root_value=0.9,
+                          source_ply=18),
         _make_fake_result(
-            status="rejected", mean_root_value=0.1, probe_id="p_reject",
+            status="rejected", mean_root_value=0.1, source_ply=22,
             rejection_reason="magnitude_below_threshold",
         ),
     ]
@@ -1300,6 +1372,30 @@ def test_borderline_rerun_not_triggered_for_non_borderline(monkeypatch):
     # Statuses unchanged.
     assert results[0]["status"] == "admitted"
     assert results[1]["status"] == "rejected"
+
+
+def test_borderline_rerun_preserves_probe_id(monkeypatch):
+    """Spec §9 invariant: rerun must produce a result with the same probe_id
+    as the parallel result. The helper recomputes probe_id from
+    source_game/source_ply, so any rerun-side mutation that changes those
+    fields would surface here."""
+    from scripts.build_probe_suite import _run_borderline_reruns
+    from scripts.GPU.alphazero import probe_eval
+
+    def stub(state, sims, seed):
+        return (0.5, 0.5)
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+
+    results = [_make_fake_result(
+        status="admitted", mean_root_value=0.451,
+    )]
+    pre_id = results[0]["probe_id"]
+    _run_borderline_reruns(
+        results, epsilon=0.01,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15,
+        label_ckpt_name="fake.safetensors", sims=10, repeats=2,
+    )
+    assert results[0]["probe_id"] == pre_id
 
 
 def test_borderline_rerun_skips_error_results(monkeypatch):
@@ -1562,6 +1658,15 @@ def _run_borderline_reruns(
             top1_share_floor=top1_share_floor,
             stability_cap=stability_cap,
         )
+        # Spec §9: rerun must preserve probe identity. The helper
+        # recomputes seed_base from sha256(probe_id) and builds the same
+        # probe_id internally, so this should always hold; assert
+        # explicitly to catch future regressions (e.g. accidental copy
+        # mutation that changes source_game/source_ply/move_history).
+        assert rerun["probe_id"] == r["probe_id"], (
+            f"borderline rerun changed probe_id: {r['probe_id']} -> "
+            f"{rerun['probe_id']}"
+        )
         counters["reruns"] += 1
         flipped = rerun["status"] != r["status"]
         if flipped:
@@ -1603,34 +1708,35 @@ def _run_borderline_reruns(
     return counters
 ```
 
-Now, in `_run_strong_advantage`, after the process-pool branch finishes building `results` and sorting them by `probe_id`, but BEFORE the per-status audit aggregation loop, add the borderline-rerun call:
+Now, in `_run_strong_advantage`, insert the rerun pass BETWEEN building `results` (end of either serial or process branch) and the existing call to `_phase2_aggregate(results)` from Task 4. Replace the prior `admitted, new_audit_rows = _phase2_aggregate(results)` with:
 
 ```python
-        # (process branch only, after results.sort by probe_id)
-        rerun_enabled = (
-            args.label_worker_mode == "process"
-            and args.admission_borderline_epsilon > 0
-            and not args.no_borderline_rerun
+    rerun_enabled = (
+        args.label_worker_mode == "process"
+        and args.admission_borderline_epsilon > 0
+        and not args.no_borderline_rerun
+    )
+    if rerun_enabled:
+        rerun_counters = _run_borderline_reruns(
+            results,
+            epsilon=args.admission_borderline_epsilon,
+            magnitude_threshold=args.magnitude_threshold,
+            top1_share_floor=args.top1_share_floor,
+            stability_cap=args.stability_cap,
+            label_ckpt_name=label_ckpt.name,
+            sims=args.label_mcts_sims,
+            repeats=args.label_mcts_repeats,
         )
-        if rerun_enabled:
-            rerun_counters = _run_borderline_reruns(
-                results,
-                epsilon=args.admission_borderline_epsilon,
-                magnitude_threshold=args.magnitude_threshold,
-                top1_share_floor=args.top1_share_floor,
-                stability_cap=args.stability_cap,
-                label_ckpt_name=label_ckpt.name,
-                sims=args.label_mcts_sims,
-                repeats=args.label_mcts_repeats,
-            )
-        else:
-            rerun_counters = {"candidates": 0, "reruns": 0, "flips": 0, "seconds": 0.0}
+    else:
+        rerun_counters = {"candidates": 0, "reruns": 0, "flips": 0, "seconds": 0.0}
 
-        # Re-derive admitted from post-rerun results.
-        admitted = [r["candidate"] for r in results if r["status"] == "admitted"]
+    # _phase2_aggregate sorts AFTER reruns so post-rerun statuses drive
+    # admitted/audit partition. Spec §6.
+    admitted, new_audit_rows = _phase2_aggregate(results)
+    audit.extend(new_audit_rows)
 ```
 
-For serial mode, set `rerun_counters` to the zero-filled dict (the pass is a no-op in serial mode by design).
+`rerun_counters` is also consumed by Task 6 (instrumentation). For serial mode the pass is a no-op by design (zero-filled counters).
 
 Finally, ensure private rerun-audit keys never reach the committed suite. In the `probes_out` construction loop (around line ~620 in `_run_strong_advantage`), add a strip step:
 
@@ -1713,22 +1819,71 @@ Spec §10.
 
 - [ ] **Step 1: Add the instrumentation test**
 
+Reuses `_run_run_strong_advantage_with_stub` (from Task 5, Step 2) and `_patch_phase1_extract` + `_SAMPLE_CENTRAL` (from Task 4, Step 1). Append to `tests/test_probe_phase2_parallel.py`:
+
 ```python
 def test_phase2_run_stats_recorded_in_meta(tmp_path, monkeypatch):
     """meta.phase2_run_stats records all the documented fields, including
-    workers_requested vs workers_effective and borderline_rerun_enabled."""
-    pytest.skip(
-        "Implement: run --label-worker-mode=serial --label-workers=4 with "
-        "the equivalence-test fixture pattern; assert "
-        "meta.phase2_run_stats.workers_requested == 4, "
-        "meta.phase2_run_stats.workers_effective == 1, "
-        "meta.phase2_run_stats.borderline_rerun_enabled == False, "
-        "meta.phase2_run_stats.admission_borderline_epsilon == 0.01, "
-        "all counter fields present."
-    )
-```
+    workers_requested vs workers_effective and borderline_rerun_enabled.
+    Use --label-worker-mode=serial --label-workers=4 to exercise the
+    serial-mode clamp path."""
+    import json as _json
+    import scripts.build_probe_suite as bps
 
-Then implement the body before continuing.
+    _patch_phase1_extract(monkeypatch, [_SAMPLE_CENTRAL])
+
+    def stub(state, sims, seed):
+        return (0.7, 0.4)
+    from scripts.GPU.alphazero import probe_eval
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+    monkeypatch.setattr(probe_eval, "load_network_for_scoring",
+                        lambda p: (object(), 30, 128, 6))
+    monkeypatch.setattr(probe_eval, "_set_default_labeler_network",
+                        lambda *a, **kw: None)
+    monkeypatch.setattr(probe_eval, "_set_default_labeler_mcts_config",
+                        lambda *a, **kw: None)
+
+    fake_ckpt = tmp_path / "fake_ckpt.safetensors"
+    fake_ckpt.write_bytes(b"stub")
+    out_path = tmp_path / "out.json"
+
+    rc = bps.main_with_args([
+        "--tier", "strong_advantage",
+        "--input", "scripts/GPU/logs/games",
+        "--source-iter-range", "70", "70",
+        "--label-checkpoint", str(fake_ckpt),
+        "--label-mcts-sims", "10",
+        "--label-mcts-repeats", "1",
+        "--magnitude-threshold", "0.45",
+        "--out", str(out_path),
+        "--label-worker-mode", "serial",
+        "--label-workers", "4",   # under serial, should clamp to 1 with warning
+        "--force",
+    ])
+    assert rc == 0
+
+    draft = _json.loads(out_path.with_suffix(".draft.json").read_text())
+    stats = draft["meta"]["phase2_run_stats"]
+    assert stats["mode"] == "serial"
+    assert stats["workers_requested"] == 4
+    assert stats["workers_effective"] == 1
+    assert stats["eval_batch_size"] == 14
+    assert stats["stall_flush_sims"] == 16
+    assert stats["candidates_total"] == 1
+    assert stats["labeled"] == 1
+    assert stats["admitted_before_diversity"] == 1
+    assert stats["rejected"] == 0
+    assert stats["replay_errors"] == 0
+    assert stats["mcts_errors"] == 0
+    assert stats["borderline_rerun_enabled"] is False  # serial mode
+    assert stats["admission_borderline_epsilon"] == 0.01
+    assert stats["borderline_candidates"] == 0
+    assert stats["borderline_reruns"] == 0
+    assert stats["borderline_flips"] == 0
+    assert "rejection_reasons" in stats
+    assert isinstance(stats["seconds_total"], (int, float))
+    assert stats["seconds_total"] >= 0
+```
 
 - [ ] **Step 2: Run the test to verify it fails**
 
