@@ -20,6 +20,7 @@ import copy
 import hashlib
 import json
 import sys
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -358,6 +359,9 @@ def main() -> int:
     _validate_parallel_args(ap, args)
 
     # Workers under serial mode: warn if explicitly set to anything other than 1.
+    # Capture the user-requested workers value BEFORE the clamp so
+    # meta.phase2_run_stats can record both requested and effective.
+    args.label_workers_requested = args.label_workers
     if args.label_worker_mode == "serial" and args.label_workers != 1:
         print("[probe_suite] warning: --label-workers is ignored when "
               "--label-worker-mode=serial", file=sys.stderr)
@@ -987,25 +991,61 @@ def _run_strong_advantage(args) -> int:
                   f"{ar['source_game']} ply {ar['source_ply']}: "
                   f"{r['error_message']}", file=sys.stderr)
 
-    # Final Phase 2 summary so the operator sees a clean breakdown.
-    # NOTE: at this point in the pipeline, audit contains only Phase-2
-    # rejection rows (the diversity selector hasn't run yet, so no
-    # reason="admitted" or reason="diversity_*" rows exist). We
-    # explicitly seed the breakdown with the Phase-2-admitted count
-    # (`len(admitted)`) so the operator sees the full picture.
+    # Final Phase 2 instrumentation (spec §10): emit a multi-line summary
+    # mirroring meta.phase2_run_stats, and stash the JSON block on `args`
+    # so the draft-payload assembly below can write it as a sibling of
+    # selection_rules. Counters are derived from the post-rerun results
+    # list so the numbers reflect what actually went into admitted/audit.
     phase2_elapsed = _time.time() - t_phase2_start
-    from collections import Counter as _Counter
-    reason_breakdown = _Counter(
-        a["reason"] for a in audit if "phase2_label" in a or a["reason"] in
-        ("mcts_error", "replay_error",
-         "sign_mismatch", "magnitude_below_threshold", "low_top1_share",
-         "unstable_value", "position_already_forced")
+    n_replay_errors = sum(1 for r in results if r["status"] == "replay_error")
+    n_mcts_errors = sum(1 for r in results if r["status"] == "mcts_error")
+    n_admitted_pre_diversity = sum(1 for r in results if r["status"] == "admitted")
+    n_rejected = sum(1 for r in results if r["status"] == "rejected")
+    n_labeled = n_admitted_pre_diversity + n_rejected
+    rejection_reasons = Counter(
+        r["rejection_reason"] for r in results
+        if r["status"] == "rejected" and r["rejection_reason"]
     )
-    reason_breakdown["admitted"] = len(admitted)
-    breakdown_str = ", ".join(f"{r}={n}" for r, n in reason_breakdown.most_common())
+
+    args._phase2_run_stats = {
+        "mode": args.label_worker_mode,
+        "workers_requested": args.label_workers_requested,
+        "workers_effective": args.label_workers,
+        "eval_batch_size": args.mcts_eval_batch_size,
+        "stall_flush_sims": args.mcts_stall_flush_sims,
+        "candidates_total": n_total,
+        "labeled": n_labeled,
+        "replay_errors": n_replay_errors,
+        "mcts_errors": n_mcts_errors,
+        "admitted_before_diversity": n_admitted_pre_diversity,
+        "rejected": n_rejected,
+        "borderline_rerun_enabled": rerun_enabled,
+        "admission_borderline_epsilon": args.admission_borderline_epsilon,
+        "borderline_candidates": rerun_counters["candidates"],
+        "borderline_reruns": rerun_counters["reruns"],
+        "borderline_flips": rerun_counters["flips"],
+        "borderline_rerun_seconds": round(rerun_counters["seconds"], 2),
+        "seconds_total": round(phase2_elapsed, 2),
+        "rejection_reasons": dict(rejection_reasons),
+    }
+
+    breakdown_str = ", ".join(f"{r}={n}" for r, n in rejection_reasons.most_common())
     print(
-        f"[probe_suite] Phase 2 complete: {n_total}/{n_total} labeled "
-        f"({len(admitted)} admitted, {phase2_elapsed:.0f}s total)\n"
+        f"[probe_suite] Phase 2 complete: {n_labeled}/{n_total} labeled "
+        f"({n_admitted_pre_diversity} admitted, {phase2_elapsed:.0f}s total)\n"
+        f"  mode={args.label_worker_mode} "
+        f"workers_requested={args.label_workers_requested} "
+        f"workers_effective={args.label_workers} "
+        f"eval_batch={args.mcts_eval_batch_size} "
+        f"stall_flush={args.mcts_stall_flush_sims}\n"
+        f"  candidates_total={n_total} labeled={n_labeled} "
+        f"replay_errors={n_replay_errors} mcts_errors={n_mcts_errors}\n"
+        f"  admitted_before_diversity={n_admitted_pre_diversity} "
+        f"rejected={n_rejected}\n"
+        f"  borderline_candidates={rerun_counters['candidates']} "
+        f"borderline_reruns={rerun_counters['reruns']} "
+        f"borderline_flips={rerun_counters['flips']}\n"
+        f"  borderline_rerun_seconds={rerun_counters['seconds']:.2f}\n"
         f"  Per-reason: {breakdown_str}",
         flush=True,
     )
@@ -1013,7 +1053,6 @@ def _run_strong_advantage(args) -> int:
     if not admitted:
         # No reason="admitted" rows can exist in audit at this point
         # (Phase 2 only writes rejections; the selector hasn't run).
-        from collections import Counter
         reason_counts = Counter(a["reason"] for a in audit)
         msg = ", ".join(f"{r}: {n}" for r, n in reason_counts.most_common())
         print(f"[probe_suite] ERROR: 0 admitted probes overall.\n"
@@ -1093,6 +1132,7 @@ def _run_strong_advantage(args) -> int:
                     "default_sort_key (-iter, -source_ply, source_game)",
                 ],
             },
+            "phase2_run_stats": args._phase2_run_stats,
         },
         "probes": probes_out,
     }

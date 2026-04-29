@@ -879,3 +879,74 @@ def test_committed_probes_have_no_private_rerun_keys(tmp_path, monkeypatch):
     serialized = (tmp_path / "out.draft.json").read_text()
     assert "_borderline_rerun_audit" not in serialized
     assert "parallel_phase2_label_before_rerun" not in serialized
+
+
+def test_phase2_run_stats_recorded_in_meta(tmp_path, monkeypatch):
+    """meta.phase2_run_stats records all the documented fields, including
+    workers_requested vs workers_effective and borderline_rerun_enabled.
+    Use --label-worker-mode=serial --label-workers=4 to exercise the
+    serial-mode clamp path."""
+    import json as _json
+    import scripts.build_probe_suite as bps
+
+    _patch_phase1_extract(monkeypatch, [_SAMPLE_CENTRAL])
+
+    def stub(state, sims, seed):
+        return (0.7, 0.4)
+    from scripts.GPU.alphazero import probe_eval
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+
+    # Serial mode loads a main-process labeler network; provide a fake
+    # with an .eval() method (matches the helper pattern used by the
+    # other tests in this file).
+    class _FakeNet:
+        def eval(self):
+            return self
+
+    monkeypatch.setattr(probe_eval, "load_network_for_scoring",
+                        lambda p: (_FakeNet(), 30, 128, 6))
+    monkeypatch.setattr(probe_eval, "_set_default_labeler_network",
+                        lambda *a, **kw: None)
+    monkeypatch.setattr(probe_eval, "_set_default_labeler_mcts_config",
+                        lambda *a, **kw: None)
+
+    fake_ckpt = tmp_path / "fake_ckpt.safetensors"
+    fake_ckpt.write_bytes(b"stub")
+    out_path = tmp_path / "out.json"
+
+    rc = bps.main_with_args([
+        "--tier", "strong_advantage",
+        "--input", "scripts/GPU/logs/games",
+        "--source-iter-range", "70", "70",
+        "--label-checkpoint", str(fake_ckpt),
+        "--label-mcts-sims", "10",
+        "--label-mcts-repeats", "1",
+        "--magnitude-threshold", "0.45",
+        "--out", str(out_path),
+        "--label-worker-mode", "serial",
+        "--label-workers", "4",   # under serial, should clamp to 1 with warning
+        "--force",
+    ])
+    assert rc == 0
+
+    draft = _json.loads(out_path.with_suffix(".draft.json").read_text())
+    stats = draft["meta"]["phase2_run_stats"]
+    assert stats["mode"] == "serial"
+    assert stats["workers_requested"] == 4
+    assert stats["workers_effective"] == 1
+    assert stats["eval_batch_size"] == 14
+    assert stats["stall_flush_sims"] == 16
+    assert stats["candidates_total"] == 1
+    assert stats["labeled"] == 1
+    assert stats["admitted_before_diversity"] == 1
+    assert stats["rejected"] == 0
+    assert stats["replay_errors"] == 0
+    assert stats["mcts_errors"] == 0
+    assert stats["borderline_rerun_enabled"] is False  # serial mode
+    assert stats["admission_borderline_epsilon"] == 0.01
+    assert stats["borderline_candidates"] == 0
+    assert stats["borderline_reruns"] == 0
+    assert stats["borderline_flips"] == 0
+    assert "rejection_reasons" in stats
+    assert isinstance(stats["seconds_total"], (int, float))
+    assert stats["seconds_total"] >= 0
