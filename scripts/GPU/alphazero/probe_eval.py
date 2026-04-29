@@ -14,6 +14,7 @@ import json
 import os
 import random
 import sys
+from dataclasses import replace
 from datetime import datetime, timezone
 
 import numpy as np
@@ -952,8 +953,12 @@ def label_candidate_with_mcts(
 
 def _default_mcts_labeler(state, sims, seed):
     """Production deep-MCTS labeler. Uses the network registered via
-    _set_default_labeler_network() and runs MCTS at the given sim count
-    and seed.
+    _set_default_labeler_network() and the MCTSConfig registered via
+    _set_default_labeler_mcts_config() (or MCTSConfig(n_simulations=sims)
+    if no config global is registered, for back-compat).
+
+    The per-call `sims` argument is always authoritative — it overrides
+    n_simulations on the registered config via dataclasses.replace.
 
     Returns (root_value_from_stm_perspective, top1_visit_share).
 
@@ -965,13 +970,11 @@ def _default_mcts_labeler(state, sims, seed):
             "Either pass labeler= explicitly or call "
             "_set_default_labeler_network() first."
         )
-    # MCTS interface (verified against scripts/GPU/alphazero/mcts.py):
-    #   MCTS(evaluator, cfg, rng=...)   constructor
-    #   mcts.search(state, add_noise=False) -> (visit_counts dict, root_value)
-    #   visit_counts: Dict[(r, c), int]
-    #   root_value: float (from state.to_move's perspective)
     evaluator = LocalGPUEvaluator(_DEFAULT_LABELER_NETWORK)
-    cfg = MCTSConfig(n_simulations=sims)
+    if _DEFAULT_LABELER_MCTS_CONFIG is None:
+        cfg = MCTSConfig(n_simulations=sims)
+    else:
+        cfg = replace(_DEFAULT_LABELER_MCTS_CONFIG, n_simulations=sims)
     mcts = MCTS(evaluator, cfg, rng=random.Random(seed))
     visit_counts, root_value = mcts.search(state, add_noise=False)
     if not visit_counts:
@@ -982,12 +985,22 @@ def _default_mcts_labeler(state, sims, seed):
 
 
 _DEFAULT_LABELER_NETWORK = None
+_DEFAULT_LABELER_MCTS_CONFIG = None
 
 
 def _set_default_labeler_network(network) -> None:
     """Register the production network for `_default_mcts_labeler`."""
     global _DEFAULT_LABELER_NETWORK
     _DEFAULT_LABELER_NETWORK = network
+
+
+def _set_default_labeler_mcts_config(config) -> None:
+    """Register MCTSConfig (eval_batch_size, stall_flush_sims) for the
+    production labeler. n_simulations on this config is ignored — per-call
+    sims is authoritative via dataclasses.replace inside _default_mcts_labeler.
+    """
+    global _DEFAULT_LABELER_MCTS_CONFIG
+    _DEFAULT_LABELER_MCTS_CONFIG = config
 
 
 # ============================================================
