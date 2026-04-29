@@ -802,11 +802,11 @@ def _run_strong_advantage(args) -> int:
     admitted, new_audit_rows = _phase2_aggregate(results)
     audit.extend(new_audit_rows)
     for r in results:
-        if r["status"] == "replay_error":
-            print(f"[probe_suite] WARN: state replay error: "
-                  f"{r['error_message']}", file=sys.stderr)
-        elif r["status"] == "mcts_error":
-            print(f"[probe_suite] WARN: MCTS error: "
+        if r["status"] in ("replay_error", "mcts_error"):
+            ar = r["audit_row"]
+            kind = "state replay error" if r["status"] == "replay_error" else "MCTS error"
+            print(f"[probe_suite] WARN: {kind} on "
+                  f"{ar['source_game']} ply {ar['source_ply']}: "
                   f"{r['error_message']}", file=sys.stderr)
 
     # Final Phase 2 summary so the operator sees a clean breakdown.
