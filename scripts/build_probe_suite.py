@@ -11,7 +11,11 @@ Tiers:
                            labeled, light-reviewed). Phases 1/2/3 per
                            docs/superpowers/specs/2026-04-28-...
 
-Both tiers produce byte-identical output for identical inputs.
+Both tiers produce byte-identical output for identical inputs in serial
+mode. The strong-advantage tier additionally supports an opt-in
+process-pool labeling path (`--label-worker-mode process`) with safe
+defaults preserving prior byte-identity. See docs/probe-suite-generation.md
+for the full operator workflow including parallel-labeling flags.
 """
 from __future__ import annotations
 

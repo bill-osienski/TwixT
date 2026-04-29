@@ -54,6 +54,13 @@ The forced tier has no Phase 2 (positions 1–2 plies from terminal don't need M
 | `--stability-cap` | 0.15 | Phase 2 admission: `max(value_per_run) - min(value_per_run) <= this`. Higher = tolerates more noise across repeated MCTS runs |
 | `--max-probes` | 30 | Final cap on admitted probes (post-filter) |
 | `--max-probes-per-game` | 2 | Maximum probes from any single source game, total across all 4 categories. Combined with the internal `MIN_PLY_SEPARATION_SAME_GAME=3` constant, no single game contributes more than 2 probes and any 2 it contributes are at least 3 plies apart in the source trajectory. Strong-advantage tier only. Default 2 is conservative; raise only if the suite is consistently undersized. |
+| `--label-worker-mode` | serial | Phase 2 execution mode. `serial` (default, byte-reference path) runs in the main process. `process` enables parallel labeling via a process pool with one MLX network per worker. |
+| `--label-workers` | 1 | Worker count under `--label-worker-mode=process`. Ignored under `serial` (warning if explicitly set to ≠1). On Apple Silicon start with 2–4. |
+| `--mcts-eval-batch-size` | 14 | NN batch size for the labeler's MCTS. Capped at 14 because larger batches have caused Metal hangs; pass `--allow-unsafe-eval-batch` to exceed. |
+| `--mcts-stall-flush-sims` | 16 | MCTS stall-flush threshold (see `MCTSConfig`). 0 disables. |
+| `--allow-unsafe-eval-batch` | flag | Required to set `--mcts-eval-batch-size > 14`. Intended only for local benchmarking. |
+| `--admission-borderline-epsilon` | 0.01 | In process mode, candidates whose phase-2 label is within ε of any admission threshold are re-labeled in the main process to use the serial reference label. 0 disables. |
+| `--no-borderline-rerun` | flag | Disable borderline rerun even when ε > 0. Used for benchmarking the raw process-pool path. |
 | `--out` | per-tier default | Output JSON path |
 | `--promote` | flag | Copy `*.draft.json` to committed file with reviewer + timestamp stamped into meta |
 | `--reviewer NAME` | required with `--promote` | Reviewer attribution recorded in `meta.reviewer` |
@@ -104,6 +111,7 @@ Watch the per-iter sidecar fields and the analyzer's CSV outputs:
     --label-mcts-repeats 2 \
     --max-probes 30 \
     --out tests/probes/strong_advantage_probes.json
+    # Faster (opt-in): --label-worker-mode process --label-workers 4
 # Phase 2 prints per-candidate progress (every ~5%, with ETA).
 
 # 3. Eyeball the draft.
@@ -130,6 +138,24 @@ Phase 2 throughput is dominated by MCTS, which is dominated by NN forward passes
 - A whole-corpus run (1500+ candidates × 10k × 3) is ~50+ hours and probably unnecessary.
 
 For a first iteration: use `--label-mcts-sims 2000 --label-mcts-repeats 2` and a narrow source-iter range (e.g., 5-9 iters). If the admitted set looks healthy, optionally do a tighter run with the full budget — but the lower-budget labels are usually good enough.
+
+### Parallel labeling
+
+`--label-worker-mode process` runs Phase 2 candidate labeling in a `ProcessPoolExecutor` with one MLX network per worker. Default remains `serial`; parallel mode is fully opt-in.
+
+Recommended starting point on Apple Silicon:
+
+```
+--label-worker-mode process --label-workers 2
+```
+
+If stable and faster, try `--label-workers 4`. Avoid increasing `--mcts-eval-batch-size` above 14 unless intentionally benchmarking with `--allow-unsafe-eval-batch`. Higher worker counts are not always faster: each process loads its own MLX network and can contend for the Metal scheduler.
+
+`--label-worker-mode process --label-workers 1` is valid (useful for testing worker initialization and deterministic reassembly), but it is not expected to speed up the run.
+
+**Reproducibility under parallel mode.** Serial mode is the strict reference path for mocked/deterministic labelers and the supported strict reproducibility mode for generated artifacts. For real MLX runs, the supported target is identical admitted probe IDs, identical final committed probe IDs, and identical rejection reasons for non-borderline candidates under normal deterministic MLX behavior. Borderline rerun (`--admission-borderline-epsilon`, default 0.01) re-labels threshold-sensitive candidates in the main process so admission decisions match serial. Byte-identical numeric labels are not promised across machines, worker counts, or MLX versions for real runs.
+
+`meta.phase2_run_stats` in the draft JSON records the mode, worker counts (requested and effective), MCTSConfig values, per-status counters, and borderline rerun counters for postmortem reproduction.
 
 ## Diversity selector (strong_advantage tier)
 

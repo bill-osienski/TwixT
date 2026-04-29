@@ -116,6 +116,9 @@ operator review**, NOT the spec §7 review-curated formal gate suite.
     --out tests/probes/strong_advantage_probes.json
 ```
 
+For parallel-labeling flags (`--label-worker-mode`, `--label-workers`, etc.) see
+[`docs/probe-suite-generation.md`](../../docs/probe-suite-generation.md#parallel-labeling).
+
 Writes `tests/probes/strong_advantage_probes.draft.json` plus an audit
 file `tests/probes/candidates_strong_advantage.json` (gitignored). After
 eyeball review, promote with:
