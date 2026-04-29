@@ -471,3 +471,411 @@ def test_phase2_mcts_error_isolated(monkeypatch):
     assert "synthetic MCTS failure" in result["error_message"]
     assert result["candidate"] is not None  # spec §7 invariant
     assert result["phase2_label"] is None
+
+
+# ----------------------------------------------------------------------
+# Task 5: borderline serial-rerun pass
+# ----------------------------------------------------------------------
+
+
+def _make_fake_result(*, status, mean_root_value, min_top1_share=0.5,
+                     value_stability=0.0, source_game="g0", source_ply=18,
+                     category="chain_advantage_central_red",
+                     rejection_reason=None):
+    """Build a result-dict shaped like _label_one_strong_advantage_candidate
+    returns. probe_id is derived from (source_game, source_ply, category) the
+    same way `_probe_id_for(cand)` derives it, so when these results are fed
+    back through `_run_borderline_reruns` (which re-runs the helper and
+    re-derives probe_id from the candidate), the spec §9 same-probe-id
+    invariant holds."""
+    from scripts.build_probe_suite import _probe_id_for
+
+    label = {
+        "mean_root_value": mean_root_value,
+        "value_per_run": [mean_root_value, mean_root_value],
+        "value_stability": value_stability,
+        "min_top1_share": min_top1_share,
+        "label_mcts_sims": 10,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 0,
+        "label_checkpoint": "fake.safetensors",
+    }
+    cand = {
+        "source_game": source_game, "source_ply": source_ply, "ply": source_ply,
+        "starting_player": "red", "winner": "red",
+        "category": category, "move_history": [(11, 11)],
+        "phase1_features": {
+            "cc_size": 12, "cc_axis_span": 0.7, "axis_span_margin": 0.2,
+        },
+        "phase2_label": label,
+    }
+    probe_id = _probe_id_for(cand)
+    audit_row = None
+    if status == "rejected":
+        audit_row = {
+            "source_game": cand["source_game"],
+            "source_ply": cand["source_ply"],
+            "phase1_features": cand["phase1_features"],
+            "phase2_label": label,
+            "reason": rejection_reason,
+        }
+    return {
+        "probe_id": probe_id,
+        "status": status,
+        "candidate": cand,
+        "audit_row": audit_row,
+        "rejection_reason": rejection_reason,
+        "phase2_label": label,
+        "error_message": None,
+    }
+
+
+def test_borderline_rerun_admitted_to_rejected(monkeypatch):
+    """Parallel result was admitted at just-above magnitude. Main-process
+    rerun returns just-below. Status flips to rejected; audit metadata
+    records the flip with old/new reasons."""
+    from scripts.build_probe_suite import _run_borderline_reruns
+    from scripts.GPU.alphazero import probe_eval
+
+    def stub(state, sims, seed):
+        # Main-process rerun: just-below threshold.
+        return (0.449, 0.5)
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+
+    results = [_make_fake_result(status="admitted", mean_root_value=0.451)]
+    counters = _run_borderline_reruns(
+        results, epsilon=0.01,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15,
+        label_ckpt_name="fake.safetensors", sims=10, repeats=2,
+    )
+
+    assert counters["candidates"] == 1
+    assert counters["reruns"] == 1
+    assert counters["flips"] == 1
+    assert counters["seconds"] >= 0
+    r = results[0]
+    assert r["status"] == "rejected"
+    assert r["audit_row"] is not None
+    assert r["audit_row"]["borderline_rerun"] is True
+    assert r["audit_row"]["borderline_rerun_flipped"] is True
+    assert r["audit_row"]["parallel_admission_reason"] == "admitted"
+    assert "magnitude" in r["audit_row"]["borderline_rerun_reason"]
+
+
+def test_borderline_rerun_rejected_to_admitted(monkeypatch):
+    """Symmetric flip: parallel rejected at just-below; main rerun just-above."""
+    from scripts.build_probe_suite import _run_borderline_reruns
+    from scripts.GPU.alphazero import probe_eval
+
+    def stub(state, sims, seed):
+        return (0.451, 0.5)
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+
+    results = [_make_fake_result(
+        status="rejected", mean_root_value=0.449,
+        rejection_reason="magnitude_below_threshold",
+    )]
+    counters = _run_borderline_reruns(
+        results, epsilon=0.01,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15,
+        label_ckpt_name="fake.safetensors", sims=10, repeats=2,
+    )
+
+    assert counters["flips"] == 1
+    r = results[0]
+    assert r["status"] == "admitted"
+    assert r["audit_row"] is None
+    # Rerun audit metadata lives on the candidate object so downstream
+    # selector audit rows can merge it.
+    rerun_meta = r["candidate"].get("_borderline_rerun_audit")
+    assert rerun_meta is not None
+    assert rerun_meta["borderline_rerun_flipped"] is True
+    assert rerun_meta["parallel_admission_reason"] == "magnitude_below_threshold"
+    assert rerun_meta["serial_rerun_admission_reason"] == "admitted"
+
+
+def test_borderline_rerun_not_triggered_for_non_borderline(monkeypatch):
+    """Candidates clearly admitted (mean=0.9) or clearly rejected (mean=0.1)
+    are far from threshold and never trigger a rerun."""
+    from scripts.build_probe_suite import _run_borderline_reruns
+    from scripts.GPU.alphazero import probe_eval
+
+    def stub(state, sims, seed):
+        raise AssertionError("stub should not be called for non-borderline cands")
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+
+    results = [
+        _make_fake_result(status="admitted", mean_root_value=0.9,
+                          source_ply=18),
+        _make_fake_result(
+            status="rejected", mean_root_value=0.1, source_ply=22,
+            rejection_reason="magnitude_below_threshold",
+        ),
+    ]
+    counters = _run_borderline_reruns(
+        results, epsilon=0.01,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15,
+        label_ckpt_name="fake.safetensors", sims=10, repeats=2,
+    )
+
+    assert counters["candidates"] == 0
+    assert counters["reruns"] == 0
+    assert counters["flips"] == 0
+    # Statuses unchanged.
+    assert results[0]["status"] == "admitted"
+    assert results[1]["status"] == "rejected"
+
+
+def test_borderline_rerun_preserves_probe_id(monkeypatch):
+    """Spec §9 invariant: rerun must produce a result with the same probe_id
+    as the parallel result. The helper recomputes probe_id from
+    source_game/source_ply, so any rerun-side mutation that changes those
+    fields would surface here."""
+    from scripts.build_probe_suite import _run_borderline_reruns
+    from scripts.GPU.alphazero import probe_eval
+
+    def stub(state, sims, seed):
+        return (0.5, 0.5)
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+
+    results = [_make_fake_result(
+        status="admitted", mean_root_value=0.451,
+    )]
+    pre_id = results[0]["probe_id"]
+    _run_borderline_reruns(
+        results, epsilon=0.01,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15,
+        label_ckpt_name="fake.safetensors", sims=10, repeats=2,
+    )
+    assert results[0]["probe_id"] == pre_id
+
+
+def test_borderline_rerun_skips_error_results(monkeypatch):
+    """replay_error and mcts_error results have phase2_label=None and must
+    be excluded from the borderline check (no IndexError, no rerun)."""
+    from scripts.build_probe_suite import _run_borderline_reruns
+    from scripts.GPU.alphazero import probe_eval
+
+    def stub(state, sims, seed):
+        raise AssertionError("stub should not be called for error rows")
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+
+    results = [
+        {
+            "probe_id": "p_replay_err",
+            "status": "replay_error",
+            "candidate": None,
+            "audit_row": {"reason": "replay_error"},
+            "rejection_reason": "replay_error",
+            "phase2_label": None,
+            "error_message": "ValueError: bad",
+        },
+        {
+            "probe_id": "p_mcts_err",
+            "status": "mcts_error",
+            "candidate": {"source_game": "g0", "source_ply": 1},
+            "audit_row": {"reason": "mcts_error"},
+            "rejection_reason": "mcts_error",
+            "phase2_label": None,
+            "error_message": "RuntimeError: kaboom",
+        },
+    ]
+    counters = _run_borderline_reruns(
+        results, epsilon=0.01,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15,
+        label_ckpt_name="fake.safetensors", sims=10, repeats=2,
+    )
+    assert counters["candidates"] == 0
+    assert counters["reruns"] == 0
+    assert counters["flips"] == 0
+
+
+# ----------------------------------------------------------------------
+# Task 5 Step 2: integration tests for the disable paths.
+#
+# Plan adaptation (Issue A): meta.phase2_run_stats is NOT added until
+# Task 6, so these tests cannot read borderline_rerun_enabled / counters
+# off the draft JSON yet. Instead, they install a spy on
+# `_run_borderline_reruns` and assert on the spy's invocation log.
+# Task 6 will replace the spy approach with real meta.phase2_run_stats
+# assertions.
+# ----------------------------------------------------------------------
+
+
+def _run_run_strong_advantage_with_stub(
+    tmp_path, monkeypatch, *, mode, epsilon, no_rerun,
+    stub=None, candidates=None, init_worker_stub: bool = False,
+):
+    """Run main_with_args(...) with a Phase-1 candidate stub and a
+    deterministic Phase-2 stub labeler. Returns the parsed draft JSON.
+
+    Plan adaptation (Issue B): the original plan referenced a
+    `_write_minimal_strong_advantage_game_fixture` helper that does not
+    exist. Task 4 used `_patch_phase1_extract` + `_SAMPLE_*` fixtures
+    instead — we follow that pattern.
+
+    For mode="process", the worker process loads the labeler network via
+    `_init_label_worker(checkpoint, ...)`. When the checkpoint is a stub
+    file, that load fails — pass `init_worker_stub=True` to substitute
+    the test-only `_init_label_worker_stub_for_tests`.
+    """
+    from scripts.GPU.alphazero import probe_eval
+    import scripts.build_probe_suite as bps
+    import json as _json
+
+    if candidates is None:
+        candidates = [_SAMPLE_CENTRAL]
+    _patch_phase1_extract(monkeypatch, candidates)
+
+    if stub is None:
+        def stub(state, sims, seed):
+            return (0.6, 0.4)
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+
+    # The main-process network is loaded when mode=serial OR when
+    # rerun_enabled in process mode. Provide a fake with .eval() for
+    # both code paths.
+    class _FakeNet:
+        def eval(self):
+            return self
+
+    monkeypatch.setattr(probe_eval, "load_network_for_scoring",
+                        lambda p: (_FakeNet(), 30, 128, 6))
+    monkeypatch.setattr(probe_eval, "_set_default_labeler_network",
+                        lambda *a, **kw: None)
+    monkeypatch.setattr(probe_eval, "_set_default_labeler_mcts_config",
+                        lambda *a, **kw: None)
+
+    if init_worker_stub:
+        monkeypatch.setattr(bps, "_init_label_worker",
+                            _init_label_worker_stub_for_tests)
+
+    fake_ckpt = tmp_path / "fake_ckpt.safetensors"
+    fake_ckpt.write_bytes(b"stub")
+
+    target = tmp_path / "out.json"
+    cli = [
+        "--tier", "strong_advantage",
+        "--input", "scripts/GPU/logs/games",
+        "--source-iter-range", "70", "70",
+        "--label-checkpoint", str(fake_ckpt),
+        "--label-mcts-sims", "10",
+        "--label-mcts-repeats", "2",
+        "--out", str(target),
+        "--label-worker-mode", mode,
+        "--admission-borderline-epsilon", str(epsilon),
+        "--force",
+    ]
+    if mode == "process":
+        cli.extend(["--label-workers", "2"])
+    if no_rerun:
+        cli.append("--no-borderline-rerun")
+
+    rc = bps.main_with_args(cli)
+    assert rc == 0
+    return _json.loads(target.with_suffix(".draft.json").read_text())
+
+
+def test_borderline_rerun_disabled(tmp_path, monkeypatch):
+    """--no-borderline-rerun disables the pass even when epsilon > 0 and
+    mode=process. _run_borderline_reruns is never called.
+
+    NOTE: meta.phase2_run_stats verification deferred to Task 6 — we use
+    a spy on `_run_borderline_reruns` here.
+    """
+    import scripts.build_probe_suite as bps
+    rerun_call_count = []
+
+    def spy(results, **kwargs):
+        rerun_call_count.append(1)
+        return {"candidates": 0, "reruns": 0, "flips": 0, "seconds": 0.0}
+    monkeypatch.setattr(bps, "_run_borderline_reruns", spy)
+
+    def stub(state, sims, seed):
+        return (0.451, 0.5)
+
+    _run_run_strong_advantage_with_stub(
+        tmp_path, monkeypatch, mode="process", epsilon=0.01,
+        no_rerun=True, stub=stub, init_worker_stub=True,
+    )
+    assert rerun_call_count == []  # spy never called
+
+
+def test_borderline_rerun_serial_mode_no_op(tmp_path, monkeypatch):
+    """Serial mode never runs the borderline pass even with epsilon > 0.
+
+    NOTE: meta.phase2_run_stats verification deferred to Task 6.
+    """
+    import scripts.build_probe_suite as bps
+    rerun_call_count = []
+
+    def spy(results, **kwargs):
+        rerun_call_count.append(1)
+        return {"candidates": 0, "reruns": 0, "flips": 0, "seconds": 0.0}
+    monkeypatch.setattr(bps, "_run_borderline_reruns", spy)
+
+    def stub(state, sims, seed):
+        return (0.451, 0.5)
+
+    _run_run_strong_advantage_with_stub(
+        tmp_path, monkeypatch, mode="serial", epsilon=0.01,
+        no_rerun=False, stub=stub,
+    )
+    assert rerun_call_count == []
+
+
+def test_admission_borderline_epsilon_zero_disables(tmp_path, monkeypatch):
+    """Epsilon=0 disables the rerun pass even in process mode.
+
+    NOTE: meta.phase2_run_stats verification deferred to Task 6.
+    """
+    import scripts.build_probe_suite as bps
+    rerun_call_count = []
+
+    def spy(results, **kwargs):
+        rerun_call_count.append(1)
+        return {"candidates": 0, "reruns": 0, "flips": 0, "seconds": 0.0}
+    monkeypatch.setattr(bps, "_run_borderline_reruns", spy)
+
+    def stub(state, sims, seed):
+        return (0.451, 0.5)
+
+    _run_run_strong_advantage_with_stub(
+        tmp_path, monkeypatch, mode="process", epsilon=0.0,
+        no_rerun=False, stub=stub, init_worker_stub=True,
+    )
+    assert rerun_call_count == []
+
+
+def test_committed_probes_have_no_private_rerun_keys(tmp_path, monkeypatch):
+    """Spec §9: the committed probe JSON must contain no
+    `_borderline_rerun_audit` or `parallel_phase2_label_before_rerun`
+    keys, even when reruns happened.
+
+    Synthesizes the post-rerun condition by monkeypatching
+    `_run_borderline_reruns` to attach the private key to every
+    admitted candidate, then asserts the serializer strips it.
+    """
+    import scripts.build_probe_suite as bps
+
+    def fake_rerun(results, **kwargs):
+        for r in results:
+            if r["candidate"] is not None:
+                r["candidate"]["_borderline_rerun_audit"] = {
+                    "borderline_rerun": True,
+                    "borderline_rerun_reason": ["magnitude"],
+                    "parallel_phase2_label_before_rerun": {"sentinel": True},
+                    "borderline_rerun_flipped": False,
+                }
+        return {"candidates": len(results), "reruns": len(results),
+                "flips": 0, "seconds": 0.0}
+
+    monkeypatch.setattr(bps, "_run_borderline_reruns", fake_rerun)
+
+    _run_run_strong_advantage_with_stub(
+        tmp_path, monkeypatch, mode="process", epsilon=0.01,
+        no_rerun=False, init_worker_stub=True,
+    )
+    serialized = (tmp_path / "out.draft.json").read_text()
+    assert "_borderline_rerun_audit" not in serialized
+    assert "parallel_phase2_label_before_rerun" not in serialized

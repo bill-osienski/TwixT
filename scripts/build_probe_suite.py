@@ -228,36 +228,44 @@ def _select_diverse_admitted_candidates(
             # Rule A: near-duplicate.
             keeper = _find_near_duplicate_keeper(cand, kept)
             if keeper is not None:
-                audit.append({
+                row = {
                     **audit_base,
                     "reason": "diversity_near_duplicate",
                     "kept_instead_source_ply": keeper["source_ply"],
-                })
+                }
+                _merge_borderline_audit(row, cand)
+                audit.append(row)
                 continue
 
             # Rule B: ply-too-close.
             keeper = _find_ply_too_close_keeper(cand, kept, rank_index)
             if keeper is not None:
-                audit.append({
+                row = {
                     **audit_base,
                     "reason": "diversity_ply_too_close",
                     "kept_instead_source_ply": keeper["source_ply"],
-                })
+                }
+                _merge_borderline_audit(row, cand)
+                audit.append(row)
                 continue
 
             # Rule C: per-game cap.
             keeper = _find_per_game_cap_keeper(cand, kept, max_probes_per_game)
             if keeper is not None:
-                audit.append({
+                row = {
                     **audit_base,
                     "reason": "diversity_per_game_cap",
                     "kept_instead_source_ply": keeper["source_ply"],
-                })
+                }
+                _merge_borderline_audit(row, cand)
+                audit.append(row)
                 continue
 
             # Admit.
             kept.append(cand)
-            audit.append({**audit_base, "reason": "admitted"})
+            row = {**audit_base, "reason": "admitted"}
+            _merge_borderline_audit(row, cand)
+            audit.append(row)
 
         if not progressed:
             break
@@ -622,6 +630,142 @@ def _label_one_strong_advantage_candidate(
     }
 
 
+_BORDERLINE_TRIGGERS = ("magnitude", "top1_share", "stability")
+
+
+def _is_borderline(
+    label: dict,
+    *,
+    epsilon: float,
+    magnitude_threshold: float,
+    top1_share_floor: float,
+    stability_cap: float,
+) -> list[str]:
+    """Return the list of triggers (subset of _BORDERLINE_TRIGGERS) for which
+    the label is within epsilon of the corresponding admission threshold.
+    Empty list means not borderline. Spec §9.
+    """
+    triggers = []
+    if abs(abs(label["mean_root_value"]) - magnitude_threshold) <= epsilon:
+        triggers.append("magnitude")
+    if abs(label["min_top1_share"] - top1_share_floor) <= epsilon:
+        triggers.append("top1_share")
+    if abs(label["value_stability"] - stability_cap) <= epsilon:
+        triggers.append("stability")
+    return triggers
+
+
+def _run_borderline_reruns(
+    results: list[dict],
+    *,
+    epsilon: float,
+    magnitude_threshold: float,
+    top1_share_floor: float,
+    stability_cap: float,
+    label_ckpt_name: str,
+    sims: int,
+    repeats: int,
+) -> dict:
+    """Re-label borderline candidates synchronously in the main process.
+    Mutates `results` in place. Returns counters for instrumentation:
+        {"candidates": N, "reruns": N, "flips": N, "seconds": float}
+
+    Spec §9. Excludes replay_error / mcts_error rows (phase2_label is None).
+    The rerun result replaces the parallel result and admission filter is
+    re-applied once. Audit metadata records flips.
+    """
+    import time as _time
+    counters = {"candidates": 0, "reruns": 0, "flips": 0, "seconds": 0.0}
+    t0 = _time.time()
+    for r in results:
+        if r["phase2_label"] is None:
+            continue  # replay/mcts errors carry no label
+        triggers = _is_borderline(
+            r["phase2_label"],
+            epsilon=epsilon,
+            magnitude_threshold=magnitude_threshold,
+            top1_share_floor=top1_share_floor,
+            stability_cap=stability_cap,
+        )
+        if not triggers:
+            continue
+        counters["candidates"] += 1
+        # Re-execute the helper in the main process. Same seed/sims/cfg.
+        # Use the candidate object that came back from the worker (already
+        # deepcopy'd inside the helper, but we deepcopy again to keep the
+        # pre-rerun label intact for audit metadata).
+        cand = copy.deepcopy(r["candidate"])
+        # Strip the prior phase2_label so the helper re-labels cleanly.
+        cand.pop("phase2_label", None)
+        rerun = _label_one_strong_advantage_candidate(
+            cand,
+            label_ckpt_name=label_ckpt_name,
+            sims=sims,
+            repeats=repeats,
+            magnitude_threshold=magnitude_threshold,
+            top1_share_floor=top1_share_floor,
+            stability_cap=stability_cap,
+        )
+        # Spec §9: rerun must preserve probe identity. The helper
+        # recomputes seed_base from sha256(probe_id) and builds the same
+        # probe_id internally, so this should always hold; assert
+        # explicitly to catch future regressions (e.g. accidental copy
+        # mutation that changes source_game/source_ply/move_history).
+        assert rerun["probe_id"] == r["probe_id"], (
+            f"borderline rerun changed probe_id: {r['probe_id']} -> "
+            f"{rerun['probe_id']}"
+        )
+        counters["reruns"] += 1
+        flipped = rerun["status"] != r["status"]
+        if flipped:
+            counters["flips"] += 1
+            print(
+                f"[probe_suite] borderline rerun flipped {r['probe_id']}: "
+                f"{r['rejection_reason'] or 'admitted'} -> "
+                f"{rerun['rejection_reason'] or 'admitted'}",
+                file=sys.stderr,
+            )
+
+        rerun_audit_meta = {
+            "borderline_rerun": True,
+            "borderline_rerun_reason": triggers,
+            "parallel_phase2_label_before_rerun": r["phase2_label"],
+            "borderline_rerun_flipped": flipped,
+        }
+        if flipped:
+            rerun_audit_meta["parallel_admission_reason"] = (
+                r["rejection_reason"] or "admitted"
+            )
+            rerun_audit_meta["serial_rerun_admission_reason"] = (
+                rerun["rejection_reason"] or "admitted"
+            )
+
+        # Attach to the candidate so any audit row built downstream
+        # (selector audit) merges these fields.
+        if rerun["candidate"] is not None:
+            rerun["candidate"]["_borderline_rerun_audit"] = rerun_audit_meta
+
+        # Replace the parallel result with the rerun result. Audit row, if
+        # any, also takes the rerun's content with the rerun metadata merged.
+        if rerun["audit_row"] is not None:
+            rerun["audit_row"].update(rerun_audit_meta)
+        # Update the result entry in-place.
+        r.update(rerun)
+
+    counters["seconds"] = _time.time() - t0
+    return counters
+
+
+def _merge_borderline_audit(audit_row: dict, cand: dict) -> dict:
+    """If cand has _borderline_rerun_audit, merge those keys into audit_row.
+    Returns the (potentially mutated) audit_row. Spec §9.
+    """
+    rerun_meta = cand.get("_borderline_rerun_audit")
+    if rerun_meta:
+        audit_row.update(rerun_meta)
+    return audit_row
+
+
 def _print_phase2_progress(idx: int, n_total: int, n_admitted: int,
                            t_start: float) -> None:
     import time as _time
@@ -711,17 +855,33 @@ def _run_strong_advantage(args) -> int:
     # with --hidden/--blocks flags (follow-up); the call below will
     # otherwise raise a tensor-shape mismatch and abort the run.
     #
-    # In process mode the main process does NOT load the network — each
-    # worker loads its own copy via _init_label_worker. The Task 5
-    # borderline-rerun pass will lazily load a main-process network IFF a
-    # rerun is needed.
+    # In process mode the main process loads the network ONLY IFF the
+    # borderline-rerun pass will fire (epsilon > 0 AND --no-borderline-rerun
+    # is off). Otherwise workers load their own copies via
+    # _init_label_worker and the main process needs no MLX context. Spec §9.
     mcts_cfg_payload = {
         "eval_batch_size": args.mcts_eval_batch_size,
         "stall_flush_sims": args.mcts_stall_flush_sims,
     }
-    if args.label_worker_mode == "serial":
-        network, _ic, _h, _nb = load_network_for_scoring(str(label_ckpt))
-        network.eval()
+    rerun_enabled = (
+        args.label_worker_mode == "process"
+        and args.admission_borderline_epsilon > 0
+        and not args.no_borderline_rerun
+    )
+    need_main_process_labeler = (
+        args.label_worker_mode == "serial" or rerun_enabled
+    )
+    if need_main_process_labeler:
+        try:
+            network, _ic, _h, _nb = load_network_for_scoring(str(label_ckpt))
+            network.eval()
+        except Exception as exc:
+            print(f"[probe_suite] ERROR: failed to load main-process labeler "
+                  f"network from checkpoint {label_ckpt}\n"
+                  f"  mode={args.label_worker_mode} "
+                  f"rerun_enabled={rerun_enabled}\n"
+                  f"  {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
         _set_default_labeler_network(network)
         _set_default_labeler_mcts_config(MCTSConfig(**mcts_cfg_payload))
 
@@ -793,12 +953,30 @@ def _run_strong_advantage(args) -> int:
                   f"  {type(exc).__name__}: {exc}", file=sys.stderr)
             return 1
 
-    # NOTE: aggregation (sort by probe_id + partition) is deferred to
-    # _phase2_aggregate(), called AFTER the borderline-rerun pass added in
-    # Task 5. Until Task 5 lands, this Task 4 implementation calls it
-    # immediately. After Task 5 lands, the rerun pass runs first, then
-    # _phase2_aggregate() is called once on the post-rerun results. The
-    # function is idempotent w.r.t. already-sorted inputs.
+    # Borderline serial-rerun pass (Task 5 / spec §9). In process mode
+    # with epsilon > 0 and --no-borderline-rerun off, candidates whose
+    # parallel-mode label is within epsilon of any admission threshold
+    # are re-labeled synchronously in the main process; the rerun result
+    # replaces the parallel result. For serial / disabled paths the
+    # counters are zero-filled. `rerun_enabled` and `rerun_counters` are
+    # consumed by Task 6's instrumentation (meta.phase2_run_stats).
+    if rerun_enabled:
+        rerun_counters = _run_borderline_reruns(
+            results,
+            epsilon=args.admission_borderline_epsilon,
+            magnitude_threshold=args.magnitude_threshold,
+            top1_share_floor=args.top1_share_floor,
+            stability_cap=args.stability_cap,
+            label_ckpt_name=label_ckpt.name,
+            sims=args.label_mcts_sims,
+            repeats=args.label_mcts_repeats,
+        )
+    else:
+        rerun_counters = {"candidates": 0, "reruns": 0, "flips": 0,
+                          "seconds": 0.0}
+
+    # _phase2_aggregate sorts AFTER reruns so post-rerun statuses drive
+    # the admitted/audit partition. Spec §6.
     admitted, new_audit_rows = _phase2_aggregate(results)
     audit.extend(new_audit_rows)
     for r in results:
