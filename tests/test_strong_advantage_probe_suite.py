@@ -437,6 +437,7 @@ def test_run_strong_advantage_writes_draft_with_admitted_candidates(tmp_path, mo
         "--label-checkpoint", str(fake_ckpt),
         "--label-mcts-sims", "10",
         "--label-mcts-repeats", "1",
+        "--label-worker-mode", "serial",
         "--magnitude-threshold", "0.45",
         "--out", str(out_path),
     ])

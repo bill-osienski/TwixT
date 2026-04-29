@@ -136,8 +136,10 @@ def test_argparse_flags_present():
 
     flags = {a.dest: a for a in parser._actions}
     assert flags["label_worker_mode"].choices == ["serial", "process"]
-    assert flags["label_worker_mode"].default == "serial"
-    assert flags["label_workers"].default == 1
+    assert flags["label_worker_mode"].default == "process"
+    # None is a sentinel meaning "pick based on mode" — main() resolves it
+    # post-parse to 10 (process) or 1 (serial). See build_probe_suite.main().
+    assert flags["label_workers"].default is None
     assert flags["mcts_eval_batch_size"].default == 14
     assert flags["mcts_stall_flush_sims"].default == 16
     assert flags["allow_unsafe_eval_batch"].default is False
@@ -996,8 +998,13 @@ def test_phase2_serial_unchanged(tmp_path, monkeypatch):
         "--label-mcts-repeats", "2",
         "--magnitude-threshold", "0.45",
         "--out", str(target),
+        "--label-worker-mode", "serial",
         "--force",
     ])
+    # Mirror main()'s post-parse default resolution for --label-workers,
+    # since this test bypasses main() and calls _run_strong_advantage directly.
+    if args.label_workers is None:
+        args.label_workers = 10 if args.label_worker_mode == "process" else 1
     args.label_workers_requested = args.label_workers
     rc = _run_strong_advantage(args)
     assert rc == 0

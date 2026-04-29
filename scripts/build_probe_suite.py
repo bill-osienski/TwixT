@@ -12,10 +12,12 @@ Tiers:
                            docs/superpowers/specs/2026-04-28-...
 
 Both tiers produce byte-identical output for identical inputs in serial
-mode. The strong-advantage tier additionally supports an opt-in
-process-pool labeling path (`--label-worker-mode process`) with safe
-defaults preserving prior byte-identity. See docs/probe-suite-generation.md
-for the full operator workflow including parallel-labeling flags.
+mode. The strong-advantage tier defaults to a process-pool labeling
+path (`--label-worker-mode process` with 10 workers — M3 Pro optimum
+validated by scripts/probes/benchmark_phase2_knobs.py). For strict
+byte-reproducibility, pass `--label-worker-mode serial`. See
+docs/probe-suite-generation.md for the full operator workflow including
+parallel-labeling flags.
 """
 from __future__ import annotations
 
@@ -312,12 +314,16 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
     # Phase 2 parallel-labeling flags (strong_advantage tier only)
     ap.add_argument("--label-worker-mode", choices=["serial", "process"],
-                    default="serial",
-                    help="Phase 2 execution mode. Default 'serial' is the "
-                         "byte-reference path. 'process' enables a process pool.")
-    ap.add_argument("--label-workers", type=int, default=1,
+                    default="process",
+                    help="Phase 2 execution mode. Default 'process' runs a "
+                         "process pool of --label-workers workers. Pass "
+                         "'serial' for the single-process byte-reference path.")
+    ap.add_argument("--label-workers", type=int, default=None,
                     help="Worker count under --label-worker-mode=process. "
-                         "Ignored under serial. Apple Silicon: start with 2-4.")
+                         "Default 10 (M3 Pro optimum, validated by "
+                         "scripts/probes/benchmark_phase2_knobs.py); use "
+                         "scripts/probes/benchmark_phase2_knobs.py to tune for "
+                         "your machine. Ignored under serial mode.")
     ap.add_argument("--mcts-eval-batch-size", type=int, default=14,
                     help=(f"NN batch size for the labeler's MCTS. Capped at "
                           f"{SAFE_METAL_EVAL_BATCH_SIZE_MAX} because larger "
@@ -360,6 +366,13 @@ def _validate_parallel_args(ap: argparse.ArgumentParser, args) -> None:
 def main() -> int:
     ap = _build_arg_parser()
     args = ap.parse_args()
+
+    # Resolve the default for --label-workers based on mode. None sentinel
+    # lets us pick a sensible default per mode without conflating "explicit
+    # 1 in process mode" with "didn't set it at all in serial mode".
+    if args.label_workers is None:
+        args.label_workers = 10 if args.label_worker_mode == "process" else 1
+
     _validate_parallel_args(ap, args)
 
     # Workers under serial mode: warn if explicitly set to anything other than 1.

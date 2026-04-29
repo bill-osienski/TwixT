@@ -682,6 +682,7 @@ def test_end_to_end_strong_advantage_runs_selector_and_writes_meta(tmp_path, mon
         "--max-probes-per-game", "2",
         "--label-mcts-sims", "100",
         "--label-mcts-repeats", "1",
+        "--label-worker-mode", "serial",
         "--force",
     ])
     assert rc == 0, f"generator exited {rc}"

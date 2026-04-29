@@ -54,8 +54,8 @@ The forced tier has no Phase 2 (positions 1–2 plies from terminal don't need M
 | `--stability-cap` | 0.15 | Phase 2 admission: `max(value_per_run) - min(value_per_run) <= this`. Higher = tolerates more noise across repeated MCTS runs |
 | `--max-probes` | 30 | Final cap on admitted probes (post-filter) |
 | `--max-probes-per-game` | 2 | Maximum probes from any single source game, total across all 4 categories. Combined with the internal `MIN_PLY_SEPARATION_SAME_GAME=3` constant, no single game contributes more than 2 probes and any 2 it contributes are at least 3 plies apart in the source trajectory. Strong-advantage tier only. Default 2 is conservative; raise only if the suite is consistently undersized. |
-| `--label-worker-mode` | serial | Phase 2 execution mode. `serial` (default, byte-reference path) runs in the main process. `process` enables parallel labeling via a process pool with one MLX network per worker. |
-| `--label-workers` | 1 | Worker count under `--label-worker-mode=process`. Ignored under `serial` (warning if explicitly set to ≠1). On Apple Silicon start with 2–4. |
+| `--label-worker-mode` | process | Phase 2 execution mode. Default `process` runs a `ProcessPoolExecutor` of `--label-workers` workers. Pass `serial` for the single-process byte-reference path (slower; useful for debugging or strict reproducibility). |
+| `--label-workers` | 10 (process) / 1 (serial) | Worker count under `--label-worker-mode=process`. Default 10 (M3 Pro optimum). Use `scripts/probes/benchmark_phase2_knobs.py` to tune for your machine. Ignored under `serial`. |
 | `--mcts-eval-batch-size` | 14 | NN batch size for the labeler's MCTS. Capped at 14 because larger batches have caused Metal hangs; pass `--allow-unsafe-eval-batch` to exceed. |
 | `--mcts-stall-flush-sims` | 16 | MCTS stall-flush threshold (see `MCTSConfig`). 0 disables. |
 | `--allow-unsafe-eval-batch` | flag | Required to set `--mcts-eval-batch-size > 14`. Intended only for local benchmarking. |
@@ -111,7 +111,7 @@ Watch the per-iter sidecar fields and the analyzer's CSV outputs:
     --label-mcts-repeats 2 \
     --max-probes 30 \
     --out tests/probes/strong_advantage_probes.json
-    # Faster (opt-in): --label-worker-mode process --label-workers 4
+    # For strict byte-reproducibility, add: --label-worker-mode serial
 # Phase 2 prints per-candidate progress (every ~5%, with ETA).
 
 # 3. Eyeball the draft.
@@ -141,15 +141,9 @@ For a first iteration: use `--label-mcts-sims 2000 --label-mcts-repeats 2` and a
 
 ### Parallel labeling
 
-`--label-worker-mode process` runs Phase 2 candidate labeling in a `ProcessPoolExecutor` with one MLX network per worker. Default remains `serial`; parallel mode is fully opt-in.
+Phase 2 runs in a `ProcessPoolExecutor` by default (`--label-worker-mode process` with `--label-workers 10`), one MLX network per worker. The default 10 workers is the M3 Pro optimum validated by `scripts/probes/benchmark_phase2_knobs.py`. For strict byte-reproducibility (e.g., generating golden test fixtures), pass `--label-worker-mode serial` to use the single-process reference path.
 
-Recommended starting point on Apple Silicon:
-
-```
---label-worker-mode process --label-workers 2
-```
-
-If stable and faster, try `--label-workers 4`. Avoid increasing `--mcts-eval-batch-size` above 14 unless intentionally benchmarking with `--allow-unsafe-eval-batch`. Higher worker counts are not always faster: each process loads its own MLX network and can contend for the Metal scheduler.
+To tune for a different machine, run `scripts/probes/benchmark_phase2_knobs.py` to sweep worker counts and pick the best for your hardware. Avoid increasing `--mcts-eval-batch-size` above 14 unless intentionally benchmarking with `--allow-unsafe-eval-batch`. Higher worker counts are not always faster: each process loads its own MLX network and can contend for the Metal scheduler.
 
 `--label-worker-mode process --label-workers 1` is valid (useful for testing worker initialization and deterministic reassembly), but it is not expected to speed up the run.
 

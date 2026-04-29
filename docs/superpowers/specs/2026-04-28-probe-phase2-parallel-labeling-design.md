@@ -42,14 +42,20 @@ Two layers of determinism, treated separately:
 ## 5. CLI surface
 
 ```
---label-worker-mode {serial,process}        default: serial
---label-workers INT (>=1)                    default: 1
+--label-worker-mode {serial,process}        default: process
+--label-workers INT (>=1)                    default: 10 (process) / 1 (serial)
 --mcts-eval-batch-size INT (>=1)             default: 14
 --mcts-stall-flush-sims INT (>=0)            default: 16
 --allow-unsafe-eval-batch                    flag,    default: off
 --admission-borderline-epsilon FLOAT (>=0)   default: 0.01     (0 disables)
 --no-borderline-rerun                        flag,    default: off
 ```
+
+**Default change post-benchmark:** Originally specified as `serial / 1` for
+"zero behavior change for existing users." Updated to `process / 10` after
+the M3 Pro benchmark in scripts/probes/benchmark_phase2_knobs.py confirmed
+3.19x speedup with admitted-ID equivalence. Tests that rely on serial-mode
+byte-identity must pass `--label-worker-mode serial` explicitly.
 
 **Validation (pre-Phase-1):**
 
