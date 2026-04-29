@@ -1026,7 +1026,11 @@ def _run_strong_advantage(args) -> int:
         "borderline_flips": rerun_counters["flips"],
         "borderline_rerun_seconds": round(rerun_counters["seconds"], 2),
         "seconds_total": round(phase2_elapsed, 2),
-        "rejection_reasons": dict(rejection_reasons),
+        # JSON: canonical alphabetical key order so byte-identity holds across
+        # process-mode runs (where as_completed yields wall-clock-dependent
+        # insertion order). The print line above uses most_common() for
+        # human-readable count-desc order — that's intentional and decoupled.
+        "rejection_reasons": dict(sorted(rejection_reasons.items())),
     }
 
     breakdown_str = ", ".join(f"{r}={n}" for r, n in rejection_reasons.most_common())
