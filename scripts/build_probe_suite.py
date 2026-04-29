@@ -31,6 +31,25 @@ from pathlib import Path
 SAFE_METAL_EVAL_BATCH_SIZE_MAX = 14
 
 
+def _init_label_worker(label_checkpoint: str, mcts_cfg_payload: dict) -> None:
+    """ProcessPoolExecutor initializer: load network and register MCTSConfig.
+
+    Each worker process holds its own MLX network (own MLX context) and its
+    own copy of the registered MCTSConfig. n_simulations is per-call and
+    NOT in the payload — see spec §8.
+    """
+    from scripts.GPU.alphazero.probe_eval import (
+        load_network_for_scoring,
+        _set_default_labeler_network,
+        _set_default_labeler_mcts_config,
+    )
+    from scripts.GPU.alphazero.mcts import MCTSConfig
+    network, _ic, _h, _nb = load_network_for_scoring(label_checkpoint)
+    network.eval()
+    _set_default_labeler_network(network)
+    _set_default_labeler_mcts_config(MCTSConfig(**mcts_cfg_payload))
+
+
 # --- Diversity selector constants and helpers ---
 
 MIN_PLY_SEPARATION_SAME_GAME = 3
@@ -480,6 +499,18 @@ def _probe_id_and_seed_base(cand: dict) -> tuple[str, int]:
     return probe_id, seed_base
 
 
+def _phase2_aggregate(results: list[dict]) -> tuple[list, list]:
+    """Sort Phase 2 result dicts by probe_id and partition into
+    (admitted candidates, audit rows). Idempotent on already-sorted input.
+    Used by both serial and process modes, and called once AFTER the
+    borderline-rerun pass (Task 5) so post-rerun statuses drive the
+    partition. Spec §6."""
+    results.sort(key=lambda r: r["probe_id"])
+    admitted = [r["candidate"] for r in results if r["status"] == "admitted"]
+    audit_rows = [r["audit_row"] for r in results if r["audit_row"] is not None]
+    return admitted, audit_rows
+
+
 def _label_one_strong_advantage_candidate(
     cand: dict,
     *,
@@ -591,6 +622,23 @@ def _label_one_strong_advantage_candidate(
     }
 
 
+def _print_phase2_progress(idx: int, n_total: int, n_admitted: int,
+                           t_start: float) -> None:
+    import time as _time
+    elapsed = _time.time() - t_start
+    if idx > 0:
+        rate = idx / elapsed
+        eta_s = (n_total - idx) / rate if rate > 0 else 0.0
+        eta_str = f"ETA {eta_s/60:.1f}m" if eta_s < 3600 else f"ETA {eta_s/3600:.1f}h"
+    else:
+        eta_str = "ETA --"
+    print(
+        f"[probe_suite] Phase 2: {idx}/{n_total} labeled "
+        f"({n_admitted} admitted, {elapsed:.0f}s elapsed, {eta_str})",
+        flush=True,
+    )
+
+
 def _run_strong_advantage(args) -> int:
     if args.out is None:
         args.out = "tests/probes/strong_advantage_probes.json"
@@ -624,12 +672,11 @@ def _run_strong_advantage(args) -> int:
 
     from scripts.GPU.alphazero.probe_eval import (
         extract_strong_advantage_candidates,
-        label_candidate_with_mcts,
-        apply_admission_filter,
         _set_default_labeler_network,
+        _set_default_labeler_mcts_config,
         load_network_for_scoring,
     )
-    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    from scripts.GPU.alphazero.mcts import MCTSConfig
 
     # Phase 1: load games, mine candidates.
     min_iter, max_iter = args.source_iter_range
@@ -663,9 +710,20 @@ def _run_strong_advantage(args) -> int:
     # with a different architecture, this generator must first be extended
     # with --hidden/--blocks flags (follow-up); the call below will
     # otherwise raise a tensor-shape mismatch and abort the run.
-    network, _ic, _h, _nb = load_network_for_scoring(str(label_ckpt))
-    network.eval()
-    _set_default_labeler_network(network)
+    #
+    # In process mode the main process does NOT load the network — each
+    # worker loads its own copy via _init_label_worker. The Task 5
+    # borderline-rerun pass will lazily load a main-process network IFF a
+    # rerun is needed.
+    mcts_cfg_payload = {
+        "eval_batch_size": args.mcts_eval_batch_size,
+        "stall_flush_sims": args.mcts_stall_flush_sims,
+    }
+    if args.label_worker_mode == "serial":
+        network, _ic, _h, _nb = load_network_for_scoring(str(label_ckpt))
+        network.eval()
+        _set_default_labeler_network(network)
+        _set_default_labeler_mcts_config(MCTSConfig(**mcts_cfg_payload))
 
     admitted = []
     import time as _time
@@ -673,49 +731,83 @@ def _run_strong_advantage(args) -> int:
     # Cadence: at small batches, every candidate; at big batches, every 5%.
     progress_every = max(1, n_total // 20)
     t_phase2_start = _time.time()
-    for idx, cand in enumerate(candidates):
-        if idx % progress_every == 0:
-            elapsed = _time.time() - t_phase2_start
-            n_admitted = len(admitted)
-            if idx > 0:
-                rate = idx / elapsed
-                eta_s = (n_total - idx) / rate if rate > 0 else 0.0
-                eta_str = f"ETA {eta_s/60:.1f}m" if eta_s < 3600 else f"ETA {eta_s/3600:.1f}h"
-            else:
-                eta_str = "ETA --"
-            print(
-                f"[probe_suite] Phase 2: {idx}/{n_total} labeled "
-                f"({n_admitted} admitted, {elapsed:.0f}s elapsed, {eta_str})",
-                flush=True,
-            )
 
-        result = _label_one_strong_advantage_candidate(
-            cand,
-            label_ckpt_name=label_ckpt.name,
-            sims=args.label_mcts_sims,
-            repeats=args.label_mcts_repeats,
-            magnitude_threshold=args.magnitude_threshold,
-            top1_share_floor=args.top1_share_floor,
-            stability_cap=args.stability_cap,
-        )
+    helper_kwargs = dict(
+        label_ckpt_name=label_ckpt.name,
+        sims=args.label_mcts_sims,
+        repeats=args.label_mcts_repeats,
+        magnitude_threshold=args.magnitude_threshold,
+        top1_share_floor=args.top1_share_floor,
+        stability_cap=args.stability_cap,
+    )
 
-        if result["status"] == "replay_error":
-            print(f"[probe_suite] WARN: state replay error on "
-                  f"{cand['source_game']} ply {cand['source_ply']}: "
-                  f"{result['error_message']}", file=sys.stderr)
-            audit.append(result["audit_row"])
-        elif result["status"] == "mcts_error":
-            print(f"[probe_suite] WARN: MCTS error on "
-                  f"{cand['source_game']} ply {cand['source_ply']}: "
-                  f"{result['error_message']}", file=sys.stderr)
-            audit.append(result["audit_row"])
-        elif result["status"] == "admitted":
-            # Admitted candidates' audit rows are written by the selector
-            # (Task 8), so they reflect the FINAL outcome (reason="admitted"
-            # for survivors, reason="diversity_*" for evictions). Spec §7.1.
-            admitted.append(result["candidate"])
-        else:  # rejected
-            audit.append(result["audit_row"])
+    if args.label_worker_mode == "serial":
+        results = []
+        admitted_so_far = 0
+        for idx, cand in enumerate(candidates):
+            if idx % progress_every == 0:
+                _print_phase2_progress(idx, n_total, admitted_so_far,
+                                       t_phase2_start)
+            r = _label_one_strong_advantage_candidate(cand, **helper_kwargs)
+            results.append(r)
+            if r["status"] == "admitted":
+                admitted_so_far += 1
+    else:  # "process"
+        import multiprocessing as _mp
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+        ctx = _mp.get_context("spawn")
+        # NOTE: the bare name `_init_label_worker` is resolved through the
+        # module globals of `scripts.build_probe_suite` at this exact moment,
+        # so tests can monkeypatch `bps._init_label_worker` to a top-level
+        # test helper and have ProcessPoolExecutor pickle the patched
+        # function (by qualified name) for the worker. Do NOT replace the
+        # bare name with `from scripts.build_probe_suite import
+        # _init_label_worker`; that would freeze the binding and break the
+        # smoke test in tests/test_probe_phase2_parallel.py.
+        try:
+            with ProcessPoolExecutor(
+                max_workers=args.label_workers,
+                mp_context=ctx,
+                initializer=_init_label_worker,
+                initargs=(str(label_ckpt), mcts_cfg_payload),
+            ) as pool:
+                futures = [
+                    pool.submit(_label_one_strong_advantage_candidate, cand,
+                                **helper_kwargs)
+                    for cand in candidates
+                ]
+                results = []
+                completed = 0
+                for fut in as_completed(futures):
+                    results.append(fut.result())
+                    completed += 1
+                    if completed % progress_every == 0:
+                        _print_phase2_progress(completed, n_total,
+                                               sum(1 for r in results
+                                                   if r["status"] == "admitted"),
+                                               t_phase2_start)
+        except Exception as exc:
+            print(f"[probe_suite] ERROR: failed to initialize process label "
+                  f"worker from checkpoint {label_ckpt}\n"
+                  f"  mode={args.label_worker_mode} workers={args.label_workers}\n"
+                  f"  {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
+
+    # NOTE: aggregation (sort by probe_id + partition) is deferred to
+    # _phase2_aggregate(), called AFTER the borderline-rerun pass added in
+    # Task 5. Until Task 5 lands, this Task 4 implementation calls it
+    # immediately. After Task 5 lands, the rerun pass runs first, then
+    # _phase2_aggregate() is called once on the post-rerun results. The
+    # function is idempotent w.r.t. already-sorted inputs.
+    admitted, new_audit_rows = _phase2_aggregate(results)
+    audit.extend(new_audit_rows)
+    for r in results:
+        if r["status"] == "replay_error":
+            print(f"[probe_suite] WARN: state replay error: "
+                  f"{r['error_message']}", file=sys.stderr)
+        elif r["status"] == "mcts_error":
+            print(f"[probe_suite] WARN: MCTS error: "
+                  f"{r['error_message']}", file=sys.stderr)
 
     # Final Phase 2 summary so the operator sees a clean breakdown.
     # NOTE: at this point in the pipeline, audit contains only Phase-2

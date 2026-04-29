@@ -241,3 +241,233 @@ def test_helper_returns_admitted_status_for_passing_candidate(monkeypatch, tmp_p
     assert result["candidate"]["phase2_label"]["mean_root_value"] == pytest.approx(0.9)
     assert result["audit_row"] is None
     assert result["error_message"] is None
+
+
+# Module-level so spawn workers can pickle and import this function:
+def _init_label_worker_stub_for_tests(label_checkpoint, mcts_cfg_payload):
+    """Test-only worker initializer. Installs a deterministic stub labeler
+    in the worker process instead of loading a real network. Imported by
+    spawned children via its qualified name."""
+    from scripts.GPU.alphazero import probe_eval
+    from scripts.GPU.alphazero.mcts import MCTSConfig
+
+    def _stub(state, sims, seed):
+        return (0.6 + 0.001 * (seed % 7), 0.4 + 0.001 * (seed % 5))
+
+    probe_eval._default_mcts_labeler = _stub
+    probe_eval._set_default_labeler_network(object())
+    probe_eval._set_default_labeler_mcts_config(MCTSConfig(**mcts_cfg_payload))
+
+
+def _patch_phase1_extract(monkeypatch, candidates):
+    """Bypass real Phase 1 mining; return the given candidate list.
+    Mirrors the pattern in tests/test_strong_advantage_probe_suite.py."""
+    monkeypatch.setattr(
+        "scripts.GPU.alphazero.probe_eval.extract_strong_advantage_candidates",
+        lambda games, **kw: (list(candidates), []),
+    )
+
+
+_SAMPLE_CENTRAL = {
+    "move_history": [(0, 12), (1, 0), (2, 11), (1, 1)],
+    "ply": 4, "winner": "red",
+    "category": "chain_advantage_central_red",
+    "phase1_features": {
+        "cc_size": 12, "cc_axis_span": 0.65, "cc_touches_own_goal": True,
+        "axis_span_margin": 0.20, "centroid_chebyshev_from_center": 4,
+        "forced_within_2": False,
+    },
+    "source_game": "iter_0070_game_001", "source_ply": 4,
+    "starting_player": "red",
+}
+_SAMPLE_EDGE = {
+    "move_history": [(0, 1), (1, 22), (2, 0), (1, 21)],
+    "ply": 4, "winner": "red",
+    "category": "chain_advantage_edge_red",
+    "phase1_features": {
+        "cc_size": 11, "cc_axis_span": 0.60, "cc_touches_own_goal": True,
+        "axis_span_margin": 0.15, "centroid_chebyshev_from_center": 10,
+        "forced_within_2": False,
+    },
+    "source_game": "iter_0070_game_002", "source_ply": 4,
+    "starting_player": "red",
+}
+
+
+def test_phase2_aggregate_sorts_by_probe_id():
+    """Hand-crafted result list (as if returned in arbitrary completion order
+    from a process pool) must be aggregated in probe_id-sorted order. This
+    test validates the aggregation logic without spawning a real pool."""
+    from scripts.build_probe_suite import _phase2_aggregate
+
+    r_a = {
+        "probe_id": "p_alpha", "status": "admitted",
+        "candidate": {"source_game": "g0", "source_ply": 4, "marker": "alpha"},
+        "audit_row": None, "rejection_reason": None,
+        "phase2_label": {"mean_root_value": 0.7},
+        "error_message": None,
+    }
+    r_b = {
+        "probe_id": "p_beta", "status": "rejected",
+        "candidate": {"source_game": "g1", "source_ply": 4, "marker": "beta"},
+        "audit_row": {"source_game": "g1", "source_ply": 4,
+                      "reason": "magnitude_below_threshold"},
+        "rejection_reason": "magnitude_below_threshold",
+        "phase2_label": {"mean_root_value": 0.1},
+        "error_message": None,
+    }
+    r_c = {
+        "probe_id": "p_gamma", "status": "replay_error",
+        "candidate": None,
+        "audit_row": {"source_game": "g2", "source_ply": 4,
+                      "reason": "replay_error"},
+        "rejection_reason": "replay_error",
+        "phase2_label": None,
+        "error_message": "ValueError: bad",
+    }
+
+    # Pass in deliberately scrambled order.
+    admitted, audit_rows = _phase2_aggregate([r_c, r_a, r_b])
+
+    assert [c["marker"] for c in admitted] == ["alpha"]
+    # Audit rows in probe_id-sorted order: alpha (no row), beta, gamma.
+    assert [a["source_game"] for a in audit_rows] == ["g1", "g2"]
+
+
+def test_phase2_process_pool_smoke(tmp_path, monkeypatch):
+    """Real ProcessPoolExecutor smoke test. Substitutes the production
+    _init_label_worker with a top-level test function via late-bound
+    module-attribute monkeypatch; that function installs a deterministic
+    stub labeler in each worker. Verifies the pool launches, all candidates
+    label, no exception escapes."""
+    import json as _json
+    import scripts.build_probe_suite as bps
+    from tests.test_probe_phase2_parallel import _init_label_worker_stub_for_tests
+
+    monkeypatch.setattr(bps, "_init_label_worker", _init_label_worker_stub_for_tests)
+    _patch_phase1_extract(monkeypatch, [_SAMPLE_CENTRAL, _SAMPLE_EDGE])
+
+    fake_ckpt = tmp_path / "fake_ckpt.safetensors"
+    fake_ckpt.write_bytes(b"stub")
+
+    out_path = tmp_path / "strong_advantage_probes.json"
+    rc = bps.main_with_args([
+        "--tier", "strong_advantage",
+        "--input", "scripts/GPU/logs/games",
+        "--source-iter-range", "70", "70",
+        "--label-checkpoint", str(fake_ckpt),
+        "--label-mcts-sims", "10",
+        "--label-mcts-repeats", "1",
+        "--magnitude-threshold", "0.45",
+        "--out", str(out_path),
+        "--label-worker-mode", "process",
+        "--label-workers", "2",
+        "--no-borderline-rerun",
+        "--force",
+    ])
+    assert rc == 0
+
+    draft = _json.loads(out_path.with_suffix(".draft.json").read_text())
+    # NOTE: meta.phase2_run_stats is added in Task 6. For Task 4 we only verify
+    # the pool ran end-to-end and produced a structurally valid draft.
+    assert "meta" in draft
+    assert "probes" in draft
+    # Re-enable these in Task 6 when meta.phase2_run_stats lands:
+    # stats = draft["meta"]["phase2_run_stats"]
+    # assert stats["mode"] == "process"
+    # assert stats["workers_effective"] == 2
+    # assert stats["candidates_total"] == 2
+    # assert stats["labeled"] == 2
+
+
+def test_phase2_process_pool_init_failure(tmp_path, monkeypatch):
+    """Worker init can't load the checkpoint -> first .result() raises ->
+    main aborts with a clear error mentioning path/mode/workers; no draft
+    is written. Uses the synthetic-candidate Phase-1 stub so workers
+    actually start (vs. zero candidates -> pool never created)."""
+    import scripts.build_probe_suite as bps
+    _patch_phase1_extract(monkeypatch, [_SAMPLE_CENTRAL])
+
+    bad_ckpt = tmp_path / "definitely_not_here.safetensors"
+    bad_ckpt.write_bytes(b"")  # exists, but won't load as a network
+
+    out_path = tmp_path / "strong_advantage_probes.json"
+    rc = bps.main_with_args([
+        "--tier", "strong_advantage",
+        "--input", "scripts/GPU/logs/games",
+        "--source-iter-range", "70", "70",
+        "--label-checkpoint", str(bad_ckpt),
+        "--label-mcts-sims", "10",
+        "--label-mcts-repeats", "1",
+        "--out", str(out_path),
+        "--label-worker-mode", "process",
+        "--label-workers", "2",
+        "--force",
+    ])
+    assert rc != 0
+    # Draft file MUST NOT exist on init failure.
+    assert not out_path.with_suffix(".draft.json").exists()
+
+
+def test_phase2_replay_error_isolated(monkeypatch):
+    """A candidate whose move_history can't be replayed returns
+    status='replay_error' with a populated audit_row and error_message —
+    the helper does NOT raise, so the pool survives."""
+    from scripts.build_probe_suite import _label_one_strong_advantage_candidate
+
+    bad_cand = {
+        "source_game": "g0",
+        "source_ply": 5,
+        "ply": 5,
+        "starting_player": "red",
+        "winner": "red",
+        "category": "central_red",
+        # Out-of-bounds move triggers TwixtState.apply_move to raise.
+        "move_history": [(999, 999)],
+        "phase1_features": {"cc_size": 1, "cc_axis_span": 0.1,
+                            "axis_span_margin": 0.0},
+    }
+    result = _label_one_strong_advantage_candidate(
+        bad_cand,
+        label_ckpt_name="fake.safetensors", sims=10, repeats=1,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15,
+    )
+    assert result["status"] == "replay_error"
+    assert result["audit_row"]["reason"] == "replay_error"
+    assert result["audit_row"]["source_game"] == "g0"
+    assert result["error_message"]
+    assert result["candidate"] is None  # spec §7 invariant
+    assert result["phase2_label"] is None
+
+
+def test_phase2_mcts_error_isolated(monkeypatch):
+    """A labeler that raises returns status='mcts_error' with a populated
+    audit_row and error_message — the helper does NOT raise."""
+    from scripts.build_probe_suite import _label_one_strong_advantage_candidate
+    from scripts.GPU.alphazero import probe_eval
+
+    def angry_labeler(state, sims, seed):
+        raise RuntimeError("synthetic MCTS failure")
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", angry_labeler)
+
+    cand = {
+        "source_game": "g1",
+        "source_ply": 18,
+        "ply": 18,
+        "starting_player": "red",
+        "winner": "red",
+        "category": "central_red",
+        "move_history": [(11, 11)],
+        "phase1_features": {"cc_size": 12, "cc_axis_span": 0.7,
+                            "axis_span_margin": 0.2},
+    }
+    result = _label_one_strong_advantage_candidate(
+        cand,
+        label_ckpt_name="fake.safetensors", sims=10, repeats=1,
+        magnitude_threshold=0.45, top1_share_floor=0.15, stability_cap=0.15,
+    )
+    assert result["status"] == "mcts_error"
+    assert result["audit_row"]["reason"] == "mcts_error"
+    assert "synthetic MCTS failure" in result["error_message"]
+    assert result["candidate"] is not None  # spec §7 invariant
+    assert result["phase2_label"] is None
