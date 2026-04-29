@@ -1005,6 +1005,14 @@ def test_phase2_serial_unchanged(tmp_path, monkeypatch):
     assert rc == 0
 
     def _normalize(blob):
+        """Strip non-deterministic / environment-dependent fields before
+        the byte-comparison:
+        - seconds_total, borderline_rerun_seconds: wall-clock timings.
+        - selection_rules.label_checkpoint: absolute path that varies
+          between generator (golden_dir) and test (tmp_path).
+        - selection_rules.label_checkpoint_sha256: SHA of the fake-blob
+          checkpoint, which changes if anyone alters the test stub.
+        """
         d = _json.loads(blob)
         stats = d.get("meta", {}).get("phase2_run_stats", {})
         stats.pop("seconds_total", None)
