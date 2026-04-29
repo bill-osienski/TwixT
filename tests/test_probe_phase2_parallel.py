@@ -950,3 +950,80 @@ def test_phase2_run_stats_recorded_in_meta(tmp_path, monkeypatch):
     assert "rejection_reasons" in stats
     assert isinstance(stats["seconds_total"], (int, float))
     assert stats["seconds_total"] >= 0
+
+
+def test_phase2_serial_unchanged(tmp_path, monkeypatch):
+    """Running with default (serial) flags on a frozen synthetic candidate set
+    produces output byte-identical to the committed golden fixture. Guards
+    against accidental drift in serial-mode Phase 2 + selector + JSON-write
+    behavior."""
+    from scripts.GPU.alphazero import probe_eval
+    from scripts.build_probe_suite import _build_arg_parser, _run_strong_advantage
+    import json as _json
+
+    repo_root = Path(__file__).resolve().parent.parent
+    golden_dir = repo_root / "tests" / "probes" / "golden"
+    expected_draft_path = golden_dir / "phase2_serial_tiny_expected.draft.json"
+    expected_audit_path = golden_dir / "phase2_serial_tiny_expected.audit.json"
+
+    class _FakeNet:
+        def eval(self):
+            return self
+
+    def stub(state, sims, seed):
+        v = 0.6 + 0.001 * (seed % 7)
+        t1 = 0.4 + 0.001 * (seed % 5)
+        return (v, t1)
+
+    _patch_phase1_extract(monkeypatch, [_SAMPLE_CENTRAL, _SAMPLE_EDGE])
+    monkeypatch.setattr(probe_eval, "_default_mcts_labeler", stub)
+    monkeypatch.setattr(probe_eval, "load_network_for_scoring",
+                        lambda p: (_FakeNet(), 30, 128, 6))
+    monkeypatch.setattr(probe_eval, "_set_default_labeler_network",
+                        lambda *a, **kw: None)
+    monkeypatch.setattr(probe_eval, "_set_default_labeler_mcts_config",
+                        lambda *a, **kw: None)
+
+    fake_ckpt = tmp_path / "fake_ckpt.safetensors"
+    fake_ckpt.write_bytes(b"stub")
+    target = tmp_path / "out.json"
+
+    ap = _build_arg_parser()
+    args = ap.parse_args([
+        "--tier", "strong_advantage",
+        "--input", "scripts/GPU/logs/games",
+        "--source-iter-range", "70", "70",
+        "--label-checkpoint", str(fake_ckpt),
+        "--label-mcts-sims", "10",
+        "--label-mcts-repeats", "2",
+        "--magnitude-threshold", "0.45",
+        "--out", str(target),
+        "--force",
+    ])
+    args.label_workers_requested = args.label_workers
+    rc = _run_strong_advantage(args)
+    assert rc == 0
+
+    def _normalize(blob):
+        d = _json.loads(blob)
+        stats = d.get("meta", {}).get("phase2_run_stats", {})
+        stats.pop("seconds_total", None)
+        stats.pop("borderline_rerun_seconds", None)
+        sr = d.get("meta", {}).get("selection_rules", {})
+        sr.pop("label_checkpoint", None)
+        sr.pop("label_checkpoint_sha256", None)
+        return _json.dumps(d, indent=2, sort_keys=True)
+
+    actual_draft = (tmp_path / "out.draft.json").read_text()
+    expected_draft = expected_draft_path.read_text()
+    assert _normalize(actual_draft) == _normalize(expected_draft), (
+        "Phase 2 serial draft drifted from golden fixture. "
+        "If intentional, regenerate via "
+        "scripts/probes/generate_golden_phase2_serial_fixture.py"
+    )
+
+    actual_audit = (tmp_path / "candidates_strong_advantage.json").read_text()
+    expected_audit = expected_audit_path.read_text()
+    assert actual_audit == expected_audit, (
+        "Phase 2 serial audit drifted from golden fixture."
+    )

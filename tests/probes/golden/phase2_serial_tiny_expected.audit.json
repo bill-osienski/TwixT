@@ -1,0 +1,43 @@
+{
+  "audit": [
+    {
+      "source_game": "iter_0070_game_002",
+      "source_ply": 4,
+      "phase1_features": {
+        "cc_size": 11,
+        "cc_axis_span": 0.6,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.15,
+        "centroid_chebyshev_from_center": 10,
+        "forced_within_2": false
+      },
+      "reason": "replay_error"
+    },
+    {
+      "source_game": "iter_0070_game_001",
+      "source_ply": 4,
+      "phase1_features": {
+        "cc_size": 12,
+        "cc_axis_span": 0.65,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2,
+        "centroid_chebyshev_from_center": 4,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.6005,
+        "value_per_run": [
+          0.601,
+          0.6
+        ],
+        "value_stability": 0.001,
+        "min_top1_share": 0.403,
+        "label_mcts_sims": 10,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 455653129,
+        "label_checkpoint": "fake_ckpt.safetensors"
+      },
+      "reason": "admitted"
+    }
+  ]
+}

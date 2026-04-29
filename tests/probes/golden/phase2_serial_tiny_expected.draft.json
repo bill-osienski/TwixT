@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "type": "bootstrap_rule_selected",
+    "tier": "strong_advantage",
+    "not_gate_suite": true,
+    "review_mode": "draft",
+    "reviewer": null,
+    "reviewed_at_utc": null,
+    "generator": "scripts/build_probe_suite.py",
+    "generator_version": 1,
+    "selection_rules": {
+      "board_size": 24,
+      "winner_reasons": [
+        "win"
+      ],
+      "k_plies_from_terminal_range": [
+        3,
+        8
+      ],
+      "phase1_thresholds": {
+        "min_cc_size": 10,
+        "min_cc_axis_span": 0.55,
+        "min_axis_span_margin": 0.1,
+        "require_cc_touches_own_goal": true,
+        "exclude_forced_within_2": true
+      },
+      "phase2_thresholds": {
+        "label_mcts_sims": 10,
+        "label_mcts_repeats": 2,
+        "min_magnitude": 0.45,
+        "min_top1_share": 0.15,
+        "max_value_stability": 0.15,
+        "require_sign_match_source_winner": true
+      },
+      "label_checkpoint": "/Users/bill/Desktop/TwixT_Game/tests/probes/golden/fake_ckpt.safetensors",
+      "label_checkpoint_sha256": "725c546b990dd1b41f3d5791b37c3c0edcb1f08cf150bdae32a73dfd166e02d7",
+      "source_iter_range": [
+        70,
+        70
+      ],
+      "dedup": "exact + 4-form-mirror-canonical",
+      "category_min_count": 5,
+      "max_probes_per_game": 2,
+      "min_ply_separation_same_game": 3,
+      "category_iteration_order": [
+        "chain_advantage_central_red",
+        "chain_advantage_central_black",
+        "chain_advantage_edge_red",
+        "chain_advantage_edge_black"
+      ],
+      "diversity_quality_key_order": [
+        "phase1_features.cc_size desc",
+        "phase1_features.axis_span_margin desc",
+        "phase1_features.cc_axis_span desc",
+        "phase2_label.min_top1_share desc",
+        "phase2_label.value_stability asc",
+        "default_sort_key (-iter, -source_ply, source_game)"
+      ]
+    },
+    "phase2_run_stats": {
+      "mode": "serial",
+      "workers_requested": 1,
+      "workers_effective": 1,
+      "eval_batch_size": 14,
+      "stall_flush_sims": 16,
+      "candidates_total": 2,
+      "labeled": 1,
+      "replay_errors": 1,
+      "mcts_errors": 0,
+      "admitted_before_diversity": 1,
+      "rejected": 0,
+      "borderline_rerun_enabled": false,
+      "admission_borderline_epsilon": 0.01,
+      "borderline_candidates": 0,
+      "borderline_reruns": 0,
+      "borderline_flips": 0,
+      "borderline_rerun_seconds": 0.0,
+      "seconds_total": 0.0,
+      "rejection_reasons": {}
+    }
+  },
+  "probes": [
+    {
+      "id": "iter_0070_game_001_ply004_chain_advantage_central_red",
+      "category": "chain_advantage_central_red",
+      "confidence": "strong_advantage",
+      "side_to_move": "red",
+      "expected_value_sign": 1,
+      "active_size": 24,
+      "ply": 4,
+      "move_history": [
+        [
+          0,
+          12
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          11
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "source_game": "iter_0070_game_001",
+      "source_ply": 4,
+      "starting_player": "red",
+      "phase1_features": {
+        "cc_size": 12,
+        "cc_axis_span": 0.65,
+        "cc_touches_own_goal": true,
+        "axis_span_margin": 0.2,
+        "centroid_chebyshev_from_center": 4,
+        "forced_within_2": false
+      },
+      "phase2_label": {
+        "mean_root_value": 0.6005,
+        "value_per_run": [
+          0.601,
+          0.6
+        ],
+        "value_stability": 0.001,
+        "min_top1_share": 0.403,
+        "label_mcts_sims": 10,
+        "label_mcts_repeats": 2,
+        "rng_seed_base": 455653129,
+        "label_checkpoint": "fake_ckpt.safetensors"
+      }
+    }
+  ]
+}
