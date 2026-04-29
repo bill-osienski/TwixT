@@ -22,6 +22,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+# Maximum MCTS evaluator batch size known stable on Apple Metal/MLX.
+# scripts/GPU/alphazero/mcts.py:106 documents that batches > this value have
+# previously caused Metal GPU hangs. The probe builder caps --mcts-eval-batch-size
+# at this value unless --allow-unsafe-eval-batch is passed.
+SAFE_METAL_EVAL_BATCH_SIZE_MAX = 14
+
+
 # --- Diversity selector constants and helpers ---
 
 MIN_PLY_SEPARATION_SAME_GAME = 3
@@ -239,7 +246,7 @@ def _select_diverse_admitted_candidates(
 
 # --- Tier dispatch ---
 
-def main() -> int:
+def _build_arg_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     ap.add_argument("--tier", choices=["forced", "strong_advantage"], required=True)
     ap.add_argument("--input", default="scripts/GPU/logs/games")
@@ -269,7 +276,63 @@ def main() -> int:
     ap.add_argument("--force", action="store_true",
                     help="Overwrite existing draft or committed file")
 
+    # Phase 2 parallel-labeling flags (strong_advantage tier only)
+    ap.add_argument("--label-worker-mode", choices=["serial", "process"],
+                    default="serial",
+                    help="Phase 2 execution mode. Default 'serial' is the "
+                         "byte-reference path. 'process' enables a process pool.")
+    ap.add_argument("--label-workers", type=int, default=1,
+                    help="Worker count under --label-worker-mode=process. "
+                         "Ignored under serial. Apple Silicon: start with 2-4.")
+    ap.add_argument("--mcts-eval-batch-size", type=int, default=14,
+                    help=(f"NN batch size for the labeler's MCTS. Capped at "
+                          f"{SAFE_METAL_EVAL_BATCH_SIZE_MAX} because larger "
+                          "batches have caused Metal hangs; pass "
+                          "--allow-unsafe-eval-batch to exceed."))
+    ap.add_argument("--mcts-stall-flush-sims", type=int, default=16,
+                    help="MCTS stall-flush threshold (see MCTSConfig). 0 disables.")
+    ap.add_argument("--allow-unsafe-eval-batch", action="store_true",
+                    help="Required to set --mcts-eval-batch-size > "
+                         f"{SAFE_METAL_EVAL_BATCH_SIZE_MAX}. Benchmark only.")
+    ap.add_argument("--admission-borderline-epsilon", type=float, default=0.01,
+                    help="In process mode, candidates whose phase-2 label is "
+                         "within epsilon of any admission threshold are "
+                         "re-labeled in the main process to use the serial "
+                         "reference label. 0 disables.")
+    ap.add_argument("--no-borderline-rerun", action="store_true",
+                    help="Disable borderline rerun even when epsilon > 0.")
+    return ap
+
+
+def _validate_parallel_args(ap: argparse.ArgumentParser, args) -> None:
+    """Validate the new Phase 2 parallel flags. Calls ap.error() on failure."""
+    if args.label_workers < 1:
+        ap.error("--label-workers must be >= 1")
+    if args.mcts_eval_batch_size < 1:
+        ap.error("--mcts-eval-batch-size must be >= 1")
+    if (args.mcts_eval_batch_size > SAFE_METAL_EVAL_BATCH_SIZE_MAX
+            and not args.allow_unsafe_eval_batch):
+        ap.error(
+            f"--mcts-eval-batch-size > {SAFE_METAL_EVAL_BATCH_SIZE_MAX} "
+            "is unsafe on Metal/MLX and may hang. "
+            "Pass --allow-unsafe-eval-batch to benchmark higher values intentionally."
+        )
+    if args.mcts_stall_flush_sims < 0:
+        ap.error("--mcts-stall-flush-sims must be >= 0")
+    if args.admission_borderline_epsilon < 0:
+        ap.error("--admission-borderline-epsilon must be >= 0")
+
+
+def main() -> int:
+    ap = _build_arg_parser()
     args = ap.parse_args()
+    _validate_parallel_args(ap, args)
+
+    # Workers under serial mode: warn if explicitly set to anything other than 1.
+    if args.label_worker_mode == "serial" and args.label_workers != 1:
+        print("[probe_suite] warning: --label-workers is ignored when "
+              "--label-worker-mode=serial", file=sys.stderr)
+        args.label_workers = 1
 
     project_root = Path(__file__).resolve().parent.parent
     if str(project_root) not in sys.path:
