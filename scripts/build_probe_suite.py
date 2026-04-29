@@ -708,13 +708,13 @@ def _run_borderline_reruns(
         )
         # Spec §9: rerun must preserve probe identity. The helper
         # recomputes seed_base from sha256(probe_id) and builds the same
-        # probe_id internally, so this should always hold; assert
-        # explicitly to catch future regressions (e.g. accidental copy
-        # mutation that changes source_game/source_ply/move_history).
-        assert rerun["probe_id"] == r["probe_id"], (
-            f"borderline rerun changed probe_id: {r['probe_id']} -> "
-            f"{rerun['probe_id']}"
-        )
+        # probe_id internally, so this should always hold. Guarded raise
+        # (not assert) so the invariant survives `python -O`.
+        if rerun["probe_id"] != r["probe_id"]:
+            raise RuntimeError(
+                f"borderline rerun changed probe_id: "
+                f"{r['probe_id']} -> {rerun['probe_id']}"
+            )
         counters["reruns"] += 1
         flipped = rerun["status"] != r["status"]
         if flipped:
