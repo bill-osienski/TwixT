@@ -1155,8 +1155,7 @@ def _run_strong_advantage(args) -> int:
 
     print(f"[probe_suite] wrote {len(probes_out)} candidates to draft "
           f"{draft_path}\n  audit: {audit_path}\n"
-          f"  Next: review the draft, then run --promote --reviewer NAME "
-          f"(lands in Task 2.5b).")
+          f"  Next: review the draft, then run --promote --reviewer NAME.")
     return 0
 
 

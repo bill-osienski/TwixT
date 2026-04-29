@@ -7,9 +7,7 @@ from __future__ import annotations
 import importlib
 import subprocess
 import sys
-from dataclasses import replace as dc_replace
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
