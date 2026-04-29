@@ -159,7 +159,7 @@ Status invariants:
 | `admitted` | not None | not None | None | None |
 | `rejected` | not None | not None | not None | None |
 | `replay_error` | None | None | not None | not None |
-| `mcts_error` | not None (no `phase2_label`) | None | not None | not None |
+| `mcts_error` | not None | None | not None | not None |
 
 Replay errors and MCTS errors are caught inside the helper and returned as a result; never raised across the process boundary. Worker survives, pool survives.
 
@@ -242,7 +242,7 @@ abs(min_top1_share        - top1_share_floor)   <= ε
 abs(value_stability       - stability_cap)      <= ε
 ```
 
-Applied to **both admitted and rejected** parallel-mode results — otherwise admission drift is one-sided.
+Applied to **both admitted and rejected** parallel-mode results — otherwise admission drift is one-sided. Results with `status` of `replay_error` or `mcts_error` carry no `phase2_label` and are excluded from the borderline check; their audit rows are unchanged by the rerun pass.
 
 **Execution.** Re-run `_default_mcts_labeler` synchronously in the main process. Same `rng_seed_base`, same `sims`, same `repeats`, same MCTSConfig (`_DEFAULT_LABELER_MCTS_CONFIG`), same checkpoint already loaded into `_DEFAULT_LABELER_NETWORK`. The rerun executes outside any worker process, so it sees a single MLX context — i.e., the serial reference answer.
 
