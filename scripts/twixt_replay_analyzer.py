@@ -2281,6 +2281,9 @@ def analyze(replays: List[dict],
             "partial_sidecar_coverage": partial_coverage,
         }
 
+    # Per-game stats persistence surfacing (spec 2026-04-29).
+    per_game_stats_val = aggregate_per_game_stats(replays)
+
     summary = {
         "iteration": sc_agg.get("iteration_max", it_max) if use_sidecar else it_max,
         "iteration_min": sc_agg.get("iteration_min", it_min) if use_sidecar else it_min,
@@ -2301,6 +2304,9 @@ def analyze(replays: List[dict],
         "resign": resign_val,
         "resign_gate": resign_gate_val,
         "compute": compute_val,
+        # Per-game stats persistence surfacing (spec 2026-04-29).
+        # Distributions complement the sidecar-derived `compute` totals above.
+        "per_game_stats": per_game_stats_val,
         # --- Original fields (preserved) ---
         "analyzer": {"name": "twixt_replay_analyzer", "version": "0.4"},
         "run_config": (run_config or {}),
@@ -2599,6 +2605,9 @@ def analyze(replays: List[dict],
         comp = summary["compute"]
         lines.append(f"Compute: buffer_size={comp['buffer_size']}, backups={comp['backups']}, leaf_evals={comp['leaf_evals']}, nn_batches={comp['nn_batches']}")
         lines.append("")
+
+        # Per-game stats triage section (spec 2026-04-29).
+        lines.extend(format_per_game_stats_report(summary["per_game_stats"]))
 
     if _HAS_OD_ANALYZER and od_summary_dict:
         lines.extend(format_opening_diagnostics_report(od_summary_dict, od_by_ply_dict, od_warnings))
