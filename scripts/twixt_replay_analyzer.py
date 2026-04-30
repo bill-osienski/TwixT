@@ -337,6 +337,114 @@ def load_sidecars(inputs: List[str]) -> Dict[int, dict]:
     return sidecars
 
 
+def aggregate_per_game_stats(replays: List[dict]) -> dict:
+    """Aggregate per-game stats from loaded replay records.
+
+    Reads:
+      - meta.n_moves (pre-existing) → game_length distribution
+      - meta.reason (pre-existing) → outcomes breakdown
+      - meta.{worker_id, wall_time_s, final_root_value, final_top1_share,
+        compute.{leaf_evals, backups, nn_batches}} (new in 2026-04-29
+        persistence change) → distribution blocks + worker_balance + compute_per_game
+
+    Old replays lacking persistence fields are silently excluded from
+    those per-stat aggregates. Per-field coverage is recorded in
+    coverage.{...} so consumers can tell exactly which stats are reliable.
+    A missing meta.compute subkey is treated as MISSING (excluded from
+    that subkey's stats), not as zero.
+
+    Worker identity comes solely from meta.worker_id; never inferred
+    from filename, sidecar, or any other source.
+
+    Pure function. Does not mutate replays.
+
+    Spec: docs/superpowers/specs/2026-04-29-analyzer-per-game-stats-design.md
+    """
+    n_games_total = len(replays)
+
+    # --- Coverage counters (always present in output) ---
+    coverage = {
+        "wall_time_s": 0,
+        "worker_id": 0,
+        "final_root_value": 0,
+        "final_top1_share": 0,
+        "compute.leaf_evals": 0,
+        "compute.backups": 0,
+        "compute.nn_batches": 0,
+        "n_moves": 0,
+        "reason": 0,
+    }
+
+    # --- Accumulators for distribution blocks (Tasks 2 and 3 fill these) ---
+    n_moves_arr = []
+    outcomes = {"decisive": 0, "resign": 0, "adjudicated": 0, "timeout": 0, "draw_other": 0}
+
+    # --- n_games_with_any_stats: counted in Task 2 (and updated in Task 3 for worker_id).
+    # Until then the only persistence-era data we track is none, so it stays 0. ---
+    n_games_with_any_stats = 0
+
+    # --- One pass over replays ---
+    for rp in replays:
+        meta = rp.get("meta") or {}
+
+        # n_moves (pre-existing field, treated like other fields: missing != 0)
+        n_moves = meta.get("n_moves")
+        if n_moves is not None:
+            coverage["n_moves"] += 1
+            n_moves_arr.append(int(n_moves))
+
+        # reason (pre-existing field) → outcomes
+        reason = meta.get("reason")
+        if reason is not None:
+            coverage["reason"] += 1
+        # Categorize: missing or unrecognized → draw_other
+        if reason == "win":
+            outcomes["decisive"] += 1
+        elif reason == "resign":
+            outcomes["resign"] += 1
+        elif reason == "adjudicated":
+            outcomes["adjudicated"] += 1
+        elif reason in ("timeout", "timeout_selfplay"):
+            outcomes["timeout"] += 1
+        else:
+            outcomes["draw_other"] += 1
+
+    # --- game_length distribution ---
+    if coverage["n_moves"] > 0:
+        arr = np.asarray(n_moves_arr, dtype=np.float64)
+        game_length = {
+            "mean": float(arr.mean()),
+            "p50":  float(np.percentile(arr, 50)),
+            "p90":  float(np.percentile(arr, 90)),
+            "p95":  float(np.percentile(arr, 95)),
+            "p99":  float(np.percentile(arr, 99)),
+            "max":  int(arr.max()),
+            "min":  int(arr.min()),
+        }
+    else:
+        game_length = None
+
+    # --- Build output (persistence-era blocks filled in Tasks 2 and 3) ---
+    return {
+        "n_games_total": n_games_total,
+        "n_games_with_any_stats": n_games_with_any_stats,
+        "coverage": coverage,
+        "game_length": game_length,
+        "outcomes": outcomes,
+        "wall_time_s": None,           # Task 2 fills this in
+        "worker_balance": {            # Task 3 fills the body of this
+            "by_worker": {},
+            "in_process_count": 0,
+            "max_min_wall_time_ratio": None,
+            "max_min_games_ratio": None,
+            "wall_time_cv": None,
+        },
+        "final_root_value": None,      # Task 2 fills this in
+        "final_top1_share": None,      # Task 2 fills this in
+        "compute_per_game": None,      # Task 2 fills this in
+    }
+
+
 def aggregate_sidecars(sidecars: Dict[int, dict]) -> dict:
     """Aggregate per-iteration sidecar dicts into one summary.
 
