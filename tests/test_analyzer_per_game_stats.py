@@ -494,3 +494,188 @@ def test_aggregate_uniform_per_worker_wall_time_yields_unity_ratio_zero_cv():
     assert wb["max_min_wall_time_ratio"] == 1.0
     assert wb["wall_time_cv"] == 0.0
     assert wb["max_min_games_ratio"] == 1.0
+
+
+# -------------------------------------------------------------------------
+# Test 14: zero-coverage short message
+# -------------------------------------------------------------------------
+
+def test_format_renders_zero_coverage_short_message():
+    """n_games_with_any_stats == 0 → game_length and outcomes lines render,
+    then the short 'no games carry new persistence fields' message.
+    """
+    from scripts.twixt_replay_analyzer import (
+        aggregate_per_game_stats, format_per_game_stats_report,
+    )
+
+    # Old-schema-only replays
+    replays = [_make_replay(n_moves=100, reason="win") for _ in range(3)]
+    pgs = aggregate_per_game_stats(replays)
+    lines = format_per_game_stats_report(pgs)
+    text = "\n".join(lines)
+
+    # game_length and outcomes are still rendered (they use pre-existing fields)
+    assert "Game length:" in text
+    assert "Outcomes:" in text
+    # The short fallback message
+    assert "no games carry new persistence fields" in text
+    # No persistence-era stat lines
+    assert "Wall time:" not in text
+    assert "Workers:" not in text
+    assert "Final root:" not in text
+    assert "Final top1:" not in text
+    assert "Compute/game:" not in text
+
+
+# -------------------------------------------------------------------------
+# Test 15: full block rendering with uniform coverage suppresses Coverage line
+# -------------------------------------------------------------------------
+
+def test_format_renders_full_block():
+    """Fully-populated per_game_stats → expected lines in expected order.
+    Uniform coverage → no separate 'Coverage:' line printed.
+    """
+    from scripts.twixt_replay_analyzer import (
+        aggregate_per_game_stats, format_per_game_stats_report,
+    )
+
+    replays = [
+        _make_replay(worker_id=0, wall_time_s=10.0, final_root_value=0.5,
+                     final_top1_share=0.4, leaf_evals=1000, backups=2000,
+                     nn_batches=50, n_moves=100),
+        _make_replay(worker_id=1, wall_time_s=20.0, final_root_value=-0.3,
+                     final_top1_share=0.6, leaf_evals=1500, backups=2500,
+                     nn_batches=80, n_moves=120),
+    ]
+    pgs = aggregate_per_game_stats(replays)
+    lines = format_per_game_stats_report(pgs)
+    text = "\n".join(lines)
+
+    # Headers and stat lines all present
+    assert "Per-game stats" in text
+    assert "Game length:" in text
+    assert "Outcomes:" in text
+    assert "Wall time:" in text
+    assert "Workers:" in text
+    assert "Final root:" in text
+    assert "Final top1:" in text
+    assert "Compute/game:" in text
+    # Uniform coverage → no Coverage: line
+    assert "Coverage:" not in text
+
+
+# -------------------------------------------------------------------------
+# Test 16: partial coverage prints the Coverage: line
+# -------------------------------------------------------------------------
+
+def test_format_renders_coverage_line_on_partial_coverage():
+    """Non-uniform per-field coverage → Coverage: line is printed."""
+    from scripts.twixt_replay_analyzer import (
+        aggregate_per_game_stats, format_per_game_stats_report,
+    )
+
+    # 3 replays: all have wall_time_s, only 2 have final_top1_share
+    replays = [
+        _make_replay(worker_id=0, wall_time_s=10.0, final_top1_share=0.5),
+        _make_replay(worker_id=0, wall_time_s=15.0, final_top1_share=0.6),
+        _make_replay(worker_id=0, wall_time_s=20.0),  # no final_top1_share
+    ]
+    pgs = aggregate_per_game_stats(replays)
+    lines = format_per_game_stats_report(pgs)
+    text = "\n".join(lines)
+
+    assert "Coverage:" in text
+
+
+# -------------------------------------------------------------------------
+# Test 17: zero-coverage field is omitted entirely (no "n/a" line)
+# -------------------------------------------------------------------------
+
+def test_format_omits_lines_for_zero_coverage_fields():
+    """When a field has zero coverage, omit its line entirely."""
+    from scripts.twixt_replay_analyzer import (
+        aggregate_per_game_stats, format_per_game_stats_report,
+    )
+
+    # Replays carry wall_time_s but not final_top1_share
+    replays = [
+        _make_replay(worker_id=0, wall_time_s=10.0),
+        _make_replay(worker_id=0, wall_time_s=20.0),
+    ]
+    pgs = aggregate_per_game_stats(replays)
+    lines = format_per_game_stats_report(pgs)
+    text = "\n".join(lines)
+
+    assert "Wall time:" in text
+    assert "Final top1:" not in text
+    # Specifically: we never render "Final top1: n/a" (we omit the whole line instead).
+    # Generic "n/a" might appear in unrelated future text, so be precise.
+    assert "Final top1: n/a" not in text
+    assert "Final root: n/a" not in text
+
+
+# -------------------------------------------------------------------------
+# Test 18: single worker line shape
+# -------------------------------------------------------------------------
+
+def test_format_handles_single_worker():
+    """One distinct worker → 'Workers: 1 active; games=N; wall-time mean=Xs (in-process: M)'."""
+    from scripts.twixt_replay_analyzer import (
+        aggregate_per_game_stats, format_per_game_stats_report,
+    )
+
+    replays = [
+        _make_replay(worker_id=0, wall_time_s=10.0),
+        _make_replay(worker_id=0, wall_time_s=20.0),
+    ]
+    pgs = aggregate_per_game_stats(replays)
+    lines = format_per_game_stats_report(pgs)
+    text = "\n".join(lines)
+
+    assert "1 active" in text
+    assert "ratio" not in text   # no ratios printed when only 1 worker
+    assert "cv=" not in text     # no CV either
+
+
+# -------------------------------------------------------------------------
+# Test 19: in-process only (worker_id all null)
+# -------------------------------------------------------------------------
+
+def test_format_handles_in_process_only():
+    """All worker_id == null → 'Workers: 0 active; in-process: N'."""
+    from scripts.twixt_replay_analyzer import (
+        aggregate_per_game_stats, format_per_game_stats_report,
+    )
+
+    replays = [
+        _make_replay(worker_id=None, wall_time_s=10.0),
+        _make_replay(worker_id=None, wall_time_s=20.0),
+        _make_replay(worker_id=None, wall_time_s=30.0),
+    ]
+    pgs = aggregate_per_game_stats(replays)
+    lines = format_per_game_stats_report(pgs)
+    text = "\n".join(lines)
+
+    assert "0 active" in text
+    assert "in-process: 3" in text
+
+
+# -------------------------------------------------------------------------
+# Test 20: human-readable duration formatting
+# -------------------------------------------------------------------------
+
+def test_format_human_readable_duration():
+    """_format_duration_human handles the three cases per spec §5.2."""
+    from scripts.twixt_replay_analyzer import _format_duration_human
+
+    # < 60s → 'X.Xs'
+    assert _format_duration_human(0.0) == "0.0s"
+    assert _format_duration_human(30.0) == "30.0s"
+    assert _format_duration_human(59.9) == "59.9s"
+    # < 1h → 'Xm Ys'
+    assert _format_duration_human(60.0)  == "1m 0s"
+    assert _format_duration_human(145.0) == "2m 25s"
+    assert _format_duration_human(3599.0) == "59m 59s"
+    # >= 1h → 'XhYm'
+    assert _format_duration_human(3600.0)   == "1h0m"
+    assert _format_duration_human(17852.4)  == "4h57m"

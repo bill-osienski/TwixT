@@ -1222,6 +1222,145 @@ def _kl(p: np.ndarray, q: np.ndarray, eps: float = 1e-12) -> float:
     return float(np.sum(p * np.log(p / q)))
 
 
+def _format_duration_human(seconds: float) -> str:
+    """Render a duration in seconds as a human-readable string per spec §5.2."""
+    if seconds < 60.0:
+        return f"{seconds:.1f}s"
+    if seconds < 3600.0:
+        m = int(seconds // 60)
+        s = int(round(seconds - m * 60))
+        return f"{m}m {s}s"
+    h = int(seconds // 3600)
+    m = int((seconds - h * 3600) // 60)
+    return f"{h}h{m}m"
+
+
+def format_per_game_stats_report(per_game_stats: dict) -> List[str]:
+    """Render the per-game stats block as report.txt lines.
+
+    - Suppresses lines for fields with zero coverage (per spec §5.1).
+    - Suppresses the per-field 'Coverage:' line when coverage is uniform
+      across all persistence-era fields.
+    - Falls back to a single short message when n_games_with_any_stats == 0.
+
+    Spec: docs/superpowers/specs/2026-04-29-analyzer-per-game-stats-design.md §5
+    """
+    lines: List[str] = []
+    pgs = per_game_stats
+    n_total = pgs.get("n_games_total", 0)
+    n_with = pgs.get("n_games_with_any_stats", 0)
+
+    # Header
+    if n_total == 0:
+        lines.append("Per-game stats: no replays loaded.")
+        lines.append("")
+        return lines
+    lines.append(f"Per-game stats (n={n_with} / {n_total} games carry new fields):")
+
+    # game_length (always rendered when n_total > 0 and coverage > 0)
+    gl = pgs.get("game_length")
+    if gl is not None:
+        lines.append(
+            f"  Game length:  mean={gl['mean']:.1f} p50={int(gl['p50'])} "
+            f"p90={int(gl['p90'])} p95={int(gl['p95'])} max={int(gl['max'])}"
+        )
+
+    # outcomes (always rendered when n_total > 0)
+    o = pgs["outcomes"]
+    lines.append(
+        f"  Outcomes:     decisive={o['decisive']} resign={o['resign']} "
+        f"adjudicated={o['adjudicated']} timeout={o['timeout']} draw_other={o['draw_other']}"
+    )
+
+    # Short fallback when no persistence-era data
+    if n_with == 0:
+        lines.append("Per-game stats: no games carry new persistence fields (all replays predate persistence change).")
+        lines.append("")
+        return lines
+
+    # Wall time
+    wt = pgs.get("wall_time_s")
+    if wt is not None:
+        lines.append(
+            f"  Wall time:    mean={wt['mean']:.1f}s p50={wt['p50']:.1f}s "
+            f"p90={wt['p90']:.1f}s p95={wt['p95']:.1f}s max={wt['max']:.1f}s "
+            f"(total={_format_duration_human(wt['total'])})"
+        )
+
+    # Workers
+    wb = pgs["worker_balance"]
+    n_workers = len(wb["by_worker"])
+    in_proc = wb["in_process_count"]
+    if n_workers == 0:
+        lines.append(f"  Workers:      0 active; in-process: {in_proc}")
+    elif n_workers == 1:
+        # Single-worker line: no ratios
+        only_w = next(iter(wb["by_worker"].values()))
+        wt_mean_str = f"; wall-time mean={only_w['wall_time_mean_s']:.1f}s" if only_w['wall_time_mean_s'] > 0 else ""
+        lines.append(f"  Workers:      1 active; games={only_w['games']}{wt_mean_str} (in-process: {in_proc})")
+    else:
+        # Multi-worker line: include ratios + CV when defined
+        games_list = [b["games"] for b in wb["by_worker"].values()]
+        gmin = min(games_list); gmax = max(games_list)
+        parts = [f"  Workers:      {n_workers} active",
+                 f"games min/max={gmin}/{gmax}"]
+        if wb["max_min_games_ratio"] is not None:
+            parts.append(f"ratio={wb['max_min_games_ratio']:.2f}")
+        if wb["max_min_wall_time_ratio"] is not None:
+            parts.append(f"wall-time ratio={wb['max_min_wall_time_ratio']:.2f}")
+        if wb["wall_time_cv"] is not None:
+            parts.append(f"cv={wb['wall_time_cv']:.2f}")
+        line = parts[0] + "; " + "; ".join(parts[1:]) + f" (in-process: {in_proc})"
+        lines.append(line)
+
+    # Final root
+    frv = pgs.get("final_root_value")
+    if frv is not None:
+        lines.append(
+            f"  Final root:   mean={frv['mean']:.2f} p50={frv['p50']:.2f} "
+            f"p10={frv['p10']:.2f} p90={frv['p90']:.2f} (|abs| mean={frv['abs_mean']:.2f})"
+        )
+
+    # Final top1
+    fts = pgs.get("final_top1_share")
+    if fts is not None:
+        lines.append(
+            f"  Final top1:   mean={fts['mean']:.2f} p50={fts['p50']:.2f} "
+            f"p10={fts['p10']:.2f} p90={fts['p90']:.2f} min={fts['min']:.2f}"
+        )
+
+    # Compute per game (each subkey rendered only when non-null)
+    cpg = pgs.get("compute_per_game")
+    if cpg is not None:
+        sub_parts = []
+        for key in ("leaf_evals", "backups", "nn_batches"):
+            sub = cpg.get(key)
+            if sub is not None:
+                sub_parts.append(f"{key} p50={int(sub['p50'])} p90={int(sub['p90'])} max={int(sub['max'])}")
+        if sub_parts:
+            lines.append(f"  Compute/game: " + " | ".join(sub_parts))
+
+    # Coverage line: print only when coverage is non-uniform across persistence-era fields
+    cov = pgs["coverage"]
+    persistence_keys = ("wall_time_s", "worker_id", "final_root_value", "final_top1_share",
+                        "compute.leaf_evals", "compute.backups", "compute.nn_batches")
+    cov_values = [cov[k] for k in persistence_keys]
+    if len(set(cov_values)) > 1:
+        # Format compactly
+        compute_subs = ", ".join(
+            f"{k.split('.')[1]}={cov[k]}" for k in
+            ("compute.leaf_evals", "compute.backups", "compute.nn_batches")
+        )
+        lines.append(
+            f"  Coverage:     wall_time_s={cov['wall_time_s']} worker_id={cov['worker_id']} "
+            f"final_root_value={cov['final_root_value']} final_top1_share={cov['final_top1_share']} "
+            f"compute={{{compute_subs}}}"
+        )
+
+    lines.append("")
+    return lines
+
+
 # -----------------------------
 # Phase 1 (connectivity-retrain) report formatters
 # -----------------------------
