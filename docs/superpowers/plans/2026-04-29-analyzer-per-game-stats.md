@@ -728,7 +728,7 @@ Expected: **FAIL** — all three assert that distribution blocks are non-null, b
 
 Run: `.venv/bin/python -m pytest tests/test_analyzer_per_game_stats.py -v`
 
-Expected: **PASS** — all 7 tests so far (4 from Task 1 + 3 new).
+Expected: **PASS** — all 8 tests so far (4 from Task 1 + 4 new in Task 2: tests 3, 4, 8, 8b).
 
 ### Step 5: Commit
 
@@ -1072,7 +1072,7 @@ Expected: **FAIL** — all 6 worker tests fail because `worker_balance.by_worker
 
 Run: `.venv/bin/python -m pytest tests/test_analyzer_per_game_stats.py -v`
 
-Expected: **PASS** — all 13 tests so far (4 from Task 1 + 3 from Task 2 + 6 worker tests).
+Expected: **PASS** — all 14 tests so far (4 from Task 1 + 4 from Task 2 + 6 worker tests).
 
 ### Step 5: Commit
 
@@ -1449,7 +1449,7 @@ def format_per_game_stats_report(per_game_stats: dict) -> List[str]:
 
 Run: `.venv/bin/python -m pytest tests/test_analyzer_per_game_stats.py -v`
 
-Expected: **PASS** — all 20 tests now pass (4 + 3 + 6 + 7).
+Expected: **PASS** — all 21 tests now pass (4 + 4 + 6 + 7 = tests 1, 2, 9, 10 + 3, 4, 8, 8b + 5, 6, 7, 11, 12, 13 + 14–20).
 
 ### Step 5: Run the existing analyzer regression to confirm no breakage
 
