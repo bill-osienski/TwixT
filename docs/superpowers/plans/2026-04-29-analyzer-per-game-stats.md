@@ -435,8 +435,8 @@ def test_aggregate_full_coverage_populates_all_blocks():
 
     assert out["n_games_total"] == 5
     assert out["n_games_with_any_stats"] == 5
-    # Every coverage entry == 5
-    for key in ("wall_time_s", "worker_id", "final_root_value", "final_top1_share",
+    # Every coverage entry == 5 (except worker_id — that's covered by Task 3's test 7)
+    for key in ("wall_time_s", "final_root_value", "final_top1_share",
                 "compute.leaf_evals", "compute.backups", "compute.nn_batches",
                 "n_moves", "reason"):
         assert out["coverage"][key] == 5, f"coverage[{key!r}] should be 5"
