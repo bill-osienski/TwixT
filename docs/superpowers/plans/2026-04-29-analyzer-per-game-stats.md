@@ -41,6 +41,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest  # for pytest.approx in tests with non-trivial float arithmetic
+
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -290,11 +292,9 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
     n_moves_arr = []
     outcomes = {"decisive": 0, "resign": 0, "adjudicated": 0, "timeout": 0, "draw_other": 0}
 
-    # --- n_games_with_any_stats: count games that carry at least one persistence-era field ---
+    # --- n_games_with_any_stats: counted in Task 2 (and updated in Task 3 for worker_id).
+    # Until then the only persistence-era data we track is none, so it stays 0. ---
     n_games_with_any_stats = 0
-    persistence_era_keys = (
-        "worker_id", "wall_time_s", "final_root_value", "final_top1_share", "compute",
-    )
 
     # --- One pass over replays ---
     for rp in replays:
@@ -321,10 +321,6 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
             outcomes["timeout"] += 1
         else:
             outcomes["draw_other"] += 1
-
-        # n_games_with_any_stats: any persistence-era key present?
-        if any(k in meta for k in persistence_era_keys):
-            n_games_with_any_stats += 1
 
     # --- game_length distribution ---
     if coverage["n_moves"] > 0:
@@ -444,16 +440,17 @@ def test_aggregate_full_coverage_populates_all_blocks():
         assert out["coverage"][key] == 5, f"coverage[{key!r}] should be 5"
     # Distribution blocks non-null
     assert out["wall_time_s"] is not None
-    assert out["wall_time_s"]["mean"] == 12.0           # mean of [10,11,12,13,14]
+    assert out["wall_time_s"]["mean"] == 12.0           # mean of [10,11,12,13,14] — exact int math
     assert out["wall_time_s"]["min"] == 10.0
     assert out["wall_time_s"]["max"] == 14.0
     assert out["wall_time_s"]["total"] == 60.0          # sum
-    assert out["final_root_value"]["mean"] == 0.2       # mean of [0, 0.1, 0.2, 0.3, 0.4]
-    assert out["final_root_value"]["abs_mean"] == 0.2   # all values >= 0 here
-    assert out["final_top1_share"]["mean"] == 0.4       # mean of [0.2, 0.3, 0.4, 0.5, 0.6]
-    assert out["final_top1_share"]["min"] == 0.2
+    # Decimal arithmetic on [0, 0.1, 0.2, 0.3, 0.4] is not byte-exact in IEEE 754.
+    assert out["final_root_value"]["mean"]     == pytest.approx(0.2)
+    assert out["final_root_value"]["abs_mean"] == pytest.approx(0.2)  # all values >= 0 here
+    assert out["final_top1_share"]["mean"]     == pytest.approx(0.4)  # mean of [0.2, 0.3, 0.4, 0.5, 0.6]
+    assert out["final_top1_share"]["min"]      == pytest.approx(0.2)
     assert out["compute_per_game"] is not None
-    assert out["compute_per_game"]["leaf_evals"]["mean"] == 1200.0  # mean of [1000,1100,1200,1300,1400]
+    assert out["compute_per_game"]["leaf_evals"]["mean"] == 1200.0  # mean of [1000,1100,1200,1300,1400] — exact int math
     assert out["compute_per_game"]["backups"]["mean"] == 2200.0
     assert out["compute_per_game"]["nn_batches"]["mean"] == 60.0
 
@@ -524,6 +521,29 @@ def test_aggregate_compute_subkey_missing_is_excluded_not_zero():
     assert out["compute_per_game"]["leaf_evals"]["mean"] == 200.0  # (100+300)/2
     assert out["compute_per_game"]["backups"]["mean"] == 300.0     # (200+400)/2
     assert out["compute_per_game"]["nn_batches"] is None
+
+
+# -------------------------------------------------------------------------
+# Test 8b: empty meta.compute does not count as carrying any persistence stats
+# -------------------------------------------------------------------------
+
+def test_empty_compute_object_does_not_count_as_any_stats():
+    """A replay with meta.compute = {} (key present but no subkeys) must NOT
+    increment n_games_with_any_stats — we count actual populated fields, not
+    just key presence."""
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    # _make_replay with no compute kwargs and include_compute=True → meta.compute
+    # is OMITTED entirely. To get an explicit empty {} we construct directly.
+    replay = {"meta": {"n_moves": 100, "reason": "win", "compute": {}}}
+    out = aggregate_per_game_stats([replay])
+
+    assert out["n_games_total"] == 1
+    assert out["n_games_with_any_stats"] == 0  # empty compute does not count
+    assert out["coverage"]["compute.leaf_evals"] == 0
+    assert out["coverage"]["compute.backups"] == 0
+    assert out["coverage"]["compute.nn_batches"] == 0
+    assert out["compute_per_game"] is None
 ```
 
 ### Step 2: Run the new tests to verify they fail
@@ -556,15 +576,11 @@ Expected: **FAIL** — all three assert that distribution blocks are non-null, b
       outcomes = {"decisive": 0, "resign": 0, "adjudicated": 0, "timeout": 0, "draw_other": 0}
   ```
 
-- [ ] Within the per-replay loop, just before the `# n_games_with_any_stats:` block, add the persistence-era field extraction. Find this section in the function:
+- [ ] Within the per-replay loop, after the outcomes categorization block, add the persistence-era field extraction. Find this section in the function:
 
   ```python
           else:
               outcomes["draw_other"] += 1
-
-          # n_games_with_any_stats: any persistence-era key present?
-          if any(k in meta for k in persistence_era_keys):
-              n_games_with_any_stats += 1
   ```
 
   Replace with:
@@ -573,21 +589,30 @@ Expected: **FAIL** — all three assert that distribution blocks are non-null, b
           else:
               outcomes["draw_other"] += 1
 
-          # Persistence-era field extraction (each field tracked independently)
+          # Persistence-era field extraction (each field tracked independently).
+          # has_any_persistence_stat starts False per replay, set True only when a
+          # persistence-era field is actually populated (not just key-present-but-empty,
+          # like meta["compute"] == {}). Worker_id case is added in Task 3 — that one
+          # treats explicit null as a persistence-era signal (in-process game).
+          has_any_persistence_stat = False
+
           wt = meta.get("wall_time_s")
           if wt is not None:
               coverage["wall_time_s"] += 1
               wall_time_arr.append(float(wt))
+              has_any_persistence_stat = True
 
           frv = meta.get("final_root_value")
           if frv is not None:
               coverage["final_root_value"] += 1
               final_root_value_arr.append(float(frv))
+              has_any_persistence_stat = True
 
           fts = meta.get("final_top1_share")
           if fts is not None:
               coverage["final_top1_share"] += 1
               final_top1_share_arr.append(float(fts))
+              has_any_persistence_stat = True
 
           # meta.compute subkeys are tracked independently — missing != 0
           comp = meta.get("compute") or {}
@@ -595,17 +620,19 @@ Expected: **FAIL** — all three assert that distribution blocks are non-null, b
           if le is not None:
               coverage["compute.leaf_evals"] += 1
               leaf_evals_arr.append(int(le))
+              has_any_persistence_stat = True
           bk = comp.get("backups")
           if bk is not None:
               coverage["compute.backups"] += 1
               backups_arr.append(int(bk))
+              has_any_persistence_stat = True
           nb = comp.get("nn_batches")
           if nb is not None:
               coverage["compute.nn_batches"] += 1
               nn_batches_arr.append(int(nb))
+              has_any_persistence_stat = True
 
-          # n_games_with_any_stats: any persistence-era key present?
-          if any(k in meta for k in persistence_era_keys):
+          if has_any_persistence_stat:
               n_games_with_any_stats += 1
   ```
 
@@ -812,6 +839,9 @@ def test_aggregate_in_process_games_counted_separately():
     assert wb["in_process_count"] == 2
     # coverage["worker_id"] counts ALL games where the field is present (incl. explicit null)
     assert out["coverage"]["worker_id"] == 4
+    # All four games carry persistence-era fields (worker_id present is sufficient,
+    # even when explicitly null — that's a meaningful "in-process new schema" signal).
+    assert out["n_games_with_any_stats"] == 4
 
 
 # -------------------------------------------------------------------------
@@ -894,28 +924,34 @@ Expected: **FAIL** — all 6 worker tests fail because `worker_balance.by_worker
 
 ### Step 3: Extend aggregate_per_game_stats with worker_balance computation
 
-- [ ] In `scripts/twixt_replay_analyzer.py`, locate the section in `aggregate_per_game_stats` that extracts persistence-era fields (added in Task 2). Find this section:
+- [ ] In `scripts/twixt_replay_analyzer.py`, locate the section in `aggregate_per_game_stats` that extracts persistence-era fields (added in Task 2). The block currently ends with the nn_batches extraction immediately followed by the `if has_any_persistence_stat: n_games_with_any_stats += 1` increment. Find this section:
 
   ```python
           nb = comp.get("nn_batches")
           if nb is not None:
               coverage["compute.nn_batches"] += 1
               nn_batches_arr.append(int(nb))
+              has_any_persistence_stat = True
 
-          # n_games_with_any_stats: any persistence-era key present?
+          if has_any_persistence_stat:
+              n_games_with_any_stats += 1
   ```
 
-  Insert the worker accumulation block between the compute-extraction and the `n_games_with_any_stats:` comment:
+  Insert the worker accumulation block BETWEEN the nn_batches block and the increment, so worker-id presence (including explicit null) is reflected in `n_games_with_any_stats`:
 
   ```python
           nb = comp.get("nn_batches")
           if nb is not None:
               coverage["compute.nn_batches"] += 1
               nn_batches_arr.append(int(nb))
+              has_any_persistence_stat = True
 
-          # worker_id: integer → bucket; explicit null → in-process; absent → not counted
+          # worker_id: integer → bucket; explicit null → in-process; absent → not counted.
+          # Explicit null IS a persistence-era signal (in-process game in new schema),
+          # so we set has_any_persistence_stat regardless of whether wid is None or int.
           if "worker_id" in meta:
               coverage["worker_id"] += 1
+              has_any_persistence_stat = True
               wid = meta["worker_id"]
               if wid is None:
                   in_process_count += 1
@@ -932,7 +968,8 @@ Expected: **FAIL** — all 6 worker tests fail because `worker_balance.by_worker
                   if wt is not None:
                       bucket["wall_time_total_s"] += float(wt)
 
-          # n_games_with_any_stats: any persistence-era key present?
+          if has_any_persistence_stat:
+              n_games_with_any_stats += 1
   ```
 
 - [ ] Above the `# --- Accumulators for distribution blocks ---` block, add the worker accumulators initialization. Find this section:
@@ -1185,7 +1222,10 @@ def test_format_omits_lines_for_zero_coverage_fields():
 
     assert "Wall time:" in text
     assert "Final top1:" not in text
-    assert "n/a" not in text   # we omit lines, never print "n/a"
+    # Specifically: we never render "Final top1: n/a" (we omit the whole line instead).
+    # Generic "n/a" might appear in unrelated future text, so be precise.
+    assert "Final top1: n/a" not in text
+    assert "Final root: n/a" not in text
 
 
 # -------------------------------------------------------------------------
@@ -1508,12 +1548,88 @@ Add immediately after the blank-line append:
 
 Expected: All pass (20 new + the four existing analyzer test files).
 
-### Step 6: Manual end-to-end smoke test against real or synthetic game JSONs
+### Step 6: Lightweight synthetic-replay end-to-end smoke
 
-- [ ] Generate a small temp directory with one new-schema game JSON using the production save path. Create `/tmp/analyzer_smoke.py`:
+This is the primary integration smoke: lighter than spinning up MLX self-play, environment-independent, and exercises the same code path (load_replays → aggregate_per_game_stats → format_per_game_stats_report).
+
+- [ ] Create `/tmp/analyzer_smoke.py` with this content:
 
 ```python
-"""Quick analyzer smoke: write 1 new-schema game, run analyzer over it, dump per_game_stats."""
+"""Lightweight analyzer smoke: write one synthetic new-schema replay JSON to
+a temp dir, then call load_replays + aggregate + format directly."""
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+PROJECT_ROOT = Path("/Users/bill/Desktop/TwixT_Game")
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts.twixt_replay_analyzer import (
+    load_replays, aggregate_per_game_stats, format_per_game_stats_report,
+)
+
+# A minimal new-schema replay record matching what game_saver writes.
+SYNTHETIC = {
+    "id": "iter_0000_game_000",
+    "timestamp": "2026-04-29T00:00:00+00:00",
+    "config_hash": "alphazero",
+    "depth": 200,
+    "seed": 0,
+    "winner": "red",
+    "starting_player": "red",
+    "moves": [
+        {"turn": 1, "player": "red",   "row": 0, "col": 1, "bridges_created": [], "heuristics": {}, "search_score": None},
+        {"turn": 2, "player": "black", "row": 1, "col": 0, "bridges_created": [], "heuristics": {}, "search_score": None},
+        {"turn": 3, "player": "red",   "row": 2, "col": 2, "bridges_created": [], "heuristics": {}, "search_score": None},
+    ],
+    "meta": {
+        "board_size": 24,
+        "mode": "alphazero",
+        "reason": "win",
+        "iteration": 0,
+        "game_idx": 0,
+        "simulations": 200,
+        "n_moves": 3,
+        "starting_player": "red",
+        "worker_id": 2,
+        "wall_time_s": 14.27,
+        "adjudication_block_reason": None,
+        "final_root_value": 0.83,
+        "final_top1_share": 0.62,
+        "compute": {"leaf_evals": 17400, "backups": 17400, "nn_batches": 850},
+    },
+}
+
+with tempfile.TemporaryDirectory(prefix="analyzer_smoke_") as tmp:
+    tmp_dir = Path(tmp)
+    (tmp_dir / "iter_0000_game_000.json").write_text(json.dumps(SYNTHETIC))
+    replays = load_replays([str(tmp_dir)])
+    pgs = aggregate_per_game_stats(replays)
+    print("=== per_game_stats ===")
+    print(json.dumps(pgs, indent=2))
+    print()
+    print("=== format_per_game_stats_report output ===")
+    for line in format_per_game_stats_report(pgs):
+        print(line)
+```
+
+Run: `.venv/bin/python /tmp/analyzer_smoke.py`
+
+Expected:
+- `per_game_stats` block printed with `n_games_total == 1`, `n_games_with_any_stats == 1`, every persistence-era coverage entry == 1, all distribution blocks non-null. `worker_balance.by_worker == {"2": {"games": 1, "n_moves_total": 3, "wall_time_total_s": 14.27, "wall_time_mean_s": 14.27}}` and `in_process_count == 0`. Single-worker → ratios all None.
+- Format report shows: Game length, Outcomes (decisive=1), Wall time (mean=14.3s, total=14.3s), Workers (1 active, no ratios), Final root (mean=0.83), Final top1 (mean=0.62), Compute/game (leaf_evals p50=17400, etc.).
+
+### Step 7: (Optional) Production-save-path smoke
+
+If the local environment has MLX/Metal available and the upstream persistence pipeline is healthy, also run an end-to-end smoke that exercises `play_game → _save_game_from_record → analyzer`. Skip this step if MLX import fails or if the local environment is otherwise constrained — Step 6 already verifies the analyzer side of the integration.
+
+- [ ] (Optional) Create `/tmp/analyzer_prod_smoke.py`:
+
+```python
+"""Production-path analyzer smoke (requires MLX). Spins up one short
+real self-play game, saves via the production trainer helper, runs the
+analyzer over it. Use only when MLX/Metal is healthy locally."""
 import json, random, sys, tempfile
 from pathlib import Path
 
@@ -1528,6 +1644,9 @@ from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
 from scripts.GPU.alphazero.self_play import play_game
 from scripts.GPU.alphazero.game_saver import GameSaver
 from scripts.GPU.alphazero.trainer import _save_game_from_record
+from scripts.twixt_replay_analyzer import (
+    load_replays, aggregate_per_game_stats, format_per_game_stats_report,
+)
 
 np.random.seed(7); mx.random.seed(7)
 net = create_network(hidden=64, n_blocks=2)
@@ -1536,14 +1655,11 @@ cfg = MCTSConfig(n_simulations=40)
 game = play_game(evaluator=ev, mcts_config=cfg, rng=random.Random(7),
                  max_moves=30, active_size=11, start_player="red")
 
-with tempfile.TemporaryDirectory(prefix="analyzer_smoke_") as tmp:
+with tempfile.TemporaryDirectory(prefix="analyzer_prod_smoke_") as tmp:
     tmp_dir = Path(tmp)
     saver = GameSaver(games_dir=tmp_dir, max_games_per_iter=1, simulations=40, active_size=11)
     saver.set_iteration(0)
     _save_game_from_record(saver, game)
-
-    # Run the analyzer's internal aggregate function directly (not the CLI).
-    from scripts.twixt_replay_analyzer import load_replays, aggregate_per_game_stats, format_per_game_stats_report
     replays = load_replays([str(tmp_dir)])
     pgs = aggregate_per_game_stats(replays)
     print("=== per_game_stats ===")
@@ -1554,17 +1670,15 @@ with tempfile.TemporaryDirectory(prefix="analyzer_smoke_") as tmp:
         print(line)
 ```
 
-Run: `.venv/bin/python /tmp/analyzer_smoke.py`
+Run (only if environment supports it): `.venv/bin/python /tmp/analyzer_prod_smoke.py`
 
-Expected:
-- `per_game_stats` block printed with `n_games_with_any_stats == 1`, all coverage entries == 1, all distribution blocks non-null, `worker_balance.in_process_count == 1`.
-- Format report shows the full section: Game length, Outcomes, Wall time, Workers (0 active; in-process: 1), Final root, Final top1, Compute/game.
+Expected: similar shape to Step 6 but with `worker_balance.in_process_count == 1` (in-process path) and real measured wall_time / final_root / final_top1 values.
 
-### Step 7: Cleanup the smoke script
+### Step 8: Cleanup the smoke scripts
 
-- [ ] Run: `rm /tmp/analyzer_smoke.py`
+- [ ] Run: `rm -f /tmp/analyzer_smoke.py /tmp/analyzer_prod_smoke.py`
 
-### Step 8: Commit
+### Step 9: Commit
 
 ```bash
 git add scripts/twixt_replay_analyzer.py
@@ -1612,14 +1726,14 @@ Expected: steps 1–2 green; step 3 shows the `per_game_stats` block with non-ze
 
 - **Spec coverage:**
   - §4 schema → Task 1 (foundation), Task 2 (distributions), Task 3 (worker_balance) — all blocks covered.
-  - §4.1 contracts → tests 1, 2, 3, 4, 8, 11, 12, 13 cover the type/null contracts.
+  - §4.1 contracts → tests 1, 2, 3, 4, 8, 8b, 11, 12, 13 cover the type/null contracts.
   - §5 report rendering → Task 4 + tests 14–20.
   - §5.1 partial coverage → tests 14, 16, 17, 18, 19.
   - §5.2 number formatting → tests 15 (mean/percentile rendering), 20 (duration helper).
   - §6.1 aggregate behavior → Tasks 1–3.
   - §6.2 format function → Task 4.
   - §6.3 integration call sites → Task 5.
-  - §7 edge cases → tests 1, 2, 7, 8, 11, 12, 13 (every row in the edge-case table has a test or is structurally implied by the implementation).
-  - §9 test plan → tests 1–20 implemented; optional test 21 deferred per spec §10.
+  - §7 edge cases → tests 1, 2, 7, 8, 8b, 11, 12, 13 (every row in the edge-case table has a test or is structurally implied by the implementation).
+  - §9 test plan → tests 1–20 implemented; bonus test 8b (empty meta.compute = {} sanity); optional test 21 deferred per spec §10.
 - **Placeholder scan:** no TBD/TODO/etc. Every step has concrete code.
-- **Type consistency:** `aggregate_per_game_stats(replays) -> dict`, `format_per_game_stats_report(per_game_stats) -> List[str]`, `_format_duration_human(seconds) -> str` — names consistent across all tasks and tests. `_make_replay` test helper consistent across all tests.
+- **Type consistency:** `aggregate_per_game_stats(replays) -> dict`, `format_per_game_stats_report(per_game_stats) -> List[str]`, `_format_duration_human(seconds) -> str` — names consistent across all tasks and tests. `_make_replay` test helper consistent across all tests. `has_any_persistence_stat` is the canonical per-replay flag set in Tasks 2 (per-stat extraction) and Task 3 (worker_id extraction); the `if has_any_persistence_stat: n_games_with_any_stats += 1` increment lives at the END of the per-replay loop body so worker_id presence (including explicit null) is reflected.
