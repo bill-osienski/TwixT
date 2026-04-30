@@ -230,10 +230,12 @@ def test_aggregate_game_length_uses_meta_n_moves():
     assert gl["max"] == 100
     assert gl["mean"] == 55.0
     # numpy.percentile linear interpolation on this set:
-    # p50 = 55, p90 = 91, p95 = 95.5, p99 = 99.1
+    # p50 = 55, p90 = 91, p95 ≈ 95.5, p99 ≈ 99.1
+    # (p95 and p99 use abs-epsilon because numpy returns 95.49999999999999
+    #  / 99.10000000000001 due to IEEE 754 linear-interpolation rounding.)
     assert gl["p50"] == 55.0
     assert gl["p90"] == 91.0
-    assert gl["p95"] == 95.5
+    assert abs(gl["p95"] - 95.5) < 1e-9
     assert abs(gl["p99"] - 99.1) < 1e-9
     # coverage reflects all 10 replays carried n_moves
     assert out["coverage"]["n_moves"] == 10
