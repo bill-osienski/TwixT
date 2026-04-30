@@ -46,6 +46,84 @@ from .opening_diagnostics import (
 )
 
 
+def _save_game_from_ipc(game_saver, msg):
+    """Persist one finished game to JSON from a GameComplete IPC message.
+
+    Internal seam for trainer.py wiring (spec 2026-04-29). Does
+    draw-reason translation, resigned_by derivation, and field-name
+    translation, then forwards to game_saver.maybe_save_game.
+
+    Returns the saved Path or None if the saver skipped it.
+    """
+    if game_saver is None or msg.move_history is None:
+        return None
+
+    # Map draw_reason int back to string
+    draw_reason_str = {
+        0: None, 1: "timeout", 2: "board_full", 3: "state_cap",
+        4: "unknown", 5: "resign", 6: "adjudicated",
+    }.get(msg.draw_reason)
+
+    # Derive resigned_by from msg (resign means loser resigned)
+    resigned_by = None
+    if draw_reason_str == "resign" and msg.winner and msg.winner != "draw":
+        resigned_by = "black" if msg.winner == "red" else "red"
+
+    return game_saver.maybe_save_game(
+        winner=msg.winner if msg.winner != "draw" else None,
+        move_history=msg.move_history,
+        n_moves=msg.n_moves,
+        draw_reason=draw_reason_str,
+        start_player=msg.start_player,
+        resigned_by=resigned_by,
+        opening_diagnostics=list(msg.opening_diagnostics) if msg.opening_diagnostics else None,
+        opening_diagnostics_meta=msg.opening_diagnostics_meta,
+        # Per-game stats persistence (spec 2026-04-29)
+        worker_id=msg.worker_id,
+        wall_time_s=msg.wall_time_s,
+        adjudication_block_reason=msg.adj_blocked_by,
+        final_root_value=msg.final_root_value,
+        final_top1_share=msg.final_top1_share,
+        leaf_evals=msg.nn_calls,
+        backups=msg.total_backups,
+        nn_batches=msg.nn_batches,
+    )
+
+
+def _save_game_from_record(game_saver, game):
+    """Persist one finished game to JSON from a GameRecord (in-process path).
+
+    Internal seam for trainer.py wiring (spec 2026-04-29). Mirrors
+    _save_game_from_ipc but reads from a GameRecord instead of a
+    GameComplete IPC message.
+    """
+    if game_saver is None or not game.move_history:
+        return None
+
+    move_history_tuple = tuple(tuple(m) for m in game.move_history)
+
+    return game_saver.maybe_save_game(
+        winner=game.winner,
+        move_history=move_history_tuple,
+        n_moves=game.n_moves,
+        draw_reason=game.draw_reason,
+        start_player=game.start_player,
+        resigned_by=game.resigned_by,
+        opening_diagnostics=game.opening_diagnostics if game.opening_diagnostics else None,
+        opening_diagnostics_meta=game.opening_diagnostics_meta,
+        # Per-game stats persistence (spec 2026-04-29).
+        # In-process path has no worker_id; record has wall_time_s now.
+        worker_id=None,
+        wall_time_s=game.wall_time_s,
+        adjudication_block_reason=game.adj_blocked_by,
+        final_root_value=game.final_root_value,
+        final_top1_share=game.final_top1_share,
+        leaf_evals=game.nn_calls,
+        backups=game.total_backups,
+        nn_batches=game.nn_batches,
+    )
+
+
 class MainModule(nn.Module):
     """Holds references to the live encoder + policy_head modules.
 
@@ -1498,29 +1576,8 @@ def run_parallel_selfplay(
             if msg.opening_diagnostics:
                 all_opening_diagnostics.append(list(msg.opening_diagnostics))
 
-            # Save game replay if enabled
-            if game_saver is not None and msg.move_history is not None:
-                # Map draw_reason int back to string (0=None, 1-4=draw reasons, 5=resign)
-                # Note: resign has winner but also has draw_reason=5 for metadata
-                draw_reason_str = {
-                    0: None, 1: "timeout", 2: "board_full", 3: "state_cap", 4: "unknown", 5: "resign", 6: "adjudicated"
-                }.get(msg.draw_reason)
-
-                # Derive resigned_by from msg (resign means loser resigned)
-                resigned_by = None
-                if draw_reason_str == "resign" and msg.winner and msg.winner != "draw":
-                    resigned_by = "black" if msg.winner == "red" else "red"
-
-                game_saver.maybe_save_game(
-                    winner=msg.winner if msg.winner != "draw" else None,
-                    move_history=msg.move_history,
-                    n_moves=msg.n_moves,
-                    draw_reason=draw_reason_str,
-                    start_player=msg.start_player,
-                    resigned_by=resigned_by,
-                    opening_diagnostics=list(msg.opening_diagnostics) if msg.opening_diagnostics else None,
-                    opening_diagnostics_meta=msg.opening_diagnostics_meta,
-                )
+            # Save game replay if enabled (spec 2026-04-29: routes per-game stats too)
+            _save_game_from_ipc(game_saver, msg)
 
             if games_completed % 5 == 0:
                 print(f"  Games: {games_completed}/{games_to_play}")
@@ -2487,19 +2544,8 @@ def train(
                     if game.opening_diagnostics:
                         all_opening_diagnostics.append(game.opening_diagnostics)
 
-                    # Save game replay if enabled
-                    if game_saver is not None and game.move_history:
-                        move_history_tuple = tuple(tuple(m) for m in game.move_history)
-                        game_saver.maybe_save_game(
-                            winner=game.winner,
-                            move_history=move_history_tuple,
-                            n_moves=game.n_moves,
-                            draw_reason=game.draw_reason,
-                            start_player=game.start_player,
-                            resigned_by=game.resigned_by,
-                            opening_diagnostics=game.opening_diagnostics if game.opening_diagnostics else None,
-                            opening_diagnostics_meta=game.opening_diagnostics_meta,
-                        )
+                    # Save game replay if enabled (spec 2026-04-29: routes per-game stats too)
+                    _save_game_from_record(game_saver, game)
 
                     # Flush MLX graph and clear caches after each game
                     # mx.eval() forces pending lazy ops to materialize, freeing intermediates

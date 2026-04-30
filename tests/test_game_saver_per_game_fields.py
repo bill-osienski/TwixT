@@ -266,3 +266,144 @@ def test_float_zero_preserved_distinct_from_null(tmp_path):
     assert meta["wall_time_s"] == 0.0
     assert meta["final_root_value"] == 0.0
     assert meta["final_top1_share"] is None
+
+
+def _make_saver(tmp_path):
+    """Construct a fresh GameSaver bound to tmp_path for routing tests."""
+    from scripts.GPU.alphazero.game_saver import GameSaver
+
+    saver = GameSaver(
+        games_dir=tmp_path,
+        max_games_per_iter=10,
+        simulations=200,
+        active_size=24,
+    )
+    saver.set_iteration(0)
+    return saver
+
+
+def test_save_game_from_ipc_routes_all_new_fields(tmp_path):
+    """_save_game_from_ipc translates all GameComplete fields onto save kwargs."""
+    import json
+    from scripts.GPU.alphazero.trainer import _save_game_from_ipc
+    from scripts.GPU.alphazero.ipc_messages import GameComplete
+
+    saver = _make_saver(tmp_path)
+
+    msg = GameComplete(
+        worker_id=2,
+        winner="red",
+        draw_reason=0,           # 0 → None (no draw)
+        n_moves=3,
+        n_positions=3,
+        wall_time_s=14.27,
+        nn_calls=17400,
+        expand_calls=17400,
+        nn_batches=850,
+        total_backups=17400,
+        total_waiters=0,
+        unique_leaves=17400,
+        max_waiters=0,
+        flush_full=0,
+        flush_stall=0,
+        flush_tail=0,
+        move_history=((0, 0), (1, 1), (2, 2)),
+        start_player="red",
+        adj_blocked_by="ply",
+        final_root_value=0.83,
+        final_top1_share=0.62,
+    )
+
+    filepath = _save_game_from_ipc(saver, msg)
+    assert filepath is not None
+
+    meta = json.loads(filepath.read_text())["meta"]
+    assert meta["worker_id"] == 2
+    assert meta["wall_time_s"] == 14.27
+    assert meta["adjudication_block_reason"] == "ply"   # adj_blocked_by → adjudication_block_reason
+    assert meta["final_root_value"] == 0.83
+    assert meta["final_top1_share"] == 0.62
+    assert meta["compute"] == {
+        "leaf_evals": 17400,                            # nn_calls → leaf_evals
+        "backups": 17400,                               # total_backups → backups
+        "nn_batches": 850,
+    }
+
+
+def test_save_game_from_ipc_handles_optional_fields_as_null(tmp_path):
+    """When GameComplete optional fields are at defaults, JSON has nulls and zeros."""
+    import json
+    from scripts.GPU.alphazero.trainer import _save_game_from_ipc
+    from scripts.GPU.alphazero.ipc_messages import GameComplete
+
+    saver = _make_saver(tmp_path)
+
+    msg = GameComplete(
+        worker_id=0,
+        winner="draw",
+        draw_reason=1,
+        n_moves=2,
+        n_positions=2,
+        wall_time_s=0.5,
+        nn_calls=0,
+        expand_calls=0,
+        nn_batches=0,
+        total_backups=0,
+        total_waiters=0,
+        unique_leaves=0,
+        max_waiters=0,
+        flush_full=0,
+        flush_stall=0,
+        flush_tail=0,
+        move_history=((0, 0), (1, 1)),
+        start_player="red",
+        # adj_blocked_by, final_root_value, final_top1_share at defaults (None)
+    )
+
+    filepath = _save_game_from_ipc(saver, msg)
+    assert filepath is not None
+
+    meta = json.loads(filepath.read_text())["meta"]
+    assert meta["adjudication_block_reason"] is None
+    assert meta["final_root_value"] is None
+    assert meta["final_top1_share"] is None
+    assert meta["compute"] == {"leaf_evals": 0, "backups": 0, "nn_batches": 0}
+
+
+def test_save_game_from_record_routes_all_new_fields(tmp_path):
+    """_save_game_from_record translates all GameRecord fields onto save kwargs."""
+    import json
+    from scripts.GPU.alphazero.trainer import _save_game_from_record
+    from scripts.GPU.alphazero.self_play import GameRecord
+
+    saver = _make_saver(tmp_path)
+
+    game = GameRecord(
+        positions=[],
+        winner="black",
+        n_moves=3,
+        move_history=[(0, 0), (1, 1), (2, 2)],
+        start_player="red",
+        nn_calls=17400,
+        nn_batches=850,
+        total_backups=17400,
+        adj_blocked_by="threshold",
+        wall_time_s=12.5,
+        final_root_value=-0.41,
+        final_top1_share=0.55,
+    )
+
+    filepath = _save_game_from_record(saver, game)
+    assert filepath is not None
+
+    meta = json.loads(filepath.read_text())["meta"]
+    assert meta["worker_id"] is None    # in-process path has no worker
+    assert meta["wall_time_s"] == 12.5
+    assert meta["adjudication_block_reason"] == "threshold"
+    assert meta["final_root_value"] == -0.41
+    assert meta["final_top1_share"] == 0.55
+    assert meta["compute"] == {
+        "leaf_evals": 17400,
+        "backups": 17400,
+        "nn_batches": 850,
+    }
