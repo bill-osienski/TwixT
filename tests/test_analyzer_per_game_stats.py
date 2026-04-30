@@ -203,3 +203,140 @@ def test_aggregate_game_length_uses_meta_n_moves():
     assert abs(gl["p99"] - 99.1) < 1e-9
     # coverage reflects all 10 replays carried n_moves
     assert out["coverage"]["n_moves"] == 10
+
+
+# -------------------------------------------------------------------------
+# Test 3: full coverage populates all blocks
+# -------------------------------------------------------------------------
+
+def test_aggregate_full_coverage_populates_all_blocks():
+    """5 replays, every persistence-era field populated → all blocks non-null."""
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    replays = []
+    for i in range(5):
+        replays.append(_make_replay(
+            n_moves=100 + i,
+            worker_id=i % 2,
+            wall_time_s=10.0 + i,
+            final_root_value=0.1 * i,
+            final_top1_share=0.2 + 0.1 * i,
+            leaf_evals=1000 + i * 100,
+            backups=2000 + i * 100,
+            nn_batches=50 + i * 5,
+        ))
+    out = aggregate_per_game_stats(replays)
+
+    assert out["n_games_total"] == 5
+    assert out["n_games_with_any_stats"] == 5
+    # Every coverage entry == 5 (except worker_id — that's covered by Task 3's test 7)
+    for key in ("wall_time_s", "final_root_value", "final_top1_share",
+                "compute.leaf_evals", "compute.backups", "compute.nn_batches",
+                "n_moves", "reason"):
+        assert out["coverage"][key] == 5, f"coverage[{key!r}] should be 5"
+    # Distribution blocks non-null
+    assert out["wall_time_s"] is not None
+    assert out["wall_time_s"]["mean"] == 12.0           # mean of [10,11,12,13,14] — exact int math
+    assert out["wall_time_s"]["min"] == 10.0
+    assert out["wall_time_s"]["max"] == 14.0
+    assert out["wall_time_s"]["total"] == 60.0          # sum
+    # Decimal arithmetic on [0, 0.1, 0.2, 0.3, 0.4] is not byte-exact in IEEE 754.
+    assert out["final_root_value"]["mean"]     == pytest.approx(0.2)
+    assert out["final_root_value"]["abs_mean"] == pytest.approx(0.2)  # all values >= 0 here
+    assert out["final_top1_share"]["mean"]     == pytest.approx(0.4)  # mean of [0.2, 0.3, 0.4, 0.5, 0.6]
+    assert out["final_top1_share"]["min"]      == pytest.approx(0.2)
+    assert out["compute_per_game"] is not None
+    assert out["compute_per_game"]["leaf_evals"]["mean"] == 1200.0  # mean of [1000,1100,1200,1300,1400] — exact int math
+    assert out["compute_per_game"]["backups"]["mean"] == 2200.0
+    assert out["compute_per_game"]["nn_batches"]["mean"] == 60.0
+
+
+# -------------------------------------------------------------------------
+# Test 4: per-field coverage counts independently
+# -------------------------------------------------------------------------
+
+def test_aggregate_per_field_coverage_counts_independently():
+    """Mixed coverage: 8 have wall_time_s, 5 have final_top1_share, 7 have nn_batches."""
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    replays = []
+    for i in range(10):
+        kw = {"n_moves": 50 + i, "reason": "win"}
+        if i < 8:
+            kw["wall_time_s"] = 1.0 * (i + 1)
+        if i < 5:
+            kw["final_top1_share"] = 0.5
+        if i < 7:
+            kw["leaf_evals"] = 100
+            kw["backups"]   = 200
+            kw["nn_batches"] = 10
+        # else: include_compute=True but no compute keys means meta.compute absent
+        replays.append(_make_replay(**kw))
+
+    out = aggregate_per_game_stats(replays)
+
+    assert out["n_games_total"] == 10
+    assert out["coverage"]["wall_time_s"] == 8
+    assert out["coverage"]["final_top1_share"] == 5
+    assert out["coverage"]["compute.nn_batches"] == 7
+    assert out["coverage"]["compute.leaf_evals"] == 7
+    assert out["coverage"]["compute.backups"] == 7
+    assert out["coverage"]["final_root_value"] == 0
+    assert out["coverage"]["worker_id"] == 0
+    # Distribution blocks computed only over their covering games
+    assert out["wall_time_s"] is not None
+    assert out["wall_time_s"]["total"] == 36.0          # 1+2+...+8
+    assert out["final_top1_share"] is not None
+    assert out["final_top1_share"]["mean"] == 0.5       # all five are 0.5
+    assert out["compute_per_game"]["nn_batches"]["mean"] == 10.0
+    # final_root_value has zero coverage → null
+    assert out["final_root_value"] is None
+
+
+# -------------------------------------------------------------------------
+# Test 8: missing compute subkey is excluded, not zero
+# -------------------------------------------------------------------------
+
+def test_aggregate_compute_subkey_missing_is_excluded_not_zero():
+    """meta.compute = {leaf_evals: 100, backups: 200} (no nn_batches) →
+    coverage.compute.nn_batches == 0; nn_batches block is null;
+    leaf_evals/backups stats reflect actual values, not depressed by phantom zeros.
+    """
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    replays = [
+        _make_replay(leaf_evals=100, backups=200),  # no nn_batches
+        _make_replay(leaf_evals=300, backups=400),  # no nn_batches
+    ]
+    out = aggregate_per_game_stats(replays)
+
+    assert out["coverage"]["compute.leaf_evals"] == 2
+    assert out["coverage"]["compute.backups"] == 2
+    assert out["coverage"]["compute.nn_batches"] == 0
+    assert out["compute_per_game"] is not None
+    assert out["compute_per_game"]["leaf_evals"]["mean"] == 200.0  # (100+300)/2
+    assert out["compute_per_game"]["backups"]["mean"] == 300.0     # (200+400)/2
+    assert out["compute_per_game"]["nn_batches"] is None
+
+
+# -------------------------------------------------------------------------
+# Test 8b: empty meta.compute does not count as carrying any persistence stats
+# -------------------------------------------------------------------------
+
+def test_empty_compute_object_does_not_count_as_any_stats():
+    """A replay with meta.compute = {} (key present but no subkeys) must NOT
+    increment n_games_with_any_stats — we count actual populated fields, not
+    just key presence."""
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    # _make_replay with no compute kwargs and include_compute=True → meta.compute
+    # is OMITTED entirely. To get an explicit empty {} we construct directly.
+    replay = {"meta": {"n_moves": 100, "reason": "win", "compute": {}}}
+    out = aggregate_per_game_stats([replay])
+
+    assert out["n_games_total"] == 1
+    assert out["n_games_with_any_stats"] == 0  # empty compute does not count
+    assert out["coverage"]["compute.leaf_evals"] == 0
+    assert out["coverage"]["compute.backups"] == 0
+    assert out["coverage"]["compute.nn_batches"] == 0
+    assert out["compute_per_game"] is None

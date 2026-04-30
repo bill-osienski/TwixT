@@ -375,8 +375,14 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
         "reason": 0,
     }
 
-    # --- Accumulators for distribution blocks (Tasks 2 and 3 fill these) ---
+    # --- Accumulators for distribution blocks ---
     n_moves_arr = []
+    wall_time_arr = []
+    final_root_value_arr = []
+    final_top1_share_arr = []
+    leaf_evals_arr = []
+    backups_arr = []
+    nn_batches_arr = []
     outcomes = {"decisive": 0, "resign": 0, "adjudicated": 0, "timeout": 0, "draw_other": 0}
 
     # --- n_games_with_any_stats: counted in Task 2 (and updated in Task 3 for worker_id).
@@ -409,6 +415,52 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
         else:
             outcomes["draw_other"] += 1
 
+        # Persistence-era field extraction (each field tracked independently).
+        # has_any_persistence_stat starts False per replay, set True only when a
+        # persistence-era field is actually populated (not just key-present-but-empty,
+        # like meta["compute"] == {}). Worker_id case is added in Task 3 — that one
+        # treats explicit null as a persistence-era signal (in-process game).
+        has_any_persistence_stat = False
+
+        wt = meta.get("wall_time_s")
+        if wt is not None:
+            coverage["wall_time_s"] += 1
+            wall_time_arr.append(float(wt))
+            has_any_persistence_stat = True
+
+        frv = meta.get("final_root_value")
+        if frv is not None:
+            coverage["final_root_value"] += 1
+            final_root_value_arr.append(float(frv))
+            has_any_persistence_stat = True
+
+        fts = meta.get("final_top1_share")
+        if fts is not None:
+            coverage["final_top1_share"] += 1
+            final_top1_share_arr.append(float(fts))
+            has_any_persistence_stat = True
+
+        # meta.compute subkeys are tracked independently — missing != 0
+        comp = meta.get("compute") or {}
+        le = comp.get("leaf_evals")
+        if le is not None:
+            coverage["compute.leaf_evals"] += 1
+            leaf_evals_arr.append(int(le))
+            has_any_persistence_stat = True
+        bk = comp.get("backups")
+        if bk is not None:
+            coverage["compute.backups"] += 1
+            backups_arr.append(int(bk))
+            has_any_persistence_stat = True
+        nb = comp.get("nn_batches")
+        if nb is not None:
+            coverage["compute.nn_batches"] += 1
+            nn_batches_arr.append(int(nb))
+            has_any_persistence_stat = True
+
+        if has_any_persistence_stat:
+            n_games_with_any_stats += 1
+
     # --- game_length distribution ---
     if coverage["n_moves"] > 0:
         arr = np.asarray(n_moves_arr, dtype=np.float64)
@@ -424,14 +476,75 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
     else:
         game_length = None
 
-    # --- Build output (persistence-era blocks filled in Tasks 2 and 3) ---
+    # --- Persistence-era distribution blocks ---
+    def _percentiles_block(arr, *, include_total=False, int_minmax=False):
+        a = np.asarray(arr, dtype=np.float64)
+        block = {
+            "mean": float(a.mean()),
+            "p50":  float(np.percentile(a, 50)),
+            "p90":  float(np.percentile(a, 90)),
+            "p95":  float(np.percentile(a, 95)),
+            "p99":  float(np.percentile(a, 99)),
+            "max":  int(a.max()) if int_minmax else float(a.max()),
+            "min":  int(a.min()) if int_minmax else float(a.min()),
+        }
+        if include_total:
+            block["total"] = float(a.sum())
+        return block
+
+    wall_time_block = _percentiles_block(wall_time_arr, include_total=True) if wall_time_arr else None
+
+    if final_root_value_arr:
+        a = np.asarray(final_root_value_arr, dtype=np.float64)
+        final_root_value_block = {
+            "mean":     float(a.mean()),
+            "p10":      float(np.percentile(a, 10)),
+            "p50":      float(np.percentile(a, 50)),
+            "p90":      float(np.percentile(a, 90)),
+            "abs_mean": float(np.abs(a).mean()),
+        }
+    else:
+        final_root_value_block = None
+
+    if final_top1_share_arr:
+        a = np.asarray(final_top1_share_arr, dtype=np.float64)
+        final_top1_share_block = {
+            "mean": float(a.mean()),
+            "p10":  float(np.percentile(a, 10)),
+            "p50":  float(np.percentile(a, 50)),
+            "p90":  float(np.percentile(a, 90)),
+            "min":  float(a.min()),
+        }
+    else:
+        final_top1_share_block = None
+
+    def _compute_subblock(arr):
+        if not arr:
+            return None
+        a = np.asarray(arr, dtype=np.float64)
+        return {
+            "mean": float(a.mean()),
+            "p50":  int(np.percentile(a, 50)),
+            "p90":  int(np.percentile(a, 90)),
+            "max":  int(a.max()),
+        }
+
+    compute_per_game_block = None
+    if leaf_evals_arr or backups_arr or nn_batches_arr:
+        compute_per_game_block = {
+            "leaf_evals": _compute_subblock(leaf_evals_arr),
+            "backups":    _compute_subblock(backups_arr),
+            "nn_batches": _compute_subblock(nn_batches_arr),
+        }
+
+    # --- Build output (worker_balance body filled in Task 3) ---
     return {
         "n_games_total": n_games_total,
         "n_games_with_any_stats": n_games_with_any_stats,
         "coverage": coverage,
         "game_length": game_length,
         "outcomes": outcomes,
-        "wall_time_s": None,           # Task 2 fills this in
+        "wall_time_s": wall_time_block,
         "worker_balance": {            # Task 3 fills the body of this
             "by_worker": {},
             "in_process_count": 0,
@@ -439,9 +552,9 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
             "max_min_games_ratio": None,
             "wall_time_cv": None,
         },
-        "final_root_value": None,      # Task 2 fills this in
-        "final_top1_share": None,      # Task 2 fills this in
-        "compute_per_game": None,      # Task 2 fills this in
+        "final_root_value": final_root_value_block,
+        "final_top1_share": final_top1_share_block,
+        "compute_per_game": compute_per_game_block,
     }
 
 
