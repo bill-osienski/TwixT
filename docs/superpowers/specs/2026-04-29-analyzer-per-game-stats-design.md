@@ -34,7 +34,7 @@ The operator's stated workflow is: read `summary.json` and `report.txt` after a 
 - **No `adjudication_block_reason` per-game histogram.** The sidecar already aggregates this as `adjudication.blocks.{ply,threshold,visits,top1}` and `report.txt` already prints it. Per-game version would be redundant.
 - **No new heatmap figures or matplotlib plots.** Text-first; figures are a future enhancement if needed.
 - **No CSV emitters.** Existing CSV outputs (`replay_cap_by_iter.csv` etc.) are unaffected. Adding per-game-stats CSVs is a separate decision.
-- **No backfill of old games.** Old replays without the new fields are silently excluded from per-stat aggregations and reflected in `n_games_with_stats`.
+- **No backfill of old games.** Old replays without the new fields are silently excluded from per-stat aggregations and reflected in `n_games_with_any_stats`.
 
 ## 4. JSON schema (`summary.json` `per_game_stats` block)
 
@@ -52,7 +52,8 @@ A single new top-level key in `summary.json`, sibling of the existing `compute` 
     "compute.leaf_evals":   812,
     "compute.backups":      812,
     "compute.nn_batches":   805,
-    "n_moves":             1234           // pre-existing field; 100% coverage on a normal run
+    "n_moves":             1234,          // pre-existing field; 100% coverage on a well-formed run
+    "reason":              1234           // pre-existing field; 100% coverage on a well-formed run
   },
   "game_length": {                        // from meta.n_moves; null only on n_games_total == 0
     "mean": 126.4, "p50": 118, "p90": 211, "p95": 244, "p99": 286, "max": 312, "min": 12
@@ -113,9 +114,9 @@ A single new top-level key in `summary.json`, sibling of the existing `compute` 
 |---|---|---|
 | `n_games_total` | int | always set; 0 if no replays loaded |
 | `n_games_with_any_stats` | int | always set; 0 if every replay is from before the persistence change |
-| `coverage` | object | always set; each entry is an int count of replays where the field is non-null. Subkeys for `compute.*` use dotted notation (`"compute.leaf_evals"`). `n_moves` is always counted (it's a pre-existing field). |
-| `game_length` | object \| null | null only when `n_games_total == 0` (n_moves is pre-existing and present on every replay) |
-| `outcomes` | object | always set when `n_games_total > 0`; integer counts. Categories are mutually exclusive: `decisive`, `resign`, `adjudicated`, `timeout`, `draw_other`. `meta.reason` values not in those categories fall into `draw_other`. |
+| `coverage` | object | always set; each entry is an int count of replays where the field is non-null. Subkeys for `compute.*` use dotted notation (`"compute.leaf_evals"`). Includes `n_moves` and `reason` so malformed-replay rates are auditable. |
+| `game_length` | object \| null | null when `coverage.n_moves == 0` (no replay carries `meta.n_moves`). On well-formed runs `coverage.n_moves == n_games_total`. |
+| `outcomes` | object | always set when `n_games_total > 0`; integer counts. Categories are mutually exclusive: `decisive`, `resign`, `adjudicated`, `timeout`, `draw_other`. `meta.reason` values not in those categories — including replays where `reason` is missing/null — fall into `draw_other`. The `coverage.reason` count + the `outcomes.draw_other` count let you tell "missing reason" from "actual rare draw." |
 | `wall_time_s` | object \| null | null when `coverage.wall_time_s == 0` |
 | `worker_balance.by_worker` | object | empty `{}` if no replay carries a non-null integer `worker_id` |
 | `worker_balance.in_process_count` | int | always set |
@@ -203,12 +204,13 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
 ```
 
 Behavior:
+- **Worker identity comes solely from `meta.worker_id`.** Never infer it from filename, sidecar, or any other source. The aggregator treats this as the single source of truth.
 - One pass over the replay list. For each replay:
-  - Always extract `meta.n_moves` (defaulting to 0 if absent — but absent shouldn't happen since it's a required pre-existing field).
-  - Always extract `meta.reason` and bin into the five outcome categories.
+  - Extract `meta.n_moves` if present and non-null (treat missing as MISSING, same convention as other fields). Increment `coverage["n_moves"]` only when present.
+  - Extract `meta.reason` if present and non-null. Increment `coverage["reason"]` only when present. For outcome categorization: present+recognized values bin into the four real categories (`decisive`, `resign`, `adjudicated`, `timeout`); present-but-unrecognized OR missing values bin into `draw_other`.
   - For each persistence-era field, extract only if non-null. Append to the field's accumulator AND increment the field's coverage counter.
   - For `meta.compute.{leaf_evals,backups,nn_batches}`, treat each subkey independently: if `meta.compute` is present and the subkey is present and non-null, append to that subkey's accumulator and increment `coverage["compute.<subkey>"]`. Missing subkey = excluded.
-  - For `worker_id`: if integer, accumulate per-worker totals (games count + n_moves total + wall_time list); if `null`, increment `in_process_count`.
+  - For `worker_id`: if integer, accumulate per-worker totals (games count + n_moves total + wall_time list) and increment `coverage["worker_id"]`; if explicitly `null`, increment `in_process_count` and increment `coverage["worker_id"]` (the field IS present and explicitly null = persistence-era in-process game); if absent (key not in `meta`), do not touch `coverage["worker_id"]` and do not bucket the game.
 - After the pass:
   - Compute means/percentiles/max/min/total per accumulator using `numpy.percentile` (default linear interpolation).
   - For `worker_balance`: compute `max_min_wall_time_ratio` (max/min of per-worker `wall_time_total_s`, only when ≥ 2 workers have wall_time_s); `max_min_games_ratio` (max/min of per-worker `games`, only when ≥ 2 workers); `wall_time_cv` (stddev/mean of per-worker `wall_time_total_s`, only when ≥ 2 workers carry wall_time_s; uses ddof=0 to match `numpy.std` default).
@@ -254,7 +256,7 @@ That's it — three call-site additions and two new functions, all in one file.
 
 | Case | Behavior |
 |---|---|
-| No replays loaded (`replays == []`) | `per_game_stats = {"n_games_total": 0, "n_games_with_any_stats": 0, "coverage": {<all keys>: 0}, "game_length": null, "outcomes": {<all categories>: 0}, "wall_time_s": null, "worker_balance": {"by_worker": {}, "in_process_count": 0, "max_min_wall_time_ratio": null, "max_min_games_ratio": null, "wall_time_cv": null}, "final_root_value": null, "final_top1_share": null, "compute_per_game": null}` |
+| No replays loaded (`replays == []`) | `per_game_stats = {"n_games_total": 0, "n_games_with_any_stats": 0, "coverage": {<all keys>: 0, including n_moves and reason}, "game_length": null, "outcomes": {<all categories>: 0}, "wall_time_s": null, "worker_balance": {"by_worker": {}, "in_process_count": 0, "max_min_wall_time_ratio": null, "max_min_games_ratio": null, "wall_time_cv": null}, "final_root_value": null, "final_top1_share": null, "compute_per_game": null}` |
 | All replays old-schema (no new persistence fields) | `n_games_with_any_stats == 0`; all persistence-era distribution blocks `null`; `coverage.<persistence-era keys>` all 0; `worker_balance.by_worker == {}`. `game_length` and `outcomes` still populated from pre-existing fields. Report renders the short "no games carry new persistence fields" message after the game_length / outcomes lines. |
 | Mixed coverage (some old, some new) | Aggregates over only the games carrying each field. Per-field counts in `coverage`. Report header shows ratio; `Coverage:` line printed when coverage is non-uniform. |
 | `final_top1_share` outside (0, 1] in some game (shouldn't happen given upstream invariants, but defensive) | Included in stats as-is. No clamping. Out-of-range values surface naturally in min/max if they occur. |
@@ -264,14 +266,17 @@ That's it — three call-site additions and two new functions, all in one file.
 | `meta.compute` present but missing one of three subkeys | The missing subkey is treated as MISSING (not 0). That game does not contribute to that subkey's stats. `coverage["compute.<subkey>"]` reflects this. |
 | `meta.compute` is `null` or absent | Game does not contribute to any `compute_per_game` subkey. All three coverage counters unchanged for this game. |
 | `meta.reason` value not in any of the five outcome categories | Counted in `outcomes.draw_other` (catch-all bucket — keeps the five categories mutually exclusive and total == n_games_total). |
-| `meta` missing entirely (extremely defensive — analyzer already uses `.get()` for this) | Treated as old-schema replay; excluded from new-stat aggregates; `meta.n_moves` and `meta.reason` access via `.get()` defaults `n_moves=0`, `reason="unknown"` → `outcomes.draw_other`. |
+| `meta` missing entirely (extremely defensive — analyzer already uses `.get()` for this) | Treated as old-schema replay; excluded from new-stat aggregates; `n_moves` and `reason` access fail safely → not counted in `coverage`; counted in `outcomes.draw_other` (since reason is effectively absent). |
+| `meta.n_moves` missing or null | Excluded from `game_length` stats; `coverage["n_moves"]` not incremented; `n_games_total` still increments (the replay was loaded). |
+| `meta.reason` missing or null | Counted in `outcomes.draw_other`; `coverage["reason"]` not incremented. The two together — low `coverage.reason` + non-zero `draw_other` — diagnose corrupted replay metadata. |
+| Worker identity inferred from filename or sidecar | **Explicitly forbidden.** Only `meta.worker_id` (when present and integer) determines per-worker bucketing. |
 | Per-worker `wall_time_total_s == 0` (would div-by-zero in `max_min_wall_time_ratio`) | Exclude that worker from the ratio computation; if fewer than 2 workers remain, ratio is `null`. |
 | All per-worker `wall_time_total_s` equal | `max_min_wall_time_ratio == 1.0`, `wall_time_cv == 0.0`. |
 
 ## 8. Backward compatibility
 
 - **Existing summary.json consumers**: the new `per_game_stats` key is purely additive at the top level. Anything reading `summary["compute"]` or `summary["adjudication"]` is unaffected. The original `report.txt` sections appear in the same order with the same content; the new section is added between the existing `Compute:` line and whatever follows it.
-- **Old replays on disk** (saved before the persistence change): silently handled — they show up in `n_games_total` but not in `n_games_with_stats`.
+- **Old replays on disk** (saved before the persistence change): silently handled — they show up in `n_games_total` but not in `n_games_with_any_stats`.
 - **No analyzer-level CLI change**: no new flags. The new aggregation always runs; cost is one extra linear pass over the replay list (negligible vs the existing per-replay loop).
 
 ## 9. Test plan
@@ -301,9 +306,9 @@ New file `tests/test_analyzer_per_game_stats.py`. Pattern mirrors `tests/test_an
 
 ### 9.1 End-to-end smoke test
 
-12. **`test_analyzer_run_produces_per_game_stats_in_summary_json`** — fixture with 3 synthetic replay JSONs written to `tmp_path`, invoke the analyzer's main flow programmatically (or through `subprocess.run`), assert `summary.json` has the `per_game_stats` block and `report.txt` contains the "Per-game stats" section header.
+**21. (optional) `test_analyzer_run_produces_per_game_stats_in_summary_json`** — fixture with 3 synthetic replay JSONs written to `tmp_path`, invoke the analyzer's main flow programmatically (or through `subprocess.run`), assert `summary.json` has the `per_game_stats` block and `report.txt` contains the "Per-game stats" section header.
 
-If invoking the analyzer's CLI proves heavy, this single test can be skipped and the surface-level integration is implicit from tests 1–11 plus the existing analyzer regression suite.
+If invoking the analyzer's CLI proves heavy, this single test can be skipped and the surface-level integration is implicit from tests 1–20 plus the existing analyzer regression suite.
 
 ### 9.2 Existing analyzer test regression
 
@@ -316,9 +321,9 @@ Run before commit, must stay green:
 
 Two commits.
 
-1. **`feat(analyzer): aggregate per-game stats from replays`** — `scripts/twixt_replay_analyzer.py` changes (new `aggregate_per_game_stats`, new `format_per_game_stats_report`, two integration call sites) + new `tests/test_analyzer_per_game_stats.py` (tests 1–11). Run `.venv/bin/python -m pytest tests/test_analyzer_per_game_stats.py -v` and the four-file analyzer regression. Both green → commit.
+1. **`feat(analyzer): aggregate per-game stats from replays`** — `scripts/twixt_replay_analyzer.py` changes (new `aggregate_per_game_stats`, new `format_per_game_stats_report`, two integration call sites) + new `tests/test_analyzer_per_game_stats.py` (tests 1–20). Run `.venv/bin/python -m pytest tests/test_analyzer_per_game_stats.py -v` and the four-file analyzer regression. Both green → commit. (The implementation plan that follows this spec may decompose this single commit into multiple, more bite-sized commits — that is preferred for review purposes.)
 
-2. **`test(analyzer): end-to-end smoke test for per-game stats in summary.json`** — only if test 12 in §9.1 is included (decide during implementation based on cost). Skip this commit if the test proves too heavy; the unit-level coverage is already comprehensive.
+2. **`test(analyzer): end-to-end smoke test for per-game stats in summary.json`** — only if optional test 21 in §9.1 is included (decide during implementation based on cost). Skip this commit if the test proves too heavy; the unit-level coverage from tests 1–20 is already comprehensive.
 
 ## 11. Verification
 
@@ -334,7 +339,7 @@ cat /tmp/analyzer_smoke_out/summary.json | python -m json.tool | grep -A 30 per_
 grep -A 6 "Per-game stats" /tmp/analyzer_smoke_out/report.txt
 ```
 
-Expected: `per_game_stats` block present in `summary.json` with non-zero `n_games_with_stats` (assuming any post-persistence games are on disk), and the new section visible in `report.txt`.
+Expected: `per_game_stats` block present in `summary.json` with non-zero `n_games_with_any_stats` (assuming any post-persistence games are on disk), and the new section visible in `report.txt`.
 
 ## 12. Out of scope
 
