@@ -251,6 +251,9 @@ def _worker_loop(
                 opening_diagnostics_meta=game.opening_diagnostics_meta,
                 n_positions_original=game.n_positions_original,
                 n_positions_kept=game.n_positions_kept,
+                # Per-game stats persistence (spec 2026-04-29)
+                final_root_value=game.final_root_value,
+                final_top1_share=game.final_top1_share,
             ))
 
         # Periodic stats

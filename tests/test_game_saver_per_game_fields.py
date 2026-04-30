@@ -118,3 +118,32 @@ def test_game_record_has_new_optional_fields_with_none_defaults():
     assert record.wall_time_s is None
     assert record.final_root_value is None
     assert record.final_top1_share is None
+
+
+def test_game_complete_has_new_optional_fields_with_none_defaults():
+    """GameComplete IPC message gains final_root_value, final_top1_share."""
+    from scripts.GPU.alphazero.ipc_messages import GameComplete
+
+    msg = GameComplete(
+        worker_id=0,
+        winner="red",
+        draw_reason=0,
+        n_moves=10,
+        n_positions=10,
+        wall_time_s=1.5,
+        nn_calls=100,
+        expand_calls=100,
+        nn_batches=10,
+        total_backups=100,
+        total_waiters=0,
+        unique_leaves=100,
+        max_waiters=0,
+        flush_full=0,
+        flush_stall=0,
+        flush_tail=0,
+    )
+
+    assert hasattr(msg, "final_root_value")
+    assert hasattr(msg, "final_top1_share")
+    assert msg.final_root_value is None
+    assert msg.final_top1_share is None

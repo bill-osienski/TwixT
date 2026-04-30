@@ -101,3 +101,8 @@ class GameComplete:
     # Phase 4: per-game replay cap diagnostics
     n_positions_original: int = 0
     n_positions_kept: int = 0
+    # Per-game stats persistence (spec 2026-04-29): final-root MCTS snapshot
+    # at the last completed root search before the game ended. None when no
+    # MCTS search ran or root had no children with visits.
+    final_root_value: Optional[float] = None
+    final_top1_share: Optional[float] = None
