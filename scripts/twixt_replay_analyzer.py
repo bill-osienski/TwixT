@@ -2606,8 +2606,10 @@ def analyze(replays: List[dict],
         lines.append(f"Compute: buffer_size={comp['buffer_size']}, backups={comp['backups']}, leaf_evals={comp['leaf_evals']}, nn_batches={comp['nn_batches']}")
         lines.append("")
 
-        # Per-game stats triage section (spec 2026-04-29).
-        lines.extend(format_per_game_stats_report(summary["per_game_stats"]))
+    # Per-game stats triage section (spec 2026-04-29). Rendered for both
+    # sidecar and replay_fallback modes — the section's own null-handling
+    # covers the all-old-schema case per spec §7 / §5.1.
+    lines.extend(format_per_game_stats_report(summary["per_game_stats"]))
 
     if _HAS_OD_ANALYZER and od_summary_dict:
         lines.extend(format_opening_diagnostics_report(od_summary_dict, od_by_ply_dict, od_warnings))
