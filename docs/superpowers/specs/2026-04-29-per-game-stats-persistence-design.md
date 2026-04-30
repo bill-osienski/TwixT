@@ -119,7 +119,7 @@ Two record types hold the new fields, one per call path:
   final_root_value: Optional[float] = None
   final_top1_share: Optional[float] = None
   ```
-  In `self_play.run_game(...)` where `GameRecord` is constructed (`self_play.py:813`), populate `final_root_value` / `final_top1_share` from `mcts._final_root_value` / `mcts._final_top1_share`. Measure `wall_time_s` with a `time.perf_counter()` bracket around the game loop.
+  In `self_play.play_game(...)` (`self_play.py:430`), where `GameRecord` is constructed at the return statement (`self_play.py:813`), populate `final_root_value` / `final_top1_share` from `mcts._final_root_value` / `mcts._final_top1_share`. Measure `wall_time_s` with a `time.perf_counter()` bracket from the start of `play_game` to just before the return. (`time` is not currently imported in `self_play.py` — add `import time` to the import block.)
 
 - **`ipc_messages.GameComplete`** (`ipc_messages.py:59`) — used by the worker-IPC path. Add:
   ```python
