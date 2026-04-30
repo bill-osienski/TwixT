@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-29
 **Author:** brainstormed with Bill
-**Status:** Design approved, awaiting implementation plan
+**Status:** Design approved, ready for implementation
 **Touches:** `scripts/GPU/alphazero/mcts.py`, `scripts/GPU/alphazero/self_play.py`, `scripts/GPU/alphazero/ipc_messages.py`, `scripts/GPU/alphazero/self_play_worker.py`, `scripts/GPU/alphazero/game_saver.py`, `scripts/GPU/alphazero/trainer.py`, `tests/test_game_saver_per_game_fields.py` (new)
 
 ## 1. Problem
