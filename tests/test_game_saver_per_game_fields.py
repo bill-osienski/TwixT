@@ -104,3 +104,17 @@ def test_mcts_capture_final_root_stats_zero_visits_returns_none_share():
 
     assert mcts._final_top1_share is None
     assert mcts._final_root_value == 0.0  # root.q_value with visit_count==0
+
+
+def test_game_record_has_new_optional_fields_with_none_defaults():
+    """GameRecord schema gains wall_time_s, final_root_value, final_top1_share."""
+    from scripts.GPU.alphazero.self_play import GameRecord
+
+    record = GameRecord(positions=[], winner=None, n_moves=0)
+
+    assert hasattr(record, "wall_time_s")
+    assert hasattr(record, "final_root_value")
+    assert hasattr(record, "final_top1_share")
+    assert record.wall_time_s is None
+    assert record.final_root_value is None
+    assert record.final_top1_share is None

@@ -14,6 +14,7 @@ from __future__ import annotations
 import gc
 import os
 import random
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
@@ -404,6 +405,15 @@ class GameRecord:
     # n_positions_kept     = positions retained after cap (what trainer sees)
     n_positions_original: int = 0
     n_positions_kept: int = 0
+    # Per-game stats persistence (spec 2026-04-29):
+    # wall_time_s: per-game wall-clock duration; trainer/IPC paths both populate.
+    # final_root_value / final_top1_share: snapshot from the last completed
+    # MCTS root search before the game ended (mcts._final_root_value /
+    # mcts._final_top1_share). None only in degenerate cases (no search ran,
+    # or root had no children with visits).
+    wall_time_s: Optional[float] = None
+    final_root_value: Optional[float] = None
+    final_top1_share: Optional[float] = None
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -481,6 +491,7 @@ def play_game(
     Returns:
         GameRecord with all positions and outcomes assigned
     """
+    game_t0 = time.perf_counter()
     mcts_config = mcts_config or MCTSConfig()
     rng = rng or random.Random()
 
@@ -861,6 +872,10 @@ def play_game(
         },
         n_positions_original=n_positions_original,
         n_positions_kept=n_positions_kept,
+        # Per-game stats persistence (spec 2026-04-29)
+        wall_time_s=time.perf_counter() - game_t0,
+        final_root_value=mcts._final_root_value,
+        final_top1_share=mcts._final_top1_share,
     )
 
 
