@@ -92,7 +92,8 @@ Add one private helper:
 
 ```python
 def _capture_final_root_stats(self, root: MCTSNode) -> None:
-    self._final_root_value = getattr(root, "q_value", None)
+    value = getattr(root, "q_value", None)
+    self._final_root_value = float(value) if value is not None else None
     children = list(getattr(root, "children", {}).values())
     if not children:
         self._final_top1_share = None
@@ -102,8 +103,10 @@ def _capture_final_root_stats(self, root: MCTSNode) -> None:
         self._final_top1_share = None
         return
     top_visits = max(getattr(c, "visit_count", 0) for c in children)
-    self._final_top1_share = top_visits / total_visits
+    self._final_top1_share = float(top_visits / total_visits)
 ```
+
+Both values are coerced to Python `float` in the helper itself so downstream JSON serialization is straightforward and the type contract is uniform regardless of caller.
 
 Call `self._capture_final_root_stats(root)` at the end of **both** `MCTS.search()` (`mcts.py:299`) and `MCTS.search_from_root()` (`mcts.py:429`), after the `visit_counts` debug-assert block but before the return. Pure observation; reads `root.q_value` and `root.children` after the search has finished. No effect on visit counts, move selection, RNG, batching, or returned tuples.
 
