@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-28
 **Author:** brainstormed with Bill
-**Status:** Design approved, awaiting implementation plan
+**Status:** Implemented and merged to main
 **Touches:** `scripts/build_probe_suite.py`, `scripts/GPU/alphazero/probe_eval.py`, `docs/probe-suite-generation.md`, `tests/probes/README.md`
 
 ## 1. Problem
