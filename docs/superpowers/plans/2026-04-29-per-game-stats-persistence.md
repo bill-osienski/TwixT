@@ -85,10 +85,12 @@ def test_mcts_capture_final_root_stats_after_search_from_root():
     mcts.search_from_root(root, add_noise=False)
 
     assert mcts._final_root_value is not None, "final_root_value should be set after search"
+    # Helper coerces to Python float — exact-type check is safe.
     assert isinstance(mcts._final_root_value, float)
     # Under MCTS numeric invariants this is finite; we don't assert range
     # tightly because spec keeps the bound informal.
     assert mcts._final_top1_share is not None, "final_top1_share should be set after search"
+    assert isinstance(mcts._final_top1_share, float)
     assert 0.0 < mcts._final_top1_share <= 1.0, (
         f"final_top1_share out of range: {mcts._final_top1_share}"
     )
@@ -120,9 +122,11 @@ Expected: **FAIL** with `AttributeError: 'MCTS' object has no attribute '_final_
 
         Pure observation — does not mutate the tree, RNG, or counters.
         Sets self._final_root_value and self._final_top1_share for the trainer
-        to read after the game's last move.
+        to read after the game's last move. Both values are coerced to Python
+        float so JSON serialization downstream is straightforward.
         """
-        self._final_root_value = getattr(root, "q_value", None)
+        value = getattr(root, "q_value", None)
+        self._final_root_value = float(value) if value is not None else None
         children = list(getattr(root, "children", {}).values())
         if not children:
             self._final_top1_share = None
@@ -132,7 +136,7 @@ Expected: **FAIL** with `AttributeError: 'MCTS' object has no attribute '_final_
             self._final_top1_share = None
             return
         top_visits = max(getattr(c, "visit_count", 0) for c in children)
-        self._final_top1_share = top_visits / total_visits
+        self._final_top1_share = float(top_visits / total_visits)
 ```
 
 ### Step 4: Call the helper at the end of search_from_root
@@ -187,6 +191,7 @@ def test_mcts_search_vanilla_also_captures():
     assert mcts._final_root_value is not None
     assert isinstance(mcts._final_root_value, float)
     assert mcts._final_top1_share is not None
+    assert isinstance(mcts._final_top1_share, float)
     assert 0.0 < mcts._final_top1_share <= 1.0
 ```
 
@@ -470,7 +475,9 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Modify: `scripts/GPU/alphazero/self_play_worker.py:219-254` (`GameComplete` construction)
 - Test: `tests/test_game_saver_per_game_fields.py` (append)
 
-### Step 1: Write the GameComplete schema test
+### Step 1: Verify GameComplete required-fields shape, then write schema test
+
+Before writing the test, **inspect** `scripts/GPU/alphazero/ipc_messages.py` to confirm the current set of required (no-default) fields on `GameComplete`. The plan below assumes the shape recorded in the spec at the time of writing (16 required fields ending at `flush_tail`). If new required fields have been added since, include neutral defaults for them in the test constructor too.
 
 - [ ] Append to `tests/test_game_saver_per_game_fields.py`:
 
@@ -979,7 +986,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Step 1: Read the existing inline save blocks for accurate refactoring
 
-- [ ] `Read scripts/GPU/alphazero/trainer.py:1490-1525` and `scripts/GPU/alphazero/trainer.py:2480-2510` to confirm the current inline structure (draw_reason translation, resigned_by derivation, opening_diagnostics handling) before extracting helpers.
+- [ ] `Read scripts/GPU/alphazero/trainer.py:1490-1525` and `scripts/GPU/alphazero/trainer.py:2480-2510` to confirm the current inline structure (draw_reason translation, resigned_by derivation, opening_diagnostics handling) before extracting helpers. Also re-check `ipc_messages.GameComplete` for the current required-field shape — the routing tests in steps 5 and 9 must include neutral defaults for any required field added since this plan was written.
 
 ### Step 2: Extract `_save_game_from_ipc` helper
 
