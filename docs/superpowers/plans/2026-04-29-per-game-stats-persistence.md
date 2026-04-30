@@ -29,7 +29,7 @@
 ## Task 1: MCTS final-root instrumentation
 
 **Files:**
-- Modify: `scripts/GPU/alphazero/mcts.py:200-225` (`__init__`), `:286-299` (end of `search()`), `:416-429` (end of `search_from_root()`), and add a private helper method below `_init__`.
+- Modify: `scripts/GPU/alphazero/mcts.py:200-225` (`__init__`), `:286-299` (end of `search()`), `:416-429` (end of `search_from_root()`), and add a private helper method below `__init__`.
 - Test: `tests/test_game_saver_per_game_fields.py` (create)
 
 ### Step 1: Create the test file with the first MCTS instrumentation test
