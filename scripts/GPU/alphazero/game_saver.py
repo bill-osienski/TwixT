@@ -27,6 +27,15 @@ def save_game_replay(
     resigned_by: Optional[str] = None,
     opening_diagnostics: Optional[list] = None,
     opening_diagnostics_meta: Optional[dict] = None,
+    # Per-game stats persistence (spec 2026-04-29)
+    worker_id: Optional[int] = None,
+    wall_time_s: Optional[float] = None,
+    adjudication_block_reason: Optional[str] = None,
+    final_root_value: Optional[float] = None,
+    final_top1_share: Optional[float] = None,
+    leaf_evals: int = 0,
+    backups: int = 0,
+    nn_batches: int = 0,
 ) -> Path:
     """Save a single game in replay-compatible format.
 
@@ -93,6 +102,20 @@ def save_game_replay(
     # Add resigned_by only for resign games
     if reason == "resign" and resigned_by:
         meta["resigned_by"] = resigned_by
+
+    # Per-game stats persistence (spec 2026-04-29).
+    # Nullable flat fields use explicit None checks so 0.0 is preserved.
+    # Compute counters always present; None upstream → 0 (counters are non-negative).
+    meta["worker_id"] = int(worker_id) if worker_id is not None else None
+    meta["wall_time_s"] = float(wall_time_s) if wall_time_s is not None else None
+    meta["adjudication_block_reason"] = adjudication_block_reason
+    meta["final_root_value"] = float(final_root_value) if final_root_value is not None else None
+    meta["final_top1_share"] = float(final_top1_share) if final_top1_share is not None else None
+    meta["compute"] = {
+        "leaf_evals": int(leaf_evals or 0),
+        "backups": int(backups or 0),
+        "nn_batches": int(nn_batches or 0),
+    }
 
     record = {
         "id": f"iter_{iteration:04d}_game_{game_idx:03d}",
@@ -161,6 +184,15 @@ class GameSaver:
         resigned_by: Optional[str] = None,
         opening_diagnostics: Optional[list] = None,
         opening_diagnostics_meta: Optional[dict] = None,
+        # Per-game stats persistence (spec 2026-04-29)
+        worker_id: Optional[int] = None,
+        wall_time_s: Optional[float] = None,
+        adjudication_block_reason: Optional[str] = None,
+        final_root_value: Optional[float] = None,
+        final_top1_share: Optional[float] = None,
+        leaf_evals: int = 0,
+        backups: int = 0,
+        nn_batches: int = 0,
     ) -> Optional[Path]:
         """Save game if we haven't reached the limit for this iteration.
 
@@ -190,6 +222,15 @@ class GameSaver:
             resigned_by=resigned_by,
             opening_diagnostics=opening_diagnostics,
             opening_diagnostics_meta=opening_diagnostics_meta,
+            # Per-game stats persistence (spec 2026-04-29)
+            worker_id=worker_id,
+            wall_time_s=wall_time_s,
+            adjudication_block_reason=adjudication_block_reason,
+            final_root_value=final_root_value,
+            final_top1_share=final_top1_share,
+            leaf_evals=leaf_evals,
+            backups=backups,
+            nn_batches=nn_batches,
         )
 
         self._games_saved_this_iter += 1

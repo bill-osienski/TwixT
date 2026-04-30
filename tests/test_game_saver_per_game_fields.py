@@ -147,3 +147,122 @@ def test_game_complete_has_new_optional_fields_with_none_defaults():
     assert hasattr(msg, "final_top1_share")
     assert msg.final_root_value is None
     assert msg.final_top1_share is None
+
+
+def test_save_record_with_all_new_fields_populated(tmp_path):
+    """save_game_replay writes all new fields under meta in the documented schema."""
+    import json
+    from scripts.GPU.alphazero.game_saver import save_game_replay
+
+    filepath = save_game_replay(
+        games_dir=tmp_path,
+        iteration=12,
+        game_idx=3,
+        winner="red",
+        move_history=((0, 0), (1, 1), (2, 2)),
+        n_moves=3,
+        active_size=24,
+        simulations=200,
+        start_player="red",
+        # New per-game stats kwargs
+        worker_id=2,
+        wall_time_s=14.27,
+        adjudication_block_reason="ply",
+        final_root_value=0.83,
+        final_top1_share=0.62,
+        leaf_evals=17400,
+        backups=17400,
+        nn_batches=850,
+    )
+
+    record = json.loads(filepath.read_text())
+    meta = record["meta"]
+
+    # New flat diagnostic fields
+    assert meta["worker_id"] == 2
+    assert meta["wall_time_s"] == 14.27
+    assert meta["adjudication_block_reason"] == "ply"
+    assert meta["final_root_value"] == 0.83
+    assert meta["final_top1_share"] == 0.62
+
+    # New compute block
+    assert meta["compute"] == {"leaf_evals": 17400, "backups": 17400, "nn_batches": 850}
+
+    # Pre-existing meta keys still present and unchanged
+    for key in ("board_size", "mode", "reason", "iteration", "game_idx",
+               "simulations", "n_moves", "starting_player"):
+        assert key in meta, f"pre-existing meta key {key!r} missing"
+    assert meta["iteration"] == 12
+    assert meta["game_idx"] == 3
+
+
+def test_save_record_with_no_new_fields_uses_safe_defaults(tmp_path):
+    """When new kwargs are unspecified, compute is zeros and flat fields are null."""
+    import json
+    from scripts.GPU.alphazero.game_saver import save_game_replay
+
+    filepath = save_game_replay(
+        games_dir=tmp_path,
+        iteration=0,
+        game_idx=0,
+        winner=None,
+        move_history=((0, 0),),
+        n_moves=1,
+    )
+
+    meta = json.loads(filepath.read_text())["meta"]
+
+    assert meta["compute"] == {"leaf_evals": 0, "backups": 0, "nn_batches": 0}
+    assert meta["worker_id"] is None
+    assert meta["wall_time_s"] is None
+    assert meta["adjudication_block_reason"] is None
+    assert meta["final_root_value"] is None
+    assert meta["final_top1_share"] is None
+
+
+def test_compute_counter_none_coerces_to_zero(tmp_path):
+    """leaf_evals=None / backups=None / nn_batches=None must coerce to 0, not crash."""
+    import json
+    from scripts.GPU.alphazero.game_saver import save_game_replay
+
+    filepath = save_game_replay(
+        games_dir=tmp_path,
+        iteration=0,
+        game_idx=0,
+        winner=None,
+        move_history=((0, 0),),
+        n_moves=1,
+        leaf_evals=None,
+        backups=None,
+        nn_batches=None,
+    )
+
+    meta = json.loads(filepath.read_text())["meta"]
+    assert meta["compute"] == {"leaf_evals": 0, "backups": 0, "nn_batches": 0}
+
+
+def test_float_zero_preserved_distinct_from_null(tmp_path):
+    """wall_time_s=0.0 and final_root_value=0.0 must be preserved as 0.0, not null.
+
+    Catches `or 0.0` truthiness regressions on floats. final_top1_share=None
+    is used because 0.0 is outside the documented (0, 1] range.
+    """
+    import json
+    from scripts.GPU.alphazero.game_saver import save_game_replay
+
+    filepath = save_game_replay(
+        games_dir=tmp_path,
+        iteration=0,
+        game_idx=0,
+        winner=None,
+        move_history=((0, 0),),
+        n_moves=1,
+        wall_time_s=0.0,
+        final_root_value=0.0,
+        final_top1_share=None,
+    )
+
+    meta = json.loads(filepath.read_text())["meta"]
+    assert meta["wall_time_s"] == 0.0
+    assert meta["final_root_value"] == 0.0
+    assert meta["final_top1_share"] is None
