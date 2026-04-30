@@ -224,6 +224,33 @@ class MCTS:
         self._flush_stall = 0  # Stall flushes (tree narrowed)
         self._flush_tail = 0  # Tail flushes (end of sims)
 
+        # Final-root snapshot for per-game stats persistence (spec 2026-04-29).
+        # Updated at the end of every successful root search; trainer reads
+        # these after the game's last move.
+        self._final_root_value: Optional[float] = None
+        self._final_top1_share: Optional[float] = None
+
+    def _capture_final_root_stats(self, root: MCTSNode) -> None:
+        """Snapshot root.q_value and top child visit share after a search.
+
+        Pure observation — does not mutate the tree, RNG, or counters.
+        Sets self._final_root_value and self._final_top1_share for the trainer
+        to read after the game's last move. Both values are coerced to Python
+        float so JSON serialization downstream is straightforward.
+        """
+        value = getattr(root, "q_value", None)
+        self._final_root_value = float(value) if value is not None else None
+        children = list(getattr(root, "children", {}).values())
+        if not children:
+            self._final_top1_share = None
+            return
+        total_visits = sum(getattr(c, "visit_count", 0) for c in children)
+        if total_visits <= 0:
+            self._final_top1_share = None
+            return
+        top_visits = max(getattr(c, "visit_count", 0) for c in children)
+        self._final_top1_share = float(top_visits / total_visits)
+
     def search(
         self,
         root_state: TwixtState,
@@ -295,6 +322,9 @@ class MCTS:
             active = root.state.active_size
             for (r, c) in visit_counts.keys():
                 assert 0 <= r < active and 0 <= c < active, f"Bad move {(r,c)} for active_size={active}"
+
+        # Snapshot final-root stats for per-game persistence (spec 2026-04-29).
+        self._capture_final_root_stats(root)
 
         return visit_counts, root.q_value
 
@@ -425,6 +455,9 @@ class MCTS:
             active = root.state.active_size
             for (r, c) in visit_counts.keys():
                 assert 0 <= r < active and 0 <= c < active, f"Bad move {(r,c)} for active_size={active}"
+
+        # Snapshot final-root stats for per-game persistence (spec 2026-04-29).
+        self._capture_final_root_stats(root)
 
         return visit_counts, root.q_value, root
 
