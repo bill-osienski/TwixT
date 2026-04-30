@@ -375,6 +375,10 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
         "reason": 0,
     }
 
+    # --- Worker balance accumulators ---
+    by_worker = {}              # str(worker_id) → {games, n_moves_total, wall_time_total_s}
+    in_process_count = 0
+
     # --- Accumulators for distribution blocks ---
     n_moves_arr = []
     wall_time_arr = []
@@ -458,6 +462,28 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
             nn_batches_arr.append(int(nb))
             has_any_persistence_stat = True
 
+        # worker_id: integer → bucket; explicit null → in-process; absent → not counted.
+        # Explicit null IS a persistence-era signal (in-process game in new schema),
+        # so we set has_any_persistence_stat regardless of whether wid is None or int.
+        if "worker_id" in meta:
+            coverage["worker_id"] += 1
+            has_any_persistence_stat = True
+            wid = meta["worker_id"]
+            if wid is None:
+                in_process_count += 1
+            else:
+                key = str(int(wid))
+                bucket = by_worker.setdefault(key, {
+                    "games": 0,
+                    "n_moves_total": 0,
+                    "wall_time_total_s": 0.0,
+                })
+                bucket["games"] += 1
+                if n_moves is not None:
+                    bucket["n_moves_total"] += int(n_moves)
+                if wt is not None:
+                    bucket["wall_time_total_s"] += float(wt)
+
         if has_any_persistence_stat:
             n_games_with_any_stats += 1
 
@@ -537,7 +563,41 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
             "nn_batches": _compute_subblock(nn_batches_arr),
         }
 
-    # --- Build output (worker_balance body filled in Task 3) ---
+    # --- Worker balance derived metrics ---
+    # Add wall_time_mean_s to each bucket
+    for bucket in by_worker.values():
+        if bucket["games"] > 0 and bucket["wall_time_total_s"] > 0:
+            bucket["wall_time_mean_s"] = bucket["wall_time_total_s"] / bucket["games"]
+        else:
+            bucket["wall_time_mean_s"] = 0.0
+
+    # max/min games ratio: needs >= 2 distinct workers
+    if len(by_worker) >= 2:
+        games_list = [b["games"] for b in by_worker.values()]
+        gmax = max(games_list)
+        gmin = min(games_list)
+        max_min_games_ratio = float(gmax) / float(gmin) if gmin > 0 else None
+    else:
+        max_min_games_ratio = None
+
+    # max/min wall-time ratio + CV: only over workers with wall_time_total_s > 0,
+    # and only when >= 2 such workers remain.
+    timed_workers = [b for b in by_worker.values() if b["wall_time_total_s"] > 0]
+    if len(timed_workers) >= 2:
+        wt_totals = np.asarray([b["wall_time_total_s"] for b in timed_workers], dtype=np.float64)
+        wt_max = float(wt_totals.max())
+        wt_min = float(wt_totals.min())
+        max_min_wall_time_ratio = wt_max / wt_min  # wt_min > 0 by filter above
+        wt_mean = float(wt_totals.mean())
+        if wt_mean > 0:
+            wall_time_cv = float(wt_totals.std(ddof=0)) / wt_mean
+        else:
+            wall_time_cv = None
+    else:
+        max_min_wall_time_ratio = None
+        wall_time_cv = None
+
+    # --- Build output ---
     return {
         "n_games_total": n_games_total,
         "n_games_with_any_stats": n_games_with_any_stats,
@@ -545,12 +605,12 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
         "game_length": game_length,
         "outcomes": outcomes,
         "wall_time_s": wall_time_block,
-        "worker_balance": {            # Task 3 fills the body of this
-            "by_worker": {},
-            "in_process_count": 0,
-            "max_min_wall_time_ratio": None,
-            "max_min_games_ratio": None,
-            "wall_time_cv": None,
+        "worker_balance": {
+            "by_worker": by_worker,
+            "in_process_count": in_process_count,
+            "max_min_wall_time_ratio": max_min_wall_time_ratio,
+            "max_min_games_ratio": max_min_games_ratio,
+            "wall_time_cv": wall_time_cv,
         },
         "final_root_value": final_root_value_block,
         "final_top1_share": final_top1_share_block,

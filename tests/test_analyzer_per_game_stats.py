@@ -340,3 +340,157 @@ def test_empty_compute_object_does_not_count_as_any_stats():
     assert out["coverage"]["compute.backups"] == 0
     assert out["coverage"]["compute.nn_batches"] == 0
     assert out["compute_per_game"] is None
+
+
+# -------------------------------------------------------------------------
+# Test 5: worker_balance groups by worker_id and computes ratios + CV
+# -------------------------------------------------------------------------
+
+def test_aggregate_worker_balance_groups_by_worker_id():
+    """4 replays from 2 workers with different wall_time_s → all metrics correct."""
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    replays = [
+        # Worker 0: 2 games, total wall_time 30s
+        _make_replay(worker_id=0, wall_time_s=10.0, n_moves=100),
+        _make_replay(worker_id=0, wall_time_s=20.0, n_moves=120),
+        # Worker 1: 2 games, total wall_time 60s
+        _make_replay(worker_id=1, wall_time_s=25.0, n_moves=110),
+        _make_replay(worker_id=1, wall_time_s=35.0, n_moves=130),
+    ]
+    out = aggregate_per_game_stats(replays)
+
+    wb = out["worker_balance"]
+    assert wb["by_worker"]["0"]["games"] == 2
+    assert wb["by_worker"]["0"]["wall_time_total_s"] == 30.0
+    assert wb["by_worker"]["0"]["wall_time_mean_s"] == 15.0
+    assert wb["by_worker"]["1"]["games"] == 2
+    assert wb["by_worker"]["1"]["wall_time_total_s"] == 60.0
+    assert wb["by_worker"]["1"]["wall_time_mean_s"] == 30.0
+    assert wb["in_process_count"] == 0
+    # max/min ratios
+    assert wb["max_min_wall_time_ratio"] == 2.0   # 60 / 30
+    assert wb["max_min_games_ratio"] == 1.0       # 2 / 2
+    # CV: per-worker totals = [30, 60], mean=45, stddev (ddof=0) = sqrt(((30-45)^2 + (60-45)^2)/2) = 15
+    # CV = 15/45 = 0.333...
+    assert abs(wb["wall_time_cv"] - (15.0 / 45.0)) < 1e-9
+
+
+# -------------------------------------------------------------------------
+# Test 6: per-worker n_moves_total
+# -------------------------------------------------------------------------
+
+def test_aggregate_worker_balance_includes_n_moves_per_worker():
+    """by_worker[w]["n_moves_total"] is sum of meta.n_moves across that worker's games."""
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    replays = [
+        _make_replay(worker_id=0, n_moves=100, wall_time_s=1.0),
+        _make_replay(worker_id=0, n_moves=200, wall_time_s=1.0),
+        _make_replay(worker_id=1, n_moves=150, wall_time_s=1.0),
+    ]
+    out = aggregate_per_game_stats(replays)
+
+    assert out["worker_balance"]["by_worker"]["0"]["n_moves_total"] == 300
+    assert out["worker_balance"]["by_worker"]["1"]["n_moves_total"] == 150
+
+
+# -------------------------------------------------------------------------
+# Test 7: in-process games counted separately from worker games
+# -------------------------------------------------------------------------
+
+def test_aggregate_in_process_games_counted_separately():
+    """worker_id=None (in-process) increments in_process_count, not by_worker.
+    worker_id=0 is a legitimate worker key, not conflated with null.
+    """
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    replays = [
+        _make_replay(worker_id=0,    wall_time_s=1.0),  # worker 0
+        _make_replay(worker_id=1,    wall_time_s=1.0),  # worker 1
+        _make_replay(worker_id=None, wall_time_s=1.0),  # in-process
+        _make_replay(worker_id=None, wall_time_s=1.0),  # in-process
+    ]
+    out = aggregate_per_game_stats(replays)
+
+    wb = out["worker_balance"]
+    assert set(wb["by_worker"].keys()) == {"0", "1"}
+    assert "None" not in wb["by_worker"]
+    assert wb["in_process_count"] == 2
+    # coverage["worker_id"] counts ALL games where the field is present (incl. explicit null)
+    assert out["coverage"]["worker_id"] == 4
+    # All four games carry persistence-era fields (worker_id present is sufficient,
+    # even when explicitly null — that's a meaningful "in-process new schema" signal).
+    assert out["n_games_with_any_stats"] == 4
+
+
+# -------------------------------------------------------------------------
+# Test 11: single worker yields null ratios and null CV
+# -------------------------------------------------------------------------
+
+def test_aggregate_single_worker_yields_null_ratios():
+    """One distinct worker → all three imbalance metrics are None."""
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    replays = [
+        _make_replay(worker_id=0, wall_time_s=10.0),
+        _make_replay(worker_id=0, wall_time_s=20.0),
+    ]
+    out = aggregate_per_game_stats(replays)
+
+    wb = out["worker_balance"]
+    assert wb["max_min_wall_time_ratio"] is None
+    assert wb["max_min_games_ratio"] is None
+    assert wb["wall_time_cv"] is None
+    # by_worker still populated
+    assert wb["by_worker"]["0"]["games"] == 2
+
+
+# -------------------------------------------------------------------------
+# Test 12: worker with zero wall_time_total excluded from ratio
+# -------------------------------------------------------------------------
+
+def test_aggregate_workers_with_zero_wall_time_excluded_from_ratio():
+    """Per spec §7: worker with wall_time_total_s == 0 is excluded from
+    max_min_wall_time_ratio computation; if fewer than 2 workers remain, ratio is None.
+    """
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    # Two workers, but one has wall_time_total_s == 0 (no wall_time_s on its replays)
+    replays = [
+        _make_replay(worker_id=0, wall_time_s=10.0),
+        _make_replay(worker_id=0, wall_time_s=20.0),
+        _make_replay(worker_id=1),  # no wall_time_s
+    ]
+    out = aggregate_per_game_stats(replays)
+
+    wb = out["worker_balance"]
+    # by_worker still has both, but worker 1's wall_time_total_s == 0
+    assert wb["by_worker"]["0"]["wall_time_total_s"] == 30.0
+    assert wb["by_worker"]["1"]["wall_time_total_s"] == 0.0
+    # Only 1 worker remains after excluding zero-time worker → ratio is None
+    assert wb["max_min_wall_time_ratio"] is None
+    assert wb["wall_time_cv"] is None
+    # max_min_games_ratio is well-defined (1 game vs 2 games)
+    assert wb["max_min_games_ratio"] == 2.0
+
+
+# -------------------------------------------------------------------------
+# Test 13: uniform per-worker wall_time yields ratio=1.0, cv=0.0
+# -------------------------------------------------------------------------
+
+def test_aggregate_uniform_per_worker_wall_time_yields_unity_ratio_zero_cv():
+    """All per-worker wall_time_total equal → max_min_ratio=1.0, cv=0.0."""
+    from scripts.twixt_replay_analyzer import aggregate_per_game_stats
+
+    replays = [
+        _make_replay(worker_id=0, wall_time_s=10.0),
+        _make_replay(worker_id=1, wall_time_s=10.0),
+        _make_replay(worker_id=2, wall_time_s=10.0),
+    ]
+    out = aggregate_per_game_stats(replays)
+
+    wb = out["worker_balance"]
+    assert wb["max_min_wall_time_ratio"] == 1.0
+    assert wb["wall_time_cv"] == 0.0
+    assert wb["max_min_games_ratio"] == 1.0
