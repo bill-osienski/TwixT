@@ -90,6 +90,19 @@ def _save_game_from_ipc(game_saver, msg):
     )
 
 
+# Map self_play.py raw draw_reason constants to the clean reporting strings
+# the IPC path uses. Keeps meta.reason consistent across in-process and
+# worker-IPC paths so the analyzer's outcomes / Draw breakdown lines do not
+# fork by code path.
+_DRAW_REASON_NORMALIZE = {
+    "timeout_selfplay":   "timeout",
+    "terminal_board_full": "board_full",
+    "terminal_state_cap":  "state_cap",
+    "terminal_unknown":    "unknown",
+    # "resign" and "adjudicated" already use clean strings in self_play.py.
+}
+
+
 def _save_game_from_record(game_saver, game):
     """Persist one finished game to JSON from a GameRecord (in-process path).
 
@@ -101,12 +114,13 @@ def _save_game_from_record(game_saver, game):
         return None
 
     move_history_tuple = tuple(tuple(m) for m in game.move_history)
+    draw_reason_clean = _DRAW_REASON_NORMALIZE.get(game.draw_reason, game.draw_reason)
 
     return game_saver.maybe_save_game(
         winner=game.winner,
         move_history=move_history_tuple,
         n_moves=game.n_moves,
-        draw_reason=game.draw_reason,
+        draw_reason=draw_reason_clean,
         start_player=game.start_player,
         resigned_by=game.resigned_by,
         opening_diagnostics=game.opening_diagnostics if game.opening_diagnostics else None,
@@ -150,7 +164,7 @@ MAX_MOVES_TABLE = {
     12: 160,
     16: 200,
     20: 250,
-    24: 380,
+    24: 280,
 }
 
 # Per-size simulation counts (balances quality vs throughput)

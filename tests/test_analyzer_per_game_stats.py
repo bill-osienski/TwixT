@@ -94,7 +94,7 @@ def test_aggregate_returns_zero_coverage_for_empty_replays():
     assert out["compute_per_game"] is None
     # Outcomes always present, all zero
     assert out["outcomes"] == {"decisive": 0, "resign": 0, "adjudicated": 0,
-                                "timeout": 0, "draw_other": 0}
+                                "timeout": 0, "state_cap": 0, "draw_other": 0}
     # Worker balance shape
     wb = out["worker_balance"]
     assert wb["by_worker"] == {}
@@ -148,24 +148,26 @@ def test_aggregate_returns_zero_coverage_for_old_schema_only():
 # -------------------------------------------------------------------------
 
 def test_aggregate_outcomes_categorizes_meta_reason():
-    """meta.reason values map to the five outcome categories per spec §4.
+    """meta.reason values map to the six outcome categories per spec §4.
 
-    timeout and timeout_selfplay both → outcomes.timeout
-    Unrecognized reasons → outcomes.draw_other
+    timeout and timeout_selfplay     → outcomes.timeout
+    state_cap and terminal_state_cap → outcomes.state_cap
+    Unrecognized reasons             → outcomes.draw_other
     """
     from scripts.twixt_replay_analyzer import aggregate_per_game_stats
 
     replays = [
-        _make_replay(reason="win"),                # decisive
-        _make_replay(reason="win"),                # decisive
-        _make_replay(reason="resign"),             # resign
-        _make_replay(reason="adjudicated"),        # adjudicated
-        _make_replay(reason="timeout"),            # timeout
-        _make_replay(reason="timeout_selfplay"),   # timeout
-        _make_replay(reason="board_full"),         # draw_other
-        _make_replay(reason="state_cap"),          # draw_other
-        _make_replay(reason="unknown"),            # draw_other
-        _make_replay(reason="something_weird"),    # draw_other (unrecognized)
+        _make_replay(reason="win"),                  # decisive
+        _make_replay(reason="win"),                  # decisive
+        _make_replay(reason="resign"),               # resign
+        _make_replay(reason="adjudicated"),          # adjudicated
+        _make_replay(reason="timeout"),              # timeout
+        _make_replay(reason="timeout_selfplay"),     # timeout
+        _make_replay(reason="state_cap"),            # state_cap
+        _make_replay(reason="terminal_state_cap"),   # state_cap (raw constant alias)
+        _make_replay(reason="board_full"),           # draw_other
+        _make_replay(reason="unknown"),              # draw_other
+        _make_replay(reason="something_weird"),      # draw_other (unrecognized)
     ]
     out = aggregate_per_game_stats(replays)
 
@@ -173,9 +175,10 @@ def test_aggregate_outcomes_categorizes_meta_reason():
     assert out["outcomes"]["resign"]      == 1
     assert out["outcomes"]["adjudicated"] == 1
     assert out["outcomes"]["timeout"]     == 2
-    assert out["outcomes"]["draw_other"]  == 4
+    assert out["outcomes"]["state_cap"]   == 2
+    assert out["outcomes"]["draw_other"]  == 3
     # Counts sum to n_games_total (mutually exclusive categories invariant)
-    assert sum(out["outcomes"].values()) == out["n_games_total"] == 10
+    assert sum(out["outcomes"].values()) == out["n_games_total"] == 11
 
 
 # -------------------------------------------------------------------------

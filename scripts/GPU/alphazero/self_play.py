@@ -780,9 +780,13 @@ def play_game(
                             winner = opponent(state.to_move)
                             draw_reason = ADJUDICATED
 
-                # Fall back to timeout if not adjudicated (or adjudication disabled/skipped)
+                # Fall back to state_cap if not adjudicated (or adjudication disabled/skipped).
+                # Reaching ply >= max_moves means we hit the per-game ply cap; that is
+                # semantically "state cap exhausted," not a runtime timeout. DRAW_TIMEOUT
+                # is reserved for genuine runtime/session timeouts (currently unused in
+                # play_game; kept as a distinct category for future use).
                 if draw_reason is None:
-                    draw_reason = DRAW_TIMEOUT
+                    draw_reason = DRAW_STATE_CAP
             elif is_terminal:
                 # State is terminal but no winner - why?
                 if not state.legal_moves():

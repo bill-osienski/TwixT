@@ -387,7 +387,8 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
     leaf_evals_arr = []
     backups_arr = []
     nn_batches_arr = []
-    outcomes = {"decisive": 0, "resign": 0, "adjudicated": 0, "timeout": 0, "draw_other": 0}
+    outcomes = {"decisive": 0, "resign": 0, "adjudicated": 0,
+                "timeout": 0, "state_cap": 0, "draw_other": 0}
 
     # --- n_games_with_any_stats: counted in Task 2 (and updated in Task 3 for worker_id).
     # Until then the only persistence-era data we track is none, so it stays 0. ---
@@ -416,6 +417,8 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
             outcomes["adjudicated"] += 1
         elif reason in ("timeout", "timeout_selfplay"):
             outcomes["timeout"] += 1
+        elif reason in ("state_cap", "terminal_state_cap"):
+            outcomes["state_cap"] += 1
         else:
             outcomes["draw_other"] += 1
 
@@ -1269,7 +1272,8 @@ def format_per_game_stats_report(per_game_stats: dict) -> List[str]:
     o = pgs["outcomes"]
     lines.append(
         f"  Outcomes:     decisive={o['decisive']} resign={o['resign']} "
-        f"adjudicated={o['adjudicated']} timeout={o['timeout']} draw_other={o['draw_other']}"
+        f"adjudicated={o['adjudicated']} timeout={o['timeout']} "
+        f"state_cap={o['state_cap']} draw_other={o['draw_other']}"
     )
 
     # Short fallback when no persistence-era data
