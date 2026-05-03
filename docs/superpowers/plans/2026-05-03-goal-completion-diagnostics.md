@@ -1397,10 +1397,11 @@ def test_component_goal_distances_blocked_by_intersecting_bridge_takes_alternati
     """SMOKE TEST: when a crossing bridge blocks one route, BFS uses an
     alternative or returns None.
 
-    Implementer note: this test as written is a does-not-crash smoke check.
-    Replace the fixture with a curated layout that produces a specific
-    expected distance once the helpers are stable, so this test actually
-    proves alternative-route correctness rather than just non-crash."""
+    REQUIRED BEFORE COMMIT: this scaffold is a does-not-crash smoke check
+    only. Replace the fixture with a curated layout that produces a
+    specific expected distance (e.g., d["top"] == 2 forced via an alt route)
+    so this test actually proves alternative-route correctness. Do not land
+    this test with the loose `is None or >= 1` assertion."""
     s = _state_after([(4, 5), (1, 4), (10, 10), (3, 3)], active_size=24)
     comp = _component_of(s, (4, 5), "red")
     d = component_goal_distances(s, "red", comp, max_depth=3)
@@ -1419,10 +1420,11 @@ def test_component_goal_distances_unreachable_within_max_depth_returns_none():
 def test_component_goal_distances_skips_invalid_placements():
     """SMOKE TEST: corner/edge restrictions don't crash the BFS.
 
-    Implementer note: replace with a curated layout where (0, 0) corner
-    placement is the ONLY single-peg path, and assert d["top"] is exactly 2
-    (forced two-hop via a non-corner cell). That makes the test
-    invariant-bearing rather than just no-crash."""
+    REQUIRED BEFORE COMMIT: replace with a curated layout where (0, 0)
+    corner placement would be the ONLY single-peg path if it were legal,
+    and assert d["top"] is exactly 2 (forced two-hop via a non-corner
+    cell). Do not land this test with the loose `is None or >= 1`
+    assertion."""
     s = _state_after([(1, 1), (15, 15)], active_size=24)
     comp = _component_of(s, (1, 1), "red")
     d = component_goal_distances(s, "red", comp, max_depth=3)
@@ -1488,13 +1490,12 @@ def test_compute_goal_completion_state_picks_smallest_distance_then_largest_size
     """SMOKE TEST scaffold: multiple red components, pick the one with smallest
     total_goal_distance; tie-break on size.
 
-    Implementer note: the loose synthetic below is a starting point. Before
-    landing this test, replace the fixture with a *curated* layout that
-    produces TWO red components meeting min_component_size=8 with KNOWN,
-    DIFFERENT total_goal_distances (e.g., 1 and 3), then assert
-    `res['component_pegs']` matches the smaller-distance component exactly.
-    That makes the test prove the selection rule rather than just no-crash.
-    """
+    REQUIRED BEFORE COMMIT: replace this fixture with a curated layout that
+    produces TWO red components both meeting min_component_size=8 with
+    KNOWN, DIFFERENT total_goal_distances (e.g., 1 and 3), then assert
+    `res["component_pegs"]` matches the smaller-distance component exactly.
+    Do not land this test with the loose `res is None or "total_goal_distance" in res`
+    assertion — it does not prove the selection rule."""
     moves_red = []
     moves_black = [(15, 15), (16, 16), (17, 17)]
     moves_red.extend(_make_red_chain(8, start_row=10, start_col=2))
@@ -2334,19 +2335,23 @@ Expected: **PASS**.
 
 ```python
 def test_aggregate_class1_detected_simple_2ply_closeout():
-    """Synthetic: a Class 1 game where the winner reaches total_goal_distance=2.
-    NOTE: This test depends on the Phase 1 helpers correctly identifying a
-    closeout structure on a small synthetic fixture. The exact peg layout to
-    produce a guaranteed distance=2 needs careful construction; see Phase 1
-    test fixtures. For now we assert structural shape, not specific values."""
+    """SMOKE TEST scaffold: a Class 1 game where the winner reaches
+    total_goal_distance=2.
+
+    REQUIRED BEFORE COMMIT: replace the synthetic move list below with a
+    Phase 1-validated fixture (one of the curated fixtures landed in
+    test_connectivity_goal_completion.py) that produces a known closeout
+    state. Then assert `record["detected"] is True`,
+    `record["first_total_goal_distance"] == 2`, and the
+    primary_class_counts match expected. Do not land this test with the
+    loose `r["main_population"]["games"] == 1` assertion alone."""
     moves = [_move(0, 5, "red"), _move(15, 15, "black")]
     replays = [_replay(moves, winner="red", reason="win")]
     r = aggregate_goal_completion_diagnostics(replays, min_component_size=1)
     assert r["main_population"]["games"] == 1
-    # Detection and watch-window assertions vary by Phase 1 fixture realism.
 ```
 
-(*Implementers should replace the synthetic moves with a Phase 1-validated fixture that produces a known closeout state; the spec §7.8 lists the full set of 22 tests with assertions.*)
+(*All 22 Phase-2 tests in spec §7.8 must use curated fixtures with exact expected values before landing. The scaffolds shown above and below are starting points only.*)
 
 ### Step 8: Implement remaining Class 1 tests (#3-#9 from spec)
 
