@@ -125,7 +125,10 @@ try:
     from scripts.GPU.alphazero.connectivity_diagnostics import (
         aggregate_connectivity_by_ply,
         compute_position_connectivity,
+        compute_goal_completion_state,
+        classify_selected_conversion_move,
     )
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
     from scripts.GPU.alphazero.value_calibration import (
         aggregate_calibration,
         classify_position,
@@ -618,6 +621,539 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
         "final_root_value": final_root_value_block,
         "final_top1_share": final_top1_share_block,
         "compute_per_game": compute_per_game_block,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Goal-completion / conversion diagnostics (spec 2026-05-03 §7)
+# ---------------------------------------------------------------------------
+
+# Outcome-class taxonomy (spec §7.1).
+# Class 1 (decisive): winner-only scope, counted in main metrics.
+# Class 2 (capped): both-sides scope, counted in bad_cases only.
+# Class 3 (excluded): not counted.
+_CLASS1_REASONS = frozenset({"win", "resign", "adjudicated"})
+_CLASS2_REASONS = frozenset({"state_cap", "timeout", "timeout_selfplay", "board_full",
+                             "terminal_state_cap"})
+
+
+def aggregate_goal_completion_diagnostics(
+    replays: List[dict],
+    max_depth: int = 3,
+    min_component_size: int = 8,
+    detection_threshold: int = 2,
+    high_value_threshold: float = 0.9,
+    high_value_delay_threshold_plies: int = 10,
+    worst_cases_top_k: int = 25,
+) -> dict:
+    """Per-game goal-completion analysis bucketed by outcome class.
+
+    Phase 2 Task 8 scaffolding: builds Class 1 (decisive winner) per-game
+    records and pools them into the main_population summary block. Class 2
+    capped + Class 3 excluded populations are scaffolded with zero-value
+    defaults; Task 9 fills in their detection logic.
+
+    Pure function. Returns the goal_completion summary block per
+    spec 2026-05-03 §7.4.
+
+    Spec: docs/superpowers/specs/2026-05-03-goal-completion-diagnostics-design.md
+    """
+    config = {
+        "max_depth": int(max_depth),
+        "min_component_size": int(min_component_size),
+        "detection_threshold": int(detection_threshold),
+        "high_value_threshold": float(high_value_threshold),
+        "high_value_delay_threshold_plies": int(high_value_delay_threshold_plies),
+        "worst_cases_top_k": int(worst_cases_top_k),
+    }
+
+    class1_records: List[dict] = []
+    class2_records: List[dict] = []
+    excluded_count = 0
+
+    for rp in replays:
+        meta = rp.get("meta") or {}
+        reason = meta.get("reason")
+        winner = rp.get("winner")
+        moves = rp.get("moves") or []
+
+        # Replays with no moves are excluded from goal-completion analysis (spec §7.7).
+        if not moves:
+            excluded_count += 1
+            continue
+
+        # Determine outcome class.
+        if reason in _CLASS1_REASONS:
+            # "reason == win" but winner == null is a corrupt record -> Class 3.
+            if winner not in ("red", "black"):
+                excluded_count += 1
+                continue
+            try:
+                rec = _build_class1_per_game_record(
+                    rp,
+                    max_depth=max_depth,
+                    min_component_size=min_component_size,
+                    detection_threshold=detection_threshold,
+                    high_value_threshold=high_value_threshold,
+                    high_value_delay_threshold_plies=high_value_delay_threshold_plies,
+                )
+            except Exception:
+                # Defensive: corrupt move history etc. -> exclude.
+                excluded_count += 1
+                continue
+            class1_records.append(rec)
+        elif reason in _CLASS2_REASONS:
+            # Class 2 detection logic is a Task-9 deliverable. Scaffold a
+            # minimal record so capped_population.games is countable.
+            class2_records.append({
+                "game_id": rp.get("id"),
+                "iteration": meta.get("iteration"),
+                "game_idx": meta.get("game_idx"),
+                "n_moves": meta.get("n_moves") if meta.get("n_moves") is not None else len(moves),
+                "reason": reason,
+                "outcome_class": 2,
+                "scope": "both_sides",
+                "detected": False,
+            })
+        else:
+            excluded_count += 1
+
+    main_population = _summarize_main_population(
+        class1_records,
+        config=config,
+        detection_threshold=detection_threshold,
+        high_value_threshold=high_value_threshold,
+        high_value_delay_threshold_plies=high_value_delay_threshold_plies,
+    )
+
+    # Class 2 capped population — Task 9 will fill in detection logic and
+    # bad-case counters. For now: just expose the games count.
+    capped_population = {
+        "scope": "both_sides",
+        "games": len(class2_records),
+        "games_with_dominant_unclosed": 0,
+        "detected_before_cap": 0,
+        "cap_delay_after_detection_plies": None,
+        "bad_cases": {
+            "state_cap_after_detection": 0,
+            "timeout_after_detection": 0,
+            "board_full_after_detection": 0,
+        },
+    }
+
+    excluded_population = {"games": excluded_count}
+
+    diagnostics_coverage = {
+        "games_with_diagnostics": 0,
+        "total_records": 0,
+        "coverage_pct_of_decisive_games": 0.0,
+        "error_count": 0,
+        "version": 1,
+    }
+
+    return {
+        "config": config,
+        "main_population": main_population,
+        "capped_population": capped_population,
+        "excluded_population": excluded_population,
+        "diagnostics_coverage": diagnostics_coverage,
+    }
+
+
+def _build_class1_per_game_record(
+    replay: dict,
+    *,
+    max_depth: int,
+    min_component_size: int,
+    detection_threshold: int,
+    high_value_threshold: float,
+    high_value_delay_threshold_plies: int,
+) -> dict:
+    """Construct a Class 1 per-game record by replaying the game (spec §7.2).
+
+    Replays moves through TwixtState, computes per-ply
+    compute_goal_completion_state(winner), records the first ply where
+    total_goal_distance <= detection_threshold, and classifies subsequent
+    winner-perspective moves via classify_selected_conversion_move.
+
+    Watch window opens AFTER the detection ply on the in-scope side's
+    subsequent moves. Non-winner plies are skipped. Detection ply itself
+    is not classified.
+    """
+    meta = replay.get("meta") or {}
+    moves = replay.get("moves") or []
+    winner = replay["winner"]
+    starting_player = (
+        replay.get("starting_player")
+        or meta.get("starting_player")
+        or "red"
+    )
+    board_size = int(meta.get("board_size", 24))
+
+    n_moves = meta.get("n_moves")
+    if n_moves is None:
+        n_moves = len(moves)
+    n_moves = int(n_moves)
+
+    # Pass 1: replay the game, tracking per-ply goal-completion states for the
+    # winner. Captures pre-state at each ply for downstream classification.
+    state = TwixtState(active_size=board_size, to_move=starting_player)
+    pre_states: List[TwixtState] = []     # state immediately before move i (0-indexed)
+    goal_states_after: List[Optional[dict]] = []  # goal_state for winner immediately after move i
+
+    ever_le_2 = False
+    ever_le_3 = False
+    min_total = None  # min total_goal_distance ever seen for the winner
+    first_dominant_unclosed_ply: Optional[int] = None  # 1-indexed ply where total <= detection_threshold
+    first_total_goal_distance: Optional[int] = None
+    first_category: Optional[str] = None
+
+    for i, m in enumerate(moves):
+        pre_states.append(state)
+        try:
+            state = state.apply_move((int(m["row"]), int(m["col"])))
+        except Exception:
+            # Corrupt move history -> bubble up; caller will exclude this game.
+            raise
+        gs = compute_goal_completion_state(
+            state,
+            winner,
+            max_depth=max_depth,
+            min_component_size=min_component_size,
+        )
+        goal_states_after.append(gs)
+        if gs is not None:
+            total = gs.get("total_goal_distance")
+            if total is not None:
+                if min_total is None or total < min_total:
+                    min_total = total
+                if total <= 2:
+                    ever_le_2 = True
+                if total <= 3:
+                    ever_le_3 = True
+                if first_dominant_unclosed_ply is None and total <= detection_threshold:
+                    first_dominant_unclosed_ply = i + 1  # 1-indexed
+                    first_total_goal_distance = total
+                    first_category = gs.get("category")
+
+    detected = first_dominant_unclosed_ply is not None
+
+    actual_terminal_ply = n_moves
+    actual_win_ply = n_moves if winner in ("red", "black") else None
+
+    # Watch-window classification (spec §7.2).
+    winner_moves_in_watch_window = 0
+    winner_moves_with_dominant_component = 0
+    winner_moves_with_dominant_unavailable = 0
+    primary_class_counts = {
+        "completes_endpoint": 0,
+        "reduces_total_goal_distance": 0,
+        "redundant_reinforcement": 0,
+        "off_chain": 0,
+        "other": 0,
+    }
+
+    # search_score is winner-perspective at winner plies (state.to_move == winner); no sign flip needed
+    search_scores_after_detection: List[float] = []  # only over winner moves with non-null search_score
+    high_value_after_detection_plies = 0
+
+    if detected:
+        # Watch window: winner moves at ply > first_dominant_unclosed_ply,
+        # through actual_terminal_ply (inclusive).
+        for i, m in enumerate(moves):
+            ply_1based = i + 1
+            if ply_1based <= first_dominant_unclosed_ply:
+                continue
+            if ply_1based > actual_terminal_ply:
+                break
+            if m.get("player") != winner:
+                continue
+
+            winner_moves_in_watch_window += 1
+            pre_state = pre_states[i]
+            gs_before = compute_goal_completion_state(
+                pre_state,
+                winner,
+                max_depth=max_depth,
+                min_component_size=min_component_size,
+            )
+            if gs_before is None:
+                winner_moves_with_dominant_unavailable += 1
+            else:
+                winner_moves_with_dominant_component += 1
+                cls = classify_selected_conversion_move(
+                    pre_state,
+                    winner,
+                    (int(m["row"]), int(m["col"])),
+                    gs_before,
+                    max_depth=max_depth,
+                    min_component_size=min_component_size,
+                )
+                primary = cls.get("primary_class", "other")
+                if primary in primary_class_counts:
+                    primary_class_counts[primary] += 1
+                else:
+                    primary_class_counts["other"] += 1
+
+            # search_score: only at winner plies, only if populated.
+            ss = m.get("search_score")
+            if ss is not None:
+                search_scores_after_detection.append(float(ss))
+                if float(ss) >= high_value_threshold:
+                    high_value_after_detection_plies += 1
+
+    # search_score-derived summaries (null when no coverage in watch window).
+    if search_scores_after_detection:
+        max_search_score_after_detection = float(max(search_scores_after_detection))
+        mean_search_score_after_detection = float(
+            sum(search_scores_after_detection) / len(search_scores_after_detection)
+        )
+        search_score_coverage_in_watch_window = len(search_scores_after_detection)
+    else:
+        max_search_score_after_detection = None
+        mean_search_score_after_detection = None
+        search_score_coverage_in_watch_window = 0
+
+    # root_value_high_but_delayed (spec §7.2):
+    # Class 1 + detected + >= 1 high-value post-detection winner ply +
+    # conversion_delay_plies >= high_value_delay_threshold_plies.
+    if detected:
+        conversion_delay_plies = actual_terminal_ply - first_dominant_unclosed_ply
+        # Count of winner moves strictly after detection through terminal.
+        conversion_delay_winner_moves = winner_moves_in_watch_window
+    else:
+        conversion_delay_plies = None
+        conversion_delay_winner_moves = None
+
+    root_value_high_but_delayed = bool(
+        detected
+        and high_value_after_detection_plies >= 1
+        and conversion_delay_plies is not None
+        and conversion_delay_plies >= high_value_delay_threshold_plies
+    )
+
+    return {
+        "game_id": replay.get("id"),
+        "iteration": meta.get("iteration"),
+        "game_idx": meta.get("game_idx"),
+        "winner": winner,
+        "starting_player": starting_player,
+        "n_moves": n_moves,
+        "reason": meta.get("reason"),
+        "outcome_class": 1,
+        "scope": "winner",
+        "detected_player": winner,
+
+        "ever_distance_le_2": ever_le_2,
+        "ever_distance_le_3": ever_le_3,
+        "min_total_goal_distance": min_total,
+
+        "detected": detected,
+        "first_dominant_unclosed_ply": first_dominant_unclosed_ply,
+        "first_total_goal_distance": first_total_goal_distance,
+        "first_category": first_category,
+        "actual_terminal_ply": actual_terminal_ply,
+        "actual_win_ply": actual_win_ply,
+
+        "conversion_delay_plies": conversion_delay_plies,
+        "conversion_delay_winner_moves": conversion_delay_winner_moves,
+
+        "winner_moves_in_watch_window": winner_moves_in_watch_window,
+        "winner_moves_with_dominant_component": winner_moves_with_dominant_component,
+        "winner_moves_with_dominant_unavailable": winner_moves_with_dominant_unavailable,
+        "primary_class_counts": primary_class_counts,
+
+        "max_search_score_after_detection": max_search_score_after_detection,
+        "mean_search_score_after_detection": mean_search_score_after_detection,
+        "high_value_after_detection_plies": high_value_after_detection_plies,
+        "root_value_high_but_delayed": root_value_high_but_delayed,
+        "search_score_coverage_in_watch_window": search_score_coverage_in_watch_window,
+    }
+
+
+def _summarize_main_population(
+    records: List[dict],
+    *,
+    config: dict,
+    detection_threshold: int,
+    high_value_threshold: float,
+    high_value_delay_threshold_plies: int,
+) -> dict:
+    """Pool Class 1 per-game records into the main_population summary (spec §7.4).
+
+    Pooled rates use winner_moves_with_dominant_component as the denominator;
+    dominant_unavailable_rate uses (dominant + unavailable) as denominator.
+    """
+    games = len(records)
+
+    if games == 0:
+        return {
+            "scope": "decisive_winner_only",
+            "games": 0,
+            "games_with_dominant_unclosed": 0,
+            "games_with_total_distance_le_2": 0,
+            "games_with_total_distance_le_3": 0,
+            "detected": 0,
+            "conversion_delay_plies": None,
+            "conversion_delay_winner_moves": None,
+            "move_quality_after_detection": None,
+            "high_value_diagnostics": None,
+            "bad_cases": {
+                "delay_ge_10_plies": 0,
+                "delay_ge_20_plies": 0,
+                "root_value_high_but_delayed": 0,
+            },
+            "_per_game_records_internal": [],
+        }
+
+    games_with_dominant_unclosed = sum(
+        1 for r in records if r.get("ever_distance_le_3")
+    )
+    games_with_total_distance_le_2 = sum(
+        1 for r in records if r.get("ever_distance_le_2")
+    )
+    games_with_total_distance_le_3 = sum(
+        1 for r in records if r.get("ever_distance_le_3")
+    )
+    detected_records = [r for r in records if r.get("detected")]
+    detected = len(detected_records)
+
+    # --- Conversion-delay distributions (over detected games) ---
+    if detected_records:
+        delays = np.asarray(
+            [r["conversion_delay_plies"] for r in detected_records], dtype=np.float64
+        )
+        winner_move_delays = np.asarray(
+            [r["conversion_delay_winner_moves"] for r in detected_records], dtype=np.float64
+        )
+        conversion_delay_plies_block = {
+            "p50": float(np.percentile(delays, 50)),
+            "p90": float(np.percentile(delays, 90)),
+            "p95": float(np.percentile(delays, 95)),
+            "max": int(delays.max()),
+            "mean": float(delays.mean()),
+        }
+        conversion_delay_winner_moves_block = {
+            "p50": float(np.percentile(winner_move_delays, 50)),
+            "p90": float(np.percentile(winner_move_delays, 90)),
+            "max": int(winner_move_delays.max()),
+            "mean": float(winner_move_delays.mean()),
+        }
+    else:
+        conversion_delay_plies_block = None
+        conversion_delay_winner_moves_block = None
+
+    # --- Pooled move-quality rates over winner_moves_with_dominant_component ---
+    pooled_with_component = sum(
+        r.get("winner_moves_with_dominant_component", 0) for r in detected_records
+    )
+    pooled_unavailable = sum(
+        r.get("winner_moves_with_dominant_unavailable", 0) for r in detected_records
+    )
+    pooled_classes = {
+        "completes_endpoint": 0,
+        "reduces_total_goal_distance": 0,
+        "redundant_reinforcement": 0,
+        "off_chain": 0,
+        "other": 0,
+    }
+    for r in detected_records:
+        for k, v in (r.get("primary_class_counts") or {}).items():
+            if k in pooled_classes:
+                pooled_classes[k] += int(v)
+
+    def _rate(numer: int, denom: int) -> Optional[float]:
+        if denom <= 0:
+            return None
+        return float(numer) / float(denom)
+
+    if pooled_with_component > 0:
+        move_quality_after_detection = {
+            "completes_endpoint_rate":
+                _rate(pooled_classes["completes_endpoint"], pooled_with_component),
+            "reduces_total_goal_distance_rate":
+                _rate(pooled_classes["reduces_total_goal_distance"], pooled_with_component),
+            "redundant_reinforcement_rate":
+                _rate(pooled_classes["redundant_reinforcement"], pooled_with_component),
+            "off_chain_rate":
+                _rate(pooled_classes["off_chain"], pooled_with_component),
+            "other_rate":
+                _rate(pooled_classes["other"], pooled_with_component),
+            "dominant_unavailable_rate":
+                _rate(pooled_unavailable, pooled_with_component + pooled_unavailable),
+        }
+    else:
+        # No detected winner moves with dominant component (e.g., all detected
+        # games had dominant structure dissolve immediately, or detection was
+        # on the terminal ply). Fall back to None so downstream renderers
+        # treat the section as absent.
+        move_quality_after_detection = None
+
+    # --- High-value diagnostics ---
+    coverage_records = [
+        r for r in detected_records
+        if r.get("search_score_coverage_in_watch_window", 0) > 0
+    ]
+    if detected_records and coverage_records:
+        max_scores = np.asarray(
+            [r["max_search_score_after_detection"] for r in coverage_records], dtype=np.float64
+        )
+        mean_scores = np.asarray(
+            [r["mean_search_score_after_detection"] for r in coverage_records], dtype=np.float64
+        )
+        coverage_pct = 100.0 * float(len(coverage_records)) / float(len(detected_records))
+        high_value_diagnostics = {
+            "search_score_coverage_pct": coverage_pct,
+            "max_search_score_after_detection": {
+                "p50": float(np.percentile(max_scores, 50)),
+                "p90": float(np.percentile(max_scores, 90)),
+                "max": float(max_scores.max()),
+            },
+            "mean_search_score_after_detection": {
+                "p50": float(np.percentile(mean_scores, 50)),
+                "p90": float(np.percentile(mean_scores, 90)),
+                "max": float(mean_scores.max()),
+            },
+        }
+    elif detected_records:
+        high_value_diagnostics = {
+            "search_score_coverage_pct": 0.0,
+            "max_search_score_after_detection": None,
+            "mean_search_score_after_detection": None,
+        }
+    else:
+        high_value_diagnostics = None
+
+    # --- Bad cases ---
+    delay_ge_10 = sum(
+        1 for r in detected_records
+        if (r.get("conversion_delay_plies") or 0) >= 10
+    )
+    delay_ge_20 = sum(
+        1 for r in detected_records
+        if (r.get("conversion_delay_plies") or 0) >= 20
+    )
+    root_value_high_but_delayed = sum(
+        1 for r in detected_records if r.get("root_value_high_but_delayed")
+    )
+
+    return {
+        "scope": "decisive_winner_only",
+        "games": games,
+        "games_with_dominant_unclosed": games_with_dominant_unclosed,
+        "games_with_total_distance_le_2": games_with_total_distance_le_2,
+        "games_with_total_distance_le_3": games_with_total_distance_le_3,
+        "detected": detected,
+        "conversion_delay_plies": conversion_delay_plies_block,
+        "conversion_delay_winner_moves": conversion_delay_winner_moves_block,
+        "move_quality_after_detection": move_quality_after_detection,
+        "high_value_diagnostics": high_value_diagnostics,
+        "bad_cases": {
+            "delay_ge_10_plies": delay_ge_10,
+            "delay_ge_20_plies": delay_ge_20,
+            "root_value_high_but_delayed": root_value_high_but_delayed,
+        },
+        "_per_game_records_internal": records,
     }
 
 
