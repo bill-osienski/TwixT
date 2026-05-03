@@ -414,6 +414,12 @@ class GameRecord:
     wall_time_s: Optional[float] = None
     final_root_value: Optional[float] = None
     final_top1_share: Optional[float] = None
+    # Per-move stats (spec 2026-05-03 §5). Both lists are 1:1 with move_history;
+    # individual entries are float when populated by MCTS, None for degenerate
+    # plies (no visits / no value). Length-equal to move_history on every
+    # code path including the resign branch.
+    move_root_values: List[Optional[float]] = field(default_factory=list)
+    move_top1_shares: List[Optional[float]] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -539,6 +545,11 @@ def play_game(
 
     positions = []
     move_history = []
+    # Per-move stats accumulators (spec 2026-05-03 §5). Appended at the same
+    # point as move_history.append(move) so the resign branch (which breaks
+    # without playing a move) does not add phantom entries.
+    move_root_values: list = []
+    move_top1_shares: list = []
 
     ply = 0
     while not state.is_terminal() and ply < max_moves:
@@ -687,6 +698,20 @@ def play_game(
 
         # SYNC: state comes from root (don't apply_move twice!)
         state = root.state
+        # Capture per-move root value and top1 share before move-history append.
+        # IMPORTANT: search_score (root_value) is ALWAYS from state.to_move
+        # perspective at search time -- i.e., +1 means "side about to play this
+        # move thinks it is winning." Phase 2's analyzer aggregation only
+        # looks at winner-to-move plies in the watch window, so no sign flip
+        # is needed there. If a future enhancement ever adds loser-side
+        # analysis, that path MUST flip the sign for non-winner plies.
+        move_root_values.append(float(root_value) if root_value is not None else None)
+        if visit_counts:
+            _total = sum(visit_counts.values())
+            _top1  = max(visit_counts.values())
+            move_top1_shares.append(float(_top1 / _total) if _total > 0 else None)
+        else:
+            move_top1_shares.append(None)
         move_history.append(move)
         ply += 1
 
@@ -825,6 +850,19 @@ def play_game(
         top1_str = f", top1={adj_top1_share:.2f}" if adj_top1_share is not None else ""
         print(f"  ADJUDICATED: plies={ply}, to_move={state.to_move}, winner={winner}, root_value={adj_root_value:.3f}{top1_str}")
 
+    # Invariant: per-move accumulators must be 1:1 with move_history on
+    # every code path, including resign. The saver tolerates mismatch
+    # defensively (with a stderr warning) -- in-process production code
+    # should not produce a mismatch.
+    assert len(move_root_values) == len(move_history), (
+        f"move_root_values length {len(move_root_values)} != "
+        f"move_history length {len(move_history)}"
+    )
+    assert len(move_top1_shares) == len(move_history), (
+        f"move_top1_shares length {len(move_top1_shares)} != "
+        f"move_history length {len(move_history)}"
+    )
+
     return GameRecord(
         positions=positions,
         winner=winner,
@@ -880,6 +918,8 @@ def play_game(
         wall_time_s=time.perf_counter() - game_t0,
         final_root_value=mcts._final_root_value,
         final_top1_share=mcts._final_top1_share,
+        move_root_values=move_root_values,
+        move_top1_shares=move_top1_shares,
     )
 
 
