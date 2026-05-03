@@ -621,6 +621,60 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
     }
 
 
+def aggregate_per_move_stats(replays: List[dict]) -> dict:
+    """Aggregate per-move search_score and root_top1_share distributions across replays.
+
+    Reads moves[i].search_score and moves[i].root_top1_share, treating absent
+    keys or null values as not-covered (move-count denominators, not
+    game-count). Returns the per_move_stats summary block per spec 2026-05-03 §5.4.
+    """
+    import numpy as np
+
+    n_games_total = len(replays)
+    n_moves_total = 0
+    search_score_vals: List[float] = []
+    top1_share_vals: List[float] = []
+
+    for replay in replays:
+        moves = replay.get("moves") or []
+        for m in moves:
+            n_moves_total += 1
+            ss = m.get("search_score")
+            if ss is not None:
+                search_score_vals.append(float(ss))
+            ts = m.get("root_top1_share")
+            if ts is not None:
+                top1_share_vals.append(float(ts))
+
+    def _stats(vals: List[float]) -> Optional[dict]:
+        if not vals:
+            return None
+        arr = np.array(vals, dtype=np.float64)
+        return {
+            "mean":     float(np.mean(arr)),
+            "p50":      float(np.percentile(arr, 50)),
+            "p90":      float(np.percentile(arr, 90)),
+            "p95":      float(np.percentile(arr, 95)),
+            "min":      float(np.min(arr)),
+            "max":      float(np.max(arr)),
+        }
+
+    ss_block = _stats(search_score_vals)
+    if ss_block is not None:
+        ss_block["mean_abs"] = float(np.mean(np.abs(np.array(search_score_vals))))
+
+    return {
+        "n_games_total": n_games_total,
+        "n_moves_total": n_moves_total,
+        "coverage": {
+            "search_score":    len(search_score_vals),
+            "root_top1_share": len(top1_share_vals),
+        },
+        "search_score":    ss_block,
+        "root_top1_share": _stats(top1_share_vals),
+    }
+
+
 def aggregate_sidecars(sidecars: Dict[int, dict]) -> dict:
     """Aggregate per-iteration sidecar dicts into one summary.
 
@@ -1236,6 +1290,58 @@ def _format_duration_human(seconds: float) -> str:
     h = int(seconds // 3600)
     m = int((seconds - h * 3600) // 60)
     return f"{h}h{m}m"
+
+
+def format_per_move_stats_report(per_move_stats: dict) -> List[str]:
+    """Render the per-move stats block as report.txt lines.
+
+    Suppresses the Coverage line only when both fields have FULL coverage
+    over all moves (n_moves_with_any_stats == n_moves_total and per-field
+    coverage equals n_moves_total). Falls back to a short message when
+    no moves carry any per-move stats.
+    """
+    n_total = per_move_stats.get("n_moves_total", 0)
+    cov = per_move_stats.get("coverage") or {}
+    cov_ss = cov.get("search_score", 0)
+    cov_ts = cov.get("root_top1_share", 0)
+    n_with_any = max(cov_ss, cov_ts)
+    lines: List[str] = []
+    if n_with_any == 0:
+        lines.append(
+            "Per-move stats: no moves carry new fields "
+            "(all replays predate persistence change)."
+        )
+        lines.append("")
+        return lines
+
+    header_n = f"n={n_with_any:,} / {n_total:,}"
+    lines.append(f"Per-move stats ({header_n} moves carry new fields):")
+
+    ss = per_move_stats.get("search_score")
+    if ss is not None:
+        lines.append(
+            f"  search_score:    mean={ss['mean']:.2f} p50={ss['p50']:.2f} "
+            f"p90={ss['p90']:.2f} p95={ss['p95']:.2f} "
+            f"(range [{ss['min']:.2f}, {ss['max']:.2f}], "
+            f"mean_abs={ss['mean_abs']:.2f})"
+        )
+    ts = per_move_stats.get("root_top1_share")
+    if ts is not None:
+        lines.append(
+            f"  root_top1_share: mean={ts['mean']:.2f} p50={ts['p50']:.2f} "
+            f"p90={ts['p90']:.2f} p95={ts['p95']:.2f} "
+            f"min={ts['min']:.2f}"
+        )
+
+    # Coverage line only when not uniform full coverage.
+    is_uniform_full = (cov_ss == n_total) and (cov_ts == n_total)
+    if not is_uniform_full:
+        lines.append(
+            f"  Coverage:        search_score={cov_ss}/{n_total} "
+            f"root_top1_share={cov_ts}/{n_total}"
+        )
+    lines.append("")
+    return lines
 
 
 def format_per_game_stats_report(per_game_stats: dict) -> List[str]:
@@ -2286,6 +2392,7 @@ def analyze(replays: List[dict],
         }
 
     # Per-game stats persistence surfacing (spec 2026-04-29).
+    per_move_stats_val = aggregate_per_move_stats(replays)
     per_game_stats_val = aggregate_per_game_stats(replays)
 
     summary = {
@@ -2310,6 +2417,7 @@ def analyze(replays: List[dict],
         "compute": compute_val,
         # Per-game stats persistence surfacing (spec 2026-04-29).
         # Distributions complement the sidecar-derived `compute` totals above.
+        "per_move_stats": per_move_stats_val,
         "per_game_stats": per_game_stats_val,
         # --- Original fields (preserved) ---
         "analyzer": {"name": "twixt_replay_analyzer", "version": "0.4"},
@@ -2613,6 +2721,7 @@ def analyze(replays: List[dict],
     # Per-game stats triage section (spec 2026-04-29). Rendered for both
     # sidecar and replay_fallback modes — the section's own null-handling
     # covers the all-old-schema case per spec §7 / §5.1.
+    lines.extend(format_per_move_stats_report(summary["per_move_stats"]))
     lines.extend(format_per_game_stats_report(summary["per_game_stats"]))
 
     if _HAS_OD_ANALYZER and od_summary_dict:
