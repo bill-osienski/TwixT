@@ -106,3 +106,8 @@ class GameComplete:
     # MCTS search ran or root had no children with visits.
     final_root_value: Optional[float] = None
     final_top1_share: Optional[float] = None
+    # Per-move stats (spec 2026-05-03 §5). Tuples for frozen-dataclass
+    # immutability; entries default to None when MCTS produced no value
+    # or visits at that ply.
+    move_root_values: Tuple[Optional[float], ...] = ()
+    move_top1_shares: Tuple[Optional[float], ...] = ()

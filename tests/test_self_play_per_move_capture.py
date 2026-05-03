@@ -99,3 +99,35 @@ def test_resign_path_does_not_append_phantom_per_move_entries():
     # are length-equal to move_history.
     assert len(record.move_root_values) == len(record.move_history)
     assert len(record.move_top1_shares) == len(record.move_history)
+
+
+def test_ipc_game_complete_pickle_roundtrip_preserves_per_move_lists():
+    """GameComplete pickle/unpickle preserves move_root_values + move_top1_shares."""
+    import pickle
+    from scripts.GPU.alphazero.ipc_messages import GameComplete
+
+    msg = GameComplete(
+        worker_id=0,
+        winner="red",
+        draw_reason=0,
+        n_moves=3,
+        n_positions=3,
+        wall_time_s=1.5,
+        nn_calls=10,
+        expand_calls=10,
+        nn_batches=1,
+        total_backups=10,
+        total_waiters=0,
+        unique_leaves=10,
+        max_waiters=0,
+        flush_full=0,
+        flush_stall=0,
+        flush_tail=0,
+        move_history=((0, 1), (5, 5), (1, 2)),
+        start_player="red",
+        move_root_values=(0.1, -0.2, 0.9),
+        move_top1_shares=(0.4, 0.18, 0.77),
+    )
+    rt = pickle.loads(pickle.dumps(msg))
+    assert rt.move_root_values == (0.1, -0.2, 0.9)
+    assert rt.move_top1_shares == (0.4, 0.18, 0.77)

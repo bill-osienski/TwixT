@@ -254,6 +254,8 @@ def _worker_loop(
                 # Per-game stats persistence (spec 2026-04-29)
                 final_root_value=game.final_root_value,
                 final_top1_share=game.final_top1_share,
+                move_root_values=tuple(game.move_root_values),
+                move_top1_shares=tuple(game.move_top1_shares),
             ))
 
         # Periodic stats
