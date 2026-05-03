@@ -87,6 +87,9 @@ def _save_game_from_ipc(game_saver, msg):
         leaf_evals=msg.nn_calls,
         backups=msg.total_backups,
         nn_batches=msg.nn_batches,
+        # Per-move stats (spec 2026-05-03 §5)
+        move_root_values=list(msg.move_root_values) if msg.move_root_values else None,
+        move_top1_shares=list(msg.move_top1_shares) if msg.move_top1_shares else None,
     )
 
 
@@ -135,6 +138,9 @@ def _save_game_from_record(game_saver, game):
         leaf_evals=game.nn_calls,
         backups=game.total_backups,
         nn_batches=game.nn_batches,
+        # Per-move stats (spec 2026-05-03 §5)
+        move_root_values=list(game.move_root_values) if game.move_root_values else None,
+        move_top1_shares=list(game.move_top1_shares) if game.move_top1_shares else None,
     )
 
 
