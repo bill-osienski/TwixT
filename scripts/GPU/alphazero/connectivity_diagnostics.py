@@ -252,3 +252,229 @@ def _bfs_distance_to_goal(
         if not layer_states:
             break
     return None
+
+
+def _categorize_total(total: Optional[int], endpoint_distances: dict, max_depth: int) -> str:
+    """Map a goal-completion state to one of six category strings (spec §6.2)."""
+    if total is None:
+        return "not_reachable"
+    if total == 0:
+        return "already_won"
+    if total == 1:
+        return "one_move_win"
+    vals = sorted(v for v in endpoint_distances.values() if v is not None)
+    if len(vals) == 2 and vals == [1, 1]:
+        return "two_endpoint_closeout_2ply"
+    if vals == [0, 2]:
+        return "one_endpoint_distance_2"
+    if total <= max_depth:
+        return "broader_conversion"
+    return "not_reachable"
+
+
+def compute_goal_completion_state(
+    state: TwixtState,
+    player: str,
+    max_depth: int = 3,
+    min_component_size: int = 8,
+) -> Optional[dict]:
+    """Best dominant-unclosed component for `player`, or None.
+
+    Selection rule (spec §6.1): smallest total_goal_distance; tie-break by
+    largest component size; tie-break by deterministic peg ordering (min-corner).
+    """
+    pegs_of = [(r, c) for (r, c), col in state.pegs.items() if col == player]
+    seen: Set[Tuple[int, int]] = set()
+    components = []
+    for peg in pegs_of:
+        if peg in seen:
+            continue
+        comp = frozenset(state._get_connected_component(peg, player))
+        seen.update(comp)
+        if len(comp) >= min_component_size:
+            components.append(comp)
+    if not components:
+        return None
+
+    best = None
+    best_key = None
+    for comp in components:
+        ed = component_goal_distances(state, player, comp, max_depth=max_depth)
+        if any(v is None for v in ed.values()):
+            total = None
+        else:
+            total = sum(ed.values())
+        sort_total = total if total is not None else 10**9
+        size = len(comp)
+        min_corner = min(comp)
+        key = (sort_total, -size, min_corner)
+        if best_key is None or key < best_key:
+            best_key = key
+            best = (comp, ed, total)
+
+    if best is None:
+        return None
+    comp, ed, total = best
+    category = _categorize_total(total, ed, max_depth)
+    if category == "not_reachable":
+        return None
+
+    completion_moves: list = []
+    reducing_moves: list = []
+    if total is not None:
+        completion_moves, reducing_moves = _enumerate_classification_moves(
+            state, player, comp, ed, total, max_depth
+        )
+
+    keys = _RED_GOAL_KEYS if player == "red" else _BLACK_GOAL_KEYS
+    touches_a = ed[keys[0]] == 0
+    touches_b = ed[keys[1]] == 0
+
+    return {
+        "component_pegs": comp,
+        "largest_component_size": len(comp),
+        "endpoint_distances": ed,
+        "total_goal_distance": total,
+        "touches_goal_a": touches_a,
+        "touches_goal_b": touches_b,
+        "endpoint_completion_moves": completion_moves,
+        "distance_reducing_moves": reducing_moves,
+        "category": category,
+        "max_depth": max_depth,
+    }
+
+
+def _enumerate_classification_moves(
+    state: TwixtState,
+    player: str,
+    component: FrozenSet[Tuple[int, int]],
+    endpoint_distances: dict,
+    total_before: int,
+    max_depth: int,
+) -> Tuple[list, list]:
+    """Return (endpoint_completion_moves, distance_reducing_moves) for a component.
+
+    - distance_reducing_moves: fresh placements that strictly reduce total_goal_distance.
+    - endpoint_completion_moves: subset that drops a non-zero endpoint distance to 0.
+      (Spec §6.1 prose definition. NOT "wins the game in one move" — that would
+      falsely exclude moves that close one endpoint while the other remains.)
+
+    Apply player-perspective legality + disjoint-component guards.
+    """
+    active = state.active_size
+
+    candidates = set()
+    for (r, c) in component:
+        for nr, nc in _knight_neighbors(r, c):
+            if 0 <= nr < active and 0 <= nc < active:
+                candidates.add((nr, nc))
+
+    state_as_player = (
+        state if state.to_move == player
+        else dataclasses.replace(state, to_move=player)
+    )
+
+    completion: list = []
+    reducing: list = []
+    for cand in sorted(candidates):
+        if cand in state.pegs:
+            continue
+        if not state_as_player.is_valid_placement(*cand):
+            continue
+        try:
+            new_state = _apply_hypothetical(state, player, cand)
+        except (ValueError, AssertionError):
+            continue
+        new_comp = frozenset(new_state._get_connected_component(cand, player))
+        # Disjoint-component guard: candidate must extend the dominant component.
+        if component.isdisjoint(new_comp):
+            continue
+        new_ed = component_goal_distances(new_state, player, new_comp, max_depth=max_depth)
+        if any(v is None for v in new_ed.values()):
+            continue
+        new_total = sum(new_ed.values())
+        if new_total < total_before:
+            reducing.append(cand)
+            # Spec §6.1: completion = drops a non-zero endpoint to 0.
+            # (NOT "wins the game in one move" — the latter would falsely exclude
+            # moves that close one endpoint while the other remains at distance 1.)
+            if any((prev > 0) and (new_ed[k] == 0) for k, prev in endpoint_distances.items()):
+                completion.append(cand)
+    return completion, reducing
+
+
+def classify_selected_conversion_move(
+    state_before: TwixtState,
+    player: str,
+    selected_move: Tuple[int, int],
+    goal_state_before: dict,
+    max_depth: int = 3,
+    min_component_size: int = 8,
+) -> dict:
+    """Classify a selected move against the pre-move dominant-unclosed state.
+
+    Raw booleans are non-exclusive; primary_class is priority-resolved
+    (completes_endpoint > reduces_total_goal_distance > redundant_reinforcement
+    > off_chain > other) — used for report rate-summing.
+    """
+    component = goal_state_before["component_pegs"]
+    total_before = goal_state_before.get("total_goal_distance")
+    completion_moves = set(map(tuple, goal_state_before.get("endpoint_completion_moves") or []))
+    reducing_moves = set(map(tuple, goal_state_before.get("distance_reducing_moves") or []))
+
+    selected = tuple(selected_move)
+    completes = selected in completion_moves
+    reduces = selected in reducing_moves
+
+    try:
+        new_state = _apply_hypothetical(state_before, player, selected)
+    except (ValueError, AssertionError):
+        return {
+            "completes_endpoint": False,
+            "reduces_total_goal_distance": False,
+            "is_redundant_reinforcement": False,
+            "is_off_chain": False,
+            "primary_class": "other",
+            "total_goal_distance_before": total_before,
+            "total_goal_distance_after": None,
+        }
+    new_comp = frozenset(new_state._get_connected_component(selected, player))
+    new_ed = component_goal_distances(new_state, player, new_comp, max_depth=max_depth)
+    if any(v is None for v in new_ed.values()):
+        total_after = None
+    else:
+        total_after = sum(new_ed.values())
+
+    bridgeable_to_component = bool(new_comp & component)
+    if total_before is not None and total_after is not None:
+        no_reduction = (total_after >= total_before)
+    else:
+        no_reduction = (total_after is None)
+    redundant = bridgeable_to_component and no_reduction and not reduces
+
+    has_knight_neighbor_in_component = any(
+        (selected[0] + dr, selected[1] + dc) in component
+        for dr, dc in ((-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1))
+    )
+    off_chain = (not has_knight_neighbor_in_component) and (not reduces)
+
+    if completes:
+        primary = "completes_endpoint"
+    elif reduces:
+        primary = "reduces_total_goal_distance"
+    elif redundant:
+        primary = "redundant_reinforcement"
+    elif off_chain:
+        primary = "off_chain"
+    else:
+        primary = "other"
+
+    return {
+        "completes_endpoint": completes,
+        "reduces_total_goal_distance": reduces,
+        "is_redundant_reinforcement": redundant,
+        "is_off_chain": off_chain,
+        "primary_class": primary,
+        "total_goal_distance_before": total_before,
+        "total_goal_distance_after": total_after,
+    }
