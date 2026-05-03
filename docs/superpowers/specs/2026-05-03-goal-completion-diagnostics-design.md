@@ -167,7 +167,7 @@ Empty/partial/uniform-coverage rules:
 - Field with zero coverage → its line omitted (not "n/a").
 - All zero (`n_moves_with_any_stats == 0`) → short fallback: `Per-move stats: no moves carry new fields (all replays predate persistence change).`
 
-### 5.6 Tests (Phase 0) — 11 tests
+### 5.6 Tests (Phase 0) — 12 tests
 
 1. `test_save_game_replay_writes_per_move_fields_when_lists_populated`
 2. `test_save_game_replay_per_move_fields_null_when_lists_absent`
@@ -180,8 +180,7 @@ Empty/partial/uniform-coverage rules:
 9. `test_format_per_move_stats_report_zero_coverage_short_message`
 10. `test_in_process_play_game_returns_per_move_lists_aligned_with_history`
 11. `test_resign_path_does_not_append_phantom_per_move_entries`
-
-Plus a pickle-roundtrip assertion that `GameComplete` preserves the two new optional list fields.
+12. `test_ipc_game_complete_pickle_roundtrip_preserves_per_move_lists` — `GameComplete` populated with both lists, pickle/unpickle, assert equality.
 
 ### 5.7 Implementation sequencing (Phase 0) — 5 commits
 
@@ -295,7 +294,7 @@ For each candidate component meeting `min_component_size`:
 
 `endpoint_completion_moves` is the set of fresh placements `(r, c)` at layer L=1 from which a goal-side cell is reachable in 0 additional placements.
 
-`distance_reducing_moves` is the set of fresh placements where, after hypothetical apply, `total_goal_distance` strictly decreases. Computed by post-hoc evaluation: candidate set is "any legal placement within knight distance of an in-component peg." Worst case ~30–50 candidates per ply. Sub-millisecond on typical positions.
+`distance_reducing_moves` is the set of fresh placements where, after hypothetical apply, `total_goal_distance` strictly decreases. Computed by post-hoc evaluation: candidate set is "any legal placement within knight distance of an in-component peg **or** a same-color peg already absorbed at cost 0 in the BFS frontier seed (i.e., any peg in the *extended* component, not only the original `component_pegs` set)." Worst case ~30–50 candidates per ply. Sub-millisecond on typical positions.
 
 ### 6.4 Engine-faithful hypothetical placements
 
@@ -983,12 +982,12 @@ Listed in **intended implementation order**, not numeric phase order:
 
 | Order | Phase | Commits | Tests | Risk |
 |---|---|---|---|---|
-| 1 | 0 — per-move `search_score` + `root_top1_share` | 5 | 11 | Low (additive schema, plumbing) |
+| 1 | 0 — per-move `search_score` + `root_top1_share` | 5 | 12 | Low (additive schema, plumbing) |
 | 2 | 1 — connectivity helpers | 2 | 19 | Low (pure functions, no callers) |
 | 3 | 2 — replay-side aggregation, summary, report, worst-cases CSV | 4 | 22 | Medium (analyzer integration) |
 | 4 | 4 — strong-advantage telemetry | 3 | predecessor §9 (7) + 3 = 10 | Low (predecessor design already done) |
 | 5 | 3 — inline closeout diagnostics | 5 | 18 | High (touches self-play hot path) |
-| **Total** | | **19** | **~80** | |
+| **Total** | | **19** | **~81** | |
 
 **Rationale for ordering**:
 - Phase 0 first because per-move data feeds Phase 2 metrics (`high_value_after_detection`) and Phase 3 cross-validation.
@@ -1003,7 +1002,7 @@ Final test-file layout is for writing-plans to settle; the spec defines counts p
 | File | Phase(s) | Tests |
 |---|---|---|
 | `tests/test_game_saver_per_move_fields.py` (new) | 0 | 4 (saver tests #1–#4) |
-| `tests/test_self_play_per_move_capture.py` (new) | 0 | 2 (in-process capture + resign branch, tests #10–#11) |
+| `tests/test_self_play_per_move_capture.py` (new) | 0 | 3 (in-process capture, resign branch, IPC pickle roundtrip — tests #10–#12) |
 | `tests/test_analyzer_per_move_stats.py` (new) | 0 | 5 (aggregate + report tests #5–#9) |
 | `tests/test_connectivity_goal_completion.py` (new) | 1 | 19 |
 | `tests/test_analyzer_goal_completion.py` (new) | 2 | 22 |
@@ -1011,7 +1010,7 @@ Final test-file layout is for writing-plans to settle; the spec defines counts p
 | `tests/test_analyzer_closeout_diagnostics.py` (new) | 3 | 4 (analyzer surfacing for closeout: tests #17–#18 plus two report tests) |
 | `tests/test_strong_advantage_analyzer_aggregation.py` (modified, predecessor) | 4 | predecessor 7 + 3 = 10 |
 
-Total: **~80** new or new-subsection tests across the listed files.
+Total: **~81** new or new-subsection tests across the listed files.
 
 ## 12. Verification
 
