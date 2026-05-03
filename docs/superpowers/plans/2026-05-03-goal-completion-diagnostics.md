@@ -12,6 +12,8 @@
 
 **Implementation order across phases (intended, not numeric):** 0 → 1 → 2 → 4 → 3. Phase 4 ships before Phase 3 so the highest-risk hot-path change happens last with everything else validated end-to-end first.
 
+**Schema-version invariant.** Every Phase 3 writer of `goal_completion_diagnostics_meta` MUST set `diagnostic_version: 1` from the very first persistence-emitting commit. Analyzer surfacing reads this field and exposes it as `goal_completion.diagnostics_coverage.version`. This is a non-optional contract: no replay JSON gets a `goal_completion_diagnostics_meta` block without a version field, and any future schema-affecting change must bump this number.
+
 ---
 
 ## File Structure
@@ -320,33 +322,6 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
-def _make_minimal_play_game_kwargs(n_simulations=20, max_moves=12):
-    """Construct minimal kwargs to call play_game with a tiny model + short cap.
-
-    Mirrors the pattern in tests/test_self_play.py. The short cap ensures the
-    game terminates well within test runtime.
-    """
-    import random
-    import numpy as np
-    import mlx.core as mx
-    from scripts.GPU.alphazero.network import create_network
-    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
-    from scripts.GPU.alphazero.mcts import MCTS, MCTSConfig
-    from scripts.GPU.alphazero.self_play import SelfPlayConfig
-    from scripts.GPU.alphazero.game import TwixtState
-
-    np.random.seed(7)
-    mx.random.seed(7)
-    net = create_network(hidden=32, n_blocks=2)
-    evaluator = LocalGPUEvaluator(net)
-    cfg = SelfPlayConfig()
-    config = MCTSConfig(n_simulations=n_simulations)
-    mcts = MCTS(evaluator, config, rng=random.Random(7))
-    state = TwixtState(active_size=8)  # smaller board for fast tests
-    state = state.__class__.__init__  # placeholder for state - actual construct below
-    return None  # body filled per-test below
-
-
 def test_in_process_play_game_returns_per_move_lists_aligned_with_history():
     """play_game's GameRecord has move_root_values and move_top1_shares
     aligned with move_history (same length, no None except where MCTS produced None)."""
@@ -424,7 +399,12 @@ Expected: **FAIL** — `AttributeError: 'GameRecord' object has no attribute 'mo
 
 ```python
         # Capture per-move root value and top1 share before move-history append.
-        # root_value is from state.to_move perspective at search time.
+        # IMPORTANT: search_score (root_value) is ALWAYS from state.to_move
+        # perspective at search time — i.e., +1 means "side about to play this
+        # move thinks it is winning." Phase 2's analyzer aggregation only
+        # looks at winner-to-move plies in the watch window, so no sign flip
+        # is needed there. If a future enhancement ever adds loser-side
+        # analysis, that path MUST flip the sign for non-winner plies.
         move_root_values.append(float(root_value) if root_value is not None else None)
         if visit_counts:
             _total = sum(visit_counts.values())
@@ -437,7 +417,24 @@ Expected: **FAIL** — `AttributeError: 'GameRecord' object has no attribute 'mo
 
 ### Step 6: Populate the new `GameRecord` fields at return
 
-- [ ] In `scripts/GPU/alphazero/self_play.py`, locate the `GameRecord(` constructor at the return (around line 870). Find the existing `final_top1_share=mcts._final_top1_share,` line. Add immediately after it (still inside the constructor):
+- [ ] In `scripts/GPU/alphazero/self_play.py`, locate the `GameRecord(` constructor at the return (around line 870). **Just before** the constructor, add a hard length-alignment invariant — self-play must never produce a mismatch (the saver tolerates one defensively, but in-process this would be a bug):
+
+```python
+    # Invariant: per-move accumulators must be 1:1 with move_history on
+    # every code path, including resign. The saver tolerates mismatch
+    # defensively (with a stderr warning) — in-process production code
+    # should not produce a mismatch.
+    assert len(move_root_values) == len(move_history), (
+        f"move_root_values length {len(move_root_values)} != "
+        f"move_history length {len(move_history)}"
+    )
+    assert len(move_top1_shares) == len(move_history), (
+        f"move_top1_shares length {len(move_top1_shares)} != "
+        f"move_history length {len(move_history)}"
+    )
+```
+
+- [ ] Find the existing `final_top1_share=mcts._final_top1_share,` line. Add immediately after it (still inside the constructor):
 
 ```python
         final_top1_share=mcts._final_top1_share,
@@ -1260,6 +1257,9 @@ def _knight_neighbors(r: int, c: int):
         yield r + dr, c + dc
 
 
+_BFS_MAX_NODES_EXPANDED = 5000  # guardrail per spec review; sub-millisecond on typical positions
+
+
 def _bfs_distance_to_goal(
     state: TwixtState,
     player: str,
@@ -1268,12 +1268,17 @@ def _bfs_distance_to_goal(
     max_depth: int,
     active: int,
 ) -> Optional[int]:
-    """One-side BFS over fresh placements."""
+    """One-side BFS over fresh placements.
+
+    Bounded by both max_depth (logical layers) AND _BFS_MAX_NODES_EXPANDED
+    (defensive guardrail against pathological positions). If the node cap
+    is hit, returns None to signal "not reachable within budget" rather
+    than raising.
+    """
     # Layer 0 = current component's pegs; track reachable component for each layer.
     # We expand by enumerating candidate fresh placements that are knight-
     # adjacent to ANY peg in the current absorbed component, and accept those
     # the engine accepts. Apply them hypothetically and check goal-touching.
-    frontier_components = {component}
     visited_states = set()  # canonicalize by frozenset(pegs of player) to avoid duplicate exploration
 
     def _player_pegs(s: TwixtState) -> FrozenSet[Tuple[int, int]]:
@@ -1283,6 +1288,7 @@ def _bfs_distance_to_goal(
 
     layer = 0
     layer_states = [(state, component)]
+    nodes_expanded = 0
 
     while layer < max_depth:
         layer += 1
@@ -1307,6 +1313,9 @@ def _bfs_distance_to_goal(
                 if key in visited_states:
                     continue
                 visited_states.add(key)
+                nodes_expanded += 1
+                if nodes_expanded > _BFS_MAX_NODES_EXPANDED:
+                    return None  # guardrail: pathological position; treat as unreachable
                 # The new component is the connected component containing (nr, nc).
                 new_comp = frozenset(new_state._get_connected_component((nr, nc), player))
                 # Goal check: any peg in new_comp on the target side?
@@ -1385,13 +1394,13 @@ def test_component_goal_distances_distance_two_two_hop_chain():
 
 
 def test_component_goal_distances_blocked_by_intersecting_bridge_takes_alternative_or_none():
-    """When a bridge crossing blocks one path, BFS uses an alternative route
-    or returns None if no alternative within max_depth."""
-    # Red at (4, 5). Place a Black bridge that blocks one knight-bridge route to row 0.
-    # Specific layout: red at (4, 5); black bridge between (1, 4) and (3, 5)
-    # would block, but black places intersecting pegs.
-    # NOTE: precise layout requires careful construction; this test asserts only
-    # that the function does not crash and returns a sensible answer.
+    """SMOKE TEST: when a crossing bridge blocks one route, BFS uses an
+    alternative or returns None.
+
+    Implementer note: this test as written is a does-not-crash smoke check.
+    Replace the fixture with a curated layout that produces a specific
+    expected distance once the helpers are stable, so this test actually
+    proves alternative-route correctness rather than just non-crash."""
     s = _state_after([(4, 5), (1, 4), (10, 10), (3, 3)], active_size=24)
     comp = _component_of(s, (4, 5), "red")
     d = component_goal_distances(s, "red", comp, max_depth=3)
@@ -1399,7 +1408,7 @@ def test_component_goal_distances_blocked_by_intersecting_bridge_takes_alternati
 
 
 def test_component_goal_distances_unreachable_within_max_depth_returns_none():
-    """Red component far from goal → top = None at max_depth=3."""
+    """STRONG: Red component far from goal → top = None at max_depth=3."""
     # Red at row 12 with no other red pegs; reaching row 0 needs 4+ placements.
     s = _state_after([(12, 5), (10, 10)], active_size=24)
     comp = _component_of(s, (12, 5), "red")
@@ -1408,13 +1417,15 @@ def test_component_goal_distances_unreachable_within_max_depth_returns_none():
 
 
 def test_component_goal_distances_skips_invalid_placements():
-    """Corner cells and Red-forbidden columns must be excluded from candidates.
-    Asserts no crash and that distance computation respects color-edge rules."""
-    # Red component near corner (1, 1); top distance via (0, 0) is invalid (corner).
+    """SMOKE TEST: corner/edge restrictions don't crash the BFS.
+
+    Implementer note: replace with a curated layout where (0, 0) corner
+    placement is the ONLY single-peg path, and assert d["top"] is exactly 2
+    (forced two-hop via a non-corner cell). That makes the test
+    invariant-bearing rather than just no-crash."""
     s = _state_after([(1, 1), (15, 15)], active_size=24)
     comp = _component_of(s, (1, 1), "red")
     d = component_goal_distances(s, "red", comp, max_depth=3)
-    # A valid path may still exist via (0, 3) or similar; we just check no crash.
     assert d["top"] is None or d["top"] >= 1
 ```
 
@@ -1474,30 +1485,29 @@ def _make_red_chain(n_pegs, start_row=4, start_col=5, dr=2, dc=1):
 
 
 def test_compute_goal_completion_state_picks_smallest_distance_then_largest_size():
-    """Multiple red components: pick the one with smallest total_goal_distance.
-    Tie-break on size."""
-    # Build two red components: a small one near a goal (distance 1) and a
-    # larger one farther from the goal (distance > 1). Smallest distance wins.
-    # Red small near top (distance ~1): pegs at (1, 5), (3, 4), (3, 6) — 3 red pegs only,
-    # but we need >= min_component_size = 8. Use the test parameter:
+    """SMOKE TEST scaffold: multiple red components, pick the one with smallest
+    total_goal_distance; tie-break on size.
+
+    Implementer note: the loose synthetic below is a starting point. Before
+    landing this test, replace the fixture with a *curated* layout that
+    produces TWO red components meeting min_component_size=8 with KNOWN,
+    DIFFERENT total_goal_distances (e.g., 1 and 3), then assert
+    `res['component_pegs']` matches the smaller-distance component exactly.
+    That makes the test prove the selection rule rather than just no-crash.
+    """
     moves_red = []
     moves_black = [(15, 15), (16, 16), (17, 17)]
-    # Far red component (eventually 8+ pegs, total_distance > 1)
     moves_red.extend(_make_red_chain(8, start_row=10, start_col=2))
-    # Inject black moves in alternation (TwixT alternates; for fixture, we rely on
-    # apply_move's swap and the state's to_move handling).
     seq = []
     for r_move, b_move in zip(moves_red, moves_black + [(20, 20)] * 10):
         seq.append(r_move)
         seq.append(b_move)
     s = _state_after(seq[:16], active_size=24)
     res = compute_goal_completion_state(s, "red", max_depth=3, min_component_size=4)
-    # Largest red component has size >= 4; we just check it's identified and has
-    # a finite total_goal_distance or None (which will fail; we accept either non-crash).
     assert res is None or "total_goal_distance" in res
 ```
 
-(*Note: building synthetic fixtures with precise distances requires careful peg layout. The 19 Phase-1 tests in the spec are exhaustive; this plan provides the canonical Game 097 anchor + key shape tests; the detailed list is in the spec §6.6. Implementers should fill out the full 19 tests using the patterns shown.*)
+(*Note: building synthetic fixtures with precise distances requires careful peg layout. The 19 Phase-1 tests in the spec §6.6 are exhaustive. Implementers should land each one with curated fixtures producing exact expected values — distances, categories, completion-move sets — rather than the loose smoke checks shown above. Loose checks are acceptable only for the explicit "does not crash" edge-case tests labeled SMOKE TEST in the assertions above.*)
 
 ### Step 2: Run the test to verify it fails
 
@@ -1776,7 +1786,11 @@ def test_compute_goal_completion_state_game097_turn35_canonical():
     candidates = list(games_dir.glob("iter_0108_game_097*"))
     if not candidates:
         import pytest
-        pytest.skip("iter_0108_game_097.json not present in scripts/GPU/logs/games/")
+        pytest.skip(
+            "Game 097 anchor replay not present in scripts/GPU/logs/games/; "
+            "synthetic Phase 1 tests still cover helper behavior. "
+            "A green test run does NOT imply the canonical Game 097 closeout was validated."
+        )
     record = json.loads(candidates[0].read_text())
     moves = [(int(m["row"]), int(m["col"])) for m in record["moves"][:35]]
     s = _state_after(moves, active_size=24,
