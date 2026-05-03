@@ -36,6 +36,11 @@ def save_game_replay(
     leaf_evals: int = 0,
     backups: int = 0,
     nn_batches: int = 0,
+    # Per-move stats (spec 2026-05-03 §5).
+    # Lists are 1:1 with move_history; entries default to None when the
+    # caller does not supply per-move data (e.g., legacy callers).
+    move_root_values: Optional[list] = None,
+    move_top1_shares: Optional[list] = None,
 ) -> Path:
     """Save a single game in replay-compatible format.
 
@@ -59,8 +64,29 @@ def save_game_replay(
     # Build moves array with player alternation from actual starting player
     moves = []
     players = [start_player, "black" if start_player == "red" else "red"]
+    n_history = len(move_history)
+    if move_root_values is not None and len(move_root_values) != n_history:
+        import sys as _sys
+        _sys.stderr.write(
+            f"[game_saver] move_root_values length {len(move_root_values)} "
+            f"!= move_history length {n_history}; tail entries default to null.\n"
+        )
+    if move_top1_shares is not None and len(move_top1_shares) != n_history:
+        import sys as _sys
+        _sys.stderr.write(
+            f"[game_saver] move_top1_shares length {len(move_top1_shares)} "
+            f"!= move_history length {n_history}; tail entries default to null.\n"
+        )
     for i, (row, col) in enumerate(move_history):
         player = players[i % 2]
+        rv = None
+        if move_root_values is not None and i < len(move_root_values):
+            v = move_root_values[i]
+            rv = float(v) if v is not None else None
+        ts = None
+        if move_top1_shares is not None and i < len(move_top1_shares):
+            v = move_top1_shares[i]
+            ts = float(v) if v is not None else None
         moves.append({
             "turn": i + 1,
             "player": player,
@@ -68,7 +94,8 @@ def save_game_replay(
             "col": int(col),
             "bridges_created": [],
             "heuristics": {},
-            "search_score": None,
+            "search_score": rv,
+            "root_top1_share": ts,
         })
 
     # Determine winner string for format
@@ -193,6 +220,9 @@ class GameSaver:
         leaf_evals: int = 0,
         backups: int = 0,
         nn_batches: int = 0,
+        # Per-move stats (spec 2026-05-03 §5).
+        move_root_values: Optional[list] = None,
+        move_top1_shares: Optional[list] = None,
     ) -> Optional[Path]:
         """Save game if we haven't reached the limit for this iteration.
 
@@ -231,6 +261,8 @@ class GameSaver:
             leaf_evals=leaf_evals,
             backups=backups,
             nn_batches=nn_batches,
+            move_root_values=move_root_values,
+            move_top1_shares=move_top1_shares,
         )
 
         self._games_saved_this_iter += 1
