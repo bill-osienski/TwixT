@@ -2278,6 +2278,98 @@ def format_goal_completion_report(gc: dict) -> List[str]:
     return lines
 
 
+def write_goal_completion_worst_cases_csv(
+    goal_completion: dict, out_path, top_k: int = 25
+) -> None:
+    """Write goal_completion_worst_cases.csv per spec 2026-05-03 §7.6.
+
+    Sort: conversion_delay_plies DESC, redundant_reinforcement_moves DESC, iteration ASC.
+    Top-K applied across the unified Class 1 + Class 2 pool. Class 2 rows
+    reuse conversion_delay_plies column for the unified sort with null
+    winner/actual_win_ply making the semantics clear.
+    """
+    import csv as _csv
+    from pathlib import Path
+
+    out_path = Path(out_path)
+    columns = [
+        "iteration", "game_idx", "game_id", "winner", "starting_player",
+        "n_moves", "reason", "detected_player",
+        "first_dominant_unclosed_ply", "first_total_goal_distance", "first_category",
+        "actual_win_ply", "conversion_delay_plies", "conversion_delay_winner_moves",
+        "distance_reducing_moves", "endpoint_completion_moves",
+        "redundant_reinforcement_moves", "off_chain_moves", "other_moves",
+        "dominant_unavailable_moves",
+        "max_search_score_after_detection", "mean_search_score_after_detection",
+        "high_value_after_detection_plies", "root_value_high_but_delayed",
+        "state_cap_after_detection", "timeout_after_detection", "board_full_after_detection",
+        "outcome_class", "scope",
+    ]
+
+    main_records = (goal_completion.get("main_population") or {}).get(
+        "_per_game_records_internal", []
+    )
+    capped_records = (goal_completion.get("capped_population") or {}).get(
+        "_per_game_records_internal", []
+    )
+
+    pool = [r for r in main_records if r.get("detected")]
+    # For Class 2 rows, copy cap_delay into conversion_delay_plies for unified sort.
+    for r in capped_records:
+        if not r.get("detected"):
+            continue
+        r2 = dict(r)
+        r2["conversion_delay_plies"] = r.get("cap_delay_after_detection_plies")
+        pool.append(r2)
+
+    def _sort_key(r):
+        cdp = r.get("conversion_delay_plies") or 0
+        pcc = r.get("primary_class_counts") or {}
+        rrm = pcc.get("redundant_reinforcement", 0) if pcc else 0
+        return (-cdp, -rrm, r.get("iteration") or 0)
+
+    pool.sort(key=_sort_key)
+    pool = pool[:top_k]
+
+    with open(out_path, "w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=columns)
+        w.writeheader()
+        for r in pool:
+            pcc = r.get("primary_class_counts") or {}
+            row = {
+                "iteration": r.get("iteration"),
+                "game_idx": r.get("game_idx"),
+                "game_id": r.get("game_id"),
+                "winner": r.get("winner"),
+                "starting_player": r.get("starting_player"),
+                "n_moves": r.get("n_moves"),
+                "reason": r.get("reason"),
+                "detected_player": r.get("detected_player"),
+                "first_dominant_unclosed_ply": r.get("first_dominant_unclosed_ply"),
+                "first_total_goal_distance": r.get("first_total_goal_distance"),
+                "first_category": r.get("first_category"),
+                "actual_win_ply": r.get("actual_win_ply"),
+                "conversion_delay_plies": r.get("conversion_delay_plies"),
+                "conversion_delay_winner_moves": r.get("conversion_delay_winner_moves"),
+                "distance_reducing_moves": pcc.get("reduces_total_goal_distance") if pcc else None,
+                "endpoint_completion_moves": pcc.get("completes_endpoint") if pcc else None,
+                "redundant_reinforcement_moves": pcc.get("redundant_reinforcement") if pcc else None,
+                "off_chain_moves": pcc.get("off_chain") if pcc else None,
+                "other_moves": pcc.get("other") if pcc else None,
+                "dominant_unavailable_moves": r.get("winner_moves_with_dominant_unavailable"),
+                "max_search_score_after_detection": r.get("max_search_score_after_detection"),
+                "mean_search_score_after_detection": r.get("mean_search_score_after_detection"),
+                "high_value_after_detection_plies": r.get("high_value_after_detection_plies"),
+                "root_value_high_but_delayed": r.get("root_value_high_but_delayed"),
+                "state_cap_after_detection": r.get("reason") == "state_cap" if r.get("outcome_class") == 2 else None,
+                "timeout_after_detection": r.get("reason") in ("timeout", "timeout_selfplay") if r.get("outcome_class") == 2 else None,
+                "board_full_after_detection": r.get("reason") == "board_full" if r.get("outcome_class") == 2 else None,
+                "outcome_class": r.get("outcome_class"),
+                "scope": r.get("scope"),
+            }
+            w.writerow(row)
+
+
 # -----------------------------
 # Phase 1 (connectivity-retrain) report formatters
 # -----------------------------
@@ -3403,6 +3495,13 @@ def analyze(replays: List[dict],
         write_value_calibration_by_bucket_csv(
             out_dir, suffix, value_calibration_summary
         )
+
+    # Goal-completion worst cases CSV
+    write_goal_completion_worst_cases_csv(
+        summary["goal_completion"],
+        os.path.join(out_dir, "goal_completion_worst_cases.csv"),
+        top_k=getattr(args, "goal_completion_worst_cases_top_k", 25) if args else 25,
+    )
 
     # -----------------------------
     # Heatmap figures
