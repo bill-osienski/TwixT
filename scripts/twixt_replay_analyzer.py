@@ -152,14 +152,15 @@ TIER_NAMES = ("forced", "strong_advantage")
 def _read_tier_summary(sc: dict, tier: str):
     """Read a per-iter sidecar's summary for `tier`. Prefers the new
     `probe_summary.<tier>` shape; falls back to the legacy
-    `forced_probe_summary` field for tier == "forced".
+    `<tier>_probe_summary` field during the one-release dual-emit window
+    (spec 2026-04-28 §6 + 2026-05-03 §9.2).
     """
     ps = sc.get("probe_summary") or {}
     if tier in ps and ps[tier] is not None:
         return ps[tier]
-    if tier == "forced":
-        return sc.get("forced_probe_summary")
-    return None
+    # Legacy fallback: <tier>_probe_summary (e.g., forced_probe_summary,
+    # strong_advantage_probe_summary).
+    return sc.get(f"{tier}_probe_summary")
 
 
 # -----------------------------

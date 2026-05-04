@@ -384,3 +384,45 @@ def test_run_inline_probe_eval_empty_probes_first_iter_prints(monkeypatch, capsy
     captured = capsys.readouterr()
     assert "Probe (strong_advantage, NN-only): (skipped" in captured.out
     assert "/tmp/missing.json" in captured.out
+
+
+def test_analyzer_prefers_probe_summary_block_over_legacy_flat_fields():
+    """When sidecar has both probe_summary.{forced,strong_advantage} and
+    legacy flat fields, _read_tier_summary returns the tier-keyed block."""
+    from scripts.twixt_replay_analyzer import _read_tier_summary
+
+    sidecar = {
+        "probe_summary": {
+            "forced": {"n": 30, "sign_correct_pct": 99.9},
+            "strong_advantage": {"n": 28, "sign_correct_pct": 80.1},
+        },
+        "forced_probe_summary":           {"n": 30, "sign_correct_pct": 50.0},  # stale legacy
+        "strong_advantage_probe_summary": {"n": 28, "sign_correct_pct": 50.0},  # stale legacy
+    }
+    forced = _read_tier_summary(sidecar, "forced")
+    strong = _read_tier_summary(sidecar, "strong_advantage")
+    assert forced["sign_correct_pct"] == 99.9
+    assert strong["sign_correct_pct"] == 80.1
+
+
+def test_analyzer_falls_back_to_legacy_strong_advantage_probe_summary():
+    """Sidecar with only legacy strong_advantage_probe_summary (no
+    probe_summary.strong_advantage) — analyzer falls back to legacy."""
+    from scripts.twixt_replay_analyzer import _read_tier_summary
+
+    sidecar_legacy_only = {
+        "strong_advantage_probe_summary": {"n": 28, "sign_correct_pct": 67.9},
+    }
+    result = _read_tier_summary(sidecar_legacy_only, "strong_advantage")
+    assert result is not None
+    assert result["sign_correct_pct"] == 67.9
+
+
+def test_analyzer_returns_none_when_neither_form_present():
+    """Sidecar with no probe_summary block AND no legacy field for the
+    requested tier → returns None."""
+    from scripts.twixt_replay_analyzer import _read_tier_summary
+
+    sidecar = {"forced_probe_summary": {"n": 30}}
+    result = _read_tier_summary(sidecar, "strong_advantage")
+    assert result is None
