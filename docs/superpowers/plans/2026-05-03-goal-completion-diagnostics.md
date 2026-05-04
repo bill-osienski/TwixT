@@ -14,6 +14,13 @@
 
 **Schema-version invariant.** Every Phase 3 writer of `goal_completion_diagnostics_meta` MUST set `diagnostic_version: 1` from the very first persistence-emitting commit. Analyzer surfacing reads this field and exposes it as `goal_completion.diagnostics_coverage.version`. This is a non-optional contract: no replay JSON gets a `goal_completion_diagnostics_meta` block without a version field, and any future schema-affecting change must bump this number.
 
+> **POST-EXECUTION CORRECTIONS (2026-05-04).** Six issues were caught during execution and fixed live; see the spec's §16 appendix for the full audit trail. The most consequential corrections that affect THIS plan's text:
+>
+> - **Task 7's Game 097 anchor moved from turn 35 to turn 43.** The closeout-2ply shape lands at turn 43, not 35. Test name renamed accordingly. Inline edit applied below.
+> - **Tasks 16 and 17 reference `SelfPlayConfig` and `cfg.foo` throughout, but `SelfPlayConfig` doesn't exist in this codebase.** Phase 3 flags were added directly as keyword-only parameters on `play_game()`. Implementer adapted Task 16 by replacing `cfg.foo` with kwargs and replacing `cfg = SelfPlayConfig()` test fixtures with `play_game(..., goal_completion_*=...)` direct calls. Plan text below not edited inline (would be invasive); read it as "kwargs, not cfg attributes."
+> - **A Task 12.5 was added between Tasks 12 and 13** to wire the inline strong-advantage probe evaluator (the 2026-04-28 strong-advantage spec assumed an evaluator that wasn't built). Schema-only Task 12 ships `strong_advantage_probe_summary = None`; Task 12.5 produces real telemetry by calling `run_forced_probes_inline(network, strong_advantage_probes, ...)` with a separately loaded probe set. See spec §9.1 for the explanation; commit `5f78048670f` for the implementation.
+> - Plus three smaller corrections (Phase 1 BFS guards, `endpoint_completion_moves` definition, `detection_threshold` semantics) — all live in shipped code; spec text above and the plan's pseudocode were updated where future readers would otherwise be misled.
+
 ---
 
 ## File Structure
@@ -1766,20 +1773,19 @@ Expected: **PASS** (or test passes silently — the fixture is loose).
 - [ ] Append to `tests/test_connectivity_goal_completion.py`:
 
 ```python
-GAME_097_FIRST_35_MOVES = [
-    # Reconstruct from scripts/GPU/logs/games/iter_0108_game_097.json move list.
-    # (turns 1-35; Red plays turn 35 last.)
-    # NOTE: Implementers should fetch the actual JSON and replace this list.
-    # Placeholder with first 35 (row, col) tuples — replace with real data
-    # before running the test.
-    # E.g.:
-    # (10, 12), (...), ..., (1, 6)  # turn 35 = Red (1, 6)
-]
+# NOTE: This anchor replays the FIRST 43 MOVES of iter_0108_game_097, NOT 35.
+# Original draft used turn 35 based on a misread of the brainstorming snippet's
+# "2 plies for Red" — that meant 2 of Red's TURNS with Black interleaved, not
+# total_goal_distance == 2 in the algorithm's sense. At turn 35, the chain has
+# total=3 (top=1, bottom=2) because the bottommost peg is (20, 5) and reaching
+# row 23 requires placing (22, 4) first. The two-endpoint-closeout-2ply shape
+# lands at turn 43, after Red plays (22, 4) — the bottom-hop setup peg. The
+# game's actual move list confirms this.
 
 
-def test_compute_goal_completion_state_game097_turn35_canonical():
-    """Spec anchor: replay first 35 moves of iter_0108_game_097, assert Red's
-    state matches the documented closeout shape."""
+def test_compute_goal_completion_state_game097_turn43_canonical():
+    """Spec anchor: replay first 43 moves of iter_0108_game_097, assert Red's
+    state matches the documented two-endpoint-closeout-2ply shape."""
     import json
     from pathlib import Path
 
@@ -1793,13 +1799,13 @@ def test_compute_goal_completion_state_game097_turn35_canonical():
             "A green test run does NOT imply the canonical Game 097 closeout was validated."
         )
     record = json.loads(candidates[0].read_text())
-    moves = [(int(m["row"]), int(m["col"])) for m in record["moves"][:35]]
+    moves = [(int(m["row"]), int(m["col"])) for m in record["moves"][:43]]
     s = _state_after(moves, active_size=24,
                      start_player=record.get("starting_player", "red"))
     res = compute_goal_completion_state(s, "red", max_depth=3, min_component_size=8)
-    assert res is not None, "Red must have a dominant-unclosed component at turn 35"
+    assert res is not None, "Red must have a dominant-unclosed component at turn 43"
     assert res["total_goal_distance"] == 2, (
-        f"Expected Red total_goal_distance=2 at turn 35, got {res['total_goal_distance']}"
+        f"Expected Red total_goal_distance=2 at turn 43, got {res['total_goal_distance']}"
     )
     assert res["endpoint_distances"]["top"] == 1
     assert res["endpoint_distances"]["bottom"] == 1
@@ -1810,7 +1816,7 @@ def test_compute_goal_completion_state_game097_turn35_canonical():
 
 ### Step 7: Run the anchor test
 
-Run: `.venv/bin/python -m pytest tests/test_connectivity_goal_completion.py::test_compute_goal_completion_state_game097_turn35_canonical -v`
+Run: `.venv/bin/python -m pytest tests/test_connectivity_goal_completion.py::test_compute_goal_completion_state_game097_turn43_canonical -v`
 
 Expected: **PASS** if the actual game JSON is at `scripts/GPU/logs/games/iter_0108_game_097.json`; **SKIPPED** otherwise.
 
@@ -1854,7 +1860,7 @@ classifier with non-exclusive raw booleans plus a priority-resolved
 primary_class (completes_endpoint > reduces_total > redundant > off_chain
 > other). Six-category enum (already_won, one_move_win,
 two_endpoint_closeout_2ply, one_endpoint_distance_2, broader_conversion,
-not_reachable). Includes the Game 097 turn 35 anchor test
+not_reachable). Includes the Game 097 turn 43 anchor test
 (skipped when the source replay JSON is not present).
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>

@@ -286,10 +286,10 @@ For each candidate component meeting `min_component_size`:
 1. **Frontier seed**: all pegs in the component at cost 0; absorb same-color out-of-component pegs that are *already* in the same `state.bridges`-connected component (degenerate: this is just the existing component).
 2. **Per-endpoint BFS**: target = "any cell on goal_side that is part of the (extended) component." Layer L corresponds to "L fresh placements made." Expand a frontier node by enumerating cells `(r, c)` where:
    - cell is empty,
-   - `state.is_valid_placement(r, c)` for `player` (corner/edge color rules),
+   - `state.is_valid_placement(r, c)` for `player`. **Player-perspective guard:** `is_valid_placement` checks legality for `state.to_move`, not for `player`. After the first hypothetical placement, `state.to_move` flips to the other color, so a layer-2+ candidate on `player`'s goal row would be rejected as "wrong color can't place there." Wrap with `dataclasses.replace(state, to_move=player).is_valid_placement(r, c)` before each candidate check.
    - `dataclasses.replace(state, to_move=player).apply_move((r, c))` succeeds and results in a bridge that connects `(r, c)` to the frontier node (verified against the engine's actual `_find_new_bridges` output, not pure knight geometry).
-3. Add `(r, c)` to the next layer at cost +1; transitively absorb same-color out-of-component pegs that become connected through the newly created bridges (cost 0).
-4. **Termination**: stop when a frontier cell **is** on goal_side. Distance = layer count of the terminating cell.
+3. Add `(r, c)` to the next layer at cost +1; transitively absorb same-color out-of-component pegs that become connected through the newly created bridges (cost 0). **Disjoint-component guard:** after `apply_move`, compute `new_comp = connected_component(fresh_peg)`. If `cur_comp.isdisjoint(new_comp)` (the intended bridge to the dominant component was blocked by a crossing — the fresh peg landed in its own isolated component), reject the candidate. Without this guard, a fresh peg that lands on the goal line but isn't actually bridge-connected back to the dominant component would falsely return `layer=1`.
+4. **Termination**: stop when a frontier cell **is** on goal_side AND it's in the extended component (post disjoint-guard). Distance = layer count of the terminating cell.
 5. **No path within `max_depth`**: return `None` for that endpoint.
 
 `endpoint_completion_moves` is the set of fresh placements `(r, c)` at layer L=1 from which a goal-side cell is reachable in 0 additional placements.
@@ -336,7 +336,7 @@ Three properties hold by engine guarantee: placement legality, bridge creation r
 14. `test_classify_selected_reduces_distance_only_primary_class_is_reduces`
 15. `test_classify_selected_redundant_reinforcement_bridgeable_to_component_no_distance_reduction`
 16. `test_classify_selected_off_chain_when_no_knight_neighbor_in_extended_component`
-17. **`test_compute_goal_completion_state_game097_turn35_canonical`** — replay first 35 moves of `iter_0108_game_097`; assert `total_goal_distance == 2`, `endpoint_distances == {"top": 1, "bottom": 1}`, `category == "two_endpoint_closeout_2ply"`, `(0, 8) in endpoint_completion_moves` and `(23, 6) in endpoint_completion_moves`. **Spec anchor.**
+17. **`test_compute_goal_completion_state_game097_turn43_canonical`** — replay first **43** moves of `iter_0108_game_097`; assert `total_goal_distance == 2`, `endpoint_distances == {"top": 1, "bottom": 1}`, `category == "two_endpoint_closeout_2ply"`, `(0, 8) in endpoint_completion_moves` and `(23, 6) in endpoint_completion_moves`. **Spec anchor.** *(Originally specified as turn 35 based on a misread of the brainstorming snippet's "2 plies for Red" — that meant 2 of Red's turns with Black interleaved, not `total_goal_distance == 2` in our algorithm's sense. At turn 35 the chain has total=3 because the bottommost peg is (20, 5) and reaching row 23 requires placing (22, 4) first. The two-endpoint-closeout-2ply shape lands at turn 43 after Red plays (22, 4) — which the actual game's move list confirms is the bottom-hop setup peg.)*
 18. `test_existing_same_color_goal_peg_requires_actual_or_new_bridge_connection` — guards against ambient bridge absorption.
 19. `test_classify_selected_primary_class_other_for_adjacent_nonreducing_nonredundant_move` — guards against forcing ambiguous moves.
 
@@ -360,6 +360,8 @@ All additions to `scripts/twixt_replay_analyzer.py`. Pure post-hoc analysis usin
 | 3 (excluded) | `draw`, `unknown`, anything else | n/a | no |
 
 Class 1 resign games: the loser's resign happens after their own MCTS produced `root_value ≤ -0.97`; this is a clean decisive resolution. `actual_terminal_ply = n_moves`; do not estimate hypothetical remaining drift.
+
+**Note on `detection_threshold` semantics:** the threshold gates *where* `first_dominant_unclosed_ply` lands (which earlier ply qualifies), NOT *whether* detection fires for a Class 1 game. Any decisive winner reaches `total_goal_distance == 0` at the terminal ply, so detection is unavoidable for Class 1 games at any non-negative threshold (it only changes which ply the lock-in happens at). Setting `detection_threshold=1` shifts `first_dominant_unclosed_ply` later (to the ply where total first dropped to ≤ 1), which compresses `conversion_delay_plies`. The `ever_distance_le_2` / `ever_distance_le_3` summary buckets are threshold-independent structural facts. To get an "undetected" Class 1 game at all, set `min_component_size` higher than the largest chain in the game.
 
 ### 7.2 Per-game record (intermediate)
 
@@ -633,23 +635,27 @@ Inline emission during self-play. Most complex phase; touches the self-play hot 
 
 After `mcts.search_from_root(...)` and after the existing opening_diagnostics block:
 
+**Note on configuration shape:** there is no `SelfPlayConfig` dataclass in this codebase (despite earlier drafts suggesting one). The Phase 3 flags below are added directly as keyword-only parameters on `play_game()` itself, not as attributes of a config object. The `cfg.foo` references in the pseudocode below are therefore local variables (the kwargs of `play_game`) rather than dataclass attributes.
+
 ```python
 # --- partial closeout-diagnostic capture (best-effort) ---
+# All cfg.* references below are play_game() kwargs (see §8.8), not a
+# SelfPlayConfig attribute — that class doesn't exist.
 gc_state = None
 partial_diag = None
-if cfg.goal_completion_emit_enabled:
-    if len(goal_completion_diagnostics) >= cfg.goal_completion_max_records_per_game:
+if goal_completion_emit_enabled:
+    if len(goal_completion_diagnostics) >= goal_completion_max_records_per_game:
         goal_completion_diagnostics_meta["records_dropped_by_cap"] += 1
     else:
         try:
             gc_state = compute_goal_completion_state(
                 state, state.to_move,
-                max_depth=cfg.goal_completion_max_depth,
-                min_component_size=cfg.goal_completion_emit_min_component,
+                max_depth=goal_completion_max_depth,
+                min_component_size=goal_completion_emit_min_component,
             )
             if (gc_state is not None
                     and gc_state["total_goal_distance"] is not None
-                    and gc_state["total_goal_distance"] <= cfg.goal_completion_emit_threshold):
+                    and gc_state["total_goal_distance"] <= goal_completion_emit_threshold):
                 if root.priors_raw is None:
                     goal_completion_diagnostics_meta["skipped_missing_priors_count"] += 1
                 else:
@@ -862,15 +868,17 @@ Policy/MCTS closeout behavior (n=84 records across 31 games):
 
 When `total_records == 0`: render `Coverage: 0 / N decisive games (0.0%); 0 capture errors. No closeout records captured this run.` and stop.
 
-### 8.8 CLI flags
+### 8.8 Configuration — `play_game()` keyword-only parameters
+
+Added directly as keyword-only parameters on `play_game()` (not attributes of a non-existent `SelfPlayConfig` dataclass). Plumbing these through to higher-level callers as CLI flags on the trainer is out of scope for Phase 3 — the defaults make end-to-end work; CLI exposure is a follow-up.
 
 ```
---goal-completion-emit-enabled            (bool, default True; set False to fully disable inline capture)
---goal-completion-emit-threshold          (int, default 3)
---goal-completion-emit-min-component      (int, default 8)
---goal-completion-max-depth               (int, default 3)            # shared with analyzer
---goal-completion-skip-distance-reducing  (bool, default False)
---goal-completion-max-records-per-game    (int, default 64)
+goal_completion_emit_enabled: bool = True            # set False to fully disable inline capture
+goal_completion_emit_threshold: int = 3
+goal_completion_emit_min_component: int = 8
+goal_completion_max_depth: int = 3                   # shared with analyzer
+goal_completion_skip_distance_reducing: bool = False
+goal_completion_max_records_per_game: int = 64
 ```
 
 ### 8.9 Edge cases
@@ -923,12 +931,13 @@ Implements `docs/superpowers/specs/2026-04-28-strong-advantage-probe-tier-design
 
 ### 9.1 Trainer changes (`scripts/GPU/alphazero/trainer.py`)
 
-1. Inline probe loop (~line 2802) currently does `forced_probe_summary = tiers.get("forced")`. Add:
-   ```python
-   strong_advantage_probe_summary = tiers.get("strong_advantage")
-   ```
+**Note on the inline strong-advantage evaluator:** the 2026-04-28 strong-advantage spec assumed a tier-keyed probe evaluator that produced `tiers = {"forced": {...}, "strong_advantage": {...}}` in one call. **No such evaluator was ever built.** `probe_eval.run_forced_probes_inline(network, probes, active_size=None)` actually accepts any pre-filtered probe list and returns a flat summary dict — the caller (trainer) is responsible for filtering by `confidence` before calling. The trainer's existing forced flow at `trainer.py:2770` builds `forced_probe_summary` directly from a single call to `run_forced_probes_inline(network, forced_probes, ...)`.
 
-2. Sidecar write (~line 2956): change `build_probe_summary_block(forced_summary=..., strong_advantage_summary=None)` to pass the new variable. Add `"strong_advantage_probe_summary": strong_advantage_probe_summary,` legacy field alongside the existing `forced_probe_summary` (one-release dual-emit window per the predecessor spec).
+To populate `strong_advantage_probe_summary` with real data, Phase 4 needs an additional task (Task 12.5 in the implementation plan): load `tests/probes/strong_advantage_probes.json` at startup, filter by `confidence == "strong_advantage"`, run the same `run_forced_probes_inline(...)` (the function name is misleading — it's actually tier-agnostic), and build the parallel summary dict + history deque. The cleanest factoring is to extract the per-tier wrapper logic (delta + rolling-5 + print + summary-build + history-update) into a shared helper called twice. Without this work, `strong_advantage_probe_summary` stays `None` even though the schema is in place.
+
+The schema-only edits below land Task 12 on their own. The actual evaluator wiring lands in Task 12.5.
+
+1. Inline probe loop (~line 2802) currently has `forced_probe_summary = {...}` built inline. Add a parallel `strong_advantage_probe_summary` build by calling `run_forced_probes_inline(network, strong_advantage_probes, ...)` with a separately loaded probe list (Task 12.5 introduces this path; Task 12 just initializes the variable to `None`).
 
 3. CSV flat fields (~line 3408–3415):
    ```python
@@ -1054,16 +1063,48 @@ None. All design decisions resolved during brainstorming.
 
 ## 15. CLI flags introduced
 
-Nine total, with `--goal-completion-max-depth` shared by analyzer and self-play config plumbing:
+Five Phase-2 CLI flags on the analyzer; six Phase-3 parameters on `play_game()` (kwargs, not CLI flags — see §8.8 note).
 
 ```
---goal-completion-detection-threshold      (int,   default 2)         # Phase 2 (analyzer)
---goal-completion-high-value-threshold     (float, default 0.9)       # Phase 2 (analyzer)
---goal-completion-worst-cases-top-k        (int,   default 25)        # Phase 2 (analyzer)
---goal-completion-emit-enabled             (bool,  default True)      # Phase 3 (self-play)
---goal-completion-emit-threshold           (int,   default 3)         # Phase 3 (self-play)
---goal-completion-emit-min-component       (int,   default 8)         # Phase 3 (self-play)
---goal-completion-max-depth                (int,   default 3)         # shared: Phase 1 helper / Phase 2 analyzer / Phase 3 self-play
---goal-completion-skip-distance-reducing   (bool,  default False)     # Phase 3 (self-play perf escape)
---goal-completion-max-records-per-game     (int,   default 64)        # Phase 3 (self-play safety cap)
+# Phase 2 — analyzer CLI flags
+--goal-completion-detection-threshold      (int,   default 2)
+--goal-completion-high-value-threshold     (float, default 0.9)
+--goal-completion-worst-cases-top-k        (int,   default 25)
+--goal-completion-max-depth                (int,   default 3)         # shared: Phase 1 helper / Phase 2 analyzer
+--goal-completion-min-component-size       (int,   default 8)
+
+# Phase 3 — play_game() keyword-only parameters (NOT CLI flags;
+# trainer-CLI exposure deferred as out-of-scope for the spec)
+goal_completion_emit_enabled               (bool,  default True)
+goal_completion_emit_threshold             (int,   default 3)
+goal_completion_emit_min_component         (int,   default 8)
+goal_completion_max_depth                  (int,   default 3)
+goal_completion_skip_distance_reducing     (bool,  default False)
+goal_completion_max_records_per_game       (int,   default 64)
 ```
+
+---
+
+## 16. Post-execution corrections (folded back into the prose above)
+
+Six spec/plan inconsistencies were caught and fixed during execution. All fixes are LIVE in the shipped code; the inline edits above reflect the corrected understanding. This appendix captures the audit trail.
+
+**1. `endpoint_completion_moves` definition (Phase 1).** Spec §6.1 prose said "drops a non-zero endpoint to 0" — correct. The implementation plan's pseudocode used `if new_total == 0` which means "wins the game in one move," which would falsely exclude moves that close one endpoint while the other remains. Caught while implementing Task 7; the algorithm now matches the prose definition. The Game 097 anchor's expected `(0, 8) ∈ endpoint_completion_moves` and `(23, 6) ∈ endpoint_completion_moves` only holds under the prose definition.
+
+**2. Game 097 anchor turn (Phase 1).** Spec §6.6 #17 originally specified turn 35. The brainstorming snippet's "2 plies for Red — turn 37: (0,8); turn 39: (23,6)" was misread as "`total_goal_distance == 2` at turn 35." It actually meant "two of Red's turns with Black interleaved." At turn 35 the chain has total=3 (top=1, bottom=2) because the bottommost peg is (20, 5) and reaching row 23 requires placing (22, 4) first. The two-endpoint-closeout-2ply shape lands at **turn 43**, after Red plays (22, 4) — which the actual game's move list confirms. Anchor moved to turn 43; assertions hold.
+
+**3. Phase 1 BFS algorithm guards (Phase 1 Task 6).** The bridge-reachable BFS as originally drafted had two latent correctness bugs caught during implementation:
+   - **Player-perspective legality**: `cur_state.is_valid_placement` checks legality for `cur_state.to_move`. After a hypothetical `apply_move`, `to_move` flips to the other color, so a layer-2+ candidate on `player`'s goal row gets rejected as "wrong color can't place there." Wrap with `dataclasses.replace(state, to_move=player)` before the legality check.
+   - **Disjoint-component guard**: a fresh placement that lands on the goal line but whose intended bridge to the dominant component was blocked by a crossing forms its own isolated component. Without checking `cur_comp.isdisjoint(new_comp)`, BFS would falsely report distance=1. The guard rejects such placements.
+
+Both fixes are required for correctness; without them the Game 097 anchor test fails on the documented expected values. Spec §6.3 prose now describes both guards inline.
+
+**4. `detection_threshold` semantics (Phase 2).** The original prose implied detection_threshold could prevent detection. For Class 1 decisive games, total reaches 0 at terminal — so detection is unavoidable at any non-negative threshold. The threshold gates *where* `first_dominant_unclosed_ply` lands, not *whether* detection fires. To get an undetected Class 1 game, set `min_component_size` higher than the largest chain. Spec §7.1 now carries this clarification.
+
+**5. `SelfPlayConfig` doesn't exist (Phase 3).** Earlier drafts pictured Phase 3 flags as attributes of a `SelfPlayConfig` dataclass. The actual codebase has no such dataclass; `play_game()` takes individual kwargs (~20 of them already). Adapted: Phase 3's six knobs are added as keyword-only parameters on `play_game()` itself (defaults match the original spec). Plumbing through to higher-level callers as CLI flags is deferred. Spec §8.1 + §8.8 + §15 all now reflect kwargs-not-config-class.
+
+**6. Inline strong-advantage evaluator was missing (Phase 4).** The 2026-04-28 strong-advantage spec assumed `tiers = run_forced_probes_inline(...)` returned a tier-keyed dict; it doesn't. `run_forced_probes_inline(network, probes, active_size=None)` is tier-agnostic — it accepts any pre-filtered probe list and returns a flat summary. The trainer pre-filters by `confidence == "forced"` before calling it. Task 12 of the original plan would have shipped only schema (sidecar keys, CSV columns) with `strong_advantage_probe_summary` always None.
+
+**Resolution: a Task 12.5 was added between Tasks 12 and 13.** It loads `tests/probes/strong_advantage_probes.json` at trainer startup, filters by `confidence == "strong_advantage"`, calls `run_forced_probes_inline(network, strong_advantage_probes, ...)`, and builds the parallel summary + history deque. The cleanest factoring extracts the per-tier wrapper logic (delta + rolling-5 + print + summary-build + history-update) into a shared `_run_inline_probe_eval(network, probes, history, *, label, ...)` helper called once per tier. Live verification on `model_iter_0099` produces real telemetry (`sas_n=30 sas_sign_correct_pct=1.0 sas_median_abs_v=0.987`).
+
+Spec §9.1 now documents this gap and notes Task 12.5 as the resolving subtask.
