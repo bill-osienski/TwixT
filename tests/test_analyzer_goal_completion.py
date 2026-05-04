@@ -12,7 +12,10 @@ import pytest
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.twixt_replay_analyzer import aggregate_goal_completion_diagnostics
+from scripts.twixt_replay_analyzer import (
+    aggregate_goal_completion_diagnostics,
+    format_goal_completion_report,
+)
 
 
 def _load_game_097() -> dict:
@@ -474,3 +477,60 @@ def test_aggregate_le_2_and_le_3_buckets_independent_of_detection_threshold(
     assert r1["main_population"]["games_with_total_distance_le_3"] == 1
     assert r2["main_population"]["games_with_total_distance_le_2"] == 1
     assert r2["main_population"]["games_with_total_distance_le_3"] == 1
+
+
+def test_format_goal_completion_report_zero_detection_short_message():
+    """When no games have detection in any class -> short message."""
+    r = aggregate_goal_completion_diagnostics([])
+    out = format_goal_completion_report(r)
+    text = "\n".join(out)
+    assert "Goal-Completion / Conversion Diagnostics" in text
+    assert ("No dominant-unclosed positions detected" in text
+            or "No decisive games" in text
+            or "No decisive or capped games" in text)
+
+
+def test_format_goal_completion_report_full_population_renders_all_sections():
+    """A populated summary renders Main + Capped sections with all subblocks."""
+    summary = {
+        "config": {"detection_threshold": 2, "max_depth": 3,
+                   "min_component_size": 8, "high_value_threshold": 0.9},
+        "main_population": {
+            "scope": "decisive_winner_only", "games": 100,
+            "games_with_dominant_unclosed": 30,
+            "games_with_total_distance_le_2": 20,
+            "games_with_total_distance_le_3": 30,
+            "detected": 20,
+            "conversion_delay_plies": {"p50": 4, "p90": 12, "p95": 18, "max": 24, "mean": 5.6},
+            "conversion_delay_winner_moves": {"p50": 2, "p90": 6, "max": 12, "mean": 2.8},
+            "move_quality_after_detection": {
+                "completes_endpoint_rate": 0.27,
+                "reduces_total_goal_distance_rate": 0.06,
+                "redundant_reinforcement_rate": 0.51,
+                "off_chain_rate": 0.12,
+                "other_rate": 0.04,
+                "dominant_unavailable_rate": 0.0,
+            },
+            "high_value_diagnostics": {
+                "search_score_coverage_pct": 100.0,
+                "max_search_score_after_detection": {"p50": 0.86, "p90": 0.99, "max": 1.0, "mean": 0.85},
+                "mean_search_score_after_detection": {"p50": 0.62, "p90": 0.94, "max": 0.99, "mean": 0.7},
+            },
+            "bad_cases": {"delay_ge_10_plies": 5, "delay_ge_20_plies": 1, "root_value_high_but_delayed": 2},
+        },
+        "capped_population": {
+            "scope": "both_sides", "games": 5,
+            "games_with_dominant_unclosed": 3, "detected_before_cap": 3,
+            "cap_delay_after_detection_plies": {"p50": 22, "p90": 38, "max": 51},
+            "bad_cases": {"state_cap_after_detection": 2,
+                          "timeout_after_detection": 1,
+                          "board_full_after_detection": 0},
+        },
+        "excluded_population": {"games": 0},
+    }
+    out = format_goal_completion_report(summary)
+    text = "\n".join(out)
+    assert "Main (decisive wins" in text
+    assert "Capped (state_cap" in text
+    assert "endpoint completion: 27.0%" in text
+    assert "state_cap after detection:        2" in text

@@ -2148,6 +2148,136 @@ def format_per_game_stats_report(per_game_stats: dict) -> List[str]:
     return lines
 
 
+def format_goal_completion_report(gc: dict) -> List[str]:
+    """Render the goal_completion summary block as report.txt lines (spec §7.5)."""
+    lines: List[str] = []
+    cfg = gc.get("config") or {}
+    main = gc.get("main_population") or {}
+    capped = gc.get("capped_population") or {}
+    excluded = gc.get("excluded_population") or {}
+
+    lines.append("Goal-Completion / Conversion Diagnostics")
+    lines.append("========================================")
+
+    if main.get("games", 0) == 0 and capped.get("games", 0) == 0:
+        lines.append("No decisive or capped games in this run.")
+        lines.append("")
+        return lines
+
+    if main.get("detected", 0) == 0 and capped.get("detected_before_cap", 0) == 0:
+        lines.append(
+            f"Config: detection<={cfg.get('detection_threshold')} / "
+            f"max_depth={cfg.get('max_depth')} / "
+            f"min_component={cfg.get('min_component_size')} / "
+            f"high_value>={cfg.get('high_value_threshold')}"
+        )
+        lines.append(
+            f"Population split: {main.get('games', 0)} decisive / "
+            f"{capped.get('games', 0)} capped / "
+            f"{excluded.get('games', 0)} excluded"
+        )
+        lines.append("No dominant-unclosed positions detected this run.")
+        lines.append("")
+        return lines
+
+    lines.append(
+        f"Config: detection<={cfg.get('detection_threshold')} / "
+        f"max_depth={cfg.get('max_depth')} / "
+        f"min_component={cfg.get('min_component_size')} / "
+        f"high_value>={cfg.get('high_value_threshold')}"
+    )
+    lines.append(
+        f"Population split: {main.get('games', 0)} decisive / "
+        f"{capped.get('games', 0)} capped / "
+        f"{excluded.get('games', 0)} excluded"
+    )
+    lines.append("")
+
+    # Main population
+    lines.append("Main (decisive wins, winner-only):")
+    n_dom = main.get("games_with_dominant_unclosed", 0)
+    n_games = main.get("games", 0)
+    pct_dom = (n_dom / n_games * 100.0) if n_games else 0.0
+    lines.append(
+        f"  Dominant-unclosed reached: {n_dom} / {n_games} ({pct_dom:.1f}%)"
+    )
+    lines.append(
+        f"    Strict closeout (<=2): {main.get('games_with_total_distance_le_2', 0)}    "
+        f"Broader (<=3): {main.get('games_with_total_distance_le_3', 0)}"
+    )
+    lines.append(
+        f"  Detected (gate=<={cfg.get('detection_threshold')}): "
+        f"{main.get('detected', 0)}"
+    )
+    cd = main.get("conversion_delay_plies")
+    if cd:
+        lines.append("  Conversion delay:")
+        lines.append(
+            f"    plies:        p50={cd['p50']:.0f} p90={cd['p90']:.0f} "
+            f"p95={cd['p95']:.0f} max={cd['max']:.0f} mean={cd['mean']:.1f}"
+        )
+        cdw = main.get("conversion_delay_winner_moves") or {}
+        if cdw:
+            lines.append(
+                f"    winner moves: p50={cdw['p50']:.0f} p90={cdw['p90']:.0f} "
+                f"max={cdw['max']:.0f} mean={cdw['mean']:.1f}"
+            )
+    mq = main.get("move_quality_after_detection") or {}
+    if mq:
+        lines.append("  Move quality after detection (pooled):")
+        lines.append(f"    endpoint completion: {mq.get('completes_endpoint_rate', 0)*100:.1f}%")
+        lines.append(f"    distance reducing:    {mq.get('reduces_total_goal_distance_rate', 0)*100:.1f}%")
+        lines.append(f"    redundant reinforce: {mq.get('redundant_reinforcement_rate', 0)*100:.1f}%")
+        lines.append(f"    off-chain:           {mq.get('off_chain_rate', 0)*100:.1f}%")
+        lines.append(f"    other:                {mq.get('other_rate', 0)*100:.1f}%")
+        lines.append(f"    dominant unavailable: {mq.get('dominant_unavailable_rate', 0)*100:.1f}%")
+    hv = main.get("high_value_diagnostics") or {}
+    cov = hv.get("search_score_coverage_pct", 0.0)
+    if cov > 0:
+        lines.append("  High value after detection:")
+        max_p = hv.get("max_search_score_after_detection") or {}
+        mean_p = hv.get("mean_search_score_after_detection") or {}
+        if max_p:
+            lines.append(
+                f"    max search_score:  p50={max_p['p50']:.2f} "
+                f"p90={max_p['p90']:.2f} max={max_p['max']:.2f}"
+            )
+        if mean_p:
+            lines.append(
+                f"    mean search_score: p50={mean_p['p50']:.2f} "
+                f"p90={mean_p['p90']:.2f} max={mean_p['max']:.2f}"
+            )
+    bc = main.get("bad_cases") or {}
+    if bc:
+        lines.append("  Bad cases:")
+        lines.append(f"    delay >=10 plies:               {bc.get('delay_ge_10_plies', 0)}")
+        lines.append(f"    delay >=20 plies:                {bc.get('delay_ge_20_plies', 0)}")
+        if cov > 0:
+            lines.append(f"    high value but delayed:         {bc.get('root_value_high_but_delayed', 0)}")
+
+    # Capped population
+    if capped.get("games", 0) > 0:
+        lines.append("")
+        lines.append("Capped (state_cap / timeout / board_full):")
+        lines.append(f"  Games:                              {capped.get('games', 0)}")
+        lines.append(f"  Dominant unclosed before cap:       {capped.get('detected_before_cap', 0)}")
+        cdcap = capped.get("cap_delay_after_detection_plies")
+        if cdcap:
+            lines.append("  Cap delay after detection:")
+            lines.append(
+                f"    plies: p50={cdcap['p50']:.0f} p90={cdcap['p90']:.0f} "
+                f"max={cdcap['max']:.0f}"
+            )
+        cbc = capped.get("bad_cases") or {}
+        lines.append("  Bad cases:")
+        lines.append(f"    state_cap after detection:        {cbc.get('state_cap_after_detection', 0)}")
+        lines.append(f"    timeout after detection:          {cbc.get('timeout_after_detection', 0)}")
+        lines.append(f"    board_full after detection:       {cbc.get('board_full_after_detection', 0)}")
+
+    lines.append("")
+    return lines
+
+
 # -----------------------------
 # Phase 1 (connectivity-retrain) report formatters
 # -----------------------------
@@ -3071,6 +3201,14 @@ def analyze(replays: List[dict],
     # Per-game stats persistence surfacing (spec 2026-04-29).
     per_move_stats_val = aggregate_per_move_stats(replays)
     per_game_stats_val = aggregate_per_game_stats(replays)
+    goal_completion_val = aggregate_goal_completion_diagnostics(
+        replays,
+        max_depth=getattr(args, "goal_completion_max_depth", 3) if args else 3,
+        min_component_size=getattr(args, "goal_completion_min_component_size", 8) if args else 8,
+        detection_threshold=getattr(args, "goal_completion_detection_threshold", 2) if args else 2,
+        high_value_threshold=getattr(args, "goal_completion_high_value_threshold", 0.9) if args else 0.9,
+        worst_cases_top_k=getattr(args, "goal_completion_worst_cases_top_k", 25) if args else 25,
+    )
 
     summary = {
         "iteration": sc_agg.get("iteration_max", it_max) if use_sidecar else it_max,
@@ -3096,6 +3234,7 @@ def analyze(replays: List[dict],
         # Distributions complement the sidecar-derived `compute` totals above.
         "per_move_stats": per_move_stats_val,
         "per_game_stats": per_game_stats_val,
+        "goal_completion": goal_completion_val,
         # --- Original fields (preserved) ---
         "analyzer": {"name": "twixt_replay_analyzer", "version": "0.4"},
         "run_config": (run_config or {}),
@@ -3400,6 +3539,7 @@ def analyze(replays: List[dict],
     # covers the all-old-schema case per spec §7 / §5.1.
     lines.extend(format_per_move_stats_report(summary["per_move_stats"]))
     lines.extend(format_per_game_stats_report(summary["per_game_stats"]))
+    lines.extend(format_goal_completion_report(summary["goal_completion"]))
 
     if _HAS_OD_ANALYZER and od_summary_dict:
         lines.extend(format_opening_diagnostics_report(od_summary_dict, od_by_ply_dict, od_warnings))
@@ -3525,6 +3665,18 @@ def main():
                     help="Threshold for classify_position winning-structure bucket (default 8).")
     ap.add_argument("--no-connectivity", dest="no_connectivity", action="store_true", default=False,
                     help="Skip connectivity diagnostics (saves time on large runs).")
+
+    # Goal-completion diagnostics (Phase 2, spec 2026-05-03 §7).
+    ap.add_argument("--goal-completion-detection-threshold", type=int, default=2,
+                    help="Phase 2 detection threshold for total_goal_distance (default: 2)")
+    ap.add_argument("--goal-completion-high-value-threshold", type=float, default=0.9,
+                    help="search_score threshold for high-value bad-case detection (default: 0.9)")
+    ap.add_argument("--goal-completion-worst-cases-top-k", type=int, default=25,
+                    help="Top-K worst cases to write to CSV (default: 25)")
+    ap.add_argument("--goal-completion-max-depth", type=int, default=3,
+                    help="Max BFS depth for endpoint distance computation (default: 3)")
+    ap.add_argument("--goal-completion-min-component-size", type=int, default=8,
+                    help="Min component size to qualify as dominant-unclosed (default: 8)")
 
     # Probes / calibration — spec §6.1 new flags.
     ap.add_argument("--weights", default=None,
