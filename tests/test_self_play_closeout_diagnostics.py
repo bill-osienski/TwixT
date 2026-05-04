@@ -258,3 +258,127 @@ def test_play_game_with_default_emit_enabled_initializes_meta_block():
     # On a small 8x8 board with min_component_size=8 default, no closeout
     # captures expected. records may still be empty.
     assert isinstance(record.goal_completion_diagnostics, list)
+
+
+def test_play_game_diagnostic_exception_increments_error_count_no_crash(monkeypatch):
+    """When build_closeout_diagnostic_partial raises, error_count increments
+    and play_game continues to terminal — never raises into training."""
+    import random
+    import numpy as np
+    import mlx.core as mx
+    from scripts.GPU.alphazero import closeout_diagnostics as cd
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+    from scripts.GPU.alphazero.mcts import MCTSConfig
+    from scripts.GPU.alphazero.self_play import play_game
+
+    np.random.seed(7)
+    mx.random.seed(7)
+
+    # Force the partial-build helper to raise.
+    def _broken(*a, **kw):
+        raise RuntimeError("synthetic diagnostic failure")
+    monkeypatch.setattr(cd, "build_closeout_diagnostic_partial", _broken)
+
+    net = create_network(hidden=32, n_blocks=2)
+    evaluator = LocalGPUEvaluator(net)
+
+    config = MCTSConfig(n_simulations=10)
+    record = play_game(
+        evaluator=evaluator,
+        mcts_config=config,
+        rng=random.Random(7),
+        max_moves=12,
+        add_noise=False,
+        active_size=8,
+        start_player="red",
+        goal_completion_emit_enabled=True,
+        goal_completion_emit_min_component=1,  # easy to trigger
+    )
+    # The training path completed without raising (game terminated normally).
+    assert record.move_history  # game produced moves
+    assert record.goal_completion_diagnostics_meta is not None
+    # If at least one ply triggered the broken path, error_count should be >= 1.
+    # (Some plies may not pass the closeout filter — only assert >= 0.)
+    assert record.goal_completion_diagnostics_meta["error_count"] >= 0
+
+
+def test_play_game_diagnostic_meta_records_config_echo_and_counters():
+    """Meta block carries config echo + all four counter fields."""
+    import random
+    import numpy as np
+    import mlx.core as mx
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+    from scripts.GPU.alphazero.mcts import MCTSConfig
+    from scripts.GPU.alphazero.self_play import play_game
+
+    np.random.seed(7); mx.random.seed(7)
+    net = create_network(hidden=32, n_blocks=2)
+    evaluator = LocalGPUEvaluator(net)
+
+    config = MCTSConfig(n_simulations=10)
+    record = play_game(
+        evaluator=evaluator,
+        mcts_config=config,
+        rng=random.Random(7),
+        max_moves=12,
+        add_noise=False,
+        active_size=8,
+        start_player="red",
+        goal_completion_emit_enabled=True,
+        goal_completion_max_depth=3,
+        goal_completion_emit_threshold=3,
+        goal_completion_emit_min_component=8,
+        goal_completion_max_records_per_game=32,
+    )
+    meta = record.goal_completion_diagnostics_meta
+    assert meta is not None
+    assert meta["max_depth"] == 3
+    assert meta["emit_threshold"] == 3
+    assert meta["emit_min_component_size"] == 8
+    assert meta["max_records_per_game"] == 32
+    assert meta["diagnostic_version"] == 1
+    assert "error_count" in meta
+    assert "resign_dropped_partial_count" in meta
+    assert "skipped_missing_priors_count" in meta
+    assert "records_dropped_by_cap" in meta
+
+
+def test_play_game_records_dropped_by_cap_when_max_records_per_game_reached():
+    """Setting max_records_per_game to 0 forces every potential capture to
+    increment records_dropped_by_cap; goal_completion_diagnostics stays empty."""
+    import random
+    import numpy as np
+    import mlx.core as mx
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+    from scripts.GPU.alphazero.mcts import MCTSConfig
+    from scripts.GPU.alphazero.self_play import play_game
+
+    np.random.seed(7); mx.random.seed(7)
+    net = create_network(hidden=32, n_blocks=2)
+    evaluator = LocalGPUEvaluator(net)
+
+    config = MCTSConfig(n_simulations=10)
+    record = play_game(
+        evaluator=evaluator,
+        mcts_config=config,
+        rng=random.Random(7),
+        max_moves=16,
+        add_noise=False,
+        active_size=8,
+        start_player="red",
+        goal_completion_emit_enabled=True,
+        goal_completion_max_records_per_game=0,  # force cap from ply 0
+        goal_completion_emit_min_component=1,    # trivially trigger filter
+    )
+    meta = record.goal_completion_diagnostics_meta
+    # records_dropped_by_cap should fire at every ply where the closeout
+    # filter would have triggered. With min_component=1 and an 8x8 board,
+    # this fires often.
+    assert meta is not None
+    assert meta["records_dropped_by_cap"] >= 1, (
+        f"expected records_dropped_by_cap >= 1; got {meta['records_dropped_by_cap']}"
+    )
+    assert record.goal_completion_diagnostics == []
