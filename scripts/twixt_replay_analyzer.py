@@ -741,13 +741,47 @@ def aggregate_goal_completion_diagnostics(
 
     excluded_population = {"games": excluded_count}
 
+    # Phase 3 surfacing: diagnostics_coverage + policy_mcts_summary.
+    games_with_diag = 0
+    total_records = 0
+    total_error_count = 0
+    total_resign_dropped = 0
+    total_skipped_priors = 0
+    total_records_dropped_cap = 0
+    diagnostic_version = 1
+    all_records: list = []
+
+    for replay in replays:
+        diag_array = replay.get("goal_completion_diagnostics")
+        diag_meta = replay.get("goal_completion_diagnostics_meta")
+        if diag_array:
+            games_with_diag += 1
+            total_records += len(diag_array)
+            all_records.extend(diag_array)
+        if diag_meta:
+            total_error_count += diag_meta.get("error_count", 0) or 0
+            total_resign_dropped += diag_meta.get("resign_dropped_partial_count", 0) or 0
+            total_skipped_priors += diag_meta.get("skipped_missing_priors_count", 0) or 0
+            total_records_dropped_cap += diag_meta.get("records_dropped_by_cap", 0) or 0
+            v = diag_meta.get("diagnostic_version")
+            if v is not None:
+                diagnostic_version = v
+
+    n_decisive = main_population.get("games", 0) if main_population else 0
+    coverage_pct = (games_with_diag / n_decisive * 100.0) if n_decisive else 0.0
+
     diagnostics_coverage = {
-        "games_with_diagnostics": 0,
-        "total_records": 0,
-        "coverage_pct_of_decisive_games": 0.0,
-        "error_count": 0,
-        "version": 1,
+        "games_with_diagnostics":            games_with_diag,
+        "total_records":                     total_records,
+        "coverage_pct_of_decisive_games":    coverage_pct,
+        "error_count":                       total_error_count,
+        "resign_dropped_partial_count":      total_resign_dropped,
+        "skipped_missing_priors_count":      total_skipped_priors,
+        "records_dropped_by_cap":            total_records_dropped_cap,
+        "version":                           diagnostic_version,
     }
+
+    policy_mcts_summary = _summarize_policy_mcts(all_records) if all_records else None
 
     return {
         "config": config,
@@ -755,6 +789,86 @@ def aggregate_goal_completion_diagnostics(
         "capped_population": capped_population,
         "excluded_population": excluded_population,
         "diagnostics_coverage": diagnostics_coverage,
+        "policy_mcts_summary": policy_mcts_summary,
+    }
+
+
+def _summarize_policy_mcts(records: list) -> dict:
+    """Pool closeout-diagnostic records into the policy_mcts_summary block.
+
+    Args:
+        records: list of per-ply closeout records (from
+            replay["goal_completion_diagnostics"], pooled across replays).
+    Returns:
+        Dict with n_records, endpoint+distance-reducing ranking pools (with
+        n_rankable denominators), primary_class rates, high_value_delayed
+        counter, and by_distance buckets (le_2 / eq_3).
+    """
+    n_records = len(records)
+    primary_counts = {k: 0 for k in (
+        "completes_endpoint", "reduces_total_goal_distance",
+        "redundant_reinforcement", "off_chain", "other"
+    )}
+    high_value_delayed = 0
+    for r in records:
+        cls = r.get("selected_move_classification") or {}
+        pc = cls.get("primary_class")
+        if pc in primary_counts:
+            primary_counts[pc] += 1
+        rs = r.get("root_summary") or {}
+        gc = r.get("goal_completion") or {}
+        if (
+            (rs.get("q_value") or 0.0) >= 0.9
+            and pc in ("redundant_reinforcement", "off_chain", "other")
+            and (gc.get("total_goal_distance_before") or 99) <= 2
+        ):
+            high_value_delayed += 1
+
+    def _ranking_pool(records, key):
+        rankable = [r.get(key) for r in records if r.get(key) is not None]
+        n = len(rankable)
+        if n == 0:
+            return {"n_rankable": 0, "policy_top1_rate": 0.0, "policy_top5_rate": 0.0,
+                    "visit_top1_rate": 0.0, "visit_top5_rate": 0.0}
+        return {
+            "n_rankable": n,
+            "policy_top1_rate": sum(
+                1 for b in rankable if (b.get("best_policy_rank") or 99) == 1
+            ) / n,
+            "policy_top5_rate": sum(
+                1 for b in rankable if b.get("any_in_policy_top5", False)
+            ) / n,
+            "visit_top1_rate": sum(
+                1 for b in rankable if (b.get("best_visit_rank") or 99) == 1
+            ) / n,
+            "visit_top5_rate": sum(
+                1 for b in rankable if b.get("any_in_visit_top5", False)
+            ) / n,
+        }
+
+    by_distance = {"distance_le_2": [], "distance_eq_3": []}
+    for r in records:
+        gc = r.get("goal_completion") or {}
+        total = gc.get("total_goal_distance_before")
+        if total is None:
+            continue
+        if total <= 2:
+            by_distance["distance_le_2"].append(r)
+        elif total == 3:
+            by_distance["distance_eq_3"].append(r)
+
+    return {
+        "n_records": n_records,
+        "endpoint_completion_ranking": _ranking_pool(records, "endpoint_completion_ranking"),
+        "distance_reducing_ranking":   _ranking_pool(records, "distance_reducing_ranking"),
+        "selected_primary_class_rates": {
+            k: (v / max(n_records, 1)) for k, v in primary_counts.items()
+        },
+        "high_value_delayed_closeouts": high_value_delayed,
+        "by_distance": {
+            "distance_le_2": {"n": len(by_distance["distance_le_2"])},
+            "distance_eq_3": {"n": len(by_distance["distance_eq_3"])},
+        },
     }
 
 
@@ -2279,6 +2393,80 @@ def format_goal_completion_report(gc: dict) -> List[str]:
     return lines
 
 
+def format_policy_mcts_closeout_report(gc_block: dict) -> List[str]:
+    """Render the policy/MCTS closeout behavior section per spec §8.7.
+
+    Reads from gc_block (the goal_completion summary dict) — both
+    diagnostics_coverage and policy_mcts_summary live there.
+    """
+    lines: List[str] = []
+    coverage = (gc_block.get("diagnostics_coverage") or {})
+    pms = gc_block.get("policy_mcts_summary")
+    n_decisive_games = (gc_block.get("main_population") or {}).get("games", 0)
+
+    if not pms or pms.get("n_records", 0) == 0:
+        lines.append(
+            f"Coverage: {coverage.get('games_with_diagnostics', 0)} / "
+            f"{n_decisive_games} decisive games "
+            f"({coverage.get('coverage_pct_of_decisive_games', 0):.1f}%); "
+            f"{coverage.get('error_count', 0)} capture errors. "
+            f"No closeout records captured this run."
+        )
+        lines.append("")
+        return lines
+
+    n_records = pms["n_records"]
+    games_with = coverage.get("games_with_diagnostics", 0)
+    pct = coverage.get("coverage_pct_of_decisive_games", 0)
+
+    lines.append(f"Policy/MCTS closeout behavior (n={n_records} records across {games_with} games):")
+    lines.append(
+        f"  Coverage:                        {games_with} / {n_decisive_games} "
+        f"decisive games ({pct:.1f}%); {coverage.get('error_count', 0)} capture errors"
+    )
+    er = pms.get("endpoint_completion_ranking") or {}
+    if er.get("n_rankable", 0) > 0:
+        lines.append(f"  Endpoint-completion ranking (n_rankable={er['n_rankable']}):")
+        lines.append(
+            f"    best completion in policy top1: {er['policy_top1_rate']*100:.1f}%   "
+            f"policy top5: {er['policy_top5_rate']*100:.1f}%"
+        )
+        lines.append(
+            f"    best completion in visit top1:  {er['visit_top1_rate']*100:.1f}%   "
+            f"visit top5:  {er['visit_top5_rate']*100:.1f}%"
+        )
+    rr = pms.get("distance_reducing_ranking") or {}
+    if rr.get("n_rankable", 0) > 0:
+        lines.append(f"  Distance-reducing ranking (n_rankable={rr['n_rankable']}):")
+        lines.append(
+            f"    best reducer in policy top1:    {rr['policy_top1_rate']*100:.1f}%   "
+            f"policy top5: {rr['policy_top5_rate']*100:.1f}%"
+        )
+        lines.append(
+            f"    best reducer in visit top1:     {rr['visit_top1_rate']*100:.1f}%   "
+            f"visit top5:  {rr['visit_top5_rate']*100:.1f}%"
+        )
+    rates = pms.get("selected_primary_class_rates") or {}
+    lines.append("  Selected (primary class):")
+    lines.append(f"    completes endpoint:    {rates.get('completes_endpoint', 0)*100:.1f}%")
+    lines.append(f"    reduces distance:       {rates.get('reduces_total_goal_distance', 0)*100:.1f}%")
+    lines.append(f"    redundant:             {rates.get('redundant_reinforcement', 0)*100:.1f}%")
+    lines.append(f"    off-chain:             {rates.get('off_chain', 0)*100:.1f}%")
+    lines.append(f"    other:                  {rates.get('other', 0)*100:.1f}%")
+    lines.append(f"  High-value delayed closeouts:    {pms.get('high_value_delayed_closeouts', 0)}")
+    by_dist = pms.get("by_distance") or {}
+    le2 = by_dist.get("distance_le_2", {})
+    eq3 = by_dist.get("distance_eq_3", {})
+    if le2 or eq3:
+        lines.append("  By distance:")
+        if le2.get("n", 0):
+            lines.append(f"    le_2 (n={le2['n']}): see policy_mcts_summary.by_distance for details")
+        if eq3.get("n", 0):
+            lines.append(f"    eq_3 (n={eq3['n']}): see policy_mcts_summary.by_distance for details")
+    lines.append("")
+    return lines
+
+
 def write_goal_completion_worst_cases_csv(
     goal_completion: dict, out_path, top_k: int = 25
 ) -> None:
@@ -3640,6 +3828,7 @@ def analyze(replays: List[dict],
     lines.extend(format_per_move_stats_report(summary["per_move_stats"]))
     lines.extend(format_per_game_stats_report(summary["per_game_stats"]))
     lines.extend(format_goal_completion_report(summary["goal_completion"]))
+    lines.extend(format_policy_mcts_closeout_report(summary["goal_completion"]))
 
     if _HAS_OD_ANALYZER and od_summary_dict:
         lines.extend(format_opening_diagnostics_report(od_summary_dict, od_by_ply_dict, od_warnings))
