@@ -41,6 +41,9 @@ def save_game_replay(
     # caller does not supply per-move data (e.g., legacy callers).
     move_root_values: Optional[list] = None,
     move_top1_shares: Optional[list] = None,
+    # Inline closeout diagnostics (spec 2026-05-03 §8.5)
+    goal_completion_diagnostics: Optional[list] = None,
+    goal_completion_diagnostics_meta: Optional[dict] = None,
 ) -> Path:
     """Save a single game in replay-compatible format.
 
@@ -156,6 +159,12 @@ def save_game_replay(
         "meta": meta,
     }
 
+    # Inline closeout diagnostics: top-level JSON keys (spec §8.5).
+    # Both keys absent when meta is None — clean schema on disabled runs.
+    if goal_completion_diagnostics_meta is not None:
+        record["goal_completion_diagnostics"] = list(goal_completion_diagnostics or [])
+        record["goal_completion_diagnostics_meta"] = goal_completion_diagnostics_meta
+
     if opening_diagnostics:
         record["opening_diagnostics"] = opening_diagnostics
         record["opening_diagnostics_meta"] = opening_diagnostics_meta
@@ -223,6 +232,9 @@ class GameSaver:
         # Per-move stats (spec 2026-05-03 §5).
         move_root_values: Optional[list] = None,
         move_top1_shares: Optional[list] = None,
+        # Inline closeout diagnostics (spec 2026-05-03 §8.5)
+        goal_completion_diagnostics: Optional[list] = None,
+        goal_completion_diagnostics_meta: Optional[dict] = None,
     ) -> Optional[Path]:
         """Save game if we haven't reached the limit for this iteration.
 
@@ -263,6 +275,8 @@ class GameSaver:
             nn_batches=nn_batches,
             move_root_values=move_root_values,
             move_top1_shares=move_top1_shares,
+            goal_completion_diagnostics=goal_completion_diagnostics,
+            goal_completion_diagnostics_meta=goal_completion_diagnostics_meta,
         )
 
         self._games_saved_this_iter += 1

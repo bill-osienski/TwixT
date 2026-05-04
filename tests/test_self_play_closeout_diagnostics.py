@@ -382,3 +382,74 @@ def test_play_game_records_dropped_by_cap_when_max_records_per_game_reached():
         f"expected records_dropped_by_cap >= 1; got {meta['records_dropped_by_cap']}"
     )
     assert record.goal_completion_diagnostics == []
+
+
+def test_save_game_replay_writes_goal_completion_diagnostics_array_and_meta_keys(tmp_path):
+    """Saved JSON has both top-level keys when meta is provided."""
+    import json
+    from scripts.GPU.alphazero.game_saver import save_game_replay
+
+    save_game_replay(
+        games_dir=tmp_path,
+        iteration=0,
+        game_idx=0,
+        winner="red",
+        move_history=((0, 1), (5, 5)),
+        n_moves=2,
+        active_size=24,
+        simulations=400,
+        start_player="red",
+        goal_completion_diagnostics=[{"ply": 1, "side_to_move": "red"}],
+        goal_completion_diagnostics_meta={"enabled": True, "diagnostic_version": 1},
+    )
+    saved = json.loads((tmp_path / "iter_0000_game_000.json").read_text())
+    assert "goal_completion_diagnostics" in saved
+    assert "goal_completion_diagnostics_meta" in saved
+    assert saved["goal_completion_diagnostics"][0]["ply"] == 1
+    assert saved["goal_completion_diagnostics_meta"]["diagnostic_version"] == 1
+
+
+def test_save_game_replay_omits_diagnostic_keys_when_meta_none(tmp_path):
+    """When meta is None, neither key appears in the saved JSON (clean schema on disabled runs)."""
+    import json
+    from scripts.GPU.alphazero.game_saver import save_game_replay
+
+    save_game_replay(
+        games_dir=tmp_path,
+        iteration=0,
+        game_idx=0,
+        winner="red",
+        move_history=((0, 1), (5, 5)),
+        n_moves=2,
+        active_size=24,
+        simulations=400,
+        start_player="red",
+    )
+    saved = json.loads((tmp_path / "iter_0000_game_000.json").read_text())
+    assert "goal_completion_diagnostics" not in saved
+    assert "goal_completion_diagnostics_meta" not in saved
+
+
+def test_ipc_game_complete_pickle_roundtrip_preserves_closeout_diagnostics():
+    """GameComplete pickle/unpickle preserves goal_completion_diagnostics + meta."""
+    import pickle
+    from scripts.GPU.alphazero.ipc_messages import GameComplete
+
+    msg = GameComplete(
+        worker_id=0,
+        winner="red",
+        draw_reason=0,
+        n_moves=2,
+        n_positions=2,
+        wall_time_s=1.0,
+        nn_calls=10, expand_calls=10, nn_batches=1, total_backups=10,
+        total_waiters=0, unique_leaves=10, max_waiters=0,
+        flush_full=0, flush_stall=0, flush_tail=0,
+        move_history=((0, 1), (5, 5)),
+        start_player="red",
+        goal_completion_diagnostics=({"ply": 1, "side_to_move": "red"},),
+        goal_completion_diagnostics_meta={"enabled": True, "diagnostic_version": 1},
+    )
+    rt = pickle.loads(pickle.dumps(msg))
+    assert rt.goal_completion_diagnostics == ({"ply": 1, "side_to_move": "red"},)
+    assert rt.goal_completion_diagnostics_meta == {"enabled": True, "diagnostic_version": 1}

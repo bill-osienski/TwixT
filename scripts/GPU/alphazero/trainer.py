@@ -90,6 +90,11 @@ def _save_game_from_ipc(game_saver, msg):
         # Per-move stats (spec 2026-05-03 §5)
         move_root_values=list(msg.move_root_values) if msg.move_root_values else None,
         move_top1_shares=list(msg.move_top1_shares) if msg.move_top1_shares else None,
+        goal_completion_diagnostics=(
+            list(msg.goal_completion_diagnostics)
+            if msg.goal_completion_diagnostics else None
+        ),
+        goal_completion_diagnostics_meta=msg.goal_completion_diagnostics_meta,
     )
 
 
@@ -141,6 +146,11 @@ def _save_game_from_record(game_saver, game):
         # Per-move stats (spec 2026-05-03 §5)
         move_root_values=list(game.move_root_values) if game.move_root_values else None,
         move_top1_shares=list(game.move_top1_shares) if game.move_top1_shares else None,
+        goal_completion_diagnostics=(
+            list(game.goal_completion_diagnostics)
+            if game.goal_completion_diagnostics else None
+        ),
+        goal_completion_diagnostics_meta=game.goal_completion_diagnostics_meta,
     )
 
 

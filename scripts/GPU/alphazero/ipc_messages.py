@@ -111,3 +111,8 @@ class GameComplete:
     # or visits at that ply.
     move_root_values: Tuple[Optional[float], ...] = ()
     move_top1_shares: Tuple[Optional[float], ...] = ()
+    # Inline closeout diagnostics (spec 2026-05-03 §8.5). meta is None
+    # when emit_enabled was False on the upstream play_game (clean schema
+    # on disabled runs). Tuple for frozen-dataclass immutability.
+    goal_completion_diagnostics: Tuple[dict, ...] = ()
+    goal_completion_diagnostics_meta: Optional[dict] = None
