@@ -420,6 +420,10 @@ class GameRecord:
     # code path including the resign branch.
     move_root_values: List[Optional[float]] = field(default_factory=list)
     move_top1_shares: List[Optional[float]] = field(default_factory=list)
+    # Inline closeout diagnostics (spec 2026-05-03 §8.5). meta is None
+    # when emit_enabled was False (clean schema on disabled runs).
+    goal_completion_diagnostics: List[dict] = field(default_factory=list)
+    goal_completion_diagnostics_meta: Optional[dict] = None
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -470,6 +474,16 @@ def play_game(
     # Phase 4: per-game replay cap (0/None disables; cap applied before returning)
     max_positions_per_game: Optional[int] = None,
     endgame_keep_positions: int = 16,
+    # Phase 3 closeout diagnostics (spec 2026-05-03 §8). Defaults make
+    # the diagnostic active by default; callers/tests can disable via the
+    # emit_enabled flag. Six knobs configure threshold, depth, sizing,
+    # safety cap, and a perf escape hatch for distance-reducing computation.
+    goal_completion_emit_enabled: bool = True,
+    goal_completion_emit_threshold: int = 3,
+    goal_completion_emit_min_component: int = 8,
+    goal_completion_max_depth: int = 3,
+    goal_completion_skip_distance_reducing: bool = False,
+    goal_completion_max_records_per_game: int = 64,
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -551,6 +565,28 @@ def play_game(
     move_root_values: list = []
     move_top1_shares: list = []
 
+    # Closeout diagnostics (spec 2026-05-03 §8). Best-effort, never raises
+    # into the training path. Meta echoes config and tracks counters.
+    goal_completion_diagnostics: list = []
+    goal_completion_diagnostics_meta: Optional[dict] = None
+    if goal_completion_emit_enabled:
+        goal_completion_diagnostics_meta = {
+            "enabled": True,
+            "max_depth": goal_completion_max_depth,
+            "emit_threshold": goal_completion_emit_threshold,
+            "emit_min_component_size": goal_completion_emit_min_component,
+            "max_records_per_game": goal_completion_max_records_per_game,
+            "skip_distance_reducing": goal_completion_skip_distance_reducing,
+            "diagnostic_version": 1,
+            "computed_inline": True,
+            "selection_perspective": "side_to_move",
+            "storage": "in_game_json",
+            "error_count": 0,
+            "resign_dropped_partial_count": 0,
+            "skipped_missing_priors_count": 0,
+            "records_dropped_by_cap": 0,
+        }
+
     ply = 0
     while not state.is_terminal() and ply < max_moves:
         # Run MCTS search from current root (reuses subtree)
@@ -591,6 +627,56 @@ def play_game(
                 _rec["root_summary"] = _child["root_summary"]
                 _rec["top_children"] = _child["top_children"]
             _opening_diags.append(_rec)
+
+        # --- Phase 3: closeout diagnostic partial capture (best-effort) ---
+        gc_state_for_diag = None
+        partial_diag = None
+        if goal_completion_emit_enabled:
+            if (goal_completion_diagnostics_meta is not None
+                    and len(goal_completion_diagnostics) >= goal_completion_max_records_per_game):
+                goal_completion_diagnostics_meta["records_dropped_by_cap"] += 1
+            else:
+                try:
+                    from .connectivity_diagnostics import compute_goal_completion_state
+                    gc_state_for_diag = compute_goal_completion_state(
+                        state, state.to_move,
+                        max_depth=goal_completion_max_depth,
+                        min_component_size=goal_completion_emit_min_component,
+                    )
+                    if (gc_state_for_diag is not None
+                            and gc_state_for_diag.get("total_goal_distance") is not None
+                            and gc_state_for_diag["total_goal_distance"]
+                                <= goal_completion_emit_threshold):
+                        if root.priors_raw is None:
+                            if goal_completion_diagnostics_meta is not None:
+                                goal_completion_diagnostics_meta[
+                                    "skipped_missing_priors_count"
+                                ] += 1
+                        else:
+                            from .closeout_diagnostics import (
+                                build_closeout_diagnostic_partial,
+                            )
+                            # decode_fn maps move_id -> (row, col) for active board.
+                            _decode_fn = lambda mid, _a=active_size: (mid // _a, mid % _a)
+                            partial_diag = build_closeout_diagnostic_partial(
+                                ply=ply,
+                                side_to_move=state.to_move,
+                                visit_counts=visit_counts,
+                                priors_raw=root.priors_raw,
+                                priors_adjusted=getattr(root, "priors", None),
+                                root=root,
+                                goal_completion_state=gc_state_for_diag,
+                                board_size=active_size,
+                                skip_distance_reducing=goal_completion_skip_distance_reducing,
+                                decode_fn=_decode_fn,
+                            )
+                except Exception as _e:
+                    if goal_completion_diagnostics_meta is not None:
+                        goal_completion_diagnostics_meta["error_count"] += 1
+                    import sys as _sys
+                    _sys.stderr.write(
+                        f"[closeout-diag] ply={ply} partial error: {_e!r}\n"
+                    )
 
         # --- RESIGN CHECK (after search, before move selection) ---
         # root_value is from state.to_move perspective:
@@ -637,6 +723,12 @@ def play_game(
             window_sum = sum(resign_window_hits)
 
             if window_sum >= resign_k:
+                # Phase 3: track partials built this ply but dropped because
+                # the resign branch breaks before finalize. The partial would
+                # otherwise be discarded silently — count it for transparency.
+                if (partial_diag is not None
+                        and goal_completion_diagnostics_meta is not None):
+                    goal_completion_diagnostics_meta["resign_dropped_partial_count"] += 1
                 resigned_by = state.to_move
                 winner = opponent(resigned_by)
                 draw_reason = RESIGN
@@ -692,6 +784,28 @@ def play_game(
                 n_sims, root_value,
                 visit_counts, root.priors_raw, root.priors, move,
             )
+
+        # --- Phase 3: finalize closeout diagnostic if partial was built ---
+        # Must run BEFORE state is advanced to root.state so state.to_move
+        # still reflects the side that selected `move`.
+        if partial_diag is not None and gc_state_for_diag is not None:
+            try:
+                from .closeout_diagnostics import finalize_closeout_diagnostic
+                full_diag = finalize_closeout_diagnostic(
+                    partial_diag,
+                    state_before=state,
+                    player=state.to_move,
+                    selected_move=move,
+                    goal_state_before=gc_state_for_diag,
+                )
+                goal_completion_diagnostics.append(full_diag)
+            except Exception as _e:
+                if goal_completion_diagnostics_meta is not None:
+                    goal_completion_diagnostics_meta["error_count"] += 1
+                import sys as _sys
+                _sys.stderr.write(
+                    f"[closeout-diag] ply={ply} finalize error: {_e!r}\n"
+                )
 
         # TREE REUSE: advance root to chosen child
         root = mcts.advance_root(root, move)
@@ -920,6 +1034,8 @@ def play_game(
         final_top1_share=mcts._final_top1_share,
         move_root_values=move_root_values,
         move_top1_shares=move_top1_shares,
+        goal_completion_diagnostics=goal_completion_diagnostics,
+        goal_completion_diagnostics_meta=goal_completion_diagnostics_meta,
     )
 
 

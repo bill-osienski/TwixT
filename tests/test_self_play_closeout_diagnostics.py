@@ -185,3 +185,76 @@ def test_finalize_closeout_diagnostic_adds_selected_and_classification():
         assert "primary_class" in full["selected_move_classification"]
         # Original partial dict not mutated.
         assert "selected_move" not in partial
+
+
+def test_play_game_skips_emission_when_emit_enabled_false_meta_block_absent():
+    """When goal_completion_emit_enabled=False, neither array nor meta is set
+    on the returned GameRecord."""
+    import random
+    import numpy as np
+    import mlx.core as mx
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+    from scripts.GPU.alphazero.mcts import MCTSConfig
+    from scripts.GPU.alphazero.self_play import play_game
+
+    np.random.seed(7)
+    mx.random.seed(7)
+    net = create_network(hidden=32, n_blocks=2)
+    evaluator = LocalGPUEvaluator(net)
+
+    config = MCTSConfig(n_simulations=10)
+    record = play_game(
+        evaluator=evaluator,
+        mcts_config=config,
+        rng=random.Random(7),
+        max_moves=12,
+        add_noise=False,
+        active_size=8,
+        start_player="red",
+        goal_completion_emit_enabled=False,
+    )
+    assert record.goal_completion_diagnostics == []
+    assert record.goal_completion_diagnostics_meta is None
+
+
+def test_play_game_with_default_emit_enabled_initializes_meta_block():
+    """Default emit_enabled=True -> meta block initialized with config echo."""
+    import random
+    import numpy as np
+    import mlx.core as mx
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+    from scripts.GPU.alphazero.mcts import MCTSConfig
+    from scripts.GPU.alphazero.self_play import play_game
+
+    np.random.seed(7)
+    mx.random.seed(7)
+    net = create_network(hidden=32, n_blocks=2)
+    evaluator = LocalGPUEvaluator(net)
+
+    config = MCTSConfig(n_simulations=10)
+    record = play_game(
+        evaluator=evaluator,
+        mcts_config=config,
+        rng=random.Random(7),
+        max_moves=12,
+        add_noise=False,
+        active_size=8,
+        start_player="red",
+    )
+    meta = record.goal_completion_diagnostics_meta
+    assert meta is not None
+    assert meta["enabled"] is True
+    assert meta["diagnostic_version"] == 1
+    assert meta["max_depth"] == 3
+    assert meta["emit_threshold"] == 3
+    assert meta["emit_min_component_size"] == 8
+    assert meta["max_records_per_game"] == 64
+    assert meta["error_count"] == 0
+    assert meta["resign_dropped_partial_count"] == 0
+    assert meta["skipped_missing_priors_count"] == 0
+    assert meta["records_dropped_by_cap"] == 0
+    # On a small 8x8 board with min_component_size=8 default, no closeout
+    # captures expected. records may still be empty.
+    assert isinstance(record.goal_completion_diagnostics, list)
