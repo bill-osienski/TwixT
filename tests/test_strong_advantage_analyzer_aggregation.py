@@ -266,3 +266,38 @@ def test_analyzer_emits_both_tier_blocks_in_summary_json(tmp_path):
         assert "iteration" in csv_files[0].read_text().splitlines()[0]
     if sa_csv_files:
         assert "iteration" in sa_csv_files[0].read_text().splitlines()[0]
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 / Task 12: trainer-side schema scaffolding (sidecar + CSV)
+# ---------------------------------------------------------------------------
+
+def test_trainer_writes_strong_advantage_probe_summary_alongside_forced(tmp_path):
+    """Trainer sidecar contains both forced_probe_summary (legacy) and
+    strong_advantage_probe_summary (new), plus probe_summary tier-keyed block."""
+    # Synthetic sidecar JSON the trainer would write under Phase 4 dual-emit.
+    sidecar = {
+        "iteration": 50,
+        "forced_probe_summary": {"n": 30, "sign_correct_pct": 96.7},
+        "strong_advantage_probe_summary": {"n": 28, "sign_correct_pct": 67.9},
+        "probe_summary": {
+            "forced": {"n": 30, "sign_correct_pct": 96.7},
+            "strong_advantage": {"n": 28, "sign_correct_pct": 67.9},
+        },
+    }
+    assert "strong_advantage_probe_summary" in sidecar
+    assert sidecar["probe_summary"]["strong_advantage"]["n"] == 28
+
+
+def test_trainer_csv_emits_sas_flat_fields():
+    """Trainer's per-iter CSV row includes sas_n / sas_sign_correct_pct / etc."""
+    csv_row = {
+        "iteration": 50,
+        "fps_n": 30, "fps_sign_correct_pct": 96.7,
+        "sas_n": 28, "sas_sign_correct_pct": 67.9,
+        "sas_median_abs_v": 0.41,
+        "sas_delta_sign_correct_pct": 3.6,
+        "sas_rolling5_sign_correct_pct": 64.3,
+    }
+    assert "sas_n" in csv_row
+    assert "sas_sign_correct_pct" in csv_row

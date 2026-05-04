@@ -457,6 +457,11 @@ CSV_FIELDNAMES = [
     "fps_n", "fps_sign_correct", "fps_sign_correct_pct", "fps_median_abs_v",
     "fps_delta_sign_correct_pct", "fps_delta_median_abs_v",
     "fps_rolling5_sign_correct_pct", "fps_rolling5_median_abs_v",
+    # Phase 4: strong-advantage probe tier (spec 2026-04-28 §6); flattened
+    # parallel to fps_*. Values are None until the inline strong_advantage
+    # eval is wired into the trainer per-iter loop.
+    "sas_n", "sas_sign_correct_pct", "sas_median_abs_v",
+    "sas_delta_sign_correct_pct", "sas_rolling5_sign_correct_pct",
 ]
 
 
@@ -2749,6 +2754,11 @@ def train(
 
             # Phase 2: inline forced-probe NN-only eval (additive observability)
             forced_probe_summary: Optional[dict] = None
+            # Phase 4 (spec 2026-04-28 §6): strong_advantage tier; populated
+            # when the inline strong_advantage eval lands. Schema scaffolding
+            # only at present — sidecar/CSV columns are emitted as None until
+            # the parallel run_strong_advantage_probes_inline is wired.
+            strong_advantage_probe_summary: Optional[dict] = None
             if probes_inline_disable:
                 pass  # explicitly disabled
             elif not forced_probes:
@@ -2960,12 +2970,12 @@ def train(
                 "sanity_by_connectivity": v_stats.get("sanity_by_connectivity"),
                 # Phase 2 inline forced-probe summary (None when probes file missing/disabled)
                 "forced_probe_summary": forced_probe_summary,
+                # Phase 4 (spec 2026-04-28 §6): legacy dual-emit field.
+                # Will be None until the inline strong_advantage eval is wired.
+                "strong_advantage_probe_summary": strong_advantage_probe_summary,
                 "probe_summary": build_probe_summary_block(
                     forced_summary=forced_probe_summary,
-                    strong_advantage_summary=None,  # populated when the
-                                                    # strong_advantage inline
-                                                    # eval lands (out of scope
-                                                    # for this plan).
+                    strong_advantage_summary=strong_advantage_probe_summary,
                 ),
                 "replay_cap": {
                     "enabled": bool(max_positions_per_game and max_positions_per_game > 0),
@@ -3419,6 +3429,12 @@ def train(
             "fps_delta_median_abs_v": (forced_probe_summary or {}).get("delta_median_abs_v"),
             "fps_rolling5_sign_correct_pct": (forced_probe_summary or {}).get("rolling5_sign_correct_pct"),
             "fps_rolling5_median_abs_v": (forced_probe_summary or {}).get("rolling5_median_abs_v"),
+            # Strong-advantage probe tier (spec 2026-04-28 §6)
+            "sas_n":                         (strong_advantage_probe_summary or {}).get("n"),
+            "sas_sign_correct_pct":          (strong_advantage_probe_summary or {}).get("sign_correct_pct"),
+            "sas_median_abs_v":              (strong_advantage_probe_summary or {}).get("median_abs_v"),
+            "sas_delta_sign_correct_pct":    (strong_advantage_probe_summary or {}).get("delta_sign_correct_pct"),
+            "sas_rolling5_sign_correct_pct": (strong_advantage_probe_summary or {}).get("rolling5_sign_correct_pct"),
 
             # Phase 4: per-game replay contribution cap
             "replay_cap_enabled": int(bool(max_positions_per_game and max_positions_per_game > 0)),
