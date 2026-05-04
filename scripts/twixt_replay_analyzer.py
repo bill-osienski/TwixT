@@ -668,7 +668,12 @@ def aggregate_goal_completion_diagnostics(
     }
 
     class1_records: List[dict] = []
-    class2_records: List[dict] = []
+    capped_pop: dict = {
+        "games": 0,
+        "games_with_dominant_unclosed": 0,
+        "detected_before_cap": 0,
+        "per_game_records": [],
+    }
     excluded_count = 0
 
     for rp in replays:
@@ -703,18 +708,23 @@ def aggregate_goal_completion_diagnostics(
                 continue
             class1_records.append(rec)
         elif reason in _CLASS2_REASONS:
-            # Class 2 detection logic is a Task-9 deliverable. Scaffold a
-            # minimal record so capped_population.games is countable.
-            class2_records.append({
-                "game_id": rp.get("id"),
-                "iteration": meta.get("iteration"),
-                "game_idx": meta.get("game_idx"),
-                "n_moves": meta.get("n_moves") if meta.get("n_moves") is not None else len(moves),
-                "reason": reason,
-                "outcome_class": 2,
-                "scope": "both_sides",
-                "detected": False,
-            })
+            try:
+                record = _build_class2_per_game_record(
+                    rp,
+                    max_depth=max_depth,
+                    min_component_size=min_component_size,
+                    detection_threshold=detection_threshold,
+                )
+            except Exception:
+                # Defensive: corrupt move history etc. -> exclude.
+                excluded_count += 1
+                continue
+            capped_pop["games"] += 1
+            if record["ever_distance_le_3"]:
+                capped_pop["games_with_dominant_unclosed"] += 1
+            if record["detected"]:
+                capped_pop["detected_before_cap"] += 1
+            capped_pop["per_game_records"].append(record)
         else:
             excluded_count += 1
 
@@ -726,20 +736,7 @@ def aggregate_goal_completion_diagnostics(
         high_value_delay_threshold_plies=high_value_delay_threshold_plies,
     )
 
-    # Class 2 capped population — Task 9 will fill in detection logic and
-    # bad-case counters. For now: just expose the games count.
-    capped_population = {
-        "scope": "both_sides",
-        "games": len(class2_records),
-        "games_with_dominant_unclosed": 0,
-        "detected_before_cap": 0,
-        "cap_delay_after_detection_plies": None,
-        "bad_cases": {
-            "state_cap_after_detection": 0,
-            "timeout_after_detection": 0,
-            "board_full_after_detection": 0,
-        },
-    }
+    capped_population = _summarize_capped_population(capped_pop)
 
     excluded_population = {"games": excluded_count}
 
@@ -971,6 +968,104 @@ def _build_class1_per_game_record(
     }
 
 
+def _build_class2_per_game_record(
+    replay: dict,
+    *,
+    max_depth: int,
+    min_component_size: int,
+    detection_threshold: int,
+) -> dict:
+    """Class 2 (capped/timeout/board_full): both-sides scope. Detection
+    triggered by either side reaching dominant-unclosed before terminal.
+
+    Spec: docs/superpowers/specs/2026-05-03-goal-completion-diagnostics-design.md §7.2.
+    """
+    meta = replay.get("meta") or {}
+    moves = replay.get("moves") or []
+    starting_player = (
+        replay.get("starting_player")
+        or meta.get("starting_player")
+        or "red"
+    )
+    active = int(meta.get("board_size", 24))
+    n_moves = meta.get("n_moves")
+    if n_moves is None:
+        n_moves = len(moves)
+    n_moves = int(n_moves)
+
+    state = TwixtState(active_size=active, to_move=starting_player)
+    first_detected_ply: Optional[int] = None
+    first_detected_player: Optional[str] = None
+    first_total: Optional[int] = None
+    first_category: Optional[str] = None
+    ever_le_2 = False
+    ever_le_3 = False
+    min_total: Optional[int] = None
+
+    for ply_idx, m in enumerate(moves):
+        state = state.apply_move((int(m["row"]), int(m["col"])))
+        # Check both sides at this ply. Tie-break: lower total wins; on equality
+        # prefer red over black (loop order). For first_detected_ply we keep the
+        # FIRST side seen at the first qualifying ply.
+        for player in ("red", "black"):
+            gc = compute_goal_completion_state(
+                state, player,
+                max_depth=max_depth, min_component_size=min_component_size,
+            )
+            if gc is None or gc.get("total_goal_distance") is None:
+                continue
+            t = gc["total_goal_distance"]
+            if min_total is None or t < min_total:
+                min_total = t
+            if t <= 2:
+                ever_le_2 = True
+            if t <= 3:
+                ever_le_3 = True
+            if t <= detection_threshold and first_detected_ply is None:
+                first_detected_ply = ply_idx + 1
+                first_detected_player = player
+                first_total = t
+                first_category = gc.get("category")
+
+    cap_delay = (
+        n_moves - first_detected_ply if first_detected_ply is not None else None
+    )
+
+    return {
+        "game_id": replay.get("id"),
+        "iteration": meta.get("iteration"),
+        "game_idx": meta.get("game_idx"),
+        "winner": None,
+        "starting_player": starting_player,
+        "n_moves": n_moves,
+        "reason": meta.get("reason"),
+        "outcome_class": 2,
+        "scope": "both_sides",
+        "detected_player": first_detected_player,
+        "ever_distance_le_2": ever_le_2,
+        "ever_distance_le_3": ever_le_3,
+        "min_total_goal_distance": min_total,
+        "detected": first_detected_ply is not None,
+        "first_dominant_unclosed_ply": first_detected_ply,
+        "first_total_goal_distance": first_total,
+        "first_category": first_category,
+        "actual_terminal_ply": n_moves,
+        "actual_win_ply": None,
+        "conversion_delay_plies": None,
+        "conversion_delay_winner_moves": None,
+        "cap_delay_after_detection_plies": cap_delay,
+        "winner_moves_in_watch_window": None,
+        "winner_moves_with_dominant_component": None,
+        "winner_moves_with_dominant_unavailable": None,
+        "primary_class_counts": None,
+        "max_search_score_after_detection": None,
+        "mean_search_score_after_detection": None,
+        "high_value_after_detection_plies": None,
+        "root_value_high_but_delayed": None,
+        "search_score_coverage_in_watch_window": 0,
+    }
+
+
 def _summarize_main_population(
     records: List[dict],
     *,
@@ -1153,6 +1248,52 @@ def _summarize_main_population(
             "delay_ge_20_plies": delay_ge_20,
             "root_value_high_but_delayed": root_value_high_but_delayed,
         },
+        "_per_game_records_internal": records,
+    }
+
+
+def _summarize_capped_population(capped_pop: dict) -> dict:
+    """Roll up Class 2 per-game records into the capped_population summary
+    (spec §7.4). Bad-case buckets (state_cap / timeout / board_full after
+    detection) count games where detection fired before the terminal cap.
+    """
+    records = capped_pop["per_game_records"]
+    detected = [r for r in records if r["detected"]]
+    delay_vals = [
+        r["cap_delay_after_detection_plies"]
+        for r in detected
+        if r["cap_delay_after_detection_plies"] is not None
+    ]
+
+    def _pcts(vals):
+        if not vals:
+            return None
+        arr = np.array(vals, dtype=np.float64)
+        return {
+            "p50": float(np.percentile(arr, 50)),
+            "p90": float(np.percentile(arr, 90)),
+            "max": float(np.max(arr)),
+        }
+
+    bad_cases = {
+        "state_cap_after_detection": sum(
+            1 for r in detected if r["reason"] == "state_cap"
+        ),
+        "timeout_after_detection": sum(
+            1 for r in detected if r["reason"] in ("timeout", "timeout_selfplay")
+        ),
+        "board_full_after_detection": sum(
+            1 for r in detected if r["reason"] == "board_full"
+        ),
+    }
+
+    return {
+        "scope": "both_sides",
+        "games": capped_pop["games"],
+        "games_with_dominant_unclosed": capped_pop["games_with_dominant_unclosed"],
+        "detected_before_cap": capped_pop["detected_before_cap"],
+        "cap_delay_after_detection_plies": _pcts(delay_vals),
+        "bad_cases": bad_cases,
         "_per_game_records_internal": records,
     }
 
