@@ -1792,6 +1792,87 @@ def build_probe_summary_block(forced_summary, strong_advantage_summary):
     }
 
 
+def _run_inline_probe_eval(
+    network,
+    probes: List[dict],
+    history: deque,
+    *,
+    label: str,
+    active_size: int,
+    iteration: int,
+    start_iteration: int,
+    probes_load_status: str,
+    probes_inline_disable: bool,
+) -> Optional[dict]:
+    """Run inline probe evaluation for one tier; print per-iter block; return summary dict.
+
+    Generalizes the per-tier wrapper logic so forced and strong_advantage
+    can share the same delta/rolling/print/history-update code path.
+
+    Returns the summary dict (suitable for sidecar write) or None on
+    skip/disabled/empty paths.
+    """
+    if probes_inline_disable:
+        return None
+    if not probes:
+        if iteration == start_iteration:
+            print(f"  Probe ({label}, NN-only): (skipped — {probes_load_status})")
+        return None
+
+    from .probe_eval import run_forced_probes_inline as _run_inline
+    res = _run_inline(network, probes, active_size=active_size)
+    if res["n"] == 0:
+        print(f"  Probe ({label}, NN-only): (skipped: no probes for "
+              f"active_size={active_size}, {res['n_skipped_size']} probes "
+              f"available at other sizes)")
+        return None
+
+    sc = res["sign_correct"]
+    n = res["n"]
+    sc_pct = res["sign_correct_pct"] or 0.0
+    mv = res["median_abs_v"]
+    rolling = list(history)
+    if rolling:
+        r_pcts = [r["sign_correct_pct"] for r in rolling
+                 if r.get("sign_correct_pct") is not None]
+        r_mvs = [r["median_abs_v"] for r in rolling
+                if r.get("median_abs_v") is not None]
+        roll_pct = sum(r_pcts) / len(r_pcts) if r_pcts else None
+        roll_mv = sum(r_mvs) / len(r_mvs) if r_mvs else None
+        prev = rolling[-1]
+        prev_pct = prev.get("sign_correct_pct")
+        prev_mv = prev.get("median_abs_v")
+        delta_pct = (sc_pct - prev_pct) if prev_pct is not None else None
+        delta_mv = (mv - prev_mv) if (mv is not None and prev_mv is not None) else None
+    else:
+        roll_pct = roll_mv = delta_pct = delta_mv = None
+
+    print(f"  Probe ({label}, NN-only, n={n}):")
+    mv_s = f"{mv:.3f}" if mv is not None else "n/a"
+    print(f"    sign_correct={sc}/{n} ({sc_pct:.1%}), median |v|={mv_s}")
+    if delta_pct is not None:
+        d_pct_s = f"{delta_pct*100:+.1f}pp"
+        d_mv_s = f"{delta_mv:+.3f}" if delta_mv is not None else "n/a"
+        print(f"    delta vs prev: sign {d_pct_s}, |v| {d_mv_s}")
+    if roll_pct is not None:
+        roll_mv_s = f"{roll_mv:.3f}" if roll_mv is not None else "n/a"
+        print(f"    rolling(5 prior): sign={roll_pct:.1%}, median |v|={roll_mv_s}")
+
+    summary = {
+        "n": n,
+        "n_skipped_size": res["n_skipped_size"],
+        "sign_correct": sc,
+        "sign_correct_pct": sc_pct,
+        "median_abs_v": mv,
+        "delta_sign_correct_pct": delta_pct,
+        "delta_median_abs_v": delta_mv,
+        "rolling5_sign_correct_pct": roll_pct,
+        "rolling5_median_abs_v": roll_mv,
+    }
+    history.append({"sign_correct_pct": sc_pct, "median_abs_v": mv})
+    return summary
+
+
 def train(
     n_iterations: int = 100,
     games_per_iteration: int = 25,
@@ -2041,8 +2122,38 @@ def train(
             )
     print(f"  Inline forced-probe eval: {probes_load_status}")
 
+    # Phase 4 (spec 2026-04-28): load strong-advantage tier probes from a
+    # separate file. Same handling pattern as forced — silently skipped if
+    # the file is missing.
+    strong_advantage_probes: List[dict] = []
+    sa_probes_load_status: str = "disabled"
+    sa_probes_path = str(Path(probes_path).parent / "strong_advantage_probes.json")
+    if not probes_inline_disable:
+        if os.path.exists(sa_probes_path):
+            try:
+                with open(sa_probes_path) as _saf:
+                    _sa_data = json.load(_saf)
+                _sa_all = _sa_data.get("probes") or _sa_data.get("candidates") or []
+                strong_advantage_probes = [
+                    p for p in _sa_all if p.get("confidence") == "strong_advantage"
+                ]
+                sa_probes_load_status = (
+                    f"loaded ({len(strong_advantage_probes)} strong_advantage probes "
+                    f"from {sa_probes_path})"
+                )
+            except Exception as _e:
+                sa_probes_load_status = f"failed to parse {sa_probes_path}: {_e}"
+        else:
+            sa_probes_load_status = (
+                f"strong_advantage probes file not found at {sa_probes_path} "
+                "(per-iter strong_advantage block will be skipped)"
+            )
+    print(f"  Inline strong_advantage-probe eval: {sa_probes_load_status}")
+
     # Rolling window of recent forced-probe stats for delta + rolling-5 output
     forced_probe_history: deque = deque(maxlen=5)  # last 5 iters of {sign_correct_pct, median_abs_v}
+    # Rolling window for strong_advantage probe stats (Phase 4)
+    strong_advantage_probe_history: deque = deque(maxlen=5)
 
     start_iteration = 0
     master_rng = random.Random(seed)
@@ -2753,83 +2864,25 @@ def train(
                       "(make_padded_batch outcomes differ from rec.outcome!)")
 
             # Phase 2: inline forced-probe NN-only eval (additive observability)
-            forced_probe_summary: Optional[dict] = None
-            # Phase 4 (spec 2026-04-28 §6): strong_advantage tier; populated
-            # when the inline strong_advantage eval lands. Schema scaffolding
-            # only at present — sidecar/CSV columns are emitted as None until
-            # the parallel run_strong_advantage_probes_inline is wired.
-            strong_advantage_probe_summary: Optional[dict] = None
-            if probes_inline_disable:
-                pass  # explicitly disabled
-            elif not forced_probes:
-                # File missing or empty — print a one-line stub so the row exists
-                # for log-grep continuity, but only on the first iter to avoid spam.
-                if iteration == start_iteration:
-                    print(f"  Probe (forced, NN-only): (skipped — {probes_load_status})")
-            else:
-                from .probe_eval import run_forced_probes_inline
-                _probe_res = run_forced_probes_inline(
-                    network, forced_probes, active_size=active_size
-                )
-                if _probe_res["n"] == 0:
-                    print(f"  Probe (forced, NN-only): (skipped: no probes for "
-                          f"active_size={active_size}, {_probe_res['n_skipped_size']} probes "
-                          f"available at other sizes)")
-                else:
-                    sc = _probe_res["sign_correct"]
-                    n = _probe_res["n"]
-                    sc_pct = _probe_res["sign_correct_pct"] or 0.0
-                    mv = _probe_res["median_abs_v"]
-                    # Rolling-5 (excludes current iter; window updated below)
-                    rolling = list(forced_probe_history)
-                    if rolling:
-                        r_pcts = [r["sign_correct_pct"] for r in rolling
-                                 if r.get("sign_correct_pct") is not None]
-                        r_mvs = [r["median_abs_v"] for r in rolling
-                                if r.get("median_abs_v") is not None]
-                        roll_pct = sum(r_pcts) / len(r_pcts) if r_pcts else None
-                        roll_mv = sum(r_mvs) / len(r_mvs) if r_mvs else None
-                    else:
-                        roll_pct = None
-                        roll_mv = None
-                    # Delta vs immediately-prior iter
-                    if rolling:
-                        prev = rolling[-1]
-                        prev_pct = prev.get("sign_correct_pct")
-                        prev_mv = prev.get("median_abs_v")
-                        delta_pct = (sc_pct - prev_pct) if prev_pct is not None else None
-                        delta_mv = (mv - prev_mv) if (mv is not None and prev_mv is not None) else None
-                    else:
-                        delta_pct = None
-                        delta_mv = None
-
-                    print(f"  Probe (forced, NN-only, n={n}):")
-                    mv_s = f"{mv:.3f}" if mv is not None else "n/a"
-                    print(f"    sign_correct={sc}/{n} ({sc_pct:.1%}), median |v|={mv_s}")
-                    if delta_pct is not None:
-                        d_pct_s = f"{delta_pct*100:+.1f}pp"
-                        d_mv_s = f"{delta_mv:+.3f}" if delta_mv is not None else "n/a"
-                        print(f"    delta vs prev: sign {d_pct_s}, |v| {d_mv_s}")
-                    if roll_pct is not None:
-                        roll_mv_s = f"{roll_mv:.3f}" if roll_mv is not None else "n/a"
-                        print(f"    rolling(5 prior): sign={roll_pct:.1%}, median |v|={roll_mv_s}")
-
-                    # Build summary dict for sidecar (after print — uses pre-update rolling)
-                    forced_probe_summary = {
-                        "n": n,
-                        "n_skipped_size": _probe_res["n_skipped_size"],
-                        "sign_correct": sc,
-                        "sign_correct_pct": sc_pct,
-                        "median_abs_v": mv,
-                        "delta_sign_correct_pct": delta_pct,
-                        "delta_median_abs_v": delta_mv,
-                        "rolling5_sign_correct_pct": roll_pct,
-                        "rolling5_median_abs_v": roll_mv,
-                    }
-                    # Update rolling window AFTER reading prev
-                    forced_probe_history.append(
-                        {"sign_correct_pct": sc_pct, "median_abs_v": mv}
-                    )
+            forced_probe_summary = _run_inline_probe_eval(
+                network, forced_probes, forced_probe_history,
+                label="forced",
+                active_size=active_size,
+                iteration=iteration,
+                start_iteration=start_iteration,
+                probes_load_status=probes_load_status,
+                probes_inline_disable=probes_inline_disable,
+            )
+            # Phase 4: inline strong_advantage probe NN-only eval
+            strong_advantage_probe_summary = _run_inline_probe_eval(
+                network, strong_advantage_probes, strong_advantage_probe_history,
+                label="strong_advantage",
+                active_size=active_size,
+                iteration=iteration,
+                start_iteration=start_iteration,
+                probes_load_status=sa_probes_load_status,
+                probes_inline_disable=probes_inline_disable,
+            )
             # Warn on ANY structural policy issue
             pi_has_issues = any(pi_stats.get(k, 0) > 0 for k in [
                 'pi_len_mismatch_frac', 'pi_all_zero_frac', 'pi_negative_frac',
@@ -2970,8 +3023,8 @@ def train(
                 "sanity_by_connectivity": v_stats.get("sanity_by_connectivity"),
                 # Phase 2 inline forced-probe summary (None when probes file missing/disabled)
                 "forced_probe_summary": forced_probe_summary,
-                # Phase 4 (spec 2026-04-28 §6): legacy dual-emit field.
-                # Will be None until the inline strong_advantage eval is wired.
+                # Phase 4 (spec 2026-04-28 §6): legacy dual-emit field;
+                # populated by the inline strong_advantage eval (Task 12.5).
                 "strong_advantage_probe_summary": strong_advantage_probe_summary,
                 "probe_summary": build_probe_summary_block(
                     forced_summary=forced_probe_summary,

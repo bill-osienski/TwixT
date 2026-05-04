@@ -301,3 +301,86 @@ def test_trainer_csv_emits_sas_flat_fields():
     }
     assert "sas_n" in csv_row
     assert "sas_sign_correct_pct" in csv_row
+
+
+def test_run_inline_probe_eval_handles_strong_advantage_probes(monkeypatch):
+    """The wrapper helper accepts ANY pre-filtered probe list (forced or
+    strong_advantage) and returns the same shape of summary dict."""
+    from collections import deque
+    from scripts.GPU.alphazero import trainer as _tr
+
+    # Stub run_forced_probes_inline to avoid loading a real network.
+    def _fake_inline(_net, _probes, active_size=None):
+        return {
+            "n": 28, "n_skipped_size": 0,
+            "sign_correct": 19,
+            "sign_correct_pct": 0.679,
+            "median_abs_v": 0.41,
+            "nn_values": [], "expected_signs": [],
+        }
+    monkeypatch.setattr("scripts.GPU.alphazero.probe_eval.run_forced_probes_inline", _fake_inline)
+
+    history = deque(maxlen=5)
+    probes = [{"confidence": "strong_advantage", "active_size": 24} for _ in range(28)]
+    summary = _tr._run_inline_probe_eval(
+        network=None, probes=probes, history=history,
+        label="strong_advantage",
+        active_size=24, iteration=10, start_iteration=10,
+        probes_load_status="loaded (28 strong_advantage probes from ...)",
+        probes_inline_disable=False,
+    )
+    assert summary is not None
+    assert summary["n"] == 28
+    assert summary["sign_correct"] == 19
+    assert summary["sign_correct_pct"] == 0.679
+    assert summary["median_abs_v"] == 0.41
+    # First call: no rolling/delta
+    assert summary["delta_sign_correct_pct"] is None
+    assert summary["rolling5_sign_correct_pct"] is None
+    # History updated
+    assert len(history) == 1
+
+
+def test_run_inline_probe_eval_disabled_path_returns_none(monkeypatch):
+    """When probes_inline_disable=True, helper short-circuits without printing or evaluating."""
+    from collections import deque
+    from scripts.GPU.alphazero import trainer as _tr
+
+    def _should_not_be_called(*_a, **_kw):
+        raise AssertionError("inline evaluator should not be called when disabled")
+    monkeypatch.setattr("scripts.GPU.alphazero.probe_eval.run_forced_probes_inline", _should_not_be_called)
+
+    history = deque(maxlen=5)
+    summary = _tr._run_inline_probe_eval(
+        network=None, probes=[{"confidence": "strong_advantage"}], history=history,
+        label="strong_advantage",
+        active_size=24, iteration=10, start_iteration=10,
+        probes_load_status="loaded",
+        probes_inline_disable=True,
+    )
+    assert summary is None
+    assert len(history) == 0
+
+
+def test_run_inline_probe_eval_empty_probes_first_iter_prints(monkeypatch, capsys):
+    """When probes list is empty AND iteration == start_iteration, prints the
+    skip stub once. Returns None either way."""
+    from collections import deque
+    from scripts.GPU.alphazero import trainer as _tr
+
+    def _should_not_be_called(*_a, **_kw):
+        raise AssertionError("inline evaluator should not be called when probes empty")
+    monkeypatch.setattr("scripts.GPU.alphazero.probe_eval.run_forced_probes_inline", _should_not_be_called)
+
+    history = deque(maxlen=5)
+    summary = _tr._run_inline_probe_eval(
+        network=None, probes=[], history=history,
+        label="strong_advantage",
+        active_size=24, iteration=10, start_iteration=10,
+        probes_load_status="probes file not found at /tmp/missing.json",
+        probes_inline_disable=False,
+    )
+    assert summary is None
+    captured = capsys.readouterr()
+    assert "Probe (strong_advantage, NN-only): (skipped" in captured.out
+    assert "/tmp/missing.json" in captured.out
