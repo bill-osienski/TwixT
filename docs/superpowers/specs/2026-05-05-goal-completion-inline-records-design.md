@@ -875,8 +875,13 @@ if missing_count == len(per_game_records):
         f"goal_completion_record_enabled."
     )
 elif missing_count > 0:
-    examples = [r["game_id"] for r, replay in zip(per_game_records, replays)
-                if r is None][:3]
+    # Examples come from `replay` (the JSON dict), not `r` (which is None here).
+    examples = [
+        replay.get("game_id")
+        or f"iter_{replay.get('iteration')}_game_{replay.get('game_idx')}"
+        for rec, replay in zip(per_game_records, replays)
+        if rec is None
+    ][:3]
     warn(
         f"{missing_count}/{len(per_game_records)} replays missing "
         f"goal_completion_record. Examples: {', '.join(examples)}."
