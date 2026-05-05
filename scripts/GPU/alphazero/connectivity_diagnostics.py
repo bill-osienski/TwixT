@@ -277,11 +277,27 @@ def compute_goal_completion_state(
     player: str,
     max_depth: int = 3,
     min_component_size: int = 8,
+    enumerate_moves: bool = True,
 ) -> Optional[dict]:
     """Best dominant-unclosed component for `player`, or None.
 
     Selection rule (spec §6.1): smallest total_goal_distance; tie-break by
     largest component size; tie-break by deterministic peg ordering (min-corner).
+
+    Performance:
+    `_enumerate_classification_moves` is the dominant cost — for each of
+    ~30-50 candidate moves it spawns a hypothetical state and runs
+    component_goal_distances at depth 3 (which itself iterates candidates
+    and recurses). Per-ply analyzer walks that only need
+    `total_goal_distance` and `category` should pass `enumerate_moves=False`
+    to skip this. Watch-window classification (which needs
+    `endpoint_completion_moves` to identify completion moves) and Phase 3
+    inline capture leave the default True.
+
+    When enumerate_moves=False the returned dict still has the same keys,
+    but `endpoint_completion_moves` and `distance_reducing_moves` are
+    empty lists. The `moves_enumerated` field distinguishes "no moves
+    available" from "we skipped enumeration for speed."
     """
     pegs_of = [(r, c) for (r, c), col in state.pegs.items() if col == player]
     seen: Set[Tuple[int, int]] = set()
@@ -321,7 +337,7 @@ def compute_goal_completion_state(
 
     completion_moves: list = []
     reducing_moves: list = []
-    if total is not None:
+    if total is not None and enumerate_moves:
         completion_moves, reducing_moves = _enumerate_classification_moves(
             state, player, comp, ed, total, max_depth
         )
@@ -339,6 +355,7 @@ def compute_goal_completion_state(
         "touches_goal_b": touches_b,
         "endpoint_completion_moves": completion_moves,
         "distance_reducing_moves": reducing_moves,
+        "moves_enumerated": enumerate_moves,
         "category": category,
         "max_depth": max_depth,
     }

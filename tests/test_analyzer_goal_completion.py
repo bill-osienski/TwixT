@@ -652,3 +652,47 @@ def test_aggregate_worst_cases_csv_class2_rows_have_null_winner_and_win_ply(tmp_
     assert rows[0]["actual_win_ply"] == ""
     assert rows[0]["outcome_class"] == "2"
     assert rows[0]["state_cap_after_detection"] == "True"
+
+
+def test_analyzer_per_ply_detection_calls_compute_goal_completion_state_with_enumerate_moves_false(monkeypatch):
+    """Perf regression test: the analyzer's per-ply detection walk must pass
+    enumerate_moves=False to skip the expensive completion/reducing move
+    enumeration. The watch-window classification path should still default
+    to True (it actually needs the move sets).
+
+    Without this gating, a 1000-game corpus takes 8+ hours to analyze
+    (verified empirically; killed run on 2026-05-05). With this gating,
+    it should complete in minutes.
+    """
+    import scripts.twixt_replay_analyzer as analyzer
+    from scripts.GPU.alphazero import connectivity_diagnostics as cd
+
+    enumerate_calls: list = []
+
+    real_fn = cd.compute_goal_completion_state
+
+    def _wrapper(state, player, **kwargs):
+        enumerate_calls.append(kwargs.get("enumerate_moves", True))
+        return real_fn(state, player, **kwargs)
+
+    monkeypatch.setattr(analyzer, "compute_goal_completion_state", _wrapper)
+
+    g097 = _load_game_097()
+    r = aggregate_goal_completion_diagnostics([g097])
+
+    n_skip = sum(1 for v in enumerate_calls if v is False)
+    n_full = sum(1 for v in enumerate_calls if v is True)
+    assert n_skip > 0, (
+        "Analyzer must pass enumerate_moves=False on at least one per-ply "
+        "detection call (perf regression vs 2026-05-05 8-hour analyzer run)."
+    )
+    # Per-ply detection (enumerate_moves=False) should dominate; full-
+    # enumeration calls happen only for winner moves in the watch window.
+    assert n_skip > n_full, (
+        f"Expected per-ply detection (enumerate_moves=False) to dominate; "
+        f"got {n_skip} skip vs {n_full} full. Detection should NOT enumerate "
+        f"moves on every ply."
+    )
+    # Sanity: aggregation result is still correct under the optimization.
+    assert r["main_population"]["games"] == 1
+    assert r["main_population"]["detected"] == 1

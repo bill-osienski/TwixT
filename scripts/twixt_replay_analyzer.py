@@ -927,11 +927,16 @@ def _build_class1_per_game_record(
         except Exception:
             # Corrupt move history -> bubble up; caller will exclude this game.
             raise
+        # Per-ply detection only needs total_goal_distance + category;
+        # skip the expensive endpoint_completion_moves / distance_reducing_moves
+        # enumeration. Watch-window classification (below) re-computes with
+        # enumerate_moves=True only on winner moves that actually need it.
         gs = compute_goal_completion_state(
             state,
             winner,
             max_depth=max_depth,
             min_component_size=min_component_size,
+            enumerate_moves=False,
         )
         goal_states_after.append(gs)
         if gs is not None:
@@ -1123,9 +1128,11 @@ def _build_class2_per_game_record(
         # prefer red over black (loop order). For first_detected_ply we keep the
         # FIRST side seen at the first qualifying ply.
         for player in ("red", "black"):
+            # Class 2 detection: same per-ply optimization as Class 1.
             gc = compute_goal_completion_state(
                 state, player,
                 max_depth=max_depth, min_component_size=min_component_size,
+                enumerate_moves=False,
             )
             if gc is None or gc.get("total_goal_distance") is None:
                 continue

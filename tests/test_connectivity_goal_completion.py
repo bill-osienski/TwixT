@@ -457,3 +457,61 @@ def test_compute_goal_completion_state_game097_turn43_canonical():
     assert res["category"] == "two_endpoint_closeout_2ply"
     assert (0, 8) in res["endpoint_completion_moves"]
     assert (23, 6) in res["endpoint_completion_moves"]
+
+
+def test_compute_goal_completion_state_enumerate_moves_false_skips_move_lists():
+    """enumerate_moves=False returns same dict shape but with empty completion /
+    reducing lists and moves_enumerated=False. The expensive enumeration is the
+    analyzer's per-ply detection cost; this flag lets per-ply walks skip it."""
+    import json
+    from pathlib import Path
+
+    games_dir = Path(__file__).parent.parent / "scripts" / "GPU" / "logs" / "games"
+    candidates = list(games_dir.glob("iter_0108_game_097*"))
+    if not candidates:
+        import pytest
+        pytest.skip("Game 097 anchor not present.")
+    record = json.loads(candidates[0].read_text())
+    moves = [(int(m["row"]), int(m["col"])) for m in record["moves"][:43]]
+    s = _state_after(moves, active_size=24, start_player=record.get("starting_player", "red"))
+
+    res_full = compute_goal_completion_state(s, "red", max_depth=3, min_component_size=8)
+    res_skip = compute_goal_completion_state(
+        s, "red", max_depth=3, min_component_size=8, enumerate_moves=False
+    )
+
+    assert res_full is not None and res_skip is not None
+    # Same identity-of-position fields:
+    assert res_full["total_goal_distance"] == res_skip["total_goal_distance"]
+    assert res_full["endpoint_distances"] == res_skip["endpoint_distances"]
+    assert res_full["category"] == res_skip["category"]
+    assert res_full["component_pegs"] == res_skip["component_pegs"]
+    assert res_full["largest_component_size"] == res_skip["largest_component_size"]
+    # Move lists differ:
+    assert res_full["endpoint_completion_moves"] != []
+    assert res_skip["endpoint_completion_moves"] == []
+    assert res_skip["distance_reducing_moves"] == []
+    # Provenance flag distinguishes "skipped" from "no moves available":
+    assert res_full["moves_enumerated"] is True
+    assert res_skip["moves_enumerated"] is False
+
+
+def test_compute_goal_completion_state_enumerate_moves_default_is_true():
+    """Default behavior unchanged: enumerate_moves defaults to True; existing
+    callers (Phase 3 inline capture, watch-window classify) keep working."""
+    import json
+    from pathlib import Path
+
+    games_dir = Path(__file__).parent.parent / "scripts" / "GPU" / "logs" / "games"
+    candidates = list(games_dir.glob("iter_0108_game_097*"))
+    if not candidates:
+        import pytest
+        pytest.skip("Game 097 anchor not present.")
+    record = json.loads(candidates[0].read_text())
+    moves = [(int(m["row"]), int(m["col"])) for m in record["moves"][:43]]
+    s = _state_after(moves, active_size=24, start_player=record.get("starting_player", "red"))
+
+    res = compute_goal_completion_state(s, "red", max_depth=3, min_component_size=8)
+    assert res is not None
+    assert res["moves_enumerated"] is True
+    assert (0, 8) in res["endpoint_completion_moves"]
