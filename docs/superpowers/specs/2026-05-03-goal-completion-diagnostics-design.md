@@ -1108,3 +1108,14 @@ Both fixes are required for correctness; without them the Game 097 anchor test f
 **Resolution: a Task 12.5 was added between Tasks 12 and 13.** It loads `tests/probes/strong_advantage_probes.json` at trainer startup, filters by `confidence == "strong_advantage"`, calls `run_forced_probes_inline(network, strong_advantage_probes, ...)`, and builds the parallel summary + history deque. The cleanest factoring extracts the per-tier wrapper logic (delta + rolling-5 + print + summary-build + history-update) into a shared `_run_inline_probe_eval(network, probes, history, *, label, ...)` helper called once per tier. Live verification on `model_iter_0099` produces real telemetry (`sas_n=30 sas_sign_correct_pct=1.0 sas_median_abs_v=0.987`).
 
 Spec §9.1 now documents this gap and notes Task 12.5 as the resolving subtask.
+
+**7. Analyzer per-ply detection ran the expensive move enumeration on every call (perf, post-Spec-1).** The first 1000-game analyzer run on the 110–119 corpus hung past 8 hours and was killed. Root cause: `compute_goal_completion_state` unconditionally ran `_enumerate_classification_moves` — for each of ~30–50 candidate moves it spawned a hypothetical state and ran `component_goal_distances` at depth 3, which itself iterated candidates and recursed. The `_build_class1_per_game_record` and `_build_class2_per_game_record` walks called this per ply per game just to read `total_goal_distance`. Compute scaled as games × plies × 50 candidates × ~5000 BFS nodes ≈ 10+ billion state-copy operations on a 1000-game corpus.
+
+**Resolution (commit `48cb5cf`):** added `enumerate_moves: bool = True` kwarg to `compute_goal_completion_state`. The two analyzer per-ply detection sites pass `enumerate_moves=False` (they only need `total_goal_distance` + `category`). Watch-window classification (which actually uses `endpoint_completion_moves`) and Phase 3 inline capture leave the default True. Returned dict gains a `moves_enumerated: bool` provenance flag distinguishing "no moves available" from "skipped enumeration for speed." Test runtime on `tests/test_analyzer_goal_completion.py` dropped from 9:44 → 3:03 (3×); real-corpus speedup expected to be ~50–100× (avoided sub-BFS dominates).
+
+Regression tests added:
+- `test_compute_goal_completion_state_enumerate_moves_false_skips_move_lists`
+- `test_compute_goal_completion_state_enumerate_moves_default_is_true`
+- `test_analyzer_per_ply_detection_calls_compute_goal_completion_state_with_enumerate_moves_false` — pins the analyzer's call sites so the per-ply walks can't accidentally regress to enumerate_moves=True.
+
+This finding is the kind of thing 5-game validation can miss: per-ply work is small in absolute terms, but the constant blew up at scale. The algorithmic split is correct: detect cheaply everywhere, enumerate only where classification is needed.
