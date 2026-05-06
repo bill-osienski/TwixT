@@ -485,10 +485,11 @@ def test_tracker_dominant_unavailable_when_cheap_state_none_post_detection():
                        selected_move=(1, 1), search_score=None,
                        gc_state_cheap=None, gc_state_full=None)
     assert t.red.moves_after_detection == 2  # detection ply + this one
-    assert t.red.moves_with_dominant_unavailable == 1
-    # Detection ply did not classify (no full state available either path).
-    # Both plies fall under "dominant_unavailable" since classification
-    # requires gc_state_full.
+    # Both plies fall under "dominant_unavailable":
+    #   ply 11: cheap state present but no gc_state_full -> classification
+    #           skipped, defensive count -> +1
+    #   ply 13: cheap state is None -> +1
+    assert t.red.moves_with_dominant_unavailable == 2
     assert sum(t.red.primary_class_counts.values()) == 0
 
 
