@@ -67,7 +67,8 @@ def test_aggregator_empty_records_returns_skeleton():
     }
     assert result["main_population"]["n"] == 0
     assert result["capped_population"]["n"] == 0
-    assert result["excluded_population"] == {"n": 0}
+    assert result["excluded_population"]["n"] == 0
+    assert result["excluded_population"]["games"] == 0
 
 
 def test_aggregator_mixed_nones_real_coverage():
@@ -351,3 +352,43 @@ def test_capped_population_legacy_aliases_present():
     assert cap["detected_before_cap"] == 2
     # Legacy alias points at same stats block as the new key.
     assert cap["cap_delay_after_detection_plies"] == cap["cap_delay_proxy_plies"]
+
+
+def test_capped_population_bad_cases_counts_by_reason():
+    """Capped population emits bad_cases counters keyed by reason
+    (state_cap_after_detection / timeout_after_detection /
+    board_full_after_detection) for legacy formatter compatibility."""
+    records = [
+        _capped_record(reason="state_cap", cap_delay_proxy_plies=10),
+        _capped_record(reason="state_cap", cap_delay_proxy_plies=12),
+        _capped_record(reason="timeout", cap_delay_proxy_plies=20),
+        _capped_record(reason="board_full", cap_delay_proxy_plies=30),
+    ]
+    result = aggregate_goal_completion_records(records, config={}, games_total=4)
+    bc = result["capped_population"]["bad_cases"]
+    assert bc["state_cap_after_detection"] == 2
+    assert bc["timeout_after_detection"] == 1
+    assert bc["board_full_after_detection"] == 1
+
+
+def test_capped_population_bad_cases_only_counts_detected():
+    """Bad cases counters only include detected records (matches legacy)."""
+    records = [
+        _capped_record(reason="state_cap", detected=True),
+        _capped_record(reason="state_cap", detected=False, cap_delay_proxy_plies=None,
+                       first_dominant_unclosed_ply=None),
+    ]
+    result = aggregate_goal_completion_records(records, config={}, games_total=2)
+    bc = result["capped_population"]["bad_cases"]
+    assert bc["state_cap_after_detection"] == 1
+
+
+def test_excluded_population_emits_games_legacy_alias():
+    """excluded_population emits both n and games for formatter compatibility."""
+    excl = {"version": 1, "outcome_class": 3, "winner": None,
+            "detected": False, "reason": "unknown"}
+    result = aggregate_goal_completion_records(
+        [excl, excl, excl], config={}, games_total=3,
+    )
+    assert result["excluded_population"]["n"] == 3
+    assert result["excluded_population"]["games"] == 3

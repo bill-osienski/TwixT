@@ -79,7 +79,7 @@ def aggregate_goal_completion_records(
         },
         "main_population": _summarize_main_population(main, config),
         "capped_population": _summarize_capped_population(capped),
-        "excluded_population": {"n": len(excluded)},
+        "excluded_population": {"n": len(excluded), "games": len(excluded)},
     }
 
 
@@ -251,6 +251,13 @@ def _summarize_capped_population(capped: List[dict]) -> dict:
         s = r.get("detected_player")
         if s in side_counts:
             side_counts[s] += 1
+    bad_cases = {
+        "state_cap_after_detection": sum(1 for r in detected if r.get("reason") == "state_cap"),
+        "timeout_after_detection": sum(
+            1 for r in detected if r.get("reason") in ("timeout", "timeout_selfplay")
+        ),
+        "board_full_after_detection": sum(1 for r in detected if r.get("reason") == "board_full"),
+    }
     return {
         "n": len(capped),
         "games": len(capped),                              # legacy alias
@@ -259,4 +266,5 @@ def _summarize_capped_population(capped: List[dict]) -> dict:
         "cap_delay_proxy_plies": _stats_block(proxies),   # new
         "cap_delay_after_detection_plies": _stats_block(proxies),  # legacy alias (same block)
         "first_detector_side": side_counts,
+        "bad_cases": bad_cases,
     }
