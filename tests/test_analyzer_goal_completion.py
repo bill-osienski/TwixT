@@ -542,116 +542,121 @@ def test_format_goal_completion_report_full_population_renders_all_sections():
 # Phase 2 Task 11: worst-cases CSV writer
 # -----------------------------
 
-def test_aggregate_worst_cases_csv_sort_order_correct(tmp_path):
-    """CSV rows ordered by conversion_delay_plies DESC, then redundant DESC, then iter ASC."""
-    summary = {
-        "config": {"worst_cases_top_k": 10},
-        "main_population": {
-            "_per_game_records_internal": [
-                {"iteration": 50, "game_idx": 1, "game_id": "iter_0050_game_001",
-                 "winner": "red", "starting_player": "red", "n_moves": 40, "reason": "win",
-                 "detected_player": "red", "first_dominant_unclosed_ply": 20,
-                 "first_total_goal_distance": 2, "first_category": "two_endpoint_closeout_2ply",
-                 "actual_win_ply": 40, "conversion_delay_plies": 20,
-                 "conversion_delay_winner_moves": 10, "primary_class_counts": {
-                     "completes_endpoint": 1, "reduces_total_goal_distance": 0,
-                     "redundant_reinforcement": 5, "off_chain": 4, "other": 0},
-                 "winner_moves_with_dominant_unavailable": 0,
-                 "max_search_score_after_detection": 0.95,
-                 "mean_search_score_after_detection": 0.9,
-                 "high_value_after_detection_plies": 8,
-                 "root_value_high_but_delayed": True,
-                 "outcome_class": 1, "scope": "winner",
-                 "detected": True},
-                {"iteration": 60, "game_idx": 2, "game_id": "iter_0060_game_002",
-                 "winner": "black", "starting_player": "red", "n_moves": 50, "reason": "win",
-                 "detected_player": "black", "first_dominant_unclosed_ply": 25,
-                 "first_total_goal_distance": 2, "first_category": "two_endpoint_closeout_2ply",
-                 "actual_win_ply": 50, "conversion_delay_plies": 25,
-                 "conversion_delay_winner_moves": 12, "primary_class_counts": {
-                     "completes_endpoint": 1, "reduces_total_goal_distance": 0,
-                     "redundant_reinforcement": 8, "off_chain": 3, "other": 0},
-                 "winner_moves_with_dominant_unavailable": 0,
-                 "max_search_score_after_detection": 0.99,
-                 "mean_search_score_after_detection": 0.95,
-                 "high_value_after_detection_plies": 11,
-                 "root_value_high_but_delayed": True,
-                 "outcome_class": 1, "scope": "winner",
-                 "detected": True},
-            ],
-        },
-        "capped_population": {"_per_game_records_internal": []},
+def _make_replay_with_record(rec: dict) -> dict:
+    """Wrap a goal_completion_record dict in a minimal replay dict."""
+    return {
+        "iteration": rec.get("iteration"),
+        "game_idx": rec.get("game_idx"),
+        "winner": rec.get("winner"),
+        "starting_player": rec.get("starting_player", "red"),
+        "moves": [],
+        "meta": {"reason": rec.get("reason", "win"), "n_moves": rec.get("n_moves", 0),
+                 "board_size": 24, "starting_player": rec.get("starting_player", "red")},
+        "goal_completion_record": rec,
     }
+
+
+def test_aggregate_worst_cases_csv_sort_order_correct(tmp_path):
+    """CSV rows ordered by conversion_delay_plies DESC for Class 1 records."""
+    replays = [
+        _make_replay_with_record(
+            {"iteration": 50, "game_idx": 1, "game_id": "iter_0050_game_001",
+             "winner": "red", "starting_player": "red", "n_moves": 40, "reason": "win",
+             "detected_player": "red", "first_dominant_unclosed_ply": 20,
+             "first_total_goal_distance": 2, "first_category": "two_endpoint_closeout_2ply",
+             "actual_terminal_ply": 40, "actual_win_ply": 40, "conversion_delay_plies": 20,
+             "conversion_delay_winner_moves": 10, "cap_delay_proxy_plies": None,
+             "primary_class_counts": {
+                 "completes_endpoint": 1, "reduces_total_goal_distance": 0,
+                 "redundant_reinforcement": 5, "off_chain": 4, "other": 0},
+             "winner_moves_with_dominant_unavailable": 0,
+             "max_search_score_after_detection": 0.95,
+             "mean_search_score_after_detection": 0.9,
+             "high_value_after_detection_plies": 8,
+             "root_value_high_but_delayed": True,
+             "outcome_class": 1, "scope": "winner",
+             "detected": True}),
+        _make_replay_with_record(
+            {"iteration": 60, "game_idx": 2, "game_id": "iter_0060_game_002",
+             "winner": "black", "starting_player": "red", "n_moves": 50, "reason": "win",
+             "detected_player": "black", "first_dominant_unclosed_ply": 25,
+             "first_total_goal_distance": 2, "first_category": "two_endpoint_closeout_2ply",
+             "actual_terminal_ply": 50, "actual_win_ply": 50, "conversion_delay_plies": 25,
+             "conversion_delay_winner_moves": 12, "cap_delay_proxy_plies": None,
+             "primary_class_counts": {
+                 "completes_endpoint": 1, "reduces_total_goal_distance": 0,
+                 "redundant_reinforcement": 8, "off_chain": 3, "other": 0},
+             "winner_moves_with_dominant_unavailable": 0,
+             "max_search_score_after_detection": 0.99,
+             "mean_search_score_after_detection": 0.95,
+             "high_value_after_detection_plies": 11,
+             "root_value_high_but_delayed": True,
+             "outcome_class": 1, "scope": "winner",
+             "detected": True}),
+    ]
     csv_path = tmp_path / "goal_completion_worst_cases.csv"
-    write_goal_completion_worst_cases_csv(summary, csv_path, top_k=10)
+    write_goal_completion_worst_cases_csv(str(csv_path), replays, top_k=10)
     rows = list(csv.DictReader(csv_path.read_text().splitlines()))
     assert rows[0]["iteration"] == "60"     # delay=25 wins over delay=20
     assert rows[1]["iteration"] == "50"
 
 
 def test_aggregate_worst_cases_csv_top_k_respects_flag(tmp_path):
-    summary = {
-        "config": {"worst_cases_top_k": 2},
-        "main_population": {
-            "_per_game_records_internal": [
-                {"iteration": i, "game_idx": 0, "game_id": f"g{i}", "winner": "red",
-                 "starting_player": "red", "n_moves": 30, "reason": "win",
-                 "detected_player": "red", "first_dominant_unclosed_ply": 10,
-                 "first_total_goal_distance": 2, "first_category": "two_endpoint_closeout_2ply",
-                 "actual_win_ply": 30, "conversion_delay_plies": 30 - 10,
-                 "conversion_delay_winner_moves": 10, "primary_class_counts": {
-                     "completes_endpoint": 0, "reduces_total_goal_distance": 0,
-                     "redundant_reinforcement": 5, "off_chain": 5, "other": 0},
-                 "winner_moves_with_dominant_unavailable": 0,
-                 "max_search_score_after_detection": 0.9,
-                 "mean_search_score_after_detection": 0.85,
-                 "high_value_after_detection_plies": 8,
-                 "root_value_high_but_delayed": False,
-                 "outcome_class": 1, "scope": "winner",
-                 "detected": True}
-                for i in range(5)
-            ],
-        },
-        "capped_population": {"_per_game_records_internal": []},
-    }
+    replays = [
+        _make_replay_with_record(
+            {"iteration": i, "game_idx": 0, "game_id": f"g{i}", "winner": "red",
+             "starting_player": "red", "n_moves": 30, "reason": "win",
+             "detected_player": "red", "first_dominant_unclosed_ply": 10,
+             "first_total_goal_distance": 2, "first_category": "two_endpoint_closeout_2ply",
+             "actual_terminal_ply": 30, "actual_win_ply": 30,
+             "conversion_delay_plies": 30 - 10, "conversion_delay_winner_moves": 10,
+             "cap_delay_proxy_plies": None,
+             "primary_class_counts": {
+                 "completes_endpoint": 0, "reduces_total_goal_distance": 0,
+                 "redundant_reinforcement": 5, "off_chain": 5, "other": 0},
+             "winner_moves_with_dominant_unavailable": 0,
+             "max_search_score_after_detection": 0.9,
+             "mean_search_score_after_detection": 0.85,
+             "high_value_after_detection_plies": 8,
+             "root_value_high_but_delayed": False,
+             "outcome_class": 1, "scope": "winner",
+             "detected": True})
+        for i in range(5)
+    ]
     csv_path = tmp_path / "wc.csv"
-    write_goal_completion_worst_cases_csv(summary, csv_path, top_k=2)
+    write_goal_completion_worst_cases_csv(str(csv_path), replays, top_k=2)
     rows = list(csv.DictReader(csv_path.read_text().splitlines()))
     assert len(rows) == 2
 
 
 def test_aggregate_worst_cases_csv_class2_rows_have_null_winner_and_win_ply(tmp_path):
-    summary = {
-        "config": {"worst_cases_top_k": 5},
-        "main_population": {"_per_game_records_internal": []},
-        "capped_population": {
-            "_per_game_records_internal": [
-                {"iteration": 70, "game_idx": 3, "game_id": "iter_0070_game_003",
-                 "winner": None, "starting_player": "red", "n_moves": 100,
-                 "reason": "state_cap", "detected_player": "red",
-                 "first_dominant_unclosed_ply": 40, "first_total_goal_distance": 2,
-                 "first_category": "two_endpoint_closeout_2ply",
-                 "actual_win_ply": None, "cap_delay_after_detection_plies": 60,
-                 "conversion_delay_plies": None, "conversion_delay_winner_moves": None,
-                 "primary_class_counts": None,
-                 "winner_moves_with_dominant_unavailable": None,
-                 "max_search_score_after_detection": None,
-                 "mean_search_score_after_detection": None,
-                 "high_value_after_detection_plies": None,
-                 "root_value_high_but_delayed": None,
-                 "outcome_class": 2, "scope": "both_sides",
-                 "detected": True},
-            ],
-        },
-    }
+    replays = [
+        _make_replay_with_record(
+            {"iteration": 70, "game_idx": 3, "game_id": "iter_0070_game_003",
+             "winner": None, "starting_player": "red", "n_moves": 100,
+             "reason": "state_cap", "detected_player": "red",
+             "first_dominant_unclosed_ply": 40, "first_total_goal_distance": 2,
+             "first_category": "two_endpoint_closeout_2ply",
+             "actual_terminal_ply": 100, "actual_win_ply": None,
+             "cap_delay_proxy_plies": 60,
+             "conversion_delay_plies": None, "conversion_delay_winner_moves": None,
+             "primary_class_counts": None,
+             "winner_moves_with_dominant_unavailable": None,
+             "max_search_score_after_detection": None,
+             "mean_search_score_after_detection": None,
+             "high_value_after_detection_plies": None,
+             "root_value_high_but_delayed": None,
+             "outcome_class": 2, "scope": "both_sides",
+             "detected": True}),
+    ]
     csv_path = tmp_path / "wc2.csv"
-    write_goal_completion_worst_cases_csv(summary, csv_path, top_k=5)
+    write_goal_completion_worst_cases_csv(str(csv_path), replays, top_k=5)
     rows = list(csv.DictReader(csv_path.read_text().splitlines()))
     assert len(rows) == 1
     assert rows[0]["winner"] == ""
     assert rows[0]["actual_win_ply"] == ""
     assert rows[0]["outcome_class"] == "2"
-    assert rows[0]["state_cap_after_detection"] == "True"
+    assert rows[0]["reason"] == "state_cap"
 
 
 def test_analyzer_per_ply_detection_calls_compute_goal_completion_state_with_enumerate_moves_false(monkeypatch):

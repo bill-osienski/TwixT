@@ -133,6 +133,9 @@ try:
         aggregate_calibration,
         classify_position,
     )
+    from scripts.GPU.alphazero.goal_completion_aggregator import (
+        aggregate_goal_completion_records,
+    )
     _HAS_PHASE1_DIAG = True
 except ImportError:
     _HAS_PHASE1_DIAG = False
@@ -636,6 +639,23 @@ def aggregate_per_game_stats(replays: List[dict]) -> dict:
 _CLASS1_REASONS = frozenset({"win", "resign", "adjudicated"})
 _CLASS2_REASONS = frozenset({"state_cap", "timeout", "timeout_selfplay", "board_full",
                              "terminal_state_cap"})
+
+
+def aggregate_goal_completion_diagnostics_from_records(
+    replays: list, sidecar_summaries: dict, config: dict,
+) -> dict:
+    """Default analyzer path (spec §11.1).
+
+    Per-game records are canonical. Sidecar summaries are held for
+    validation / iteration telemetry but the cross-iteration roll-up
+    is recomputed from records to avoid lossy roll-up of roll-ups.
+    """
+    per_game_records = [r.get("goal_completion_record") for r in replays]
+    return aggregate_goal_completion_records(
+        per_game_records,
+        config=config,
+        games_total=len(replays),
+    )
 
 
 def aggregate_goal_completion_diagnostics(
@@ -2475,93 +2495,91 @@ def format_policy_mcts_closeout_report(gc_block: dict) -> List[str]:
 
 
 def write_goal_completion_worst_cases_csv(
-    goal_completion: dict, out_path, top_k: int = 25
+    out_path: str, replays: list, top_k: int = 25, suffix: str = "",
 ) -> None:
-    """Write goal_completion_worst_cases.csv per spec 2026-05-03 §7.6.
+    """Write worst-cases CSV from per-game goal_completion_records.
 
-    Sort: conversion_delay_plies DESC, redundant_reinforcement_moves DESC, iteration ASC.
-    Top-K applied across the unified Class 1 + Class 2 pool. Class 2 rows
-    reuse conversion_delay_plies column for the unified sort with null
-    winner/actual_win_ply making the semantics clear.
+    Sort key: conversion_delay_plies for Class 1, cap_delay_proxy_plies
+    for Class 2; replays without a record are skipped silently.
     """
-    import csv as _csv
-    from pathlib import Path
+    def _sort_delay(rec):
+        if rec is None:
+            return -1
+        oc = rec.get("outcome_class")
+        if oc == 1:
+            return int(rec.get("conversion_delay_plies") or 0)
+        if oc == 2:
+            return int(rec.get("cap_delay_proxy_plies") or 0)
+        return -1
 
-    out_path = Path(out_path)
-    columns = [
-        "iteration", "game_idx", "game_id", "winner", "starting_player",
-        "n_moves", "reason", "detected_player",
-        "first_dominant_unclosed_ply", "first_total_goal_distance", "first_category",
-        "actual_win_ply", "conversion_delay_plies", "conversion_delay_winner_moves",
-        "distance_reducing_moves", "endpoint_completion_moves",
-        "redundant_reinforcement_moves", "off_chain_moves", "other_moves",
-        "dominant_unavailable_moves",
-        "max_search_score_after_detection", "mean_search_score_after_detection",
-        "high_value_after_detection_plies", "root_value_high_but_delayed",
-        "state_cap_after_detection", "timeout_after_detection", "board_full_after_detection",
-        "outcome_class", "scope",
-    ]
-
-    main_records = (goal_completion.get("main_population") or {}).get(
-        "_per_game_records_internal", []
-    )
-    capped_records = (goal_completion.get("capped_population") or {}).get(
-        "_per_game_records_internal", []
-    )
-
-    pool = [r for r in main_records if r.get("detected")]
-    # For Class 2 rows, copy cap_delay into conversion_delay_plies for unified sort.
-    for r in capped_records:
-        if not r.get("detected"):
+    pairs = []
+    for replay in replays:
+        rec = replay.get("goal_completion_record")
+        if rec is None:
             continue
-        r2 = dict(r)
-        r2["conversion_delay_plies"] = r.get("cap_delay_after_detection_plies")
-        pool.append(r2)
+        pairs.append((rec, replay))
+    pairs.sort(key=lambda p: -_sort_delay(p[0]))
+    top = pairs[:top_k]
 
-    def _sort_key(r):
-        cdp = r.get("conversion_delay_plies") or 0
-        pcc = r.get("primary_class_counts") or {}
-        rrm = pcc.get("redundant_reinforcement", 0) if pcc else 0
-        return (-cdp, -rrm, r.get("iteration") or 0)
-
-    pool.sort(key=_sort_key)
-    pool = pool[:top_k]
-
+    fieldnames = [
+        "iteration", "game_idx", "game_id", "winner", "starting_player",
+        "n_moves", "reason", "outcome_class", "scope",
+        "detected_player", "first_dominant_unclosed_ply",
+        "first_total_goal_distance", "first_category",
+        "actual_terminal_ply", "actual_win_ply",
+        "conversion_delay_plies", "conversion_delay_winner_moves",
+        "cap_delay_proxy_plies",
+        "primary_class_completes_endpoint",
+        "primary_class_reduces_total_goal_distance",
+        "primary_class_redundant_reinforcement",
+        "primary_class_off_chain",
+        "primary_class_other",
+        "winner_moves_in_watch_window",
+        "winner_moves_with_dominant_component",
+        "winner_moves_with_dominant_unavailable",
+        "max_search_score_after_detection",
+        "mean_search_score_after_detection",
+        "high_value_after_detection_plies",
+        "root_value_high_but_delayed",
+        "search_score_coverage_in_watch_window",
+    ]
     with open(out_path, "w", newline="") as f:
-        w = _csv.DictWriter(f, fieldnames=columns)
+        w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
-        for r in pool:
-            pcc = r.get("primary_class_counts") or {}
+        for rec, replay in top:
+            pcc = rec.get("primary_class_counts") or {}
             row = {
-                "iteration": r.get("iteration"),
-                "game_idx": r.get("game_idx"),
-                "game_id": r.get("game_id"),
-                "winner": r.get("winner"),
-                "starting_player": r.get("starting_player"),
-                "n_moves": r.get("n_moves"),
-                "reason": r.get("reason"),
-                "detected_player": r.get("detected_player"),
-                "first_dominant_unclosed_ply": r.get("first_dominant_unclosed_ply"),
-                "first_total_goal_distance": r.get("first_total_goal_distance"),
-                "first_category": r.get("first_category"),
-                "actual_win_ply": r.get("actual_win_ply"),
-                "conversion_delay_plies": r.get("conversion_delay_plies"),
-                "conversion_delay_winner_moves": r.get("conversion_delay_winner_moves"),
-                "distance_reducing_moves": pcc.get("reduces_total_goal_distance") if pcc else None,
-                "endpoint_completion_moves": pcc.get("completes_endpoint") if pcc else None,
-                "redundant_reinforcement_moves": pcc.get("redundant_reinforcement") if pcc else None,
-                "off_chain_moves": pcc.get("off_chain") if pcc else None,
-                "other_moves": pcc.get("other") if pcc else None,
-                "dominant_unavailable_moves": r.get("winner_moves_with_dominant_unavailable"),
-                "max_search_score_after_detection": r.get("max_search_score_after_detection"),
-                "mean_search_score_after_detection": r.get("mean_search_score_after_detection"),
-                "high_value_after_detection_plies": r.get("high_value_after_detection_plies"),
-                "root_value_high_but_delayed": r.get("root_value_high_but_delayed"),
-                "state_cap_after_detection": r.get("reason") == "state_cap" if r.get("outcome_class") == 2 else None,
-                "timeout_after_detection": r.get("reason") in ("timeout", "timeout_selfplay") if r.get("outcome_class") == 2 else None,
-                "board_full_after_detection": r.get("reason") == "board_full" if r.get("outcome_class") == 2 else None,
-                "outcome_class": r.get("outcome_class"),
-                "scope": r.get("scope"),
+                "iteration": rec.get("iteration"),
+                "game_idx": rec.get("game_idx"),
+                "game_id": rec.get("game_id"),
+                "winner": rec.get("winner"),
+                "starting_player": rec.get("starting_player"),
+                "n_moves": rec.get("n_moves"),
+                "reason": rec.get("reason"),
+                "outcome_class": rec.get("outcome_class"),
+                "scope": rec.get("scope"),
+                "detected_player": rec.get("detected_player"),
+                "first_dominant_unclosed_ply": rec.get("first_dominant_unclosed_ply"),
+                "first_total_goal_distance": rec.get("first_total_goal_distance"),
+                "first_category": rec.get("first_category"),
+                "actual_terminal_ply": rec.get("actual_terminal_ply"),
+                "actual_win_ply": rec.get("actual_win_ply"),
+                "conversion_delay_plies": rec.get("conversion_delay_plies"),
+                "conversion_delay_winner_moves": rec.get("conversion_delay_winner_moves"),
+                "cap_delay_proxy_plies": rec.get("cap_delay_proxy_plies"),
+                "primary_class_completes_endpoint": pcc.get("completes_endpoint") if pcc else None,
+                "primary_class_reduces_total_goal_distance": pcc.get("reduces_total_goal_distance") if pcc else None,
+                "primary_class_redundant_reinforcement": pcc.get("redundant_reinforcement") if pcc else None,
+                "primary_class_off_chain": pcc.get("off_chain") if pcc else None,
+                "primary_class_other": pcc.get("other") if pcc else None,
+                "winner_moves_in_watch_window": rec.get("winner_moves_in_watch_window"),
+                "winner_moves_with_dominant_component": rec.get("winner_moves_with_dominant_component"),
+                "winner_moves_with_dominant_unavailable": rec.get("winner_moves_with_dominant_unavailable"),
+                "max_search_score_after_detection": rec.get("max_search_score_after_detection"),
+                "mean_search_score_after_detection": rec.get("mean_search_score_after_detection"),
+                "high_value_after_detection_plies": rec.get("high_value_after_detection_plies"),
+                "root_value_high_but_delayed": rec.get("root_value_high_but_delayed"),
+                "search_score_coverage_in_watch_window": rec.get("search_score_coverage_in_watch_window"),
             }
             w.writerow(row)
 
@@ -3489,14 +3507,33 @@ def analyze(replays: List[dict],
     # Per-game stats persistence surfacing (spec 2026-04-29).
     per_move_stats_val = aggregate_per_move_stats(replays)
     per_game_stats_val = aggregate_per_game_stats(replays)
-    goal_completion_val = aggregate_goal_completion_diagnostics(
-        replays,
-        max_depth=getattr(args, "goal_completion_max_depth", 3) if args else 3,
-        min_component_size=getattr(args, "goal_completion_min_component_size", 8) if args else 8,
-        detection_threshold=getattr(args, "goal_completion_detection_threshold", 2) if args else 2,
-        high_value_threshold=getattr(args, "goal_completion_high_value_threshold", 0.9) if args else 0.9,
-        worst_cases_top_k=getattr(args, "goal_completion_worst_cases_top_k", 25) if args else 25,
-    )
+    if getattr(args, "goal_completion_recompute", False):
+        # Legacy walker (Task 13).
+        goal_completion_val = aggregate_goal_completion_diagnostics(
+            replays,
+            max_depth=getattr(args, "goal_completion_max_depth", 3) if args else 3,
+            min_component_size=getattr(args, "goal_completion_min_component_size", 8) if args else 8,
+            detection_threshold=getattr(args, "goal_completion_detection_threshold", 2) if args else 2,
+            high_value_threshold=getattr(args, "goal_completion_high_value_threshold", 0.9) if args else 0.9,
+            worst_cases_top_k=getattr(args, "goal_completion_worst_cases_top_k", 25) if args else 25,
+        )
+    else:
+        goal_completion_val = aggregate_goal_completion_diagnostics_from_records(
+            replays,
+            sidecar_summaries={
+                it: sc.get("goal_completion_summary")
+                for it, sc in (relevant_sidecars or {}).items()
+                if sc.get("goal_completion_summary") is not None
+            },
+            config={
+                "detection_threshold": getattr(args, "goal_completion_detection_threshold", 2) if args else 2,
+                "emit_threshold": 3,
+                "high_value_threshold": getattr(args, "goal_completion_high_value_threshold", 0.9) if args else 0.9,
+                "high_value_delay_threshold_plies": 6,
+                "max_depth": getattr(args, "goal_completion_max_depth", 3) if args else 3,
+                "min_component_size": getattr(args, "goal_completion_min_component_size", 8) if args else 8,
+            },
+        )
 
     summary = {
         "iteration": sc_agg.get("iteration_max", it_max) if use_sidecar else it_max,
@@ -3693,11 +3730,14 @@ def analyze(replays: List[dict],
         )
 
     # Goal-completion worst cases CSV
-    write_goal_completion_worst_cases_csv(
-        summary["goal_completion"],
-        os.path.join(out_dir, "goal_completion_worst_cases.csv"),
-        top_k=getattr(args, "goal_completion_worst_cases_top_k", 25) if args else 25,
-    )
+    if not getattr(args, "goal_completion_recompute", False):
+        write_goal_completion_worst_cases_csv(
+            os.path.join(out_dir, _suffixed("goal_completion_worst_cases", "csv", suffix)),
+            replays,
+            top_k=getattr(args, "goal_completion_worst_cases_top_k", 25) if args else 25,
+            suffix=suffix,
+        )
+    # Recompute path's own CSV writer is preserved; Task 13 wires it.
 
     # -----------------------------
     # Heatmap figures
@@ -3973,6 +4013,9 @@ def main():
                     help="Max BFS depth for endpoint distance computation (default: 3)")
     ap.add_argument("--goal-completion-min-component-size", type=int, default=8,
                     help="Min component size to qualify as dominant-unclosed (default: 8)")
+    ap.add_argument("--goal-completion-recompute", action="store_true",
+                    default=False,
+                    help="(Task 13) Use legacy replay walker for goal-completion. Default: read records.")
 
     # Probes / calibration — spec §6.1 new flags.
     ap.add_argument("--weights", default=None,
