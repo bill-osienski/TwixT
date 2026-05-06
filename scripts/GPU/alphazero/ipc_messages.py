@@ -116,3 +116,7 @@ class GameComplete:
     # on disabled runs). Tuple for frozen-dataclass immutability.
     goal_completion_diagnostics: Tuple[dict, ...] = ()
     goal_completion_diagnostics_meta: Optional[dict] = None
+    # Compact per-game goal-completion summary (spec 2026-05-05). None when
+    # goal_completion_record_enabled=False upstream. Distinct artifact from
+    # goal_completion_diagnostics_meta — see spec §9.1.
+    goal_completion_record: Optional[dict] = None

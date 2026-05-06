@@ -44,6 +44,9 @@ def save_game_replay(
     # Inline closeout diagnostics (spec 2026-05-03 §8.5)
     goal_completion_diagnostics: Optional[list] = None,
     goal_completion_diagnostics_meta: Optional[dict] = None,
+    # Compact per-game goal-completion summary (spec 2026-05-05).
+    # Top-level JSON key when present; omitted from JSON when None.
+    goal_completion_record: Optional[dict] = None,
 ) -> Path:
     """Save a single game in replay-compatible format.
 
@@ -165,6 +168,9 @@ def save_game_replay(
         record["goal_completion_diagnostics"] = list(goal_completion_diagnostics or [])
         record["goal_completion_diagnostics_meta"] = goal_completion_diagnostics_meta
 
+    if goal_completion_record is not None:
+        record["goal_completion_record"] = goal_completion_record
+
     if opening_diagnostics:
         record["opening_diagnostics"] = opening_diagnostics
         record["opening_diagnostics_meta"] = opening_diagnostics_meta
@@ -235,6 +241,8 @@ class GameSaver:
         # Inline closeout diagnostics (spec 2026-05-03 §8.5)
         goal_completion_diagnostics: Optional[list] = None,
         goal_completion_diagnostics_meta: Optional[dict] = None,
+        # Compact per-game goal-completion summary (spec 2026-05-05).
+        goal_completion_record: Optional[dict] = None,
     ) -> Optional[Path]:
         """Save game if we haven't reached the limit for this iteration.
 
@@ -277,6 +285,7 @@ class GameSaver:
             move_top1_shares=move_top1_shares,
             goal_completion_diagnostics=goal_completion_diagnostics,
             goal_completion_diagnostics_meta=goal_completion_diagnostics_meta,
+            goal_completion_record=goal_completion_record,
         )
 
         self._games_saved_this_iter += 1

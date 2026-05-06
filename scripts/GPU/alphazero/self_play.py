@@ -424,6 +424,9 @@ class GameRecord:
     # when emit_enabled was False (clean schema on disabled runs).
     goal_completion_diagnostics: List[dict] = field(default_factory=list)
     goal_completion_diagnostics_meta: Optional[dict] = None
+    # Compact per-game goal-completion summary (spec 2026-05-05). None when
+    # goal_completion_record_enabled=False on the upstream play_game.
+    goal_completion_record: Optional[dict] = None
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
