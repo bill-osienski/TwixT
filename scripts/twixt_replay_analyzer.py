@@ -641,6 +641,22 @@ _CLASS2_REASONS = frozenset({"state_cap", "timeout", "timeout_selfplay", "board_
                              "terminal_state_cap"})
 
 
+def _replay_int_field(replay: dict, field: str, default: int = 0) -> int:
+    """Extract an int field from a replay dict.
+
+    The saver writes some identity fields (iteration, game_idx) under
+    `meta`, NOT at the top level. Look at top-level first, then meta.
+    Returns `default` when the field is absent or None in both places.
+    """
+    val = replay.get(field)
+    if val is None:
+        meta = replay.get("meta") or {}
+        val = meta.get(field)
+    if val is None:
+        return default
+    return int(val)
+
+
 def aggregate_goal_completion_diagnostics_from_records(
     replays: list, sidecar_summaries: dict, config: dict,
 ) -> dict:
@@ -679,8 +695,8 @@ def aggregate_goal_completion_diagnostics_from_records(
             # off the replay JSON directly. Synthesized id matches the
             # iter_NNNN_game_NNN naming the saver writes.
             gid = (
-                f"iter_{int(replay.get('iteration', 0)):04d}"
-                f"_game_{int(replay.get('game_idx', 0)):03d}"
+                f"iter_{_replay_int_field(replay, 'iteration'):04d}"
+                f"_game_{_replay_int_field(replay, 'game_idx'):03d}"
             )
             examples.append(gid)
         print(
@@ -695,8 +711,9 @@ def aggregate_goal_completion_diagnostics_from_records(
         for replay, rec in zip(replays, per_game_records):
             if rec is None:
                 continue
-            it = replay.get("iteration")
-            per_iter_record_counts[it] = per_iter_record_counts.get(it, 0) + 1
+            it = _replay_int_field(replay, "iteration", default=-1)
+            if it >= 0:
+                per_iter_record_counts[it] = per_iter_record_counts.get(it, 0) + 1
         for it, summary in sidecar_summaries.items():
             sidecar_n = (summary.get("diagnostics_coverage") or {}).get("games_with_record")
             replay_n = per_iter_record_counts.get(it, 0)
@@ -2627,8 +2644,8 @@ def write_goal_completion_worst_cases_csv(
                 "iteration": rec.get("iteration"),
                 "game_idx": rec.get("game_idx"),
                 "game_id": rec.get("game_id") or (
-                    f"iter_{int(replay.get('iteration', 0)):04d}"
-                    f"_game_{int(replay.get('game_idx', 0)):03d}"
+                    f"iter_{_replay_int_field(replay, 'iteration'):04d}"
+                    f"_game_{_replay_int_field(replay, 'game_idx'):03d}"
                 ),
                 "winner": rec.get("winner"),
                 "starting_player": rec.get("starting_player"),
@@ -3618,8 +3635,8 @@ def analyze(replays: List[dict],
                 if div:
                     n_diverge += 1
                     gid = (inline_rec or rec_rec or {}).get("game_id") or (
-                        f"iter_{int(replay.get('iteration', 0)):04d}"
-                        f"_game_{int(replay.get('game_idx', 0)):03d}"
+                        f"iter_{_replay_int_field(replay, 'iteration'):04d}"
+                        f"_game_{_replay_int_field(replay, 'game_idx'):03d}"
                     )
                     print(f"[VALIDATE] {gid}: {len(div)} fields diverge",
                           file=sys.stderr)
