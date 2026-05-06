@@ -258,6 +258,7 @@ def _worker_loop(
                 move_top1_shares=tuple(game.move_top1_shares),
                 goal_completion_diagnostics=tuple(game.goal_completion_diagnostics),
                 goal_completion_diagnostics_meta=game.goal_completion_diagnostics_meta,
+                goal_completion_record=game.goal_completion_record,
             ))
 
         # Periodic stats

@@ -95,3 +95,58 @@ def test_save_game_replay_independent_of_other_goal_completion_keys():
         assert "goal_completion_record" in payload
         assert "goal_completion_diagnostics" not in payload
         assert "goal_completion_diagnostics_meta" not in payload
+
+
+def test_save_game_from_record_injects_iteration():
+    """The trainer overwrites iteration=0 placeholder with its actual iter."""
+    from scripts.GPU.alphazero.trainer import _save_game_from_record
+
+    # Minimal in-memory game saver double.
+    saved = {}
+    class _FakeSaver:
+        def maybe_save_game(self, *args, **kwargs):
+            saved.update(kwargs)
+            return Path("/tmp/fake_path.json")
+
+    rec = GameRecord(positions=[], winner="red", n_moves=1)
+    rec.move_history = [(0, 0)]
+    rec.start_player = "red"
+    rec.draw_reason = None
+    rec.goal_completion_record = {
+        "version": 1, "outcome_class": 1, "winner": "red",
+        "iteration": 0, "game_idx": 5, "game_id": "game_005",
+    }
+
+    fake = _FakeSaver()
+    fake._current_iter = 112
+    _save_game_from_record(fake, rec)
+    rec_arg = saved["goal_completion_record"]
+    assert rec_arg["iteration"] == 112
+
+
+def test_save_game_from_ipc_injects_iteration():
+    from scripts.GPU.alphazero.trainer import _save_game_from_ipc
+
+    saved = {}
+    class _FakeSaver:
+        def maybe_save_game(self, *args, **kwargs):
+            saved.update(kwargs)
+            return Path("/tmp/fake_path.json")
+
+    msg = GameComplete(
+        worker_id=0, winner="red", draw_reason=0, n_moves=1, n_positions=1,
+        wall_time_s=0.0, nn_calls=0, expand_calls=0, nn_batches=0,
+        total_backups=0, total_waiters=0, unique_leaves=0,
+        max_waiters=0, flush_full=0, flush_stall=0, flush_tail=0,
+        move_history=((0, 0),),
+        start_player="red",
+        goal_completion_record={
+            "version": 1, "outcome_class": 1, "winner": "red",
+            "iteration": 0, "game_idx": 5, "game_id": "game_005",
+        },
+    )
+    fake = _FakeSaver()
+    fake._current_iter = 112
+    _save_game_from_ipc(fake, msg)
+    rec_arg = saved["goal_completion_record"]
+    assert rec_arg["iteration"] == 112

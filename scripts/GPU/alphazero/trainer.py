@@ -46,6 +46,20 @@ from .opening_diagnostics import (
 )
 
 
+def _inject_iteration(record: Optional[dict], iteration: Optional[int]) -> Optional[dict]:
+    """Set iteration on a goal_completion_record copy.
+
+    play_game() emits records with iteration=0 because the worker process
+    does not know the trainer's iteration counter. The trainer-side save
+    helpers inject the actual iteration here. Returns None unchanged.
+    """
+    if record is None or iteration is None:
+        return record
+    out = dict(record)
+    out["iteration"] = int(iteration)
+    return out
+
+
 def _save_game_from_ipc(game_saver, msg):
     """Persist one finished game to JSON from a GameComplete IPC message.
 
@@ -95,6 +109,9 @@ def _save_game_from_ipc(game_saver, msg):
             if msg.goal_completion_diagnostics else None
         ),
         goal_completion_diagnostics_meta=msg.goal_completion_diagnostics_meta,
+        goal_completion_record=_inject_iteration(
+            msg.goal_completion_record, getattr(game_saver, "_current_iter", None),
+        ),
     )
 
 
@@ -151,6 +168,9 @@ def _save_game_from_record(game_saver, game):
             if game.goal_completion_diagnostics else None
         ),
         goal_completion_diagnostics_meta=game.goal_completion_diagnostics_meta,
+        goal_completion_record=_inject_iteration(
+            game.goal_completion_record, getattr(game_saver, "_current_iter", None),
+        ),
     )
 
 
