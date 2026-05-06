@@ -115,8 +115,6 @@ def _summarize_main_population(main: List[dict], config: dict) -> dict:
     if not main:
         return {"n": 0}
 
-    high_value_delay = int(config.get("high_value_delay_threshold_plies", 6))
-
     detected = [r for r in main if r["detected"]]
     n = len(main)
 
@@ -125,7 +123,7 @@ def _summarize_main_population(main: List[dict], config: dict) -> dict:
     delays_winner_moves = [r["conversion_delay_winner_moves"] for r in detected
                            if r["conversion_delay_winner_moves"] is not None]
 
-    # Pooled primary_class counts -> rates.
+    # Pooled primary_class counts -> rates (new style: single total denominator).
     pooled = _zero_class_counts()
     pooled["dominant_unavailable"] = 0
     total_classified = 0
@@ -143,15 +141,72 @@ def _summarize_main_population(main: List[dict], config: dict) -> dict:
     else:
         primary_class_rates = {k: 0.0 for k in pooled}
 
+    # Legacy denominator semantics for move_quality_after_detection:
+    # 5 base classes use pooled_with_component; dominant_unavailable uses
+    # pooled_with_component + pooled_unavailable.
+    pooled_with_component = sum(
+        pooled[k] for k in ("completes_endpoint", "reduces_total_goal_distance",
+                             "redundant_reinforcement", "off_chain", "other")
+    )
+    pooled_unavailable = pooled["dominant_unavailable"]
+
+    if pooled_with_component > 0:
+        move_quality_after_detection = {
+            "completes_endpoint_rate": pooled["completes_endpoint"] / pooled_with_component,
+            "reduces_total_goal_distance_rate": pooled["reduces_total_goal_distance"] / pooled_with_component,
+            "redundant_reinforcement_rate": pooled["redundant_reinforcement"] / pooled_with_component,
+            "off_chain_rate": pooled["off_chain"] / pooled_with_component,
+            "other_rate": pooled["other"] / pooled_with_component,
+            "dominant_unavailable_rate": (
+                pooled_unavailable / (pooled_with_component + pooled_unavailable)
+                if (pooled_with_component + pooled_unavailable) > 0 else 0.0
+            ),
+        }
+    else:
+        move_quality_after_detection = None
+
     # search_score_after_detection (nested: max distribution + mean distribution).
     max_scores = [r["max_search_score_after_detection"] for r in detected
                   if r.get("max_search_score_after_detection") is not None]
     mean_scores = [r["mean_search_score_after_detection"] for r in detected
                    if r.get("mean_search_score_after_detection") is not None]
 
+    # Legacy high_value_diagnostics block (format_goal_completion_report reads this).
+    coverage_records = [
+        r for r in detected
+        if int(r.get("search_score_coverage_in_watch_window") or 0) > 0
+    ]
+    if detected and coverage_records:
+        max_scores_only = [r["max_search_score_after_detection"] for r in coverage_records
+                           if r.get("max_search_score_after_detection") is not None]
+        mean_scores_only = [r["mean_search_score_after_detection"] for r in coverage_records
+                            if r.get("mean_search_score_after_detection") is not None]
+        coverage_pct = 100.0 * len(coverage_records) / len(detected)
+        high_value_diagnostics = {
+            "search_score_coverage_pct": coverage_pct,
+            "max_search_score_after_detection": {
+                "p50": _percentile(sorted(max_scores_only), 50),
+                "p90": _percentile(sorted(max_scores_only), 90),
+                "max": float(max(max_scores_only)) if max_scores_only else 0.0,
+            },
+            "mean_search_score_after_detection": {
+                "p50": _percentile(sorted(mean_scores_only), 50),
+                "p90": _percentile(sorted(mean_scores_only), 90),
+                "max": float(max(mean_scores_only)) if mean_scores_only else 0.0,
+            },
+        }
+    elif detected:
+        high_value_diagnostics = {
+            "search_score_coverage_pct": 0.0,
+            "max_search_score_after_detection": None,
+            "mean_search_score_after_detection": None,
+        }
+    else:
+        high_value_diagnostics = None
+
     bad = {
-        "delay_ge_10": sum(1 for d in delays if d >= 10),
-        "delay_ge_20": sum(1 for d in delays if d >= 20),
+        "delay_ge_10_plies": sum(1 for d in delays if d >= 10),
+        "delay_ge_20_plies": sum(1 for d in delays if d >= 20),
         "high_value_after_detection_plies_total": sum(
             int(r.get("high_value_after_detection_plies") or 0) for r in detected
         ),
@@ -161,7 +216,9 @@ def _summarize_main_population(main: List[dict], config: dict) -> dict:
     }
 
     return {
+        "scope": "decisive_winner_only",
         "n": n,
+        "games": n,                                   # legacy alias
         "games_with_dominant_unclosed": sum(1 for r in main if r["detected"]),
         "games_with_total_distance_le_2": sum(1 for r in main if r.get("ever_distance_le_2")),
         "games_with_total_distance_le_3": sum(1 for r in main if r.get("ever_distance_le_3")),
@@ -172,11 +229,13 @@ def _summarize_main_population(main: List[dict], config: dict) -> dict:
         ),
         "conversion_delay_plies": _stats_block(delays),
         "conversion_delay_winner_moves": _stats_block(delays_winner_moves),
-        "primary_class_rates": primary_class_rates,
-        "search_score_after_detection": {
+        "primary_class_rates": primary_class_rates,           # new
+        "move_quality_after_detection": move_quality_after_detection,  # legacy
+        "search_score_after_detection": {                     # new
             "max": _stats_block(max_scores),
             "mean": _stats_block(mean_scores),
         },
+        "high_value_diagnostics": high_value_diagnostics,    # legacy
         "bad_cases": bad,
     }
 
@@ -194,7 +253,10 @@ def _summarize_capped_population(capped: List[dict]) -> dict:
             side_counts[s] += 1
     return {
         "n": len(capped),
+        "games": len(capped),                              # legacy alias
         "detected": len(detected),
-        "cap_delay_proxy_plies": _stats_block(proxies),
+        "detected_before_cap": len(detected),              # legacy alias
+        "cap_delay_proxy_plies": _stats_block(proxies),   # new
+        "cap_delay_after_detection_plies": _stats_block(proxies),  # legacy alias (same block)
         "first_detector_side": side_counts,
     }

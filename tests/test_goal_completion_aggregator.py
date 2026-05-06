@@ -221,9 +221,9 @@ def test_main_population_bad_cases_thresholds():
     result = aggregate_goal_completion_records(records, config={}, games_total=len(records))
     bad = result["main_population"]["bad_cases"]
     # delay >= 10 -> 5 (10, 11, 19, 20, 25)
-    assert bad["delay_ge_10"] == 5
+    assert bad["delay_ge_10_plies"] == 5
     # delay >= 20 -> 2 (20, 25)
-    assert bad["delay_ge_20"] == 2
+    assert bad["delay_ge_20_plies"] == 2
     # high_value_after_detection_plies_total = 2 * 7 = 14
     assert bad["high_value_after_detection_plies_total"] == 14
 
@@ -263,3 +263,91 @@ def test_cross_iteration_roll_up_matches_per_iter_aggregation():
     # Reaggregate from the same records — same input, same shape, same numbers.
     cross2 = aggregate_goal_completion_records(records, config={}, games_total=len(records))
     assert cross == cross2
+
+
+def test_main_population_legacy_formatter_keys_present():
+    """Aggregator must emit legacy keys the existing analyzer formatter
+    reads (spec §11.7, plan Task 10 reuses format_goal_completion_report
+    unchanged)."""
+    rec = _decisive_record()
+    result = aggregate_goal_completion_records([rec, rec], config={}, games_total=2)
+    main = result["main_population"]
+    # Legacy key set required by format_goal_completion_report:
+    assert "games" in main
+    assert main["games"] == 2
+    assert "move_quality_after_detection" in main
+    assert "high_value_diagnostics" in main
+    assert "delay_ge_10_plies" in main["bad_cases"]
+    assert "delay_ge_20_plies" in main["bad_cases"]
+    # New keys also still present (programmatic-access aliases):
+    assert "n" in main
+    assert "primary_class_rates" in main
+    assert "search_score_after_detection" in main
+
+
+def test_main_population_move_quality_uses_rate_suffix_and_separate_denominator():
+    """move_quality_after_detection has _rate suffix keys; the 5 base rates
+    use pooled_with_component denominator; dominant_unavailable_rate uses
+    pooled_with_component + pooled_unavailable denominator (legacy semantics)."""
+    r1 = _decisive_record(
+        primary_class_counts={
+            "completes_endpoint": 2, "reduces_total_goal_distance": 1,
+            "redundant_reinforcement": 1, "off_chain": 0, "other": 0,
+        },
+        winner_moves_with_dominant_unavailable=1,
+    )
+    result = aggregate_goal_completion_records([r1], config={}, games_total=1)
+    mq = result["main_population"]["move_quality_after_detection"]
+    # pooled_with_component = 2+1+1+0+0 = 4
+    # pooled_unavailable = 1
+    # base rates use denom 4: completes 2/4, reduces 1/4, redundant 1/4, off 0/4, other 0/4
+    assert abs(mq["completes_endpoint_rate"] - 0.5) < 1e-9
+    assert abs(mq["reduces_total_goal_distance_rate"] - 0.25) < 1e-9
+    assert abs(mq["redundant_reinforcement_rate"] - 0.25) < 1e-9
+    # dominant_unavailable_rate uses denom 4+1=5: 1/5
+    assert abs(mq["dominant_unavailable_rate"] - 0.2) < 1e-9
+
+
+def test_main_population_move_quality_none_when_no_with_component():
+    """When no detected records have a dominant component (all unavailable
+    or no detection), move_quality_after_detection is None (legacy)."""
+    r1 = _decisive_record(
+        primary_class_counts={
+            "completes_endpoint": 0, "reduces_total_goal_distance": 0,
+            "redundant_reinforcement": 0, "off_chain": 0, "other": 0,
+        },
+        winner_moves_with_dominant_unavailable=3,
+    )
+    result = aggregate_goal_completion_records([r1], config={}, games_total=1)
+    assert result["main_population"]["move_quality_after_detection"] is None
+
+
+def test_main_population_high_value_diagnostics_shape():
+    """high_value_diagnostics has search_score_coverage_pct + nested
+    max/mean blocks with p50/p90/max keys."""
+    rec = _decisive_record(
+        max_search_score_after_detection=0.99,
+        mean_search_score_after_detection=0.95,
+        search_score_coverage_in_watch_window=5,
+    )
+    result = aggregate_goal_completion_records([rec, rec], config={}, games_total=2)
+    hv = result["main_population"]["high_value_diagnostics"]
+    assert "search_score_coverage_pct" in hv
+    assert hv["search_score_coverage_pct"] == 100.0
+    assert "max_search_score_after_detection" in hv
+    assert "mean_search_score_after_detection" in hv
+    assert hv["max_search_score_after_detection"]["p50"] == 0.99
+    assert hv["max_search_score_after_detection"]["max"] == 0.99
+
+
+def test_capped_population_legacy_aliases_present():
+    """capped_population must emit detected_before_cap + cap_delay_after_detection_plies
+    + games (legacy keys for formatter)."""
+    records = [_capped_record(cap_delay_proxy_plies=20, detected_player="red"),
+               _capped_record(cap_delay_proxy_plies=40, detected_player="black")]
+    result = aggregate_goal_completion_records(records, config={}, games_total=2)
+    cap = result["capped_population"]
+    assert cap["games"] == 2
+    assert cap["detected_before_cap"] == 2
+    # Legacy alias points at same stats block as the new key.
+    assert cap["cap_delay_after_detection_plies"] == cap["cap_delay_proxy_plies"]
