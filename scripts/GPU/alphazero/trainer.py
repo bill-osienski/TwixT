@@ -1460,6 +1460,7 @@ def run_parallel_selfplay(
     rg_eligible_red = 0;   rg_eligible_black = 0
     rg_top1_all = []       # collect all top1_range samples across games
     all_opening_diagnostics = []
+    all_goal_completion_records: list = []
 
     # Phase 4: per-game replay cap aggregation (IPC path)
     total_positions_original = 0
@@ -1634,6 +1635,14 @@ def run_parallel_selfplay(
             # Save game replay if enabled (spec 2026-04-29: routes per-game stats too)
             _save_game_from_ipc(game_saver, msg)
 
+            # Collect goal_completion_record per game for sidecar aggregation.
+            # The injected iteration set by _save_game_from_ipc is already in
+            # the saved JSON; for sidecar aggregation we use the original record
+            # and let aggregate_goal_completion_records use the trainer-supplied
+            # config snapshot. (None entries are passed through; aggregator
+            # tolerates them.)
+            all_goal_completion_records.append(msg.goal_completion_record)
+
             if games_completed % 5 == 0:
                 print(f"  Games: {games_completed}/{games_to_play}")
 
@@ -1804,6 +1813,7 @@ def run_parallel_selfplay(
         # root_child_diagnostics into the sidecar. Return the list so the
         # outer train() loop can feed it into the sidecar aggregation.
         "all_opening_diagnostics": list(all_opening_diagnostics),
+        "all_goal_completion_records": list(all_goal_completion_records),
     }
 
     return games_records, new_positions, stats
@@ -2398,6 +2408,7 @@ def train(
         rg_eligible_red = 0;   rg_eligible_black = 0
         rg_top1_all = []
         all_opening_diagnostics = []  # Collect per-game diagnostic lists for sidecar aggregation
+        all_goal_completion_records: list = []
         total_nn_calls = 0
         total_expand_calls = 0
         total_nn_batches = 0
@@ -2546,6 +2557,9 @@ def train(
                 _par_od = parallel_stats.get("all_opening_diagnostics", [])
                 if _par_od:
                     all_opening_diagnostics.extend(_par_od)
+                _par_gc = parallel_stats.get("all_goal_completion_records", [])
+                if _par_gc:
+                    all_goal_completion_records.extend(_par_gc)
 
             except KeyboardInterrupt:
                 print(f"\n\nInterrupted during parallel self-play!")
@@ -2712,6 +2726,9 @@ def train(
 
                     # Save game replay if enabled (spec 2026-04-29: routes per-game stats too)
                     _save_game_from_record(game_saver, game)
+
+                    # Collect goal_completion_record per game for sidecar aggregation.
+                    all_goal_completion_records.append(game.goal_completion_record)
 
                     # Flush MLX graph and clear caches after each game
                     # mx.eval() forces pending lazy ops to materialize, freeing intermediates
@@ -3111,6 +3128,23 @@ def train(
                     rcd_aggregate=_sidecar["root_child_diagnostics"],
                     early_plies=CHILD_DETAIL_PLIES,
                 )
+
+            # Goal-completion sidecar aggregation (spec 2026-05-05 §10).
+            # Always emitted; coverage_rate reflects None-record gaps from
+            # games where goal_completion_record_enabled was False.
+            from .goal_completion_aggregator import aggregate_goal_completion_records
+            _sidecar["goal_completion_summary"] = aggregate_goal_completion_records(
+                all_goal_completion_records,
+                config={
+                    "detection_threshold": 2,
+                    "emit_threshold": 3,
+                    "high_value_threshold": 0.9,
+                    "high_value_delay_threshold_plies": 6,
+                    "max_depth": 3,
+                    "min_component_size": 8,
+                },
+                games_total=games_generated,
+            )
 
             games_dir.mkdir(parents=True, exist_ok=True)
             _tmp = games_dir / f"iter_{iteration:04d}_stats.json.tmp"

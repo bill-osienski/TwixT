@@ -392,3 +392,31 @@ def test_excluded_population_emits_games_legacy_alias():
     )
     assert result["excluded_population"]["n"] == 3
     assert result["excluded_population"]["games"] == 3
+
+
+def test_trainer_style_sidecar_block_construction():
+    """Validate that the aggregator output composes cleanly into a
+    trainer-shaped sidecar dict. Reflects the call pattern in
+    trainer.py's iteration sidecar writer."""
+    records_for_iter = [_decisive_record(), _decisive_record(), None]
+    sidecar = {}
+    sidecar["goal_completion_summary"] = aggregate_goal_completion_records(
+        records_for_iter,
+        config={
+            "detection_threshold": 2,
+            "emit_threshold": 3,
+            "high_value_threshold": 0.9,
+            "high_value_delay_threshold_plies": 6,
+            "max_depth": 3,
+            "min_component_size": 8,
+        },
+        games_total=3,
+    )
+    block = sidecar["goal_completion_summary"]
+    assert block["version"] == 1
+    assert block["config"]["detection_threshold"] == 2
+    assert block["config"]["emit_threshold"] == 3
+    assert block["diagnostics_coverage"]["games_total"] == 3
+    assert block["diagnostics_coverage"]["games_with_record"] == 2
+    assert block["diagnostics_coverage"]["coverage_rate"] == pytest.approx(2/3)
+    assert block["main_population"]["n"] == 2
