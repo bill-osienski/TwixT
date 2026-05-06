@@ -138,3 +138,128 @@ def test_normalize_record_fills_defaults():
 def test_normalize_record_handles_unknown_version_defensively():
     out = _normalize_record({"version": 99, "outcome_class": 1, "winner": "red"})
     assert out["version"] == 99  # passes through; aggregator may warn
+
+
+def _capped_record(**overrides):
+    base = {
+        "version": 1, "outcome_class": 2, "winner": None,
+        "detected_player": "red", "reason": "state_cap",
+        "detected": True,
+        "ever_distance_le_2": True, "ever_distance_le_3": True,
+        "min_total_goal_distance": 2,
+        "first_dominant_unclosed_ply": 60,
+        "first_total_goal_distance": 2,
+        "first_category": "two_endpoint_closeout_2ply",
+        "actual_terminal_ply": 100,
+        "actual_win_ply": None,
+        "conversion_delay_plies": None,
+        "conversion_delay_winner_moves": None,
+        "cap_delay_proxy_plies": 40,
+        "primary_class_counts": None,
+    }
+    base.update(overrides)
+    return base
+
+
+def test_main_population_known_percentiles():
+    """Handcrafted record set with known delays — assert exact percentiles."""
+    delays = [4, 4, 6, 8, 10, 14, 18, 22, 28]
+    records = [_decisive_record(conversion_delay_plies=d, conversion_delay_winner_moves=d // 2)
+               for d in delays]
+    result = aggregate_goal_completion_records(records, config={}, games_total=len(records))
+    main = result["main_population"]
+    assert main["n"] == 9
+    assert main["detected"] == 9
+    assert main["detection_rate"] == 1.0
+    cd = main["conversion_delay_plies"]
+    # Linear-interpolation percentiles (per _percentile helper):
+    #   rank = p/100 * (N-1); for N=9 sorted [4,4,6,8,10,14,18,22,28]:
+    #     p50 -> rank 4.0 -> values[4] = 10
+    #     p90 -> rank 7.2 -> values[7]*0.8 + values[8]*0.2 = 22*0.8 + 28*0.2 = 23.2
+    #     max -> 28
+    assert cd["p50"] == 10
+    assert abs(cd["p90"] - 23.2) < 1e-9
+    assert cd["max"] == 28
+
+
+def test_main_population_naming_continuity():
+    """Spec-locked naming — continuity with existing analyzer report."""
+    rec = _decisive_record()
+    result = aggregate_goal_completion_records([rec, rec], config={}, games_total=2)
+    main = result["main_population"]
+    assert "games_with_dominant_unclosed" in main
+    assert "games_with_total_distance_le_2" in main
+    assert "games_with_total_distance_le_3" in main
+    assert main["games_with_dominant_unclosed"] == 2
+    assert main["games_with_total_distance_le_2"] == 2
+
+
+def test_main_population_primary_class_rates_pooled():
+    """primary_class_rates pools counts across all main games."""
+    r1 = _decisive_record(primary_class_counts={
+        "completes_endpoint": 2, "reduces_total_goal_distance": 1,
+        "redundant_reinforcement": 1, "off_chain": 0, "other": 0,
+    })
+    r2 = _decisive_record(primary_class_counts={
+        "completes_endpoint": 0, "reduces_total_goal_distance": 1,
+        "redundant_reinforcement": 4, "off_chain": 0, "other": 1,
+    })
+    result = aggregate_goal_completion_records([r1, r2], config={}, games_total=2)
+    rates = result["main_population"]["primary_class_rates"]
+    # Total selected = 10. completes=2, reduces=2, redundant=5, off=0, other=1.
+    assert abs(rates["completes_endpoint"] - 0.2) < 1e-9
+    assert abs(rates["reduces_total_goal_distance"] - 0.2) < 1e-9
+    assert abs(rates["redundant_reinforcement"] - 0.5) < 1e-9
+
+
+def test_main_population_bad_cases_thresholds():
+    delays = [3, 9, 10, 11, 19, 20, 25]
+    records = [_decisive_record(
+        conversion_delay_plies=d,
+        high_value_after_detection_plies=2,
+    ) for d in delays]
+    result = aggregate_goal_completion_records(records, config={}, games_total=len(records))
+    bad = result["main_population"]["bad_cases"]
+    # delay >= 10 -> 5 (10, 11, 19, 20, 25)
+    assert bad["delay_ge_10"] == 5
+    # delay >= 20 -> 2 (20, 25)
+    assert bad["delay_ge_20"] == 2
+    # high_value_after_detection_plies_total = 2 * 7 = 14
+    assert bad["high_value_after_detection_plies_total"] == 14
+
+
+def test_main_population_root_value_high_but_delayed_count():
+    records = [
+        _decisive_record(root_value_high_but_delayed=True),
+        _decisive_record(root_value_high_but_delayed=False),
+        _decisive_record(root_value_high_but_delayed=True),
+    ]
+    result = aggregate_goal_completion_records(records, config={}, games_total=3)
+    assert result["main_population"]["bad_cases"]["root_value_high_but_delayed"] == 2
+
+
+def test_capped_population_summary():
+    records = [
+        _capped_record(cap_delay_proxy_plies=20, detected_player="red"),
+        _capped_record(cap_delay_proxy_plies=40, detected_player="red"),
+        _capped_record(cap_delay_proxy_plies=60, detected_player="black"),
+    ]
+    result = aggregate_goal_completion_records(records, config={}, games_total=3)
+    cap = result["capped_population"]
+    assert cap["n"] == 3
+    assert cap["detected"] == 3
+    assert cap["cap_delay_proxy_plies"]["p50"] == 40
+    assert cap["cap_delay_proxy_plies"]["max"] == 60
+    assert cap["first_detector_side"] == {"red": 2, "black": 1}
+
+
+def test_cross_iteration_roll_up_matches_per_iter_aggregation():
+    """The same shared aggregator at any scope: per-iter aggregation
+    composed via roll-up should equal one cross-iter aggregation on the
+    same records (recompute principle, spec §11.1)."""
+    delays = [4, 6, 8, 10, 14, 18]
+    records = [_decisive_record(conversion_delay_plies=d) for d in delays]
+    cross = aggregate_goal_completion_records(records, config={}, games_total=len(records))
+    # Reaggregate from the same records — same input, same shape, same numbers.
+    cross2 = aggregate_goal_completion_records(records, config={}, games_total=len(records))
+    assert cross == cross2

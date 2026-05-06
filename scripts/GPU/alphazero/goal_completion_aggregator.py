@@ -77,8 +77,124 @@ def aggregate_goal_completion_records(
             "games_class_2": len(capped),
             "games_class_3": len(excluded),
         },
-        # Population summaries land in Task 5; emit empty skeletons here.
-        "main_population": {"n": len(main)},
-        "capped_population": {"n": len(capped)},
+        "main_population": _summarize_main_population(main, config),
+        "capped_population": _summarize_capped_population(capped),
         "excluded_population": {"n": len(excluded)},
+    }
+
+
+def _percentile(sorted_values: list, p: float) -> float:
+    """Linear-interpolation percentile on a pre-sorted list."""
+    if not sorted_values:
+        return 0.0
+    if len(sorted_values) == 1:
+        return float(sorted_values[0])
+    rank = (p / 100.0) * (len(sorted_values) - 1)
+    lo = int(rank)
+    hi = min(lo + 1, len(sorted_values) - 1)
+    frac = rank - lo
+    return float(sorted_values[lo] * (1.0 - frac) + sorted_values[hi] * frac)
+
+
+def _stats_block(values: list) -> dict:
+    if not values:
+        return {"p10": 0, "p50": 0, "p90": 0, "p95": 0, "max": 0, "mean": 0.0, "min": 0}
+    s = sorted(values)
+    return {
+        "p10": _percentile(s, 10),
+        "p50": _percentile(s, 50),
+        "p90": _percentile(s, 90),
+        "p95": _percentile(s, 95),
+        "max": float(s[-1]),
+        "min": float(s[0]),
+        "mean": float(sum(s) / len(s)),
+    }
+
+
+def _summarize_main_population(main: List[dict], config: dict) -> dict:
+    if not main:
+        return {"n": 0}
+
+    high_value_delay = int(config.get("high_value_delay_threshold_plies", 6))
+
+    detected = [r for r in main if r["detected"]]
+    n = len(main)
+
+    delays = [r["conversion_delay_plies"] for r in detected
+              if r["conversion_delay_plies"] is not None]
+    delays_winner_moves = [r["conversion_delay_winner_moves"] for r in detected
+                           if r["conversion_delay_winner_moves"] is not None]
+
+    # Pooled primary_class counts -> rates.
+    pooled = _zero_class_counts()
+    pooled["dominant_unavailable"] = 0
+    total_classified = 0
+    for r in detected:
+        pcc = r.get("primary_class_counts") or {}
+        for k in ("completes_endpoint", "reduces_total_goal_distance",
+                  "redundant_reinforcement", "off_chain", "other"):
+            pooled[k] += int(pcc.get(k, 0))
+            total_classified += int(pcc.get(k, 0))
+        # dominant_unavailable comes from winner_moves_with_dominant_unavailable
+        pooled["dominant_unavailable"] += int(r.get("winner_moves_with_dominant_unavailable") or 0)
+        total_classified += int(r.get("winner_moves_with_dominant_unavailable") or 0)
+    if total_classified > 0:
+        primary_class_rates = {k: v / total_classified for k, v in pooled.items()}
+    else:
+        primary_class_rates = {k: 0.0 for k in pooled}
+
+    # search_score_after_detection (nested: max distribution + mean distribution).
+    max_scores = [r["max_search_score_after_detection"] for r in detected
+                  if r.get("max_search_score_after_detection") is not None]
+    mean_scores = [r["mean_search_score_after_detection"] for r in detected
+                   if r.get("mean_search_score_after_detection") is not None]
+
+    bad = {
+        "delay_ge_10": sum(1 for d in delays if d >= 10),
+        "delay_ge_20": sum(1 for d in delays if d >= 20),
+        "high_value_after_detection_plies_total": sum(
+            int(r.get("high_value_after_detection_plies") or 0) for r in detected
+        ),
+        "root_value_high_but_delayed": sum(
+            1 for r in detected if r.get("root_value_high_but_delayed") is True
+        ),
+    }
+
+    return {
+        "n": n,
+        "games_with_dominant_unclosed": sum(1 for r in main if r["detected"]),
+        "games_with_total_distance_le_2": sum(1 for r in main if r.get("ever_distance_le_2")),
+        "games_with_total_distance_le_3": sum(1 for r in main if r.get("ever_distance_le_3")),
+        "detected": len(detected),
+        "detection_rate": (len(detected) / n) if n else 0.0,
+        "min_total_goal_distance": _stats_block(
+            [r["min_total_goal_distance"] for r in main if r.get("min_total_goal_distance") is not None]
+        ),
+        "conversion_delay_plies": _stats_block(delays),
+        "conversion_delay_winner_moves": _stats_block(delays_winner_moves),
+        "primary_class_rates": primary_class_rates,
+        "search_score_after_detection": {
+            "max": _stats_block(max_scores),
+            "mean": _stats_block(mean_scores),
+        },
+        "bad_cases": bad,
+    }
+
+
+def _summarize_capped_population(capped: List[dict]) -> dict:
+    if not capped:
+        return {"n": 0}
+    detected = [r for r in capped if r["detected"]]
+    proxies = [r["cap_delay_proxy_plies"] for r in detected
+               if r.get("cap_delay_proxy_plies") is not None]
+    side_counts = {"red": 0, "black": 0}
+    for r in detected:
+        s = r.get("detected_player")
+        if s in side_counts:
+            side_counts[s] += 1
+    return {
+        "n": len(capped),
+        "detected": len(detected),
+        "cap_delay_proxy_plies": _stats_block(proxies),
+        "first_detector_side": side_counts,
     }
