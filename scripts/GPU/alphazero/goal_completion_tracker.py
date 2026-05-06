@@ -9,6 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
+from scripts.GPU.alphazero.connectivity_diagnostics import (
+    classify_selected_conversion_move,
+)
+
 
 def _zero_class_counts() -> dict:
     return {
@@ -102,4 +106,30 @@ class GoalCompletionGameTracker:
                 comp = gc_state_cheap.get("component_pegs")
                 acc.first_largest_component_size = len(comp) if comp else None
 
-        # Classification fires in Task 2; for now we only track detection state.
+        # 3. Watch-window: if detected (either before or just now),
+        # the selected move counts as post-detection. Classify when full
+        # state is available; otherwise log as dominant_unavailable.
+        if acc.detected:
+            acc.moves_after_detection += 1
+            if gc_state_cheap is None:
+                acc.moves_with_dominant_unavailable += 1
+            elif gc_state_full is None:
+                acc.moves_with_dominant_unavailable += 1
+            else:
+                acc.moves_with_dominant_component += 1
+                cls = classify_selected_conversion_move(
+                    state, side_to_move, selected_move, gc_state_full,
+                    max_depth=self.max_depth,
+                    min_component_size=self.min_component_size,
+                )
+                primary = cls.get("primary_class", "other")
+                if primary in acc.primary_class_counts:
+                    acc.primary_class_counts[primary] += 1
+                else:
+                    acc.primary_class_counts["other"] += 1
+
+            if search_score is not None:
+                ss = float(search_score)
+                acc.search_scores_after_detection.append(ss)
+                if ss >= self.high_value_threshold:
+                    acc.high_value_after_detection_plies += 1
