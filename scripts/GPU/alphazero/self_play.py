@@ -518,6 +518,11 @@ def play_game(
         adjudicate_threshold: Absolute root_value threshold for adjudication (default: 0.90)
         adjudicate_min_visits: Require root.visit_count >= this (default: 200)
         adjudicate_min_top1_share: Require top move's visit share >= this (default: 0.0 = disabled)
+        goal_completion_record_enabled: Emit compact per-game goal_completion_record (default: True). Independent of emit_enabled — record emits even when Phase 3 detailed diagnostics are off (spec 2026-05-05 §6).
+        goal_completion_detection_threshold: total_goal_distance threshold for tracker detection (default: 2). Must be <= goal_completion_emit_threshold (validated at startup; ValueError on violation).
+        goal_completion_high_value_threshold: search_score threshold for "high-value" classification (default: 0.9).
+        goal_completion_high_value_delay_threshold_plies: Conversion-delay threshold (in plies) for the root_value_high_but_delayed bad-case flag (default: 6).
+        goal_completion_min_component_size: Minimum dominant-component size for tracker classification (default: 8).
 
     Returns:
         GameRecord with all positions and outcomes assigned
