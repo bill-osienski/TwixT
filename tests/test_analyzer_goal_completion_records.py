@@ -248,3 +248,34 @@ def test_analyzer_version_mismatch_warning(capsys):
     out = captured.out + captured.err
     assert "version mismatch" in out
     assert "records canonical" in out
+
+
+def test_analyzer_default_path_does_not_recompute_goal_completion():
+    """ANCHOR: Structural guard — default path must not call BFS helpers
+    on the analyzer side. Monkeypatch and assert zero calls."""
+    from scripts.twixt_replay_analyzer import (
+        aggregate_goal_completion_diagnostics_from_records,
+    )
+    replays = [
+        _replay_with_record(iteration=110, game_idx=i, winner="red",
+                            outcome_class=1, conversion_delay_plies=10)
+        for i in range(5)
+    ]
+
+    with patch(
+        "scripts.GPU.alphazero.connectivity_diagnostics.compute_goal_completion_state",
+    ) as mock_compute, patch(
+        "scripts.twixt_replay_analyzer._build_class1_per_game_record",
+    ) as mock_build1, patch(
+        "scripts.twixt_replay_analyzer._build_class2_per_game_record",
+    ) as mock_build2:
+        aggregate_goal_completion_diagnostics_from_records(
+            replays, sidecar_summaries={}, config={},
+        )
+
+    assert mock_compute.call_count == 0, \
+        "Default analyzer path must not call compute_goal_completion_state"
+    assert mock_build1.call_count == 0, \
+        "Default analyzer path must not call _build_class1_per_game_record"
+    assert mock_build2.call_count == 0, \
+        "Default analyzer path must not call _build_class2_per_game_record"
