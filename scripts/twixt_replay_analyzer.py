@@ -2934,6 +2934,10 @@ def analyze(replays: List[dict],
             no_connectivity: bool = False,
             args: Optional[argparse.Namespace] = None) -> None:
     os.makedirs(out_dir, exist_ok=True)
+    # --goal-completion-recompute-validate implies --goal-completion-recompute.
+    if getattr(args, "goal_completion_recompute_validate", False):
+        if hasattr(args, "goal_completion_recompute"):
+            args.goal_completion_recompute = True
     # Compute once — every output artifact shares this suffix.
     suffix = _derive_out_suffix(out_dir, override=out_suffix)
     buckets = _ply_buckets(buckets_spec)
@@ -3604,6 +3608,35 @@ def analyze(replays: List[dict],
             },
         )
         merged = _merge_inline_with_recomputed(per_game_inline, recomputed)
+        if getattr(args, "goal_completion_recompute_validate", False):
+            from scripts.GPU.alphazero.goal_completion_recompute import (
+                compare_records_for_validation,
+            )
+            n_diverge = 0
+            for inline_rec, rec_rec, replay in zip(per_game_inline, recomputed, replays):
+                div = compare_records_for_validation(inline_rec, rec_rec)
+                if div:
+                    n_diverge += 1
+                    gid = (inline_rec or rec_rec or {}).get("game_id") or (
+                        f"iter_{int(replay.get('iteration', 0)):04d}"
+                        f"_game_{int(replay.get('game_idx', 0)):03d}"
+                    )
+                    print(f"[VALIDATE] {gid}: {len(div)} fields diverge",
+                          file=sys.stderr)
+                    for fname, (a, b) in div.items():
+                        print(f"    {fname}: inline={a!r}  recomputed={b!r}",
+                              file=sys.stderr)
+            if n_diverge == 0:
+                print(
+                    f"[VALIDATE] All {len(replays)} replays match between "
+                    f"inline and recomputed paths.",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"[VALIDATE] {n_diverge}/{len(replays)} replays diverge.",
+                    file=sys.stderr,
+                )
         goal_completion_val = aggregate_goal_completion_records(
             merged,
             config={
@@ -4115,6 +4148,11 @@ def main():
                     default=False,
                     help="Use the recompute walker for goal-completion (pre-move semantics). "
                          "Default: read pre-computed records from per-game JSONs.")
+    ap.add_argument("--goal-completion-recompute-validate", action="store_true",
+                    default=False,
+                    help="With --goal-completion-recompute, also load inline "
+                         "records and report per-field divergence. Implies "
+                         "--goal-completion-recompute. Intentionally expensive.")
 
     # Probes / calibration — spec §6.1 new flags.
     ap.add_argument("--weights", default=None,

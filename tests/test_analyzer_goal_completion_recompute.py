@@ -86,3 +86,48 @@ def test_analyzer_recompute_fills_mixed_corpus():
     )
     assert merged[0] is inline      # inline preferred when present
     assert merged[1] is recomputed_only  # recomputed used when inline missing
+
+
+def test_compare_records_all_match_returns_empty():
+    from scripts.GPU.alphazero.goal_completion_recompute import (
+        compare_records_for_validation,
+    )
+    inline = {"version": 1, "outcome_class": 1, "detected": True,
+              "first_dominant_unclosed_ply": 11,
+              "first_total_goal_distance": 2,
+              "primary_class_counts": {"completes_endpoint": 1, "redundant_reinforcement": 0,
+                                       "reduces_total_goal_distance": 0, "off_chain": 0, "other": 0},
+              "max_search_score_after_detection": 0.99,
+              "mean_search_score_after_detection": 0.99}
+    div = compare_records_for_validation(inline, inline)
+    assert div == {}
+
+
+def test_compare_records_field_divergence():
+    from scripts.GPU.alphazero.goal_completion_recompute import (
+        compare_records_for_validation,
+    )
+    inline = {"version": 1, "outcome_class": 1, "detected": True,
+              "first_dominant_unclosed_ply": 11,
+              "first_total_goal_distance": 2,
+              "primary_class_counts": {"completes_endpoint": 1, "redundant_reinforcement": 0,
+                                       "reduces_total_goal_distance": 0, "off_chain": 0, "other": 0}}
+    recomputed = {**inline, "first_dominant_unclosed_ply": 13}
+    div = compare_records_for_validation(inline, recomputed)
+    assert "first_dominant_unclosed_ply" in div
+    assert div["first_dominant_unclosed_ply"] == (11, 13)
+
+
+def test_compare_records_float_tolerance():
+    from scripts.GPU.alphazero.goal_completion_recompute import (
+        compare_records_for_validation,
+    )
+    inline = {"version": 1, "outcome_class": 1, "detected": True,
+              "max_search_score_after_detection": 0.97}
+    # Within 1e-6 -> not flagged.
+    recomputed = {**inline, "max_search_score_after_detection": 0.97 + 5e-7}
+    assert compare_records_for_validation(inline, recomputed) == {}
+    # Exceeding 1e-6 -> flagged.
+    recomputed_diff = {**inline, "max_search_score_after_detection": 0.971}
+    div = compare_records_for_validation(inline, recomputed_diff)
+    assert "max_search_score_after_detection" in div

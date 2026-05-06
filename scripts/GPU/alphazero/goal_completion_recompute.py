@@ -145,3 +145,45 @@ def _walk_replay(
         game_id=(replay.get("goal_completion_record") or {}).get("game_id")
                 or f"iter_{int(replay.get('iteration', 0)):04d}_game_{int(replay.get('game_idx', 0)):03d}",
     )
+
+
+_KEY_FIELDS = (
+    "outcome_class",
+    "detected",
+    "detected_player",
+    "first_dominant_unclosed_ply",
+    "first_total_goal_distance",
+    "first_category",
+    "conversion_delay_plies",
+    "conversion_delay_winner_moves",
+    "cap_delay_proxy_plies",
+    "primary_class_counts",
+    "root_value_high_but_delayed",
+)
+_FLOAT_FIELDS = (
+    "max_search_score_after_detection",
+    "mean_search_score_after_detection",
+)
+_FLOAT_TOLERANCE = 1e-6
+
+
+def compare_records_for_validation(
+    inline: Optional[dict], recomputed: Optional[dict],
+) -> dict:
+    """Per-field divergence report (spec §11.6)."""
+    if inline is None and recomputed is None:
+        return {}
+    if inline is None or recomputed is None:
+        return {"presence": (inline is not None, recomputed is not None)}
+    div: dict = {}
+    for k in _KEY_FIELDS:
+        a, b = inline.get(k), recomputed.get(k)
+        if a != b:
+            div[k] = (a, b)
+    for k in _FLOAT_FIELDS:
+        a, b = inline.get(k), recomputed.get(k)
+        if a is None and b is None:
+            continue
+        if a is None or b is None or abs(float(a) - float(b)) > _FLOAT_TOLERANCE:
+            div[k] = (a, b)
+    return div
