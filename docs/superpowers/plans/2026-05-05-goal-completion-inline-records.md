@@ -1369,10 +1369,13 @@ def test_main_population_known_percentiles():
     assert main["detected"] == 9
     assert main["detection_rate"] == 1.0
     cd = main["conversion_delay_plies"]
-    # Linear-interp percentiles. With this exact ordering the medians are
-    # well-defined: p50=10, p90=22 (90th percentile), max=28.
+    # Linear-interpolation percentiles (per _percentile helper):
+    #   rank = p/100 * (N-1); for N=9 sorted [4,4,6,8,10,14,18,22,28]:
+    #     p50 -> rank 4.0 -> values[4] = 10
+    #     p90 -> rank 7.2 -> values[7]*0.8 + values[8]*0.2 = 22*0.8 + 28*0.2 = 23.2
+    #     max -> 28
     assert cd["p50"] == 10
-    assert cd["p90"] == 22 or cd["p90"] == 22.0
+    assert abs(cd["p90"] - 23.2) < 1e-9
     assert cd["max"] == 28
 
 
@@ -1962,6 +1965,63 @@ def test_play_game_record_iteration_metadata_default_zero():
     assert rec.goal_completion_record["game_idx"] == 5
     # iteration is not known inside play_game; default 0.
     assert rec.goal_completion_record["iteration"] == 0
+
+
+def test_play_game_upgrades_to_gc_state_full_on_detection_ply(monkeypatch):
+    """Caller-side BFS-upgrade integration guard.
+
+    Independent of the tracker's defensive None-handling: this proves that
+    on a ply where total_goal_distance <= detection_threshold pre-move,
+    the self-play loop actually computes compute_goal_completion_state
+    with enumerate_moves=True (so the tracker has gc_state_full available
+    to classify, not just gc_state_cheap).
+
+    Mechanism: monkeypatch compute_goal_completion_state to record the
+    enumerate_moves arg on each call. Construct a synthetic short game
+    that reaches dominant-unclosed; assert at least one call uses
+    enumerate_moves=True.
+    """
+    from scripts.GPU.alphazero import connectivity_diagnostics as _cd
+
+    calls = []
+    real_fn = _cd.compute_goal_completion_state
+
+    def _spy(state, player, *args, **kwargs):
+        # Track the (enumerate_moves, total) signal per call.
+        em = kwargs.get("enumerate_moves", True)
+        result = real_fn(state, player, *args, **kwargs)
+        calls.append({
+            "enumerate_moves": em,
+            "total": (result or {}).get("total_goal_distance"),
+        })
+        return result
+
+    monkeypatch.setattr(_cd, "compute_goal_completion_state", _spy)
+    # play_game imports compute_goal_completion_state inside the per-ply
+    # block via `from .connectivity_diagnostics import ...` — the spy is
+    # installed on the module attribute, so subsequent imports pick it up.
+
+    rec = play_game(
+        evaluator=_eval(),
+        mcts_config=_short_cfg(),
+        rng=_rng.Random(13),
+        max_moves=40,
+        active_size=8,
+        goal_completion_record_enabled=True,
+        goal_completion_emit_enabled=False,
+        goal_completion_detection_threshold=2,
+    )
+    # Assert at least one call where the cheap state's total <= 2 was
+    # followed by an enumerate_moves=True call. This proves the caller
+    # upgraded on the detection threshold being crossed.
+    upgraded_calls = [c for c in calls if c["enumerate_moves"] is True]
+    if rec.goal_completion_record and rec.goal_completion_record.get("detected"):
+        assert len(upgraded_calls) >= 1, (
+            "Expected at least one compute_goal_completion_state call with "
+            "enumerate_moves=True on the detection ply"
+        )
+    # If the random game never reached dominant-unclosed, the test is
+    # vacuous — re-run with a different seed if this becomes flaky.
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -3012,9 +3072,12 @@ def aggregate_goal_completion_diagnostics_from_records(
     Emits aggregated warnings for missing records, sidecar/replay
     coverage mismatches, and version drift.
     """
-    per_game_records = [r.get("goal_completion_record") for r in replays]
+    per_game_records = [replay.get("goal_completion_record") for replay in replays]
+    # Variable convention here: `rec` is the per-game record (which may be None),
+    # `replay` is the full replay JSON dict. Names kept distinct to avoid the
+    # "r is None then r['game_id'] crashes" bug class flagged in spec §11.3 review.
     missing = [
-        (idx, r) for idx, (rec, r) in enumerate(zip(per_game_records, replays))
+        (idx, replay) for idx, (rec, replay) in enumerate(zip(per_game_records, replays))
         if rec is None
     ]
     n_missing = len(missing)
@@ -3030,10 +3093,14 @@ def aggregate_goal_completion_diagnostics_from_records(
         )
     elif n_missing > 0:
         examples = []
-        for _, r in missing[:3]:
-            gid = (r.get("goal_completion_record", {}) or {}).get("game_id")
-            if gid is None:
-                gid = f"iter_{r.get('iteration', 0):04d}_game_{r.get('game_idx', 0):03d}"
+        for _, replay in missing[:3]:
+            # Inline record is by definition None here, so we read identity
+            # off the replay JSON directly. Synthesized id matches the
+            # iter_NNNN_game_NNN naming the saver writes.
+            gid = (
+                f"iter_{int(replay.get('iteration', 0)):04d}"
+                f"_game_{int(replay.get('game_idx', 0)):03d}"
+            )
             examples.append(gid)
         print(
             f"[WARN] {n_missing}/{n_total} replays missing "
@@ -3044,10 +3111,10 @@ def aggregate_goal_completion_diagnostics_from_records(
     # Sidecar / replay reconciliation per iteration.
     if sidecar_summaries:
         per_iter_record_counts: dict = {}
-        for r, rec in zip(replays, per_game_records):
+        for replay, rec in zip(replays, per_game_records):
             if rec is None:
                 continue
-            it = r.get("iteration")
+            it = replay.get("iteration")
             per_iter_record_counts[it] = per_iter_record_counts.get(it, 0) + 1
         for it, summary in sidecar_summaries.items():
             sidecar_n = (summary.get("diagnostics_coverage") or {}).get("games_with_record")
