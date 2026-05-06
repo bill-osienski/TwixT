@@ -302,3 +302,191 @@ def test_tracker_opponent_side_unaffected_by_focal_classification():
     assert t.black.detected is False
     assert t.black.moves_after_detection == 0
     assert sum(t.black.primary_class_counts.values()) == 0
+
+
+# ---------------------------------------------------------------------------
+# Task 3: finalize_game tests
+# ---------------------------------------------------------------------------
+
+
+def test_finalize_class3_when_disabled_returns_none():
+    t = GoalCompletionGameTracker(enabled=False)
+    rec = t.finalize_game(
+        winner="red", reason="win", n_moves=20,
+        starting_player="red", iteration=110, game_idx=5,
+        game_id="iter_0110_game_005",
+    )
+    assert rec is None
+
+
+def test_finalize_class1_basic_decisive_winner():
+    """Class 1: winner == detected side. All winner-perspective fields populated."""
+    t = GoalCompletionGameTracker(high_value_delay_threshold_plies=6)
+    full = _gc_state_full(total=2)
+    # Detect red at ply 11 with two_endpoint_closeout shape.
+    with patch(
+        "scripts.GPU.alphazero.goal_completion_tracker.classify_selected_conversion_move",
+        return_value={"primary_class": "completes_endpoint"},
+    ):
+        t.observe_pre_move(state="<state>", ply=11, side_to_move="red",
+                           selected_move=(0, 0), search_score=0.99,
+                           gc_state_cheap=full, gc_state_full=full)
+
+    rec = t.finalize_game(
+        winner="red", reason="win", n_moves=21,
+        starting_player="red", iteration=112, game_idx=34,
+        game_id="iter_0112_game_034",
+    )
+    assert rec["version"] == 1
+    assert rec["outcome_class"] == 1
+    assert rec["scope"] == "winner"
+    assert rec["winner"] == "red"
+    assert rec["detected_player"] == "red"
+    assert rec["reason"] == "win"
+    assert rec["detected"] is True
+    assert rec["first_dominant_unclosed_ply"] == 11
+    assert rec["first_total_goal_distance"] == 2
+    assert rec["first_category"] == "two_endpoint_closeout_2ply"
+    assert rec["actual_terminal_ply"] == 21
+    assert rec["actual_win_ply"] == 21
+    assert rec["conversion_delay_plies"] == 10  # 21 - 11
+    # winner_moves_in_watch_window mirrors moves_after_detection for Class 1.
+    assert rec["winner_moves_in_watch_window"] == 1
+    assert rec["winner_moves_with_dominant_component"] == 1
+    assert rec["winner_moves_with_dominant_unavailable"] == 0
+    assert rec["primary_class_counts"]["completes_endpoint"] == 1
+    assert rec["max_search_score_after_detection"] == 0.99
+    assert rec["mean_search_score_after_detection"] == 0.99
+    assert rec["high_value_after_detection_plies"] == 1
+    # delay_plies 10 >= high_value_delay_threshold 6 AND high_value >= 1
+    assert rec["root_value_high_but_delayed"] is True
+    assert rec["search_score_coverage_in_watch_window"] == 1
+    assert rec["cap_delay_proxy_plies"] is None
+
+
+def test_finalize_class1_winner_never_detected():
+    """Edge: winner exists but their side never reached detection threshold.
+    detected=false, all post-detection fields null/0."""
+    t = GoalCompletionGameTracker()
+    # Red plays, total stays at 4 throughout — no detection.
+    t.observe_pre_move(state="<state>", ply=1, side_to_move="red",
+                       selected_move=(0, 0), search_score=0.5,
+                       gc_state_cheap=_gc_state(4), gc_state_full=None)
+    rec = t.finalize_game(
+        winner="red", reason="win", n_moves=20,
+        starting_player="red", iteration=110, game_idx=0,
+        game_id="iter_0110_game_000",
+    )
+    assert rec["outcome_class"] == 1
+    assert rec["winner"] == "red"
+    assert rec["detected"] is False
+    assert rec["first_dominant_unclosed_ply"] is None
+    assert rec["conversion_delay_plies"] is None
+    assert rec["winner_moves_in_watch_window"] == 0
+    assert rec["primary_class_counts"] == {
+        "completes_endpoint": 0,
+        "reduces_total_goal_distance": 0,
+        "redundant_reinforcement": 0,
+        "off_chain": 0,
+        "other": 0,
+    }
+    assert rec["root_value_high_but_delayed"] is False
+
+
+def test_finalize_class2_capped_focal_earliest_detector():
+    """Class 2: no winner; focal = earliest detector. cap_delay_proxy_plies =
+    actual_terminal_ply - first_dominant_unclosed_ply."""
+    t = GoalCompletionGameTracker()
+    # Red detects at ply 41, Black at ply 60 — Red is focal.
+    t.observe_pre_move(state="<state>", ply=41, side_to_move="red",
+                       selected_move=(0, 0), search_score=None,
+                       gc_state_cheap=_gc_state(2), gc_state_full=None)
+    t.observe_pre_move(state="<state>", ply=60, side_to_move="black",
+                       selected_move=(0, 0), search_score=None,
+                       gc_state_cheap=_gc_state(2), gc_state_full=None)
+
+    rec = t.finalize_game(
+        winner=None, reason="state_cap", n_moves=120,
+        starting_player="red", iteration=112, game_idx=7,
+        game_id="iter_0112_game_007",
+    )
+    assert rec["outcome_class"] == 2
+    assert rec["scope"] == "both_sides"
+    assert rec["winner"] is None
+    assert rec["detected_player"] == "red"
+    assert rec["detected"] is True
+    assert rec["first_dominant_unclosed_ply"] == 41
+    assert rec["first_total_goal_distance"] == 2
+    assert rec["actual_terminal_ply"] == 120
+    assert rec["actual_win_ply"] is None
+    assert rec["conversion_delay_plies"] is None
+    assert rec["cap_delay_proxy_plies"] == 79  # 120 - 41
+    assert rec["primary_class_counts"] is None
+    assert rec["max_search_score_after_detection"] is None
+
+
+def test_finalize_class2_tiebreak_lower_first_total_then_red():
+    """Tie-break: same ply -> lower first_total_goal_distance -> red."""
+    # Equal-ply, equal-distance -> red wins.
+    t = GoalCompletionGameTracker()
+    t.observe_pre_move(state="<state>", ply=50, side_to_move="red",
+                       selected_move=(0, 0), search_score=None,
+                       gc_state_cheap=_gc_state(2), gc_state_full=None)
+    t.observe_pre_move(state="<state>", ply=50, side_to_move="black",
+                       selected_move=(0, 0), search_score=None,
+                       gc_state_cheap=_gc_state(2), gc_state_full=None)
+    rec = t.finalize_game(
+        winner=None, reason="timeout", n_moves=80,
+        starting_player="red", iteration=110, game_idx=0,
+        game_id="iter_0110_game_000",
+    )
+    assert rec["detected_player"] == "red"
+
+    # Equal-ply, black has lower distance -> black wins.
+    t2 = GoalCompletionGameTracker()
+    t2.observe_pre_move(state="<state>", ply=50, side_to_move="red",
+                        selected_move=(0, 0), search_score=None,
+                        gc_state_cheap=_gc_state(2), gc_state_full=None)
+    t2.observe_pre_move(state="<state>", ply=50, side_to_move="black",
+                        selected_move=(0, 0), search_score=None,
+                        gc_state_cheap=_gc_state(1), gc_state_full=None)
+    rec2 = t2.finalize_game(
+        winner=None, reason="timeout", n_moves=80,
+        starting_player="red", iteration=110, game_idx=0,
+        game_id="iter_0110_game_000",
+    )
+    assert rec2["detected_player"] == "black"
+
+
+def test_finalize_class2_no_detection_either_side():
+    """Class 2 with neither side detected: detected=false, proxy null."""
+    t = GoalCompletionGameTracker()
+    rec = t.finalize_game(
+        winner=None, reason="state_cap", n_moves=200,
+        starting_player="red", iteration=110, game_idx=0,
+        game_id="iter_0110_game_000",
+    )
+    assert rec["outcome_class"] == 2
+    assert rec["detected"] is False
+    assert rec["detected_player"] is None
+    assert rec["first_dominant_unclosed_ply"] is None
+    assert rec["cap_delay_proxy_plies"] is None
+
+
+def test_finalize_class3_excluded():
+    """Unhandled outcome -> Class 3 minimal record."""
+    t = GoalCompletionGameTracker()
+    rec = t.finalize_game(
+        winner=None, reason="unknown", n_moves=0,
+        starting_player="red", iteration=110, game_idx=0,
+        game_id="iter_0110_game_000",
+    )
+    assert rec["outcome_class"] == 3
+    assert rec["scope"] == "excluded"
+    assert rec["winner"] is None
+    assert rec["detected_player"] is None
+    assert rec["detected"] is False
+    assert rec["actual_terminal_ply"] == 0
+    assert rec["actual_win_ply"] is None
+    assert rec["conversion_delay_plies"] is None
+    assert rec["cap_delay_proxy_plies"] is None
