@@ -487,6 +487,14 @@ def play_game(
     goal_completion_max_depth: int = 3,
     goal_completion_skip_distance_reducing: bool = False,
     goal_completion_max_records_per_game: int = 64,
+    # Compact per-game goal-completion record (spec 2026-05-05).
+    # Independent of emit_enabled — emits even when Phase 3 detailed
+    # diagnostics are disabled.
+    goal_completion_record_enabled: bool = True,
+    goal_completion_detection_threshold: int = 2,
+    goal_completion_high_value_threshold: float = 0.9,
+    goal_completion_high_value_delay_threshold_plies: int = 6,
+    goal_completion_min_component_size: int = 8,
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -519,6 +527,26 @@ def play_game(
     rng = rng or random.Random()
 
     mcts = MCTS(evaluator, mcts_config, rng)
+
+    # Spec §12.1 invariant: detection_threshold must be <= emit_threshold
+    # so post-detection plies are guaranteed to have full state available
+    # when Phase 3 emit is enabled.
+    if goal_completion_detection_threshold > goal_completion_emit_threshold:
+        raise ValueError(
+            "detection_threshold must be <= emit_threshold "
+            f"(got {goal_completion_detection_threshold} > {goal_completion_emit_threshold})"
+        )
+
+    # Spec §6: per-game tracker. enabled=False short-circuits to no-op.
+    from .goal_completion_tracker import GoalCompletionGameTracker
+    gc_tracker = GoalCompletionGameTracker(
+        enabled=goal_completion_record_enabled,
+        detection_threshold=goal_completion_detection_threshold,
+        high_value_threshold=goal_completion_high_value_threshold,
+        high_value_delay_threshold_plies=goal_completion_high_value_delay_threshold_plies,
+        max_depth=goal_completion_max_depth,
+        min_component_size=goal_completion_min_component_size,
+    )
 
     # Compute opening diagnostics window
     cfg = mcts.config
@@ -631,55 +659,93 @@ def play_game(
                 _rec["top_children"] = _child["top_children"]
             _opening_diags.append(_rec)
 
-        # --- Phase 3: closeout diagnostic partial capture (best-effort) ---
-        gc_state_for_diag = None
+        # --- Compute gc_state once per ply, shared by Phase 3 + tracker. ---
+        gc_state_for_diag = None     # cheap: total_goal_distance only
+        gc_state_full = None         # full: includes endpoint_completion_moves
         partial_diag = None
-        if goal_completion_emit_enabled:
-            if (goal_completion_diagnostics_meta is not None
-                    and len(goal_completion_diagnostics) >= goal_completion_max_records_per_game):
-                goal_completion_diagnostics_meta["records_dropped_by_cap"] += 1
-            else:
+        need_cheap = goal_completion_emit_enabled or gc_tracker.enabled
+        if need_cheap:
+            try:
+                from .connectivity_diagnostics import compute_goal_completion_state
+                gc_state_for_diag = compute_goal_completion_state(
+                    state, state.to_move,
+                    max_depth=goal_completion_max_depth,
+                    min_component_size=goal_completion_emit_min_component,
+                    enumerate_moves=False,
+                )
+            except Exception as _e:
+                if goal_completion_diagnostics_meta is not None:
+                    goal_completion_diagnostics_meta["error_count"] += 1
+                import sys as _sys
+                _sys.stderr.write(f"[gc-cheap] ply={ply} error: {_e!r}\n")
+
+            # Decide whether to upgrade to gc_state_full (spec §8.2).
+            total_now = (
+                gc_state_for_diag.get("total_goal_distance")
+                if gc_state_for_diag is not None else None
+            )
+            needs_phase3_full = (
+                goal_completion_emit_enabled
+                and gc_state_for_diag is not None
+                and total_now is not None
+                and total_now <= goal_completion_emit_threshold
+            )
+            needs_tracker_full = (
+                gc_tracker.enabled
+                and gc_state_for_diag is not None
+                and total_now is not None
+                and (
+                    gc_tracker.is_detected(state.to_move)
+                    or total_now <= gc_tracker.detection_threshold
+                )
+            )
+            if needs_phase3_full or needs_tracker_full:
                 try:
-                    from .connectivity_diagnostics import compute_goal_completion_state
-                    gc_state_for_diag = compute_goal_completion_state(
+                    gc_state_full = compute_goal_completion_state(
                         state, state.to_move,
                         max_depth=goal_completion_max_depth,
                         min_component_size=goal_completion_emit_min_component,
+                        enumerate_moves=True,
                     )
-                    if (gc_state_for_diag is not None
-                            and gc_state_for_diag.get("total_goal_distance") is not None
-                            and gc_state_for_diag["total_goal_distance"]
-                                <= goal_completion_emit_threshold):
-                        if root.priors_raw is None:
-                            if goal_completion_diagnostics_meta is not None:
-                                goal_completion_diagnostics_meta[
-                                    "skipped_missing_priors_count"
-                                ] += 1
-                        else:
-                            from .closeout_diagnostics import (
-                                build_closeout_diagnostic_partial,
-                            )
-                            # decode_fn maps move_id -> (row, col) for active board.
-                            _decode_fn = lambda mid, _a=active_size: (mid // _a, mid % _a)
-                            partial_diag = build_closeout_diagnostic_partial(
-                                ply=ply,
-                                side_to_move=state.to_move,
-                                visit_counts=visit_counts,
-                                priors_raw=root.priors_raw,
-                                priors_adjusted=getattr(root, "priors", None),
-                                root=root,
-                                goal_completion_state=gc_state_for_diag,
-                                board_size=active_size,
-                                skip_distance_reducing=goal_completion_skip_distance_reducing,
-                                decode_fn=_decode_fn,
-                            )
                 except Exception as _e:
                     if goal_completion_diagnostics_meta is not None:
                         goal_completion_diagnostics_meta["error_count"] += 1
                     import sys as _sys
-                    _sys.stderr.write(
-                        f"[closeout-diag] ply={ply} partial error: {_e!r}\n"
-                    )
+                    _sys.stderr.write(f"[gc-full] ply={ply} error: {_e!r}\n")
+
+            # Phase 3 partial build (existing behavior, but uses the shared
+            # gc_state_full instead of recomputing).
+            if (goal_completion_emit_enabled
+                    and gc_state_full is not None
+                    and total_now is not None
+                    and total_now <= goal_completion_emit_threshold):
+                if (goal_completion_diagnostics_meta is not None
+                        and len(goal_completion_diagnostics) >= goal_completion_max_records_per_game):
+                    goal_completion_diagnostics_meta["records_dropped_by_cap"] += 1
+                elif root.priors_raw is None:
+                    if goal_completion_diagnostics_meta is not None:
+                        goal_completion_diagnostics_meta["skipped_missing_priors_count"] += 1
+                else:
+                    try:
+                        from .closeout_diagnostics import build_closeout_diagnostic_partial
+                        _decode_fn = lambda mid, _a=active_size: (mid // _a, mid % _a)
+                        partial_diag = build_closeout_diagnostic_partial(
+                            ply=ply,
+                            side_to_move=state.to_move,
+                            visit_counts=visit_counts,
+                            priors_raw=root.priors_raw,
+                            priors_adjusted=getattr(root, "priors", None),
+                            root=root,
+                            goal_completion_state=gc_state_full,
+                            board_size=active_size,
+                            skip_distance_reducing=goal_completion_skip_distance_reducing,
+                            decode_fn=_decode_fn,
+                        )
+                    except Exception as _e:
+                        if goal_completion_diagnostics_meta is not None:
+                            goal_completion_diagnostics_meta["error_count"] += 1
+                        import sys as _sys
+                        _sys.stderr.write(f"[closeout-diag] ply={ply} partial: {_e!r}\n")
 
         # --- RESIGN CHECK (after search, before move selection) ---
         # root_value is from state.to_move perspective:
@@ -788,10 +854,30 @@ def play_game(
                 visit_counts, root.priors_raw, root.priors, move,
             )
 
+        # Tracker observes pre-move state. Independent of Phase 3 emit.
+        if gc_tracker.enabled:
+            # search_score (root_value) is from state.to_move's perspective.
+            _ss = float(root_value) if root_value is not None else None
+            try:
+                gc_tracker.observe_pre_move(
+                    state=state,
+                    ply=ply + 1,                     # tracker uses 1-indexed ply
+                    side_to_move=state.to_move,
+                    selected_move=move,
+                    search_score=_ss,
+                    gc_state_cheap=gc_state_for_diag,
+                    gc_state_full=gc_state_full,
+                )
+            except Exception as _e:
+                import sys as _sys
+                _sys.stderr.write(
+                    f"[gc-tracker] ply={ply} observe error: {_e!r}\n"
+                )
+
         # --- Phase 3: finalize closeout diagnostic if partial was built ---
         # Must run BEFORE state is advanced to root.state so state.to_move
         # still reflects the side that selected `move`.
-        if partial_diag is not None and gc_state_for_diag is not None:
+        if partial_diag is not None and gc_state_full is not None:
             try:
                 from .closeout_diagnostics import finalize_closeout_diagnostic
                 full_diag = finalize_closeout_diagnostic(
@@ -799,7 +885,7 @@ def play_game(
                     state_before=state,
                     player=state.to_move,
                     selected_move=move,
-                    goal_state_before=gc_state_for_diag,
+                    goal_state_before=gc_state_full,
                 )
                 goal_completion_diagnostics.append(full_diag)
             except Exception as _e:
@@ -980,6 +1066,29 @@ def play_game(
         f"move_history length {len(move_history)}"
     )
 
+    # Compact goal-completion record (spec §6).
+    _gc_reason_for_record = "win"
+    if winner is None:
+        if draw_reason in ("terminal_state_cap",):
+            _gc_reason_for_record = "state_cap"
+        elif draw_reason in ("timeout_selfplay",):
+            _gc_reason_for_record = "timeout"
+        elif draw_reason in ("terminal_board_full",):
+            _gc_reason_for_record = "board_full"
+        else:
+            _gc_reason_for_record = "unknown"
+    elif resigned_by is not None:
+        _gc_reason_for_record = "resign"
+    gc_record = gc_tracker.finalize_game(
+        winner=winner,
+        reason=_gc_reason_for_record,
+        n_moves=len(move_history),
+        starting_player=start_player,
+        iteration=0,                        # populated downstream by trainer/saver path
+        game_idx=game_id,
+        game_id=f"game_{game_id:03d}",
+    )
+
     return GameRecord(
         positions=positions,
         winner=winner,
@@ -1039,6 +1148,7 @@ def play_game(
         move_top1_shares=move_top1_shares,
         goal_completion_diagnostics=goal_completion_diagnostics,
         goal_completion_diagnostics_meta=goal_completion_diagnostics_meta,
+        goal_completion_record=gc_record,
     )
 
 
