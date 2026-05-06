@@ -648,13 +648,77 @@ def aggregate_goal_completion_diagnostics_from_records(
 
     Per-game records are canonical. Sidecar summaries are held for
     validation / iteration telemetry but the cross-iteration roll-up
-    is recomputed from records to avoid lossy roll-up of roll-ups.
+    is recomputed from records.
+
+    Emits aggregated warnings for missing records, sidecar/replay
+    coverage mismatches, and version drift.
     """
-    per_game_records = [r.get("goal_completion_record") for r in replays]
+    per_game_records = [replay.get("goal_completion_record") for replay in replays]
+    # Variable convention here: `rec` is the per-game record (which may be None),
+    # `replay` is the full replay JSON dict. Names kept distinct to avoid the
+    # "r is None then r['game_id'] crashes" bug class flagged in spec §11.3 review.
+    missing = [
+        (idx, replay) for idx, (rec, replay) in enumerate(zip(per_game_records, replays))
+        if rec is None
+    ]
+    n_missing = len(missing)
+    n_total = len(replays)
+
+    if n_missing == n_total and n_total > 0:
+        print(
+            f"[WARN] {n_missing}/{n_total} replays missing "
+            f"goal_completion_record. Goal-completion report skipped. "
+            f"Run with --goal-completion-recompute or rerun training "
+            f"with goal_completion_record_enabled=True.",
+            file=sys.stderr,
+        )
+    elif n_missing > 0:
+        examples = []
+        for _, replay in missing[:3]:
+            # Inline record is by definition None here, so we read identity
+            # off the replay JSON directly. Synthesized id matches the
+            # iter_NNNN_game_NNN naming the saver writes.
+            gid = (
+                f"iter_{int(replay.get('iteration', 0)):04d}"
+                f"_game_{int(replay.get('game_idx', 0)):03d}"
+            )
+            examples.append(gid)
+        print(
+            f"[WARN] {n_missing}/{n_total} replays missing "
+            f"goal_completion_record. Examples: {', '.join(examples)}.",
+            file=sys.stderr,
+        )
+
+    # Sidecar / replay reconciliation per iteration.
+    if sidecar_summaries:
+        per_iter_record_counts: dict = {}
+        for replay, rec in zip(replays, per_game_records):
+            if rec is None:
+                continue
+            it = replay.get("iteration")
+            per_iter_record_counts[it] = per_iter_record_counts.get(it, 0) + 1
+        for it, summary in sidecar_summaries.items():
+            sidecar_n = (summary.get("diagnostics_coverage") or {}).get("games_with_record")
+            replay_n = per_iter_record_counts.get(it, 0)
+            if sidecar_n is not None and sidecar_n != replay_n:
+                print(
+                    f"[WARN] Goal-completion sidecar/replay mismatch for "
+                    f"iter {it:04d}: sidecar games_with_record={sidecar_n}, "
+                    f"replay records found={replay_n}. Using per-game records "
+                    f"as canonical analyzer source.",
+                    file=sys.stderr,
+                )
+            sidecar_version = summary.get("version")
+            if sidecar_version is not None and sidecar_version != 1:
+                print(
+                    f"[WARN] Goal-completion version mismatch for iter "
+                    f"{it:04d}: sidecar version={sidecar_version}, "
+                    f"per-game records canonical (treating as v1).",
+                    file=sys.stderr,
+                )
+
     return aggregate_goal_completion_records(
-        per_game_records,
-        config=config,
-        games_total=len(replays),
+        per_game_records, config=config, games_total=n_total,
     )
 
 
@@ -2495,7 +2559,7 @@ def format_policy_mcts_closeout_report(gc_block: dict) -> List[str]:
 
 
 def write_goal_completion_worst_cases_csv(
-    out_path: str, replays: list, top_k: int = 25, suffix: str = "",
+    out_path: str, replays: list, top_k: int = 25,
 ) -> None:
     """Write worst-cases CSV from per-game goal_completion_records.
 
@@ -2551,7 +2615,10 @@ def write_goal_completion_worst_cases_csv(
             row = {
                 "iteration": rec.get("iteration"),
                 "game_idx": rec.get("game_idx"),
-                "game_id": rec.get("game_id"),
+                "game_id": rec.get("game_id") or (
+                    f"iter_{int(replay.get('iteration', 0)):04d}"
+                    f"_game_{int(replay.get('game_idx', 0)):03d}"
+                ),
                 "winner": rec.get("winner"),
                 "starting_player": rec.get("starting_player"),
                 "n_moves": rec.get("n_moves"),
@@ -3735,7 +3802,6 @@ def analyze(replays: List[dict],
             os.path.join(out_dir, _suffixed("goal_completion_worst_cases", "csv", suffix)),
             replays,
             top_k=getattr(args, "goal_completion_worst_cases_top_k", 25) if args else 25,
-            suffix=suffix,
         )
     # Recompute path's own CSV writer is preserved; Task 13 wires it.
 

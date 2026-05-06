@@ -102,7 +102,7 @@ def test_worst_cases_csv_from_records_class1():
     with tempfile.TemporaryDirectory() as tmp:
         out_path = Path(tmp) / "worst.csv"
         write_goal_completion_worst_cases_csv(
-            str(out_path), replays, top_k=3, suffix="test",
+            str(out_path), replays, top_k=3,
         )
         with open(out_path) as f:
             rows = list(csv.DictReader(f))
@@ -125,7 +125,7 @@ def test_worst_cases_csv_mixed_class1_class2_unified_sort():
     with tempfile.TemporaryDirectory() as tmp:
         out_path = Path(tmp) / "worst.csv"
         write_goal_completion_worst_cases_csv(
-            str(out_path), replays, top_k=3, suffix="test",
+            str(out_path), replays, top_k=3,
         )
         with open(out_path) as f:
             rows = list(csv.DictReader(f))
@@ -145,9 +145,106 @@ def test_worst_cases_csv_skips_replays_without_record():
     with tempfile.TemporaryDirectory() as tmp:
         out_path = Path(tmp) / "worst.csv"
         write_goal_completion_worst_cases_csv(
-            str(out_path), [r_with, r_without], top_k=5, suffix="test",
+            str(out_path), [r_with, r_without], top_k=5,
         )
         with open(out_path) as f:
             rows = list(csv.DictReader(f))
     assert len(rows) == 1
     assert rows[0]["game_idx"] == "0"
+
+
+def test_analyzer_missing_record_warning_aggregated(capsys):
+    """One summary warning per missing-record bucket, with up to 3 examples."""
+    from scripts.twixt_replay_analyzer import (
+        aggregate_goal_completion_diagnostics_from_records,
+    )
+    replays = []
+    # 5 missing replays.
+    for i in range(5):
+        replays.append({
+            "iteration": 110, "game_idx": i, "winner": "red",
+            "starting_player": "red", "moves": [],
+            "meta": {"n_moves": 0, "board_size": 24},
+        })
+    # 1 with record.
+    replays.append(_replay_with_record(iteration=110, game_idx=99, winner="red",
+                                       outcome_class=1, conversion_delay_plies=10))
+
+    aggregate_goal_completion_diagnostics_from_records(
+        replays, sidecar_summaries={}, config={},
+    )
+    captured = capsys.readouterr()
+    out = captured.out + captured.err
+    assert "5/6" in out
+    assert "missing goal_completion_record" in out
+    assert "Examples:" in out
+
+
+def test_analyzer_all_missing_warning(capsys):
+    from scripts.twixt_replay_analyzer import (
+        aggregate_goal_completion_diagnostics_from_records,
+    )
+    replays = [
+        {"iteration": 110, "game_idx": i, "winner": "red",
+         "starting_player": "red", "moves": [],
+         "meta": {"n_moves": 0, "board_size": 24}}
+        for i in range(3)
+    ]
+    aggregate_goal_completion_diagnostics_from_records(
+        replays, sidecar_summaries={}, config={},
+    )
+    captured = capsys.readouterr()
+    out = captured.out + captured.err
+    assert "3/3" in out
+    assert "Goal-completion report skipped" in out
+
+
+def test_analyzer_sidecar_mismatch_warning(capsys):
+    from scripts.twixt_replay_analyzer import (
+        aggregate_goal_completion_diagnostics_from_records,
+    )
+    replays = [
+        _replay_with_record(iteration=110, game_idx=0, winner="red",
+                            outcome_class=1, conversion_delay_plies=10),
+    ]
+    sidecar_summaries = {
+        110: {"diagnostics_coverage": {"games_with_record": 100,
+                                       "games_total": 100,
+                                       "coverage_rate": 1.0,
+                                       "games_class_1": 100,
+                                       "games_class_2": 0,
+                                       "games_class_3": 0}}
+    }
+    aggregate_goal_completion_diagnostics_from_records(
+        replays, sidecar_summaries=sidecar_summaries, config={},
+    )
+    captured = capsys.readouterr()
+    out = captured.out + captured.err
+    assert "sidecar/replay mismatch" in out
+    assert "iter 0110" in out
+
+
+def test_analyzer_version_mismatch_warning(capsys):
+    from scripts.twixt_replay_analyzer import (
+        aggregate_goal_completion_diagnostics_from_records,
+    )
+    replays = [
+        _replay_with_record(iteration=110, game_idx=0, winner="red",
+                            outcome_class=1, conversion_delay_plies=10),
+    ]
+    sidecar_summaries = {
+        110: {
+            "version": 2,
+            "diagnostics_coverage": {"games_with_record": 1, "games_total": 1,
+                                     "coverage_rate": 1.0,
+                                     "games_class_1": 1, "games_class_2": 0,
+                                     "games_class_3": 0},
+        }
+    }
+    aggregate_goal_completion_diagnostics_from_records(
+        replays, sidecar_summaries=sidecar_summaries, config={},
+    )
+    captured = capsys.readouterr()
+    out = captured.out + captured.err
+    assert "version mismatch" in out
+    assert "records canonical" in out
