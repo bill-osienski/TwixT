@@ -135,6 +135,8 @@ try:
     )
     from scripts.GPU.alphazero.goal_completion_aggregator import (
         aggregate_goal_completion_records,
+        _summarize_main_population as _aggregator_summarize_main_population,
+        _summarize_capped_population as _aggregator_summarize_capped_population,
     )
     _HAS_PHASE1_DIAG = True
 except ImportError:
@@ -1308,228 +1310,49 @@ def _summarize_main_population(
     high_value_threshold: float,
     high_value_delay_threshold_plies: int,
 ) -> dict:
-    """Pool Class 1 per-game records into the main_population summary (spec §7.4).
+    """Pool Class 1 per-game records into the main_population summary.
 
-    Pooled rates use winner_moves_with_dominant_component as the denominator;
-    dominant_unavailable_rate uses (dominant + unavailable) as denominator.
+    DEPRECATED: this is a thin delegating shim around
+    scripts.GPU.alphazero.goal_completion_aggregator._summarize_main_population
+    (which is the canonical implementation post-Spec 1.5). Bridges the
+    legacy (kwarg-thresholds) signature to the new (config-bundled) one.
+    Adds the legacy `_per_game_records_internal` key for backward compat
+    with any consumer still using it.
     """
-    games = len(records)
-
-    if games == 0:
-        return {
-            "scope": "decisive_winner_only",
-            "games": 0,
-            "games_with_dominant_unclosed": 0,
-            "games_with_total_distance_le_2": 0,
-            "games_with_total_distance_le_3": 0,
-            "detected": 0,
-            "conversion_delay_plies": None,
-            "conversion_delay_winner_moves": None,
-            "move_quality_after_detection": None,
-            "high_value_diagnostics": None,
-            "bad_cases": {
-                "delay_ge_10_plies": 0,
-                "delay_ge_20_plies": 0,
-                "root_value_high_but_delayed": 0,
-            },
-            "_per_game_records_internal": [],
-        }
-
-    games_with_dominant_unclosed = sum(
-        1 for r in records if r.get("ever_distance_le_3")
-    )
-    games_with_total_distance_le_2 = sum(
-        1 for r in records if r.get("ever_distance_le_2")
-    )
-    games_with_total_distance_le_3 = sum(
-        1 for r in records if r.get("ever_distance_le_3")
-    )
-    detected_records = [r for r in records if r.get("detected")]
-    detected = len(detected_records)
-
-    # --- Conversion-delay distributions (over detected games) ---
-    if detected_records:
-        delays = np.asarray(
-            [r["conversion_delay_plies"] for r in detected_records], dtype=np.float64
-        )
-        winner_move_delays = np.asarray(
-            [r["conversion_delay_winner_moves"] for r in detected_records], dtype=np.float64
-        )
-        conversion_delay_plies_block = {
-            "p50": float(np.percentile(delays, 50)),
-            "p90": float(np.percentile(delays, 90)),
-            "p95": float(np.percentile(delays, 95)),
-            "max": int(delays.max()),
-            "mean": float(delays.mean()),
-        }
-        conversion_delay_winner_moves_block = {
-            "p50": float(np.percentile(winner_move_delays, 50)),
-            "p90": float(np.percentile(winner_move_delays, 90)),
-            "max": int(winner_move_delays.max()),
-            "mean": float(winner_move_delays.mean()),
-        }
-    else:
-        conversion_delay_plies_block = None
-        conversion_delay_winner_moves_block = None
-
-    # --- Pooled move-quality rates over winner_moves_with_dominant_component ---
-    pooled_with_component = sum(
-        r.get("winner_moves_with_dominant_component", 0) for r in detected_records
-    )
-    pooled_unavailable = sum(
-        r.get("winner_moves_with_dominant_unavailable", 0) for r in detected_records
-    )
-    pooled_classes = {
-        "completes_endpoint": 0,
-        "reduces_total_goal_distance": 0,
-        "redundant_reinforcement": 0,
-        "off_chain": 0,
-        "other": 0,
-    }
-    for r in detected_records:
-        for k, v in (r.get("primary_class_counts") or {}).items():
-            if k in pooled_classes:
-                pooled_classes[k] += int(v)
-
-    def _rate(numer: int, denom: int) -> Optional[float]:
-        if denom <= 0:
-            return None
-        return float(numer) / float(denom)
-
-    if pooled_with_component > 0:
-        move_quality_after_detection = {
-            "completes_endpoint_rate":
-                _rate(pooled_classes["completes_endpoint"], pooled_with_component),
-            "reduces_total_goal_distance_rate":
-                _rate(pooled_classes["reduces_total_goal_distance"], pooled_with_component),
-            "redundant_reinforcement_rate":
-                _rate(pooled_classes["redundant_reinforcement"], pooled_with_component),
-            "off_chain_rate":
-                _rate(pooled_classes["off_chain"], pooled_with_component),
-            "other_rate":
-                _rate(pooled_classes["other"], pooled_with_component),
-            "dominant_unavailable_rate":
-                _rate(pooled_unavailable, pooled_with_component + pooled_unavailable),
-        }
-    else:
-        # No detected winner moves with dominant component (e.g., all detected
-        # games had dominant structure dissolve immediately, or detection was
-        # on the terminal ply). Fall back to None so downstream renderers
-        # treat the section as absent.
-        move_quality_after_detection = None
-
-    # --- High-value diagnostics ---
-    coverage_records = [
-        r for r in detected_records
-        if r.get("search_score_coverage_in_watch_window", 0) > 0
-    ]
-    if detected_records and coverage_records:
-        max_scores = np.asarray(
-            [r["max_search_score_after_detection"] for r in coverage_records], dtype=np.float64
-        )
-        mean_scores = np.asarray(
-            [r["mean_search_score_after_detection"] for r in coverage_records], dtype=np.float64
-        )
-        coverage_pct = 100.0 * float(len(coverage_records)) / float(len(detected_records))
-        high_value_diagnostics = {
-            "search_score_coverage_pct": coverage_pct,
-            "max_search_score_after_detection": {
-                "p50": float(np.percentile(max_scores, 50)),
-                "p90": float(np.percentile(max_scores, 90)),
-                "max": float(max_scores.max()),
-            },
-            "mean_search_score_after_detection": {
-                "p50": float(np.percentile(mean_scores, 50)),
-                "p90": float(np.percentile(mean_scores, 90)),
-                "max": float(mean_scores.max()),
-            },
-        }
-    elif detected_records:
-        high_value_diagnostics = {
-            "search_score_coverage_pct": 0.0,
-            "max_search_score_after_detection": None,
-            "mean_search_score_after_detection": None,
-        }
-    else:
-        high_value_diagnostics = None
-
-    # --- Bad cases ---
-    delay_ge_10 = sum(
-        1 for r in detected_records
-        if (r.get("conversion_delay_plies") or 0) >= 10
-    )
-    delay_ge_20 = sum(
-        1 for r in detected_records
-        if (r.get("conversion_delay_plies") or 0) >= 20
-    )
-    root_value_high_but_delayed = sum(
-        1 for r in detected_records if r.get("root_value_high_but_delayed")
-    )
-
-    return {
-        "scope": "decisive_winner_only",
-        "games": games,
-        "games_with_dominant_unclosed": games_with_dominant_unclosed,
-        "games_with_total_distance_le_2": games_with_total_distance_le_2,
-        "games_with_total_distance_le_3": games_with_total_distance_le_3,
-        "detected": detected,
-        "conversion_delay_plies": conversion_delay_plies_block,
-        "conversion_delay_winner_moves": conversion_delay_winner_moves_block,
-        "move_quality_after_detection": move_quality_after_detection,
-        "high_value_diagnostics": high_value_diagnostics,
-        "bad_cases": {
-            "delay_ge_10_plies": delay_ge_10,
-            "delay_ge_20_plies": delay_ge_20,
-            "root_value_high_but_delayed": root_value_high_but_delayed,
-        },
-        "_per_game_records_internal": records,
-    }
+    merged_config = dict(config) if config else {}
+    merged_config.setdefault("detection_threshold", detection_threshold)
+    merged_config.setdefault("high_value_threshold", high_value_threshold)
+    merged_config.setdefault("high_value_delay_threshold_plies", high_value_delay_threshold_plies)
+    out = dict(_aggregator_summarize_main_population(records, merged_config))
+    # Legacy back-compat: the aggregator returns {"n": 0} for empty input, but
+    # legacy tests assert on "games" and "detected" keys; ensure they are present.
+    out.setdefault("games", out.get("n", 0))
+    out.setdefault("detected", 0)
+    # Legacy back-compat: preserve the field that the old worst-cases CSV
+    # writer used to read. Spec 1.5's new writer reads from per-game records
+    # directly, but the legacy aggregate_goal_completion_diagnostics flow
+    # may still expect this.
+    out["_per_game_records_internal"] = records
+    return out
 
 
 def _summarize_capped_population(capped_pop: dict) -> dict:
-    """Roll up Class 2 per-game records into the capped_population summary
-    (spec §7.4). Bad-case buckets (state_cap / timeout / board_full after
-    detection) count games where detection fired before the terminal cap.
+    """Roll up Class 2 per-game records into the capped_population summary.
+
+    DEPRECATED: thin delegating shim around
+    scripts.GPU.alphazero.goal_completion_aggregator._summarize_capped_population
+    (canonical post-Spec 1.5). Bridges the legacy
+    `{"per_game_records": [...]}` input shape to the new flat-list shape.
     """
-    records = capped_pop["per_game_records"]
-    detected = [r for r in records if r["detected"]]
-    delay_vals = [
-        r["cap_delay_after_detection_plies"]
-        for r in detected
-        if r["cap_delay_after_detection_plies"] is not None
-    ]
-
-    def _pcts(vals):
-        if not vals:
-            return None
-        arr = np.array(vals, dtype=np.float64)
-        return {
-            "p50": float(np.percentile(arr, 50)),
-            "p90": float(np.percentile(arr, 90)),
-            "max": float(np.max(arr)),
-        }
-
-    bad_cases = {
-        "state_cap_after_detection": sum(
-            1 for r in detected if r["reason"] == "state_cap"
-        ),
-        "timeout_after_detection": sum(
-            1 for r in detected if r["reason"] in ("timeout", "timeout_selfplay")
-        ),
-        "board_full_after_detection": sum(
-            1 for r in detected if r["reason"] == "board_full"
-        ),
-    }
-
-    return {
-        "scope": "both_sides",
-        "games": capped_pop["games"],
-        "games_with_dominant_unclosed": capped_pop["games_with_dominant_unclosed"],
-        "detected_before_cap": capped_pop["detected_before_cap"],
-        "cap_delay_after_detection_plies": _pcts(delay_vals),
-        "bad_cases": bad_cases,
-        "_per_game_records_internal": records,
-    }
+    records = capped_pop.get("per_game_records") or []
+    out = dict(_aggregator_summarize_capped_population(records))
+    # Legacy back-compat: the aggregator returns {"n": 0} for empty input, but
+    # legacy tests assert on "games" key; ensure it is always present.
+    out.setdefault("games", out.get("n", 0))
+    # Legacy back-compat: tests assert on _per_game_records_internal to inspect
+    # individual per-game fields after aggregation.
+    out["_per_game_records_internal"] = records
+    return out
 
 
 def aggregate_per_move_stats(replays: List[dict]) -> dict:
