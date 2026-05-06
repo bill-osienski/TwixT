@@ -722,6 +722,17 @@ def aggregate_goal_completion_diagnostics_from_records(
     )
 
 
+def _merge_inline_with_recomputed(
+    inline: list, recomputed: list,
+) -> list:
+    """Mixed-corpus merge (spec §13.2). Inline records preferred; gaps
+    filled by recomputed records."""
+    return [
+        ir if ir is not None else rr
+        for ir, rr in zip(inline, recomputed)
+    ]
+
+
 def aggregate_goal_completion_diagnostics(
     replays: List[dict],
     max_depth: int = 3,
@@ -3575,14 +3586,35 @@ def analyze(replays: List[dict],
     per_move_stats_val = aggregate_per_move_stats(replays)
     per_game_stats_val = aggregate_per_game_stats(replays)
     if getattr(args, "goal_completion_recompute", False):
-        # Legacy walker (Task 13).
-        goal_completion_val = aggregate_goal_completion_diagnostics(
+        # Recompute path (spec §11.5): walk replays via the new module
+        # using pre-move detection semantics, merge with any inline
+        # records, and aggregate via the shared aggregator.
+        from scripts.GPU.alphazero.goal_completion_recompute import (
+            recompute_goal_completion_records_from_replays,
+        )
+        per_game_inline = [r.get("goal_completion_record") for r in replays]
+        recomputed = recompute_goal_completion_records_from_replays(
             replays,
-            max_depth=getattr(args, "goal_completion_max_depth", 3) if args else 3,
-            min_component_size=getattr(args, "goal_completion_min_component_size", 8) if args else 8,
-            detection_threshold=getattr(args, "goal_completion_detection_threshold", 2) if args else 2,
-            high_value_threshold=getattr(args, "goal_completion_high_value_threshold", 0.9) if args else 0.9,
-            worst_cases_top_k=getattr(args, "goal_completion_worst_cases_top_k", 25) if args else 25,
+            config={
+                "detection_threshold": getattr(args, "goal_completion_detection_threshold", 2) if args else 2,
+                "max_depth": getattr(args, "goal_completion_max_depth", 3) if args else 3,
+                "min_component_size": getattr(args, "goal_completion_min_component_size", 8) if args else 8,
+                "high_value_threshold": getattr(args, "goal_completion_high_value_threshold", 0.9) if args else 0.9,
+                "high_value_delay_threshold_plies": 6,
+            },
+        )
+        merged = _merge_inline_with_recomputed(per_game_inline, recomputed)
+        goal_completion_val = aggregate_goal_completion_records(
+            merged,
+            config={
+                "detection_threshold": getattr(args, "goal_completion_detection_threshold", 2) if args else 2,
+                "emit_threshold": 3,
+                "high_value_threshold": getattr(args, "goal_completion_high_value_threshold", 0.9) if args else 0.9,
+                "high_value_delay_threshold_plies": 6,
+                "max_depth": getattr(args, "goal_completion_max_depth", 3) if args else 3,
+                "min_component_size": getattr(args, "goal_completion_min_component_size", 8) if args else 8,
+            },
+            games_total=len(replays),
         )
     else:
         goal_completion_val = aggregate_goal_completion_diagnostics_from_records(
@@ -4081,7 +4113,8 @@ def main():
                     help="Min component size to qualify as dominant-unclosed (default: 8)")
     ap.add_argument("--goal-completion-recompute", action="store_true",
                     default=False,
-                    help="(Task 13) Use legacy replay walker for goal-completion. Default: read records.")
+                    help="Use the recompute walker for goal-completion (pre-move semantics). "
+                         "Default: read pre-computed records from per-game JSONs.")
 
     # Probes / calibration — spec §6.1 new flags.
     ap.add_argument("--weights", default=None,
