@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -211,7 +212,6 @@ def _build_parser_for_test() -> argparse.ArgumentParser:
     )
 
     # Multi-process self-play
-    import os
     default_workers = max(1, (os.cpu_count() or 4) - 2)
     parser.add_argument(
         "--n-workers",
