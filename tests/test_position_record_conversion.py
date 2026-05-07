@@ -1,4 +1,6 @@
 """PositionRecord.conversion round-trip (Spec 2 §5)."""
+import pickle
+
 import numpy as np
 from scripts.GPU.alphazero.self_play import PositionRecord
 
@@ -55,3 +57,29 @@ def test_position_record_buffer_load_with_old_no_conversion_field():
     }
     p = PositionRecord.from_dict(legacy_dict)
     assert p.conversion is None
+
+
+def test_position_record_pickle_round_trip_carries_conversion():
+    """Worker→trainer IPC uses position_queue.put(List[PositionRecord]).
+    multiprocessing.Queue pickles the live object; conversion field must
+    survive pickle round-trip on the live PositionRecord (not via to_dict).
+    """
+    conv = {
+        "version": 1,
+        "total_goal_distance": 2,
+        "largest_component_size": 12,
+        "endpoint_completion_moves": [[0, 8]],
+        "distance_reducing_moves":   [[22, 4]],
+        "conversion_category": "two_endpoint_closeout_2ply",
+        "selected_primary_class": "completes_endpoint",
+    }
+    p = _make_position(conversion=conv)
+    p2 = pickle.loads(pickle.dumps(p))
+    assert p2.conversion == conv
+
+
+def test_position_record_pickle_with_conversion_none():
+    """Default-off path: conversion=None must also round-trip."""
+    p = _make_position(conversion=None)
+    p2 = pickle.loads(pickle.dumps(p))
+    assert p2.conversion is None
