@@ -323,21 +323,16 @@ conversion=None.
 
 ---
 
-### Task 3: IPC carrying via GameComplete
+### Task 3: IPC carrying via PositionRecord pickle round-trip
 
 **Files:**
-- Modify: (likely none — verify) `scripts/GPU/alphazero/ipc_messages.py`
 - Test: `tests/test_position_record_conversion.py` (extend)
 
-- [ ] **Step 1: Inspect GameComplete to confirm positions field shape**
+**Background:** Workers send `PositionRecord` instances to the trainer through `position_queue.put(buf)` where `buf` is a `List[PositionRecord]` (`scripts/GPU/alphazero/self_play_worker.py:198`). `multiprocessing.Queue` uses pickle internally on the live `PositionRecord` object — NOT the `to_dict()` form.
 
-```bash
-grep -n "GameComplete\|positions:" /Users/bill/Desktop/TwixT_Game/scripts/GPU/alphazero/ipc_messages.py | head -20
-```
+`GameComplete` (`scripts/GPU/alphazero/ipc_messages.py:59`) does **not** carry positions; it carries game-level stats (`worker_id`, `n_positions`, `winner`, MCTS counters, `goal_completion_record`, etc.). So the IPC contract for conversion metadata is just "`PositionRecord` pickles correctly with the new field" — no `ipc_messages.py` change needed.
 
-If `GameComplete.positions` is already `tuple[dict, ...]` or `tuple[PositionRecord, ...]` flowing through pickle, no schema change needed. If it stores positions in another normalized form, that path needs the `conversion` field carried explicitly.
-
-- [ ] **Step 2: Write the failing test**
+- [ ] **Step 1: Write the failing test**
 
 Append to `tests/test_position_record_conversion.py`:
 
@@ -345,10 +340,11 @@ Append to `tests/test_position_record_conversion.py`:
 import pickle
 
 
-def test_game_complete_ipc_carries_conversion():
-    """Worker → trainer pickle round-trip preserves PositionRecord.conversion."""
-    from scripts.GPU.alphazero.ipc_messages import GameComplete  # adjust import if needed
-
+def test_position_record_pickle_round_trip_carries_conversion():
+    """Worker→trainer IPC uses position_queue.put(List[PositionRecord]).
+    multiprocessing.Queue pickles the live object; conversion field must
+    survive pickle round-trip on the live PositionRecord (not via to_dict).
+    """
     conv = {
         "version": 1,
         "total_goal_distance": 2,
@@ -359,43 +355,37 @@ def test_game_complete_ipc_carries_conversion():
         "selected_primary_class": "completes_endpoint",
     }
     p = _make_position(conversion=conv)
+    p2 = pickle.loads(pickle.dumps(p))
+    assert p2.conversion == conv
 
-    # Build a minimal GameComplete mirroring how worker_loop assembles it.
-    # Adjust kwargs to match GameComplete's actual signature.
-    gc = GameComplete(
-        game_id="test",
-        positions=(p.to_dict(),),
-        # ... other required fields filled with sensible defaults ...
-    )
-    blob = pickle.dumps(gc)
-    gc2 = pickle.loads(blob)
-    assert gc2.positions[0]["conversion"] == conv
+
+def test_position_record_pickle_with_conversion_none():
+    """Default-off path: conversion=None must also round-trip."""
+    p = _make_position(conversion=None)
+    p2 = pickle.loads(pickle.dumps(p))
+    assert p2.conversion is None
 ```
 
-If `GameComplete` stores positions differently (e.g., as a tuple of PositionRecords already), adjust the test to match — the invariant being asserted is that `conversion` survives pickle round-trip on whatever positions structure is used.
-
-- [ ] **Step 3: Run test to verify it passes (likely no code change needed)**
-
-```bash
-pytest tests/test_position_record_conversion.py::test_game_complete_ipc_carries_conversion -v
-```
-
-Expected: PASS without code change, because `GameComplete.positions` carries dicts verbatim. If it FAILS, adjust `ipc_messages.py` to flow the `conversion` key through whatever transform it applies.
-
-- [ ] **Step 4: If GameComplete required modification, run all conversion tests**
+- [ ] **Step 2: Run tests**
 
 ```bash
 pytest tests/test_position_record_conversion.py -v
 ```
 
-Expected: all PASS.
+Expected: PASS without code change, because Task 2's `@dataclass` field addition makes `PositionRecord.conversion` a normal pickled attribute. If it FAILS, the dataclass is using `__slots__` or a custom `__reduce__` that drops the new field — investigate `PositionRecord`'s dataclass options before introducing serialization workarounds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add tests/test_position_record_conversion.py
-# Plus scripts/GPU/alphazero/ipc_messages.py if modified
-git commit -m "test(conversion): pin IPC round-trip carries PositionRecord.conversion"
+git commit -m "test(conversion): pin worker→trainer pickle carries PositionRecord.conversion
+
+Workers stream positions via position_queue.put(List[PositionRecord]);
+multiprocessing.Queue pickles the live object. Test confirms the new
+conversion field round-trips through pickle for both populated and
+None values. GameComplete IPC schema does NOT carry positions — no
+ipc_messages.py change needed.
+"
 ```
 
 ---
@@ -414,126 +404,217 @@ grep -n "tracker.observe_pre_move\|gc_state_full\|classify_selected_conversion_m
 
 Note the line where `gc_state_full` is computed and where `classify_selected_conversion_move` runs (Spec 1.5 attached classification result).
 
-- [ ] **Step 2: Write the failing tests using the existing helper pattern**
+- [ ] **Step 2: Write the failing tests — DETERMINISTIC, no pytest.skip**
 
-The file `tests/test_self_play_goal_completion_integration.py` already defines `_make_evaluator(seed)` and `_short_cfg()` for tracker integration tests. Reuse them. Append:
+Anchor tests must not skip. Spec 2's anchor invariants apply regardless of whether the random seeded game happens to reach a closeout naturally. We use **monkeypatch** to inject a synthetic eligible `gc_state_full` on a known ply — same pattern as existing `test_play_game_upgrades_to_gc_state_full_on_detection_ply` (`tests/test_self_play_goal_completion_integration.py:114`).
+
+The injected `gc_state` carries a **ply-stamped** `total_goal_distance` so we can prove the attached metadata reflects the **pre-move** state at the ply when `compute_goal_completion_state` was called — not a post-apply value.
+
+Append to `tests/test_self_play_goal_completion_integration.py`:
 
 ```python
-def _run_closeout_game(*, seed=7, **kwargs):
-    """Run play_game with the standard test evaluator/config plus the given
-    overrides. Mirrors the existing Spec 1.5 integration tests in this file.
+def _stub_gc_state(target_ply: int):
+    """Build a stub for compute_goal_completion_state that returns a
+    synthetic eligible gc_state when ply >= target_ply with
+    enumerate_moves=True. Total_goal_distance is stamped to 2 (eligible)
+    on the target ply; the largest legal moves at the position are used as
+    completion / reducer moves so the eligibility predicate fires.
 
-    Defaults: tiny network (hidden=32, n_blocks=2), MCTSConfig(n_simulations=8),
-    max_moves=30, active_size=8. Override any of these via kwargs.
-
-    Returns GameRecord. The 8x8 board with seeded RNG produces a deterministic
-    game; over 30 plies a dominant-unclosed state is typically reached at
-    least once for either side.
+    Returns (stub_fn, real_fn) — caller monkeypatches stub_fn and uses
+    real_fn for plies outside the closeout window.
     """
-    from scripts.GPU.alphazero.self_play import play_game
-    defaults = {
-        "evaluator": _make_evaluator(seed),
-        "mcts_config": _short_cfg(),
-        "rng": _rng.Random(seed),
-        "max_moves": 30,
-        "active_size": 8,
-    }
-    defaults.update(kwargs)
-    return play_game(**defaults)
+    from scripts.GPU.alphazero import connectivity_diagnostics as _cd
+    real_fn = _cd.compute_goal_completion_state
+
+    def _stub(state, player, *args, **kwargs):
+        em = kwargs.get("enumerate_moves", False)
+        if state.ply >= target_ply and em:
+            legal = state.legal_moves()
+            if len(legal) >= 2:
+                return {
+                    "total_goal_distance": 2,
+                    "largest_component_size": 12,
+                    "endpoint_completion_moves": [legal[0]],
+                    "distance_reducing_moves":   [legal[1]],
+                    "category": "two_endpoint_closeout_2ply",
+                    "max_depth": 3,
+                    "endpoint_distances": {"top": 0, "bottom": 1},
+                    "component_pegs": [],
+                }
+        return real_fn(state, player, *args, **kwargs)
+
+    return _stub, real_fn
 
 
-def _played_move_after_position(record, position):
-    """Return the move played from `position` (looked up by identity).
-    GameRecord.positions and GameRecord.move_history are parallel lists."""
-    idx = next(i for i, p in enumerate(record.positions) if p is position)
-    return record.move_history[idx]
-
-
-def test_play_game_attaches_conversion_when_enabled_and_eligible():
+def test_play_game_attaches_conversion_when_enabled_and_eligible(monkeypatch):
     """Spec 2 §5.5: PositionRecord.conversion populated on closeout plies
-    when --conversion-policy-loss-enabled is on."""
-    record = _run_closeout_game(
+    when --conversion-policy-loss-enabled is on. Deterministic via stubbed
+    gc_state — no skip."""
+    from scripts.GPU.alphazero.self_play import play_game
+    from scripts.GPU.alphazero import connectivity_diagnostics as _cd
+    stub, _ = _stub_gc_state(target_ply=4)
+    monkeypatch.setattr(_cd, "compute_goal_completion_state", stub)
+
+    record = play_game(
+        evaluator=_make_evaluator(7),
+        mcts_config=_short_cfg(),
+        rng=_rng.Random(7),
+        max_moves=20, active_size=8,
         conversion_policy_loss_enabled=True,
         conversion_policy_loss_weight=0.05,
         conversion_max_total_goal_distance=2,
+        goal_completion_record_enabled=False,
+        goal_completion_emit_enabled=False,
     )
-    closeout_positions = [p for p in record.positions if p.conversion is not None]
-    if not closeout_positions:
-        pytest.skip(
-            "Deterministic 8x8 game did not reach a closeout-eligible state; "
-            "expected most seeds do, but tracker is sparse — re-seed if this "
-            "test becomes flaky in CI."
-        )
-    cp = closeout_positions[0]
+    closeout = [p for p in record.positions if p.conversion is not None]
+    assert len(closeout) >= 1, (
+        "Stubbed eligible gc_state did not produce conversion metadata — "
+        "attach point in play_game is broken"
+    )
+    cp = closeout[0]
     assert cp.conversion["version"] == 1
-    assert cp.conversion["total_goal_distance"] <= 2
-    assert cp.conversion["largest_component_size"] >= 8
+    assert cp.conversion["total_goal_distance"] == 2
+    assert cp.conversion["largest_component_size"] == 12
     assert (cp.conversion["endpoint_completion_moves"]
             or cp.conversion["distance_reducing_moves"])
 
 
 def test_play_game_no_conversion_metadata_when_loss_disabled():
-    """ANCHOR (Spec 2 §11.3): default config produces no conversion metadata."""
-    record = _run_closeout_game(
+    """ANCHOR (Spec 2 §11.3): default config produces no conversion metadata.
+    Negative invariant — does NOT depend on a closeout state occurring.
+    No skip path."""
+    from scripts.GPU.alphazero.self_play import play_game
+    record = play_game(
+        evaluator=_make_evaluator(7),
+        mcts_config=_short_cfg(),
+        rng=_rng.Random(7),
+        max_moves=30, active_size=8,
         conversion_policy_loss_enabled=False,
         # Spec 1.5 also off, to isolate conversion-specific BFS
         goal_completion_record_enabled=False,
         goal_completion_emit_enabled=False,
     )
+    assert len(record.positions) > 0    # game produced positions
     assert all(p.conversion is None for p in record.positions)
 
 
-def test_position_record_conversion_pre_move_invariant():
+def test_position_record_conversion_pre_move_invariant(monkeypatch):
     """ANCHOR (Spec 2 §5.4 / §11.3): conversion describes the pre-move state
-    of position.to_move, not the post-apply state.
+    of position.to_move, not the post-apply state. Deterministic via stubbed
+    gc_state — no skip.
 
     Test name matches the spec's anchor list verbatim. The test lives in
     test_self_play_goal_completion_integration.py because the invariant
     requires a real play_game() run to verify; the spec's anchor list (§11.3)
     references the test by name, not by file location.
+
+    Strategy: when the stub fires on ply N, the legal_moves it sees come
+    from state.legal_moves() at ply N (PRE-apply_move). If the conversion
+    metadata captured those exact legal moves as completion/reducer, then
+    the attach happened on the pre-move state. If the attach happened
+    AFTER apply_move, the legal moves on disk would differ from what the
+    stub provided, since one move would have been consumed.
     """
-    record = _run_closeout_game(
+    from scripts.GPU.alphazero.self_play import play_game
+    from scripts.GPU.alphazero import connectivity_diagnostics as _cd
+
+    # Capture (ply, legal_moves) the stub was called with on the target ply.
+    target_ply = 4
+    stub_seen = {}
+    real_fn = _cd.compute_goal_completion_state
+
+    def _stub(state, player, *args, **kwargs):
+        em = kwargs.get("enumerate_moves", False)
+        if state.ply == target_ply and em and "captured" not in stub_seen:
+            legal = state.legal_moves()
+            if len(legal) >= 2:
+                stub_seen["captured"] = {
+                    "ply": state.ply,
+                    "legal_first_two": [tuple(legal[0]), tuple(legal[1])],
+                }
+                return {
+                    "total_goal_distance": 2,
+                    "largest_component_size": 12,
+                    "endpoint_completion_moves": [legal[0]],
+                    "distance_reducing_moves":   [legal[1]],
+                    "category": "two_endpoint_closeout_2ply",
+                    "max_depth": 3,
+                    "endpoint_distances": {"top": 0, "bottom": 1},
+                    "component_pegs": [],
+                }
+        return real_fn(state, player, *args, **kwargs)
+
+    monkeypatch.setattr(_cd, "compute_goal_completion_state", _stub)
+
+    record = play_game(
+        evaluator=_make_evaluator(7),
+        mcts_config=_short_cfg(),
+        rng=_rng.Random(7),
+        max_moves=20, active_size=8,
         conversion_policy_loss_enabled=True,
         conversion_policy_loss_weight=0.05,
+        conversion_max_total_goal_distance=2,
+        goal_completion_record_enabled=False,
+        goal_completion_emit_enabled=False,
     )
-    found_one = False
-    for p in record.positions:
-        if p.conversion is None:
-            continue
-        found_one = True
-        assert p.conversion["total_goal_distance"] is not None
-        # If selected move classifies as completes_endpoint, that move must
-        # appear in the pre-move enumeration's completion list.
-        if p.conversion["selected_primary_class"] == "completes_endpoint":
-            played = _played_move_after_position(record, p)
-            completion_set = {tuple(m) for m in p.conversion["endpoint_completion_moves"]}
-            assert played in completion_set, (
-                f"played move {played} classified as completes_endpoint but "
-                f"not in pre-move completion set {completion_set} — "
-                "pre-move invariant violated"
-            )
-    if not found_one:
-        pytest.skip(
-            "No closeout-eligible position in this game; re-seed if needed."
-        )
+
+    assert "captured" in stub_seen, (
+        "Stub was never called with enumerate_moves=True on target ply — "
+        "play_game's conversion path is not invoking the BFS"
+    )
+
+    # Find the position attached at the target ply.
+    matching = [p for p in record.positions if p.conversion is not None
+                and p.conversion["total_goal_distance"] == 2]
+    assert len(matching) >= 1, (
+        "Stubbed gc_state did not attach conversion metadata at the target ply"
+    )
+    cp = matching[0]
+
+    # PRE-MOVE INVARIANT: the completion/reducer moves on the persisted
+    # PositionRecord must match the legal moves the stub saw at the target
+    # ply (BEFORE any move was applied). If attach happened AFTER apply_move,
+    # one of these moves would have been consumed and the lists would mismatch.
+    persisted_completion = {tuple(m) for m in cp.conversion["endpoint_completion_moves"]}
+    persisted_reducing   = {tuple(m) for m in cp.conversion["distance_reducing_moves"]}
+    seen_first  = stub_seen["captured"]["legal_first_two"][0]
+    seen_second = stub_seen["captured"]["legal_first_two"][1]
+    assert seen_first  in persisted_completion, (
+        f"completion_moves on disk={persisted_completion}, but stub saw "
+        f"{seen_first} as the first legal move at pre-move ply {target_ply}. "
+        "Conversion metadata was not captured PRE-apply_move."
+    )
+    assert seen_second in persisted_reducing, (
+        f"distance_reducing_moves on disk={persisted_reducing}, but stub saw "
+        f"{seen_second} as the second legal move at pre-move ply {target_ply}. "
+        "Conversion metadata was not captured PRE-apply_move."
+    )
 
 
-def test_play_game_conversion_enabled_computes_full_state_when_emit_disabled():
+def test_play_game_conversion_enabled_computes_full_state_when_emit_disabled(monkeypatch):
     """Spec 2 §3 cost-path: conversion forces full BFS even when Spec 1.5 emit
-    is off, on plies that are conversion-eligible."""
-    record = _run_closeout_game(
+    is off, on plies that are conversion-eligible. Deterministic — no skip."""
+    from scripts.GPU.alphazero.self_play import play_game
+    from scripts.GPU.alphazero import connectivity_diagnostics as _cd
+    stub, _ = _stub_gc_state(target_ply=4)
+    monkeypatch.setattr(_cd, "compute_goal_completion_state", stub)
+
+    record = play_game(
+        evaluator=_make_evaluator(7),
+        mcts_config=_short_cfg(),
+        rng=_rng.Random(7),
+        max_moves=20, active_size=8,
         conversion_policy_loss_enabled=True,
         conversion_policy_loss_weight=0.05,
         conversion_max_total_goal_distance=2,
         goal_completion_emit_enabled=False,
         goal_completion_record_enabled=False,
     )
-    # Even with both Spec 1.5 paths off, conversion eligibility should fire on
-    # at least some closeout plies — confirming Spec 2 took its own BFS path.
-    closeout_positions = [p for p in record.positions if p.conversion is not None]
-    if not closeout_positions:
-        pytest.skip("No closeout state reached in this game; re-seed if needed.")
-    assert len(closeout_positions) >= 1
+    closeout = [p for p in record.positions if p.conversion is not None]
+    assert len(closeout) >= 1, (
+        "Conversion attach did not fire when Spec 1.5 emit/record paths "
+        "were off — Spec 2 cost-path failed to compute its own full BFS"
+    )
 ```
 
 - [ ] **Step 3: Run tests to verify they fail**
