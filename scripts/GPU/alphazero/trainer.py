@@ -26,6 +26,7 @@ import threading
 import time
 import uuid
 from collections import deque
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
@@ -1272,6 +1273,17 @@ def train_step(
     )
 
 
+@dataclass
+class _SampleStats:
+    """Stats from the most recent ReplayBuffer.sample() call (Spec 2 §7.7).
+    Reset on each call. Read by trainer accumulator for sidecar telemetry.
+    """
+    batch_size: int
+    eligible_drawn: int
+    cap_was_binding: bool
+    boost_was_inactive: bool
+
+
 class ReplayBuffer:
     """Fixed-size buffer of training positions with uniform sampling.
 
@@ -1287,6 +1299,7 @@ class ReplayBuffer:
         self.max_size = max_size
         self.buffer: List["PositionRecord"] = []
         self.index = 0
+        self.last_sample_stats: Optional[_SampleStats] = None
         # Spec 2: O(1) eligible-position pool with swap-delete semantics
         self._eligible_idxs: list = []           # ordered list of eligible indices
         self._eligible_pos: dict = {}            # idx -> position in _eligible_idxs
@@ -1351,29 +1364,95 @@ class ReplayBuffer:
         batch_size: int,
         rng: Optional[random.Random] = None,
         active_size: Optional[int] = None,
+        *,
+        conversion_sample_boost: float = 1.0,
+        conversion_max_batch_fraction: float = 0.15,
     ) -> List["PositionRecord"]:
         """Sample random batch from buffer.
 
-        Args:
-            batch_size: Number of positions to sample
-            rng: Optional RNG for reproducibility
-            active_size: If provided, only sample positions with this active_size
-                        (for curriculum learning - avoids mixed board sizes in batch)
-
-        Returns:
-            List of sampled positions
+        Default behavior (boost=1.0): pure uniform — eligibility ignored,
+        cap not consulted, identical to pre-Spec-2 behavior. With
+        boost > 1.0, stratified sampling (Spec 2 §7.3): a target_eligible
+        count is drawn from the conversion-eligible pool (using ceil
+        rounding to avoid round-to-zero), the rest are filled uniformly
+        from non-eligible positions, and the assembled batch is shuffled.
+        No-replacement invariant holds across both strata.
         """
+        import math
         if rng is None:
             rng = random.Random()
 
-        # Filter by active_size if specified (curriculum learning)
-        if active_size is not None:
-            eligible = [p for p in self.buffer if p.active_size == active_size]
-            if not eligible:
-                return []
-            return rng.sample(eligible, min(batch_size, len(eligible)))
+        # Filter pool by active_size (existing behavior)
+        if active_size is None:
+            full_pool = list(range(len(self.buffer)))
+        else:
+            full_pool = [
+                i for i, p in enumerate(self.buffer)
+                if p.active_size == active_size
+            ]
 
-        return rng.sample(self.buffer, min(batch_size, len(self.buffer)))
+        if not full_pool:
+            self.last_sample_stats = _SampleStats(
+                batch_size=batch_size, eligible_drawn=0,
+                cap_was_binding=False, boost_was_inactive=True,
+            )
+            return []
+
+        # SHORT-CIRCUIT for boost == 1.0 (anchor invariant)
+        if conversion_sample_boost == 1.0:
+            chosen_idxs = rng.sample(full_pool, k=min(batch_size, len(full_pool)))
+            batch = [self.buffer[i] for i in chosen_idxs]
+            drawn = sum(1 for p in batch if getattr(p, "conversion", None) is not None)
+            self.last_sample_stats = _SampleStats(
+                batch_size=batch_size, eligible_drawn=drawn,
+                cap_was_binding=False, boost_was_inactive=False,
+            )
+            return batch
+
+        # Stratified path
+        eligible_in_size = [
+            i for i in self._eligible_idxs
+            if active_size is None or self.buffer[i].active_size == active_size
+        ]
+        non_eligible_in_size = [
+            i for i in full_pool if i not in self._eligible_pos
+        ]
+        eligible_count = len(eligible_in_size)
+
+        cap_count = int(math.floor(batch_size * conversion_max_batch_fraction))
+        if cap_count == 0 or eligible_count == 0:
+            chosen_idxs = rng.sample(full_pool, k=min(batch_size, len(full_pool)))
+            batch = [self.buffer[i] for i in chosen_idxs]
+            drawn = sum(1 for p in batch if getattr(p, "conversion", None) is not None)
+            self.last_sample_stats = _SampleStats(
+                batch_size=batch_size, eligible_drawn=drawn,
+                cap_was_binding=False,
+                boost_was_inactive=(eligible_count == 0),
+            )
+            return batch
+
+        natural_expectation = batch_size * (eligible_count / len(full_pool))
+        target_eligible_uncapped = math.ceil(natural_expectation * conversion_sample_boost)
+        target_eligible = min(
+            target_eligible_uncapped,
+            cap_count,
+            eligible_count,
+            batch_size,
+        )
+
+        chosen_eligible = rng.sample(eligible_in_size, k=target_eligible)
+        n_other = min(batch_size - target_eligible, len(non_eligible_in_size))
+        chosen_other = rng.sample(non_eligible_in_size, k=n_other)
+        chosen_idxs = chosen_eligible + chosen_other
+        rng.shuffle(chosen_idxs)
+        batch = [self.buffer[i] for i in chosen_idxs]
+
+        cap_was_binding = (target_eligible == cap_count and target_eligible < target_eligible_uncapped)
+        self.last_sample_stats = _SampleStats(
+            batch_size=batch_size, eligible_drawn=target_eligible,
+            cap_was_binding=cap_was_binding, boost_was_inactive=False,
+        )
+        return batch
 
     def count_by_active_size(self, active_size: int) -> int:
         """Count positions with given active_size."""
@@ -2467,6 +2546,9 @@ def train(
     sum_aux_coverage: float = 0.0
     sum_aux_n_eligible: int = 0
     steps_done: int = 0
+    sum_eligible_drawn: int = 0
+    sum_cap_binding: int = 0
+    sum_boost_inactive: int = 0
     effective_conversion_loss_weight: float = (
         conversion_policy_loss_weight if conversion_policy_loss_enabled else 0.0
     )
@@ -3390,12 +3472,19 @@ def train(
                 sum_aux = 0.0
                 sum_aux_coverage = 0.0
                 sum_aux_n_eligible = 0
+                sum_eligible_drawn = 0
+                sum_cap_binding = 0
+                sum_boost_inactive = 0
 
                 train_rng = random.Random(master_rng.randint(0, 2**31))
 
                 try:
                     for step in range(scaled_train_steps):
-                        batch = buffer.sample(batch_size, rng=train_rng, active_size=active_size)
+                        batch = buffer.sample(
+                            batch_size, rng=train_rng, active_size=active_size,
+                            conversion_sample_boost=conversion_sample_boost,
+                            conversion_max_batch_fraction=conversion_max_batch_fraction,
+                        )
                         # Pass active_size to training (use current curriculum stage)
                         loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli = train_step(
                             network=network,
@@ -3422,6 +3511,13 @@ def train(
                         sum_aux += loss_aux
                         sum_aux_coverage += aux_cov
                         sum_aux_n_eligible += aux_neli
+                        stats = buffer.last_sample_stats
+                        if stats is not None:
+                            sum_eligible_drawn += stats.eligible_drawn
+                            if stats.cap_was_binding:
+                                sum_cap_binding += 1
+                            if stats.boost_was_inactive:
+                                sum_boost_inactive += 1
                         steps_done += 1
 
                         if (step + 1) % 20 == 0:
@@ -3510,9 +3606,11 @@ def train(
                     "steps_done": steps_done,
                     "batch_size": batch_size,
                 },
-                # Phase 2: sampler stats not yet wired. Pass None so the
-                # consistency block reports available=False.
-                sample_accumulator=None,
+                sample_accumulator={
+                    "eligible_drawn_total": sum_eligible_drawn,
+                    "cap_was_binding_steps": sum_cap_binding,
+                    "boost_inactive_steps": sum_boost_inactive,
+                },
             )
 
             games_dir.mkdir(parents=True, exist_ok=True)

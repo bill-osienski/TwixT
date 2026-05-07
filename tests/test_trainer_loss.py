@@ -4,8 +4,8 @@ import json
 
 
 def test_trainer_runs_with_conversion_enabled_smoke(tmp_path):
-    """Phase 2 smoke: 1 iter with conversion enabled produces sidecar block
-    with correct shape including consistency.available=False."""
+    """Phase 3 smoke: 1 iter with conversion enabled produces sidecar block
+    with correct shape including consistency.available=True (sampler stats wired)."""
     from scripts.GPU.alphazero.trainer import train
 
     network = train(
@@ -38,10 +38,9 @@ def test_trainer_runs_with_conversion_enabled_smoke(tmp_path):
     assert cnv["version"] == 1
     assert cnv["enabled"] is True
     assert cnv["config"]["effective_loss_weight"] == 0.05
-    # Phase 2: sampler stats not yet wired. Consistency must report
-    # available=False — NOT False-positive drawn_vs_seen_match=False.
-    assert cnv["consistency"]["available"] is False
-    assert cnv["consistency"]["drawn_vs_seen_match"] is None
+    # Phase 3: sampler stats wired. Consistency check IS available now.
+    assert cnv["consistency"]["available"] is True
+    assert cnv["consistency"]["drawn_vs_seen_match"] is True
     # Buffer stats from O(N) scan: with conversion enabled and games played,
     # buffer should contain real positions. eligible_positions_in_buffer can be
     # 0 legitimately (no closeouts in 2-game smoke), but the FIELD must be
