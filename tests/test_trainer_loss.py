@@ -47,3 +47,37 @@ def test_trainer_runs_with_conversion_enabled_smoke(tmp_path):
     # populated with a real int and the rate must be a valid float.
     assert isinstance(cnv["buffer"]["eligible_positions_in_buffer"], int)
     assert 0.0 <= cnv["buffer"]["eligible_position_rate"] <= 1.0
+
+
+def test_trainer_runs_with_sample_boost_smoke(tmp_path):
+    """Phase 3 smoke: 1 iter, conversion enabled with boost=2.0.
+    Asserts sample_stats populated and drawn-vs-seen invariant holds.
+    """
+    from scripts.GPU.alphazero.trainer import train
+
+    network = train(
+        n_iterations=1,
+        games_per_iteration=2,
+        train_steps_per_iteration=4,
+        batch_size=8,
+        buffer_size=100,
+        checkpoint_dir=str(tmp_path),
+        games_dir_override=str(tmp_path),
+        save_games=False,
+        probes_inline_disable=True,
+        conversion_policy_loss_enabled=True,
+        conversion_policy_loss_weight=0.05,
+        conversion_sample_boost=2.0,
+        conversion_max_batch_fraction=0.5,
+    )
+    assert network is not None
+
+    sidecar_files = list(tmp_path.rglob("iter_*_stats.json"))
+    assert len(sidecar_files) >= 1
+    sidecar = json.loads(sidecar_files[0].read_text())
+    cnv = sidecar["conversion_training"]
+    # Phase 3 invariant: sampler stats wired; consistency check available.
+    assert cnv["consistency"]["available"] is True
+    assert cnv["consistency"]["drawn_vs_seen_match"] is True
+    # eligible_drawn_total must equal aux_positions_seen_in_training.
+    assert cnv["sample_stats"]["eligible_drawn_total"] == cnv["loss"]["aux_positions_seen_in_training"]
