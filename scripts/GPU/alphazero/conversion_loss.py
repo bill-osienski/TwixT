@@ -5,6 +5,7 @@ the policy-side closeout correction.
 """
 from __future__ import annotations
 from typing import Optional
+import numpy as np
 
 
 def is_conversion_eligible(
@@ -33,3 +34,31 @@ def is_conversion_eligible(
     if not completion and not reducing:
         return False
     return True
+
+
+def build_conversion_target(
+    legal_moves: list,
+    completion_moves: set,
+    reducing_moves: set,
+    *,
+    completion_weight: float,
+    reducer_weight: float,
+) -> Optional[np.ndarray]:
+    """Build a normalized auxiliary target distribution over legal_moves.
+
+    Returns a length-len(legal_moves) np.float32 array summing to 1.0,
+    or None if the target is empty after legal-move alignment.
+
+    Disjoint-mass rule: a move that is both endpoint-completing AND
+    distance-reducing receives completion_weight (the larger), not the sum.
+    """
+    weights = np.zeros(len(legal_moves), dtype=np.float32)
+    for i, m in enumerate(legal_moves):
+        if m in completion_moves:
+            weights[i] = completion_weight
+        elif m in reducing_moves:
+            weights[i] = reducer_weight
+    total = float(weights.sum())
+    if total <= 0.0:
+        return None
+    return weights / total
