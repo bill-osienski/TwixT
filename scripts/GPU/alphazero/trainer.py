@@ -1079,7 +1079,10 @@ def alphazero_loss_batch(
                   aux_loss, aux_coverage, aux_n_eligible).
         - aux_loss: MLX scalar — Spec 2 §6.3 auxiliary CE, mean over eligible
           positions only. Zero when conversion_loss_weight==0.
-        - aux_coverage: float — n_eligible / batch_size.
+        - aux_coverage: float — n_eligible / len(positions) (fraction of this
+          batch that was eligible). Equals n_eligible/batch_size in normal
+          training but may be larger if the replay buffer returned fewer
+          positions than requested.
         - aux_n_eligible: int — exact count of eligible positions in batch.
 
     IMPORTANT: total_loss MUST be first because nn.value_and_grad() only
@@ -1207,7 +1210,11 @@ def train_step(
 
     Returns:
         Tuple of (total_loss, policy_loss, value_loss, l2_loss,
-                  aux_loss, aux_coverage, aux_n_eligible) as floats/int
+                  aux_loss, aux_coverage, aux_n_eligible) as floats/int.
+        - aux_coverage: float — n_eligible / len(batch) (fraction of this
+          batch that was eligible). Equals n_eligible/batch_size in normal
+          training but may be larger if the replay buffer returned fewer
+          positions than requested.
     """
     def loss_fn(model):
         # Returns 7-tuple; total is first for nn.value_and_grad()
