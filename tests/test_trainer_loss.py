@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 
-def test_trainer_writes_conversion_training_to_sidecar(tmp_path):
+def test_trainer_runs_with_conversion_enabled_smoke(tmp_path):
     """Phase 2 smoke: 1 iter with conversion enabled produces sidecar block
     with correct shape including consistency.available=False."""
     from scripts.GPU.alphazero.trainer import train

@@ -1081,7 +1081,6 @@ Do not over-interpret `delay_ge_10` / `delay_ge_20` until the replay buffer cont
 #### `tests/test_trainer_loss.py`
 
 - `test_trainer_runs_with_conversion_enabled_smoke`
-- `test_trainer_writes_conversion_training_to_sidecar`
 
 ### 11.3 Anchor tests (9, mandatory)
 
