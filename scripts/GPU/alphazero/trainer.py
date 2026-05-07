@@ -917,15 +917,21 @@ def verify_canonicalization(
 def make_padded_batch(
     positions: List["PositionRecord"],
     max_moves_cap: int = 512,
+    return_legal: bool = False,    # NEW: opt-in for Spec 2 conversion aux loss
 ):
     """Prepare batched tensors with padded moves for training.
 
     Args:
         positions: List of PositionRecord
         max_moves_cap: Maximum moves to consider (truncates if exceeded)
+        return_legal: If True, also return legal_moves_padded (a Python list
+            of lists of (row, col) tuples or None for padding slots), used
+            by the conversion auxiliary loss. Default False preserves
+            backward compatibility.
 
     Returns:
-        Tuple of (boards_mx, move_rows, move_cols, move_mask, target_pi, outcomes)
+        Without return_legal: (boards_mx, move_rows, move_cols, move_mask, target_pi, outcomes)
+        With return_legal:    (boards_mx, move_rows, move_cols, move_mask, target_pi, outcomes, legal_moves_padded)
     """
     B = len(positions)
     assert B > 0
@@ -981,7 +987,15 @@ def make_padded_batch(
         if s > 0:
             target_pi_np[i, :n] /= s
 
-    return (
+    legal_moves_padded = None
+    if return_legal:
+        legal_moves_padded = []
+        for p in positions:
+            moves = p.legal_moves[:M]
+            row = list(moves) + [None] * (M - len(moves))
+            legal_moves_padded.append(row)
+
+    base = (
         boards_mx,
         mx.array(move_rows_np),
         mx.array(move_cols_np),
@@ -989,6 +1003,9 @@ def make_padded_batch(
         mx.array(target_pi_np),
         mx.array(outcomes_np),
     )
+    if return_legal:
+        return base + (legal_moves_padded,)
+    return base
 
 
 def _compute_progress_weighted_value_loss(
