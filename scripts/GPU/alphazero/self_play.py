@@ -499,6 +499,14 @@ def play_game(
     goal_completion_high_value_threshold: float = 0.9,
     goal_completion_high_value_delay_threshold_plies: int = 6,
     goal_completion_min_component_size: int = 8,
+    # Spec 2: conversion auxiliary loss attach point (§5.5).
+    # When enabled, attaches conversion metadata to PositionRecords whose
+    # pre-move gc_state_full is conversion-eligible. Reuses gc_state_full
+    # from the BFS-reuse contract (Spec 1.5); forces full BFS only when needed.
+    conversion_policy_loss_enabled: bool = False,
+    conversion_max_total_goal_distance: int = 2,
+    # min_component_size reuses goal_completion_emit_min_component —
+    # single source of truth, no duplicate flag.
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -672,7 +680,11 @@ def play_game(
         gc_state_for_diag = None     # cheap: total_goal_distance only
         gc_state_full = None         # full: includes endpoint_completion_moves
         partial_diag = None
-        need_cheap = goal_completion_emit_enabled or gc_tracker.enabled
+        need_cheap = (
+            goal_completion_emit_enabled
+            or gc_tracker.enabled
+            or conversion_policy_loss_enabled  # Spec 2: may need BFS for conversion
+        )
         if need_cheap:
             try:
                 from .connectivity_diagnostics import compute_goal_completion_state
@@ -708,7 +720,14 @@ def play_game(
                     or total_now <= gc_tracker.detection_threshold
                 )
             )
-            if needs_phase3_full or needs_tracker_full:
+            # Spec 2 §5.5: conversion forces full BFS when ply is eligible.
+            needs_conversion_full = (
+                conversion_policy_loss_enabled
+                and gc_state_for_diag is not None
+                and total_now is not None
+                and total_now <= conversion_max_total_goal_distance
+            )
+            if needs_phase3_full or needs_tracker_full or needs_conversion_full:
                 try:
                     gc_state_full = compute_goal_completion_state(
                         state, state.to_move,
@@ -821,6 +840,26 @@ def play_game(
         board_chw = state.to_tensor()  # (C, H, W)
         board_hwc = np.transpose(board_chw, (1, 2, 0))  # (H, W, C)
 
+        # Spec 2 §5.5: build conversion metadata using the SAME gc_state_full above.
+        # Must be done BEFORE move selection (pre-move semantics).
+        conversion_meta = None
+        if conversion_policy_loss_enabled and gc_state_full is not None:
+            from .conversion_loss import is_conversion_eligible
+            if is_conversion_eligible(
+                gc_state_full,
+                max_total_goal_distance=conversion_max_total_goal_distance,
+                min_component_size=goal_completion_emit_min_component,
+            ):
+                conversion_meta = {
+                    "version": 1,
+                    "total_goal_distance":       gc_state_full["total_goal_distance"],
+                    "largest_component_size":    gc_state_full["largest_component_size"],
+                    "endpoint_completion_moves": [list(m) for m in (gc_state_full.get("endpoint_completion_moves") or [])],
+                    "distance_reducing_moves":   [list(m) for m in (gc_state_full.get("distance_reducing_moves") or [])],
+                    "conversion_category":       gc_state_full.get("category"),
+                    "selected_primary_class":    None,    # telemetry-only; deferred
+                }
+
         positions.append(
             PositionRecord(
                 board_tensor=board_hwc,  # (H, W, C) NHWC format
@@ -829,6 +868,7 @@ def play_game(
                 visit_counts=counts,  # Raw counts, not normalized
                 active_size=active_size,  # Store for training with masked pooling
                 ply=ply,  # Ply at which this position occurred
+                conversion=conversion_meta,  # Spec 2: None unless conversion-eligible
             )
         )
 
