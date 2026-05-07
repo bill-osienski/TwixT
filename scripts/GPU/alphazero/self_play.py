@@ -852,8 +852,8 @@ def play_game(
             ):
                 conversion_meta = {
                     "version": 1,
-                    "total_goal_distance":       gc_state_full["total_goal_distance"],
-                    "largest_component_size":    gc_state_full["largest_component_size"],
+                    "total_goal_distance":       gc_state_full.get("total_goal_distance"),
+                    "largest_component_size":    gc_state_full.get("largest_component_size"),
                     "endpoint_completion_moves": [list(m) for m in (gc_state_full.get("endpoint_completion_moves") or [])],
                     "distance_reducing_moves":   [list(m) for m in (gc_state_full.get("distance_reducing_moves") or [])],
                     "conversion_category":       gc_state_full.get("category"),
