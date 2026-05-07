@@ -138,3 +138,40 @@ def test_conversion_training_consistency_unavailable_when_disabled_even_with_sam
     assert block["consistency"]["drawn_vs_seen_match"] is None
     # Sample stats also zeroed (disabled path)
     assert block["sample_stats"]["eligible_drawn_total"] == 0
+
+
+def test_drawn_vs_seen_match_flags_divergence():
+    """ANCHOR (Spec 2 §11.3): when sampler-drawn != loss-seen, flag false
+    and report exact delta."""
+    block = build_conversion_training_block(
+        config=_config(),
+        enabled=True,
+        buffer_stats=_zero_buffer_stats(),
+        loss_accumulator={"sum_aux": 100.0, "sum_aux_coverage": 5.0,
+                          "sum_aux_n_eligible": 1280, "steps_done": 50,
+                          "batch_size": 256},
+        sample_accumulator={"eligible_drawn_total": 1300,    # mismatch by +20
+                            "cap_was_binding_steps": 0,
+                            "boost_inactive_steps": 0},
+    )
+    assert block["consistency"]["available"] is True
+    assert block["consistency"]["drawn_vs_seen_match"] is False
+    assert block["consistency"]["drawn_minus_seen"] == 20
+
+
+def test_drawn_vs_seen_match_naming_correctness():
+    """Spec 2 §8.2 lock: drawn = sampler count, seen = loss count.
+    NOT reversed."""
+    block = build_conversion_training_block(
+        config=_config(),
+        enabled=True,
+        buffer_stats=_zero_buffer_stats(),
+        loss_accumulator={"sum_aux": 0.0, "sum_aux_coverage": 0.0,
+                          "sum_aux_n_eligible": 90, "steps_done": 1,
+                          "batch_size": 100},
+        sample_accumulator={"eligible_drawn_total": 100,
+                            "cap_was_binding_steps": 0,
+                            "boost_inactive_steps": 0},
+    )
+    # drawn (100) - seen (90) = 10 (positive)
+    assert block["consistency"]["drawn_minus_seen"] == 10

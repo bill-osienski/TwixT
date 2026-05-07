@@ -3613,6 +3613,16 @@ def train(
                 },
             )
 
+            cons = _sidecar["conversion_training"]["consistency"]
+            if cons.get("available") and not cons.get("drawn_vs_seen_match"):
+                print(
+                    f"[WARN] [conversion] drawn vs seen mismatch: "
+                    f"drawn={sum_eligible_drawn}, seen={sum_aux_n_eligible}, "
+                    f"delta={cons.get('drawn_minus_seen')}. Likely cause: "
+                    f"legal-move alignment or active-size filter divergence "
+                    f"between sampler and loss."
+                )
+
             games_dir.mkdir(parents=True, exist_ok=True)
             _tmp = games_dir / f"iter_{iteration:04d}_stats.json.tmp"
             _final = games_dir / f"iter_{iteration:04d}_stats.json"
