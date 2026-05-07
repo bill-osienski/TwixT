@@ -2416,6 +2416,18 @@ def train(
                 pass
             caffeinate_proc = None
 
+    # Spec 2 Task 9: pre-loop init so sidecar writer can reference these on
+    # iteration 0 (before any training has happened). Training section resets
+    # them before accumulating; the sidecar for iteration N reads the stats
+    # from iteration N's training (training runs before next iter's sidecar write).
+    sum_aux: float = 0.0
+    sum_aux_coverage: float = 0.0
+    sum_aux_n_eligible: int = 0
+    steps_done: int = 0
+    effective_conversion_loss_weight: float = (
+        conversion_policy_loss_weight if conversion_policy_loss_enabled else 0.0
+    )
+
     for iteration in range(start_iteration, n_iterations):
         iter_start = time.perf_counter()
 
@@ -3273,6 +3285,60 @@ def train(
                 games_total=games_generated,
             )
 
+            # Spec 2: conversion_training sidecar block.
+            # Buffer stats: O(N) scan of replay buffer at sidecar-write time.
+            # Phase 3 (Task 11) replaces this with the O(1) index pool.
+            _all_buf_positions = buffer._positions if hasattr(buffer, "_positions") else []
+            _eligible_total = sum(
+                1 for p in _all_buf_positions
+                if getattr(p, "conversion", None) is not None
+            )
+            _eligible_at_size = sum(
+                1 for p in _all_buf_positions
+                if getattr(p, "conversion", None) is not None
+                and getattr(p, "active_size", None) == active_size
+            )
+            _at_size = sum(
+                1 for p in _all_buf_positions
+                if getattr(p, "active_size", None) == active_size
+            )
+            _buffer_stats = {
+                "eligible_positions_in_buffer": _eligible_total,
+                "eligible_position_rate": (
+                    _eligible_total / len(_all_buf_positions) if _all_buf_positions else 0.0
+                ),
+                "eligible_positions_at_active_size": _eligible_at_size,
+                "eligible_rate_at_active_size": (
+                    _eligible_at_size / _at_size if _at_size > 0 else 0.0
+                ),
+            }
+
+            from .conversion_telemetry import build_conversion_training_block
+            _sidecar["conversion_training"] = build_conversion_training_block(
+                config={
+                    "configured_loss_weight": conversion_policy_loss_weight,
+                    "effective_loss_weight": effective_conversion_loss_weight,
+                    "completion_weight": conversion_completion_weight,
+                    "reducer_weight": conversion_reducer_weight,
+                    "max_total_goal_distance": conversion_max_total_goal_distance,
+                    "min_component_size": 8,
+                    "sample_boost": conversion_sample_boost,
+                    "max_batch_fraction": conversion_max_batch_fraction,
+                },
+                enabled=conversion_policy_loss_enabled,
+                buffer_stats=_buffer_stats,
+                loss_accumulator={
+                    "sum_aux": sum_aux,
+                    "sum_aux_coverage": sum_aux_coverage,
+                    "sum_aux_n_eligible": sum_aux_n_eligible,
+                    "steps_done": steps_done,
+                    "batch_size": batch_size,
+                },
+                # Phase 2: sampler stats not yet wired. Pass None so the
+                # consistency block reports available=False.
+                sample_accumulator=None,
+            )
+
             games_dir.mkdir(parents=True, exist_ok=True)
             _tmp = games_dir / f"iter_{iteration:04d}_stats.json.tmp"
             _final = games_dir / f"iter_{iteration:04d}_stats.json"
@@ -3337,18 +3403,15 @@ def train(
                 print(f"\nTraining: {scaled_train_steps} steps... (value_weight={curr_value_weight})")
 
                 # Seven accumulators for loss split (aux stats for Task 9 sidecar)
+                # Note: sum_aux*, effective_conversion_loss_weight are hoisted to iter
+                # scope above; reset here at the start of each training run.
                 sum_total = 0.0
                 sum_policy = 0.0
                 sum_value = 0.0
                 sum_l2 = 0.0
-                sum_aux = 0.0                # NEW: Spec 2 aux CE loss
-                sum_aux_coverage = 0.0       # NEW: fraction of eligible positions
-                sum_aux_n_eligible = 0       # NEW: total eligible positions (int)
-
-                # Compute effective conversion loss weight for this iteration
-                effective_conversion_loss_weight = (
-                    conversion_policy_loss_weight if conversion_policy_loss_enabled else 0.0
-                )
+                sum_aux = 0.0
+                sum_aux_coverage = 0.0
+                sum_aux_n_eligible = 0
 
                 train_rng = random.Random(master_rng.randint(0, 2**31))
 
