@@ -304,6 +304,7 @@ class PositionRecord:
         active_size: Curriculum board size (for training with masked pooling)
         ply: Ply at which this position occurred (0 = first move)
         game_n_moves: Total plies played in the source game (set in outcome loop)
+        conversion: Spec 2: closeout aux-loss metadata (optional dict)
     """
 
     board_tensor: np.ndarray  # (H, W, C) numpy array - NHWC format
@@ -314,6 +315,7 @@ class PositionRecord:
     active_size: int = 24  # Curriculum board size
     ply: int = 0                        # ply at which this position occurred
     game_n_moves: Optional[int] = None  # total plies in the source game (set in outcome loop)
+    conversion: Optional[dict] = None   # Spec 2: closeout aux-loss metadata
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -326,6 +328,7 @@ class PositionRecord:
             "active_size": self.active_size,
             "ply": self.ply,
             "game_n_moves": self.game_n_moves,
+            "conversion": self.conversion,
         }
 
     @classmethod
@@ -340,6 +343,7 @@ class PositionRecord:
             active_size=d.get("active_size", 24),
             ply=d.get("ply", 0),
             game_n_moves=d.get("game_n_moves"),
+            conversion=d.get("conversion"),     # defaults to None for pre-Spec-2 dicts
         )
 
 
