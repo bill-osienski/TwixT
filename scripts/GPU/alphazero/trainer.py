@@ -3285,74 +3285,9 @@ def train(
                 games_total=games_generated,
             )
 
-            # Spec 2: conversion_training sidecar block.
-            # Buffer stats: O(N) scan of replay buffer at sidecar-write time.
-            # Phase 3 (Task 11) replaces this with the O(1) index pool.
-            _all_buf_positions = buffer._positions if hasattr(buffer, "_positions") else []
-            _eligible_total = sum(
-                1 for p in _all_buf_positions
-                if getattr(p, "conversion", None) is not None
-            )
-            _eligible_at_size = sum(
-                1 for p in _all_buf_positions
-                if getattr(p, "conversion", None) is not None
-                and getattr(p, "active_size", None) == active_size
-            )
-            _at_size = sum(
-                1 for p in _all_buf_positions
-                if getattr(p, "active_size", None) == active_size
-            )
-            _buffer_stats = {
-                "eligible_positions_in_buffer": _eligible_total,
-                "eligible_position_rate": (
-                    _eligible_total / len(_all_buf_positions) if _all_buf_positions else 0.0
-                ),
-                "eligible_positions_at_active_size": _eligible_at_size,
-                "eligible_rate_at_active_size": (
-                    _eligible_at_size / _at_size if _at_size > 0 else 0.0
-                ),
-            }
-
-            from .conversion_telemetry import build_conversion_training_block
-            _sidecar["conversion_training"] = build_conversion_training_block(
-                config={
-                    "configured_loss_weight": conversion_policy_loss_weight,
-                    "effective_loss_weight": effective_conversion_loss_weight,
-                    "completion_weight": conversion_completion_weight,
-                    "reducer_weight": conversion_reducer_weight,
-                    "max_total_goal_distance": conversion_max_total_goal_distance,
-                    "min_component_size": 8,
-                    "sample_boost": conversion_sample_boost,
-                    "max_batch_fraction": conversion_max_batch_fraction,
-                },
-                enabled=conversion_policy_loss_enabled,
-                buffer_stats=_buffer_stats,
-                loss_accumulator={
-                    "sum_aux": sum_aux,
-                    "sum_aux_coverage": sum_aux_coverage,
-                    "sum_aux_n_eligible": sum_aux_n_eligible,
-                    "steps_done": steps_done,
-                    "batch_size": batch_size,
-                },
-                # Phase 2: sampler stats not yet wired. Pass None so the
-                # consistency block reports available=False.
-                sample_accumulator=None,
-            )
-
-            games_dir.mkdir(parents=True, exist_ok=True)
-            _tmp = games_dir / f"iter_{iteration:04d}_stats.json.tmp"
-            _final = games_dir / f"iter_{iteration:04d}_stats.json"
-            try:
-                with open(_tmp, "w", encoding="utf-8") as _sf:
-                    json.dump(_sidecar, _sf, indent=2)
-                os.replace(_tmp, _final)
-            except Exception as e:
-                print(f"  WARNING: failed to write stats sidecar: {e}")
-                try:
-                    if _tmp.exists():
-                        _tmp.unlink()
-                except Exception:
-                    pass
+            # conversion_training sidecar block and file write are deferred
+            # to after the training loop so that sum_aux* reflect THIS iter's
+            # training.  See post-training write below.
 
         else:
             avg_plies = 0
@@ -3489,6 +3424,79 @@ def train(
                     print(f"\nSkipping training (buffer too small): positions={positions_available} batch={batch_size}")
                     train_completed = False  # explicit: not a full iteration
         train_end = time.perf_counter()
+
+        # --- Write per-iteration stats sidecar (atomic, post-training) ---
+        # Deferred from the self-play block so conversion_training.loss reports
+        # THIS iter's sum_aux* values (Spec 2 §8.1 off-by-one fix).
+        if games_generated > 0:
+            # Spec 2: conversion_training sidecar block.
+            # Buffer stats: O(N) scan of replay buffer at sidecar-write time.
+            # Phase 3 (Task 11) replaces this with the O(1) index pool.
+            _all_buf_positions = buffer._positions if hasattr(buffer, "_positions") else []
+            _eligible_total = sum(
+                1 for p in _all_buf_positions
+                if getattr(p, "conversion", None) is not None
+            )
+            _eligible_at_size = sum(
+                1 for p in _all_buf_positions
+                if getattr(p, "conversion", None) is not None
+                and getattr(p, "active_size", None) == active_size
+            )
+            _at_size = sum(
+                1 for p in _all_buf_positions
+                if getattr(p, "active_size", None) == active_size
+            )
+            _buffer_stats = {
+                "eligible_positions_in_buffer": _eligible_total,
+                "eligible_position_rate": (
+                    _eligible_total / len(_all_buf_positions) if _all_buf_positions else 0.0
+                ),
+                "eligible_positions_at_active_size": _eligible_at_size,
+                "eligible_rate_at_active_size": (
+                    _eligible_at_size / _at_size if _at_size > 0 else 0.0
+                ),
+            }
+
+            from .conversion_telemetry import build_conversion_training_block
+            _sidecar["conversion_training"] = build_conversion_training_block(
+                config={
+                    "configured_loss_weight": conversion_policy_loss_weight,
+                    "effective_loss_weight": effective_conversion_loss_weight,
+                    "completion_weight": conversion_completion_weight,
+                    "reducer_weight": conversion_reducer_weight,
+                    "max_total_goal_distance": conversion_max_total_goal_distance,
+                    "min_component_size": 8,
+                    "sample_boost": conversion_sample_boost,
+                    "max_batch_fraction": conversion_max_batch_fraction,
+                },
+                enabled=conversion_policy_loss_enabled,
+                buffer_stats=_buffer_stats,
+                loss_accumulator={
+                    "sum_aux": sum_aux,
+                    "sum_aux_coverage": sum_aux_coverage,
+                    "sum_aux_n_eligible": sum_aux_n_eligible,
+                    "steps_done": steps_done,
+                    "batch_size": batch_size,
+                },
+                # Phase 2: sampler stats not yet wired. Pass None so the
+                # consistency block reports available=False.
+                sample_accumulator=None,
+            )
+
+            games_dir.mkdir(parents=True, exist_ok=True)
+            _tmp = games_dir / f"iter_{iteration:04d}_stats.json.tmp"
+            _final = games_dir / f"iter_{iteration:04d}_stats.json"
+            try:
+                with open(_tmp, "w", encoding="utf-8") as _sf:
+                    json.dump(_sidecar, _sf, indent=2)
+                os.replace(_tmp, _final)
+            except Exception as e:
+                print(f"  WARNING: failed to write stats sidecar: {e}")
+                try:
+                    if _tmp.exists():
+                        _tmp.unlink()
+                except Exception:
+                    pass
 
         # D) Determine "full iteration"
         selfplay_completed = (games_generated == games_per_iteration)
