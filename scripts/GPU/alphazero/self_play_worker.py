@@ -69,6 +69,9 @@ def self_play_worker_main(
     # Phase 4: per-game replay cap (None/0 disables)
     max_positions_per_game: Optional[int] = None,
     endgame_keep_positions: int = 16,
+    # Spec 2: conversion auxiliary loss
+    conversion_policy_loss_enabled: bool = False,
+    conversion_max_total_goal_distance: int = 2,
 ) -> None:
     """Worker process entry point.
 
@@ -101,6 +104,7 @@ def self_play_worker_main(
             adjudicate_min_visits, adjudicate_min_top1_share,
             adjudicate_debug,
             max_positions_per_game, endgame_keep_positions,
+            conversion_policy_loss_enabled, conversion_max_total_goal_distance,
         )
     except (KeyboardInterrupt, BrokenPipeError, EOFError, RuntimeError):
         # Graceful exit on interrupt, queue closure, or evaluator timeout
@@ -140,6 +144,9 @@ def _worker_loop(
     # Phase 4: per-game replay cap
     max_positions_per_game: Optional[int],
     endgame_keep_positions: int,
+    # Spec 2: conversion auxiliary loss
+    conversion_policy_loss_enabled: bool = False,
+    conversion_max_total_goal_distance: int = 2,
 ) -> None:
     """Inner worker loop (extracted for clean exception handling)."""
     import time
@@ -187,6 +194,8 @@ def _worker_loop(
             adjudicate_debug=adjudicate_debug,
             max_positions_per_game=max_positions_per_game,
             endgame_keep_positions=endgame_keep_positions,
+            conversion_policy_loss_enabled=conversion_policy_loss_enabled,
+            conversion_max_total_goal_distance=conversion_max_total_goal_distance,
         )
         games_played += 1
 

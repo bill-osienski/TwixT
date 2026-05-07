@@ -27,7 +27,13 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
-def main():
+def _build_parser_for_test() -> argparse.ArgumentParser:
+    """Build the trainer CLI parser. Importable from tests to assert
+    defaults / validation behavior without invoking main()/parse_args().
+
+    Single source of truth for the parser definition — main() calls this
+    and then parse_args(); tests call this and parse_args(arglist).
+    """
     parser = argparse.ArgumentParser(
         description="Train AlphaZero for TwixT",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -347,7 +353,86 @@ def main():
         help="Disable per-iter inline forced-probe eval entirely. "
              "Use when probes file is intentionally absent or for max throughput.")
 
+    # Spec 2: conversion auxiliary loss
+    parser.add_argument("--conversion-policy-loss-enabled", action="store_true",
+        help="Enable conversion auxiliary policy loss on closeout-eligible positions.")
+    parser.add_argument("--conversion-policy-loss-weight", type=float, default=0.05,
+        help="Weight λ for the conversion auxiliary loss term (default: 0.05).")
+    parser.add_argument("--conversion-completion-weight", type=float, default=1.0,
+        help="Target weight for endpoint_completion_moves (default: 1.0).")
+    parser.add_argument("--conversion-reducer-weight", type=float, default=0.35,
+        help="Target weight for distance_reducing_moves (default: 0.35). "
+             "Must be <= --conversion-completion-weight.")
+    parser.add_argument("--conversion-max-total-goal-distance", type=int, default=2,
+        help="Eligibility threshold on total_goal_distance (default: 2). "
+             "Range [1, 3]; first experiment uses 2, widens to 3 later.")
+    # Track 2: sample boost
+    parser.add_argument("--conversion-sample-boost", type=float, default=1.0,
+        help="Multiplier on uniform-eligible expectation (default: 1.0 = pure uniform).")
+    parser.add_argument("--conversion-max-batch-fraction", type=float, default=0.15,
+        help="Hard cap on eligible fraction per batch (default: 0.15).")
+    # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
+    parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
+        help="Enable recovery / extreme-closeout-drift telemetry (default: on).")
+    parser.add_argument("--no-recovery-bucket", dest="recovery_bucket_enabled",
+        action="store_false",
+        help="Disable recovery / extreme-closeout-drift telemetry.")
+    parser.add_argument("--recovery-dominant-unavailable-threshold", type=int, default=10,
+        help="DU-moves threshold for recovery bucket (default: 10).")
+    parser.add_argument("--recovery-delay-threshold", type=int, default=20,
+        help="conversion_delay_plies threshold for recovery bucket (default: 20).")
+
+    return parser
+
+
+def _validate_conversion_args(parser: argparse.ArgumentParser, args) -> None:
+    """Validate Spec 2 conversion / recovery args. Raises SystemExit via parser.error."""
+    if args.conversion_policy_loss_enabled and args.conversion_policy_loss_weight <= 0.0:
+        parser.error(
+            "--conversion-policy-loss-enabled requires "
+            "--conversion-policy-loss-weight > 0.0. "
+            "Omit --conversion-policy-loss-enabled to disable conversion entirely."
+        )
+    if args.conversion_completion_weight <= 0.0:
+        parser.error("--conversion-completion-weight must be > 0.0")
+    if args.conversion_reducer_weight < 0.0:
+        parser.error("--conversion-reducer-weight must be >= 0.0")
+    if args.conversion_reducer_weight > args.conversion_completion_weight:
+        parser.error(
+            "--conversion-reducer-weight must be <= --conversion-completion-weight "
+            f"(got reducer={args.conversion_reducer_weight}, "
+            f"completion={args.conversion_completion_weight})."
+        )
+    if not (1 <= args.conversion_max_total_goal_distance <= 3):
+        parser.error("--conversion-max-total-goal-distance must be in [1, 3]")
+    if args.conversion_sample_boost < 1.0:
+        parser.error(
+            "--conversion-sample-boost must be >= 1.0 "
+            "(omit --conversion-policy-loss-enabled to disable conversion entirely)"
+        )
+    if not (0.0 <= args.conversion_max_batch_fraction <= 1.0):
+        parser.error("--conversion-max-batch-fraction must be in [0.0, 1.0]")
+
+    # Cross-flag warning (not error)
+    if (not args.conversion_policy_loss_enabled
+            and args.conversion_sample_boost > 1.0):
+        print(
+            "[WARN] --conversion-sample-boost > 1.0 has no effect when "
+            "--conversion-policy-loss-enabled is off. Sample boost stays inactive "
+            "and PositionRecord.conversion stays unpopulated."
+        )
+
+    if args.recovery_dominant_unavailable_threshold < 1:
+        parser.error("--recovery-dominant-unavailable-threshold must be >= 1")
+    if args.recovery_delay_threshold < 1:
+        parser.error("--recovery-delay-threshold must be >= 1")
+
+
+def main():
+    parser = _build_parser_for_test()
+
     args = parser.parse_args()
+    _validate_conversion_args(parser, args)
 
     # Propagate opening debug to workers via env var
     if args.opening_debug:
@@ -608,6 +693,18 @@ def main():
         probes_path=args.probes_path,
         probes_inline_disable=args.probes_inline_disable,
     )
+    train_kwargs.update(dict(
+        conversion_policy_loss_enabled=args.conversion_policy_loss_enabled,
+        conversion_policy_loss_weight=args.conversion_policy_loss_weight,
+        conversion_completion_weight=args.conversion_completion_weight,
+        conversion_reducer_weight=args.conversion_reducer_weight,
+        conversion_max_total_goal_distance=args.conversion_max_total_goal_distance,
+        conversion_sample_boost=args.conversion_sample_boost,
+        conversion_max_batch_fraction=args.conversion_max_batch_fraction,
+        recovery_bucket_enabled=args.recovery_bucket_enabled,
+        recovery_dominant_unavailable_threshold=args.recovery_dominant_unavailable_threshold,
+        recovery_delay_threshold=args.recovery_delay_threshold,
+    ))
     # Conditional override: None means "use default from train() (0.5)"
     if args.value_weight is not None:
         train_kwargs["value_weight"] = args.value_weight

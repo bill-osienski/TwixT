@@ -1280,6 +1280,9 @@ def run_parallel_selfplay(
     # Phase 4: per-game replay contribution cap
     max_positions_per_game: Optional[int] = None,
     endgame_keep_positions: int = 16,
+    # Spec 2: conversion auxiliary loss
+    conversion_policy_loss_enabled: bool = False,
+    conversion_max_total_goal_distance: int = 2,
 ) -> Tuple[
     List["GameRecord"],  # All game records (for stats)
     List["PositionRecord"],  # New positions (for sanity stats)
@@ -1398,6 +1401,9 @@ def run_parallel_selfplay(
                 # Phase 4: per-game replay cap
                 "max_positions_per_game": max_positions_per_game,
                 "endgame_keep_positions": endgame_keep_positions,
+                # Spec 2: conversion auxiliary loss
+                "conversion_policy_loss_enabled": conversion_policy_loss_enabled,
+                "conversion_max_total_goal_distance": conversion_max_total_goal_distance,
             },
         )
         p.start()
@@ -1992,6 +1998,17 @@ def train(
     # Phase 2: inline forced-probe per-iter eval (additive observability)
     probes_path: str = "tests/probes/twixt_probes.json",
     probes_inline_disable: bool = False,
+    # Spec 2: conversion auxiliary loss
+    conversion_policy_loss_enabled: bool = False,
+    conversion_policy_loss_weight: float = 0.05,
+    conversion_completion_weight: float = 1.0,
+    conversion_reducer_weight: float = 0.35,
+    conversion_max_total_goal_distance: int = 2,
+    conversion_sample_boost: float = 1.0,
+    conversion_max_batch_fraction: float = 0.15,
+    recovery_bucket_enabled: bool = True,
+    recovery_dominant_unavailable_threshold: int = 10,
+    recovery_delay_threshold: int = 20,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2252,6 +2269,23 @@ def train(
     print(f"  Sims policy: {'CLI override' if mcts_simulations else 'SIMS_TABLE'}")
     print(f"  Workers: {n_workers}" + (" (parallel)" if n_workers > 1 else " (sequential)"))
     print(f"  Save games: {save_games}")
+    if conversion_policy_loss_enabled:
+        print(f"  Conversion auxiliary loss: enabled (weight={conversion_policy_loss_weight})")
+        print(f"    Target weights:        completion={conversion_completion_weight}, "
+              f"reducer={conversion_reducer_weight}")
+        print(f"    Eligibility:           total_goal_distance <= "
+              f"{conversion_max_total_goal_distance}, "
+              f"min_component_size >= {8}")
+        print(f"    Sample boost:          {conversion_sample_boost}"
+              f"{' (disabled — pure uniform)' if conversion_sample_boost == 1.0 else ''}")
+        print(f"    Max batch fraction:    {conversion_max_batch_fraction}"
+              f"{' (cap inert at boost=1.0)' if conversion_sample_boost == 1.0 else ''}")
+    else:
+        print(f"  Conversion auxiliary loss: disabled")
+    print(f"  Recovery / extreme-closeout-drift: "
+          f"{'enabled' if recovery_bucket_enabled else 'disabled'} "
+          f"(du_threshold={recovery_dominant_unavailable_threshold}, "
+          f"delay_threshold={recovery_delay_threshold})")
 
     # Games directory (used for both game replays and per-iteration stats sidecars)
     if games_dir_override:
@@ -2478,6 +2512,8 @@ def train(
                     adjudicate_debug=adjudicate_debug,
                     max_positions_per_game=max_positions_per_game,
                     endgame_keep_positions=endgame_keep_positions,
+                    conversion_policy_loss_enabled=conversion_policy_loss_enabled,
+                    conversion_max_total_goal_distance=conversion_max_total_goal_distance,
                 )
 
                 # Unpack stats
@@ -2604,6 +2640,8 @@ def train(
                         adjudicate_debug=adjudicate_debug,
                         max_positions_per_game=max_positions_per_game,
                         endgame_keep_positions=endgame_keep_positions,
+                        conversion_policy_loss_enabled=conversion_policy_loss_enabled,
+                        conversion_max_total_goal_distance=conversion_max_total_goal_distance,
                     )
                     game_dur = time.perf_counter() - game_t0
                     game_plies_list.append(game.n_moves)
