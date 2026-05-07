@@ -41,6 +41,8 @@ def build_conversion_training_block(
     # loss accumulator forces seen=0 while sampler-side drawn can be >0 from
     # incidental eligible positions in uniform batches, creating false negatives).
     # In both cases, emit consistency.available=False.
+    # Phase 2 forward-compat seam: in Phase 3+ production wiring, sample_accumulator
+    # is always a dict. None is reachable from unit tests and the disabled path.
     sample_stats_meaningful = enabled and sample_accumulator is not None
     if not sample_stats_meaningful:
         sample_block = {
@@ -116,7 +118,7 @@ def is_recovery_or_extreme_closeout_drift(
     if delay is not None and delay >= delay_threshold:
         return True
 
-    if outcome_class == 2 and record.get("detected") and record.get("reason") == "state_cap":
+    if outcome_class == 2 and record.get("reason") == "state_cap":
         return True
 
     return False

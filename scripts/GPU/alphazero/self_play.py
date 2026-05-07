@@ -877,6 +877,9 @@ def play_game(
             m_board, m_moves, m_counts = _mirror_position_lr(
                 board_hwc, moves, counts, active_size
             )
+            # Spec 2: mirrored positions intentionally drop conversion metadata
+            # (defaults to None). Completion/reducing move coordinates would need
+            # column-flip (col -> active_size - 1 - col) to remain valid; deferred.
             positions.append(
                 PositionRecord(
                     board_tensor=m_board,
