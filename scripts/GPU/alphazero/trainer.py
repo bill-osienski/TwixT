@@ -3432,7 +3432,7 @@ def train(
             # Spec 2: conversion_training sidecar block.
             # Buffer stats: O(N) scan of replay buffer at sidecar-write time.
             # Phase 3 (Task 11) replaces this with the O(1) index pool.
-            _all_buf_positions = buffer._positions if hasattr(buffer, "_positions") else []
+            _all_buf_positions = buffer.buffer    # ReplayBuffer's internal list
             _eligible_total = sum(
                 1 for p in _all_buf_positions
                 if getattr(p, "conversion", None) is not None

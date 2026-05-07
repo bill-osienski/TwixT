@@ -42,7 +42,9 @@ def test_trainer_writes_conversion_training_to_sidecar(tmp_path):
     # available=False — NOT False-positive drawn_vs_seen_match=False.
     assert cnv["consistency"]["available"] is False
     assert cnv["consistency"]["drawn_vs_seen_match"] is None
-    # Buffer stats from O(N) scan must be real, not hard-coded zero.
-    assert cnv["buffer"]["eligible_positions_in_buffer"] >= 0
-    if cnv["buffer"]["eligible_positions_in_buffer"] > 0:
-        assert cnv["buffer"]["eligible_position_rate"] > 0.0
+    # Buffer stats from O(N) scan: with conversion enabled and games played,
+    # buffer should contain real positions. eligible_positions_in_buffer can be
+    # 0 legitimately (no closeouts in 2-game smoke), but the FIELD must be
+    # populated with a real int and the rate must be a valid float.
+    assert isinstance(cnv["buffer"]["eligible_positions_in_buffer"], int)
+    assert 0.0 <= cnv["buffer"]["eligible_position_rate"] <= 1.0
