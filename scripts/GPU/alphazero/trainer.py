@@ -3613,6 +3613,16 @@ def train(
                 },
             )
 
+            # Spec 2 §8.3: recovery / extreme-closeout-drift telemetry block.
+            # Telemetry-only — reads existing goal_completion_record fields.
+            from .conversion_telemetry import build_recovery_block
+            _sidecar["recovery_or_extreme_closeout_drift"] = build_recovery_block(
+                records=[r for r in all_goal_completion_records if r is not None],
+                du_threshold=recovery_dominant_unavailable_threshold,
+                delay_threshold=recovery_delay_threshold,
+                enabled=recovery_bucket_enabled,
+            )
+
             cons = _sidecar["conversion_training"]["consistency"]
             if cons.get("available") and not cons.get("drawn_vs_seen_match"):
                 print(

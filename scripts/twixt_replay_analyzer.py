@@ -1867,6 +1867,120 @@ def write_value_calibration_by_bucket_csv(
             })
 
 
+def format_conversion_training_trend_report(sidecar_summaries: dict) -> list:
+    """Read-only roll-up of conversion_training blocks across iters.
+
+    sidecar_summaries: {iteration_int: conversion_training_block_dict}
+    Returns a list of report-line strings.
+    """
+    lines = ["── Conversion-training trend ─────────────────────────────────"]
+    if not sidecar_summaries:
+        lines.append("  (no conversion_training data)")
+        lines.append("──────────────────────────────────────────────────────────────")
+        return lines
+    iters = sorted(sidecar_summaries.keys())
+    lines.append(f"Iters covered:   {iters[0]}-{iters[-1]}")
+
+    weights = sorted({
+        sidecar_summaries[i]["config"].get("effective_loss_weight", 0.0)
+        for i in iters
+    })
+    if len(weights) == 1:
+        lines.append(f"Aux loss weight: {weights[0]} (constant)")
+    else:
+        lines.append(f"Aux loss weight: varies ({weights})")
+
+    aux_losses = [sidecar_summaries[i]["loss"]["aux_loss_avg_iter"] for i in iters]
+    lines.append("Aux loss (avg):  " + " → ".join(f"{x:.2f}" for x in aux_losses))
+    coverages = [sidecar_summaries[i]["loss"]["aux_target_coverage_rate"] for i in iters]
+    lines.append("Coverage rate:   " + " → ".join(f"{x*100:.1f}%" for x in coverages))
+    matches = [sidecar_summaries[i]["consistency"].get("drawn_vs_seen_match", None) for i in iters]
+    avail = [sidecar_summaries[i]["consistency"].get("available", False) for i in iters]
+    if all(avail) and all(m is True for m in matches):
+        consistency_summary = "✓ all iters consistent"
+    elif not any(avail):
+        consistency_summary = "(consistency check unavailable — Phase 2 only)"
+    else:
+        consistency_summary = "✗ DIVERGENCE — check WARNs"
+    lines.append(f"Drawn vs seen:   {consistency_summary}")
+    lines.append("──────────────────────────────────────────────────────────────")
+    return lines
+
+
+def format_recovery_or_extreme_closeout_drift_report(sidecar_summaries: dict) -> list:
+    """Read-only roll-up of recovery blocks across iters."""
+    lines = ["── Recovery / extreme-closeout-drift (telemetry only) ────────"]
+    if not sidecar_summaries:
+        lines.append("  (no recovery data)")
+        lines.append("──────────────────────────────────────────────────────────────")
+        return lines
+    iters = sorted(sidecar_summaries.keys())
+    lines.append(f"Iters covered:        {iters[0]}-{iters[-1]}")
+    counts = [sidecar_summaries[i]["count"] for i in iters]
+    rates = [sidecar_summaries[i]["rate"] for i in iters]
+    p90s = [sidecar_summaries[i]["dominant_unavailable_moves"]["p90"] for i in iters]
+    lines.append("Recovery count/iter:  " + " → ".join(str(x) for x in counts))
+    lines.append("Recovery rate:        " + " → ".join(f"{x*100:.1f}%" for x in rates))
+    lines.append("DU moves p90:         " + " → ".join(str(x) for x in p90s))
+    lines.append("──────────────────────────────────────────────────────────────")
+    return lines
+
+
+def write_conversion_training_by_iter_csv(
+    sidecar_summaries: dict, output_dir, suffix: str = "",
+) -> str:
+    """Write conversion_training_by_iter.csv — one row per iter."""
+    import csv
+    from pathlib import Path
+    fieldnames = [
+        "iteration", "cnv_enabled", "cnv_loss_weight", "cnv_aux_loss_avg",
+        "cnv_aux_coverage", "cnv_aux_seen", "cnv_eligible_in_buf",
+        "cnv_eligible_at_size", "cnv_drawn_total", "cnv_drawn_vs_seen_ok",
+    ]
+    out_path = Path(output_dir) / f"conversion_training_by_iter{suffix}.csv"
+    with open(out_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        for it in sorted(sidecar_summaries.keys()):
+            s = sidecar_summaries[it]
+            cons = s.get("consistency", {})
+            w.writerow({
+                "iteration": it,
+                "cnv_enabled": int(s.get("enabled", False)),
+                "cnv_loss_weight": s.get("config", {}).get("effective_loss_weight", 0.0),
+                "cnv_aux_loss_avg": s.get("loss", {}).get("aux_loss_avg_iter", 0.0),
+                "cnv_aux_coverage": s.get("loss", {}).get("aux_target_coverage_rate", 0.0),
+                "cnv_aux_seen": s.get("loss", {}).get("aux_positions_seen_in_training", 0),
+                "cnv_eligible_in_buf": s.get("buffer", {}).get("eligible_positions_in_buffer", 0),
+                "cnv_eligible_at_size": s.get("buffer", {}).get("eligible_positions_at_active_size", 0),
+                "cnv_drawn_total": s.get("sample_stats", {}).get("eligible_drawn_total", 0),
+                "cnv_drawn_vs_seen_ok": int(cons.get("drawn_vs_seen_match") is True),
+            })
+    return str(out_path)
+
+
+def write_recovery_or_extreme_closeout_drift_by_iter_csv(
+    sidecar_summaries: dict, output_dir, suffix: str = "",
+) -> str:
+    """Write recovery_or_extreme_closeout_drift_by_iter.csv."""
+    import csv
+    from pathlib import Path
+    fieldnames = ["iteration", "rcv_count", "rcv_rate", "rcv_du_p90"]
+    out_path = Path(output_dir) / f"recovery_or_extreme_closeout_drift_by_iter{suffix}.csv"
+    with open(out_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        for it in sorted(sidecar_summaries.keys()):
+            s = sidecar_summaries[it]
+            w.writerow({
+                "iteration": it,
+                "rcv_count": s.get("count", 0),
+                "rcv_rate": s.get("rate", 0.0),
+                "rcv_du_p90": s.get("dominant_unavailable_moves", {}).get("p90", 0),
+            })
+    return str(out_path)
+
+
 def format_replay_cap_report(rcap_summary: dict) -> List[str]:
     """Format a concise replay-cap section for report.txt.
 
@@ -3212,6 +3326,22 @@ def analyze(replays: List[dict],
         if rcap_by_iter:
             rcap_summary_dict = aggregate_replay_cap(rcap_by_iter)
 
+    # --- Spec 2 §8.8: conversion_training + recovery per-iter dicts ----------
+    # Read-only: extracted from sidecars, no recomputation.
+    conversion_training_by_iter: Dict[int, dict] = {}
+    recovery_by_iter: Dict[int, dict] = {}
+    if relevant_sidecars:
+        conversion_training_by_iter = {
+            it: sidecar_dict.get("conversion_training")
+            for it, sidecar_dict in relevant_sidecars.items()
+            if sidecar_dict.get("conversion_training") is not None
+        }
+        recovery_by_iter = {
+            it: sidecar_dict.get("recovery_or_extreme_closeout_drift")
+            for it, sidecar_dict in relevant_sidecars.items()
+            if sidecar_dict.get("recovery_or_extreme_closeout_drift") is not None
+        }
+
     # --- Phase 2: early-override summary (combines mass + best-by-* signals)
     # Built only when we have at least the opening-diagnostics aggregate —
     # the best-by-* columns fill in only if the root-child aggregate is also
@@ -3726,6 +3856,18 @@ def analyze(replays: List[dict],
         if _rc_csv:
             print(f"[OK] wrote: {_rc_csv}")
 
+    # --- Spec 2 §8.8: conversion_training + recovery per-iter CSVs ---
+    if conversion_training_by_iter:
+        _cnv_csv = write_conversion_training_by_iter_csv(
+            conversion_training_by_iter, out_dir, suffix=suffix
+        )
+        print(f"[OK] wrote: {_cnv_csv}")
+    if recovery_by_iter:
+        _rcv_csv = write_recovery_or_extreme_closeout_drift_by_iter_csv(
+            recovery_by_iter, out_dir, suffix=suffix
+        )
+        print(f"[OK] wrote: {_rcv_csv}")
+
     # Spec §6.5: new CSVs for replay probe scoring + value calibration.
     if replay_probe_scoring and replay_probe_scoring.get("probe_count", 0) > 0:
         write_replay_probe_per_probe_csv(
@@ -3893,6 +4035,8 @@ def analyze(replays: List[dict],
     lines.extend(format_per_game_stats_report(summary["per_game_stats"]))
     lines.extend(format_goal_completion_report(summary["goal_completion"]))
     lines.extend(format_policy_mcts_closeout_report(summary["goal_completion"]))
+    lines.extend(format_conversion_training_trend_report(conversion_training_by_iter))
+    lines.extend(format_recovery_or_extreme_closeout_drift_report(recovery_by_iter))
 
     if _HAS_OD_ANALYZER and od_summary_dict:
         lines.extend(format_opening_diagnostics_report(od_summary_dict, od_by_ply_dict, od_warnings))

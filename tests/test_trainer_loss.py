@@ -81,3 +81,21 @@ def test_trainer_runs_with_sample_boost_smoke(tmp_path):
     assert cnv["consistency"]["drawn_vs_seen_match"] is True
     # eligible_drawn_total must equal aux_positions_seen_in_training.
     assert cnv["sample_stats"]["eligible_drawn_total"] == cnv["loss"]["aux_positions_seen_in_training"]
+
+
+def test_trainer_writes_recovery_block_to_sidecar(tmp_path):
+    """Spec 2 §8.6: trainer emits recovery_or_extreme_closeout_drift sidecar."""
+    from scripts.GPU.alphazero.trainer import train
+    train(
+        n_iterations=1, games_per_iteration=2, train_steps_per_iteration=2,
+        batch_size=4, buffer_size=50, checkpoint_dir=str(tmp_path),
+        save_games=False, probes_inline_disable=True,
+        recovery_bucket_enabled=True,
+        games_dir_override=str(tmp_path),
+    )
+    import json
+    sidecar = json.loads(list(tmp_path.rglob("iter_*_stats.json"))[0].read_text())
+    rec = sidecar["recovery_or_extreme_closeout_drift"]
+    assert rec["version"] == 1
+    assert "config" in rec
+    assert "trigger_breakdown" in rec
