@@ -1277,30 +1277,73 @@ class ReplayBuffer:
 
     Uses ring buffer semantics - oldest positions are overwritten when
     buffer is full.
+
+    Spec 2 §7.1: maintains a parallel index pool of conversion-eligible
+    positions for stratified sampling. Eligibility derives from
+    PositionRecord.conversion is not None — single source of truth.
     """
 
     def __init__(self, max_size: int = 100000):
         self.max_size = max_size
         self.buffer: List["PositionRecord"] = []
         self.index = 0
+        # Spec 2: O(1) eligible-position pool with swap-delete semantics
+        self._eligible_idxs: list = []           # ordered list of eligible indices
+        self._eligible_pos: dict = {}            # idx -> position in _eligible_idxs
+
+    def _eligible_add(self, idx: int) -> None:
+        if idx in self._eligible_pos:
+            return
+        self._eligible_pos[idx] = len(self._eligible_idxs)
+        self._eligible_idxs.append(idx)
+
+    def _eligible_remove(self, idx: int) -> None:
+        pos = self._eligible_pos.pop(idx, None)
+        if pos is None:
+            return
+        last = self._eligible_idxs.pop()
+        if pos < len(self._eligible_idxs):
+            self._eligible_idxs[pos] = last
+            self._eligible_pos[last] = pos
+
+    def _update_eligible_index(self, idx: int, p: "PositionRecord") -> None:
+        if getattr(p, "conversion", None) is not None:
+            self._eligible_add(idx)
+        else:
+            self._eligible_remove(idx)
+
+    def count_eligible(self, active_size: Optional[int] = None) -> int:
+        """Count eligible positions, optionally filtered by active_size.
+        O(1) when active_size is None; O(E) when filtered."""
+        if active_size is None:
+            return len(self._eligible_idxs)
+        return sum(
+            1 for i in self._eligible_idxs
+            if self.buffer[i].active_size == active_size
+        )
 
     def add_game(self, game: "GameRecord"):
         """Add all positions from a game to the buffer."""
         for pos in game.positions:
             if len(self.buffer) < self.max_size:
+                idx = len(self.buffer)
                 self.buffer.append(pos)
             else:
-                # Overwrite oldest (ring buffer)
-                self.buffer[self.index] = pos
+                idx = self.index
+                self.buffer[idx] = pos
+            self._update_eligible_index(idx, pos)
             self.index = (self.index + 1) % self.max_size
 
     def add_positions(self, positions: List["PositionRecord"]):
         """Add positions directly to the buffer."""
         for pos in positions:
             if len(self.buffer) < self.max_size:
+                idx = len(self.buffer)
                 self.buffer.append(pos)
             else:
-                self.buffer[self.index] = pos
+                idx = self.index
+                self.buffer[idx] = pos
+            self._update_eligible_index(idx, pos)
             self.index = (self.index + 1) % self.max_size
 
     def sample(
@@ -3430,26 +3473,15 @@ def train(
         # THIS iter's sum_aux* values (Spec 2 §8.1 off-by-one fix).
         if games_generated > 0:
             # Spec 2: conversion_training sidecar block.
-            # Buffer stats: O(N) scan of replay buffer at sidecar-write time.
-            # Phase 3 (Task 11) replaces this with the O(1) index pool.
-            _all_buf_positions = buffer.buffer    # ReplayBuffer's internal list
-            _eligible_total = sum(
-                1 for p in _all_buf_positions
-                if getattr(p, "conversion", None) is not None
-            )
-            _eligible_at_size = sum(
-                1 for p in _all_buf_positions
-                if getattr(p, "conversion", None) is not None
-                and getattr(p, "active_size", None) == active_size
-            )
-            _at_size = sum(
-                1 for p in _all_buf_positions
-                if getattr(p, "active_size", None) == active_size
-            )
+            # Buffer stats: O(1)/O(E) via index pool (Task 11).
+            _eligible_total = buffer.count_eligible()
+            _eligible_at_size = buffer.count_eligible(active_size=active_size)
+            _at_size = buffer.count_by_active_size(active_size)
+            _total_buf_size = len(buffer)
             _buffer_stats = {
                 "eligible_positions_in_buffer": _eligible_total,
                 "eligible_position_rate": (
-                    _eligible_total / len(_all_buf_positions) if _all_buf_positions else 0.0
+                    _eligible_total / _total_buf_size if _total_buf_size > 0 else 0.0
                 ),
                 "eligible_positions_at_active_size": _eligible_at_size,
                 "eligible_rate_at_active_size": (
