@@ -37,8 +37,12 @@ def build_conversion_training_block(
         seen_frac = 0.0
 
     # Sample accumulator may be None during Phase 2 (before sampler stats wired).
-    # Emit consistency.available=False to flag drawn-vs-seen check is N/A.
-    if sample_accumulator is None:
+    # Also, consistency check is only meaningful when enabled=True (otherwise
+    # loss accumulator forces seen=0 while sampler-side drawn can be >0 from
+    # incidental eligible positions in uniform batches, creating false negatives).
+    # In both cases, emit consistency.available=False.
+    sample_stats_meaningful = enabled and sample_accumulator is not None
+    if not sample_stats_meaningful:
         sample_block = {
             "eligible_drawn_total": 0,
             "eligible_drawn_fraction": 0.0,

@@ -119,3 +119,22 @@ def test_conversion_training_block_disabled_emits_zero_telemetry():
     assert block["loss"]["aux_loss_avg_iter"] == 0.0
     assert block["loss"]["aux_target_coverage_rate"] == 0.0
     assert block["loss"]["aux_positions_seen_in_training"] == 0
+
+
+def test_conversion_training_consistency_unavailable_when_disabled_even_with_sample_accumulator():
+    """When enabled=False, consistency must report available=False even
+    if a sample_accumulator dict is provided. Disabled conversion is a
+    superset of 'consistency check is N/A'."""
+    block = build_conversion_training_block(
+        config=_config(effective=0.0),
+        enabled=False,
+        buffer_stats=_zero_buffer_stats(),
+        loss_accumulator=_zero_loss_acc(),
+        sample_accumulator={"eligible_drawn_total": 100,
+                            "cap_was_binding_steps": 0,
+                            "boost_inactive_steps": 0},
+    )
+    assert block["consistency"]["available"] is False
+    assert block["consistency"]["drawn_vs_seen_match"] is None
+    # Sample stats also zeroed (disabled path)
+    assert block["sample_stats"]["eligible_drawn_total"] == 0
