@@ -659,6 +659,61 @@ def _replay_int_field(replay: dict, field: str, default: int = 0) -> int:
     return int(val)
 
 
+def _surface_phase3_diagnostics(replays: list, n_decisive: int) -> dict:
+    """Aggregate Phase 3 closeout-diagnostics records across replays.
+
+    Reads per-game `goal_completion_diagnostics` (list of per-ply records)
+    and `goal_completion_diagnostics_meta` (per-game meta) from each replay
+    JSON. Pure dict iteration — no BFS, no replay walking.
+
+    Returns:
+        {"diagnostics_coverage": dict, "policy_mcts_summary": dict | None}
+    """
+    games_with_diag = 0
+    total_records = 0
+    total_error_count = 0
+    total_resign_dropped = 0
+    total_skipped_priors = 0
+    total_records_dropped_cap = 0
+    diagnostic_version = 1
+    all_records: list = []
+
+    for replay in replays:
+        diag_array = replay.get("goal_completion_diagnostics")
+        diag_meta = replay.get("goal_completion_diagnostics_meta")
+        if diag_array:
+            games_with_diag += 1
+            total_records += len(diag_array)
+            all_records.extend(diag_array)
+        if diag_meta:
+            total_error_count += diag_meta.get("error_count", 0) or 0
+            total_resign_dropped += diag_meta.get("resign_dropped_partial_count", 0) or 0
+            total_skipped_priors += diag_meta.get("skipped_missing_priors_count", 0) or 0
+            total_records_dropped_cap += diag_meta.get("records_dropped_by_cap", 0) or 0
+            v = diag_meta.get("diagnostic_version")
+            if v is not None:
+                diagnostic_version = v
+
+    coverage_pct = (games_with_diag / n_decisive * 100.0) if n_decisive else 0.0
+    diagnostics_coverage = {
+        "games_with_diagnostics":            games_with_diag,
+        "total_records":                     total_records,
+        "coverage_pct_of_decisive_games":    coverage_pct,
+        "error_count":                       total_error_count,
+        "resign_dropped_partial_count":      total_resign_dropped,
+        "skipped_missing_priors_count":      total_skipped_priors,
+        "records_dropped_by_cap":            total_records_dropped_cap,
+        "version":                           diagnostic_version,
+    }
+
+    policy_mcts_summary = _summarize_policy_mcts(all_records) if all_records else None
+
+    return {
+        "diagnostics_coverage": diagnostics_coverage,
+        "policy_mcts_summary": policy_mcts_summary,
+    }
+
+
 def aggregate_goal_completion_diagnostics_from_records(
     replays: list, sidecar_summaries: dict, config: dict,
 ) -> dict:
@@ -736,9 +791,26 @@ def aggregate_goal_completion_diagnostics_from_records(
                     file=sys.stderr,
                 )
 
-    return aggregate_goal_completion_records(
+    result = aggregate_goal_completion_records(
         per_game_records, config=config, games_total=n_total,
     )
+    # Surface Phase 3 detailed-record aggregation alongside the compact
+    # record summary. The default path was missing this in Spec 1.5; the
+    # data IS in the per-game JSONs, just not aggregated here.
+    n_decisive = (result.get("main_population") or {}).get("n", 0) or (
+        result.get("main_population") or {}
+    ).get("games", 0)
+    phase3 = _surface_phase3_diagnostics(replays, n_decisive)
+    # Phase 3's diagnostics_coverage is DIFFERENT from the Spec 1.5
+    # record-coverage block (which lives at result["diagnostics_coverage"]).
+    # Spec 1's analyzer used the same key name for the Phase 3 block;
+    # preserve that contract so format_policy_mcts_closeout_report finds it.
+    # We move the Spec 1.5 record-coverage to a separate key first.
+    if "diagnostics_coverage" in result:
+        result["record_coverage"] = result.pop("diagnostics_coverage")
+    result["diagnostics_coverage"] = phase3["diagnostics_coverage"]
+    result["policy_mcts_summary"] = phase3["policy_mcts_summary"]
+    return result
 
 
 def _merge_inline_with_recomputed(
@@ -855,47 +927,12 @@ def aggregate_goal_completion_diagnostics(
 
     excluded_population = {"games": excluded_count}
 
-    # Phase 3 surfacing: diagnostics_coverage + policy_mcts_summary.
-    games_with_diag = 0
-    total_records = 0
-    total_error_count = 0
-    total_resign_dropped = 0
-    total_skipped_priors = 0
-    total_records_dropped_cap = 0
-    diagnostic_version = 1
-    all_records: list = []
-
-    for replay in replays:
-        diag_array = replay.get("goal_completion_diagnostics")
-        diag_meta = replay.get("goal_completion_diagnostics_meta")
-        if diag_array:
-            games_with_diag += 1
-            total_records += len(diag_array)
-            all_records.extend(diag_array)
-        if diag_meta:
-            total_error_count += diag_meta.get("error_count", 0) or 0
-            total_resign_dropped += diag_meta.get("resign_dropped_partial_count", 0) or 0
-            total_skipped_priors += diag_meta.get("skipped_missing_priors_count", 0) or 0
-            total_records_dropped_cap += diag_meta.get("records_dropped_by_cap", 0) or 0
-            v = diag_meta.get("diagnostic_version")
-            if v is not None:
-                diagnostic_version = v
-
+    # Phase 3 surfacing — extracted to _surface_phase3_diagnostics for reuse
+    # across legacy and default analyzer paths.
     n_decisive = main_population.get("games", 0) if main_population else 0
-    coverage_pct = (games_with_diag / n_decisive * 100.0) if n_decisive else 0.0
-
-    diagnostics_coverage = {
-        "games_with_diagnostics":            games_with_diag,
-        "total_records":                     total_records,
-        "coverage_pct_of_decisive_games":    coverage_pct,
-        "error_count":                       total_error_count,
-        "resign_dropped_partial_count":      total_resign_dropped,
-        "skipped_missing_priors_count":      total_skipped_priors,
-        "records_dropped_by_cap":            total_records_dropped_cap,
-        "version":                           diagnostic_version,
-    }
-
-    policy_mcts_summary = _summarize_policy_mcts(all_records) if all_records else None
+    phase3 = _surface_phase3_diagnostics(replays, n_decisive)
+    diagnostics_coverage = phase3["diagnostics_coverage"]
+    policy_mcts_summary = phase3["policy_mcts_summary"]
 
     return {
         "config": config,
@@ -3741,7 +3778,16 @@ def analyze(replays: List[dict],
     lines = []
     lines.append("Twixt Replay Analyzer Report")
     lines.append("="*30)
-    lines.append(f"Games analyzed: {n}")
+    # `n` counts every loaded replay file (entire input directory).
+    # For users running on a multi-iteration logs/games dir, this is
+    # often higher than the in-range count derived from sidecars.
+    in_range_count = len([r for r in rows if it_min is not None
+                          and it_min <= r.iteration <= it_max])
+    if in_range_count and in_range_count != n:
+        lines.append(f"Games analyzed: {in_range_count} in iter range "
+                     f"({n} total loaded from input)")
+    else:
+        lines.append(f"Games analyzed: {n}")
     if it_min is not None:
         lines.append(f"Iteration range: {it_min} .. {it_max}")
     lines.append(f"Avg game length (moves): {avg_len:.1f}")

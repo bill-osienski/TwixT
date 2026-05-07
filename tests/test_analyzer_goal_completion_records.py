@@ -87,8 +87,10 @@ def test_analyzer_default_path_uses_records_no_recompute():
         config={"detection_threshold": 2},
     )
     assert summary["main_population"]["n"] == 3
-    assert summary["diagnostics_coverage"]["games_with_record"] == 3
-    assert summary["diagnostics_coverage"]["coverage_rate"] == 1.0
+    # After Phase 3 fix: Spec 1.5 record-coverage moved to "record_coverage";
+    # "diagnostics_coverage" now holds the Phase 3 closeout-diagnostics block.
+    assert summary["record_coverage"]["games_with_record"] == 3
+    assert summary["record_coverage"]["coverage_rate"] == 1.0
 
 
 def test_worst_cases_csv_from_records_class1():
