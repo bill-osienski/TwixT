@@ -175,3 +175,86 @@ def test_drawn_vs_seen_match_naming_correctness():
     )
     # drawn (100) - seen (90) = 10 (positive)
     assert block["consistency"]["drawn_minus_seen"] == 10
+
+
+from scripts.GPU.alphazero.conversion_telemetry import (
+    build_recovery_block,
+    is_recovery_or_extreme_closeout_drift,
+)
+
+
+def _record(
+    detected=True, outcome_class=1, du_moves=0, delay=0,
+    state_cap=False,
+):
+    rec = {
+        "detected": detected,
+        "outcome_class": outcome_class,
+        "winner_moves_with_dominant_unavailable": du_moves if outcome_class == 1 else None,
+        "dominant_unavailable_moves": du_moves if outcome_class == 2 else None,
+        "conversion_delay_plies": delay,
+        "reason": "state_cap" if state_cap else "win",
+    }
+    return rec
+
+
+def test_recovery_predicate_three_triggers():
+    # DU clause
+    rec_du = _record(du_moves=15)
+    assert is_recovery_or_extreme_closeout_drift(rec_du, du_threshold=10, delay_threshold=20)
+    # Delay clause
+    rec_delay = _record(delay=25)
+    assert is_recovery_or_extreme_closeout_drift(rec_delay, du_threshold=10, delay_threshold=20)
+    # State-cap clause
+    rec_cap = _record(outcome_class=2, state_cap=True)
+    assert is_recovery_or_extreme_closeout_drift(rec_cap, du_threshold=10, delay_threshold=20)
+
+
+def test_recovery_predicate_state_cap_after_detection_required_for_class2():
+    """Class 2 with detected=False → not counted."""
+    rec = _record(detected=False, outcome_class=2, state_cap=True)
+    assert not is_recovery_or_extreme_closeout_drift(rec, du_threshold=10, delay_threshold=20)
+
+
+def test_recovery_block_class2_dominant_unavailable_handling():
+    """Spec 2 §8.4 lock: Class 2 du_moves explicitly defined; no silent zero."""
+    # Class 2 with du_moves field present, NOT state_cap
+    rec_class2 = _record(outcome_class=2, du_moves=15, state_cap=False)
+    assert is_recovery_or_extreme_closeout_drift(rec_class2, du_threshold=10, delay_threshold=20)
+
+
+def test_recovery_block_excludes_undetected_games():
+    rec = _record(detected=False, du_moves=15, delay=25)
+    assert not is_recovery_or_extreme_closeout_drift(rec, du_threshold=10, delay_threshold=20)
+
+
+def test_recovery_block_percentiles_handcrafted():
+    records = [_record(du_moves=v) for v in [0, 1, 2, 3, 4, 5, 10, 15, 20, 22]]
+    block = build_recovery_block(records, du_threshold=10, delay_threshold=20)
+    p = block["dominant_unavailable_moves"]
+    assert 4 <= p["p50"] <= 5    # midpoint (linear interpolation gives 4.5)
+    assert p["p90"] >= 15
+    assert p["max"] == 22
+
+
+def test_recovery_rate_denominators():
+    """Spec 2 §8.3: rate = count/games_total; rate_among_detected = count/detected_games."""
+    records = [
+        _record(detected=True, du_moves=15),    # triggers
+        _record(detected=True, du_moves=0),     # no trigger
+        _record(detected=False),                # not detected
+    ]
+    block = build_recovery_block(records, du_threshold=10, delay_threshold=20)
+    assert block["games_total"] == 3
+    assert block["detected_games"] == 2
+    assert block["count"] == 1
+    assert block["rate"] == 1 / 3
+    assert block["rate_among_detected"] == 0.5
+
+
+def test_recovery_block_renamed_to_extreme_closeout_drift():
+    """Spec 2 §5 lock: function names use the renamed form."""
+    block = build_recovery_block([], du_threshold=10, delay_threshold=20)
+    assert "version" in block
+    assert "config" in block
+    assert "trigger_breakdown" in block
