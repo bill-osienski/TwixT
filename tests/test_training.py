@@ -15,10 +15,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 def test_loss_computes():
     """Test that loss computes without error.
 
-    Uses the current public API `alphazero_loss_batch`, which returns a 4-tuple
-    (total_loss, policy_loss, value_loss, l2_loss) — total_loss is first so
-    that `nn.value_and_grad` differentiates it. Test validates the scalar
-    total loss is finite and positive.
+    Uses the current public API `alphazero_loss_batch`, which returns a 7-tuple
+    (total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage,
+    aux_n_eligible) — total_loss is first so that `nn.value_and_grad`
+    differentiates it. Test validates the scalar total loss is finite and positive.
     """
     import numpy as np
     from scripts.GPU.alphazero.network import create_network
@@ -40,8 +40,8 @@ def test_loss_computes():
         )
         positions.append(pos)
 
-    # Compute loss — batched API returns (total, policy, value, l2)
-    total_loss, policy_loss, value_loss, l2_loss = alphazero_loss_batch(
+    # Compute loss — batched API returns (total, policy, value, l2, aux, coverage, n_eligible)
+    total_loss, policy_loss, value_loss, l2_loss, _, _, _ = alphazero_loss_batch(
         network, positions
     )
     total_val = float(total_loss)
@@ -78,13 +78,13 @@ def test_loss_components():
         outcome=1.0,
     )
 
-    # Loss with L2 — unpack total
-    total_with_l2, _, _, l2_with = alphazero_loss_batch(network, [pos], l2_weight=1e-3)
+    # Loss with L2 — unpack total (7-tuple)
+    total_with_l2, _, _, l2_with, _, _, _ = alphazero_loss_batch(network, [pos], l2_weight=1e-3)
     total_with_l2 = float(total_with_l2)
     l2_with = float(l2_with)
 
     # Loss without L2
-    total_no_l2, _, _, l2_no = alphazero_loss_batch(network, [pos], l2_weight=0.0)
+    total_no_l2, _, _, l2_no, _, _, _ = alphazero_loss_batch(network, [pos], l2_weight=0.0)
     total_no_l2 = float(total_no_l2)
     l2_no = float(l2_no)
 
@@ -118,8 +118,8 @@ def test_train_step():
     """Test single training step with the two-optimizer API.
 
     `train_step` now takes (network, main_module, opt_main, opt_value, batch, ...)
-    and returns (total, policy, value, l2). We assert all four losses are finite
-    and the total is positive.
+    and returns (total, policy, value, l2, aux, coverage, n_eligible). We assert
+    the first four losses are finite and the total is positive.
     """
     import numpy as np
     from scripts.GPU.alphazero.trainer import train_step
@@ -140,8 +140,8 @@ def test_train_step():
         )
         batch.append(pos)
 
-    # Run step — returns (total, policy, value, l2) as floats
-    total_loss, policy_loss, value_loss, l2_loss = train_step(
+    # Run step — returns (total, policy, value, l2, aux, coverage, n_eligible) as floats/int
+    total_loss, policy_loss, value_loss, l2_loss, _, _, _ = train_step(
         network, main_module, opt_main, opt_value, batch
     )
 
@@ -186,7 +186,7 @@ def test_loss_decreases():
     # Train for 50 steps and record total losses
     losses = []
     for step in range(50):
-        total_loss, _, _, _ = train_step(
+        total_loss, _, _, _, _, _, _ = train_step(
             network, main_module, opt_main, opt_value, batch,
             l2_weight=0.0,  # No L2 so we can see pure policy+value overfitting
         )

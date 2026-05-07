@@ -1036,6 +1036,29 @@ def _compute_progress_weighted_value_loss(
     return mx.sum(weights * err_sq) / total_w
 
 
+def compute_masked_log_probs(logits, move_mask):
+    """Compute log-softmax over only the legal moves indicated by move_mask.
+
+    Padded/illegal columns are forced to a large negative value before
+    logsumexp, ensuring they contribute zero probability to the denominator.
+    Returned log_probs at illegal columns are well-defined but should not
+    be consumed by any loss term — masking the target is the caller's
+    responsibility.
+
+    Args:
+        logits: (B, M) MLX array of pre-softmax scores.
+        move_mask: (B, M) MLX array of 1.0 (legal) / 0.0 (illegal/padding).
+    Returns:
+        log_probs: (B, M) MLX array — log-softmax over legal moves only.
+    """
+    masked_logits = mx.where(
+        move_mask > 0,
+        logits,
+        mx.array(-1e9, dtype=logits.dtype),
+    )
+    return masked_logits - mx.logsumexp(masked_logits, axis=1, keepdims=True)
+
+
 def alphazero_loss_batch(
     network: AlphaZeroNetwork,
     positions: List["PositionRecord"],
@@ -1045,32 +1068,32 @@ def alphazero_loss_batch(
     active_size: int = 24,
     progress_weighted: bool = True,
     progress_weight_floor: float = 0.25,
-) -> Tuple[mx.array, mx.array, mx.array, mx.array]:
-    """Batched policy + value + L2 loss (vectorized, no loops).
-
-    This replaces the old per-position loop with a single batched forward pass,
-    dramatically reducing Metal allocations and avoiding resource limit crashes.
-
-    Args:
-        network: AlphaZero network
-        positions: List of training positions
-        l2_weight: L2 regularization weight
-        value_weight: Weight for value loss (default 0.5; Phase 2 bump from 0.25)
-        max_moves_cap: Maximum moves per position (512 for TwixT)
-        active_size: Curriculum board size for masked pooling
-        progress_weighted: If True, use progress-weighted value loss (default True; Phase 2)
-        progress_weight_floor: Floor weight for earliest plies when progress_weighted=True
+    conversion_loss_weight: float = 0.0,             # NEW: Spec 2
+    conversion_completion_weight: float = 1.0,       # NEW
+    conversion_reducer_weight: float = 0.35,         # NEW
+):
+    """Batched policy + value + l2 + (optional) conversion auxiliary loss.
 
     Returns:
-        Tuple of (total_loss, policy_loss, value_loss, l2_loss)
-        NOTE: value_loss is RAW (unweighted) for meaningful logging
+        Tuple of (total_loss, policy_loss, value_loss, l2_loss,
+                  aux_loss, aux_coverage, aux_n_eligible).
+        - aux_loss: MLX scalar — Spec 2 §6.3 auxiliary CE, mean over eligible
+          positions only. Zero when conversion_loss_weight==0.
+        - aux_coverage: float — n_eligible / batch_size.
+        - aux_n_eligible: int — exact count of eligible positions in batch.
 
-    IMPORTANT: total_loss MUST be first element because nn.value_and_grad()
-    only differentiates the first returned value.
+    IMPORTANT: total_loss MUST be first because nn.value_and_grad() only
+    differentiates the first returned value.
     """
-    boards, move_rows, move_cols, move_mask, target_pi, outcomes = make_padded_batch(
-        positions, max_moves_cap=max_moves_cap
-    )
+    if conversion_loss_weight > 0.0:
+        boards, move_rows, move_cols, move_mask, target_pi, outcomes, legal_padded = make_padded_batch(
+            positions, max_moves_cap=max_moves_cap, return_legal=True
+        )
+    else:
+        boards, move_rows, move_cols, move_mask, target_pi, outcomes = make_padded_batch(
+            positions, max_moves_cap=max_moves_cap
+        )
+        legal_padded = None
 
     # Extract ply / game_n_moves from positions for progress-weighted mode.
     # Old records default ply=0, game_n_moves=None; `or 1` keeps np int happy.
@@ -1086,9 +1109,10 @@ def alphazero_loss_batch(
         boards, move_rows, move_cols, move_mask, active_size=active_size
     )  # (B, M), (B,), None
 
-    # Policy loss: cross entropy with masked logits
-    # logits already have -1e9 where mask==0, so logsumexp ignores those
-    log_probs = logits - mx.logsumexp(logits, axis=1, keepdims=True)  # (B, M)
+    # Use the SAME masked log_probs for policy and aux. Apply move_mask
+    # EXPLICITLY here — do not rely on network.forward_padded() pre-masking,
+    # which can drift across architecture changes.
+    log_probs = compute_masked_log_probs(logits, move_mask)
     policy_loss = -mx.sum(target_pi * log_probs, axis=1)  # (B,)
     policy_loss = mx.mean(policy_loss)
 
@@ -1106,11 +1130,39 @@ def alphazero_loss_batch(
         l2_loss = l2_loss + mx.sum(param ** 2)
     l2_loss = l2_weight * l2_loss
 
-    # Combine losses (value weighted lower to prevent dominance)
-    total_loss = policy_loss + value_weight * value_loss + l2_loss
+    # NEW: conversion auxiliary loss (zero-overhead when disabled)
+    aux_loss = mx.array(0.0)
+    aux_coverage = 0.0
+    aux_n_eligible = 0
+    if conversion_loss_weight > 0.0:
+        from .conversion_loss import make_conversion_aux_tensors
+        M = target_pi.shape[1]    # actual padded width
+        aux_target_np, aux_mask_np = make_conversion_aux_tensors(
+            positions, legal_padded, max_moves_cap=M,
+            completion_weight=conversion_completion_weight,
+            reducer_weight=conversion_reducer_weight,
+        )
+        aux_target = mx.array(aux_target_np)
+        aux_mask_arr = mx.array(aux_mask_np)
+
+        per_pos_aux = -mx.sum(aux_target * log_probs, axis=1)
+        per_pos_aux = aux_mask_arr * per_pos_aux
+        n_eligible_arr = mx.sum(aux_mask_arr)
+        aux_loss = mx.where(
+            n_eligible_arr > 0,
+            mx.sum(per_pos_aux) / mx.maximum(n_eligible_arr, 1.0),
+            mx.array(0.0),
+        )
+        aux_n_eligible = int(n_eligible_arr.item())
+        aux_coverage = aux_n_eligible / max(len(positions), 1)
+
+    total_loss = (policy_loss
+                  + value_weight * value_loss
+                  + l2_loss
+                  + conversion_loss_weight * aux_loss)
 
     # CRITICAL: total_loss must be first for nn.value_and_grad()
-    return total_loss, policy_loss, value_loss, l2_loss
+    return total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage, aux_n_eligible
 
 
 def train_step(
@@ -1126,7 +1178,10 @@ def train_step(
     value_grad_max_norm: float = 0.5,
     progress_weighted: bool = True,
     progress_weight_floor: float = 0.25,
-) -> Tuple[float, float, float, float]:
+    conversion_loss_weight: float = 0.0,             # NEW
+    conversion_completion_weight: float = 1.0,       # NEW
+    conversion_reducer_weight: float = 0.35,         # NEW
+) -> Tuple[float, float, float, float, float, float, int]:
     """Single training step with two optimizers and separate gradient clipping.
 
     Uses separate optimizers for encoder+policy (opt_main) and value head (opt_value)
@@ -1146,12 +1201,16 @@ def train_step(
         value_grad_max_norm: Max grad norm for value head (default 0.5)
         progress_weighted: If True, use progress-weighted value loss (default True; Phase 2)
         progress_weight_floor: Floor weight for earliest plies (default 0.25)
+        conversion_loss_weight: Weight for conversion auxiliary CE loss (0.0 = disabled)
+        conversion_completion_weight: Weight for endpoint completion moves in aux target
+        conversion_reducer_weight: Weight for distance-reducing moves in aux target
 
     Returns:
-        Tuple of (total_loss, policy_loss, value_loss, l2_loss) as floats
+        Tuple of (total_loss, policy_loss, value_loss, l2_loss,
+                  aux_loss, aux_coverage, aux_n_eligible) as floats/int
     """
     def loss_fn(model):
-        # Returns (total, policy, value, l2) - total is first for grad
+        # Returns 7-tuple; total is first for nn.value_and_grad()
         return alphazero_loss_batch(
             model, batch,
             l2_weight=l2_weight,
@@ -1160,13 +1219,16 @@ def train_step(
             active_size=active_size,
             progress_weighted=progress_weighted,
             progress_weight_floor=progress_weight_floor,
+            conversion_loss_weight=conversion_loss_weight,
+            conversion_completion_weight=conversion_completion_weight,
+            conversion_reducer_weight=conversion_reducer_weight,
         )
 
     # value_and_grad differentiates first element (total_loss)
     loss_tuple, grads = nn.value_and_grad(network, loss_fn)(network)
 
-    # Unpack losses
-    total_loss, policy_loss, value_loss, l2_loss = loss_tuple
+    # Unpack losses (7-tuple)
+    total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage, aux_n_eligible = loss_tuple
 
     # Slice GRADS only (not params) into module-shaped trees
     # NOTE: Assumes network.parameters() / grads use top-level keys: encoder, policy_head, value_head
@@ -1197,6 +1259,9 @@ def train_step(
         float(policy_loss.item()),
         float(value_loss.item()),
         float(l2_loss.item()),
+        float(aux_loss.item()),
+        float(aux_coverage),
+        int(aux_n_eligible),
     )
 
 
@@ -3264,11 +3329,19 @@ def train(
             if positions_available >= batch_size and scaled_train_steps > 0:
                 print(f"\nTraining: {scaled_train_steps} steps... (value_weight={curr_value_weight})")
 
-                # Four accumulators for loss split
+                # Seven accumulators for loss split (aux stats for Task 9 sidecar)
                 sum_total = 0.0
                 sum_policy = 0.0
                 sum_value = 0.0
                 sum_l2 = 0.0
+                sum_aux = 0.0                # NEW: Spec 2 aux CE loss
+                sum_aux_coverage = 0.0       # NEW: fraction of eligible positions
+                sum_aux_n_eligible = 0       # NEW: total eligible positions (int)
+
+                # Compute effective conversion loss weight for this iteration
+                effective_conversion_loss_weight = (
+                    conversion_policy_loss_weight if conversion_policy_loss_enabled else 0.0
+                )
 
                 train_rng = random.Random(master_rng.randint(0, 2**31))
 
@@ -3276,7 +3349,7 @@ def train(
                     for step in range(scaled_train_steps):
                         batch = buffer.sample(batch_size, rng=train_rng, active_size=active_size)
                         # Pass active_size to training (use current curriculum stage)
-                        loss_total, loss_policy, loss_value, loss_l2 = train_step(
+                        loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli = train_step(
                             network=network,
                             main_module=main_module,
                             opt_main=opt_main,
@@ -3288,6 +3361,9 @@ def train(
                             value_grad_max_norm=value_grad_max_norm,
                             progress_weighted=progress_weighted,
                             progress_weight_floor=progress_weight_floor,
+                            conversion_loss_weight=effective_conversion_loss_weight,
+                            conversion_completion_weight=conversion_completion_weight,
+                            conversion_reducer_weight=conversion_reducer_weight,
                         )
 
                         # Sums first, then steps_done (ensures denominator matches included samples)
@@ -3295,6 +3371,9 @@ def train(
                         sum_policy += loss_policy
                         sum_value += loss_value
                         sum_l2 += loss_l2
+                        sum_aux += loss_aux
+                        sum_aux_coverage += aux_cov
+                        sum_aux_n_eligible += aux_neli
                         steps_done += 1
 
                         if (step + 1) % 20 == 0:
