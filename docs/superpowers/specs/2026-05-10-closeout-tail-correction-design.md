@@ -5,7 +5,7 @@
 **Predecessors:**
 - [2026-05-03-goal-completion-diagnostics-design.md](2026-05-03-goal-completion-diagnostics-design.md) (Spec 1, shipped)
 - [2026-05-05-goal-completion-inline-records-design.md](2026-05-05-goal-completion-inline-records-design.md) (Spec 1.5, shipped)
-- [2026-05-06-goal-completion-policy-correction-design.md](2026-05-06-goal-completion-policy-correction-design.md) (Spec 2, shipped — production-verified on 130-138)
+- [2026-05-06-goal-completion-policy-correction-design.md](2026-05-06-goal-completion-policy-correction-design.md) (Spec 2, shipped — production-verified on 130-139)
 
 **Successor:** Recovery-aware training (Spec 4) only if Fix 3 diagnostics show a clear, addressable failure shape.
 
@@ -15,7 +15,7 @@
 
 Eliminate the remaining closeout tail after Spec 2. Spec 2 fixed the average policy-prior issue (visit top-5 for endpoint completion rose to 86.3%, reducer to 88.2%; selected completion / reducer rate to ~75%). What remains is tail behavior, not coverage.
 
-### 1.1 Diagnosis from 130-138
+### 1.1 Diagnosis from 130-139
 
 Per-ply inspection of the top 9 worst cases shows failures concentrate at **td=1 (one_move_win)**, not at td=2:
 
@@ -151,7 +151,7 @@ New file `goal_completion_td_breakdown_<range>.csv` with one row per `td_before`
 
 ### 3.4 Decision rule
 
-After running Fix 0 on 130-138:
+After running Fix 0 on 130-139:
 
 - If td=1 has high redundant/off-chain rate AND endpoint visit top-5 is low (< 50%), Fix 1 is justified.
 - If td=1 endpoint visit top-5 is already high (≥ 80%) but selection still drifts, Fix 2 is the right tool.
@@ -398,7 +398,7 @@ Strict ordering — each phase gates the next:
 
 | Phase | Deliverable | Runs / gate |
 |-------|------------|-------------|
-| 1 | **Fix 0 + Fix 3 analyzer-only** (no trainer code touched) | re-run analyzer on 130-138; gates Phase 2 by confirming td=1 dominates the failure distribution |
+| 1 | **Fix 0 + Fix 3 analyzer-only** (no trainer code touched) | re-run analyzer on 130-139; gates Phase 2 by confirming td=1 dominates the failure distribution |
 | 2 | **Fix 1 MCTS code** — reusing the existing single-simulation / backup path (see §4.2); telemetry accumulators; unit tests including the equivalence test in §9.1 | unit tests pass; smoke run on a constructed td=1 game |
 | 3 | **Fix 1 self-play wiring + CLI flags** — defaults off | smoke training run with `--closeout-td1-visit-forcing-enabled` produces well-formed telemetry |
 | 4 | **Analyzer additions for Fix 1 telemetry** — read `closeout_td1_visit_forcing` from sidecars, summarize trigger frequency + post-force endpoint visit top-5 in `report_<range>.txt` | analyzer on a 1–2 iteration smoke run shows the new section |
@@ -411,9 +411,9 @@ Strict ordering — each phase gates the next:
 
 ## 8. Success criteria
 
-Compared to 130-138 baseline:
+Compared to 130-139 baseline:
 
-| Metric | 130-138 baseline | Target after Fix 1 |
+| Metric | 130-139 baseline | Target after Fix 1 |
 |--------|------------------|---------------------|
 | td=1 selected `completes_endpoint` rate | (filled in after Fix 0 first run) | substantial increase |
 | td=1 endpoint visit top-5 rate | (filled in after Fix 0 first run) | sharp increase (≥ 90%) |
@@ -445,7 +445,7 @@ If td=1 visit top-5 rises sharply but the game-count tails do not move, the resi
 
 ### 9.3 Treatment run
 
-Primary evaluation uses the existing 130-138/139 Spec 2 block as the baseline — its metrics are already produced via `Replays/130-139_Replay`. No separate control rerun is needed for the first read of Fix 1's effect.
+Primary evaluation uses the existing 130-139 Spec 2 block as the baseline — its metrics are already produced via `Replays/130-139_Replay`. No separate control rerun is needed for the first read of Fix 1's effect.
 
 Run one treatment block from `model_iter_0139.safetensors` for 10 iterations (140-149) with Fix 1 enabled (`--closeout-td1-visit-forcing-enabled --closeout-td1-min-visits 8 --closeout-td1-max-forced-moves 4`) and all other Spec 2 knobs unchanged. Compare `report_140-149.txt` against `report_130-139.txt` for the §8 metrics.
 
@@ -475,7 +475,7 @@ The embedded `goal_completion_diagnostics` array caps at `max_records_per_game=6
 
 ### 10.5 Fix 2 may be a near-no-op
 
-Per the 130-138 worst-cases data, only 1 of 15 cases (137/71) sits in the regime where the closeout candidate is in policy AND visit top-5 while selection still drifts. Fix 2's expected impact is small. It ships in this spec as opt-in scaffolding so it's a flag-flip away if Fix 1's residual is dominated by top-K-visible cases. If Fix 0's td=1 breakdown shows that almost all failures have the closeout move outside visit top-5, Fix 2 stays off permanently.
+Per the 130-139 worst-cases data, only 1 of 15 cases (137/71) sits in the regime where the closeout candidate is in policy AND visit top-5 while selection still drifts. Fix 2's expected impact is small. It ships in this spec as opt-in scaffolding so it's a flag-flip away if Fix 1's residual is dominated by top-K-visible cases. If Fix 0's td=1 breakdown shows that almost all failures have the closeout move outside visit top-5, Fix 2 stays off permanently.
 
 ### 10.6 Self-play-only scope of Fix 1
 
