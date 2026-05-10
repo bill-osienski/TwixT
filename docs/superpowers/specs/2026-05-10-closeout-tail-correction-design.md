@@ -39,6 +39,8 @@ Three fixes plus a recovery diagnostic, in order of safety and confidence:
 3. **Fix 2 — narrow selection tie-break (opt-in, off by default).** For positions where a closeout candidate is already in visit top-K but argmax selection chose redundant/off-chain. Defaults off until Fix 1 results are evaluated.
 4. **Fix 3 — recovery diagnostic.** Per-game `recovery_event` classification. Diagnostics only; no trainer changes.
 
+**Replay analyzer is in scope and required.** Fix 0 and Fix 3 land in `scripts/twixt_replay_analyzer.py` and are required to produce the §8 success-criteria report. Fix 1's telemetry block also surfaces in the per-iteration sidecar consumed by the analyzer, and the analyzer must learn to summarize it in `report_<range>.txt`. The Fix 1 treatment run cannot be evaluated against §8 metrics without the analyzer changes shipped first.
+
 **Out of scope:**
 - Increasing `conversion_policy_loss_weight` or widening to td=3
 - New training data sources, curated probes
@@ -55,7 +57,8 @@ Three fixes plus a recovery diagnostic, in order of safety and confidence:
 scripts/twixt_replay_analyzer.py
     + td_closeout_breakdown aggregation (Fix 0)
     + recovery_events aggregation and CSV (Fix 3)
-    + report sections for both
+    + closeout_td1_visit_forcing sidecar read + report section (Fix 1 telemetry)
+    + report sections for all of the above
 
 scripts/GPU/alphazero/mcts.py
     + force_root_visits()                          (Fix 1)
@@ -209,10 +212,11 @@ def force_root_visits(
     return forced_count
 ```
 
-`_run_one_sim_with_root_override` is a new private method on `MCTS`. It mirrors the body of a single iteration of the `search_from_root` main loop (descend → expand if leaf → backup) with two differences: (a) at the root, the child is selected by `move_id` instead of by PUCT; (b) it does not use the batching/waiter machinery — each forced sim is a single synchronous NN eval. The simpler control flow is acceptable because forced sims are bounded (max 32 per position with defaults) and the batching speedup is small at that scale.
+**Implementation requirement: reuse the existing single-simulation path.** The current MCTS main loop has batching, waiter-list coordination, virtual-visit penalties, and stall-flush logic. Introducing a parallel synchronous eval path risks accidentally bypassing those assumptions (e.g., double-counting visits, racing on shared state, breaking backup semantics).
 
-Notes:
-- After the root child is chosen, the rest of the descent is normal PUCT.
+Preferred shape: identify or extract a shared single-simulation helper from the existing `search_from_root` body and add a `root_move_override: Optional[int]` kwarg. Forced sims call that helper with the override set; normal sims call it with `None`. If the existing loop is too entangled to refactor cleanly in this spec, extract the minimum (descent + expand + backup) and leave the batching scaffolding to the main loop. Do NOT duplicate leaf-eval, backup, virtual-visit, or batching semantics unless a unit test proves equivalence (see §9.1).
+
+After the root child is chosen by override, the rest of the descent is normal PUCT.
 - Children corresponding to candidate moves are expanded by `_expand` on first visit, so their priors and Q values are populated correctly.
 - After forcing completes, the main simulation loop runs `n_simulations - forced_count` regular PUCT sims. PUCT with Q=+1 backed up through the forced children naturally directs subsequent sims toward those children.
 
@@ -390,14 +394,18 @@ Diagnostic-only; no training signal derived. The aggregate distribution drives w
 
 ## 7. Implementation order
 
-| Phase | Deliverable | Runs |
-|-------|------------|------|
-| 1 | Fix 0 + Fix 3 (analyzer only) | re-run analyzer on 130-138 |
-| 2 | Fix 1 trainer wiring, MCTS code, telemetry, unit tests | smoke test (single short game) |
-| 3 | 10-iteration self-play with Fix 1 enabled, defaults | iters 140-149 |
-| 4 | Evaluate Fix 1 against §8 success criteria | analyzer on 140-149 |
-| 5 | Decision point: enable Fix 2 if residual top-K-visible drifts remain | conditional |
-| 6 | Recovery training plan deferred until Fix 3 outputs reviewed | Spec 4 brainstorm if needed |
+Strict ordering — each phase gates the next:
+
+| Phase | Deliverable | Runs / gate |
+|-------|------------|-------------|
+| 1 | **Fix 0 + Fix 3 analyzer-only** (no trainer code touched) | re-run analyzer on 130-138; gates Phase 2 by confirming td=1 dominates the failure distribution |
+| 2 | **Fix 1 MCTS code** — reusing the existing single-simulation / backup path (see §4.2); telemetry accumulators; unit tests including the equivalence test in §9.1 | unit tests pass; smoke run on a constructed td=1 game |
+| 3 | **Fix 1 self-play wiring + CLI flags** — defaults off | smoke training run with `--closeout-td1-visit-forcing-enabled` produces well-formed telemetry |
+| 4 | **Analyzer additions for Fix 1 telemetry** — read `closeout_td1_visit_forcing` from sidecars, summarize trigger frequency + post-force endpoint visit top-5 in `report_<range>.txt` | analyzer on a 1–2 iteration smoke run shows the new section |
+| 5 | **Treatment run** — 10 iterations from `model_iter_0139.safetensors` with Fix 1 enabled (defaults `min_visits=8`, `max_forced_moves=4`); Fix 2 stays off | iters 140-149 complete; sidecars and games captured |
+| 6 | **Evaluate against §8 success criteria** using the analyzer | report_140-149 vs report_130-139; telemetry shows trigger fired meaningfully and endpoint visit top-5 rose |
+| 7 | **Decision point: Fix 2** — enable only if residual top-K-visible drifts remain | conditional second treatment run |
+| 8 | **Recovery training** deferred to Spec 4 brainstorm, gated on Fix 3 outputs | not in this spec |
 
 ---
 
@@ -426,7 +434,8 @@ If td=1 visit top-5 rises sharply but the game-count tails do not move, the resi
 ### 9.1 Unit tests
 
 - `test_td_closeout_breakdown.py` — Fix 0 aggregation over synthetic per-ply records covering all bucket transitions
-- `test_force_root_visits.py` — Fix 1 trigger fires only when td=1 and EC moves exist; correct number of forced sims; Q backup propagated
+- `test_force_root_visits.py` — Fix 1 trigger fires only when td=1 and EC moves exist; correct number of forced sims
+- `test_forced_root_visit_matches_normal_backup_semantics.py` — **equivalence test.** A single forced sim that overrides the root child to `move_id` produces the same `child.visits` increment and the same backup of leaf value along the path as a hand-constructed normal sim that selects `move_id` by PUCT. Run with a deterministic stub eval and verify identical post-state.
 - `test_closeout_selection_tiebreak.py` — Fix 2 override priority; min-share gate; argmax-of-closeout selection
 - `test_recovery_events.py` — Fix 3 bucket assignment against fixture records (one per bucket)
 
@@ -434,13 +443,13 @@ If td=1 visit top-5 rises sharply but the game-count tails do not move, the resi
 
 `scripts/GPU/alphazero/smoke_closeout_td1_visit_forcing.py` — runs a short self-play game with Fix 1 enabled, asserts the trigger fires at least once on a constructed td=1 position and that the resulting telemetry block is well-formed.
 
-### 9.3 A/B run
+### 9.3 Treatment run
 
-Two 10-iteration runs starting from `model_iter_0139.safetensors`:
-- Control: existing Spec 2 knobs, Fix 1 disabled
-- Treatment: existing Spec 2 knobs, Fix 1 enabled (`--closeout-td1-min-visits 8 --closeout-td1-max-forced-moves 4`)
+Primary evaluation uses the existing 130-138/139 Spec 2 block as the baseline — its metrics are already produced via `Replays/130-139_Replay`. No separate control rerun is needed for the first read of Fix 1's effect.
 
-Compare via `report_<range>.txt` against §8 metrics.
+Run one treatment block from `model_iter_0139.safetensors` for 10 iterations (140-149) with Fix 1 enabled (`--closeout-td1-visit-forcing-enabled --closeout-td1-min-visits 8 --closeout-td1-max-forced-moves 4`) and all other Spec 2 knobs unchanged. Compare `report_140-149.txt` against `report_130-139.txt` for the §8 metrics.
+
+A same-checkpoint control rerun from `model_iter_0139.safetensors` with Fix 1 disabled is optional and only worth running if the treatment result is ambiguous — e.g., if §8 metrics shift in inconsistent directions or if `closeout_td1_visit_forcing.positions_triggered` indicates the trigger barely fired.
 
 ---
 
