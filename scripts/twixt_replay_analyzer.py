@@ -714,6 +714,153 @@ def _surface_phase3_diagnostics(replays: list, n_decisive: int) -> dict:
     }
 
 
+def aggregate_td_closeout_breakdown(
+    per_ply_records: list,
+    detected_player: str,
+    high_value_threshold: float = 0.95,
+) -> dict:
+    """Bucket strict closeout per-ply records by total_goal_distance_before.
+
+    Spec 2026-05-10 §3. Reads records of the form emitted in
+    goal_completion_diagnostics (see closeout_diagnostics.build_*).
+
+    Returns a dict keyed "td=1" / "td=2" / "td=3" with the metric set
+    described in spec §3.1.
+    """
+    def _empty():
+        return {
+            "records": 0,
+            "high_value_records": 0,
+            "selected_completes_endpoint": 0,
+            "selected_reduces_distance": 0,
+            "selected_redundant": 0,
+            "selected_off_chain": 0,
+            "selected_other": 0,
+            "endpoint_exists": 0,
+            "endpoint_policy_top1": 0,
+            "endpoint_policy_top5": 0,
+            "endpoint_policy_top20": 0,
+            "endpoint_policy_gt20": 0,
+            "endpoint_visit_top1": 0,
+            "endpoint_visit_top5": 0,
+            "endpoint_visit_top20": 0,
+            "endpoint_visit_gt20": 0,
+            "reducer_exists": 0,
+            "reducer_policy_top1": 0,
+            "reducer_policy_top5": 0,
+            "reducer_policy_top20": 0,
+            "reducer_policy_gt20": 0,
+            "reducer_visit_top1": 0,
+            "reducer_visit_top5": 0,
+            "reducer_visit_top20": 0,
+            "reducer_visit_gt20": 0,
+        }
+
+    buckets = {"td=1": _empty(), "td=2": _empty(), "td=3": _empty()}
+
+    def _bucket_rank(rank, c):
+        if rank is None:
+            return
+        if rank <= 1:
+            c["_top1"] += 1; c["_top5"] += 1; c["_top20"] += 1
+        elif rank <= 5:
+            c["_top5"] += 1; c["_top20"] += 1
+        elif rank <= 20:
+            c["_top20"] += 1
+        else:
+            c["_gt20"] += 1
+
+    for rec in per_ply_records or []:
+        if not isinstance(rec, dict):
+            continue
+        if rec.get("side_to_move") != detected_player:
+            continue
+        gc = rec.get("goal_completion") or {}
+        td = gc.get("total_goal_distance_before")
+        if td not in (1, 2, 3):
+            continue
+        key = f"td={td}"
+        b = buckets[key]
+        b["records"] += 1
+        q = (rec.get("root_summary") or {}).get("q_value")
+        if isinstance(q, (int, float)) and q >= high_value_threshold:
+            b["high_value_records"] += 1
+        cls_name = ((rec.get("selected_move_classification") or {}).get("primary_class")) or ""
+        cls_field = {
+            "completes_endpoint": "selected_completes_endpoint",
+            "reduces_total_goal_distance": "selected_reduces_distance",
+            "redundant_reinforcement": "selected_redundant",
+            "off_chain": "selected_off_chain",
+            "other": "selected_other",
+        }.get(cls_name)
+        if cls_field is not None:
+            b[cls_field] += 1
+        # Endpoint completion ranking buckets (denominator: endpoint_exists)
+        ec = rec.get("endpoint_completion_ranking") or {}
+        epr = ec.get("best_policy_rank")
+        evr = ec.get("best_visit_rank")
+        if epr is not None or evr is not None:
+            b["endpoint_exists"] += 1
+            tmp_p = {"_top1": 0, "_top5": 0, "_top20": 0, "_gt20": 0}
+            _bucket_rank(epr, tmp_p)
+            tmp_v = {"_top1": 0, "_top5": 0, "_top20": 0, "_gt20": 0}
+            _bucket_rank(evr, tmp_v)
+            for k in ("_top1", "_top5", "_top20", "_gt20"):
+                b[f"endpoint_policy{k}"] += tmp_p[k]
+                b[f"endpoint_visit{k}"] += tmp_v[k]
+        # Distance reducer ranking buckets
+        rd = rec.get("distance_reducing_ranking") or {}
+        rpr = rd.get("best_policy_rank")
+        rvr = rd.get("best_visit_rank")
+        if rpr is not None or rvr is not None:
+            b["reducer_exists"] += 1
+            tmp_p = {"_top1": 0, "_top5": 0, "_top20": 0, "_gt20": 0}
+            _bucket_rank(rpr, tmp_p)
+            tmp_v = {"_top1": 0, "_top5": 0, "_top20": 0, "_gt20": 0}
+            _bucket_rank(rvr, tmp_v)
+            for k in ("_top1", "_top5", "_top20", "_gt20"):
+                b[f"reducer_policy{k}"] += tmp_p[k]
+                b[f"reducer_visit{k}"] += tmp_v[k]
+
+    # Convert raw counts to rates
+    def _rate(num, den):
+        return (num / den) if den > 0 else 0.0
+
+    out = {}
+    for key, b in buckets.items():
+        n = b["records"]
+        e_exists = b["endpoint_exists"]
+        r_exists = b["reducer_exists"]
+        out[key] = {
+            "records": n,
+            "high_value_records": b["high_value_records"],
+            "selected_completes_endpoint_rate": _rate(b["selected_completes_endpoint"], n),
+            "selected_reduces_distance_rate":   _rate(b["selected_reduces_distance"], n),
+            "selected_redundant_rate":          _rate(b["selected_redundant"], n),
+            "selected_off_chain_rate":          _rate(b["selected_off_chain"], n),
+            "selected_other_rate":              _rate(b["selected_other"], n),
+            "endpoint_completion_exists_rate":  _rate(e_exists, n),
+            "endpoint_policy_top1_rate":  _rate(b["endpoint_policy_top1"], e_exists),
+            "endpoint_policy_top5_rate":  _rate(b["endpoint_policy_top5"], e_exists),
+            "endpoint_policy_top20_rate": _rate(b["endpoint_policy_top20"], e_exists),
+            "endpoint_policy_gt20_rate":  _rate(b["endpoint_policy_gt20"], e_exists),
+            "endpoint_visit_top1_rate":   _rate(b["endpoint_visit_top1"], e_exists),
+            "endpoint_visit_top5_rate":   _rate(b["endpoint_visit_top5"], e_exists),
+            "endpoint_visit_top20_rate":  _rate(b["endpoint_visit_top20"], e_exists),
+            "endpoint_visit_gt20_rate":   _rate(b["endpoint_visit_gt20"], e_exists),
+            "distance_reducer_exists_rate":   _rate(r_exists, n),
+            "reducer_policy_top1_rate":   _rate(b["reducer_policy_top1"], r_exists),
+            "reducer_policy_top5_rate":   _rate(b["reducer_policy_top5"], r_exists),
+            "reducer_policy_top20_rate":  _rate(b["reducer_policy_top20"], r_exists),
+            "reducer_policy_gt20_rate":   _rate(b["reducer_policy_gt20"], r_exists),
+            "reducer_visit_top1_rate":    _rate(b["reducer_visit_top1"], r_exists),
+            "reducer_visit_top5_rate":    _rate(b["reducer_visit_top5"], r_exists),
+            "reducer_visit_top20_rate":   _rate(b["reducer_visit_top20"], r_exists),
+            "reducer_visit_gt20_rate":    _rate(b["reducer_visit_gt20"], r_exists),
+        }
+    return out
+
+
 def aggregate_goal_completion_diagnostics_from_records(
     replays: list, sidecar_summaries: dict, config: dict,
 ) -> dict:
