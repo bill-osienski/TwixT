@@ -972,6 +972,122 @@ def aggregate_td_closeout_breakdown(
     return out
 
 
+def aggregate_recovery_events(replays: list) -> list:
+    """Build per-event rows for the recovery diagnostic (spec §6).
+
+    Event criterion (§6.1): a replay contributes an event when any of
+    - winner_moves_with_dominant_unavailable >= 10
+    - meta.reason == "state_cap" AND record.detected == True (or
+      winner_moves_in_watch_window > 0 as a proxy for detection)
+    - meta.reason == "adjudicated" AND winner_moves_with_dominant_unavailable >= 5
+    """
+    events = []
+    for replay in replays or []:
+        rec = replay.get("goal_completion_record")
+        if not isinstance(rec, dict):
+            continue
+        meta = replay.get("meta") or {}
+        reason = meta.get("reason")
+        dom_unavail = rec.get("winner_moves_with_dominant_unavailable") or 0
+        in_window = rec.get("winner_moves_in_watch_window") or 0
+        detected = (in_window or 0) > 0
+
+        triggered = (
+            (dom_unavail or 0) >= 10
+            or (reason == "state_cap" and detected)
+            or (reason == "adjudicated" and (dom_unavail or 0) >= 5)
+        )
+        if not triggered:
+            continue
+
+        # Optional per-ply walk to find first_unavailable_ply (first detected-side
+        # ply where total_goal_distance_before > 2).
+        det_side = rec.get("detected_player")
+        first_unavailable_ply = None
+        q_at_first_unavailable = None
+        diag = replay.get("goal_completion_diagnostics") or []
+        for r in diag:
+            if not isinstance(r, dict):
+                continue
+            if r.get("side_to_move") != det_side:
+                continue
+            gc = r.get("goal_completion") or {}
+            td = gc.get("total_goal_distance_before")
+            if td is not None and td > 2:
+                first_unavailable_ply = r.get("ply")
+                q_at_first_unavailable = (r.get("root_summary") or {}).get("q_value")
+                break
+        # latest fields from last detected-side row in diag
+        latest_largest = None; latest_td = None
+        for r in diag:
+            if isinstance(r, dict) and r.get("side_to_move") == det_side:
+                gc = r.get("goal_completion") or {}
+                latest_largest = gc.get("largest_component_size")
+                latest_td = gc.get("total_goal_distance_before")
+        sel_class_counts = {"completes_endpoint": 0, "reduces_total_goal_distance": 0,
+                            "redundant_reinforcement": 0, "off_chain": 0, "other": 0}
+        if first_unavailable_ply is not None:
+            for r in diag:
+                if not isinstance(r, dict):
+                    continue
+                if r.get("side_to_move") != det_side:
+                    continue
+                if (r.get("ply") or 0) < first_unavailable_ply:
+                    continue
+                cls = ((r.get("selected_move_classification") or {}).get("primary_class"))
+                if cls in sel_class_counts:
+                    sel_class_counts[cls] += 1
+
+        q_at_terminal = meta.get("final_root_value")
+        outcome = "win" if reason == "win" else (
+            "state_cap" if reason == "state_cap" else (
+                "adjudicated" if reason == "adjudicated" else (reason or "other")
+            )
+        )
+
+        delay_winner = rec.get("conversion_delay_winner_moves") or 0
+        # Bucket assignment (priority order, §6.3)
+        recovered_later_to_le2 = any(
+            (r.get("side_to_move") == det_side
+             and (r.get("goal_completion") or {}).get("total_goal_distance_before") is not None
+             and (r.get("goal_completion") or {}).get("total_goal_distance_before") <= 2
+             and (first_unavailable_ply is not None and (r.get("ply") or 0) > first_unavailable_ply))
+            for r in diag if isinstance(r, dict)
+        )
+        if outcome == "win" and (dom_unavail or 0) >= 10 and recovered_later_to_le2:
+            bucket = "lost_then_recovered"
+        elif outcome == "win" and delay_winner >= 30:
+            bucket = "lost_then_won_late"
+        elif outcome == "state_cap":
+            bucket = "lost_then_state_cap"
+        elif (q_at_first_unavailable is not None and q_at_first_unavailable >= 0.9
+              and (q_at_terminal or 0) <= 0.5):
+            bucket = "lost_and_value_collapsed"
+        elif (q_at_first_unavailable is not None and q_at_first_unavailable >= 0.9
+              and (q_at_terminal or 0) >= 0.9):
+            bucket = "lost_but_value_stayed_high"
+        else:
+            bucket = "lost_other"
+
+        events.append({
+            "iteration": meta.get("iteration"),
+            "game_id": rec.get("game_id"),
+            "winner": rec.get("winner"),
+            "detected_player": det_side,
+            "first_detection_ply": rec.get("first_dominant_unclosed_ply"),
+            "first_unavailable_ply": first_unavailable_ply,
+            "dominant_unavailable_moves": dom_unavail,
+            "latest_largest_component_size": latest_largest,
+            "latest_total_goal_distance": latest_td,
+            "q_at_first_unavailable": q_at_first_unavailable,
+            "q_at_terminal": q_at_terminal,
+            "selected_class_counts_after_first_unavailable": sel_class_counts,
+            "eventual_outcome": outcome,
+            "recovery_class": bucket,
+        })
+    return events
+
+
 def aggregate_goal_completion_diagnostics_from_records(
     replays: list, sidecar_summaries: dict, config: dict,
 ) -> dict:
