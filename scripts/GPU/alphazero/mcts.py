@@ -384,32 +384,7 @@ class MCTS:
         batch_size = self.config.eval_batch_size
 
         # Spec 3 Fix 1 — td=1 root visit forcing.
-        forced_count = 0
-        forced_candidate_ids: Set[int] = set()
-        if self.config.closeout_td1_visit_forcing_enabled and gc_state_full is not None:
-            if gc_state_full.get("total_goal_distance") == 1:
-                ec_moves = gc_state_full.get("endpoint_completion_moves") or []
-                gate_passes = (
-                    (not self.config.closeout_td1_require_high_value)
-                    or (root.q_value >= self.config.closeout_td1_high_value_threshold)
-                )
-                if not ec_moves:
-                    self._closeout_td1_positions_skipped_no_candidates += 1
-                elif not gate_passes:
-                    self._closeout_td1_positions_skipped_high_value_gate += 1
-                else:
-                    self._closeout_td1_positions_triggered += 1
-                    forced_count = self.force_root_visits(
-                        root=root,
-                        candidate_moves=ec_moves,
-                        min_visits=self.config.closeout_td1_min_visits,
-                        max_candidates=self.config.closeout_td1_max_forced_moves,
-                    )
-                    self._closeout_td1_forced_sims_total += forced_count
-                    forced_candidate_ids = {
-                        encode_move(r, c)
-                        for (r, c) in ec_moves[:self.config.closeout_td1_max_forced_moves]
-                    }
+        forced_count, forced_candidate_ids = self._maybe_force_root_td1_visits(root, gc_state_full)
 
         # Reduce the main loop budget by the number of forced sims already run.
         remaining_sims = self.config.n_simulations - forced_count
@@ -581,12 +556,16 @@ class MCTS:
         """
         node = root
         search_path = [node]
+        override = root_move_override
 
-        # Step 1: Root selection (overridden or PUCT).
-        if root.is_expanded and not root.state.is_terminal():
-            if root_move_override is not None:
-                move_id = root_move_override
-                child = root.children.get(move_id)
+        # DESCEND: single loop. `override` is consumed exactly once (only at
+        # the first iteration if set), then falls through to PUCT for all
+        # remaining hops.
+        while node.is_expanded and not node.state.is_terminal():
+            if override is not None:
+                move_id = override
+                child = node.children.get(move_id)
+                override = None
             else:
                 move_id, child = self._select_child(node)
             if child is None:
@@ -600,27 +579,13 @@ class MCTS:
             search_path.append(child)
             node = child
 
-        # Step 2: Standard PUCT descent below the root.
-        while node.is_expanded and not node.state.is_terminal():
-            move_id, child = self._select_child(node)
-            if child is None:
-                r, c = decode_move(move_id)
-                child = MCTSNode(
-                    state=node.state.apply_move((r, c)),
-                    parent=node,
-                    move=move_id,
-                )
-                node.children[move_id] = child
-            search_path.append(child)
-            node = child
-
-        # Step 3: Expand or terminal-evaluate.
+        # EXPAND or terminal-evaluate.
         if not node.state.is_terminal():
             value = self._expand(node)
         else:
             value = self._terminal_value(node.state)
 
-        # Step 4: Backup along the recorded path.
+        # BACKUP along the recorded path.
         self._backup(search_path, value)
 
     def force_root_visits(
@@ -1038,6 +1003,44 @@ class MCTS:
                     src = "EARLY" if early_active else "BASE"
                     print(f"[NEARCORNER] ply={ply}: {corner_count}/{len(move_ids)} in R, mass={corner_mass:.3f}, penalty={effective_corner_pen} ({src}), R={R}")
         # --- end root prior shaping ---
+
+    def _maybe_force_root_td1_visits(
+        self,
+        root: MCTSNode,
+        gc_state_full: Optional[dict],
+    ) -> Tuple[int, Set[int]]:
+        """Run td=1 endpoint-completion visit forcing if the trigger fires.
+
+        Returns ``(forced_count, forced_candidate_ids)``. Both are zero/empty
+        when the trigger does not fire (feature disabled, ``gc_state`` absent,
+        ``total_goal_distance != 1``, no candidates, or high-value gate fails).
+        Increments the matching telemetry counter for each skip / trigger path.
+        """
+        if not self.config.closeout_td1_visit_forcing_enabled or gc_state_full is None:
+            return 0, set()
+        if gc_state_full.get("total_goal_distance") != 1:
+            return 0, set()
+        ec_moves = gc_state_full.get("endpoint_completion_moves") or []
+        if not ec_moves:
+            self._closeout_td1_positions_skipped_no_candidates += 1
+            return 0, set()
+        if (self.config.closeout_td1_require_high_value
+                and root.q_value < self.config.closeout_td1_high_value_threshold):
+            self._closeout_td1_positions_skipped_high_value_gate += 1
+            return 0, set()
+        self._closeout_td1_positions_triggered += 1
+        forced_count = self.force_root_visits(
+            root=root,
+            candidate_moves=ec_moves,
+            min_visits=self.config.closeout_td1_min_visits,
+            max_candidates=self.config.closeout_td1_max_forced_moves,
+        )
+        self._closeout_td1_forced_sims_total += forced_count
+        forced_candidate_ids = {
+            encode_move(r, c)
+            for (r, c) in ec_moves[:self.config.closeout_td1_max_forced_moves]
+        }
+        return forced_count, forced_candidate_ids
 
     def _terminal_value(self, state: TwixtState) -> float:
         """Get value for terminal state from perspective of to_move.
