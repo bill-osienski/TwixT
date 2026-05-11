@@ -135,3 +135,48 @@ def test_search_from_root_invokes_force_when_td1_triggers():
     tel = m.get_closeout_td1_telemetry()
     assert tel["positions_triggered"] == 1
     assert tel["forced_sims_total"] == 4   # min_visits=2 * 2 candidates
+
+
+def test_force_root_visits_skips_candidates_not_in_priors():
+    """Defensive: if a candidate move_id is not in root.priors (illegal
+    or upstream bug), force_root_visits must skip it and increment the
+    invalid-candidate telemetry counter rather than forcing visits to it."""
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    from scripts.GPU.alphazero.mcts import MCTS, MCTSConfig, MCTSNode, encode_move
+
+    cfg = MCTSConfig(
+        n_simulations=400,
+        closeout_td1_visit_forcing_enabled=True,
+        closeout_td1_min_visits=3,
+        closeout_td1_max_forced_moves=2,
+    )
+    state = TwixtState()
+    def stub(state):
+        legal = state.legal_moves()
+        if not legal:
+            return {}, 0.0
+        p = 1.0 / len(legal)
+        return {encode_move(r, c): p for (r, c) in legal}, 0.5
+    m = _make_mcts_with_stub_eval(stub, n_sims=400)
+    m.config = cfg
+    m.reset_closeout_td1_telemetry()
+    root = MCTSNode(state=state)
+    m._expand(root)
+
+    legal = list(state.legal_moves())
+    valid_move = legal[0]
+    invalid_move = (99, 99)   # off-board — encode_move produces an id that's not in priors
+
+    forced = m.force_root_visits(
+        root=root,
+        candidate_moves=[valid_move, invalid_move],
+        min_visits=cfg.closeout_td1_min_visits,
+        max_candidates=cfg.closeout_td1_max_forced_moves,
+    )
+
+    # Only the valid candidate gets its 3 forced visits
+    assert forced == 3
+    tel = m.get_closeout_td1_telemetry()
+    assert tel["candidates_skipped_invalid"] == 1
+    valid_id = encode_move(*valid_move)
+    assert root.children[valid_id].visit_count == 3

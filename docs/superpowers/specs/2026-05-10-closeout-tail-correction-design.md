@@ -252,11 +252,14 @@ Per-iteration sidecar at `closeout_td1_visit_forcing`:
   "selected_forced_move_count": 95,
   "selected_forced_move_rate": 0.772,
   "post_force_endpoint_visit_top1_rate": 0.812,
-  "post_force_endpoint_visit_top5_rate": 0.940
+  "post_force_endpoint_visit_top5_rate": 0.940,
+  "candidates_skipped_invalid": 0
 }
 ```
 
 The MCTS instance accumulates these counters; the self-play worker drains them into the stats sidecar at the end of each iteration.
+
+`candidates_skipped_invalid` counts forcing candidates whose encoded move id was not present in the expanded root's priors. These are either illegal at the current position or symptoms of an upstream bug in `compute_goal_completion_state`. The guard skips them silently and increments this counter so anomalies surface in the merged sidecar.
 
 ### 4.6 Scope
 
@@ -477,6 +480,10 @@ The embedded `goal_completion_diagnostics` array caps at `max_records_per_game=6
 
 Per the 130-139 worst-cases data, only 1 of 15 cases (137/71) sits in the regime where the closeout candidate is in policy AND visit top-5 while selection still drifts. Fix 2's expected impact is small. It ships in this spec as opt-in scaffolding so it's a flag-flip away if Fix 1's residual is dominated by top-K-visible cases. If Fix 0's td=1 breakdown shows that almost all failures have the closeout move outside visit top-5, Fix 2 stays off permanently.
 
-### 10.6 Self-play-only scope of Fix 1
+### 10.6 Defensive guard against invalid endpoint candidates
+
+Defensive guard: candidates not present in `root.priors` are skipped and counted in `candidates_skipped_invalid` rather than forcing MCTS to evaluate illegal/anomalous positions. Spikes in this counter indicate upstream bugs in `compute_goal_completion_state`.
+
+### 10.7 Self-play-only scope of Fix 1
 
 Eval games and the production export path do not trigger Fix 1. This is deliberate: it isolates the experiment and preserves measurement integrity for non-self-play surfaces. If after several iterations the policy has internalized the closing behavior, the flag can be left off for production. If it has not, that itself is a signal worth surfacing — and a candidate for Spec 4 work.

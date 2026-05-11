@@ -21,7 +21,8 @@ def test_merge_sums_counters_and_recomputes_rates():
          "selected_forced_move_count": 7,
          "selected_forced_move_rate": 0.7,
          "post_force_endpoint_visit_top1_rate": 0.6,
-         "post_force_endpoint_visit_top5_rate": 0.8},
+         "post_force_endpoint_visit_top5_rate": 0.8,
+         "candidates_skipped_invalid": 2},
         {"enabled": True, "min_visits": 8, "max_forced_moves": 4,
          "require_high_value": False, "high_value_threshold": 0.95,
          "positions_triggered": 20, "positions_skipped_no_candidates": 1,
@@ -29,7 +30,8 @@ def test_merge_sums_counters_and_recomputes_rates():
          "selected_forced_move_count": 16,
          "selected_forced_move_rate": 0.8,
          "post_force_endpoint_visit_top1_rate": 0.75,
-         "post_force_endpoint_visit_top5_rate": 0.9},
+         "post_force_endpoint_visit_top5_rate": 0.9,
+         "candidates_skipped_invalid": 3},
     ]
     out = _merge_closeout_td1_telemetry(workers)
     assert out["enabled"] is True
@@ -40,6 +42,7 @@ def test_merge_sums_counters_and_recomputes_rates():
     assert abs(out["selected_forced_move_rate"] - (23 / 30)) < 1e-6
     # Weighted top5 = (0.8 * 10 + 0.9 * 20) / 30 = 26/30
     assert abs(out["post_force_endpoint_visit_top5_rate"] - (26 / 30)) < 1e-6
+    assert out["candidates_skipped_invalid"] == 5
 
 
 def test_merge_handles_empty_input():

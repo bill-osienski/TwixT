@@ -244,6 +244,7 @@ class MCTS:
         self._closeout_td1_selected_forced_move_count = 0
         self._closeout_td1_post_force_top1_hits = 0
         self._closeout_td1_post_force_top5_hits = 0
+        self._closeout_td1_candidates_skipped_invalid: int = 0
 
     def _capture_final_root_stats(self, root: MCTSNode) -> None:
         """Snapshot root.q_value and top child visit share after a search.
@@ -277,6 +278,7 @@ class MCTS:
         self._closeout_td1_selected_forced_move_count = 0
         self._closeout_td1_post_force_top1_hits = 0
         self._closeout_td1_post_force_top5_hits = 0
+        self._closeout_td1_candidates_skipped_invalid = 0
 
     def get_closeout_td1_telemetry(self) -> dict:
         triggered = self._closeout_td1_positions_triggered
@@ -301,6 +303,7 @@ class MCTS:
             "post_force_endpoint_visit_top5_rate": (
                 (self._closeout_td1_post_force_top5_hits / triggered) if triggered > 0 else 0.0
             ),
+            "candidates_skipped_invalid": self._closeout_td1_candidates_skipped_invalid,
         }
 
     def search(
@@ -614,6 +617,13 @@ class MCTS:
         forced = 0
         for (r, c) in moves:
             move_id = encode_move(r, c)
+            if move_id not in root.priors:
+                # Defensive: candidate not in expanded root's priors means either
+                # (a) the move is illegal here, or (b) a bug in compute_goal_completion_state
+                # produced a candidate MCTS would never naturally consider. Skip silently
+                # and increment a telemetry counter so we can detect upstream bugs.
+                self._closeout_td1_candidates_skipped_invalid += 1
+                continue
             for _ in range(min_visits):
                 if forced >= budget_total:
                     return forced

@@ -480,6 +480,7 @@ def _merge_closeout_td1_telemetry(per_worker_telemetry: list) -> dict:
         "positions_skipped_high_value_gate": 0,
         "forced_sims_total": 0,
         "selected_forced_move_count": 0,
+        "candidates_skipped_invalid": 0,
         "_top1_hits": 0,
         "_top5_hits": 0,
     }
@@ -514,6 +515,7 @@ def _merge_closeout_td1_telemetry(per_worker_telemetry: list) -> dict:
         "post_force_endpoint_visit_top5_rate": (
             (sums["_top5_hits"] / triggered_total) if triggered_total > 0 else 0.0
         ),
+        "candidates_skipped_invalid": sums["candidates_skipped_invalid"],
     })
     return out
 
