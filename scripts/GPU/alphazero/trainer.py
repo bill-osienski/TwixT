@@ -1678,6 +1678,8 @@ def run_parallel_selfplay(
     rg_top1_all = []       # collect all top1_range samples across games
     all_opening_diagnostics = []
     all_goal_completion_records: list = []
+    # Spec 3 Fix 1: per-game closeout_td1 telemetry snapshots (IPC path)
+    all_closeout_td1_telemetry: list = []
 
     # Phase 4: per-game replay cap aggregation (IPC path)
     total_positions_original = 0
@@ -1859,6 +1861,9 @@ def run_parallel_selfplay(
             # config snapshot. (None entries are passed through; aggregator
             # tolerates them.)
             all_goal_completion_records.append(msg.goal_completion_record)
+            # Spec 3 Fix 1: per-game closeout_td1 telemetry snapshot from worker.
+            if getattr(msg, "closeout_td1_telemetry", None) is not None:
+                all_closeout_td1_telemetry.append(msg.closeout_td1_telemetry)
 
             if games_completed % 5 == 0:
                 print(f"  Games: {games_completed}/{games_to_play}")
@@ -2031,6 +2036,8 @@ def run_parallel_selfplay(
         # outer train() loop can feed it into the sidecar aggregation.
         "all_opening_diagnostics": list(all_opening_diagnostics),
         "all_goal_completion_records": list(all_goal_completion_records),
+        # Spec 3 Fix 1: per-game closeout_td1 telemetry list (parallel path).
+        "all_closeout_td1_telemetry": list(all_closeout_td1_telemetry),
     }
 
     return games_records, new_positions, stats
@@ -2687,6 +2694,8 @@ def train(
         rg_top1_all = []
         all_opening_diagnostics = []  # Collect per-game diagnostic lists for sidecar aggregation
         all_goal_completion_records: list = []
+        # Spec 3 Fix 1: per-game closeout_td1 telemetry snapshots (this iter).
+        all_closeout_td1_telemetry: list = []
         total_nn_calls = 0
         total_expand_calls = 0
         total_nn_batches = 0
@@ -2840,6 +2849,11 @@ def train(
                 _par_gc = parallel_stats.get("all_goal_completion_records", [])
                 if _par_gc:
                     all_goal_completion_records.extend(_par_gc)
+                # Spec 3 Fix 1: pull closeout_td1 telemetry from the parallel
+                # path so the per-iter sidecar block aggregates across workers.
+                _par_ct = parallel_stats.get("all_closeout_td1_telemetry", [])
+                if _par_ct:
+                    all_closeout_td1_telemetry.extend(_par_ct)
 
             except KeyboardInterrupt:
                 print(f"\n\nInterrupted during parallel self-play!")
@@ -3011,6 +3025,9 @@ def train(
 
                     # Collect goal_completion_record per game for sidecar aggregation.
                     all_goal_completion_records.append(game.goal_completion_record)
+                    # Spec 3 Fix 1: collect per-game closeout_td1 telemetry.
+                    if getattr(game, "closeout_td1_telemetry", None) is not None:
+                        all_closeout_td1_telemetry.append(game.closeout_td1_telemetry)
 
                     # Flush MLX graph and clear caches after each game
                     # mx.eval() forces pending lazy ops to materialize, freeing intermediates
@@ -3639,6 +3656,14 @@ def train(
                 du_threshold=recovery_dominant_unavailable_threshold,
                 delay_threshold=recovery_delay_threshold,
                 enabled=recovery_bucket_enabled,
+            )
+
+            # Spec 3 Fix 1 (§4.5): closeout_td1_visit_forcing sidecar block.
+            # Merges per-game telemetry across workers; empty when no
+            # telemetry was captured (older runs / record path off).
+            from .self_play import _merge_closeout_td1_telemetry
+            _sidecar["closeout_td1_visit_forcing"] = _merge_closeout_td1_telemetry(
+                all_closeout_td1_telemetry
             )
 
             cons = _sidecar["conversion_training"]["consistency"]

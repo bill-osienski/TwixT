@@ -120,3 +120,7 @@ class GameComplete:
     # goal_completion_record_enabled=False upstream. Distinct artifact from
     # goal_completion_diagnostics_meta — see spec §9.1.
     goal_completion_record: Optional[dict] = None
+    # Spec 3 Fix 1: per-game closeout_td1 visit-forcing telemetry snapshot.
+    # None when not captured upstream; otherwise a dict with the keys returned
+    # by MCTS.get_closeout_td1_telemetry().
+    closeout_td1_telemetry: Optional[dict] = None

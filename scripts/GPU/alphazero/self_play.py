@@ -431,6 +431,10 @@ class GameRecord:
     # Compact per-game goal-completion summary (spec 2026-05-05). None when
     # goal_completion_record_enabled=False on the upstream play_game.
     goal_completion_record: Optional[dict] = None
+    # Spec 3 Fix 1: per-game closeout_td1 visit-forcing telemetry snapshot.
+    # Captured at game end via mcts.get_closeout_td1_telemetry(). None means
+    # the field was never populated (older code path / not captured).
+    closeout_td1_telemetry: Optional[dict] = None
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -452,6 +456,66 @@ class GameRecord:
             move_history=[tuple(m) for m in d.get("move_history", [])],
             start_player=d.get("start_player", "red"),
         )
+
+
+def _merge_closeout_td1_telemetry(per_worker_telemetry: list) -> dict:
+    """Sum closeout_td1_visit_forcing counters across workers/games and
+    recompute weighted rates.
+
+    Per-worker telemetry blocks come from MCTS.get_closeout_td1_telemetry().
+    Config fields (enabled, min_visits, etc.) are taken from the first
+    non-empty block; counter fields are summed; rates are recomputed
+    against the summed positions_triggered using the per-block triggered
+    weight (so top1/top5 stay correct as weighted averages).
+    """
+    if not per_worker_telemetry:
+        return {}
+    first = per_worker_telemetry[0]
+    out = {k: first.get(k) for k in
+           ("enabled", "min_visits", "max_forced_moves",
+            "require_high_value", "high_value_threshold")}
+    sums = {
+        "positions_triggered": 0,
+        "positions_skipped_no_candidates": 0,
+        "positions_skipped_high_value_gate": 0,
+        "forced_sims_total": 0,
+        "selected_forced_move_count": 0,
+        "_top1_hits": 0,
+        "_top5_hits": 0,
+    }
+    for t in per_worker_telemetry:
+        if not t:
+            continue
+        for k in sums:
+            if k.startswith("_"):
+                continue
+            sums[k] += int(t.get(k, 0) or 0)
+        triggered = int(t.get("positions_triggered", 0) or 0)
+        sums["_top1_hits"] += int(round(
+            (t.get("post_force_endpoint_visit_top1_rate", 0) or 0) * triggered
+        ))
+        sums["_top5_hits"] += int(round(
+            (t.get("post_force_endpoint_visit_top5_rate", 0) or 0) * triggered
+        ))
+    triggered_total = sums["positions_triggered"]
+    out.update({
+        "positions_triggered": triggered_total,
+        "positions_skipped_no_candidates": sums["positions_skipped_no_candidates"],
+        "positions_skipped_high_value_gate": sums["positions_skipped_high_value_gate"],
+        "forced_sims_total": sums["forced_sims_total"],
+        "selected_forced_move_count": sums["selected_forced_move_count"],
+        "selected_forced_move_rate": (
+            (sums["selected_forced_move_count"] / triggered_total)
+            if triggered_total > 0 else 0.0
+        ),
+        "post_force_endpoint_visit_top1_rate": (
+            (sums["_top1_hits"] / triggered_total) if triggered_total > 0 else 0.0
+        ),
+        "post_force_endpoint_visit_top5_rate": (
+            (sums["_top5_hits"] / triggered_total) if triggered_total > 0 else 0.0
+        ),
+    })
+    return out
 
 
 def play_game(
@@ -1219,6 +1283,9 @@ def play_game(
         goal_completion_diagnostics=goal_completion_diagnostics,
         goal_completion_diagnostics_meta=goal_completion_diagnostics_meta,
         goal_completion_record=gc_record,
+        # Spec 3 Fix 1: snapshot per-game closeout_td1 visit-forcing telemetry.
+        # Safe to call even when the feature is off (returns config echo + zeros).
+        closeout_td1_telemetry=mcts.get_closeout_td1_telemetry(),
     )
 
 

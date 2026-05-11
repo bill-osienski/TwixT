@@ -268,6 +268,7 @@ def _worker_loop(
                 goal_completion_diagnostics=tuple(game.goal_completion_diagnostics),
                 goal_completion_diagnostics_meta=game.goal_completion_diagnostics_meta,
                 goal_completion_record=game.goal_completion_record,
+                closeout_td1_telemetry=game.closeout_td1_telemetry,
             ))
 
         # Periodic stats
