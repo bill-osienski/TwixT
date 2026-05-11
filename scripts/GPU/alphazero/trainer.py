@@ -2516,6 +2516,16 @@ def train(
           f"{'enabled' if recovery_bucket_enabled else 'disabled'} "
           f"(du_threshold={recovery_dominant_unavailable_threshold}, "
           f"delay_threshold={recovery_delay_threshold})")
+    if closeout_td1_visit_forcing_enabled:
+        print(f"  Closeout td=1 visit forcing: enabled")
+        print(f"    min_visits:            {closeout_td1_min_visits}")
+        print(f"    max_forced_moves:      {closeout_td1_max_forced_moves}")
+        if closeout_td1_require_high_value:
+            print(f"    require_high_value:    True (q >= {closeout_td1_high_value_threshold})")
+        else:
+            print(f"    require_high_value:    False")
+    else:
+        print(f"  Closeout td=1 visit forcing: disabled")
 
     # Games directory (used for both game replays and per-iteration stats sidecars)
     if games_dir_override:
