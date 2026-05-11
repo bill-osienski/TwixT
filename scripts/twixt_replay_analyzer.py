@@ -4660,6 +4660,13 @@ def analyze(replays: List[dict],
     lines.extend(format_policy_mcts_closeout_report(summary["goal_completion"]))
     lines.extend(format_conversion_training_trend_report(conversion_training_by_iter))
     lines.extend(format_recovery_or_extreme_closeout_drift_report(recovery_by_iter))
+    # Spec 3 Fix 1 §1.2 — closeout td=1 visit forcing telemetry summary.
+    # Gracefully absent when no iter in range has the sidecar key.
+    td1_summary = aggregate_closeout_td1_visit_forcing(relevant_sidecars or {})
+    if td1_summary:
+        lines.extend([""])
+        lines.extend(format_closeout_td1_visit_forcing_report(td1_summary))
+        summary["closeout_td1_visit_forcing"] = td1_summary
     # Spec 2026-05-10 §6 — per-game recovery event classification + CSV.
     recovery_events = aggregate_recovery_events(replays)
     write_recovery_events_csv(
