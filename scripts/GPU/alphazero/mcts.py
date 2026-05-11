@@ -126,6 +126,12 @@ class MCTSConfig:
     # ply 0-1 while the broader penalty window is still useful for later plies.
     root_near_corner_penalty_early: float = 0.0
     root_near_corner_penalty_early_plies: int = 0
+    # Spec 3 Fix 1 — td=1 root visit forcing
+    closeout_td1_visit_forcing_enabled: bool = False
+    closeout_td1_min_visits: int = 8
+    closeout_td1_max_forced_moves: int = 4
+    closeout_td1_require_high_value: bool = False
+    closeout_td1_high_value_threshold: float = 0.95
 
     def __post_init__(self):
         if self.eval_batch_size < 1:
