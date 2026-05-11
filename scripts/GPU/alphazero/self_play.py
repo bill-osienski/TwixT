@@ -637,53 +637,19 @@ def play_game(
 
     ply = 0
     while not state.is_terminal() and ply < max_moves:
-        # Run MCTS search from current root (reuses subtree)
-        visit_counts, root_value, root = mcts.search_from_root(
-            root, add_noise=add_noise, ply=ply
-        )
-
-        # Build opening diagnostic record if within window
-        if ply < _diag_end_ply and root.priors_raw is not None:
-            _rec = build_root_diagnostic(
-                ply=ply,
-                side_to_move=state.to_move,
-                visit_counts=visit_counts,
-                priors_raw=root.priors_raw,
-                priors_adjusted=root.priors,
-                board_size=active_size,
-                band_width=cfg.root_edge_band_width,
-                corner_radius=cfg.root_near_corner_radius,
-                edge_penalty=cfg.root_edge_band_penalty,
-                corner_penalty=cfg.root_near_corner_penalty,
-                edge_penalty_ply=cfg.root_edge_band_penalty_ply,
-                corner_penalty_ply=cfg.root_near_corner_penalty_ply,
-                corner_penalty_early=cfg.root_near_corner_penalty_early,
-                corner_penalty_early_plies=cfg.root_near_corner_penalty_early_plies,
-                decode_fn=decode_move,
-            )
-            # Attach deep per-child details for the earliest plies only
-            if ply < CHILD_DETAIL_PLIES:
-                _child = build_root_child_details(
-                    root=root,
-                    c_puct=cfg.c_puct,
-                    board_size=active_size,
-                    band_width=cfg.root_edge_band_width,
-                    corner_radius=cfg.root_near_corner_radius,
-                    top_k=CHILD_DETAIL_TOPK,
-                    decode_fn=decode_move,
-                )
-                _rec["root_summary"] = _child["root_summary"]
-                _rec["top_children"] = _child["top_children"]
-            _opening_diags.append(_rec)
-
-        # --- Compute gc_state once per ply, shared by Phase 3 + tracker. ---
+        # --- Compute gc_state once per ply, shared by Phase 3 + tracker.
+        # This must happen BEFORE search_from_root so that Spec 3 Fix 1
+        # (td=1 endpoint-completion visit forcing) can consume the current
+        # board's gc_state_full inside the MCTS root search.
         gc_state_for_diag = None     # cheap: total_goal_distance only
         gc_state_full = None         # full: includes endpoint_completion_moves
         partial_diag = None
+        total_now = None
         need_cheap = (
             goal_completion_emit_enabled
             or gc_tracker.enabled
             or conversion_policy_loss_enabled  # Spec 2: may need BFS for conversion
+            or mcts.config.closeout_td1_visit_forcing_enabled  # Spec 3 Fix 1
         )
         if need_cheap:
             try:
@@ -727,7 +693,16 @@ def play_game(
                 and total_now is not None
                 and total_now <= conversion_max_total_goal_distance
             )
-            if needs_phase3_full or needs_tracker_full or needs_conversion_full:
+            # Spec 3 Fix 1: td=1 root visit forcing needs enumerated
+            # endpoint_completion_moves, available only on the full state.
+            needs_closeout_td1_full = (
+                mcts.config.closeout_td1_visit_forcing_enabled
+                and gc_state_for_diag is not None
+                and total_now is not None
+                and total_now == 1
+            )
+            if (needs_phase3_full or needs_tracker_full
+                    or needs_conversion_full or needs_closeout_td1_full):
                 try:
                     gc_state_full = compute_goal_completion_state(
                         state, state.to_move,
@@ -741,39 +716,78 @@ def play_game(
                     import sys as _sys
                     _sys.stderr.write(f"[gc-full] ply={ply} error: {_e!r}\n")
 
-            # Phase 3 partial build (existing behavior, but uses the shared
-            # gc_state_full instead of recomputing).
-            if (goal_completion_emit_enabled
-                    and gc_state_full is not None
-                    and total_now is not None
-                    and total_now <= goal_completion_emit_threshold):
-                if (goal_completion_diagnostics_meta is not None
-                        and len(goal_completion_diagnostics) >= goal_completion_max_records_per_game):
-                    goal_completion_diagnostics_meta["records_dropped_by_cap"] += 1
-                elif root.priors_raw is None:
+        # Run MCTS search from current root (reuses subtree)
+        visit_counts, root_value, root = mcts.search_from_root(
+            root, add_noise=add_noise, ply=ply, gc_state_full=gc_state_full,
+        )
+
+        # Build opening diagnostic record if within window
+        if ply < _diag_end_ply and root.priors_raw is not None:
+            _rec = build_root_diagnostic(
+                ply=ply,
+                side_to_move=state.to_move,
+                visit_counts=visit_counts,
+                priors_raw=root.priors_raw,
+                priors_adjusted=root.priors,
+                board_size=active_size,
+                band_width=cfg.root_edge_band_width,
+                corner_radius=cfg.root_near_corner_radius,
+                edge_penalty=cfg.root_edge_band_penalty,
+                corner_penalty=cfg.root_near_corner_penalty,
+                edge_penalty_ply=cfg.root_edge_band_penalty_ply,
+                corner_penalty_ply=cfg.root_near_corner_penalty_ply,
+                corner_penalty_early=cfg.root_near_corner_penalty_early,
+                corner_penalty_early_plies=cfg.root_near_corner_penalty_early_plies,
+                decode_fn=decode_move,
+            )
+            # Attach deep per-child details for the earliest plies only
+            if ply < CHILD_DETAIL_PLIES:
+                _child = build_root_child_details(
+                    root=root,
+                    c_puct=cfg.c_puct,
+                    board_size=active_size,
+                    band_width=cfg.root_edge_band_width,
+                    corner_radius=cfg.root_near_corner_radius,
+                    top_k=CHILD_DETAIL_TOPK,
+                    decode_fn=decode_move,
+                )
+                _rec["root_summary"] = _child["root_summary"]
+                _rec["top_children"] = _child["top_children"]
+            _opening_diags.append(_rec)
+
+        # Phase 3 partial build uses gc_state_full (computed pre-search above)
+        # plus post-search visit_counts / root priors.
+        if (goal_completion_emit_enabled
+                and gc_state_full is not None
+                and total_now is not None
+                and total_now <= goal_completion_emit_threshold):
+            if (goal_completion_diagnostics_meta is not None
+                    and len(goal_completion_diagnostics) >= goal_completion_max_records_per_game):
+                goal_completion_diagnostics_meta["records_dropped_by_cap"] += 1
+            elif root.priors_raw is None:
+                if goal_completion_diagnostics_meta is not None:
+                    goal_completion_diagnostics_meta["skipped_missing_priors_count"] += 1
+            else:
+                try:
+                    from .closeout_diagnostics import build_closeout_diagnostic_partial
+                    _decode_fn = lambda mid, _a=active_size: (mid // _a, mid % _a)
+                    partial_diag = build_closeout_diagnostic_partial(
+                        ply=ply,
+                        side_to_move=state.to_move,
+                        visit_counts=visit_counts,
+                        priors_raw=root.priors_raw,
+                        priors_adjusted=getattr(root, "priors", None),
+                        root=root,
+                        goal_completion_state=gc_state_full,
+                        board_size=active_size,
+                        skip_distance_reducing=goal_completion_skip_distance_reducing,
+                        decode_fn=_decode_fn,
+                    )
+                except Exception as _e:
                     if goal_completion_diagnostics_meta is not None:
-                        goal_completion_diagnostics_meta["skipped_missing_priors_count"] += 1
-                else:
-                    try:
-                        from .closeout_diagnostics import build_closeout_diagnostic_partial
-                        _decode_fn = lambda mid, _a=active_size: (mid // _a, mid % _a)
-                        partial_diag = build_closeout_diagnostic_partial(
-                            ply=ply,
-                            side_to_move=state.to_move,
-                            visit_counts=visit_counts,
-                            priors_raw=root.priors_raw,
-                            priors_adjusted=getattr(root, "priors", None),
-                            root=root,
-                            goal_completion_state=gc_state_full,
-                            board_size=active_size,
-                            skip_distance_reducing=goal_completion_skip_distance_reducing,
-                            decode_fn=_decode_fn,
-                        )
-                    except Exception as _e:
-                        if goal_completion_diagnostics_meta is not None:
-                            goal_completion_diagnostics_meta["error_count"] += 1
-                        import sys as _sys
-                        _sys.stderr.write(f"[closeout-diag] ply={ply} partial: {_e!r}\n")
+                        goal_completion_diagnostics_meta["error_count"] += 1
+                    import sys as _sys
+                    _sys.stderr.write(f"[closeout-diag] ply={ply} partial: {_e!r}\n")
 
         # --- RESIGN CHECK (after search, before move selection) ---
         # root_value is from state.to_move perspective:
@@ -995,8 +1009,12 @@ def play_game(
                     adj_state = state.copy()
                     adj_state.max_plies_limit = None
                     adj_root0 = MCTSNode(state=adj_state)
+                    # Spec 3 Fix 1: adjudication rerun does not pre-compute a
+                    # fresh gc_state_full for adj_state, so pass None to skip
+                    # td=1 visit forcing here. This path is non-training and
+                    # the spec scopes Fix 1 to self-play only.
                     adj_visit_counts, adj_root_value, adj_root = mcts.search_from_root(
-                        adj_root0, add_noise=False, ply=ply
+                        adj_root0, add_noise=False, ply=ply, gc_state_full=None,
                     )
 
                     # Compute from fresh search results (not cumulative root)
