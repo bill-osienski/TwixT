@@ -714,6 +714,117 @@ def _surface_phase3_diagnostics(replays: list, n_decisive: int) -> dict:
     }
 
 
+def _aggregate_td_breakdown_multi_side(
+    records: list,
+    detected_sides: list,
+    high_value_threshold: float = 0.95,
+) -> dict:
+    """Variant of aggregate_td_closeout_breakdown that takes per-record
+    detected_player labels. Used when aggregating across games where
+    detected_player differs game-to-game.
+
+    Internally re-implements aggregation directly on raw counts to avoid
+    losing precision when combining rates across games.
+    """
+    def _empty():
+        return {
+            "records": 0, "high_value_records": 0,
+            "selected_completes_endpoint": 0, "selected_reduces_distance": 0,
+            "selected_redundant": 0, "selected_off_chain": 0, "selected_other": 0,
+            "endpoint_exists": 0,
+            "endpoint_policy_top1": 0, "endpoint_policy_top5": 0,
+            "endpoint_policy_top20": 0, "endpoint_policy_gt20": 0,
+            "endpoint_visit_top1": 0, "endpoint_visit_top5": 0,
+            "endpoint_visit_top20": 0, "endpoint_visit_gt20": 0,
+            "reducer_exists": 0,
+            "reducer_policy_top1": 0, "reducer_policy_top5": 0,
+            "reducer_policy_top20": 0, "reducer_policy_gt20": 0,
+            "reducer_visit_top1": 0, "reducer_visit_top5": 0,
+            "reducer_visit_top20": 0, "reducer_visit_gt20": 0,
+        }
+
+    def _bucket_rank(rank, c, prefix):
+        if rank is None:
+            return
+        if rank <= 1:
+            c[f"{prefix}_top1"] += 1; c[f"{prefix}_top5"] += 1; c[f"{prefix}_top20"] += 1
+        elif rank <= 5:
+            c[f"{prefix}_top5"] += 1; c[f"{prefix}_top20"] += 1
+        elif rank <= 20:
+            c[f"{prefix}_top20"] += 1
+        else:
+            c[f"{prefix}_gt20"] += 1
+
+    buckets = {"td=1": _empty(), "td=2": _empty(), "td=3": _empty()}
+    for rec, det in zip(records, detected_sides):
+        if not isinstance(rec, dict) or rec.get("side_to_move") != det:
+            continue
+        gc = rec.get("goal_completion") or {}
+        td = gc.get("total_goal_distance_before")
+        if td not in (1, 2, 3):
+            continue
+        b = buckets[f"td={td}"]
+        b["records"] += 1
+        q = (rec.get("root_summary") or {}).get("q_value")
+        if isinstance(q, (int, float)) and q >= high_value_threshold:
+            b["high_value_records"] += 1
+        cls_name = ((rec.get("selected_move_classification") or {}).get("primary_class")) or ""
+        cls_field = {
+            "completes_endpoint": "selected_completes_endpoint",
+            "reduces_total_goal_distance": "selected_reduces_distance",
+            "redundant_reinforcement": "selected_redundant",
+            "off_chain": "selected_off_chain",
+            "other": "selected_other",
+        }.get(cls_name)
+        if cls_field:
+            b[cls_field] += 1
+        ec = rec.get("endpoint_completion_ranking") or {}
+        if ec.get("best_policy_rank") is not None or ec.get("best_visit_rank") is not None:
+            b["endpoint_exists"] += 1
+            _bucket_rank(ec.get("best_policy_rank"), b, "endpoint_policy")
+            _bucket_rank(ec.get("best_visit_rank"),  b, "endpoint_visit")
+        rd = rec.get("distance_reducing_ranking") or {}
+        if rd.get("best_policy_rank") is not None or rd.get("best_visit_rank") is not None:
+            b["reducer_exists"] += 1
+            _bucket_rank(rd.get("best_policy_rank"), b, "reducer_policy")
+            _bucket_rank(rd.get("best_visit_rank"),  b, "reducer_visit")
+
+    def _rate(num, den):
+        return (num / den) if den > 0 else 0.0
+
+    out = {}
+    for key, b in buckets.items():
+        n = b["records"]; e = b["endpoint_exists"]; r = b["reducer_exists"]
+        out[key] = {
+            "records": n,
+            "high_value_records": b["high_value_records"],
+            "selected_completes_endpoint_rate": _rate(b["selected_completes_endpoint"], n),
+            "selected_reduces_distance_rate":   _rate(b["selected_reduces_distance"], n),
+            "selected_redundant_rate":          _rate(b["selected_redundant"], n),
+            "selected_off_chain_rate":          _rate(b["selected_off_chain"], n),
+            "selected_other_rate":              _rate(b["selected_other"], n),
+            "endpoint_completion_exists_rate":  _rate(e, n),
+            "endpoint_policy_top1_rate":  _rate(b["endpoint_policy_top1"], e),
+            "endpoint_policy_top5_rate":  _rate(b["endpoint_policy_top5"], e),
+            "endpoint_policy_top20_rate": _rate(b["endpoint_policy_top20"], e),
+            "endpoint_policy_gt20_rate":  _rate(b["endpoint_policy_gt20"], e),
+            "endpoint_visit_top1_rate":   _rate(b["endpoint_visit_top1"], e),
+            "endpoint_visit_top5_rate":   _rate(b["endpoint_visit_top5"], e),
+            "endpoint_visit_top20_rate":  _rate(b["endpoint_visit_top20"], e),
+            "endpoint_visit_gt20_rate":   _rate(b["endpoint_visit_gt20"], e),
+            "distance_reducer_exists_rate":   _rate(r, n),
+            "reducer_policy_top1_rate":   _rate(b["reducer_policy_top1"], r),
+            "reducer_policy_top5_rate":   _rate(b["reducer_policy_top5"], r),
+            "reducer_policy_top20_rate":  _rate(b["reducer_policy_top20"], r),
+            "reducer_policy_gt20_rate":   _rate(b["reducer_policy_gt20"], r),
+            "reducer_visit_top1_rate":    _rate(b["reducer_visit_top1"], r),
+            "reducer_visit_top5_rate":    _rate(b["reducer_visit_top5"], r),
+            "reducer_visit_top20_rate":   _rate(b["reducer_visit_top20"], r),
+            "reducer_visit_gt20_rate":    _rate(b["reducer_visit_gt20"], r),
+        }
+    return out
+
+
 def aggregate_td_closeout_breakdown(
     per_ply_records: list,
     detected_player: str,
@@ -940,6 +1051,26 @@ def aggregate_goal_completion_diagnostics_from_records(
 
     result = aggregate_goal_completion_records(
         per_game_records, config=config, games_total=n_total,
+    )
+    # Fix 0 (spec 2026-05-10 §3): bulk td-before breakdown across decisive
+    # winners. Each replay's per-ply diagnostic records carry the
+    # winner's perspective; pair them with the per-game record's
+    # detected_player so we can filter to side_to_move == detected.
+    td_breakdown_records = []
+    td_breakdown_detected = []
+    for replay, rec in zip(replays, per_game_records):
+        if rec is None:
+            continue
+        det = rec.get("detected_player")
+        if not det:
+            continue
+        diag = replay.get("goal_completion_diagnostics") or []
+        for r in diag:
+            if isinstance(r, dict):
+                td_breakdown_records.append(r)
+                td_breakdown_detected.append(det)
+    result["td_closeout_breakdown"] = _aggregate_td_breakdown_multi_side(
+        td_breakdown_records, td_breakdown_detected, high_value_threshold=0.95,
     )
     # Surface Phase 3 detailed-record aggregation alongside the compact
     # record summary. The default path was missing this in Spec 1.5; the
@@ -4106,6 +4237,14 @@ def analyze(replays: List[dict],
         )
     # Recompute path's own CSV writer is preserved; Task 13 wires it.
 
+    # Spec 2026-05-10 §3.3 — td_closeout breakdown CSV. Always emitted
+    # so downstream tooling has a stable filename; empty buckets render as
+    # zero rows.
+    write_goal_completion_td_breakdown_csv(
+        os.path.join(out_dir, _suffixed("goal_completion_td_breakdown", "csv", suffix)),
+        (summary.get("goal_completion") or {}).get("td_closeout_breakdown") or {},
+    )
+
     # -----------------------------
     # Heatmap figures
     # -----------------------------
@@ -4251,6 +4390,11 @@ def analyze(replays: List[dict],
     lines.extend(format_per_move_stats_report(summary["per_move_stats"]))
     lines.extend(format_per_game_stats_report(summary["per_game_stats"]))
     lines.extend(format_goal_completion_report(summary["goal_completion"]))
+    # Spec 2026-05-10 §3.2 — closeout breakdown by total_goal_distance.
+    td_breakdown = (summary.get("goal_completion") or {}).get("td_closeout_breakdown")
+    if td_breakdown:
+        lines.append("")
+        lines.extend(format_td_closeout_breakdown_report(td_breakdown))
     lines.extend(format_policy_mcts_closeout_report(summary["goal_completion"]))
     lines.extend(format_conversion_training_trend_report(conversion_training_by_iter))
     lines.extend(format_recovery_or_extreme_closeout_drift_report(recovery_by_iter))
