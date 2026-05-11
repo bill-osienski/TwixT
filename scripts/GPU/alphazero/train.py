@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
-def _build_parser_for_test() -> argparse.ArgumentParser:
+def build_arg_parser() -> argparse.ArgumentParser:
     """Build the trainer CLI parser. Importable from tests to assert
     defaults / validation behavior without invoking main()/parse_args().
 
@@ -382,7 +382,23 @@ def _build_parser_for_test() -> argparse.ArgumentParser:
     parser.add_argument("--recovery-delay-threshold", type=int, default=20,
         help="conversion_delay_plies threshold for recovery bucket (default: 20).")
 
+    # Spec 3 Fix 1: td=1 root visit forcing (closeout tail correction)
+    parser.add_argument("--closeout-td1-visit-forcing-enabled", action="store_true",
+        help="Enable td=1 endpoint-completion root visit forcing in MCTS (Spec 3 Fix 1).")
+    parser.add_argument("--closeout-td1-min-visits", type=int, default=8,
+        help="Forced visits per endpoint-completion candidate at td=1 (default: 8).")
+    parser.add_argument("--closeout-td1-max-forced-moves", type=int, default=4,
+        help="Cap on number of candidate endpoint-completion moves to force per position.")
+    parser.add_argument("--closeout-td1-require-high-value", action="store_true",
+        help="Gate Fix 1 on root.q_value >= --closeout-td1-high-value-threshold.")
+    parser.add_argument("--closeout-td1-high-value-threshold", type=float, default=0.95,
+        help="Root q threshold used when --closeout-td1-require-high-value is set.")
+
     return parser
+
+
+# Backward-compat alias for callers/tests that imported the previous name.
+_build_parser_for_test = build_arg_parser
 
 
 def _validate_conversion_args(parser: argparse.ArgumentParser, args) -> None:
@@ -428,11 +444,22 @@ def _validate_conversion_args(parser: argparse.ArgumentParser, args) -> None:
         parser.error("--recovery-delay-threshold must be >= 1")
 
 
+def _validate_closeout_td1_args(parser: argparse.ArgumentParser, args) -> None:
+    """Validate Spec 3 Fix 1 closeout-td1 CLI args. Raises SystemExit via parser.error."""
+    if args.closeout_td1_min_visits < 1:
+        parser.error("--closeout-td1-min-visits must be >= 1")
+    if args.closeout_td1_max_forced_moves < 1:
+        parser.error("--closeout-td1-max-forced-moves must be >= 1")
+    if not (0.0 <= args.closeout_td1_high_value_threshold <= 1.0):
+        parser.error("--closeout-td1-high-value-threshold must be in [0.0, 1.0]")
+
+
 def main():
-    parser = _build_parser_for_test()
+    parser = build_arg_parser()
 
     args = parser.parse_args()
     _validate_conversion_args(parser, args)
+    _validate_closeout_td1_args(parser, args)
 
     # Propagate opening debug to workers via env var
     if args.opening_debug:
@@ -704,6 +731,12 @@ def main():
         recovery_bucket_enabled=args.recovery_bucket_enabled,
         recovery_dominant_unavailable_threshold=args.recovery_dominant_unavailable_threshold,
         recovery_delay_threshold=args.recovery_delay_threshold,
+        # Spec 3 Fix 1: td=1 root visit forcing
+        closeout_td1_visit_forcing_enabled=args.closeout_td1_visit_forcing_enabled,
+        closeout_td1_min_visits=args.closeout_td1_min_visits,
+        closeout_td1_max_forced_moves=args.closeout_td1_max_forced_moves,
+        closeout_td1_require_high_value=args.closeout_td1_require_high_value,
+        closeout_td1_high_value_threshold=args.closeout_td1_high_value_threshold,
     ))
     # Conditional override: None means "use default from train() (0.5)"
     if args.value_weight is not None:

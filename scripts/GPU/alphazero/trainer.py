@@ -2220,6 +2220,12 @@ def train(
     recovery_bucket_enabled: bool = True,
     recovery_dominant_unavailable_threshold: int = 10,
     recovery_delay_threshold: int = 20,
+    # Spec 3 Fix 1: td=1 root visit forcing in MCTS
+    closeout_td1_visit_forcing_enabled: bool = False,
+    closeout_td1_min_visits: int = 8,
+    closeout_td1_max_forced_moves: int = 4,
+    closeout_td1_require_high_value: bool = False,
+    closeout_td1_high_value_threshold: float = 0.95,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2328,6 +2334,12 @@ def train(
         eval_batch_size=mcts_eval_batch_size,
         pending_virtual_visits=mcts_pending_virtual_visits,
         stall_flush_sims=mcts_stall_flush_sims,
+        # Spec 3 Fix 1: td=1 root visit forcing
+        closeout_td1_visit_forcing_enabled=closeout_td1_visit_forcing_enabled,
+        closeout_td1_min_visits=closeout_td1_min_visits,
+        closeout_td1_max_forced_moves=closeout_td1_max_forced_moves,
+        closeout_td1_require_high_value=closeout_td1_require_high_value,
+        closeout_td1_high_value_threshold=closeout_td1_high_value_threshold,
         **mcts_exploration_overrides,
     )
 
@@ -2620,6 +2632,12 @@ def train(
             eval_batch_size=mcts_eval_batch_size,
             pending_virtual_visits=mcts_pending_virtual_visits,
             stall_flush_sims=mcts_stall_flush_sims,
+            # Spec 3 Fix 1: td=1 root visit forcing
+            closeout_td1_visit_forcing_enabled=closeout_td1_visit_forcing_enabled,
+            closeout_td1_min_visits=closeout_td1_min_visits,
+            closeout_td1_max_forced_moves=closeout_td1_max_forced_moves,
+            closeout_td1_require_high_value=closeout_td1_require_high_value,
+            closeout_td1_high_value_threshold=closeout_td1_high_value_threshold,
             **mcts_exploration_overrides,
         )
 
