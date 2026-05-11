@@ -524,6 +524,39 @@ class MCTS:
         # Step 4: Backup along the recorded path.
         self._backup(search_path, value)
 
+    def force_root_visits(
+        self,
+        root: MCTSNode,
+        candidate_moves: list,          # list of (row, col)
+        min_visits: int,
+        max_candidates: int,
+    ) -> int:
+        """Force ``min_visits`` root-override sims for each of the first
+        ``max_candidates`` candidate moves. Returns the total number of forced
+        sims executed.
+
+        Each forced sim uses the existing ``_run_single_simulation`` helper
+        with ``root_move_override`` set to the candidate move's encoded id.
+        The sim consumes from the same ``n_simulations`` budget as normal
+        sims — callers are expected to reduce the main-loop budget by the
+        return value. Forced sims must not exceed ``n_simulations``.
+        """
+        if not self.config.closeout_td1_visit_forcing_enabled:
+            return 0
+        if not candidate_moves:
+            return 0
+        moves = list(candidate_moves)[:max_candidates]
+        budget_total = self.config.n_simulations
+        forced = 0
+        for (r, c) in moves:
+            move_id = encode_move(r, c)
+            for _ in range(min_visits):
+                if forced >= budget_total:
+                    return forced
+                self._run_single_simulation(root, root_move_override=move_id)
+                forced += 1
+        return forced
+
     def _expand(self, node: MCTSNode) -> float:
         """Expand node: evaluate via evaluator, store priors and value.
 
