@@ -68,6 +68,14 @@ def test_below_event_threshold_excluded():
     assert aggregate_recovery_events([g]) == []
 
 
+def test_aggregator_populates_conversion_delay_winner_moves():
+    g = _fixture(rec_overrides={"winner_moves_with_dominant_unavailable": 12,
+                                "conversion_delay_winner_moves": 27})
+    events = aggregate_recovery_events([g])
+    assert events
+    assert events[0]["conversion_delay_winner_moves"] == 27
+
+
 import csv
 from scripts.twixt_replay_analyzer import (
     write_recovery_events_csv,
@@ -90,7 +98,9 @@ def test_recovery_csv_written(tmp_path):
     out = tmp_path / "rec.csv"
     write_recovery_events_csv(str(out), events)
     with open(out) as f:
-        rows = list(csv.DictReader(f))
+        reader = csv.DictReader(f)
+        assert "conversion_delay_winner_moves" in (reader.fieldnames or [])
+        rows = list(reader)
     assert len(rows) == 1
     assert rows[0]["recovery_class"] == "lost_and_value_collapsed"
     assert rows[0]["dominant_unavailable_moves"] == "100"

@@ -1077,6 +1077,7 @@ def aggregate_recovery_events(replays: list) -> list:
             "first_detection_ply": rec.get("first_dominant_unclosed_ply"),
             "first_unavailable_ply": first_unavailable_ply,
             "dominant_unavailable_moves": dom_unavail,
+            "conversion_delay_winner_moves": delay_winner,
             "latest_largest_component_size": latest_largest,
             "latest_total_goal_distance": latest_td,
             "q_at_first_unavailable": q_at_first_unavailable,
@@ -3122,6 +3123,7 @@ def write_recovery_events_csv(path: str, events: list) -> None:
     fields = [
         "iteration", "game_id", "winner", "detected_player",
         "first_detection_ply", "first_unavailable_ply", "dominant_unavailable_moves",
+        "conversion_delay_winner_moves",
         "latest_largest_component_size", "latest_total_goal_distance",
         "q_at_first_unavailable", "q_at_terminal",
         "sel_completes_endpoint", "sel_reduces_distance",
@@ -3141,6 +3143,7 @@ def write_recovery_events_csv(path: str, events: list) -> None:
                 "first_detection_ply": e.get("first_detection_ply"),
                 "first_unavailable_ply": e.get("first_unavailable_ply"),
                 "dominant_unavailable_moves": e.get("dominant_unavailable_moves"),
+                "conversion_delay_winner_moves": e.get("conversion_delay_winner_moves"),
                 "latest_largest_component_size": e.get("latest_largest_component_size"),
                 "latest_total_goal_distance": e.get("latest_total_goal_distance"),
                 "q_at_first_unavailable": e.get("q_at_first_unavailable"),
