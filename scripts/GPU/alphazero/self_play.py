@@ -470,7 +470,7 @@ def _merge_closeout_td1_telemetry(per_worker_telemetry: list) -> dict:
     """
     if not per_worker_telemetry:
         return {}
-    first = per_worker_telemetry[0]
+    first = next((t for t in per_worker_telemetry if t), {})
     out = {k: first.get(k) for k in
            ("enabled", "min_visits", "max_forced_moves",
             "require_high_value", "high_value_threshold")}
