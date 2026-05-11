@@ -1199,14 +1199,9 @@ Spec §3.4 gate to proceed to Phase 2:
 
 If those hold, Phase 2 (MCTS code) is justified. If not, stop and re-discuss with the user before proceeding.
 
-- [ ] **Step 3: Commit the regenerated artifacts**
+- [ ] **Step 3: Do NOT commit the regenerated artifacts**
 
-```bash
-git add Replays/130-139_Replay/goal_completion_td_breakdown_130-139.csv \
-        Replays/130-139_Replay/recovery_events_130-139.csv \
-        Replays/130-139_Replay/report_130-139.txt
-git commit -m "chore(analyzer): regenerate 130-139 with Spec 3 Fix 0 + Fix 3 outputs"
-```
+`Replays/130-139_Replay/` is not tracked in this repo (verified: `git ls-files Replays/130-139_Replay/` returns empty). Analyzer output is a generated artifact, not source. Skip the commit step entirely — the gate decision and metric values from the run go into the spec's results section or the conversation summary, not into git as data files. If this project later starts tracking analyzer output, re-introduce a commit step here.
 
 ---
 
@@ -2033,15 +2028,26 @@ git commit -m "feat(train): add CLI flags for closeout td=1 visit forcing"
 ## Task 16: Drain MCTS telemetry into stats sidecar
 
 **Files:**
-- Modify: `scripts/GPU/alphazero/self_play.py`
+- Modify: `scripts/GPU/alphazero/self_play.py`, `scripts/GPU/alphazero/ipc_messages.py`, `scripts/GPU/alphazero/self_play_worker.py`, `scripts/GPU/alphazero/trainer.py`
 
-- [ ] **Step 1: Locate the stats-sidecar emit site**
+**Transport pattern (Option A — per the spec §4.5 telemetry transport paragraph):**
+
+The MCTS instance lives inside a worker, but the sidecar gets written by the trainer. The telemetry must cross the worker boundary. As shipped, the chosen pattern is:
+
+1. `play_game` snapshots `mcts.get_closeout_td1_telemetry()` at game end and stores it on a new `GameRecord.closeout_td1_telemetry: Optional[dict]` field.
+2. `GameComplete` (IPC dataclass) gains a parallel `closeout_td1_telemetry: Optional[dict] = None` field; the worker (`self_play_worker.py`) forwards `game.closeout_td1_telemetry` into the message.
+3. The trainer collects each completed game's snapshot into an `all_closeout_td1_telemetry` list (one entry per game per iteration) on both the serial and parallel code paths.
+4. At the per-iteration sidecar emit point, the trainer calls `_merge_closeout_td1_telemetry(all_closeout_td1_telemetry)` and assigns the result to `_sidecar["closeout_td1_visit_forcing"]`.
+
+Alternative Option B (worker already has a stats payload — add closeout_td1 there and aggregate in trainer) was considered but rejected because the existing payload contract is per-game (matches GameRecord), not per-worker-iteration, and GameRecord already collects every other per-game telemetry surface.
+
+- [ ] **Step 1: Locate the trainer-side sidecar emit site**
 
 ```bash
-grep -n "closeout_td1\|recovery_or_extreme_closeout_drift\|conversion_training\|stats_sidecar" /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/self_play.py | head
+grep -n "closeout_td1\|recovery_or_extreme_closeout_drift\|conversion_training\|_sidecar\[" /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/trainer.py | head
 ```
 
-Find where per-iteration aggregate dicts (like `conversion_training`, `recovery_or_extreme_closeout_drift`) are written into the iter-NNNN_stats.json. The new block joins them.
+Find where the trainer assembles the per-iteration sidecar dict (look for `_sidecar["recovery_or_extreme_closeout_drift"]` or similar). The new merged block joins them at that point.
 
 - [ ] **Step 2: Aggregate per-worker MCTS telemetry**
 

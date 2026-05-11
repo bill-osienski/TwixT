@@ -216,6 +216,8 @@ def force_root_visits(
 
 Preferred shape: identify or extract a shared single-simulation helper from the existing `search_from_root` body and add a `root_move_override: Optional[int]` kwarg. Forced sims call that helper with the override set; normal sims call it with `None`. If the existing loop is too entangled to refactor cleanly in this spec, extract the minimum (descent + expand + backup) and leave the batching scaffolding to the main loop. Do NOT duplicate leaf-eval, backup, virtual-visit, or batching semantics unless a unit test proves equivalence (see §9.1).
 
+**Sync helper vs. `search_from_root`'s batched loop — known scope of the equivalence test.** As shipped, the helper (`_run_single_simulation`) is the body of the non-batched `search()` entrypoint, and `search_from_root` keeps its existing batched waiter machinery. `force_root_visits` calls the sync helper one forced sim at a time, then the batched loop runs the remaining `n_simulations - forced_count` sims as before. The equivalence test in §9.1 proves that a sync forced sim produces the same `child.visit_count` and `value_sum` as a sync normal-PUCT sim. It does NOT prove that a sync forced sim is byte-for-byte equivalent to a single sim inside the batched loop — those paths differ in waiter coordination, but they share `_expand`, `_backup`, and the leaf-evaluation contract. The integration coverage for the batched path remains the existing `test_self_play_closeout_diagnostics.py` suite plus the Phase 5 treatment run. Treat any divergence between sync-helper and batched semantics as a bug surfaced by the treatment run's telemetry, not a silent regression.
+
 After the root child is chosen by override, the rest of the descent is normal PUCT.
 - Children corresponding to candidate moves are expanded by `_expand` on first visit, so their priors and Q values are populated correctly.
 - After forcing completes, the main simulation loop runs `n_simulations - forced_count` regular PUCT sims. PUCT with Q=+1 backed up through the forced children naturally directs subsequent sims toward those children.
@@ -257,7 +259,7 @@ Per-iteration sidecar at `closeout_td1_visit_forcing`:
 }
 ```
 
-The MCTS instance accumulates these counters; the self-play worker drains them into the stats sidecar at the end of each iteration.
+**Telemetry transport** (concrete path as shipped): the MCTS instance accumulates counters during `play_game`; at game end the worker reads them via `mcts.get_closeout_td1_telemetry()` and stores the snapshot on a new `GameRecord.closeout_td1_telemetry: Optional[dict]` field. The worker passes that field through `GameComplete` (a new `closeout_td1_telemetry` IPC payload field). The trainer collects each completed game's snapshot into a per-iteration `all_closeout_td1_telemetry` list and feeds it to `_merge_closeout_td1_telemetry` from `self_play.py`. The merged dict lands at top-level `_sidecar["closeout_td1_visit_forcing"]` in the per-iteration `iter_NNNN_stats.json`. Rates are weighted by per-block `positions_triggered`; raw counters are summed.
 
 `candidates_skipped_invalid` counts forcing candidates whose encoded move id was not present in the expanded root's priors. These are either illegal at the current position or symptoms of an upstream bug in `compute_goal_completion_state`. The guard skips them silently and increments this counter so anomalies surface in the merged sidecar.
 
