@@ -2318,6 +2318,87 @@ def format_recovery_or_extreme_closeout_drift_report(sidecar_summaries: dict) ->
     return lines
 
 
+def aggregate_closeout_td1_visit_forcing(sidecars: dict) -> dict:
+    """Aggregate the closeout_td1_visit_forcing block across iterations.
+
+    Sums raw counters; recomputes weighted rates with positions_triggered
+    as the weight. Spec 3 Fix 1 §4.5.
+    """
+    iters_covered = sorted([
+        it for it, sc in (sidecars or {}).items()
+        if isinstance(sc, dict) and isinstance(sc.get("closeout_td1_visit_forcing"), dict)
+    ])
+    if not iters_covered:
+        return {}
+    enabled = False
+    min_visits = None
+    max_forced_moves = None
+    pt_total = 0
+    skip_no_cand = 0
+    skip_hv = 0
+    forced_total = 0
+    selected_count = 0
+    top1_weighted = 0.0
+    top5_weighted = 0.0
+    for it in iters_covered:
+        blk = sidecars[it].get("closeout_td1_visit_forcing") or {}
+        enabled = enabled or bool(blk.get("enabled"))
+        if min_visits is None and blk.get("min_visits") is not None:
+            min_visits = blk.get("min_visits")
+        if max_forced_moves is None and blk.get("max_forced_moves") is not None:
+            max_forced_moves = blk.get("max_forced_moves")
+        pt = int(blk.get("positions_triggered", 0) or 0)
+        pt_total += pt
+        skip_no_cand += int(blk.get("positions_skipped_no_candidates", 0) or 0)
+        skip_hv      += int(blk.get("positions_skipped_high_value_gate", 0) or 0)
+        forced_total += int(blk.get("forced_sims_total", 0) or 0)
+        selected_count += int(blk.get("selected_forced_move_count", 0) or 0)
+        top1_weighted += float(blk.get("post_force_endpoint_visit_top1_rate", 0) or 0) * pt
+        top5_weighted += float(blk.get("post_force_endpoint_visit_top5_rate", 0) or 0) * pt
+
+    def _rate(num, den):
+        return (num / den) if den > 0 else 0.0
+
+    return {
+        "iters_covered": iters_covered,
+        "enabled": enabled,
+        "min_visits": min_visits,
+        "max_forced_moves": max_forced_moves,
+        "positions_triggered_total": pt_total,
+        "positions_skipped_no_candidates": skip_no_cand,
+        "positions_skipped_high_value_gate": skip_hv,
+        "forced_sims_total": forced_total,
+        "selected_forced_move_count": selected_count,
+        "selected_forced_move_rate": _rate(selected_count, pt_total),
+        "post_force_endpoint_visit_top1_rate": _rate(top1_weighted, pt_total),
+        "post_force_endpoint_visit_top5_rate": _rate(top5_weighted, pt_total),
+    }
+
+
+def format_closeout_td1_visit_forcing_report(summary: dict) -> list:
+    """Format the Fix 1 telemetry section. Spec §1.2."""
+    if not summary:
+        return []
+    def _pct(x):
+        return f"{(x or 0.0) * 100.0:.1f}%"
+    lines = []
+    lines.append("Closeout td=1 visit forcing")
+    lines.append("===========================")
+    iters = summary.get("iters_covered") or []
+    if iters:
+        lines.append(f"Iters covered: {min(iters)}-{max(iters)}  enabled={summary.get('enabled')}  "
+                     f"min_visits={summary.get('min_visits')}  "
+                     f"max_forced_moves={summary.get('max_forced_moves')}")
+    lines.append(f"Positions triggered: {summary.get('positions_triggered_total', 0)}  "
+                 f"skipped(no_cand)={summary.get('positions_skipped_no_candidates', 0)}  "
+                 f"skipped(hv_gate)={summary.get('positions_skipped_high_value_gate', 0)}")
+    lines.append(f"Forced sims total:   {summary.get('forced_sims_total', 0)}")
+    lines.append(f"Selected forced move rate:        {_pct(summary.get('selected_forced_move_rate'))}")
+    lines.append(f"Post-force endpoint visit top-1:  {_pct(summary.get('post_force_endpoint_visit_top1_rate'))}")
+    lines.append(f"Post-force endpoint visit top-5:  {_pct(summary.get('post_force_endpoint_visit_top5_rate'))}")
+    return lines
+
+
 def write_conversion_training_by_iter_csv(
     sidecar_summaries: dict, output_dir, suffix: str = "",
 ) -> str:
