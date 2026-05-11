@@ -284,37 +284,7 @@ class MCTS:
 
         # Run simulations
         for _ in range(self.config.n_simulations):
-            node = root
-            search_path = [node]
-
-            # SELECT with LAZY CHILD CREATION
-            while node.is_expanded and not node.state.is_terminal():
-                move_id, child = self._select_child(node)
-
-                # Instantiate child if missing (lazy creation)
-                if child is None:
-                    # Decode move_id to (row, col) for apply_move
-                    r, c = decode_move(move_id)
-                    child = MCTSNode(
-                        state=node.state.apply_move((r, c)),
-                        parent=node,
-                        move=move_id,
-                    )
-                    node.children[move_id] = child
-
-                search_path.append(child)
-                node = child
-
-            # EXPAND & EVALUATE
-            if not node.state.is_terminal():
-                # Non-terminal leaf: expand with NN
-                value = self._expand(node)
-            else:
-                # Terminal node: explicit value assignment
-                value = self._terminal_value(node.state)
-
-            # BACKUP: propagate value up the tree
-            self._backup(search_path, value)
+            self._run_single_simulation(root, root_move_override=None)
 
         # Build visit_counts from ALL legal moves (not root.priors)
         visit_counts: Dict[Tuple[int, int], int] = {}
@@ -492,6 +462,67 @@ class MCTS:
         # Detach from parent to allow GC of old tree
         new_root.parent = None
         return new_root
+
+    def _run_single_simulation(
+        self,
+        root: MCTSNode,
+        root_move_override: Optional[int] = None,
+    ) -> None:
+        """Run one synchronous MCTS simulation from ``root``.
+
+        Implements the canonical DESCEND -> EXPAND/EVAL -> BACKUP loop without
+        the batching/waiter machinery used by ``search_from_root``. Shared by
+        both the non-batched ``search()`` entrypoint and ``force_root_visits``.
+
+        Args:
+            root: Tree root.
+            root_move_override: If not None, this move_id is selected at the
+                root instead of PUCT's argmax. Internal-node descent is
+                normal PUCT.
+        """
+        node = root
+        search_path = [node]
+
+        # Step 1: Root selection (overridden or PUCT).
+        if root.is_expanded and not root.state.is_terminal():
+            if root_move_override is not None:
+                move_id = root_move_override
+                child = root.children.get(move_id)
+            else:
+                move_id, child = self._select_child(node)
+            if child is None:
+                r, c = decode_move(move_id)
+                child = MCTSNode(
+                    state=node.state.apply_move((r, c)),
+                    parent=node,
+                    move=move_id,
+                )
+                node.children[move_id] = child
+            search_path.append(child)
+            node = child
+
+        # Step 2: Standard PUCT descent below the root.
+        while node.is_expanded and not node.state.is_terminal():
+            move_id, child = self._select_child(node)
+            if child is None:
+                r, c = decode_move(move_id)
+                child = MCTSNode(
+                    state=node.state.apply_move((r, c)),
+                    parent=node,
+                    move=move_id,
+                )
+                node.children[move_id] = child
+            search_path.append(child)
+            node = child
+
+        # Step 3: Expand or terminal-evaluate.
+        if not node.state.is_terminal():
+            value = self._expand(node)
+        else:
+            value = self._terminal_value(node.state)
+
+        # Step 4: Backup along the recorded path.
+        self._backup(search_path, value)
 
     def _expand(self, node: MCTSNode) -> float:
         """Expand node: evaluate via evaluator, store priors and value.
