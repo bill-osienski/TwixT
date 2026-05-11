@@ -4579,6 +4579,14 @@ def analyze(replays: List[dict],
     lines.extend(format_policy_mcts_closeout_report(summary["goal_completion"]))
     lines.extend(format_conversion_training_trend_report(conversion_training_by_iter))
     lines.extend(format_recovery_or_extreme_closeout_drift_report(recovery_by_iter))
+    # Spec 2026-05-10 §6 — per-game recovery event classification + CSV.
+    recovery_events = aggregate_recovery_events(replays)
+    write_recovery_events_csv(
+        os.path.join(out_dir, _suffixed("recovery_events", "csv", suffix)),
+        recovery_events,
+    )
+    lines.append("")
+    lines.extend(format_recovery_events_report(recovery_events))
 
     if _HAS_OD_ANALYZER and od_summary_dict:
         lines.extend(format_opening_diagnostics_report(od_summary_dict, od_by_ply_dict, od_warnings))
