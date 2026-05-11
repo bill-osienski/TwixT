@@ -236,6 +236,15 @@ class MCTS:
         self._final_root_value: Optional[float] = None
         self._final_top1_share: Optional[float] = None
 
+        # Spec 3 Fix 1 — closeout td=1 visit-forcing telemetry
+        self._closeout_td1_positions_triggered = 0
+        self._closeout_td1_positions_skipped_no_candidates = 0
+        self._closeout_td1_positions_skipped_high_value_gate = 0
+        self._closeout_td1_forced_sims_total = 0
+        self._closeout_td1_selected_forced_move_count = 0
+        self._closeout_td1_post_force_top1_hits = 0
+        self._closeout_td1_post_force_top5_hits = 0
+
     def _capture_final_root_stats(self, root: MCTSNode) -> None:
         """Snapshot root.q_value and top child visit share after a search.
 
@@ -256,6 +265,43 @@ class MCTS:
             return
         top_visits = max(getattr(c, "visit_count", 0) for c in children)
         self._final_top1_share = float(top_visits / total_visits)
+
+    # ------------------------------------------------------------------
+    # Spec 3 Fix 1 — closeout td=1 visit-forcing telemetry helpers
+    # ------------------------------------------------------------------
+    def reset_closeout_td1_telemetry(self) -> None:
+        self._closeout_td1_positions_triggered = 0
+        self._closeout_td1_positions_skipped_no_candidates = 0
+        self._closeout_td1_positions_skipped_high_value_gate = 0
+        self._closeout_td1_forced_sims_total = 0
+        self._closeout_td1_selected_forced_move_count = 0
+        self._closeout_td1_post_force_top1_hits = 0
+        self._closeout_td1_post_force_top5_hits = 0
+
+    def get_closeout_td1_telemetry(self) -> dict:
+        triggered = self._closeout_td1_positions_triggered
+        return {
+            "enabled": bool(self.config.closeout_td1_visit_forcing_enabled),
+            "min_visits": self.config.closeout_td1_min_visits,
+            "max_forced_moves": self.config.closeout_td1_max_forced_moves,
+            "require_high_value": bool(self.config.closeout_td1_require_high_value),
+            "high_value_threshold": self.config.closeout_td1_high_value_threshold,
+            "positions_triggered": triggered,
+            "positions_skipped_no_candidates": self._closeout_td1_positions_skipped_no_candidates,
+            "positions_skipped_high_value_gate": self._closeout_td1_positions_skipped_high_value_gate,
+            "forced_sims_total": self._closeout_td1_forced_sims_total,
+            "selected_forced_move_count": self._closeout_td1_selected_forced_move_count,
+            "selected_forced_move_rate": (
+                (self._closeout_td1_selected_forced_move_count / triggered)
+                if triggered > 0 else 0.0
+            ),
+            "post_force_endpoint_visit_top1_rate": (
+                (self._closeout_td1_post_force_top1_hits / triggered) if triggered > 0 else 0.0
+            ),
+            "post_force_endpoint_visit_top5_rate": (
+                (self._closeout_td1_post_force_top5_hits / triggered) if triggered > 0 else 0.0
+            ),
+        }
 
     def search(
         self,
@@ -309,6 +355,7 @@ class MCTS:
         root: MCTSNode,
         add_noise: bool = True,
         ply: int = 0,
+        gc_state_full: Optional[dict] = None,
     ) -> Tuple[Dict[Tuple[int, int], int], float, MCTSNode]:
         """Run MCTS with batched leaf evaluation using waiter lists.
 
@@ -336,6 +383,37 @@ class MCTS:
         # Define batch_size once at top
         batch_size = self.config.eval_batch_size
 
+        # Spec 3 Fix 1 — td=1 root visit forcing.
+        forced_count = 0
+        forced_candidate_ids: Set[int] = set()
+        if self.config.closeout_td1_visit_forcing_enabled and gc_state_full is not None:
+            if gc_state_full.get("total_goal_distance") == 1:
+                ec_moves = gc_state_full.get("endpoint_completion_moves") or []
+                gate_passes = (
+                    (not self.config.closeout_td1_require_high_value)
+                    or (root.q_value >= self.config.closeout_td1_high_value_threshold)
+                )
+                if not ec_moves:
+                    self._closeout_td1_positions_skipped_no_candidates += 1
+                elif not gate_passes:
+                    self._closeout_td1_positions_skipped_high_value_gate += 1
+                else:
+                    self._closeout_td1_positions_triggered += 1
+                    forced_count = self.force_root_visits(
+                        root=root,
+                        candidate_moves=ec_moves,
+                        min_visits=self.config.closeout_td1_min_visits,
+                        max_candidates=self.config.closeout_td1_max_forced_moves,
+                    )
+                    self._closeout_td1_forced_sims_total += forced_count
+                    forced_candidate_ids = {
+                        encode_move(r, c)
+                        for (r, c) in ec_moves[:self.config.closeout_td1_max_forced_moves]
+                    }
+
+        # Reduce the main loop budget by the number of forced sims already run.
+        remaining_sims = self.config.n_simulations - forced_count
+
         # Option B: Store (node_id, node) pairs to avoid recomputing id() at flush
         # Note: pending_node_ids contains id(node), NOT move_ids - different int domains!
         pending_nodes: List[Tuple[int, MCTSNode]] = []  # (node_id, node), unique leaves
@@ -343,7 +421,7 @@ class MCTS:
         pending_node_ids: Set[int] = set()  # For virtual visit penalty in _select_child
         stall_count: int = 0  # Sims since we added a NEW pending leaf
 
-        for sim in range(self.config.n_simulations):
+        for sim in range(remaining_sims):
             node = root
             search_path = [node]
 
@@ -434,6 +512,27 @@ class MCTS:
 
         # Snapshot final-root stats for per-game persistence (spec 2026-04-29).
         self._capture_final_root_stats(root)
+
+        # Spec 3 Fix 1 — post-force telemetry: did the forced candidates rank
+        # top-1 / top-5 by final visit count? Bumps the "selected forced move"
+        # counter if the visit-argmax matches a forced id.
+        if forced_candidate_ids:
+            sorted_visits = sorted(
+                [(mid, c.visit_count) for mid, c in root.children.items()],
+                key=lambda kv: kv[1],
+                reverse=True,
+            )
+            top1_ids = {sorted_visits[0][0]} if sorted_visits else set()
+            top5_ids = {mid for mid, _ in sorted_visits[:5]}
+            if forced_candidate_ids & top1_ids:
+                self._closeout_td1_post_force_top1_hits += 1
+            if forced_candidate_ids & top5_ids:
+                self._closeout_td1_post_force_top5_hits += 1
+            # Did MCTS-final-selection pick one of the forced moves? Compute by
+            # visit argmax (selection is by visit count in the caller; replicate
+            # the rule conservatively).
+            if sorted_visits and sorted_visits[0][0] in forced_candidate_ids:
+                self._closeout_td1_selected_forced_move_count += 1
 
         return visit_counts, root.q_value, root
 
