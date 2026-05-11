@@ -717,7 +717,7 @@ def _surface_phase3_diagnostics(replays: list, n_decisive: int) -> dict:
 def _aggregate_td_breakdown_multi_side(
     records: list,
     detected_sides: list,
-    high_value_threshold: float = 0.95,
+    high_value_threshold: float = 0.9,
 ) -> dict:
     """Variant of aggregate_td_closeout_breakdown that takes per-record
     detected_player labels. Used when aggregating across games where
@@ -828,7 +828,7 @@ def _aggregate_td_breakdown_multi_side(
 def aggregate_td_closeout_breakdown(
     per_ply_records: list,
     detected_player: str,
-    high_value_threshold: float = 0.95,
+    high_value_threshold: float = 0.9,
 ) -> dict:
     """Bucket strict closeout per-ply records by total_goal_distance_before.
 
@@ -1039,11 +1039,7 @@ def aggregate_recovery_events(replays: list) -> list:
                     sel_class_counts[cls] += 1
 
         q_at_terminal = meta.get("final_root_value")
-        outcome = "win" if reason == "win" else (
-            "state_cap" if reason == "state_cap" else (
-                "adjudicated" if reason == "adjudicated" else (reason or "other")
-            )
-        )
+        outcome = reason or "other"
 
         delay_winner = rec.get("conversion_delay_winner_moves") or 0
         # Bucket assignment (priority order, §6.3)
@@ -1061,10 +1057,10 @@ def aggregate_recovery_events(replays: list) -> list:
         elif outcome == "state_cap":
             bucket = "lost_then_state_cap"
         elif (q_at_first_unavailable is not None and q_at_first_unavailable >= 0.9
-              and (q_at_terminal or 0) <= 0.5):
+              and q_at_terminal is not None and q_at_terminal <= 0.5):
             bucket = "lost_and_value_collapsed"
         elif (q_at_first_unavailable is not None and q_at_first_unavailable >= 0.9
-              and (q_at_terminal or 0) >= 0.9):
+              and q_at_terminal is not None and q_at_terminal >= 0.9):
             bucket = "lost_but_value_stayed_high"
         else:
             bucket = "lost_other"
@@ -1187,7 +1183,8 @@ def aggregate_goal_completion_diagnostics_from_records(
                 td_breakdown_records.append(r)
                 td_breakdown_detected.append(det)
     result["td_closeout_breakdown"] = _aggregate_td_breakdown_multi_side(
-        td_breakdown_records, td_breakdown_detected, high_value_threshold=0.95,
+        td_breakdown_records, td_breakdown_detected,
+        high_value_threshold=(config or {}).get("high_value_threshold", 0.9),
     )
     # Surface Phase 3 detailed-record aggregation alongside the compact
     # record summary. The default path was missing this in Spec 1.5; the

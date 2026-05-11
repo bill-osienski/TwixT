@@ -48,6 +48,18 @@ def test_lost_and_value_collapsed():
     assert events[0]["recovery_class"] == "lost_and_value_collapsed"
 
 
+def test_missing_terminal_value_does_not_bucket_as_value_collapsed():
+    """q_at_terminal is None must NOT be treated as 0 (which would always satisfy
+    the <= 0.5 threshold and mis-bucket as lost_and_value_collapsed)."""
+    g = _fixture(meta_overrides={"final_root_value": None},
+                 diag=[{"ply": 60, "side_to_move": "black",
+                        "root_summary": {"q_value": 0.95},
+                        "goal_completion": {"total_goal_distance_before": 5}}])
+    events = aggregate_recovery_events([g])
+    assert events
+    assert events[0]["recovery_class"] != "lost_and_value_collapsed"
+
+
 def test_lost_but_value_stayed_high():
     g = _fixture(meta_overrides={"final_root_value": 0.99},
                  diag=[{"ply": 60, "side_to_move": "black",
