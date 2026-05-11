@@ -78,3 +78,49 @@ def test_td_outside_1_2_3_is_ignored():
     assert out["td=1"]["records"] == 0
     assert out["td=2"]["records"] == 0
     assert out["td=3"]["records"] == 0
+
+
+from scripts.twixt_replay_analyzer import format_td_closeout_breakdown_report
+
+
+def test_report_formatter_produces_section():
+    breakdown = {
+        "td=1": {
+            "records": 100, "high_value_records": 90,
+            "selected_completes_endpoint_rate": 0.1,
+            "selected_reduces_distance_rate": 0.0,
+            "selected_redundant_rate": 0.6,
+            "selected_off_chain_rate": 0.25,
+            "selected_other_rate": 0.05,
+            "endpoint_completion_exists_rate": 1.0,
+            "endpoint_policy_top5_rate": 0.3,
+            "endpoint_visit_top5_rate": 0.2,
+            "endpoint_visit_gt20_rate": 0.6,
+            "distance_reducer_exists_rate": 1.0,
+            "reducer_policy_top5_rate": 0.4,
+            "reducer_visit_top5_rate": 0.3,
+            "reducer_visit_gt20_rate": 0.5,
+        },
+        "td=2": {"records": 50, "high_value_records": 40,
+                 "selected_completes_endpoint_rate": 0.7, "selected_reduces_distance_rate": 0.1,
+                 "selected_redundant_rate": 0.1, "selected_off_chain_rate": 0.1,
+                 "selected_other_rate": 0.0,
+                 "endpoint_completion_exists_rate": 0.8, "endpoint_policy_top5_rate": 0.8,
+                 "endpoint_visit_top5_rate": 0.75, "endpoint_visit_gt20_rate": 0.05,
+                 "distance_reducer_exists_rate": 1.0, "reducer_policy_top5_rate": 0.85,
+                 "reducer_visit_top5_rate": 0.8, "reducer_visit_gt20_rate": 0.05},
+        "td=3": {"records": 0, "high_value_records": 0,
+                 "selected_completes_endpoint_rate": 0.0, "selected_reduces_distance_rate": 0.0,
+                 "selected_redundant_rate": 0.0, "selected_off_chain_rate": 0.0,
+                 "selected_other_rate": 0.0,
+                 "endpoint_completion_exists_rate": 0.0, "endpoint_policy_top5_rate": 0.0,
+                 "endpoint_visit_top5_rate": 0.0, "endpoint_visit_gt20_rate": 0.0,
+                 "distance_reducer_exists_rate": 0.0, "reducer_policy_top5_rate": 0.0,
+                 "reducer_visit_top5_rate": 0.0, "reducer_visit_gt20_rate": 0.0},
+    }
+    lines = format_td_closeout_breakdown_report(breakdown)
+    body = "\n".join(lines)
+    assert "Closeout breakdown by total_goal_distance" in body
+    assert "td=1:" in body and "td=2:" in body and "td=3:" in body
+    assert "records=100" in body
+    assert "visit >20=60.0%" in body or "visit >20=60%" in body

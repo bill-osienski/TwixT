@@ -2633,6 +2633,48 @@ def format_goal_completion_report(gc: dict) -> List[str]:
     return lines
 
 
+def format_td_closeout_breakdown_report(breakdown: dict) -> list:
+    """Format the td_closeout_breakdown section for report_<range>.txt.
+
+    Spec 2026-05-10 §3.2. `breakdown` is the dict returned by
+    aggregate_td_closeout_breakdown().
+    """
+    def _pct(x):
+        return f"{(x or 0.0) * 100.0:.1f}%"
+
+    lines = []
+    lines.append("Closeout breakdown by total_goal_distance")
+    lines.append("=========================================")
+    for key in ("td=1", "td=2", "td=3"):
+        b = breakdown.get(key) or {}
+        n = b.get("records", 0)
+        hv = b.get("high_value_records", 0)
+        lines.append(f"{key}:  records={n}  high_value={hv}")
+        if n == 0:
+            lines.append("  (no records)")
+            continue
+        lines.append(
+            "  selected: complete=" + _pct(b.get("selected_completes_endpoint_rate"))
+            + "  reduce=" + _pct(b.get("selected_reduces_distance_rate"))
+            + "  redundant=" + _pct(b.get("selected_redundant_rate"))
+            + "  off-chain=" + _pct(b.get("selected_off_chain_rate"))
+            + "  other=" + _pct(b.get("selected_other_rate"))
+        )
+        lines.append(
+            "  endpoint exists: " + _pct(b.get("endpoint_completion_exists_rate"))
+            + "  policy top5=" + _pct(b.get("endpoint_policy_top5_rate"))
+            + "  visit top5=" + _pct(b.get("endpoint_visit_top5_rate"))
+            + "  visit >20=" + _pct(b.get("endpoint_visit_gt20_rate"))
+        )
+        lines.append(
+            "  reducer  exists: " + _pct(b.get("distance_reducer_exists_rate"))
+            + "  policy top5=" + _pct(b.get("reducer_policy_top5_rate"))
+            + "  visit top5=" + _pct(b.get("reducer_visit_top5_rate"))
+            + "  visit >20=" + _pct(b.get("reducer_visit_gt20_rate"))
+        )
+    return lines
+
+
 def format_policy_mcts_closeout_report(gc_block: dict) -> List[str]:
     """Render the policy/MCTS closeout behavior section per spec §8.7.
 
