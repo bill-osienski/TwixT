@@ -124,3 +124,66 @@ def test_report_formatter_produces_section():
     assert "td=1:" in body and "td=2:" in body and "td=3:" in body
     assert "records=100" in body
     assert "visit >20=60.0%" in body or "visit >20=60%" in body
+
+
+import csv
+import tempfile
+
+from scripts.twixt_replay_analyzer import write_goal_completion_td_breakdown_csv
+
+
+def test_td_breakdown_csv_one_row_per_td_value(tmp_path):
+    breakdown = {
+        "td=1": {"records": 3, "high_value_records": 2,
+                 "selected_completes_endpoint_rate": 0.33,
+                 "selected_reduces_distance_rate": 0.0,
+                 "selected_redundant_rate": 0.33, "selected_off_chain_rate": 0.34,
+                 "selected_other_rate": 0.0,
+                 "endpoint_completion_exists_rate": 1.0,
+                 "endpoint_policy_top1_rate": 0.0, "endpoint_policy_top5_rate": 0.33,
+                 "endpoint_policy_top20_rate": 0.66, "endpoint_policy_gt20_rate": 0.34,
+                 "endpoint_visit_top1_rate": 0.0, "endpoint_visit_top5_rate": 0.33,
+                 "endpoint_visit_top20_rate": 0.33, "endpoint_visit_gt20_rate": 0.67,
+                 "distance_reducer_exists_rate": 1.0,
+                 "reducer_policy_top1_rate": 0.0, "reducer_policy_top5_rate": 0.33,
+                 "reducer_policy_top20_rate": 0.66, "reducer_policy_gt20_rate": 0.34,
+                 "reducer_visit_top1_rate": 0.0, "reducer_visit_top5_rate": 0.33,
+                 "reducer_visit_top20_rate": 0.33, "reducer_visit_gt20_rate": 0.67},
+        "td=2": {"records": 0, "high_value_records": 0,
+                 "selected_completes_endpoint_rate": 0.0,
+                 "selected_reduces_distance_rate": 0.0,
+                 "selected_redundant_rate": 0.0, "selected_off_chain_rate": 0.0,
+                 "selected_other_rate": 0.0,
+                 "endpoint_completion_exists_rate": 0.0,
+                 "endpoint_policy_top1_rate": 0.0, "endpoint_policy_top5_rate": 0.0,
+                 "endpoint_policy_top20_rate": 0.0, "endpoint_policy_gt20_rate": 0.0,
+                 "endpoint_visit_top1_rate": 0.0, "endpoint_visit_top5_rate": 0.0,
+                 "endpoint_visit_top20_rate": 0.0, "endpoint_visit_gt20_rate": 0.0,
+                 "distance_reducer_exists_rate": 0.0,
+                 "reducer_policy_top1_rate": 0.0, "reducer_policy_top5_rate": 0.0,
+                 "reducer_policy_top20_rate": 0.0, "reducer_policy_gt20_rate": 0.0,
+                 "reducer_visit_top1_rate": 0.0, "reducer_visit_top5_rate": 0.0,
+                 "reducer_visit_top20_rate": 0.0, "reducer_visit_gt20_rate": 0.0},
+        "td=3": {"records": 0, "high_value_records": 0,
+                 "selected_completes_endpoint_rate": 0.0,
+                 "selected_reduces_distance_rate": 0.0,
+                 "selected_redundant_rate": 0.0, "selected_off_chain_rate": 0.0,
+                 "selected_other_rate": 0.0,
+                 "endpoint_completion_exists_rate": 0.0,
+                 "endpoint_policy_top1_rate": 0.0, "endpoint_policy_top5_rate": 0.0,
+                 "endpoint_policy_top20_rate": 0.0, "endpoint_policy_gt20_rate": 0.0,
+                 "endpoint_visit_top1_rate": 0.0, "endpoint_visit_top5_rate": 0.0,
+                 "endpoint_visit_top20_rate": 0.0, "endpoint_visit_gt20_rate": 0.0,
+                 "distance_reducer_exists_rate": 0.0,
+                 "reducer_policy_top1_rate": 0.0, "reducer_policy_top5_rate": 0.0,
+                 "reducer_policy_top20_rate": 0.0, "reducer_policy_gt20_rate": 0.0,
+                 "reducer_visit_top1_rate": 0.0, "reducer_visit_top5_rate": 0.0,
+                 "reducer_visit_top20_rate": 0.0, "reducer_visit_gt20_rate": 0.0},
+    }
+    out = tmp_path / "td_breakdown.csv"
+    write_goal_completion_td_breakdown_csv(str(out), breakdown)
+    with open(out) as f:
+        rows = list(csv.DictReader(f))
+    assert [r["td_before"] for r in rows] == ["1", "2", "3"]
+    assert int(rows[0]["records"]) == 3
+    assert float(rows[0]["selected_completes_endpoint_rate"]) == 0.33

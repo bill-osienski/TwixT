@@ -2842,6 +2842,34 @@ def write_goal_completion_worst_cases_csv(
             w.writerow(row)
 
 
+def write_goal_completion_td_breakdown_csv(path: str, breakdown: dict) -> None:
+    """Write one row per td_before bucket. Spec 2026-05-10 §3.3."""
+    fields = [
+        "td_before", "records", "high_value_records",
+        "selected_completes_endpoint_rate", "selected_reduces_distance_rate",
+        "selected_redundant_rate", "selected_off_chain_rate", "selected_other_rate",
+        "endpoint_completion_exists_rate",
+        "endpoint_policy_top1_rate", "endpoint_policy_top5_rate",
+        "endpoint_policy_top20_rate", "endpoint_policy_gt20_rate",
+        "endpoint_visit_top1_rate", "endpoint_visit_top5_rate",
+        "endpoint_visit_top20_rate", "endpoint_visit_gt20_rate",
+        "distance_reducer_exists_rate",
+        "reducer_policy_top1_rate", "reducer_policy_top5_rate",
+        "reducer_policy_top20_rate", "reducer_policy_gt20_rate",
+        "reducer_visit_top1_rate", "reducer_visit_top5_rate",
+        "reducer_visit_top20_rate", "reducer_visit_gt20_rate",
+    ]
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for key in ("td=1", "td=2", "td=3"):
+            b = breakdown.get(key) or {}
+            row = {"td_before": key.split("=", 1)[1]}
+            for k in fields[1:]:
+                row[k] = b.get(k, 0)
+            w.writerow(row)
+
+
 # -----------------------------
 # Phase 1 (connectivity-retrain) report formatters
 # -----------------------------
