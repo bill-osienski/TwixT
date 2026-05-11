@@ -3117,6 +3117,71 @@ def write_goal_completion_td_breakdown_csv(path: str, breakdown: dict) -> None:
             w.writerow(row)
 
 
+def write_recovery_events_csv(path: str, events: list) -> None:
+    """One row per recovery event (spec §6.4)."""
+    fields = [
+        "iteration", "game_id", "winner", "detected_player",
+        "first_detection_ply", "first_unavailable_ply", "dominant_unavailable_moves",
+        "latest_largest_component_size", "latest_total_goal_distance",
+        "q_at_first_unavailable", "q_at_terminal",
+        "sel_completes_endpoint", "sel_reduces_distance",
+        "sel_redundant_reinforcement", "sel_off_chain", "sel_other",
+        "eventual_outcome", "recovery_class",
+    ]
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for e in events:
+            sc = e.get("selected_class_counts_after_first_unavailable") or {}
+            row = {
+                "iteration": e.get("iteration"),
+                "game_id": e.get("game_id"),
+                "winner": e.get("winner"),
+                "detected_player": e.get("detected_player"),
+                "first_detection_ply": e.get("first_detection_ply"),
+                "first_unavailable_ply": e.get("first_unavailable_ply"),
+                "dominant_unavailable_moves": e.get("dominant_unavailable_moves"),
+                "latest_largest_component_size": e.get("latest_largest_component_size"),
+                "latest_total_goal_distance": e.get("latest_total_goal_distance"),
+                "q_at_first_unavailable": e.get("q_at_first_unavailable"),
+                "q_at_terminal": e.get("q_at_terminal"),
+                "sel_completes_endpoint": sc.get("completes_endpoint", 0),
+                "sel_reduces_distance": sc.get("reduces_total_goal_distance", 0),
+                "sel_redundant_reinforcement": sc.get("redundant_reinforcement", 0),
+                "sel_off_chain": sc.get("off_chain", 0),
+                "sel_other": sc.get("other", 0),
+                "eventual_outcome": e.get("eventual_outcome"),
+                "recovery_class": e.get("recovery_class"),
+            }
+            w.writerow(row)
+
+
+def format_recovery_events_report(events: list) -> list:
+    """Format the recovery section for report_<range>.txt (spec §6.4)."""
+    lines = []
+    lines.append("Recovery / dominant-component-lost diagnostics")
+    lines.append("===============================================")
+    lines.append(f"Events: {len(events)}")
+    if not events:
+        return lines
+    counts = {}
+    for e in events:
+        b = e.get("recovery_class") or "lost_other"
+        counts[b] = counts.get(b, 0) + 1
+    lines.append("By outcome:")
+    for k in ("lost_then_recovered", "lost_then_won_late", "lost_then_state_cap",
+              "lost_and_value_collapsed", "lost_but_value_stayed_high", "lost_other"):
+        if k in counts:
+            lines.append(f"  {k:30s} {counts[k]}")
+    dom = sorted(int(e.get("dominant_unavailable_moves") or 0) for e in events)
+    delays = sorted(int(e.get("conversion_delay_winner_moves") or 0) for e in events)
+    def _median(xs):
+        return xs[len(xs)//2] if xs else 0
+    lines.append(f"Median dominant_unavailable_moves: {_median(dom)}")
+    lines.append(f"Median delay (winner_moves):       {_median(delays)}")
+    return lines
+
+
 # -----------------------------
 # Phase 1 (connectivity-retrain) report formatters
 # -----------------------------

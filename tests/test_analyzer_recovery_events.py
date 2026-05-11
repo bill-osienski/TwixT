@@ -66,3 +66,47 @@ def test_lost_then_won_late():
 def test_below_event_threshold_excluded():
     g = _fixture(rec_overrides={"winner_moves_with_dominant_unavailable": 2})
     assert aggregate_recovery_events([g]) == []
+
+
+import csv
+from scripts.twixt_replay_analyzer import (
+    write_recovery_events_csv,
+    format_recovery_events_report,
+)
+
+
+def test_recovery_csv_written(tmp_path):
+    events = [
+        {"iteration": 131, "game_id": "game_079", "winner": "black",
+         "detected_player": "black", "first_detection_ply": 56,
+         "first_unavailable_ply": 60, "dominant_unavailable_moves": 100,
+         "latest_largest_component_size": 24, "latest_total_goal_distance": 5,
+         "q_at_first_unavailable": 0.95, "q_at_terminal": -0.1,
+         "selected_class_counts_after_first_unavailable":
+             {"completes_endpoint": 0, "reduces_total_goal_distance": 1,
+              "redundant_reinforcement": 3, "off_chain": 8, "other": 1},
+         "eventual_outcome": "adjudicated", "recovery_class": "lost_and_value_collapsed"},
+    ]
+    out = tmp_path / "rec.csv"
+    write_recovery_events_csv(str(out), events)
+    with open(out) as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 1
+    assert rows[0]["recovery_class"] == "lost_and_value_collapsed"
+    assert rows[0]["dominant_unavailable_moves"] == "100"
+
+
+def test_recovery_report_formatter():
+    events = [
+        {"recovery_class": "lost_then_state_cap", "dominant_unavailable_moves": 10,
+         "conversion_delay_winner_moves": 20},
+        {"recovery_class": "lost_then_state_cap", "dominant_unavailable_moves": 14,
+         "conversion_delay_winner_moves": 30},
+        {"recovery_class": "lost_but_value_stayed_high",
+         "dominant_unavailable_moves": 12, "conversion_delay_winner_moves": 5},
+    ]
+    lines = format_recovery_events_report(events)
+    body = "\n".join(lines)
+    assert "Recovery / dominant-component-lost diagnostics" in body
+    assert "lost_then_state_cap" in body
+    assert "Events: 3" in body
