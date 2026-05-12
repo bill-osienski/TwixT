@@ -2422,6 +2422,62 @@ def format_closeout_td1_visit_forcing_report(summary: dict) -> list:
     return lines
 
 
+def aggregate_closeout_selection_tiebreak(sidecars: dict) -> dict:
+    """Aggregate the closeout_selection_tiebreak block across iterations.
+
+    Sums raw counters and recomputes override_rate. Spec 3 Fix 2 §5.5.
+    """
+    iters_covered = sorted([
+        it for it, sc in (sidecars or {}).items()
+        if isinstance(sc, dict) and isinstance(sc.get("closeout_selection_tiebreak"), dict)
+    ])
+    if not iters_covered:
+        return {}
+    enabled = False
+    sums = {
+        "eligible_positions": 0, "overrides": 0,
+        "override_to_endpoint": 0, "override_to_reducer": 0,
+        "would_have_selected_redundant": 0,
+        "would_have_selected_off_chain": 0,
+        "would_have_selected_other": 0,
+    }
+    for it in iters_covered:
+        blk = sidecars[it].get("closeout_selection_tiebreak") or {}
+        enabled = enabled or bool(blk.get("enabled"))
+        for k in sums:
+            sums[k] += int(blk.get(k, 0) or 0)
+    eligible = sums["eligible_positions"]
+    return {
+        "iters_covered": iters_covered,
+        "enabled": enabled,
+        **sums,
+        "override_rate": (sums["overrides"] / eligible) if eligible > 0 else 0.0,
+    }
+
+
+def format_closeout_selection_tiebreak_report(summary: dict) -> list:
+    """Format the Fix 2 telemetry section. Spec §5.5."""
+    if not summary:
+        return []
+    def _pct(x):
+        return f"{(x or 0.0) * 100.0:.1f}%"
+    lines = []
+    lines.append("Closeout selection tie-break")
+    lines.append("============================")
+    iters = summary.get("iters_covered") or []
+    if iters:
+        lines.append(f"Iters covered: {min(iters)}-{max(iters)}  enabled={summary.get('enabled')}")
+    lines.append(f"Eligible positions: {summary.get('eligible_positions', 0)}")
+    lines.append(f"Overrides: {summary.get('overrides', 0)}  rate={_pct(summary.get('override_rate'))}")
+    lines.append(f"  -> endpoint: {summary.get('override_to_endpoint', 0)}")
+    lines.append(f"  -> reducer:  {summary.get('override_to_reducer', 0)}")
+    lines.append("Would-have-selected (only when an override fired):")
+    lines.append(f"  redundant: {summary.get('would_have_selected_redundant', 0)}")
+    lines.append(f"  off-chain: {summary.get('would_have_selected_off_chain', 0)}")
+    lines.append(f"  other:     {summary.get('would_have_selected_other', 0)}")
+    return lines
+
+
 def write_conversion_training_by_iter_csv(
     sidecar_summaries: dict, output_dir, suffix: str = "",
 ) -> str:
@@ -4700,6 +4756,12 @@ def analyze(replays: List[dict],
         lines.extend([""])
         lines.extend(format_closeout_td1_visit_forcing_report(td1_summary))
         summary["closeout_td1_visit_forcing"] = td1_summary
+    # Spec 3 Fix 2 §5.5 — closeout selection tie-break telemetry summary.
+    tb_summary = aggregate_closeout_selection_tiebreak(relevant_sidecars or {})
+    if tb_summary:
+        lines.extend([""])
+        lines.extend(format_closeout_selection_tiebreak_report(tb_summary))
+        summary["closeout_selection_tiebreak"] = tb_summary
     # Spec 2026-05-10 §6 — per-game recovery event classification + CSV.
     recovery_events = aggregate_recovery_events(replays)
     write_recovery_events_csv(
