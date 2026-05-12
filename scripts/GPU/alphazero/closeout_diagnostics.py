@@ -31,6 +31,11 @@ def _rank_moves_by_score(
     """Return (move_to_visit_rank, move_to_policy_rank, move_to_policy_prob, total_visits).
 
     Ranks are 1-based; ties broken by lexicographic move order for determinism.
+
+    `priors_raw` is the MCTS root's per-legal-move prior dict ({move_id: prob}),
+    matching the format mcts._expand_batch writes. Earlier code assumed a
+    length-n_cells flat array and silently produced empty ranks against the
+    real dict format — leaving best_policy_rank=None on every closeout record.
     """
     move_to_visits = dict(visit_counts)
     sorted_by_visits = sorted(
@@ -39,13 +44,12 @@ def _rank_moves_by_score(
     move_to_visit_rank = {m: i + 1 for i, (m, _) in enumerate(sorted_by_visits)}
     total_visits = sum(move_to_visits.values())
 
-    n_cells = board_size * board_size
     move_to_policy_rank: Dict[Tuple[int, int], int] = {}
     move_to_policy_prob: Dict[Tuple[int, int], float] = {}
-    if priors_raw is not None and len(priors_raw) >= n_cells:
+    if priors_raw:
         scored = []
-        for mid in range(n_cells):
-            p = float(priors_raw[mid])
+        for mid, p in priors_raw.items():
+            p = float(p)
             if p <= 0.0:
                 continue
             mv = decode_fn(mid)

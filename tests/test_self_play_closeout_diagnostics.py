@@ -2,22 +2,28 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def _make_visit_counts_and_priors(active_size=8):
-    """Build minimal visit_counts dict and priors_raw/priors_adjusted arrays
-    suitable for build_closeout_diagnostic_partial."""
-    import numpy as np
+    """Build minimal visit_counts dict and priors_raw/priors_adjusted dicts
+    suitable for build_closeout_diagnostic_partial.
+
+    Format mirrors mcts._expand_batch's `node.priors_raw`: {move_id: prob}
+    keyed by encoded move id, legal-moves-only. The `decode_fn` callers pass
+    must inverse the same encoding (here `mid // active_size, mid % active_size`).
+    """
     visit_counts = {(0, 5): 100, (1, 5): 80, (2, 5): 60, (3, 4): 40, (5, 5): 20}
-    n = active_size * active_size
-    priors = np.zeros(n, dtype=np.float32)
-    priors[0 * active_size + 5] = 0.30  # (0, 5)
-    priors[1 * active_size + 5] = 0.20  # (1, 5)
-    priors[2 * active_size + 5] = 0.15  # (2, 5)
-    priors[3 * active_size + 4] = 0.10  # (3, 4)
-    priors[5 * active_size + 5] = 0.05  # (5, 5)
+    priors = {
+        0 * active_size + 5: 0.30,  # (0, 5)
+        1 * active_size + 5: 0.20,  # (1, 5)
+        2 * active_size + 5: 0.15,  # (2, 5)
+        3 * active_size + 4: 0.10,  # (3, 4)
+        5 * active_size + 5: 0.05,  # (5, 5)
+    }
     return visit_counts, priors, priors
 
 
@@ -69,6 +75,67 @@ def test_build_closeout_diagnostic_partial_includes_root_summary_and_goal_comple
     # (0, 5) is the top by both visit and policy.
     assert rec["endpoint_completion_ranking"]["best_visit_rank"] == 1
     assert rec["endpoint_completion_ranking"]["any_in_visit_top5"] is True
+    # Policy side: (0, 5) has the highest prior (0.30) so it ranks #1.
+    # Asserts the priors dict path actually populates ranks — without this,
+    # _rank_moves_by_score regressed silently to all-None policy ranks
+    # against the production {move_id: prob} format.
+    assert rec["endpoint_completion_ranking"]["best_policy_rank"] == 1
+    assert rec["endpoint_completion_ranking"]["any_in_policy_top5"] is True
+    assert rec["endpoint_completion_ranking"]["best_policy_prob"] == pytest.approx(0.30)
+
+
+def test_build_closeout_diagnostic_partial_dict_priors_only_legal_moves_populates_ranks():
+    """Regression: priors_raw is a dict with FEWER entries than n_cells (only
+    legal moves). Earlier `len(priors_raw) >= n_cells` gate skipped this case
+    entirely, leaving every closeout record with best_policy_rank=None."""
+    from scripts.GPU.alphazero.closeout_diagnostics import (
+        build_closeout_diagnostic_partial,
+    )
+    active_size = 8
+    # Sparse dict, well under n_cells=64 — what production actually passes.
+    priors = {
+        0 * active_size + 5: 0.40,  # (0, 5)
+        7 * active_size + 5: 0.30,  # (7, 5)
+        3 * active_size + 4: 0.20,  # (3, 4)
+        2 * active_size + 5: 0.10,  # (2, 5)
+    }
+    assert len(priors) < active_size * active_size
+    visit_counts = {(0, 5): 100, (7, 5): 80, (3, 4): 40, (2, 5): 20}
+
+    class _StubRoot:
+        visit_count = 100
+        q_value = 0.9
+        nn_value = 0.85
+
+    gc_state = {
+        "max_depth": 3,
+        "total_goal_distance": 2,
+        "endpoint_distances": {"top": 1, "bottom": 1},
+        "largest_component_size": 11,
+        "category": "two_endpoint_closeout_2ply",
+        "endpoint_completion_moves": [(0, 5), (7, 5)],
+        "distance_reducing_moves":   [(0, 5), (7, 5), (3, 4)],
+    }
+    rec = build_closeout_diagnostic_partial(
+        ply=10,
+        side_to_move="red",
+        visit_counts=visit_counts,
+        priors_raw=priors,
+        priors_adjusted=priors,
+        root=_StubRoot(),
+        goal_completion_state=gc_state,
+        board_size=active_size,
+        skip_distance_reducing=False,
+        decode_fn=_decode_move(active_size),
+    )
+    er = rec["endpoint_completion_ranking"]
+    rr = rec["distance_reducing_ranking"]
+    assert er is not None and rr is not None
+    # (0, 5) prior=0.40 is highest, then (7, 5) prior=0.30.
+    assert er["best_policy_rank"] == 1
+    assert er["any_in_policy_top5"] is True
+    assert rr["best_policy_rank"] == 1
+    assert rr["any_in_policy_top5"] is True
 
 
 def test_build_closeout_diagnostic_partial_no_endpoint_completion_moves_yields_null_ranking():
@@ -144,11 +211,12 @@ def test_finalize_closeout_diagnostic_adds_selected_and_classification():
     gc_state = compute_goal_completion_state(s, "red", max_depth=3, min_component_size=1)
 
     # Synthetic visit_counts / priors for the rank computation.
+    # priors_raw mirrors mcts._expand_batch's dict format ({move_id: prob}).
     visit_counts = {(0, 6): 80, (1, 6): 60}
-    import numpy as np
-    priors = np.zeros(24 * 24, dtype=np.float32)
-    priors[0 * 24 + 6] = 0.4
-    priors[1 * 24 + 6] = 0.3
+    priors = {
+        0 * 24 + 6: 0.4,
+        1 * 24 + 6: 0.3,
+    }
 
     class _StubRoot:
         visit_count = 200

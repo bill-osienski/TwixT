@@ -659,17 +659,26 @@ def _replay_int_field(replay: dict, field: str, default: int = 0) -> int:
     return int(val)
 
 
-def _surface_phase3_diagnostics(replays: list, n_decisive: int) -> dict:
+def _surface_phase3_diagnostics(
+    replays: list, n_decisive: int, decisive_indices: set,
+) -> dict:
     """Aggregate Phase 3 closeout-diagnostics records across replays.
 
     Reads per-game `goal_completion_diagnostics` (list of per-ply records)
     and `goal_completion_diagnostics_meta` (per-game meta) from each replay
     JSON. Pure dict iteration — no BFS, no replay walking.
 
+    `decisive_indices` is the set of replay indices that contributed to
+    `n_decisive` (i.e. successfully built a Class-1 record). Caller-supplied
+    so the decisive-coverage numerator agrees with the denominator —
+    re-deriving the predicate locally would diverge on rare edge cases
+    (e.g. corrupt move history that fails the build).
+
     Returns:
         {"diagnostics_coverage": dict, "policy_mcts_summary": dict | None}
     """
-    games_with_diag = 0
+    games_with_diag_decisive = 0
+    games_with_diag_nondecisive = 0
     total_records = 0
     total_error_count = 0
     total_resign_dropped = 0
@@ -678,11 +687,14 @@ def _surface_phase3_diagnostics(replays: list, n_decisive: int) -> dict:
     diagnostic_version = 1
     all_records: list = []
 
-    for replay in replays:
+    for idx, replay in enumerate(replays):
         diag_array = replay.get("goal_completion_diagnostics")
         diag_meta = replay.get("goal_completion_diagnostics_meta")
         if diag_array:
-            games_with_diag += 1
+            if idx in decisive_indices:
+                games_with_diag_decisive += 1
+            else:
+                games_with_diag_nondecisive += 1
             total_records += len(diag_array)
             all_records.extend(diag_array)
         if diag_meta:
@@ -694,16 +706,21 @@ def _surface_phase3_diagnostics(replays: list, n_decisive: int) -> dict:
             if v is not None:
                 diagnostic_version = v
 
-    coverage_pct = (games_with_diag / n_decisive * 100.0) if n_decisive else 0.0
+    games_with_diag = games_with_diag_decisive + games_with_diag_nondecisive
+    # Pct uses only the decisive numerator vs. decisive denominator so it can
+    # never exceed 100% — non-decisive coverage is surfaced separately.
+    coverage_pct = (games_with_diag_decisive / n_decisive * 100.0) if n_decisive else 0.0
     diagnostics_coverage = {
-        "games_with_diagnostics":            games_with_diag,
-        "total_records":                     total_records,
-        "coverage_pct_of_decisive_games":    coverage_pct,
-        "error_count":                       total_error_count,
-        "resign_dropped_partial_count":      total_resign_dropped,
-        "skipped_missing_priors_count":      total_skipped_priors,
-        "records_dropped_by_cap":            total_records_dropped_cap,
-        "version":                           diagnostic_version,
+        "games_with_diagnostics":              games_with_diag,
+        "games_with_diagnostics_decisive":     games_with_diag_decisive,
+        "games_with_diagnostics_nondecisive":  games_with_diag_nondecisive,
+        "total_records":                       total_records,
+        "coverage_pct_of_decisive_games":      coverage_pct,
+        "error_count":                         total_error_count,
+        "resign_dropped_partial_count":        total_resign_dropped,
+        "skipped_missing_priors_count":        total_skipped_priors,
+        "records_dropped_by_cap":              total_records_dropped_cap,
+        "version":                             diagnostic_version,
     }
 
     policy_mcts_summary = _summarize_policy_mcts(all_records) if all_records else None
@@ -1192,7 +1209,11 @@ def aggregate_goal_completion_diagnostics_from_records(
     n_decisive = (result.get("main_population") or {}).get("n", 0) or (
         result.get("main_population") or {}
     ).get("games", 0)
-    phase3 = _surface_phase3_diagnostics(replays, n_decisive)
+    decisive_indices = {
+        i for i, rec in enumerate(per_game_records)
+        if rec is not None and rec.get("outcome_class") == 1
+    }
+    phase3 = _surface_phase3_diagnostics(replays, n_decisive, decisive_indices)
     # Phase 3's diagnostics_coverage is DIFFERENT from the Spec 1.5
     # record-coverage block (which lives at result["diagnostics_coverage"]).
     # Spec 1's analyzer used the same key name for the Phase 3 block;
@@ -1247,6 +1268,7 @@ def aggregate_goal_completion_diagnostics(
     }
 
     class1_records: List[dict] = []
+    class1_indices: set = set()
     capped_pop: dict = {
         "games": 0,
         "games_with_dominant_unclosed": 0,
@@ -1255,7 +1277,7 @@ def aggregate_goal_completion_diagnostics(
     }
     excluded_count = 0
 
-    for rp in replays:
+    for idx, rp in enumerate(replays):
         meta = rp.get("meta") or {}
         reason = meta.get("reason")
         winner = rp.get("winner")
@@ -1286,6 +1308,7 @@ def aggregate_goal_completion_diagnostics(
                 excluded_count += 1
                 continue
             class1_records.append(rec)
+            class1_indices.add(idx)
         elif reason in _CLASS2_REASONS:
             try:
                 record = _build_class2_per_game_record(
@@ -1322,7 +1345,7 @@ def aggregate_goal_completion_diagnostics(
     # Phase 3 surfacing — extracted to _surface_phase3_diagnostics for reuse
     # across legacy and default analyzer paths.
     n_decisive = main_population.get("games", 0) if main_population else 0
-    phase3 = _surface_phase3_diagnostics(replays, n_decisive)
+    phase3 = _surface_phase3_diagnostics(replays, n_decisive, class1_indices)
     diagnostics_coverage = phase3["diagnostics_coverage"]
     policy_mcts_summary = phase3["policy_mcts_summary"]
 
@@ -3012,11 +3035,20 @@ def format_policy_mcts_closeout_report(gc_block: dict) -> List[str]:
     pms = gc_block.get("policy_mcts_summary")
     n_decisive_games = (gc_block.get("main_population") or {}).get("games", 0)
 
+    # Decisive vs. non-decisive split. Older sidecars predating this split
+    # only have games_with_diagnostics; treat that as the decisive count.
+    dec_n = coverage.get(
+        "games_with_diagnostics_decisive",
+        coverage.get("games_with_diagnostics", 0),
+    )
+    nondec_n = coverage.get("games_with_diagnostics_nondecisive", 0)
+    nondec_suffix = f" + {nondec_n} non-decisive with diagnostics" if nondec_n else ""
+
     if not pms or pms.get("n_records", 0) == 0:
         lines.append(
-            f"Coverage: {coverage.get('games_with_diagnostics', 0)} / "
-            f"{n_decisive_games} decisive games "
-            f"({coverage.get('coverage_pct_of_decisive_games', 0):.1f}%); "
+            f"Coverage: {dec_n} / {n_decisive_games} decisive games "
+            f"({coverage.get('coverage_pct_of_decisive_games', 0):.1f}%)"
+            f"{nondec_suffix}; "
             f"{coverage.get('error_count', 0)} capture errors. "
             f"No closeout records captured this run."
         )
@@ -3029,8 +3061,9 @@ def format_policy_mcts_closeout_report(gc_block: dict) -> List[str]:
 
     lines.append(f"Policy/MCTS closeout behavior (n={n_records} records across {games_with} games):")
     lines.append(
-        f"  Coverage:                        {games_with} / {n_decisive_games} "
-        f"decisive games ({pct:.1f}%); {coverage.get('error_count', 0)} capture errors"
+        f"  Coverage:                        {dec_n} / {n_decisive_games} "
+        f"decisive games ({pct:.1f}%){nondec_suffix}; "
+        f"{coverage.get('error_count', 0)} capture errors"
     )
     er = pms.get("endpoint_completion_ranking") or {}
     if er.get("n_rankable", 0) > 0:

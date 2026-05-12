@@ -6,6 +6,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.twixt_replay_analyzer import (
+    _surface_phase3_diagnostics,
     aggregate_goal_completion_diagnostics,
     format_policy_mcts_closeout_report,
 )
@@ -47,6 +48,66 @@ def test_aggregate_diagnostics_coverage_counts_games_with_records():
     assert r["diagnostics_coverage"]["total_records"] == 1
     assert r["diagnostics_coverage"]["error_count"] == 0
     assert r["diagnostics_coverage"]["version"] == 1
+
+
+def test_surface_phase3_splits_decisive_vs_nondecisive():
+    """Decisive vs. non-decisive coverage is driven by the indices the caller
+    classified as Class-1 — guarantees the numerator can never exceed the
+    denominator (which previously happened when a capped game's diagnostics
+    counted toward 'X / N decisive games')."""
+    diag = [{
+        "ply": 10, "side_to_move": "red",
+        "goal_completion": {"total_goal_distance_before": 2},
+        "endpoint_completion_ranking": {"any_in_policy_top5": True, "any_in_visit_top5": False,
+                                         "best_visit_rank": 8, "best_policy_rank": 4},
+        "selected_move_classification": {"primary_class": "off_chain"},
+    }]
+    decisive = _replay_with_diag(diag)
+    capped = _replay_with_diag(diag, reason="state_cap")
+    out = _surface_phase3_diagnostics([decisive, capped], n_decisive=1, decisive_indices={0})
+    cov = out["diagnostics_coverage"]
+    assert cov["games_with_diagnostics"] == 2
+    assert cov["games_with_diagnostics_decisive"] == 1
+    assert cov["games_with_diagnostics_nondecisive"] == 1
+    assert cov["coverage_pct_of_decisive_games"] == 100.0
+
+
+def test_format_policy_mcts_closeout_surfaces_nondecisive_breakdown():
+    """When non-decisive games also carry diagnostics, the Coverage line
+    explicitly calls them out instead of letting the numerator exceed 100%."""
+    gc_block = {
+        "main_population": {"games": 98},
+        "diagnostics_coverage": {
+            "games_with_diagnostics": 99,
+            "games_with_diagnostics_decisive": 98,
+            "games_with_diagnostics_nondecisive": 1,
+            "coverage_pct_of_decisive_games": 100.0,
+            "error_count": 0,
+        },
+        "policy_mcts_summary": {"n_records": 5},
+    }
+    text = "\n".join(format_policy_mcts_closeout_report(gc_block))
+    assert "98 / 98 decisive games (100.0%)" in text
+    assert "+ 1 non-decisive with diagnostics" in text
+    assert "101.0%" not in text
+
+
+def test_format_policy_mcts_closeout_omits_nondecisive_when_zero():
+    """No non-decisive coverage → no '+ 0 non-decisive' clutter."""
+    gc_block = {
+        "main_population": {"games": 100},
+        "diagnostics_coverage": {
+            "games_with_diagnostics": 100,
+            "games_with_diagnostics_decisive": 100,
+            "games_with_diagnostics_nondecisive": 0,
+            "coverage_pct_of_decisive_games": 100.0,
+            "error_count": 0,
+        },
+        "policy_mcts_summary": {"n_records": 5},
+    }
+    text = "\n".join(format_policy_mcts_closeout_report(gc_block))
+    assert "100 / 100 decisive games (100.0%)" in text
+    assert "non-decisive" not in text
 
 
 def test_aggregate_policy_mcts_summary_pools_records_correctly_by_distance():
