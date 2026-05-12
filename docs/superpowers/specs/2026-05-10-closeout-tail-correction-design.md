@@ -565,3 +565,52 @@ The remaining tail is two distinct problems:
 2. **Recovery after dominant-component lost** — Fix 3's diagnostic block. Currently 2 events per 1000 games; events tend to be high-delay and high-impact (median delay 95 winner-moves). Different mechanism: when the original chain is contested, the model can't re-target. This is the natural Spec 4 brainstorm.
 
 Recommended immediate next step: continue training with Fix 1 enabled (no new code) for one more 10-iter block to test whether policy internalization brings the tail down without further mechanism. The +6.8pp/9-iters policy improvement suggests another 10 iters could reach the §8 delay≥10 target organically.
+
+---
+
+## 13. Results — Fix 2 treatment run (template)
+
+To be filled in after Phase 7 (Fix 2) ships and runs. Mirrors §11's structure so the three runs (baseline, Fix 1, Fix 1 + Fix 2) can be compared side-by-side.
+
+### 13.1 Mechanism — did the tiebreak actually fire
+
+```
+Closeout selection tie-break
+  Eligible positions:        ___
+  Overrides:                  ___ (rate ___%)
+  -> endpoint:                ___
+  -> reducer:                 ___
+  Would-have-selected redundant: ___
+  Would-have-selected off-chain: ___
+  Would-have-selected other:     ___
+```
+
+### 13.2 Bulk td=2 behavior (the Fix-2 target)
+
+| Metric | Baseline 130-139 | Fix 1 only (140-149) | Fix 1 only (150-159) | Fix 1 + Fix 2 (160-169) |
+|--------|------------------|---------------------|---------------------|-------------------------|
+| td=2 selected `completes_endpoint` | 10.7% | 11.6% | tbd | tbd |
+| td=2 selected `reduces_distance` | 63.5% | 61.9% | tbd | tbd |
+| td=2 selected `redundant` | 15.0% | 16.0% | tbd | tbd |
+| td=2 selected `off-chain` | 7.8% | 8.7% | tbd | tbd |
+| td=2 reducer visit top-5 | 84.3% | 85.7% | tbd | tbd |
+
+Target after Fix 2: reduce td=2 redundant + off-chain by ~5-10pp by overriding selection to the in-top-5 reducer.
+
+### 13.3 Tail metrics
+
+| Metric | Baseline | Fix 1 only (140-149) | Fix 1 only (150-159) | Fix 1 + Fix 2 (160-169) | Δ vs 150-159 |
+|--------|---------:|---------------------:|---------------------:|------------------------:|------|
+| delay ≥ 10 plies | 21 | 14 | 29 | tbd | tbd |
+| delay ≥ 20 plies | 7 | 4 | 9 | tbd | tbd |
+| state_cap after detection | 4 | 6 | 4 | tbd | tbd |
+| high-value delayed records | 198 | 167 | tbd | tbd | tbd |
+| game-level high-value delayed | 46 | 42 | 79 | tbd | tbd |
+
+### 13.4 Worst-cases bucket composition
+
+Compare the 25 worst-cases CSV by bucket (high-val td=2 drift / dominant-unavailable / state_cap / value-collapse) against the 150-159 split: 18 high-val td=2, 3 recovery, 1 state_cap, 3 value-collapse. Expected effect of Fix 2: shrink the high-val td=2 bucket; leave the others unchanged.
+
+### 13.5 Verdict
+
+To be written. If Fix 2 cuts the high-val td=2 drift bucket meaningfully (target: from 18 to ≤ 8 worst cases) without regressing the others, ship Fix 2 as the new production default. If it doesn't move the needle or destabilizes other metrics, leave Fix 2 off and shift focus to Spec 4 (recovery / td≥2 reducer mechanism).

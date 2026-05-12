@@ -2792,11 +2792,60 @@ per_worker_tel_tb = [w.mcts.get_closeout_tiebreak_telemetry() for w in workers i
 stats_sidecar["closeout_selection_tiebreak"] = _merge_closeout_tiebreak_telemetry(per_worker_tel_tb)
 ```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Wire IPC + trainer transport (mirror Fix 1's pattern exactly)**
+
+Fix 2's telemetry must cross the worker→trainer boundary the same way Fix 1's did. The self_play-side merge helper alone is not enough — the trainer is what writes the per-iter sidecar. Mirror what Phase 3 shipped for Fix 1:
+
+Reference commits to mirror:
+- `60552b150` — self_play gc_state_full plumbing
+- `52a51bdf5` — Fix 1 sidecar drain into trainer
+- `2c5f56b71` — defensive guard (model for adding fields after the fact)
+
+Concrete edits (every place Fix 1 has `closeout_td1_telemetry`, add a parallel `closeout_tiebreak_telemetry`):
+
+1. **`scripts/GPU/alphazero/self_play.py`** (`GameRecord` dataclass): add `closeout_tiebreak_telemetry: Optional[dict] = None`. At game end inside `play_game`, snapshot `mcts.get_closeout_tiebreak_telemetry()` onto it (parallel to the Fix 1 snapshot already there).
+
+2. **`scripts/GPU/alphazero/ipc_messages.py`** (`GameComplete`): add `closeout_tiebreak_telemetry: Optional[dict] = None` field.
+
+3. **`scripts/GPU/alphazero/self_play_worker.py`**: forward `game.closeout_tiebreak_telemetry` into the `GameComplete` message (parallel to the existing `closeout_td1_telemetry` forwarding).
+
+4. **`scripts/GPU/alphazero/trainer.py`**:
+   - Add 5 kwargs to `train()`: `closeout_selection_tiebreak_enabled: bool = False`, `closeout_selection_tiebreak_max_distance: int = 2`, `closeout_selection_tiebreak_topk: int = 5`, `closeout_selection_tiebreak_min_value: float = 0.95`, `closeout_selection_tiebreak_min_share: float = 0.05` (alongside the existing Fix 1 kwargs).
+   - Pass them through to BOTH `MCTSConfig` construction sites (the same two sites that handle Fix 1's `closeout_td1_*` fields).
+   - Add `all_closeout_tiebreak_telemetry: list = []` alongside the existing `all_closeout_td1_telemetry`.
+   - Append `msg.closeout_tiebreak_telemetry` in the parallel IPC collection branch (mirror trainer.py:1864-1866).
+   - Append `game.closeout_tiebreak_telemetry` in the serial-path collection (mirror trainer.py:3028-3030 — Fix 1 uses defensive `getattr`; do the same here).
+   - Forward both lists between parallel and merged collections (mirror trainer.py:2039-2040 and 2852-2856 patterns).
+   - At the sidecar emit point, immediately after the existing `_sidecar["closeout_td1_visit_forcing"] = ...` line, add `_sidecar["closeout_selection_tiebreak"] = _merge_closeout_tiebreak_telemetry(all_closeout_tiebreak_telemetry)`.
+
+5. **`scripts/GPU/alphazero/train.py`**: wire the 5 CLI args into the trainer kwargs in `train_kwargs.update(...)` (parallel to the existing Fix 1 kwargs).
+
+The self_play-side merge code from Step 5 stays — it's the helper the trainer calls. Drop the demo `stats_sidecar[...] = ...` line at the very end of Step 5 since it's misleading (the real assignment happens in the trainer).
+
+- [ ] **Step 7: Add startup banner line**
+
+In `scripts/GPU/alphazero/trainer.py`, immediately after the `Closeout td=1 visit forcing: ...` banner block (added in commit `1f00450`), append:
+
+```python
+    if closeout_selection_tiebreak_enabled:
+        print(f"  Closeout selection tie-break: enabled")
+        print(f"    max_distance:          {closeout_selection_tiebreak_max_distance}")
+        print(f"    topk:                  {closeout_selection_tiebreak_topk}")
+        print(f"    min_value:             {closeout_selection_tiebreak_min_value}")
+        print(f"    min_share:             {closeout_selection_tiebreak_min_share}")
+    else:
+        print(f"  Closeout selection tie-break: disabled")
+```
+
+This catches the "flag-not-parsed" / "flag-not-wired" / "banner-not-updated" class of bug that bit Fix 1's first launch.
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add scripts/GPU/alphazero/self_play.py scripts/GPU/alphazero/train.py
-git commit -m "feat(self_play,train): wire Fix 2 closeout tie-break with CLI + telemetry"
+git add scripts/GPU/alphazero/self_play.py scripts/GPU/alphazero/ipc_messages.py \
+        scripts/GPU/alphazero/self_play_worker.py scripts/GPU/alphazero/trainer.py \
+        scripts/GPU/alphazero/train.py
+git commit -m "feat(self_play,train,trainer,ipc): wire Fix 2 closeout tie-break with CLI + telemetry + banner"
 ```
 
 ---
@@ -2937,38 +2986,107 @@ git commit -m "feat(analyzer): Fix 2 closeout_selection_tiebreak summary + repor
 
 ---
 
-## Task 25: Second treatment run with Fix 2 enabled
+## Task 25: Treatment run with Fix 2 enabled
 
-**Files:** none (training run)
+**Files:** none (training run; produces `model_iter_016?.safetensors` and game/stats sidecars under `scripts/GPU/logs/games/`)
 
-- [ ] **Step 1: Run training from latest checkpoint with both Fix 1 and Fix 2 enabled**
+**Resume checkpoint**: `model_iter_0159.safetensors` is the latest as of this plan's update. If newer checkpoints exist when this task is executed, resume from the actual latest and rename target ranges accordingly.
+
+- [ ] **Step 1: Verify the resume checkpoint exists**
 
 ```bash
-# Adjust --resume to the latest checkpoint from Phase 5
+ls -la checkpoints/alphazero-v2-staged/model_iter_0159.safetensors
+```
+
+- [ ] **Step 2: Launch the Fix 2 treatment training**
+
+```bash
 .venv/bin/python -m scripts.GPU.alphazero.train \
-  --resume checkpoints/alphazero-v2-staged/model_iter_0149.safetensors \
-  --iterations 159 --games-per-iter 100 \
-  ... [same other knobs as Task 19] ... \
+  --resume checkpoints/alphazero-v2-staged/model_iter_0159.safetensors \
+  --iterations 169 \
+  --games-per-iter 100 \
+  --checkpoint-dir checkpoints/alphazero-v2-staged \
+  --value-weight 0.5 --value-lr-scale 0.0025 --value-grad-max-norm 0.05 \
+  --progress-weighted-value-loss --progress-weight-floor 0.25 \
+  --n-workers 10 --mcts-eval-batch-size 14 --mcts-stall-flush-sims 48 \
+  --opening-noise-ply 10 --opening-dirichlet-alpha 0.7 --opening-dirichlet-eps 0.50 \
+  --mirror-prob 0.5 \
+  --resign-enabled --resign-min-ply 80 --resign-threshold -0.945 \
+  --resign-window 12 --resign-k 4 --resign-min-visits 200 --resign-min-top1-share 0.102 \
+  --adjudicate-enabled --adjudicate-min-ply 240 --adjudicate-threshold 0.20 \
+  --adjudicate-min-visits 200 --adjudicate-min-top1-share 0.13 \
+  --max-positions-per-game 64 --endgame-keep-positions 16 \
+  --conversion-policy-loss-enabled \
+  --conversion-policy-loss-weight 0.05 \
+  --conversion-completion-weight 1.0 --conversion-reducer-weight 0.35 \
+  --conversion-max-total-goal-distance 2 --conversion-sample-boost 2.0 \
+  --conversion-max-batch-fraction 0.15 \
   --closeout-td1-visit-forcing-enabled \
   --closeout-td1-min-visits 8 --closeout-td1-max-forced-moves 4 \
   --closeout-selection-tiebreak-enabled
 ```
 
-- [ ] **Step 2: Run analyzer on 150-159 and compare**
+Fix 1 stays on (its mechanism is the production default). Fix 2 layers on top. All other knobs identical to the 140-149 / 150-159 treatment runs so the comparison is controlled.
 
-```bash
-mkdir -p Replays/150-159
-cp scripts/GPU/logs/games/iter_015?_*.json Replays/150-159/
-.venv/bin/python ./scripts/twixt_replay_analyzer.py --input Replays/150-159 --out Replays/150-159_Replay
+Verify the startup banner shows both:
+```
+  Closeout td=1 visit forcing: enabled
+    ...
+  Closeout selection tie-break: enabled
+    ...
 ```
 
-Compare against both the baseline (130-139) and the Fix 1-only run (140-149).
+If either says `disabled`, stop and investigate before the run consumes ~24h of GPU time.
 
-- [ ] **Step 3: Commit + record results**
+- [ ] **Step 3: Confirm completion**
 
 ```bash
-git add Replays/150-159 Replays/150-159_Replay docs/superpowers/specs/2026-05-10-closeout-tail-correction-design.md
-git commit -m "data: spec 3 fix 2 treatment 150-159 + spec results update"
+ls -1 checkpoints/alphazero-v2-staged/model_iter_016?.safetensors | wc -l
+ls -1 scripts/GPU/logs/games/iter_016?_stats.json | wc -l
+```
+
+Expected: 10 checkpoints `model_iter_0160` through `model_iter_0169`; 10 stats files `iter_0159_stats.json` through `iter_0168_stats.json` (file naming uses the playing-model number, off-by-one from training-iter — see Spec 3 results section).
+
+- [ ] **Step 4: Stage games for analyzer + run analyzer**
+
+```bash
+mkdir -p Replays/160-169
+for f in scripts/GPU/logs/games/iter_0159_game_*.json scripts/GPU/logs/games/iter_016?_game_*.json; do
+  ln -sf "../../$f" "Replays/160-169/$(basename $f)" 2>/dev/null
+done
+for f in scripts/GPU/logs/games/iter_0159_stats.json scripts/GPU/logs/games/iter_016?_stats.json; do
+  ln -sf "../../$f" "Replays/160-169/$(basename $f)" 2>/dev/null
+done
+.venv/bin/python ./scripts/twixt_replay_analyzer.py --input Replays/160-169 --out Replays/160-169_Replay
+```
+
+Compare report sections against the prior three runs:
+- Baseline 130-139 (Spec 2 only)
+- 140-149 (Spec 2 + Fix 1)
+- 150-159 (Spec 2 + Fix 1, second block)
+
+Key comparisons:
+```bash
+grep -E "delay >=|state_cap after|high.value.*delayed|endpoint completion:|distance reducing:" \
+  Replays/{130-139,140-149,150-159,160-169}_Replay/report_*.txt
+```
+
+Plus the new Fix 2 telemetry block:
+```bash
+grep -B 1 -A 12 "Closeout selection tie-break" Replays/160-169_Replay/report_160-169.txt
+```
+
+Spec §13 results template (see spec) is where the numbers get recorded.
+
+- [ ] **Step 5: Do NOT commit `Replays/` artifacts**
+
+`Replays/` is not tracked in this repo (analyzer output is generated data, not source). Skip any artifact commit step.
+
+The only thing to commit after this task is the spec §13 results update once the numbers are in:
+
+```bash
+git add docs/superpowers/specs/2026-05-10-closeout-tail-correction-design.md
+git commit -m "docs(spec): record Spec 3 Fix 2 treatment results 160-169"
 ```
 
 ---
