@@ -252,6 +252,15 @@ class MCTS:
         self._closeout_td1_post_force_top5_hits = 0
         self._closeout_td1_candidates_skipped_invalid: int = 0
 
+        # Spec 3 Fix 2 — closeout selection tie-break telemetry
+        self._closeout_tiebreak_eligible = 0
+        self._closeout_tiebreak_overrides = 0
+        self._closeout_tiebreak_override_to_endpoint = 0
+        self._closeout_tiebreak_override_to_reducer = 0
+        self._closeout_tiebreak_would_have_redundant = 0
+        self._closeout_tiebreak_would_have_off_chain = 0
+        self._closeout_tiebreak_would_have_other = 0
+
     def _capture_final_root_stats(self, root: MCTSNode) -> None:
         """Snapshot root.q_value and top child visit share after a search.
 
@@ -310,6 +319,32 @@ class MCTS:
                 (self._closeout_td1_post_force_top5_hits / triggered) if triggered > 0 else 0.0
             ),
             "candidates_skipped_invalid": self._closeout_td1_candidates_skipped_invalid,
+        }
+
+    # ------------------------------------------------------------------
+    # Spec 3 Fix 2 — closeout selection tie-break telemetry helpers
+    # ------------------------------------------------------------------
+    def reset_closeout_tiebreak_telemetry(self) -> None:
+        self._closeout_tiebreak_eligible = 0
+        self._closeout_tiebreak_overrides = 0
+        self._closeout_tiebreak_override_to_endpoint = 0
+        self._closeout_tiebreak_override_to_reducer = 0
+        self._closeout_tiebreak_would_have_redundant = 0
+        self._closeout_tiebreak_would_have_off_chain = 0
+        self._closeout_tiebreak_would_have_other = 0
+
+    def get_closeout_tiebreak_telemetry(self) -> dict:
+        eligible = self._closeout_tiebreak_eligible
+        return {
+            "enabled": bool(self.config.closeout_selection_tiebreak_enabled),
+            "eligible_positions": eligible,
+            "overrides": self._closeout_tiebreak_overrides,
+            "override_rate": (self._closeout_tiebreak_overrides / eligible) if eligible > 0 else 0.0,
+            "override_to_endpoint": self._closeout_tiebreak_override_to_endpoint,
+            "override_to_reducer": self._closeout_tiebreak_override_to_reducer,
+            "would_have_selected_redundant": self._closeout_tiebreak_would_have_redundant,
+            "would_have_selected_off_chain": self._closeout_tiebreak_would_have_off_chain,
+            "would_have_selected_other": self._closeout_tiebreak_would_have_other,
         }
 
     # ------------------------------------------------------------------

@@ -124,3 +124,7 @@ class GameComplete:
     # None when not captured upstream; otherwise a dict with the keys returned
     # by MCTS.get_closeout_td1_telemetry().
     closeout_td1_telemetry: Optional[dict] = None
+    # Spec 3 Fix 2: per-game closeout_selection_tiebreak telemetry snapshot.
+    # None when not captured upstream; otherwise a dict with the keys returned
+    # by MCTS.get_closeout_tiebreak_telemetry().
+    closeout_tiebreak_telemetry: Optional[dict] = None

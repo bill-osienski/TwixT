@@ -394,6 +394,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--closeout-td1-high-value-threshold", type=float, default=0.95,
         help="Root q threshold used when --closeout-td1-require-high-value is set.")
 
+    # Spec 3 Fix 2: narrow closeout selection tie-break
+    parser.add_argument("--closeout-selection-tiebreak-enabled", action="store_true",
+        help="Enable Spec 3 Fix 2 closeout selection tie-break.")
+    parser.add_argument("--closeout-selection-tiebreak-max-distance", type=int, default=2,
+        help="Max total_goal_distance at which the tie-break may fire (default: 2).")
+    parser.add_argument("--closeout-selection-tiebreak-topk", type=int, default=5,
+        help="Visit-rank top-k window the closeout candidate must fall within (default: 5).")
+    parser.add_argument("--closeout-selection-tiebreak-min-value", type=float, default=0.95,
+        help="Root q_value gate for Fix 2 tie-break (default: 0.95).")
+    parser.add_argument("--closeout-selection-tiebreak-min-share", type=float, default=0.05,
+        help="Minimum visit-share floor for the candidate (default: 0.05).")
+
     return parser
 
 
@@ -737,6 +749,12 @@ def main():
         closeout_td1_max_forced_moves=args.closeout_td1_max_forced_moves,
         closeout_td1_require_high_value=args.closeout_td1_require_high_value,
         closeout_td1_high_value_threshold=args.closeout_td1_high_value_threshold,
+        # Spec 3 Fix 2: narrow closeout selection tie-break
+        closeout_selection_tiebreak_enabled=args.closeout_selection_tiebreak_enabled,
+        closeout_selection_tiebreak_max_distance=args.closeout_selection_tiebreak_max_distance,
+        closeout_selection_tiebreak_topk=args.closeout_selection_tiebreak_topk,
+        closeout_selection_tiebreak_min_value=args.closeout_selection_tiebreak_min_value,
+        closeout_selection_tiebreak_min_share=args.closeout_selection_tiebreak_min_share,
     ))
     # Conditional override: None means "use default from train() (0.5)"
     if args.value_weight is not None:

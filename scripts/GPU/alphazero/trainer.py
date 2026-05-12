@@ -1680,6 +1680,8 @@ def run_parallel_selfplay(
     all_goal_completion_records: list = []
     # Spec 3 Fix 1: per-game closeout_td1 telemetry snapshots (IPC path)
     all_closeout_td1_telemetry: list = []
+    # Spec 3 Fix 2: per-game closeout_selection_tiebreak telemetry snapshots
+    all_closeout_tiebreak_telemetry: list = []
 
     # Phase 4: per-game replay cap aggregation (IPC path)
     total_positions_original = 0
@@ -1864,6 +1866,9 @@ def run_parallel_selfplay(
             # Spec 3 Fix 1: per-game closeout_td1 telemetry snapshot from worker.
             if getattr(msg, "closeout_td1_telemetry", None) is not None:
                 all_closeout_td1_telemetry.append(msg.closeout_td1_telemetry)
+            # Spec 3 Fix 2: per-game closeout_selection_tiebreak snapshot from worker.
+            if getattr(msg, "closeout_tiebreak_telemetry", None) is not None:
+                all_closeout_tiebreak_telemetry.append(msg.closeout_tiebreak_telemetry)
 
             if games_completed % 5 == 0:
                 print(f"  Games: {games_completed}/{games_to_play}")
@@ -2038,6 +2043,8 @@ def run_parallel_selfplay(
         "all_goal_completion_records": list(all_goal_completion_records),
         # Spec 3 Fix 1: per-game closeout_td1 telemetry list (parallel path).
         "all_closeout_td1_telemetry": list(all_closeout_td1_telemetry),
+        # Spec 3 Fix 2: per-game closeout_selection_tiebreak telemetry (parallel path).
+        "all_closeout_tiebreak_telemetry": list(all_closeout_tiebreak_telemetry),
     }
 
     return games_records, new_positions, stats
@@ -2233,6 +2240,12 @@ def train(
     closeout_td1_max_forced_moves: int = 4,
     closeout_td1_require_high_value: bool = False,
     closeout_td1_high_value_threshold: float = 0.95,
+    # Spec 3 Fix 2: narrow closeout selection tie-break in MCTS
+    closeout_selection_tiebreak_enabled: bool = False,
+    closeout_selection_tiebreak_max_distance: int = 2,
+    closeout_selection_tiebreak_topk: int = 5,
+    closeout_selection_tiebreak_min_value: float = 0.95,
+    closeout_selection_tiebreak_min_share: float = 0.05,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2347,6 +2360,12 @@ def train(
         closeout_td1_max_forced_moves=closeout_td1_max_forced_moves,
         closeout_td1_require_high_value=closeout_td1_require_high_value,
         closeout_td1_high_value_threshold=closeout_td1_high_value_threshold,
+        # Spec 3 Fix 2: narrow closeout selection tie-break
+        closeout_selection_tiebreak_enabled=closeout_selection_tiebreak_enabled,
+        closeout_selection_tiebreak_max_distance=closeout_selection_tiebreak_max_distance,
+        closeout_selection_tiebreak_topk=closeout_selection_tiebreak_topk,
+        closeout_selection_tiebreak_min_value=closeout_selection_tiebreak_min_value,
+        closeout_selection_tiebreak_min_share=closeout_selection_tiebreak_min_share,
         **mcts_exploration_overrides,
     )
 
@@ -2526,6 +2545,14 @@ def train(
             print(f"    require_high_value:    False")
     else:
         print(f"  Closeout td=1 visit forcing: disabled")
+    if closeout_selection_tiebreak_enabled:
+        print(f"  Closeout selection tie-break: enabled")
+        print(f"    max_distance:          {closeout_selection_tiebreak_max_distance}")
+        print(f"    topk:                  {closeout_selection_tiebreak_topk}")
+        print(f"    min_value:             {closeout_selection_tiebreak_min_value}")
+        print(f"    min_share:             {closeout_selection_tiebreak_min_share}")
+    else:
+        print(f"  Closeout selection tie-break: disabled")
 
     # Games directory (used for both game replays and per-iteration stats sidecars)
     if games_dir_override:
@@ -2655,6 +2682,12 @@ def train(
             closeout_td1_max_forced_moves=closeout_td1_max_forced_moves,
             closeout_td1_require_high_value=closeout_td1_require_high_value,
             closeout_td1_high_value_threshold=closeout_td1_high_value_threshold,
+            # Spec 3 Fix 2: narrow closeout selection tie-break
+            closeout_selection_tiebreak_enabled=closeout_selection_tiebreak_enabled,
+            closeout_selection_tiebreak_max_distance=closeout_selection_tiebreak_max_distance,
+            closeout_selection_tiebreak_topk=closeout_selection_tiebreak_topk,
+            closeout_selection_tiebreak_min_value=closeout_selection_tiebreak_min_value,
+            closeout_selection_tiebreak_min_share=closeout_selection_tiebreak_min_share,
             **mcts_exploration_overrides,
         )
 
@@ -2706,6 +2739,8 @@ def train(
         all_goal_completion_records: list = []
         # Spec 3 Fix 1: per-game closeout_td1 telemetry snapshots (this iter).
         all_closeout_td1_telemetry: list = []
+        # Spec 3 Fix 2: per-game closeout_selection_tiebreak telemetry snapshots.
+        all_closeout_tiebreak_telemetry: list = []
         total_nn_calls = 0
         total_expand_calls = 0
         total_nn_batches = 0
@@ -2864,6 +2899,12 @@ def train(
                 _par_ct = parallel_stats.get("all_closeout_td1_telemetry", [])
                 if _par_ct:
                     all_closeout_td1_telemetry.extend(_par_ct)
+                # Spec 3 Fix 2: pull closeout_selection_tiebreak telemetry from
+                # the parallel path so the per-iter sidecar block aggregates
+                # across workers.
+                _par_tb = parallel_stats.get("all_closeout_tiebreak_telemetry", [])
+                if _par_tb:
+                    all_closeout_tiebreak_telemetry.extend(_par_tb)
 
             except KeyboardInterrupt:
                 print(f"\n\nInterrupted during parallel self-play!")
@@ -3038,6 +3079,9 @@ def train(
                     # Spec 3 Fix 1: collect per-game closeout_td1 telemetry.
                     if getattr(game, "closeout_td1_telemetry", None) is not None:
                         all_closeout_td1_telemetry.append(game.closeout_td1_telemetry)
+                    # Spec 3 Fix 2: collect per-game closeout_selection_tiebreak telemetry.
+                    if getattr(game, "closeout_tiebreak_telemetry", None) is not None:
+                        all_closeout_tiebreak_telemetry.append(game.closeout_tiebreak_telemetry)
 
                     # Flush MLX graph and clear caches after each game
                     # mx.eval() forces pending lazy ops to materialize, freeing intermediates
@@ -3674,6 +3718,11 @@ def train(
             from .self_play import _merge_closeout_td1_telemetry
             _sidecar["closeout_td1_visit_forcing"] = _merge_closeout_td1_telemetry(
                 all_closeout_td1_telemetry
+            )
+            # Spec 3 Fix 2 (§5.5): closeout_selection_tiebreak sidecar block.
+            from .self_play import _merge_closeout_tiebreak_telemetry
+            _sidecar["closeout_selection_tiebreak"] = _merge_closeout_tiebreak_telemetry(
+                all_closeout_tiebreak_telemetry
             )
 
             cons = _sidecar["conversion_training"]["consistency"]

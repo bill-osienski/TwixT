@@ -435,6 +435,10 @@ class GameRecord:
     # Captured at game end via mcts.get_closeout_td1_telemetry(). None means
     # the field was never populated (older code path / not captured).
     closeout_td1_telemetry: Optional[dict] = None
+    # Spec 3 Fix 2: per-game closeout_selection_tiebreak telemetry snapshot.
+    # Captured at game end via mcts.get_closeout_tiebreak_telemetry(). None
+    # means the field was never populated.
+    closeout_tiebreak_telemetry: Optional[dict] = None
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -456,6 +460,21 @@ class GameRecord:
             move_history=[tuple(m) for m in d.get("move_history", [])],
             start_player=d.get("start_player", "red"),
         )
+
+
+def _classify_argmax_against_gc(argmax_move, gc_state_full):
+    """Classify the visit-argmax move against the precomputed gc_state_full move sets.
+
+    Returns one of "completes_endpoint", "reduces_total_goal_distance", or "other".
+    Used by Spec 3 Fix 2 to decide whether to invoke the closeout selection tie-break.
+    """
+    ec_set = {tuple(m) for m in (gc_state_full.get("endpoint_completion_moves") or ())}
+    rd_set = {tuple(m) for m in (gc_state_full.get("distance_reducing_moves") or ())}
+    if argmax_move in ec_set:
+        return "completes_endpoint"
+    if argmax_move in rd_set:
+        return "reduces_total_goal_distance"
+    return "other"
 
 
 def _merge_closeout_td1_telemetry(per_worker_telemetry: list) -> dict:
@@ -518,6 +537,35 @@ def _merge_closeout_td1_telemetry(per_worker_telemetry: list) -> dict:
         "candidates_skipped_invalid": sums["candidates_skipped_invalid"],
     })
     return out
+
+
+def _merge_closeout_tiebreak_telemetry(per_worker_telemetry: list) -> dict:
+    """Sum closeout_selection_tiebreak counters across workers/games and
+    recompute override_rate. Per-game telemetry blocks come from
+    MCTS.get_closeout_tiebreak_telemetry(). Spec 3 Fix 2 §5.5.
+    """
+    if not per_worker_telemetry:
+        return {}
+    first = next((t for t in per_worker_telemetry if t), None)
+    if first is None:
+        return {}
+    sums = {
+        "eligible_positions": 0, "overrides": 0,
+        "override_to_endpoint": 0, "override_to_reducer": 0,
+        "would_have_selected_redundant": 0, "would_have_selected_off_chain": 0,
+        "would_have_selected_other": 0,
+    }
+    for t in per_worker_telemetry:
+        if not t:
+            continue
+        for k in sums:
+            sums[k] += int(t.get(k, 0) or 0)
+    eligible = sums["eligible_positions"]
+    return {
+        "enabled": bool(first.get("enabled")),
+        **sums,
+        "override_rate": (sums["overrides"] / eligible) if eligible > 0 else 0.0,
+    }
 
 
 def play_game(
@@ -971,6 +1019,35 @@ def play_game(
                 )
             )
 
+        # Spec 3 Fix 2: narrow closeout selection tie-break — applied to
+        # visit_counts before select_move so the override propagates to both
+        # the training target (the position record below) and the move played.
+        if mcts.config.closeout_selection_tiebreak_enabled and gc_state_full is not None:
+            argmax_move = max(visit_counts, key=visit_counts.get) if visit_counts else None
+            argmax_class = (_classify_argmax_against_gc(argmax_move, gc_state_full)
+                            if argmax_move is not None else "other")
+            mcts._closeout_tiebreak_eligible += 1
+            visit_counts, tiebreak_record = MCTS.apply_closeout_selection_tiebreak(
+                visit_counts=visit_counts,
+                gc_state_full=gc_state_full,
+                root_q=root_value,
+                selected_argmax_class=argmax_class,
+                config=mcts.config,
+            )
+            if tiebreak_record.get("overrode_to") == "endpoint":
+                mcts._closeout_tiebreak_overrides += 1
+                mcts._closeout_tiebreak_override_to_endpoint += 1
+            elif tiebreak_record.get("overrode_to") == "reducer":
+                mcts._closeout_tiebreak_overrides += 1
+                mcts._closeout_tiebreak_override_to_reducer += 1
+            if tiebreak_record.get("overrode_to"):
+                if argmax_class == "redundant_reinforcement":
+                    mcts._closeout_tiebreak_would_have_redundant += 1
+                elif argmax_class == "off_chain":
+                    mcts._closeout_tiebreak_would_have_off_chain += 1
+                elif argmax_class == "other":
+                    mcts._closeout_tiebreak_would_have_other += 1
+
         # Select move
         move = mcts.select_move(visit_counts, ply)
 
@@ -1288,6 +1365,8 @@ def play_game(
         # Spec 3 Fix 1: snapshot per-game closeout_td1 visit-forcing telemetry.
         # Safe to call even when the feature is off (returns config echo + zeros).
         closeout_td1_telemetry=mcts.get_closeout_td1_telemetry(),
+        # Spec 3 Fix 2: snapshot per-game closeout_selection_tiebreak telemetry.
+        closeout_tiebreak_telemetry=mcts.get_closeout_tiebreak_telemetry(),
     )
 
 
