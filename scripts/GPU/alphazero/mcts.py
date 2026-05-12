@@ -362,6 +362,13 @@ class MCTS:
 
         Returns (updated_counts, record). The record has overrode_to: 'endpoint'
         or 'reducer' or None. Spec 2026-05-10 §5.
+
+        The gate accepts {"redundant_reinforcement", "off_chain", "other"} for
+        forward compatibility with a precise classifier. The production caller
+        (self_play._classify_argmax_against_gc) returns only {"completes_endpoint",
+        "reduces_total_goal_distance", "other"} — so in the current pipeline only
+        the "other" branch ever fires the override, and would_have_selected_*
+        telemetry counters for redundant/off_chain stay at zero by design.
         """
         record = {"overrode_to": None}
         if not config.closeout_selection_tiebreak_enabled or not visit_counts or not gc_state_full:
@@ -375,15 +382,13 @@ class MCTS:
             return visit_counts, record
         total_visits = sum(visit_counts.values()) or 1
         sorted_moves = sorted(visit_counts.items(), key=lambda kv: kv[1], reverse=True)
-        topk_moves = [mv for mv, _ in sorted_moves[:config.closeout_selection_tiebreak_topk]]
+        topk = sorted_moves[:config.closeout_selection_tiebreak_topk]
 
         def _best_match(candidate_list):
             candidate_set = {tuple(m) for m in (candidate_list or [])}
-            for mv, c in sorted_moves:
-                if mv in candidate_set and mv in topk_moves:
-                    share = c / total_visits
-                    if share >= config.closeout_selection_tiebreak_min_share:
-                        return mv, c
+            for mv, c in topk:
+                if mv in candidate_set and (c / total_visits) >= config.closeout_selection_tiebreak_min_share:
+                    return mv, c
             return None
 
         ec = _best_match(gc_state_full.get("endpoint_completion_moves"))

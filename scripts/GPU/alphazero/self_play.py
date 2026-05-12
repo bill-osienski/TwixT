@@ -1034,13 +1034,14 @@ def play_game(
                 selected_argmax_class=argmax_class,
                 config=mcts.config,
             )
-            if tiebreak_record.get("overrode_to") == "endpoint":
+            overrode_to = tiebreak_record.get("overrode_to")
+            if overrode_to == "endpoint":
                 mcts._closeout_tiebreak_overrides += 1
                 mcts._closeout_tiebreak_override_to_endpoint += 1
-            elif tiebreak_record.get("overrode_to") == "reducer":
+            elif overrode_to == "reducer":
                 mcts._closeout_tiebreak_overrides += 1
                 mcts._closeout_tiebreak_override_to_reducer += 1
-            if tiebreak_record.get("overrode_to"):
+            if overrode_to:
                 if argmax_class == "redundant_reinforcement":
                     mcts._closeout_tiebreak_would_have_redundant += 1
                 elif argmax_class == "off_chain":
