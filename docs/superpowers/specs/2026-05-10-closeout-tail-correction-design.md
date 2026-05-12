@@ -489,3 +489,79 @@ Defensive guard: candidates not present in `root.priors` are skipped and counted
 ### 10.7 Self-play-only scope of Fix 1
 
 Eval games and the production export path do not trigger Fix 1. This is deliberate: it isolates the experiment and preserves measurement integrity for non-self-play surfaces. If after several iterations the policy has internalized the closing behavior, the flag can be left off for production. If it has not, that itself is a signal worth surfacing — and a candidate for Spec 4 work.
+
+---
+
+## 11. Results — 140-148 treatment run
+
+Run: `model_iter_0139.safetensors → model_iter_0149.safetensors`, 10 iterations × 100 games = 1000 games, Fix 1 enabled with defaults (`min_visits=8`, `max_forced_moves=4`, `require_high_value=False`). Fix 2 not run.
+
+### 11.1 Mechanism
+
+```
+Closeout td=1 visit forcing
+  Positions triggered:                  984
+  Forced sims total:                15,216
+  Selected forced move rate:        99.2%
+  Post-force endpoint visit top-1:  99.2%
+  Post-force endpoint visit top-5:  99.6%
+```
+
+Forced visits flipped MCTS selection in 99.2% of triggered positions. The mechanism worked as designed.
+
+### 11.2 Bulk td=1 behavior
+
+| Metric | Baseline 130-139 | Treatment 140-149 | Δ |
+|--------|------------------|-------------------|---|
+| td=1 records (denominator) | 1118 | 984 | -134 (games close faster) |
+| td=1 selected `completes_endpoint` | 88.6% | **99.2%** | +10.6pp |
+| td=1 selected `redundant` | 7.0% | 0.7% | -6.3pp |
+| td=1 selected `off-chain` | 3.1% | 0.1% | -3.0pp |
+| td=1 endpoint visit top-5 | 88.7% | **99.6%** | +10.9pp |
+| **td=1 endpoint visit >20** | **11.3%** | **0.0%** | -11.3pp |
+
+The "endpoint at visit rank >20" tail — the exact pathology identified in §1.1 — collapsed to zero.
+
+### 11.3 Game-count tails vs §8 targets
+
+| Metric | Baseline | Target | Treatment | Status |
+|--------|---------:|-------:|----------:|--------|
+| delay ≥ 10 plies | 21 | ≤ 10 | **14** | partial (–7) |
+| delay ≥ 20 plies | 7 | ≤ 3 | 4 | very close (–3) |
+| state_cap after detection | 4 | ≤ 1 | 6 | regressed (+2, within Poisson noise at N=1000) |
+| high-value delayed records (policy/MCTS) | 198 | ≤ 80 | 167 | partial (–31) |
+| game-level high-value delayed | 46 | ≤ 20 | 42 | partial (–4) |
+
+The bulk mechanism succeeded; §8 game-count targets were not fully hit because the residual tail lives at td≥2 (not addressed by Fix 1) and in recovery / dominant-unavailable cases (not addressed by Spec 3 at all).
+
+### 11.4 Policy internalization
+
+| Policy/MCTS metric | Baseline | Treatment | Δ |
+|--------------------|----------|-----------|---|
+| Endpoint completion in policy top-1 | 68.6% | **75.4%** | +6.8pp |
+| Endpoint completion in policy top-5 | 86.3% | 92.9% | +6.6pp |
+| Endpoint completion in visit top-5 | 84.9% | 89.2% | +4.3pp |
+
+Forced visits feeding into the visit-policy training target moved the network's policy distribution toward the closing move. The self-correcting effect predicted in §10.2 is validated. Continued training with Fix 1 on is expected to compound this effect.
+
+---
+
+## 12. Fix 2 decision — deferred
+
+Decision: **Fix 2 is not enabled.** The §8 decision rule said Fix 2 would be warranted if "td=1 visit top-5 rises sharply but the game-count tails do not move" — the first half holds (88.7% → 99.6%), but Fix 2's preconditions are no longer met by the post-Fix-1 distribution.
+
+Rationale:
+- **At td=1**: residual drift is 0.8% (0.7% redundant + 0.1% off-chain). Fix 2 needs an EC candidate in visit top-5 AND argmax-selects-redundant/off-chain. That intersection at td=1 is now ~0% — Fix 2 has nothing to fire on.
+- **At td=2**: residual drift is real (24.7%: 16.0% redundant + 8.7% off-chain), but td=2 is structurally a reducer position (only 19.8% of td=2 records have an EC candidate at all). Fix 2 with reducer-fallback could shave a few percentage points, but the expected impact is incremental, not transformative.
+- **The new bottleneck is structural**: state_cap (4 → 6, within noise) plus recovery cases (Median dom_unavailable=82 winner-moves, Median delay=95). These are td≥2 reducer drift and dominant-component-lost shape — different problem family than Fix 2 was built for.
+
+The Fix 2 code paths in the spec remain documented for future use if the failure shape changes. Tasks 22-25 in the implementation plan remain unimplemented and gated.
+
+### Next direction
+
+The remaining tail is two distinct problems:
+
+1. **td=2 / td=3 closeout drift** — when there's no immediate-win move, the reducer is in top-K, but selection still drifts. This is what Spec 3 Fix 2 was originally aimed at, but the post-Fix-1 residual at td=1 is too small to test Fix 2's design assumption. Worth re-examining if the residual delay≥10 tail persists after further training.
+2. **Recovery after dominant-component lost** — Fix 3's diagnostic block. Currently 2 events per 1000 games; events tend to be high-delay and high-impact (median delay 95 winner-moves). Different mechanism: when the original chain is contested, the model can't re-target. This is the natural Spec 4 brainstorm.
+
+Recommended immediate next step: continue training with Fix 1 enabled (no new code) for one more 10-iter block to test whether policy internalization brings the tail down without further mechanism. The +6.8pp/9-iters policy improvement suggests another 10 iters could reach the §8 delay≥10 target organically.
