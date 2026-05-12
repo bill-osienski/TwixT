@@ -132,6 +132,12 @@ class MCTSConfig:
     closeout_td1_max_forced_moves: int = 4
     closeout_td1_require_high_value: bool = False
     closeout_td1_high_value_threshold: float = 0.95
+    # Spec 3 Fix 2 — narrow closeout selection tie-break (opt-in)
+    closeout_selection_tiebreak_enabled: bool = False
+    closeout_selection_tiebreak_max_distance: int = 2
+    closeout_selection_tiebreak_topk: int = 5
+    closeout_selection_tiebreak_min_value: float = 0.95
+    closeout_selection_tiebreak_min_share: float = 0.05
 
     def __post_init__(self):
         if self.eval_batch_size < 1:
@@ -305,6 +311,61 @@ class MCTS:
             ),
             "candidates_skipped_invalid": self._closeout_td1_candidates_skipped_invalid,
         }
+
+    # ------------------------------------------------------------------
+    # Spec 3 Fix 2 — narrow closeout selection tie-break (static helper)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def apply_closeout_selection_tiebreak(
+        visit_counts: dict,
+        gc_state_full: dict,
+        root_q: float,
+        selected_argmax_class: str,
+        config: MCTSConfig,
+    ) -> tuple:
+        """Conditionally override the visit-count argmax to a closeout candidate.
+
+        Returns (updated_counts, record). The record has overrode_to: 'endpoint'
+        or 'reducer' or None. Spec 2026-05-10 §5.
+        """
+        record = {"overrode_to": None}
+        if not config.closeout_selection_tiebreak_enabled or not visit_counts or not gc_state_full:
+            return visit_counts, record
+        td = gc_state_full.get("total_goal_distance")
+        if td is None or td > config.closeout_selection_tiebreak_max_distance:
+            return visit_counts, record
+        if root_q < config.closeout_selection_tiebreak_min_value:
+            return visit_counts, record
+        if selected_argmax_class not in {"redundant_reinforcement", "off_chain", "other"}:
+            return visit_counts, record
+        total_visits = sum(visit_counts.values()) or 1
+        sorted_moves = sorted(visit_counts.items(), key=lambda kv: kv[1], reverse=True)
+        topk_moves = [mv for mv, _ in sorted_moves[:config.closeout_selection_tiebreak_topk]]
+
+        def _best_match(candidate_list):
+            candidate_set = {tuple(m) for m in (candidate_list or [])}
+            for mv, c in sorted_moves:
+                if mv in candidate_set and mv in topk_moves:
+                    share = c / total_visits
+                    if share >= config.closeout_selection_tiebreak_min_share:
+                        return mv, c
+            return None
+
+        ec = _best_match(gc_state_full.get("endpoint_completion_moves"))
+        if ec is not None:
+            target_move = ec[0]
+            record["overrode_to"] = "endpoint"
+        else:
+            rd = _best_match(gc_state_full.get("distance_reducing_moves"))
+            if rd is None:
+                return visit_counts, record
+            target_move = rd[0]
+            record["overrode_to"] = "reducer"
+        new_counts = dict(visit_counts)
+        new_counts[target_move] = sorted_moves[0][1] + 1
+        record["target_move"] = target_move
+        record["argmax_class_before_override"] = selected_argmax_class
+        return new_counts, record
 
     def search(
         self,
