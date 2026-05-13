@@ -72,6 +72,8 @@ def self_play_worker_main(
     # Spec 2: conversion auxiliary loss
     conversion_policy_loss_enabled: bool = False,
     conversion_max_total_goal_distance: int = 2,
+    # Spec 4 — recovery / re-targeting diagnostic (§5.6).
+    recovery_retargeting_config: Optional[Any] = None,
 ) -> None:
     """Worker process entry point.
 
@@ -105,6 +107,7 @@ def self_play_worker_main(
             adjudicate_debug,
             max_positions_per_game, endgame_keep_positions,
             conversion_policy_loss_enabled, conversion_max_total_goal_distance,
+            recovery_retargeting_config,
         )
     except (KeyboardInterrupt, BrokenPipeError, EOFError, RuntimeError):
         # Graceful exit on interrupt, queue closure, or evaluator timeout
@@ -147,6 +150,8 @@ def _worker_loop(
     # Spec 2: conversion auxiliary loss
     conversion_policy_loss_enabled: bool = False,
     conversion_max_total_goal_distance: int = 2,
+    # Spec 4 — recovery / re-targeting diagnostic (§5.6).
+    recovery_retargeting_config: Optional[Any] = None,
 ) -> None:
     """Inner worker loop (extracted for clean exception handling)."""
     import time
@@ -196,6 +201,8 @@ def _worker_loop(
             endgame_keep_positions=endgame_keep_positions,
             conversion_policy_loss_enabled=conversion_policy_loss_enabled,
             conversion_max_total_goal_distance=conversion_max_total_goal_distance,
+            # Spec 4 — recovery / re-targeting diagnostic (§5.6).
+            recovery_retargeting_config=recovery_retargeting_config,
         )
         games_played += 1
 

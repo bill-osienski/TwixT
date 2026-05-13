@@ -45,10 +45,15 @@ from .opening_diagnostics import (
     build_early_override_summary,
     compute_diagnostic_end_ply,
 )
+from .recovery_retargeting_diagnostics import (
+    RecoveryRetargetingConfig,
+    aggregate_recovery_retargeting_records,
+    validate_config as _validate_recovery_retargeting_config,
+)
 
 
 def _inject_iteration(record: Optional[dict], iteration: Optional[int]) -> Optional[dict]:
-    """Set iteration on a goal_completion_record copy.
+    """Set iteration on a goal_completion_record OR recovery_retargeting_record copy.
 
     play_game() emits records with iteration=0 because the worker process
     does not know the trainer's iteration counter. The trainer-side save
@@ -1494,6 +1499,8 @@ def run_parallel_selfplay(
     # Spec 2: conversion auxiliary loss
     conversion_policy_loss_enabled: bool = False,
     conversion_max_total_goal_distance: int = 2,
+    # Spec 4 — recovery / re-targeting diagnostic (§5.6).
+    recovery_retargeting_config: Optional[Any] = None,
 ) -> Tuple[
     List["GameRecord"],  # All game records (for stats)
     List["PositionRecord"],  # New positions (for sanity stats)
@@ -1615,6 +1622,8 @@ def run_parallel_selfplay(
                 # Spec 2: conversion auxiliary loss
                 "conversion_policy_loss_enabled": conversion_policy_loss_enabled,
                 "conversion_max_total_goal_distance": conversion_max_total_goal_distance,
+                # Spec 4 — recovery / re-targeting diagnostic (§5.6).
+                "recovery_retargeting_config": recovery_retargeting_config,
             },
         )
         p.start()
@@ -2246,6 +2255,18 @@ def train(
     closeout_selection_tiebreak_topk: int = 5,
     closeout_selection_tiebreak_min_value: float = 0.95,
     closeout_selection_tiebreak_min_share: float = 0.05,
+    # Spec 4 — recovery / re-targeting diagnostic config.
+    recovery_retargeting_enabled: bool = True,
+    recovery_retargeting_collapse_value_threshold: float = -0.75,
+    recovery_retargeting_severe_value_threshold: float = -0.90,
+    recovery_retargeting_diffuse_root_top1_threshold: float = 0.20,
+    recovery_retargeting_very_diffuse_root_top1_threshold: float = 0.15,
+    recovery_retargeting_delta_threshold: float = 0.50,
+    recovery_retargeting_delta_max_current_score: float = -0.30,
+    recovery_retargeting_alternate_component_min_size: int = 4,
+    recovery_retargeting_classify_defense: bool = True,
+    recovery_retargeting_max_sampled_moves_per_side: int = 32,
+    recovery_retargeting_sample_all_moves: bool = False,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2346,6 +2367,22 @@ def train(
         mcts_exploration_overrides["root_near_corner_penalty_early"] = root_near_corner_penalty_early
     if root_near_corner_penalty_early_plies is not None:
         mcts_exploration_overrides["root_near_corner_penalty_early_plies"] = root_near_corner_penalty_early_plies
+
+    # Spec 4 — recovery / re-targeting diagnostic config (constructed once at startup).
+    recovery_retargeting_config = RecoveryRetargetingConfig(
+        enabled=recovery_retargeting_enabled,
+        collapse_value_threshold=recovery_retargeting_collapse_value_threshold,
+        severe_collapse_value_threshold=recovery_retargeting_severe_value_threshold,
+        diffuse_root_top1_threshold=recovery_retargeting_diffuse_root_top1_threshold,
+        very_diffuse_root_top1_threshold=recovery_retargeting_very_diffuse_root_top1_threshold,
+        delta_threshold=recovery_retargeting_delta_threshold,
+        delta_max_current_score=recovery_retargeting_delta_max_current_score,
+        alternate_component_min_size=recovery_retargeting_alternate_component_min_size,
+        classify_defense=recovery_retargeting_classify_defense,
+        max_sampled_moves_per_side=recovery_retargeting_max_sampled_moves_per_side,
+        sample_all_moves=recovery_retargeting_sample_all_moves,
+    )
+    _validate_recovery_retargeting_config(recovery_retargeting_config)
 
     # Default MCTS config (overridden per iteration with curriculum-scaled values)
     default_sims = mcts_simulations if mcts_simulations is not None else 400
@@ -2812,6 +2849,8 @@ def train(
                     endgame_keep_positions=endgame_keep_positions,
                     conversion_policy_loss_enabled=conversion_policy_loss_enabled,
                     conversion_max_total_goal_distance=conversion_max_total_goal_distance,
+                    # Spec 4 — recovery / re-targeting diagnostic (§5.6).
+                    recovery_retargeting_config=recovery_retargeting_config,
                 )
 
                 # Unpack stats
@@ -2951,6 +2990,8 @@ def train(
                         endgame_keep_positions=endgame_keep_positions,
                         conversion_policy_loss_enabled=conversion_policy_loss_enabled,
                         conversion_max_total_goal_distance=conversion_max_total_goal_distance,
+                        # Spec 4 — recovery / re-targeting diagnostic (§5.6).
+                        recovery_retargeting_config=recovery_retargeting_config,
                     )
                     game_dur = time.perf_counter() - game_t0
                     game_plies_list.append(game.n_moves)
