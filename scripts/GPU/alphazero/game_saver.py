@@ -169,7 +169,14 @@ def save_game_replay(
         record["goal_completion_diagnostics_meta"] = goal_completion_diagnostics_meta
 
     if goal_completion_record is not None:
-        record["goal_completion_record"] = goal_completion_record
+        # play_game writes a dispatch-order counter into game_idx/game_id;
+        # the filename + meta use the save-order counter we hold here.
+        # Reconcile so worst-cases CSV attribution points at the right file.
+        record["goal_completion_record"] = {
+            **goal_completion_record,
+            "game_idx": game_idx,
+            "game_id": f"game_{game_idx:03d}",
+        }
 
     if opening_diagnostics:
         record["opening_diagnostics"] = opening_diagnostics
