@@ -63,3 +63,63 @@ def validate_config(cfg: RecoveryRetargetingConfig) -> None:
         raise ValueError(
             f"max_sampled_moves_per_side ({cfg.max_sampled_moves_per_side}) must be >= 0"
         )
+
+
+# ---------------------------------------------------------------------------
+# Component analysis helpers
+# ---------------------------------------------------------------------------
+
+_KNIGHT_OFFSETS = ((1, 2), (1, -2), (-1, 2), (-1, -2), (2, 1), (2, -1), (-2, 1), (-2, -1))
+
+
+def knight_neighbors(r: int, c: int) -> List[Tuple[int, int]]:
+    """The 8 TwixT knight-distance offsets from (r, c). No bounds check."""
+    return [(r + dr, c + dc) for dr, dc in _KNIGHT_OFFSETS]
+
+
+def find_components(state, side: str) -> List[frozenset]:
+    """All same-color bridge-connected components for `side` on the current state.
+
+    Uses state._get_connected_component which respects enemy-blocking of bridges
+    on real states. The _StubState fixture in tests provides a simpler
+    knight-neighbor walk; that's sufficient for unit testing the classifier
+    logic without a full Twixt board.
+    """
+    pegs_of = [p for p, color in state.pegs.items() if color == side]
+    seen: set = set()
+    components: List[frozenset] = []
+    for peg in pegs_of:
+        if peg in seen:
+            continue
+        comp = frozenset(state._get_connected_component(peg, side))
+        if not comp:
+            comp = frozenset({peg})
+        seen.update(comp)
+        components.append(comp)
+    return components
+
+
+def is_local_to_existing(state, side: str, move: Tuple[int, int]) -> bool:
+    """True iff `move` is at TwixT knight distance of at least one same-color peg.
+
+    Bridge-formability is NOT required; the flag is about proximity to
+    bridge-able structure, per spec §3.1.
+    """
+    r, c = move
+    for (nr, nc) in knight_neighbors(r, c):
+        if state.pegs.get((nr, nc)) == side:
+            return True
+    return False
+
+
+def selected_component_after(state_after, side: str, move: Tuple[int, int]) -> frozenset:
+    """The component containing `move` in the POST-MOVE state.
+
+    Caller is responsible for constructing `state_after` (via state.apply_move
+    or equivalent). This helper performs no state mutation — making it safe
+    to call inside the per-ply hook without copying or restoring board state.
+    """
+    comp = frozenset(state_after._get_connected_component(move, side))
+    if not comp:
+        comp = frozenset({move})
+    return comp

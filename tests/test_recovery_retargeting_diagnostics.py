@@ -68,3 +68,113 @@ def test_validate_max_sampled_non_negative():
 
 def test_validate_default_config_passes():
     validate_config(RecoveryRetargetingConfig())   # must not raise
+
+
+from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
+    find_components,
+    is_local_to_existing,
+    knight_neighbors,
+    selected_component_after,
+)
+
+
+class _StubState:
+    """Minimal state shim: exposes .pegs dict, apply_move, _get_connected_component."""
+    def __init__(self, pegs_dict, to_move="black"):
+        # pegs_dict: {(r, c): "red" | "black"}
+        self.pegs = dict(pegs_dict)
+        self.to_move = to_move
+
+    def apply_move(self, move):
+        """Return a NEW _StubState with `move` placed for the current side.
+
+        The real TwixtState.apply_move alternates to_move; the stub mirrors that.
+        Tests that need a specific side-to-move should construct the stub with
+        the desired to_move and call apply_move once.
+        """
+        new_pegs = dict(self.pegs)
+        new_pegs[move] = self.to_move
+        return _StubState(new_pegs, to_move="red" if self.to_move == "black" else "black")
+
+    def _get_connected_component(self, peg, side):
+        # BFS over knight-distance neighbors of the same color, no enemy blocking check
+        # (sufficient for unit tests; real state has full enemy-block logic)
+        if peg not in self.pegs or self.pegs[peg] != side:
+            return frozenset()
+        visited = {peg}
+        frontier = [peg]
+        while frontier:
+            cur = frontier.pop()
+            for n in knight_neighbors(*cur):
+                if n in self.pegs and self.pegs[n] == side and n not in visited:
+                    visited.add(n)
+                    frontier.append(n)
+        return frozenset(visited)
+
+
+def _state_after(state_before, side, move):
+    """Test helper: build a new _StubState representing state_before + move for side."""
+    new_pegs = dict(state_before.pegs)
+    new_pegs[move] = side
+    return _StubState(new_pegs)
+
+
+def test_knight_neighbors_returns_8_offsets():
+    n = set(knight_neighbors(5, 5))
+    assert n == {(3, 4), (3, 6), (4, 3), (4, 7), (6, 3), (6, 7), (7, 4), (7, 6)}
+
+
+def test_find_components_groups_by_bridge_connectivity():
+    # Two black pegs at knight distance form one component; a third isolated peg is its own component.
+    state = _StubState({(0, 0): "black", (1, 2): "black", (10, 10): "black"})
+    comps = find_components(state, "black")
+    assert len(comps) == 2
+    sizes = sorted(len(c) for c in comps)
+    assert sizes == [1, 2]
+
+
+def test_find_components_skips_other_color():
+    state = _StubState({(0, 0): "black", (1, 2): "red"})
+    comps = find_components(state, "black")
+    assert len(comps) == 1
+    assert next(iter(comps)) == frozenset({(0, 0)})
+
+
+def test_is_local_to_existing_true_when_knight_neighbor_exists():
+    state = _StubState({(0, 0): "black"})
+    assert is_local_to_existing(state, "black", (1, 2)) is True
+    assert is_local_to_existing(state, "black", (2, 1)) is True
+
+
+def test_is_local_to_existing_false_when_no_same_color_knight_neighbor():
+    state = _StubState({(0, 0): "black"})
+    # (2, 2) is Chebyshev-2 from (0, 0) but NOT knight-distance.
+    assert is_local_to_existing(state, "black", (2, 2)) is False
+
+
+def test_is_local_to_existing_ignores_other_color():
+    state = _StubState({(1, 2): "red"})
+    assert is_local_to_existing(state, "black", (0, 0)) is False
+
+
+def test_selected_component_after_includes_new_peg_and_merged_components():
+    """Caller passes state_after (post-move). Helper does NOT mutate state."""
+    # Two prior black pegs at (0, 0) and (4, 0). (2, 1) is knight-distance from both.
+    state_before = _StubState({(0, 0): "black", (4, 0): "black"})
+    state_after = _state_after(state_before, "black", (2, 1))
+    comp_after = selected_component_after(state_after, "black", (2, 1))
+    assert (0, 0) in comp_after
+    assert (4, 0) in comp_after
+    assert (2, 1) in comp_after
+    assert len(comp_after) == 3
+
+
+def test_selected_component_after_uses_post_move_state_without_mutation():
+    """The helper must NOT mutate state_after.pegs (or any state)."""
+    state_before = _StubState({(0, 0): "black", (4, 0): "black"})
+    state_after = _state_after(state_before, "black", (2, 1))
+    pegs_before_call = dict(state_after.pegs)
+    selected_component_after(state_after, "black", (2, 1))
+    assert state_after.pegs == pegs_before_call
+    # state_before is untouched (it never received the move).
+    assert (2, 1) not in state_before.pegs
