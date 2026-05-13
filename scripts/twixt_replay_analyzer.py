@@ -4973,6 +4973,54 @@ def analyze(replays: List[dict],
         lines.extend([""])
         lines.extend(format_closeout_selection_tiebreak_report(tb_summary))
         summary["closeout_selection_tiebreak"] = tb_summary
+    # Spec 4 — recovery / re-targeting diagnostic.
+    from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
+        aggregate_recovery_retargeting_records,
+    )
+
+    # Per-iter summaries: read from sidecars; analyzer cross-iter rollup
+    # tolerates config drift (warns, does not skip) per spec §6.4.
+    per_iter_rr = {}
+    for it, sc in (relevant_sidecars or {}).items():
+        block = (sc or {}).get("recovery_retargeting_summary")
+        if isinstance(block, dict):
+            per_iter_rr[it] = block
+
+    # Cross-iter rollup: build a synthetic summary by re-aggregating from
+    # per-game records (collected by analyze() upstream as `replays`).
+    rr_records = [r.get("recovery_retargeting_record") for r in replays
+                  if isinstance(r, dict) and r.get("recovery_retargeting_record")]
+    rr_games_total = len(replays) if replays else 0
+    rr_summary = aggregate_recovery_retargeting_records(
+        rr_records, games_total=rr_games_total,
+    )
+    rr_summary["iters_covered"] = sorted(per_iter_rr.keys())
+
+    # Detect mixed configs across iterations (warn, do not skip — spec §6.4).
+    iter_configs = {it: (sc or {}).get("config") for it, sc in per_iter_rr.items()}
+    distinct_configs = []
+    for cfg in iter_configs.values():
+        if cfg and cfg not in distinct_configs:
+            distinct_configs.append(cfg)
+    rr_summary["mixed_config_across_iters"] = len(distinct_configs) > 1
+
+    if rr_summary.get("games_total"):
+        lines.extend([""])
+        lines.extend(format_recovery_retargeting_report(rr_summary))
+        if rr_summary.get("mixed_config_across_iters"):
+            lines.append("")
+            lines.append(f"Mixed config across iters covered ({len(distinct_configs)} distinct configs).")
+            lines.append(f"WARNING: rates aggregate across config changes; treat with care.")
+        summary["recovery_retargeting"] = rr_summary
+
+        # CSVs (analyzer §6.6 + §6.7).
+        rr_by_iter_path = os.path.join(out_dir, _suffixed("recovery_retargeting_by_iter", "csv", suffix))
+        write_recovery_retargeting_by_iter_csv(rr_by_iter_path, per_iter_rr)
+        rr_worst_path = os.path.join(out_dir, _suffixed("recovery_retargeting_worst_cases", "csv", suffix))
+        write_recovery_retargeting_worst_cases_csv(
+            rr_worst_path, rr_records,
+            top_k=getattr(args, "recovery_retargeting_worst_cases_top_k", 25),
+        )
     # Spec 2026-05-10 §6 — per-game recovery event classification + CSV.
     recovery_events = aggregate_recovery_events(replays)
     write_recovery_events_csv(
@@ -5127,6 +5175,11 @@ def main():
                     help="With --goal-completion-recompute, also load inline "
                          "records and report per-field divergence. Implies "
                          "--goal-completion-recompute. Intentionally expensive.")
+    ap.add_argument(
+        "--recovery-retargeting-worst-cases-top-k",
+        type=int, default=25,
+        help="Max rows in recovery_retargeting_worst_cases CSV (Spec 4)",
+    )
 
     # Probes / calibration — spec §6.1 new flags.
     ap.add_argument("--weights", default=None,
