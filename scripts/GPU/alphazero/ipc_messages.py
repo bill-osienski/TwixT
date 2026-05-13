@@ -128,3 +128,5 @@ class GameComplete:
     # None when not captured upstream; otherwise a dict with the keys returned
     # by MCTS.get_closeout_tiebreak_telemetry().
     closeout_tiebreak_telemetry: Optional[dict] = None
+    # Spec 4 — recovery / re-targeting per-game record (None if no side triggered).
+    recovery_retargeting_record: Optional[dict] = None
