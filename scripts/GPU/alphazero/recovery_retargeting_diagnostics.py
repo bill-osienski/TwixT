@@ -326,6 +326,36 @@ def classify_move(
 
 
 # ---------------------------------------------------------------------------
+# Rollup mapping (single source of truth for spec §3.5 / §6.1 partitions)
+# ---------------------------------------------------------------------------
+
+def _bucket_rollup(counts: Dict[str, int], *, denom: int) -> dict:
+    """Map per-class counts into the four spec §3.5 rollups + their rates.
+
+    counts: a {class -> int} dict over PRIMARY_CLASSES.
+    denom:  classified_in_window_moves (use 1 when zero so rates are 0.0).
+
+    Used by both RecoveryRetargetingTracker.finalize_game (per-game record)
+    and aggregate_recovery_retargeting_records (per-iter sidecar) so the
+    bucket→class mapping lives in one place.
+    """
+    constructive = counts["reduces_own_goal_distance"] + counts["starts_or_extends_alternate_component"]
+    defensive    = counts["blocks_opponent_closeout"]
+    structural   = counts["connects_to_existing_component"] + counts["improves_own_largest_component"]
+    local_drift  = counts["redundant_local_reinforcement"] + counts["off_plan_or_unclear"]
+    return {
+        "constructive_recovery_moves":  constructive,
+        "defensive_moves":              defensive,
+        "structural_connection_moves":  structural,
+        "local_drift_moves":            local_drift,
+        "constructive_recovery_rate":   round(constructive / denom, 3),
+        "defensive_rate":               round(defensive / denom, 3),
+        "structural_connection_rate":   round(structural / denom, 3),
+        "local_drift_rate":             round(local_drift / denom, 3),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Per-game tracker
 # ---------------------------------------------------------------------------
 
@@ -572,6 +602,46 @@ class RecoveryRetargetingTracker:
             "classifier_error_count": a.classifier_error_count,
         }
 
+    def _build_side_record(self, a: _SideAccumulator) -> dict:
+        """Build the per-side dict for a triggered side. Spec §4 schema."""
+        classified = sum(a.selected_class_counts.values())
+        denom = classified if classified > 0 else 1
+        scores = a.triggered_scores
+        shares = a.triggered_top1_shares
+        return {
+            "triggered":              True,
+            "first_trigger_ply":      a.first_trigger_ply,
+            "first_trigger_reason":   a.first_trigger_reason,
+            "classifier_error_count": a.classifier_error_count,
+
+            "in_window_own_moves":             a.in_window_own_moves,
+            "triggered_own_moves":             a.triggered_own_moves,
+            "non_triggered_in_window_moves":   a.non_triggered_in_window_moves,
+            "missing_signal_moves":            a.missing_signal_moves,
+            "missing_search_score_moves":      a.missing_search_score_moves,
+            "missing_root_top1_share_moves":   a.missing_root_top1_share_moves,
+
+            "trigger_reason_counts":  dict(a.trigger_reason_counts),
+            "severe_collapse_moves":  a.severe_collapse_moves,
+            "very_diffuse_moves":     a.very_diffuse_moves,
+
+            "mean_search_score_triggered_plies":    round(sum(scores) / len(scores), 3) if scores else None,
+            "min_search_score_triggered_plies":     round(min(scores), 3) if scores else None,
+            "max_search_score_triggered_plies":     round(max(scores), 3) if scores else None,
+            "mean_root_top1_share_triggered_plies": round(sum(shares) / len(shares), 3) if shares else None,
+
+            "classified_in_window_moves": classified,
+            "selected_class_counts":      dict(a.selected_class_counts),
+
+            **_bucket_rollup(a.selected_class_counts, denom=denom),
+
+            "sampled_moves_count":   len(a.sampled_moves),
+            "sampled_moves_cap":     self.config.max_sampled_moves_per_side,
+            "sampled_moves_dropped": a.sampled_moves_dropped,
+            "sample_all_moves":      self.config.sample_all_moves,
+            "sampled_moves":         list(a.sampled_moves),
+        }
+
     def finalize_game(
         self,
         *,
@@ -606,59 +676,11 @@ class RecoveryRetargetingTracker:
         total_classifier_errors = 0
         for side in ("red", "black"):
             a = self._sides[side]
+            total_classifier_errors += a.classifier_error_count
             if not a.triggered:
                 side_records[side] = {"triggered": False, "classifier_error_count": a.classifier_error_count}
-                total_classifier_errors += a.classifier_error_count
                 continue
-            classified = sum(a.selected_class_counts.values())
-            counts = a.selected_class_counts
-            constructive = counts["reduces_own_goal_distance"] + counts["starts_or_extends_alternate_component"]
-            defensive = counts["blocks_opponent_closeout"]
-            structural = counts["connects_to_existing_component"] + counts["improves_own_largest_component"]
-            local_drift = counts["redundant_local_reinforcement"] + counts["off_plan_or_unclear"]
-            denom = classified if classified > 0 else 1
-            side_records[side] = {
-                "triggered":            True,
-                "first_trigger_ply":    a.first_trigger_ply,
-                "first_trigger_reason": a.first_trigger_reason,
-                "classifier_error_count": a.classifier_error_count,
-
-                "in_window_own_moves":             a.in_window_own_moves,
-                "triggered_own_moves":             a.triggered_own_moves,
-                "non_triggered_in_window_moves":   a.non_triggered_in_window_moves,
-                "missing_signal_moves":            a.missing_signal_moves,
-                "missing_search_score_moves":      a.missing_search_score_moves,
-                "missing_root_top1_share_moves":   a.missing_root_top1_share_moves,
-
-                "trigger_reason_counts":  dict(a.trigger_reason_counts),
-                "severe_collapse_moves":  a.severe_collapse_moves,
-                "very_diffuse_moves":     a.very_diffuse_moves,
-
-                "mean_search_score_triggered_plies":   round(sum(a.triggered_scores) / len(a.triggered_scores), 3) if a.triggered_scores else None,
-                "min_search_score_triggered_plies":    round(min(a.triggered_scores), 3) if a.triggered_scores else None,
-                "max_search_score_triggered_plies":    round(max(a.triggered_scores), 3) if a.triggered_scores else None,
-                "mean_root_top1_share_triggered_plies": round(sum(a.triggered_top1_shares) / len(a.triggered_top1_shares), 3) if a.triggered_top1_shares else None,
-
-                "classified_in_window_moves": classified,
-                "selected_class_counts":      dict(a.selected_class_counts),
-
-                "constructive_recovery_moves":  constructive,
-                "defensive_moves":              defensive,
-                "structural_connection_moves":  structural,
-                "local_drift_moves":            local_drift,
-
-                "constructive_recovery_rate":  round(constructive / denom, 3),
-                "defensive_rate":              round(defensive / denom, 3),
-                "structural_connection_rate":  round(structural / denom, 3),
-                "local_drift_rate":            round(local_drift / denom, 3),
-
-                "sampled_moves_count":   len(a.sampled_moves),
-                "sampled_moves_cap":     self.config.max_sampled_moves_per_side,
-                "sampled_moves_dropped": a.sampled_moves_dropped,
-                "sample_all_moves":      self.config.sample_all_moves,
-                "sampled_moves":         list(a.sampled_moves),
-            }
-            total_classifier_errors += a.classifier_error_count
+            side_records[side] = self._build_side_record(a)
 
         return {
             "version": 1,
@@ -769,10 +791,7 @@ def aggregate_recovery_retargeting_records(
     selected_class_rates = {
         cls: round(count / denom, 3) for cls, count in selected_class_totals.items()
     }
-    constructive = selected_class_totals["reduces_own_goal_distance"] + selected_class_totals["starts_or_extends_alternate_component"]
-    defensive = selected_class_totals["blocks_opponent_closeout"]
-    structural = selected_class_totals["connects_to_existing_component"] + selected_class_totals["improves_own_largest_component"]
-    local_drift = selected_class_totals["redundant_local_reinforcement"] + selected_class_totals["off_plan_or_unclear"]
+    rollup = _bucket_rollup(selected_class_totals, denom=denom)
 
     return {
         "version": 1,
@@ -790,10 +809,12 @@ def aggregate_recovery_retargeting_records(
         "classified_in_window_moves_total": classified_total,
         "selected_class_counts_total": selected_class_totals,
         "selected_class_rates_total": selected_class_rates,
-        "constructive_recovery_rate": round(constructive / denom, 3),
-        "defensive_rate": round(defensive / denom, 3),
-        "structural_connection_rate": round(structural / denom, 3),
-        "local_drift_rate": round(local_drift / denom, 3),
+        # Per-iter sidecar emits only the four rollup *rates* (not the *_moves
+        # totals — those are at game scope, not iter scope).
+        "constructive_recovery_rate":  rollup["constructive_recovery_rate"],
+        "defensive_rate":              rollup["defensive_rate"],
+        "structural_connection_rate":  rollup["structural_connection_rate"],
+        "local_drift_rate":            rollup["local_drift_rate"],
         "schema_integrity": {
             "skipped_unknown_version_count": skipped_unknown_version,
             "skipped_config_mismatch_count": skipped_config_mismatch,
