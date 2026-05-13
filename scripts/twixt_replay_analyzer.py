@@ -2478,6 +2478,79 @@ def format_closeout_selection_tiebreak_report(summary: dict) -> list:
     return lines
 
 
+def format_recovery_retargeting_report(summary: Optional[dict]) -> list:
+    """Format the recovery / re-targeting telemetry section. Spec 4 §6.5."""
+    if not summary:
+        return []
+    cfg = summary.get("config") or {}
+    classify_defense_on = bool(cfg.get("classify_defense", True))
+
+    def _pct(x):
+        return f"{(x or 0.0) * 100.0:.1f}%"
+
+    lines = []
+    lines.append("Recovery / Re-targeting Diagnostics")
+    lines.append("===================================")
+    iters = summary.get("iters_covered") or []
+    if iters:
+        lines.append(
+            f"Iters covered: {min(iters)}-{max(iters)}  enabled={summary.get('enabled')}  "
+            f"defense_classifier={'on' if classify_defense_on else 'off'}"
+        )
+    lines.append(
+        f"Config: collapse_value<={cfg.get('collapse_value_threshold')}  "
+        f"diffuse_root_top1<={cfg.get('diffuse_root_top1_threshold')}  "
+        f"delta>={cfg.get('delta_threshold')} with current<={cfg.get('delta_max_current_score')}"
+    )
+    games_total = summary.get("games_total", 0)
+    games_triggered = summary.get("games_triggered", 0)
+    lines.append(f"Triggered games:           {games_triggered} / {games_total} ({_pct(summary.get('trigger_rate'))})")
+    lines.append(f"  side was eventual loser: {summary.get('triggered_loser_side', 0)} / {games_triggered} ({_pct(summary.get('triggered_loser_side_per_triggered_game'))})")
+    lines.append(f"  side was eventual winner:{summary.get('triggered_winner_side', 0):4d} / {games_triggered} ({_pct(summary.get('triggered_winner_side_per_triggered_game'))})")
+    in_window = summary.get("in_window_own_moves_total", 0)
+    lines.append(f"In-window own moves:       {in_window}")
+    lines.append(f"  triggered:               {summary.get('triggered_own_moves_total', 0)}")
+    lines.append(f"  non-triggered in-window: {summary.get('non_triggered_in_window_moves_total', 0)}")
+    lines.append(f"  missing-signal:          {summary.get('missing_signal_moves_total', 0)}")
+    lines.append(f"Severity:")
+    lines.append(f"  severe collapse:         {summary.get('severe_collapse_moves_total', 0)} plies")
+    lines.append(f"  very diffuse root:       {summary.get('very_diffuse_moves_total', 0)} plies")
+    trc = summary.get("trigger_reason_counts_total") or {}
+    lines.append("Trigger composition:")
+    lines.append(f"  delta_precursor:         {trc.get('delta_precursor', 0)}")
+    lines.append(f"  steady_state:            {trc.get('steady_state', 0)}")
+    lines.append(f"  both:                    {trc.get('both', 0)}")
+    classified = summary.get("classified_in_window_moves_total", 0)
+    counts = summary.get("selected_class_counts_total") or {}
+    rates = summary.get("selected_class_rates_total") or {}
+    lines.append("Move-class composition (denominator: classified in-window):")
+    for cls, label in (
+        ("blocks_opponent_closeout",              "blocks opponent closeout:"),
+        ("reduces_own_goal_distance",             "reduces own goal distance:"),
+        ("starts_or_extends_alternate_component", "starts/extends alternate component:"),
+        ("connects_to_existing_component",        "connects to existing component:"),
+        ("improves_own_largest_component",        "improves own largest component:"),
+        ("redundant_local_reinforcement",         "redundant local reinforcement:"),
+        ("off_plan_or_unclear",                   "off-plan or unclear:"),
+    ):
+        lines.append(f"  {label:42s} {_pct(rates.get(cls)):>6s}   ({counts.get(cls, 0)})")
+    lines.append("Rollup:")
+    lines.append(f"  constructive recovery:                 {_pct(summary.get('constructive_recovery_rate'))}")
+    if classify_defense_on:
+        lines.append(f"  defense:                               {_pct(summary.get('defensive_rate'))}")
+    else:
+        lines.append(f"  defense:                  N/A (defense classification disabled — local drift may include defensive moves)")
+    lines.append(f"  structural connection:                 {_pct(summary.get('structural_connection_rate'))}")
+    lines.append(f"  local drift / unclear:                 {_pct(summary.get('local_drift_rate'))}")
+    si = summary.get("schema_integrity") or {}
+    lines.append("Schema integrity:")
+    lines.append(f"  classifier_error_count:                {si.get('classifier_error_count_total', 0)}")
+    lines.append(f"  records skipped (unknown version):     {si.get('skipped_unknown_version_count', 0)}")
+    lines.append(f"  records skipped (config mismatch):     {si.get('skipped_config_mismatch_count', 0)}")
+    lines.append("Worst cases: recovery_retargeting_worst_cases.csv")
+    return lines
+
+
 def write_conversion_training_by_iter_csv(
     sidecar_summaries: dict, output_dir, suffix: str = "",
 ) -> str:
