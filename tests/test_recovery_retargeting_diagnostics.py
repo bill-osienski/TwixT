@@ -267,3 +267,152 @@ def test_severity_flags_reflect_current_score_and_share():
     assert r["triggered"] is True
     assert r["is_severe_collapse"] is True
     assert r["is_very_diffuse"] is True
+
+
+from scripts.GPU.alphazero.recovery_retargeting_diagnostics import classify_move
+
+
+def _classify(
+    state_before, side, move,
+    own_td_before, own_td_after,
+    opp_td_before=None, opp_td_after=None,
+    classify_defense=True,
+    alternate_component_min_size=4,
+    state_after=None,
+):
+    """Test harness wrapper. Caller may pass state_after explicitly to override
+    the default (state_before + move) — useful for testing isolated-bridge scenarios."""
+    if state_after is None:
+        state_after = _state_after(state_before, side, move)
+    return classify_move(
+        state_before=state_before,
+        state_after=state_after,
+        side=side,
+        move=move,
+        own_total_goal_distance_before=own_td_before,
+        own_total_goal_distance_after=own_td_after,
+        opponent_total_goal_distance_before=opp_td_before,
+        opponent_total_goal_distance_after=opp_td_after,
+        classify_defense=classify_defense,
+        alternate_component_min_size=alternate_component_min_size,
+    )
+
+
+def test_classify_move_does_not_mutate_state_before():
+    """classify_move must not mutate state_before.pegs in any code path."""
+    state_before = _StubState({(0, 0): "black", (1, 2): "black"})
+    state_after = _state_after(state_before, "black", (5, 5))
+    pegs_snapshot = dict(state_before.pegs)
+    classify_move(
+        state_before=state_before, state_after=state_after,
+        side="black", move=(5, 5),
+        own_total_goal_distance_before=4, own_total_goal_distance_after=4,
+        opponent_total_goal_distance_before=None,
+        opponent_total_goal_distance_after=None,
+        classify_defense=True, alternate_component_min_size=4,
+    )
+    assert state_before.pegs == pegs_snapshot
+
+
+def test_classifies_blocks_opponent_closeout():
+    state = _StubState({(0, 0): "black"})
+    r = _classify(state, "black", (5, 5),
+                  own_td_before=6, own_td_after=6,
+                  opp_td_before=2, opp_td_after=3)
+    assert r["primary_class"] == "blocks_opponent_closeout"
+    assert r["flags"]["blocked_opponent_closeout"] is True
+
+
+def test_classifies_reduces_own_goal_distance():
+    state = _StubState({(0, 0): "black"})
+    r = _classify(state, "black", (5, 5),
+                  own_td_before=4, own_td_after=3)
+    assert r["primary_class"] == "reduces_own_goal_distance"
+
+
+def test_priority_defense_beats_reduces_goal_distance():
+    state = _StubState({(0, 0): "black"})
+    r = _classify(state, "black", (5, 5),
+                  own_td_before=4, own_td_after=3,         # reduces own goal distance
+                  opp_td_before=2, opp_td_after=3)         # also blocks opponent
+    assert r["primary_class"] == "blocks_opponent_closeout"
+
+
+def test_classifies_starts_or_extends_alternate_via_opens_new():
+    # Dominant black component at (0,0)-(1,2) size 2; move at (10,10) opens new component size 1.
+    # alternate_component_min_size=1 to make this test independent of default.
+    state = _StubState({(0, 0): "black", (1, 2): "black"})
+    r = _classify(state, "black", (10, 10),
+                  own_td_before=5, own_td_after=5,
+                  alternate_component_min_size=1)
+    assert r["primary_class"] == "starts_or_extends_alternate_component"
+    assert r["flags"]["opens_new_component"] is True
+
+
+def test_classifies_connects_to_existing_component():
+    # Move bridges to dominant component but does NOT reduce td.
+    state = _StubState({(0, 0): "black", (1, 2): "black", (3, 1): "black"})
+    # New move at (4, 3) is knight-from (3, 1) and joins dominant.
+    r = _classify(state, "black", (4, 3),
+                  own_td_before=5, own_td_after=5)
+    assert r["primary_class"] == "connects_to_existing_component"
+    assert r["flags"]["extends_dominant_component"] is True
+
+
+def test_classifies_redundant_local_reinforcement():
+    # Move is local (knight-distance) to a same-color peg, but the simulated
+    # bridge is blocked (e.g., enemy peg between them), so the move does NOT
+    # actually join the component. Use _IsolateState for both before & after.
+    class _IsolateState(_StubState):
+        def _get_connected_component(self, peg, side):
+            if peg not in self.pegs or self.pegs[peg] != side:
+                return frozenset()
+            return frozenset({peg})
+
+    state_before = _IsolateState({(0, 0): "black"})
+    new_pegs = dict(state_before.pegs)
+    new_pegs[(1, 2)] = "black"
+    state_after = _IsolateState(new_pegs)
+    r = _classify(state_before, "black", (1, 2),                # knight-local to (0, 0)
+                  own_td_before=5, own_td_after=5,
+                  state_after=state_after)
+    assert r["primary_class"] == "redundant_local_reinforcement"
+    assert r["flags"]["local_to_existing"] is True
+    assert r["flags"]["extends_dominant_component"] is False
+
+
+def test_classifies_off_plan_or_unclear_fallback():
+    state = _StubState({(0, 0): "black"})
+    # Move is far away (not local), no td change, no defense.
+    r = _classify(state, "black", (15, 15),
+                  own_td_before=5, own_td_after=5)
+    assert r["primary_class"] == "off_plan_or_unclear"
+
+
+def test_local_to_existing_uses_knight_not_chebyshev():
+    # (2, 2) is Chebyshev-2 from (0, 0) but NOT knight-2.
+    class _IsolateState(_StubState):
+        def _get_connected_component(self, peg, side):
+            if peg not in self.pegs or self.pegs[peg] != side:
+                return frozenset()
+            return frozenset({peg})
+
+    state_before = _IsolateState({(0, 0): "black"})
+    new_pegs = dict(state_before.pegs)
+    new_pegs[(2, 2)] = "black"
+    state_after = _IsolateState(new_pegs)
+    r = _classify(state_before, "black", (2, 2),
+                  own_td_before=5, own_td_after=5,
+                  state_after=state_after)
+    assert r["flags"]["local_to_existing"] is False
+    assert r["primary_class"] == "off_plan_or_unclear"
+
+
+def test_classify_defense_disabled_never_returns_blocks_opponent_closeout():
+    state = _StubState({(0, 0): "black"})
+    r = _classify(state, "black", (5, 5),
+                  own_td_before=4, own_td_after=3,
+                  opp_td_before=2, opp_td_after=3,
+                  classify_defense=False)
+    assert r["primary_class"] == "reduces_own_goal_distance"
+    assert r["flags"]["blocked_opponent_closeout"] is False
