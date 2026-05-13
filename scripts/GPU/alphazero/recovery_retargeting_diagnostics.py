@@ -567,3 +567,119 @@ class RecoveryRetargetingTracker:
             "selected_class_counts": dict(a.selected_class_counts),
             "classifier_error_count": a.classifier_error_count,
         }
+
+    def finalize_game(
+        self,
+        *,
+        iteration: int,
+        game_idx: int,
+        game_id: str,
+        winner: Optional[str],
+        starting_player: str,
+        n_moves: int,
+        reason: str,
+    ) -> Optional[dict]:
+        """Emit per-game record per Spec §4 if any side opened a window. Else None."""
+        triggered_sides = [s for s, a in self._sides.items() if a.triggered]
+        if not triggered_sides:
+            return None
+
+        loser = None
+        if winner == "red":
+            loser = "black"
+        elif winner == "black":
+            loser = "red"
+
+        first_acc = min(
+            (a for a in self._sides.values() if a.triggered),
+            key=lambda a: a.first_trigger_ply if a.first_trigger_ply is not None else 10**9,
+        )
+        first_trigger_ply = first_acc.first_trigger_ply
+        first_trigger_side = next(s for s, a in self._sides.items() if a is first_acc)
+        first_trigger_reason = first_acc.first_trigger_reason
+
+        side_records: Dict[str, dict] = {}
+        total_classifier_errors = 0
+        for side in ("red", "black"):
+            a = self._sides[side]
+            if not a.triggered:
+                side_records[side] = {"triggered": False, "classifier_error_count": a.classifier_error_count}
+                total_classifier_errors += a.classifier_error_count
+                continue
+            classified = sum(a.selected_class_counts.values())
+            counts = a.selected_class_counts
+            constructive = counts["reduces_own_goal_distance"] + counts["starts_or_extends_alternate_component"]
+            defensive = counts["blocks_opponent_closeout"]
+            structural = counts["connects_to_existing_component"] + counts["improves_own_largest_component"]
+            local_drift = counts["redundant_local_reinforcement"] + counts["off_plan_or_unclear"]
+            denom = classified if classified > 0 else 1
+            side_records[side] = {
+                "triggered":            True,
+                "first_trigger_ply":    a.first_trigger_ply,
+                "first_trigger_reason": a.first_trigger_reason,
+                "classifier_error_count": a.classifier_error_count,
+
+                "in_window_own_moves":             a.in_window_own_moves,
+                "triggered_own_moves":             a.triggered_own_moves,
+                "non_triggered_in_window_moves":   a.non_triggered_in_window_moves,
+                "missing_signal_moves":            a.missing_signal_moves,
+                "missing_search_score_moves":      a.missing_search_score_moves,
+                "missing_root_top1_share_moves":   a.missing_root_top1_share_moves,
+
+                "trigger_reason_counts":  dict(a.trigger_reason_counts),
+                "severe_collapse_moves":  a.severe_collapse_moves,
+                "very_diffuse_moves":     a.very_diffuse_moves,
+
+                "mean_search_score_triggered_plies":   round(sum(a.triggered_scores) / len(a.triggered_scores), 3) if a.triggered_scores else None,
+                "min_search_score_triggered_plies":    round(min(a.triggered_scores), 3) if a.triggered_scores else None,
+                "max_search_score_triggered_plies":    round(max(a.triggered_scores), 3) if a.triggered_scores else None,
+                "mean_root_top1_share_triggered_plies": round(sum(a.triggered_top1_shares) / len(a.triggered_top1_shares), 3) if a.triggered_top1_shares else None,
+
+                "classified_in_window_moves": classified,
+                "selected_class_counts":      dict(a.selected_class_counts),
+
+                "constructive_recovery_moves":  constructive,
+                "defensive_moves":              defensive,
+                "structural_connection_moves":  structural,
+                "local_drift_moves":            local_drift,
+
+                "constructive_recovery_rate":  round(constructive / denom, 3),
+                "defensive_rate":              round(defensive / denom, 3),
+                "structural_connection_rate":  round(structural / denom, 3),
+                "local_drift_rate":            round(local_drift / denom, 3),
+
+                "sampled_moves_count":   len(a.sampled_moves),
+                "sampled_moves_cap":     self.config.max_sampled_moves_per_side,
+                "sampled_moves_dropped": a.sampled_moves_dropped,
+                "sample_all_moves":      self.config.sample_all_moves,
+                "sampled_moves":         list(a.sampled_moves),
+            }
+            total_classifier_errors += a.classifier_error_count
+
+        return {
+            "version": 1,
+            "iteration": iteration,
+            "game_idx": game_idx,
+            "game_id": game_id,
+            "winner": winner,
+            "loser": loser,
+            "starting_player": starting_player,
+            "n_moves": n_moves,
+            "reason": reason,
+            "classifier_error_count": total_classifier_errors,
+            "config": {
+                "collapse_value_threshold":          self.config.collapse_value_threshold,
+                "severe_collapse_value_threshold":   self.config.severe_collapse_value_threshold,
+                "diffuse_root_top1_threshold":       self.config.diffuse_root_top1_threshold,
+                "very_diffuse_root_top1_threshold":  self.config.very_diffuse_root_top1_threshold,
+                "delta_threshold":                   self.config.delta_threshold,
+                "delta_max_current_score":           self.config.delta_max_current_score,
+                "alternate_component_min_size":      self.config.alternate_component_min_size,
+                "classify_defense":                  self.config.classify_defense,
+            },
+            "triggered_sides":      triggered_sides,
+            "first_trigger_ply":    first_trigger_ply,
+            "first_trigger_side":   first_trigger_side,
+            "first_trigger_reason": first_trigger_reason,
+            "side_records":         side_records,
+        }

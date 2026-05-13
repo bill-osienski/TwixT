@@ -544,3 +544,118 @@ def test_observe_move_sampled_entry_previous_score_is_pre_current():
     entry_46 = next(e for e in side_acc.sampled_moves if e["ply"] == 46)
     assert entry_46["previous_own_search_score"] == -0.85
     assert entry_46["current_search_score"] == -0.99
+
+
+def test_finalize_returns_none_when_no_side_triggered():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 10, "black", +0.20, 0.30)
+    rec = tracker.finalize_game(
+        iteration=0, game_idx=0, game_id="game_000",
+        winner="red", starting_player="red", n_moves=65, reason="win",
+    )
+    assert rec is None
+
+
+def test_finalize_emits_record_when_one_side_triggered():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    rec = tracker.finalize_game(
+        iteration=170, game_idx=22, game_id="game_022",
+        winner="red", starting_player="red", n_moves=65, reason="win",
+    )
+    assert rec is not None
+    assert rec["version"] == 1
+    assert rec["iteration"] == 170
+    assert rec["game_idx"] == 22
+    assert rec["game_id"] == "game_022"
+    assert rec["winner"] == "red"
+    assert rec["loser"] == "black"
+    assert rec["triggered_sides"] == ["black"]
+    assert rec["first_trigger_ply"] == 44
+    assert rec["first_trigger_side"] == "black"
+    assert rec["first_trigger_reason"] == "steady_state"
+    black_rec = rec["side_records"]["black"]
+    assert black_rec["triggered"] is True
+    assert black_rec["classified_in_window_moves"] == 1
+    rollup_sum = (
+        black_rec["constructive_recovery_moves"]
+        + black_rec["defensive_moves"]
+        + black_rec["structural_connection_moves"]
+        + black_rec["local_drift_moves"]
+    )
+    assert rollup_sum == black_rec["classified_in_window_moves"]
+
+
+def test_finalize_loser_is_none_on_draw():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    rec = tracker.finalize_game(
+        iteration=170, game_idx=22, game_id="game_022",
+        winner=None, starting_player="red", n_moves=65, reason="board_full",
+    )
+    assert rec["loser"] is None
+
+
+def test_finalize_includes_config_block():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    rec = tracker.finalize_game(
+        iteration=170, game_idx=22, game_id="game_022",
+        winner="red", starting_player="red", n_moves=65, reason="win",
+    )
+    cfg = rec["config"]
+    assert cfg["collapse_value_threshold"] == -0.75
+    assert cfg["classify_defense"] is True
+
+
+def test_finalize_sampled_moves_metadata():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(max_sampled_moves_per_side=2),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    for ply, mv in [(44, (5, 5)), (46, (6, 6)), (48, (7, 7)), (50, (8, 8))]:
+        tracker.observe_move(state, mv, ply, "black", -0.85, 0.12)
+    rec = tracker.finalize_game(
+        iteration=170, game_idx=22, game_id="game_022",
+        winner="red", starting_player="red", n_moves=65, reason="win",
+    )
+    black_rec = rec["side_records"]["black"]
+    assert black_rec["sampled_moves_count"] == 2
+    assert black_rec["sampled_moves_cap"] == 2
+    assert black_rec["sampled_moves_dropped"] == 2
+
+
+def test_observe_move_disabled_via_config_is_no_op():
+    """If config.enabled is False the tracker is not constructed by self_play
+    in the first place. But ensure the tracker itself also no-ops if invoked
+    despite enabled=False, so an integration bug doesn't silently corrupt state."""
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(enabled=False),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    snap = tracker.side_snapshot("black")
+    assert snap["triggered"] is False
+    rec = tracker.finalize_game(
+        iteration=170, game_idx=0, game_id="game_000",
+        winner="red", starting_player="red", n_moves=65, reason="win",
+    )
+    assert rec is None
