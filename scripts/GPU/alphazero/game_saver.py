@@ -47,6 +47,8 @@ def save_game_replay(
     # Compact per-game goal-completion summary (spec 2026-05-05).
     # Top-level JSON key when present; omitted from JSON when None.
     goal_completion_record: Optional[dict] = None,
+    # Compact per-game recovery / re-targeting record (spec 2026-05-12 §5.8).
+    recovery_retargeting_record: Optional[dict] = None,
 ) -> Path:
     """Save a single game in replay-compatible format.
 
@@ -178,6 +180,16 @@ def save_game_replay(
             "game_id": f"game_{game_idx:03d}",
         }
 
+    if recovery_retargeting_record is not None:
+        # play_game writes a dispatch-order counter into game_idx/game_id;
+        # save-order counter is authoritative. Override on a shallow copy
+        # (no in-place mutation — trainer collects records via IPC before save).
+        record["recovery_retargeting_record"] = {
+            **recovery_retargeting_record,
+            "game_idx": game_idx,
+            "game_id": f"game_{game_idx:03d}",
+        }
+
     if opening_diagnostics:
         record["opening_diagnostics"] = opening_diagnostics
         record["opening_diagnostics_meta"] = opening_diagnostics_meta
@@ -250,6 +262,8 @@ class GameSaver:
         goal_completion_diagnostics_meta: Optional[dict] = None,
         # Compact per-game goal-completion summary (spec 2026-05-05).
         goal_completion_record: Optional[dict] = None,
+        # Compact per-game recovery / re-targeting record (spec 2026-05-12 §5.8).
+        recovery_retargeting_record: Optional[dict] = None,
     ) -> Optional[Path]:
         """Save game if we haven't reached the limit for this iteration.
 
@@ -293,6 +307,7 @@ class GameSaver:
             goal_completion_diagnostics=goal_completion_diagnostics,
             goal_completion_diagnostics_meta=goal_completion_diagnostics_meta,
             goal_completion_record=goal_completion_record,
+            recovery_retargeting_record=recovery_retargeting_record,
         )
 
         self._games_saved_this_iter += 1

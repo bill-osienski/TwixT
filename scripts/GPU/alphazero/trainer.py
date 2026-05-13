@@ -118,10 +118,9 @@ def _save_game_from_ipc(game_saver, msg):
         goal_completion_record=_inject_iteration(
             msg.goal_completion_record, getattr(game_saver, "_current_iter", None),
         ),
-        # TODO(Unit 6): once game_saver.maybe_save_game accepts recovery_retargeting_record,
-        # add a sibling call here: recovery_retargeting_record=_inject_iteration(
-        #     msg.recovery_retargeting_record, getattr(game_saver, "_current_iter", None),
-        # )
+        recovery_retargeting_record=_inject_iteration(
+            msg.recovery_retargeting_record, getattr(game_saver, "_current_iter", None),
+        ),
     )
 
 
@@ -181,10 +180,9 @@ def _save_game_from_record(game_saver, game):
         goal_completion_record=_inject_iteration(
             game.goal_completion_record, getattr(game_saver, "_current_iter", None),
         ),
-        # TODO(Unit 6): once game_saver.maybe_save_game accepts recovery_retargeting_record,
-        # add a sibling call here: recovery_retargeting_record=_inject_iteration(
-        #     game.recovery_retargeting_record, getattr(game_saver, "_current_iter", None),
-        # )
+        recovery_retargeting_record=_inject_iteration(
+            game.recovery_retargeting_record, getattr(game_saver, "_current_iter", None),
+        ),
     )
 
 
