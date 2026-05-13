@@ -233,10 +233,22 @@ from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
 
 
 class _StubState:
-    """Minimal state shim: exposes .pegs dict + _get_connected_component."""
-    def __init__(self, pegs_dict):
+    """Minimal state shim: exposes .pegs dict, apply_move, _get_connected_component."""
+    def __init__(self, pegs_dict, to_move="black"):
         # pegs_dict: {(r, c): "red" | "black"}
         self.pegs = dict(pegs_dict)
+        self.to_move = to_move
+
+    def apply_move(self, move):
+        """Return a NEW _StubState with `move` placed for the current side.
+
+        The real TwixtState.apply_move alternates to_move; the stub mirrors that.
+        Tests that need a specific side-to-move should construct the stub with
+        the desired to_move and call apply_move once.
+        """
+        new_pegs = dict(self.pegs)
+        new_pegs[move] = self.to_move
+        return _StubState(new_pegs, to_move="red" if self.to_move == "black" else "black")
 
     def _get_connected_component(self, peg, side):
         # BFS over knight-distance neighbors of the same color, no enemy blocking check
@@ -252,6 +264,13 @@ class _StubState:
                     visited.add(n)
                     frontier.append(n)
         return frozenset(visited)
+
+
+def _state_after(state_before, side, move):
+    """Test helper: build a new _StubState representing state_before + move for side."""
+    new_pegs = dict(state_before.pegs)
+    new_pegs[move] = side
+    return _StubState(new_pegs)
 
 
 def test_knight_neighbors_returns_8_offsets():
@@ -293,18 +312,26 @@ def test_is_local_to_existing_ignores_other_color():
 
 
 def test_selected_component_after_includes_new_peg_and_merged_components():
-    # Two prior black pegs not connected to each other; new peg bridges them.
-    state = _StubState({(0, 0): "black", (4, 4): "black"})
-    # (2, 3) is knight-distance from (0, 0)? |2-0|=2, |3-0|=3 → no.
-    # (2, 1) is knight-distance from (0, 0): |2|, |1| → no (2,1 is knight pattern).
-    # Let's use (2, 1) which IS knight from (0, 0) and place (4, 0) which is knight-2 from (2, 1).
-    state = _StubState({(0, 0): "black", (4, 0): "black"})
-    # (2, 1) is knight from both (0, 0) (|2|, |1|) and (4, 0) (|2|, |1|).
-    comp_after = selected_component_after(state, "black", (2, 1))
+    """Caller passes state_after (post-move). Helper does NOT mutate state."""
+    # Two prior black pegs at (0, 0) and (4, 0). (2, 1) is knight-distance from both.
+    state_before = _StubState({(0, 0): "black", (4, 0): "black"})
+    state_after = _state_after(state_before, "black", (2, 1))
+    comp_after = selected_component_after(state_after, "black", (2, 1))
     assert (0, 0) in comp_after
     assert (4, 0) in comp_after
     assert (2, 1) in comp_after
     assert len(comp_after) == 3
+
+
+def test_selected_component_after_uses_post_move_state_without_mutation():
+    """The helper must NOT mutate state_after.pegs (or any state)."""
+    state_before = _StubState({(0, 0): "black", (4, 0): "black"})
+    state_after = _state_after(state_before, "black", (2, 1))
+    pegs_before_call = dict(state_after.pegs)
+    selected_component_after(state_after, "black", (2, 1))
+    assert state_after.pegs == pegs_before_call
+    # state_before is untouched (it never received the move).
+    assert (2, 1) not in state_before.pegs
 ```
 
 - [ ] **Step 2: Run → fail**
@@ -367,25 +394,17 @@ def is_local_to_existing(state, side: str, move: Tuple[int, int]) -> bool:
     return False
 
 
-def selected_component_after(state, side: str, move: Tuple[int, int]) -> frozenset:
-    """The component containing `move` AFTER applying the move on `state`.
+def selected_component_after(state_after, side: str, move: Tuple[int, int]) -> frozenset:
+    """The component containing `move` in the POST-MOVE state.
 
-    Builds a temporary view by adding the move to state.pegs, recomputing
-    the component containing the move, then restoring state.pegs. Does NOT
-    permanently mutate state.
+    Caller is responsible for constructing `state_after` (via state.apply_move
+    or equivalent). This helper performs no state mutation — making it safe
+    to call inside the per-ply hook without copying or restoring board state.
     """
-    original = state.pegs.get(move)
-    state.pegs[move] = side
-    try:
-        comp = frozenset(state._get_connected_component(move, side))
-        if not comp:
-            comp = frozenset({move})
-        return comp
-    finally:
-        if original is None:
-            del state.pegs[move]
-        else:
-            state.pegs[move] = original
+    comp = frozenset(state_after._get_connected_component(move, side))
+    if not comp:
+        comp = frozenset({move})
+    return comp
 ```
 
 - [ ] **Step 4: Run tests**
@@ -635,10 +654,15 @@ def _classify(
     opp_td_before=None, opp_td_after=None,
     classify_defense=True,
     alternate_component_min_size=4,
+    state_after=None,
 ):
-    """Test harness wrapper. Returns (primary_class, flags) dict."""
+    """Test harness wrapper. Caller may pass state_after explicitly to override
+    the default (state_before + move) — useful for testing isolated-bridge scenarios."""
+    if state_after is None:
+        state_after = _state_after(state_before, side, move)
     return classify_move(
         state_before=state_before,
+        state_after=state_after,
         side=side,
         move=move,
         own_total_goal_distance_before=own_td_before,
@@ -648,6 +672,22 @@ def _classify(
         classify_defense=classify_defense,
         alternate_component_min_size=alternate_component_min_size,
     )
+
+
+def test_classify_move_does_not_mutate_state_before():
+    """classify_move must not mutate state_before.pegs in any code path."""
+    state_before = _StubState({(0, 0): "black", (1, 2): "black"})
+    state_after = _state_after(state_before, "black", (5, 5))
+    pegs_snapshot = dict(state_before.pegs)
+    classify_move(
+        state_before=state_before, state_after=state_after,
+        side="black", move=(5, 5),
+        own_total_goal_distance_before=4, own_total_goal_distance_after=4,
+        opponent_total_goal_distance_before=None,
+        opponent_total_goal_distance_after=None,
+        classify_defense=True, alternate_component_min_size=4,
+    )
+    assert state_before.pegs == pegs_snapshot
 
 
 def test_classifies_blocks_opponent_closeout():
@@ -696,24 +736,22 @@ def test_classifies_connects_to_existing_component():
 
 
 def test_classifies_redundant_local_reinforcement():
-    # Move is local (knight-distance) to a same-color peg, but:
-    # - does not reduce own td
-    # - opponent td unchanged
-    # - does not open new / does not extend alternate
-    # - does not increase largest_component_size (because it joins dominant, raising its size; we set sizes equal)
-    # To make this fire, the move must be local but NOT connected via _get_connected_component.
-    # Stub state's _get_connected_component uses knight-walk so a local move WILL connect.
-    # For this test, use a state where _get_connected_component returns empty (no same-color peg in stub):
+    # Move is local (knight-distance) to a same-color peg, but the simulated
+    # bridge is blocked (e.g., enemy peg between them), so the move does NOT
+    # actually join the component. Use _IsolateState for both before & after.
     class _IsolateState(_StubState):
         def _get_connected_component(self, peg, side):
-            # Simulate a bridge blocked by an enemy peg between knight neighbors:
-            # peg has knight neighbors of same color but no actual bridge connects them.
             if peg not in self.pegs or self.pegs[peg] != side:
                 return frozenset()
             return frozenset({peg})
-    state = _IsolateState({(0, 0): "black"})
-    r = _classify(state, "black", (1, 2),                  # knight-local to (0, 0)
-                  own_td_before=5, own_td_after=5)
+
+    state_before = _IsolateState({(0, 0): "black"})
+    new_pegs = dict(state_before.pegs)
+    new_pegs[(1, 2)] = "black"
+    state_after = _IsolateState(new_pegs)
+    r = _classify(state_before, "black", (1, 2),                # knight-local to (0, 0)
+                  own_td_before=5, own_td_after=5,
+                  state_after=state_after)
     assert r["primary_class"] == "redundant_local_reinforcement"
     assert r["flags"]["local_to_existing"] is True
     assert r["flags"]["extends_dominant_component"] is False
@@ -729,17 +767,19 @@ def test_classifies_off_plan_or_unclear_fallback():
 
 def test_local_to_existing_uses_knight_not_chebyshev():
     # (2, 2) is Chebyshev-2 from (0, 0) but NOT knight-2.
-    state = _StubState({(0, 0): "black"})
-
     class _IsolateState(_StubState):
         def _get_connected_component(self, peg, side):
             if peg not in self.pegs or self.pegs[peg] != side:
                 return frozenset()
             return frozenset({peg})
 
-    state = _IsolateState({(0, 0): "black"})
-    r = _classify(state, "black", (2, 2),
-                  own_td_before=5, own_td_after=5)
+    state_before = _IsolateState({(0, 0): "black"})
+    new_pegs = dict(state_before.pegs)
+    new_pegs[(2, 2)] = "black"
+    state_after = _IsolateState(new_pegs)
+    r = _classify(state_before, "black", (2, 2),
+                  own_td_before=5, own_td_after=5,
+                  state_after=state_after)
     assert r["flags"]["local_to_existing"] is False
     assert r["primary_class"] == "off_plan_or_unclear"
 
@@ -792,6 +832,7 @@ def _dominant_component(components: List[frozenset]) -> Optional[frozenset]:
 def classify_move(
     *,
     state_before,
+    state_after,
     side: str,
     move: Tuple[int, int],
     own_total_goal_distance_before: Optional[int],
@@ -802,6 +843,10 @@ def classify_move(
     alternate_component_min_size: int,
 ) -> dict:
     """Classify a single move into one of PRIMARY_CLASSES. Spec §3.
+
+    Both `state_before` (pre-move) and `state_after` (post-move) are passed
+    in; the classifier never mutates either. Caller computes state_after
+    once via state.apply_move(move) and reuses it.
 
     Returns:
         {
@@ -820,7 +865,7 @@ def classify_move(
     """
     own_components_before = find_components(state_before, side)
     dominant_before = _dominant_component(own_components_before)
-    selected_after = selected_component_after(state_before, side, move)
+    selected_after = selected_component_after(state_after, side, move)
     local_flag = is_local_to_existing(state_before, side, move)
 
     prior_components_extended = [c for c in own_components_before if c <= selected_after]
@@ -834,13 +879,8 @@ def classify_move(
     )
 
     largest_before = max((len(c) for c in own_components_before), default=0)
-    # Recompute components post-move for "largest after" (spec §3.1).
-    state_before.pegs[move] = side
-    try:
-        own_components_after = find_components(state_before, side)
-        largest_after = max((len(c) for c in own_components_after), default=0)
-    finally:
-        del state_before.pegs[move]
+    own_components_after = find_components(state_after, side)
+    largest_after = max((len(c) for c in own_components_after), default=0)
 
     # Defense check (priority 1, only when classify_defense=True).
     blocked_opp = False
@@ -1014,6 +1054,80 @@ def test_observe_move_other_side_does_not_affect_window():
     red_snap = tracker.side_snapshot("red")
     assert red_snap["triggered"] is True
     assert red_snap["in_window_own_moves"] == 1
+
+
+def test_observe_move_does_not_mutate_state_before():
+    """observe_move must not mutate state.pegs in any code path.
+    Real TwixtState.apply_move returns a new state; we verify the stub here."""
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black", (1, 2): "black"})
+    pegs_snapshot = dict(state.pegs)
+    # Trigger fires (steady_state) so classification path runs.
+    tracker.observe_move(
+        state_before=state, selected_move=(5, 5), ply=44, side_to_move="black",
+        search_score=-0.85, root_top1_share=0.12,
+    )
+    assert state.pegs == pegs_snapshot
+
+
+def test_observe_move_in_window_includes_missing_signal_in_count():
+    """in_window_own_moves counts every own-move after window opens,
+    including missing-signal plies. classified_in_window_moves (at finalize)
+    excludes missing-signal plies."""
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)   # opens window, triggered
+    tracker.observe_move(state, (6, 6), 46, "black", None, 0.20)    # missing-signal in-window
+    tracker.observe_move(state, (7, 7), 48, "black", -0.80, 0.10)   # triggered
+    snap = tracker.side_snapshot("black")
+    assert snap["in_window_own_moves"] == 3
+    assert snap["missing_signal_moves"] == 1
+    # selected_class_counts holds the classified subset (2 plies, not 3).
+    assert sum(snap["selected_class_counts"].values()) == 2
+
+
+def test_observe_move_sampled_entry_previous_score_is_pre_current():
+    """The sampled entry's previous_own_search_score must reflect the score from
+    the prior own-move, NOT the current score (which gets stored on the tracker
+    only AFTER the entry is built)."""
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    # First triggered ply: previous_own_search_score is None.
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    # Second triggered ply: previous_own_search_score must be -0.85, NOT -0.99.
+    tracker.observe_move(state, (6, 6), 46, "black", -0.99, 0.10)
+    side_acc = tracker._sides["black"]
+    entry_46 = next(e for e in side_acc.sampled_moves if e["ply"] == 46)
+    assert entry_46["previous_own_search_score"] == -0.85
+    assert entry_46["current_search_score"] == -0.99
+
+
+def test_observe_move_disabled_via_config_is_no_op():
+    """If config.enabled is False the tracker is not constructed by self_play
+    in the first place. But ensure the tracker itself also no-ops if invoked
+    despite enabled=False, so an integration bug doesn't silently corrupt state."""
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(enabled=False),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    snap = tracker.side_snapshot("black")
+    assert snap["triggered"] is False
+    rec = tracker.finalize_game(
+        iteration=170, game_idx=0, game_id="game_000",
+        winner="red", starting_player="red", n_moves=65, reason="win",
+    )
+    assert rec is None
 ```
 
 - [ ] **Step 2: Run → fail**
@@ -1096,25 +1210,36 @@ class RecoveryRetargetingTracker:
         search_score: Optional[float],
         root_top1_share: Optional[float],
     ) -> None:
+        # Defensive: if a caller invokes a tracker whose config has enabled=False,
+        # no-op rather than collecting data. Production code in self_play.py also
+        # checks enabled before constructing the tracker, but this guard prevents
+        # silent corruption if that check is ever bypassed.
+        if not self.config.enabled:
+            return
+
         side_acc = self._sides[side_to_move]
         opponent = "black" if side_to_move == "red" else "red"
+
+        # Capture previous score BEFORE updating it, so trigger evaluation and
+        # the sampled-entry record both see the pre-current value.
+        prev_score = side_acc.previous_own_search_score
 
         trig = evaluate_trigger(
             current_search_score=search_score,
             root_top1_share=root_top1_share,
-            previous_own_search_score=side_acc.previous_own_search_score,
+            previous_own_search_score=prev_score,
             config=self.config,
         )
 
         # Track missing-signal independently of in-window status.
         missing = trig["missing_search_score"] or trig["missing_root_top1_share"]
 
-        # Update previous_own_search_score only from valid current scores.
-        if not trig["missing_search_score"]:
-            side_acc.previous_own_search_score = search_score
-
         # If side is not in-window and didn't just trigger, no further work.
+        # Still update previous_own_search_score so future delta-precursor
+        # evaluations see the current valid score.
         if not side_acc.triggered and not trig["triggered"]:
+            if not trig["missing_search_score"]:
+                side_acc.previous_own_search_score = search_score
             return
 
         # First-time trigger: open the window.
@@ -1123,17 +1248,22 @@ class RecoveryRetargetingTracker:
             side_acc.first_trigger_ply = ply
             side_acc.first_trigger_reason = trig["trigger_reason"]
 
-        # In-window bookkeeping.
+        # Every own-move inside the window counts toward in_window_own_moves
+        # (matches the spec name's literal meaning). The classified-vs-missing
+        # split lives in classified_in_window_moves at finalize.
+        side_acc.in_window_own_moves += 1
+
         if missing:
             side_acc.missing_signal_moves += 1
             if trig["missing_search_score"]:
                 side_acc.missing_search_score_moves += 1
             if trig["missing_root_top1_share"]:
                 side_acc.missing_root_top1_share_moves += 1
-            # Missing-signal plies are NOT counted in in_window_own_moves and NOT classified.
+            # No classification on missing-signal plies. previous_own_search_score
+            # is NOT updated (per spec §2.3 — only valid scores update it).
             return
 
-        side_acc.in_window_own_moves += 1
+        # Valid signal: classify and update bookkeeping.
         if trig["triggered"]:
             side_acc.triggered_own_moves += 1
             side_acc.trigger_reason_counts[trig["trigger_reason"]] += 1
@@ -1146,23 +1276,16 @@ class RecoveryRetargetingTracker:
         else:
             side_acc.non_triggered_in_window_moves += 1
 
-        # Classify the move.
+        # Compute state_after ONCE via the state's own apply_move. No mutation.
         try:
+            state_after = state_before.apply_move(selected_move)
             own_gc_before = self._gc_state_provider(state_before, side_to_move, enumerate_moves=False)
-            # state_after for goal-completion: apply move on a copy via tracker helper.
-            state_before.pegs[selected_move] = side_to_move
-            try:
-                own_gc_after = self._gc_state_provider(state_before, side_to_move, enumerate_moves=False)
-                opp_gc_before = None
-                opp_gc_after = None
-                if self.config.classify_defense:
-                    # Restore state for opponent-before, then apply for opponent-after.
-                    del state_before.pegs[selected_move]
-                    opp_gc_before = self._gc_state_provider(state_before, opponent, enumerate_moves=False)
-                    state_before.pegs[selected_move] = side_to_move
-                    opp_gc_after = self._gc_state_provider(state_before, opponent, enumerate_moves=False)
-            finally:
-                del state_before.pegs[selected_move]
+            own_gc_after = self._gc_state_provider(state_after, side_to_move, enumerate_moves=False)
+            opp_gc_before = None
+            opp_gc_after = None
+            if self.config.classify_defense:
+                opp_gc_before = self._gc_state_provider(state_before, opponent, enumerate_moves=False)
+                opp_gc_after = self._gc_state_provider(state_after, opponent, enumerate_moves=False)
 
             own_td_before = (own_gc_before or {}).get("total_goal_distance")
             own_td_after = (own_gc_after or {}).get("total_goal_distance")
@@ -1171,6 +1294,7 @@ class RecoveryRetargetingTracker:
 
             cls = classify_move(
                 state_before=state_before,
+                state_after=state_after,
                 side=side_to_move,
                 move=selected_move,
                 own_total_goal_distance_before=own_td_before,
@@ -1207,13 +1331,17 @@ class RecoveryRetargetingTracker:
             opp_td_before = None
             opp_td_after = None
 
-        # Sampled-moves recording.
+        # Sampled-moves recording. Capture in-window-own-move ordinal BEFORE
+        # updating previous_own_search_score so the entry's prev_score reflects
+        # the value used by the trigger.
+        own_move_ordinal = side_acc.in_window_own_moves  # 1-based: this ply IS the Nth in-window own move.
         entry = {
             "ply": ply,
+            "in_window_own_move_index": own_move_ordinal,
             "triggered_this_ply": trig["triggered"],
             "trigger_reason": trig["trigger_reason"],
             "current_search_score": search_score,
-            "previous_own_search_score": side_acc.previous_own_search_score,
+            "previous_own_search_score": prev_score,
             "search_score_delta": trig["search_score_delta"],
             "root_top1_share": root_top1_share,
             "is_severe_collapse": trig["is_severe_collapse"],
@@ -1230,6 +1358,9 @@ class RecoveryRetargetingTracker:
         }
         self._maybe_record_sample(side_acc, entry)
 
+        # Update previous_own_search_score AFTER the sampled entry is built.
+        side_acc.previous_own_search_score = search_score
+
     def _maybe_record_sample(self, side_acc: _SideAccumulator, entry: dict) -> None:
         if self.config.sample_all_moves:
             side_acc.sampled_moves.append(entry)
@@ -1238,16 +1369,15 @@ class RecoveryRetargetingTracker:
         if cap <= 0:
             side_acc.sampled_moves_dropped += 1
             return
-        # Priority 1: first 4 plies after first_trigger_ply
-        # Priority 2: severe collapse plies
-        # Priority 3: window order
+        # Priority 1 (highest): first 4 own-moves in the window — the inflection region.
+        # Priority 2: severe-collapse plies.
+        # Priority 3 (lowest): everything else, in window order.
         # Implemented as: insert in window order; if over cap, drop lowest-priority entries.
         side_acc.sampled_moves.append(entry)
         if len(side_acc.sampled_moves) > cap:
-            # Recompute priorities to find the lowest-priority entry to drop.
             def _priority(e):
-                # 0 = highest priority (inflection region); 2 = lowest.
-                if side_acc.first_trigger_ply is not None and 0 <= (e["ply"] - side_acc.first_trigger_ply) <= 6:
+                # 0 = highest priority; 2 = lowest.
+                if e.get("in_window_own_move_index", 10**9) <= 4:
                     return 0
                 if e["is_severe_collapse"]:
                     return 1
@@ -1631,6 +1761,21 @@ def test_aggregator_returns_empty_summary_when_no_records():
     assert s["games_total"] == 100
     assert s["games_triggered"] == 0
     assert s["trigger_rate"] == 0.0
+
+
+def test_aggregator_empty_records_emits_enabled_summary_with_zero_trigger_rate():
+    """5-game smoke run where no game triggers must still produce a well-formed
+    sidecar block (the analyzer's report relies on the block existing)."""
+    s = aggregate_recovery_retargeting_records([], games_total=5)
+    assert s["version"] == 1
+    assert s["enabled"] is True
+    assert s["games_total"] == 5
+    assert s["games_triggered"] == 0
+    assert s["trigger_rate"] == 0.0
+    assert s["in_window_own_moves_total"] == 0
+    assert s["classified_in_window_moves_total"] == 0
+    # Schema-integrity block is always present.
+    assert s["schema_integrity"]["classifier_error_count_total"] == 0
 
 
 def test_aggregator_skips_unknown_version():
