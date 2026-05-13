@@ -1691,6 +1691,8 @@ def run_parallel_selfplay(
     all_closeout_td1_telemetry: list = []
     # Spec 3 Fix 2: per-game closeout_selection_tiebreak telemetry snapshots
     all_closeout_tiebreak_telemetry: list = []
+    # Spec 4: per-game recovery_retargeting records (IPC path).
+    all_recovery_retargeting_records: list = []
 
     # Phase 4: per-game replay cap aggregation (IPC path)
     total_positions_original = 0
@@ -1878,6 +1880,9 @@ def run_parallel_selfplay(
             # Spec 3 Fix 2: per-game closeout_selection_tiebreak snapshot from worker.
             if getattr(msg, "closeout_tiebreak_telemetry", None) is not None:
                 all_closeout_tiebreak_telemetry.append(msg.closeout_tiebreak_telemetry)
+            # Spec 4: per-game recovery_retargeting record from worker.
+            if getattr(msg, "recovery_retargeting_record", None) is not None:
+                all_recovery_retargeting_records.append(msg.recovery_retargeting_record)
 
             if games_completed % 5 == 0:
                 print(f"  Games: {games_completed}/{games_to_play}")
@@ -2054,6 +2059,8 @@ def run_parallel_selfplay(
         "all_closeout_td1_telemetry": list(all_closeout_td1_telemetry),
         # Spec 3 Fix 2: per-game closeout_selection_tiebreak telemetry (parallel path).
         "all_closeout_tiebreak_telemetry": list(all_closeout_tiebreak_telemetry),
+        # Spec 4: per-game recovery_retargeting records (parallel path).
+        "all_recovery_retargeting_records": list(all_recovery_retargeting_records),
     }
 
     return games_records, new_positions, stats
@@ -2590,6 +2597,24 @@ def train(
         print(f"    min_share:             {closeout_selection_tiebreak_min_share}")
     else:
         print(f"  Closeout selection tie-break: disabled")
+    if recovery_retargeting_enabled:
+        print(f"  Recovery / re-targeting diagnostics: enabled")
+        print(f"    collapse_value <=         {recovery_retargeting_collapse_value_threshold:.2f}")
+        print(f"    severe_value <=           {recovery_retargeting_severe_value_threshold:.2f}")
+        print(f"    diffuse_root_top1 <=       {recovery_retargeting_diffuse_root_top1_threshold:.2f}")
+        print(f"    delta >=                   {recovery_retargeting_delta_threshold:.2f}")
+        print(f"    delta_max_current_score:  {recovery_retargeting_delta_max_current_score:.2f}")
+        print(f"    alternate_component_min_size:  {recovery_retargeting_alternate_component_min_size}")
+        if recovery_retargeting_classify_defense:
+            print(f"    classify_defense:          on")
+        else:
+            print(f"    classify_defense:          off  (WARNING: local_drift may include defensive moves)")
+        if recovery_retargeting_sample_all_moves:
+            print(f"    sample_all_moves:          on")
+        else:
+            print(f"    sample_all_moves:          off  (cap={recovery_retargeting_max_sampled_moves_per_side} per side)")
+    else:
+        print(f"  Recovery / re-targeting diagnostics: disabled")
 
     # Games directory (used for both game replays and per-iteration stats sidecars)
     if games_dir_override:
@@ -2778,6 +2803,8 @@ def train(
         all_closeout_td1_telemetry: list = []
         # Spec 3 Fix 2: per-game closeout_selection_tiebreak telemetry snapshots.
         all_closeout_tiebreak_telemetry: list = []
+        # Spec 4: per-game recovery_retargeting records (this iter).
+        all_recovery_retargeting_records: list = []
         total_nn_calls = 0
         total_expand_calls = 0
         total_nn_batches = 0
@@ -2944,6 +2971,11 @@ def train(
                 _par_tb = parallel_stats.get("all_closeout_tiebreak_telemetry", [])
                 if _par_tb:
                     all_closeout_tiebreak_telemetry.extend(_par_tb)
+                # Spec 4: pull recovery_retargeting records from the parallel
+                # path so the per-iter sidecar block aggregates across workers.
+                _par_rr = parallel_stats.get("all_recovery_retargeting_records", [])
+                if _par_rr:
+                    all_recovery_retargeting_records.extend(_par_rr)
 
             except KeyboardInterrupt:
                 print(f"\n\nInterrupted during parallel self-play!")
@@ -3123,6 +3155,10 @@ def train(
                     # Spec 3 Fix 2: collect per-game closeout_selection_tiebreak telemetry.
                     if getattr(game, "closeout_tiebreak_telemetry", None) is not None:
                         all_closeout_tiebreak_telemetry.append(game.closeout_tiebreak_telemetry)
+                    # Spec 4: collect per-game recovery_retargeting record.
+                    rr_rec = getattr(game, "recovery_retargeting_record", None)
+                    if rr_rec is not None:
+                        all_recovery_retargeting_records.append(rr_rec)
 
                     # Flush MLX graph and clear caches after each game
                     # mx.eval() forces pending lazy ops to materialize, freeing intermediates
@@ -3764,6 +3800,10 @@ def train(
             from .self_play import _merge_closeout_tiebreak_telemetry
             _sidecar["closeout_selection_tiebreak"] = _merge_closeout_tiebreak_telemetry(
                 all_closeout_tiebreak_telemetry
+            )
+            # Spec 4 (§5.6, §7.3): recovery_retargeting_summary sidecar block.
+            _sidecar["recovery_retargeting_summary"] = aggregate_recovery_retargeting_records(
+                all_recovery_retargeting_records, games_total=games_generated,
             )
 
             cons = _sidecar["conversion_training"]["consistency"]
