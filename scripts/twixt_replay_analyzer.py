@@ -2606,6 +2606,89 @@ def write_recovery_retargeting_by_iter_csv(out_path: str, per_iter_summaries: di
     return out_path
 
 
+def write_recovery_retargeting_worst_cases_csv(
+    out_path: str, records: list, *, top_k: int = 25,
+) -> str:
+    """Write recovery_retargeting_worst_cases.csv. Spec 4 §6.7.
+
+    One row per triggered side; sorted by (local_drift_moves DESC,
+    in_window_own_moves DESC, min_search_score_triggered_plies ASC).
+    """
+    import csv
+    rows = []
+    for rec in records:
+        if not rec:
+            continue
+        for side in rec.get("triggered_sides") or []:
+            sr = (rec.get("side_records") or {}).get(side) or {}
+            counts = sr.get("selected_class_counts") or {}
+            rows.append({
+                "iteration": rec.get("iteration"),
+                "game_idx": rec.get("game_idx"),
+                "game_id": rec.get("game_id"),
+                "winner": rec.get("winner"),
+                "loser": rec.get("loser"),
+                "reason": rec.get("reason"),
+                "n_moves": rec.get("n_moves"),
+                "triggered_side": side,
+                "first_trigger_ply": sr.get("first_trigger_ply"),
+                "first_trigger_reason": sr.get("first_trigger_reason"),
+                "in_window_own_moves": sr.get("in_window_own_moves", 0),
+                "triggered_own_moves": sr.get("triggered_own_moves", 0),
+                "severe_collapse_moves": sr.get("severe_collapse_moves", 0),
+                "very_diffuse_moves": sr.get("very_diffuse_moves", 0),
+                "classified_in_window_moves": sr.get("classified_in_window_moves", 0),
+                "missing_signal_moves": sr.get("missing_signal_moves", 0),
+                "blocks_opponent_closeout_moves":              counts.get("blocks_opponent_closeout", 0),
+                "reduces_own_goal_distance_moves":             counts.get("reduces_own_goal_distance", 0),
+                "starts_or_extends_alternate_component_moves": counts.get("starts_or_extends_alternate_component", 0),
+                "connects_to_existing_component_moves":        counts.get("connects_to_existing_component", 0),
+                "improves_own_largest_component_moves":        counts.get("improves_own_largest_component", 0),
+                "redundant_local_reinforcement_moves":         counts.get("redundant_local_reinforcement", 0),
+                "off_plan_or_unclear_moves":                   counts.get("off_plan_or_unclear", 0),
+                "constructive_recovery_moves": sr.get("constructive_recovery_moves", 0),
+                "defensive_moves":             sr.get("defensive_moves", 0),
+                "structural_connection_moves": sr.get("structural_connection_moves", 0),
+                "local_drift_moves":           sr.get("local_drift_moves", 0),
+                "local_drift_rate":            sr.get("local_drift_rate", 0.0),
+                "constructive_recovery_rate":  sr.get("constructive_recovery_rate", 0.0),
+                "mean_search_score_triggered_plies": sr.get("mean_search_score_triggered_plies"),
+                "min_search_score_triggered_plies":  sr.get("min_search_score_triggered_plies"),
+                "max_search_score_triggered_plies":  sr.get("max_search_score_triggered_plies"),
+                "mean_root_top1_share_triggered_plies": sr.get("mean_root_top1_share_triggered_plies"),
+            })
+    rows.sort(
+        key=lambda r: (
+            -int(r["local_drift_moves"] or 0),
+            -int(r["in_window_own_moves"] or 0),
+            float(r["min_search_score_triggered_plies"]) if r.get("min_search_score_triggered_plies") is not None else 0.0,
+        )
+    )
+    rows = rows[:max(0, int(top_k))]
+    fields = list(rows[0].keys()) if rows else [
+        "iteration","game_idx","game_id","winner","loser","reason","n_moves",
+        "triggered_side","first_trigger_ply","first_trigger_reason",
+        "in_window_own_moves","triggered_own_moves",
+        "severe_collapse_moves","very_diffuse_moves",
+        "classified_in_window_moves","missing_signal_moves",
+        "blocks_opponent_closeout_moves","reduces_own_goal_distance_moves",
+        "starts_or_extends_alternate_component_moves",
+        "connects_to_existing_component_moves","improves_own_largest_component_moves",
+        "redundant_local_reinforcement_moves","off_plan_or_unclear_moves",
+        "constructive_recovery_moves","defensive_moves",
+        "structural_connection_moves","local_drift_moves",
+        "local_drift_rate","constructive_recovery_rate",
+        "mean_search_score_triggered_plies","min_search_score_triggered_plies",
+        "max_search_score_triggered_plies","mean_root_top1_share_triggered_plies",
+    ]
+    with open(out_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+    return out_path
+
+
 def write_conversion_training_by_iter_csv(
     sidecar_summaries: dict, output_dir, suffix: str = "",
 ) -> str:

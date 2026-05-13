@@ -96,3 +96,61 @@ def test_by_iter_csv_one_row_per_iter(tmp_path):
     assert int(rows[0]["games_triggered"]) == 14
     assert int(rows[1]["games_triggered"]) == 20
     assert "local_drift_rate" in rows[0]
+
+
+from scripts.twixt_replay_analyzer import write_recovery_retargeting_worst_cases_csv
+
+
+def _per_game_rec(iteration, game_idx, sides_triggered, local_drift_moves, in_window):
+    side_records = {"red": {"triggered": False}, "black": {"triggered": False}}
+    for side in sides_triggered:
+        side_records[side] = {
+            "triggered": True,
+            "first_trigger_ply": 44, "first_trigger_reason": "steady_state",
+            "in_window_own_moves": in_window, "triggered_own_moves": in_window,
+            "severe_collapse_moves": 0, "very_diffuse_moves": 0,
+            "classified_in_window_moves": in_window, "missing_signal_moves": 0,
+            "selected_class_counts": {
+                "blocks_opponent_closeout": 0, "reduces_own_goal_distance": 0,
+                "starts_or_extends_alternate_component": 0,
+                "connects_to_existing_component": 0, "improves_own_largest_component": 0,
+                "redundant_local_reinforcement": local_drift_moves,
+                "off_plan_or_unclear": 0,
+            },
+            "constructive_recovery_moves": 0, "defensive_moves": 0,
+            "structural_connection_moves": 0, "local_drift_moves": local_drift_moves,
+            "local_drift_rate": 1.0, "constructive_recovery_rate": 0.0,
+            "mean_search_score_triggered_plies": -0.85,
+            "min_search_score_triggered_plies": -0.99,
+            "max_search_score_triggered_plies": -0.75,
+            "mean_root_top1_share_triggered_plies": 0.12,
+        }
+    return {
+        "iteration": iteration, "game_idx": game_idx, "game_id": f"game_{game_idx:03d}",
+        "winner": "red", "loser": "black", "n_moves": 65, "reason": "win",
+        "triggered_sides": sides_triggered, "side_records": side_records,
+    }
+
+
+def test_worst_cases_csv_sort_order_and_topk(tmp_path):
+    out = tmp_path / "recovery_retargeting_worst_cases.csv"
+    records = [
+        _per_game_rec(170, 0, ["black"], local_drift_moves=2, in_window=2),
+        _per_game_rec(170, 1, ["black"], local_drift_moves=15, in_window=15),
+        _per_game_rec(170, 2, ["black"], local_drift_moves=8, in_window=8),
+    ]
+    write_recovery_retargeting_worst_cases_csv(str(out), records, top_k=2)
+    rows = list(csv.DictReader(out.open()))
+    assert len(rows) == 2
+    assert int(rows[0]["local_drift_moves"]) == 15
+    assert int(rows[1]["local_drift_moves"]) == 8
+
+
+def test_worst_cases_csv_two_rows_for_dual_triggered_game(tmp_path):
+    out = tmp_path / "recovery_retargeting_worst_cases.csv"
+    records = [_per_game_rec(170, 0, ["black", "red"], local_drift_moves=5, in_window=5)]
+    write_recovery_retargeting_worst_cases_csv(str(out), records, top_k=25)
+    rows = list(csv.DictReader(out.open()))
+    assert len(rows) == 2
+    sides = sorted(r["triggered_side"] for r in rows)
+    assert sides == ["black", "red"]
