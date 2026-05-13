@@ -406,7 +406,28 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--closeout-selection-tiebreak-min-share", type=float, default=0.05,
         help="Minimum visit-share floor for the candidate (default: 0.05).")
 
+    # Spec 4: recovery / re-targeting diagnostic
+    _add_recovery_retargeting_args(parser)
+
     return parser
+
+
+def _add_recovery_retargeting_args(parser):
+    """Spec 4 recovery / re-targeting diagnostic CLI flags."""
+    parser.add_argument("--recovery-retargeting-disabled", action="store_true",
+                        help="Disable the diagnostic. Default: enabled.")
+    parser.add_argument("--recovery-retargeting-collapse-value-threshold", type=float, default=-0.75)
+    parser.add_argument("--recovery-retargeting-severe-value-threshold", type=float, default=-0.90)
+    parser.add_argument("--recovery-retargeting-diffuse-root-top1-threshold", type=float, default=0.20)
+    parser.add_argument("--recovery-retargeting-very-diffuse-root-top1-threshold", type=float, default=0.15)
+    parser.add_argument("--recovery-retargeting-delta-threshold", type=float, default=0.50)
+    parser.add_argument("--recovery-retargeting-delta-max-current-score", type=float, default=-0.30)
+    parser.add_argument("--recovery-retargeting-alternate-component-min-size", type=int, default=4)
+    classify_group = parser.add_mutually_exclusive_group()
+    classify_group.add_argument("--recovery-retargeting-classify-defense", dest="recovery_retargeting_classify_defense", action="store_true", default=True)
+    classify_group.add_argument("--recovery-retargeting-no-classify-defense", dest="recovery_retargeting_classify_defense", action="store_false")
+    parser.add_argument("--recovery-retargeting-max-sampled-moves-per-side", type=int, default=32)
+    parser.add_argument("--recovery-retargeting-sample-all-moves", action="store_true", default=False)
 
 
 # Backward-compat alias for callers/tests that imported the previous name.
@@ -756,6 +777,19 @@ def main():
         closeout_selection_tiebreak_min_value=args.closeout_selection_tiebreak_min_value,
         closeout_selection_tiebreak_min_share=args.closeout_selection_tiebreak_min_share,
     ))
+    train_kwargs.update(
+        recovery_retargeting_enabled=not args.recovery_retargeting_disabled,
+        recovery_retargeting_collapse_value_threshold=args.recovery_retargeting_collapse_value_threshold,
+        recovery_retargeting_severe_value_threshold=args.recovery_retargeting_severe_value_threshold,
+        recovery_retargeting_diffuse_root_top1_threshold=args.recovery_retargeting_diffuse_root_top1_threshold,
+        recovery_retargeting_very_diffuse_root_top1_threshold=args.recovery_retargeting_very_diffuse_root_top1_threshold,
+        recovery_retargeting_delta_threshold=args.recovery_retargeting_delta_threshold,
+        recovery_retargeting_delta_max_current_score=args.recovery_retargeting_delta_max_current_score,
+        recovery_retargeting_alternate_component_min_size=args.recovery_retargeting_alternate_component_min_size,
+        recovery_retargeting_classify_defense=args.recovery_retargeting_classify_defense,
+        recovery_retargeting_max_sampled_moves_per_side=args.recovery_retargeting_max_sampled_moves_per_side,
+        recovery_retargeting_sample_all_moves=args.recovery_retargeting_sample_all_moves,
+    )
     # Conditional override: None means "use default from train() (0.5)"
     if args.value_weight is not None:
         train_kwargs["value_weight"] = args.value_weight
