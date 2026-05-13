@@ -33,6 +33,11 @@ from .game import (
     CHANNEL_RED_LINKS_START, CHANNEL_BLACK_LINKS_START,
     CHANNEL_BLACK_LEFT_DIST, CHANNEL_BLACK_RIGHT_DIST,
 )
+from .recovery_retargeting_diagnostics import (
+    RecoveryRetargetingConfig,
+    RecoveryRetargetingTracker,
+)
+from .connectivity_diagnostics import compute_goal_completion_state as _compute_goal_completion_state
 
 # --- Temporary opening diagnostics (enable via TWIXT_OPENING_DEBUG env var) ---
 _OPENING_DEBUG = os.environ.get("TWIXT_OPENING_DEBUG", "").strip().lower() in ("1", "true", "yes", "on")
@@ -621,6 +626,10 @@ def play_game(
     conversion_max_total_goal_distance: int = 2,
     # min_component_size reuses goal_completion_emit_min_component —
     # single source of truth, no duplicate flag.
+    # Spec 4 — recovery / re-targeting diagnostic (§5.4).
+    # When provided and enabled, instantiates a per-game tracker that fires
+    # observe_move at each ply and emits a compact record at game end.
+    recovery_retargeting_config: Optional[RecoveryRetargetingConfig] = None,
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -678,6 +687,14 @@ def play_game(
         max_depth=goal_completion_max_depth,
         min_component_size=goal_completion_min_component_size,
     )
+
+    # Spec 4: per-game recovery / re-targeting tracker (§5.4).
+    recovery_tracker = None
+    if recovery_retargeting_config is not None and recovery_retargeting_config.enabled:
+        recovery_tracker = RecoveryRetargetingTracker(
+            config=recovery_retargeting_config,
+            gc_state_provider=_compute_goal_completion_state,
+        )
 
     # Compute opening diagnostics window
     cfg = mcts.config
@@ -1083,6 +1100,22 @@ def play_game(
                 _sys.stderr.write(
                     f"[gc-tracker] ply={ply} observe error: {_e!r}\n"
                 )
+
+        # Spec 4 — recovery / re-targeting diagnostic per-ply hook.
+        if recovery_tracker is not None:
+            if visit_counts:
+                total_visits = sum(visit_counts.values()) or 1
+                top1_share = max(visit_counts.values()) / total_visits
+            else:
+                top1_share = None
+            recovery_tracker.observe_move(
+                state_before=state,
+                selected_move=move,
+                ply=ply,
+                side_to_move=state.to_move,
+                search_score=root_value,
+                root_top1_share=top1_share,
+            )
 
         # --- Phase 3: finalize closeout diagnostic if partial was built ---
         # Must run BEFORE state is advanced to root.state so state.to_move
