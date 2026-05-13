@@ -659,3 +659,103 @@ def test_observe_move_disabled_via_config_is_no_op():
         winner="red", starting_player="red", n_moves=65, reason="win",
     )
     assert rec is None
+
+
+from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
+    aggregate_recovery_retargeting_records,
+)
+from scripts.GPU.alphazero.recovery_retargeting_diagnostics import PRIMARY_CLASSES
+
+
+def _record(side="black", classified=10, classes=None, in_window=10, triggered=8, severe=4, very_diffuse=6):
+    classes = classes or {"redundant_local_reinforcement": classified}
+    counts = {c: 0 for c in PRIMARY_CLASSES}
+    counts.update(classes)
+    other_side = "red" if side == "black" else "black"
+    return {
+        "version": 1,
+        "iteration": 170, "game_idx": 0, "game_id": "game_000",
+        "winner": "red" if side == "black" else "black",
+        "loser": side,
+        "triggered_sides": [side],
+        "side_records": {
+            other_side: {"triggered": False, "classifier_error_count": 0},
+            side: {
+                "triggered": True,
+                "in_window_own_moves": in_window,
+                "triggered_own_moves": triggered,
+                "non_triggered_in_window_moves": in_window - triggered,
+                "missing_signal_moves": 0,
+                "severe_collapse_moves": severe,
+                "very_diffuse_moves": very_diffuse,
+                "trigger_reason_counts": {"delta_precursor": 1, "steady_state": triggered - 1, "both": 0},
+                "classified_in_window_moves": classified,
+                "selected_class_counts": counts,
+                "constructive_recovery_moves": counts.get("reduces_own_goal_distance", 0) + counts.get("starts_or_extends_alternate_component", 0),
+                "defensive_moves": counts.get("blocks_opponent_closeout", 0),
+                "structural_connection_moves": counts.get("connects_to_existing_component", 0) + counts.get("improves_own_largest_component", 0),
+                "local_drift_moves": counts.get("redundant_local_reinforcement", 0) + counts.get("off_plan_or_unclear", 0),
+                "classifier_error_count": 0,
+            },
+        },
+        "classifier_error_count": 0,
+        "config": {
+            "collapse_value_threshold": -0.75,
+            "severe_collapse_value_threshold": -0.90,
+            "diffuse_root_top1_threshold": 0.20,
+            "very_diffuse_root_top1_threshold": 0.15,
+            "delta_threshold": 0.50,
+            "delta_max_current_score": -0.30,
+            "alternate_component_min_size": 4,
+            "classify_defense": True,
+        },
+    }
+
+
+def test_aggregator_sums_counts_and_recomputes_rates():
+    recs = [_record(), _record()]
+    s = aggregate_recovery_retargeting_records(recs, games_total=100)
+    assert s["version"] == 1
+    assert s["games_total"] == 100
+    assert s["games_triggered"] == 2
+    assert s["triggered_own_moves_total"] == 16
+    assert s["in_window_own_moves_total"] == 20
+    assert s["selected_class_counts_total"]["redundant_local_reinforcement"] == 20
+    assert s["local_drift_rate"] == 1.0
+
+
+def test_aggregator_returns_empty_summary_when_no_records():
+    s = aggregate_recovery_retargeting_records([], games_total=100)
+    assert s["games_total"] == 100
+    assert s["games_triggered"] == 0
+    assert s["trigger_rate"] == 0.0
+
+
+def test_aggregator_empty_records_emits_enabled_summary_with_zero_trigger_rate():
+    s = aggregate_recovery_retargeting_records([], games_total=5)
+    assert s["version"] == 1
+    assert s["enabled"] is True
+    assert s["games_total"] == 5
+    assert s["games_triggered"] == 0
+    assert s["trigger_rate"] == 0.0
+    assert s["in_window_own_moves_total"] == 0
+    assert s["classified_in_window_moves_total"] == 0
+    assert s["schema_integrity"]["classifier_error_count_total"] == 0
+
+
+def test_aggregator_skips_unknown_version():
+    rec = _record()
+    rec["version"] = 99
+    s = aggregate_recovery_retargeting_records([_record(), rec], games_total=100)
+    assert s["games_triggered"] == 1
+    assert s["schema_integrity"]["skipped_unknown_version_count"] == 1
+
+
+def test_aggregator_skips_config_mismatch():
+    a = _record()
+    b = _record()
+    b["config"] = dict(b["config"])
+    b["config"]["collapse_value_threshold"] = -0.50
+    s = aggregate_recovery_retargeting_records([a, b], games_total=100)
+    assert s["games_triggered"] == 1
+    assert s["schema_integrity"]["skipped_config_mismatch_count"] == 1

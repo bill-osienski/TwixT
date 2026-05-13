@@ -683,3 +683,116 @@ class RecoveryRetargetingTracker:
             "first_trigger_reason": first_trigger_reason,
             "side_records":         side_records,
         }
+
+
+# ---------------------------------------------------------------------------
+# Per-iteration aggregator
+# ---------------------------------------------------------------------------
+
+_AGG_COUNT_KEYS = (
+    "in_window_own_moves",
+    "triggered_own_moves",
+    "non_triggered_in_window_moves",
+    "missing_signal_moves",
+    "severe_collapse_moves",
+    "very_diffuse_moves",
+)
+
+
+def aggregate_recovery_retargeting_records(
+    records: List[dict],
+    *,
+    games_total: int,
+    expected_config: Optional[dict] = None,
+) -> dict:
+    """Aggregate per-game records into a per-iteration sidecar summary. Spec §6.
+
+    `games_total` is the iteration's full game count; records exist only when
+    at least one side triggered.
+
+    Per-iteration semantics: all records must share the same config block.
+    Cross-iteration use is handled by the analyzer's analyze() loop, not here.
+    """
+    skipped_unknown_version = 0
+    skipped_config_mismatch = 0
+    accepted: List[dict] = []
+    canonical_config = expected_config
+
+    for rec in records:
+        if rec is None:
+            continue
+        if rec.get("version") != 1:
+            skipped_unknown_version += 1
+            continue
+        cfg = rec.get("config") or {}
+        if canonical_config is None:
+            canonical_config = cfg
+        elif cfg != canonical_config:
+            skipped_config_mismatch += 1
+            continue
+        accepted.append(rec)
+
+    games_triggered = len(accepted)
+    triggered_loser_side = 0
+    triggered_winner_side = 0
+    sums_total = {k + "_total": 0 for k in _AGG_COUNT_KEYS}
+    selected_class_totals = {c: 0 for c in PRIMARY_CLASSES}
+    trigger_reason_totals = {"delta_precursor": 0, "steady_state": 0, "both": 0}
+    classifier_error_total = 0
+
+    for rec in accepted:
+        classifier_error_total += int(rec.get("classifier_error_count", 0))
+        winner = rec.get("winner")
+        loser = rec.get("loser")
+        for side, sr in (rec.get("side_records") or {}).items():
+            if not sr or not sr.get("triggered"):
+                continue
+            if side == loser:
+                triggered_loser_side += 1
+            elif side == winner:
+                triggered_winner_side += 1
+            for k in _AGG_COUNT_KEYS:
+                sums_total[k + "_total"] += int(sr.get(k, 0) or 0)
+            for cls, count in (sr.get("selected_class_counts") or {}).items():
+                if cls in selected_class_totals:
+                    selected_class_totals[cls] += int(count or 0)
+            for reason, count in (sr.get("trigger_reason_counts") or {}).items():
+                if reason in trigger_reason_totals:
+                    trigger_reason_totals[reason] += int(count or 0)
+
+    classified_total = sum(selected_class_totals.values())
+    denom = classified_total if classified_total > 0 else 1
+    selected_class_rates = {
+        cls: round(count / denom, 3) for cls, count in selected_class_totals.items()
+    }
+    constructive = selected_class_totals["reduces_own_goal_distance"] + selected_class_totals["starts_or_extends_alternate_component"]
+    defensive = selected_class_totals["blocks_opponent_closeout"]
+    structural = selected_class_totals["connects_to_existing_component"] + selected_class_totals["improves_own_largest_component"]
+    local_drift = selected_class_totals["redundant_local_reinforcement"] + selected_class_totals["off_plan_or_unclear"]
+
+    return {
+        "version": 1,
+        "enabled": True,
+        "config": canonical_config or {},
+        "games_total": games_total,
+        "games_triggered": games_triggered,
+        "trigger_rate": round(games_triggered / games_total, 3) if games_total > 0 else 0.0,
+        "triggered_loser_side": triggered_loser_side,
+        "triggered_winner_side": triggered_winner_side,
+        "triggered_loser_side_per_triggered_game": round(triggered_loser_side / games_triggered, 3) if games_triggered > 0 else 0.0,
+        "triggered_winner_side_per_triggered_game": round(triggered_winner_side / games_triggered, 3) if games_triggered > 0 else 0.0,
+        **sums_total,
+        "trigger_reason_counts_total": trigger_reason_totals,
+        "classified_in_window_moves_total": classified_total,
+        "selected_class_counts_total": selected_class_totals,
+        "selected_class_rates_total": selected_class_rates,
+        "constructive_recovery_rate": round(constructive / denom, 3),
+        "defensive_rate": round(defensive / denom, 3),
+        "structural_connection_rate": round(structural / denom, 3),
+        "local_drift_rate": round(local_drift / denom, 3),
+        "schema_integrity": {
+            "skipped_unknown_version_count": skipped_unknown_version,
+            "skipped_config_mismatch_count": skipped_config_mismatch,
+            "classifier_error_count_total": classifier_error_total,
+        },
+    }
