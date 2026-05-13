@@ -76,3 +76,23 @@ def test_format_warns_when_classify_defense_off():
 def test_format_returns_empty_when_summary_is_none_or_empty():
     assert format_recovery_retargeting_report(None) == []
     assert format_recovery_retargeting_report({}) == []
+
+
+import csv
+
+from scripts.twixt_replay_analyzer import write_recovery_retargeting_by_iter_csv
+
+
+def test_by_iter_csv_one_row_per_iter(tmp_path):
+    per_iter = {
+        170: _summary(games_total=100, games_triggered=14),
+        171: _summary(games_total=100, games_triggered=20),
+    }
+    out = tmp_path / "recovery_retargeting_by_iter.csv"
+    write_recovery_retargeting_by_iter_csv(str(out), per_iter)
+    rows = list(csv.DictReader(out.open()))
+    assert len(rows) == 2
+    assert int(rows[0]["iteration"]) == 170
+    assert int(rows[0]["games_triggered"]) == 14
+    assert int(rows[1]["games_triggered"]) == 20
+    assert "local_drift_rate" in rows[0]

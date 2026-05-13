@@ -2551,6 +2551,61 @@ def format_recovery_retargeting_report(summary: Optional[dict]) -> list:
     return lines
 
 
+def write_recovery_retargeting_by_iter_csv(out_path: str, per_iter_summaries: dict) -> str:
+    """Write recovery_retargeting_by_iter.csv. Spec 4 §6.6.
+
+    per_iter_summaries: dict mapping iteration -> per-iter summary dict (output
+    of aggregate_recovery_retargeting_records).
+    """
+    import csv
+    fields = [
+        "iteration",
+        "games_total", "games_triggered", "trigger_rate",
+        "triggered_loser_side", "triggered_winner_side",
+        "triggered_loser_side_per_triggered_game",
+        "in_window_own_moves_total", "triggered_own_moves_total",
+        "severe_collapse_moves_total", "very_diffuse_moves_total",
+        "classified_in_window_moves_total", "classifier_error_count_total",
+        "constructive_recovery_rate", "defensive_rate",
+        "structural_connection_rate", "local_drift_rate",
+        "redundant_local_reinforcement_rate", "off_plan_or_unclear_rate",
+        "trigger_delta_precursor_count", "trigger_steady_state_count", "trigger_both_count",
+    ]
+    with open(out_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for it in sorted(per_iter_summaries.keys()):
+            s = per_iter_summaries[it] or {}
+            rates = s.get("selected_class_rates_total") or {}
+            trc = s.get("trigger_reason_counts_total") or {}
+            si = s.get("schema_integrity") or {}
+            w.writerow({
+                "iteration": it,
+                "games_total": s.get("games_total", 0),
+                "games_triggered": s.get("games_triggered", 0),
+                "trigger_rate": s.get("trigger_rate", 0.0),
+                "triggered_loser_side": s.get("triggered_loser_side", 0),
+                "triggered_winner_side": s.get("triggered_winner_side", 0),
+                "triggered_loser_side_per_triggered_game": s.get("triggered_loser_side_per_triggered_game", 0.0),
+                "in_window_own_moves_total": s.get("in_window_own_moves_total", 0),
+                "triggered_own_moves_total": s.get("triggered_own_moves_total", 0),
+                "severe_collapse_moves_total": s.get("severe_collapse_moves_total", 0),
+                "very_diffuse_moves_total": s.get("very_diffuse_moves_total", 0),
+                "classified_in_window_moves_total": s.get("classified_in_window_moves_total", 0),
+                "classifier_error_count_total": si.get("classifier_error_count_total", 0),
+                "constructive_recovery_rate": s.get("constructive_recovery_rate", 0.0),
+                "defensive_rate": s.get("defensive_rate", 0.0),
+                "structural_connection_rate": s.get("structural_connection_rate", 0.0),
+                "local_drift_rate": s.get("local_drift_rate", 0.0),
+                "redundant_local_reinforcement_rate": rates.get("redundant_local_reinforcement", 0.0),
+                "off_plan_or_unclear_rate": rates.get("off_plan_or_unclear", 0.0),
+                "trigger_delta_precursor_count": trc.get("delta_precursor", 0),
+                "trigger_steady_state_count": trc.get("steady_state", 0),
+                "trigger_both_count": trc.get("both", 0),
+            })
+    return out_path
+
+
 def write_conversion_training_by_iter_csv(
     sidecar_summaries: dict, output_dir, suffix: str = "",
 ) -> str:
