@@ -444,6 +444,9 @@ class GameRecord:
     # Captured at game end via mcts.get_closeout_tiebreak_telemetry(). None
     # means the field was never populated.
     closeout_tiebreak_telemetry: Optional[dict] = None
+    # Compact per-game recovery / re-targeting record (Spec 4 §4).
+    # Top-level JSON key when present; omitted from JSON when None.
+    recovery_retargeting_record: Optional[dict] = None
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -1335,6 +1338,18 @@ def play_game(
         game_idx=game_id,
         game_id=f"game_{game_id:03d}",
     )
+    recovery_retargeting_record = (
+        recovery_tracker.finalize_game(
+            iteration=0,                       # populated downstream like goal_completion_record
+            game_idx=game_id,                  # play_game's local counter; saver overrides per §5.8
+            game_id=f"game_{game_id:03d}",
+            winner=winner,
+            starting_player=start_player,
+            n_moves=len(move_history),
+            reason=_gc_reason_for_record,
+        )
+        if recovery_tracker is not None else None
+    )
 
     return GameRecord(
         positions=positions,
@@ -1401,6 +1416,7 @@ def play_game(
         closeout_td1_telemetry=mcts.get_closeout_td1_telemetry(),
         # Spec 3 Fix 2: snapshot per-game closeout_selection_tiebreak telemetry.
         closeout_tiebreak_telemetry=mcts.get_closeout_tiebreak_telemetry(),
+        recovery_retargeting_record=recovery_retargeting_record,
     )
 
 
