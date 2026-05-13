@@ -413,3 +413,134 @@ def test_classify_defense_disabled_never_returns_blocks_opponent_closeout():
                   classify_defense=False)
     assert r["primary_class"] == "reduces_own_goal_distance"
     assert r["flags"]["blocked_opponent_closeout"] is False
+
+
+from scripts.GPU.alphazero.recovery_retargeting_diagnostics import RecoveryRetargetingTracker
+
+
+def _gc_stub(td_before, td_after):
+    """Helper to build a goal-completion-state provider that returns fixed tds."""
+    calls = {"n": 0}
+    def provider(state, side, enumerate_moves=False):
+        calls["n"] += 1
+        return {"total_goal_distance": td_before if calls["n"] % 2 == 1 else td_after}
+    return provider
+
+
+def test_observe_move_not_in_window_no_classify():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(
+        state_before=state, selected_move=(5, 5), ply=10, side_to_move="black",
+        search_score=+0.20, root_top1_share=0.30,
+    )
+    snap = tracker.side_snapshot("black")
+    assert snap["triggered"] is False
+    assert snap["in_window_own_moves"] == 0
+
+
+def test_observe_move_opens_window_on_trigger():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(
+        state_before=state, selected_move=(5, 5), ply=44, side_to_move="black",
+        search_score=-0.85, root_top1_share=0.12,
+    )
+    snap = tracker.side_snapshot("black")
+    assert snap["triggered"] is True
+    assert snap["first_trigger_ply"] == 44
+    assert snap["first_trigger_reason"] == "steady_state"
+    assert snap["in_window_own_moves"] == 1
+    assert snap["triggered_own_moves"] == 1
+
+
+def test_observe_move_window_stays_open_across_non_triggered_plies():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    tracker.observe_move(state, (6, 6), 46, "black", -0.20, 0.30)
+    snap = tracker.side_snapshot("black")
+    assert snap["in_window_own_moves"] == 2
+    assert snap["triggered_own_moves"] == 1
+    assert snap["non_triggered_in_window_moves"] == 1
+
+
+def test_observe_move_missing_signal_in_window_counts_separately():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    tracker.observe_move(state, (6, 6), 46, "black", None, 0.20)
+    snap = tracker.side_snapshot("black")
+    assert snap["missing_signal_moves"] == 1
+    assert snap["missing_search_score_moves"] == 1
+    assert sum(snap["selected_class_counts"].values()) == 1
+
+
+def test_observe_move_other_side_does_not_affect_window():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    tracker.observe_move(state, (6, 6), 45, "red", -0.85, 0.12)
+    snap = tracker.side_snapshot("black")
+    assert snap["in_window_own_moves"] == 1
+    red_snap = tracker.side_snapshot("red")
+    assert red_snap["triggered"] is True
+    assert red_snap["in_window_own_moves"] == 1
+
+
+def test_observe_move_does_not_mutate_state_before():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black", (1, 2): "black"})
+    pegs_snapshot = dict(state.pegs)
+    tracker.observe_move(
+        state_before=state, selected_move=(5, 5), ply=44, side_to_move="black",
+        search_score=-0.85, root_top1_share=0.12,
+    )
+    assert state.pegs == pegs_snapshot
+
+
+def test_observe_move_in_window_includes_missing_signal_in_count():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    tracker.observe_move(state, (6, 6), 46, "black", None, 0.20)
+    tracker.observe_move(state, (7, 7), 48, "black", -0.80, 0.10)
+    snap = tracker.side_snapshot("black")
+    assert snap["in_window_own_moves"] == 3
+    assert snap["missing_signal_moves"] == 1
+    assert sum(snap["selected_class_counts"].values()) == 2
+
+
+def test_observe_move_sampled_entry_previous_score_is_pre_current():
+    tracker = RecoveryRetargetingTracker(
+        config=RecoveryRetargetingConfig(),
+        gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
+    )
+    state = _StubState({(0, 0): "black"})
+    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    tracker.observe_move(state, (6, 6), 46, "black", -0.99, 0.10)
+    side_acc = tracker._sides["black"]
+    entry_46 = next(e for e in side_acc.sampled_moves if e["ply"] == 46)
+    assert entry_46["previous_own_search_score"] == -0.85
+    assert entry_46["current_search_score"] == -0.99

@@ -8,8 +8,8 @@ Spec: docs/superpowers/specs/2026-05-12-recovery-retargeting-diagnostic-design.m
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -323,3 +323,247 @@ def classify_move(
         "own_largest_component_size_before": largest_before,
         "own_largest_component_size_after": largest_after,
     }
+
+
+# ---------------------------------------------------------------------------
+# Per-game tracker
+# ---------------------------------------------------------------------------
+
+@dataclass
+class _SideAccumulator:
+    triggered: bool = False
+    first_trigger_ply: Optional[int] = None
+    first_trigger_reason: Optional[str] = None
+    previous_own_search_score: Optional[float] = None
+
+    in_window_own_moves: int = 0
+    triggered_own_moves: int = 0
+    non_triggered_in_window_moves: int = 0
+    missing_signal_moves: int = 0
+    missing_search_score_moves: int = 0
+    missing_root_top1_share_moves: int = 0
+
+    trigger_reason_counts: Dict[str, int] = field(
+        default_factory=lambda: {"delta_precursor": 0, "steady_state": 0, "both": 0}
+    )
+    severe_collapse_moves: int = 0
+    very_diffuse_moves: int = 0
+
+    triggered_scores: List[float] = field(default_factory=list)
+    triggered_top1_shares: List[float] = field(default_factory=list)
+
+    selected_class_counts: Dict[str, int] = field(
+        default_factory=lambda: {c: 0 for c in PRIMARY_CLASSES}
+    )
+
+    sampled_moves: List[dict] = field(default_factory=list)
+    sampled_moves_dropped: int = 0
+    classifier_error_count: int = 0
+
+
+class RecoveryRetargetingTracker:
+    """Per-game tracker. One instance per game; lifecycle matches play_game.
+
+    gc_state_provider: callable(state, side, enumerate_moves=False) -> dict|None
+        Matches connectivity_diagnostics.compute_goal_completion_state.
+    """
+
+    def __init__(self, config: RecoveryRetargetingConfig, gc_state_provider):
+        self.config = config
+        self._gc_state_provider = gc_state_provider
+        self._sides: Dict[str, _SideAccumulator] = {
+            "red":   _SideAccumulator(),
+            "black": _SideAccumulator(),
+        }
+        self._warned_classifier_error = False
+
+    def observe_move(
+        self,
+        state_before,
+        selected_move: Tuple[int, int],
+        ply: int,
+        side_to_move: str,
+        search_score: Optional[float],
+        root_top1_share: Optional[float],
+    ) -> None:
+        # Defensive: enabled=False trackers no-op even if invoked.
+        if not self.config.enabled:
+            return
+
+        side_acc = self._sides[side_to_move]
+        opponent = "black" if side_to_move == "red" else "red"
+
+        # Capture previous score BEFORE updating it.
+        prev_score = side_acc.previous_own_search_score
+
+        trig = evaluate_trigger(
+            current_search_score=search_score,
+            root_top1_share=root_top1_share,
+            previous_own_search_score=prev_score,
+            config=self.config,
+        )
+
+        missing = trig["missing_search_score"] or trig["missing_root_top1_share"]
+
+        # Side not in-window and didn't trigger: just update prev_score and return.
+        if not side_acc.triggered and not trig["triggered"]:
+            if not trig["missing_search_score"]:
+                side_acc.previous_own_search_score = search_score
+            return
+
+        # First-time trigger: open the window.
+        if not side_acc.triggered and trig["triggered"]:
+            side_acc.triggered = True
+            side_acc.first_trigger_ply = ply
+            side_acc.first_trigger_reason = trig["trigger_reason"]
+
+        # in_window_own_moves counts every own-move once window opens.
+        side_acc.in_window_own_moves += 1
+
+        if missing:
+            side_acc.missing_signal_moves += 1
+            if trig["missing_search_score"]:
+                side_acc.missing_search_score_moves += 1
+            if trig["missing_root_top1_share"]:
+                side_acc.missing_root_top1_share_moves += 1
+            # prev_score is NOT updated from a None signal.
+            return
+
+        # Valid signal: classify and update bookkeeping.
+        if trig["triggered"]:
+            side_acc.triggered_own_moves += 1
+            side_acc.trigger_reason_counts[trig["trigger_reason"]] += 1
+            side_acc.triggered_scores.append(search_score)
+            side_acc.triggered_top1_shares.append(root_top1_share)
+            if trig["is_severe_collapse"]:
+                side_acc.severe_collapse_moves += 1
+            if trig["is_very_diffuse"]:
+                side_acc.very_diffuse_moves += 1
+        else:
+            side_acc.non_triggered_in_window_moves += 1
+
+        # Compute state_after ONCE via state.apply_move. No mutation.
+        try:
+            state_after = state_before.apply_move(selected_move)
+            own_gc_before = self._gc_state_provider(state_before, side_to_move, enumerate_moves=False)
+            own_gc_after = self._gc_state_provider(state_after, side_to_move, enumerate_moves=False)
+            opp_gc_before = None
+            opp_gc_after = None
+            if self.config.classify_defense:
+                opp_gc_before = self._gc_state_provider(state_before, opponent, enumerate_moves=False)
+                opp_gc_after = self._gc_state_provider(state_after, opponent, enumerate_moves=False)
+
+            own_td_before = (own_gc_before or {}).get("total_goal_distance")
+            own_td_after = (own_gc_after or {}).get("total_goal_distance")
+            opp_td_before = (opp_gc_before or {}).get("total_goal_distance")
+            opp_td_after = (opp_gc_after or {}).get("total_goal_distance")
+
+            cls = classify_move(
+                state_before=state_before,
+                state_after=state_after,
+                side=side_to_move,
+                move=selected_move,
+                own_total_goal_distance_before=own_td_before,
+                own_total_goal_distance_after=own_td_after,
+                opponent_total_goal_distance_before=opp_td_before,
+                opponent_total_goal_distance_after=opp_td_after,
+                classify_defense=self.config.classify_defense,
+                alternate_component_min_size=self.config.alternate_component_min_size,
+            )
+            side_acc.selected_class_counts[cls["primary_class"]] += 1
+            primary_class = cls["primary_class"]
+            flags = cls["flags"]
+            own_lcs_before = cls["own_largest_component_size_before"]
+            own_lcs_after = cls["own_largest_component_size_after"]
+        except Exception:
+            side_acc.classifier_error_count += 1
+            if not self._warned_classifier_error:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "recovery_retargeting classifier raised; recording as off_plan_or_unclear"
+                )
+                self._warned_classifier_error = True
+            side_acc.selected_class_counts["off_plan_or_unclear"] += 1
+            primary_class = "off_plan_or_unclear"
+            flags = {
+                "opens_new_component": False, "merges_components": False,
+                "merges_dominant_with_alternate": False, "extends_dominant_component": False,
+                "local_to_existing": False, "blocked_opponent_closeout": False,
+            }
+            own_lcs_before = 0
+            own_lcs_after = 0
+            own_td_before = None
+            own_td_after = None
+            opp_td_before = None
+            opp_td_after = None
+
+        # Sampled-moves recording.
+        own_move_ordinal = side_acc.in_window_own_moves  # 1-based.
+        entry = {
+            "ply": ply,
+            "in_window_own_move_index": own_move_ordinal,
+            "triggered_this_ply": trig["triggered"],
+            "trigger_reason": trig["trigger_reason"],
+            "current_search_score": search_score,
+            "previous_own_search_score": prev_score,
+            "search_score_delta": trig["search_score_delta"],
+            "root_top1_share": root_top1_share,
+            "is_severe_collapse": trig["is_severe_collapse"],
+            "is_very_diffuse": trig["is_very_diffuse"],
+            "primary_class": primary_class,
+            "selected_move": list(selected_move),
+            "flags": flags,
+            "own_total_goal_distance_before": own_td_before,
+            "own_total_goal_distance_after": own_td_after,
+            "own_largest_component_size_before": own_lcs_before,
+            "own_largest_component_size_after": own_lcs_after,
+            "opponent_total_goal_distance_before": opp_td_before,
+            "opponent_total_goal_distance_after": opp_td_after,
+        }
+        self._maybe_record_sample(side_acc, entry)
+
+        # Update previous_own_search_score AFTER entry is built.
+        side_acc.previous_own_search_score = search_score
+
+    def _maybe_record_sample(self, side_acc: _SideAccumulator, entry: dict) -> None:
+        if self.config.sample_all_moves:
+            side_acc.sampled_moves.append(entry)
+            return
+        cap = self.config.max_sampled_moves_per_side
+        if cap <= 0:
+            side_acc.sampled_moves_dropped += 1
+            return
+        # Priority 1 (highest): first 4 own-moves in window.
+        # Priority 2: severe-collapse plies.
+        # Priority 3 (lowest): everything else, in window order.
+        side_acc.sampled_moves.append(entry)
+        if len(side_acc.sampled_moves) > cap:
+            def _priority(e):
+                if e.get("in_window_own_move_index", 10**9) <= 4:
+                    return 0
+                if e["is_severe_collapse"]:
+                    return 1
+                return 2
+            worst_idx = max(
+                range(len(side_acc.sampled_moves)),
+                key=lambda i: (_priority(side_acc.sampled_moves[i]), side_acc.sampled_moves[i]["ply"]),
+            )
+            side_acc.sampled_moves.pop(worst_idx)
+            side_acc.sampled_moves_dropped += 1
+
+    def side_snapshot(self, side: str) -> dict:
+        """Test helper: snapshot of per-side accumulator state."""
+        a = self._sides[side]
+        return {
+            "triggered": a.triggered,
+            "first_trigger_ply": a.first_trigger_ply,
+            "first_trigger_reason": a.first_trigger_reason,
+            "in_window_own_moves": a.in_window_own_moves,
+            "triggered_own_moves": a.triggered_own_moves,
+            "non_triggered_in_window_moves": a.non_triggered_in_window_moves,
+            "missing_signal_moves": a.missing_signal_moves,
+            "missing_search_score_moves": a.missing_search_score_moves,
+            "missing_root_top1_share_moves": a.missing_root_top1_share_moves,
+            "selected_class_counts": dict(a.selected_class_counts),
+            "classifier_error_count": a.classifier_error_count,
+        }
