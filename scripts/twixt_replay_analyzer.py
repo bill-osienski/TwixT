@@ -2520,7 +2520,6 @@ def format_recovery_retargeting_report(summary: Optional[dict]) -> list:
     lines.append(f"  delta_precursor:         {trc.get('delta_precursor', 0)}")
     lines.append(f"  steady_state:            {trc.get('steady_state', 0)}")
     lines.append(f"  both:                    {trc.get('both', 0)}")
-    classified = summary.get("classified_in_window_moves_total", 0)
     counts = summary.get("selected_class_counts_total") or {}
     rates = summary.get("selected_class_rates_total") or {}
     lines.append("Move-class composition (denominator: classified in-window):")
@@ -5004,12 +5003,29 @@ def analyze(replays: List[dict],
             distinct_configs.append(cfg)
     rr_summary["mixed_config_across_iters"] = len(distinct_configs) > 1
 
+    # Group consecutive iters by config so the mixed-config warning can self-document
+    # which iters used which thresholds (spec §6.4).
+    config_ranges = []
+    for it in sorted(iter_configs.keys()):
+        cfg = iter_configs[it]
+        if config_ranges and config_ranges[-1]["config"] == cfg:
+            config_ranges[-1]["last"] = it
+        else:
+            config_ranges.append({"first": it, "last": it, "config": cfg})
+
     if rr_summary.get("games_total"):
         lines.extend([""])
         lines.extend(format_recovery_retargeting_report(rr_summary))
         if rr_summary.get("mixed_config_across_iters"):
             lines.append("")
-            lines.append(f"Mixed config across iters covered ({len(distinct_configs)} distinct configs).")
+            lines.append(f"Mixed config across iters covered ({len(distinct_configs)} distinct configs):")
+            for rng in config_ranges:
+                rng_cfg = rng["config"] or {}
+                rng_label = f"{rng['first']}-{rng['last']}" if rng["first"] != rng["last"] else f"{rng['first']}"
+                lines.append(
+                    f"  iter {rng_label}: collapse_value<={rng_cfg.get('collapse_value_threshold')} "
+                    f"delta>={rng_cfg.get('delta_threshold')}"
+                )
             lines.append(f"WARNING: rates aggregate across config changes; treat with care.")
         summary["recovery_retargeting"] = rr_summary
 
