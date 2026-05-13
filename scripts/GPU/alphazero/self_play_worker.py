@@ -270,6 +270,7 @@ def _worker_loop(
                 goal_completion_record=game.goal_completion_record,
                 closeout_td1_telemetry=game.closeout_td1_telemetry,
                 closeout_tiebreak_telemetry=game.closeout_tiebreak_telemetry,
+                recovery_retargeting_record=game.recovery_retargeting_record,
             ))
 
         # Periodic stats
