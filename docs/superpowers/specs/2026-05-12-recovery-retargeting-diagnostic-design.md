@@ -913,8 +913,17 @@ The banner is the canary for "flag-not-parsed / flag-not-wired" bugs. Same role 
 ## 9. Verification workflow
 
 1. **Unit tests pass.** `.venv/bin/pytest tests/test_recovery_retargeting_diagnostics.py -v`
-2. **Full regression suite still passes.** `.venv/bin/pytest tests/test_mcts*.py tests/test_analyzer_*.py tests/test_self_play_closeout*.py tests/test_train_closeout*.py tests/test_game_saver*.py tests/test_recovery_retargeting_diagnostics.py -q` — confirms no regression to Fix 1 / Fix 2 / game-saver fix paths. Baseline: 168 passed, 2 skipped. Expected after this spec: 168 + (count of new tests) passed, 2 skipped.
-3. **CLI smoke.** `.venv/bin/python -m scripts.GPU.alphazero.train --help | grep recovery-retargeting` — confirm the key flags appear: `--recovery-retargeting-disabled`, `--recovery-retargeting-collapse-value-threshold`, `--recovery-retargeting-diffuse-root-top1-threshold`, `--recovery-retargeting-no-classify-defense`, `--recovery-retargeting-worst-cases-top-k`. Do NOT lock the exact flag count — depends on argparse output format.
+2. **Full regression suite still passes.** `.venv/bin/pytest tests/test_mcts*.py tests/test_analyzer_*.py tests/test_self_play_closeout*.py tests/test_train_closeout*.py tests/test_game_saver*.py tests/test_recovery_retargeting_diagnostics.py -q` — confirms no regression to Fix 1 / Fix 2 / game-saver fix paths. Current baseline at spec time: 168 passed, 2 skipped. After this spec, expect all existing tests plus the new recovery-retargeting tests to pass, with the same known skips unless unrelated tests change.
+3. **Train CLI smoke.** `.venv/bin/python -m scripts.GPU.alphazero.train --help | grep recovery-retargeting` — confirm these train-side flags appear:
+   - `--recovery-retargeting-disabled`
+   - `--recovery-retargeting-collapse-value-threshold`
+   - `--recovery-retargeting-diffuse-root-top1-threshold`
+   - `--recovery-retargeting-no-classify-defense`
+
+   Do NOT lock the exact flag count — depends on argparse output format. The `--recovery-retargeting-worst-cases-top-k` flag is analyzer-side per §7.1.1 and should NOT appear here.
+
+3a. **Analyzer CLI smoke.** `.venv/bin/python scripts/twixt_replay_analyzer.py --help | grep recovery-retargeting` — confirm:
+   - `--recovery-retargeting-worst-cases-top-k`
 4. **5–10 game smoke run.** Resume from `model_iter_0169.safetensors`, run 1 iteration × 5 games (~10 minutes). Inspect:
    - Banner shows all three diagnostic blocks (Fix 1, Fix 2, recovery) as enabled.
    - Sidecar `recovery_retargeting_summary` block is well-formed regardless of trigger rate. If no game triggers, the sidecar should still contain `recovery_retargeting_summary` with `games_triggered=0` and `enabled=true`. If a trigger appears, inspect at least one `recovery_retargeting_record`.
@@ -964,5 +973,5 @@ The decision rule is consulted by hand after the 170-179 analyzer pass. No autom
 - `scripts/GPU/alphazero/trainer.py` — `train()` kwargs, IPC append, serial append, `_inject_iteration` extension, sidecar emit, startup banner
 - `scripts/GPU/alphazero/train.py` — CLI flags, validation, `train_kwargs.update`
 - `scripts/GPU/alphazero/game_saver.py` — `recovery_retargeting_record.game_idx` / `game_id` reconciliation
-- `scripts/twixt_replay_analyzer.py` — `aggregate_recovery_retargeting_records` + report formatter + CSV writers, wired into `analyze()`
+- `scripts/twixt_replay_analyzer.py` — imports `aggregate_recovery_retargeting_records` from `recovery_retargeting_diagnostics`; adds report formatter + CSV writers; wired into `analyze()`. Analyzer-side CLI flag `--recovery-retargeting-worst-cases-top-k` (per §7.1.1) lives here.
 - `tests/test_recovery_retargeting_diagnostics.py` — new test file
