@@ -379,6 +379,7 @@ class RecoveryRetargetingTracker:
 
     def observe_move(
         self,
+        *,
         state_before,
         selected_move: Tuple[int, int],
         ply: int,
@@ -426,7 +427,10 @@ class RecoveryRetargetingTracker:
                 side_acc.missing_search_score_moves += 1
             if trig["missing_root_top1_share"]:
                 side_acc.missing_root_top1_share_moves += 1
-            # prev_score is NOT updated from a None signal.
+            # Per spec §2.3: update from a valid current_search_score even if
+            # root_top1_share is missing. Skip update only when search_score is None.
+            if not trig["missing_search_score"]:
+                side_acc.previous_own_search_score = search_score
             return
 
         # Valid signal: classify and update bookkeeping.
@@ -703,7 +707,7 @@ def aggregate_recovery_retargeting_records(
     records: List[dict],
     *,
     games_total: int,
-    expected_config: Optional[dict] = None,
+    config: Optional[dict] = None,
 ) -> dict:
     """Aggregate per-game records into a per-iteration sidecar summary. Spec §6.
 
@@ -716,7 +720,7 @@ def aggregate_recovery_retargeting_records(
     skipped_unknown_version = 0
     skipped_config_mismatch = 0
     accepted: List[dict] = []
-    canonical_config = expected_config
+    canonical_config = config
 
     for rec in records:
         if rec is None:

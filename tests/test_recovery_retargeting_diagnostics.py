@@ -466,8 +466,8 @@ def test_observe_move_window_stays_open_across_non_triggered_plies():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
-    tracker.observe_move(state, (6, 6), 46, "black", -0.20, 0.30)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=44, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
+    tracker.observe_move(state_before=state, selected_move=(6, 6), ply=46, side_to_move="black", search_score=-0.20, root_top1_share=0.30)
     snap = tracker.side_snapshot("black")
     assert snap["in_window_own_moves"] == 2
     assert snap["triggered_own_moves"] == 1
@@ -480,8 +480,8 @@ def test_observe_move_missing_signal_in_window_counts_separately():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
-    tracker.observe_move(state, (6, 6), 46, "black", None, 0.20)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=44, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
+    tracker.observe_move(state_before=state, selected_move=(6, 6), ply=46, side_to_move="black", search_score=None, root_top1_share=0.20)
     snap = tracker.side_snapshot("black")
     assert snap["missing_signal_moves"] == 1
     assert snap["missing_search_score_moves"] == 1
@@ -494,8 +494,8 @@ def test_observe_move_other_side_does_not_affect_window():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
-    tracker.observe_move(state, (6, 6), 45, "red", -0.85, 0.12)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=44, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
+    tracker.observe_move(state_before=state, selected_move=(6, 6), ply=45, side_to_move="red", search_score=-0.85, root_top1_share=0.12)
     snap = tracker.side_snapshot("black")
     assert snap["in_window_own_moves"] == 1
     red_snap = tracker.side_snapshot("red")
@@ -523,9 +523,9 @@ def test_observe_move_in_window_includes_missing_signal_in_count():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
-    tracker.observe_move(state, (6, 6), 46, "black", None, 0.20)
-    tracker.observe_move(state, (7, 7), 48, "black", -0.80, 0.10)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=44, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
+    tracker.observe_move(state_before=state, selected_move=(6, 6), ply=46, side_to_move="black", search_score=None, root_top1_share=0.20)
+    tracker.observe_move(state_before=state, selected_move=(7, 7), ply=48, side_to_move="black", search_score=-0.80, root_top1_share=0.10)
     snap = tracker.side_snapshot("black")
     assert snap["in_window_own_moves"] == 3
     assert snap["missing_signal_moves"] == 1
@@ -538,8 +538,8 @@ def test_observe_move_sampled_entry_previous_score_is_pre_current():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
-    tracker.observe_move(state, (6, 6), 46, "black", -0.99, 0.10)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=44, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
+    tracker.observe_move(state_before=state, selected_move=(6, 6), ply=46, side_to_move="black", search_score=-0.99, root_top1_share=0.10)
     side_acc = tracker._sides["black"]
     entry_46 = next(e for e in side_acc.sampled_moves if e["ply"] == 46)
     assert entry_46["previous_own_search_score"] == -0.85
@@ -552,7 +552,7 @@ def test_finalize_returns_none_when_no_side_triggered():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 10, "black", +0.20, 0.30)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=10, side_to_move="black", search_score=+0.20, root_top1_share=0.30)
     rec = tracker.finalize_game(
         iteration=0, game_idx=0, game_id="game_000",
         winner="red", starting_player="red", n_moves=65, reason="win",
@@ -566,7 +566,7 @@ def test_finalize_emits_record_when_one_side_triggered():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=44, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
     rec = tracker.finalize_game(
         iteration=170, game_idx=22, game_id="game_022",
         winner="red", starting_player="red", n_moves=65, reason="win",
@@ -600,7 +600,7 @@ def test_finalize_loser_is_none_on_draw():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=44, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
     rec = tracker.finalize_game(
         iteration=170, game_idx=22, game_id="game_022",
         winner=None, starting_player="red", n_moves=65, reason="board_full",
@@ -614,7 +614,7 @@ def test_finalize_includes_config_block():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=44, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
     rec = tracker.finalize_game(
         iteration=170, game_idx=22, game_id="game_022",
         winner="red", starting_player="red", n_moves=65, reason="win",
@@ -631,7 +631,7 @@ def test_finalize_sampled_moves_metadata():
     )
     state = _StubState({(0, 0): "black"})
     for ply, mv in [(44, (5, 5)), (46, (6, 6)), (48, (7, 7)), (50, (8, 8))]:
-        tracker.observe_move(state, mv, ply, "black", -0.85, 0.12)
+        tracker.observe_move(state_before=state, selected_move=mv, ply=ply, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
     rec = tracker.finalize_game(
         iteration=170, game_idx=22, game_id="game_022",
         winner="red", starting_player="red", n_moves=65, reason="win",
@@ -651,7 +651,7 @@ def test_observe_move_disabled_via_config_is_no_op():
         gc_state_provider=lambda *a, **kw: {"total_goal_distance": 5},
     )
     state = _StubState({(0, 0): "black"})
-    tracker.observe_move(state, (5, 5), 44, "black", -0.85, 0.12)
+    tracker.observe_move(state_before=state, selected_move=(5, 5), ply=44, side_to_move="black", search_score=-0.85, root_top1_share=0.12)
     snap = tracker.side_snapshot("black")
     assert snap["triggered"] is False
     rec = tracker.finalize_game(
