@@ -123,3 +123,83 @@ def selected_component_after(state_after, side: str, move: Tuple[int, int]) -> f
     if not comp:
         comp = frozenset({move})
     return comp
+
+
+# ---------------------------------------------------------------------------
+# Trigger evaluation
+# ---------------------------------------------------------------------------
+
+def evaluate_trigger(
+    *,
+    current_search_score: Optional[float],
+    root_top1_share: Optional[float],
+    previous_own_search_score: Optional[float],
+    config: RecoveryRetargetingConfig,
+) -> dict:
+    """Per-ply trigger decision. Pure function. Spec §2.
+
+    Returns:
+        {
+          "triggered": bool,
+          "trigger_reason": None | "delta_precursor" | "steady_state" | "both",
+          "is_severe_collapse": bool,
+          "is_very_diffuse": bool,
+          "missing_search_score": bool,
+          "missing_root_top1_share": bool,
+          "search_score_delta": Optional[float],
+        }
+    """
+    missing_search_score = current_search_score is None
+    missing_root_top1_share = root_top1_share is None
+    if missing_search_score or missing_root_top1_share:
+        return {
+            "triggered": False,
+            "trigger_reason": None,
+            "is_severe_collapse": False,
+            "is_very_diffuse": False,
+            "missing_search_score": missing_search_score,
+            "missing_root_top1_share": missing_root_top1_share,
+            "search_score_delta": None,
+        }
+
+    diffuse_root = root_top1_share <= config.diffuse_root_top1_threshold
+
+    delta_value = (
+        previous_own_search_score - current_search_score
+        if previous_own_search_score is not None else None
+    )
+    delta_precursor = (
+        previous_own_search_score is not None
+        and delta_value is not None
+        and delta_value >= config.delta_threshold
+        and current_search_score <= config.delta_max_current_score
+        and diffuse_root
+    )
+
+    steady_state = (
+        current_search_score <= config.collapse_value_threshold
+        and diffuse_root
+    )
+
+    if delta_precursor and steady_state:
+        trigger_reason = "both"
+        triggered = True
+    elif delta_precursor:
+        trigger_reason = "delta_precursor"
+        triggered = True
+    elif steady_state:
+        trigger_reason = "steady_state"
+        triggered = True
+    else:
+        trigger_reason = None
+        triggered = False
+
+    return {
+        "triggered": triggered,
+        "trigger_reason": trigger_reason,
+        "is_severe_collapse": current_search_score <= config.severe_collapse_value_threshold,
+        "is_very_diffuse": root_top1_share <= config.very_diffuse_root_top1_threshold,
+        "missing_search_score": False,
+        "missing_root_top1_share": False,
+        "search_score_delta": delta_value,
+    }

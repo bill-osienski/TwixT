@@ -178,3 +178,92 @@ def test_selected_component_after_uses_post_move_state_without_mutation():
     assert state_after.pegs == pegs_before_call
     # state_before is untouched (it never received the move).
     assert (2, 1) not in state_before.pegs
+
+
+from scripts.GPU.alphazero.recovery_retargeting_diagnostics import evaluate_trigger
+
+
+def _cfg(**overrides):
+    return RecoveryRetargetingConfig(**overrides)
+
+
+def test_steady_state_trigger_fires_when_score_and_top1_both_low():
+    r = evaluate_trigger(
+        current_search_score=-0.80, root_top1_share=0.10,
+        previous_own_search_score=-0.70, config=_cfg(),
+    )
+    assert r["triggered"] is True
+    assert r["trigger_reason"] == "steady_state"
+
+
+def test_steady_state_does_not_fire_when_score_bad_but_root_confident():
+    r = evaluate_trigger(
+        current_search_score=-0.80, root_top1_share=0.40,
+        previous_own_search_score=None, config=_cfg(),
+    )
+    assert r["triggered"] is False
+    assert r["trigger_reason"] is None
+
+
+def test_steady_state_does_not_fire_when_root_diffuse_but_score_ok():
+    r = evaluate_trigger(
+        current_search_score=-0.20, root_top1_share=0.10,
+        previous_own_search_score=None, config=_cfg(),
+    )
+    assert r["triggered"] is False
+
+
+def test_delta_precursor_fires_on_sharp_drop():
+    r = evaluate_trigger(
+        current_search_score=-0.40, root_top1_share=0.12,
+        previous_own_search_score=0.30, config=_cfg(),
+    )
+    assert r["triggered"] is True
+    assert r["trigger_reason"] == "delta_precursor"
+
+
+def test_delta_precursor_guard_blocks_when_current_score_still_positive():
+    # Drop from +0.95 to +0.40 = delta 0.55 >= 0.50, top1 diffuse, but current > -0.30 guard.
+    r = evaluate_trigger(
+        current_search_score=0.40, root_top1_share=0.10,
+        previous_own_search_score=0.95, config=_cfg(),
+    )
+    assert r["triggered"] is False
+
+
+def test_trigger_reason_both_when_both_paths_fire():
+    # current=-0.80 (steady fires) AND previous=-0.20 → delta=0.60 → delta also fires
+    r = evaluate_trigger(
+        current_search_score=-0.80, root_top1_share=0.10,
+        previous_own_search_score=-0.20, config=_cfg(),
+    )
+    assert r["triggered"] is True
+    assert r["trigger_reason"] == "both"
+
+
+def test_missing_search_score_skips_trigger():
+    r = evaluate_trigger(
+        current_search_score=None, root_top1_share=0.10,
+        previous_own_search_score=-0.30, config=_cfg(),
+    )
+    assert r["triggered"] is False
+    assert r["missing_search_score"] is True
+
+
+def test_missing_root_top1_share_skips_trigger():
+    r = evaluate_trigger(
+        current_search_score=-0.80, root_top1_share=None,
+        previous_own_search_score=None, config=_cfg(),
+    )
+    assert r["triggered"] is False
+    assert r["missing_root_top1_share"] is True
+
+
+def test_severity_flags_reflect_current_score_and_share():
+    r = evaluate_trigger(
+        current_search_score=-0.95, root_top1_share=0.10,
+        previous_own_search_score=None, config=_cfg(),
+    )
+    assert r["triggered"] is True
+    assert r["is_severe_collapse"] is True
+    assert r["is_very_diffuse"] is True
