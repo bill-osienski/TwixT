@@ -119,6 +119,16 @@ def _state_after(state_before, side, move):
     return _StubState(new_pegs)
 
 
+class _IsolateState(_StubState):
+    """Stub variant where each peg is its own component (simulates enemy-blocked
+    bridges between knight-distance neighbors). Lets tests verify locality
+    flags and redundant-reinforcement classification without bridge formation."""
+    def _get_connected_component(self, peg, side):
+        if peg not in self.pegs or self.pegs[peg] != side:
+            return frozenset()
+        return frozenset({peg})
+
+
 def test_knight_neighbors_returns_8_offsets():
     n = set(knight_neighbors(5, 5))
     assert n == {(3, 4), (3, 6), (4, 3), (4, 7), (6, 3), (6, 7), (7, 4), (7, 6)}
@@ -361,14 +371,7 @@ def test_classifies_connects_to_existing_component():
 
 def test_classifies_redundant_local_reinforcement():
     # Move is local (knight-distance) to a same-color peg, but the simulated
-    # bridge is blocked (e.g., enemy peg between them), so the move does NOT
-    # actually join the component. Use _IsolateState for both before & after.
-    class _IsolateState(_StubState):
-        def _get_connected_component(self, peg, side):
-            if peg not in self.pegs or self.pegs[peg] != side:
-                return frozenset()
-            return frozenset({peg})
-
+    # bridge is blocked, so the move does NOT actually join the component.
     state_before = _IsolateState({(0, 0): "black"})
     new_pegs = dict(state_before.pegs)
     new_pegs[(1, 2)] = "black"
@@ -391,12 +394,6 @@ def test_classifies_off_plan_or_unclear_fallback():
 
 def test_local_to_existing_uses_knight_not_chebyshev():
     # (2, 2) is Chebyshev-2 from (0, 0) but NOT knight-2.
-    class _IsolateState(_StubState):
-        def _get_connected_component(self, peg, side):
-            if peg not in self.pegs or self.pegs[peg] != side:
-                return frozenset()
-            return frozenset({peg})
-
     state_before = _IsolateState({(0, 0): "black"})
     new_pegs = dict(state_before.pegs)
     new_pegs[(2, 2)] = "black"

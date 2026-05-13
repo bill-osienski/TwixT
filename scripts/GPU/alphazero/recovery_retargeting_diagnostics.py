@@ -8,8 +8,8 @@ Spec: docs/superpowers/specs/2026-05-12-recovery-retargeting-diagnostic-design.m
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 
 @dataclass
@@ -169,8 +169,7 @@ def evaluate_trigger(
         if previous_own_search_score is not None else None
     )
     delta_precursor = (
-        previous_own_search_score is not None
-        and delta_value is not None
+        delta_value is not None
         and delta_value >= config.delta_threshold
         and current_search_score <= config.delta_max_current_score
         and diffuse_root
@@ -183,19 +182,15 @@ def evaluate_trigger(
 
     if delta_precursor and steady_state:
         trigger_reason = "both"
-        triggered = True
     elif delta_precursor:
         trigger_reason = "delta_precursor"
-        triggered = True
     elif steady_state:
         trigger_reason = "steady_state"
-        triggered = True
     else:
         trigger_reason = None
-        triggered = False
 
     return {
-        "triggered": triggered,
+        "triggered": trigger_reason is not None,
         "trigger_reason": trigger_reason,
         "is_severe_collapse": current_search_score <= config.severe_collapse_value_threshold,
         "is_very_diffuse": root_top1_share <= config.very_diffuse_root_top1_threshold,
@@ -224,7 +219,8 @@ def _dominant_component(components: List[frozenset]) -> Optional[frozenset]:
     """Largest component by size; tie-break by lexicographically-smallest peg."""
     if not components:
         return None
-    return max(components, key=lambda c: (len(c), -min(c)[0] if c else 0, -min(c)[1] if c else 0))
+    # find_components guarantees non-empty components, so no min(c) guard needed.
+    return max(components, key=lambda c: (len(c), -min(c)[0], -min(c)[1]))
 
 
 def classify_move(
@@ -264,7 +260,7 @@ def classify_move(
     own_components_before = find_components(state_before, side)
     dominant_before = _dominant_component(own_components_before)
     selected_after = selected_component_after(state_after, side, move)
-    local_flag = is_local_to_existing(state_before, side, move)
+    local_to_existing = is_local_to_existing(state_before, side, move)
 
     prior_components_extended = [c for c in own_components_before if c <= selected_after]
     opens_new = len(prior_components_extended) == 0
@@ -292,7 +288,7 @@ def classify_move(
         "merges_components":              merges,
         "merges_dominant_with_alternate": merges_dom_alt,
         "extends_dominant_component":     extends_dominant,
-        "local_to_existing":              local_flag,
+        "local_to_existing":              local_to_existing,
         "blocked_opponent_closeout":      blocked_opp,
     }
 
@@ -313,7 +309,7 @@ def classify_move(
         primary = "connects_to_existing_component"
     elif largest_after > largest_before:
         primary = "improves_own_largest_component"
-    elif (local_flag
+    elif (local_to_existing
           and (own_total_goal_distance_before is None
                or own_total_goal_distance_after is None
                or own_total_goal_distance_after >= own_total_goal_distance_before)):
