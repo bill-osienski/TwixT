@@ -663,6 +663,7 @@ def test_observe_move_disabled_via_config_is_no_op():
 
 from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
     aggregate_recovery_retargeting_records,
+    _side_bucket_for_record,
 )
 from scripts.GPU.alphazero.recovery_retargeting_diagnostics import PRIMARY_CLASSES
 
@@ -759,3 +760,19 @@ def test_aggregator_skips_config_mismatch():
     s = aggregate_recovery_retargeting_records([a, b], games_total=100)
     assert s["games_triggered"] == 1
     assert s["schema_integrity"]["skipped_config_mismatch_count"] == 1
+
+
+def test_side_bucket_eventual_loser():
+    rec = {"winner": "red", "loser": "black"}
+    assert _side_bucket_for_record(rec, "black") == "eventual_loser"
+
+
+def test_side_bucket_eventual_winner():
+    rec = {"winner": "red", "loser": "black"}
+    assert _side_bucket_for_record(rec, "red") == "eventual_winner"
+
+
+def test_side_bucket_state_cap_or_draw():
+    rec = {"winner": None, "loser": None}
+    assert _side_bucket_for_record(rec, "red") == "state_cap_or_draw"
+    assert _side_bucket_for_record(rec, "black") == "state_cap_or_draw"

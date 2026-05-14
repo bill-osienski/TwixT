@@ -821,3 +821,26 @@ def aggregate_recovery_retargeting_records(
             "classifier_error_count_total": classifier_error_total,
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# Side-split aggregation (Spec 2026-05-13 filtered side-split view)
+# ---------------------------------------------------------------------------
+
+
+def _side_bucket_for_record(record: dict, side: str) -> str:
+    """Map a triggered side to its eventual-game-outcome bucket.
+
+    Returns one of: 'eventual_loser', 'eventual_winner', 'state_cap_or_draw'.
+    Buckets are by *eventual game outcome*, not by side at the trigger ply.
+    Draws and state-caps land in 'state_cap_or_draw' for both sides.
+    """
+    winner = record.get("winner")
+    loser = record.get("loser")
+    if winner is None:
+        return "state_cap_or_draw"
+    if side == loser:
+        return "eventual_loser"
+    if side == winner:
+        return "eventual_winner"
+    return "state_cap_or_draw"
