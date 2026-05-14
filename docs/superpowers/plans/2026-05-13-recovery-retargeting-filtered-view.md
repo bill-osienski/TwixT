@@ -143,7 +143,7 @@ EOF
 - Modify: `scripts/GPU/alphazero/recovery_retargeting_diagnostics.py` — add private helpers and the side-split aggregator after Task 1's `_side_bucket_for_record`.
 - Test: `tests/test_recovery_retargeting_diagnostics.py` — append after Task 1's tests.
 
-This task introduces the four private helpers (`_filter_and_canonicalize`, `_iter_triggered_side_views`, `_compute_side_rollup`, `_empty_side_rollup`) and the first public aggregator that uses them. Test 4 (recombination) and Test 9 (weighted-mean math) live here.
+This task introduces five private helpers (`_filter_and_canonicalize`, `_side_view_for_record_side`, `_iter_triggered_side_views`, `_empty_side_rollup`, `_compute_side_rollup`) and the first public aggregator that uses them. Together with `_side_bucket_for_record` from Task 1, this completes the six side-split helpers listed in the Architecture section. Test 4 (recombination) and Test 9 (weighted-mean math) live here.
 
 - [ ] **Step 1: Extend the import in the test file**
 
@@ -403,6 +403,38 @@ def test_side_split_schema_for_empty_records():
     assert out["schema_integrity"]["classifier_error_count_total"] == 0
 
 
+def test_bucket_score_aggregation_ignores_missing_mean_values():
+    """A side view with triggered_own_moves > 0 but a None mean_search_score
+    must NOT contribute its weight to the score denominator. Otherwise the
+    pooled mean is biased toward zero. Same rule applies to mean_root_top1_share."""
+    rec_with = _record(
+        side="black", in_window=10, triggered=10, classified=10,
+        classes={"redundant_local_reinforcement": 10},
+    )
+    rec_with["side_records"]["black"]["mean_search_score_triggered_plies"]    = -0.90
+    rec_with["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = 0.10
+
+    rec_without = _record(
+        side="black", in_window=10, triggered=10, classified=10,
+        classes={"redundant_local_reinforcement": 10},
+    )
+    rec_without["game_idx"] = 1
+    rec_without["game_id"]  = "game_001"
+    rec_without["side_records"]["black"]["mean_search_score_triggered_plies"]    = None
+    rec_without["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = None
+    rec_without["side_records"]["black"]["min_search_score_triggered_plies"]     = None
+    rec_without["side_records"]["black"]["max_search_score_triggered_plies"]     = None
+
+    split = aggregate_recovery_retargeting_with_side_split(
+        [rec_with, rec_without], games_total=2,
+    )
+    bucket = split["eventual_loser"]
+    assert bucket["sides"] == 2
+    # Pooled score should equal the side-with-mean's value, not (-0.90 + 0)/2.
+    assert bucket["mean_search_score_triggered_plies"] == -0.9
+    assert bucket["mean_root_top1_share_triggered_plies"] == 0.1
+
+
 def test_split_schema_integrity_matches_existing_pooled_behavior():
     """Parity test: _filter_and_canonicalize must reproduce the existing
     aggregator's accepted-record / skipped-counts behavior on the same
@@ -427,7 +459,7 @@ def test_split_schema_integrity_matches_existing_pooled_behavior():
 
 - [ ] **Step 4: Run tests to verify they fail with ImportError**
 
-Run: `.venv/bin/python -m pytest tests/test_recovery_retargeting_diagnostics.py::test_side_split_rollup_recombines_to_pooled_counts tests/test_recovery_retargeting_diagnostics.py::test_bucket_score_aggregation_uses_pooled_weighted_mean tests/test_recovery_retargeting_diagnostics.py::test_side_view_for_record_side_matches_iter_triggered_side_views tests/test_recovery_retargeting_diagnostics.py::test_side_view_derives_rates_when_missing tests/test_recovery_retargeting_diagnostics.py::test_side_split_schema_for_empty_records tests/test_recovery_retargeting_diagnostics.py::test_split_schema_integrity_matches_existing_pooled_behavior -v`
+Run: `.venv/bin/python -m pytest tests/test_recovery_retargeting_diagnostics.py -k "side_split or bucket_score or side_view or split_schema" -v`
 
 Expected: ImportError on `aggregate_recovery_retargeting_with_side_split`.
 
@@ -437,6 +469,13 @@ Insert after `_side_bucket_for_record` (added in Task 1). The helpers — in dep
 
 ```python
 _SIDE_BUCKETS = ("eventual_loser", "eventual_winner", "state_cap_or_draw")
+
+_RATE_KEYS = (
+    "constructive_recovery_rate",
+    "defensive_rate",
+    "structural_connection_rate",
+    "local_drift_rate",
+)
 
 
 def _filter_and_canonicalize(records, *, config):
@@ -481,7 +520,11 @@ def _side_view_for_record_side(record, side):
         return None
     view = dict(sr)
     view["side_bucket"] = _side_bucket_for_record(record, side)
-    if "constructive_recovery_rate" not in view:
+    # Derive any of the four rollup rates that are missing — if even one
+    # is absent, recompute all four from selected_class_counts so the
+    # filter never silently sees a default-zero where a partial record
+    # has it set inconsistently.
+    if any(k not in view for k in _RATE_KEYS):
         counts = view.get("selected_class_counts") or {}
         classified = sum(counts.values())
         denom = classified if classified > 0 else 1
@@ -583,10 +626,13 @@ def _compute_side_rollup(side_views) -> dict:
     out["local_drift_rate"]            = rollup["local_drift_rate"]
 
     # Score statistics: pooled means weighted by triggered_own_moves; min of mins,
-    # max of maxes. None when total triggered weight is zero.
+    # max of maxes. Separate denominators for score vs top1 — a side with a
+    # triggered count but a missing mean must NOT contribute its weight to the
+    # denominator (otherwise the pooled mean gets biased toward zero).
     weighted_score = 0.0
     weighted_top1 = 0.0
-    weight_sum = 0
+    score_weight_sum = 0
+    top1_weight_sum = 0
     mins = []
     maxs = []
     for v in views:
@@ -599,17 +645,19 @@ def _compute_side_rollup(side_views) -> dict:
         mx = v.get("max_search_score_triggered_plies")
         if ms is not None:
             weighted_score += float(ms) * w
+            score_weight_sum += w
         if mt is not None:
             weighted_top1 += float(mt) * w
-        weight_sum += w
+            top1_weight_sum += w
         if mn is not None:
             mins.append(float(mn))
         if mx is not None:
             maxs.append(float(mx))
 
-    if weight_sum > 0:
-        out["mean_search_score_triggered_plies"]    = round(weighted_score / weight_sum, 3)
-        out["mean_root_top1_share_triggered_plies"] = round(weighted_top1  / weight_sum, 3)
+    if score_weight_sum > 0:
+        out["mean_search_score_triggered_plies"]    = round(weighted_score / score_weight_sum, 3)
+    if top1_weight_sum > 0:
+        out["mean_root_top1_share_triggered_plies"] = round(weighted_top1  / top1_weight_sum, 3)
     out["min_search_score_triggered_plies"] = round(min(mins), 3) if mins else None
     out["max_search_score_triggered_plies"] = round(max(maxs), 3) if maxs else None
 
@@ -682,10 +730,11 @@ git commit -m "$(cat <<'EOF'
 feat(diagnostics): aggregate_recovery_retargeting_with_side_split + helpers
 
 Adds the raw three-way side-outcome split aggregator (eventual_loser /
-eventual_winner / state_cap_or_draw) plus four private helpers:
-_filter_and_canonicalize, _iter_triggered_side_views, _compute_side_rollup,
-_empty_side_rollup. Bucket-level mean_search_score and mean_root_top1_share
-are pooled triggered-ply means weighted by triggered_own_moves; min/max are
+eventual_winner / state_cap_or_draw) plus the shared side-split helpers
+(_filter_and_canonicalize, _side_view_for_record_side,
+_iter_triggered_side_views, _empty_side_rollup, _compute_side_rollup).
+Bucket-level mean_search_score and mean_root_top1_share are pooled
+triggered-ply means weighted by triggered_own_moves; min/max are
 min-of-mins / max-of-maxes (Spec filtered-view §4.4).
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
@@ -1028,11 +1077,11 @@ def aggregate_recovery_retargeting_filtered(
     }
 ```
 
-- [ ] **Step 5: Run the two tests to verify they pass**
+- [ ] **Step 5: Run the three tests to verify they pass**
 
-Run: `.venv/bin/python -m pytest tests/test_recovery_retargeting_diagnostics.py::test_filtered_aggregator_counts_only_passing_sides tests/test_recovery_retargeting_diagnostics.py::test_filter_summary_counts_multiple_failed_reasons -v`
+Run: `.venv/bin/python -m pytest tests/test_recovery_retargeting_diagnostics.py::test_filtered_aggregator_counts_only_passing_sides tests/test_recovery_retargeting_diagnostics.py::test_filter_summary_counts_multiple_failed_reasons tests/test_recovery_retargeting_diagnostics.py::test_filtered_schema_for_empty_records -v`
 
-Expected: 2 passed.
+Expected: 3 passed.
 
 - [ ] **Step 6: Run the whole test file to confirm no regression**
 
