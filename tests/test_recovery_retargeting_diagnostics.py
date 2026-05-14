@@ -664,6 +664,7 @@ def test_observe_move_disabled_via_config_is_no_op():
 from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
     aggregate_recovery_retargeting_records,
     aggregate_recovery_retargeting_with_side_split,
+    apply_actionable_filter,
     _side_bucket_for_record,
 )
 from scripts.GPU.alphazero.recovery_retargeting_diagnostics import PRIMARY_CLASSES
@@ -1056,3 +1057,36 @@ def test_split_schema_integrity_matches_existing_pooled_behavior():
     assert p_si["skipped_unknown_version_count"] == s_si["skipped_unknown_version_count"]
     assert p_si["skipped_config_mismatch_count"] == s_si["skipped_config_mismatch_count"]
     assert p_si["classifier_error_count_total"]  == s_si["classifier_error_count_total"]
+
+
+def test_apply_actionable_filter_passes_clean_failure_case():
+    """Spec §6 Test 5. A side view passing all five clauses returns (True, [])."""
+    side_view = {
+        "in_window_own_moves": 30,
+        "triggered_own_moves": 10,
+        "mean_search_score_triggered_plies": -0.92,
+        "constructive_recovery_rate": 0.10,
+        "structural_connection_rate": 0.40,
+        "local_drift_rate": 0.30,
+    }
+    passes, reasons = apply_actionable_filter(side_view)
+    assert passes is True
+    assert reasons == []
+
+
+def test_apply_actionable_filter_reports_all_failed_reasons():
+    """Spec §6 Test 6. A side view failing 3 clauses returns (False, [<3 ids>])."""
+    side_view = {
+        "in_window_own_moves": 5,
+        "triggered_own_moves": 1,
+        "mean_search_score_triggered_plies": -0.50,
+        "constructive_recovery_rate": 0.10,
+        "structural_connection_rate": 0.40,
+        "local_drift_rate": 0.30,
+    }
+    passes, reasons = apply_actionable_filter(side_view)
+    assert passes is False
+    assert "in_window_below_min" in reasons
+    assert "triggered_below_min" in reasons
+    assert "mean_score_above_max" in reasons
+    assert len(reasons) == 3

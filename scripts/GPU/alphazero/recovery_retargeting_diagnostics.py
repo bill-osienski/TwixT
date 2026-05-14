@@ -1056,3 +1056,36 @@ def aggregate_recovery_retargeting_with_side_split(
             "classifier_error_count_total":  classifier_error_total,
         },
     }
+
+
+def apply_actionable_filter(
+    side_view: dict,
+    *,
+    min_in_window_own_moves: int = 20,
+    min_triggered_own_moves: int = 3,
+    max_mean_search_score_triggered_plies: float = -0.85,
+    max_constructive_recovery_rate: float = 0.30,
+    min_structural_plus_local_rate: float = 0.60,
+):
+    """Pure predicate. Returns (passes: bool, reasons_failed: list[str]).
+
+    Five clauses, all must hold for passes=True. Each failed clause appends
+    one stable reason id. A side view can fail multiple clauses.
+    """
+    reasons = []
+    if int(side_view.get("in_window_own_moves", 0) or 0) < min_in_window_own_moves:
+        reasons.append("in_window_below_min")
+    if int(side_view.get("triggered_own_moves", 0) or 0) < min_triggered_own_moves:
+        reasons.append("triggered_below_min")
+    mean_score = side_view.get("mean_search_score_triggered_plies")
+    if mean_score is None or float(mean_score) > max_mean_search_score_triggered_plies:
+        reasons.append("mean_score_above_max")
+    if float(side_view.get("constructive_recovery_rate", 0.0) or 0.0) >= max_constructive_recovery_rate:
+        reasons.append("constructive_recovery_above_max")
+    structural_plus_local = (
+        float(side_view.get("structural_connection_rate", 0.0) or 0.0)
+        + float(side_view.get("local_drift_rate", 0.0) or 0.0)
+    )
+    if structural_plus_local < min_structural_plus_local_rate:
+        reasons.append("structural_plus_local_below_min")
+    return (len(reasons) == 0, reasons)
