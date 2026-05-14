@@ -4,7 +4,7 @@
 
 **Goal:** Add an analyzer-only raw three-way side-outcome split and a calibrated actionable-collapse filter on top of the existing Spec 4 recovery/re-targeting telemetry, so the §11 Spec-5-gating decision rule can be applied to a population of side windows that plausibly represent true failed re-targeting.
 
-**Architecture:** All changes are additive. The existing `aggregate_recovery_retargeting_records` and the trainer-side sidecar emission stay unchanged (backward compatible). Two new module-level aggregators (`aggregate_recovery_retargeting_with_side_split`, `aggregate_recovery_retargeting_filtered`) live in `scripts/GPU/alphazero/recovery_retargeting_diagnostics.py` and share four private helpers (`_filter_and_canonicalize`, `_iter_triggered_side_views`, `_side_bucket_for_record`, `_compute_side_rollup`, `_empty_side_rollup`) so the rollup math has a single source of truth. A pure-predicate `apply_actionable_filter` is reused by both the filtered aggregator and the per-row annotation in the worst-cases CSV, so the filtered report and the worst-cases CSV cannot disagree on what passes. Analyzer (`scripts/twixt_replay_analyzer.py`) calls all three aggregators per-iter and at range-level, formats three report sections (pooled / raw side split / filtered actionable-collapse view + filter summary), writes a new `recovery_retargeting_side_split_by_iter_<range>.csv`, and adds three columns to `recovery_retargeting_worst_cases_<range>.csv`. No self-play, no trainer change, no MCTS change.
+**Architecture:** All changes are additive. The existing `aggregate_recovery_retargeting_records` and the trainer-side sidecar emission stay unchanged (backward compatible). Two new module-level aggregators (`aggregate_recovery_retargeting_with_side_split`, `aggregate_recovery_retargeting_filtered`) live in `scripts/GPU/alphazero/recovery_retargeting_diagnostics.py` and share six private helpers (`_filter_and_canonicalize`, `_side_bucket_for_record`, `_side_view_for_record_side`, `_iter_triggered_side_views`, `_compute_side_rollup`, `_empty_side_rollup`) so the rollup math has a single source of truth. The same `_side_view_for_record_side` helper is reused by the worst-cases CSV writer for per-row annotation, so the filtered aggregator and the worst-cases CSV cannot construct different side-view shapes. A pure-predicate `apply_actionable_filter` is reused by both the filtered aggregator and the per-row annotation, so the filtered report and the worst-cases CSV cannot disagree on what passes. Analyzer (`scripts/twixt_replay_analyzer.py`) calls all three aggregators per-iter and at range-level, formats three report sections (pooled / raw side split / filtered actionable-collapse view + filter summary), writes a new `recovery_retargeting_side_split_by_iter_<range>.csv`, and adds three columns to `recovery_retargeting_worst_cases_<range>.csv`. No self-play, no trainer change, no MCTS change.
 
 **Tech Stack:** Python 3.14, pytest, pure-stdlib (csv module). All work re-runnable on existing per-game records in `scripts/GPU/logs/games/`.
 
@@ -16,7 +16,7 @@
 
 | Path | Action | Responsibility |
 |---|---|---|
-| `scripts/GPU/alphazero/recovery_retargeting_diagnostics.py` | Modify | Add `_filter_and_canonicalize`, `_iter_triggered_side_views`, `_side_bucket_for_record`, `_compute_side_rollup`, `_empty_side_rollup`, `aggregate_recovery_retargeting_with_side_split`, `apply_actionable_filter`, `aggregate_recovery_retargeting_filtered`. Existing `aggregate_recovery_retargeting_records`, `_bucket_rollup`, `_AGG_COUNT_KEYS`, `PRIMARY_CLASSES`, tracker classes — untouched. |
+| `scripts/GPU/alphazero/recovery_retargeting_diagnostics.py` | Modify | Add `_filter_and_canonicalize`, `_side_bucket_for_record`, `_side_view_for_record_side`, `_iter_triggered_side_views`, `_compute_side_rollup`, `_empty_side_rollup`, `aggregate_recovery_retargeting_with_side_split`, `apply_actionable_filter`, `aggregate_recovery_retargeting_filtered`. Existing `aggregate_recovery_retargeting_records`, `_bucket_rollup`, `_AGG_COUNT_KEYS`, `PRIMARY_CLASSES`, tracker classes — untouched. |
 | `scripts/twixt_replay_analyzer.py` | Modify | Extend `format_recovery_retargeting_report` (3-arg signature), add `write_recovery_retargeting_side_split_csv`, extend `write_recovery_retargeting_worst_cases_csv` with 3 new columns, wire all three aggregators into the main path's recovery-retargeting block. |
 | `tests/test_recovery_retargeting_diagnostics.py` | Modify | Add 9 tests (Tests 1–9 from spec §6). Reuses existing `_record()` fixture, adds two new factories for multi-side and state-cap records. |
 | `tests/test_analyzer_recovery_retargeting.py` | Modify | Add 2 tests (Tests 10–11 from spec §6). Reuses existing `_summary()` factory, adds factories for the new split/filtered summaries. |
@@ -300,34 +300,140 @@ def test_side_split_rollup_recombines_to_pooled_counts():
 
 def test_bucket_score_aggregation_uses_pooled_weighted_mean():
     """Spec §6 Test 9. Bucket mean_search_score_triggered_plies =
-    sum(per_side_mean * per_side_triggered) / sum(per_side_triggered)."""
-    rec = _record_two_sides(
-        winner="red",
-        loser_in_window=120, loser_triggered=120, loser_score_mean=-0.95,
-        winner_in_window=3,   winner_triggered=3,   winner_score_mean=-0.40,
+    sum(per_side_mean * per_side_triggered) / sum(per_side_triggered).
+
+    Two records, both with winner=red+loser=black, so both black sides
+    land in eventual_loser. This exercises multi-side aggregation
+    *within* the same bucket — the actual invariant the weighting rule
+    is meant to enforce. (A fixture with one side per bucket would only
+    test that the bucket holds a single side's mean unchanged.)"""
+    rec_long = _record(
+        side="black", in_window=120, triggered=120, classified=120,
+        classes={"redundant_local_reinforcement": 120},
     )
-    split = aggregate_recovery_retargeting_with_side_split([rec], games_total=1)
-    expected = (-0.95 * 120 + -0.40 * 3) / 123
-    assert abs(split["eventual_loser"]["mean_search_score_triggered_plies"] - (-0.95)) < 1e-6
-    assert abs(split["eventual_winner"]["mean_search_score_triggered_plies"] - (-0.40)) < 1e-6
-    # And a single-side bucket equals its source mean.
-    # Weighted across both sides (sanity — separate combine to confirm formula):
-    combined = sum(
-        rec["side_records"][s]["mean_search_score_triggered_plies"] * rec["side_records"][s]["triggered_own_moves"]
-        for s in ("red", "black")
-    ) / sum(rec["side_records"][s]["triggered_own_moves"] for s in ("red", "black"))
-    assert abs(combined - expected) < 1e-6
+    rec_long["side_records"]["black"]["mean_search_score_triggered_plies"]    = -0.95
+    rec_long["side_records"]["black"]["min_search_score_triggered_plies"]     = -0.97
+    rec_long["side_records"]["black"]["max_search_score_triggered_plies"]     = -0.93
+    rec_long["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = 0.10
+
+    rec_short = _record(
+        side="black", in_window=3, triggered=3, classified=3,
+        classes={"redundant_local_reinforcement": 3},
+    )
+    rec_short["side_records"]["black"]["mean_search_score_triggered_plies"]    = -0.40
+    rec_short["side_records"]["black"]["min_search_score_triggered_plies"]     = -0.42
+    rec_short["side_records"]["black"]["max_search_score_triggered_plies"]     = -0.38
+    rec_short["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = 0.30
+    # _record() sets game_idx=0 for both — keep distinct to avoid identity confusion.
+    rec_short["game_idx"] = 1
+    rec_short["game_id"]  = "game_001"
+
+    split = aggregate_recovery_retargeting_with_side_split(
+        [rec_long, rec_short], games_total=2,
+    )
+    bucket = split["eventual_loser"]
+    assert bucket["sides"] == 2
+    expected_score = (-0.95 * 120 + -0.40 * 3) / 123
+    expected_top1  = (0.10 * 120 + 0.30 * 3) / 123
+    # Aggregator rounds to 3 places; assert with same tolerance.
+    assert abs(bucket["mean_search_score_triggered_plies"] - round(expected_score, 3)) < 1e-9
+    assert abs(bucket["mean_root_top1_share_triggered_plies"] - round(expected_top1,  3)) < 1e-9
+    # min/max are min-of-mins / max-of-maxes (not weighted).
+    assert bucket["min_search_score_triggered_plies"] == -0.97
+    assert bucket["max_search_score_triggered_plies"] == -0.38
+
+
+def test_side_view_for_record_side_matches_iter_triggered_side_views():
+    """Helper invariant: _side_view_for_record_side and _iter_triggered_side_views
+    must produce equivalent views for the same triggered sides. Pins the
+    'single source of truth' contract used by Task 7's worst-cases CSV writer."""
+    from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
+        _side_view_for_record_side, _iter_triggered_side_views,
+    )
+    rec = _record_two_sides(winner="red", loser_in_window=20, loser_triggered=10,
+                            winner_in_window=8, winner_triggered=4)
+    iterator_views = list(_iter_triggered_side_views([rec]))
+    helper_views = [
+        _side_view_for_record_side(rec, "red"),
+        _side_view_for_record_side(rec, "black"),
+    ]
+    helper_views = [v for v in helper_views if v is not None]
+    # Sort both by side_bucket for stable comparison.
+    iterator_views.sort(key=lambda v: v["side_bucket"])
+    helper_views.sort(key=lambda v: v["side_bucket"])
+    assert iterator_views == helper_views
+
+
+def test_side_view_derives_rates_when_missing():
+    """Spec filtered-view §4.2: _side_view_for_record_side derives the four
+    bucket rates from selected_class_counts when the underlying side record
+    omits them. Protects the filter from defaulting to zero on records that
+    pre-date the rate fields or come from a parallel implementation."""
+    from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
+        _side_view_for_record_side,
+    )
+    rec = _record(side="black", in_window=20, triggered=10, classified=10,
+                  classes={"connects_to_existing_component": 4,
+                           "redundant_local_reinforcement": 6})
+    # Strip the derived rate fields the test factory set.
+    for k in ("constructive_recovery_rate", "defensive_rate",
+              "structural_connection_rate", "local_drift_rate"):
+        rec["side_records"]["black"].pop(k, None)
+    view = _side_view_for_record_side(rec, "black")
+    assert view is not None
+    # 4 structural / 10 classified = 0.4; 6 local_drift / 10 = 0.6.
+    assert view["structural_connection_rate"] == 0.4
+    assert view["local_drift_rate"]           == 0.6
+    assert view["constructive_recovery_rate"] == 0.0
+    assert view["defensive_rate"]             == 0.0
+
+
+def test_side_split_schema_for_empty_records():
+    """Spec filtered-view §4.7. Empty records list returns a fully-shaped
+    summary with all three buckets present (zero counts, None scores)."""
+    out = aggregate_recovery_retargeting_with_side_split([], games_total=10)
+    assert out["games_total"] == 10
+    assert out["games_triggered"] == 0
+    for bucket in ("eventual_loser", "eventual_winner", "state_cap_or_draw"):
+        b = out[bucket]
+        assert b["sides"] == 0
+        assert b["in_window_own_moves_total"] == 0
+        assert b["mean_search_score_triggered_plies"] is None
+        assert b["constructive_recovery_rate"] == 0.0
+    assert out["schema_integrity"]["classifier_error_count_total"] == 0
+
+
+def test_split_schema_integrity_matches_existing_pooled_behavior():
+    """Parity test: _filter_and_canonicalize must reproduce the existing
+    aggregator's accepted-record / skipped-counts behavior on the same
+    inputs. Catches future drift if either filter implementation changes."""
+    a = _record(side="black")
+    b = _record(side="black")
+    b["version"] = 99             # unknown version
+    c = _record(side="black")
+    c["config"] = dict(c["config"])
+    c["config"]["collapse_value_threshold"] = -0.50  # config mismatch
+
+    pooled = aggregate_recovery_retargeting_records([a, b, c], games_total=10)
+    split  = aggregate_recovery_retargeting_with_side_split([a, b, c], games_total=10)
+
+    assert pooled["games_triggered"] == split["games_triggered"]
+    p_si = pooled["schema_integrity"]
+    s_si = split["schema_integrity"]
+    assert p_si["skipped_unknown_version_count"] == s_si["skipped_unknown_version_count"]
+    assert p_si["skipped_config_mismatch_count"] == s_si["skipped_config_mismatch_count"]
+    assert p_si["classifier_error_count_total"]  == s_si["classifier_error_count_total"]
 ```
 
 - [ ] **Step 4: Run tests to verify they fail with ImportError**
 
-Run: `.venv/bin/python -m pytest tests/test_recovery_retargeting_diagnostics.py::test_side_split_rollup_recombines_to_pooled_counts tests/test_recovery_retargeting_diagnostics.py::test_bucket_score_aggregation_uses_pooled_weighted_mean -v`
+Run: `.venv/bin/python -m pytest tests/test_recovery_retargeting_diagnostics.py::test_side_split_rollup_recombines_to_pooled_counts tests/test_recovery_retargeting_diagnostics.py::test_bucket_score_aggregation_uses_pooled_weighted_mean tests/test_recovery_retargeting_diagnostics.py::test_side_view_for_record_side_matches_iter_triggered_side_views tests/test_recovery_retargeting_diagnostics.py::test_side_view_derives_rates_when_missing tests/test_recovery_retargeting_diagnostics.py::test_side_split_schema_for_empty_records tests/test_recovery_retargeting_diagnostics.py::test_split_schema_integrity_matches_existing_pooled_behavior -v`
 
 Expected: ImportError on `aggregate_recovery_retargeting_with_side_split`.
 
-- [ ] **Step 5: Add the four private helpers to `scripts/GPU/alphazero/recovery_retargeting_diagnostics.py`**
+- [ ] **Step 5: Add the five private helpers to `scripts/GPU/alphazero/recovery_retargeting_diagnostics.py`**
 
-Insert after `_side_bucket_for_record` (added in Task 1):
+Insert after `_side_bucket_for_record` (added in Task 1). The helpers — in dependency order: `_filter_and_canonicalize`, `_side_view_for_record_side`, `_iter_triggered_side_views`, `_empty_side_rollup`, `_compute_side_rollup`:
 
 ```python
 _SIDE_BUCKETS = ("eventual_loser", "eventual_winner", "state_cap_or_draw")
@@ -357,18 +463,44 @@ def _filter_and_canonicalize(records, *, config):
     return accepted, canonical_config, skipped_unknown_version, skipped_config_mismatch
 
 
+def _side_view_for_record_side(record, side):
+    """Build a normalized side-view dict for a single (record, side) pair.
+
+    Returns None if the side did not trigger. The view carries 'side_bucket'
+    plus all per-side stats needed by both _compute_side_rollup and
+    apply_actionable_filter. If derived rates (constructive_recovery_rate,
+    defensive_rate, structural_connection_rate, local_drift_rate) are missing
+    from the underlying side record, they are computed from selected_class_counts
+    so the filter never silently sees zeros.
+
+    Single source of truth for side-view construction — used by
+    _iter_triggered_side_views (filtered/split aggregation) and by the
+    worst-cases CSV writer (per-row annotation)."""
+    sr = (record.get("side_records") or {}).get(side) or {}
+    if not sr.get("triggered"):
+        return None
+    view = dict(sr)
+    view["side_bucket"] = _side_bucket_for_record(record, side)
+    if "constructive_recovery_rate" not in view:
+        counts = view.get("selected_class_counts") or {}
+        classified = sum(counts.values())
+        denom = classified if classified > 0 else 1
+        rollup = _bucket_rollup(counts, denom=denom)
+        view["constructive_recovery_rate"] = rollup["constructive_recovery_rate"]
+        view["defensive_rate"]              = rollup["defensive_rate"]
+        view["structural_connection_rate"]  = rollup["structural_connection_rate"]
+        view["local_drift_rate"]            = rollup["local_drift_rate"]
+    return view
+
+
 def _iter_triggered_side_views(records):
     """Yield one normalized side-view dict per triggered side across all
-    records. The view carries a 'side_bucket' key plus all per-side stats
-    needed by _compute_side_rollup."""
+    records. Delegates per-side construction to _side_view_for_record_side."""
     for rec in records:
         for side in ("red", "black"):
-            sr = (rec.get("side_records") or {}).get(side) or {}
-            if not sr.get("triggered"):
-                continue
-            view = dict(sr)
-            view["side_bucket"] = _side_bucket_for_record(rec, side)
-            yield view
+            view = _side_view_for_record_side(rec, side)
+            if view is not None:
+                yield view
 
 
 def _empty_side_rollup() -> dict:
@@ -716,30 +848,39 @@ from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
 ```python
 def test_filtered_aggregator_counts_only_passing_sides():
     """Spec §6 Test 7. `sides` per filtered bucket equals the predicate's
-    true count over the records' triggered sides in that bucket."""
-    # Two passing loser sides (in_window=30, triggered=10, score=-0.92,
-    # constructive 10%, structural 40%, local 30% -> structural+local=70%).
+    true count over the records' triggered sides in that bucket.
+
+    This test intentionally does NOT pre-set the four bucket rate fields
+    on the per-side records — it relies on _side_view_for_record_side
+    deriving them from selected_class_counts. That's the contract used in
+    production by the analyzer when it loads per-game JSONs."""
+    # Passing loser side (structural 40%, local 60%, sum=100%, constructive 0%).
     passing_loser = _record(
         side="black", in_window=30, triggered=10,
         classified=10,
-        classes={"connects_to_existing_component": 4, "redundant_local_reinforcement": 3, "off_plan_or_unclear": 3},
+        classes={"connects_to_existing_component": 4,
+                 "redundant_local_reinforcement": 3,
+                 "off_plan_or_unclear": 3},
     )
     passing_loser["side_records"]["black"]["mean_search_score_triggered_plies"] = -0.92
-    passing_loser["side_records"]["black"]["min_search_score_triggered_plies"] = -0.95
-    passing_loser["side_records"]["black"]["max_search_score_triggered_plies"] = -0.86
+    passing_loser["side_records"]["black"]["min_search_score_triggered_plies"]  = -0.95
+    passing_loser["side_records"]["black"]["max_search_score_triggered_plies"]  = -0.86
     passing_loser["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = 0.12
-    # constructive 0/10, structural 4/10=0.4, local 6/10=0.6, sum=1.0
-    passing_loser["side_records"]["black"]["constructive_recovery_rate"]  = 0.0
-    passing_loser["side_records"]["black"]["structural_connection_rate"]  = 0.4
-    passing_loser["side_records"]["black"]["local_drift_rate"]            = 0.6
+    # Strip the rate fields the test factory sets — force the helper to derive them.
+    for k in ("constructive_recovery_rate", "defensive_rate",
+              "structural_connection_rate", "local_drift_rate"):
+        passing_loser["side_records"]["black"].pop(k, None)
 
-    # One failing loser side (in_window=5 -> fails in_window_below_min).
+    # Failing loser side (in_window=5 -> fails in_window_below_min).
     failing_loser = _record(
         side="black", in_window=5, triggered=2,
         classified=2,
         classes={"redundant_local_reinforcement": 2},
     )
     failing_loser["side_records"]["black"]["mean_search_score_triggered_plies"] = -0.92
+    for k in ("constructive_recovery_rate", "defensive_rate",
+              "structural_connection_rate", "local_drift_rate"):
+        failing_loser["side_records"]["black"].pop(k, None)
 
     out = aggregate_recovery_retargeting_filtered(
         [passing_loser, failing_loser], games_total=10,
@@ -774,11 +915,28 @@ def test_filter_summary_counts_multiple_failed_reasons():
     assert counts["mean_score_above_max"] == 1
     assert counts["structural_plus_local_below_min"] == 1
     assert sum(counts.values()) > fs["side_views_failed"]
+
+
+def test_filtered_schema_for_empty_records():
+    """Spec filtered-view §4.7. Empty records list returns a fully-shaped
+    summary with all three buckets zeroed AND filter_summary present
+    with all-zero counts and the default filter_config."""
+    out = aggregate_recovery_retargeting_filtered([], games_total=10)
+    assert out["games_total"] == 10
+    assert out["games_triggered"] == 0
+    for bucket in ("eventual_loser", "eventual_winner", "state_cap_or_draw"):
+        assert out[bucket]["sides"] == 0
+    fs = out["filter_summary"]
+    assert fs["side_views_total"] == 0
+    assert fs["side_views_passed"] == 0
+    assert fs["side_views_failed"] == 0
+    assert all(v == 0 for v in fs["failed_reason_counts"].values())
+    assert fs["filter_config"]["min_in_window_own_moves"] == 20
 ```
 
 - [ ] **Step 3: Run tests to verify they fail with ImportError**
 
-Run: `.venv/bin/python -m pytest tests/test_recovery_retargeting_diagnostics.py::test_filtered_aggregator_counts_only_passing_sides tests/test_recovery_retargeting_diagnostics.py::test_filter_summary_counts_multiple_failed_reasons -v`
+Run: `.venv/bin/python -m pytest tests/test_recovery_retargeting_diagnostics.py::test_filtered_aggregator_counts_only_passing_sides tests/test_recovery_retargeting_diagnostics.py::test_filter_summary_counts_multiple_failed_reasons tests/test_recovery_retargeting_diagnostics.py::test_filtered_schema_for_empty_records -v`
 
 Expected: ImportError on `aggregate_recovery_retargeting_filtered`.
 
@@ -1038,7 +1196,12 @@ Expected: TypeError (formatter currently takes 1 arg, called with 3).
 
 - [ ] **Step 4: Extend `format_recovery_retargeting_report` in `scripts/twixt_replay_analyzer.py`**
 
-Replace the existing function (line 2481-2550) with the extended version. Keep the entire existing pooled rendering logic intact; add the new sections after the existing `Worst cases:` line.
+**Conservative extension — minimize blast radius.** Do NOT rewrite the existing pooled rendering logic line-by-line. The two changes are:
+
+1. Change the function signature from `format_recovery_retargeting_report(summary)` to `format_recovery_retargeting_report(summary, split_summary=None, filtered_summary=None)`.
+2. After the existing `lines.append("Worst cases: recovery_retargeting_worst_cases.csv")` line, add the new section blocks gated on `if split_summary:` and `if filtered_summary:`.
+
+The full extended function is shown below for reference, but the diff should be a signature change + an append at the end + a new `_format_side_split_block` helper. Anything in between (the existing pooled-rendering block) stays byte-identical:
 
 ```python
 def format_recovery_retargeting_report(
@@ -1466,17 +1629,34 @@ def test_worst_cases_csv_uses_same_filter_predicate(tmp_path):
             assert row["filter_reasons_failed"] == ""
         # side_bucket matches: loser == 'eventual_loser' here (winner=red, loser=black)
         assert row["side_bucket"] == "eventual_loser"
+
+
+def test_worst_cases_csv_filter_reasons_empty_when_passes(tmp_path):
+    """For a row that passes apply_actionable_filter, filter_reasons_failed
+    must be the empty string (not 'none', not absent, not whitespace)."""
+    passing = _worst_cases_record(in_window=30, triggered=10, mean_score=-0.92,
+                                  constructive=0.0, structural=0.4, local=0.6)
+    out_path = tmp_path / "worst.csv"
+    write_recovery_retargeting_worst_cases_csv(str(out_path), [passing], top_k=25)
+    import csv
+    with open(out_path) as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 1
+    assert rows[0]["passes_actionable_filter"] == "true"
+    assert rows[0]["filter_reasons_failed"] == ""
 ```
 
-- [ ] **Step 4: Run test to verify it fails**
+- [ ] **Step 4: Run tests to verify they fail**
 
-Run: `.venv/bin/python -m pytest tests/test_analyzer_recovery_retargeting.py::test_worst_cases_csv_uses_same_filter_predicate -v`
+Run: `.venv/bin/python -m pytest tests/test_analyzer_recovery_retargeting.py::test_worst_cases_csv_uses_same_filter_predicate tests/test_analyzer_recovery_retargeting.py::test_worst_cases_csv_filter_reasons_empty_when_passes -v`
 
-Expected: KeyError on `side_bucket` (column not yet emitted).
+Expected: KeyError on `side_bucket` (column not yet emitted) for both.
 
 - [ ] **Step 5: Extend `write_recovery_retargeting_worst_cases_csv` in `scripts/twixt_replay_analyzer.py`**
 
-Locate the function (around line 2608). Add the import of the helpers at the top of the function body, and three new fields to each row, and three new defaults to the empty-fields fallback list.
+Locate the function (around line 2608). Two structural changes:
+1. Import `apply_actionable_filter` and `_side_view_for_record_side` from the diagnostics module.
+2. For each row, build the side view via `_side_view_for_record_side(rec, side)` (same helper the filtered aggregator uses) and pass that to `apply_actionable_filter`. This guarantees the row's `passes_actionable_filter` value cannot disagree with the filtered aggregator's classification of the same side. The row's data fields are still pulled from `sr` (the per-side record) for compatibility with the existing column set.
 
 ```python
 def write_recovery_retargeting_worst_cases_csv(
@@ -1488,11 +1668,14 @@ def write_recovery_retargeting_worst_cases_csv(
     in_window_own_moves DESC, min_search_score_triggered_plies ASC).
 
     Spec 2026-05-13 adds three columns: side_bucket, passes_actionable_filter,
-    filter_reasons_failed (semicolon-separated; empty when passes).
+    filter_reasons_failed (semicolon-separated; empty when passes). The filter
+    is applied to the side view produced by _side_view_for_record_side — the
+    same helper the filtered aggregator uses — so per-row annotations cannot
+    drift from the filtered report.
     """
     import csv
     from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
-        apply_actionable_filter, _side_bucket_for_record,
+        apply_actionable_filter, _side_view_for_record_side,
     )
     rows = []
     for rec in records:
@@ -1501,7 +1684,12 @@ def write_recovery_retargeting_worst_cases_csv(
         for side in rec.get("triggered_sides") or []:
             sr = (rec.get("side_records") or {}).get(side) or {}
             counts = sr.get("selected_class_counts") or {}
-            passes, reasons = apply_actionable_filter(sr)
+            view = _side_view_for_record_side(rec, side)
+            if view is None:
+                # Defensive: triggered_sides included a side whose side_record
+                # has triggered=False. Skip rather than emit a malformed row.
+                continue
+            passes, reasons = apply_actionable_filter(view)
             rows.append({
                 "iteration": rec.get("iteration"),
                 "game_idx": rec.get("game_idx"),
@@ -1511,7 +1699,7 @@ def write_recovery_retargeting_worst_cases_csv(
                 "reason": rec.get("reason"),
                 "n_moves": rec.get("n_moves"),
                 "triggered_side": side,
-                "side_bucket": _side_bucket_for_record(rec, side),
+                "side_bucket": view["side_bucket"],
                 "first_trigger_ply": sr.get("first_trigger_ply"),
                 "first_trigger_reason": sr.get("first_trigger_reason"),
                 "in_window_own_moves": sr.get("in_window_own_moves", 0),
@@ -1575,11 +1763,11 @@ def write_recovery_retargeting_worst_cases_csv(
 
 (If the existing function ends with a different `with open(...)` write block, preserve that block — the only changes are the three new dict keys, the import, the empty-fields list, and the `apply_actionable_filter` call.)
 
-- [ ] **Step 6: Run test to verify it passes**
+- [ ] **Step 6: Run tests to verify they pass**
 
-Run: `.venv/bin/python -m pytest tests/test_analyzer_recovery_retargeting.py::test_worst_cases_csv_uses_same_filter_predicate -v`
+Run: `.venv/bin/python -m pytest tests/test_analyzer_recovery_retargeting.py::test_worst_cases_csv_uses_same_filter_predicate tests/test_analyzer_recovery_retargeting.py::test_worst_cases_csv_filter_reasons_empty_when_passes -v`
 
-Expected: 1 passed.
+Expected: 2 passed.
 
 - [ ] **Step 7: Run all analyzer tests**
 
@@ -1876,22 +2064,30 @@ After completing all tasks, verify:
 - §2 side-bucket assignment → Task 1
 - §3 actionable-collapse filter → Task 3
 - §4.1 public functions → Tasks 2, 3, 4
-- §4.2 private helpers → Task 2
+- §4.2 private helpers → Task 2 (`_side_view_for_record_side` is the single source of truth for side-view construction; reused by Task 7)
 - §4.3 side-rollup shape → Task 2 (`_empty_side_rollup`)
-- §4.4 weighted score aggregation → Task 2 (Test 9)
+- §4.4 weighted score aggregation → Task 2 (Test 9 — multi-side-in-one-bucket fixture)
 - §4.5/§4.6 return shapes → Tasks 2, 4
-- §4.7 empty-input handling → Task 2 (`_empty_side_rollup`), Task 4 (filter_summary all-zero)
-- §4.8 backward compatibility → Task 2 (untouched existing function), Task 5 (formatter back-compat test)
-- §5.1 report rendering → Task 5
+- §4.7 empty-input handling → Task 2 (`test_side_split_schema_for_empty_records`), Task 4 (`test_filtered_schema_for_empty_records`)
+- §4.8 backward compatibility → Task 2 (untouched existing function + `test_split_schema_integrity_matches_existing_pooled_behavior` parity test), Task 5 (formatter back-compat test)
+- §5.1 report rendering → Task 5 (conservative extension — signature change + appended sections only, existing pooled lines byte-identical)
 - §5.2 new CSV → Task 6
-- §5.3 worst-cases extension → Task 7
+- §5.3 worst-cases extension → Task 7 (uses `_side_view_for_record_side` so the per-row annotation cannot drift from the filtered aggregator)
 - §5.4 wiring → Task 8
-- §6 tests 1–11 → Tasks 1, 2, 3, 4, 5, 6, 7
+- §6 tests 1–11 → Tasks 1, 2, 3, 4, 5, 6, 7 (plus 5 additional tests added during plan review)
 - §7 decision rule → Task 9
 - §8 implementation order → followed by Task 1 → 9
 
+**Tests added during plan review (beyond spec §6's eleven):**
+- `test_side_view_for_record_side_matches_iter_triggered_side_views` (Task 2) — pins single-source-of-truth contract
+- `test_side_view_derives_rates_when_missing` (Task 2) — robustness against records missing rate fields
+- `test_side_split_schema_for_empty_records` (Task 2) — §4.7 invariant
+- `test_split_schema_integrity_matches_existing_pooled_behavior` (Task 2) — parity with existing aggregator
+- `test_filtered_schema_for_empty_records` (Task 4) — §4.7 invariant
+- `test_worst_cases_csv_filter_reasons_empty_when_passes` (Task 7) — explicit empty-string contract
+
 **Type/name consistency:**
-- `_side_bucket_for_record` / `_iter_triggered_side_views` / `_compute_side_rollup` / `_empty_side_rollup` / `_filter_and_canonicalize` / `_SIDE_BUCKETS` / `_DEFAULT_FILTER_CONFIG` / `_FILTER_REASON_KEYS` — used consistently across Tasks 1–4
+- `_side_bucket_for_record` / `_side_view_for_record_side` / `_iter_triggered_side_views` / `_compute_side_rollup` / `_empty_side_rollup` / `_filter_and_canonicalize` / `_SIDE_BUCKETS` / `_DEFAULT_FILTER_CONFIG` / `_FILTER_REASON_KEYS` — used consistently across Tasks 1–4 and reused in Task 7
 - `aggregate_recovery_retargeting_with_side_split` / `aggregate_recovery_retargeting_filtered` / `apply_actionable_filter` — three public function names used consistently in Tasks 2, 3, 4, 5, 6, 7, 8
 - `write_recovery_retargeting_side_split_csv` introduced in Task 6, called in Task 8
 - Side-bucket strings: `eventual_loser`, `eventual_winner`, `state_cap_or_draw` — used everywhere
