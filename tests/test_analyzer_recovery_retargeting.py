@@ -272,6 +272,7 @@ def test_format_report_backward_compat_pooled_only():
 
 
 from scripts.twixt_replay_analyzer import write_recovery_retargeting_side_split_csv
+from scripts.GPU.alphazero.recovery_retargeting_diagnostics import apply_actionable_filter
 
 
 def test_analyzer_writes_side_split_csv_with_six_rows_per_iter(tmp_path):
@@ -291,3 +292,98 @@ def test_analyzer_writes_side_split_csv_with_six_rows_per_iter(tmp_path):
     assert views == {"raw", "filtered"}
     buckets = {r["side_bucket"] for r in rows}
     assert buckets == {"eventual_loser", "eventual_winner", "state_cap_or_draw"}
+
+
+def _worst_cases_record(*, side="black", winner="red", in_window=30, triggered=10,
+                        mean_score=-0.92, classes=None,
+                        constructive=0.0, defensive=0.0, structural=0.4, local=0.6):
+    """Per-game record fixture suitable for the worst-cases CSV writer."""
+    classes = classes or {"redundant_local_reinforcement": 6, "connects_to_existing_component": 4}
+    counts = {
+        "blocks_opponent_closeout": 0, "reduces_own_goal_distance": 0,
+        "starts_or_extends_alternate_component": 0,
+        "connects_to_existing_component": 0, "improves_own_largest_component": 0,
+        "redundant_local_reinforcement": 0, "off_plan_or_unclear": 0,
+    }
+    counts.update(classes)
+    other = "red" if side == "black" else "black"
+    return {
+        "version": 1,
+        "iteration": 170, "game_idx": 0, "game_id": "game_000",
+        "winner": winner, "loser": side, "n_moves": 65, "reason": "win",
+        "triggered_sides": [side],
+        "side_records": {
+            other: {"triggered": False, "classifier_error_count": 0},
+            side: {
+                "triggered": True,
+                "first_trigger_ply": 44,
+                "first_trigger_reason": "steady_state",
+                "in_window_own_moves": in_window,
+                "triggered_own_moves": triggered,
+                "non_triggered_in_window_moves": in_window - triggered,
+                "missing_signal_moves": 0,
+                "severe_collapse_moves": triggered // 2,
+                "very_diffuse_moves": triggered,
+                "trigger_reason_counts": {"delta_precursor": 0, "steady_state": triggered, "both": 0},
+                "classified_in_window_moves": sum(counts.values()),
+                "selected_class_counts": counts,
+                "constructive_recovery_moves": counts["reduces_own_goal_distance"] + counts["starts_or_extends_alternate_component"],
+                "defensive_moves":             counts["blocks_opponent_closeout"],
+                "structural_connection_moves": counts["connects_to_existing_component"] + counts["improves_own_largest_component"],
+                "local_drift_moves":           counts["redundant_local_reinforcement"] + counts["off_plan_or_unclear"],
+                "constructive_recovery_rate":  constructive,
+                "defensive_rate":              defensive,
+                "structural_connection_rate":  structural,
+                "local_drift_rate":            local,
+                "mean_search_score_triggered_plies":    mean_score,
+                "min_search_score_triggered_plies":     mean_score - 0.05,
+                "max_search_score_triggered_plies":     mean_score + 0.05,
+                "mean_root_top1_share_triggered_plies": 0.12,
+                "classifier_error_count": 0,
+            },
+        },
+        "classifier_error_count": 0,
+    }
+
+
+def test_worst_cases_csv_uses_same_filter_predicate(tmp_path):
+    """Spec §6 Test 11. Each row's passes_actionable_filter matches
+    apply_actionable_filter on the same per-side data."""
+    passing = _worst_cases_record(in_window=30, triggered=10, mean_score=-0.92,
+                                  constructive=0.0, structural=0.4, local=0.6)
+    failing = _worst_cases_record(in_window=5, triggered=1, mean_score=-0.50,
+                                  constructive=0.10, structural=0.50, local=0.20)
+
+    out_path = tmp_path / "worst.csv"
+    write_recovery_retargeting_worst_cases_csv(
+        str(out_path), [passing, failing], top_k=25,
+    )
+    rows = list(csv.DictReader(out_path.open()))
+
+    assert "side_bucket" in rows[0]
+    assert "passes_actionable_filter" in rows[0]
+    assert "filter_reasons_failed" in rows[0]
+
+    for row in rows:
+        rec = passing if int(row["in_window_own_moves"]) == 30 else failing
+        sr = rec["side_records"][row["triggered_side"]]
+        passes, reasons = apply_actionable_filter(sr)
+        assert (row["passes_actionable_filter"] == "true") == passes
+        if not passes:
+            assert set(row["filter_reasons_failed"].split(";")) == set(reasons)
+        else:
+            assert row["filter_reasons_failed"] == ""
+        assert row["side_bucket"] == "eventual_loser"
+
+
+def test_worst_cases_csv_filter_reasons_empty_when_passes(tmp_path):
+    """For a row that passes apply_actionable_filter, filter_reasons_failed
+    must be the empty string (not 'none', not absent, not whitespace)."""
+    passing = _worst_cases_record(in_window=30, triggered=10, mean_score=-0.92,
+                                  constructive=0.0, structural=0.4, local=0.6)
+    out_path = tmp_path / "worst.csv"
+    write_recovery_retargeting_worst_cases_csv(str(out_path), [passing], top_k=25)
+    rows = list(csv.DictReader(out_path.open()))
+    assert len(rows) == 1
+    assert rows[0]["passes_actionable_filter"] == "true"
+    assert rows[0]["filter_reasons_failed"] == ""

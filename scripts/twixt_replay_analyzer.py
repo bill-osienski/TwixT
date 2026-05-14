@@ -2746,12 +2746,20 @@ def write_recovery_retargeting_side_split_csv(
 def write_recovery_retargeting_worst_cases_csv(
     out_path: str, records: list, *, top_k: int = 25,
 ) -> str:
-    """Write recovery_retargeting_worst_cases.csv. Spec 4 §6.7.
+    """Write recovery_retargeting_worst_cases.csv. Spec 4 §6.7 + Spec 2026-05-13 §5.3.
 
     One row per triggered side; sorted by (local_drift_moves DESC,
     in_window_own_moves DESC, min_search_score_triggered_plies ASC).
+
+    Spec 2026-05-13 adds three columns: side_bucket, passes_actionable_filter,
+    filter_reasons_failed. The filter is applied to the side view produced by
+    _side_view_for_record_side — the same helper the filtered aggregator uses
+    — so per-row annotations cannot drift from the filtered report.
     """
     import csv
+    from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
+        apply_actionable_filter, _side_view_for_record_side,
+    )
     rows = []
     for rec in records:
         if not rec:
@@ -2759,6 +2767,12 @@ def write_recovery_retargeting_worst_cases_csv(
         for side in rec.get("triggered_sides") or []:
             sr = (rec.get("side_records") or {}).get(side) or {}
             counts = sr.get("selected_class_counts") or {}
+            view = _side_view_for_record_side(rec, side)
+            if view is None:
+                # Defensive: triggered_sides included a side whose side_record
+                # has triggered=False. Skip rather than emit a malformed row.
+                continue
+            passes, reasons = apply_actionable_filter(view)
             rows.append({
                 "iteration": rec.get("iteration"),
                 "game_idx": rec.get("game_idx"),
@@ -2768,6 +2782,7 @@ def write_recovery_retargeting_worst_cases_csv(
                 "reason": rec.get("reason"),
                 "n_moves": rec.get("n_moves"),
                 "triggered_side": side,
+                "side_bucket": view["side_bucket"],
                 "first_trigger_ply": sr.get("first_trigger_ply"),
                 "first_trigger_reason": sr.get("first_trigger_reason"),
                 "in_window_own_moves": sr.get("in_window_own_moves", 0),
@@ -2793,6 +2808,8 @@ def write_recovery_retargeting_worst_cases_csv(
                 "min_search_score_triggered_plies":  sr.get("min_search_score_triggered_plies"),
                 "max_search_score_triggered_plies":  sr.get("max_search_score_triggered_plies"),
                 "mean_root_top1_share_triggered_plies": sr.get("mean_root_top1_share_triggered_plies"),
+                "passes_actionable_filter": "true" if passes else "false",
+                "filter_reasons_failed":    ";".join(reasons),
             })
     rows.sort(
         key=lambda r: (
@@ -2804,7 +2821,7 @@ def write_recovery_retargeting_worst_cases_csv(
     rows = rows[:max(0, int(top_k))]
     fields = list(rows[0].keys()) if rows else [
         "iteration","game_idx","game_id","winner","loser","reason","n_moves",
-        "triggered_side","first_trigger_ply","first_trigger_reason",
+        "triggered_side","side_bucket","first_trigger_ply","first_trigger_reason",
         "in_window_own_moves","triggered_own_moves",
         "severe_collapse_moves","very_diffuse_moves",
         "classified_in_window_moves","missing_signal_moves",
@@ -2817,6 +2834,7 @@ def write_recovery_retargeting_worst_cases_csv(
         "local_drift_rate","constructive_recovery_rate",
         "mean_search_score_triggered_plies","min_search_score_triggered_plies",
         "max_search_score_triggered_plies","mean_root_top1_share_triggered_plies",
+        "passes_actionable_filter","filter_reasons_failed",
     ]
     with open(out_path, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields)
