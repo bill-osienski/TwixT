@@ -1160,6 +1160,51 @@ def test_filter_summary_counts_multiple_failed_reasons():
     assert sum(counts.values()) > fs["side_views_failed"]
 
 
+def test_filter_default_threshold_is_v11_calibrated():
+    """v1.1 (2026-05-14) tightened max_mean_score from -0.85 to -0.90.
+    A side at -0.87 (would have passed v1, fails v1.1) must now fail
+    when no filter_config is supplied."""
+    side_view = {
+        "in_window_own_moves": 30,
+        "triggered_own_moves": 10,
+        "mean_search_score_triggered_plies": -0.87,  # between v1 and v1.1 thresholds
+        "constructive_recovery_rate": 0.10,
+        "structural_connection_rate": 0.40,
+        "local_drift_rate": 0.30,
+    }
+    passes, reasons = apply_actionable_filter(side_view)
+    assert passes is False
+    assert "mean_score_above_max" in reasons
+    # And confirm the filtered aggregator default uses v1.1 too.
+    rec = _record(side="black", in_window=30, triggered=10, classified=10,
+                  classes={"connects_to_existing_component": 4,
+                           "redundant_local_reinforcement": 6})
+    rec["side_records"]["black"]["mean_search_score_triggered_plies"] = -0.87
+    out = aggregate_recovery_retargeting_filtered([rec], games_total=1)
+    assert out["filter_summary"]["filter_config"]["max_mean_search_score_triggered_plies"] == -0.90
+    assert out["filter_summary"]["side_views_failed"] == 1
+    assert out["filter_summary"]["failed_reason_counts"]["mean_score_above_max"] == 1
+
+
+def test_filter_config_override_can_restore_v1_threshold():
+    """Backward compat for analysis re-runs that need to compare against
+    v1 reports: passing filter_config={'max_mean_search_score_triggered_plies': -0.85}
+    must restore the original v1 behavior."""
+    rec = _record(side="black", in_window=30, triggered=10, classified=10,
+                  classes={"connects_to_existing_component": 4,
+                           "redundant_local_reinforcement": 6})
+    rec["side_records"]["black"]["mean_search_score_triggered_plies"] = -0.87  # passes v1, fails v1.1
+    # v1 threshold (override): should pass.
+    out_v1 = aggregate_recovery_retargeting_filtered(
+        [rec], games_total=1,
+        filter_config={"max_mean_search_score_triggered_plies": -0.85},
+    )
+    assert out_v1["filter_summary"]["side_views_passed"] == 1
+    # v1.1 threshold (default): should fail.
+    out_v11 = aggregate_recovery_retargeting_filtered([rec], games_total=1)
+    assert out_v11["filter_summary"]["side_views_passed"] == 0
+
+
 def test_filtered_schema_for_empty_records():
     """Spec filtered-view §4.7. Empty records list returns a fully-shaped
     summary with all three buckets zeroed AND filter_summary present

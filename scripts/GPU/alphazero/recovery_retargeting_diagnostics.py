@@ -1063,7 +1063,7 @@ def apply_actionable_filter(
     *,
     min_in_window_own_moves: int = 20,
     min_triggered_own_moves: int = 3,
-    max_mean_search_score_triggered_plies: float = -0.85,
+    max_mean_search_score_triggered_plies: float = -0.90,
     max_constructive_recovery_rate: float = 0.30,
     min_structural_plus_local_rate: float = 0.60,
 ):
@@ -1071,6 +1071,11 @@ def apply_actionable_filter(
 
     Five clauses, all must hold for passes=True. Each failed clause appends
     one stable reason id. A side view can fail multiple clauses.
+
+    Default thresholds calibrated against 170-179 (v1.1, 2026-05-14):
+    max_mean_search_score_triggered_plies tightened from -0.85 to -0.90 to
+    eliminate winner-side trigger artifacts (winner_share dropped 23.7% -> 17.5%
+    while preserving the loser-side failure shape).
     """
     reasons = []
     if int(side_view.get("in_window_own_moves", 0) or 0) < min_in_window_own_moves:
@@ -1094,7 +1099,7 @@ def apply_actionable_filter(
 _DEFAULT_FILTER_CONFIG = {
     "min_in_window_own_moves": 20,
     "min_triggered_own_moves": 3,
-    "max_mean_search_score_triggered_plies": -0.85,
+    "max_mean_search_score_triggered_plies": -0.90,  # v1.1 calibrated; was -0.85 in v1
     "max_constructive_recovery_rate": 0.30,
     "min_structural_plus_local_rate": 0.60,
 }

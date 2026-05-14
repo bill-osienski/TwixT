@@ -449,3 +449,38 @@ Each step ships independently and is verifiable in isolation. The per-iter sidec
 ## 9. Open questions
 
 None blocking implementation. The §7 decision-rule thresholds are intentionally placeholders to be calibrated on first-run data.
+
+---
+
+## 10. v1.1 calibration update (2026-05-14)
+
+After shipping v1.0 and applying §7 to the 170-179 data, the read-out was:
+
+| Rule | Outcome | Value |
+|---|---|---|
+| Rule 1: share ≥ 30% | FAIL | 7.4% |
+| Rule 6: winner_share ≤ 20% | FAIL | 23.7% |
+
+A 31-case hand-review of the filter-passing winner-side cases (median in_window=25, just above the 20-cutoff; median first_trigger_ply at 25% into the game; top class `connects_to_existing_component` at 61% pooled) confirmed those were Category B (trigger artifacts on transient bad MCTS reads), not genuine recoveries.
+
+A filter sweep on the same data tested four levers (raise `min_in_window_own_moves`, raise `min_triggered_own_moves`, tighten `max_mean_search_score_triggered_plies`, and combinations). Findings:
+
+- Rule 1 fails in **every** tested config — the actionable-collapse signal is genuinely rare in 170-179 (not hidden behind a too-loose filter).
+- Tightening `min_in_window_own_moves` is bad for the loser-side signal (in=30 drops loser sides 95→13; real late-game collapses have short windows).
+- Tightening `max_mean_search_score_triggered_plies` from -0.85 to -0.90 (Option C) is the cleanest single-knob fix for Rule 6: winner_share 23.7% → 17.5%, loser+state_cap 100 → 47 sides (still hand-reviewable), structural+local stays at 85.7%, constructive+defense stays at 14.3%.
+
+**v1.1 default change (shipped 2026-05-14):**
+
+```python
+_DEFAULT_FILTER_CONFIG["max_mean_search_score_triggered_plies"] = -0.90  # was -0.85 in v1
+apply_actionable_filter(..., max_mean_search_score_triggered_plies: float = -0.90)  # was -0.85
+```
+
+No other defaults changed. The runtime trigger (`collapse_value_threshold = -0.75` in self-play) is unchanged — this is an analyzer filter calibration only, not a self-play diagnostic trigger change.
+
+**§7 read-out under v1.1:**
+- Rule 1 still FAILS (share 3.5%) — confirms Spec 5 is not justified by current data.
+- Rule 6 PASSES (winner_share 17.5%) — filter is no longer too permissive.
+- The "Spec 5 not justified" verdict now has a clean basis: **the failure shape exists and is real, but it is rare**, rather than "maybe the filter is too permissive".
+
+**Backward compatibility for re-runs against v1 reports:** pass `filter_config={"max_mean_search_score_triggered_plies": -0.85}` to `aggregate_recovery_retargeting_filtered` to restore v1 behavior. Tested by `test_filter_config_override_can_restore_v1_threshold`.
