@@ -269,3 +269,25 @@ def test_format_report_backward_compat_pooled_only():
     assert "Recovery / Re-targeting Diagnostics" in text
     assert "Raw side-outcome split" not in text
     assert "Filtered actionable-collapse view" not in text
+
+
+from scripts.twixt_replay_analyzer import write_recovery_retargeting_side_split_csv
+
+
+def test_analyzer_writes_side_split_csv_with_six_rows_per_iter(tmp_path):
+    """Spec §6 Test 10. For two iters, the new CSV contains 12 rows
+    (6 per iter: 3 buckets x 2 views)."""
+    per_iter_split = {170: _split_summary(), 171: _split_summary()}
+    per_iter_filtered = {170: _filtered_summary(), 171: _filtered_summary()}
+    out_path = tmp_path / "side_split.csv"
+    write_recovery_retargeting_side_split_csv(
+        str(out_path), per_iter_split, per_iter_filtered,
+    )
+    rows = list(csv.DictReader(out_path.open()))
+    assert len(rows) == 12
+    iters = sorted({int(r["iteration"]) for r in rows})
+    assert iters == [170, 171]
+    views = {r["view"] for r in rows}
+    assert views == {"raw", "filtered"}
+    buckets = {r["side_bucket"] for r in rows}
+    assert buckets == {"eventual_loser", "eventual_winner", "state_cap_or_draw"}

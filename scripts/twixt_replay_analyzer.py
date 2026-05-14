@@ -2684,6 +2684,65 @@ def write_recovery_retargeting_by_iter_csv(out_path: str, per_iter_summaries: di
     return out_path
 
 
+def write_recovery_retargeting_side_split_csv(
+    out_path: str,
+    per_iter_split_summaries: dict,
+    per_iter_filtered_summaries: dict,
+) -> str:
+    """Write recovery_retargeting_side_split_by_iter.csv. Spec 2026-05-13 §5.2.
+
+    Long format, 6 rows per iteration: 3 side buckets x 2 views (raw, filtered).
+    Empty buckets emit a row with zero counts and empty score fields.
+    """
+    import csv
+    fields = [
+        "iteration",
+        "view",
+        "side_bucket",
+        "sides",
+        "in_window_own_moves_total",
+        "triggered_own_moves_total",
+        "mean_search_score_triggered_plies",
+        "mean_root_top1_share_triggered_plies",
+        "constructive_recovery_rate",
+        "defensive_rate",
+        "structural_connection_rate",
+        "local_drift_rate",
+        "redundant_local_reinforcement_rate",
+        "off_plan_or_unclear_rate",
+    ]
+    iters = sorted(set(per_iter_split_summaries.keys()) | set(per_iter_filtered_summaries.keys()))
+    with open(out_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for it in iters:
+            for view, summaries in (("raw", per_iter_split_summaries),
+                                    ("filtered", per_iter_filtered_summaries)):
+                s = summaries.get(it) or {}
+                for bucket in ("eventual_loser", "eventual_winner", "state_cap_or_draw"):
+                    b = s.get(bucket) or {}
+                    rates = b.get("selected_class_rates_total") or {}
+                    ms = b.get("mean_search_score_triggered_plies")
+                    mt = b.get("mean_root_top1_share_triggered_plies")
+                    w.writerow({
+                        "iteration": it,
+                        "view": view,
+                        "side_bucket": bucket,
+                        "sides": int(b.get("sides", 0) or 0),
+                        "in_window_own_moves_total":  int(b.get("in_window_own_moves_total", 0) or 0),
+                        "triggered_own_moves_total":  int(b.get("triggered_own_moves_total", 0) or 0),
+                        "mean_search_score_triggered_plies":    "" if ms is None else ms,
+                        "mean_root_top1_share_triggered_plies": "" if mt is None else mt,
+                        "constructive_recovery_rate": b.get("constructive_recovery_rate", 0.0),
+                        "defensive_rate":             b.get("defensive_rate", 0.0),
+                        "structural_connection_rate": b.get("structural_connection_rate", 0.0),
+                        "local_drift_rate":           b.get("local_drift_rate", 0.0),
+                        "redundant_local_reinforcement_rate": rates.get("redundant_local_reinforcement", 0.0),
+                        "off_plan_or_unclear_rate":           rates.get("off_plan_or_unclear", 0.0),
+                    })
+    return out_path
+
+
 def write_recovery_retargeting_worst_cases_csv(
     out_path: str, records: list, *, top_k: int = 25,
 ) -> str:
