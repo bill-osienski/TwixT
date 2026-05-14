@@ -664,6 +664,7 @@ def test_observe_move_disabled_via_config_is_no_op():
 from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
     aggregate_recovery_retargeting_records,
     aggregate_recovery_retargeting_with_side_split,
+    aggregate_recovery_retargeting_filtered,
     apply_actionable_filter,
     _side_bucket_for_record,
 )
@@ -1090,3 +1091,87 @@ def test_apply_actionable_filter_reports_all_failed_reasons():
     assert "triggered_below_min" in reasons
     assert "mean_score_above_max" in reasons
     assert len(reasons) == 3
+
+
+def test_filtered_aggregator_counts_only_passing_sides():
+    """Spec §6 Test 7. `sides` per filtered bucket equals the predicate's
+    true count over the records' triggered sides in that bucket.
+
+    Intentionally does NOT pre-set the four bucket rate fields — relies on
+    _side_view_for_record_side deriving them from selected_class_counts."""
+    passing_loser = _record(
+        side="black", in_window=30, triggered=10,
+        classified=10,
+        classes={"connects_to_existing_component": 4,
+                 "redundant_local_reinforcement": 3,
+                 "off_plan_or_unclear": 3},
+    )
+    passing_loser["side_records"]["black"]["mean_search_score_triggered_plies"] = -0.92
+    passing_loser["side_records"]["black"]["min_search_score_triggered_plies"]  = -0.95
+    passing_loser["side_records"]["black"]["max_search_score_triggered_plies"]  = -0.86
+    passing_loser["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = 0.12
+    for k in ("constructive_recovery_rate", "defensive_rate",
+              "structural_connection_rate", "local_drift_rate"):
+        passing_loser["side_records"]["black"].pop(k, None)
+
+    failing_loser = _record(
+        side="black", in_window=5, triggered=2,
+        classified=2,
+        classes={"redundant_local_reinforcement": 2},
+    )
+    failing_loser["side_records"]["black"]["mean_search_score_triggered_plies"] = -0.92
+    for k in ("constructive_recovery_rate", "defensive_rate",
+              "structural_connection_rate", "local_drift_rate"):
+        failing_loser["side_records"]["black"].pop(k, None)
+
+    out = aggregate_recovery_retargeting_filtered(
+        [passing_loser, failing_loser], games_total=10,
+    )
+    assert out["eventual_loser"]["sides"] == 1
+    assert out["eventual_winner"]["sides"] == 0
+    assert out["state_cap_or_draw"]["sides"] == 0
+    assert out["filter_summary"]["side_views_total"] == 2
+    assert out["filter_summary"]["side_views_passed"] == 1
+    assert out["filter_summary"]["side_views_failed"] == 1
+
+
+def test_filter_summary_counts_multiple_failed_reasons():
+    """Spec §6 Test 8. failed_reason_counts may sum above side_views_failed
+    because a side can fail multiple clauses."""
+    # Class composition is 100% defensive (blocks_opponent_closeout) so the
+    # derived structural+local rate is 0.0 and the structural_plus_local
+    # clause fails. Rate fields on the per-side record are intentionally
+    # absent so _side_view_for_record_side derives them from counts.
+    bad = _record(
+        side="black", in_window=5, triggered=1, classified=1,
+        classes={"blocks_opponent_closeout": 1},
+    )
+    bad["side_records"]["black"]["mean_search_score_triggered_plies"] = -0.50
+
+    out = aggregate_recovery_retargeting_filtered([bad], games_total=1)
+    fs = out["filter_summary"]
+    assert fs["side_views_total"] == 1
+    assert fs["side_views_failed"] == 1
+    counts = fs["failed_reason_counts"]
+    assert counts["in_window_below_min"] == 1
+    assert counts["triggered_below_min"] == 1
+    assert counts["mean_score_above_max"] == 1
+    assert counts["structural_plus_local_below_min"] == 1
+    assert sum(counts.values()) > fs["side_views_failed"]
+
+
+def test_filtered_schema_for_empty_records():
+    """Spec filtered-view §4.7. Empty records list returns a fully-shaped
+    summary with all three buckets zeroed AND filter_summary present
+    with all-zero counts and the default filter_config."""
+    out = aggregate_recovery_retargeting_filtered([], games_total=10)
+    assert out["games_total"] == 10
+    assert out["games_triggered"] == 0
+    for bucket in ("eventual_loser", "eventual_winner", "state_cap_or_draw"):
+        assert out[bucket]["sides"] == 0
+    fs = out["filter_summary"]
+    assert fs["side_views_total"] == 0
+    assert fs["side_views_passed"] == 0
+    assert fs["side_views_failed"] == 0
+    assert all(v == 0 for v in fs["failed_reason_counts"].values())
+    assert fs["filter_config"]["min_in_window_own_moves"] == 20

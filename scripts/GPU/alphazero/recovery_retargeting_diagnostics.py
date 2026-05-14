@@ -1089,3 +1089,86 @@ def apply_actionable_filter(
     if structural_plus_local < min_structural_plus_local_rate:
         reasons.append("structural_plus_local_below_min")
     return (len(reasons) == 0, reasons)
+
+
+_DEFAULT_FILTER_CONFIG = {
+    "min_in_window_own_moves": 20,
+    "min_triggered_own_moves": 3,
+    "max_mean_search_score_triggered_plies": -0.85,
+    "max_constructive_recovery_rate": 0.30,
+    "min_structural_plus_local_rate": 0.60,
+}
+
+_FILTER_REASON_KEYS = (
+    "in_window_below_min",
+    "triggered_below_min",
+    "mean_score_above_max",
+    "constructive_recovery_above_max",
+    "structural_plus_local_below_min",
+)
+
+
+def aggregate_recovery_retargeting_filtered(
+    records,
+    *,
+    games_total: int,
+    config: Optional[dict] = None,
+    filter_config: Optional[dict] = None,
+) -> dict:
+    """Filtered side-split aggregator. Spec 2026-05-13 §4.
+
+    Same shape as aggregate_recovery_retargeting_with_side_split, but only
+    counts side views that pass apply_actionable_filter. Adds a top-level
+    'filter_summary' with per-clause failed counts.
+    """
+    fcfg = dict(_DEFAULT_FILTER_CONFIG)
+    if filter_config:
+        fcfg.update(filter_config)
+
+    accepted, canonical_config, skipped_version, skipped_config = (
+        _filter_and_canonicalize(records, config=config)
+    )
+    games_triggered = len(accepted)
+    classifier_error_total = sum(int(r.get("classifier_error_count", 0)) for r in accepted)
+
+    by_bucket: Dict[str, list] = {b: [] for b in _SIDE_BUCKETS}
+    side_views_total = 0
+    side_views_passed = 0
+    side_views_failed = 0
+    failed_reason_counts = {k: 0 for k in _FILTER_REASON_KEYS}
+
+    for view in _iter_triggered_side_views(accepted):
+        side_views_total += 1
+        passes, reasons = apply_actionable_filter(view, **fcfg)
+        if passes:
+            by_bucket[view["side_bucket"]].append(view)
+            side_views_passed += 1
+        else:
+            side_views_failed += 1
+            for r in reasons:
+                if r in failed_reason_counts:
+                    failed_reason_counts[r] += 1
+
+    return {
+        "version": 1,
+        "view": "filtered_actionable_collapse",
+        "enabled": True,
+        "config": canonical_config or {},
+        "games_total": games_total,
+        "games_triggered": games_triggered,
+        "eventual_loser":     _compute_side_rollup(by_bucket["eventual_loser"]),
+        "eventual_winner":    _compute_side_rollup(by_bucket["eventual_winner"]),
+        "state_cap_or_draw":  _compute_side_rollup(by_bucket["state_cap_or_draw"]),
+        "filter_summary": {
+            "filter_config":         dict(fcfg),
+            "side_views_total":      side_views_total,
+            "side_views_passed":     side_views_passed,
+            "side_views_failed":     side_views_failed,
+            "failed_reason_counts":  failed_reason_counts,
+        },
+        "schema_integrity": {
+            "skipped_unknown_version_count": skipped_version,
+            "skipped_config_mismatch_count": skipped_config,
+            "classifier_error_count_total":  classifier_error_total,
+        },
+    }
