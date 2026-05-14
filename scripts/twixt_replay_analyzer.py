@@ -2478,8 +2478,16 @@ def format_closeout_selection_tiebreak_report(summary: dict) -> list:
     return lines
 
 
-def format_recovery_retargeting_report(summary: Optional[dict]) -> list:
-    """Format the recovery / re-targeting telemetry section. Spec 4 §6.5."""
+def format_recovery_retargeting_report(
+    summary,
+    split_summary=None,
+    filtered_summary=None,
+):
+    """Format the recovery / re-targeting telemetry section.
+
+    Spec 4 §6.5 (pooled, original) + Spec 2026-05-13 §5.1 (raw side-outcome
+    split + filtered actionable-collapse view + filter summary).
+    """
     if not summary:
         return []
     cfg = summary.get("config") or {}
@@ -2547,7 +2555,78 @@ def format_recovery_retargeting_report(summary: Optional[dict]) -> list:
     lines.append(f"  records skipped (unknown version):     {si.get('skipped_unknown_version_count', 0)}")
     lines.append(f"  records skipped (config mismatch):     {si.get('skipped_config_mismatch_count', 0)}")
     lines.append("Worst cases: recovery_retargeting_worst_cases.csv")
+
+    if split_summary:
+        lines.append("")
+        lines.append("Raw side-outcome split")
+        lines.append("----------------------")
+        lines.extend(_format_side_split_block(split_summary, label="triggered sides"))
+
+    if filtered_summary:
+        lines.append("")
+        lines.append("Filtered actionable-collapse view")
+        lines.append("---------------------------------")
+        fc = (filtered_summary.get("filter_summary") or {}).get("filter_config") or {}
+        lines.append(
+            f"Filter: in_window>={fc.get('min_in_window_own_moves')}, "
+            f"triggered>={fc.get('min_triggered_own_moves')}, "
+            f"mean_score<={fc.get('max_mean_search_score_triggered_plies')}, "
+            f"constructive<{int(round(fc.get('max_constructive_recovery_rate', 0)*100))}%, "
+            f"structural+local>={int(round(fc.get('min_structural_plus_local_rate', 0)*100))}%"
+        )
+        lines.extend(_format_side_split_block(
+            filtered_summary, label="eligible sides",
+            winner_note="[threshold sanity only — not used as Spec 5 intervention target]",
+        ))
+        fs = filtered_summary.get("filter_summary") or {}
+        lines.append("")
+        lines.append("Filter summary:")
+        lines.append(f"  side views total:    {fs.get('side_views_total', 0)}")
+        lines.append(f"  side views passed:   {fs.get('side_views_passed', 0)}")
+        lines.append(f"  side views failed:   {fs.get('side_views_failed', 0)}")
+        lines.append("  failed reasons:")
+        for reason in (
+            "in_window_below_min", "triggered_below_min", "mean_score_above_max",
+            "constructive_recovery_above_max", "structural_plus_local_below_min",
+        ):
+            lines.append(f"    {reason+':':36s} {(fs.get('failed_reason_counts') or {}).get(reason, 0)}")
+
     return lines
+
+
+def _format_side_split_block(side_split_summary, *, label, winner_note=""):
+    """Render the three side buckets within a side-split or filtered summary."""
+    def _pct(x):
+        return f"{(x or 0.0) * 100.0:.1f}%"
+    out = []
+    for bucket_key, bucket_label in (
+        ("eventual_loser",    "eventual_loser:"),
+        ("eventual_winner",   "eventual_winner:"),
+        ("state_cap_or_draw", "state_cap_or_draw:"),
+    ):
+        b = side_split_summary.get(bucket_key) or {}
+        out.append(bucket_label)
+        sides_line = f"  {label}:        {b.get('sides', 0)}"
+        if bucket_key == "eventual_winner" and winner_note:
+            sides_line += f"   {winner_note}"
+        out.append(sides_line)
+        out.append(f"  constructive recovery:  {_pct(b.get('constructive_recovery_rate'))}")
+        out.append(f"  defense:                {_pct(b.get('defensive_rate'))}")
+        out.append(f"  structural connection:  {_pct(b.get('structural_connection_rate'))}")
+        out.append(f"  local drift / unclear:  {_pct(b.get('local_drift_rate'))}")
+        ms = b.get("mean_search_score_triggered_plies")
+        mn = b.get("min_search_score_triggered_plies")
+        mx = b.get("max_search_score_triggered_plies")
+        mt = b.get("mean_root_top1_share_triggered_plies")
+        if ms is not None:
+            score_str = f"{ms:.3f}"
+            if mn is not None and mx is not None:
+                score_str += f"  (in [{mn:.3f}, {mx:.3f}])"
+            out.append(f"  mean trigger score:     {score_str}")
+        if mt is not None:
+            out.append(f"  mean trigger top1:       {mt:.3f}")
+        out.append("")
+    return out
 
 
 def write_recovery_retargeting_by_iter_csv(out_path: str, per_iter_summaries: dict) -> str:

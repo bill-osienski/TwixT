@@ -154,3 +154,118 @@ def test_worst_cases_csv_two_rows_for_dual_triggered_game(tmp_path):
     assert len(rows) == 2
     sides = sorted(r["triggered_side"] for r in rows)
     assert sides == ["black", "red"]
+
+
+# Spec 2026-05-13 — filtered side-split view tests.
+
+def _empty_split_bucket(*, sides=0, in_window=0, triggered=0, mean_score=None,
+                        constructive=0.0, defensive=0.0, structural=0.0, local=0.0):
+    return {
+        "sides": sides,
+        "in_window_own_moves_total": in_window,
+        "triggered_own_moves_total": triggered,
+        "non_triggered_in_window_moves_total": in_window - triggered,
+        "missing_signal_moves_total": 0,
+        "severe_collapse_moves_total": triggered // 2,
+        "very_diffuse_moves_total": triggered,
+        "classified_in_window_moves_total": triggered,
+        "selected_class_counts_total": {
+            "blocks_opponent_closeout": 0, "reduces_own_goal_distance": 0,
+            "starts_or_extends_alternate_component": 0,
+            "connects_to_existing_component": 0, "improves_own_largest_component": 0,
+            "redundant_local_reinforcement": 0, "off_plan_or_unclear": 0,
+        },
+        "selected_class_rates_total": {
+            "blocks_opponent_closeout": 0.0, "reduces_own_goal_distance": 0.0,
+            "starts_or_extends_alternate_component": 0.0,
+            "connects_to_existing_component": 0.0, "improves_own_largest_component": 0.0,
+            "redundant_local_reinforcement": 0.0, "off_plan_or_unclear": 0.0,
+        },
+        "trigger_reason_counts_total": {"delta_precursor": 0, "steady_state": triggered, "both": 0},
+        "constructive_recovery_rate": constructive,
+        "defensive_rate":             defensive,
+        "structural_connection_rate": structural,
+        "local_drift_rate":           local,
+        "mean_search_score_triggered_plies":    mean_score,
+        "min_search_score_triggered_plies":     (mean_score - 0.05) if mean_score is not None else None,
+        "max_search_score_triggered_plies":     (mean_score + 0.05) if mean_score is not None else None,
+        "mean_root_top1_share_triggered_plies": 0.15 if mean_score is not None else None,
+    }
+
+
+def _split_summary(**overrides):
+    """Minimal raw_side_split summary fixture."""
+    base = {
+        "version": 1,
+        "view": "raw_side_split",
+        "enabled": True,
+        "config": _summary()["config"],
+        "games_total": 1000, "games_triggered": 1000,
+        "eventual_loser":    _empty_split_bucket(sides=989, in_window=10000, triggered=8000,
+                                                 mean_score=-0.92, constructive=0.20, defensive=0.01,
+                                                 structural=0.55, local=0.24),
+        "eventual_winner":   _empty_split_bucket(sides=342, in_window=2500, triggered=1500,
+                                                 mean_score=-0.78, constructive=0.30, defensive=0.00,
+                                                 structural=0.50, local=0.20),
+        "state_cap_or_draw": _empty_split_bucket(sides=8, in_window=200, triggered=120,
+                                                 mean_score=-0.93, constructive=0.18, defensive=0.02,
+                                                 structural=0.55, local=0.25),
+        "schema_integrity": {
+            "skipped_unknown_version_count": 0,
+            "skipped_config_mismatch_count": 0,
+            "classifier_error_count_total": 0,
+        },
+    }
+    base.update(overrides)
+    return base
+
+
+def _filtered_summary(**overrides):
+    """Minimal filtered_actionable_collapse summary fixture."""
+    base = _split_summary()
+    base["view"] = "filtered_actionable_collapse"
+    base["filter_summary"] = {
+        "filter_config": {
+            "min_in_window_own_moves": 20,
+            "min_triggered_own_moves": 3,
+            "max_mean_search_score_triggered_plies": -0.85,
+            "max_constructive_recovery_rate": 0.30,
+            "min_structural_plus_local_rate": 0.60,
+        },
+        "side_views_total":  1339,
+        "side_views_passed": 412,
+        "side_views_failed": 927,
+        "failed_reason_counts": {
+            "in_window_below_min":             120,
+            "triggered_below_min":             210,
+            "mean_score_above_max":            300,
+            "constructive_recovery_above_max": 250,
+            "structural_plus_local_below_min": 90,
+        },
+    }
+    base.update(overrides)
+    return base
+
+
+def test_format_report_renders_three_sections():
+    pooled = _summary()
+    split = _split_summary()
+    filtered = _filtered_summary()
+    lines = format_recovery_retargeting_report(pooled, split, filtered)
+    text = "\n".join(lines)
+    assert "Raw side-outcome split" in text
+    assert "Filtered actionable-collapse view" in text
+    assert "Filter summary" in text
+    assert "eventual_loser" in text
+    assert "eventual_winner" in text
+    assert "state_cap_or_draw" in text
+
+
+def test_format_report_backward_compat_pooled_only():
+    """When split and filtered are None, render only the existing pooled section."""
+    pooled = _summary()
+    lines = format_recovery_retargeting_report(pooled, None, None)
+    text = "\n".join(lines)
+    assert "Recovery / Re-targeting Diagnostics" in text
+    assert "Raw side-outcome split" not in text
+    assert "Filtered actionable-collapse view" not in text
