@@ -5129,8 +5129,11 @@ def analyze(replays: List[dict],
         lines.extend(format_closeout_selection_tiebreak_report(tb_summary))
         summary["closeout_selection_tiebreak"] = tb_summary
     # Spec 4 — recovery / re-targeting diagnostic.
+    # Spec 2026-05-13 — filtered side-split view (analyzer-only).
     from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
         aggregate_recovery_retargeting_records,
+        aggregate_recovery_retargeting_with_side_split,
+        aggregate_recovery_retargeting_filtered,
     )
 
     # Per-iter summaries: read from sidecars; analyzer cross-iter rollup
@@ -5150,6 +5153,39 @@ def analyze(replays: List[dict],
         rr_records, games_total=rr_games_total,
     )
     rr_summary["iters_covered"] = sorted(per_iter_rr.keys())
+
+    # Spec 2026-05-13: range-level raw side-split + filtered views.
+    rr_split = aggregate_recovery_retargeting_with_side_split(
+        rr_records, games_total=rr_games_total,
+    )
+    rr_filtered = aggregate_recovery_retargeting_filtered(
+        rr_records, games_total=rr_games_total,
+    )
+    rr_split["iters_covered"]    = sorted(per_iter_rr.keys())
+    rr_filtered["iters_covered"] = sorted(per_iter_rr.keys())
+
+    # Per-iter raw + filtered summaries for the new side-split CSV.
+    # Group per-game records by iteration; use sidecar games_per_iter when
+    # available, fall back to len(records-in-iter).
+    rr_records_by_iter: dict = {}
+    for rec in rr_records:
+        it = rec.get("iteration") if rec else None
+        if it is None:
+            continue
+        rr_records_by_iter.setdefault(it, []).append(rec)
+
+    per_iter_rr_split: dict = {}
+    per_iter_rr_filtered: dict = {}
+    for it in sorted(per_iter_rr.keys() | rr_records_by_iter.keys()):
+        iter_records = rr_records_by_iter.get(it, [])
+        sidecar_block = per_iter_rr.get(it) or {}
+        iter_games_total = int(sidecar_block.get("games_total", len(iter_records)) or 0)
+        per_iter_rr_split[it] = aggregate_recovery_retargeting_with_side_split(
+            iter_records, games_total=iter_games_total,
+        )
+        per_iter_rr_filtered[it] = aggregate_recovery_retargeting_filtered(
+            iter_records, games_total=iter_games_total,
+        )
 
     # Detect mixed configs across iterations (warn, do not skip — spec §6.4).
     iter_configs = {it: (sc or {}).get("config") for it, sc in per_iter_rr.items()}
@@ -5171,7 +5207,7 @@ def analyze(replays: List[dict],
 
     if rr_summary.get("games_total"):
         lines.extend([""])
-        lines.extend(format_recovery_retargeting_report(rr_summary))
+        lines.extend(format_recovery_retargeting_report(rr_summary, rr_split, rr_filtered))
         if rr_summary.get("mixed_config_across_iters"):
             lines.append("")
             lines.append(f"Mixed config across iters covered ({len(distinct_configs)} distinct configs):")
@@ -5184,10 +5220,16 @@ def analyze(replays: List[dict],
                 )
             lines.append(f"WARNING: rates aggregate across config changes; treat with care.")
         summary["recovery_retargeting"] = rr_summary
+        summary["recovery_retargeting_side_split"] = rr_split
+        summary["recovery_retargeting_filtered"]   = rr_filtered
 
-        # CSVs (analyzer §6.6 + §6.7).
+        # CSVs (analyzer §6.6 + §6.7 + Spec 2026-05-13 §5.2).
         rr_by_iter_path = os.path.join(out_dir, _suffixed("recovery_retargeting_by_iter", "csv", suffix))
         write_recovery_retargeting_by_iter_csv(rr_by_iter_path, per_iter_rr)
+        rr_split_path = os.path.join(out_dir, _suffixed("recovery_retargeting_side_split_by_iter", "csv", suffix))
+        write_recovery_retargeting_side_split_csv(
+            rr_split_path, per_iter_rr_split, per_iter_rr_filtered,
+        )
         rr_worst_path = os.path.join(out_dir, _suffixed("recovery_retargeting_worst_cases", "csv", suffix))
         write_recovery_retargeting_worst_cases_csv(
             rr_worst_path, rr_records,
