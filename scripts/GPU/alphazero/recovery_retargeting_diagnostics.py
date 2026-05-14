@@ -844,3 +844,215 @@ def _side_bucket_for_record(record: dict, side: str) -> str:
     if side == winner:
         return "eventual_winner"
     return "state_cap_or_draw"
+
+
+_SIDE_BUCKETS = ("eventual_loser", "eventual_winner", "state_cap_or_draw")
+
+_RATE_KEYS = (
+    "constructive_recovery_rate",
+    "defensive_rate",
+    "structural_connection_rate",
+    "local_drift_rate",
+)
+
+
+def _filter_and_canonicalize(records, *, config):
+    """Apply version + config-mismatch filtering. Mirrors the logic in
+    aggregate_recovery_retargeting_records so all aggregators see the
+    same accepted-record set semantics."""
+    skipped_unknown_version = 0
+    skipped_config_mismatch = 0
+    accepted = []
+    canonical_config = config
+    for rec in records:
+        if rec is None:
+            continue
+        if rec.get("version") != 1:
+            skipped_unknown_version += 1
+            continue
+        cfg = rec.get("config") or {}
+        if canonical_config is None:
+            canonical_config = cfg
+        elif cfg != canonical_config:
+            skipped_config_mismatch += 1
+            continue
+        accepted.append(rec)
+    return accepted, canonical_config, skipped_unknown_version, skipped_config_mismatch
+
+
+def _side_view_for_record_side(record, side):
+    """Build a normalized side-view dict for a single (record, side) pair.
+
+    Returns None if the side did not trigger. The view carries 'side_bucket'
+    plus all per-side stats needed by both _compute_side_rollup and
+    apply_actionable_filter. If derived rates are missing from the underlying
+    side record, they are recomputed from selected_class_counts so the filter
+    never silently sees defaulted zeros.
+
+    Single source of truth for side-view construction — used by
+    _iter_triggered_side_views (filtered/split aggregation) and by the
+    worst-cases CSV writer (per-row annotation).
+    """
+    sr = (record.get("side_records") or {}).get(side) or {}
+    if not sr.get("triggered"):
+        return None
+    view = dict(sr)
+    view["side_bucket"] = _side_bucket_for_record(record, side)
+    if any(k not in view for k in _RATE_KEYS):
+        counts = view.get("selected_class_counts") or {}
+        classified = sum(counts.values())
+        denom = classified if classified > 0 else 1
+        rollup = _bucket_rollup(counts, denom=denom)
+        view["constructive_recovery_rate"] = rollup["constructive_recovery_rate"]
+        view["defensive_rate"]              = rollup["defensive_rate"]
+        view["structural_connection_rate"]  = rollup["structural_connection_rate"]
+        view["local_drift_rate"]            = rollup["local_drift_rate"]
+    return view
+
+
+def _iter_triggered_side_views(records):
+    """Yield one normalized side-view dict per triggered side across all
+    records. Delegates per-side construction to _side_view_for_record_side."""
+    for rec in records:
+        for side in ("red", "black"):
+            view = _side_view_for_record_side(rec, side)
+            if view is not None:
+                yield view
+
+
+def _empty_side_rollup() -> dict:
+    """Stable zero schema for an empty side bucket."""
+    return {
+        "sides": 0,
+        "in_window_own_moves_total": 0,
+        "triggered_own_moves_total": 0,
+        "non_triggered_in_window_moves_total": 0,
+        "missing_signal_moves_total": 0,
+        "severe_collapse_moves_total": 0,
+        "very_diffuse_moves_total": 0,
+        "classified_in_window_moves_total": 0,
+        "selected_class_counts_total": {c: 0 for c in PRIMARY_CLASSES},
+        "selected_class_rates_total":  {c: 0.0 for c in PRIMARY_CLASSES},
+        "trigger_reason_counts_total": {"delta_precursor": 0, "steady_state": 0, "both": 0},
+        "constructive_recovery_rate":  0.0,
+        "defensive_rate":              0.0,
+        "structural_connection_rate":  0.0,
+        "local_drift_rate":            0.0,
+        "mean_search_score_triggered_plies":    None,
+        "min_search_score_triggered_plies":     None,
+        "max_search_score_triggered_plies":     None,
+        "mean_root_top1_share_triggered_plies": None,
+    }
+
+
+def _compute_side_rollup(side_views) -> dict:
+    """Roll up a list of side views into a single bucket summary."""
+    views = list(side_views)
+    if not views:
+        return _empty_side_rollup()
+
+    out = _empty_side_rollup()
+    out["sides"] = len(views)
+
+    count_to_total = {
+        "in_window_own_moves":           "in_window_own_moves_total",
+        "triggered_own_moves":           "triggered_own_moves_total",
+        "non_triggered_in_window_moves": "non_triggered_in_window_moves_total",
+        "missing_signal_moves":          "missing_signal_moves_total",
+        "severe_collapse_moves":         "severe_collapse_moves_total",
+        "very_diffuse_moves":            "very_diffuse_moves_total",
+        "classified_in_window_moves":    "classified_in_window_moves_total",
+    }
+    for v in views:
+        for k, total_k in count_to_total.items():
+            out[total_k] += int(v.get(k, 0) or 0)
+        for cls, c in (v.get("selected_class_counts") or {}).items():
+            if cls in out["selected_class_counts_total"]:
+                out["selected_class_counts_total"][cls] += int(c or 0)
+        for reason, c in (v.get("trigger_reason_counts") or {}).items():
+            if reason in out["trigger_reason_counts_total"]:
+                out["trigger_reason_counts_total"][reason] += int(c or 0)
+
+    classified = out["classified_in_window_moves_total"]
+    denom = classified if classified > 0 else 1
+    out["selected_class_rates_total"] = {
+        cls: round(c / denom, 3)
+        for cls, c in out["selected_class_counts_total"].items()
+    }
+    rollup = _bucket_rollup(out["selected_class_counts_total"], denom=denom)
+    out["constructive_recovery_rate"] = rollup["constructive_recovery_rate"]
+    out["defensive_rate"]              = rollup["defensive_rate"]
+    out["structural_connection_rate"]  = rollup["structural_connection_rate"]
+    out["local_drift_rate"]            = rollup["local_drift_rate"]
+
+    # Score statistics: pooled means with separate denominators per stat
+    # so a side with triggered_own_moves > 0 but a None mean does not
+    # bias the pooled value toward zero.
+    weighted_score = 0.0
+    weighted_top1 = 0.0
+    score_weight_sum = 0
+    top1_weight_sum = 0
+    mins = []
+    maxs = []
+    for v in views:
+        w = int(v.get("triggered_own_moves", 0) or 0)
+        if w <= 0:
+            continue
+        ms = v.get("mean_search_score_triggered_plies")
+        mt = v.get("mean_root_top1_share_triggered_plies")
+        mn = v.get("min_search_score_triggered_plies")
+        mx = v.get("max_search_score_triggered_plies")
+        if ms is not None:
+            weighted_score += float(ms) * w
+            score_weight_sum += w
+        if mt is not None:
+            weighted_top1 += float(mt) * w
+            top1_weight_sum += w
+        if mn is not None:
+            mins.append(float(mn))
+        if mx is not None:
+            maxs.append(float(mx))
+
+    if score_weight_sum > 0:
+        out["mean_search_score_triggered_plies"]    = round(weighted_score / score_weight_sum, 3)
+    if top1_weight_sum > 0:
+        out["mean_root_top1_share_triggered_plies"] = round(weighted_top1  / top1_weight_sum, 3)
+    out["min_search_score_triggered_plies"] = round(min(mins), 3) if mins else None
+    out["max_search_score_triggered_plies"] = round(max(maxs), 3) if maxs else None
+
+    return out
+
+
+def aggregate_recovery_retargeting_with_side_split(
+    records,
+    *,
+    games_total: int,
+    config: Optional[dict] = None,
+) -> dict:
+    """Three-way side-outcome split aggregator. Spec 2026-05-13 §4."""
+    accepted, canonical_config, skipped_version, skipped_config = (
+        _filter_and_canonicalize(records, config=config)
+    )
+    games_triggered = len(accepted)
+    classifier_error_total = sum(int(r.get("classifier_error_count", 0)) for r in accepted)
+
+    by_bucket: Dict[str, list] = {b: [] for b in _SIDE_BUCKETS}
+    for view in _iter_triggered_side_views(accepted):
+        by_bucket[view["side_bucket"]].append(view)
+
+    return {
+        "version": 1,
+        "view": "raw_side_split",
+        "enabled": True,
+        "config": canonical_config or {},
+        "games_total": games_total,
+        "games_triggered": games_triggered,
+        "eventual_loser":     _compute_side_rollup(by_bucket["eventual_loser"]),
+        "eventual_winner":    _compute_side_rollup(by_bucket["eventual_winner"]),
+        "state_cap_or_draw":  _compute_side_rollup(by_bucket["state_cap_or_draw"]),
+        "schema_integrity": {
+            "skipped_unknown_version_count": skipped_version,
+            "skipped_config_mismatch_count": skipped_config,
+            "classifier_error_count_total":  classifier_error_total,
+        },
+    }

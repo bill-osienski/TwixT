@@ -663,6 +663,7 @@ def test_observe_move_disabled_via_config_is_no_op():
 
 from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
     aggregate_recovery_retargeting_records,
+    aggregate_recovery_retargeting_with_side_split,
     _side_bucket_for_record,
 )
 from scripts.GPU.alphazero.recovery_retargeting_diagnostics import PRIMARY_CLASSES
@@ -776,3 +777,282 @@ def test_side_bucket_state_cap_or_draw():
     rec = {"winner": None, "loser": None}
     assert _side_bucket_for_record(rec, "red") == "state_cap_or_draw"
     assert _side_bucket_for_record(rec, "black") == "state_cap_or_draw"
+
+
+def _record_two_sides(
+    *,
+    winner="red",
+    loser_classes=None,
+    winner_classes=None,
+    loser_in_window=20, loser_triggered=10,
+    winner_in_window=10, winner_triggered=4,
+    loser_score_mean=-0.90, winner_score_mean=-0.80,
+):
+    """Record where both sides triggered. Used for split/filter tests."""
+    loser = "black" if winner == "red" else "red"
+    loser_classes = loser_classes or {"redundant_local_reinforcement": 10}
+    winner_classes = winner_classes or {"redundant_local_reinforcement": 4}
+
+    def _side(triggered, in_window, classes, score_mean, top1_mean=0.15, mins=None, maxs=None):
+        counts = {c: 0 for c in PRIMARY_CLASSES}
+        counts.update(classes)
+        classified = sum(counts.values())
+        return {
+            "triggered": True,
+            "in_window_own_moves": in_window,
+            "triggered_own_moves": triggered,
+            "non_triggered_in_window_moves": in_window - triggered,
+            "missing_signal_moves": 0,
+            "severe_collapse_moves": triggered // 2,
+            "very_diffuse_moves": triggered,
+            "trigger_reason_counts": {"delta_precursor": 1, "steady_state": triggered - 1, "both": 0},
+            "classified_in_window_moves": classified,
+            "selected_class_counts": counts,
+            "mean_search_score_triggered_plies": score_mean,
+            "min_search_score_triggered_plies": mins if mins is not None else score_mean - 0.05,
+            "max_search_score_triggered_plies": maxs if maxs is not None else score_mean + 0.05,
+            "mean_root_top1_share_triggered_plies": top1_mean,
+            "classifier_error_count": 0,
+        }
+
+    return {
+        "version": 1,
+        "iteration": 170, "game_idx": 0, "game_id": "game_000",
+        "winner": winner, "loser": loser,
+        "triggered_sides": ["red", "black"],
+        "side_records": {
+            loser: _side(loser_triggered, loser_in_window, loser_classes, loser_score_mean),
+            winner: _side(winner_triggered, winner_in_window, winner_classes, winner_score_mean),
+        },
+        "classifier_error_count": 0,
+        "config": {
+            "collapse_value_threshold": -0.75,
+            "severe_collapse_value_threshold": -0.90,
+            "diffuse_root_top1_threshold": 0.20,
+            "very_diffuse_root_top1_threshold": 0.15,
+            "delta_threshold": 0.50,
+            "delta_max_current_score": -0.30,
+            "alternate_component_min_size": 4,
+            "classify_defense": True,
+        },
+    }
+
+
+def _record_state_cap(triggered_sides=("red", "black"), classes=None, in_window=25, triggered=5, score_mean=-0.95):
+    """Record where the game ended state-cap/draw (winner=None)."""
+    classes = classes or {"redundant_local_reinforcement": 5}
+    counts = {c: 0 for c in PRIMARY_CLASSES}
+    counts.update(classes)
+    classified = sum(counts.values())
+
+    def _side():
+        return {
+            "triggered": True,
+            "in_window_own_moves": in_window,
+            "triggered_own_moves": triggered,
+            "non_triggered_in_window_moves": in_window - triggered,
+            "missing_signal_moves": 0,
+            "severe_collapse_moves": triggered // 2,
+            "very_diffuse_moves": triggered,
+            "trigger_reason_counts": {"delta_precursor": 0, "steady_state": triggered, "both": 0},
+            "classified_in_window_moves": classified,
+            "selected_class_counts": counts,
+            "mean_search_score_triggered_plies": score_mean,
+            "min_search_score_triggered_plies": score_mean - 0.05,
+            "max_search_score_triggered_plies": score_mean + 0.05,
+            "mean_root_top1_share_triggered_plies": 0.15,
+            "classifier_error_count": 0,
+        }
+
+    side_records = {}
+    for s in ("red", "black"):
+        if s in triggered_sides:
+            side_records[s] = _side()
+        else:
+            side_records[s] = {"triggered": False, "classifier_error_count": 0}
+
+    return {
+        "version": 1,
+        "iteration": 170, "game_idx": 0, "game_id": "game_000",
+        "winner": None, "loser": None,
+        "triggered_sides": list(triggered_sides),
+        "side_records": side_records,
+        "classifier_error_count": 0,
+        "config": {
+            "collapse_value_threshold": -0.75,
+            "severe_collapse_value_threshold": -0.90,
+            "diffuse_root_top1_threshold": 0.20,
+            "very_diffuse_root_top1_threshold": 0.15,
+            "delta_threshold": 0.50,
+            "delta_max_current_score": -0.30,
+            "alternate_component_min_size": 4,
+            "classify_defense": True,
+        },
+    }
+
+
+def test_side_split_rollup_recombines_to_pooled_counts():
+    """Spec §6 Test 4. Sum of counts across the three side-split buckets
+    must equal the corresponding totals from the pooled aggregator."""
+    recs = [
+        _record(side="black", in_window=10, triggered=8, classified=10),
+        _record_two_sides(loser_in_window=20, loser_triggered=10, winner_in_window=8, winner_triggered=3),
+        _record_state_cap(in_window=25, triggered=5),
+    ]
+    pooled = aggregate_recovery_retargeting_records(recs, games_total=100)
+    split  = aggregate_recovery_retargeting_with_side_split(recs, games_total=100)
+
+    split_in_window = (
+        split["eventual_loser"]["in_window_own_moves_total"]
+        + split["eventual_winner"]["in_window_own_moves_total"]
+        + split["state_cap_or_draw"]["in_window_own_moves_total"]
+    )
+    split_classified = (
+        split["eventual_loser"]["classified_in_window_moves_total"]
+        + split["eventual_winner"]["classified_in_window_moves_total"]
+        + split["state_cap_or_draw"]["classified_in_window_moves_total"]
+    )
+    assert split_in_window == pooled["in_window_own_moves_total"]
+    assert split_classified == pooled["classified_in_window_moves_total"]
+
+
+def test_bucket_score_aggregation_uses_pooled_weighted_mean():
+    """Spec §6 Test 9. Two records, both with winner=red+loser=black, so both
+    black sides land in eventual_loser. Exercises multi-side aggregation
+    *within* the same bucket — the actual invariant the weighting rule enforces."""
+    rec_long = _record(
+        side="black", in_window=120, triggered=120, classified=120,
+        classes={"redundant_local_reinforcement": 120},
+    )
+    rec_long["side_records"]["black"]["mean_search_score_triggered_plies"]    = -0.95
+    rec_long["side_records"]["black"]["min_search_score_triggered_plies"]     = -0.97
+    rec_long["side_records"]["black"]["max_search_score_triggered_plies"]     = -0.93
+    rec_long["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = 0.10
+
+    rec_short = _record(
+        side="black", in_window=3, triggered=3, classified=3,
+        classes={"redundant_local_reinforcement": 3},
+    )
+    rec_short["side_records"]["black"]["mean_search_score_triggered_plies"]    = -0.40
+    rec_short["side_records"]["black"]["min_search_score_triggered_plies"]     = -0.42
+    rec_short["side_records"]["black"]["max_search_score_triggered_plies"]     = -0.38
+    rec_short["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = 0.30
+    rec_short["game_idx"] = 1
+    rec_short["game_id"]  = "game_001"
+
+    split = aggregate_recovery_retargeting_with_side_split(
+        [rec_long, rec_short], games_total=2,
+    )
+    bucket = split["eventual_loser"]
+    assert bucket["sides"] == 2
+    expected_score = (-0.95 * 120 + -0.40 * 3) / 123
+    expected_top1  = (0.10 * 120 + 0.30 * 3) / 123
+    assert abs(bucket["mean_search_score_triggered_plies"] - round(expected_score, 3)) < 1e-9
+    assert abs(bucket["mean_root_top1_share_triggered_plies"] - round(expected_top1,  3)) < 1e-9
+    assert bucket["min_search_score_triggered_plies"] == -0.97
+    assert bucket["max_search_score_triggered_plies"] == -0.38
+
+
+def test_side_view_for_record_side_matches_iter_triggered_side_views():
+    """Helper invariant: _side_view_for_record_side and _iter_triggered_side_views
+    must produce equivalent views for the same triggered sides."""
+    from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
+        _side_view_for_record_side, _iter_triggered_side_views,
+    )
+    rec = _record_two_sides(winner="red", loser_in_window=20, loser_triggered=10,
+                            winner_in_window=8, winner_triggered=4)
+    iterator_views = list(_iter_triggered_side_views([rec]))
+    helper_views = [
+        _side_view_for_record_side(rec, "red"),
+        _side_view_for_record_side(rec, "black"),
+    ]
+    helper_views = [v for v in helper_views if v is not None]
+    iterator_views.sort(key=lambda v: v["side_bucket"])
+    helper_views.sort(key=lambda v: v["side_bucket"])
+    assert iterator_views == helper_views
+
+
+def test_side_view_derives_rates_when_missing():
+    """_side_view_for_record_side derives the four bucket rates from
+    selected_class_counts when the underlying side record omits them."""
+    from scripts.GPU.alphazero.recovery_retargeting_diagnostics import (
+        _side_view_for_record_side,
+    )
+    rec = _record(side="black", in_window=20, triggered=10, classified=10,
+                  classes={"connects_to_existing_component": 4,
+                           "redundant_local_reinforcement": 6})
+    for k in ("constructive_recovery_rate", "defensive_rate",
+              "structural_connection_rate", "local_drift_rate"):
+        rec["side_records"]["black"].pop(k, None)
+    view = _side_view_for_record_side(rec, "black")
+    assert view is not None
+    assert view["structural_connection_rate"] == 0.4
+    assert view["local_drift_rate"]           == 0.6
+    assert view["constructive_recovery_rate"] == 0.0
+    assert view["defensive_rate"]             == 0.0
+
+
+def test_side_split_schema_for_empty_records():
+    """Empty records list returns a fully-shaped summary with all three
+    buckets present (zero counts, None scores)."""
+    out = aggregate_recovery_retargeting_with_side_split([], games_total=10)
+    assert out["games_total"] == 10
+    assert out["games_triggered"] == 0
+    for bucket in ("eventual_loser", "eventual_winner", "state_cap_or_draw"):
+        b = out[bucket]
+        assert b["sides"] == 0
+        assert b["in_window_own_moves_total"] == 0
+        assert b["mean_search_score_triggered_plies"] is None
+        assert b["constructive_recovery_rate"] == 0.0
+    assert out["schema_integrity"]["classifier_error_count_total"] == 0
+
+
+def test_bucket_score_aggregation_ignores_missing_mean_values():
+    """A side view with triggered_own_moves > 0 but None mean_search_score
+    must NOT contribute weight to the score denominator."""
+    rec_with = _record(
+        side="black", in_window=10, triggered=10, classified=10,
+        classes={"redundant_local_reinforcement": 10},
+    )
+    rec_with["side_records"]["black"]["mean_search_score_triggered_plies"]    = -0.90
+    rec_with["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = 0.10
+
+    rec_without = _record(
+        side="black", in_window=10, triggered=10, classified=10,
+        classes={"redundant_local_reinforcement": 10},
+    )
+    rec_without["game_idx"] = 1
+    rec_without["game_id"]  = "game_001"
+    rec_without["side_records"]["black"]["mean_search_score_triggered_plies"]    = None
+    rec_without["side_records"]["black"]["mean_root_top1_share_triggered_plies"] = None
+    rec_without["side_records"]["black"]["min_search_score_triggered_plies"]     = None
+    rec_without["side_records"]["black"]["max_search_score_triggered_plies"]     = None
+
+    split = aggregate_recovery_retargeting_with_side_split(
+        [rec_with, rec_without], games_total=2,
+    )
+    bucket = split["eventual_loser"]
+    assert bucket["sides"] == 2
+    assert bucket["mean_search_score_triggered_plies"] == -0.9
+    assert bucket["mean_root_top1_share_triggered_plies"] == 0.1
+
+
+def test_split_schema_integrity_matches_existing_pooled_behavior():
+    """Parity test: _filter_and_canonicalize must reproduce the existing
+    aggregator's accepted-record / skipped-counts behavior on the same inputs."""
+    a = _record(side="black")
+    b = _record(side="black")
+    b["version"] = 99
+    c = _record(side="black")
+    c["config"] = dict(c["config"])
+    c["config"]["collapse_value_threshold"] = -0.50
+
+    pooled = aggregate_recovery_retargeting_records([a, b, c], games_total=10)
+    split  = aggregate_recovery_retargeting_with_side_split([a, b, c], games_total=10)
+
+    assert pooled["games_triggered"] == split["games_triggered"]
+    p_si = pooled["schema_integrity"]
+    s_si = split["schema_integrity"]
+    assert p_si["skipped_unknown_version_count"] == s_si["skipped_unknown_version_count"]
+    assert p_si["skipped_config_mismatch_count"] == s_si["skipped_config_mismatch_count"]
+    assert p_si["classifier_error_count_total"]  == s_si["classifier_error_count_total"]
