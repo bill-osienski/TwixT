@@ -169,3 +169,80 @@ def classify_adjudication_coverage(
         return "would_have_passed"
     # Unknown string value — defensive fallback.
     return "missing_signal"
+
+
+GAME_LENGTH_BUCKETS = ("short", "mid", "long")
+
+
+def game_length_bucket(n_moves: int) -> str:
+    """§3.3 partition: short (<=100), mid (101-200), long (>200)."""
+    n = int(n_moves or 0)
+    if n <= 100:
+        return "short"
+    if n <= 200:
+        return "mid"
+    return "long"
+
+
+def compute_resign_gate_breakdown(
+    record: dict,
+    diagnostics: list,
+    *,
+    losing_side: str,
+    resign_threshold: float,
+    resign_min_ply: int,
+    resign_min_visits: int,
+    resign_min_top1_share: float,
+) -> dict:
+    """Spec §3.3 resign-gate breakdown for the losing side, looking at
+    its last 40 plies (plies where side_to_move == losing_side).
+
+    Returns:
+      value_hits           : count of own-plies where q_value < resign_threshold
+      eligible_hits        : count of value_hits also satisfying
+                             ply >= resign_min_ply AND visits >= resign_min_visits
+      blocked_by_top1      : count of eligible_hits where top1_share <
+                             resign_min_top1_share
+      final_eval_below_thr : at the last own-ply for the loser,
+                             q_value < resign_threshold
+      top1_block_rate_over_value_hits     : blocked_by_top1 / max(value_hits, 1)
+                                            (returns 0.0 when value_hits == 0)
+      top1_block_rate_over_eligible_hits  : blocked_by_top1 / max(eligible_hits, 1)
+                                            (returns 0.0 when eligible_hits == 0)
+    """
+    own = [e for e in (diagnostics or []) if e.get("side_to_move") == losing_side]
+    own = own[-40:]  # last 40 own-plies
+
+    value_hits = 0
+    eligible_hits = 0
+    blocked_by_top1 = 0
+    for e in own:
+        rs = e.get("root_summary") or {}
+        q = rs.get("q_value")
+        visits = int(rs.get("visit_count") or 0)
+        top1 = e.get("root_top1_share")
+        ply = int(e.get("ply") or 0)
+        if q is None or q >= resign_threshold:
+            continue
+        value_hits += 1
+        if ply >= resign_min_ply and visits >= resign_min_visits:
+            eligible_hits += 1
+            if top1 is not None and float(top1) < resign_min_top1_share:
+                blocked_by_top1 += 1
+
+    final_eval_below_thr = bool(
+        own and (own[-1].get("root_summary") or {}).get("q_value") is not None
+        and (own[-1]["root_summary"]["q_value"] < resign_threshold)
+    )
+
+    def _rate(num, denom):
+        return float(num) / float(denom) if denom > 0 else 0.0
+
+    return {
+        "value_hits": value_hits,
+        "eligible_hits": eligible_hits,
+        "blocked_by_top1": blocked_by_top1,
+        "final_eval_below_thr": final_eval_below_thr,
+        "top1_block_rate_over_value_hits": _rate(blocked_by_top1, value_hits),
+        "top1_block_rate_over_eligible_hits": _rate(blocked_by_top1, eligible_hits),
+    }

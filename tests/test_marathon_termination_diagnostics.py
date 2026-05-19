@@ -11,7 +11,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from scripts.GPU.alphazero.marathon_termination_diagnostics import (
     detect_no_progress_windows,
     classify_adjudication_coverage,
+    compute_resign_gate_breakdown,
+    game_length_bucket,
     ADJUDICATION_GATE_BUCKETS,
+    GAME_LENGTH_BUCKETS,
     NO_PROGRESS_WINDOW_SIZE,
 )
 
@@ -199,3 +202,97 @@ def test_adjudication_gate_buckets_export_matches_spec_taxonomy():
         "missing_signal",
         "would_have_passed",
     }
+
+
+def _losing_side_ply(*, search_score: float, top1_share: float,
+                     visit_count: int = 250, ply: int = 200,
+                     side_to_move: str = "black"):
+    """A goal_completion_diagnostics entry suitable for resign-gate scoring.
+    'side_to_move' here is the LOSING side's own-move; the helper uses
+    the convention that root_summary.q_value is the score from the
+    side-to-move's perspective."""
+    return {
+        "ply": ply, "side_to_move": side_to_move,
+        "root_summary": {
+            "q_value": search_score,
+            "visit_count": visit_count,
+        },
+        "root_top1_share": top1_share,
+    }
+
+
+def _resign_thresholds():
+    """Production defaults from the 220-229 launch command (memory entry)."""
+    return dict(
+        resign_threshold=-0.945,
+        resign_min_ply=80,
+        resign_min_visits=200,
+        resign_min_top1_share=0.102,
+    )
+
+
+def test_resign_gate_breakdown_separates_value_hits_from_eligible_hits():
+    """Spec §7 test 15 + 16. Game where value crosses threshold often
+    but visits/top1 sometimes fail: value_hits >= eligible_hits >= blocked_by_top1."""
+    diag = [
+        # Hit 1: value crosses, all gates pass except top1 (eligible, blocked by top1).
+        _losing_side_ply(search_score=-0.95, top1_share=0.05, visit_count=300, ply=200),
+        # Hit 2: value crosses, all gates pass (eligible, NOT blocked).
+        _losing_side_ply(search_score=-0.97, top1_share=0.20, visit_count=300, ply=210),
+        # Hit 3: value crosses but visits fail (value_hit yes, eligible no).
+        _losing_side_ply(search_score=-0.96, top1_share=0.20, visit_count=100, ply=220),
+        # Non-hit: value below threshold doesn't qualify (no value_hit).
+        _losing_side_ply(search_score=-0.50, top1_share=0.20, visit_count=300, ply=230),
+    ]
+    record = {"winner": "red", "n_moves": 250}  # losing side: black
+    out = compute_resign_gate_breakdown(record, diag, losing_side="black", **_resign_thresholds())
+    assert out["value_hits"] == 3
+    assert out["eligible_hits"] == 2          # hits 1 and 2 (hit 3 fails visits)
+    assert out["blocked_by_top1"] == 1        # hit 1 only
+    # over_value_hits = 1/3, over_eligible_hits = 1/2.
+    assert abs(out["top1_block_rate_over_value_hits"] - 1/3) < 1e-9
+    assert abs(out["top1_block_rate_over_eligible_hits"] - 1/2) < 1e-9
+
+
+def test_resign_gate_breakdown_empty_when_no_value_hits():
+    """Game where the loser never crossed resign_threshold → all counts 0,
+    rates 0.0 (not NaN)."""
+    diag = [
+        _losing_side_ply(search_score=-0.50, top1_share=0.20, ply=200),
+    ]
+    record = {"winner": "red", "n_moves": 250}
+    out = compute_resign_gate_breakdown(record, diag, losing_side="black", **_resign_thresholds())
+    assert out["value_hits"] == 0
+    assert out["eligible_hits"] == 0
+    assert out["blocked_by_top1"] == 0
+    assert out["top1_block_rate_over_value_hits"] == 0.0
+    assert out["top1_block_rate_over_eligible_hits"] == 0.0
+
+
+def test_game_length_bucket_partitions():
+    """Spec §3.3 game-length partition: short / mid / long."""
+    assert game_length_bucket(50) == "short"
+    assert game_length_bucket(100) == "short"
+    assert game_length_bucket(101) == "mid"
+    assert game_length_bucket(200) == "mid"
+    assert game_length_bucket(201) == "long"
+    assert game_length_bucket(280) == "long"
+    assert set(GAME_LENGTH_BUCKETS) == {"short", "mid", "long"}
+
+
+def test_resign_separates_no_value_signal_from_blocked_by_top1():
+    """Spec §7 test 16. A game with no value hits is distinguishable from
+    a game with high blocked_by_top1 rate."""
+    record = {"winner": "red", "n_moves": 250}
+    diag_no_value = [_losing_side_ply(search_score=-0.50, top1_share=0.20)]
+    diag_high_block = [
+        _losing_side_ply(search_score=-0.97, top1_share=0.05, visit_count=300, ply=200),
+        _losing_side_ply(search_score=-0.97, top1_share=0.05, visit_count=300, ply=210),
+    ]
+    out_no_value = compute_resign_gate_breakdown(record, diag_no_value, losing_side="black", **_resign_thresholds())
+    out_high_block = compute_resign_gate_breakdown(record, diag_high_block, losing_side="black", **_resign_thresholds())
+    # Distinguishable: no-value has zero value_hits; high-block has positive value_hits + positive blocked_by_top1.
+    assert out_no_value["value_hits"] == 0
+    assert out_no_value["blocked_by_top1"] == 0
+    assert out_high_block["value_hits"] == 2
+    assert out_high_block["blocked_by_top1"] == 2
