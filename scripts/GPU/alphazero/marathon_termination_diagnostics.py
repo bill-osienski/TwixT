@@ -310,3 +310,150 @@ def value_uncertain_guard(
         _sign_flips(last_red) >= sign_flip_min
         or _sign_flips(last_black) >= sign_flip_min
     )
+
+
+def _losing_side(record: dict) -> Optional[str]:
+    winner = record.get("winner")
+    if winner == "red":
+        return "black"
+    if winner == "black":
+        return "red"
+    return None
+
+
+def aggregate_marathon_termination(
+    games: Iterable[Tuple[dict, dict, list]],
+    *,
+    resign_threshold: float,
+    resign_min_ply: int,
+    resign_min_visits: int,
+    resign_min_top1_share: float,
+) -> dict:
+    """Aggregate per-game diagnostics into per-iter and range tables.
+
+    games: iterable of (record, meta, diagnostics) triples.
+
+    Returns the structure consumed by write_marathon_termination_csv +
+    format_marathon_termination_report (see spec §4.2/§4.3).
+    """
+    def _empty_iter_row() -> dict:
+        return {
+            "games_total": 0,
+            "state_cap_280_games": 0,
+            "no_progress_window_counts": [],  # per-game ints
+            "adjudication_gate_counts": {b: 0 for b in ADJUDICATION_GATE_BUCKETS},
+            "resign_top1_block_over_value_hits": {b: [] for b in GAME_LENGTH_BUCKETS},
+            "resign_top1_block_over_eligible_hits": {b: [] for b in GAME_LENGTH_BUCKETS},
+            # Observability counters (spec §3.1 follow-up — surface coverage
+            # gaps so a zero no-progress rate is not confused with a
+            # no-data situation).
+            "diagnostics_entries_red": 0,
+            "diagnostics_entries_black": 0,
+            "no_progress_observable_games_red": 0,    # games with >=15 red own-entries
+            "no_progress_observable_games_black": 0,  # games with >=15 black own-entries
+        }
+
+    per_iter: dict = defaultdict(_empty_iter_row)
+
+    for record, meta, diagnostics in games:
+        it = record.get("iteration")
+        row = per_iter[it]
+        row["games_total"] += 1
+
+        # Observability: count diagnostics entries by side per game.
+        red_entries = sum(1 for e in (diagnostics or []) if e.get("side_to_move") == "red")
+        black_entries = sum(1 for e in (diagnostics or []) if e.get("side_to_move") == "black")
+        row["diagnostics_entries_red"] += red_entries
+        row["diagnostics_entries_black"] += black_entries
+        if red_entries >= NO_PROGRESS_WINDOW_SIZE:
+            row["no_progress_observable_games_red"] += 1
+        if black_entries >= NO_PROGRESS_WINDOW_SIZE:
+            row["no_progress_observable_games_black"] += 1
+
+        # §3.1 — no-progress window count summed across both sides.
+        npw = (
+            detect_no_progress_windows(diagnostics, side="red")
+            + detect_no_progress_windows(diagnostics, side="black")
+        )
+        row["no_progress_window_counts"].append(npw)
+
+        # §3.2 — only for state_cap 280-ply games.
+        n_moves = int(record.get("n_moves") or 0)
+        if record.get("reason") == "state_cap" and n_moves == 280:
+            row["state_cap_280_games"] += 1
+            bucket = classify_adjudication_coverage(record, meta, diagnostics)
+            if bucket:
+                row["adjudication_gate_counts"][bucket] += 1
+
+        # §3.3 — resign-gate breakdown (only when winner is known).
+        loser = _losing_side(record)
+        if loser is not None:
+            br = compute_resign_gate_breakdown(
+                record, diagnostics,
+                losing_side=loser,
+                resign_threshold=resign_threshold,
+                resign_min_ply=resign_min_ply,
+                resign_min_visits=resign_min_visits,
+                resign_min_top1_share=resign_min_top1_share,
+            )
+            len_bucket = game_length_bucket(record.get("n_moves") or 0)
+            row["resign_top1_block_over_value_hits"][len_bucket].append(
+                br["top1_block_rate_over_value_hits"]
+            )
+            row["resign_top1_block_over_eligible_hits"][len_bucket].append(
+                br["top1_block_rate_over_eligible_hits"]
+            )
+
+    # Compute derived per-iter values.
+    def _finalize(row: dict) -> dict:
+        npw_list = row["no_progress_window_counts"]
+        mean_npw = sum(npw_list) / len(npw_list) if npw_list else 0.0
+        finalized = {
+            "games_total": row["games_total"],
+            "state_cap_280_games": row["state_cap_280_games"],
+            "mean_no_progress_windows_per_game": round(mean_npw, 3),
+            "adjudication_gate_counts": dict(row["adjudication_gate_counts"]),
+            "mean_resign_top1_block_rate_over_value_hits": {
+                b: round(sum(vs) / len(vs), 3) if vs else 0.0
+                for b, vs in row["resign_top1_block_over_value_hits"].items()
+            },
+            "mean_resign_top1_block_rate_over_eligible_hits": {
+                b: round(sum(vs) / len(vs), 3) if vs else 0.0
+                for b, vs in row["resign_top1_block_over_eligible_hits"].items()
+            },
+            "observability": {
+                "diagnostics_entries_red":   row["diagnostics_entries_red"],
+                "diagnostics_entries_black": row["diagnostics_entries_black"],
+                "no_progress_observable_games_red":   row["no_progress_observable_games_red"],
+                "no_progress_observable_games_black": row["no_progress_observable_games_black"],
+            },
+        }
+        return finalized
+
+    per_iter_final = {it: _finalize(row) for it, row in per_iter.items()}
+
+    # Range totals.
+    range_row = _empty_iter_row()
+    for it, row in per_iter.items():
+        range_row["games_total"] += row["games_total"]
+        range_row["state_cap_280_games"] += row["state_cap_280_games"]
+        range_row["no_progress_window_counts"].extend(row["no_progress_window_counts"])
+        for b, c in row["adjudication_gate_counts"].items():
+            range_row["adjudication_gate_counts"][b] += c
+        for b in GAME_LENGTH_BUCKETS:
+            range_row["resign_top1_block_over_value_hits"][b].extend(
+                row["resign_top1_block_over_value_hits"][b]
+            )
+            range_row["resign_top1_block_over_eligible_hits"][b].extend(
+                row["resign_top1_block_over_eligible_hits"][b]
+            )
+        range_row["diagnostics_entries_red"]   += row["diagnostics_entries_red"]
+        range_row["diagnostics_entries_black"] += row["diagnostics_entries_black"]
+        range_row["no_progress_observable_games_red"]   += row["no_progress_observable_games_red"]
+        range_row["no_progress_observable_games_black"] += row["no_progress_observable_games_black"]
+    range_final = _finalize(range_row)
+
+    return {
+        "per_iter": per_iter_final,
+        "range_total": range_final,
+    }

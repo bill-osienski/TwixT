@@ -3718,6 +3718,134 @@ def format_long_tail_bucket_report(agg: dict, range_label: str = "") -> list:
     return lines
 
 
+def write_marathon_termination_csv(out_path: str, agg: dict) -> str:
+    """Spec marathon-termination §4.2. Long format; one row per iter +
+    one range-total row (iteration=-1)."""
+    from scripts.GPU.alphazero.marathon_termination_diagnostics import (
+        ADJUDICATION_GATE_BUCKETS, GAME_LENGTH_BUCKETS,
+    )
+    fields = [
+        "iteration", "games_total", "state_cap_280_games",
+        "mean_no_progress_windows_per_game",
+    ] + [f"adjudication_gate_{b}" for b in ADJUDICATION_GATE_BUCKETS] + [
+        f"mean_resign_top1_block_rate_over_value_hits_{b}" for b in GAME_LENGTH_BUCKETS
+    ] + [
+        f"mean_resign_top1_block_rate_over_eligible_hits_{b}" for b in GAME_LENGTH_BUCKETS
+    ] + [
+        # Observability counters: surface coverage gaps so zero no-progress
+        # rates can be distinguished from missing data.
+        "diagnostics_entries_red",
+        "diagnostics_entries_black",
+        "no_progress_observable_games_red",
+        "no_progress_observable_games_black",
+    ]
+
+    def _row_dict(iteration, row):
+        d = {
+            "iteration": iteration,
+            "games_total": row["games_total"],
+            "state_cap_280_games": row["state_cap_280_games"],
+            "mean_no_progress_windows_per_game": row["mean_no_progress_windows_per_game"],
+        }
+        for b in ADJUDICATION_GATE_BUCKETS:
+            d[f"adjudication_gate_{b}"] = row["adjudication_gate_counts"][b]
+        for b in GAME_LENGTH_BUCKETS:
+            d[f"mean_resign_top1_block_rate_over_value_hits_{b}"] = \
+                row["mean_resign_top1_block_rate_over_value_hits"][b]
+            d[f"mean_resign_top1_block_rate_over_eligible_hits_{b}"] = \
+                row["mean_resign_top1_block_rate_over_eligible_hits"][b]
+        obs = row["observability"]
+        d["diagnostics_entries_red"]   = obs["diagnostics_entries_red"]
+        d["diagnostics_entries_black"] = obs["diagnostics_entries_black"]
+        d["no_progress_observable_games_red"]   = obs["no_progress_observable_games_red"]
+        d["no_progress_observable_games_black"] = obs["no_progress_observable_games_black"]
+        return d
+
+    with open(out_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for it in sorted(agg["per_iter"].keys()):
+            w.writerow(_row_dict(it, agg["per_iter"][it]))
+        w.writerow(_row_dict(-1, agg["range_total"]))
+    return out_path
+
+
+def format_marathon_termination_report(agg: dict, range_label: str = "") -> list:
+    """Spec marathon-termination §4.3. Report section + decision-rule
+    suggestion line."""
+    from scripts.GPU.alphazero.marathon_termination_diagnostics import (
+        ADJUDICATION_GATE_BUCKETS, GAME_LENGTH_BUCKETS,
+    )
+    rt = agg["range_total"]
+    suffix = f" ({range_label})" if range_label else ""
+    lines = []
+    lines.append(f"Marathon termination diagnostics{suffix}")
+    lines.append("=" * (32 + len(suffix)))
+    lines.append(f"state_cap 280-ply games: {rt['state_cap_280_games']}")
+    lines.append("  adjudication gate blocked by:")
+    for b in ADJUDICATION_GATE_BUCKETS:
+        lines.append(f"    {b+':':28s} {rt['adjudication_gate_counts'][b]}")
+    lines.append("")
+    lines.append(f"No-progress windows (length {15} own-moves, structural-only):")
+    lines.append(f"  mean per game: {rt['mean_no_progress_windows_per_game']:.2f}")
+    obs = rt["observability"]
+    games_total = rt["games_total"] or 1
+    red_obs_pct = obs["no_progress_observable_games_red"] / games_total * 100
+    black_obs_pct = obs["no_progress_observable_games_black"] / games_total * 100
+    lines.append(
+        f"  observability: red entries={obs['diagnostics_entries_red']}, "
+        f"black entries={obs['diagnostics_entries_black']}, "
+        f"games with >=15 own-entries: red {red_obs_pct:.1f}% / black {black_obs_pct:.1f}%"
+    )
+    if red_obs_pct < 50 or black_obs_pct < 50:
+        lines.append(
+            "  WARNING: observability < 50% for at least one side — "
+            "no-progress rates may be undercounted (diagnostics list may be "
+            "capped or biased toward winner-side / closeout-scoped plies)."
+        )
+    lines.append("")
+    lines.append("Resign top1-gate block rate (losing-side, last 40 plies):")
+    lines.append("  over value_hits:")
+    for b in GAME_LENGTH_BUCKETS:
+        v = rt["mean_resign_top1_block_rate_over_value_hits"][b]
+        lines.append(f"    {b+' games:':14s} {v*100:>5.1f}%")
+    lines.append("  over eligible_hits:")
+    for b in GAME_LENGTH_BUCKETS:
+        v = rt["mean_resign_top1_block_rate_over_eligible_hits"][b]
+        lines.append(f"    {b+' games:':14s} {v*100:>5.1f}%")
+    lines.append("")
+    lines.append(f"Suggested termination action: {_marathon_termination_decision(rt)}")
+    return lines
+
+
+def _marathon_termination_decision(rt: dict) -> str:
+    """Spec §5 decision rule applied to the range-total row.
+    Returns a single short suggestion string."""
+    gate = rt["adjudication_gate_counts"]
+    total_state_cap = rt["state_cap_280_games"]
+    long_eligible = rt["mean_resign_top1_block_rate_over_eligible_hits"]["long"]
+    short_eligible = rt["mean_resign_top1_block_rate_over_eligible_hits"]["short"]
+
+    if total_state_cap > 0:
+        share_value = gate["value_below_threshold"] / total_state_cap
+        share_top1 = gate["min_top1_share"] / total_state_cap
+        share_visits = gate["min_visits"] / total_state_cap
+        if share_value > 0.50:
+            return "do not terminate; consider lowering adjudicate_threshold for very late plies only"
+        if share_top1 > 0.50:
+            return "relax --adjudicate-min-top1-share in late-game tier (>=260 ply)"
+        if share_visits > 0.50:
+            return "investigate MCTS budget (visits below min at relevant plies) — not adjudication"
+
+    if short_eligible > 0 and long_eligible > 2 * short_eligible:
+        return "relax --resign-min-top1-share late-game (>=200 ply) — top1 gating too strict on hopeless positions"
+
+    if rt["mean_no_progress_windows_per_game"] > 2.0:
+        return "candidate: early state-cap on K=2 consecutive no-progress windows (default-off; treatment requires explicit user approval per spec §5)"
+
+    return "no dominant remedy — hand-review 5-10 representative cases before another knob change"
+
+
 def write_goal_completion_td_breakdown_csv(path: str, breakdown: dict) -> None:
     """Write one row per td_before bucket. Spec 2026-05-10 §3.3."""
     fields = [
@@ -5069,6 +5197,33 @@ def analyze(replays: List[dict],
     # initialized; we stash range_label for the renderer there.
     _long_tail_range_label = suffix.lstrip("_") if suffix else ""
 
+    # Spec marathon-termination §4 — diagnostics CSV + report section.
+    from scripts.GPU.alphazero.marathon_termination_diagnostics import (
+        aggregate_marathon_termination,
+    )
+    marathon_triples = [
+        (r.get("goal_completion_record"),
+         r.get("meta") or {},
+         r.get("goal_completion_diagnostics") or [])
+        for r in (replays or [])
+        if isinstance(r, dict) and r.get("goal_completion_record")
+    ]
+    # Resign thresholds for the breakdown come from launch-args; falls back
+    # to the production defaults from the 220-229 launch command.
+    marathon_agg = aggregate_marathon_termination(
+        marathon_triples,
+        resign_threshold=getattr(args, "resign_threshold", -0.945) if args else -0.945,
+        resign_min_ply=getattr(args, "resign_min_ply", 80) if args else 80,
+        resign_min_visits=getattr(args, "resign_min_visits", 200) if args else 200,
+        resign_min_top1_share=getattr(args, "resign_min_top1_share", 0.102) if args else 0.102,
+    )
+    write_marathon_termination_csv(
+        os.path.join(out_dir, _suffixed("marathon_termination_by_iter", "csv", suffix)),
+        marathon_agg,
+    )
+    summary["marathon_termination"] = marathon_agg
+    _marathon_range_label = suffix.lstrip("_") if suffix else ""
+
     # Spec 2026-05-10 §3.3 — td_closeout breakdown CSV. Always emitted
     # so downstream tooling has a stable filename; empty buckets render as
     # zero rows.
@@ -5233,6 +5388,10 @@ def analyze(replays: List[dict],
     if long_tail_lines:
         lines.append("")
         lines.extend(long_tail_lines)
+    marathon_lines = format_marathon_termination_report(marathon_agg, range_label=_marathon_range_label)
+    if marathon_lines:
+        lines.append("")
+        lines.extend(marathon_lines)
     lines.extend(format_conversion_training_trend_report(conversion_training_by_iter))
     lines.extend(format_recovery_or_extreme_closeout_drift_report(recovery_by_iter))
     # Spec 3 Fix 1 §1.2 — closeout td=1 visit forcing telemetry summary.

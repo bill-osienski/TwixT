@@ -347,3 +347,67 @@ def test_value_uncertain_guard_allows_termination_when_stable_losing():
             "root_summary": {"q_value": score},
         })
     assert value_uncertain_guard(diagnostics) is False
+
+
+from scripts.GPU.alphazero.marathon_termination_diagnostics import (
+    aggregate_marathon_termination,
+)
+
+
+def _per_game(iteration, game_idx, *, reason="win", n_moves=80, winner="red",
+              adj_block=None, diagnostics=None):
+    record = {
+        "iteration": iteration, "game_idx": game_idx,
+        "winner": winner, "reason": reason, "n_moves": n_moves,
+        "first_total_goal_distance": 2,
+        "winner_moves_with_dominant_unavailable": 0,
+        "conversion_delay_plies": 0,
+    }
+    meta = {"reason": reason, "n_moves": n_moves}
+    if adj_block is not None:
+        meta["adjudication_block_reason"] = adj_block
+    return record, meta, (diagnostics or [])
+
+
+def test_aggregate_marathon_termination_per_iter_and_range_totals():
+    """Spec §7 test 20. 3 games across 2 iters → correct per-iter rows + range-total row."""
+    games = [
+        _per_game(220, 0, reason="state_cap", n_moves=280, winner=None, adj_block="top1"),
+        _per_game(220, 1, reason="state_cap", n_moves=280, winner=None, adj_block="threshold"),
+        _per_game(221, 0, reason="state_cap", n_moves=280, winner=None, adj_block="top1"),
+    ]
+    resign_cfg = dict(
+        resign_threshold=-0.945, resign_min_ply=80,
+        resign_min_visits=200, resign_min_top1_share=0.102,
+    )
+    out = aggregate_marathon_termination(games, **resign_cfg)
+    assert out["per_iter"][220]["state_cap_280_games"] == 2
+    assert out["per_iter"][221]["state_cap_280_games"] == 1
+    assert out["per_iter"][220]["adjudication_gate_counts"]["min_top1_share"] == 1
+    assert out["per_iter"][220]["adjudication_gate_counts"]["value_below_threshold"] == 1
+    assert out["per_iter"][221]["adjudication_gate_counts"]["min_top1_share"] == 1
+    assert out["range_total"]["state_cap_280_games"] == 3
+    assert out["range_total"]["adjudication_gate_counts"]["min_top1_share"] == 2
+    assert out["range_total"]["adjudication_gate_counts"]["value_below_threshold"] == 1
+
+
+def test_aggregate_marathon_termination_no_progress_window_mean():
+    """Spec §3.4. Per-iter mean of detected no-progress windows across games."""
+    games = [
+        _per_game(220, 0, reason="win", n_moves=80, winner="red",
+                  diagnostics=[]),
+        _per_game(220, 1, reason="win", n_moves=80, winner="red",
+                  diagnostics=[
+                      {"ply": p, "side_to_move": "red" if i % 2 == 0 else "black",
+                       "selected_move_classification": {"primary_class": "redundant_reinforcement"}}
+                      for i, p in enumerate(range(50, 80))
+                  ]),
+    ]
+    resign_cfg = dict(
+        resign_threshold=-0.945, resign_min_ply=80,
+        resign_min_visits=200, resign_min_top1_share=0.102,
+    )
+    out = aggregate_marathon_termination(games, **resign_cfg)
+    # Iter 220 has two games; one has 0 windows, the other has at least one
+    # 15-window run on one side. Mean across games > 0.
+    assert out["per_iter"][220]["mean_no_progress_windows_per_game"] > 0.0
