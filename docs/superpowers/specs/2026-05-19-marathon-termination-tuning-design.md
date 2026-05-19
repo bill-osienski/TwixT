@@ -206,16 +206,21 @@ iteration,
 games_total,
 state_cap_280_games,
 mean_no_progress_windows_per_game,
-adjudication_gate_blocked_by_min_visits,
-adjudication_gate_blocked_by_min_top1_share,
-adjudication_gate_blocked_by_value_below_threshold,
-adjudication_gate_never_blocked,
-mean_resign_top1_block_rate_short_games,
-mean_resign_top1_block_rate_mid_games,
-mean_resign_top1_block_rate_long_games
+adjudication_gate_not_attempted,
+adjudication_gate_value_below_threshold,
+adjudication_gate_min_top1_share,
+adjudication_gate_min_visits,
+adjudication_gate_missing_signal,
+adjudication_gate_would_have_passed,
+mean_resign_top1_block_rate_over_value_hits_short,
+mean_resign_top1_block_rate_over_value_hits_mid,
+mean_resign_top1_block_rate_over_value_hits_long,
+mean_resign_top1_block_rate_over_eligible_hits_short,
+mean_resign_top1_block_rate_over_eligible_hits_mid,
+mean_resign_top1_block_rate_over_eligible_hits_long
 ```
 
-Plus one range-total row with `iteration = -1` (matching the long-tail-buckets CSV convention).
+Column names match the §3.2 adjudication taxonomy exactly (one column per bucket, no aliases). Resign columns expose BOTH derived rates from §3.3 per game-length partition. Plus one range-total row with `iteration = -1` (matching the long-tail-buckets CSV convention).
 
 ### 4.3 Report section "Marathon termination diagnostics"
 
@@ -288,7 +293,11 @@ The guard is enforced at the termination call-site, not the diagnostic call-site
 
 ## 6. Implementation order
 
-0. **Pre-check (Task 0)**: confirm whether per-ply adjudication-block reasons are already persisted in the existing `adjudication` sidecar block or per-game record (§3.2). If absent, add a minimal self-play telemetry hook (one append per adjudication attempt: the gate that blocked) **before** any analyzer-side work. This is the only allowed self-play-side change in this spec. Until Task 0 resolves, §3.2 numbers will be partially observable; document the partial-observability state explicitly in any pre-Task-0 report.
+0. **Pre-check (Task 0)**: confirm whether per-ply adjudication-block reasons are already persisted in the existing `adjudication` sidecar block or per-game record (§3.2). Task 0 MUST produce a definitive answer with one of two outcomes:
+   - **A.** Existing records carry per-attempt gate-block reasons → analyzer-only implementation proceeds (Tasks 2-7).
+   - **B.** Existing records are not enough → add a minimal self-play telemetry hook (one append per adjudication attempt: the gate that blocked) **before** any analyzer-side work. This is the only allowed self-play-side change in this spec.
+
+   Do NOT let the adjudication coverage report silently infer missing gates if the per-attempt data isn't actually persisted. If outcome B applies and the hook ships, the §3.2 numbers will only be meaningful for training runs done AFTER the hook lands; pre-hook ranges should report "partial observability — gate-block reasons unavailable in this range" explicitly.
 1. **Rollback the two failed experiments** in the next training-launch command. No code change. Update memory: both should be flagged as "tried and reverted" to prevent re-attempts under a different framing.
 2. New module `scripts/GPU/alphazero/marathon_termination_diagnostics.py` with four pure-function diagnostics from §3 + unit tests. The opponent-block helper (§3.1) MUST be imported from / share a helper with `recovery_retargeting_diagnostics.classify_move` to prevent definitional drift.
 3. Hook the diagnostics into the analyzer's per-game pass (reads `goal_completion_record` and `goal_completion_diagnostics`, no self-play change beyond Task 0). Sidecar fields and CSV-writer.
