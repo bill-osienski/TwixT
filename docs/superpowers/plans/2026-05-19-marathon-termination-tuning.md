@@ -31,7 +31,21 @@ The opponent-block helper in `marathon_termination_diagnostics.py` MUST import /
 - All public functions use keyword-only arguments after the first positional.
 - Adjudication taxonomy stable values: `not_attempted`, `value_below_threshold`, `min_top1_share`, `min_visits`, `missing_signal`, `would_have_passed`.
 - Game-length partition: `short` (n_moves ≤ 100), `mid` (100 < n_moves ≤ 200), `long` (n_moves > 200).
-- Window size for no-progress detector: N=15 own-moves.
+- Window size for no-progress detector: N=15 own-moves; the detector counts **non-overlapping** 15-window chunks inside any stagnant run (a 30-move run → 2 windows; a 45-move run → 3). This matches the spec's K=2-consecutive-windows termination logic; an "episode count" (1 per stale run) would not.
+
+### Range / iteration naming convention
+
+Four overlapping range concepts exist; pin them up-front so CSV suffixes and report content don't drift:
+
+| Concept | Where it lives | Example |
+|---|---|---|
+| **User-facing block name** | filename suffix, Replay staging dir, memory notes, this plan's prose | `220-229` |
+| **Analyzer `iteration_min..iteration_max`** | first/last `meta.iteration` value seen in the staged JSONs; appears in the report's "Iteration range:" line | `219..228` (one-off because staging includes `iter_0219_*` from the previous block's tail) |
+| **Checkpoint resume label** | `--resume model_iter_0XXX.safetensors` | `model_iter_0219` |
+| **Per-game JSON `meta.iteration`** | actual training iteration produced by self-play | `220, 221, ..., 228` (iter 229 is training-only tail; no game files) |
+
+**Rule:** range labels in filenames + memory notes follow the **user-facing block name** (e.g., `220-229`) even though the analyzer's iteration_min/iteration_max may read `219..228`. The aggregator MUST use the actual `meta.iteration` values for per-iter rows; the file suffix may use the requested block label. Tests that fixture per-iter rows should match the iteration values that real meta would produce (e.g., 220-228 for the 220-229 block, not 219-228).
+
 - Conventional commit prefixes: `feat(diagnostics):` / `feat(analyzer):` / `docs(memory):` / `chore(memory):`.
 
 ---
@@ -50,17 +64,17 @@ Task 0 from spec §6 has been resolved in advance via inspection:
 
 **Outcome: A.** No self-play hook needed. Spec §3.2 analyzer-side implementation can proceed on existing 190-219 / 220-229 data.
 
-Taxonomy mapping (self-play field → spec bucket):
+Taxonomy mapping (self-play field → spec bucket). **None handling matches spec §3.2 verbatim**: a state_cap game with no block reason is a bug indicator (`would_have_passed`), NOT silently collapsed to `not_attempted`. Do not weaken this — collapsing None → `not_attempted` would hide the bug class the taxonomy was designed to surface.
 
-| `meta.adjudication_block_reason` | Spec bucket |
-|---|---|
-| `"threshold"` | `value_below_threshold` |
-| `"top1"` | `min_top1_share` |
-| `"visits"` | `min_visits` |
-| `"ply"` | `not_attempted` (ply gate fired before adjudicate_min_ply was reached — semantically: adjudication couldn't run) |
-| `None` AND `meta.reason == "state_cap"` | `would_have_passed` (bug indicator: game state-capped but no blocking gate recorded) |
-| `None` AND `meta.reason == "adjudicated"` | (not a state_cap game; excluded from §3.2 scope) |
-| missing search_score / top1_share at the relevant ply | `missing_signal` |
+| `meta.adjudication_block_reason` | Spec bucket | Reasoning |
+|---|---|---|
+| `"threshold"` | `value_below_threshold` | direct mapping |
+| `"top1"` | `min_top1_share` | direct mapping |
+| `"visits"` | `min_visits` | direct mapping |
+| `"ply"` | `not_attempted` | ply gate fired before `adjudicate_min_ply` was reached — adjudication couldn't run |
+| `None` AND `meta.reason == "state_cap"` | **`would_have_passed`** | bug indicator: game state-capped but no blocking gate recorded. Adjudication-enabled was set in the 190-219 + 220-229 launches, so a None block_reason on a state_cap game means an attempt should have happened. If adjudication was actually disabled (a separate launch config), the report MUST note this caveat alongside the count. |
+| `None` AND `meta.reason == "adjudicated"` | (not a state_cap game; excluded from §3.2 scope) | classifier returns None |
+| `meta.adjudication_block_reason` key absent entirely from old-format `meta` | `missing_signal` | per-game JSON predates the field; observability gap rather than a bug |
 
 - [ ] **Step 1: Confirm Outcome A via one verification command**
 
@@ -86,45 +100,41 @@ Expected: at least `threshold` and/or `top1` populated with non-zero counts, con
 
 ---
 
-## Task 1: Rollback note for next training launch
+## Task 1: Rollback record (two surfaces)
 
 **Files:**
-- Create/update: `~/.claude/projects/-Users-bill-projects-TwixT-Game/memory/spec4_recovery_retargeting_diagnostic.md` (or a new closeout-experiments memory file).
+- Already-created (this revision): `docs/superpowers/decisions/2026-05-19-reverted-closeout-experiments.md` (git-tracked decision record).
+- Update: `~/.claude/projects/-Users-bill-projects-TwixT-Game/memory/spec4_recovery_retargeting_diagnostic.md` (Claude-session memory).
 
-This task records the two reverted experiments so they don't get re-attempted under a different framing. No code change; memory-only.
+Both surfaces are needed:
+- The **git-tracked decision record** is the canonical record. It survives across sessions, is visible in code review / PR history, and cannot be "forgotten" by a memory reset or context truncation.
+- The **Claude-session memory** is for fast retrieval in subsequent sessions so a future suggestion can be vetoed without rereading the decision record from scratch.
 
-- [ ] **Step 1: Update project memory with reverted experiments**
+- [ ] **Step 1: Verify the git-tracked decision record is committed**
 
-Append to the existing recovery-retargeting memory file (or create a new closeout-experiments memory file if preferred). Suggested content (verbatim, so future sessions see the exact baseline):
+Run:
+```bash
+git log --oneline --diff-filter=A -- docs/superpowers/decisions/2026-05-19-reverted-closeout-experiments.md
+```
+
+Expected: a commit listing the file's creation. If absent, the file is in the working tree but not yet committed — commit it before Task 2 starts.
+
+- [ ] **Step 2: Append a short pointer to Claude-session memory**
+
+Append the following to `~/.claude/projects/-Users-bill-projects-TwixT-Game/memory/spec4_recovery_retargeting_diagnostic.md` (or create a new closeout-experiments memory file if preferred). The pointer keeps the canonical detail in the decision record; the memory entry only needs to surface the takeaway and the reference.
 
 ```markdown
-**Reverted closeout-side experiments (do not re-attempt without new evidence):**
+**Reverted closeout-side experiments (canonical record: `docs/superpowers/decisions/2026-05-19-reverted-closeout-experiments.md`):**
 
-- `--closeout-selection-tiebreak-min-value 0.90` — tried after 220-229 block.
-  Increased Fix 2 overrides but worsened closeout tail / td=2 quality.
-  Reverted to 0.95 (the 190-219 baseline). Do not re-test 0.90 without
-  a new diagnostic showing why the gate would now behave differently.
+- `--closeout-selection-tiebreak-min-value 0.90` was tried and reverted (worsened tail). Stable value: 0.95.
+- `--conversion-policy-loss-weight 0.075` was tried and reverted (worsened state-cap pressure). Stable value: 0.05.
 
-- `--conversion-policy-loss-weight 0.075` — tried after 220-229 block.
-  Did not improve buried td=2 reducers; worsened state-cap / long-tail
-  pressure. Reverted to 0.05 (the 190-219 baseline). Do not re-test
-  0.075 without a new diagnostic showing why the policy signal would
-  now behave differently.
-
-**Hard baseline for next training block (model_iter_0229 onward):**
-  --closeout-selection-tiebreak-min-value 0.95
-  --conversion-policy-loss-weight 0.05
-
-All other flags inherit the 220-229 launch command.
+Do NOT re-suggest either knob change without new evidence per the canonical record's "When to revisit" section.
 ```
 
-- [ ] **Step 2: Commit the memory update**
+- [ ] **Step 3: No additional git commit needed**
 
-```bash
-# Memory lives outside the project repo (in ~/.claude/projects/...).
-# No git action needed — auto-memory files are not tracked.
-echo "Memory updated locally; no commit required."
-```
+The decision record is the git-tracked surface; auto-memory is not committed. The pointer in memory is one-line and additive.
 
 ---
 
@@ -490,12 +500,25 @@ def test_adjudication_coverage_not_attempted_when_ply_blocked():
     assert classify_adjudication_coverage(rec, meta, diag) == "not_attempted"
 
 
-def test_adjudication_coverage_not_attempted_when_reason_absent():
-    """Spec §7 test 10 (variant). state_cap game with no block reason
-    recorded → 'not_attempted' (adjudication probably disabled OR
-    state_cap fired before any attempt was made)."""
-    rec, meta, diag = _gc_record_state_cap()  # no adjudication_block_reason
-    assert classify_adjudication_coverage(rec, meta, diag) == "not_attempted"
+def test_adjudication_coverage_would_have_passed_when_none_on_state_cap():
+    """Spec §7 test 11. state_cap game with adjudication_block_reason
+    PRESENT as None (key exists, value is None) → 'would_have_passed'
+    (bug indicator: game state-capped, key was set but no blocking gate
+    recorded → an attempt should have happened). MUST NOT silently
+    collapse to 'not_attempted'."""
+    rec, meta, diag = _gc_record_state_cap(adjudication_block_reason=None)
+    # Explicit assertion: the key IS in meta, just None-valued.
+    assert "adjudication_block_reason" in meta
+    assert meta["adjudication_block_reason"] is None
+    assert classify_adjudication_coverage(rec, meta, diag) == "would_have_passed"
+
+
+def test_adjudication_coverage_missing_signal_when_key_absent():
+    """Spec §7 test 12. Old-format per-game JSON where the key isn't
+    present at all → 'missing_signal' (observability gap, not a bug)."""
+    rec, meta, diag = _gc_record_state_cap()
+    assert "adjudication_block_reason" not in meta
+    assert classify_adjudication_coverage(rec, meta, diag) == "missing_signal"
 
 
 def test_adjudication_coverage_skipped_for_non_state_cap_games():
@@ -556,7 +579,7 @@ _BLOCKED_BY_TO_BUCKET = {
 def classify_adjudication_coverage(
     record: dict, meta: dict, diagnostics: list,
 ) -> Optional[str]:
-    """Classify which gate blocked adjudication for a 280-ply state_cap game.
+    """Classify which gate blocked adjudication for a state_cap game.
 
     Returns one of ADJUDICATION_GATE_BUCKETS, or None if the game does
     not qualify for §3.2 (not a state_cap game).
@@ -565,22 +588,32 @@ def classify_adjudication_coverage(
       record: per-game goal_completion_record
       meta:   per-game `meta` dict (contains adjudication_block_reason
               from game_saver.py:146, populated by self_play.py:1248-1249)
-      diagnostics: per-game goal_completion_diagnostics (used only for
-                   missing_signal detection — checks whether late-game
-                   per-ply data exists at all)
+      diagnostics: per-game goal_completion_diagnostics
+
+    None handling matches spec §3.2 strictly:
+      - key absent from meta      -> 'missing_signal' (observability gap)
+      - key present, value is None -> 'would_have_passed' (bug indicator)
+      - known value                -> direct mapping via _BLOCKED_BY_TO_BUCKET
     """
-    if (meta or {}).get("reason") != "state_cap" and record.get("reason") != "state_cap":
+    meta = meta or {}
+    if meta.get("reason") != "state_cap" and record.get("reason") != "state_cap":
         return None  # not in scope
 
-    reason = (meta or {}).get("adjudication_block_reason")
+    if "adjudication_block_reason" not in meta:
+        # Old-format JSON written before the field was persisted.
+        return "missing_signal"
+
+    reason = meta["adjudication_block_reason"]
     if reason in _BLOCKED_BY_TO_BUCKET:
         return _BLOCKED_BY_TO_BUCKET[reason]
-    # reason is None: either adjudication disabled, OR state_cap fired
-    # before any attempt was made, OR (bug) eligible but no decision logged.
-    # Defensive: if late-ply diagnostics exist with full per-ply signal,
-    # the absence of a block reason is a 'would_have_passed' bug indicator;
-    # otherwise 'not_attempted'.
-    return "not_attempted"
+    if reason is None:
+        # Key present but null: an attempt should have happened (adjudication
+        # was on for our 220-229 launches). Treat as a bug indicator. If
+        # adjudication was actually disabled in a different launch config,
+        # the report MUST surface this as a caveat alongside the count.
+        return "would_have_passed"
+    # Unknown string value — defensive fallback.
+    return "missing_signal"
 ```
 
 - [ ] **Step 6: Run the adjudication tests to verify pass**
@@ -593,7 +626,7 @@ Expected: 7 passed.
 
 Run: `.venv/bin/python -m pytest tests/test_marathon_termination_diagnostics.py -v`
 
-Expected: 13 passed (6 from Task 2 + 7 from Task 3).
+Expected: 14 passed (6 from Task 2 + 8 from Task 3 — the None-handling split added one test).
 
 - [ ] **Step 8: Commit**
 
@@ -833,7 +866,7 @@ Expected: 4 passed.
 
 Run: `.venv/bin/python -m pytest tests/test_marathon_termination_diagnostics.py -v`
 
-Expected: 17 passed (6 + 7 + 4).
+Expected: 18 passed (6 + 8 + 4).
 
 - [ ] **Step 7: Commit**
 
@@ -1004,7 +1037,7 @@ Expected: 3 passed.
 
 Run: `.venv/bin/python -m pytest tests/test_marathon_termination_diagnostics.py -v`
 
-Expected: 20 passed (6 + 7 + 4 + 3).
+Expected: 21 passed (6 + 8 + 4 + 3).
 
 - [ ] **Step 7: Commit**
 
@@ -1147,6 +1180,13 @@ def aggregate_marathon_termination(
             "adjudication_gate_counts": {b: 0 for b in ADJUDICATION_GATE_BUCKETS},
             "resign_top1_block_over_value_hits": {b: [] for b in GAME_LENGTH_BUCKETS},
             "resign_top1_block_over_eligible_hits": {b: [] for b in GAME_LENGTH_BUCKETS},
+            # Observability counters (spec §3.1 follow-up — surface coverage
+            # gaps so a zero no-progress rate is not confused with a
+            # no-data situation).
+            "diagnostics_entries_red": 0,
+            "diagnostics_entries_black": 0,
+            "no_progress_observable_games_red": 0,    # games with >=15 red own-entries
+            "no_progress_observable_games_black": 0,  # games with >=15 black own-entries
         }
 
     per_iter: dict = defaultdict(_empty_iter_row)
@@ -1155,6 +1195,16 @@ def aggregate_marathon_termination(
         it = record.get("iteration")
         row = per_iter[it]
         row["games_total"] += 1
+
+        # Observability: count diagnostics entries by side per game.
+        red_entries = sum(1 for e in (diagnostics or []) if e.get("side_to_move") == "red")
+        black_entries = sum(1 for e in (diagnostics or []) if e.get("side_to_move") == "black")
+        row["diagnostics_entries_red"] += red_entries
+        row["diagnostics_entries_black"] += black_entries
+        if red_entries >= NO_PROGRESS_WINDOW_SIZE:
+            row["no_progress_observable_games_red"] += 1
+        if black_entries >= NO_PROGRESS_WINDOW_SIZE:
+            row["no_progress_observable_games_black"] += 1
 
         # §3.1 — no-progress window count summed across both sides.
         npw = (
@@ -1207,6 +1257,12 @@ def aggregate_marathon_termination(
                 b: round(sum(vs) / len(vs), 3) if vs else 0.0
                 for b, vs in row["resign_top1_block_over_eligible_hits"].items()
             },
+            "observability": {
+                "diagnostics_entries_red":   row["diagnostics_entries_red"],
+                "diagnostics_entries_black": row["diagnostics_entries_black"],
+                "no_progress_observable_games_red":   row["no_progress_observable_games_red"],
+                "no_progress_observable_games_black": row["no_progress_observable_games_black"],
+            },
         }
         return finalized
 
@@ -1227,6 +1283,10 @@ def aggregate_marathon_termination(
             range_row["resign_top1_block_over_eligible_hits"][b].extend(
                 row["resign_top1_block_over_eligible_hits"][b]
             )
+        range_row["diagnostics_entries_red"]   += row["diagnostics_entries_red"]
+        range_row["diagnostics_entries_black"] += row["diagnostics_entries_black"]
+        range_row["no_progress_observable_games_red"]   += row["no_progress_observable_games_red"]
+        range_row["no_progress_observable_games_black"] += row["no_progress_observable_games_black"]
     range_final = _finalize(range_row)
 
     return {
@@ -1239,7 +1299,7 @@ def aggregate_marathon_termination(
 
 Run: `.venv/bin/python -m pytest tests/test_marathon_termination_diagnostics.py -v`
 
-Expected: 22 passed (20 from prior + 2 new).
+Expected: 23 passed (21 from prior + 2 new).
 
 - [ ] **Step 5: Add CSV writer + report formatter to analyzer**
 
@@ -1261,6 +1321,13 @@ def write_marathon_termination_csv(out_path: str, agg: dict) -> str:
         f"mean_resign_top1_block_rate_over_value_hits_{b}" for b in GAME_LENGTH_BUCKETS
     ] + [
         f"mean_resign_top1_block_rate_over_eligible_hits_{b}" for b in GAME_LENGTH_BUCKETS
+    ] + [
+        # Observability counters: surface coverage gaps so zero no-progress
+        # rates can be distinguished from missing data.
+        "diagnostics_entries_red",
+        "diagnostics_entries_black",
+        "no_progress_observable_games_red",
+        "no_progress_observable_games_black",
     ]
 
     def _row_dict(iteration, row):
@@ -1277,6 +1344,11 @@ def write_marathon_termination_csv(out_path: str, agg: dict) -> str:
                 row["mean_resign_top1_block_rate_over_value_hits"][b]
             d[f"mean_resign_top1_block_rate_over_eligible_hits_{b}"] = \
                 row["mean_resign_top1_block_rate_over_eligible_hits"][b]
+        obs = row["observability"]
+        d["diagnostics_entries_red"]   = obs["diagnostics_entries_red"]
+        d["diagnostics_entries_black"] = obs["diagnostics_entries_black"]
+        d["no_progress_observable_games_red"]   = obs["no_progress_observable_games_red"]
+        d["no_progress_observable_games_black"] = obs["no_progress_observable_games_black"]
         return d
 
     with open(out_path, "w", newline="") as f:
@@ -1306,6 +1378,21 @@ def format_marathon_termination_report(agg: dict, range_label: str = "") -> list
     lines.append("")
     lines.append(f"No-progress windows (length {15} own-moves, structural-only):")
     lines.append(f"  mean per game: {rt['mean_no_progress_windows_per_game']:.2f}")
+    obs = rt["observability"]
+    games_total = rt["games_total"] or 1
+    red_obs_pct = obs["no_progress_observable_games_red"] / games_total * 100
+    black_obs_pct = obs["no_progress_observable_games_black"] / games_total * 100
+    lines.append(
+        f"  observability: red entries={obs['diagnostics_entries_red']}, "
+        f"black entries={obs['diagnostics_entries_black']}, "
+        f"games with >=15 own-entries: red {red_obs_pct:.1f}% / black {black_obs_pct:.1f}%"
+    )
+    if red_obs_pct < 50 or black_obs_pct < 50:
+        lines.append(
+            "  WARNING: observability < 50% for at least one side — "
+            "no-progress rates may be undercounted (diagnostics list may be "
+            "capped or biased toward winner-side / closeout-scoped plies)."
+        )
     lines.append("")
     lines.append("Resign top1-gate block rate (losing-side, last 40 plies):")
     lines.append("  over value_hits:")
@@ -1476,13 +1563,46 @@ def test_format_marathon_termination_report_neutral_when_no_signal_dominates():
     lines = format_marathon_termination_report(agg, range_label="220-229")
     text = "\n".join(lines)
     assert "no dominant remedy" in text
+
+
+def test_report_emits_observability_warning_when_diagnostics_sparse(tmp_path):
+    """Spec §3.1 observability follow-up. If less than 50% of games have
+    >=15 own-entries on either side, the report surfaces a WARNING line
+    so a zero no-progress rate isn't confused with a no-data state."""
+    # Diagnostics are short (5 entries / game) — won't reach 15 own-entries.
+    short_diag = [
+        {"ply": p, "side_to_move": "red" if i % 2 == 0 else "black",
+         "selected_move_classification": {"primary_class": "redundant_reinforcement"}}
+        for i, p in enumerate(range(50, 55))
+    ]
+    games = [_per_game(220, reason="win", n_moves=80, winner="red", diagnostics=short_diag)
+             for _ in range(10)]
+    agg = aggregate_marathon_termination(games, **_cfg())
+    lines = format_marathon_termination_report(agg, range_label="220-229")
+    text = "\n".join(lines)
+    assert "WARNING" in text
+    assert "observability" in text
+
+
+def test_csv_includes_observability_columns(tmp_path):
+    """Observability counters present per row + range-total row."""
+    games = [_per_game(220, reason="win", n_moves=80, winner="red")]
+    agg = aggregate_marathon_termination(games, **_cfg())
+    out = tmp_path / "m.csv"
+    write_marathon_termination_csv(str(out), agg)
+    rows = list(csv.DictReader(open(out)))
+    for r in rows:
+        assert "diagnostics_entries_red" in r
+        assert "diagnostics_entries_black" in r
+        assert "no_progress_observable_games_red" in r
+        assert "no_progress_observable_games_black" in r
 ```
 
 - [ ] **Step 8: Run analyzer tests + full marathon-termination suite**
 
 Run: `.venv/bin/python -m pytest tests/test_marathon_termination_diagnostics.py tests/test_analyzer_marathon_termination.py -v`
 
-Expected: 25 passed (22 module + 3 analyzer-integration).
+Expected: 28 passed (23 module + 5 analyzer-integration).
 
 - [ ] **Step 9: Commit**
 

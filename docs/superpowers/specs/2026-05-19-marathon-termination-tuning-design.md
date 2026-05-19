@@ -95,7 +95,7 @@ AND opponent_total_goal_distance_after > opponent_total_goal_distance_before
 
 If `goal_completion_diagnostics` entries already carry a `selected_move_classification.primary_class == "blocks_opponent_closeout"` value (Spec 4 vocabulary), prefer that flag — it's the same rule already computed. Otherwise compute inline from the entry's `goal_completion.total_goal_distance_before` and the next opponent-eval's `total_goal_distance_before` (which equals "after" from the own-move's perspective). The implementation MUST share a helper with `recovery_retargeting_diagnostics.classify_move` so the two diagnostics cannot diverge on what counts as a block.
 
-Per-game metric: count of distinct no-progress windows per side (overlapping windows count once, anchored to the last ply of the longest such window).
+Per-game metric: count of **non-overlapping 15-own-move windows** inside any stagnant run for the side. Concretely: walk the side's own-moves, accumulate a run length while every condition holds, and add `floor(run_length / 15)` to the count when the run breaks (or at the end of the game). A 30-move run → 2 windows; a 45-move run → 3. This semantics is required by the §5 decision rule's "K=2 consecutive no-progress windows" termination logic — an "episode count" (1 per stale run regardless of length) would not distinguish a 15-move stall from a 75-move stall and so could not parameterize K.
 
 ### 3.2 Adjudication coverage diagnostic
 
