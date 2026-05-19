@@ -3578,12 +3578,16 @@ def write_goal_completion_worst_cases_csv(
         "high_value_after_detection_plies",
         "root_value_high_but_delayed",
         "search_score_coverage_in_watch_window",
+        "long_tail_bucket",
     ]
+    from scripts.GPU.alphazero.long_tail_bucket_classifier import classify_long_tail_bucket
     with open(out_path, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         for rec, replay in top:
             pcc = rec.get("primary_class_counts") or {}
+            diagnostics = replay.get("goal_completion_diagnostics") or []
+            bucket = classify_long_tail_bucket(rec, diagnostics)
             row = {
                 "iteration": rec.get("iteration"),
                 "game_idx": rec.get("game_idx"),
@@ -3619,8 +3623,99 @@ def write_goal_completion_worst_cases_csv(
                 "high_value_after_detection_plies": rec.get("high_value_after_detection_plies"),
                 "root_value_high_but_delayed": rec.get("root_value_high_but_delayed"),
                 "search_score_coverage_in_watch_window": rec.get("search_score_coverage_in_watch_window"),
+                "long_tail_bucket": bucket,
             }
             w.writerow(row)
+
+
+_LONG_TAIL_NEXT_ACTION_HINTS = {
+    "marathon_or_state_cap":           "state-cap / adjudication / resign tuning",
+    "dominant_unavailable_contested":  "recovery dynamics (rare; usually overlaps Spec 4)",
+    "td3_drift":                       "broader closeout / planning depth",
+    "td2_alt_in_top5":                 "Fix 2 calibration (value gate / preconditions)",
+    "td2_reducer_buried":              "policy training tail (conversion-aware loss)",
+    "unclassified":                    "classifier review needed if > 5%",
+}
+
+
+def write_goal_completion_long_tail_buckets_csv(out_path: str, agg: dict) -> str:
+    """Write goal_completion_long_tail_buckets.csv. Spec 2026-05-19 §4.2.
+
+    Long format. One row per (iteration x bucket). Iteration = -1 sentinel
+    for range-total rows.
+    """
+    from scripts.GPU.alphazero.long_tail_bucket_classifier import LONG_TAIL_BUCKETS
+    fields = ["iteration", "bucket", "games", "total_long_tail_games", "share"]
+    with open(out_path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for it in sorted(agg["per_iter"].keys()):
+            counts = agg["per_iter"][it]
+            total = agg["total_long_tail_games_per_iter"][it]
+            shares = agg["per_iter_shares"][it]
+            for bucket in LONG_TAIL_BUCKETS:
+                w.writerow({
+                    "iteration": it,
+                    "bucket": bucket,
+                    "games": counts.get(bucket, 0),
+                    "total_long_tail_games": total,
+                    "share": shares.get(bucket, 0.0),
+                })
+        # Range-total row block (sentinel iteration=-1).
+        total_range = agg["total_long_tail_games_range"]
+        for bucket in LONG_TAIL_BUCKETS:
+            w.writerow({
+                "iteration": -1,
+                "bucket": bucket,
+                "games": agg["range_total"].get(bucket, 0),
+                "total_long_tail_games": total_range,
+                "share": agg["range_total_shares"].get(bucket, 0.0),
+            })
+    return out_path
+
+
+def format_long_tail_bucket_report(agg: dict, range_label: str = "") -> list:
+    """Format the long-tail bucket counts report section. Spec 2026-05-19 §4.3."""
+    from scripts.GPU.alphazero.long_tail_bucket_classifier import LONG_TAIL_BUCKETS
+    lines = []
+    suffix = f" ({range_label})" if range_label else ""
+    lines.append(f"Long-tail bucket counts{suffix}")
+    lines.append("=" * (23 + len(suffix)))
+    lines.append("Long-tail filter: delay >= 20 OR state_cap OR dom_unavail >= 20 OR n_moves == 280")
+    total_range = agg.get("total_long_tail_games_range", 0)
+    lines.append(f"Total long-tail games in range: {total_range}")
+    lines.append("")
+    if total_range == 0:
+        lines.append("(no long-tail games in this range)")
+        return lines
+
+    lines.append(f"{'Bucket':<35} {'games':>6} {'share':>7}   next-action hint")
+    for bucket in LONG_TAIL_BUCKETS:
+        games = agg["range_total"].get(bucket, 0)
+        share = agg["range_total_shares"].get(bucket, 0.0) * 100.0
+        hint = _LONG_TAIL_NEXT_ACTION_HINTS.get(bucket, "")
+        lines.append(f"{bucket:<35} {games:>6} {share:>6.1f}%   {hint}")
+    lines.append("")
+
+    # Per-iter trend block.
+    iters = sorted(agg["per_iter"].keys())
+    if iters:
+        lines.append("Per-iter trend:")
+        header_cells = [b.replace("dominant_unavailable_contested", "contested")
+                          .replace("marathon_or_state_cap",          "marathon")
+                          .replace("td2_alt_in_top5",                "td2_top5")
+                          .replace("td2_reducer_buried",             "td2_buried")
+                          .replace("td3_drift",                      "td3")
+                          .replace("unclassified",                   "uncl")
+                        for b in LONG_TAIL_BUCKETS]
+        lines.append(f"  {'iter':>5} " + " ".join(f"{h:>10}" for h in header_cells) + " " + f"{'total':>6}")
+        for it in iters:
+            counts = agg["per_iter"][it]
+            total = agg["total_long_tail_games_per_iter"][it]
+            cell_vals = [counts.get(b, 0) for b in LONG_TAIL_BUCKETS]
+            lines.append(f"  {it:>5} " + " ".join(f"{v:>10d}" for v in cell_vals) + " " + f"{total:>6d}")
+
+    return lines
 
 
 def write_goal_completion_td_breakdown_csv(path: str, breakdown: dict) -> None:
@@ -4954,6 +5049,26 @@ def analyze(replays: List[dict],
         )
     # Recompute path's own CSV writer is preserved; Task 13 wires it.
 
+    # Spec 2026-05-19 §4.2/§4.3 — long-tail bucket counts CSV + report section.
+    # Aggregates over ALL games matching the long-tail filter (not just top-K).
+    from scripts.GPU.alphazero.long_tail_bucket_classifier import (
+        aggregate_long_tail_buckets,
+    )
+    long_tail_pairs = [
+        (r.get("goal_completion_record"), r.get("goal_completion_diagnostics") or [])
+        for r in (replays or [])
+        if isinstance(r, dict) and r.get("goal_completion_record")
+    ]
+    long_tail_agg = aggregate_long_tail_buckets(long_tail_pairs)
+    write_goal_completion_long_tail_buckets_csv(
+        os.path.join(out_dir, _suffixed("goal_completion_long_tail_buckets", "csv", suffix)),
+        long_tail_agg,
+    )
+    summary["long_tail_buckets"] = long_tail_agg
+    # Report-section rendering happens later in the function after `lines` is
+    # initialized; we stash range_label for the renderer there.
+    _long_tail_range_label = suffix.lstrip("_") if suffix else ""
+
     # Spec 2026-05-10 §3.3 — td_closeout breakdown CSV. Always emitted
     # so downstream tooling has a stable filename; empty buckets render as
     # zero rows.
@@ -5113,6 +5228,11 @@ def analyze(replays: List[dict],
         lines.append("")
         lines.extend(format_td_closeout_breakdown_report(td_breakdown))
     lines.extend(format_policy_mcts_closeout_report(summary["goal_completion"]))
+    # Spec 2026-05-19 §4.3 — long-tail bucket counts.
+    long_tail_lines = format_long_tail_bucket_report(long_tail_agg, range_label=_long_tail_range_label)
+    if long_tail_lines:
+        lines.append("")
+        lines.extend(long_tail_lines)
     lines.extend(format_conversion_training_trend_report(conversion_training_by_iter))
     lines.extend(format_recovery_or_extreme_closeout_drift_report(recovery_by_iter))
     # Spec 3 Fix 1 §1.2 — closeout td=1 visit forcing telemetry summary.
