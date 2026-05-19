@@ -78,13 +78,22 @@ For each side, slide a window of the last N=15 own-moves over the game and flag 
 no_goal_distance_reduction   : no own-move in the window reduced
                                total_goal_distance for this side
 no_endpoint_completion       : no own-move in the window completed an endpoint
-no_opponent_block            : no own-move in the window was classified as
-                               blocks_opponent_closeout (Spec 4 vocabulary)
+no_opponent_block            : no own-move in the window was a defensive block
+                               (definition below)
 moves_are_local_structural   : all moves in the window had primary_class in
                                {redundant_reinforcement, off_chain,
                                 connects_to_existing_component,
                                 improves_own_largest_component}
 ```
+
+**"Opponent block" definition (pinned):** Use the same rule as the recovery-retargeting defense classifier (Spec 4 §3, `blocks_opponent_closeout`). For an own-move at ply t, the move is an opponent block iff:
+
+```
+opponent_total_goal_distance_before <= 2
+AND opponent_total_goal_distance_after > opponent_total_goal_distance_before
+```
+
+If `goal_completion_diagnostics` entries already carry a `selected_move_classification.primary_class == "blocks_opponent_closeout"` value (Spec 4 vocabulary), prefer that flag — it's the same rule already computed. Otherwise compute inline from the entry's `goal_completion.total_goal_distance_before` and the next opponent-eval's `total_goal_distance_before` (which equals "after" from the own-move's perspective). The implementation MUST share a helper with `recovery_retargeting_diagnostics.classify_move` so the two diagnostics cannot diverge on what counts as a block.
 
 Per-game metric: count of distinct no-progress windows per side (overlapping windows count once, anchored to the last ply of the longest such window).
 
@@ -97,40 +106,76 @@ ply_of_first_eligible_adjudication      : first ply >= adjudicate_min_ply
                                           where adjudicate eligibility held
 ply_of_first_threshold_crossing         : first ply at which the would-be
                                           winner's value crossed adjudicate_threshold
-gate_blocked_by                         : which gate blocked: 'min_visits',
-                                          'min_top1_share', 'value_below_threshold',
-                                          or 'never_blocked' (eligible but no
-                                          attempt — likely a bug)
+gate_blocked_by                         : one of the taxonomy values below
 plies_after_first_threshold_crossing    : 280 - ply_of_first_threshold_crossing
 ```
 
-Range-level rollup: distribution of `gate_blocked_by` across 280-ply state_cap games. Tells us which adjudication gate to relax (if any).
+**Adjudication gate taxonomy (full enumeration):**
+
+```
+not_attempted          : ply >= adjudicate_min_ply was reached but no
+                         adjudication attempt was logged for the game
+                         (likely a coverage hole; signals a self-play bug
+                         OR that adjudication only fires on a sparse
+                         schedule we need to characterize)
+value_below_threshold  : at least one attempt was logged, but no ply
+                         had a side's value cross adjudicate_threshold
+min_top1_share         : value crossed threshold AND visits met, but
+                         root_top1_share was below adjudicate_min_top1_share
+                         at every attempt
+min_visits             : value crossed threshold AND top1 met, but visit
+                         count was below adjudicate_min_visits
+missing_signal         : per-ply data missing for ply >= adjudicate_min_ply
+                         (no search_score or no top1_share); cannot classify
+would_have_passed      : all gates passed at some ply but adjudication
+                         still wasn't applied — bug indicator
+```
+
+When multiple gates blocked across the game's plies, classify by the **last-blocking** gate (i.e., the closest-to-passing). Ties resolved by precedence `min_top1_share > min_visits > value_below_threshold` (top1 typically tightens last).
+
+Range-level rollup: distribution of `gate_blocked_by` across 280-ply state_cap games. Tells us which adjudication gate to relax (if any). The `not_attempted` and `would_have_passed` counts should both be 0 in a healthy pipeline; non-zero values flag a telemetry/wiring bug.
+
+**Implementation pre-check (Task 1):** confirm whether per-ply adjudication-block reasons are already persisted in the existing `adjudication` sidecar block or per-game record. The current sidecar tracks aggregate `attempts` and `checks` counts but may not surface per-attempt gate-block causes. If absent, add a minimal self-play telemetry hook (one append to the adjudication telemetry per attempt: the gate that blocked it) **before** writing the analyzer-side aggregator. This is the only allowed self-play-side change in this spec; see §6 step 0.
 
 ### 3.3 Resign-gate-on-hopeless diagnostic
 
-For each game's losing side (when winner is known), in the last 40 plies:
+For each game's losing side (when winner is known), in the last 40 plies, compute these four counts explicitly (separating "no value signal" from "value signal blocked by top1" is the point):
 
 ```
-resign_value_hits_blocked_by_top1       : count of plies where the loser's
-                                          search_score was below resign_threshold
-                                          AND root_top1_share was below
-                                          resign_min_top1_share (so resign was gated)
-final_eval_was_below_threshold          : at the last ply for the loser,
-                                          search_score < resign_threshold
-losing_side_total_value_hits            : total value-hits across the game
-losing_side_top1_gate_block_rate        : value_hits_blocked_by_top1 /
-                                          losing_side_total_value_hits
+value_hits           : count of own-plies where search_score < resign_threshold
+                       (i.e., the value signal qualified for resign on its own)
+eligible_hits        : count of value_hits that ALSO satisfied
+                       min_visits AND >= resign_min_ply
+                       (i.e., all gates met EXCEPT top1)
+blocked_by_top1      : count of eligible_hits where root_top1_share was
+                       below resign_min_top1_share (so resign was gated)
+final_eval_below_thr : at the last own-ply for the loser,
+                       search_score < resign_threshold (sanity check —
+                       confirms the loser actually had a losing signal)
 ```
 
-Range-level rollup: mean `top1_gate_block_rate` for losing sides, partitioned by game length:
+Derived rates (per game):
+
+```
+top1_block_rate_over_value_hits     : blocked_by_top1 / value_hits
+                                      (was the value signal frequently
+                                      present but mostly blocked by top1?)
+top1_block_rate_over_eligible_hits  : blocked_by_top1 / eligible_hits
+                                      (of resigns that ONLY needed top1
+                                      to pass, what fraction were blocked?
+                                      this is the cleanest "is top1 the
+                                      problem?" rate)
+```
+
+Range-level rollup: **both** rates above, partitioned by game length:
 
 ```
 short games (n_moves <= 100)    : sanity baseline
 mid games   (100 < n_moves <= 200)
-long games  (n_moves > 200)     : these are the ones we care about
+long games  (n_moves > 200)     : the ones we care about
 ```
 
-If long-game block-rate is significantly higher than short-game (e.g. 2x), the top1 gate is too conservative late in hopeless games.
+If `top1_block_rate_over_eligible_hits` in long games is significantly higher than in short games (e.g. 2x), the top1 gate is too conservative late in hopeless games. The two-rate split avoids confusing "no losing value signal" (low `value_hits`) with "top1 gate prevented resignation" (high `top1_block_rate_over_eligible_hits`).
 
 ### 3.4 Stagnation-rate per-iter trend
 
@@ -215,24 +260,43 @@ The diagnostic output feeds a single termination-knob choice, in this priority o
 
 4. **If `mean_resign_top1_block_rate_long_games` is >2x `short_games`**: relax `--resign-min-top1-share` from 0.102 → 0.05 for late-game (>=200 ply) — top1 gating in hopeless positions is too strict.
 
-5. **If `mean_no_progress_windows_per_game` is high (>2 per game)** AND none of (1)-(4) trigger: introduce an **early state-cap** rule that ends the game after K consecutive no-progress windows for either side. K=2 is the starting point.
+5. **If `mean_no_progress_windows_per_game` is high (>2 per game)** AND none of (1)-(4) trigger: the candidate action is an **early state-cap** rule that ends the game after K consecutive no-progress windows for either side. K=2 is the starting point.
+
+   **The early state-cap action is diagnostic-gated and default-off.** It is NOT enabled by the diagnostic rollout itself. It is enabled in a follow-up treatment run only if §5 selects it as the dominant remedy AND the user explicitly approves the treatment.
 
 6. **If none of (1)-(5) clearly dominates**: the marathon shape is heterogeneous; defer to a hand-review of 5-10 representative cases before another knob change.
 
 Each branch produces at most one CLI/config change. No simultaneous tuning of multiple termination knobs.
 
+### 5.1 Value-uncertain guard (applies to any termination knob)
+
+Any termination/adjudication change selected by §5 — especially early state-cap — MUST include a value-uncertain guard before terminating:
+
+```
+Do not terminate early if both sides' recent root values (window
+of last 10 own-plies, both sides) remain near neutral (|search_score| < 0.30)
+or oscillatory (sign-flip count >= 3), unless the chosen decision rule
+explicitly selected state-cap-by-stagnation AND the required consecutive
+no-progress window count K has been met.
+```
+
+Rationale: we do not want to cut off genuinely contested games just because they are long. A game where both sides are still searching meaningfully (mid-range root values, no stable assessment) is the OPPOSITE of a marathon — it's a hard contested position that the model is correctly treating as uncertain. Terminating those would corrupt the training signal.
+
+The guard is enforced at the termination call-site, not the diagnostic call-site. The diagnostic still measures and reports; the termination knob is what consults the guard before acting.
+
 ---
 
 ## 6. Implementation order
 
-1. **Rollback the two failed experiments** in the next training-launch command. No code change. Update memory.
-2. New module `scripts/GPU/alphazero/marathon_termination_diagnostics.py` with four pure-function diagnostics from §3 + unit tests.
-3. Hook the diagnostics into the analyzer's per-game pass (reads `goal_completion_record` and `goal_completion_diagnostics`, no self-play change). Sidecar fields and CSV-writer.
+0. **Pre-check (Task 0)**: confirm whether per-ply adjudication-block reasons are already persisted in the existing `adjudication` sidecar block or per-game record (§3.2). If absent, add a minimal self-play telemetry hook (one append per adjudication attempt: the gate that blocked) **before** any analyzer-side work. This is the only allowed self-play-side change in this spec. Until Task 0 resolves, §3.2 numbers will be partially observable; document the partial-observability state explicitly in any pre-Task-0 report.
+1. **Rollback the two failed experiments** in the next training-launch command. No code change. Update memory: both should be flagged as "tried and reverted" to prevent re-attempts under a different framing.
+2. New module `scripts/GPU/alphazero/marathon_termination_diagnostics.py` with four pure-function diagnostics from §3 + unit tests. The opponent-block helper (§3.1) MUST be imported from / share a helper with `recovery_retargeting_diagnostics.classify_move` to prevent definitional drift.
+3. Hook the diagnostics into the analyzer's per-game pass (reads `goal_completion_record` and `goal_completion_diagnostics`, no self-play change beyond Task 0). Sidecar fields and CSV-writer.
 4. Report-section formatter with the decision-rule output line. Tests.
-5. End-to-end smoke on existing 190-219 data. The 42 marathon games already on disk are the input — no retraining required for diagnostic-side work.
-6. Apply §5 decision rule against the resulting numbers; ship the single chosen termination change in the following training block.
+5. End-to-end smoke on existing 190-219 data. The 42 marathon games already on disk are the input — no retraining required for diagnostic-side work (Task 0 may require a fresh training block for the new telemetry to be populated; pre-Task-0 the report just shows partial-observability state).
+6. Apply §5 decision rule against the resulting numbers; ship the single chosen termination change in the following training block — **with the §5.1 value-uncertain guard enforced at the termination call-site**.
 
-Each step is analyzer-only and ships independently. The training-side change in step 6 is gated on the diagnostic output, not pre-committed.
+Each step is analyzer-only (except Task 0 if needed). The training-side change in step 6 is gated on the diagnostic output, not pre-committed.
 
 ---
 
@@ -245,13 +309,23 @@ In `tests/test_marathon_termination_diagnostics.py`:
 3. `test_no_progress_window_breaks_on_endpoint_completion` — 14 redundant + 1 completes_endpoint → 0 windows.
 4. `test_no_progress_window_breaks_on_opponent_block` — 14 redundant + 1 blocks_opponent_closeout → 0 windows.
 5. `test_no_progress_window_window_size_15` — exactly 14 redundant → 0 windows; 15 → 1.
-6. `test_adjudication_coverage_blocked_by_min_top1` — synthetic per-ply data with high value, low top1 → `gate_blocked_by = 'min_top1_share'`.
-7. `test_adjudication_coverage_blocked_by_value_below_threshold` — value never crosses 0.20 → `'value_below_threshold'`.
-8. `test_adjudication_coverage_never_blocked` — eligible but no attempt logged → `'never_blocked'`.
-9. `test_adjudication_coverage_skipped_for_non_state_cap_games` — game ending in win → `adjudication_coverage` is None/absent.
-10. `test_resign_top1_gate_block_rate_partitions_by_n_moves` — three synthetic games (short / mid / long) → correct partitioned rates.
-11. `test_aggregate_marathon_termination_per_iter_and_range` — synthetic 3-game / 2-iter fixture → correct per-iter rows + range-total row.
-12. `test_format_marathon_termination_report_renders_section_with_decision_suggestion` — agg with min_top1_share dominant → suggestion line mentions "relax --adjudicate-min-top1-share".
+6. `test_no_progress_window_opponent_block_uses_shared_helper` — fixture where the only "block" move passes Spec 4's defense rule but NOT a stricter local test → still counted as a block (confirms the shared helper).
+7. `test_adjudication_coverage_blocked_by_min_top1` — synthetic per-ply data with high value, low top1 → `'min_top1_share'`.
+8. `test_adjudication_coverage_blocked_by_value_below_threshold` — value never crosses 0.20 → `'value_below_threshold'`.
+9. `test_adjudication_coverage_blocked_by_min_visits` — value + top1 met, visits below 200 → `'min_visits'`.
+10. `test_adjudication_coverage_not_attempted` — eligible ply reached but no attempts logged → `'not_attempted'`.
+11. `test_adjudication_coverage_would_have_passed` — all gates passed at some ply, no adjudication applied → `'would_have_passed'` (bug indicator).
+12. `test_adjudication_coverage_missing_signal` — per-ply data missing search_score / top1 → `'missing_signal'`.
+13. `test_adjudication_coverage_last_blocking_gate_precedence` — game where multiple gates blocked across plies: classify by last-blocking, with `min_top1_share > min_visits > value_below_threshold` precedence on ties.
+14. `test_adjudication_coverage_skipped_for_non_state_cap_games` — game ending in win → `adjudication_coverage` is None/absent.
+15. `test_resign_top1_gate_block_rate_partitions_by_n_moves` — three synthetic games (short / mid / long) → correct partitioned rates for BOTH `top1_block_rate_over_value_hits` and `top1_block_rate_over_eligible_hits`.
+16. `test_resign_separates_no_value_signal_from_blocked_by_top1` — game with low `value_hits` (no losing signal) vs game with high `value_hits` and high `blocked_by_top1` → distinguishable in the report (the point of edit 5).
+17. `test_value_uncertain_guard_blocks_termination_when_neutral` — predicate: last 10 own-plies for both sides with |score|<0.30 → guard returns "do not terminate".
+18. `test_value_uncertain_guard_blocks_termination_when_oscillatory` — last 10 own-plies with >=3 sign-flips → guard returns "do not terminate".
+19. `test_value_uncertain_guard_allows_termination_when_stable_losing` — last 10 own-plies stably below -0.30 for the loser → guard allows.
+20. `test_aggregate_marathon_termination_per_iter_and_range` — synthetic 3-game / 2-iter fixture → correct per-iter rows + range-total row.
+21. `test_format_marathon_termination_report_renders_section_with_decision_suggestion` — agg with min_top1_share dominant → suggestion line mentions "relax --adjudicate-min-top1-share".
+22. `test_format_marathon_termination_report_partial_observability_when_taxonomy_incomplete` — pre-Task-0 state (gate-block reasons absent): report shows "partial observability — Task 0 not yet completed" caveat instead of definitive numbers.
 
 In `tests/test_analyzer_marathon_termination.py`:
 
@@ -264,4 +338,5 @@ In `tests/test_analyzer_marathon_termination.py`:
 
 - Window size N=15 in §3.1 is a starting point; may need calibration on first run.
 - Game-length partitioning in §3.3 uses 100 / 200 / >200 ply bins; revisit if the long-bin sample size is < 30 across a single range.
-- Adjudication-attempt logging granularity: the diagnostic in §3.2 needs to know *which* gate blocked. The existing `adjudication` sidecar block tracks aggregate attempts/checks but may not surface per-ply gate-block reasons. If that data isn't present, §3.2 will be partially observable and may need a small self-play hook addition (one-line append to existing adjudication telemetry). To be confirmed in step 3 implementation.
+
+(The adjudication-attempt logging granularity question from the original draft has been promoted to Task 0 in §6 — it's a pre-check rather than an open question.)
