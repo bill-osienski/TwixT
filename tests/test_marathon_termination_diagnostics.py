@@ -10,6 +10,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.GPU.alphazero.marathon_termination_diagnostics import (
     detect_no_progress_windows,
+    classify_adjudication_coverage,
+    ADJUDICATION_GATE_BUCKETS,
     NO_PROGRESS_WINDOW_SIZE,
 )
 
@@ -113,3 +115,87 @@ def test_no_progress_window_opponent_block_uses_primary_class_only():
     })
     # Run of 14 followed by a block → 0 no-progress windows.
     assert detect_no_progress_windows(entries, side="red") == 0
+
+
+def _gc_record_state_cap(**meta_overrides):
+    """A per-game (record, meta, diagnostics) triple for a 280-ply state_cap game."""
+    record = {
+        "iteration": 220, "game_idx": 0,
+        "winner": None, "reason": "state_cap", "n_moves": 280,
+        "first_total_goal_distance": 2,
+        "winner_moves_with_dominant_unavailable": 0,
+        "conversion_delay_plies": 0,
+    }
+    meta = {"reason": "state_cap", "n_moves": 280}
+    meta.update(meta_overrides)
+    return record, meta, []
+
+
+def test_adjudication_coverage_blocked_by_min_top1():
+    """Spec §7 test 7. self-play 'top1' → bucket 'min_top1_share'."""
+    rec, meta, diag = _gc_record_state_cap(adjudication_block_reason="top1")
+    assert classify_adjudication_coverage(rec, meta, diag) == "min_top1_share"
+
+
+def test_adjudication_coverage_blocked_by_value_below_threshold():
+    """Spec §7 test 8. self-play 'threshold' → bucket 'value_below_threshold'."""
+    rec, meta, diag = _gc_record_state_cap(adjudication_block_reason="threshold")
+    assert classify_adjudication_coverage(rec, meta, diag) == "value_below_threshold"
+
+
+def test_adjudication_coverage_blocked_by_min_visits():
+    """Spec §7 test 9. self-play 'visits' → bucket 'min_visits'."""
+    rec, meta, diag = _gc_record_state_cap(adjudication_block_reason="visits")
+    assert classify_adjudication_coverage(rec, meta, diag) == "min_visits"
+
+
+def test_adjudication_coverage_not_attempted_when_ply_blocked():
+    """Spec §7 test 10. self-play 'ply' → 'not_attempted' (adjudication
+    couldn't run because the ply gate fired)."""
+    rec, meta, diag = _gc_record_state_cap(adjudication_block_reason="ply")
+    assert classify_adjudication_coverage(rec, meta, diag) == "not_attempted"
+
+
+def test_adjudication_coverage_would_have_passed_when_none_on_state_cap():
+    """Spec §7 test 11. state_cap game with adjudication_block_reason
+    PRESENT as None (key exists, value is None) → 'would_have_passed'
+    (bug indicator: game state-capped, key was set but no blocking gate
+    recorded → an attempt should have happened). MUST NOT silently
+    collapse to 'not_attempted'."""
+    rec, meta, diag = _gc_record_state_cap(adjudication_block_reason=None)
+    # Explicit assertion: the key IS in meta, just None-valued.
+    assert "adjudication_block_reason" in meta
+    assert meta["adjudication_block_reason"] is None
+    assert classify_adjudication_coverage(rec, meta, diag) == "would_have_passed"
+
+
+def test_adjudication_coverage_missing_signal_when_key_absent():
+    """Spec §7 test 12. Old-format per-game JSON where the key isn't
+    present at all → 'missing_signal' (observability gap, not a bug)."""
+    rec, meta, diag = _gc_record_state_cap()
+    assert "adjudication_block_reason" not in meta
+    assert classify_adjudication_coverage(rec, meta, diag) == "missing_signal"
+
+
+def test_adjudication_coverage_skipped_for_non_state_cap_games():
+    """Spec §7 test 14. Game ending in win → returns None
+    (excluded from §3.2 scope)."""
+    record = {
+        "iteration": 220, "game_idx": 0,
+        "winner": "red", "reason": "win", "n_moves": 80,
+    }
+    meta = {"reason": "win", "adjudication_block_reason": None}
+    assert classify_adjudication_coverage(record, meta, []) is None
+
+
+def test_adjudication_gate_buckets_export_matches_spec_taxonomy():
+    """Spec §3.2 enumeration. The exported tuple lists exactly the six
+    bucket names so the analyzer and tests share one source of truth."""
+    assert set(ADJUDICATION_GATE_BUCKETS) == {
+        "not_attempted",
+        "value_below_threshold",
+        "min_top1_share",
+        "min_visits",
+        "missing_signal",
+        "would_have_passed",
+    }

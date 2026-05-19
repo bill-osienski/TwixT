@@ -109,3 +109,63 @@ def detect_no_progress_windows(diagnostics: list, *, side: str) -> int:
             run_len = 0
     windows += run_len // NO_PROGRESS_WINDOW_SIZE
     return windows
+
+
+ADJUDICATION_GATE_BUCKETS = (
+    "not_attempted",
+    "value_below_threshold",
+    "min_top1_share",
+    "min_visits",
+    "missing_signal",
+    "would_have_passed",
+)
+
+
+# Mapping: self_play.py's adj_blocked_by value -> spec §3.2 bucket name.
+# Source: self_play.py:1213-1222 (deterministic first-failure label).
+_BLOCKED_BY_TO_BUCKET = {
+    "ply":       "not_attempted",
+    "threshold": "value_below_threshold",
+    "top1":      "min_top1_share",
+    "visits":    "min_visits",
+}
+
+
+def classify_adjudication_coverage(
+    record: dict, meta: dict, diagnostics: list,
+) -> Optional[str]:
+    """Classify which gate blocked adjudication for a state_cap game.
+
+    Returns one of ADJUDICATION_GATE_BUCKETS, or None if the game does
+    not qualify for §3.2 (not a state_cap game).
+
+    Inputs (all already on disk; Task 0 outcome A):
+      record: per-game goal_completion_record
+      meta:   per-game `meta` dict (contains adjudication_block_reason
+              from game_saver.py:146, populated by self_play.py:1248-1249)
+      diagnostics: per-game goal_completion_diagnostics
+
+    None handling matches spec §3.2 strictly:
+      - key absent from meta      -> 'missing_signal' (observability gap)
+      - key present, value is None -> 'would_have_passed' (bug indicator)
+      - known value                -> direct mapping via _BLOCKED_BY_TO_BUCKET
+    """
+    meta = meta or {}
+    if meta.get("reason") != "state_cap" and record.get("reason") != "state_cap":
+        return None  # not in scope
+
+    if "adjudication_block_reason" not in meta:
+        # Old-format JSON written before the field was persisted.
+        return "missing_signal"
+
+    reason = meta["adjudication_block_reason"]
+    if reason in _BLOCKED_BY_TO_BUCKET:
+        return _BLOCKED_BY_TO_BUCKET[reason]
+    if reason is None:
+        # Key present but null: an attempt should have happened (adjudication
+        # was on for our 220-229 launches). Treat as a bug indicator. If
+        # adjudication was actually disabled in a different launch config,
+        # the report MUST surface this as a caveat alongside the count.
+        return "would_have_passed"
+    # Unknown string value — defensive fallback.
+    return "missing_signal"
