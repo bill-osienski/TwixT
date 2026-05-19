@@ -246,3 +246,67 @@ def compute_resign_gate_breakdown(
         "top1_block_rate_over_value_hits": _rate(blocked_by_top1, value_hits),
         "top1_block_rate_over_eligible_hits": _rate(blocked_by_top1, eligible_hits),
     }
+
+
+def value_uncertain_guard(
+    diagnostics: list,
+    *,
+    window_per_side: int = 10,
+    neutral_abs_threshold: float = 0.30,
+    sign_flip_min: int = 3,
+) -> bool:
+    """Spec §5.1 value-uncertain guard.
+
+    Returns True (DO NOT terminate) when EITHER:
+      - both sides' last `window_per_side` own-plies have
+        |q_value| < neutral_abs_threshold for ALL plies in the window
+      - EITHER side's last `window_per_side` own-plies show >= sign_flip_min
+        sign-flips in q_value (per-side oscillation, NOT the interleaved
+        natural turn-alternation)
+
+    Returns False (termination is safe per this guard) when both sides
+    show stable, non-neutral assessments.
+
+    Per-side sign-flip semantics: a stable game where red consistently
+    sees +0.85 and black consistently sees -0.85 has 0 per-side flips —
+    decisive, terminate is safe. A side whose own q-value alternates
+    sign across its own moves IS uncertain — do not terminate.
+
+    Implementation note: callers in self-play / training enforce this at
+    the termination call-site, not the diagnostic call-site. This
+    predicate is pure and side-effect-free.
+    """
+    own_red = [
+        (e["root_summary"] or {}).get("q_value")
+        for e in (diagnostics or [])
+        if e.get("side_to_move") == "red" and (e.get("root_summary") or {}).get("q_value") is not None
+    ]
+    own_black = [
+        (e["root_summary"] or {}).get("q_value")
+        for e in (diagnostics or [])
+        if e.get("side_to_move") == "black" and (e.get("root_summary") or {}).get("q_value") is not None
+    ]
+    last_red = own_red[-window_per_side:]
+    last_black = own_black[-window_per_side:]
+
+    # Neutral both-sides condition.
+    both_neutral = (
+        len(last_red) >= 1
+        and len(last_black) >= 1
+        and all(abs(q) < neutral_abs_threshold for q in last_red)
+        and all(abs(q) < neutral_abs_threshold for q in last_black)
+    )
+    if both_neutral:
+        return True
+
+    # Oscillatory: per-side sign-flip count over each side's own last-window.
+    def _sign_flips(values: list) -> int:
+        return sum(
+            1 for a, b in zip(values, values[1:])
+            if (a > 0 and b < 0) or (a < 0 and b > 0)
+        )
+
+    return (
+        _sign_flips(last_red) >= sign_flip_min
+        or _sign_flips(last_black) >= sign_flip_min
+    )

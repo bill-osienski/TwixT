@@ -12,6 +12,7 @@ from scripts.GPU.alphazero.marathon_termination_diagnostics import (
     detect_no_progress_windows,
     classify_adjudication_coverage,
     compute_resign_gate_breakdown,
+    value_uncertain_guard,
     game_length_bucket,
     ADJUDICATION_GATE_BUCKETS,
     GAME_LENGTH_BUCKETS,
@@ -296,3 +297,53 @@ def test_resign_separates_no_value_signal_from_blocked_by_top1():
     assert out_no_value["blocked_by_top1"] == 0
     assert out_high_block["value_hits"] == 2
     assert out_high_block["blocked_by_top1"] == 2
+
+
+def test_value_uncertain_guard_blocks_termination_when_neutral():
+    """Spec §7 test 17. Last 10 own-plies for both sides with |score|<0.30
+    → guard returns True (do not terminate)."""
+    diagnostics = []
+    for ply in range(220, 240):
+        side = "red" if ply % 2 == 0 else "black"
+        diagnostics.append({
+            "ply": ply, "side_to_move": side,
+            "root_summary": {"q_value": 0.05},  # near neutral
+        })
+    assert value_uncertain_guard(diagnostics) is True
+
+
+def test_value_uncertain_guard_blocks_termination_when_oscillatory():
+    """Spec §7 test 18. EITHER side's last 10 own-plies show >=3 sign-flips
+    in its OWN q_value sequence → guard True. Per-side oscillation, NOT the
+    natural interleaved turn-alternation (which would conflate every stable
+    game with an oscillatory one — see test 19)."""
+    diagnostics = []
+    # Red's own q sequence oscillates: +0.5, -0.5, +0.5, ...
+    # Black's own q sequence oscillates: -0.5, +0.5, -0.5, ...
+    # 20 entries total = 10 own-plies per side.
+    for i in range(20):
+        if i % 2 == 0:  # red
+            score = 0.5 if (i // 2) % 2 == 0 else -0.5
+            side = "red"
+        else:  # black
+            score = -0.5 if (i // 2) % 2 == 0 else 0.5
+            side = "black"
+        diagnostics.append({
+            "ply": 220 + i, "side_to_move": side,
+            "root_summary": {"q_value": score},
+        })
+    assert value_uncertain_guard(diagnostics) is True
+
+
+def test_value_uncertain_guard_allows_termination_when_stable_losing():
+    """Spec §7 test 19. Last 10 own-plies stably below -0.30 for the loser
+    AND above 0.30 for the winner → guard returns False (terminate is safe)."""
+    diagnostics = []
+    for i in range(20):
+        side = "red" if i % 2 == 0 else "black"
+        score = 0.85 if side == "red" else -0.85
+        diagnostics.append({
+            "ply": 220 + i, "side_to_move": side,
+            "root_summary": {"q_value": score},
+        })
+    assert value_uncertain_guard(diagnostics) is False
