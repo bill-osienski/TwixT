@@ -146,6 +146,12 @@ class TwixtState:
     bridges: Set[Bridge] = field(default_factory=set)
     ply: int = 0
     max_plies_limit: Optional[int] = None  # if set, state becomes terminal at this ply
+    # Derived, lazily-built adjacency cache (peg -> neighbor pegs) backing
+    # _get_connected_component. Not a constructor arg; never copied (null on
+    # copy -> rebuilt lazily). Excluded from equality/repr (derived state).
+    _adj: Optional[Dict[Pos, List[Pos]]] = field(
+        default=None, init=False, compare=False, repr=False
+    )
 
     def __post_init__(self):
         """Validate active_size."""
@@ -388,13 +394,42 @@ class TwixtState:
 
         return new_bridges
 
+    def _build_adjacency(self) -> Dict[Pos, List[Pos]]:
+        """Build a peg -> [bridge-connected neighbor pegs] map from self.bridges.
+
+        One map per state (not per player): bridges are same-player by
+        construction, and per-player traversal correctness is enforced by the
+        pop-time color check in _get_connected_component.
+        """
+        adj: Dict[Pos, List[Pos]] = {}
+        for p1, p2 in self.bridges:
+            adj.setdefault(p1, []).append(p2)
+            adj.setdefault(p2, []).append(p1)
+        return adj
+
+    def _invalidate_adj(self) -> None:
+        """Drop the cached adjacency map.
+
+        Call after any in-place mutation of self.bridges / self.pegs on an
+        EXISTING state. Production mutates only via apply_move (which copies
+        first, so the child's cache is already empty); this is a safety hook
+        for tests and tools that mutate state in place.
+        """
+        self._adj = None
+
     def _get_connected_component(self, start: Pos, player: str) -> Set[Pos]:
         """Get all positions connected to start via same-player bridges.
 
-        Uses BFS traversal through bridges.
+        BFS over a lazily-built adjacency map (O(V+E) amortized per call). The
+        map is shared by winner(), _check_win(), and connectivity_masks() so
+        feature-side and game-logic-side connectivity can never drift.
         """
-        visited = set()
-        component = set()
+        if self._adj is None:
+            self._adj = self._build_adjacency()
+        adj = self._adj
+
+        visited: Set[Pos] = set()
+        component: Set[Pos] = set()
         queue = deque([start])
 
         while queue:
@@ -407,25 +442,9 @@ class TwixtState:
             visited.add(pos)
             component.add(pos)
 
-            # Find neighbors through bridges
-            for bridge in self.bridges:
-                (p1r, p1c), (p2r, p2c) = bridge
-
-                # Check if this bridge connects to our position
-                nr, nc = None, None
-                if (p1r, p1c) == pos:
-                    nr, nc = p2r, p2c
-                elif (p2r, p2c) == pos:
-                    nr, nc = p1r, p1c
-                else:
-                    continue
-
-                # Bridge must belong to same player (check one endpoint is enough)
-                if self.pegs.get((p1r, p1c)) != player:
-                    continue
-
-                if (nr, nc) not in visited:
-                    queue.append((nr, nc))
+            for npos in adj.get(pos, ()):
+                if npos not in visited:
+                    queue.append(npos)
 
         return component
 

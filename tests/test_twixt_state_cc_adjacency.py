@@ -182,3 +182,43 @@ def test_equivalence_real_replays():
         checked += 1
     print(f"[cc-adjacency] replays checked={checked} skipped={skipped} (capped at 40)")
     assert checked > 0, "expected at least one replayable game in Replays/"
+
+
+def test_adj_is_none_on_fresh_state():
+    s = TwixtState(active_size=8)
+    assert s._adj is None
+
+
+def test_adj_built_lazily_on_query():
+    s = TwixtState(active_size=8)
+    s.pegs[(3, 3)] = "red"
+    assert s._adj is None  # setting a peg does not build the cache
+    s._get_connected_component((3, 3), "red")
+    assert isinstance(s._adj, dict)
+
+
+def test_adj_not_carried_into_copy():
+    s = TwixtState(active_size=8)
+    s.pegs[(3, 3)] = "red"
+    s._get_connected_component((3, 3), "red")  # build cache
+    assert s._adj is not None
+    child = s.copy()
+    assert child._adj is None
+
+
+def test_apply_move_child_has_fresh_cache():
+    s = TwixtState(active_size=8)
+    s._get_connected_component((0, 0), "red")  # build cache on parent
+    child = s.apply_move((3, 3))  # red plays (3,3)
+    assert child._adj is None
+    assert child._get_connected_component((3, 3), "red") == {(3, 3)}
+
+
+def test_invalidate_adj_picks_up_mutation():
+    s = TwixtState(active_size=8)
+    s.pegs[(3, 3)] = "red"
+    s._get_connected_component((3, 3), "red")  # build cache (no bridges yet)
+    s.pegs[(5, 4)] = "red"
+    s.bridges.add(((3, 3), (5, 4)))
+    s._invalidate_adj()
+    assert s._get_connected_component((3, 3), "red") == {(3, 3), (5, 4)}
