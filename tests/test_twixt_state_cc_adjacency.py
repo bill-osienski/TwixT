@@ -222,3 +222,22 @@ def test_invalidate_adj_picks_up_mutation():
     s.bridges.add(((3, 3), (5, 4)))
     s._invalidate_adj()
     assert s._get_connected_component((3, 3), "red") == {(3, 3), (5, 4)}
+
+
+@pytest.mark.slow
+def test_perf_smoke_dense_winner():
+    """A dense position must resolve winner() quickly. With the old O(V*E)
+    scan this loop would take many seconds; O(V+E) is well under the bound."""
+    import time
+
+    state = None
+    for state in _random_game(7, active_size=24, max_ply=250):
+        pass
+    assert len(state.pegs) > 150, "expected a dense position"
+
+    start = time.perf_counter()
+    for _ in range(300):
+        state._invalidate_adj()  # force rebuild + full traversal each call
+        state.winner()
+    elapsed = time.perf_counter() - start
+    assert elapsed < 3.0, f"dense winner() x300 took {elapsed:.2f}s (regression?)"
