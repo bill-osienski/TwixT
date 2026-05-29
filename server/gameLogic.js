@@ -161,6 +161,10 @@ export class TwixtState {
     this.pegs = pegs;
     this.bridges = bridges;
     this.ply = ply;
+    // Derived, lazily-built adjacency cache backing _getConnectedComponent.
+    // Never copied (copy() runs the constructor -> null -> rebuilt lazily).
+    // Mirrors Python TwixtState._adj.
+    this._adj = null;
   }
 
   /**
@@ -387,12 +391,47 @@ export class TwixtState {
   }
 
   /**
+   * Build a "r,c" -> Array<[r,c]> adjacency map from this.bridges.
+   * One map per state; per-player correctness is enforced by the pop-time
+   * color check in _getConnectedComponent. Mirrors Python _build_adjacency.
+   */
+  _buildAdjacency() {
+    const adj = new Map();
+    for (const bKey of this.bridges) {
+      const [p1Str, p2Str] = bKey.split('-');
+      const [r1, c1] = p1Str.split(',').map(Number);
+      const [r2, c2] = p2Str.split(',').map(Number);
+      const k1 = `${r1},${c1}`;
+      const k2 = `${r2},${c2}`;
+      if (!adj.has(k1)) adj.set(k1, []);
+      if (!adj.has(k2)) adj.set(k2, []);
+      adj.get(k1).push([r2, c2]);
+      adj.get(k2).push([r1, c1]);
+    }
+    return adj;
+  }
+
+  /**
+   * Drop the cached adjacency map. Call after any in-place mutation of
+   * this.bridges / this.pegs on an existing state. Mirrors Python
+   * _invalidate_adj. Production mutates only via applyMove (fresh copy).
+   */
+  _invalidateAdj() {
+    this._adj = null;
+  }
+
+  /**
    * Get all positions connected to start via same-player bridges (BFS).
    * @param {[number, number]} start
    * @param {string} player
    * @returns {Set<string>} Set of "r,c" keys
    */
   _getConnectedComponent(start, player) {
+    if (this._adj === null) {
+      this._adj = this._buildAdjacency();
+    }
+    const adj = this._adj;
+
     const visited = new Set();
     const component = new Set();
     const queue = [start];
@@ -407,29 +446,9 @@ export class TwixtState {
       visited.add(key);
       component.add(key);
 
-      // Find neighbors through bridges
-      for (const bKey of this.bridges) {
-        const [p1Str, p2Str] = bKey.split('-');
-        const [r1, c1] = p1Str.split(',').map(Number);
-        const [r2, c2] = p2Str.split(',').map(Number);
-
-        // Check if bridge connects to our position
-        let nr, nc;
-        if (r1 === row && c1 === col) {
-          nr = r2;
-          nc = c2;
-        } else if (r2 === row && c2 === col) {
-          nr = r1;
-          nc = c1;
-        } else {
-          continue;
-        }
-
-        // Bridge must belong to same player
-        if (this.getPeg(r1, c1) !== player) {
-          continue;
-        }
-
+      const neighbors = adj.get(key);
+      if (neighbors === undefined) continue;
+      for (const [nr, nc] of neighbors) {
         const nKey = `${nr},${nc}`;
         if (!visited.has(nKey)) {
           queue.push([nr, nc]);
