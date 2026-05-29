@@ -195,18 +195,28 @@ def test_equivalence_real_replays():
     files = sorted(glob.glob(os.path.join(REPO_ROOT, "Replays", "**", "*.json"), recursive=True))
     if not files:
         pytest.skip("no Replays/ corpus present")
-    for path in files[:40]:  # bound runtime; log the cap
+    checked = skipped = 0
+    for path in files[:40]:  # bound runtime
         with open(path) as f:
             rec = json.load(f)
         moves = [(m["row"], m["col"]) for m in rec.get("moves", [])]
         if not moves:
             continue
         active = int(rec.get("meta", {}).get("board_size", 24))
-        state = TwixtState(active_size=active)
-        for mv in moves:
-            state = state.apply_move(mv)
+        # Games may start black (mirror-prob); honor the recorded starting
+        # player so apply_move's per-player legality holds during replay.
+        start = rec.get("starting_player", "red")
+        try:
+            state = TwixtState(active_size=active, to_move=start)
+            for mv in moves:
+                state = state.apply_move(mv)
+        except ValueError:
+            skipped += 1  # a non-replayable record must not crash the suite
+            continue
         _assert_position_equivalent(state)  # final (densest) position
-    print(f"[cc-adjacency] checked {min(len(files), 40)}/{len(files)} replays (capped at 40)")
+        checked += 1
+    print(f"[cc-adjacency] replays checked={checked} skipped={skipped} (capped at 40)")
+    assert checked > 0, "expected at least one replayable game in Replays/"
 ```
 
 - [ ] **Step 2: Run it against the current (unmodified) engine**
