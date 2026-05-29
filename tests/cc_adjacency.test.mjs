@@ -92,7 +92,7 @@ function check(name, cond) {
 
 // 4. Equivalence vs legacy over seeded random games
 for (const seed of [1, 2, 3]) {
-  const state = playRandomGame(seed, BOARD_SIZE, 120);
+  const state = playRandomGame(seed, BOARD_SIZE, 250);  // reach the dense regime the bug lived in
   let ok = true;
   for (const [key, p] of state.pegs) {
     const [r, c] = key.split(',').map(Number);
