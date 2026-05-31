@@ -86,6 +86,17 @@ Dirichlet exploration noise, which stays **off** (`add_noise=False`). Mirror
 augmentation **off**. Exposed via `--opening-temp-plies / --temp-high
 / --temp-low` for tuning.
 
+`select_move` (`mcts.py:1176-1226`) uses only `temp_threshold_ply`/`temp_high`
+/`temp_low` and is **independent** of `add_noise`/Dirichlet, so the
+`EvalConfig → MCTSConfig` mapping is clean. (If a future MCTS change ever ties
+the temperature schedule to noise, the plan must add explicit eval-selection
+logic rather than relying on these fields.)
+
+**Deterministic smoke mode:** `--selection-mode argmax` sets
+`temp_high = temp_low = 0.0`, hitting `select_move`'s existing `temp < 0.01`
+argmax-with-rng-tiebreak branch — exact reproducibility with no sampling noise,
+for tiny debug runs. Real tournaments use the default `opening_temperature`.
+
 ### 4. Controlled colors: red always moves first; balance which model is red
 
 `start_player` is fixed to `"red"` every game (red has the fixed first-move
@@ -117,6 +128,20 @@ mirrors the trainer's dynamic-counter worker pool
 Properties: one parallelism knob (`--workers`); dynamic work-stealing across all
 games; no per-pairing barrier; per-worker checkpoint cache; reproducible seeds
 independent of worker assignment; same engine for match and tournament.
+
+### 6. Defaults aligned to the 24-board training tables (comparability)
+
+Tournament defaults must match the conditions the models were trained under, or
+results would misrepresent strength:
+
+- **`--max-moves` default = 280**, not 200. `MAX_MOVES_TABLE[24] = 280`
+  (`trainer.py:215`). A 200-ply cap would punish models that win *slowly but
+  correctly* within the real 280-ply training cap by converting their wins into
+  premature state-caps. Exposed for override, but **280 is the default**.
+- **`--mcts-sims` default = 400.** `SIMS_TABLE[24] = 400` (`trainer.py:226`),
+  so 400 already matches 24-board training's effective sims. Stated explicitly:
+  *eval sims default to the current 24×24 `SIMS_TABLE` effective sims unless
+  overridden.* If that table value ever changes, the eval default tracks it.
 
 ## Architecture
 
@@ -161,22 +186,31 @@ class EvalGameResult:
     black_checkpoint: str
     winner: str | None              # "red" | "black" | None
     winner_checkpoint: str | None
-    reason: str                     # "win" | "state_cap" | "board_full"
+    reason: str                     # "win"|"state_cap"|"board_full"|"unknown_error"
     n_moves: int
     red_score: float                # 1.0 / 0.0 / 0.5
     black_score: float              # 1.0 - red_score
 
 @dataclass(frozen=True)
 class EvalConfig:                   # pickle-safe; passed to workers under spawn
-    board_size: int
-    mcts_sims: int
-    mcts_eval_batch_size: int
-    mcts_stall_flush_sims: int
-    opening_temp_plies: int
-    temp_high: float
-    temp_low: float
-    max_moves: int
+    board_size: int      = 24
+    mcts_sims: int       = 400      # SIMS_TABLE[24]; see "Defaults" below
+    mcts_eval_batch_size: int = 14
+    mcts_stall_flush_sims: int = 48
+    selection_mode: str  = "opening_temperature"   # or "argmax" (smoke/debug)
+    opening_temp_plies: int = 20    # -> MCTSConfig.temp_threshold_ply
+    temp_high: float     = 1.0      # -> MCTSConfig.temp_high
+    temp_low: float      = 0.1      # -> MCTSConfig.temp_low
+    max_moves: int       = 280      # MAX_MOVES_TABLE[24]; see "Defaults" below
+```
 
+`cfg_from(config) -> MCTSConfig` maps these fields directly.
+`selection_mode == "argmax"` sets `temp_high = temp_low = 0.0`, which triggers
+`select_move`'s existing `temp < 0.01` argmax-with-rng-tiebreak branch — a
+deterministic mode for smoke tests. `"opening_temperature"` passes
+`opening_temp_plies`/`temp_high`/`temp_low` through.
+
+```python
 def run_game_tasks(tasks: list[EvalGameTask], workers: int,
                    config: EvalConfig) -> list[EvalGameResult]:
     """Execute tasks and return results sorted by (pairing_id, game_idx).
@@ -201,21 +235,28 @@ Per-game function (pure, deterministic given seed):
 
 ```python
 def play_eval_game(red_eval, black_eval, config, seed) -> (winner, reason, n_moves):
-    rng = random.Random(seed)                       # shared by both MCTS
-    mcts_red   = MCTS(red_eval,   cfg_from(config), rng)
-    mcts_black = MCTS(black_eval, cfg_from(config), rng)
+    # Correction #5: independent per-side child RNGs derived deterministically
+    # from the task seed. Avoids cross-player coupling where red's sampling
+    # consumes RNG draws and shifts black's future samples. Still fully
+    # reproducible by `seed`.
+    mcts_red   = MCTS(red_eval,   cfg_from(config), random.Random(seed ^ 0xA5A5A5))
+    mcts_black = MCTS(black_eval, cfg_from(config), random.Random(seed ^ 0x5A5A5A))
     state = TwixtState(active_size=config.board_size,
                        to_move="red", max_plies_limit=config.max_moves)
     ply = 0
     while not state.is_terminal() and ply < config.max_moves:
         mcts = mcts_red if state.to_move == "red" else mcts_black
         counts, _ = mcts.search(state, add_noise=False)   # fresh root each ply
-        move = mcts.select_move(counts, ply)              # opening temp -> sharp
+        move = mcts.select_move(counts, ply)              # selection_mode (above)
         state = state.apply_move(move); ply += 1
-    winner = state.winner() if state.is_terminal() else None
-    if winner is not None:                 reason = "win"
-    elif not state.legal_moves():          reason = "board_full"   # rare draw
-    else:                                  reason = "state_cap"
+    # Correction #3: classify explicitly. Do NOT rely on is_terminal() — it
+    # conflates win / cap / board-full (twixt_state.py:549-574). winner()
+    # checks paths independent of the cap, so it is authoritative here.
+    winner = state.winner()
+    if   winner is not None:        reason = "win"
+    elif ply >= config.max_moves:   reason = "state_cap"
+    elif not state.legal_moves():   reason = "board_full"   # rare
+    else:                           reason = "unknown_error"
     return winner, reason, ply
 ```
 
@@ -294,7 +335,8 @@ python -m scripts.GPU.alphazero.eval_checkpoint_match \
   --checkpoint-b checkpoints/alphazero-v2-staged/model_iter_0379.safetensors \
   --games 400 --board-size 24 \
   --mcts-sims 400 --mcts-eval-batch-size 14 --mcts-stall-flush-sims 48 \
-  --opening-temp-plies 20 --temp-high 1.0 --temp-low 0.1 --max-moves 200 \
+  --selection-mode opening_temperature \
+  --opening-temp-plies 20 --temp-high 1.0 --temp-low 0.1 --max-moves 280 \
   --workers 6 --base-seed 12345 \
   --output logs/eval/0419_vs_0379.json
 ```
@@ -319,9 +361,12 @@ Writes:
   "a_as_black": {"games":200,"wins":...,"losses":...,"caps":...,"score_rate":...},
   "color_bias": {"red_win_rate_decisive": 0.51},
   "avg_plies": 58.2,
+  "selection_mode": "opening_temperature",
+  "draw_score_policy": "state_cap_and_board_full_score_0.5",
   "config": {"mcts_sims":400,"mcts_eval_batch_size":14,"mcts_stall_flush_sims":48,
+             "selection_mode":"opening_temperature",
              "opening_temp_plies":20,"temp_high":1.0,"temp_low":0.1,
-             "max_moves":200,"board_size":24,"base_seed":12345,"workers":6},
+             "max_moves":280,"board_size":24,"base_seed":12345,"workers":6},
   "git_commit": "<sha>", "generated_at": "<iso8601>"
 }
 ```
@@ -334,7 +379,8 @@ python -m scripts.GPU.alphazero.eval_checkpoint_tournament \
   --pairings 0419:0379,0419:0339,0419:0299,0379:0339 \
   --games 400 --board-size 24 \
   --mcts-sims 400 --mcts-eval-batch-size 14 --mcts-stall-flush-sims 48 \
-  --opening-temp-plies 20 --temp-high 1.0 --temp-low 0.1 --max-moves 200 \
+  --selection-mode opening_temperature \
+  --opening-temp-plies 20 --temp-high 1.0 --temp-low 0.1 --max-moves 280 \
   --workers 6 --base-seed 12345 \
   --output-dir logs/eval/tournament_<id>/
 ```
@@ -387,9 +433,26 @@ Required (stats + game logic):
 - **Output dir** created if absent; summary always written even if a pairing is
   degenerate (all caps).
 
+## Implementation order
+
+Build bottom-up so each layer is tested before the next depends on it:
+
+1. `eval_elo.py` — pure stats + unit tests (no game/MLX deps).
+2. `eval_runner.py` — dataclasses, a fake deterministic evaluator,
+   `play_eval_game`, and the `workers == 1` in-process path.
+3. Task builders for match + tournament + their tests (balance, seed stability).
+4. `workers > 1` spawn path + cache tests (workers=1 vs 2 equivalence).
+5. Real checkpoint-loading path (`load_network_for_scoring` + `LocalGPUEvaluator`,
+   per-worker cache).
+6. 2-game fake-evaluator end-to-end smoke.
+7. **Same-checkpoint real smoke: 0419 vs 0419** — sanity gate. Must land near
+   50% / ~0 Elo within CI; a large deviation means a color/seed/bookkeeping bug.
+8. First real match: **0419 vs 0379**.
+
 ## First runs to validate the system
 
-The four pairings from the original proposal:
+After the 0419-vs-0419 sanity gate (step 7), the four pairings from the
+original proposal:
 
 ```
 0419 vs 0379    # adjacent — is recent training still gaining?
@@ -402,4 +465,3 @@ Interpretation:
 - 0419 beats all clearly → keep training.
 - 0419 ≈ 0379 but beats 0339/0299 → plateauing around 0379–0419.
 - 0419 loses to 0379 → freeze 0379 as current best.
-```
