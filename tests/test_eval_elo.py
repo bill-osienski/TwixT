@@ -50,3 +50,17 @@ def test_verdict_thresholds():
     assert verdict(0.53) == "weak_signal"
     assert verdict(0.50) == "tied"
     assert verdict(0.40) == "worse"
+
+
+def test_elo_diff_rejects_nonpositive_n():
+    with pytest.raises(ValueError):
+        elo_diff(0.5, 0)
+
+
+def test_verdict_lower_bounds_inclusive():
+    # Exact threshold values must fall in the higher category.
+    assert verdict(0.52) == "weak_signal"
+    assert verdict(0.48) == "tied"
+    # Just below each threshold drops a category.
+    assert verdict(0.5199) == "tied"
+    assert verdict(0.4799) == "worse"

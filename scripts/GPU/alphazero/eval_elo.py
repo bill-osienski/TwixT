@@ -26,7 +26,9 @@ def _clamp_p(p: float, n: int) -> float:
 
 
 def elo_diff(p: float, n: int) -> float:
-    """Elo difference implied by score rate p over n games (clamped)."""
+    """Elo difference implied by score rate p over n games (clamped). n must be > 0."""
+    if n <= 0:
+        raise ValueError("n must be > 0")
     p = _clamp_p(p, n)
     return 400.0 * math.log10(p / (1.0 - p))
 
