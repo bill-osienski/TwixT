@@ -100,7 +100,7 @@ def test_verdict_thresholds():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python -m pytest tests/test_eval_elo.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_elo.py -q`
 Expected: FAIL — `ModuleNotFoundError: No module named 'scripts.GPU.alphazero.eval_elo'`
 
 - [ ] **Step 3: Write the implementation**
@@ -180,7 +180,7 @@ def verdict(rate: float) -> str:
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `python -m pytest tests/test_eval_elo.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_elo.py -q`
 Expected: PASS (8 passed)
 
 - [ ] **Step 5: Commit**
@@ -199,6 +199,24 @@ git commit -m "$(printf 'feat(eval): pure Elo/score/CI stats for checkpoint tour
 - Create: `tests/eval_fakes.py`
 - Test: `tests/test_eval_runner.py`
 
+- [ ] **Step 0: Confirm import paths (no code change)**
+
+These five symbols are imported by the new modules. All were verified to
+resolve against the repo on 2026-05-31; re-run if the tree has changed:
+
+Run:
+```bash
+.venv/bin/python -c "
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero.mcts import MCTS, MCTSConfig
+from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+from scripts.GPU.alphazero.probe_eval import load_network_for_scoring
+print('imports OK')
+"
+```
+Expected: `imports OK`. If any import fails, fix the path in `eval_runner.py`
+before proceeding (this would be a non-design failure).
+
 - [ ] **Step 1: Write the fake evaluator helper**
 
 Create `tests/eval_fakes.py` (NOT a `test_*.py` file, so pytest won't collect it; module-level so it pickles under spawn):
@@ -214,8 +232,6 @@ Factories are module-level functions so they pickle under the spawn
 multiprocessing context (lambdas do not).
 """
 from __future__ import annotations
-
-import multiprocessing as mp
 
 import numpy as np
 
@@ -240,10 +256,6 @@ class FakeEvaluator:
 def fake_evaluator_factory(path: str) -> FakeEvaluator:
     """Picklable factory: ignores path, returns a fresh FakeEvaluator."""
     return FakeEvaluator(value=0.0)
-
-
-# Shared counter for the "loads each checkpoint at most once per worker" test.
-_LOAD_COUNTS = mp.Manager().dict() if False else {}
 
 
 def counting_factory(path: str) -> FakeEvaluator:
@@ -363,7 +375,7 @@ def test_worker_cache_loads_each_checkpoint_once_sequential():
 
 - [ ] **Step 3: Run tests to verify they fail**
 
-Run: `python -m pytest tests/test_eval_runner.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_runner.py -q`
 Expected: FAIL — `ImportError` / `cannot import name` from `eval_runner`
 
 - [ ] **Step 4: Write the implementation (core + sequential path)**
@@ -472,7 +484,10 @@ def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int):
     state = TwixtState(active_size=config.board_size, to_move="red",
                        max_plies_limit=config.max_moves)
     ply = 0
-    while not state.is_terminal() and ply < config.max_moves:
+    # Explicit loop condition -- do NOT gate on is_terminal(), which conflates
+    # win / cap / board-full. Continue while there is no real winner, the ply
+    # cap is not reached, and legal moves remain.
+    while state.winner() is None and ply < config.max_moves and state.legal_moves():
         mcts = mcts_red if state.to_move == "red" else mcts_black
         counts, _ = mcts.search(state, add_noise=False)
         move = mcts.select_move(counts, ply)
@@ -511,6 +526,10 @@ def build_pairing_tasks(pairing_id, a_ckpt, b_ckpt, games, base_seed, pairing_in
     task_id and seed are task-derived (stable across worker counts)."""
     if games < 2:
         raise ValueError("games must be >= 2")
+    if games % 2 != 0:
+        # Color balancing assigns A=red on even game_idx, A=black on odd.
+        # An odd count gives one model an extra red game -> biased.
+        raise ValueError("games must be even for balanced colors")
     if games >= GAMES_PER_PAIRING_LIMIT:
         raise ValueError(f"games must be < {GAMES_PER_PAIRING_LIMIT}")
     offset = pairing_index * GAMES_PER_PAIRING_LIMIT
@@ -588,8 +607,13 @@ def run_game_tasks(tasks, workers: int, config: EvalConfig,
                    evaluator_factory: Optional[EvaluatorFactory] = None):
     """Execute tasks; return results sorted by (pairing_id, game_idx).
 
-    workers<=1 runs in-process; workers>1 uses a spawn pool (added in a
-    later task). evaluator_factory defaults to the real checkpoint loader.
+    workers<=1 runs in-process. workers>1 (spawn pool) is added in Task 5;
+    until then it raises NotImplementedError so the intermediate commit has
+    no live unresolved reference.
+
+    NOTE: when workers>1, evaluator_factory must be a MODULE-LEVEL picklable
+    callable (it is sent to spawned workers). Lambdas/closures will fail to
+    pickle. The default real loader and the test fakes satisfy this.
     """
     factory = evaluator_factory or _default_evaluator_factory
     if not tasks:
@@ -597,16 +621,16 @@ def run_game_tasks(tasks, workers: int, config: EvalConfig,
     workers = min(workers, len(tasks))
     if workers <= 1:
         return _run_sequential(tasks, config, factory)
-    return _run_parallel(tasks, workers, config, factory)
+    raise NotImplementedError("workers > 1 added in Task 5")
 ```
 
-> NOTE: `_run_parallel` is referenced here but defined in Task 5. Until then,
-> any `workers>1` call raises `NameError`. All Task 2/3/4 tests use
-> `workers=1`, so this is fine; Task 5 adds `_run_parallel` and its tests.
+> NOTE: the `workers>1` branch raises `NotImplementedError` in this task. All
+> Task 2/3/4 tests use `workers=1`, so this is safe; Task 5 replaces the raise
+> with the real `_run_parallel` call and adds its tests.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `python -m pytest tests/test_eval_runner.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_runner.py -q`
 Expected: PASS (11 passed)
 
 - [ ] **Step 6: Commit**
@@ -661,6 +685,12 @@ def test_match_rejects_too_few_games():
         build_match_tasks("A", "B", games=1, base_seed=0, pairing_id="p")
 
 
+def test_match_rejects_odd_games():
+    # Odd count would give one model an extra red game -> color imbalance.
+    with pytest.raises(ValueError, match="even"):
+        build_match_tasks("A", "B", games=3, base_seed=0, pairing_id="p")
+
+
 def test_tournament_flat_list_unique_task_ids():
     pairings = [("A", "B"), ("A", "C")]
     tasks = build_tournament_tasks(pairings, games=4, base_seed=500)
@@ -699,7 +729,7 @@ def test_resolve_checkpoint_passthrough_full_path():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python -m pytest tests/test_eval_builders.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_builders.py -q`
 Expected: FAIL — `ModuleNotFoundError` for the two new modules
 
 - [ ] **Step 3: Write `eval_checkpoint_match.py` builder**
@@ -752,8 +782,8 @@ def build_tournament_tasks(pairings, games: int, base_seed: int):
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `python -m pytest tests/test_eval_builders.py -q`
-Expected: PASS (9 passed)
+Run: `.venv/bin/python -m pytest tests/test_eval_builders.py -q`
+Expected: PASS (10 passed)
 
 - [ ] **Step 6: Commit**
 
@@ -834,7 +864,7 @@ def test_summarize_tournament_groups_by_pairing():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python -m pytest tests/test_eval_summary.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_summary.py -q`
 Expected: FAIL — `ModuleNotFoundError: ... eval_summary`
 
 - [ ] **Step 3: Write the implementation**
@@ -874,6 +904,10 @@ def _color_stats(results, model_ckpt, color):
 
 
 def summarize_match(results, a_ckpt, b_ckpt, pairing_id, config) -> dict:
+    if not results:
+        # Empty here means a grouping bug (callers reject empty pairings
+        # before running). Fail loud rather than emit a 0.0 placeholder.
+        raise ValueError(f"no results for pairing {pairing_id}")
     games = len(results)
     a_wins = sum(1 for r in results if r.winner_checkpoint == a_ckpt)
     b_wins = sum(1 for r in results if r.winner_checkpoint == b_ckpt)
@@ -881,7 +915,7 @@ def summarize_match(results, a_ckpt, b_ckpt, pairing_id, config) -> dict:
     board_full = sum(1 for r in results if r.reason == "board_full")
     draws = state_caps + board_full
     a_score = a_wins + 0.5 * draws
-    rate = score_rate(a_wins, draws, games) if games else 0.0
+    rate = score_rate(a_wins, draws, games)
     s_lo, s_hi = score_ci_trinomial(a_wins, draws, b_wins)
     e_lo, e_hi = elo_ci(a_wins, draws, b_wins)
 
@@ -898,7 +932,7 @@ def summarize_match(results, a_ckpt, b_ckpt, pairing_id, config) -> dict:
         "state_caps": state_caps, "board_full": board_full,
         "a_score": a_score,
         "a_score_rate": rate,
-        "elo_estimate": elo_diff(rate, games) if games else 0.0,
+        "elo_estimate": elo_diff(rate, games),
         "elo_ci95": [e_lo, e_hi],
         "score_rate_ci95": [s_lo, s_hi],
         "verdict": verdict(rate),
@@ -907,7 +941,7 @@ def summarize_match(results, a_ckpt, b_ckpt, pairing_id, config) -> dict:
         "color_bias": {
             "red_win_rate_decisive": (red_wins / decisive) if decisive else None,
         },
-        "avg_plies": (mean(r.n_moves for r in results) if results else 0.0),
+        "avg_plies": mean(r.n_moves for r in results),
         "selection_mode": config.get("selection_mode") if config else None,
         "draw_score_policy": DRAW_SCORE_POLICY,
         "config": config,
@@ -943,7 +977,7 @@ def summarize_tournament(results, pairings, config) -> dict:
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `python -m pytest tests/test_eval_summary.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_summary.py -q`
 Expected: PASS (4 passed)
 
 - [ ] **Step 5: Commit**
@@ -1007,12 +1041,27 @@ def test_parallel_returns_all_results_sorted():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python -m pytest tests/test_eval_runner_parallel.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_runner_parallel.py -q`
 Expected: FAIL — `NameError: name '_run_parallel' is not defined`
 
-- [ ] **Step 3: Add the parallel path to `eval_runner.py`**
+- [ ] **Step 3a: Activate the parallel branch in `run_game_tasks`**
 
-Append to `scripts/GPU/alphazero/eval_runner.py` (after `_run_sequential`):
+In `scripts/GPU/alphazero/eval_runner.py`, replace the placeholder line inside
+`run_game_tasks`:
+
+```python
+    raise NotImplementedError("workers > 1 added in Task 5")
+```
+with:
+```python
+    return _run_parallel(tasks, workers, config, factory)
+```
+
+- [ ] **Step 3b: Append the parallel path to `eval_runner.py`**
+
+Append to `scripts/GPU/alphazero/eval_runner.py` (after `_run_sequential`).
+`factory` is sent to spawned workers, so it must be a module-level picklable
+callable (see `run_game_tasks` docstring):
 
 ```python
 def _worker_main(worker_id, tasks, config, factory, next_idx, result_q):
@@ -1079,12 +1128,12 @@ def _run_parallel(tasks, workers, config, factory):
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `python -m pytest tests/test_eval_runner_parallel.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_runner_parallel.py -q`
 Expected: PASS (2 passed)
 
 - [ ] **Step 5: Run the full eval suite to confirm no regressions**
 
-Run: `python -m pytest tests/test_eval_elo.py tests/test_eval_runner.py tests/test_eval_runner_parallel.py tests/test_eval_builders.py tests/test_eval_summary.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_elo.py tests/test_eval_runner.py tests/test_eval_runner_parallel.py tests/test_eval_builders.py tests/test_eval_summary.py -q`
 Expected: PASS (all)
 
 - [ ] **Step 6: Commit**
@@ -1153,7 +1202,7 @@ def test_run_match_pairing_id_default(tmp_path):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest tests/test_eval_cli.py::test_run_match_two_games_writes_outputs -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_cli.py::test_run_match_two_games_writes_outputs -q`
 Expected: FAIL — `cannot import name 'run_match'`
 
 - [ ] **Step 3: Add `run_match` + `main` to `eval_checkpoint_match.py`**
@@ -1278,7 +1327,7 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `python -m pytest tests/test_eval_cli.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_cli.py -q`
 Expected: PASS (2 passed)
 
 - [ ] **Step 5: Commit**
@@ -1349,7 +1398,7 @@ def test_run_tournament_writes_per_pairing_files(tmp_path):
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python -m pytest tests/test_eval_cli.py -k tournament -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_cli.py -k tournament -q`
 Expected: FAIL — `cannot import name 'run_tournament'`
 
 - [ ] **Step 3: Add tournament runtime to `eval_checkpoint_tournament.py`**
@@ -1493,12 +1542,12 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `python -m pytest tests/test_eval_cli.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_cli.py -q`
 Expected: PASS (5 passed)
 
 - [ ] **Step 5: Run the full eval suite**
 
-Run: `python -m pytest tests/test_eval_elo.py tests/test_eval_runner.py tests/test_eval_runner_parallel.py tests/test_eval_builders.py tests/test_eval_summary.py tests/test_eval_cli.py -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_elo.py tests/test_eval_runner.py tests/test_eval_runner_parallel.py tests/test_eval_builders.py tests/test_eval_summary.py tests/test_eval_cli.py -q`
 Expected: PASS (all)
 
 - [ ] **Step 6: Commit**
@@ -1555,11 +1604,16 @@ def test_same_checkpoint_is_near_even(tmp_path):
 
 - [ ] **Step 2: Run the sanity gate explicitly**
 
-Run: `python -m pytest tests/test_eval_real_smoke.py -m integration -q`
+Run: `.venv/bin/python -m pytest tests/test_eval_real_smoke.py -m integration -q`
 Expected: PASS (1 passed) — model-vs-itself score rate's 95% CI contains 0.5.
 
-> If this FAILS, stop and debug before any real match: the most likely causes
-> are a color-assignment bug (A not balanced across red/black) or a
+> **This is a sanity gate only, not proof of correctness.** With only 20 games
+> the CI is wide, so it can pass even with moderate issues. Before trusting any
+> tournament output for a real decision, run a same-checkpoint validation of
+> **100–200 games manually** and confirm the rate sits near 0.50 with a tight CI.
+>
+> If this gate FAILS, stop and debug before any real match: the most likely
+> causes are a color-assignment bug (A not balanced across red/black) or a
 > winner→checkpoint mapping bug. Re-check `build_pairing_tasks` parity and
 > `make_result`.
 
@@ -1577,7 +1631,7 @@ depending on `--workers`; tune `--workers` to your core count):
 
 ```bash
 mkdir -p logs/eval
-python -m scripts.GPU.alphazero.eval_checkpoint_match \
+.venv/bin/python -m scripts.GPU.alphazero.eval_checkpoint_match \
   --checkpoint-a checkpoints/alphazero-v2-staged/model_iter_0419.safetensors \
   --checkpoint-b checkpoints/alphazero-v2-staged/model_iter_0379.safetensors \
   --games 400 --board-size 24 \
@@ -1594,7 +1648,7 @@ and writes `logs/eval/0419_vs_0379.json` + `logs/eval/0419_vs_0379_games.jsonl`.
 - [ ] **Step 5: Run the four-pairing tournament (manual)**
 
 ```bash
-python -m scripts.GPU.alphazero.eval_checkpoint_tournament \
+.venv/bin/python -m scripts.GPU.alphazero.eval_checkpoint_tournament \
   --checkpoints-dir checkpoints/alphazero-v2-staged \
   --pairings 0419:0379,0419:0339,0419:0299,0379:0339 \
   --games 400 --board-size 24 \

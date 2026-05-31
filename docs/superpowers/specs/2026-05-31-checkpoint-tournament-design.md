@@ -105,6 +105,9 @@ separates the color/first-move advantage (cancels across a balanced match) from
 model strength. By-color stats are still tracked and a `color_bias` sanity
 metric is reported.
 
+Because the balance relies on parity, **`games` must be even** — an odd count
+gives one model an extra red game. `build_pairing_tasks` rejects odd `games`.
+
 ### 5. One flat task queue, one global worker pool — never nested pools
 
 Two levels of parallelism exist: across games within a pairing, and across
@@ -145,12 +148,15 @@ results would misrepresent strength:
 
 ## Architecture
 
-Three new files. **Zero changes** to training code.
+Five new files. **Zero changes** to training code.
 
 ```
 scripts/GPU/alphazero/
-  eval_runner.py                  # shared flat task queue + global worker pool
+  eval_runner.py                  # shared flat task queue + global worker pool;
+                                  #   also short_id/resolve_checkpoint helpers
   eval_elo.py                     # pure stats: score, Elo, draw-aware CI, verdict
+  eval_summary.py                 # aggregate results -> match/tournament summary
+                                  #   (by-color, color-bias); pure (no MLX/time/git)
   eval_checkpoint_match.py        # builds one pairing's tasks, calls run_game_tasks
   eval_checkpoint_tournament.py   # builds all pairings' tasks, calls run_game_tasks,
                                   #   groups results by pairing_id
@@ -244,7 +250,9 @@ def play_eval_game(red_eval, black_eval, config, seed) -> (winner, reason, n_mov
     state = TwixtState(active_size=config.board_size,
                        to_move="red", max_plies_limit=config.max_moves)
     ply = 0
-    while not state.is_terminal() and ply < config.max_moves:
+    # Explicit condition -- do NOT gate on is_terminal() (it conflates
+    # win/cap/board-full). Stop on a real winner, the cap, or no legal moves.
+    while state.winner() is None and ply < config.max_moves and state.legal_moves():
         mcts = mcts_red if state.to_move == "red" else mcts_black
         counts, _ = mcts.search(state, add_noise=False)   # fresh root each ply
         move = mcts.select_move(counts, ply)              # selection_mode (above)
