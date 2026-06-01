@@ -152,8 +152,11 @@ def main(argv=None):
     )
     print(f"{'pairing':<16} {'a_rate':>7} {'elo':>7}  verdict")
     for row in summary["table"]:
-        print(f"{row['pairing_id']:<16} {row['a_score_rate']:>7.4f} "
-              f"{row['elo_estimate']:>7.1f}  {row['verdict']}")
+        rate = row["a_score_rate"]
+        elo = row["elo_estimate"]
+        rate_s = f"{rate:>7.4f}" if rate is not None else f"{'self':>7}"
+        elo_s = f"{elo:>7.1f}" if elo is not None else f"{'-':>7}"
+        print(f"{row['pairing_id']:<16} {rate_s} {elo_s}  {row['verdict']}")
 
 
 if __name__ == "__main__":

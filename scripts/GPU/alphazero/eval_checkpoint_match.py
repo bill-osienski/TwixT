@@ -107,9 +107,15 @@ def main(argv=None):
         base_seed=args.base_seed, config=_config_from_args(args),
         workers=args.workers, output=args.output,
     )
-    print(f"{summary['pairing_id']}: a_score_rate={summary['a_score_rate']:.4f} "
-          f"elo={summary['elo_estimate']:.1f} "
-          f"CI95={summary['elo_ci95']} verdict={summary['verdict']}")
+    if summary.get("self_match"):
+        cb = summary["color_bias"]["red_win_rate_decisive"]
+        print(f"{summary['pairing_id']}: SELF-MATCH — per-checkpoint score "
+              f"undefined; red_win_rate_decisive={cb} "
+              f"(see color_bias / a_as_red+black are null by design)")
+    else:
+        print(f"{summary['pairing_id']}: a_score_rate={summary['a_score_rate']:.4f} "
+              f"elo={summary['elo_estimate']:.1f} "
+              f"CI95={summary['elo_ci95']} verdict={summary['verdict']}")
 
 
 if __name__ == "__main__":

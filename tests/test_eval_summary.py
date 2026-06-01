@@ -53,3 +53,31 @@ def test_summarize_tournament_groups_by_pairing():
     assert out["pairings"][0]["pairing_id"] == "A_vs_B"
     assert len(out["table"]) == 1
     assert out["table"][0]["verdict"] == "stronger"
+
+
+def _self_match_results():
+    # Same checkpoint "X" on both sides; balanced colors by game_idx parity.
+    return [
+        _res(0, "X", "X", "red", "win"),
+        _res(1, "X", "X", "black", "win"),
+        _res(2, "X", "X", "red", "win"),
+        _res(3, "X", "X", None, "state_cap"),
+    ]
+
+
+def test_summarize_match_self_match_nulls_comparison():
+    s = summarize_match(_self_match_results(), "X", "X", "X_vs_X", config={})
+    assert s["self_match"] is True
+    # per-checkpoint comparison undefined
+    for k in ("a_wins", "b_wins", "a_score", "a_score_rate", "elo_estimate",
+              "elo_ci95", "score_rate_ci95", "verdict", "a_as_red", "a_as_black"):
+        assert s[k] is None, f"{k} should be None for self-match"
+    # color balance IS meaningful: red wins g0,g2 / black wins g1 -> 2/3 of decisive
+    assert abs(s["color_bias"]["red_win_rate_decisive"] - (2 / 3)) < 1e-9
+    assert s["games"] == 4 and s["state_caps"] == 1
+
+
+def test_summarize_match_normal_sets_self_match_false():
+    s = summarize_match(_match_results(), "A", "B", "A_vs_B", config={})
+    assert s["self_match"] is False
+    assert s["a_score_rate"] is not None and s["verdict"] == "stronger"
