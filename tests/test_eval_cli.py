@@ -40,3 +40,49 @@ def test_run_match_pairing_id_default(tmp_path):
                   games=2, base_seed=0, config=_tiny_cfg(), workers=1,
                   output=str(out), evaluator_factory=fake_evaluator_factory)
     assert s["pairing_id"] == "0419_vs_0379"
+
+
+import scripts.GPU.alphazero.eval_checkpoint_tournament as tourney_mod
+from scripts.GPU.alphazero.eval_checkpoint_tournament import (
+    run_tournament, parse_pairings,
+)
+
+
+def test_parse_pairings_resolves_ids():
+    pairs = parse_pairings("0419:0379,0419:0339", "checkpoints/x")
+    assert pairs == [
+        ("checkpoints/x/model_iter_0419.safetensors",
+         "checkpoints/x/model_iter_0379.safetensors"),
+        ("checkpoints/x/model_iter_0419.safetensors",
+         "checkpoints/x/model_iter_0339.safetensors"),
+    ]
+
+
+def test_run_tournament_calls_run_game_tasks_once(tmp_path, monkeypatch):
+    calls = {"n": 0}
+    real = tourney_mod.run_game_tasks
+
+    def counting(*a, **k):
+        calls["n"] += 1
+        return real(*a, **k)
+
+    monkeypatch.setattr(tourney_mod, "run_game_tasks", counting)
+
+    pairings = [("A", "B"), ("A", "C")]
+    out = run_tournament(
+        pairings=pairings, games=2, base_seed=0, config=_tiny_cfg(),
+        workers=1, output_dir=str(tmp_path),
+        evaluator_factory=fake_evaluator_factory,
+    )
+    assert calls["n"] == 1                       # ONE pool, no nested calls
+    assert len(out["pairings"]) == 2
+    assert (tmp_path / "tournament.json").exists()
+
+
+def test_run_tournament_writes_per_pairing_files(tmp_path):
+    out = run_tournament(
+        pairings=[("A", "B")], games=2, base_seed=0, config=_tiny_cfg(),
+        workers=1, output_dir=str(tmp_path),
+        evaluator_factory=fake_evaluator_factory,
+    )
+    assert (tmp_path / "A_vs_B.json").exists()
