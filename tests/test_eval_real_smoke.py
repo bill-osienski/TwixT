@@ -51,3 +51,31 @@ def test_self_match_color_balance_is_near_even(tmp_path):
         f"self-match side-aware score {a_side_score:.3f} far from 0.5 — "
         f"suspect a color-assignment / seed / bookkeeping bug"
     )
+
+
+@pytest.mark.skipif(not os.path.exists(CKPT_0419), reason="0419 checkpoint absent")
+def test_parallel_workers2_viability(tmp_path):
+    """Best-effort parallel viability smoke: two MLX worker processes must
+    coexist on this machine and complete a small real-model match.
+
+    Parallel MLX is hardware-dependent (Metal resource limits). v1 only
+    REQUIRES --workers 1; this smoke gates --workers>1 so a future regression
+    (or a machine that can't hold two Metal contexts) is caught here rather
+    than mid-tournament. compile=True (the default eval factory) bounds the
+    per-game Metal-resource churn that otherwise exhausts the limit.
+
+    If this fails at checkpoint load on some Mac, that machine should run
+    tournaments with --workers 1 (sequential is fully valid, just slower).
+    """
+    cfg = EvalConfig(board_size=24, mcts_sims=64, selection_mode="argmax",
+                     max_moves=280)
+    out = tmp_path / "w2.json"
+    summary = run_match(
+        a_ckpt=CKPT_0419, b_ckpt=CKPT_0419, games=4, base_seed=12345,
+        config=cfg, workers=2, output=str(out),
+    )
+    assert summary["games"] == 4
+    recs = [json.loads(line) for line
+            in (tmp_path / "w2_games.jsonl").read_text().splitlines()]
+    assert len(recs) == 4
+    assert all(r["reason"] in {"win", "state_cap", "board_full"} for r in recs)

@@ -76,7 +76,10 @@ def _build_arg_parser():
     ap.add_argument("--temp-high", type=float, default=1.0)
     ap.add_argument("--temp-low", type=float, default=0.1)
     ap.add_argument("--max-moves", type=int, default=280)
-    ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument("--workers", type=int, default=1,
+                    help="default 1. Values >1 spawn multiple MLX processes and "
+                         "may exceed Metal resource limits on some Macs; run a "
+                         "small --workers 2 probe before a large parallel run.")
     ap.add_argument("--base-seed", type=int, default=12345)
     ap.add_argument("--output", required=True)
     return ap

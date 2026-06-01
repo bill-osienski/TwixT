@@ -300,12 +300,15 @@ def _run_parallel(tasks, workers, config, factory):
             _terminate_all()
             raise RuntimeError(
                 f"eval workers stalled (>{GET_TIMEOUT}s, no result); "
-                f"crashed={dead}"
+                f"crashed={dead}. If this is a Metal/MLX resource limit, "
+                f"re-run with --workers 1 (sequential is fully valid, just slower)."
             )
         if isinstance(msg, _WorkerFailed):
             _terminate_all()
             raise RuntimeError(
-                f"eval worker {msg.worker_id} crashed: {msg.error}"
+                f"eval worker {msg.worker_id} crashed: {msg.error}\n"
+                f"If this is a Metal/MLX resource limit, re-run with --workers 1 "
+                f"(sequential is fully valid, just slower)."
             )
         if isinstance(msg, _WorkerDone):
             done += 1

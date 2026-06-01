@@ -1573,6 +1573,7 @@ git commit -m "$(printf 'feat(eval): tournament CLI, one flat pool, grouped outp
 Create `tests/test_eval_real_smoke.py`:
 
 ```python
+import json
 import os
 
 import pytest
@@ -1587,25 +1588,50 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.mark.skipif(not os.path.exists(CKPT_0419), reason="0419 checkpoint absent")
-def test_same_checkpoint_is_near_even(tmp_path):
-    """Sanity gate: a model vs itself must land near 50% / ~0 Elo within CI.
-    A large deviation means a color/seed/bookkeeping bug."""
+def test_self_match_color_balance_is_near_even(tmp_path):
+    """Sanity gate: a model vs itself, validating color-balanced bookkeeping.
+
+    For a self-match the per-CHECKPOINT score is meaningless (a_ckpt == b_ckpt,
+    so winner_checkpoint matches both and a_wins counts every decisive game).
+    And red_win_rate is NOT 0.5 either — TwixT has a real first-move (red)
+    advantage, so red legitimately wins >50% of decisive games.
+
+    The meaningful, bug-catching metric is A's SIDE-AWARE score: A plays red on
+    even game_idx and black on odd, so if color-balancing correctly cancels the
+    first-move advantage, A's combined score over both roles must sit near 0.5.
+    A gross deviation means a color-assignment / seed / bookkeeping bug.
+
+    Deterministic (fixed base_seed) — pass/fail is stable run-to-run; the wide
+    band only tolerates the 20-game sample size. This is a smoke gate, NOT proof
+    (see the note below for the 100-200 game manual validation).
+    """
     cfg = EvalConfig(board_size=24, mcts_sims=64, max_moves=280)
     out = tmp_path / "self.json"
     summary = run_match(
         a_ckpt=CKPT_0419, b_ckpt=CKPT_0419, games=20, base_seed=12345,
         config=cfg, workers=2, output=str(out),
     )
-    rate = summary["a_score_rate"]
-    lo, hi = summary["score_rate_ci95"]
     assert summary["games"] == 20
-    assert lo <= 0.5 <= hi, f"0.5 outside CI [{lo}, {hi}] (rate={rate})"
+
+    recs = [json.loads(line) for line
+            in (tmp_path / "self_games.jsonl").read_text().splitlines()]
+    assert len(recs) == 20
+    # A's side: red on even game_idx, black on odd.
+    a_side_score = sum(
+        (r["red_score"] if r["game_idx"] % 2 == 0 else r["black_score"])
+        for r in recs
+    ) / len(recs)
+    assert 0.2 <= a_side_score <= 0.8, (
+        f"self-match side-aware score {a_side_score:.3f} far from 0.5 — "
+        f"suspect a color-assignment / seed / bookkeeping bug"
+    )
 ```
 
 - [ ] **Step 2: Run the sanity gate explicitly**
 
 Run: `.venv/bin/python -m pytest tests/test_eval_real_smoke.py -m integration -q`
-Expected: PASS (1 passed) — model-vs-itself score rate's 95% CI contains 0.5.
+Expected: PASS (1 passed) — A's side-aware self-match score lands in [0.2, 0.8]
+(near 0.5 once red's first-move advantage cancels across balanced colors).
 
 > **This is a sanity gate only, not proof of correctness.** With only 20 games
 > the CI is wide, so it can pass even with moderate issues. Before trusting any
@@ -1663,6 +1689,52 @@ Interpretation (from the spec):
 - 0419 beats all clearly → keep training.
 - 0419 ≈ 0379 but beats 0339/0299 → plateauing around 0379–0419.
 - 0419 loses to 0379 → freeze 0379 as current best.
+
+---
+
+## Parallel MLX worker viability (best-effort)
+
+**Stance:** Parallel MLX worker support is **best-effort**. The evaluator is
+REQUIRED to pass and produce correct results with `--workers 1`. `workers>1` is
+enabled only after a real-checkpoint viability smoke on the target Mac. If Metal
+resource limits appear *at load time*, run tournaments with `--workers 1` — do
+NOT block v1. A clean failure (RuntimeError suggesting `--workers 1`) is the
+fallback; there is no automatic downgrade.
+
+**On `compile=True`:** the eval path sets `LocalGPUEvaluator(..., compile=True)`,
+which fixes/reduces *per-game* MLX/Metal resource churn (the unbounded
+graph-retrace that exhausted the ~499k Metal-resource limit after ~2 games). It
+does **not** by itself guarantee that multiple MLX worker processes can coexist
+— that is a separate, hardware-dependent question answered only by the probe.
+
+**Two distinct failure modes:**
+- *At load time* — multiple MLX processes + Metal contexts cannot coexist.
+  `compile=True` does NOT fix this. → run `--workers 1`.
+- *After a few games* — resource accumulation / repeated graph compilation.
+  `compile=True` fixes this. → parallel is viable.
+
+**Viability probe matrix (run before any large `--workers N` tournament):**
+```bash
+# 1-worker baseline
+.venv/bin/python -m scripts.GPU.alphazero.eval_checkpoint_match \
+  --checkpoint-a checkpoints/alphazero-v2-staged/model_iter_0419.safetensors \
+  --checkpoint-b checkpoints/alphazero-v2-staged/model_iter_0419.safetensors \
+  --games 4 --board-size 24 --mcts-sims 64 --mcts-eval-batch-size 14 \
+  --mcts-stall-flush-sims 48 --selection-mode argmax --max-moves 280 \
+  --workers 1 --base-seed 12345 --output logs/eval/parallel_probe_w1.json
+# 2-worker viability probe (same, --workers 2)
+#   ... --workers 2 --output logs/eval/parallel_probe_w2.json
+```
+If `--workers 2` fails immediately at checkpoint load → parallel MLX is not
+viable on this machine; run sequentially. If it completes 4 games → step up to
+`workers=2, games=20, mcts_sims=400`, then `workers=4`/`6`.
+
+**Empirical result on this Mac (2026-05-31, compile=True in place):** the probe
+matrix passed — `--workers 1` finished 4 games in ~41s, `--workers 2` in ~24s
+(~1.7× speedup), no Metal exhaustion. The implementer's earlier `workers=2`
+failure predated the compile fix (it was the accumulation mode). Parallel is
+viable here; other Macs must re-run the probe. A `workers=2` real-checkpoint
+viability smoke is included in `tests/test_eval_real_smoke.py` (integration).
 
 ---
 
