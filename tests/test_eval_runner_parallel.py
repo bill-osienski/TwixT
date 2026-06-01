@@ -2,7 +2,7 @@ import pytest
 
 from scripts.GPU.alphazero.eval_runner import EvalGameTask, EvalConfig, run_game_tasks
 from scripts.GPU.alphazero.eval_checkpoint_tournament import build_tournament_tasks
-from tests.eval_fakes import fake_evaluator_factory
+from tests.eval_fakes import fake_evaluator_factory, raising_factory
 
 
 def _tiny_cfg():
@@ -32,3 +32,11 @@ def test_parallel_returns_all_results_sorted():
                          evaluator_factory=fake_evaluator_factory)
     assert len(out) == 8
     assert [r.game_idx for r in out] == sorted(r.game_idx for r in out)
+
+
+def test_parallel_surfaces_worker_crash():
+    # A factory that raises must surface promptly as a RuntimeError, not hang.
+    tasks = build_tournament_tasks([("A", "B")], games=4, base_seed=1)
+    with pytest.raises(RuntimeError):
+        run_game_tasks(tasks, workers=2, config=_tiny_cfg(),
+                       evaluator_factory=raising_factory)

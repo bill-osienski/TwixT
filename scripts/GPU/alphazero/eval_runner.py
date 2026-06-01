@@ -68,6 +68,12 @@ class _WorkerDone:
     worker_id: int
 
 
+@dataclass(frozen=True)
+class _WorkerFailed:
+    worker_id: int
+    error: str
+
+
 def cfg_from(config: EvalConfig) -> MCTSConfig:
     """Map EvalConfig -> MCTSConfig. argmax mode zeroes temps to hit
     select_move's deterministic argmax branch."""
@@ -219,26 +225,36 @@ def _run_sequential(tasks, config, factory):
 
 
 def _worker_main(worker_id, tasks, config, factory, next_idx, result_q):
-    """Pull tasks via the shared atomic counter; per-process checkpoint cache."""
+    """Pull tasks via the shared atomic counter; per-process checkpoint cache.
+
+    On any exception, send a _WorkerFailed sentinel so the parent fails
+    promptly instead of waiting out the stall timeout.
+    """
+    import traceback
     get_eval = _make_cache(factory)
     n = len(tasks)
-    while True:
-        with next_idx.get_lock():
-            i = next_idx.value
-            if i >= n:
-                break
-            next_idx.value = i + 1
-        task = tasks[i]
-        red = get_eval(task.red_checkpoint)
-        black = get_eval(task.black_checkpoint)
-        winner, reason, nm = play_eval_game(red, black, config, task.seed)
-        result_q.put(make_result(task, winner, reason, nm))
+    try:
+        while True:
+            with next_idx.get_lock():
+                i = next_idx.value
+                if i >= n:
+                    break
+                next_idx.value = i + 1
+            task = tasks[i]
+            red = get_eval(task.red_checkpoint)
+            black = get_eval(task.black_checkpoint)
+            winner, reason, nm = play_eval_game(red, black, config, task.seed)
+            result_q.put(make_result(task, winner, reason, nm))
+    except Exception as e:
+        result_q.put(_WorkerFailed(worker_id, f"{e!r}\n{traceback.format_exc()}"))
+        return
     result_q.put(_WorkerDone(worker_id))
 
 
 def _run_parallel(tasks, workers, config, factory):
     """Spawn pool (macOS-mandatory). Shared next-task counter, results via
-    queue, explicit WorkerDone, parent joins with timeout (no silent hang)."""
+    queue, explicit WorkerDone, parent joins with timeout (no silent hang).
+    A _WorkerFailed sentinel surfaces a crashed worker promptly."""
     ctx = mp.get_context("spawn")
     next_idx = ctx.Value("i", 0)
     result_q = ctx.Queue()
@@ -250,6 +266,12 @@ def _run_parallel(tasks, workers, config, factory):
     for p in procs:
         p.start()
 
+    def _terminate_all():
+        for p in procs:
+            p.terminate()
+        for p in procs:
+            p.join(timeout=5)
+
     GET_TIMEOUT = 600  # seconds without progress => assume stall
     results = []
     done = 0
@@ -259,11 +281,15 @@ def _run_parallel(tasks, workers, config, factory):
         except queue.Empty:
             dead = [(p.pid, p.exitcode) for p in procs
                     if p.exitcode not in (None, 0)]
-            for p in procs:
-                p.terminate()
+            _terminate_all()
             raise RuntimeError(
                 f"eval workers stalled (>{GET_TIMEOUT}s, no result); "
                 f"crashed={dead}"
+            )
+        if isinstance(msg, _WorkerFailed):
+            _terminate_all()
+            raise RuntimeError(
+                f"eval worker {msg.worker_id} crashed: {msg.error}"
             )
         if isinstance(msg, _WorkerDone):
             done += 1
@@ -284,9 +310,8 @@ def run_game_tasks(tasks, workers: int, config: EvalConfig,
                    evaluator_factory: Optional[EvaluatorFactory] = None):
     """Execute tasks; return results sorted by (pairing_id, game_idx).
 
-    workers<=1 runs in-process. workers>1 (spawn pool) is added in Task 5;
-    until then it raises NotImplementedError so the intermediate commit has
-    no live unresolved reference.
+    workers<=1 runs in-process. workers>1 uses a spawn worker pool with a
+    shared atomic task counter (dynamic work-stealing).
 
     NOTE: when workers>1, evaluator_factory must be a MODULE-LEVEL picklable
     callable (it is sent to spawned workers). Lambdas/closures will fail to

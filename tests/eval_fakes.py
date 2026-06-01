@@ -41,3 +41,8 @@ def counting_factory(path: str) -> FakeEvaluator:
 
 
 counting_factory.calls = {}
+
+
+def raising_factory(path: str):
+    """Picklable factory that always raises — exercises the worker-crash path."""
+    raise RuntimeError(f"boom: cannot load {path}")
