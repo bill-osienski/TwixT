@@ -61,7 +61,11 @@ def test_save_game_replay_writes_top_level_goal_completion_record_when_present()
         )
         with open(path) as f:
             payload = json.load(f)
-        assert payload["goal_completion_record"] == record
+        # The saver reconciles game_id/game_idx in the record to the save-order
+        # counter (game_saver.py; commit 32c4966), so the persisted record has
+        # game_idx=0 and game_id="game_000", overriding the input's values.
+        expected = {**record, "game_idx": 0, "game_id": "game_000"}
+        assert payload["goal_completion_record"] == expected
 
 
 def test_save_game_replay_omits_goal_completion_record_when_none():
