@@ -198,6 +198,8 @@ def _default_evaluator_factory(path: str):
     from .probe_eval import load_network_for_scoring
     from .local_evaluator import LocalGPUEvaluator
     net, _in_ch, _hidden, _blocks = load_network_for_scoring(path, verbose=False)
+    # Eval workers opt into compile=True to avoid repeated MLX/Metal resource churn.
+    # Training path keeps LocalGPUEvaluator default compile=False.
     return LocalGPUEvaluator(net, compile=True)
 
 
