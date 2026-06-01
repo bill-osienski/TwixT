@@ -5,8 +5,16 @@ It implements the Evaluator protocol, taking numpy arrays and returning numpy ar
 
 Cache clearing: Handled by trainer.py per-game (mx.clear_cache() after each game).
 Do NOT add periodic clearing here - it becomes a perf tax with hot inference.
+
+Graph compilation (compile=True):
+    Without mx.compile, MLX re-traces the computation graph on every infer() call,
+    creating ~84 new Metal buffer objects per call.  These accumulate and hit the
+    Metal resource limit (~499k) after ~5900 inferences (~2 full eval games).
+    mx.compile() traces once and reuses the stored graph so Metal resources stay
+    bounded.  Enabled by default for eval inference (eval_runner uses it); the
+    trainer manages its own cache lifecycle and does not need it.
 """
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import mlx.core as mx
@@ -24,13 +32,22 @@ class LocalGPUEvaluator:
     - GPU synchronization
     """
 
-    def __init__(self, network: AlphaZeroNetwork):
+    def __init__(self, network: AlphaZeroNetwork, compile: bool = False):
         """Initialize evaluator.
 
         Args:
             network: AlphaZeroNetwork instance for inference
+            compile: If True, wrap the MLX forward pass with mx.compile() to
+                reuse the computation graph across calls.  This prevents Metal
+                resource exhaustion during long sequential eval runs.  Set False
+                (default) for training where the trainer manages cache lifecycle.
         """
         self.network = network
+        # _compiled_forward is set lazily on first infer() call when compile=True
+        # so that the active_size constant is baked in from the first real call.
+        self._use_compile: bool = compile
+        self._compiled_forward: Optional[object] = None
+        self._compiled_active_size: Optional[int] = None
 
     def build_input_tensor(self, state) -> np.ndarray:
         """Build the (C, H, W) input tensor in the format matching the network.
@@ -73,10 +90,26 @@ class LocalGPUEvaluator:
         move_cols_mx = mx.array(move_cols)
         move_mask_mx = mx.array(move_mask)
 
-        # Forward pass
-        policy_logits, values_mx, _ = self.network.forward_padded(
-            boards_mx, move_rows_mx, move_cols_mx, move_mask_mx, active_size
-        )
+        # Forward pass — use compiled graph if requested to prevent Metal
+        # resource exhaustion during long sequential eval runs (see module doc).
+        if self._use_compile:
+            if (self._compiled_forward is None
+                    or self._compiled_active_size != active_size):
+                net = self.network
+                _size = active_size
+
+                def _fwd(b, r, c, m):
+                    return net.forward_padded(b, r, c, m, _size)
+
+                self._compiled_forward = mx.compile(_fwd)
+                self._compiled_active_size = active_size
+            policy_logits, values_mx, _ = self._compiled_forward(
+                boards_mx, move_rows_mx, move_cols_mx, move_mask_mx
+            )
+        else:
+            policy_logits, values_mx, _ = self.network.forward_padded(
+                boards_mx, move_rows_mx, move_cols_mx, move_mask_mx, active_size
+            )
 
         # Sync GPU (known stable at eval_batch <= 14)
         mx.eval(policy_logits, values_mx)

@@ -189,11 +189,16 @@ def resolve_checkpoint(token: str, checkpoints_dir: str) -> str:
 
 def _default_evaluator_factory(path: str):
     """Real loader: auto-detects 24/30-channel, wraps in LocalGPUEvaluator.
-    Imported lazily so fake-evaluator tests need no MLX."""
+    Imported lazily so fake-evaluator tests need no MLX.
+
+    compile=True: reuses the MLX computation graph across calls to prevent
+    Metal resource exhaustion during long sequential eval runs (see
+    local_evaluator module docstring for details).
+    """
     from .probe_eval import load_network_for_scoring
     from .local_evaluator import LocalGPUEvaluator
     net, _in_ch, _hidden, _blocks = load_network_for_scoring(path, verbose=False)
-    return LocalGPUEvaluator(net)
+    return LocalGPUEvaluator(net, compile=True)
 
 
 def _sorted(results):
@@ -214,6 +219,10 @@ def _make_cache(factory):
 
 
 def _run_sequential(tasks, config, factory):
+    import gc
+
+    import mlx.core as mx
+
     get_eval = _make_cache(factory)
     results = []
     for task in tasks:
@@ -221,6 +230,11 @@ def _run_sequential(tasks, config, factory):
         black = get_eval(task.black_checkpoint)
         winner, reason, nm = play_eval_game(red, black, config, task.seed)
         results.append(make_result(task, winner, reason, nm))
+        # Flush pending MLX lazy ops and release cached Metal buffers between
+        # games to stay within Metal's resource limit (trainer.py:3169-3173).
+        mx.eval()
+        gc.collect()
+        mx.clear_cache()
     return _sorted(results)
 
 
