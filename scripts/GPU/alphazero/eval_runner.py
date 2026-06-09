@@ -17,6 +17,7 @@ from typing import Callable, Optional
 
 from .game.twixt_state import TwixtState
 from .mcts import MCTS, MCTSConfig
+from .eval_replay import ply_record, build_replay_dict, write_replay
 
 # game_idx and pairing offsets share this stride; games-per-pairing must
 # stay below it so task_ids/seeds never collide across pairings.
@@ -48,6 +49,7 @@ class EvalGameResult:
     n_moves: int
     red_score: float
     black_score: float
+    replay_path: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -93,25 +95,27 @@ def cfg_from(config: EvalConfig) -> MCTSConfig:
     )
 
 
-def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int):
-    """Play one A-vs-B game. Returns (winner, reason, n_moves).
+def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
+                   capture: bool = False):
+    """Play one A-vs-B game. Returns (winner, reason, n_moves, records).
 
-    Independent per-side child RNGs (seed-derived) avoid cross-player
-    coupling. Classification is explicit via winner()/ply/legal_moves --
-    is_terminal() conflates win/cap/board-full (twixt_state.py:549-574).
+    `records` is None unless capture=True, in which case it is a list of
+    ply_record dicts (one per ply). Capturing reads already-computed search
+    outputs only — no extra search calls, no RNG draws — so game outcomes are
+    identical with capture on or off.
     """
     mcts_red = MCTS(red_eval, cfg_from(config), random.Random(seed ^ 0xA5A5A5))
     mcts_black = MCTS(black_eval, cfg_from(config), random.Random(seed ^ 0x5A5A5A))
     state = TwixtState(active_size=config.board_size, to_move="red",
                        max_plies_limit=config.max_moves)
     ply = 0
-    # Explicit loop condition -- do NOT gate on is_terminal(), which conflates
-    # win / cap / board-full. Continue while there is no real winner, the ply
-    # cap is not reached, and legal moves remain.
+    records = [] if capture else None
     while state.winner() is None and ply < config.max_moves and state.legal_moves():
         mcts = mcts_red if state.to_move == "red" else mcts_black
-        counts, _ = mcts.search(state, add_noise=False)
+        counts, root_value = mcts.search(state, add_noise=False)
         move = mcts.select_move(counts, ply)
+        if capture:
+            records.append(ply_record(ply, state.to_move, move, counts, root_value))
         state = state.apply_move(move)
         ply += 1
     winner = state.winner()
@@ -123,10 +127,11 @@ def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int):
         reason = "board_full"
     else:
         reason = "unknown_error"
-    return winner, reason, ply
+    return winner, reason, ply, records
 
 
-def make_result(task: EvalGameTask, winner, reason, n_moves) -> EvalGameResult:
+def make_result(task: EvalGameTask, winner, reason, n_moves,
+                replay_path=None) -> EvalGameResult:
     """Build a result, mapping winner color -> checkpoint and 0/0.5/1 scores."""
     if winner == "red":
         red_score, black_score, winner_ckpt = 1.0, 0.0, task.red_checkpoint
@@ -139,6 +144,7 @@ def make_result(task: EvalGameTask, winner, reason, n_moves) -> EvalGameResult:
         red_checkpoint=task.red_checkpoint, black_checkpoint=task.black_checkpoint,
         winner=winner, winner_checkpoint=winner_ckpt, reason=reason,
         n_moves=n_moves, red_score=red_score, black_score=black_score,
+        replay_path=replay_path,
     )
 
 
