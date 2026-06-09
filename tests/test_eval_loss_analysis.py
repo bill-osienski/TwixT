@@ -196,3 +196,34 @@ def test_sample_worst_losses_buckets_and_order():
     assert sample["a_score"] == 0.0
     assert sample["game_idx"] == 0 and sample["task_id"] == 0
     assert sample["reason"] == "win"           # decisive B win
+
+
+from scripts.GPU.alphazero.eval_loss_analysis import (
+    analyze_match, combine_branch_summaries,
+)
+
+
+def test_analyze_match_shape():
+    rows = [_row(0, A, B, "red"), _row(1, B, A, "black"),
+            _row(2, A, B, "black"), _row(3, B, A, "red")]
+    s = analyze_match(rows, A, B, match="demo", pairing_id="0399_vs_0379")
+    assert s["match"] == "demo"
+    assert s["pairing_id"] == "0399_vs_0379"
+    assert s["a_checkpoint"] == A and s["b_checkpoint"] == B
+    assert s["games"] == 4
+    assert isinstance(s["by_color"], list) and isinstance(s["by_length"], list)
+    assert "termination" in s
+
+
+def test_combined_branch_comparison_orders_by_a_score_rate():
+    weak = {"match": "weak", "pairing_id": "p", "a_checkpoint": A,
+            "b_checkpoint": B, "games": 10, "a_score_rate": 0.30,
+            "a_wins": 3, "b_wins": 7, "draws": 0, "elo": -147.0, "verdict": "worse"}
+    strong = {**weak, "match": "strong", "a_score_rate": 0.55,
+              "a_wins": 6, "b_wins": 4, "elo": 35.0, "verdict": "stronger"}
+    combined = combine_branch_summaries([weak, strong])
+    assert [r["match"] for r in combined] == ["strong", "weak"]  # descending rate
+    assert list(combined[0].keys()) == [
+        "match", "pairing_id", "a_checkpoint", "b_checkpoint", "games",
+        "a_score_rate", "a_wins", "b_wins", "draws", "elo", "verdict",
+    ]

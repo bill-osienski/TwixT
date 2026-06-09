@@ -252,3 +252,42 @@ def sample_worst_losses(rows, a_ckpt, b_ckpt, limit=50):
                           ("draw_cap", caps[:limit])):
         out.extend(_worst_row(r, bucket, a_ckpt) for r in group)
     return out
+
+
+def analyze_match(rows, a_ckpt, b_ckpt, *, match=None, pairing_id=None,
+                  length_buckets=LENGTH_BUCKETS_DEFAULT):
+    """Full per-match summary dict (the loss_summary.json payload). The
+    worst-loss CSV is produced separately via sample_worst_losses()."""
+    overall = summarize_overall(rows, a_ckpt, b_ckpt)
+    return {
+        "match": match,
+        "pairing_id": pairing_id or rows[0]["pairing_id"],
+        "a_checkpoint": a_ckpt,
+        "b_checkpoint": b_ckpt,
+        **overall,
+        "by_color": summarize_by_color(rows, a_ckpt, b_ckpt),
+        "by_length": summarize_by_length(rows, a_ckpt, b_ckpt, length_buckets),
+    }
+
+
+def combine_branch_summaries(match_summaries):
+    """One row per match, sorted descending by a_score_rate (strongest
+    branch-vs-anchor first)."""
+    rows = [
+        {
+            "match": s["match"],
+            "pairing_id": s["pairing_id"],
+            "a_checkpoint": s["a_checkpoint"],
+            "b_checkpoint": s["b_checkpoint"],
+            "games": s["games"],
+            "a_score_rate": s["a_score_rate"],
+            "a_wins": s["a_wins"],
+            "b_wins": s["b_wins"],
+            "draws": s["draws"],
+            "elo": s["elo"],
+            "verdict": s["verdict"],
+        }
+        for s in match_summaries
+    ]
+    rows.sort(key=lambda r: r["a_score_rate"], reverse=True)
+    return rows
