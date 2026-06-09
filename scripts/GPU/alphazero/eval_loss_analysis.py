@@ -84,3 +84,42 @@ def a_color(row, a_ckpt):
     if row["black_checkpoint"] == a_ckpt:
         return "black"
     raise ValueError(f"A checkpoint {short_id(a_ckpt)} not in row {row['game_idx']}")
+
+
+def _match_short(ckpts, sid):
+    hits = [c for c in ckpts if short_id(c) == sid]
+    if len(hits) != 1:
+        raise ValueError(f"pairing side {sid!r} matched {len(hits)} checkpoints, expected 1")
+    return hits[0]
+
+
+def _infer_from_pairing(rows, pairing_id):
+    pid = pairing_id or rows[0]["pairing_id"]
+    if "_vs_" not in pid:
+        raise ValueError(f"cannot infer A/B: pairing_id {pid!r} has no '_vs_'")
+    a_id, b_id = pid.split("_vs_", 1)
+    ckpts = ({r["red_checkpoint"] for r in rows}
+             | {r["black_checkpoint"] for r in rows})
+    return _match_short(ckpts, a_id), _match_short(ckpts, b_id)
+
+
+def resolve_checkpoints(rows, pairing_id=None, a_override=None,
+                        b_override=None, summary=None):
+    """Resolve (A, B) checkpoint paths.
+
+    Precedence: explicit overrides -> sidecar summary checkpoint_a/checkpoint_b
+    -> infer from pairing_id + short_id of the row checkpoints. Both resolved
+    paths must actually appear across the rows.
+    """
+    if a_override and b_override:
+        a, b = a_override, b_override
+    elif summary and summary.get("checkpoint_a") and summary.get("checkpoint_b"):
+        a, b = summary["checkpoint_a"], summary["checkpoint_b"]
+    else:
+        a, b = _infer_from_pairing(rows, pairing_id)
+    present = ({r["red_checkpoint"] for r in rows}
+               | {r["black_checkpoint"] for r in rows})
+    for label, ckpt in (("A", a), ("B", b)):
+        if ckpt not in present:
+            raise ValueError(f"resolved {label} checkpoint {ckpt!r} not present in rows")
+    return a, b

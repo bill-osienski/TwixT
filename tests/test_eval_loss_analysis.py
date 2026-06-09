@@ -73,3 +73,34 @@ def test_validation_rejects_mixed_jsonl():
     rows = [_row(0, A, B, "red"), _row(1, A, "ckpts/model_iter_0123.safetensors", "red")]
     with pytest.raises(ValueError, match="mixed"):
         validate_rows(rows, A, B)
+
+
+from scripts.GPU.alphazero.eval_loss_analysis import resolve_checkpoints
+
+
+def _rows_ab():
+    # balanced colors: A red on even idx, A black on odd idx
+    return [_row(0, A, B, "red"), _row(1, B, A, "black")]
+
+
+def test_resolve_from_override():
+    a, b = resolve_checkpoints(_rows_ab(), a_override=A, b_override=B)
+    assert (a, b) == (A, B)
+
+
+def test_resolve_from_sidecar():
+    summary = {"checkpoint_a": A, "checkpoint_b": B}
+    a, b = resolve_checkpoints(_rows_ab(), summary=summary)
+    assert (a, b) == (A, B)
+
+
+def test_resolve_from_pairing_fallback():
+    # no override, no sidecar -> infer from pairing_id "0399_vs_0379" via short_id
+    a, b = resolve_checkpoints(_rows_ab(), pairing_id="0399_vs_0379")
+    assert (a, b) == (A, B)
+
+
+def test_resolve_rejects_absent_checkpoint():
+    with pytest.raises(ValueError, match="not present"):
+        resolve_checkpoints(_rows_ab(), a_override="ckpts/model_iter_9999.safetensors",
+                            b_override=B)
