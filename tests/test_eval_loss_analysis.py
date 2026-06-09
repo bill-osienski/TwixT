@@ -104,3 +104,38 @@ def test_resolve_rejects_absent_checkpoint():
     with pytest.raises(ValueError, match="not present"):
         resolve_checkpoints(_rows_ab(), a_override="ckpts/model_iter_9999.safetensors",
                             b_override=B)
+
+
+from scripts.GPU.alphazero.eval_loss_analysis import (
+    summarize_by_color, summarize_by_length,
+)
+
+
+def test_by_color_uses_checkpoint_assignment_not_winner_color():
+    # A red and wins (red win) ; A black and wins (black win).
+    # Both are A-wins. By-color must file each under A's SEAT, not winner color.
+    rows = [_row(0, A, B, "red"), _row(1, B, A, "black")]
+    by_color = {c["a_color"]: c for c in summarize_by_color(rows, A, B)}
+    assert by_color["red"]["games"] == 1
+    assert by_color["red"]["a_wins"] == 1   # A won its red game
+    assert by_color["black"]["games"] == 1
+    assert by_color["black"]["a_wins"] == 1  # A won its black game
+    assert by_color["red"]["a_score_rate"] == 1.0
+    assert by_color["black"]["a_score_rate"] == 1.0
+
+
+def test_by_length_buckets_280_state_cap():
+    rows = [
+        _row(0, A, B, "red", n=30),                       # <=40
+        _row(1, A, B, "black", n=50),                     # 41-60
+        _row(2, A, B, "red", n=279),                      # 121-279
+        _row(3, A, B, None, reason="state_cap", n=280),   # 280
+    ]
+    by_len = {b["length_bucket"]: b for b in summarize_by_length(rows, A, B)}
+    assert by_len["<=40"]["games"] == 1
+    assert by_len["41-60"]["games"] == 1
+    assert by_len["121-279"]["games"] == 1
+    assert by_len["280"]["games"] == 1
+    assert by_len["280"]["draws"] == 1
+    # empty buckets (61-80, 81-120) are omitted, not zero-filled
+    assert "61-80" not in by_len

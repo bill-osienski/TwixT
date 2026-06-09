@@ -123,3 +123,59 @@ def resolve_checkpoints(rows, pairing_id=None, a_override=None,
         if ckpt not in present:
             raise ValueError(f"resolved {label} checkpoint {ckpt!r} not present in rows")
     return a, b
+
+
+def _ab_stats(rows, a_ckpt):
+    """Games / A-wins / B-wins / draws / A-score-rate / avg moves for a subset."""
+    n = len(rows)
+    a_wins = sum(1 for r in rows if r["winner_checkpoint"] == a_ckpt)
+    draws = sum(1 for r in rows if r["winner"] is None)
+    b_wins = n - a_wins - draws
+    return {
+        "games": n,
+        "a_wins": a_wins,
+        "b_wins": b_wins,
+        "draws": draws,
+        "a_score_rate": (score_rate(a_wins, draws, n) if n else None),
+        "avg_moves": (round(mean(r["n_moves"] for r in rows), 2) if n else None),
+    }
+
+
+def _bucket_name(edge, buckets):
+    idx = buckets.index(edge)
+    lo = (buckets[idx - 1] + 1) if idx > 0 else None
+    if lo is None:
+        return f"<={edge}"
+    if lo == edge:
+        return f"{edge}"
+    return f"{lo}-{edge}"
+
+
+def _length_bucket_label(n_moves, buckets):
+    for edge in buckets:
+        if n_moves <= edge:
+            return _bucket_name(edge, buckets)
+    return f">{buckets[-1]}"
+
+
+def summarize_by_color(rows, a_ckpt, b_ckpt):
+    out = []
+    for color in ("red", "black"):
+        sub = [r for r in rows if a_color(r, a_ckpt) == color]
+        out.append({"a_color": color, **_ab_stats(sub, a_ckpt)})
+    return out
+
+
+def summarize_by_length(rows, a_ckpt, b_ckpt, buckets=LENGTH_BUCKETS_DEFAULT):
+    ordered_labels = [_bucket_name(e, buckets) for e in buckets]
+    groups = {}
+    for r in rows:
+        groups.setdefault(_length_bucket_label(r["n_moves"], buckets), []).append(r)
+    # bucket order first, then any overflow label (e.g. ">280") last
+    labels = ordered_labels + [k for k in groups if k not in ordered_labels]
+    out = []
+    for lbl in labels:
+        sub = groups.get(lbl)
+        if sub:  # omit empty buckets
+            out.append({"length_bucket": lbl, **_ab_stats(sub, a_ckpt)})
+    return out
