@@ -46,3 +46,50 @@ def test_ply_record_fails_when_move_not_in_counts():
 
 def test_schema_version_is_one():
     assert REPLAY_SCHEMA_VERSION == 1
+
+
+from dataclasses import dataclass
+
+from scripts.GPU.alphazero.eval_replay import build_replay_dict, replay_filename
+
+
+@dataclass
+class _FakeResult:
+    pairing_id: str
+    game_idx: int
+    task_id: int
+    red_checkpoint: str
+    black_checkpoint: str
+    winner: str
+    winner_checkpoint: str
+    reason: str
+    n_moves: int
+
+
+def test_build_replay_dict_shape():
+    result = _FakeResult("0399_vs_0379", 3, 7, "A.safetensors", "B.safetensors",
+                         "red", "A.safetensors", "win", 2)
+    records = [
+        {"ply": 0, "player": "red", "row": 4, "col": 19, "root_value": 0.1,
+         "root_top1_share": 0.5, "selected_visit_rank": 1,
+         "selected_visit_count": 5, "root_total_visits": 10, "n_legal": 3},
+        {"ply": 1, "player": "black", "row": 1, "col": 1, "root_value": -0.1,
+         "root_top1_share": 0.6, "selected_visit_rank": 1,
+         "selected_visit_count": 6, "root_total_visits": 10, "n_legal": 2},
+    ]
+    d = build_replay_dict(result, seed=35791, board_size=24, records=records)
+    assert d == {
+        "schema_version": 1,
+        "pairing_id": "0399_vs_0379",
+        "game_idx": 3, "task_id": 7, "seed": 35791, "board_size": 24,
+        "red_checkpoint": "A.safetensors", "black_checkpoint": "B.safetensors",
+        "winner": "red", "winner_checkpoint": "A.safetensors",
+        "reason": "win", "n_moves": 2,
+        "moves": records,
+    }
+
+
+def test_replay_filename_zero_padded():
+    assert replay_filename(0) == "game_000000.json"
+    assert replay_filename(42) == "game_000042.json"
+    assert replay_filename(123456) == "game_123456.json"

@@ -42,3 +42,28 @@ def ply_record(ply, player, move, counts, root_value):
         "root_total_visits": total,
         "n_legal": len(counts),
     }
+
+
+def build_replay_dict(result, seed, board_size, records):
+    """Assemble the replay sidecar dict from a finished EvalGameResult plus the
+    per-ply records. Reads identity/outcome from `result`; `seed` and
+    `board_size` complete the contract."""
+    return {
+        "schema_version": REPLAY_SCHEMA_VERSION,
+        "pairing_id": result.pairing_id,
+        "game_idx": result.game_idx,
+        "task_id": result.task_id,
+        "seed": seed,
+        "board_size": board_size,
+        "red_checkpoint": result.red_checkpoint,
+        "black_checkpoint": result.black_checkpoint,
+        "winner": result.winner,
+        "winner_checkpoint": result.winner_checkpoint,
+        "reason": result.reason,
+        "n_moves": result.n_moves,
+        "moves": records,
+    }
+
+
+def replay_filename(game_idx):
+    return f"game_{game_idx:06d}.json"
