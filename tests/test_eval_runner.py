@@ -140,3 +140,52 @@ def test_make_result_sets_replay_path():
     task = EvalGameTask(0, "p", 0, "A.safetensors", "B.safetensors", 7)
     res = make_result(task, "red", "win", 40, "logs/x_replays/game_000000.json")
     assert res.replay_path == "logs/x_replays/game_000000.json"
+
+
+def test_run_game_tasks_no_replay_dir_leaves_replay_path_none():
+    tasks = [EvalGameTask(0, "p", 0, "A", "B", 100),
+             EvalGameTask(1, "p", 1, "B", "A", 101)]
+    out = run_game_tasks(tasks, workers=1, config=_tiny_cfg(),
+                         evaluator_factory=fake_evaluator_factory)
+    assert all(r.replay_path is None for r in out)
+
+
+def test_run_game_tasks_replay_dir_writes_one_sidecar_per_game(tmp_path):
+    rd = tmp_path / "replays"
+    tasks = [EvalGameTask(0, "p", 0, "A", "B", 100),
+             EvalGameTask(1, "p", 1, "B", "A", 101)]
+    out = run_game_tasks(tasks, workers=1, config=_tiny_cfg(),
+                         evaluator_factory=fake_evaluator_factory,
+                         replay_dir=str(rd))
+    assert all(r.replay_path is not None for r in out)
+    for r in out:
+        assert (rd / f"game_{r.game_idx:06d}.json").exists()
+
+
+def test_run_game_tasks_capture_does_not_change_results(tmp_path):
+    tasks = [EvalGameTask(0, "p", 0, "A", "B", 100),
+             EvalGameTask(1, "p", 1, "B", "A", 101)]
+    off = run_game_tasks(tasks, workers=1, config=_tiny_cfg(),
+                         evaluator_factory=fake_evaluator_factory)
+    on = run_game_tasks(tasks, workers=1, config=_tiny_cfg(),
+                        evaluator_factory=fake_evaluator_factory,
+                        replay_dir=str(tmp_path / "r"))
+
+    def fields(r):  # every pre-replay field
+        return (r.game_idx, r.task_id, r.pairing_id, r.winner, r.winner_checkpoint,
+                r.reason, r.n_moves, r.red_score, r.black_score,
+                r.red_checkpoint, r.black_checkpoint)
+
+    assert [fields(r) for r in off] == [fields(r) for r in on]
+
+
+def test_run_game_tasks_replay_dir_parallel_writes_sidecars(tmp_path):
+    rd = tmp_path / "replays_par"
+    tasks = [EvalGameTask(0, "p", 0, "A", "B", 100),
+             EvalGameTask(1, "p", 1, "B", "A", 101)]
+    out = run_game_tasks(tasks, workers=2, config=_tiny_cfg(),
+                         evaluator_factory=fake_evaluator_factory,
+                         replay_dir=str(rd))
+    assert all(r.replay_path is not None for r in out)
+    for r in out:
+        assert (rd / f"game_{r.game_idx:06d}.json").exists()

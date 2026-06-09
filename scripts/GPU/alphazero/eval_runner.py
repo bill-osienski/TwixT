@@ -226,18 +226,25 @@ def _make_cache(factory):
     return get_eval
 
 
-def _run_sequential(tasks, config, factory):
+def _run_sequential(tasks, config, factory, replay_dir=None):
     import gc
 
     import mlx.core as mx
 
+    capture = replay_dir is not None
     get_eval = _make_cache(factory)
     results = []
     for task in tasks:
         red = get_eval(task.red_checkpoint)
         black = get_eval(task.black_checkpoint)
-        winner, reason, nm = play_eval_game(red, black, config, task.seed)
-        results.append(make_result(task, winner, reason, nm))
+        winner, reason, nm, records = play_eval_game(
+            red, black, config, task.seed, capture=capture)
+        result = make_result(task, winner, reason, nm)
+        if records is not None:
+            result.replay_path = write_replay(
+                replay_dir,
+                build_replay_dict(result, task.seed, config.board_size, records))
+        results.append(result)
         # Flush pending MLX lazy ops and release cached Metal buffers between
         # games to stay within Metal's resource limit (trainer.py:3169-3173).
         mx.eval()
@@ -246,13 +253,15 @@ def _run_sequential(tasks, config, factory):
     return _sorted(results)
 
 
-def _worker_main(worker_id, tasks, config, factory, next_idx, result_q):
+def _worker_main(worker_id, tasks, config, factory, next_idx, result_q,
+                 replay_dir=None):
     """Pull tasks via the shared atomic counter; per-process checkpoint cache.
 
     On any exception, send a _WorkerFailed sentinel so the parent fails
     promptly instead of waiting out the stall timeout.
     """
     import traceback
+    capture = replay_dir is not None
     get_eval = _make_cache(factory)
     n = len(tasks)
     try:
@@ -265,15 +274,21 @@ def _worker_main(worker_id, tasks, config, factory, next_idx, result_q):
             task = tasks[i]
             red = get_eval(task.red_checkpoint)
             black = get_eval(task.black_checkpoint)
-            winner, reason, nm = play_eval_game(red, black, config, task.seed)
-            result_q.put(make_result(task, winner, reason, nm))
+            winner, reason, nm, records = play_eval_game(
+                red, black, config, task.seed, capture=capture)
+            result = make_result(task, winner, reason, nm)
+            if records is not None:
+                result.replay_path = write_replay(
+                    replay_dir,
+                    build_replay_dict(result, task.seed, config.board_size, records))
+            result_q.put(result)
     except Exception as e:
         result_q.put(_WorkerFailed(worker_id, f"{e!r}\n{traceback.format_exc()}"))
         return
     result_q.put(_WorkerDone(worker_id))
 
 
-def _run_parallel(tasks, workers, config, factory):
+def _run_parallel(tasks, workers, config, factory, replay_dir=None):
     """Spawn pool (macOS-mandatory). Shared next-task counter, results via
     queue, explicit WorkerDone, parent joins with timeout (no silent hang).
     A _WorkerFailed sentinel surfaces a crashed worker promptly."""
@@ -282,7 +297,8 @@ def _run_parallel(tasks, workers, config, factory):
     result_q = ctx.Queue()
     procs = [
         ctx.Process(target=_worker_main,
-                    args=(wid, tasks, config, factory, next_idx, result_q))
+                    args=(wid, tasks, config, factory, next_idx, result_q,
+                          replay_dir))
         for wid in range(workers)
     ]
     for p in procs:
@@ -332,11 +348,16 @@ def _run_parallel(tasks, workers, config, factory):
 
 
 def run_game_tasks(tasks, workers: int, config: EvalConfig,
-                   evaluator_factory: Optional[EvaluatorFactory] = None):
+                   evaluator_factory: Optional[EvaluatorFactory] = None,
+                   replay_dir: Optional[str] = None):
     """Execute tasks; return results sorted by (pairing_id, game_idx).
 
     workers<=1 runs in-process. workers>1 uses a spawn worker pool with a
     shared atomic task counter (dynamic work-stealing).
+
+    When replay_dir is set, each game writes a per-ply replay sidecar into it
+    (worker-safe: each game writes its own file) and the result's replay_path
+    is filled in; otherwise replay_path stays None.
 
     NOTE: when workers>1, evaluator_factory must be a MODULE-LEVEL picklable
     callable (it is sent to spawned workers). Lambdas/closures will fail to
@@ -347,5 +368,5 @@ def run_game_tasks(tasks, workers: int, config: EvalConfig,
         return []
     workers = min(workers, len(tasks))
     if workers <= 1:
-        return _run_sequential(tasks, config, factory)
-    return _run_parallel(tasks, workers, config, factory)
+        return _run_sequential(tasks, config, factory, replay_dir)
+    return _run_parallel(tasks, workers, config, factory, replay_dir)
