@@ -67,3 +67,16 @@ def build_replay_dict(result, seed, board_size, records):
 
 def replay_filename(game_idx):
     return f"game_{game_idx:06d}.json"
+
+
+def write_replay(replay_dir, replay_dict):
+    """Write one game sidecar; return its path relative to the process CWD.
+
+    Worker-safe: makedirs(exist_ok=True) tolerates concurrent creation by other
+    worker processes writing into the same replay_dir.
+    """
+    os.makedirs(replay_dir, exist_ok=True)
+    path = os.path.join(replay_dir, replay_filename(replay_dict["game_idx"]))
+    with open(path, "w") as fh:
+        json.dump(replay_dict, fh)
+    return os.path.relpath(path)

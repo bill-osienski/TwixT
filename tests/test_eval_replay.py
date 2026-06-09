@@ -93,3 +93,30 @@ def test_replay_filename_zero_padded():
     assert replay_filename(0) == "game_000000.json"
     assert replay_filename(42) == "game_000042.json"
     assert replay_filename(123456) == "game_123456.json"
+
+
+import json as _json
+import os as _os
+
+from scripts.GPU.alphazero.eval_replay import write_replay
+
+
+def test_write_replay_roundtrip_and_relative_path(tmp_path):
+    replay_dir = tmp_path / "m_replays"
+    d = {"schema_version": 1, "game_idx": 5, "moves": []}
+    path = write_replay(str(replay_dir), d)
+    # returns a path relative to CWD, not absolute
+    assert not _os.path.isabs(path)
+    # file exists where expected and round-trips
+    abs_path = replay_dir / "game_000005.json"
+    assert abs_path.exists()
+    assert _json.loads(abs_path.read_text()) == d
+
+
+def test_write_replay_creates_dir_idempotently(tmp_path):
+    replay_dir = tmp_path / "nested" / "replays"
+    write_replay(str(replay_dir), {"game_idx": 0, "moves": []})
+    # second write into the same (now-existing) dir must not raise
+    write_replay(str(replay_dir), {"game_idx": 1, "moves": []})
+    assert (replay_dir / "game_000000.json").exists()
+    assert (replay_dir / "game_000001.json").exists()
