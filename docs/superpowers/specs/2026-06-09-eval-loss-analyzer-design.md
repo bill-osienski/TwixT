@@ -160,7 +160,7 @@ Per match, into `--output-dir`, named by stem (`*_games.jsonl` → `<stem>`):
 
 | File | Content |
 |------|---------|
-| `<stem>_loss_summary.json` | overall: a_wins/b_wins/draws, a_score_rate, elo + CI, verdict, color gap, **`termination` counts block**, nested by-color + by-length |
+| `<stem>_loss_summary.json` | `match` (stem) + `pairing_id`, overall: a_wins/b_wins/draws, a_score_rate, elo + CI, verdict, color gap, **`termination` block (counts + rates)**, nested by-color + by-length |
 | `<stem>_by_color.csv` | A-as-red / A-as-black rows |
 | `<stem>_by_length.csv` | per length bucket |
 | `<stem>_worst_losses.csv` | worst-loss sampler (game_idx for manual inspection) |
@@ -177,12 +177,41 @@ cap/board-full rates, and a "Likely loss shape" line from simple heuristics.
 because `state_cap`/`board_full` are always `0.5/0.5` by definition and `win` just
 mirrors the decisive A/B result.
 
+### `loss_summary.json` shape
+
+```json
+{
+  "match": "lr0003_eps035_0399_vs_0379_800g_w4",
+  "pairing_id": "0399_vs_0379",
+  "a_checkpoint": ".../model_iter_0399.safetensors",
+  "b_checkpoint": ".../model_iter_0379.safetensors",
+  "games": 800,
+  "a_wins": 331, "b_wins": 461, "draws": 8,
+  "a_score": 335.0, "a_score_rate": 0.41875,
+  "elo": -56.96, "elo_ci95": [-81.56, -32.92],
+  "score_rate_ci95": [0.3847, 0.4528],
+  "verdict": "worse",
+  "color_gap": -0.055,
+  "termination": {
+    "win": 792, "state_cap": 8, "board_full": 0, "unknown_error": 0,
+    "draws": 8, "state_cap_rate": 0.01, "board_full_rate": 0.0
+  },
+  "by_color": [ ... ],
+  "by_length": [ ... ]
+}
+```
+
 ### Table shapes
 
 `by_color.csv`: `match,a_color,games,a_score_rate,a_wins,b_wins,draws,avg_moves`
 `by_length.csv`: `match,length_bucket,games,a_score_rate,a_wins,b_wins,draws,avg_moves`
-`worst_losses.csv`: `match,game_idx,task_id,a_color,winner,reason,n_moves,a_score,red_checkpoint,black_checkpoint`
+`worst_losses.csv`: `match,loss_bucket,game_idx,task_id,a_color,winner,reason,n_moves,a_score,red_checkpoint,black_checkpoint`
 `combined_branch_comparison.csv`: `match,pairing_id,a_checkpoint,b_checkpoint,games,a_score_rate,a_wins,b_wins,draws,elo,verdict`
+
+The `loss_bucket` column on `worst_losses.csv` is one of `short_loss` / `long_loss` /
+`draw_cap`, so marathon (long) failures are sampled alongside short losses rather than
+being crowded out by a single sorted list. The sampler emits up to `--worst-losses`
+rows per bucket (shortest-first for `short_loss`, longest-first for `long_loss`).
 
 ### Console "Likely loss shape" heuristics
 
@@ -204,8 +233,11 @@ state_cap_signal  = state_cap_rate >= 0.05
    labels `<=40, 41-60, 61-80, 81-120, 121-279, 280`. The `279`/`280` split
    deliberately isolates state-caps (`n_moves == 280`) from long decisive games.
 
-3. **Self-match** (`a == b`, e.g. `0419_vs_0419` sanity files): no "A loses to B"
-   meaning. Skip with a printed note; exclude from `combined_branch_comparison.csv`.
+3. **Self-match**: detected *after* A/B resolution by `a_ckpt == b_ckpt` (the resolved
+   checkpoint paths), **not** by a `pairing_id` string like `"0419_vs_0419"` — path
+   aliases can produce a self-match the id wouldn't reveal, and vice versa. A self-match
+   has no "A loses to B" meaning, so skip it with a printed note and exclude it from
+   `combined_branch_comparison.csv`.
 
 4. **`unknown_error` rows**: none exist in current data. V1 **fails loud** if any
    appear rather than guess a score. Handling is added when one is actually observed.
@@ -222,6 +254,9 @@ state_cap_signal  = state_cap_rate >= 0.05
 - `winner is None` but `winner_checkpoint is not None`, scores ≠ `0.5/0.5`, or
   `reason ∉ {"state_cap", "board_full"}`
 - `reason == "unknown_error"` (see ruling 4)
+- after A/B is resolved: any row where
+  `{red_checkpoint, black_checkpoint} != {a_checkpoint, b_checkpoint}` — catches a
+  mixed/concatenated JSONL (rows from more than one pairing) early
 
 ## Testing (TDD — written red first)
 
@@ -236,6 +271,19 @@ Pure-module unit tests in `tests/test_eval_loss_analysis.py`:
 - `test_validation_rejects_winner_checkpoint_mismatch`
 - A/B resolution: flag override / sidecar / pairing-id fallback
 - self-match skip
+
+## Implementation order
+
+TDD, building outward from the pure invariants:
+
+1. `tests/test_eval_loss_analysis.py` with row fixtures (red)
+2. `eval_loss_analysis.py`: `validate_rows` + `score_for_checkpoint`
+3. `summarize_by_color` + `summarize_by_length`
+4. `summarize_overall` (+ Elo/CI/verdict reuse from `eval_elo`)
+5. `sample_worst_losses` (short/long/draw_cap buckets)
+6. `combine_branch_summaries`
+7. thin CLI + file outputs (`eval_loss_analyzer.py`)
+8. console summary + "Likely loss shape" heuristics
 
 ## Future (V2 — out of scope)
 
