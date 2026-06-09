@@ -227,3 +227,15 @@ def test_combined_branch_comparison_orders_by_a_score_rate():
         "match", "pairing_id", "a_checkpoint", "b_checkpoint", "games",
         "a_score_rate", "a_wins", "b_wins", "draws", "elo", "verdict",
     ]
+
+
+def test_combined_branch_comparison_none_rate_sorts_last():
+    # A zero-game summary carries a_score_rate=None; it must not raise on the
+    # None-vs-float sort comparison and should sort to the bottom.
+    rated = {"match": "rated", "pairing_id": "p", "a_checkpoint": A,
+             "b_checkpoint": B, "games": 4, "a_score_rate": 0.5,
+             "a_wins": 2, "b_wins": 2, "draws": 0, "elo": 0.0, "verdict": "tied"}
+    empty = {**rated, "match": "empty", "games": 0, "a_score_rate": None,
+             "a_wins": 0, "b_wins": 0, "elo": 0.0, "verdict": "tied"}
+    combined = combine_branch_summaries([empty, rated])
+    assert [r["match"] for r in combined] == ["rated", "empty"]

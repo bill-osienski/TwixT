@@ -8,10 +8,10 @@ from __future__ import annotations
 
 from statistics import mean
 
-from scripts.GPU.alphazero.eval_elo import (
+from .eval_elo import (
     score_rate, elo_diff, score_ci_trinomial, elo_ci, verdict,
 )
-from scripts.GPU.alphazero.eval_runner import short_id
+from .eval_runner import short_id
 
 LENGTH_BUCKETS_DEFAULT = (40, 60, 80, 120, 279, 280)
 
@@ -289,5 +289,8 @@ def combine_branch_summaries(match_summaries):
         }
         for s in match_summaries
     ]
-    rows.sort(key=lambda r: r["a_score_rate"], reverse=True)
+    # None a_score_rate (a zero-game summary) sorts to the bottom rather than
+    # raising on the None-vs-float comparison.
+    rows.sort(key=lambda r: (r["a_score_rate"] is not None, r["a_score_rate"] or 0.0),
+              reverse=True)
     return rows
