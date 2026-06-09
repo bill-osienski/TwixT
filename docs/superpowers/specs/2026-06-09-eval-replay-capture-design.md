@@ -69,7 +69,8 @@ One JSON file per game: `<replay_dir>/game_{game_idx:06d}.json`.
   "moves": [
     {"ply": 0, "player": "red", "row": 4, "col": 19,
      "root_value": 0.12, "root_top1_share": 0.31,
-     "selected_visit_rank": 1, "n_legal": 520}
+     "selected_visit_rank": 1, "selected_visit_count": 124,
+     "root_total_visits": 400, "n_legal": 520}
   ]
 }
 ```
@@ -91,8 +92,17 @@ One JSON file per game: `<replay_dir>/game_{game_idx:06d}.json`.
 - **`root_top1_share`** = `max(counts.values()) / sum(counts.values())`. Range
   0.0–1.0; higher means MCTS concentrated visits into one top move.
 - **`selected_visit_rank`** — 1-based rank of the selected move among legal moves
-  sorted by descending visit count. Ties broken deterministically by move ordering
-  (stable iteration). `1` means the selected move was the most-visited.
+  sorted by **descending visit count, ties broken by ascending `(row, col)`**.
+  Concretely the 1-based index of the selected move in
+  `sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))`. The explicit `(row,col)`
+  tie-break is portable and stable rather than relying on dict insertion order. `1`
+  means the selected move was the most-visited.
+- **`selected_visit_count`** — the selected move's own visit count (`counts[move]`).
+  Stored alongside the rank so Phase B can tell rank-2@198-of-201 from
+  rank-2@6-of-350 — magnitude the rank alone loses.
+- **`root_total_visits`** — `sum(counts.values())`, the total visits distributed
+  across the root's legal moves (and the denominator of `root_top1_share`). Stored to
+  ease debugging and to catch aborted/partial-search anomalies.
 - **`n_legal`** — the number of legal actions represented in the MCTS visit-count
   dict for this root (i.e. `len(counts)`). Documented precisely so a future masked/
   pruned-move change doesn't silently shift its meaning.
@@ -192,12 +202,16 @@ CWD. Phase B will resolve `replay_path` relative to the CWD.
 ## Determinism — hard acceptance test
 
 For the same config and seed, **capture off vs capture on must yield identical games**
-on the pre-replay fields:
+on every pre-replay field of each result:
 
-- same `winner`, `reason`, `n_moves`, `red_score`, `black_score`, `winner_checkpoint`.
+- outcome: `winner`, `winner_checkpoint`, `reason`, `n_moves`, `red_score`,
+  `black_score`;
+- identity/ordering: `red_checkpoint`, `black_checkpoint`, `game_idx`, `task_id`,
+  `pairing_id` (these must obviously match, and comparing them catches accidental
+  task-ordering bugs).
 
 The whole JSONL is **not** compared byte-for-byte, because capture-on adds the
-`replay_path` field. Compare only the pre-existing fields. (Capture adds no RNG draws
+`replay_path` field. Compare every field **except** `replay_path`. (Capture adds no RNG draws
 and no extra search calls, so this must hold.)
 
 ## The capture run (Phase A deliverable)
@@ -230,7 +244,9 @@ step, not an automated test.
 
 Pure (`tests/test_eval_replay.py`, no MLX):
 - `ply_record` builds the documented fields; `selected_visit_rank` ranks by
-  descending visits with deterministic tie-break; `root_top1_share` math; `n_legal`.
+  descending visits with the explicit `(-count, (row,col))` tie-break (a constructed
+  tie case asserts the (row,col) ordering); `selected_visit_count == counts[move]`;
+  `root_total_visits == sum(counts.values())`; `root_top1_share` math; `n_legal`.
 - fail-loud on empty `counts` and on a selected move absent from `counts`.
 - `build_replay_dict` shape + `schema_version`; `replay_filename` zero-padding.
 - `write_replay` roundtrip in `tmp_path`; returns a relative path; creates the dir.
