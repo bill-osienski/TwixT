@@ -169,3 +169,30 @@ def test_overall_summary_scoring_and_termination():
         "draws": 1, "state_cap_rate": 1 / 6, "board_full_rate": 0.0,
     }
     assert s["color_gap"] is not None
+
+
+from scripts.GPU.alphazero.eval_loss_analysis import sample_worst_losses
+
+
+def test_sample_worst_losses_buckets_and_order():
+    rows = [
+        _row(0, A, B, "black", n=35),                     # A loss, short
+        _row(1, A, B, "black", n=120),                    # A loss, long
+        _row(2, A, B, "red"),                             # A win (excluded from losses)
+        _row(3, A, B, None, reason="state_cap", n=280),   # draw cap
+    ]
+    out = sample_worst_losses(rows, A, B, limit=10)
+    by_bucket = {}
+    for w in out:
+        by_bucket.setdefault(w["loss_bucket"], []).append(w)
+
+    # short_loss sorted shortest-first; long_loss sorted longest-first
+    assert [w["n_moves"] for w in by_bucket["short_loss"]] == [35, 120]
+    assert [w["n_moves"] for w in by_bucket["long_loss"]] == [120, 35]
+    assert [w["game_idx"] for w in by_bucket["draw_cap"]] == [3]
+    # row shape carries the inspection handles
+    sample = by_bucket["short_loss"][0]
+    assert sample["a_color"] == "red"          # A was seated red in game 0
+    assert sample["a_score"] == 0.0
+    assert sample["game_idx"] == 0 and sample["task_id"] == 0
+    assert sample["reason"] == "win"           # decisive B win

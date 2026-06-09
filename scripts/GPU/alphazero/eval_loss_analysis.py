@@ -221,3 +221,34 @@ def summarize_overall(rows, a_ckpt, b_ckpt):
             "board_full_rate": board_full / n,
         },
     }
+
+
+def _worst_row(r, bucket, a_ckpt):
+    return {
+        "loss_bucket": bucket,
+        "game_idx": r["game_idx"],
+        "task_id": r["task_id"],
+        "a_color": a_color(r, a_ckpt),
+        "winner": r["winner"],
+        "reason": r["reason"],
+        "n_moves": r["n_moves"],
+        "a_score": score_for_checkpoint(r, a_ckpt),
+        "red_checkpoint": r["red_checkpoint"],
+        "black_checkpoint": r["black_checkpoint"],
+    }
+
+
+def sample_worst_losses(rows, a_ckpt, b_ckpt, limit=50):
+    """Up to `limit` rows per bucket: A's shortest decisive losses
+    (short_loss), A's longest decisive losses (long_loss), and the
+    non-decisive cap/board-full games (draw_cap). short_loss and long_loss
+    draw from the same A-loss pool, so they overlap when losses are few."""
+    a_losses = [r for r in rows if score_for_checkpoint(r, a_ckpt) == 0.0]
+    caps = [r for r in rows if r["winner"] is None]
+    short = sorted(a_losses, key=lambda r: r["n_moves"])[:limit]
+    long = sorted(a_losses, key=lambda r: -r["n_moves"])[:limit]
+    out = []
+    for bucket, group in (("short_loss", short), ("long_loss", long),
+                          ("draw_cap", caps[:limit])):
+        out.extend(_worst_row(r, bucket, a_ckpt) for r in group)
+    return out
