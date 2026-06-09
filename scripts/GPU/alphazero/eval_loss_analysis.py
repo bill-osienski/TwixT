@@ -20,7 +20,9 @@ REQUIRED_KEYS = {
     "winner", "winner_checkpoint", "reason", "n_moves", "red_score", "black_score",
 }
 DRAW_REASONS = {"state_cap", "board_full"}
-VALID_REASONS = {"win", "state_cap", "board_full", "unknown_error"}
+# Reasons the eval runner can emit. "unknown_error" is recognized but rejected
+# in V1 (see validate_rows) — none are expected in current data.
+RECOGNIZED_REASONS = {"win", "state_cap", "board_full", "unknown_error"}
 
 
 def _require(i, cond, msg):
@@ -42,7 +44,7 @@ def validate_rows(rows, a_ckpt=None, b_ckpt=None):
         missing = REQUIRED_KEYS - r.keys()
         _require(i, not missing, f"missing keys {sorted(missing)}")
         reason = r["reason"]
-        _require(i, reason in VALID_REASONS, f"bad reason {reason!r}")
+        _require(i, reason in RECOGNIZED_REASONS, f"bad reason {reason!r}")
         _require(i, reason != "unknown_error",
                  "reason 'unknown_error' not handled in V1 (none expected in current data)")
         winner = r["winner"]
@@ -131,12 +133,14 @@ def _ab_stats(rows, a_ckpt):
     a_wins = sum(1 for r in rows if r["winner_checkpoint"] == a_ckpt)
     draws = sum(1 for r in rows if r["winner"] is None)
     b_wins = n - a_wins - draws
+    # Key order is the CSV column order (DictWriter), kept aligned with the
+    # spec's "Table shapes": games, a_score_rate, a_wins, b_wins, draws, avg_moves.
     return {
         "games": n,
+        "a_score_rate": (score_rate(a_wins, draws, n) if n else None),
         "a_wins": a_wins,
         "b_wins": b_wins,
         "draws": draws,
-        "a_score_rate": (score_rate(a_wins, draws, n) if n else None),
         "avg_moves": (round(mean(r["n_moves"] for r in rows), 2) if n else None),
     }
 
