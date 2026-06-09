@@ -70,3 +70,9 @@ def test_cli_skips_self_match(tmp_path, capsys):
     assert rc == 0
     assert "self-match" in capsys.readouterr().out
     assert not (tmp_path / "out" / "combined_branch_comparison.csv").exists()
+
+
+def test_cli_no_inputs_returns_2(tmp_path, capsys):
+    rc = main(["--output-dir", str(tmp_path / "out")])
+    assert rc == 2
+    assert "no input files" in capsys.readouterr().err

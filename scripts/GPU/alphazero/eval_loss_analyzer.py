@@ -88,7 +88,10 @@ def resolve_inputs(args):
 
 
 def _weighted_rate(by_len, labels):
-    subs = [b for b in by_len if b["length_bucket"] in labels]
+    # Only buckets with games and a real score rate contribute; the pure
+    # module omits empty buckets, but stay None-safe against a None rate.
+    subs = [b for b in by_len
+            if b["length_bucket"] in labels and b["games"] and b["a_score_rate"] is not None]
     g = sum(b["games"] for b in subs)
     if not g:
         return None
@@ -183,4 +186,5 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    # main() returns a meaningful exit code (2 = no inputs), so forward it.
     raise SystemExit(main())
