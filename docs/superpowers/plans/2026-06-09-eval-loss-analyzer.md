@@ -834,14 +834,19 @@ def test_cli_writes_outputs_and_combined(tmp_path, capsys):
 
 def test_cli_skips_self_match(tmp_path, capsys):
     m = tmp_path / "0419_vs_0419_sanity_games.jsonl"
-    _write_jsonl(m, [_row(i, A, A, "red", pairing_id="0399_vs_0399") for i in range(2)])
+    # self-match rows: same checkpoint both seats, scored as draws (a red
+    # "win" against yourself is semantically odd). Never validated — the CLI
+    # skips on resolved a == b before validate_rows runs.
+    _write_jsonl(
+        m,
+        [_row(i, A, A, None, reason="state_cap", n=280, pairing_id="0399_vs_0399")
+         for i in range(2)],
+    )
     rc = main(["--games-jsonl", str(m), "--output-dir", str(tmp_path / "out")])
     assert rc == 0
     assert "self-match" in capsys.readouterr().out
     assert not (tmp_path / "out" / "combined_branch_comparison.csv").exists()
 ```
-
-Note: in `test_cli_skips_self_match` both seats are A and `pairing_id` is `0399_vs_0399`, so resolution infers A==B and the CLI skips before validating.
 
 - [ ] **Step 2: Run test to verify it fails**
 
