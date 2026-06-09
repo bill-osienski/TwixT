@@ -179,3 +179,45 @@ def summarize_by_length(rows, a_ckpt, b_ckpt, buckets=LENGTH_BUCKETS_DEFAULT):
         if sub:  # omit empty buckets
             out.append({"length_bucket": lbl, **_ab_stats(sub, a_ckpt)})
     return out
+
+
+def summarize_overall(rows, a_ckpt, b_ckpt):
+    n = len(rows)
+    a_wins = sum(1 for r in rows if r["winner_checkpoint"] == a_ckpt)
+    b_wins = sum(1 for r in rows if r["winner_checkpoint"] == b_ckpt)
+    wins = sum(1 for r in rows if r["reason"] == "win")
+    state_caps = sum(1 for r in rows if r["reason"] == "state_cap")
+    board_full = sum(1 for r in rows if r["reason"] == "board_full")
+    draws = state_caps + board_full
+    rate = score_rate(a_wins, draws, n)
+    s_lo, s_hi = score_ci_trinomial(a_wins, draws, b_wins)
+    e_lo, e_hi = elo_ci(a_wins, draws, b_wins)
+
+    by_color = summarize_by_color(rows, a_ckpt, b_ckpt)
+    rates = {c["a_color"]: c["a_score_rate"] for c in by_color}
+    red_rate, black_rate = rates.get("red"), rates.get("black")
+    color_gap = (red_rate - black_rate
+                 if red_rate is not None and black_rate is not None else None)
+
+    return {
+        "games": n,
+        "a_wins": a_wins,
+        "b_wins": b_wins,
+        "draws": draws,
+        "a_score": a_wins + 0.5 * draws,
+        "a_score_rate": rate,
+        "elo": elo_diff(rate, n),
+        "elo_ci95": [e_lo, e_hi],
+        "score_rate_ci95": [s_lo, s_hi],
+        "verdict": verdict(rate),
+        "color_gap": color_gap,
+        "termination": {
+            "win": wins,
+            "state_cap": state_caps,
+            "board_full": board_full,
+            "unknown_error": 0,
+            "draws": draws,
+            "state_cap_rate": state_caps / n,
+            "board_full_rate": board_full / n,
+        },
+    }

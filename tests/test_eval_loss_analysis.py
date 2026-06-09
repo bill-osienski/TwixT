@@ -139,3 +139,33 @@ def test_by_length_buckets_280_state_cap():
     assert by_len["280"]["draws"] == 1
     # empty buckets (61-80, 81-120) are omitted, not zero-filled
     assert "61-80" not in by_len
+
+
+from scripts.GPU.alphazero.eval_loss_analysis import summarize_overall
+
+
+def test_overall_summary_scoring_and_termination():
+    # 6 games: A wins 2, B wins 3, 1 state-cap draw.
+    rows = [
+        _row(0, A, B, "red"),     # A win
+        _row(1, B, A, "black"),   # A win
+        _row(2, A, B, "black"),   # B win
+        _row(3, B, A, "red"),     # B win
+        _row(4, A, B, "black"),   # B win
+        _row(5, A, B, None, reason="state_cap", n=280),  # draw
+    ]
+    s = summarize_overall(rows, A, B)
+    assert s["games"] == 6
+    assert s["a_wins"] == 2
+    assert s["b_wins"] == 3
+    assert s["draws"] == 1
+    assert s["a_score"] == 2.5            # 2 wins + 0.5 draw
+    assert s["a_score_rate"] == 2.5 / 6
+    assert s["verdict"] == "worse"        # rate < 0.48
+    assert s["elo"] < 0                   # A scoring below 0.5 -> negative Elo
+    assert len(s["elo_ci95"]) == 2 and s["elo_ci95"][0] < s["elo_ci95"][1]
+    assert s["termination"] == {
+        "win": 5, "state_cap": 1, "board_full": 0, "unknown_error": 0,
+        "draws": 1, "state_cap_rate": 1 / 6, "board_full_rate": 0.0,
+    }
+    assert s["color_gap"] is not None
