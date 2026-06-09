@@ -79,4 +79,5 @@ def write_replay(replay_dir, replay_dict):
     path = os.path.join(replay_dir, replay_filename(replay_dict["game_idx"]))
     with open(path, "w") as fh:
         json.dump(replay_dict, fh)
+    # relpath raises ValueError on cross-drive paths (Windows); safe on macOS.
     return os.path.relpath(path)
