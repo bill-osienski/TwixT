@@ -5,6 +5,7 @@ from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     confidence_features, opening_key, classify_collapse,
     game_features, b_side_features,
     cohort_comparison_row, phase_of, phase_bucket_rows,
+    cohens_d, effect_sizes,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -347,3 +348,40 @@ def test_phase_bucket_rows_labels_opening_as_temperature():
     assert sum(r["plies"] for r in rows) == 6
     assert all(r["games"] == 1 for r in rows)
     assert "mean_root_value" in rows[0] and "median_selected_visit_rank" in rows[0]
+
+
+def test_cohens_d_hand_computed():
+    # means 2 vs 4, each var 1 (ddof=1), pooled sd 1 -> d = -2.0
+    assert cohens_d([1, 2, 3], [3, 4, 5]) == pytest.approx(-2.0)
+
+
+def test_cohens_d_degenerate_and_short():
+    assert cohens_d([1.0, 1.0], [1.0, 1.0]) is None   # zero pooled variance
+    assert cohens_d([1.0], [1.0, 2.0]) is None        # too few samples
+
+
+def test_effect_sizes_sign_convention_and_nulls():
+    loss = [{"final_a_value": -0.9, "largest_a_value_drop": -0.5,
+             "initial_a_value": 0.0, "mean_top1_share_post": 0.2,
+             "median_selected_visit_rank_post": 3},
+            {"final_a_value": -0.7, "largest_a_value_drop": -0.4,
+             "initial_a_value": 0.1, "mean_top1_share_post": 0.3,
+             "median_selected_visit_rank_post": 2}]
+    win = [{"final_a_value": 0.8, "largest_a_value_drop": -0.1,
+            "initial_a_value": 0.1, "mean_top1_share_post": 0.5,
+            "median_selected_visit_rank_post": 1},
+           {"final_a_value": 0.6, "largest_a_value_drop": -0.2,
+            "initial_a_value": 0.2, "mean_top1_share_post": 0.4,
+            "median_selected_visit_rank_post": 1}]
+    out = effect_sizes(loss, win)
+    m = out["metrics"]
+    assert "cohens_d" in out["formula"]
+    assert m["final_a_value"]["d"] < 0                # lower in losses
+    assert m["final_a_value"]["delta"] == pytest.approx(-0.8 - 0.7)
+    assert m["median_selected_visit_rank_post"]["d"] > 0   # higher rank in losses
+    # a metric that is all-None in one cohort yields nulls, not a crash
+    for f in win:
+        f["mean_top1_share_post"] = None
+    out2 = effect_sizes(loss, win)
+    assert out2["metrics"]["mean_top1_share_post"]["d"] is None
+    assert out2["metrics"]["mean_top1_share_post"]["win_mean"] is None

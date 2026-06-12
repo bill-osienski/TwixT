@@ -336,3 +336,31 @@ def phase_bucket_rows(cohort, games, opening_plies):
                 [m["selected_visit_rank"] for m in ms]),
         })
     return rows
+
+
+def cohens_d(xs, ys):
+    """Cohen's d with pooled sample std (ddof=1); None when either side has
+    < 2 samples or the pooled variance is zero (degenerate)."""
+    if len(xs) < 2 or len(ys) < 2:
+        return None
+    pooled = sqrt(((len(xs) - 1) * variance(xs) + (len(ys) - 1) * variance(ys))
+                  / (len(xs) + len(ys) - 2))
+    if pooled == 0:
+        return None
+    return (mean(xs) - mean(ys)) / pooled
+
+
+def effect_sizes(loss_feats, win_feats):
+    """Loss-vs-win effect sizes per EFFECT_METRICS. Sign convention is fixed
+    by EFFECT_FORMULA: d = (loss - win) / pooled_std."""
+    metrics = {}
+    for name in EFFECT_METRICS:
+        xs = [f[name] for f in loss_feats if f[name] is not None]
+        ys = [f[name] for f in win_feats if f[name] is not None]
+        lm, wm = _mean(xs), _mean(ys)
+        metrics[name] = {
+            "loss_mean": lm, "win_mean": wm,
+            "delta": (lm - wm) if lm is not None and wm is not None else None,
+            "d": cohens_d(xs, ys),
+        }
+    return {"formula": EFFECT_FORMULA, "metrics": metrics}
