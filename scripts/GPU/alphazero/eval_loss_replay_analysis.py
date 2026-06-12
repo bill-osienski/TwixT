@@ -107,8 +107,8 @@ def validate_replay(row, replay):
         raise ValueError(
             f"game {gi}: schema_version {replay.get('schema_version')!r} "
             f"!= {REPLAY_SCHEMA_VERSION}")
-    for key in ("game_idx", "task_id", "pairing_id", "winner", "reason",
-                "n_moves", "red_checkpoint", "black_checkpoint"):
+    for key in ("game_idx", "task_id", "pairing_id", "winner", "winner_checkpoint",
+                "reason", "n_moves", "red_checkpoint", "black_checkpoint"):
         if replay.get(key) != row[key]:
             raise ValueError(
                 f"game {gi}: replay {key}={replay.get(key)!r} != row {row[key]!r}")

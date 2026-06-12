@@ -51,6 +51,13 @@ def test_validate_replay_rejects_identity_mismatch():
         validate_replay(row, replay)
 
 
+def test_validate_replay_rejects_winner_checkpoint_mismatch():
+    row, replay = make_game(0)
+    replay["winner_checkpoint"] = "ckpts/other.safetensors"
+    with pytest.raises(ValueError, match="winner_checkpoint"):
+        validate_replay(row, replay)
+
+
 def test_validate_replay_rejects_move_count_mismatch():
     row, replay = make_game(0, n_moves=10)
     replay["moves"] = replay["moves"][:-1]
