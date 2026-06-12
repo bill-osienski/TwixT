@@ -167,3 +167,43 @@ def value_features(a_plies, n_moves, th):
         feats[f"{name}_a_ply"] = c["a_ply"] if c else None
         feats[f"{name}_fraction"] = c["fraction"] if c else None
     return feats
+
+
+def confidence_features(a_plies, th):
+    """Confidence/diffusion features over POST-OPENING A plies only (the
+    opening is temperature-sampled — see OPENING_SAMPLING_NOTE). All-null
+    when the game has no post-opening A plies."""
+    post = [m for m in a_plies if m["ply"] >= th.opening_plies]
+    feats = {
+        "n_a_plies": len(a_plies),
+        "n_a_plies_post": len(post),
+        "mean_n_legal": _mean([m["n_legal"] for m in a_plies]),
+        "mean_top1_share_post": None,
+        "min_top1_share_post": None,
+        "median_selected_visit_rank_post": None,
+        "max_selected_visit_rank_post": None,
+        "mean_selected_visit_share_post": None,
+        "low_confidence_ply_count": None,
+        "diffuse_ply_fraction": None,
+    }
+    if post:
+        shares = [m["root_top1_share"] for m in post]
+        ranks = [m["selected_visit_rank"] for m in post]
+        feats.update(
+            mean_top1_share_post=mean(shares),
+            min_top1_share_post=min(shares),
+            median_selected_visit_rank_post=median(ranks),
+            max_selected_visit_rank_post=max(ranks),
+            mean_selected_visit_share_post=mean(
+                [m["selected_visit_count"] / m["root_total_visits"] for m in post]),
+            low_confidence_ply_count=sum(r >= th.low_visit_rank for r in ranks),
+            diffuse_ply_fraction=(
+                sum(s <= th.low_top1_share for s in shares) / len(post)),
+        )
+    return feats
+
+
+def opening_key(replay, key_plies):
+    """First key_plies moves (both players) as a compact cluster key."""
+    return "|".join(f"r{m['row']}c{m['col']}"
+                    for m in replay["moves"][:key_plies])

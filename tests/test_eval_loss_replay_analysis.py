@@ -2,6 +2,7 @@ import pytest
 
 from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     Thresholds, side_plies, validate_replay, value_features,
+    confidence_features, opening_key,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -136,3 +137,42 @@ def test_value_features_single_ply_has_null_drop():
     assert f["largest_drop_ply"] is None
     assert f["initial_a_value"] == -0.5           # median of the single value
     assert f["first_a_value_below_lost_ply"] == 1
+
+
+def test_confidence_features_post_opening_only():
+    # opening_plies=4 -> A (black) post plies are global 5,7,9,11 (a_ply 2..5)
+    _row, replay = make_game(
+        0, a_is_black=True, n_moves=12, a_values=TRAJ,
+        a_top1=[0.5, 0.5, 0.08, 0.12, 0.3, 0.05],
+        a_rank=[4, 1, 6, 2, 1, 7])
+    th = Thresholds(opening_plies=4)
+    f = confidence_features(side_plies(replay, "black"), th)
+    assert f["n_a_plies"] == 6
+    assert f["n_a_plies_post"] == 4
+    assert f["mean_top1_share_post"] == pytest.approx((0.08 + 0.12 + 0.3 + 0.05) / 4)
+    assert f["min_top1_share_post"] == 0.05
+    assert f["median_selected_visit_rank_post"] == 4.0   # median(6, 2, 1, 7)
+    assert f["max_selected_visit_rank_post"] == 7
+    assert f["low_confidence_ply_count"] == 2            # ranks 6 and 7 >= 5
+    assert f["diffuse_ply_fraction"] == 0.5              # 0.08, 0.05 <= 0.10
+    assert f["mean_selected_visit_share_post"] == 0.5    # 200/400 everywhere
+    assert f["mean_n_legal"] == 100
+
+
+def test_confidence_features_all_opening_yields_nulls():
+    _row, replay = make_game(0, a_is_black=True, n_moves=6)
+    th = Thresholds(opening_plies=20)  # whole game inside the opening window
+    f = confidence_features(side_plies(replay, "black"), th)
+    assert f["n_a_plies_post"] == 0
+    assert f["mean_top1_share_post"] is None
+    assert f["median_selected_visit_rank_post"] is None
+    assert f["low_confidence_ply_count"] is None
+    assert f["diffuse_ply_fraction"] is None
+    assert f["mean_n_legal"] == 100                      # all-plies metric survives
+
+
+def test_opening_key_first_k_plies():
+    _row, replay = make_game(0, n_moves=6)
+    # fixture rows/cols default to the ply number
+    assert opening_key(replay, 4) == "r0c0|r1c1|r2c2|r3c3"
+    assert opening_key(replay, 2) == "r0c0|r1c1"
