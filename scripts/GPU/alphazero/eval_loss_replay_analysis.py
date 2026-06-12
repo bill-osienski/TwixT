@@ -207,3 +207,30 @@ def opening_key(replay, key_plies):
     """First key_plies moves (both players) as a compact cluster key."""
     return "|".join(f"r{m['row']}c{m['col']}"
                     for m in replay["moves"][:key_plies])
+
+
+def classify_collapse(f, th):
+    """(label, flags) for one game's features. One label via the documented
+    precedence; every rule's flag is returned so multi-signal games stay
+    visible in the CSVs. Rules with null inputs do not fire."""
+    init, fin = f["initial_a_value"], f["final_a_value"]
+    drop = f["largest_a_value_drop"]
+    sharp = drop is not None and drop <= -th.sharp_drop
+    flags = {
+        "flag_already_bad": init is not None and init <= th.bad_value,
+        "flag_sharp": sharp,
+        "flag_gradual": (init is not None and fin is not None
+                         and init > HEALTHY_START and fin <= DECAYED_FINAL
+                         and not sharp),
+        "flag_diffusion": (
+            f["mean_top1_share_post"] is not None
+            and (f["mean_top1_share_post"] <= DIFFUSE_MEAN_TOP1
+                 or f["diffuse_ply_fraction"] >= DIFFUSE_PLY_FRACTION)),
+        "flag_low_visit": (
+            f["median_selected_visit_rank_post"] is not None
+            and (f["median_selected_visit_rank_post"] >= LOW_RANK_MEDIAN
+                 or f["low_confidence_ply_count"] >= LOW_RANK_PLY_COUNT)),
+    }
+    label = next((lab for lab, flag in COLLAPSE_PRECEDENCE if flags[flag]),
+                 "no_clear_signal")
+    return label, flags

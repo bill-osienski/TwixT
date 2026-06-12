@@ -2,7 +2,7 @@ import pytest
 
 from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     Thresholds, side_plies, validate_replay, value_features,
-    confidence_features, opening_key,
+    confidence_features, opening_key, classify_collapse,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -187,3 +187,77 @@ def test_opening_key_first_k_plies():
     # fixture rows/cols default to the ply number
     assert opening_key(replay, 4) == "r0c0|r1c1|r2c2|r3c3"
     assert opening_key(replay, 2) == "r0c0|r1c1"
+
+
+def _feats(**over):
+    base = {
+        "initial_a_value": 0.0, "final_a_value": 0.0,
+        "largest_a_value_drop": -0.1,
+        "mean_top1_share_post": 0.5, "diffuse_ply_fraction": 0.0,
+        "median_selected_visit_rank_post": 1, "low_confidence_ply_count": 0,
+    }
+    base.update(over)
+    return base
+
+
+def test_classify_already_bad_at_boundary():
+    label, flags = classify_collapse(_feats(initial_a_value=-0.25), Thresholds())
+    assert label == "already_bad" and flags["flag_already_bad"]
+
+
+def test_classify_sharp_drop_at_boundary():
+    label, _ = classify_collapse(_feats(largest_a_value_drop=-0.40), Thresholds())
+    assert label == "sharp_value_drop"
+
+
+def test_classify_gradual_decay_requires_healthy_start_and_no_cliff():
+    label, _ = classify_collapse(
+        _feats(initial_a_value=0.0, final_a_value=-0.40,
+               largest_a_value_drop=-0.39), Thresholds())
+    assert label == "gradual_decay"
+
+
+def test_gradual_flag_suppressed_by_sharp():
+    label, flags = classify_collapse(
+        _feats(initial_a_value=0.0, final_a_value=-0.5,
+               largest_a_value_drop=-0.45), Thresholds())
+    assert label == "sharp_value_drop"
+    assert flags["flag_gradual"] is False        # spec: "and not sharp"
+
+
+def test_classify_diffusion_mean_or_fraction():
+    label, _ = classify_collapse(_feats(mean_top1_share_post=0.15), Thresholds())
+    assert label == "search_diffusion"
+    label, _ = classify_collapse(_feats(diffuse_ply_fraction=0.25), Thresholds())
+    assert label == "search_diffusion"
+
+
+def test_classify_low_visit_median_or_count():
+    label, _ = classify_collapse(
+        _feats(median_selected_visit_rank_post=3), Thresholds())
+    assert label == "low_visit_selection"
+    label, _ = classify_collapse(
+        _feats(low_confidence_ply_count=3), Thresholds())
+    assert label == "low_visit_selection"
+
+
+def test_classify_precedence_already_bad_beats_sharp_but_keeps_flag():
+    label, flags = classify_collapse(
+        _feats(initial_a_value=-0.3, largest_a_value_drop=-0.5), Thresholds())
+    assert label == "already_bad"
+    assert flags["flag_sharp"] is True           # multi-signal stays visible
+
+
+def test_classify_no_clear_signal():
+    label, flags = classify_collapse(_feats(), Thresholds())
+    assert label == "no_clear_signal"
+    assert not any(flags.values())
+
+
+def test_classify_null_post_features_disable_those_rules():
+    label, flags = classify_collapse(
+        _feats(mean_top1_share_post=None, diffuse_ply_fraction=None,
+               median_selected_visit_rank_post=None,
+               low_confidence_ply_count=None), Thresholds())
+    assert label == "no_clear_signal"
+    assert flags["flag_diffusion"] is False and flags["flag_low_visit"] is False
