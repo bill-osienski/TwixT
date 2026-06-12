@@ -1,7 +1,7 @@
 import pytest
 
 from scripts.GPU.alphazero.eval_loss_replay_analysis import (
-    Thresholds, side_plies,
+    Thresholds, side_plies, validate_replay,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -30,3 +30,51 @@ def test_fixture_seats_a_by_color():
     assert row_b["black_checkpoint"] == A and row_b["red_checkpoint"] == B
     row_r, _ = make_game(1, a_is_black=False, a_wins=True)
     assert row_r["red_checkpoint"] == A and row_r["winner"] == "red"
+
+
+def test_validate_replay_accepts_consistent_pair():
+    row, replay = make_game(3, n_moves=8)
+    validate_replay(row, replay)  # no raise
+
+
+def test_validate_replay_rejects_wrong_schema_version():
+    row, replay = make_game(0)
+    replay["schema_version"] = 2
+    with pytest.raises(ValueError, match="schema_version"):
+        validate_replay(row, replay)
+
+
+def test_validate_replay_rejects_identity_mismatch():
+    row, replay = make_game(0)
+    replay["winner"] = "red" if replay["winner"] == "black" else "black"
+    with pytest.raises(ValueError, match="winner"):
+        validate_replay(row, replay)
+
+
+def test_validate_replay_rejects_move_count_mismatch():
+    row, replay = make_game(0, n_moves=10)
+    replay["moves"] = replay["moves"][:-1]
+    replay["n_moves"] = 10  # identity still matches the row
+    with pytest.raises(ValueError, match="move records"):
+        validate_replay(row, replay)
+
+
+def test_validate_replay_rejects_broken_alternation():
+    row, replay = make_game(0, n_moves=6)
+    replay["moves"][2]["player"] = "black"  # ply 2 must be red
+    with pytest.raises(ValueError, match="player"):
+        validate_replay(row, replay)
+
+
+def test_validate_replay_rejects_bad_ply_field():
+    row, replay = make_game(0, n_moves=6)
+    replay["moves"][4]["ply"] = 99
+    with pytest.raises(ValueError, match="ply field"):
+        validate_replay(row, replay)
+
+
+def test_validate_replay_rejects_missing_ply_key():
+    row, replay = make_game(0, n_moves=6)
+    del replay["moves"][1]["root_value"]
+    with pytest.raises(ValueError, match="missing keys"):
+        validate_replay(row, replay)

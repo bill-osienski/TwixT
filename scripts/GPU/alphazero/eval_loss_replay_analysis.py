@@ -98,3 +98,31 @@ def _median(vals):
 def side_plies(replay, color):
     """Per-ply records for one side, in game order (spec: a_ply_series)."""
     return [m for m in replay["moves"] if m["player"] == color]
+
+
+def validate_replay(row, replay):
+    """Fail loud if a sidecar contradicts its games.jsonl row."""
+    gi = row["game_idx"]
+    if replay.get("schema_version") != REPLAY_SCHEMA_VERSION:
+        raise ValueError(
+            f"game {gi}: schema_version {replay.get('schema_version')!r} "
+            f"!= {REPLAY_SCHEMA_VERSION}")
+    for key in ("game_idx", "task_id", "pairing_id", "winner", "reason",
+                "n_moves", "red_checkpoint", "black_checkpoint"):
+        if replay.get(key) != row[key]:
+            raise ValueError(
+                f"game {gi}: replay {key}={replay.get(key)!r} != row {row[key]!r}")
+    moves = replay["moves"]
+    if len(moves) != row["n_moves"]:
+        raise ValueError(
+            f"game {gi}: {len(moves)} move records != n_moves {row['n_moves']}")
+    for i, m in enumerate(moves):
+        missing = REQUIRED_PLY_KEYS - m.keys()
+        if missing:
+            raise ValueError(f"game {gi} ply {i}: missing keys {sorted(missing)}")
+        if m["ply"] != i:
+            raise ValueError(f"game {gi} ply {i}: ply field is {m['ply']}")
+        expect = "red" if i % 2 == 0 else "black"
+        if m["player"] != expect:
+            raise ValueError(
+                f"game {gi} ply {i}: player {m['player']!r}, expected {expect!r}")
