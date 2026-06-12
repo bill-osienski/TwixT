@@ -4,6 +4,7 @@ from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     Thresholds, side_plies, validate_replay, value_features,
     confidence_features, opening_key, classify_collapse,
     game_features, b_side_features,
+    cohort_comparison_row, phase_of, phase_bucket_rows,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -308,3 +309,41 @@ def test_b_saw_it_first_false_when_either_onset_missing():
     assert f["b_saw_it_first"] is False
     f2 = b_side_features(replay, "red", Thresholds(), a_first_below_lost_fraction=None)
     assert f2["b_saw_it_first"] is False
+
+
+def test_cohort_comparison_row_pools_plies_across_games():
+    th = Thresholds(opening_plies=4)
+    games = []
+    for i, vals in enumerate(([0.5, 0.25, -0.25, -0.5, -0.75, -1.0],
+                              [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])):
+        _row, replay = make_game(i, a_is_black=True, n_moves=12, a_values=vals)
+        games.append(side_plies(replay, "black"))
+    r = cohort_comparison_row("loss", games, th.opening_plies)
+    assert r["cohort"] == "loss" and r["games"] == 2 and r["plies"] == 12
+    assert r["mean_root_value"] == pytest.approx(-1.75 / 12)
+    assert r["mean_n_legal"] == 100
+    # post pool: 4 post plies per game = 8
+    assert r["mean_top1_share_post"] == 0.5
+
+
+def test_phase_of_boundaries():
+    # opening_plies=20, n_moves=80: post-opening span is plies 20..79
+    assert phase_of(19, 80, 20) == "opening"
+    assert phase_of(20, 80, 20) == "early_midgame"
+    assert phase_of(34, 80, 20) == "early_midgame"   # f = 14/60 < 0.25
+    assert phase_of(35, 80, 20) == "midgame"         # f = 15/60 = 0.25
+    assert phase_of(79, 80, 20) == "pre_terminal"
+    assert phase_of(40, 41, 20) == "pre_terminal"    # short game, last ply
+
+
+def test_phase_bucket_rows_labels_opening_as_temperature():
+    _row, replay = make_game(0, a_is_black=True, n_moves=12, a_values=TRAJ)
+    rows = phase_bucket_rows("loss", [(side_plies(replay, "black"), 12)], 4)
+    by_phase = {r["phase"]: r for r in rows}
+    assert by_phase["opening"]["sampling"] == "temperature"
+    assert all(r["sampling"] == "argmax" for p, r in by_phase.items()
+               if p != "opening")
+    assert by_phase["opening"]["plies"] == 2          # A plies 1, 3
+    assert sum(r["plies"] for r in rows) == 6
+    assert all(r["games"] == 1 for r in rows)
+    assert "mean_root_value" in rows[0] and "median_selected_visit_rank" in rows[0]

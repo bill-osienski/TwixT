@@ -275,3 +275,64 @@ def b_side_features(replay, b_clr, th, a_first_below_lost_fraction):
                                and a_first_below_lost_fraction is not None
                                and bf < a_first_below_lost_fraction)
     return feats
+
+
+def cohort_comparison_row(cohort, a_plies_per_game, opening_plies):
+    """Ply-pooled aggregates for one cohort (the cohort_comparison.csv row)."""
+    plies = [m for g in a_plies_per_game for m in g]
+    post = [m for m in plies if m["ply"] >= opening_plies]
+    return {
+        "cohort": cohort,
+        "games": len(a_plies_per_game),
+        "plies": len(plies),
+        "mean_root_value": _mean([m["root_value"] for m in plies]),
+        "median_root_value": _median([m["root_value"] for m in plies]),
+        "mean_top1_share_post": _mean([m["root_top1_share"] for m in post]),
+        "median_top1_share_post": _median([m["root_top1_share"] for m in post]),
+        "mean_selected_visit_rank_post": _mean(
+            [m["selected_visit_rank"] for m in post]),
+        "median_selected_visit_rank_post": _median(
+            [m["selected_visit_rank"] for m in post]),
+        "mean_selected_visit_share_post": _mean(
+            [m["selected_visit_count"] / m["root_total_visits"] for m in post]),
+        "mean_n_legal": _mean([m["n_legal"] for m in plies]),
+    }
+
+
+def phase_of(ply, n_moves, opening_plies):
+    """opening = absolute temp-sampled window; the rest splits into four
+    equal game-fraction bands."""
+    if ply < opening_plies:
+        return "opening"
+    f = (ply - opening_plies) / (n_moves - opening_plies)
+    return MIDGAME_PHASES[min(3, int(f * 4))]
+
+
+def phase_bucket_rows(cohort, games, opening_plies):
+    """games: list of (a_plies, n_moves). Empty phases are omitted."""
+    plies_by = {p: [] for p in PHASES}
+    games_by = {p: set() for p in PHASES}
+    for gi, (a_plies, n_moves) in enumerate(games):
+        for m in a_plies:
+            p = phase_of(m["ply"], n_moves, opening_plies)
+            plies_by[p].append(m)
+            games_by[p].add(gi)
+    rows = []
+    for p in PHASES:
+        ms = plies_by[p]
+        if not ms:
+            continue
+        rows.append({
+            "cohort": cohort, "phase": p,
+            "sampling": "temperature" if p == "opening" else "argmax",
+            "games": len(games_by[p]), "plies": len(ms),
+            "mean_root_value": _mean([m["root_value"] for m in ms]),
+            "median_root_value": _median([m["root_value"] for m in ms]),
+            "mean_top1_share": _mean([m["root_top1_share"] for m in ms]),
+            "median_top1_share": _median([m["root_top1_share"] for m in ms]),
+            "mean_selected_visit_rank": _mean(
+                [m["selected_visit_rank"] for m in ms]),
+            "median_selected_visit_rank": _median(
+                [m["selected_visit_rank"] for m in ms]),
+        })
+    return rows
