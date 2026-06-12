@@ -3,6 +3,7 @@ import pytest
 from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     Thresholds, side_plies, validate_replay, value_features,
     confidence_features, opening_key, classify_collapse,
+    game_features, b_side_features,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -271,3 +272,39 @@ def test_classify_just_outside_boundaries_do_not_fire():
                median_selected_visit_rank_post=2,
                low_confidence_ply_count=2), Thresholds())
     assert not any(flags.values())
+
+
+def test_game_features_merges_identity_value_confidence():
+    row, replay = make_game(7, a_is_black=True, n_moves=12, a_values=TRAJ)
+    f = game_features(row, replay, "black", Thresholds(opening_plies=4),
+                      key_plies=2)
+    assert f["game_idx"] == 7 and f["a_color"] == "black"
+    assert f["replay_path"] == row["replay_path"]
+    assert f["opening_key"] == "r0c0|r1c1"
+    assert f["initial_a_value"] == 0.125          # value features present
+    assert f["n_a_plies_post"] == 4               # confidence features present
+
+
+def test_b_side_features_onsets_and_saw_it_first():
+    # B is red: B plies at global 0,2,4,6,8,10. B's values rise to a win.
+    _row, replay = make_game(
+        0, a_is_black=True, n_moves=12,
+        b_values=[0.0, 0.125, 0.25, 0.5, 0.75, 1.0])
+    th = Thresholds(opening_plies=4)
+    f = b_side_features(replay, "red", th, a_first_below_lost_fraction=9 / 11)
+    assert f["b_first_value_above_025_ply"] == 4         # 0.25 >= 0.25
+    assert f["b_first_value_above_050_ply"] == 6         # 0.5 >= 0.50
+    assert f["b_first_value_above_050_fraction"] == pytest.approx(6 / 11)
+    assert f["b_saw_it_first"] is True                   # 6/11 < 9/11
+    assert f["b_mean_value"] == pytest.approx((0.0 + 0.125 + 0.25 + 0.5 + 0.75 + 1.0) / 6)
+    assert f["b_mean_top1_share_post"] == 0.5            # fixture default
+    assert f["b_median_visit_rank_post"] == 1
+
+
+def test_b_saw_it_first_false_when_either_onset_missing():
+    _row, replay = make_game(0, a_is_black=True, n_moves=12)  # flat 0.0: no onset
+    f = b_side_features(replay, "red", Thresholds(), a_first_below_lost_fraction=0.5)
+    assert f["b_first_value_above_050_ply"] is None
+    assert f["b_saw_it_first"] is False
+    f2 = b_side_features(replay, "red", Thresholds(), a_first_below_lost_fraction=None)
+    assert f2["b_saw_it_first"] is False

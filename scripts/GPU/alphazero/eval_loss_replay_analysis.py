@@ -237,3 +237,41 @@ def classify_collapse(f, th):
     label = next((lab for lab, flag in COLLAPSE_PRECEDENCE if flags[flag]),
                  "no_clear_signal")
     return label, flags
+
+
+def game_features(row, replay, a_clr, th, key_plies=4):
+    """One flat per-game feature dict: identity + value + confidence."""
+    a_plies = side_plies(replay, a_clr)
+    feats = {
+        "game_idx": row["game_idx"], "task_id": row["task_id"],
+        "replay_path": row.get("replay_path"), "a_color": a_clr,
+        "winner": row["winner"], "n_moves": row["n_moves"],
+        "opening_key": opening_key(replay, key_plies),
+    }
+    feats.update(value_features(a_plies, row["n_moves"], th))
+    feats.update(confidence_features(a_plies, th))
+    return feats
+
+
+def b_side_features(replay, b_clr, th, a_first_below_lost_fraction):
+    """B's series inside one (lost) game, in B's OWN perspective — kept
+    separate from A's series, never sign-flipped or merged."""
+    n_moves = replay["n_moves"]
+    b_plies = side_plies(replay, b_clr)
+    post = [m for m in b_plies if m["ply"] >= th.opening_plies]
+    feats = {
+        "b_mean_value": _mean([m["root_value"] for m in b_plies]),
+        "b_mean_top1_share_post": _mean([m["root_top1_share"] for m in post]),
+        "b_median_visit_rank_post": _median(
+            [m["selected_visit_rank"] for m in post]),
+    }
+    for name, t in (("b_first_value_above_025", B_ONSET_LOW),
+                    ("b_first_value_above_050", B_ONSET_HIGH)):
+        c = _crossing(b_plies, n_moves, lambda v, t=t: v >= t)
+        feats[f"{name}_ply"] = c["ply"] if c else None
+        feats[f"{name}_fraction"] = c["fraction"] if c else None
+    bf = feats["b_first_value_above_050_fraction"]
+    feats["b_saw_it_first"] = (bf is not None
+                               and a_first_below_lost_fraction is not None
+                               and bf < a_first_below_lost_fraction)
+    return feats
