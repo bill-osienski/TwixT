@@ -226,6 +226,19 @@ def _make_cache(factory):
     return get_eval
 
 
+def _play_and_build_result(task, red, black, config, capture, replay_dir):
+    """Play one game and build its result, writing a replay sidecar when
+    capturing. Shared by the sequential and worker loops (both single-process)."""
+    winner, reason, nm, records = play_eval_game(
+        red, black, config, task.seed, capture=capture)
+    result = make_result(task, winner, reason, nm)
+    if records is not None:
+        result.replay_path = write_replay(
+            replay_dir,
+            build_replay_dict(result, task.seed, config.board_size, records))
+    return result
+
+
 def _run_sequential(tasks, config, factory, replay_dir=None):
     import gc
 
@@ -237,14 +250,8 @@ def _run_sequential(tasks, config, factory, replay_dir=None):
     for task in tasks:
         red = get_eval(task.red_checkpoint)
         black = get_eval(task.black_checkpoint)
-        winner, reason, nm, records = play_eval_game(
-            red, black, config, task.seed, capture=capture)
-        result = make_result(task, winner, reason, nm)
-        if records is not None:
-            result.replay_path = write_replay(
-                replay_dir,
-                build_replay_dict(result, task.seed, config.board_size, records))
-        results.append(result)
+        results.append(
+            _play_and_build_result(task, red, black, config, capture, replay_dir))
         # Flush pending MLX lazy ops and release cached Metal buffers between
         # games to stay within Metal's resource limit (trainer.py:3169-3173).
         mx.eval()
@@ -274,14 +281,8 @@ def _worker_main(worker_id, tasks, config, factory, next_idx, result_q,
             task = tasks[i]
             red = get_eval(task.red_checkpoint)
             black = get_eval(task.black_checkpoint)
-            winner, reason, nm, records = play_eval_game(
-                red, black, config, task.seed, capture=capture)
-            result = make_result(task, winner, reason, nm)
-            if records is not None:
-                result.replay_path = write_replay(
-                    replay_dir,
-                    build_replay_dict(result, task.seed, config.board_size, records))
-            result_q.put(result)
+            result_q.put(
+                _play_and_build_result(task, red, black, config, capture, replay_dir))
     except Exception as e:
         result_q.put(_WorkerFailed(worker_id, f"{e!r}\n{traceback.format_exc()}"))
         return
