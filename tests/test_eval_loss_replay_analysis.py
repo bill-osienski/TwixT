@@ -9,6 +9,7 @@ from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     collapse_distribution, timing_distribution, secondary_contrast_summary,
     make_verdict,
     review_queue_rows, opening_cluster_rows,
+    build_replay_summary, MIN_WIN_COHORT, OPENING_SAMPLING_NOTE,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -522,3 +523,65 @@ def test_opening_cluster_rows_grouping_and_sort():
     assert rows[0]["opening_plies"] == 2
     assert rows[1]["games"] == 1 and rows[1]["opening_key"] == "r9c9|r9c9"
     assert rows[1]["avg_moves"] == 14
+
+
+def _summary_inputs(n_wins):
+    # Values vary per game: identical dicts would give zero variance and a
+    # (correctly) null Cohen's d, which is not what this test exercises.
+    loss = [{"collapse_type": "sharp_value_drop",
+             "final_a_value": -0.9 + 0.05 * i,
+             "largest_a_value_drop": -0.6 - 0.01 * i,
+             "initial_a_value": 0.0 + 0.01 * i,
+             "mean_top1_share_post": 0.3 + 0.01 * i,
+             "median_selected_visit_rank_post": 2 + (i % 2),
+             "first_a_value_below_0_fraction": 0.4,
+             "first_a_value_below_bad_fraction": 0.5,
+             "first_a_value_below_lost_fraction": 0.6,
+             "largest_drop_fraction": 0.55, "mean_a_value": -0.4,
+             "b_mean_value": 0.4, "b_mean_top1_share_post": 0.5,
+             "b_median_visit_rank_post": 1,
+             "b_first_value_above_050_fraction": 0.5,
+             "b_saw_it_first": True} for i in range(6)]
+    win = [{"collapse_type": "no_clear_signal",
+            "final_a_value": 0.8 - 0.05 * i,
+            "largest_a_value_drop": -0.1 - 0.01 * i,
+            "initial_a_value": 0.1 + 0.01 * i,
+            "mean_top1_share_post": 0.5 - 0.01 * i,
+            "median_selected_visit_rank_post": 1,
+            "first_a_value_below_0_fraction": None,
+            "first_a_value_below_bad_fraction": None,
+            "first_a_value_below_lost_fraction": None,
+            "largest_drop_fraction": 0.3, "mean_a_value": 0.5}
+           for i in range(n_wins)]
+    return loss, win
+
+
+def _build(loss, win):
+    return build_replay_summary(
+        match="m", pairing_id="0399_vs_0379", a_ckpt=A, b_ckpt=B,
+        filters={"a_color": "black"}, counts={"loss": len(loss), "win": len(win)},
+        loss_feats=loss, win_feats=win,
+        verdict=make_verdict([f["collapse_type"] for f in loss], "A-as-black"),
+        cohort_rows=[{"cohort": "loss"}, {"cohort": "win"}],
+        secondary=secondary_contrast_summary(loss))
+
+
+def test_build_replay_summary_full_shape():
+    loss, win = _summary_inputs(n_wins=6)
+    s = _build(loss, win)
+    assert s["match"] == "m" and s["a_checkpoint"] == A
+    assert OPENING_SAMPLING_NOTE in s["notes"]
+    assert s["primary_contrast"]["effect_sizes"]["metrics"]["final_a_value"]["d"] is not None
+    assert s["primary_contrast"]["note"] is None
+    assert s["collapse_type_distribution"]["mode_shares"]["value-drop"] == 1.0
+    assert s["timing_distribution"]["first_a_value_below_lost"]["p50"] == pytest.approx(0.6)
+    assert s["verdict"]["primary"] == "value-drop"
+    assert s["secondary_contrast"]["b_saw_it_first_share"] == 1.0
+
+
+def test_build_replay_summary_insufficient_contrast():
+    loss, win = _summary_inputs(n_wins=MIN_WIN_COHORT - 1)
+    s = _build(loss, win)
+    assert s["primary_contrast"]["effect_sizes"] is None
+    assert s["primary_contrast"]["note"] == "insufficient_contrast"
+    assert s["verdict"]["primary"] == "value-drop"   # verdict still computed

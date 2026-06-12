@@ -473,8 +473,9 @@ QUEUE_COLUMNS = (
 
 def review_queue_rows(loss_feats, limit):
     """Top-N loss games by composite priority: sharpest drop, then lowest
-    final value, then lowest post-opening top1 share, then highest rank.
-    Null sort keys go last (None drop -> +inf etc.)."""
+    final value, then lowest post-opening top1 share, then highest visit-rank
+    (model ignored its top choice). Null sort keys go last (None drop -> +inf
+    etc.)."""
     def sort_key(f):
         return (
             f["largest_a_value_drop"] if f["largest_a_value_drop"] is not None
@@ -520,3 +521,30 @@ def opening_cluster_rows(games, key_plies, cohort_label, opening_plies):
         })
     rows.sort(key=lambda r: (-r["games"], r["a_score_rate"]))
     return rows
+
+
+def build_replay_summary(*, match, pairing_id, a_ckpt, b_ckpt, filters,
+                         counts, loss_feats, win_feats, verdict,
+                         cohort_rows, secondary):
+    """Assemble the replay_summary.json payload (pure; CLI writes it)."""
+    insufficient = len(win_feats) < MIN_WIN_COHORT
+    return {
+        "match": match,
+        "pairing_id": pairing_id,
+        "a_checkpoint": a_ckpt,
+        "b_checkpoint": b_ckpt,
+        "filters": filters,
+        "cohorts": counts,
+        "notes": [OPENING_SAMPLING_NOTE],
+        "primary_contrast": {
+            "cohort_comparison": cohort_rows,
+            "effect_sizes": (None if insufficient
+                             else effect_sizes(loss_feats, win_feats)),
+            "note": "insufficient_contrast" if insufficient else None,
+        },
+        "secondary_contrast": secondary,
+        "collapse_type_distribution": collapse_distribution(
+            [f["collapse_type"] for f in loss_feats]),
+        "timing_distribution": timing_distribution(loss_feats),
+        "verdict": verdict,
+    }
