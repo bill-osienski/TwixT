@@ -104,12 +104,15 @@ Value trajectory (all A plies; values are A's own `root_value`):
 - `mean_a_value`, `min_a_value`.
 - `largest_a_value_drop` — most negative delta between consecutive A plies
   (signed; more negative = sharper cliff), with `largest_drop_ply` (global ply
-  index of the later ply) and `largest_drop_fraction` (`ply / (n_moves - 1)`);
-  `null` when the game has fewer than 2 A plies.
+  index of the later ply), `largest_drop_a_ply` (0-based index into A's own
+  ply sequence — easier to read against a trajectory) and
+  `largest_drop_fraction` (`ply / (n_moves - 1)`); `null` when the game has
+  fewer than 2 A plies.
 - First crossings: `first_a_value_below_0`, `first_a_value_below_bad`
-  (−0.25), `first_a_value_below_lost` (−0.50) — each as global ply index and
-  game fraction; `null` if never crossed. Plain first crossings (decisive
-  losses rarely recover; cliffs are caught by `largest_a_value_drop`).
+  (−0.25), `first_a_value_below_lost` (−0.50) — each as global ply index,
+  A-ply index, and game fraction; `null` if never crossed. Plain first
+  crossings (decisive losses rarely recover; cliffs are caught by
+  `largest_a_value_drop`).
 
 Confidence/diffusion (post-opening A plies only; `null` if none exist):
 
@@ -164,8 +167,10 @@ the sampling regime); remaining A plies split into four equal **game-fraction**
 bands over `[opening_plies, n_moves)`: `early_midgame`, `midgame`,
 `late_midgame`, `pre_terminal`. Per cohort × phase: games, plies,
 mean/median `root_value`, mean/median `root_top1_share`, mean/median
-`selected_visit_rank`. Interpretation note in the artifact: the `opening` row
-is temperature-sampled (rank/share there are not confidence evidence).
+`selected_visit_rank`, plus a `sampling` column — `temperature` for the
+`opening` rows, `argmax` otherwise — so the artifact itself says rank/share in
+the opening are not confidence evidence. The replay-summary JSON carries the
+same caveat as a `notes` entry.
 
 ## Verdict synthesis
 
@@ -178,7 +183,12 @@ Two evidence layers, both reported:
 2. **Effect sizes** (Cohen's d, pooled sample std, ddof=1; `null` on degenerate
    variance) for loss vs win on: `final_a_value`, `largest_a_value_drop`,
    `initial_a_value`, `mean_top1_share_post`,
-   `median_selected_visit_rank_post`.
+   `median_selected_visit_rank_post`. Sign convention is explicit and fixed:
+   d = (loss_mean − win_mean) / pooled_std, so a lower `final_a_value` in
+   losses yields a **negative** d; `largest_a_value_drop` is already signed,
+   so negative d likewise means sharper collapses in losses; a higher visit
+   rank in losses yields a **positive** d. The JSON records the formula string
+   alongside the values.
 
 Deterministic rule (module constants `PRIMARY_SHARE = 0.35`,
 `SECONDARY_SHARE = 0.20`): primary failure mode = largest failure-mode share if
@@ -215,9 +225,10 @@ match, `<stem>` from `<stem>_games.jsonl`:
   sorted by composite priority: `largest_a_value_drop` asc (most negative
   first), then `final_a_value` asc, then `mean_top1_share_post` asc, then
   `median_selected_visit_rank_post` desc. Columns: rank, identity +
-  `replay_path`, `collapse_type`, key timing/confidence features,
-  `opening_key` (the same key the clusters use; default 4 plies — the
-  "opening_4" column from the brainstorm, named generically since
+  `replay_path`, `collapse_type`, `initial_a_value`, `final_a_value` (so the
+  queue reads as a story, not just a drop magnitude), key timing/confidence
+  features, `opening_key` (the same key the clusters use; default 4 plies —
+  the "opening_4" column from the brainstorm, named generically since
   `--opening-key-plies` is tunable).
 - **`<stem>_opening_clusters.csv`** — context only, not the diagnostic. Key =
   first `--opening-key-plies 4` plies (both players) rendered
