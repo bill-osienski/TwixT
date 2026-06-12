@@ -378,6 +378,36 @@ def collapse_distribution(labels):
     return {"n": n, "counts": counts, "mode_shares": mode_shares}
 
 
+def make_verdict(labels, cohort_desc):
+    """Deterministic verdict from the loss-cohort collapse labels.
+
+    Primary = the failure-mode group with the largest share, if it reaches
+    PRIMARY_SHARE and is not beaten by the unexplained share (a tie goes to
+    the explained mode). Secondary = next group at SECONDARY_SHARE+.
+    """
+    dist = collapse_distribution(labels)
+    shares = dist["mode_shares"]
+    modes = [(m, s) for m, s in shares.items() if m != "unexplained"]
+    modes.sort(key=lambda kv: -kv[1])   # FAILURE_MODE_GROUPS order breaks ties
+    top_mode, top_share = modes[0]
+    unexplained = shares["unexplained"]
+    base = {"mode_shares": shares, "primary_share": top_share}
+    if top_share < PRIMARY_SHARE or unexplained > top_share:
+        return {**base, "primary": "mixed / no strong single signal",
+                "secondary": None, "secondary_share": None,
+                "narrative": (
+                    f"{cohort_desc} losses show no dominant failure mode "
+                    f"(top: {top_mode} {top_share:.0%}, "
+                    f"unexplained {unexplained:.0%}).")}
+    sec, sec_share = next(((m, s) for m, s in modes[1:] if s >= SECONDARY_SHARE),
+                          (None, None))
+    tail = (f"; secondary signal: {sec} {sec_share:.0%})." if sec else ").")
+    return {**base, "primary": top_mode, "secondary": sec,
+            "secondary_share": sec_share,
+            "narrative": (f"{cohort_desc} losses are best explained by "
+                          f"{top_mode} ({top_share:.0%} of losses{tail}")}
+
+
 def _pct(vals, q):
     """Linear-interpolated percentile; None on empty input."""
     if not vals:

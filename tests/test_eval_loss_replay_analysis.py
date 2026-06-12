@@ -7,6 +7,7 @@ from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     cohort_comparison_row, phase_of, phase_bucket_rows,
     cohens_d, effect_sizes,
     collapse_distribution, timing_distribution, secondary_contrast_summary,
+    make_verdict,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -437,3 +438,34 @@ def test_secondary_contrast_summary_gap_and_share():
     assert s["median_onset_gap_fraction"] == pytest.approx(0.2)   # 0.5 - 0.3
     assert s["a_mean_value"] == pytest.approx(-0.375)
     assert s["b_mean_value"] == pytest.approx(0.375)
+
+
+def test_verdict_primary_and_secondary():
+    labels = (["sharp_value_drop"] * 5 + ["gradual_decay"] * 2
+              + ["search_diffusion"] * 2 + ["no_clear_signal"])
+    v = make_verdict(labels, "A-as-black 41-80")
+    assert v["primary"] == "value-drop"
+    assert v["primary_share"] == pytest.approx(0.7)
+    assert v["secondary"] == "diffusion"
+    assert v["secondary_share"] == pytest.approx(0.2)
+    assert "value-drop" in v["narrative"] and "A-as-black 41-80" in v["narrative"]
+
+
+def test_verdict_mixed_when_no_mode_reaches_bar():
+    labels = (["sharp_value_drop"] * 3 + ["search_diffusion"] * 3
+              + ["low_visit_selection"] * 2 + ["already_bad"] * 2)
+    v = make_verdict(labels, "X")
+    assert v["primary"] == "mixed / no strong single signal"
+    assert v["secondary"] is None
+
+
+def test_verdict_mixed_when_unexplained_dominates():
+    labels = ["no_clear_signal"] * 6 + ["sharp_value_drop"] * 4
+    v = make_verdict(labels, "X")   # value-drop 0.4 >= bar, but unexplained 0.6 wins
+    assert v["primary"] == "mixed / no strong single signal"
+
+
+def test_verdict_no_secondary_below_bar():
+    labels = ["sharp_value_drop"] * 8 + ["search_diffusion"] * 1 + ["no_clear_signal"]
+    v = make_verdict(labels, "X")
+    assert v["primary"] == "value-drop" and v["secondary"] is None
