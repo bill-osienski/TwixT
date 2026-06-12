@@ -585,3 +585,10 @@ def test_build_replay_summary_insufficient_contrast():
     assert s["primary_contrast"]["effect_sizes"] is None
     assert s["primary_contrast"]["note"] == "insufficient_contrast"
     assert s["verdict"]["primary"] == "value-drop"   # verdict still computed
+
+
+def test_build_replay_summary_exactly_min_win_cohort_is_sufficient():
+    loss, win = _summary_inputs(n_wins=MIN_WIN_COHORT)   # boundary: < not <=
+    s = _build(loss, win)
+    assert s["primary_contrast"]["effect_sizes"] is not None
+    assert s["primary_contrast"]["note"] is None
