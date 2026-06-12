@@ -460,3 +460,63 @@ def secondary_contrast_summary(loss_feats):
         "median_onset_gap_fraction": _median(gaps),
         "onset_gap_games": len(both),
     }
+
+
+QUEUE_COLUMNS = (
+    "game_idx", "task_id", "replay_path", "a_color", "winner", "n_moves",
+    "collapse_type", "initial_a_value", "final_a_value",
+    "largest_a_value_drop", "largest_drop_ply", "largest_drop_fraction",
+    "first_a_value_below_lost_ply", "first_a_value_below_lost_fraction",
+    "mean_top1_share_post", "median_selected_visit_rank_post", "opening_key",
+)
+
+
+def review_queue_rows(loss_feats, limit):
+    """Top-N loss games by composite priority: sharpest drop, then lowest
+    final value, then lowest post-opening top1 share, then highest rank.
+    Null sort keys go last (None drop -> +inf etc.)."""
+    def sort_key(f):
+        return (
+            f["largest_a_value_drop"] if f["largest_a_value_drop"] is not None
+            else float("inf"),
+            f["final_a_value"] if f["final_a_value"] is not None
+            else float("inf"),
+            f["mean_top1_share_post"] if f["mean_top1_share_post"] is not None
+            else float("inf"),
+            -(f["median_selected_visit_rank_post"]
+              if f["median_selected_visit_rank_post"] is not None else 0),
+        )
+    ranked = sorted(loss_feats, key=sort_key)[:limit]
+    return [{"rank": i + 1, **{c: f.get(c) for c in QUEUE_COLUMNS}}
+            for i, f in enumerate(ranked)]
+
+
+def opening_cluster_rows(games, key_plies, cohort_label, opening_plies):
+    """Context table over focus-window decisive games; NOT the diagnostic.
+    games: list of (replay, a_color, a_won). One row per opening key."""
+    groups = {}
+    for replay, a_clr, won in games:
+        groups.setdefault(opening_key(replay, key_plies), []).append(
+            (replay, a_clr, won))
+    rows = []
+    for key, items in sorted(groups.items()):
+        n = len(items)
+        wins = sum(1 for _r, _c, w in items if w)
+        early_vals, early_shares, moves = [], [], []
+        for replay, a_clr, _w in items:
+            moves.append(replay["n_moves"])
+            for m in side_plies(replay, a_clr):
+                if m["ply"] < opening_plies:
+                    early_vals.append(m["root_value"])
+                    early_shares.append(m["root_top1_share"])
+        rows.append({
+            "opening_plies": key_plies, "opening_key": key,
+            "cohort": cohort_label, "games": n,
+            "losses": n - wins, "wins": wins,
+            "a_score_rate": score_rate(wins, 0, n),
+            "mean_root_value_early": _mean(early_vals),
+            "mean_top1_share_early": _mean(early_shares),
+            "avg_moves": _mean(moves),
+        })
+    rows.sort(key=lambda r: (-r["games"], r["a_score_rate"]))
+    return rows

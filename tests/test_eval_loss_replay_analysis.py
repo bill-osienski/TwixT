@@ -8,6 +8,7 @@ from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     cohens_d, effect_sizes,
     collapse_distribution, timing_distribution, secondary_contrast_summary,
     make_verdict,
+    review_queue_rows, opening_cluster_rows,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -469,3 +470,55 @@ def test_verdict_no_secondary_below_bar():
     labels = ["sharp_value_drop"] * 8 + ["search_diffusion"] * 1 + ["no_clear_signal"]
     v = make_verdict(labels, "X")
     assert v["primary"] == "value-drop" and v["secondary"] is None
+
+
+def _queue_feat(idx, drop, final, top1=0.5, rank=1):
+    return {"game_idx": idx, "task_id": idx, "replay_path": f"r/{idx}.json",
+            "a_color": "black", "winner": "red", "n_moves": 50,
+            "collapse_type": "sharp_value_drop",
+            "initial_a_value": 0.1, "final_a_value": final,
+            "largest_a_value_drop": drop, "largest_drop_ply": 30,
+            "largest_drop_fraction": 0.6,
+            "first_a_value_below_lost_ply": 35,
+            "first_a_value_below_lost_fraction": 0.7,
+            "mean_top1_share_post": top1,
+            "median_selected_visit_rank_post": rank, "opening_key": "k"}
+
+
+def test_review_queue_composite_sort_and_limit():
+    feats = [
+        _queue_feat(1, -0.5, -0.2),          # mid drop, better final
+        _queue_feat(2, -0.8, -0.9),          # sharpest drop -> rank 1
+        _queue_feat(3, -0.5, -0.9),          # tie on drop -> worse final first
+        _queue_feat(4, -0.1, -0.1),
+    ]
+    rows = review_queue_rows(feats, limit=3)
+    assert [r["game_idx"] for r in rows] == [2, 3, 1]
+    assert [r["rank"] for r in rows] == [1, 2, 3]
+    assert rows[0]["initial_a_value"] == 0.1            # spec: queue carries both
+    assert rows[0]["final_a_value"] == -0.9
+    assert "flag_sharp" not in rows[0]                  # queue is the curated view
+
+
+def test_review_queue_null_drop_sorts_last():
+    feats = [_queue_feat(1, None, -0.9), _queue_feat(2, -0.3, -0.1)]
+    rows = review_queue_rows(feats, limit=10)
+    assert [r["game_idx"] for r in rows] == [2, 1]
+
+
+def test_opening_cluster_rows_grouping_and_sort():
+    g0_row, g0 = make_game(0, a_is_black=True, a_wins=False, n_moves=12)
+    g1_row, g1 = make_game(1, a_is_black=True, a_wins=True, n_moves=12)
+    g2_row, g2 = make_game(2, a_is_black=True, a_wins=False, n_moves=14)
+    for m in g2["moves"][:2]:
+        m["row"], m["col"] = 9, 9           # distinct opening key
+    rows = opening_cluster_rows(
+        [(g0, "black", False), (g1, "black", True), (g2, "black", False)],
+        key_plies=2, cohort_label="A_black_41_80_decisive", opening_plies=4)
+    assert rows[0]["games"] == 2            # the shared key sorts first
+    assert rows[0]["wins"] == 1 and rows[0]["losses"] == 1
+    assert rows[0]["a_score_rate"] == 0.5
+    assert rows[0]["cohort"] == "A_black_41_80_decisive"
+    assert rows[0]["opening_plies"] == 2
+    assert rows[1]["games"] == 1 and rows[1]["opening_key"] == "r9c9|r9c9"
+    assert rows[1]["avg_moves"] == 14
