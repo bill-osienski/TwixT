@@ -171,6 +171,17 @@ def test_confidence_features_all_opening_yields_nulls():
     assert f["mean_n_legal"] == 100                      # all-plies metric survives
 
 
+def test_confidence_features_boundary_ply_is_post_opening():
+    # a_is_black=False -> A (red) plays plies 0,2,4,6,8,10; opening_plies=4
+    # means ply 4 itself is post-opening (>=). A `>` regression would yield 3.
+    _row, replay = make_game(
+        0, a_is_black=False, a_wins=True, n_moves=12, a_values=TRAJ,
+        a_top1=[0.5, 0.5, 0.3, 0.2, 0.1, 0.05])
+    f = confidence_features(side_plies(replay, "red"), Thresholds(opening_plies=4))
+    assert f["n_a_plies_post"] == 4                      # plies 4, 6, 8, 10
+    assert f["mean_top1_share_post"] == pytest.approx((0.3 + 0.2 + 0.1 + 0.05) / 4)
+
+
 def test_opening_key_first_k_plies():
     _row, replay = make_game(0, n_moves=6)
     # fixture rows/cols default to the ply number
