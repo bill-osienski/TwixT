@@ -126,3 +126,44 @@ def validate_replay(row, replay):
         if m["player"] != expect:
             raise ValueError(
                 f"game {gi} ply {i}: player {m['player']!r}, expected {expect!r}")
+
+
+def _crossing(plies, n_moves, pred):
+    """First ply where pred(root_value) -> {ply, a_ply, fraction} or None."""
+    for i, m in enumerate(plies):
+        if pred(m["root_value"]):
+            frac = m["ply"] / (n_moves - 1) if n_moves > 1 else 0.0
+            return {"ply": m["ply"], "a_ply": i, "fraction": frac}
+    return None
+
+
+def value_features(a_plies, n_moves, th):
+    """Value-trajectory features over ALL of A's plies (see module docstring:
+    value readings are not temperature-distorted, so the opening is included
+    — that is what lets initial_a_value detect already_bad games)."""
+    vals = [m["root_value"] for m in a_plies]
+    feats = {
+        "initial_a_value": _median(vals[:3]),
+        "final_a_value": _median(vals[-3:]),
+        "mean_a_value": _mean(vals),
+        "min_a_value": min(vals) if vals else None,
+        "largest_a_value_drop": None,
+        "largest_drop_ply": None,
+        "largest_drop_a_ply": None,
+        "largest_drop_fraction": None,
+    }
+    if len(vals) >= 2:
+        # (delta, index) tuple-min: ties on delta resolve to the earliest ply.
+        d, i = min((vals[i] - vals[i - 1], i) for i in range(1, len(vals)))
+        ply = a_plies[i]["ply"]
+        feats.update(
+            largest_a_value_drop=d, largest_drop_ply=ply, largest_drop_a_ply=i,
+            largest_drop_fraction=ply / (n_moves - 1) if n_moves > 1 else 0.0)
+    for name, thresh in (("first_a_value_below_0", 0.0),
+                         ("first_a_value_below_bad", th.bad_value),
+                         ("first_a_value_below_lost", th.lost_value)):
+        c = _crossing(a_plies, n_moves, lambda v, t=thresh: v <= t)
+        feats[f"{name}_ply"] = c["ply"] if c else None
+        feats[f"{name}_a_ply"] = c["a_ply"] if c else None
+        feats[f"{name}_fraction"] = c["fraction"] if c else None
+    return feats

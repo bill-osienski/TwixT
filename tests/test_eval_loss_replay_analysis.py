@@ -1,7 +1,7 @@
 import pytest
 
 from scripts.GPU.alphazero.eval_loss_replay_analysis import (
-    Thresholds, side_plies, validate_replay,
+    Thresholds, side_plies, validate_replay, value_features,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -85,3 +85,54 @@ def test_validate_replay_rejects_missing_ply_key():
     del replay["moves"][1]["root_value"]
     with pytest.raises(ValueError, match="missing keys"):
         validate_replay(row, replay)
+
+
+# A-as-black, n_moves=12 -> A plies at global plies 1,3,5,7,9,11 (6 A plies).
+TRAJ = [0.5, 0.125, -0.125, -0.375, -0.625, -1.0]
+# deltas: -0.375, -0.25, -0.25, -0.25, -0.375 (all binary-exact)
+
+
+def _a_plies(values, n_moves=12):
+    _row, replay = make_game(0, a_is_black=True, n_moves=n_moves, a_values=values)
+    return side_plies(replay, "black")
+
+
+def test_value_features_medians_mean_min():
+    f = value_features(_a_plies(TRAJ), 12, Thresholds())
+    assert f["initial_a_value"] == 0.125          # median(0.5, 0.125, -0.125)
+    assert f["final_a_value"] == -0.625           # median(-0.375, -0.625, -1.0)
+    assert f["mean_a_value"] == -0.25             # sum = -1.5 over 6
+    assert f["min_a_value"] == -1.0
+
+
+def test_value_features_largest_drop_with_tie_takes_earliest():
+    f = value_features(_a_plies(TRAJ), 12, Thresholds())
+    # ties at -0.375 (a_ply 1 and 5): earliest wins
+    assert f["largest_a_value_drop"] == -0.375
+    assert f["largest_drop_a_ply"] == 1
+    assert f["largest_drop_ply"] == 3
+    assert f["largest_drop_fraction"] == pytest.approx(3 / 11)
+
+
+def test_value_features_first_crossings():
+    f = value_features(_a_plies(TRAJ), 12, Thresholds())
+    assert (f["first_a_value_below_0_ply"], f["first_a_value_below_0_a_ply"]) == (5, 2)
+    assert f["first_a_value_below_0_fraction"] == pytest.approx(5 / 11)
+    assert (f["first_a_value_below_bad_ply"], f["first_a_value_below_bad_a_ply"]) == (7, 3)
+    assert (f["first_a_value_below_lost_ply"], f["first_a_value_below_lost_a_ply"]) == (9, 4)
+    assert f["first_a_value_below_lost_fraction"] == pytest.approx(9 / 11)
+
+
+def test_value_features_never_crossed_is_none():
+    f = value_features(_a_plies([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]), 12, Thresholds())
+    assert f["first_a_value_below_0_ply"] is None
+    assert f["first_a_value_below_lost_fraction"] is None
+
+
+def test_value_features_single_ply_has_null_drop():
+    _row, replay = make_game(0, a_is_black=True, n_moves=2, a_values=[-0.5])
+    f = value_features(side_plies(replay, "black"), 2, Thresholds())
+    assert f["largest_a_value_drop"] is None
+    assert f["largest_drop_ply"] is None
+    assert f["initial_a_value"] == -0.5           # median of the single value
+    assert f["first_a_value_below_lost_ply"] == 1
