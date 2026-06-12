@@ -44,14 +44,26 @@ def _write_outputs(output, summary, results):
         json.dump(summary, fh, indent=2)
 
 
+def replay_dir_for(output, replay_dir_arg, save_enabled):
+    """Resolve the replay output dir. None when capture is off; else the
+    explicit --replay-dir, else <output-stem>_replays."""
+    if not save_enabled:
+        return None
+    if replay_dir_arg:
+        return replay_dir_arg
+    stem, _ext = os.path.splitext(output)
+    return f"{stem}_replays"
+
+
 def run_match(a_ckpt, b_ckpt, games, base_seed, config, workers, output,
-              pairing_id=None, evaluator_factory=None):
+              pairing_id=None, evaluator_factory=None, replay_dir=None):
     """Run a full match and write outputs. Returns the summary dict."""
     if pairing_id is None:
         pairing_id = f"{short_id(a_ckpt)}_vs_{short_id(b_ckpt)}"
     tasks = build_match_tasks(a_ckpt, b_ckpt, games, base_seed, pairing_id)
     results = run_game_tasks(tasks, workers=workers, config=config,
-                             evaluator_factory=evaluator_factory)
+                             evaluator_factory=evaluator_factory,
+                             replay_dir=replay_dir)
     config_dict = {**asdict(config), "base_seed": base_seed, "workers": workers}
     summary = summarize_match(results, a_ckpt, b_ckpt, pairing_id, config_dict)
     summary["git_commit"] = _git_commit()
@@ -81,6 +93,12 @@ def _build_arg_parser():
                          "may exceed Metal resource limits on some Macs; run a "
                          "small --workers 2 probe before a large parallel run.")
     ap.add_argument("--base-seed", type=int, default=12345)
+    ap.add_argument("--save-eval-replays", action="store_true",
+                    help="write a per-ply replay sidecar per game and link it "
+                         "from each *_games.jsonl row (default off).")
+    ap.add_argument("--replay-dir", default=None,
+                    help="replay output dir (default <output-stem>_replays); "
+                         "only used with --save-eval-replays.")
     ap.add_argument("--output", required=True)
     return ap
 
@@ -102,10 +120,11 @@ def main(argv=None):
     for path in (args.checkpoint_a, args.checkpoint_b):
         if not os.path.exists(path):
             raise SystemExit(f"checkpoint not found: {path}")
+    replay_dir = replay_dir_for(args.output, args.replay_dir, args.save_eval_replays)
     summary = run_match(
         a_ckpt=args.checkpoint_a, b_ckpt=args.checkpoint_b, games=args.games,
         base_seed=args.base_seed, config=_config_from_args(args),
-        workers=args.workers, output=args.output,
+        workers=args.workers, output=args.output, replay_dir=replay_dir,
     )
     if summary.get("self_match"):
         cb = summary["color_bias"]["red_win_rate_decisive"]
