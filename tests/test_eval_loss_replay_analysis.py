@@ -261,3 +261,13 @@ def test_classify_null_post_features_disable_those_rules():
                low_confidence_ply_count=None), Thresholds())
     assert label == "no_clear_signal"
     assert flags["flag_diffusion"] is False and flags["flag_low_visit"] is False
+
+
+def test_classify_just_outside_boundaries_do_not_fire():
+    _label, flags = classify_collapse(
+        _feats(initial_a_value=-0.24, largest_a_value_drop=-0.39,
+               final_a_value=-0.39, mean_top1_share_post=0.16,
+               diffuse_ply_fraction=0.24,
+               median_selected_visit_rank_post=2,
+               low_confidence_ply_count=2), Thresholds())
+    assert not any(flags.values())

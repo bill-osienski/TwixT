@@ -222,10 +222,13 @@ def classify_collapse(f, th):
         "flag_gradual": (init is not None and fin is not None
                          and init > HEALTHY_START and fin <= DECAYED_FINAL
                          and not sharp),
+        # mean_top1_share_post and diffuse_ply_fraction are co-null (set
+        # together in confidence_features), so one guard covers both.
         "flag_diffusion": (
             f["mean_top1_share_post"] is not None
             and (f["mean_top1_share_post"] <= DIFFUSE_MEAN_TOP1
                  or f["diffuse_ply_fraction"] >= DIFFUSE_PLY_FRACTION)),
+        # co-null with low_confidence_ply_count, same as above.
         "flag_low_visit": (
             f["median_selected_visit_rank_post"] is not None
             and (f["median_selected_visit_rank_post"] >= LOW_RANK_MEDIAN
