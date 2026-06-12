@@ -6,6 +6,7 @@ from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     game_features, b_side_features,
     cohort_comparison_row, phase_of, phase_bucket_rows,
     cohens_d, effect_sizes,
+    collapse_distribution, timing_distribution, secondary_contrast_summary,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -385,3 +386,54 @@ def test_effect_sizes_sign_convention_and_nulls():
     out2 = effect_sizes(loss, win)
     assert out2["metrics"]["mean_top1_share_post"]["d"] is None
     assert out2["metrics"]["mean_top1_share_post"]["win_mean"] is None
+
+
+def test_collapse_distribution_groups_failure_modes():
+    labels = (["sharp_value_drop"] * 5 + ["gradual_decay"] * 2
+              + ["search_diffusion"] * 2 + ["no_clear_signal"])
+    d = collapse_distribution(labels)
+    assert d["n"] == 10
+    assert d["counts"]["sharp_value_drop"] == 5
+    assert d["mode_shares"]["value-drop"] == pytest.approx(0.7)
+    assert d["mode_shares"]["diffusion"] == pytest.approx(0.2)
+    assert d["mode_shares"]["unexplained"] == pytest.approx(0.1)
+    assert d["mode_shares"]["already-losing"] == 0.0
+
+
+def test_timing_distribution_percentiles_and_never():
+    feats = [{"first_a_value_below_0_fraction": x,
+              "first_a_value_below_bad_fraction": None,
+              "first_a_value_below_lost_fraction": None,
+              "largest_drop_fraction": x}
+             for x in (0.2, 0.4, 0.6)]
+    feats.append({"first_a_value_below_0_fraction": None,
+                  "first_a_value_below_bad_fraction": None,
+                  "first_a_value_below_lost_fraction": None,
+                  "largest_drop_fraction": None})
+    t = timing_distribution(feats)
+    assert t["first_a_value_below_0"]["p50"] == pytest.approx(0.4)
+    assert t["first_a_value_below_0"]["p25"] == pytest.approx(0.3)
+    assert t["first_a_value_below_0"]["never"] == 1
+    assert t["first_a_value_below_lost"]["p50"] is None
+    assert t["first_a_value_below_lost"]["never"] == 4
+    assert t["largest_drop"]["p75"] == pytest.approx(0.5)
+
+
+def test_secondary_contrast_summary_gap_and_share():
+    f1 = {"mean_a_value": -0.5, "b_mean_value": 0.5,
+          "mean_top1_share_post": 0.2, "b_mean_top1_share_post": 0.6,
+          "median_selected_visit_rank_post": 3, "b_median_visit_rank_post": 1,
+          "first_a_value_below_lost_fraction": 0.5,
+          "b_first_value_above_050_fraction": 0.3, "b_saw_it_first": True}
+    f2 = {"mean_a_value": -0.25, "b_mean_value": 0.25,
+          "mean_top1_share_post": 0.4, "b_mean_top1_share_post": 0.5,
+          "median_selected_visit_rank_post": 1, "b_median_visit_rank_post": 1,
+          "first_a_value_below_lost_fraction": 0.6,
+          "b_first_value_above_050_fraction": None, "b_saw_it_first": False}
+    s = secondary_contrast_summary([f1, f2])
+    assert s["games"] == 2
+    assert s["b_saw_it_first_share"] == 0.5
+    assert s["onset_gap_games"] == 1
+    assert s["median_onset_gap_fraction"] == pytest.approx(0.2)   # 0.5 - 0.3
+    assert s["a_mean_value"] == pytest.approx(-0.375)
+    assert s["b_mean_value"] == pytest.approx(0.375)

@@ -364,3 +364,69 @@ def effect_sizes(loss_feats, win_feats):
             "d": cohens_d(xs, ys),
         }
     return {"formula": EFFECT_FORMULA, "metrics": metrics}
+
+
+def collapse_distribution(labels):
+    """Counts per collapse label + shares per failure-mode group."""
+    n = len(labels)
+    counts = {}
+    for lab in labels:
+        counts[lab] = counts.get(lab, 0) + 1
+    mode_shares = {mode: sum(counts.get(l, 0) for l in group) / n
+                   for mode, group in FAILURE_MODE_GROUPS.items()}
+    mode_shares["unexplained"] = counts.get("no_clear_signal", 0) / n
+    return {"n": n, "counts": counts, "mode_shares": mode_shares}
+
+
+def _pct(vals, q):
+    """Linear-interpolated percentile; None on empty input."""
+    if not vals:
+        return None
+    s = sorted(vals)
+    if len(s) == 1:
+        return s[0]
+    pos = q * (len(s) - 1)
+    lo = int(pos)
+    hi = min(lo + 1, len(s) - 1)
+    return s[lo] + (s[hi] - s[lo]) * (pos - lo)
+
+
+def timing_distribution(loss_feats):
+    """When the loss cohort crosses each value threshold (game fractions)."""
+    out = {}
+    keys = [(k, f"{k}_fraction") for k in CROSSING_KEYS]
+    keys.append(("largest_drop", "largest_drop_fraction"))
+    for name, field in keys:
+        fracs = [f[field] for f in loss_feats if f[field] is not None]
+        out[name] = {"p25": _pct(fracs, 0.25), "p50": _pct(fracs, 0.50),
+                     "p75": _pct(fracs, 0.75),
+                     "never": len(loss_feats) - len(fracs)}
+    return out
+
+
+def secondary_contrast_summary(loss_feats):
+    """A vs B inside the loss cohort. B metrics are in B's own perspective;
+    the onset gap asks: did B see the win (>= B_ONSET_HIGH) before A admitted
+    the loss (<= lost_value)?"""
+    def col(key):
+        return [f[key] for f in loss_feats if f.get(key) is not None]
+
+    both = [f for f in loss_feats
+            if f.get("b_first_value_above_050_fraction") is not None
+            and f.get("first_a_value_below_lost_fraction") is not None]
+    gaps = [f["first_a_value_below_lost_fraction"]
+            - f["b_first_value_above_050_fraction"] for f in both]
+    return {
+        "games": len(loss_feats),
+        "a_mean_value": _mean(col("mean_a_value")),
+        "b_mean_value": _mean(col("b_mean_value")),
+        "a_mean_top1_share_post": _mean(col("mean_top1_share_post")),
+        "b_mean_top1_share_post": _mean(col("b_mean_top1_share_post")),
+        "a_median_visit_rank_post": _median(col("median_selected_visit_rank_post")),
+        "b_median_visit_rank_post": _median(col("b_median_visit_rank_post")),
+        "b_saw_it_first_share": (
+            sum(1 for f in loss_feats if f.get("b_saw_it_first")) / len(loss_feats)
+            if loss_feats else None),
+        "median_onset_gap_fraction": _median(gaps),
+        "onset_gap_games": len(both),
+    }
