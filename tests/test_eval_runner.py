@@ -42,8 +42,8 @@ def test_play_eval_game_is_deterministic_by_seed():
 
 
 def test_play_eval_game_reason_is_valid():
-    winner, reason, n = play_eval_game(FakeEvaluator(), FakeEvaluator(),
-                                       _tiny_cfg(), seed=1)
+    winner, reason, n, _records = play_eval_game(FakeEvaluator(), FakeEvaluator(),
+                                                 _tiny_cfg(), seed=1)
     assert reason in {"win", "state_cap", "board_full", "unknown_error"}
     assert reason != "unknown_error"
     assert n >= 1
@@ -97,3 +97,95 @@ def test_worker_cache_loads_each_checkpoint_once_sequential():
     run_game_tasks(tasks, workers=1, config=_tiny_cfg(),
                    evaluator_factory=counting_factory)
     assert counting_factory.calls == {"A": 1, "B": 1}
+
+
+def test_play_eval_game_capture_off_returns_none():
+    *_head, records = play_eval_game(FakeEvaluator(), FakeEvaluator(),
+                                     _tiny_cfg(), seed=1)
+    assert records is None
+
+
+def test_play_eval_game_capture_records_one_per_ply():
+    winner, reason, n, records = play_eval_game(
+        FakeEvaluator(), FakeEvaluator(), _tiny_cfg(), seed=1, capture=True)
+    assert records is not None
+    assert len(records) == n
+    assert [r["ply"] for r in records] == list(range(n))
+    players = [r["player"] for r in records]
+    assert players[0] == "red"                                  # red moves first
+    assert all(players[i] != players[i + 1] for i in range(len(players) - 1))
+    for r in records:
+        assert set(r) == {"ply", "player", "row", "col", "root_value",
+                          "root_top1_share", "selected_visit_rank",
+                          "selected_visit_count", "root_total_visits", "n_legal"}
+        assert 0.0 <= r["root_top1_share"] <= 1.0
+        assert r["selected_visit_rank"] >= 1
+        assert r["selected_visit_count"] >= 1
+        assert r["n_legal"] >= 1
+
+
+def test_play_eval_game_capture_does_not_change_outcome():
+    off = play_eval_game(FakeEvaluator(), FakeEvaluator(), _tiny_cfg(), seed=7)
+    on = play_eval_game(FakeEvaluator(), FakeEvaluator(), _tiny_cfg(),
+                        seed=7, capture=True)
+    assert off[:3] == on[:3]   # winner, reason, n_moves identical regardless of capture
+
+
+def test_make_result_default_replay_path_is_none():
+    task = EvalGameTask(0, "p", 0, "A.safetensors", "B.safetensors", 7)
+    assert make_result(task, "red", "win", 40).replay_path is None
+
+
+def test_make_result_sets_replay_path():
+    task = EvalGameTask(0, "p", 0, "A.safetensors", "B.safetensors", 7)
+    res = make_result(task, "red", "win", 40, "logs/x_replays/game_000000.json")
+    assert res.replay_path == "logs/x_replays/game_000000.json"
+
+
+def test_run_game_tasks_no_replay_dir_leaves_replay_path_none():
+    tasks = [EvalGameTask(0, "p", 0, "A", "B", 100),
+             EvalGameTask(1, "p", 1, "B", "A", 101)]
+    out = run_game_tasks(tasks, workers=1, config=_tiny_cfg(),
+                         evaluator_factory=fake_evaluator_factory)
+    assert all(r.replay_path is None for r in out)
+
+
+def test_run_game_tasks_replay_dir_writes_one_sidecar_per_game(tmp_path):
+    rd = tmp_path / "replays"
+    tasks = [EvalGameTask(0, "p", 0, "A", "B", 100),
+             EvalGameTask(1, "p", 1, "B", "A", 101)]
+    out = run_game_tasks(tasks, workers=1, config=_tiny_cfg(),
+                         evaluator_factory=fake_evaluator_factory,
+                         replay_dir=str(rd))
+    assert all(r.replay_path is not None for r in out)
+    for r in out:
+        assert (rd / f"game_{r.game_idx:06d}.json").exists()
+
+
+def test_run_game_tasks_capture_does_not_change_results(tmp_path):
+    tasks = [EvalGameTask(0, "p", 0, "A", "B", 100),
+             EvalGameTask(1, "p", 1, "B", "A", 101)]
+    off = run_game_tasks(tasks, workers=1, config=_tiny_cfg(),
+                         evaluator_factory=fake_evaluator_factory)
+    on = run_game_tasks(tasks, workers=1, config=_tiny_cfg(),
+                        evaluator_factory=fake_evaluator_factory,
+                        replay_dir=str(tmp_path / "r"))
+
+    def fields(r):  # every pre-replay field
+        return (r.game_idx, r.task_id, r.pairing_id, r.winner, r.winner_checkpoint,
+                r.reason, r.n_moves, r.red_score, r.black_score,
+                r.red_checkpoint, r.black_checkpoint)
+
+    assert [fields(r) for r in off] == [fields(r) for r in on]
+
+
+def test_run_game_tasks_replay_dir_parallel_writes_sidecars(tmp_path):
+    rd = tmp_path / "replays_par"
+    tasks = [EvalGameTask(0, "p", 0, "A", "B", 100),
+             EvalGameTask(1, "p", 1, "B", "A", 101)]
+    out = run_game_tasks(tasks, workers=2, config=_tiny_cfg(),
+                         evaluator_factory=fake_evaluator_factory,
+                         replay_dir=str(rd))
+    assert all(r.replay_path is not None for r in out)
+    for r in out:
+        assert (rd / f"game_{r.game_idx:06d}.json").exists()

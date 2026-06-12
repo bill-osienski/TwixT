@@ -17,6 +17,7 @@ from typing import Callable, Optional
 
 from .game.twixt_state import TwixtState
 from .mcts import MCTS, MCTSConfig
+from .eval_replay import ply_record, build_replay_dict, write_replay
 
 # game_idx and pairing offsets share this stride; games-per-pairing must
 # stay below it so task_ids/seeds never collide across pairings.
@@ -48,6 +49,7 @@ class EvalGameResult:
     n_moves: int
     red_score: float
     black_score: float
+    replay_path: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -93,25 +95,27 @@ def cfg_from(config: EvalConfig) -> MCTSConfig:
     )
 
 
-def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int):
-    """Play one A-vs-B game. Returns (winner, reason, n_moves).
+def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
+                   capture: bool = False):
+    """Play one A-vs-B game. Returns (winner, reason, n_moves, records).
 
-    Independent per-side child RNGs (seed-derived) avoid cross-player
-    coupling. Classification is explicit via winner()/ply/legal_moves --
-    is_terminal() conflates win/cap/board-full (twixt_state.py:549-574).
+    `records` is None unless capture=True, in which case it is a list of
+    ply_record dicts (one per ply). Capturing reads already-computed search
+    outputs only — no extra search calls, no RNG draws — so game outcomes are
+    identical with capture on or off.
     """
     mcts_red = MCTS(red_eval, cfg_from(config), random.Random(seed ^ 0xA5A5A5))
     mcts_black = MCTS(black_eval, cfg_from(config), random.Random(seed ^ 0x5A5A5A))
     state = TwixtState(active_size=config.board_size, to_move="red",
                        max_plies_limit=config.max_moves)
     ply = 0
-    # Explicit loop condition -- do NOT gate on is_terminal(), which conflates
-    # win / cap / board-full. Continue while there is no real winner, the ply
-    # cap is not reached, and legal moves remain.
+    records = [] if capture else None
     while state.winner() is None and ply < config.max_moves and state.legal_moves():
         mcts = mcts_red if state.to_move == "red" else mcts_black
-        counts, _ = mcts.search(state, add_noise=False)
+        counts, root_value = mcts.search(state, add_noise=False)
         move = mcts.select_move(counts, ply)
+        if capture:
+            records.append(ply_record(ply, state.to_move, move, counts, root_value))
         state = state.apply_move(move)
         ply += 1
     winner = state.winner()
@@ -123,10 +127,11 @@ def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int):
         reason = "board_full"
     else:
         reason = "unknown_error"
-    return winner, reason, ply
+    return winner, reason, ply, records
 
 
-def make_result(task: EvalGameTask, winner, reason, n_moves) -> EvalGameResult:
+def make_result(task: EvalGameTask, winner, reason, n_moves,
+                replay_path=None) -> EvalGameResult:
     """Build a result, mapping winner color -> checkpoint and 0/0.5/1 scores."""
     if winner == "red":
         red_score, black_score, winner_ckpt = 1.0, 0.0, task.red_checkpoint
@@ -139,6 +144,7 @@ def make_result(task: EvalGameTask, winner, reason, n_moves) -> EvalGameResult:
         red_checkpoint=task.red_checkpoint, black_checkpoint=task.black_checkpoint,
         winner=winner, winner_checkpoint=winner_ckpt, reason=reason,
         n_moves=n_moves, red_score=red_score, black_score=black_score,
+        replay_path=replay_path,
     )
 
 
@@ -220,18 +226,32 @@ def _make_cache(factory):
     return get_eval
 
 
-def _run_sequential(tasks, config, factory):
+def _play_and_build_result(task, red, black, config, capture, replay_dir):
+    """Play one game and build its result, writing a replay sidecar when
+    capturing. Shared by the sequential and worker loops (both single-process)."""
+    winner, reason, nm, records = play_eval_game(
+        red, black, config, task.seed, capture=capture)
+    result = make_result(task, winner, reason, nm)
+    if records is not None:
+        result.replay_path = write_replay(
+            replay_dir,
+            build_replay_dict(result, task.seed, config.board_size, records))
+    return result
+
+
+def _run_sequential(tasks, config, factory, replay_dir=None):
     import gc
 
     import mlx.core as mx
 
+    capture = replay_dir is not None
     get_eval = _make_cache(factory)
     results = []
     for task in tasks:
         red = get_eval(task.red_checkpoint)
         black = get_eval(task.black_checkpoint)
-        winner, reason, nm = play_eval_game(red, black, config, task.seed)
-        results.append(make_result(task, winner, reason, nm))
+        results.append(
+            _play_and_build_result(task, red, black, config, capture, replay_dir))
         # Flush pending MLX lazy ops and release cached Metal buffers between
         # games to stay within Metal's resource limit (trainer.py:3169-3173).
         mx.eval()
@@ -240,13 +260,15 @@ def _run_sequential(tasks, config, factory):
     return _sorted(results)
 
 
-def _worker_main(worker_id, tasks, config, factory, next_idx, result_q):
+def _worker_main(worker_id, tasks, config, factory, next_idx, result_q,
+                 replay_dir=None):
     """Pull tasks via the shared atomic counter; per-process checkpoint cache.
 
     On any exception, send a _WorkerFailed sentinel so the parent fails
     promptly instead of waiting out the stall timeout.
     """
     import traceback
+    capture = replay_dir is not None
     get_eval = _make_cache(factory)
     n = len(tasks)
     try:
@@ -259,15 +281,15 @@ def _worker_main(worker_id, tasks, config, factory, next_idx, result_q):
             task = tasks[i]
             red = get_eval(task.red_checkpoint)
             black = get_eval(task.black_checkpoint)
-            winner, reason, nm = play_eval_game(red, black, config, task.seed)
-            result_q.put(make_result(task, winner, reason, nm))
+            result_q.put(
+                _play_and_build_result(task, red, black, config, capture, replay_dir))
     except Exception as e:
         result_q.put(_WorkerFailed(worker_id, f"{e!r}\n{traceback.format_exc()}"))
         return
     result_q.put(_WorkerDone(worker_id))
 
 
-def _run_parallel(tasks, workers, config, factory):
+def _run_parallel(tasks, workers, config, factory, replay_dir=None):
     """Spawn pool (macOS-mandatory). Shared next-task counter, results via
     queue, explicit WorkerDone, parent joins with timeout (no silent hang).
     A _WorkerFailed sentinel surfaces a crashed worker promptly."""
@@ -276,7 +298,8 @@ def _run_parallel(tasks, workers, config, factory):
     result_q = ctx.Queue()
     procs = [
         ctx.Process(target=_worker_main,
-                    args=(wid, tasks, config, factory, next_idx, result_q))
+                    args=(wid, tasks, config, factory, next_idx, result_q,
+                          replay_dir))
         for wid in range(workers)
     ]
     for p in procs:
@@ -326,11 +349,16 @@ def _run_parallel(tasks, workers, config, factory):
 
 
 def run_game_tasks(tasks, workers: int, config: EvalConfig,
-                   evaluator_factory: Optional[EvaluatorFactory] = None):
+                   evaluator_factory: Optional[EvaluatorFactory] = None,
+                   replay_dir: Optional[str] = None):
     """Execute tasks; return results sorted by (pairing_id, game_idx).
 
     workers<=1 runs in-process. workers>1 uses a spawn worker pool with a
     shared atomic task counter (dynamic work-stealing).
+
+    When replay_dir is set, each game writes a per-ply replay sidecar into it
+    (worker-safe: each game writes its own file) and the result's replay_path
+    is filled in; otherwise replay_path stays None.
 
     NOTE: when workers>1, evaluator_factory must be a MODULE-LEVEL picklable
     callable (it is sent to spawned workers). Lambdas/closures will fail to
@@ -341,5 +369,5 @@ def run_game_tasks(tasks, workers: int, config: EvalConfig,
         return []
     workers = min(workers, len(tasks))
     if workers <= 1:
-        return _run_sequential(tasks, config, factory)
-    return _run_parallel(tasks, workers, config, factory)
+        return _run_sequential(tasks, config, factory, replay_dir)
+    return _run_parallel(tasks, workers, config, factory, replay_dir)
