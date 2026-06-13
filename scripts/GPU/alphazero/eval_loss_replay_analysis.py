@@ -151,6 +151,7 @@ def value_features(a_plies, n_moves, th):
         "largest_drop_ply": None,
         "largest_drop_a_ply": None,
         "largest_drop_fraction": None,
+        "largest_drop_phase": None,
     }
     if len(vals) >= 2:
         # (delta, index) tuple-min: ties on delta resolve to the earliest ply.
@@ -158,7 +159,9 @@ def value_features(a_plies, n_moves, th):
         ply = a_plies[i]["ply"]
         feats.update(
             largest_a_value_drop=d, largest_drop_ply=ply, largest_drop_a_ply=i,
-            largest_drop_fraction=ply / (n_moves - 1) if n_moves > 1 else 0.0)
+            largest_drop_fraction=ply / (n_moves - 1) if n_moves > 1 else 0.0,
+            largest_drop_phase=("opening" if ply < th.opening_plies
+                                else "post_opening"))
     for name, thresh in (("first_a_value_below_0", 0.0),
                          ("first_a_value_below_bad", th.bad_value),
                          ("first_a_value_below_lost", th.lost_value)):
@@ -466,6 +469,7 @@ QUEUE_COLUMNS = (
     "game_idx", "task_id", "replay_path", "a_color", "winner", "n_moves",
     "collapse_type", "initial_a_value", "final_a_value",
     "largest_a_value_drop", "largest_drop_ply", "largest_drop_fraction",
+    "largest_drop_phase",
     "first_a_value_below_lost_ply", "first_a_value_below_lost_fraction",
     "mean_top1_share_post", "median_selected_visit_rank_post", "opening_key",
 )
@@ -523,11 +527,58 @@ def opening_cluster_rows(games, key_plies, cohort_label, opening_plies):
     return rows
 
 
+def largest_drop_phase_counts(loss_feats):
+    """Partition losses by where the largest value drop fell (opening vs
+    post-opening, per `largest_drop_phase`). Games with no drop fall in
+    neither bucket. Over ALL losses, not just the sharp_value_drop label."""
+    out = {"opening": 0, "post_opening": 0}
+    for f in loss_feats:
+        ph = f.get("largest_drop_phase")
+        if ph in out:
+            out[ph] += 1
+    return out
+
+
+def drop_window_rows(loss_pairs, half_width=3):
+    """Per-ply context windows around each POST-OPENING largest value drop —
+    the 'what happened right around the collapse' diagnostic. Long format: one
+    row per ply in [drop_ply - half_width, drop_ply + half_width] (clipped to
+    the game), both players' plies included. loss_pairs: (replay, feat) tuples;
+    opening-phase drops are skipped."""
+    rows = []
+    for replay, feat in loss_pairs:
+        if feat.get("largest_drop_phase") != "post_opening":
+            continue
+        dp = feat["largest_drop_ply"]
+        moves = replay["moves"]
+        lo, hi = max(0, dp - half_width), min(len(moves) - 1, dp + half_width)
+        for ply in range(lo, hi + 1):
+            m = moves[ply]
+            rows.append({
+                "game_idx": feat["game_idx"],
+                "replay_path": feat.get("replay_path"),
+                "largest_drop_ply": dp,
+                "largest_drop_phase": feat["largest_drop_phase"],
+                "offset": ply - dp,
+                "ply": ply,
+                "player": m["player"],
+                "row": m["row"], "col": m["col"],
+                "root_value": m["root_value"],
+                "root_top1_share": m["root_top1_share"],
+                "selected_visit_rank": m["selected_visit_rank"],
+                "selected_visit_count": m["selected_visit_count"],
+                "root_total_visits": m["root_total_visits"],
+            })
+    return rows
+
+
 def build_replay_summary(*, match, pairing_id, a_ckpt, b_ckpt, filters,
                          counts, loss_feats, win_feats, verdict,
                          cohort_rows, secondary):
     """Assemble the replay_summary.json payload (pure; CLI writes it)."""
     insufficient = len(win_feats) < MIN_WIN_COHORT
+    dist = collapse_distribution([f["collapse_type"] for f in loss_feats])
+    dist["largest_drop_phase"] = largest_drop_phase_counts(loss_feats)
     return {
         "match": match,
         "pairing_id": pairing_id,
@@ -543,8 +594,7 @@ def build_replay_summary(*, match, pairing_id, a_ckpt, b_ckpt, filters,
             "note": "insufficient_contrast" if insufficient else None,
         },
         "secondary_contrast": secondary,
-        "collapse_type_distribution": collapse_distribution(
-            [f["collapse_type"] for f in loss_feats]),
+        "collapse_type_distribution": dist,
         "timing_distribution": timing_distribution(loss_feats),
         "verdict": verdict,
     }

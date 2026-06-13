@@ -240,6 +240,33 @@ match, `<stem>` from `<stem>_games.jsonl`:
   openings most keys are singletons — expected and fine; the table gains value
   as more captures accumulate.
 
+### V2.1 addendum (drop-phase tagging + post-opening drop windows)
+
+A small follow-on enhancement, not a new analyzer:
+
+- **Per-game feature `largest_drop_phase`** — `"opening"` if `largest_drop_ply <
+  opening_plies` else `"post_opening"` (`None` when the game has no drop). Added
+  to `collapse_timing.csv` and `manual_review_queue.csv` so review can be
+  prioritised by *where* the collapse fell, not just its magnitude.
+- **Summary + console split.** `collapse_type_distribution.largest_drop_phase`
+  records `{opening, post_opening}` counts over **all** losses (named for the
+  phase, not the `sharp_value_drop` label — the partition spans every loss, of
+  which the sharp label is the 92% majority). The console adds, after the
+  collapse-type list:
+  ```
+  Sharp value drops:
+    post-opening: 126 / 172 = 73.3%
+    opening:       46 / 172 = 26.7%
+  ```
+- **`<stem>_drop_windows.csv`** (seventh artifact) — the "what happened right
+  around the collapse" diagnostic. For each **post-opening** drop, one long-format
+  row per ply in `[largest_drop_ply ± 3]` (clipped to the game), both players:
+  `game_idx`, `replay_path`, `largest_drop_ply`, `largest_drop_phase`, `offset`,
+  `ply`, `player`, `row`, `col`, `root_value`, `root_top1_share`,
+  `selected_visit_rank`, `selected_visit_count`, `root_total_visits`. Opening-phase
+  drops are excluded (the focus is structural midgame collapses, not the
+  temperature-sampled opening).
+
 Console output mirrors V1 (cohort counts, collapse-type shares, effect-size
 table, secondary-contrast line) and ends with:
 
