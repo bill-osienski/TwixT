@@ -10,6 +10,7 @@ from scripts.GPU.alphazero.eval_loss_replay_analysis import (
     make_verdict,
     review_queue_rows, opening_cluster_rows,
     build_replay_summary, MIN_WIN_COHORT, OPENING_SAMPLING_NOTE,
+    largest_drop_phase_counts, drop_window_rows,
 )
 from tests.eval_replay_fixtures import A, B, make_game
 
@@ -592,3 +593,75 @@ def test_build_replay_summary_exactly_min_win_cohort_is_sufficient():
     s = _build(loss, win)
     assert s["primary_contrast"]["effect_sizes"] is not None
     assert s["primary_contrast"]["note"] is None
+
+
+# --- V2.1: largest-drop phase tagging + post-opening drop windows ------------
+
+def test_value_features_largest_drop_phase_opening_vs_post():
+    # A-as-black: a_ply i -> global ply 2i+1. opening_plies=4.
+    # drop at a_ply 1 (global ply 3 < 4) -> "opening".
+    _row, r1 = make_game(0, a_is_black=True, n_moves=12,
+                         a_values=[0.5, -0.9, 0.0, 0.0, 0.0, 0.0])
+    f1 = value_features(side_plies(r1, "black"), 12, Thresholds(opening_plies=4))
+    assert f1["largest_drop_ply"] == 3 and f1["largest_drop_phase"] == "opening"
+    # drop at a_ply 2 (global ply 5 >= 4) -> "post_opening".
+    _row, r2 = make_game(0, a_is_black=True, n_moves=12,
+                         a_values=[0.5, 0.5, -0.9, 0.0, 0.0, 0.0])
+    f2 = value_features(side_plies(r2, "black"), 12, Thresholds(opening_plies=4))
+    assert f2["largest_drop_ply"] == 5 and f2["largest_drop_phase"] == "post_opening"
+
+
+def test_value_features_largest_drop_phase_none_for_single_ply():
+    _row, replay = make_game(0, a_is_black=True, n_moves=2, a_values=[-0.5])
+    f = value_features(side_plies(replay, "black"), 2, Thresholds())
+    assert f["largest_drop_ply"] is None and f["largest_drop_phase"] is None
+
+
+def test_largest_drop_phase_counts_partitions_all_losses():
+    feats = ([{"largest_drop_phase": "post_opening"}] * 3
+             + [{"largest_drop_phase": "opening"}] * 2
+             + [{"largest_drop_phase": None}])      # degenerate game: neither
+    assert largest_drop_phase_counts(feats) == {"opening": 2, "post_opening": 3}
+
+
+def test_drop_window_rows_windows_post_opening_only():
+    _r, post = make_game(7, a_is_black=True, n_moves=16,
+                         a_values=[0.5, 0.5, 0.5, -0.9, 0.0, 0.0, 0.0, 0.0])
+    pf = value_features(side_plies(post, "black"), 16, Thresholds(opening_plies=4))
+    assert pf["largest_drop_phase"] == "post_opening"   # drop a_ply 3 -> ply 7
+    pf["game_idx"], pf["replay_path"] = 7, "r/7.json"
+    _r, opn = make_game(8, a_is_black=True, n_moves=16,
+                        a_values=[0.5, -0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    of = value_features(side_plies(opn, "black"), 16, Thresholds(opening_plies=4))
+    assert of["largest_drop_phase"] == "opening"
+    of["game_idx"], of["replay_path"] = 8, "r/8.json"
+    rows = drop_window_rows([(post, pf), (opn, of)], half_width=2)
+    # Only the post-opening game contributes; window = plies 5..9 (7 +/- 2).
+    assert {r["game_idx"] for r in rows} == {7}
+    assert [r["ply"] for r in rows] == [5, 6, 7, 8, 9]
+    assert [r["offset"] for r in rows] == [-2, -1, 0, 1, 2]
+    mid = next(r for r in rows if r["offset"] == 0)
+    assert mid["ply"] == 7 and mid["player"] == "black"   # the drop ply (A=black)
+    assert mid["largest_drop_phase"] == "post_opening"
+    assert {"root_value", "root_top1_share", "selected_visit_rank",
+            "selected_visit_count", "root_total_visits", "row", "col"} <= mid.keys()
+
+
+def test_drop_window_rows_clips_at_board_edges():
+    _r, replay = make_game(0, a_is_black=True, n_moves=10,
+                           a_values=[0.5, 0.5, 0.5, 0.5, -0.9])
+    f = value_features(side_plies(replay, "black"), 10, Thresholds(opening_plies=4))
+    f["game_idx"], f["replay_path"] = 0, "r/0.json"
+    # drop a_ply 4 -> global ply 9 (last ply); window 6..9, clipped above.
+    rows = drop_window_rows([(replay, f)], half_width=3)
+    assert [r["ply"] for r in rows] == [6, 7, 8, 9]
+    assert max(r["ply"] for r in rows) == replay["n_moves"] - 1
+
+
+def test_build_replay_summary_includes_largest_drop_phase():
+    loss, win = _summary_inputs(n_wins=6)
+    for i, f in enumerate(loss):
+        f["largest_drop_phase"] = "post_opening" if i % 2 == 0 else "opening"
+    s = _build(loss, win)
+    assert s["collapse_type_distribution"]["largest_drop_phase"] == {
+        "opening": 3, "post_opening": 3}

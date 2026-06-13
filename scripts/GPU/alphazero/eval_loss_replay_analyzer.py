@@ -2,7 +2,7 @@
 
 Reads Phase A capture data (*_games.jsonl rows carrying replay_path + per-game
 replay sidecars), explains WHY checkpoint A loses in the focus window, and
-writes six artifacts per match to --output-dir. All analysis lives in
+writes seven artifacts per match to --output-dir. All analysis lives in
 eval_loss_replay_analysis; this module is IO + composition + formatting.
 """
 from __future__ import annotations
@@ -23,7 +23,8 @@ from .eval_loss_analyzer import (
 from .eval_loss_replay_analysis import (
     MIN_WIN_COHORT, Thresholds, b_side_features, build_replay_summary,
     classify_collapse, cohort_comparison_row, game_features, make_verdict,
-    opening_cluster_rows, phase_bucket_rows, review_queue_rows,
+    drop_window_rows, opening_cluster_rows, phase_bucket_rows,
+    review_queue_rows,
     secondary_contrast_summary, side_plies, validate_replay,
 )
 from .eval_runner import short_id
@@ -114,6 +115,7 @@ def analyze_input(path, args, th):
     feats = {"loss": [], "win": []}
     plies_games = {"loss": [], "win": []}
     cluster_games = []
+    loss_pairs = []
     for cohort, cohort_rows_in in (("loss", loss_rows), ("win", win_rows)):
         for r in cohort_rows_in:
             replay = load_replay(r)
@@ -125,6 +127,7 @@ def analyze_input(path, args, th):
             if cohort == "loss":
                 f.update(b_side_features(
                     replay, b_clr, th, f["first_a_value_below_lost_fraction"]))
+                loss_pairs.append((replay, f))
             feats[cohort].append(f)
             plies_games[cohort].append((side_plies(replay, a_clr), r["n_moves"]))
             cluster_games.append((replay, a_clr, cohort == "win"))
@@ -158,6 +161,7 @@ def analyze_input(path, args, th):
             cluster_games, args.opening_key_plies,
             f"A_{a_clr}_{args.min_moves}_{args.max_moves}_decisive",
             th.opening_plies),
+        "drop_windows": drop_window_rows(loss_pairs),
     }
 
 
@@ -182,6 +186,7 @@ def write_outputs(out_dir, res):
               timing_csv_rows(res["feats"]))
     write_csv(out_dir / f"{stem}_manual_review_queue.csv", res["queue"])
     write_csv(out_dir / f"{stem}_opening_clusters.csv", res["clusters"])
+    write_csv(out_dir / f"{stem}_drop_windows.csv", res["drop_windows"])
 
 
 def print_console_summary(res, out_dir):
@@ -197,6 +202,11 @@ def print_console_summary(res, out_dir):
     print("Collapse types (losses):")
     for lab, cnt in sorted(dist["counts"].items(), key=lambda kv: -kv[1]):
         print(f"  {lab:<20} {cnt:>4}  ({cnt / dist['n']:.0%})")
+    phase, nloss = dist["largest_drop_phase"], c["loss"]
+    print("Sharp value drops:")
+    for label, key in (("post-opening", "post_opening"), ("opening", "opening")):
+        n = phase[key]
+        print(f"  {label + ':':<13}{n:>4} / {nloss} = {n / nloss:.1%}")
     pc = s["primary_contrast"]
     if pc["effect_sizes"] is None:
         print(f"Effect sizes: {pc['note']} (win cohort < {MIN_WIN_COHORT})")

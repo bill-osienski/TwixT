@@ -76,21 +76,35 @@ def test_cli_end_to_end_writes_all_artifacts(tmp_path, capsys):
     stem = "synth"
     for suffix in ("replay_summary.json", "cohort_comparison.csv",
                    "phase_buckets.csv", "collapse_timing.csv",
-                   "manual_review_queue.csv", "opening_clusters.csv"):
+                   "manual_review_queue.csv", "opening_clusters.csv",
+                   "drop_windows.csv"):
         assert (out / f"{stem}_{suffix}").exists(), suffix
     s = json.loads((out / f"{stem}_replay_summary.json").read_text())
     assert s["cohorts"] == {"focus_window_games": 13, "excluded_draws": 1,
                             "loss": 6, "win": 6}
     assert s["primary_contrast"]["effect_sizes"] is not None   # 6 wins >= 5
     assert s["verdict"]["primary"] == "value-drop"
+    # V2.1: every synthetic loss drops post-opening (drop ply 21 >= opening 20)
+    assert s["collapse_type_distribution"]["largest_drop_phase"] == {
+        "opening": 0, "post_opening": 6}
     timing = (out / f"{stem}_collapse_timing.csv").read_text().splitlines()
     assert len(timing) == 13                                   # header + 12 games
     header = timing[0].split(",")
     assert "collapse_type" in header and "flag_sharp" in header
     assert "b_saw_it_first" in header and "cohort" in header
+    assert "largest_drop_phase" in header                      # V2.1 column
+    queue_hdr = (out / f"{stem}_manual_review_queue.csv").read_text(
+        ).splitlines()[0]
+    assert "largest_drop_phase" in queue_hdr                   # V2.1 column
+    dw = (out / f"{stem}_drop_windows.csv").read_text().splitlines()
+    assert dw[0].split(",")[:6] == ["game_idx", "replay_path",
+                                    "largest_drop_ply", "largest_drop_phase",
+                                    "offset", "ply"]
+    assert len(dw) == 1 + 6 * 7                  # 6 post-opening games, 7-ply windows
     console = capsys.readouterr().out
     assert "Phase B verdict:" in console
     assert "manual_review_queue.csv" in console
+    assert "Sharp value drops:" in console and "post-opening:" in console
 
 
 def test_cli_skips_v1_era_file_without_replay_path(tmp_path, capsys):
