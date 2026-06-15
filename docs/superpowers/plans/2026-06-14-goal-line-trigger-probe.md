@@ -812,13 +812,12 @@ def load_manifest(path):
     return manifest
 
 
-def evaluate_case(evaluator, case, config, base_seed):
+def evaluate_case(evaluator, case, mcts_cfg, base_seed):
     """Reconstruct the case position and search it -> (black_value, top1_share)."""
     replay = json.loads(Path(case["replay_path"]).read_text())
     state = position_state(replay, case["position_ply"], case["side_to_move"])
     rng = random.Random(base_seed ^ case["game_idx"])
-    counts, root_value = MCTS(evaluator, cfg_from(config), rng).search(
-        state, add_noise=False)
+    counts, root_value = MCTS(evaluator, mcts_cfg, rng).search(state, add_noise=False)
     total = sum(counts.values())
     if total <= 0:
         raise ValueError(f"{case_id(case)}: empty search counts")
@@ -828,13 +827,14 @@ def evaluate_case(evaluator, case, config, base_seed):
 def run_probe(manifest, checkpoints, config, base_seed, evaluator_factory):
     """Evaluate every case with every checkpoint -> (summary, case_rows)."""
     cases = manifest["cases"]
+    mcts_cfg = cfg_from(config)                     # built once, reused for every search
     per_ckpt, case_rows = {}, []
     for ckpt in checkpoints:
         evaluator = evaluator_factory(ckpt)        # one load, reused across cases
         sid = short_id(ckpt)
         values, shares = [], []
         for case in cases:
-            v, t1 = evaluate_case(evaluator, case, config, base_seed)
+            v, t1 = evaluate_case(evaluator, case, mcts_cfg, base_seed)
             values.append(v)
             shares.append(t1)
             case_rows.append({
