@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from scripts.GPU.alphazero.goal_line_trigger_probe_cases import (
-    DEFAULT_SELECTION, EXPECTED_PROBLEM, case_id, position_state, select_cases,
+    DEFAULT_SELECTION, EXPECTED_PROBLEM, case_id, position_state, select_cases, summarize,
 )
 from tests.goal_line_probe_fixtures import legal_replay
 
@@ -108,3 +108,28 @@ def test_real_candidates_reproduce_canonical_18():
     want_keys = [(c["game_idx"], c["position_ply"]) for c in manifest["cases"]]
     assert got_keys == want_keys          # exact set AND order
     assert len(got_keys) == manifest["num_cases"] == 18
+
+
+def test_summarize_metrics_hand_computed():
+    # values: two >= 0.5, one in [0.25,0.5), one below 0.25
+    values = [0.8, 0.5, 0.3, -0.4]
+    shares = [0.9, 0.8, 0.5, 0.2]
+    s = summarize(values, shares)
+    assert s["num_cases"] == 4
+    assert s["mean_black_root_value"] == pytest.approx((0.8 + 0.5 + 0.3 - 0.4) / 4)
+    assert s["median_black_root_value"] == pytest.approx(0.4)   # median(0.8,0.5,0.3,-0.4)
+    assert s["black_overvalue_rate"] == 0.75                    # 3 of 4 >= 0.25
+    assert s["severe_black_overvalue_rate"] == 0.5             # 2 of 4 >= 0.50
+    assert s["mean_top1_share"] == pytest.approx((0.9 + 0.8 + 0.5 + 0.2) / 4)
+    assert s["median_top1_share"] == pytest.approx(0.65)
+
+
+def test_summarize_threshold_boundaries_inclusive():
+    s = summarize([0.25, 0.50], [0.5, 0.5])
+    assert s["black_overvalue_rate"] == 1.0      # 0.25 counts (>=)
+    assert s["severe_black_overvalue_rate"] == 0.5  # only 0.50 counts
+
+
+def test_summarize_empty_raises():
+    with pytest.raises(ValueError, match="no cases"):
+        summarize([], [])

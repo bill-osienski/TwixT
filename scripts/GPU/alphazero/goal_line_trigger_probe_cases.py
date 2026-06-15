@@ -87,3 +87,22 @@ def position_state(replay, position_ply, side_to_move):
             f"reconstructed to_move {state.to_move!r} != side_to_move "
             f"{side_to_move!r} at position_ply {position_ply}")
     return state
+
+
+def summarize(black_values, top1_shares):
+    """Per-checkpoint metrics over parallel lists of black root_value + top1
+    share. Overvalue thresholds are inclusive (>=)."""
+    n = len(black_values)
+    if n == 0:
+        raise ValueError("no cases to summarize")
+    over = sum(1 for v in black_values if v >= OVERVALUE_THRESHOLD)
+    severe = sum(1 for v in black_values if v >= SEVERE_OVERVALUE_THRESHOLD)
+    return {
+        "num_cases": n,
+        "mean_black_root_value": mean(black_values),
+        "median_black_root_value": median(black_values),
+        "black_overvalue_rate": over / n,
+        "severe_black_overvalue_rate": severe / n,
+        "mean_top1_share": mean(top1_shares),
+        "median_top1_share": median(top1_shares),
+    }
