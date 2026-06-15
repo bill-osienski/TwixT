@@ -74,14 +74,24 @@ def evaluate_case(evaluator, case, mcts_cfg, base_seed):
     return root_value, max(counts.values()) / total
 
 
+def _checkpoint_labels(checkpoints):
+    """One label per checkpoint. Clean short_ids when unique; disambiguated by
+    parent-dir name when two checkpoints share a short_id (same iter number from
+    different runs), so results never silently collide in the summary/CSV."""
+    sids = [short_id(c) for c in checkpoints]
+    if len(set(sids)) == len(sids):
+        return sids
+    return [f"{Path(c).parent.name}:{s}" for c, s in zip(checkpoints, sids)]
+
+
 def run_probe(manifest, checkpoints, config, base_seed, evaluator_factory):
     """Evaluate every case with every checkpoint -> (summary, case_rows)."""
     cases = manifest["cases"]
     mcts_cfg = cfg_from(config)                     # built once, reused for every search
+    labels = _checkpoint_labels(checkpoints)        # collision-safe per-checkpoint keys
     per_ckpt, case_rows = {}, []
-    for ckpt in checkpoints:
+    for ckpt, sid in zip(checkpoints, labels):
         evaluator = evaluator_factory(ckpt)        # one load, reused across cases
-        sid = short_id(ckpt)
         values, shares = [], []
         for case in cases:
             v, t1 = evaluate_case(evaluator, case, mcts_cfg, base_seed)
@@ -133,6 +143,9 @@ def main(argv=None, evaluator_factory=None):
         if not Path(ckpt).exists():
             print(f"error: checkpoint not found: {ckpt}", file=sys.stderr)
             return 2
+    if not Path(args.manifest).exists():
+        print(f"error: manifest not found: {args.manifest}", file=sys.stderr)
+        return 2
     manifest = load_manifest(args.manifest)
     config = EvalConfig(mcts_sims=args.mcts_sims,
                         mcts_eval_batch_size=args.mcts_eval_batch_size,

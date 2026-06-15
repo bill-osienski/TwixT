@@ -173,3 +173,30 @@ def test_probe_out_of_range_position_ply_raises(tmp_path):
     manifest.write_text(json.dumps(data))
     with pytest.raises(ValueError, match="out of range"):
         _run(tmp_path, manifest, a, b, tmp_path / "o")
+
+
+def test_probe_disambiguates_colliding_short_ids(tmp_path):
+    # Two checkpoints with the SAME iter number from different run dirs must not
+    # collide into one summary key.
+    manifest, _a, _b = _write_probe_inputs(tmp_path)
+    d1 = tmp_path / "runA"; d1.mkdir()
+    c1 = d1 / "model_iter_0399.safetensors"; c1.write_text("x")
+    d2 = tmp_path / "runB"; d2.mkdir()
+    c2 = d2 / "model_iter_0399.safetensors"; c2.write_text("x")
+    out = tmp_path / "out"
+    rc = probe_main(["--manifest", str(manifest), "--checkpoint", str(c1),
+                     "--checkpoint", str(c2), "--output-dir", str(out),
+                     "--mcts-sims", "12"], evaluator_factory=_fake_factory)
+    assert rc == 0
+    s = json.loads((out / "goal_line_trigger_probe_summary.json").read_text())
+    assert len(s["checkpoints"]) == 2                 # both kept, not overwritten
+    assert set(s["checkpoints"]) == {"runA:0399", "runB:0399"}
+
+
+def test_probe_missing_manifest_returns_2(tmp_path):
+    _m, a, b = _write_probe_inputs(tmp_path)
+    rc = probe_main(["--manifest", str(tmp_path / "nope.json"),
+                     "--checkpoint", str(a), "--checkpoint", str(b),
+                     "--output-dir", str(tmp_path / "o")], evaluator_factory=_fake_factory)
+    assert rc == 2
+    assert not (tmp_path / "o").exists()
