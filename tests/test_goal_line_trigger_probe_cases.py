@@ -5,8 +5,9 @@ from pathlib import Path
 import pytest
 
 from scripts.GPU.alphazero.goal_line_trigger_probe_cases import (
-    DEFAULT_SELECTION, EXPECTED_PROBLEM, case_id, select_cases,
+    DEFAULT_SELECTION, EXPECTED_PROBLEM, case_id, position_state, select_cases,
 )
+from tests.goal_line_probe_fixtures import legal_replay
 
 CANON_DIR = Path("logs/eval/loss_analysis_v2_1")
 CANON_CANDIDATES = CANON_DIR / "goal_line_trigger_probe_candidates.csv"
@@ -66,6 +67,34 @@ def test_select_preserves_input_order():
 def test_case_id_format():
     case = select_cases([_cand(game_idx="15", prev_black_ply="19")], DEFAULT_SELECTION)[0]
     assert case_id(case) == "game_000015_ply_19"
+
+
+def test_position_state_reconstructs_black_to_move():
+    replay = legal_replay(8)                      # plies 0..7; ply 5 is black's turn
+    state = position_state(replay, 5, "black")    # apply moves[0:5] -> black to move
+    assert state.to_move == "black"
+
+
+def test_position_state_position_ply_19_inside_opening_window():
+    # Boundary: game-15-style case. Drop is post-opening but the black decision
+    # ply is 19 (< opening_plies). position_state must reconstruct it normally.
+    replay = legal_replay(22)
+    assert replay["n_moves"] >= 20
+    state = position_state(replay, 19, "black")   # 19 moves applied -> black to move
+    assert state.to_move == "black"
+
+
+def test_position_state_raises_on_out_of_range_ply():
+    replay = legal_replay(8)
+    with pytest.raises(ValueError, match="out of range"):
+        position_state(replay, 99, "black")
+
+
+def test_position_state_raises_on_side_to_move_mismatch():
+    replay = legal_replay(8)
+    # apply moves[0:4] -> red to move; claiming black must fail loud
+    with pytest.raises(ValueError, match="side_to_move"):
+        position_state(replay, 4, "black")
 
 
 @pytest.mark.skipif(not CANON_CANDIDATES.exists() or not CANON_MANIFEST.exists(),

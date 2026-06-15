@@ -68,3 +68,22 @@ def select_cases(candidate_rows, selection):
 
 def case_id(case):
     return f"game_{case['game_idx']:06d}_ply_{case['position_ply']}"
+
+
+def position_state(replay, position_ply, side_to_move):
+    """Board at the side-to-move's decision point: apply moves[0:position_ply]
+    to a fresh TwixtState. Fail loud if the ply is out of range or the
+    reconstructed side to move disagrees with the manifest."""
+    moves = replay["moves"]
+    if not (0 <= position_ply < len(moves)):
+        raise ValueError(
+            f"position_ply {position_ply} out of range [0, {len(moves)})")
+    state = TwixtState(active_size=replay["board_size"], to_move="red",
+                       max_plies_limit=replay["n_moves"])
+    for m in moves[:position_ply]:
+        state = state.apply_move((m["row"], m["col"]))
+    if state.to_move != side_to_move:
+        raise ValueError(
+            f"reconstructed to_move {state.to_move!r} != side_to_move "
+            f"{side_to_move!r} at position_ply {position_ply}")
+    return state
