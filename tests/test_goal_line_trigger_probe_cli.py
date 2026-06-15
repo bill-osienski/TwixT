@@ -8,6 +8,10 @@ from scripts.GPU.alphazero.generate_goal_line_trigger_probe_manifest import (
     build_manifest, main as gen_main,
 )
 from scripts.GPU.alphazero.goal_line_trigger_probe_cases import DEFAULT_SELECTION
+from scripts.GPU.alphazero.eval_goal_line_trigger_probe import main as probe_main
+from scripts.GPU.alphazero.goal_line_trigger_probe_cases import EXPECTED_PROBLEM
+from tests.eval_fakes import FakeEvaluator
+from tests.goal_line_probe_fixtures import legal_replay
 
 CANON_DIR = Path("logs/eval/loss_analysis_v2_1")
 CANON_CANDIDATES = CANON_DIR / "goal_line_trigger_probe_candidates.csv"
@@ -72,3 +76,100 @@ def test_generator_reproduces_canonical_manifest(tmp_path):
     got_keys = [(c["game_idx"], c["position_ply"]) for c in got["cases"]]
     want_keys = [(c["game_idx"], c["position_ply"]) for c in want["cases"]]
     assert got_keys == want_keys and got["num_cases"] == want["num_cases"] == 18
+
+
+def _fake_factory(path):
+    # Two distinct constant evaluators so the probe must produce different
+    # per-checkpoint readouts. NOTE: FakeEvaluator's constant negates/clamps
+    # through the negamax backup (+0.9 leaf -> root -0.9; <=0 leaf -> root ~0.0),
+    # so these do NOT model real over/under-valuation. The real 0399-vs-0379
+    # direction is the operator acceptance run (Task 6), not a fake unit test.
+    return FakeEvaluator(value=0.9 if "0399" in path else 0.0)
+
+
+def _write_probe_inputs(tmp_path, position_plies=(5, 7)):
+    """Write sidecars + a manifest + two dummy checkpoint files; return paths."""
+    rdir = tmp_path / "replays"
+    rdir.mkdir()
+    cases = []
+    for i, pp in enumerate(position_plies):
+        replay = legal_replay(pp + 3, game_idx=i)     # ensure n_moves > position_ply
+        assert replay["moves"][pp]["player"] == "black"  # pp must be black's turn
+        rpath = rdir / f"game_{i:06d}.json"
+        rpath.write_text(json.dumps(replay))
+        cases.append({
+            "game_idx": i, "rank": i + 1, "replay_path": str(rpath),
+            "position_ply": pp, "side_to_move": "black",
+            "expected_problem": EXPECTED_PROBLEM, "trigger_red_ply": pp + 1,
+            "trigger_red_move": {"row": 0, "col": 1}, "trigger_zone": "red_goal_row_exact",
+            "baseline_black_prev_value": 0.7, "baseline_black_prev_top1": 0.9,
+            "drop_black_ply": pp + 2, "drop_black_value": -0.5, "drop_amount": -1.2,
+        })
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({
+        "schema_version": 1, "name": "goal_line_trigger_black_defense_probe",
+        "selection": DEFAULT_SELECTION, "num_cases": len(cases), "cases": cases}))
+    ck = tmp_path / "ckpts"
+    ck.mkdir()
+    a = ck / "model_iter_0379.safetensors"; a.write_text("x")
+    b = ck / "model_iter_0399.safetensors"; b.write_text("x")
+    return manifest, a, b
+
+
+def _run(tmp_path, manifest, a, b, outdir):
+    return probe_main(
+        ["--manifest", str(manifest), "--checkpoint", str(a), "--checkpoint", str(b),
+         "--output-dir", str(outdir), "--mcts-sims", "12"],
+        evaluator_factory=_fake_factory)
+
+
+def test_probe_writes_summary_and_cases(tmp_path, capsys):
+    manifest, a, b = _write_probe_inputs(tmp_path)
+    out = tmp_path / "out"
+    assert _run(tmp_path, manifest, a, b, out) == 0
+    summary = json.loads((out / "goal_line_trigger_probe_summary.json").read_text())
+    assert summary["num_cases"] == 2 and summary["mcts_sims"] == 12
+    assert set(summary["checkpoints"]) == {"0379", "0399"}
+    rows = list(csv.DictReader((out / "goal_line_trigger_probe_cases.csv").open()))
+    assert len(rows) == 4                                   # 2 checkpoints x 2 cases
+    assert {"checkpoint", "case_id", "probe_black_root_value", "probe_top1_share",
+            "black_overvalue", "baseline_black_prev_value"} <= set(rows[0].keys())
+
+
+def test_probe_distinguishes_checkpoints(tmp_path):
+    manifest, a, b = _write_probe_inputs(tmp_path)
+    out = tmp_path / "out"
+    _run(tmp_path, manifest, a, b, out)
+    s = json.loads((out / "goal_line_trigger_probe_summary.json").read_text())["checkpoints"]
+    # Different evaluators -> different per-checkpoint readouts (the comparison
+    # machinery works). Exact root values are an MCTS detail; the directional
+    # 0399-overvalues-more-than-0379 readout is operator acceptance (Task 6),
+    # not a constant-fake unit test.
+    assert s["0399"]["mean_black_root_value"] != s["0379"]["mean_black_root_value"]
+
+
+def test_probe_is_deterministic(tmp_path):
+    manifest, a, b = _write_probe_inputs(tmp_path)
+    o1, o2 = tmp_path / "o1", tmp_path / "o2"
+    _run(tmp_path, manifest, a, b, o1)
+    _run(tmp_path, manifest, a, b, o2)
+    assert (o1 / "goal_line_trigger_probe_cases.csv").read_text() == \
+           (o2 / "goal_line_trigger_probe_cases.csv").read_text()
+
+
+def test_probe_missing_checkpoint_returns_2(tmp_path):
+    manifest, a, _b = _write_probe_inputs(tmp_path)
+    rc = probe_main(["--manifest", str(manifest), "--checkpoint", str(a),
+                     "--checkpoint", str(tmp_path / "nope.safetensors"),
+                     "--output-dir", str(tmp_path / "o")], evaluator_factory=_fake_factory)
+    assert rc == 2
+    assert not (tmp_path / "o").exists()
+
+
+def test_probe_out_of_range_position_ply_raises(tmp_path):
+    manifest, a, b = _write_probe_inputs(tmp_path)
+    data = json.loads(manifest.read_text())
+    data["cases"][0]["position_ply"] = 999
+    manifest.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="out of range"):
+        _run(tmp_path, manifest, a, b, tmp_path / "o")
