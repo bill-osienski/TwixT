@@ -37,6 +37,18 @@ The probe reconstructs the board at `position_ply` (black to move) and asks each
 checkpoint: *how do you value black here?* A well-calibrated net should already
 see red's goal-line threat and **not** sit at a high positive value.
 
+**Boundary note — `position_ply` may sit inside the opening window.**
+`post_opening_only` is a property of the **drop/trigger sequence**
+(`largest_drop_phase == "post_opening"`, i.e. the *drop* ply ≥ `opening_plies`),
+**not** a constraint on `position_ply`. The black decision ply can therefore fall
+below `opening_plies`. In the canonical manifest exactly one case does:
+**game 15 — `position_ply = 19` (< 20), `trigger_red_ply = 20`,
+`drop_black_ply = 21`** (the post-opening drop, `red_goal_band_6`). This is
+**allowed by design**: `select_cases` applies no `position_ply >= opening_plies`
+filter, and `position_state` reconstructs such early positions normally. (A black
+decision at ply 19 being temperature-sampled in the *source* game is irrelevant
+here — the probe re-evaluates the position fresh with `add_noise=False`.)
+
 ## Scope
 
 - **In (this task):**
@@ -233,6 +245,12 @@ Pure (`tests/test_goal_line_trigger_probe_cases.py`, no MLX):
 - `position_state`: synthetic replay → applies `moves[0:position_ply]`, asserts
   `to_move == "black"`; raises on out-of-range ply and on a parity/`side_to_move`
   mismatch.
+- **Boundary — `position_ply` inside the opening window.** The game-15 case
+  (`position_ply = 19 < opening_plies`) is still selected by `select_cases` (the
+  `post_opening_only` filter keys on the drop's `largest_drop_phase`, not
+  `position_ply`), and `position_state` reconstructs `moves[0:19]` with
+  `to_move == "black"`. This guards against a future regression that wrongly adds
+  a `position_ply >= opening_plies` filter.
 - `summarize`: hand-computed mean/median + the `>= 0.25` / `>= 0.50` rate
   boundaries; empty input guarded.
 
