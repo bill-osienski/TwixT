@@ -277,6 +277,9 @@ canonical 18-case manifest + candidates CSV live under
    → the collapse mechanism, timing, and a review queue.
 4. **Inspect:** open the top post-opening drop windows against their replay
    sidecars.
+5. **Targeted screen:** when V2 shows goal-line-trigger / defender-side value cliffs,
+   run `eval_goal_line_trigger_probe` on candidate checkpoints before spending time
+   on another full match.
 
 ## See also
 
