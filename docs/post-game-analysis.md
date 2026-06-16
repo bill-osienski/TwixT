@@ -19,6 +19,7 @@ plans under `docs/superpowers/`; for *metric definitions* see
 | Which checkpoint is strongest across **many** pairings? | `eval_checkpoint_tournament` | no |
 | **How** does A lose — as which color, short vs long games, worst losses? | `eval_loss_analyzer` (V1) | no — reads existing `*_games.jsonl` |
 | **Why** does A lose — value collapse vs search diffusion vs low-confidence, and **when** in the game? | `eval_loss_replay_analyzer` (V2) | **yes** — the match must have run with `--save-eval-replays` |
+| **Is a checkpoint's value head blind to red's goal-line trigger?** (fast targeted screen across checkpoints) | `eval_goal_line_trigger_probe` | n/a — re-evaluates a fixed manifest of captured positions |
 
 **The one thing to decide up front:** per-ply replay data is captured *only if
 you ask for it at match time* (`--save-eval-replays`), and it cannot be
@@ -183,6 +184,77 @@ its drop-window rows to see the value cliff ply-by-ply.
 
 ---
 
+## 5. `eval_goal_line_trigger_probe` — checkpoint value-head calibration screen
+
+**Purpose:** Re-evaluate a *fixed* set of "goal-line trigger" positions (black to
+move, one ply before red's goal-line-completing move) with one or more
+checkpoints, and report whether each **overvalues black** there. Lower black
+`root_value` = better calibrated. It is a seconds-to-minutes diagnostic for one
+specific value-head failure mode, not a full strength eval.
+
+**When:** You suspect (e.g. from a V2 replay analysis) that a checkpoint's value
+head is blind to red's goal-line conversion, and you want a fast targeted screen
+across checkpoints *before* committing to an 800-game match.
+
+**⚠️ Run from the repo root.** The probe manifest's cases carry `replay_path`
+entries that are **relative to the repo root** (e.g.
+`logs/eval/…_replays/game_000769.json`), and the probe resolves them against the
+current working directory. Run every command below from the repo root, exactly as
+the other eval CLIs expect — otherwise the replay reads fail with
+`FileNotFoundError`. Path resolution is intentionally left CWD-relative to match
+the rest of the eval tooling; this is a usage convention, not a bug.
+
+**Two steps — build the fixed manifest (once), then probe:**
+
+```bash
+# 1. Generate the manifest from the curated candidates CSV (Mode A; reproducible).
+.venv/bin/python -m scripts.GPU.alphazero.generate_goal_line_trigger_probe_manifest \
+  --from-candidates-csv logs/eval/loss_analysis_v2_1/goal_line_trigger_probe_candidates.csv \
+  --output logs/eval/loss_analysis_v2_1/goal_line_trigger_probe_manifest.json
+
+# 2. Probe each checkpoint against the fixed positions.
+.venv/bin/python -m scripts.GPU.alphazero.eval_goal_line_trigger_probe \
+  --manifest logs/eval/loss_analysis_v2_1/goal_line_trigger_probe_manifest.json \
+  --checkpoint checkpoints/alphazero-v2-staged/model_iter_0379.safetensors \
+  --checkpoint checkpoints/alphazero-v2-eps035-from0379/model_iter_0399.safetensors \
+  --output-dir logs/eval/goal_line_trigger_probe \
+  --mcts-sims 400
+```
+
+**Key arguments (probe):** `--manifest` (required); `--checkpoint` (repeatable,
+required); `--output-dir` (default `logs/eval/goal_line_trigger_probe`);
+`--mcts-sims` (400); `--base-seed` (per-case search is seeded for
+reproducibility). Checkpoints that share an iter number across different run dirs
+are disambiguated by parent-dir name, so they never collide in the output.
+
+**Key arguments (generator):** `--from-candidates-csv` and `--output` (required),
+plus the selection knobs `--min-prev-black-value` (0.25), `--min-prev-black-top1`
+(0.5), `--post-opening-only` / `--no-post-opening-only`, `--trigger-zone-prefix`
+(`red_goal`). The defaults reproduce the canonical 18-case manifest. Re-deriving
+the candidates CSV from a fresh capture ("Mode B") is deferred; the generator
+consumes the curated candidates so the probe target stays fixed and reproducible.
+
+**Outputs (in `--output-dir`):** `goal_line_trigger_probe_summary.json` (per
+checkpoint: `num_cases`, mean/median `black_root_value`, `black_overvalue_rate`
+≥+0.25, `severe_black_overvalue_rate` ≥+0.50, mean/median `top1_share`) and
+`goal_line_trigger_probe_cases.csv` (one row per checkpoint×case, carrying the
+in-game `baseline_black_prev_value` next to the probe's `probe_black_root_value`
+so you can confirm a source checkpoint reproduces its own in-game evaluation).
+
+**Reading the output:** a well-calibrated checkpoint reads **low/negative** black
+value on these positions (it already sees red's goal-line threat). A high
+`black_overvalue_rate` / positive `mean_black_root_value` is the failure mode —
+the value head thinks black is winning right before red closes the goal line.
+(Example readout: eps035 `0399` overvalued black on 94% of the cases, vs staged
+`0379`'s 11%.)
+
+The fixed positions come from the V2.1 loss analysis (sharp post-opening value
+drops where black was confidently positive just before a red goal-band move); the
+canonical 18-case manifest + candidates CSV live under
+`logs/eval/loss_analysis_v2_1/`.
+
+---
+
 ## Internal libraries (not run directly)
 
 - `eval_runner` — the game-playing task queue / worker pool used by the match and
@@ -192,6 +264,8 @@ its drop-window rows to see the value cliff ply-by-ply.
 - `eval_replay` — the replay sidecar schema + writer (capture path).
 - `eval_loss_analysis`, `eval_loss_replay_analysis` — the pure analysis modules
   behind the V1 and V2 CLIs (importable, fully unit-tested).
+- `goal_line_trigger_probe_cases` — pure selection / board-reconstruction /
+  summary helpers behind the goal-line trigger probe (no MLX, unit-tested).
 
 ## Typical end-to-end workflow
 
@@ -208,7 +282,7 @@ its drop-window rows to see the value cliff ply-by-ply.
 
 - Designs/plans: `docs/superpowers/specs/` and `docs/superpowers/plans/` —
   `*-checkpoint-tournament-*`, `*-eval-loss-analyzer-*`, `*-eval-replay-capture-*`,
-  `2026-06-12-eval-replay-analyzer-*`.
+  `2026-06-12-eval-replay-analyzer-*`, `2026-06-14-goal-line-trigger-probe-*`.
 - Metric definitions: [`analysis-metrics-guide.md`](analysis-metrics-guide.md).
 - MLX/Metal eval performance and the `--workers` gotcha:
   [`mlx-memory-management.md`](mlx-memory-management.md).
