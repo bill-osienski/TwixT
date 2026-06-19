@@ -371,6 +371,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Multiplier on uniform-eligible expectation (default: 1.0 = pure uniform).")
     parser.add_argument("--conversion-max-batch-fraction", type=float, default=0.15,
         help="Hard cap on eligible fraction per batch (default: 0.15).")
+
+    # Post-opening sharp-drop calibration (design 2026-06-16)
+    parser.add_argument("--post-opening-calibration-enabled", action="store_true",
+        help="Enable the post-opening sharp-drop value calibration aux loss.")
+    parser.add_argument("--post-opening-calibration-manifest", type=str, default=None,
+        help="Path to the calibration TRAIN manifest CSV (required when enabled).")
+    parser.add_argument("--post-opening-calibration-target", type=float, default=-0.50,
+        help="Soft value target (black perspective) for calibration positions "
+             "(default: -0.50).")
+    parser.add_argument("--post-opening-calibration-weight", type=float, default=0.02,
+        help="Absolute coefficient on the calibration value-loss term "
+             "(default: 0.02; NOT multiplied by value_weight).")
+    parser.add_argument("--post-opening-calibration-batch-fraction", type=float, default=0.10,
+        help="Calibration mini-batch size as a fraction of batch_size (default: 0.10).")
+
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
         help="Enable recovery / extreme-closeout-drift telemetry (default: on).")
@@ -776,6 +791,12 @@ def main():
         closeout_selection_tiebreak_topk=args.closeout_selection_tiebreak_topk,
         closeout_selection_tiebreak_min_value=args.closeout_selection_tiebreak_min_value,
         closeout_selection_tiebreak_min_share=args.closeout_selection_tiebreak_min_share,
+        # Post-opening sharp-drop calibration
+        post_opening_calibration_enabled=args.post_opening_calibration_enabled,
+        post_opening_calibration_manifest=args.post_opening_calibration_manifest,
+        post_opening_calibration_target=args.post_opening_calibration_target,
+        post_opening_calibration_weight=args.post_opening_calibration_weight,
+        post_opening_calibration_batch_fraction=args.post_opening_calibration_batch_fraction,
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,
