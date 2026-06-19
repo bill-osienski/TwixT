@@ -1083,6 +1083,8 @@ def alphazero_loss_batch(
     conversion_loss_weight: float = 0.0,             # NEW: Spec 2
     conversion_completion_weight: float = 1.0,       # NEW
     conversion_reducer_weight: float = 0.35,         # NEW
+    calibration_positions=None,                       # NEW: design Mechanism B
+    calibration_loss_weight: float = 0.0,             # NEW
 ):
     """Batched policy + value + l2 + (optional) conversion auxiliary loss.
 
@@ -1176,6 +1178,31 @@ def alphazero_loss_batch(
                   + l2_loss
                   + conversion_loss_weight * aux_loss)
 
+    # Post-opening calibration (value-only, standalone weight, NOT * value_weight)
+    calib_active = (
+        calibration_loss_weight > 0.0
+        and calibration_positions is not None
+        and len(calibration_positions) > 0
+    )
+    if calib_active:
+        cb_boards, cb_rows, cb_cols, cb_mask, _cb_pi, cb_targets = make_padded_batch(
+            calibration_positions, max_moves_cap=max_moves_cap
+        )
+        _, cb_values, _ = network.forward_padded(
+            cb_boards, cb_rows, cb_cols, cb_mask,
+            active_size=calibration_positions[0].active_size,
+        )  # value head ignores move arrays; values are side-to-move perspective
+        calib_loss = mx.mean((cb_values - cb_targets) ** 2)
+        # Per-STEP mean prediction. The sidecar averages these across steps;
+        # since k is constant, step-weighted == sample-weighted. Do NOT change
+        # the sidecar to divide a raw sum by n_drawn — this is already a mean.
+        calib_value_mean = mx.mean(cb_values)
+        total_loss = total_loss + calibration_loss_weight * calib_loss
+        # CRITICAL: total_loss must be first for nn.value_and_grad()
+        return (total_loss, policy_loss, value_loss, l2_loss,
+                aux_loss, aux_coverage, aux_n_eligible,
+                calib_loss, calib_value_mean, len(calibration_positions))
+
     # CRITICAL: total_loss must be first for nn.value_and_grad()
     return total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage, aux_n_eligible
 
@@ -1196,6 +1223,8 @@ def train_step(
     conversion_loss_weight: float = 0.0,             # NEW
     conversion_completion_weight: float = 1.0,       # NEW
     conversion_reducer_weight: float = 0.35,         # NEW
+    calibration_positions=None,                       # NEW
+    calibration_loss_weight: float = 0.0,             # NEW
 ) -> Tuple[float, float, float, float, float, float, int]:
     """Single training step with two optimizers and separate gradient clipping.
 
@@ -1228,8 +1257,13 @@ def train_step(
           training but may be larger if the replay buffer returned fewer
           positions than requested.
     """
+    calib_active = (
+        calibration_loss_weight > 0.0
+        and calibration_positions is not None
+        and len(calibration_positions) > 0
+    )
+
     def loss_fn(model):
-        # Returns 7-tuple; total is first for nn.value_and_grad()
         return alphazero_loss_batch(
             model, batch,
             l2_weight=l2_weight,
@@ -1241,13 +1275,19 @@ def train_step(
             conversion_loss_weight=conversion_loss_weight,
             conversion_completion_weight=conversion_completion_weight,
             conversion_reducer_weight=conversion_reducer_weight,
+            calibration_positions=calibration_positions,
+            calibration_loss_weight=calibration_loss_weight,
         )
 
     # value_and_grad differentiates first element (total_loss)
     loss_tuple, grads = nn.value_and_grad(network, loss_fn)(network)
 
-    # Unpack losses (7-tuple)
-    total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage, aux_n_eligible = loss_tuple
+    # Unpack losses (7-tuple, or 10-tuple when calibration active)
+    if calib_active:
+        (total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage,
+         aux_n_eligible, calib_loss, calib_value_mean, calib_n) = loss_tuple
+    else:
+        total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage, aux_n_eligible = loss_tuple
 
     # Slice GRADS only (not params) into module-shaped trees
     # NOTE: Assumes network.parameters() / grads use top-level keys: encoder, policy_head, value_head
@@ -1273,6 +1313,19 @@ def train_step(
     # Evaluate all arrays before extracting Python floats
     mx.eval(network.parameters(), opt_main.state, opt_value.state, loss_tuple)
 
+    if calib_active:
+        return (
+            float(total_loss.item()),
+            float(policy_loss.item()),
+            float(value_loss.item()),
+            float(l2_loss.item()),
+            float(aux_loss.item()),
+            float(aux_coverage),
+            int(aux_n_eligible),
+            float(calib_loss.item()),
+            float(calib_value_mean.item()),
+            int(calib_n),
+        )
     return (
         float(total_loss.item()),
         float(policy_loss.item()),
