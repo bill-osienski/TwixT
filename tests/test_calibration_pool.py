@@ -73,3 +73,22 @@ def test_from_manifest_loads_all_cases(tmp_path):
     drawn = pool.sample(7, random.Random(0))
     assert len(drawn) == 7
     assert all(r.outcome == -0.5 for r in drawn)
+
+
+def test_build_post_opening_calibration_block():
+    from scripts.GPU.alphazero.calibration_pool import (
+        build_post_opening_calibration_block,
+    )
+    block = build_post_opening_calibration_block(
+        config={"enabled": True, "target": -0.5, "effective_weight": 0.02,
+                "pool_size": 134},
+        enabled=True,
+        loss_accumulator={"sum_calib_loss": 4.0, "sum_calib_n_drawn": 60,
+                          "sum_calib_value_pred": 3.0, "steps_done": 10},
+    )
+    assert block["enabled"] is True
+    assert block["version"] == 1
+    assert block["config"]["pool_size"] == 134
+    np.testing.assert_allclose(block["loss"]["calib_loss_avg_iter"], 0.4)
+    np.testing.assert_allclose(block["loss"]["calib_mean_value_pred"], 0.3)
+    assert block["loss"]["calib_n_drawn_total"] == 60

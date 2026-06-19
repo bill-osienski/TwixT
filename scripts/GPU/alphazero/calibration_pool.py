@@ -83,3 +83,27 @@ class CalibrationPool:
         records = [build_calibration_position(c, calibration_target)
                    for c in manifest["cases"]]
         return cls(records)
+
+
+def build_post_opening_calibration_block(config: dict, enabled: bool,
+                                         loss_accumulator: dict) -> dict:
+    """Per-iteration calibration telemetry for the training stats sidecar.
+
+    calib_mean_value_pred is the headline signal: it should drift from ~+0.6
+    toward the target (~-0.5) over the run.
+    """
+    steps = max(int(loss_accumulator.get("steps_done", 0)), 1)
+    n_drawn = int(loss_accumulator.get("sum_calib_n_drawn", 0))
+    return {
+        "version": 1,
+        "enabled": bool(enabled),
+        "config": dict(config),
+        "loss": {
+            "calib_loss_avg_iter":
+                float(loss_accumulator.get("sum_calib_loss", 0.0)) / steps,
+            "calib_mean_value_pred":
+                float(loss_accumulator.get("sum_calib_value_pred", 0.0)) / steps,
+            "calib_n_drawn_total": n_drawn,
+            "calib_n_drawn_per_step": n_drawn / steps,
+        },
+    }

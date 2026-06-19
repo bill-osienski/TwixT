@@ -2333,6 +2333,12 @@ def train(
     recovery_retargeting_classify_defense: bool = True,
     recovery_retargeting_max_sampled_moves_per_side: int = 32,
     recovery_retargeting_sample_all_moves: bool = False,
+    # Post-opening sharp-drop calibration (design 2026-06-16)
+    post_opening_calibration_enabled: bool = False,
+    post_opening_calibration_manifest: Optional[str] = None,
+    post_opening_calibration_target: float = -0.50,
+    post_opening_calibration_weight: float = 0.02,
+    post_opening_calibration_batch_fraction: float = 0.10,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2729,6 +2735,29 @@ def train(
     effective_conversion_loss_weight: float = (
         conversion_policy_loss_weight if conversion_policy_loss_enabled else 0.0
     )
+
+    # Post-opening calibration: gate weight + build the fixed pool once.
+    effective_post_opening_calibration_weight: float = (
+        post_opening_calibration_weight if post_opening_calibration_enabled else 0.0
+    )
+    _calib_pool = None
+    if effective_post_opening_calibration_weight > 0.0:
+        if not post_opening_calibration_manifest:
+            raise ValueError(
+                "post_opening_calibration_enabled requires "
+                "post_opening_calibration_manifest")
+        from .calibration_pool import CalibrationPool
+        _calib_pool = CalibrationPool.from_manifest(
+            post_opening_calibration_manifest, post_opening_calibration_target)
+        print(f"Post-opening calibration: {len(_calib_pool)} positions, "
+              f"weight={effective_post_opening_calibration_weight}, "
+              f"target={post_opening_calibration_target}, "
+              f"batch_fraction={post_opening_calibration_batch_fraction}")
+
+    # Iteration-scope calibration accumulators (mirror sum_aux* hoist).
+    sum_calib_loss: float = 0.0
+    sum_calib_n_drawn: int = 0
+    sum_calib_value_pred: float = 0.0
 
     for iteration in range(start_iteration, n_iterations):
         iter_start = time.perf_counter()
@@ -3700,6 +3729,9 @@ def train(
                 sum_eligible_drawn = 0
                 sum_cap_binding = 0
                 sum_boost_inactive = 0
+                sum_calib_loss = 0.0
+                sum_calib_n_drawn = 0
+                sum_calib_value_pred = 0.0
 
                 train_rng = random.Random(master_rng.randint(0, 2**31))
 
@@ -3711,22 +3743,48 @@ def train(
                             conversion_max_batch_fraction=conversion_max_batch_fraction,
                         )
                         # Pass active_size to training (use current curriculum stage)
-                        loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli = train_step(
-                            network=network,
-                            main_module=main_module,
-                            opt_main=opt_main,
-                            opt_value=opt_value,
-                            batch=batch,
-                            l2_weight=l2_weight,
-                            value_weight=curr_value_weight,
-                            active_size=active_size,
-                            value_grad_max_norm=value_grad_max_norm,
-                            progress_weighted=progress_weighted,
-                            progress_weight_floor=progress_weight_floor,
-                            conversion_loss_weight=effective_conversion_loss_weight,
-                            conversion_completion_weight=conversion_completion_weight,
-                            conversion_reducer_weight=conversion_reducer_weight,
-                        )
+                        if _calib_pool is not None:
+                            _k = max(1, round(batch_size * post_opening_calibration_batch_fraction))
+                            _calib_batch = _calib_pool.sample(_k, train_rng)
+                            (loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli,
+                             _calib_loss, _calib_value_pred, _calib_n) = train_step(
+                                network=network,
+                                main_module=main_module,
+                                opt_main=opt_main,
+                                opt_value=opt_value,
+                                batch=batch,
+                                l2_weight=l2_weight,
+                                value_weight=curr_value_weight,
+                                active_size=active_size,
+                                value_grad_max_norm=value_grad_max_norm,
+                                progress_weighted=progress_weighted,
+                                progress_weight_floor=progress_weight_floor,
+                                conversion_loss_weight=effective_conversion_loss_weight,
+                                conversion_completion_weight=conversion_completion_weight,
+                                conversion_reducer_weight=conversion_reducer_weight,
+                                calibration_positions=_calib_batch,
+                                calibration_loss_weight=effective_post_opening_calibration_weight,
+                            )
+                            sum_calib_loss += _calib_loss
+                            sum_calib_n_drawn += _calib_n
+                            sum_calib_value_pred += _calib_value_pred
+                        else:
+                            loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli = train_step(
+                                network=network,
+                                main_module=main_module,
+                                opt_main=opt_main,
+                                opt_value=opt_value,
+                                batch=batch,
+                                l2_weight=l2_weight,
+                                value_weight=curr_value_weight,
+                                active_size=active_size,
+                                value_grad_max_norm=value_grad_max_norm,
+                                progress_weighted=progress_weighted,
+                                progress_weight_floor=progress_weight_floor,
+                                conversion_loss_weight=effective_conversion_loss_weight,
+                                conversion_completion_weight=conversion_completion_weight,
+                                conversion_reducer_weight=conversion_reducer_weight,
+                            )
 
                         # Sums first, then steps_done (ensures denominator matches included samples)
                         sum_total += loss_total
@@ -3837,6 +3895,27 @@ def train(
                     "boost_inactive_steps": sum_boost_inactive,
                 },
             )
+
+            if post_opening_calibration_enabled or _calib_pool is not None:
+                from .calibration_pool import build_post_opening_calibration_block
+                _sidecar["post_opening_calibration"] = build_post_opening_calibration_block(
+                    config={
+                        "enabled": post_opening_calibration_enabled,
+                        "manifest": post_opening_calibration_manifest,
+                        "target": post_opening_calibration_target,
+                        "configured_weight": post_opening_calibration_weight,
+                        "effective_weight": effective_post_opening_calibration_weight,
+                        "batch_fraction": post_opening_calibration_batch_fraction,
+                        "pool_size": len(_calib_pool) if _calib_pool is not None else 0,
+                    },
+                    enabled=post_opening_calibration_enabled,
+                    loss_accumulator={
+                        "sum_calib_loss": sum_calib_loss,
+                        "sum_calib_n_drawn": sum_calib_n_drawn,
+                        "sum_calib_value_pred": sum_calib_value_pred,
+                        "steps_done": steps_done,
+                    },
+                )
 
             # Spec 2 §8.3: recovery / extreme-closeout-drift telemetry block.
             # Telemetry-only — reads existing goal_completion_record fields.
