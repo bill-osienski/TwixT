@@ -1098,6 +1098,9 @@ def alphazero_loss_batch(
           training but may be larger if the replay buffer returned fewer
           positions than requested.
         - aux_n_eligible: int — exact count of eligible positions in batch.
+        When calibration is active (calibration_loss_weight > 0 and
+        calibration_positions is non-empty), returns a 10-tuple extending the
+        above with (calib_loss, calib_value_mean, calib_n).
 
     IMPORTANT: total_loss MUST be first because nn.value_and_grad() only
     differentiates the first returned value.
@@ -1225,7 +1228,7 @@ def train_step(
     conversion_reducer_weight: float = 0.35,         # NEW
     calibration_positions=None,                       # NEW
     calibration_loss_weight: float = 0.0,             # NEW
-) -> Tuple[float, float, float, float, float, float, int]:
+) -> tuple:
     """Single training step with two optimizers and separate gradient clipping.
 
     Uses separate optimizers for encoder+policy (opt_main) and value head (opt_value)
@@ -1250,8 +1253,11 @@ def train_step(
         conversion_reducer_weight: Weight for distance-reducing moves in aux target
 
     Returns:
-        Tuple of (total_loss, policy_loss, value_loss, l2_loss,
+        7-tuple of (total_loss, policy_loss, value_loss, l2_loss,
                   aux_loss, aux_coverage, aux_n_eligible) as floats/int.
+        When calibration is active (calibration_loss_weight > 0 and
+        calibration_positions is non-empty), returns a 10-tuple extending the
+        above with (calib_loss, calib_value_mean, calib_n).
         - aux_coverage: float — n_eligible / len(batch) (fraction of this
           batch that was eligible). Equals n_eligible/batch_size in normal
           training but may be larger if the replay buffer returned fewer
