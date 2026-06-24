@@ -175,3 +175,66 @@ def test_goal_line_join_missing_replay_file_raises(tmp_path):
                      "replay_path": str(tmp_path / "missing.json"), "trigger_zone": "red_goal"}])
     with pytest.raises(ValueError, match="replay_path missing"):
         goal_line_retention_rows(str(cases), str(cands), "0001", "goal_line_retention", 0.5)
+
+
+from scripts.GPU.alphazero.build_targeted_calibration_manifest import (
+    assign_case_rank, tag_stats, write_manifest, main,
+)
+
+
+def test_assign_case_rank_is_global_1_to_n():
+    rows = [{"case_rank": ""} for _ in range(3)]
+    assign_case_rank(rows)
+    assert [r["case_rank"] for r in rows] == [1, 2, 3]
+
+
+def test_tag_stats_counts_mass_and_targets():
+    rows = [{"tag": "c", "weight_scale": "1.0", "target_black_value": "-0.35"},
+            {"tag": "c", "weight_scale": "1.0", "target_black_value": "-0.35"},
+            {"tag": "r", "weight_scale": "0.5", "target_black_value": "0.10"}]
+    st = tag_stats(rows)
+    assert st["c"]["n"] == 2 and st["c"]["weight_mass"] == 2.0
+    assert st["r"]["n"] == 1 and st["r"]["weight_mass"] == 0.5
+    assert st["r"]["targets"] == [0.10]
+
+
+def test_main_end_to_end_and_determinism(tmp_path):
+    # correction + holdout (disjoint) + one position-probe retention source
+    corr = _write(tmp_path, "train.csv", CORR_COLS, [_corr_row(637, 39)])
+    hold = _write(tmp_path, "frozen.csv", CORR_COLS, [_corr_row(999, 39)])
+    red = _write(tmp_path, "red.csv", PROBE_COLS, [_probe_row("0001", 10, "-0.20")])
+    # old-PO + goal-line: reuse the same shapes with anchor 0001
+    oldpo = _write(tmp_path, "oldpo.csv", PROBE_COLS, [_probe_row("0001", 20, "0.10", side="black")])
+    replay = tmp_path / "g30.json"; replay.write_text("{}")
+    glc = _write(tmp_path, "gl_cases.csv", GL_CASE_COLS, [_gl_case("0001", 30, "-0.24")])
+    gln = _write(tmp_path, "gl_cand.csv", GL_CAND_COLS,
+                 [{"game_idx": 30, "rank": 1, "prev_black_ply": 39,
+                   "replay_path": str(replay), "trigger_zone": "red_goal"}])
+    out = tmp_path / "v2.csv"
+    argv = ["--correction-manifest", str(corr), "--correction-holdout-manifest", str(hold),
+            "--red-predrop-cases", str(red), "--old-post-opening-cases", str(oldpo),
+            "--old-post-opening-anchor-label", "0001",
+            "--goal-line-cases", str(glc), "--goal-line-candidates", str(gln),
+            "--out", str(out)]
+    assert main(argv) == 0
+    rows = list(csv.DictReader(out.open()))
+    assert [r["tag"] for r in rows] == [
+        "black_predrop_correction", "red_predrop_retention",
+        "old_post_opening_retention", "goal_line_retention"]
+    assert [r["case_rank"] for r in rows] == ["1", "2", "3", "4"]
+    first = out.read_bytes()
+    main(argv)
+    assert out.read_bytes() == first  # deterministic
+
+
+def test_validate_rows_rejects_bad_rows():
+    from scripts.GPU.alphazero.build_targeted_calibration_manifest import validate_rows
+    good = {"target_black_value": "-0.35", "weight_scale": "1.0", "case_id": "c1",
+            "replay_path": "x.json", "position_ply": "39", "side_to_move": "black"}
+    validate_rows([good])  # no raise
+    with pytest.raises(ValueError):
+        validate_rows([dict(good, weight_scale="-1.0")])
+    with pytest.raises(ValueError):
+        validate_rows([dict(good, target_black_value="1.5")])
+    with pytest.raises(ValueError):
+        validate_rows([dict(good, replay_path="")])

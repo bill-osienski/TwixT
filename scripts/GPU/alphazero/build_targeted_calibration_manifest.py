@@ -140,3 +140,96 @@ def goal_line_retention_rows(cases_path, candidates_path, anchor_label, tag, wei
             position_ply=r["position_ply"], side_to_move=r["side_to_move"],
             anchor_checkpoint=r["checkpoint"]))
     return out
+
+
+def assign_case_rank(rows: list) -> list:
+    for i, r in enumerate(rows, start=1):
+        r["case_rank"] = i
+    return rows
+
+
+def tag_stats(rows: list) -> dict:
+    stats: dict = {}
+    for r in rows:
+        s = stats.setdefault(r["tag"], {"n": 0, "weight_mass": 0.0, "targets": []})
+        s["n"] += 1
+        s["weight_mass"] += float(r["weight_scale"])
+        s["targets"].append(float(r["target_black_value"]))
+    return stats
+
+
+def print_tag_stats(stats: dict) -> None:
+    for tag in sorted(stats):
+        s = stats[tag]
+        t = s["targets"]
+        print(f"{tag}: n={s['n']}, weight_mass={s['weight_mass']:.1f}, "
+              f"target mean={sum(t)/len(t):+.3f} min={min(t):+.3f} max={max(t):+.3f}")
+
+
+def write_manifest(rows: list, out_path) -> None:
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=UNIFIED_COLUMNS)
+        w.writeheader()
+        for r in rows:
+            w.writerow({c: r[c] for c in UNIFIED_COLUMNS})
+
+
+def validate_rows(rows: list) -> None:
+    """Final guard on the assembled manifest before writing (catches adapter bugs)."""
+    for r in rows:
+        _validate_target_str(r["target_black_value"], r["case_id"])
+        w = float(r["weight_scale"])
+        if not math.isfinite(w) or w < 0.0:
+            raise ValueError(f"weight_scale {w!r} invalid (case {r['case_id']!r})")
+        for k in ("replay_path", "position_ply", "side_to_move"):
+            if not r[k]:
+                raise ValueError(f"missing {k} (case {r['case_id']!r})")
+
+
+def build(args) -> list:
+    rows = correction_rows(args.correction_manifest, args.correction_target, 1.0)
+    assert_no_holdout_overlap(rows, args.correction_holdout_manifest)
+    rows += position_probe_retention_rows(
+        args.red_predrop_cases, args.red_predrop_anchor_label,
+        "red_predrop_retention", args.retention_weight)
+    rows += position_probe_retention_rows(
+        args.old_post_opening_cases, args.old_post_opening_anchor_label,
+        "old_post_opening_retention", args.retention_weight)
+    rows += goal_line_retention_rows(
+        args.goal_line_cases, args.goal_line_candidates, args.goal_line_anchor_label,
+        "goal_line_retention", args.retention_weight)
+    validate_rows(rows)
+    assign_case_rank(rows)
+    return rows
+
+
+def parse_args(argv=None):
+    p = argparse.ArgumentParser(description="Build the Targeted Value Calibration v2 manifest.")
+    p.add_argument("--correction-manifest", required=True)
+    p.add_argument("--correction-holdout-manifest", required=True)
+    p.add_argument("--red-predrop-cases", required=True)
+    p.add_argument("--red-predrop-anchor-label", default="0001")
+    p.add_argument("--old-post-opening-cases", required=True)
+    p.add_argument("--old-post-opening-anchor-label", default="0001")
+    p.add_argument("--goal-line-cases", required=True)
+    p.add_argument("--goal-line-candidates", required=True)
+    p.add_argument("--goal-line-anchor-label", default="0001")
+    p.add_argument("--correction-target", type=float, default=-0.35)
+    p.add_argument("--retention-weight", type=float, default=0.5)
+    p.add_argument("--out", required=True)
+    return p.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    args = parse_args(argv)
+    rows = build(args)
+    write_manifest(rows, args.out)
+    print_tag_stats(tag_stats(rows))
+    print(f"wrote {len(rows)} rows -> {args.out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
