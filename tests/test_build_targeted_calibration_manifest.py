@@ -1,6 +1,9 @@
+import csv
 import pytest
 
-from scripts.GPU.alphazero.build_targeted_calibration_manifest import resolve_anchor_rows
+from scripts.GPU.alphazero.build_targeted_calibration_manifest import (
+    UNIFIED_COLUMNS, correction_rows, assert_no_holdout_overlap, resolve_anchor_rows
+)
 
 
 def _rows(*labels):
@@ -25,3 +28,57 @@ def test_resolve_ambiguous_suffix_raises():
 def test_resolve_no_match_raises():
     with pytest.raises(ValueError, match="no checkpoint matches"):
         resolve_anchor_rows(_rows("0379", "0409"), "0001")
+
+
+CORR_COLS = ["case_rank", "game_idx", "case_id", "replay_path", "position_ply",
+             "drop_ply", "side_to_move", "a_color", "winner", "n_moves",
+             "initial_a_value", "final_a_value", "largest_a_value_drop",
+             "largest_drop_phase", "collapse_type"]
+
+
+def _corr_row(game_idx, position_ply, case_rank=1):
+    return {c: "" for c in CORR_COLS} | {
+        "case_rank": case_rank, "game_idx": game_idx,
+        "case_id": f"game_{game_idx:06d}_ply_{position_ply:03d}",
+        "replay_path": f"logs/eval/replays/game_{game_idx:06d}.json",
+        "position_ply": position_ply, "side_to_move": "black",
+        "drop_ply": position_ply + 2, "largest_drop_phase": "post_opening",
+        "collapse_type": "sharp_value_drop"}
+
+
+def _write(tmp_path, name, cols, rows):
+    p = tmp_path / name
+    with p.open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        w.writerows(rows)
+    return p
+
+
+def test_correction_rows_fields(tmp_path):
+    p = _write(tmp_path, "train.csv", CORR_COLS, [_corr_row(637, 39), _corr_row(200, 41, 2)])
+    rows = correction_rows(str(p), target=-0.35, weight=1.0)
+    assert len(rows) == 2
+    assert all(set(r) == set(UNIFIED_COLUMNS) for r in rows)
+    assert rows[0]["tag"] == "black_predrop_correction"
+    assert rows[0]["target_black_value"] == "-0.35"
+    assert rows[0]["weight_scale"] == "1.0"
+    assert rows[0]["replay_path"] == "logs/eval/replays/game_000637.json"
+    assert rows[0]["side_to_move"] == "black"
+
+
+def test_holdout_overlap_raises(tmp_path):
+    corr = correction_rows(
+        str(_write(tmp_path, "train.csv", CORR_COLS, [_corr_row(637, 39)])),
+        target=-0.35, weight=1.0)
+    holdout = _write(tmp_path, "frozen.csv", CORR_COLS, [_corr_row(637, 39)])  # same (path, ply)
+    with pytest.raises(ValueError, match="leaks"):
+        assert_no_holdout_overlap(corr, str(holdout))
+
+
+def test_holdout_disjoint_ok(tmp_path):
+    corr = correction_rows(
+        str(_write(tmp_path, "train.csv", CORR_COLS, [_corr_row(637, 39)])),
+        target=-0.35, weight=1.0)
+    holdout = _write(tmp_path, "frozen.csv", CORR_COLS, [_corr_row(999, 39)])  # different game
+    assert_no_holdout_overlap(corr, str(holdout))  # no raise
