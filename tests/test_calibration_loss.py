@@ -189,3 +189,18 @@ def test_train_step_arity_disabled_and_enabled():
     assert len(on) == 10
     assert all(np.isfinite(x) for x in on[:9])
     assert on[9] == 1
+
+
+def test_train_step_accepts_weights_returns_ten_tuple():
+    net = create_network(hidden=64, n_blocks=2)
+    mm = MainModule(net.encoder, net.policy_head)
+    opt_main = optim.Adam(learning_rate=1e-3)
+    opt_value = optim.Adam(learning_rate=1e-4)
+    pos = [_main_pos() for _ in range(3)]
+    out = train_step(network=net, main_module=mm, opt_main=opt_main, opt_value=opt_value,
+                     batch=pos, calibration_positions=[_calib_pos(-0.5), _calib_pos(0.25)],
+                     calibration_weights=np.array([1.0, 3.0], dtype=np.float32),
+                     calibration_loss_weight=0.02)
+    assert len(out) == 10
+    assert all(np.isfinite(x) for x in out[:9])
+    assert out[9] == 2

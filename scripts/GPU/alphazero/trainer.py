@@ -1235,6 +1235,7 @@ def train_step(
     conversion_completion_weight: float = 1.0,       # NEW
     conversion_reducer_weight: float = 0.35,         # NEW
     calibration_positions=None,                       # NEW
+    calibration_weights=None,                          # NEW: v2 per-sample weights
     calibration_loss_weight: float = 0.0,             # NEW
 ) -> tuple:
     """Single training step with two optimizers and separate gradient clipping.
@@ -1290,6 +1291,7 @@ def train_step(
             conversion_completion_weight=conversion_completion_weight,
             conversion_reducer_weight=conversion_reducer_weight,
             calibration_positions=calibration_positions,
+            calibration_weights=calibration_weights,
             calibration_loss_weight=calibration_loss_weight,
         )
 
@@ -2763,10 +2765,16 @@ def train(
         from .calibration_pool import CalibrationPool
         _calib_pool = CalibrationPool.from_manifest(
             post_opening_calibration_manifest, post_opening_calibration_target)
-        print(f"Post-opening calibration: {len(_calib_pool)} positions, "
-              f"weight={effective_post_opening_calibration_weight}, "
-              f"target={post_opening_calibration_target}, "
-              f"batch_fraction={post_opening_calibration_batch_fraction}")
+        if _calib_pool.schema == "per_row_target":
+            print(f"Post-opening calibration: {len(_calib_pool)} positions, "
+                  f"mode=per_row_target, "
+                  f"weight={effective_post_opening_calibration_weight}, "
+                  f"batch_fraction={post_opening_calibration_batch_fraction}")
+        else:
+            print(f"Post-opening calibration: {len(_calib_pool)} positions, "
+                  f"mode=global_target, target={post_opening_calibration_target}, "
+                  f"weight={effective_post_opening_calibration_weight}, "
+                  f"batch_fraction={post_opening_calibration_batch_fraction}")
 
     # Iteration-scope calibration accumulators (mirror sum_aux* hoist).
     sum_calib_loss: float = 0.0
@@ -3759,7 +3767,10 @@ def train(
                         # Pass active_size to training (use current curriculum stage)
                         if _calib_pool is not None:
                             _k = max(1, round(batch_size * post_opening_calibration_batch_fraction))
-                            _calib_batch = _calib_pool.sample(_k, train_rng)
+                            from .calibration_pool import split_samples
+                            _calib_samples = _calib_pool.sample(_k, train_rng)
+                            _calib_batch, _calib_weights = split_samples(
+                                _calib_samples, _calib_pool.has_weight_scale)
                             (loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli,
                              _calib_loss, _calib_value_pred, _calib_n) = train_step(
                                 network=network,
@@ -3777,6 +3788,7 @@ def train(
                                 conversion_completion_weight=conversion_completion_weight,
                                 conversion_reducer_weight=conversion_reducer_weight,
                                 calibration_positions=_calib_batch,
+                                calibration_weights=_calib_weights,
                                 calibration_loss_weight=effective_post_opening_calibration_weight,
                             )
                             sum_calib_loss += _calib_loss
