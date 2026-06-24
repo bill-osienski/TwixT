@@ -1,5 +1,6 @@
 import csv
 import json
+import math
 import random
 
 import numpy as np
@@ -7,6 +8,8 @@ import pytest
 
 from scripts.GPU.alphazero.calibration_pool import (
     target_in_to_move, build_calibration_position, CalibrationPool,
+    CalibrationSample, build_calibration_sample,
+    _resolve_target_black, _parse_weight_scale,
 )
 from scripts.GPU.alphazero.self_play import PositionRecord
 from tests.goal_line_probe_fixtures import legal_replay
@@ -32,6 +35,22 @@ def _write_case(tmp_path, game_idx=0, position_ply=5):
         "position_ply": position_ply,
         "side_to_move": "black",
     }
+
+
+def _write_case_side(tmp_path, side, position_ply, game_idx=1, **extra):
+    """legal_replay alternates from red: odd ply => black to move, even => red."""
+    replay = legal_replay(position_ply + 3, game_idx=game_idx)
+    rpath = tmp_path / f"game_{game_idx:06d}.json"
+    rpath.write_text(json.dumps(replay))
+    case = {
+        "game_idx": game_idx,
+        "case_id": f"game_{game_idx:06d}_ply_{position_ply:03d}",
+        "replay_path": str(rpath),
+        "position_ply": position_ply,
+        "side_to_move": side,
+    }
+    case.update(extra)
+    return case
 
 
 def test_build_calibration_position_black(tmp_path):
@@ -92,3 +111,46 @@ def test_build_post_opening_calibration_block():
     np.testing.assert_allclose(block["loss"]["calib_loss_avg_iter"], 0.4)
     np.testing.assert_allclose(block["loss"]["calib_mean_value_pred"], 0.3)
     assert block["loss"]["calib_n_drawn_total"] == 60
+
+
+def test_per_row_target_overrides_global(tmp_path):
+    case = _write_case_side(tmp_path, "black", 5, target_black_value="-0.35")
+    rec = build_calibration_position(case, calibration_target=-0.5)
+    assert rec.outcome == -0.35  # per-row wins over global -0.5
+
+
+def test_red_side_to_move_sign_flip(tmp_path):
+    case = _write_case_side(tmp_path, "red", 4, target_black_value="-0.30")
+    rec = build_calibration_position(case, calibration_target=-0.5)
+    assert rec.outcome == 0.30  # black-perspective -0.30 → side-to-move (red) = +0.30
+
+
+def test_parse_weight_scale_default_and_explicit():
+    assert _parse_weight_scale({}) == (1.0, False)
+    assert _parse_weight_scale({"weight_scale": ""}) == (1.0, False)
+    assert _parse_weight_scale({"weight_scale": "0.5"}) == (0.5, True)
+
+
+def test_invalid_target_raises():
+    with pytest.raises(ValueError):
+        _resolve_target_black({"target_black_value": "1.5"}, fallback=-0.5)
+    with pytest.raises(ValueError):
+        _resolve_target_black({"target_black_value": "nan"}, fallback=-0.5)
+
+
+def test_invalid_weight_raises():
+    with pytest.raises(ValueError):
+        _parse_weight_scale({"weight_scale": "-0.1"})
+    with pytest.raises(ValueError):
+        _parse_weight_scale({"weight_scale": "inf"})
+
+
+def test_build_calibration_sample_carries_metadata(tmp_path):
+    case = _write_case_side(tmp_path, "black", 5,
+                            target_black_value="-0.35", weight_scale="0.5", tag="correction")
+    s = build_calibration_sample(case, calibration_target=-0.5)
+    assert isinstance(s, CalibrationSample)
+    assert s.weight_scale == 0.5
+    assert s.tag == "correction"
+    assert s.target_black_value == -0.35
+    assert s.record.outcome == -0.35

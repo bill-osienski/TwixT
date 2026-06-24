@@ -8,6 +8,8 @@ step; the value-only MSE term is added to total_loss in alphazero_loss_batch.
 from __future__ import annotations
 
 import json
+import math
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -28,6 +30,43 @@ def target_in_to_move(side_to_move: str, calibration_target: float) -> float:
     if side_to_move == "red":
         return float(-calibration_target)
     raise ValueError(f"unexpected side_to_move {side_to_move!r}")
+
+
+@dataclass(frozen=True)
+class CalibrationSample:
+    """A calibration position plus its per-row weight/tag/target metadata.
+
+    The loss reads the target from record.outcome (already in side-to-move
+    perspective); target_black_value is retained as black-perspective metadata.
+    """
+    record: PositionRecord
+    weight_scale: float = 1.0
+    tag: str = ""
+    target_black_value: float | None = None
+
+
+def _resolve_target_black(case: dict, fallback: float) -> float:
+    """Per-row black-perspective target, falling back to the global value.
+    Validates finite and in [-1.0, +1.0]."""
+    raw = case.get("target_black_value")
+    target = float(fallback) if raw in (None, "") else float(raw)
+    if not math.isfinite(target) or not (-1.0 <= target <= 1.0):
+        raise ValueError(
+            f"target_black_value {target!r} must be finite in [-1.0, 1.0] "
+            f"(case {case.get('case_id')!r})")
+    return target
+
+
+def _parse_weight_scale(case: dict) -> tuple[float, bool]:
+    """Return (weight_scale, was_explicit). Default 1.0; validate finite and >= 0."""
+    raw = case.get("weight_scale")
+    if raw in (None, ""):
+        return 1.0, False
+    w = float(raw)
+    if not math.isfinite(w) or w < 0.0:
+        raise ValueError(
+            f"weight_scale {w!r} must be finite and >= 0 (case {case.get('case_id')!r})")
+    return w, True
 
 
 def build_calibration_position(case: dict, calibration_target: float) -> PositionRecord:
@@ -54,11 +93,21 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
         to_move=state.to_move,
         legal_moves=legal,
         visit_counts=[0] * len(legal),
-        outcome=target_in_to_move(state.to_move, calibration_target),
+        outcome=target_in_to_move(state.to_move, _resolve_target_black(case, calibration_target)),
         active_size=state.active_size,
         ply=position_ply,
         game_n_moves=None,
     )
+
+
+def build_calibration_sample(case: dict, calibration_target: float) -> CalibrationSample:
+    """Wrap a value-only PositionRecord with per-row weight/tag/target metadata."""
+    record = build_calibration_position(case, calibration_target)
+    weight_scale, _ = _parse_weight_scale(case)
+    tag = case.get("tag") or ""
+    target_black = _resolve_target_black(case, calibration_target)
+    return CalibrationSample(record=record, weight_scale=weight_scale,
+                             tag=tag, target_black_value=target_black)
 
 
 class CalibrationPool:
