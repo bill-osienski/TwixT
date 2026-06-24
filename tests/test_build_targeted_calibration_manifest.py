@@ -123,3 +123,55 @@ def test_position_probe_retention_duplicate_case_id_raises(tmp_path):
                [_probe_row("0001", 10, "-0.20"), _probe_row("0001", 10, "-0.21")])
     with pytest.raises(ValueError, match="duplicate case_id"):
         position_probe_retention_rows(str(p), "0001", "red_predrop_retention", 0.5)
+
+
+from scripts.GPU.alphazero.build_targeted_calibration_manifest import goal_line_retention_rows
+
+GL_CASE_COLS = ["checkpoint", "game_idx", "case_id", "rank", "position_ply", "trigger_zone",
+                "side_to_move", "baseline_black_prev_value", "baseline_black_prev_top1",
+                "probe_black_root_value", "probe_top1_share", "black_overvalue",
+                "severe_black_overvalue"]
+GL_CAND_COLS = ["game_idx", "rank", "prev_black_ply", "replay_path", "trigger_zone"]
+
+
+def _gl_case(ckpt, game_idx, value, position_ply=39):
+    return {c: "" for c in GL_CASE_COLS} | {
+        "checkpoint": ckpt, "game_idx": game_idx,
+        "case_id": f"game_{game_idx:06d}_ply_{position_ply:03d}", "rank": 1,
+        "position_ply": position_ply, "side_to_move": "black",
+        "probe_black_root_value": value}
+
+
+def test_goal_line_join_happy(tmp_path):
+    replay = tmp_path / "g10.json"
+    replay.write_text("{}")
+    cases = _write(tmp_path, "gl_cases.csv", GL_CASE_COLS,
+                   [_gl_case("0001", 10, "-0.24"), _gl_case("0379", 10, "0.30")])
+    cands = _write(tmp_path, "gl_cand.csv", GL_CAND_COLS,
+                   [{"game_idx": 10, "rank": 1, "prev_black_ply": 39,
+                     "replay_path": str(replay), "trigger_zone": "red_goal"}])
+    rows = goal_line_retention_rows(str(cases), str(cands), "0001", "goal_line_retention", 0.5)
+    assert len(rows) == 1
+    assert rows[0]["tag"] == "goal_line_retention"
+    assert rows[0]["target_black_value"] == "-0.24"
+    assert rows[0]["replay_path"] == str(replay)
+    assert rows[0]["position_ply"] == "39"
+    assert rows[0]["anchor_checkpoint"] == "0001"
+
+
+def test_goal_line_join_no_candidate_raises(tmp_path):
+    cases = _write(tmp_path, "gl_cases.csv", GL_CASE_COLS, [_gl_case("0001", 10, "-0.24")])
+    cands = _write(tmp_path, "gl_cand.csv", GL_CAND_COLS,
+                   [{"game_idx": 99, "rank": 1, "prev_black_ply": 39,
+                     "replay_path": "x.json", "trigger_zone": "red_goal"}])
+    with pytest.raises(ValueError, match="no candidate"):
+        goal_line_retention_rows(str(cases), str(cands), "0001", "goal_line_retention", 0.5)
+
+
+def test_goal_line_join_missing_replay_file_raises(tmp_path):
+    cases = _write(tmp_path, "gl_cases.csv", GL_CASE_COLS, [_gl_case("0001", 10, "-0.24")])
+    cands = _write(tmp_path, "gl_cand.csv", GL_CAND_COLS,
+                   [{"game_idx": 10, "rank": 1, "prev_black_ply": 39,
+                     "replay_path": str(tmp_path / "missing.json"), "trigger_zone": "red_goal"}])
+    with pytest.raises(ValueError, match="replay_path missing"):
+        goal_line_retention_rows(str(cases), str(cands), "0001", "goal_line_retention", 0.5)

@@ -110,3 +110,33 @@ def position_probe_retention_rows(cases_path, anchor_label, tag, weight) -> list
             largest_drop_phase=r.get("largest_drop_phase", ""),
             collapse_type=r.get("collapse_type", "")))
     return out
+
+
+def goal_line_retention_rows(cases_path, candidates_path, anchor_label, tag, weight) -> list:
+    cases = resolve_anchor_rows(_read_csv(cases_path), anchor_label)
+    index = {}
+    for c in _read_csv(candidates_path):
+        key = (str(int(c["game_idx"])), str(int(float(c["prev_black_ply"]))))
+        if key in index:
+            raise ValueError(f"goal-line candidates: duplicate join key {key}")
+        index[key] = c
+    out = []
+    for r in cases:
+        cid = r["case_id"]
+        key = (str(int(r["game_idx"])), str(int(float(r["position_ply"]))))
+        match = index.get(key)
+        if match is None:
+            raise ValueError(f"goal-line join: no candidate for case {cid!r} key {key}")
+        replay_path = match["replay_path"]
+        if not Path(replay_path).exists():
+            raise ValueError(f"goal-line join: replay_path missing on disk: {replay_path}")
+        if r["side_to_move"] != "black":
+            raise ValueError(f"goal-line join: side_to_move {r['side_to_move']!r} != black ({cid!r})")
+        out.append(_unified_row(
+            tag=tag, source=Path(cases_path).name, source_rank=r.get("rank", ""),
+            target_black_value=_validate_target_str(r["probe_black_root_value"], cid),
+            weight_scale=str(weight),
+            game_idx=r["game_idx"], case_id=cid, replay_path=replay_path,
+            position_ply=r["position_ply"], side_to_move=r["side_to_move"],
+            anchor_checkpoint=r["checkpoint"]))
+    return out
