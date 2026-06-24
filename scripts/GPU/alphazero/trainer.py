@@ -3933,6 +3933,10 @@ def train(
                         "effective_weight": effective_post_opening_calibration_weight,
                         "batch_fraction": post_opening_calibration_batch_fraction,
                         "pool_size": len(_calib_pool) if _calib_pool is not None else 0,
+                        "schema": _calib_pool.schema if _calib_pool is not None else "global_target",
+                        "has_weight_scale": (_calib_pool.has_weight_scale
+                                             if _calib_pool is not None else False),
+                        "tags": _calib_pool.tag_counts() if _calib_pool is not None else {},
                     },
                     enabled=post_opening_calibration_enabled,
                     loss_accumulator={

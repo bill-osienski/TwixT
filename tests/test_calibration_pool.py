@@ -208,3 +208,16 @@ def test_pool_rejects_raw_position_records(tmp_path):
         _write_case(tmp_path, game_idx=1, position_ply=5), calibration_target=-0.5)
     with pytest.raises(TypeError):
         CalibrationPool([rec])
+
+
+def test_sidecar_block_passes_through_v2_config_fields():
+    from scripts.GPU.alphazero.calibration_pool import build_post_opening_calibration_block
+    block = build_post_opening_calibration_block(
+        config={"enabled": True, "schema": "per_row_target", "has_weight_scale": True,
+                "tags": {"black_predrop_correction": 50, "red_predrop_retention": 30}},
+        enabled=True,
+        loss_accumulator={"sum_calib_loss": 4.0, "sum_calib_n_drawn": 60,
+                          "sum_calib_value_pred": 3.0, "steps_done": 10})
+    assert block["config"]["schema"] == "per_row_target"
+    assert block["config"]["has_weight_scale"] is True
+    assert block["config"]["tags"]["black_predrop_correction"] == 50
