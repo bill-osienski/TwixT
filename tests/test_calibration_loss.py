@@ -120,6 +120,57 @@ def nn_value_and_grad(net, fn):
     return nn.value_and_grad(net, fn)(net)
 
 
+def test_weighted_calibration_loss_matches_formula():
+    """calib_loss == Σ(wᵢ·mseᵢ)/Σ(wᵢ). Recover per-sample mse with one-hot weights,
+    then verify the [1,3] weighting (network is deterministic across forward-only calls)."""
+    net = create_network(hidden=64, n_blocks=2)
+    pos = [_main_pos() for _ in range(3)]
+    calib = [_calib_pos(-0.5), _calib_pos(0.25)]  # distinct targets → distinct mse
+
+    def calib_loss(weights):
+        out = alphazero_loss_batch(
+            net, pos, calibration_positions=calib,
+            calibration_weights=np.array(weights, dtype=np.float32),
+            calibration_loss_weight=0.02)
+        return float(out[7].item())  # index 7 = calib_loss
+
+    mse0 = calib_loss([1.0, 0.0])
+    mse1 = calib_loss([0.0, 1.0])
+    expected = (1.0 * mse0 + 3.0 * mse1) / (1.0 + 3.0)
+    np.testing.assert_allclose(calib_loss([1.0, 3.0]), expected, rtol=1e-5)
+
+
+def test_equal_weights_equal_unweighted_mean():
+    net = create_network(hidden=64, n_blocks=2)
+    pos = [_main_pos() for _ in range(3)]
+    calib = [_calib_pos(-0.5), _calib_pos(0.25)]
+
+    def calib_loss(weights):
+        out = alphazero_loss_batch(
+            net, pos, calibration_positions=calib,
+            calibration_weights=(None if weights is None
+                                 else np.array(weights, dtype=np.float32)),
+            calibration_loss_weight=0.02)
+        return float(out[7].item())
+
+    np.testing.assert_allclose(calib_loss([2.0, 2.0]), calib_loss(None), rtol=1e-6)
+
+
+def test_all_zero_calibration_weights_are_finite_zero_loss():
+    """Σw==0 → mx.maximum(Σw, 1e-8) keeps it finite (0.0), never NaN.
+    Explicit zero-weight rows are now allowed, so pin this behavior."""
+    net = create_network(hidden=64, n_blocks=2)
+    pos = [_main_pos() for _ in range(3)]
+    calib = [_calib_pos(-0.5), _calib_pos(0.25)]
+    out = alphazero_loss_batch(
+        net, pos, calibration_positions=calib,
+        calibration_weights=np.array([0.0, 0.0], dtype=np.float32),
+        calibration_loss_weight=0.02)
+    calib_loss = float(out[7].item())
+    assert np.isfinite(calib_loss)
+    assert calib_loss == 0.0
+
+
 def test_train_step_arity_disabled_and_enabled():
     net = create_network(hidden=64, n_blocks=2)
     mm = MainModule(net.encoder, net.policy_head)

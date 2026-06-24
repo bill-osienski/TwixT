@@ -1084,6 +1084,7 @@ def alphazero_loss_batch(
     conversion_completion_weight: float = 1.0,       # NEW
     conversion_reducer_weight: float = 0.35,         # NEW
     calibration_positions=None,                       # NEW: design Mechanism B
+    calibration_weights=None,                          # NEW: v2 per-sample weights
     calibration_loss_weight: float = 0.0,             # NEW
 ):
     """Batched policy + value + l2 + (optional) conversion auxiliary loss.
@@ -1195,7 +1196,14 @@ def alphazero_loss_batch(
             cb_boards, cb_rows, cb_cols, cb_mask,
             active_size=calibration_positions[0].active_size,
         )  # value head ignores move arrays; values are side-to-move perspective
-        calib_loss = mx.mean((cb_values - cb_targets) ** 2)
+        per_sample = (cb_values - cb_targets) ** 2
+        if calibration_weights is not None:
+            # cb_values is (B,) (network.py:546 value head). Reshape to per_sample.shape
+            # keeps weights aligned even if a future value head returns (B, 1).
+            _w = mx.reshape(mx.array(calibration_weights), per_sample.shape)
+            calib_loss = mx.sum(_w * per_sample) / mx.maximum(mx.sum(_w), 1e-8)
+        else:
+            calib_loss = mx.mean(per_sample)
         # Per-STEP mean prediction. The sidecar averages these across steps;
         # since k is constant, step-weighted == sample-weighted. Do NOT change
         # the sidecar to divide a raw sum by n_drawn — this is already a mean.
