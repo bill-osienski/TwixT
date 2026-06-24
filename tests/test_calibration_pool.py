@@ -9,7 +9,7 @@ import pytest
 from scripts.GPU.alphazero.calibration_pool import (
     target_in_to_move, build_calibration_position, CalibrationPool,
     CalibrationSample, build_calibration_sample,
-    _resolve_target_black, _parse_weight_scale,
+    _resolve_target_black, _parse_weight_scale, split_samples,
 )
 from scripts.GPU.alphazero.self_play import PositionRecord
 from tests.goal_line_probe_fixtures import legal_replay
@@ -91,7 +91,7 @@ def test_from_manifest_loads_all_cases(tmp_path):
     assert len(pool) == 3
     drawn = pool.sample(7, random.Random(0))
     assert len(drawn) == 7
-    assert all(r.outcome == -0.5 for r in drawn)
+    assert all(s.record.outcome == -0.5 for s in drawn)
 
 
 def test_build_post_opening_calibration_block():
@@ -154,3 +154,57 @@ def test_build_calibration_sample_carries_metadata(tmp_path):
     assert s.tag == "correction"
     assert s.target_black_value == -0.35
     assert s.record.outcome == -0.35
+
+
+def _write_manifest(tmp_path, rows, name="m.csv"):
+    fieldnames = sorted({k for r in rows for k in r})
+    path = tmp_path / name
+    with path.open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        w.writerows(rows)
+    return path
+
+
+def test_from_manifest_detects_global_schema_no_weights(tmp_path):
+    cases = [_write_case(tmp_path, game_idx=i, position_ply=5) for i in (1, 2)]
+    path = _write_manifest(tmp_path, cases)
+    pool = CalibrationPool.from_manifest(str(path), calibration_target=-0.5)
+    assert pool.schema == "global_target"
+    assert pool.has_weight_scale is False
+
+
+def test_from_manifest_detects_per_row_schema_and_weights(tmp_path):
+    cases = []
+    for i in (1, 2):
+        c = _write_case(tmp_path, game_idx=i, position_ply=5)
+        c["target_black_value"] = "-0.35"
+        c["weight_scale"] = "0.5"
+        c["tag"] = "correction" if i == 1 else "retention"
+        cases.append(c)
+    path = _write_manifest(tmp_path, cases)
+    pool = CalibrationPool.from_manifest(str(path), calibration_target=-0.5)
+    assert pool.schema == "per_row_target"
+    assert pool.has_weight_scale is True
+    assert pool.tag_counts() == {"correction": 1, "retention": 1}
+
+
+def test_split_samples_gating(tmp_path):
+    # has_weight_scale=False → weights None; True → full array incl. 1.0 defaults
+    s_explicit = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=1, weight_scale="0.5"), -0.5)
+    s_default = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=2), -0.5)  # omitted → 1.0
+    records, weights = split_samples([s_explicit, s_default], has_weight_scale=False)
+    assert weights is None
+    assert [type(r).__name__ for r in records] == ["PositionRecord", "PositionRecord"]
+    records, weights = split_samples([s_explicit, s_default], has_weight_scale=True)
+    assert weights is not None
+    assert list(weights) == [0.5, 1.0]
+
+
+def test_pool_rejects_raw_position_records(tmp_path):
+    rec = build_calibration_position(
+        _write_case(tmp_path, game_idx=1, position_ply=5), calibration_target=-0.5)
+    with pytest.raises(TypeError):
+        CalibrationPool([rec])

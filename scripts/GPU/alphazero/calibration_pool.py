@@ -111,27 +111,53 @@ def build_calibration_sample(case: dict, calibration_target: float) -> Calibrati
 
 
 class CalibrationPool:
-    """Fixed pool of calibration PositionRecords; sampled with replacement."""
+    """Fixed pool of CalibrationSamples; sampled with replacement."""
 
-    def __init__(self, records):
-        if not records:
-            raise ValueError("CalibrationPool requires at least one record")
-        self._records = list(records)
+    def __init__(self, samples, has_weight_scale: bool = False,
+                 schema: str = "global_target"):
+        if not samples:
+            raise ValueError("CalibrationPool requires at least one sample")
+        if any(not isinstance(s, CalibrationSample) for s in samples):
+            raise TypeError(
+                "CalibrationPool stores CalibrationSample objects; "
+                "use build_calibration_sample / from_manifest")
+        self._samples = list(samples)
+        self.has_weight_scale = bool(has_weight_scale)
+        self.schema = schema
 
     def __len__(self):
-        return len(self._records)
+        return len(self._samples)
 
     def sample(self, k: int, rng):
         if k <= 0:
             return []
-        return [rng.choice(self._records) for _ in range(k)]
+        return [rng.choice(self._samples) for _ in range(k)]
+
+    def tag_counts(self) -> dict:
+        counts: dict = {}
+        for s in self._samples:
+            counts[s.tag] = counts.get(s.tag, 0) + 1
+        return counts
 
     @classmethod
     def from_manifest(cls, manifest_path, calibration_target: float):
-        manifest = load_csv_manifest(manifest_path)
-        records = [build_calibration_position(c, calibration_target)
-                   for c in manifest["cases"]]
-        return cls(records)
+        cases = load_csv_manifest(manifest_path)["cases"]
+        samples = [build_calibration_sample(c, calibration_target) for c in cases]
+        has_weight_scale = any(c.get("weight_scale") not in (None, "") for c in cases)
+        schema = ("per_row_target"
+                  if any(c.get("target_black_value") not in (None, "") for c in cases)
+                  else "global_target")
+        return cls(samples, has_weight_scale=has_weight_scale, schema=schema)
+
+
+def split_samples(samples, has_weight_scale: bool):
+    """Split CalibrationSamples into (records, weights). weights is None when the
+    manifest specified no explicit weight_scale (→ loss uses plain mx.mean,
+    byte-identical to v1); otherwise a float32 array of per-sample weight_scale."""
+    records = [s.record for s in samples]
+    weights = (np.asarray([s.weight_scale for s in samples], dtype=np.float32)
+               if has_weight_scale else None)
+    return records, weights
 
 
 def build_post_opening_calibration_block(config: dict, enabled: bool,
