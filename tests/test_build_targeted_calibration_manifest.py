@@ -82,3 +82,44 @@ def test_holdout_disjoint_ok(tmp_path):
         target=-0.35, weight=1.0)
     holdout = _write(tmp_path, "frozen.csv", CORR_COLS, [_corr_row(999, 39)])  # different game
     assert_no_holdout_overlap(corr, str(holdout))  # no raise
+
+
+from scripts.GPU.alphazero.build_targeted_calibration_manifest import position_probe_retention_rows
+
+PROBE_COLS = ["checkpoint", "game_idx", "case_id", "case_rank", "position_ply",
+              "side_to_move", "probe_black_root_value", "probe_top1_share",
+              "black_overvalue", "severe_black_overvalue", "replay_path", "drop_ply",
+              "initial_a_value", "final_a_value", "largest_a_value_drop",
+              "largest_drop_phase", "collapse_type"]
+
+
+def _probe_row(ckpt, game_idx, value, side="red", position_ply=39):
+    return {c: "" for c in PROBE_COLS} | {
+        "checkpoint": ckpt, "game_idx": game_idx,
+        "case_id": f"game_{game_idx:06d}_ply_{position_ply:03d}",
+        "case_rank": 1, "position_ply": position_ply, "side_to_move": side,
+        "probe_black_root_value": value,
+        "replay_path": f"logs/eval/replays/game_{game_idx:06d}.json",
+        "drop_ply": position_ply + 2, "largest_drop_phase": "post_opening",
+        "collapse_type": "sharp_value_drop"}
+
+
+def test_position_probe_retention_picks_anchor_only(tmp_path):
+    p = _write(tmp_path, "red.csv", PROBE_COLS, [
+        _probe_row("0001", 10, "-0.20"), _probe_row("0379", 10, "0.40"),
+        _probe_row("0001", 11, "-0.10"), _probe_row("0409", 11, "0.50")])
+    rows = position_probe_retention_rows(str(p), "0001", "red_predrop_retention", 0.5)
+    assert [r["game_idx"] for r in rows] == ["10", "11"]
+    assert rows[0]["tag"] == "red_predrop_retention"
+    assert rows[0]["target_black_value"] == "-0.20"
+    assert rows[0]["weight_scale"] == "0.5"
+    assert rows[0]["anchor_checkpoint"] == "0001"
+    assert rows[0]["replay_path"] == "logs/eval/replays/game_000010.json"
+    assert rows[0]["side_to_move"] == "red"
+
+
+def test_position_probe_retention_duplicate_case_id_raises(tmp_path):
+    p = _write(tmp_path, "red.csv", PROBE_COLS,
+               [_probe_row("0001", 10, "-0.20"), _probe_row("0001", 10, "-0.21")])
+    with pytest.raises(ValueError, match="duplicate case_id"):
+        position_probe_retention_rows(str(p), "0001", "red_predrop_retention", 0.5)

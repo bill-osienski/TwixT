@@ -89,3 +89,24 @@ def assert_no_holdout_overlap(correction: list, holdout_path) -> None:
         raise ValueError(
             f"correction train leaks {len(leaks)} frozen-eval positions: "
             f"{[r['case_id'] for r in leaks]}")
+
+
+def position_probe_retention_rows(cases_path, anchor_label, tag, weight) -> list:
+    rows = resolve_anchor_rows(_read_csv(cases_path), anchor_label)
+    seen, out = set(), []
+    for r in rows:
+        cid = r["case_id"]
+        if cid in seen:
+            raise ValueError(f"{tag}: duplicate case_id {cid!r} for anchor {anchor_label!r}")
+        seen.add(cid)
+        out.append(_unified_row(
+            tag=tag, source=Path(cases_path).name,
+            source_rank=r.get("case_rank", ""),
+            target_black_value=_validate_target_str(r["probe_black_root_value"], cid),
+            weight_scale=str(weight),
+            game_idx=r["game_idx"], case_id=cid, replay_path=r["replay_path"],
+            position_ply=r["position_ply"], side_to_move=r["side_to_move"],
+            anchor_checkpoint=r["checkpoint"], drop_ply=r.get("drop_ply", ""),
+            largest_drop_phase=r.get("largest_drop_phase", ""),
+            collapse_type=r.get("collapse_type", "")))
+    return out
