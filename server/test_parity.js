@@ -8,36 +8,11 @@
  */
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert';
-import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 import { TwixtState } from './gameLogic.js';
 import { AlphaZeroInference } from './inference.js';
-import { MCTS, MCTSNode } from './mcts.js';
-
-// Test positions: various game states to test
-const TEST_POSITIONS = [
-  // Empty board
-  { moves: [], name: 'empty' },
-  // Single move
-  { moves: [[5, 5]], name: 'single_move' },
-  // Two moves (one per player)
-  { moves: [[5, 5], [10, 10]], name: 'two_moves' },
-  // Creating a bridge
-  { moves: [[5, 5], [10, 10], [7, 6]], name: 'with_bridge' },
-  // Several moves
-  {
-    moves: [
-      [5, 5],
-      [10, 10],
-      [7, 6],
-      [12, 11],
-      [9, 7],
-      [14, 12],
-    ],
-    name: 'six_moves',
-  },
-];
+import { MCTS } from './mcts.js';
 
 let inference = null;
 
@@ -146,7 +121,6 @@ print(json.dumps(sample))
     );
 
     // Generate Python output for same position
-    const movesJson = JSON.stringify(moves);
     const pythonCode = `
 import sys
 sys.path.insert(0, '.')

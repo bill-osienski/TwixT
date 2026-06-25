@@ -10,7 +10,7 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 
-import { TwixtState, BOARD_SIZE, MAX_PLIES } from './gameLogic.js';
+import { TwixtState, MAX_PLIES } from './gameLogic.js';
 import { BoardMovesCache } from './cache.js';
 import { MCTS, MCTSNode } from './mcts.js';
 

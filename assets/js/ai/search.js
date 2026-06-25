@@ -8,12 +8,7 @@ import {
   clearComponentCache,
 } from './heuristics.js';
 import {
-  FrontierBuffers,
   FrontierBufferPool,
-  computeFrontierFast,
-  computeConnectorTargetsFromBounds,
-  idxToRow,
-  idxToCol,
 } from './frontierFast.js';
 import { evaluateValueModel, maybeLoadValueModel, isModelLoaded } from './valueModel.js';
 import { getOpeningBookMove, maybeLoadOpeningBook } from './openingBook.js';

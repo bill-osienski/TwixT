@@ -499,8 +499,8 @@ export class TwixtState {
     // Goal-edge predicates per player
     let onG1, onG2;
     if (player === 'red') {
-      onG1 = (r, c) => r === 0;
-      onG2 = (r, c) => r === active - 1;
+      onG1 = (r, _c) => r === 0;
+      onG2 = (r, _c) => r === active - 1;
     } else {
       // black
       onG1 = (r, c) => c === 0;

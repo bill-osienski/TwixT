@@ -154,9 +154,6 @@ export default class GameController {
       };
     }
 
-    // Show recording note in difficulty modal
-    const recordingNote = document.getElementById('recording-note');
-
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'u' || e.key === 'U') {
@@ -352,9 +349,6 @@ export default class GameController {
       const cached = gameRecorder.analysisCache.get(gameRecorder._lastPrecomputeHash);
       if (cached?.status === 'completed' && cached?.root?.root_value !== undefined) {
         // root_value is from side-to-move perspective; convert to Red
-        const toMove = this.game.currentPlayer === this.game.aiPlayer
-          ? (this.game.aiPlayer === 'red' ? 'black' : 'red')  // human just moved, it's AI's turn now
-          : this.game.currentPlayer;
         // Actually: the precompute ran BEFORE the human moved, so root_value
         // is from the human's perspective (they were to_move)
         const humanColor = this.game.aiPlayer === 'black' ? 'red' : 'black';

@@ -235,7 +235,6 @@ export class GameRecorder {
   // --- Build chosen_move_eval ---
   _computeChosenMoveEval(packet, row, col) {
     const candidates = packet.candidates_topN || [];
-    const totalVisits = packet.root?.total_visits || 0;
 
     // Find the chosen move in candidates
     let chosenCandidate = candidates.find(

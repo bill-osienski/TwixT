@@ -27,6 +27,7 @@ export default [
         performance: 'readonly',
         Blob: 'readonly',
         URL: 'readonly',
+        AbortController: 'readonly',
         // Optional debugging/tracing globals
         capture: 'readonly',
         // Node.js globals
@@ -65,6 +66,7 @@ export default [
     // Ignore patterns
     ignores: [
       'node_modules/**',
+      '.venv/**', // Python virtualenv — vendored matplotlib/torch/pip JS, not our code
       '.build/**',
       'temp/**',
       '__pycache__/**',

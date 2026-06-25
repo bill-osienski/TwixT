@@ -643,7 +643,7 @@ function hasReachableGoalEdge(game, player, metrics) {
  * Calculate move priority score.
  * Simplified version for oracle testing - focuses on key features.
  */
-function movePriority(game, move, player, params) {
+function movePriority(game, move, player, _params) {
   const opponent = player === 'red' ? 'black' : 'red';
   const boardSize = game.boardSize;
   const board = game.board;
