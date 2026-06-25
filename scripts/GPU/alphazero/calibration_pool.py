@@ -212,4 +212,5 @@ def build_post_opening_calibration_block(config: dict, enabled: bool,
             "calib_n_drawn_total": n_drawn,
             "calib_n_drawn_per_step": n_drawn / steps,
         },
+        "draws_by_tag": dict(loss_accumulator.get("sum_calib_n_drawn_by_tag", {})),
     }

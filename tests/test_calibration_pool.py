@@ -111,6 +111,7 @@ def test_build_post_opening_calibration_block():
     np.testing.assert_allclose(block["loss"]["calib_loss_avg_iter"], 0.4)
     np.testing.assert_allclose(block["loss"]["calib_mean_value_pred"], 0.3)
     assert block["loss"]["calib_n_drawn_total"] == 60
+    assert block["draws_by_tag"] == {}  # absent in accumulator -> empty dict
 
 
 def test_per_row_target_overrides_global(tmp_path):
@@ -286,3 +287,17 @@ def test_validate_tag_schedule_ignores_zero_count_missing_tag(tmp_path):
         _write_case_side(tmp_path, "black", 5, game_idx=1, tag="correction"), -0.5)
     pool = CalibrationPool([s])
     pool.validate_tag_schedule({"correction": 1, "absent": 0})  # 0-count tag skipped
+
+
+def test_sidecar_block_surfaces_draws_by_tag():
+    from scripts.GPU.alphazero.calibration_pool import (
+        build_post_opening_calibration_block,
+    )
+    block = build_post_opening_calibration_block(
+        config={"enabled": True},
+        enabled=True,
+        loss_accumulator={"sum_calib_loss": 4.0, "sum_calib_n_drawn": 60,
+                          "sum_calib_value_pred": 3.0, "steps_done": 10,
+                          "sum_calib_n_drawn_by_tag": {"correction": 40,
+                                                       "retention": 20}})
+    assert block["draws_by_tag"] == {"correction": 40, "retention": 20}
