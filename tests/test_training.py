@@ -338,6 +338,10 @@ def test_mini_training_run():
             n_blocks=2,
             max_moves=10,  # Short games
             seed=42,
+            # Isolate self-play game output: train() defaults to writing games to
+            # the shared scripts/GPU/logs/games/ dir, which is real fixture data
+            # for the analyzer smoke tests. Keep test artifacts in tmpdir.
+            games_dir_override=str(Path(tmpdir) / "games"),
         )
 
         # Check checkpoint was saved
@@ -371,6 +375,82 @@ def test_train_cli_has_progress_weighted_flag():
     assert "--value-weight" in result.stdout
 
 
+def test_csv_fieldnames_includes_calibration_columns():
+    """Post-opening calibration scalars must be CSV columns so they persist to
+    metrics.csv and model_iter_*.json (state spreads iteration_metrics)."""
+    from scripts.GPU.alphazero.trainer import CSV_FIELDNAMES
+    for col in ("calib_loss_avg_iter", "calib_mean_value_pred",
+                "calib_n_drawn_total", "calib_n_drawn_per_step"):
+        assert col in CSV_FIELDNAMES, f"{col} missing from CSV_FIELDNAMES"
+    print("PASS: CSV_FIELDNAMES includes calibration columns")
+
+
+def test_calibration_telemetry_persisted_to_metrics_and_model_iter_json():
+    """Regression: post_opening_calibration telemetry reached only the
+    iter_<N>_stats.json sidecar, not metrics.csv / model_iter_*.json. With
+    calibration enabled, a mini run must write finite, populated calib_* values
+    into BOTH metrics.csv and the per-checkpoint model_iter JSON."""
+    import csv as _csv
+    import json as _json
+    import math as _math
+    from scripts.GPU.alphazero.trainer import train
+    from tests.goal_line_probe_fixtures import legal_replay
+
+    CALIB_COLS = ("calib_loss_avg_iter", "calib_mean_value_pred",
+                  "calib_n_drawn_total", "calib_n_drawn_per_step")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        # Minimal 1-case global-target calibration manifest + its replay.
+        # ply 5 is odd => black to move (legal_replay alternates from red).
+        replay = legal_replay(8, game_idx=1)
+        rpath = tmp / "game_000001.json"
+        rpath.write_text(_json.dumps(replay))
+        manifest = tmp / "calib.csv"
+        with manifest.open("w", newline="") as f:
+            w = _csv.DictWriter(f, fieldnames=["game_idx", "case_id", "replay_path",
+                                               "position_ply", "side_to_move"])
+            w.writeheader()
+            w.writerow({"game_idx": 1, "case_id": "game_000001_ply_005",
+                        "replay_path": str(rpath), "position_ply": 5,
+                        "side_to_move": "black"})
+
+        ckpt_dir = tmp / "ckpt"
+        train(
+            n_iterations=1, games_per_iteration=1, train_steps_per_iteration=5,
+            batch_size=4, buffer_size=1000, checkpoint_dir=str(ckpt_dir),
+            mcts_simulations=10, learning_rate=1e-3, hidden=64, n_blocks=2,
+            max_moves=10, seed=42,
+            post_opening_calibration_enabled=True,
+            post_opening_calibration_manifest=str(manifest),
+            post_opening_calibration_weight=0.02,
+            post_opening_calibration_batch_fraction=0.10,
+            # Isolate self-play game output (see test_mini_training_run): never
+            # write into the shared scripts/GPU/logs/games/ analyzer fixtures.
+            games_dir_override=str(tmp / "games"),
+        )
+
+        # metrics.csv carries the calib columns AND finite populated values.
+        rows = list(_csv.DictReader((ckpt_dir / "metrics.csv").open()))
+        assert rows, "no metrics.csv rows written"
+        row = rows[-1]
+        for col in CALIB_COLS:
+            assert col in row, f"{col} missing from metrics.csv header"
+            assert row[col] not in ("", None), f"{col} empty despite calibration enabled"
+        assert _math.isfinite(float(row["calib_mean_value_pred"]))
+        assert int(row["calib_n_drawn_total"]) > 0
+
+        # model_iter_*.json (per-checkpoint state) carries the same keys.
+        model_jsons = sorted(ckpt_dir.glob("model_iter_*.json"))
+        assert model_jsons, "no model_iter_*.json written"
+        state = _json.loads(model_jsons[-1].read_text())
+        for col in CALIB_COLS:
+            assert col in state, f"{col} missing from model_iter JSON"
+        assert state["calib_n_drawn_total"] > 0
+
+    print("PASS: calibration telemetry persisted to metrics.csv + model_iter JSON")
+
+
 def main():
     """Run all tests."""
     print("=" * 60)
@@ -389,6 +469,8 @@ def main():
         test_mini_training_run,
         test_train_default_value_weight_is_half,
         test_train_cli_has_progress_weighted_flag,
+        test_csv_fieldnames_includes_calibration_columns,
+        test_calibration_telemetry_persisted_to_metrics_and_model_iter_json,
     ]
 
     passed = 0

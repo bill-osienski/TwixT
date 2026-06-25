@@ -504,6 +504,10 @@ CSV_FIELDNAMES = [
     # eval is wired into the trainer per-iter loop.
     "sas_n", "sas_sign_correct_pct", "sas_median_abs_v",
     "sas_delta_sign_correct_pct", "sas_rolling5_sign_correct_pct",
+    # Post-opening value calibration (flattened; nested form in iter_<N>_stats.json
+    # under post_opening_calibration). None/empty when calibration is disabled.
+    "calib_loss_avg_iter", "calib_mean_value_pred",
+    "calib_n_drawn_total", "calib_n_drawn_per_step",
 ]
 
 
@@ -4139,6 +4143,18 @@ def train(
 
         # Note: curriculum_metrics already computed after record_game calls
 
+        # Post-opening value calibration scalars (flattened for metrics.csv and
+        # the model_iter_*.json state; the nested form lives in iter_<N>_stats.json
+        # under post_opening_calibration). None when the feature is disabled,
+        # matching the fps_*/sas_* convention. Same math as
+        # build_post_opening_calibration_block (steps = max(steps_done, 1)).
+        _calib_active = post_opening_calibration_enabled or _calib_pool is not None
+        _calib_steps = max(steps_done, 1)
+        calib_loss_avg_iter = (sum_calib_loss / _calib_steps) if _calib_active else None
+        calib_mean_value_pred = (sum_calib_value_pred / _calib_steps) if _calib_active else None
+        calib_n_drawn_total = sum_calib_n_drawn if _calib_active else None
+        calib_n_drawn_per_step = (sum_calib_n_drawn / _calib_steps) if _calib_active else None
+
         # Build iteration_metrics dict for CSV and JSON
         iteration_metrics = {
             # Identity
@@ -4286,6 +4302,12 @@ def train(
                 (total_positions_kept_iter / total_positions_original_iter)
                 if total_positions_original_iter else 1.0, 4
             ),
+            # Post-opening value calibration (flattened; nested form in
+            # iter_<N>_stats.json under post_opening_calibration). None when disabled.
+            "calib_loss_avg_iter": calib_loss_avg_iter,
+            "calib_mean_value_pred": calib_mean_value_pred,
+            "calib_n_drawn_total": calib_n_drawn_total,
+            "calib_n_drawn_per_step": calib_n_drawn_per_step,
         }
 
         # Write metrics to CSV (append-only)
