@@ -385,6 +385,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
              "(default: 0.02; NOT multiplied by value_weight).")
     parser.add_argument("--post-opening-calibration-batch-fraction", type=float, default=0.10,
         help="Calibration mini-batch size as a fraction of batch_size (default: 0.10).")
+    parser.add_argument("--post-opening-calibration-tag-schedule", type=str, default=None,
+        help="Tag-stratified calibration sampling schedule, e.g. "
+             "'black_predrop_correction=2,goal_line_retention=1,"
+             "old_post_opening_retention=2,red_predrop_retention=1'. When set, "
+             "replaces uniform batch-fraction sampling (batch-fraction is ignored).")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
@@ -500,6 +505,38 @@ def _validate_closeout_td1_args(parser: argparse.ArgumentParser, args) -> None:
         parser.error("--closeout-td1-max-forced-moves must be >= 1")
     if not (0.0 <= args.closeout_td1_high_value_threshold <= 1.0):
         parser.error("--closeout-td1-high-value-threshold must be in [0.0, 1.0]")
+
+
+def parse_calibration_tag_schedule(raw):
+    """Parse 'tag=count,tag=count' into an ordered dict[str, int], or None.
+
+    None/'' -> None (uniform batch-fraction sampling). Each count must be a
+    non-negative int. Rejects entries missing '=', empty tags, duplicate tags,
+    and an all-zero total.
+    """
+    if raw in (None, ""):
+        return None
+    out: dict = {}
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "=" not in part:
+            raise ValueError(f"invalid calibration tag schedule entry {part!r}")
+        tag, value = part.split("=", 1)
+        tag = tag.strip()
+        if not tag:
+            raise ValueError("calibration tag schedule contains an empty tag")
+        n = int(value)
+        if n < 0:
+            raise ValueError(
+                f"calibration tag schedule count must be >= 0 for {tag!r}")
+        if tag in out:
+            raise ValueError(f"duplicate calibration tag schedule entry {tag!r}")
+        out[tag] = n
+    if not out or sum(out.values()) <= 0:
+        raise ValueError("calibration tag schedule must draw at least one sample")
+    return out
 
 
 def main():
@@ -797,6 +834,8 @@ def main():
         post_opening_calibration_target=args.post_opening_calibration_target,
         post_opening_calibration_weight=args.post_opening_calibration_weight,
         post_opening_calibration_batch_fraction=args.post_opening_calibration_batch_fraction,
+        post_opening_calibration_tag_schedule=parse_calibration_tag_schedule(
+            args.post_opening_calibration_tag_schedule),
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,
