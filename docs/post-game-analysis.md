@@ -2,8 +2,10 @@
 
 Operator guide for the scripts that run **after** training has produced
 checkpoints: play checkpoints against each other, then analyze *who* wins, *how*
-they lose, and *why*. All scripts live in `scripts/GPU/alphazero/` and run as
-`python -m scripts.GPU.alphazero.<name>` from the repo root (use `.venv/bin/python`).
+they lose, and *why* — and (§6) turn those findings into the value-calibration
+manifest that feeds the **next** training run. All scripts live in
+`scripts/GPU/alphazero/` and run as `python -m scripts.GPU.alphazero.<name>` from
+the repo root (use `.venv/bin/python`).
 
 This is a how/when-to-run guide. For the *design* of each tool see the specs and
 plans under `docs/superpowers/`; for *metric definitions* see
@@ -20,6 +22,7 @@ plans under `docs/superpowers/`; for *metric definitions* see
 | **How** does A lose — as which color, short vs long games, worst losses? | `eval_loss_analyzer` (V1) | no — reads existing `*_games.jsonl` |
 | **Why** does A lose — value collapse vs search diffusion vs low-confidence, and **when** in the game? | `eval_loss_replay_analyzer` (V2) | **yes** — the match must have run with `--save-eval-replays` |
 | **Is a checkpoint's value head blind to red's goal-line trigger?** (fast targeted screen across checkpoints) | `eval_goal_line_trigger_probe` | n/a — re-evaluates a fixed manifest of captured positions |
+| Found value-head errors — **how do I turn them into a calibration training signal** that corrects them *without* moving the fragile guardrails? | `build_targeted_calibration_manifest` (then `train.py --post-opening-calibration-*`) | n/a — consumes the probe / loss-analysis CSVs |
 
 **The one thing to decide up front:** per-ply replay data is captured *only if
 you ask for it at match time* (`--save-eval-replays`), and it cannot be
@@ -255,6 +258,103 @@ canonical 18-case manifest + candidates CSV live under
 
 ---
 
+## 6. `build_targeted_calibration_manifest` — turn analysis findings into a calibration training manifest
+
+**Purpose:** Assemble the **Targeted Value Calibration v2** *mixed* manifest — one
+CSV where every row carries its own `target_black_value`, `weight_scale`, and
+`tag`. **Correction** rows pull a known value-head error toward a hard target
+(black pre-drop overvalue → −0.35); **retention** rows pin the fragile guardrail
+families (red pre-drop, old broad post-opening, goal-line) to a checkpoint's
+*own* `probe_black_root_value` (self-distillation), so the follow-on calibration
+run fixes the target *without* moving the guardrails. Deterministic
+(byte-identical re-run) and fails **loud** on any anchor ambiguity, frozen-eval
+leak, or goal-line join mismatch — no silent drops.
+
+**When:** *Before* a calibration training run, after the analysis CLIs above
+(§3–§5) have produced the per-family probe / loss-analysis CSVs. This is the
+bridge from "the analyzers told me which positions A misvalues" to "here is the
+per-row training signal that corrects them while holding the guardrails." It
+consumes the loss-analysis predrop manifests and the probe
+`position_probe_cases.csv` / goal-line `*_cases.csv` + `*_candidates.csv`, and
+produces the manifest that `train.py --post-opening-calibration-manifest` loads.
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.build_targeted_calibration_manifest \
+  --correction-manifest          logs/eval/loss_analysis_v2_calib020_0001_vs_0379_black/0001_black_post_opening_predrop_train_manifest.csv \
+  --correction-holdout-manifest  logs/eval/loss_analysis_v2_calib020_0001_vs_0379_black/0001_black_post_opening_top30_predrop_probe_manifest.csv \
+  --red-predrop-cases            logs/eval/calib020_0001_red_loss_post_opening_predrop_probe/position_probe_cases.csv \
+  --old-post-opening-cases       logs/eval/black_predrop_calib010_checkpoint_sweep_old_post_opening/position_probe_cases.csv \
+  --old-post-opening-anchor-label "alphazero-v2-calib020-from0409:0001" \
+  --goal-line-cases              logs/eval/calib020_goal_line_sweep/goal_line_trigger_probe_cases.csv \
+  --goal-line-candidates         logs/eval/loss_analysis_v2_1/goal_line_trigger_probe_candidates.csv \
+  --out                          logs/eval/targeted_calibration_v2_from_calib020_0001.csv
+```
+
+**Key arguments**
+
+| Flag | Default | Notes |
+|---|---|---|
+| `--correction-manifest` | (required) | Correction train rows (hard target) — the black pre-drop predrop train manifest from the V2 loss analysis. |
+| `--correction-holdout-manifest` | (required) | The frozen eval holdout. The builder **asserts no `(replay_path, position_ply)` overlap** with the correction train set and fails loud if any frozen-eval position leaks in. |
+| `--red-predrop-cases` | (required) | Retention D source: red pre-drop `position_probe_cases.csv` (self-sufficient — carries `replay_path`). |
+| `--red-predrop-anchor-label` | `0001` | Checkpoint label whose `probe_black_root_value` becomes each red row's retention target. |
+| `--old-post-opening-cases` | (required) | Retention C source: old broad post-opening `position_probe_cases.csv`. |
+| `--old-post-opening-anchor-label` | `0001` | **Usually must be set explicitly** — e.g. `alphazero-v2-calib020-from0409:0001`. A bare `0001` is rejected as ambiguous when two `:0001` checkpoint labels exist in the source (strict resolver, below). |
+| `--goal-line-cases` | (required) | Retention B *values*: goal-line `goal_line_trigger_probe_cases.csv` (carries the probe value but **no** `replay_path`). |
+| `--goal-line-candidates` | (required) | Retention B *`replay_path`*: the goal-line `*_candidates.csv`, joined to the cases on `(game_idx, prev_black_ply)`. The builder requires exactly one candidate per case **and** that the replay file exists on disk. |
+| `--goal-line-anchor-label` | `0001` | Anchor for the goal-line retention targets. |
+| `--correction-target` | `-0.35` | Hard black-perspective target for every correction row. |
+| `--retention-weight` | `0.5` | Per-sample `weight_scale` for *all* retention rows (correction rows are fixed at `1.0`). It is **relative within the calibration batch** — at the default a correction row carries 2× a retention row's per-sample influence; absolute force is `train.py --post-opening-calibration-weight`. |
+| `--out` | (required) | Output CSV path (parent dirs are created). |
+
+**Strict anchor resolution:** for each retention source the builder takes rows
+whose `checkpoint` equals the anchor label exactly; failing that, the *unique*
+set whose `checkpoint` ends with `":" + label`. More than one distinct `:label`
+→ it errors and asks for the exact label; no match → it errors. This is why
+old-post-opening usually needs the full `alphazero-v2-calib020-from0409:0001`
+(its source also contains the failed `…calib010…:0001` branch).
+
+**Outputs:** one unified CSV (`--out`) with 15 columns — `case_rank, tag, source,
+source_rank, target_black_value, weight_scale, game_idx, case_id, replay_path,
+position_ply, side_to_move, anchor_checkpoint, drop_ply, largest_drop_phase,
+collapse_type` — plus a per-tag sanity summary to stdout:
+
+```
+black_predrop_correction:   n=50, weight_mass=50.0, target mean=-0.350 ...
+goal_line_retention:        n=18, weight_mass= 9.0, target mean=-0.244 ...
+old_post_opening_retention: n=30, weight_mass=15.0, target mean=+0.099 ...
+red_predrop_retention:      n=30, weight_mass=15.0, target mean=-0.188 ...
+wrote 128 rows -> logs/eval/targeted_calibration_v2_from_calib020_0001.csv
+```
+
+**Reading the output:** check the per-tag `target mean` against the source
+baselines — a wrong anchor direction shows up immediately as a flipped sign. The
+output CSV is a regenerable artifact (git-ignored under `logs/eval/`);
+re-running on the same inputs is byte-identical.
+
+**Feeds the next training run:** point the trainer's calibration flags at the
+output — `train.py --post-opening-calibration-enabled
+--post-opening-calibration-manifest <out.csv> --post-opening-calibration-weight
+0.01 --post-opening-calibration-target -0.35
+--post-opening-calibration-batch-fraction 0.10`. The pool auto-detects the
+per-row schema (`schema=per_row_target`, `has_weight_scale=True`); a manifest
+with no v2 columns loads byte-identically to v1 (`schema=global_target`,
+plain-mean calibration loss). After training, re-run the §3–§5 probes as the
+acceptance gates and (if they pass) a promotion match (§1) vs the current best.
+
+**Smoke check (optional, before a GPU run):** `smoke_targeted_calibration_v2`
+loads the real manifest, draws + splits a weighted batch, runs it through
+`alphazero_loss_batch`, and asserts a finite weighted calibration term — a fast
+end-to-end check that the manifest + replays + loss path are wired correctly.
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.smoke_targeted_calibration_v2 \
+  logs/eval/targeted_calibration_v2_from_calib020_0001.csv
+# → "pool: 128 schema per_row_target ..." then "OK calib_loss=... calib_value_mean=..." (exit 0)
+```
+
+---
+
 ## Internal libraries (not run directly)
 
 - `eval_runner` — the game-playing task queue / worker pool used by the match and
@@ -285,7 +385,11 @@ canonical 18-case manifest + candidates CSV live under
 
 - Designs/plans: `docs/superpowers/specs/` and `docs/superpowers/plans/` —
   `*-checkpoint-tournament-*`, `*-eval-loss-analyzer-*`, `*-eval-replay-capture-*`,
-  `2026-06-12-eval-replay-analyzer-*`, `2026-06-14-goal-line-trigger-probe-*`.
+  `2026-06-12-eval-replay-analyzer-*`, `2026-06-14-goal-line-trigger-probe-*`,
+  and the calibration builder's `2026-06-23-targeted-value-calibration-v2-design.md`
+  + `2026-06-24-targeted-value-calibration-v2.md` (per-tag baselines, gates A–D,
+  promotion). The v1 single-target predecessor is
+  `2026-06-16-post-opening-sharp-drop-calibration-*`.
 - Metric definitions: [`analysis-metrics-guide.md`](analysis-metrics-guide.md).
 - MLX/Metal eval performance and the `--workers` gotcha:
   [`mlx-memory-management.md`](mlx-memory-management.md).
