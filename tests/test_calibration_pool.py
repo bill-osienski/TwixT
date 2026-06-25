@@ -221,3 +221,68 @@ def test_sidecar_block_passes_through_v2_config_fields():
     assert block["config"]["schema"] == "per_row_target"
     assert block["config"]["has_weight_scale"] is True
     assert block["config"]["tags"]["black_predrop_correction"] == 50
+
+
+def test_sample_by_tag_draws_requested_counts(tmp_path):
+    s_corr_a = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=1, tag="correction"), -0.5)
+    s_corr_b = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=2, tag="correction"), -0.5)
+    s_ret = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=3, tag="retention"), -0.5)
+    pool = CalibrationPool([s_corr_a, s_corr_b, s_ret])
+    drawn = pool.sample_by_tag({"correction": 2, "retention": 1}, random.Random(0))
+    tags = [s.tag for s in drawn]
+    assert len(drawn) == 3
+    assert tags.count("correction") == 2
+    assert tags.count("retention") == 1
+
+
+def test_sample_by_tag_samples_with_replacement(tmp_path):
+    s = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=1, tag="correction"), -0.5)
+    pool = CalibrationPool([s])  # single-member bucket
+    drawn = pool.sample_by_tag({"correction": 4}, random.Random(0))
+    assert len(drawn) == 4
+    assert all(d.tag == "correction" for d in drawn)
+
+
+def test_sample_by_tag_zero_count_skips(tmp_path):
+    s_corr = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=1, tag="correction"), -0.5)
+    s_ret = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=2, tag="retention"), -0.5)
+    pool = CalibrationPool([s_corr, s_ret])
+    drawn = pool.sample_by_tag({"correction": 2, "retention": 0}, random.Random(0))
+    assert len(drawn) == 2
+    assert all(d.tag == "correction" for d in drawn)
+
+
+def test_sample_by_tag_unknown_tag_raises(tmp_path):
+    s = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=1, tag="correction"), -0.5)
+    pool = CalibrationPool([s])
+    with pytest.raises(ValueError):
+        pool.sample_by_tag({"nonexistent": 1}, random.Random(0))
+
+
+def test_validate_tag_schedule_passes_for_known_tags(tmp_path):
+    s = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=1, tag="correction"), -0.5)
+    pool = CalibrationPool([s])
+    pool.validate_tag_schedule({"correction": 2})  # no raise
+
+
+def test_validate_tag_schedule_raises_for_missing_tag(tmp_path):
+    s = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=1, tag="correction"), -0.5)
+    pool = CalibrationPool([s])
+    with pytest.raises(ValueError):
+        pool.validate_tag_schedule({"correction": 1, "typo_tag": 1})
+
+
+def test_validate_tag_schedule_ignores_zero_count_missing_tag(tmp_path):
+    s = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=1, tag="correction"), -0.5)
+    pool = CalibrationPool([s])
+    pool.validate_tag_schedule({"correction": 1, "absent": 0})  # 0-count tag skipped

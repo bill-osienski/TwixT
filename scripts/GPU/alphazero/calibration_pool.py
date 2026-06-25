@@ -124,6 +124,9 @@ class CalibrationPool:
         self._samples = list(samples)
         self.has_weight_scale = bool(has_weight_scale)
         self.schema = schema
+        self._by_tag: dict[str, list] = {}
+        for s in self._samples:
+            self._by_tag.setdefault(s.tag, []).append(s)
 
     def __len__(self):
         return len(self._samples)
@@ -132,6 +135,34 @@ class CalibrationPool:
         if k <= 0:
             return []
         return [rng.choice(self._samples) for _ in range(k)]
+
+    def validate_tag_schedule(self, schedule: dict) -> None:
+        """Raise ValueError if any positively-scheduled tag is absent from the pool.
+
+        Call once at setup (before self-play) so a typo'd tag fails fast rather
+        than after a wasted self-play iteration. Zero-count tags are ignored.
+        """
+        missing = sorted(tag for tag, n in schedule.items()
+                         if n > 0 and tag not in self._by_tag)
+        if missing:
+            raise ValueError(
+                f"calibration tag schedule requested missing tags {missing}; "
+                f"pool has tags {sorted(self._by_tag)}")
+
+    def sample_by_tag(self, schedule: dict, rng):
+        """Draw per-tag counts (with replacement) per an explicit tag->count schedule.
+
+        Validates the schedule first (raises on an absent positively-scheduled
+        tag), then preserves schedule (dict-insertion) order and skips any tag
+        whose count is <= 0.
+        """
+        self.validate_tag_schedule(schedule)
+        out = []
+        for tag, n in schedule.items():
+            if n <= 0:
+                continue
+            out.extend(rng.choice(self._by_tag[tag]) for _ in range(n))
+        return out
 
     def tag_counts(self) -> dict:
         counts: dict = {}
