@@ -451,6 +451,105 @@ def test_calibration_telemetry_persisted_to_metrics_and_model_iter_json():
     print("PASS: calibration telemetry persisted to metrics.csv + model_iter JSON")
 
 
+def test_calibration_tag_schedule_draw_counts_persisted():
+    """v3: a tag schedule draws per-tag counts each step and persists
+    calib_n_drawn_by_tag (a dict) into model_iter_*.json state -- in the
+    scheduled ratio -- and never into metrics.csv (flat scalars only)."""
+    import csv as _csv
+    import json as _json
+    from scripts.GPU.alphazero.trainer import train
+    from tests.goal_line_probe_fixtures import legal_replay
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        # Two tagged black-to-move rows (ply 5 odd => black to move).
+        rows = []
+        for gi, tag in ((1, "correction"), (2, "retention")):
+            replay = legal_replay(8, game_idx=gi)
+            rpath = tmp / f"game_{gi:06d}.json"
+            rpath.write_text(_json.dumps(replay))
+            rows.append({"game_idx": gi, "case_id": f"game_{gi:06d}_ply_005",
+                         "replay_path": str(rpath), "position_ply": 5,
+                         "side_to_move": "black", "tag": tag})
+        manifest = tmp / "calib_tagged.csv"
+        with manifest.open("w", newline="") as f:
+            w = _csv.DictWriter(f, fieldnames=["game_idx", "case_id", "replay_path",
+                                               "position_ply", "side_to_move", "tag"])
+            w.writeheader()
+            w.writerows(rows)
+
+        ckpt_dir = tmp / "ckpt"
+        train(
+            n_iterations=1, games_per_iteration=1, train_steps_per_iteration=5,
+            batch_size=4, buffer_size=1000, checkpoint_dir=str(ckpt_dir),
+            mcts_simulations=10, learning_rate=1e-3, hidden=64, n_blocks=2,
+            max_moves=10, seed=42,
+            post_opening_calibration_enabled=True,
+            post_opening_calibration_manifest=str(manifest),
+            post_opening_calibration_weight=0.02,
+            post_opening_calibration_tag_schedule={"correction": 2, "retention": 1},
+            # Isolate self-play output from the shared analyzer fixtures.
+            games_dir_override=str(tmp / "games"),
+        )
+
+        # metrics.csv must NOT carry the dict (flat scalars only).
+        header = next(_csv.reader((ckpt_dir / "metrics.csv").open()))
+        assert "calib_n_drawn_by_tag" not in header
+
+        # model_iter_*.json state carries the dict, in the scheduled 2:1 ratio.
+        model_jsons = sorted(ckpt_dir.glob("model_iter_*.json"))
+        assert model_jsons, "no model_iter_*.json written"
+        state = _json.loads(model_jsons[-1].read_text())
+        by_tag = state["calib_n_drawn_by_tag"]
+        assert set(by_tag) == {"correction", "retention"}
+        assert by_tag["correction"] > 0 and by_tag["retention"] > 0
+        assert by_tag["correction"] == 2 * by_tag["retention"]  # each step: 2 corr : 1 ret
+
+    print("PASS: tag-stratified calibration draw counts persisted to model_iter JSON")
+
+
+def test_calibration_tag_schedule_unknown_tag_fails_before_selfplay():
+    """A schedule naming a tag absent from the manifest must raise at trainer
+    setup (before self-play), not after a wasted iteration. Validation runs
+    right after the pool is built, so train() returns the error fast."""
+    import csv as _csv
+    import json as _json
+    from scripts.GPU.alphazero.trainer import train
+    from tests.goal_line_probe_fixtures import legal_replay
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        replay = legal_replay(8, game_idx=1)
+        rpath = tmp / "game_000001.json"
+        rpath.write_text(_json.dumps(replay))
+        manifest = tmp / "calib_tagged.csv"
+        with manifest.open("w", newline="") as f:
+            w = _csv.DictWriter(f, fieldnames=["game_idx", "case_id", "replay_path",
+                                               "position_ply", "side_to_move", "tag"])
+            w.writeheader()
+            w.writerow({"game_idx": 1, "case_id": "game_000001_ply_005",
+                        "replay_path": str(rpath), "position_ply": 5,
+                        "side_to_move": "black", "tag": "correction"})
+
+        raised = False
+        try:
+            train(
+                n_iterations=1, games_per_iteration=1, train_steps_per_iteration=5,
+                batch_size=4, buffer_size=1000, checkpoint_dir=str(tmp / "ckpt"),
+                mcts_simulations=10, learning_rate=1e-3, hidden=64, n_blocks=2,
+                max_moves=10, seed=42,
+                post_opening_calibration_enabled=True,
+                post_opening_calibration_manifest=str(manifest),
+                post_opening_calibration_weight=0.02,
+                post_opening_calibration_tag_schedule={"correction": 1, "typo_tag": 1},
+                games_dir_override=str(tmp / "games"),
+            )
+        except ValueError:
+            raised = True
+        assert raised, "expected ValueError for a schedule tag absent from the manifest"
+    print("PASS: unknown scheduled tag fails before self-play")
+
+
 def main():
     """Run all tests."""
     print("=" * 60)
@@ -471,6 +570,8 @@ def main():
         test_train_cli_has_progress_weighted_flag,
         test_csv_fieldnames_includes_calibration_columns,
         test_calibration_telemetry_persisted_to_metrics_and_model_iter_json,
+        test_calibration_tag_schedule_draw_counts_persisted,
+        test_calibration_tag_schedule_unknown_tag_fails_before_selfplay,
     ]
 
     passed = 0

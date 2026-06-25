@@ -2359,6 +2359,7 @@ def train(
     post_opening_calibration_target: float = -0.50,
     post_opening_calibration_weight: float = 0.02,
     post_opening_calibration_batch_fraction: float = 0.10,
+    post_opening_calibration_tag_schedule: Optional[dict] = None,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2769,21 +2770,28 @@ def train(
         from .calibration_pool import CalibrationPool
         _calib_pool = CalibrationPool.from_manifest(
             post_opening_calibration_manifest, post_opening_calibration_target)
+        _sampling_desc = (
+            f"tag_schedule={post_opening_calibration_tag_schedule}"
+            if post_opening_calibration_tag_schedule
+            else f"batch_fraction={post_opening_calibration_batch_fraction}")
         if _calib_pool.schema == "per_row_target":
             print(f"Post-opening calibration: {len(_calib_pool)} positions, "
                   f"mode=per_row_target, "
                   f"weight={effective_post_opening_calibration_weight}, "
-                  f"batch_fraction={post_opening_calibration_batch_fraction}")
+                  f"{_sampling_desc}")
         else:
             print(f"Post-opening calibration: {len(_calib_pool)} positions, "
                   f"mode=global_target, target={post_opening_calibration_target}, "
                   f"weight={effective_post_opening_calibration_weight}, "
-                  f"batch_fraction={post_opening_calibration_batch_fraction}")
+                  f"{_sampling_desc}")
+        if post_opening_calibration_tag_schedule:
+            _calib_pool.validate_tag_schedule(post_opening_calibration_tag_schedule)
 
     # Iteration-scope calibration accumulators (mirror sum_aux* hoist).
     sum_calib_loss: float = 0.0
     sum_calib_n_drawn: int = 0
     sum_calib_value_pred: float = 0.0
+    sum_calib_n_drawn_by_tag: dict = {}
 
     for iteration in range(start_iteration, n_iterations):
         iter_start = time.perf_counter()
@@ -3758,6 +3766,7 @@ def train(
                 sum_calib_loss = 0.0
                 sum_calib_n_drawn = 0
                 sum_calib_value_pred = 0.0
+                sum_calib_n_drawn_by_tag = {}
 
                 train_rng = random.Random(master_rng.randint(0, 2**31))
 
@@ -3770,9 +3779,17 @@ def train(
                         )
                         # Pass active_size to training (use current curriculum stage)
                         if _calib_pool is not None:
-                            _k = max(1, round(batch_size * post_opening_calibration_batch_fraction))
                             from .calibration_pool import split_samples
-                            _calib_samples = _calib_pool.sample(_k, train_rng)
+                            if post_opening_calibration_tag_schedule:
+                                _calib_samples = _calib_pool.sample_by_tag(
+                                    post_opening_calibration_tag_schedule, train_rng)
+                            else:
+                                _k = max(1, round(
+                                    batch_size * post_opening_calibration_batch_fraction))
+                                _calib_samples = _calib_pool.sample(_k, train_rng)
+                            for _s in _calib_samples:
+                                sum_calib_n_drawn_by_tag[_s.tag] = (
+                                    sum_calib_n_drawn_by_tag.get(_s.tag, 0) + 1)
                             _calib_batch, _calib_weights = split_samples(
                                 _calib_samples, _calib_pool.has_weight_scale)
                             (loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli,
@@ -3947,6 +3964,7 @@ def train(
                         "sum_calib_loss": sum_calib_loss,
                         "sum_calib_n_drawn": sum_calib_n_drawn,
                         "sum_calib_value_pred": sum_calib_value_pred,
+                        "sum_calib_n_drawn_by_tag": sum_calib_n_drawn_by_tag,
                         "steps_done": steps_done,
                     },
                 )
@@ -4334,6 +4352,9 @@ def train(
             },
             # Self-play progress snapshots (nested, JSON only)
             "selfplay_progress": selfplay_progress,
+            # Tag-stratified calibration draw counts (dict; JSON sibling only,
+            # never iteration_metrics/CSV). Empty when calibration is disabled.
+            "calib_n_drawn_by_tag": sum_calib_n_drawn_by_tag if _calib_active else {},
         }
 
         state_path = ckpt_path.replace(".safetensors", ".json")
