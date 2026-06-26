@@ -353,6 +353,49 @@ end-to-end check that the manifest + replays + loss path are wired correctly.
 # → "pool: 128 schema per_row_target ..." then "OK calib_loss=... calib_value_mean=..." (exit 0)
 ```
 
+**Tag-stratified sampling (v3 — `--post-opening-calibration-tag-schedule`):** v2
+draws the calibration pool *uniformly* (with replacement) each training step, so
+the per-step correction:retention mix is whatever the manifest's natural tag
+counts happen to be. v3 adds an explicit **tag-stratified draw schedule** so you
+can over-weight correction draws relative to retention *per step* — without
+touching weights, targets, or the loss math. When a schedule is set it
+**replaces** uniform `--post-opening-calibration-batch-fraction` sampling (the
+batch-fraction is then ignored). Pair it with a manifest built at
+`--retention-weight 1.0` (uniform per-row `weight_scale`, so the *schedule alone*
+controls the draw ratio).
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.train \
+  --post-opening-calibration-enabled \
+  --post-opening-calibration-manifest logs/eval/targeted_calibration_v3_strat_from_calib020_0001.csv \
+  --post-opening-calibration-weight 0.01 \
+  --post-opening-calibration-target -0.35 \
+  --post-opening-calibration-tag-schedule black_predrop_correction=2,goal_line_retention=1,old_post_opening_retention=2,red_predrop_retention=1
+```
+
+The schedule is `tag=count,tag=count` (each count a non-negative int; at least one
+positive; duplicate/empty tags and missing `=` are rejected). Each training step
+draws exactly `count` samples per tag with replacement, so the example draws
+**2 correction : 1 goal-line : 2 old-post-opening : 1 red** every step. A tag named
+in the schedule but **absent from the manifest fails fast — a `ValueError` at
+trainer setup, before any self-play** — so a typo'd tag costs no iteration.
+
+**Reading the per-tag draw telemetry (v3, Option A):** the run records how many
+samples it drew per tag — a **dict** — in two JSON places, and **never** in
+`metrics.csv` (which stays flat scalars only):
+- `model_iter_<N>.json` → `state.calib_n_drawn_by_tag`
+- the sidecar `iter_<N>_stats.json` → `post_opening_calibration.draws_by_tag`
+
+Confirm both carry every scheduled tag in the intended ratio. **Index/location
+gotcha:** the checkpoint is **1-based** (`model_iter_0001` = first iteration) but
+the sidecar is **0-based** and lives in the games dir (default
+`scripts/GPU/logs/games/iter_0000_stats.json` unless `--games-dir` was passed).
+Per-tag *loss/value* means are deliberately **deferred** — v3 surfaces draw counts
+only; the global `calib_loss_avg_iter` / `calib_mean_value_pred` telemetry is
+unchanged. Omit the flag and the **sampling, loss, and optimization are identical**
+to the v2 uniform path (the by-tag draw-count telemetry is still emitted there,
+additively — it simply reports the manifest's natural tag distribution).
+
 ---
 
 ## Internal libraries (not run directly)
