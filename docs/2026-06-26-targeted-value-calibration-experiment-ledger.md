@@ -6,6 +6,15 @@ A durable, append-only record of every value-calibration experiment: what change
 
 > **Key conclusion (2026-06-26):** Targeted **correction works** — we can pull the black pre-drop overvalue toward a hard target. But **scalar-MSE retention does not reliably preserve the guardrail families (B/C/D).** Uniform sampling, retention-weight sweeps, and global-weight sweeps have all failed. The next work (**v4**) should shift from scalar-row retention to **teacher-retention distillation** from the current best.
 
+## Before proposing a new calibration experiment
+
+Run this check first (it encodes the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) findings):
+
+1. Check whether it is **only** a global-weight, retention-weight, or schedule-ratio sweep.
+2. Check whether it uses **scalar-MSE retention only**.
+3. Check whether it requires a **promotion match before A/B/C/D pass**.
+4. **If yes to any of the above, stop and justify** why this is *not* repeating a rejected path — in writing, against the [experiment ledger](#experiment-ledger) row that already failed it.
+
 ## How to read this
 
 The work targets one known weakness — **A, black pre-drop overvalue** — while holding three fragile "guardrail" families steady: **B goal-line**, **C old broad post-opening**, **D red pre-drop**. Each experiment is scored at 400-sim probes against the current best's baselines.
