@@ -158,7 +158,7 @@ total_loss   = total_loss + calibration_loss_weight · calib_loss
 2. **`teacher_value_weight` scales the ENTIRE calibration value-MSE term** — both hard-correction value-MSE on correction rows **and** teacher-value MSE on retention rows. (Despite the name; the CLI flag keeps the `teacher-value-weight` spelling for consistency with the plan.)
 3. **Explicit policy denominator.** The policy weighted-mean denominator is `Σ_i (w_i · m_i)`, **not** `Σ_i w_i` — correction rows must not dilute the retention-policy average.
 4. **Mask is the control mechanism.** The policy term is gated explicitly by `teacher_policy_mask`. The all-zero `target_pi` on correction rows is a **secondary safety property, not the control** — never rely on it alone.
-5. **`weight_scale` scales both terms.** A row's `weight_scale` means "importance of this row," scaling value and policy together: `row_weight × (value_term + policy_term)`.
+5. **`weight_scale` applies to both eligible objectives (separate denominators).** A row's `weight_scale` means "importance of this row." It contributes to the **value** weighted mean for **all** calibration rows and, for `teacher_retention` rows only, to the **policy** weighted mean. Value and policy use their **own explicit denominators** — `Σ w` for value, `Σ (w·m)` for policy — so a row's weight is **not** a single `w × (value + policy)` term over one shared denominator.
 
 **Signature / return.** New args: `calibration_teacher_policy_mask`, `teacher_value_weight`, `teacher_policy_kl_weight`. The calibration return tuple extends to additionally surface `(calib_value_term, calib_policy_ce_term, calib_policy_kl_est_term, n_teacher_retention)` for telemetry; the **non-calibration path stays the 7-tuple**, and `train_step` unpacking is updated in lockstep. `teacher_policy_kl_weight = 0` cleanly degrades to value-only (the ablation).
 
@@ -192,12 +192,16 @@ Extend the `post_opening_calibration` sidecar block with `calib_value_term_avg_i
 
 ## 11. First experiment + operator gates
 
-Self-distillation run: base = teacher = `calib020_0001`. **"Match v3's run length" resolves to a concrete config** — confirmed from the v3 plan operator section (`docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md`, §"Run the 1-iteration v3 experiment"): **`--iterations 1`**, 100 games/iter, 400 sims, batch 64, lr 0.0003. The v4 run is the **v3 command verbatim with exactly three deltas** (checkpoint-dir, manifest, two new weight flags):
+Self-distillation run: base = teacher = `calib020_0001`. **"Match v3's run length" resolves to a concrete config** — confirmed from the v3 plan operator section (`docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md`, §"Run the 1-iteration v3 experiment"): **`--iterations 1`**, 100 games/iter, 400 sims, batch 64, lr 0.0003. The v4 run is the **v3 command verbatim with exactly three deltas vs v3**:
+
+1. `--checkpoint-dir` → `checkpoints/alphazero-v4-teacher-from-calib020-0001` (new output dir)
+2. `--post-opening-calibration-manifest` → `logs/eval/targeted_calibration_v4_teacher_from_calib020_0001.csv` (v4 teacher manifest)
+3. add `--post-opening-calibration-teacher-value-weight 1.0` and `--post-opening-calibration-teacher-policy-kl-weight 0.25`
 
 ```bash
 .venv/bin/python -m scripts.GPU.alphazero.train \
   --load-weights checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
-  --checkpoint-dir checkpoints/alphazero-v4-teacher-from-calib020-0001 \                 # Δ1
+  --checkpoint-dir checkpoints/alphazero-v4-teacher-from-calib020-0001 \
   --iterations 1 --lr 0.0003 --curriculum-sizes 24 \
   --games-per-iter 100 --simulations 400 --max-moves 280 --batch-size 64 \
   --mcts-eval-batch-size 14 --mcts-pending-virtual-visits 8 --mcts-stall-flush-sims 48 \
@@ -207,11 +211,11 @@ Self-distillation run: base = teacher = `calib020_0001`. **"Match v3's run lengt
   --resign-k 4 --resign-min-visits 200 \
   --adjudicate-enabled --adjudicate-min-ply 240 --max-positions-per-game 280 \
   --post-opening-calibration-enabled \
-  --post-opening-calibration-manifest logs/eval/targeted_calibration_v4_teacher_from_calib020_0001.csv \  # Δ2
+  --post-opening-calibration-manifest logs/eval/targeted_calibration_v4_teacher_from_calib020_0001.csv \
   --post-opening-calibration-weight 0.01 \
   --post-opening-calibration-target -0.35 \
   --post-opening-calibration-tag-schedule black_predrop_correction=2,goal_line_retention=1,old_post_opening_retention=2,red_predrop_retention=1 \
-  --post-opening-calibration-teacher-value-weight 1.0 \                                  # Δ3
+  --post-opening-calibration-teacher-value-weight 1.0 \
   --post-opening-calibration-teacher-policy-kl-weight 0.25
 ```
 
