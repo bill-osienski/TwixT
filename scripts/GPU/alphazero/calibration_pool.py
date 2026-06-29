@@ -83,19 +83,39 @@ def _parse_weight_scale(case: dict) -> tuple[float, bool]:
 
 
 def _parse_teacher_policy(case: dict, legal) -> list[float]:
-    """Parse teacher_policy_json into a dense list aligned to legal_moves."""
+    """Parse and validate teacher_policy_json against the reconstructed legal_moves.
+
+    Checks: non-empty, length == len(legal), all entries >= 0 and finite,
+    sum in 1 ± 1e-3, and teacher_legal_moves_sha1 matches the recomputed hash
+    over legal (catches a same-length reorder).
+    """
+    cid = case.get("case_id")
     raw = case.get("teacher_policy_json")
     if raw in (None, ""):
-        raise ValueError(f"{case.get('case_id')}: teacher_retention row needs teacher_policy_json")
+        raise ValueError(f"{cid}: teacher_retention row needs teacher_policy_json")
     policy = [float(x) for x in json.loads(raw)]
+    if len(policy) != len(legal):
+        raise ValueError(
+            f"{cid}: teacher_policy length {len(policy)} != legal_moves {len(legal)}")
+    if any(p < 0.0 or not math.isfinite(p) for p in policy):
+        raise ValueError(f"{cid}: teacher_policy has negative/non-finite entries")
+    if abs(sum(policy) - 1.0) > 1e-3:
+        raise ValueError(f"{cid}: teacher_policy not normalized (sum={sum(policy)})")
+    stored = case.get("teacher_legal_moves_sha1") or ""
+    expected = legal_moves_sha1(legal)
+    if stored != expected:
+        raise ValueError(
+            f"{cid}: teacher_legal_moves_sha1 mismatch (alignment); "
+            f"stored {stored!r} != recomputed {expected!r}")
     return policy
 
 
 def build_calibration_position(case: dict, calibration_target: float) -> PositionRecord:
-    """Reconstruct a case to a board and build a value-only PositionRecord.
+    """Reconstruct a case to a board and build a PositionRecord.
 
-    visit_counts is a zero vector (policy is never supervised here); outcome
-    carries the soft target in side-to-move perspective.
+    For hard_value rows visit_counts is a zero vector (policy is not supervised);
+    for teacher_retention rows visit_counts holds the dense teacher policy.
+    outcome carries the soft target in side-to-move perspective.
     """
     replay_path = Path(case["replay_path"])
     if not replay_path.exists():
@@ -112,7 +132,10 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
 
     loss_mode = case.get("loss_mode") or "hard_value"
     if loss_mode == "teacher_retention":
-        teacher_value = float(case["teacher_value"])     # side-to-move; direct
+        teacher_value = float(case["teacher_value"])
+        if not math.isfinite(teacher_value) or not (-1.0 <= teacher_value <= 1.0):
+            raise ValueError(
+                f"{case.get('case_id')}: teacher_value {teacher_value!r} must be finite in [-1,1]")
         teacher_policy = _parse_teacher_policy(case, legal)
         return PositionRecord(
             board_tensor=board_hwc,
@@ -138,6 +161,14 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
 
 def build_calibration_sample(case: dict, calibration_target: float) -> CalibrationSample:
     """Wrap a value-only PositionRecord with per-row weight/tag/target metadata."""
+    if (case.get("loss_mode") or "hard_value") == "hard_value":
+        populated = [k for k in ("teacher_value", "teacher_policy_json",
+                                 "teacher_legal_moves_sha1")
+                     if case.get(k) not in (None, "")]
+        if populated:
+            raise ValueError(
+                f"{case.get('case_id')}: hard_value row must leave teacher columns "
+                f"blank; found {populated}")
     record = build_calibration_position(case, calibration_target)
     weight_scale, _ = _parse_weight_scale(case)
     tag = case.get("tag") or ""

@@ -1,3 +1,4 @@
+import copy
 import csv
 import json
 import math
@@ -358,3 +359,44 @@ def test_from_manifest_detects_teacher_schema(tmp_path):
     assert pool.schema == "teacher_retention"
     assert pool._samples[0].loss_mode == "teacher_retention"
     assert pool._samples[0].teacher_value == 0.20
+
+
+def test_teacher_policy_length_mismatch_rejected(tmp_path):
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_position
+    case, n = _teacher_case(tmp_path)
+    case["teacher_policy_json"] = json.dumps([1.0 / (n + 1)] * (n + 1))  # wrong length
+    with pytest.raises(ValueError, match="length"):
+        build_calibration_position(case, calibration_target=-0.5)
+
+
+def test_teacher_policy_sha1_reorder_rejected(tmp_path):
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_position
+    case, n = _teacher_case(tmp_path)
+    case["teacher_legal_moves_sha1"] = "0" * 40            # same length, wrong hash
+    with pytest.raises(ValueError, match="sha1|alignment"):
+        build_calibration_position(case, calibration_target=-0.5)
+
+
+def test_teacher_policy_not_normalized_rejected(tmp_path):
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_position
+    case, n = _teacher_case(tmp_path)
+    case["teacher_policy_json"] = json.dumps([2.0 / n] * n)  # sums to 2.0
+    with pytest.raises(ValueError, match="sum|normal"):
+        build_calibration_position(case, calibration_target=-0.5)
+
+
+def test_teacher_value_out_of_range_rejected(tmp_path):
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_position
+    case, n = _teacher_case(tmp_path)
+    case["teacher_value"] = "1.5"
+    with pytest.raises(ValueError, match="teacher_value"):
+        build_calibration_position(case, calibration_target=-0.5)
+
+
+def test_hard_value_row_with_teacher_column_rejected(tmp_path):
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_sample
+    case = _write_case_side(tmp_path, "black", 5, game_idx=9)
+    case["loss_mode"] = "hard_value"
+    case["teacher_value"] = "0.1"                          # must be blank
+    with pytest.raises(ValueError, match="hard_value|blank"):
+        build_calibration_sample(case, calibration_target=-0.35)
