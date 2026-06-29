@@ -65,3 +65,27 @@ def test_builder_module_does_not_import_mcts():
     src = open(mod.__file__).read()
     assert "import mcts" not in src.lower()
     assert "from .mcts" not in src and "MCTS(" not in src
+
+
+def test_self_distillation_holds_for_matching_teacher(tmp_path):
+    import csv as _csv
+    from scripts.GPU.alphazero.smoke_teacher_calibration_v4 import assert_self_distillation
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+
+    # Build a 1-retention-row manifest whose teacher == THIS network's own outputs.
+    rp = tmp_path / "game_000001.json"
+    rp.write_text(json.dumps(legal_replay(9, game_idx=1)))
+    net = create_network(hidden=64, n_blocks=2)
+    rows = [{"game_idx": "1", "case_id": "ret1", "replay_path": str(rp),
+             "position_ply": "5", "side_to_move": "black",
+             "tag": "old_post_opening_retention", "weight_scale": "1.0"}]
+    built = build_rows(rows, LocalGPUEvaluator(net))     # teacher = net itself
+    manifest = tmp_path / "v4.csv"
+    with manifest.open("w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=list(built[0].keys()))
+        w.writeheader(); w.writerows(built)
+
+    stats = assert_self_distillation(net, str(manifest), tol=1e-3)
+    assert abs(stats["value_mse"]) < 1e-3
+    assert abs(stats["kl_est"]) < 1e-3
