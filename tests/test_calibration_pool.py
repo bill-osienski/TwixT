@@ -400,3 +400,17 @@ def test_hard_value_row_with_teacher_column_rejected(tmp_path):
     case["teacher_value"] = "0.1"                          # must be blank
     with pytest.raises(ValueError, match="hard_value|blank"):
         build_calibration_sample(case, calibration_target=-0.35)
+
+
+def test_split_samples_with_modes_builds_mask(tmp_path):
+    from scripts.GPU.alphazero.calibration_pool import (
+        build_calibration_sample, split_samples_with_modes)
+    hard = build_calibration_sample(
+        _write_case_side(tmp_path, "black", 5, game_idx=1), calibration_target=-0.35)
+    tcase, _ = _teacher_case(tmp_path, position_ply=5, game_idx=2)
+    teach = build_calibration_sample(tcase, calibration_target=-0.35)
+    records, weights, mask = split_samples_with_modes([hard, teach, hard],
+                                                      has_weight_scale=False)
+    assert len(records) == 3
+    assert mask.tolist() == [0.0, 1.0, 0.0]
+    assert mask.dtype == np.float32

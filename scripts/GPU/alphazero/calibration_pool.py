@@ -268,6 +268,17 @@ def split_samples(samples, has_weight_scale: bool):
     return records, weights
 
 
+def split_samples_with_modes(samples, has_weight_scale: bool):
+    """Like split_samples, plus a teacher_policy_mask (float32 (N,), 1.0 for
+    teacher_retention rows, 0.0 otherwise). Used by the v4 calibration loss to
+    gate the policy-CE term to retention rows only."""
+    records, weights = split_samples(samples, has_weight_scale)
+    mask = np.asarray(
+        [1.0 if s.loss_mode == "teacher_retention" else 0.0 for s in samples],
+        dtype=np.float32)
+    return records, weights, mask
+
+
 def build_post_opening_calibration_block(config: dict, enabled: bool,
                                          loss_accumulator: dict) -> dict:
     """Per-iteration calibration telemetry for the training stats sidecar.
