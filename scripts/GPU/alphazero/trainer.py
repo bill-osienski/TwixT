@@ -1279,6 +1279,9 @@ def train_step(
     calibration_positions=None,                       # NEW
     calibration_weights=None,                          # NEW: v2 per-sample weights
     calibration_loss_weight: float = 0.0,             # NEW
+    calibration_teacher_policy_mask=None,             # v4
+    teacher_value_weight: float = 1.0,                # v4
+    teacher_policy_kl_weight: float = 0.25,           # v4
 ) -> tuple:
     """Single training step with two optimizers and separate gradient clipping.
 
@@ -1335,13 +1338,21 @@ def train_step(
             calibration_positions=calibration_positions,
             calibration_weights=calibration_weights,
             calibration_loss_weight=calibration_loss_weight,
+            calibration_teacher_policy_mask=calibration_teacher_policy_mask,
+            teacher_value_weight=teacher_value_weight,
+            teacher_policy_kl_weight=teacher_policy_kl_weight,
         )
 
     # value_and_grad differentiates first element (total_loss)
     loss_tuple, grads = nn.value_and_grad(network, loss_fn)(network)
 
-    # Unpack losses (7-tuple, or 10-tuple when calibration active)
-    if calib_active:
+    # Unpack losses (7-tuple, 10-tuple when calibration active, or 14-tuple when teacher mode)
+    teacher_mode = calibration_teacher_policy_mask is not None
+    if calib_active and teacher_mode:
+        (total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage,
+         aux_n_eligible, calib_loss, calib_value_mean, calib_n,
+         calib_value_term, calib_policy_ce, calib_policy_kl_est, calib_n_retention) = loss_tuple
+    elif calib_active:
         (total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage,
          aux_n_eligible, calib_loss, calib_value_mean, calib_n) = loss_tuple
     else:
@@ -1371,6 +1382,15 @@ def train_step(
     # Evaluate all arrays before extracting Python floats
     mx.eval(network.parameters(), opt_main.state, opt_value.state, loss_tuple)
 
+    if calib_active and teacher_mode:
+        return (
+            float(total_loss.item()), float(policy_loss.item()),
+            float(value_loss.item()), float(l2_loss.item()),
+            float(aux_loss.item()), float(aux_coverage), int(aux_n_eligible),
+            float(calib_loss.item()), float(calib_value_mean.item()), int(calib_n),
+            float(calib_value_term.item()), float(calib_policy_ce.item()),
+            float(calib_policy_kl_est.item()), int(calib_n_retention),
+        )
     if calib_active:
         return (
             float(total_loss.item()),
@@ -2398,6 +2418,8 @@ def train(
     post_opening_calibration_weight: float = 0.02,
     post_opening_calibration_batch_fraction: float = 0.10,
     post_opening_calibration_tag_schedule: Optional[dict] = None,
+    post_opening_calibration_teacher_value_weight: float = 1.0,
+    post_opening_calibration_teacher_policy_kl_weight: float = 0.25,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -3828,10 +3850,16 @@ def train(
                             for _s in _calib_samples:
                                 sum_calib_n_drawn_by_tag[_s.tag] = (
                                     sum_calib_n_drawn_by_tag.get(_s.tag, 0) + 1)
-                            _calib_batch, _calib_weights = split_samples(
-                                _calib_samples, _calib_pool.has_weight_scale)
-                            (loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli,
-                             _calib_loss, _calib_value_pred, _calib_n) = train_step(
+                            if _calib_pool.schema == "teacher_retention":
+                                from .calibration_pool import split_samples_with_modes
+                                _calib_batch, _calib_weights, _calib_tp_mask = (
+                                    split_samples_with_modes(_calib_samples,
+                                                             _calib_pool.has_weight_scale))
+                            else:
+                                _calib_batch, _calib_weights = split_samples(
+                                    _calib_samples, _calib_pool.has_weight_scale)
+                                _calib_tp_mask = None
+                            _ret = train_step(
                                 network=network,
                                 main_module=main_module,
                                 opt_main=opt_main,
@@ -3849,7 +3877,14 @@ def train(
                                 calibration_positions=_calib_batch,
                                 calibration_weights=_calib_weights,
                                 calibration_loss_weight=effective_post_opening_calibration_weight,
+                                calibration_teacher_policy_mask=_calib_tp_mask,
+                                teacher_value_weight=post_opening_calibration_teacher_value_weight,
+                                teacher_policy_kl_weight=post_opening_calibration_teacher_policy_kl_weight,
                             )
+                            # TEMPORARY slice: Task 8 consumes _ret[10:14] (teacher telemetry).
+                            # Do NOT leave _ret[:10] as the only handling after Task 8 lands.
+                            (loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov,
+                             aux_neli, _calib_loss, _calib_value_pred, _calib_n) = _ret[:10]
                             sum_calib_loss += _calib_loss
                             sum_calib_n_drawn += _calib_n
                             sum_calib_value_pred += _calib_value_pred

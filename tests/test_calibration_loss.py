@@ -261,6 +261,24 @@ def test_policy_ce_zero_when_no_retention_rows():
     assert abs(float(policy_ce)) < 1e-6            # policy_ce == 0 (guarded denominator, no retention rows)
 
 
+def test_train_step_teacher_mode_returns_fourteen_floats():
+    net = create_network(hidden=64, n_blocks=2)
+    main = MainModule(net.encoder, net.policy_head)
+    opt_main = optim.Adam(learning_rate=1e-3)
+    opt_value = optim.Adam(learning_rate=1e-3)
+    out = train_step(
+        network=net, main_module=main, opt_main=opt_main, opt_value=opt_value,
+        batch=[_main_pos() for _ in range(3)],
+        calibration_positions=[_calib_pos(-0.5), _teacher_calib_pos(0.2)],
+        calibration_weights=np.array([1.0, 1.0], dtype=np.float32),
+        calibration_loss_weight=0.01,
+        calibration_teacher_policy_mask=np.array([0.0, 1.0], dtype=np.float32),
+        teacher_value_weight=1.0, teacher_policy_kl_weight=0.25,
+    )
+    assert len(out) == 14
+    assert all(isinstance(float(x), float) for x in out)
+
+
 def test_make_padded_batch_correction_vs_retention_target_pi():
     # spec §10: bridge between parsing and loss — correction rows produce a
     # zero target_pi, retention rows a normalized one, padded/masked columns no mass.
