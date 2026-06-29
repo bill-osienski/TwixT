@@ -204,3 +204,77 @@ def test_train_step_accepts_weights_returns_ten_tuple():
     assert len(out) == 10
     assert all(np.isfinite(x) for x in out[:9])
     assert out[9] == 2
+
+
+def _teacher_calib_pos(value=0.2):
+    # 2 legal moves, uniform teacher policy in visit_counts.
+    return PositionRecord(
+        board_tensor=np.zeros((24, 24, 30), dtype=np.float32),
+        to_move="black", legal_moves=[(0, 0), (1, 1)],
+        visit_counts=[0.5, 0.5], outcome=value, active_size=24,
+        ply=20, game_n_moves=None,
+    )
+
+
+def test_mask_none_stays_ten_tuple_regression():
+    net = create_network(hidden=64, n_blocks=2)
+    out = alphazero_loss_batch(
+        net, [_main_pos() for _ in range(3)],
+        calibration_positions=[_calib_pos(-0.5)],
+        calibration_loss_weight=0.02,
+        calibration_teacher_policy_mask=None,     # v2/v3 path
+    )
+    assert len(out) == 10                          # unchanged shape
+
+
+def test_teacher_mode_returns_fourteen_tuple():
+    net = create_network(hidden=64, n_blocks=2)
+    calib = [_calib_pos(-0.5), _teacher_calib_pos(0.2)]   # 1 correction, 1 retention
+    out = alphazero_loss_batch(
+        net, [_main_pos() for _ in range(3)],
+        calibration_positions=calib,
+        calibration_weights=np.array([1.0, 1.0], dtype=np.float32),
+        calibration_loss_weight=0.01,
+        calibration_teacher_policy_mask=np.array([0.0, 1.0], dtype=np.float32),
+        teacher_value_weight=1.0, teacher_policy_kl_weight=0.25,
+    )
+    assert len(out) == 14
+    (_, _, _, _, _, _, _, _, _, _,
+     value_term, policy_ce, policy_kl_est, n_ret) = out
+    assert n_ret == 1                              # one retention row
+    assert float(policy_ce) >= float(policy_kl_est) - 1e-5   # CE >= CE - H  (H >= 0)
+    assert float(policy_kl_est) >= -1e-4           # KL is non-negative
+
+
+def test_policy_ce_zero_when_no_retention_rows():
+    net = create_network(hidden=64, n_blocks=2)
+    out = alphazero_loss_batch(
+        net, [_main_pos() for _ in range(3)],
+        calibration_positions=[_calib_pos(-0.5)],
+        calibration_weights=np.array([1.0], dtype=np.float32),
+        calibration_loss_weight=0.01,
+        calibration_teacher_policy_mask=np.array([0.0], dtype=np.float32),  # no retention
+        teacher_value_weight=1.0, teacher_policy_kl_weight=0.25,
+    )
+    assert len(out) == 14
+    *_head, value_term, policy_ce, policy_kl_est, n_ret = out   # named, not magic indices
+    assert abs(float(policy_ce)) < 1e-6            # policy_ce == 0 (guarded denominator, no retention rows)
+
+
+def test_make_padded_batch_correction_vs_retention_target_pi():
+    # spec §10: bridge between parsing and loss — correction rows produce a
+    # zero target_pi, retention rows a normalized one, padded/masked columns no mass.
+    from scripts.GPU.alphazero.trainer import make_padded_batch
+    corr = _calib_pos(-0.5)                        # 2 legal moves, visit_counts [0, 0]
+    ret3 = PositionRecord(                          # 3 legal moves, uniform teacher policy
+        board_tensor=np.zeros((24, 24, 30), dtype=np.float32),
+        to_move="black", legal_moves=[(0, 0), (1, 1), (2, 2)],
+        visit_counts=[1 / 3, 1 / 3, 1 / 3], outcome=0.2, active_size=24,
+        ply=20, game_n_moves=None)
+    _, _, _, mask, target_pi, _ = make_padded_batch([corr, ret3])
+    tp = np.array(target_pi.tolist())
+    msk = np.array(mask.tolist())
+    assert tp.shape[1] == msk.shape[1] == 3        # target_pi width == padded legal dim
+    assert np.allclose(tp[0], 0.0)                 # correction row: all-zero target
+    np.testing.assert_allclose(tp[1].sum(), 1.0, atol=1e-6)  # retention row sums to 1
+    assert tp[0, 2] == 0.0 and msk[0, 2] == 0.0    # corr's padded slot: masked, no mass

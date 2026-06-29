@@ -51,6 +51,12 @@ from .recovery_retargeting_diagnostics import (
     validate_config as _validate_recovery_retargeting_config,
 )
 
+# v4 calibration teacher 14-tuple telemetry indices (positions 10-13).
+CALIB_VALUE_TERM_IDX = 10
+CALIB_POLICY_CE_IDX = 11
+CALIB_POLICY_KL_EST_IDX = 12
+CALIB_N_RETENTION_IDX = 13
+
 
 def _inject_iteration(record: Optional[dict], iteration: Optional[int]) -> Optional[dict]:
     """Set iteration on a goal_completion_record OR recovery_retargeting_record copy.
@@ -1090,6 +1096,9 @@ def alphazero_loss_batch(
     calibration_positions=None,                       # NEW: design Mechanism B
     calibration_weights=None,                          # NEW: v2 per-sample weights
     calibration_loss_weight: float = 0.0,             # NEW
+    calibration_teacher_policy_mask=None,             # v4: (N,) 1.0 retention / 0.0 correction
+    teacher_value_weight: float = 1.0,                # v4
+    teacher_policy_kl_weight: float = 0.25,           # v4 (CE gradient term)
 ):
     """Batched policy + value + l2 + (optional) conversion auxiliary loss.
 
@@ -1193,30 +1202,59 @@ def alphazero_loss_batch(
         and len(calibration_positions) > 0
     )
     if calib_active:
-        cb_boards, cb_rows, cb_cols, cb_mask, _cb_pi, cb_targets = make_padded_batch(
+        cb_boards, cb_rows, cb_cols, cb_mask, cb_pi, cb_targets = make_padded_batch(
             calibration_positions, max_moves_cap=max_moves_cap
         )
-        _, cb_values, _ = network.forward_padded(
-            cb_boards, cb_rows, cb_cols, cb_mask,
-            active_size=calibration_positions[0].active_size,
-        )  # value head ignores move arrays; values are side-to-move perspective
-        per_sample = (cb_values - cb_targets) ** 2
-        if calibration_weights is not None:
-            # cb_values is (B,) (network.py:546 value head). Reshape to per_sample.shape
-            # keeps weights aligned even if a future value head returns (B, 1).
-            _w = mx.reshape(mx.array(calibration_weights), per_sample.shape)
-            calib_loss = mx.sum(_w * per_sample) / mx.maximum(mx.sum(_w), 1e-8)
+        teacher_mode = calibration_teacher_policy_mask is not None
+        if teacher_mode:
+            cb_logits, cb_values, _ = network.forward_padded(
+                cb_boards, cb_rows, cb_cols, cb_mask,
+                active_size=calibration_positions[0].active_size)
         else:
-            calib_loss = mx.mean(per_sample)
-        # Per-STEP mean prediction. The sidecar averages these across steps;
-        # since k is constant, step-weighted == sample-weighted. Do NOT change
-        # the sidecar to divide a raw sum by n_drawn — this is already a mean.
+            _, cb_values, _ = network.forward_padded(
+                cb_boards, cb_rows, cb_cols, cb_mask,
+                active_size=calibration_positions[0].active_size)
+
+        # Value term (ALL calibration rows), optional per-row weight_scale.
+        per_value = (cb_values - cb_targets) ** 2
+        if calibration_weights is not None:
+            _w = mx.reshape(mx.array(calibration_weights), per_value.shape)
+            value_term = mx.sum(_w * per_value) / mx.maximum(mx.sum(_w), 1e-8)
+        else:
+            _w = None
+            value_term = mx.mean(per_value)
         calib_value_mean = mx.mean(cb_values)
+
+        if not teacher_mode:
+            # v2/v3 byte-identical path: value-only, 10-tuple.
+            calib_loss = value_term
+            total_loss = total_loss + calibration_loss_weight * calib_loss
+            return (total_loss, policy_loss, value_loss, l2_loss,
+                    aux_loss, aux_coverage, aux_n_eligible,
+                    calib_loss, calib_value_mean, len(calibration_positions))
+
+        # v4 teacher-retention path: value + masked policy CE; 14-tuple.
+        m = mx.reshape(mx.array(calibration_teacher_policy_mask), per_value.shape)
+        w = _w if _w is not None else mx.ones(per_value.shape)
+        wm = w * m
+        denom_p = mx.maximum(mx.sum(wm), 1e-8)
+        cb_log_probs = compute_masked_log_probs(cb_logits, cb_mask)
+        per_ce = -mx.sum(cb_pi * cb_log_probs, axis=1)          # (B,) cross-entropy
+        policy_ce = mx.sum(wm * per_ce) / denom_p
+        # Telemetry-only KL estimate: CE - teacher entropy (NOT in the gradient path).
+        safe_pi = mx.maximum(cb_pi, mx.array(1e-12, dtype=cb_pi.dtype))  # avoid log(0); 0*log(1e-12)=0
+        per_H = -mx.sum(cb_pi * mx.log(safe_pi), axis=1)        # (B,) teacher entropy
+        teacher_H = mx.sum(wm * per_H) / denom_p
+        policy_kl_est = policy_ce - teacher_H
+
+        calib_loss = (teacher_value_weight * value_term
+                      + teacher_policy_kl_weight * policy_ce)
         total_loss = total_loss + calibration_loss_weight * calib_loss
-        # CRITICAL: total_loss must be first for nn.value_and_grad()
+        n_retention = int(mx.sum(m).item())
         return (total_loss, policy_loss, value_loss, l2_loss,
                 aux_loss, aux_coverage, aux_n_eligible,
-                calib_loss, calib_value_mean, len(calibration_positions))
+                calib_loss, calib_value_mean, len(calibration_positions),
+                value_term, policy_ce, policy_kl_est, n_retention)
 
     # CRITICAL: total_loss must be first for nn.value_and_grad()
     return total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage, aux_n_eligible
