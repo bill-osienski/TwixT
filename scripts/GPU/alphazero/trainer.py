@@ -1115,6 +1115,10 @@ def alphazero_loss_batch(
         When calibration is active (calibration_loss_weight > 0 and
         calibration_positions is non-empty), returns a 10-tuple extending the
         above with (calib_loss, calib_value_mean, calib_n).
+        When a teacher-policy mask is also present (v4 teacher-retention),
+        returns a 14-tuple extending the 10-tuple with
+        (calib_value_term, calib_policy_ce, calib_policy_kl_est,
+        n_teacher_retention) at positions 10–13.
 
     IMPORTANT: total_loss MUST be first because nn.value_and_grad() only
     differentiates the first returned value.
@@ -1229,6 +1233,7 @@ def alphazero_loss_batch(
             # v2/v3 byte-identical path: value-only, 10-tuple.
             calib_loss = value_term
             total_loss = total_loss + calibration_loss_weight * calib_loss
+            # CRITICAL: total_loss must be first for nn.value_and_grad()
             return (total_loss, policy_loss, value_loss, l2_loss,
                     aux_loss, aux_coverage, aux_n_eligible,
                     calib_loss, calib_value_mean, len(calibration_positions))
@@ -1251,6 +1256,7 @@ def alphazero_loss_batch(
                       + teacher_policy_kl_weight * policy_ce)
         total_loss = total_loss + calibration_loss_weight * calib_loss
         n_retention = int(mx.sum(m).item())
+        # CRITICAL: total_loss must be first for nn.value_and_grad()
         return (total_loss, policy_loss, value_loss, l2_loss,
                 aux_loss, aux_coverage, aux_n_eligible,
                 calib_loss, calib_value_mean, len(calibration_positions),
@@ -3847,7 +3853,7 @@ def train(
                         )
                         # Pass active_size to training (use current curriculum stage)
                         if _calib_pool is not None:
-                            from .calibration_pool import split_samples
+                            from .calibration_pool import split_samples, split_samples_with_modes
                             if post_opening_calibration_tag_schedule:
                                 _calib_samples = _calib_pool.sample_by_tag(
                                     post_opening_calibration_tag_schedule, train_rng)
@@ -3859,7 +3865,6 @@ def train(
                                 sum_calib_n_drawn_by_tag[_s.tag] = (
                                     sum_calib_n_drawn_by_tag.get(_s.tag, 0) + 1)
                             if _calib_pool.schema == "teacher_retention":
-                                from .calibration_pool import split_samples_with_modes
                                 _calib_batch, _calib_weights, _calib_tp_mask = (
                                     split_samples_with_modes(_calib_samples,
                                                              _calib_pool.has_weight_scale))
@@ -3889,8 +3894,8 @@ def train(
                                 teacher_value_weight=post_opening_calibration_teacher_value_weight,
                                 teacher_policy_kl_weight=post_opening_calibration_teacher_policy_kl_weight,
                             )
-                            # TEMPORARY slice: Task 8 consumes _ret[10:14] (teacher telemetry).
-                            # Do NOT leave _ret[:10] as the only handling after Task 8 lands.
+                            # First 10 returns are the standard losses; _ret[10:14] (teacher telemetry)
+                            # is consumed by the accumulation block below when the teacher mask is active.
                             (loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov,
                              aux_neli, _calib_loss, _calib_value_pred, _calib_n) = _ret[:10]
                             sum_calib_loss += _calib_loss

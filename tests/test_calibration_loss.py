@@ -276,7 +276,7 @@ def test_train_step_teacher_mode_returns_fourteen_floats():
         teacher_value_weight=1.0, teacher_policy_kl_weight=0.25,
     )
     assert len(out) == 14
-    assert all(isinstance(float(x), float) for x in out)
+    assert all(np.isfinite(x) for x in out)
 
 
 def test_make_padded_batch_correction_vs_retention_target_pi():
