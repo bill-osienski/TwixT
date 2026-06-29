@@ -53,6 +53,9 @@ class CalibrationSample:
     weight_scale: float = 1.0
     tag: str = ""
     target_black_value: float | None = None
+    loss_mode: str = "hard_value"            # "hard_value" | "teacher_retention"
+    teacher_value: float | None = None        # side-to-move; telemetry/validation
+    teacher_policy_len: int | None = None      # == len(legal_moves); validation
 
 
 def _resolve_target_black(case: dict, fallback: float) -> float:
@@ -79,6 +82,15 @@ def _parse_weight_scale(case: dict) -> tuple[float, bool]:
     return w, True
 
 
+def _parse_teacher_policy(case: dict, legal) -> list[float]:
+    """Parse teacher_policy_json into a dense list aligned to legal_moves."""
+    raw = case.get("teacher_policy_json")
+    if raw in (None, ""):
+        raise ValueError(f"{case.get('case_id')}: teacher_retention row needs teacher_policy_json")
+    policy = [float(x) for x in json.loads(raw)]
+    return policy
+
+
 def build_calibration_position(case: dict, calibration_target: float) -> PositionRecord:
     """Reconstruct a case to a board and build a value-only PositionRecord.
 
@@ -98,6 +110,20 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
     board_hwc = np.transpose(board_chw, (1, 2, 0)).astype(np.float32)  # (24,24,30)
     legal = state.legal_moves()
 
+    loss_mode = case.get("loss_mode") or "hard_value"
+    if loss_mode == "teacher_retention":
+        teacher_value = float(case["teacher_value"])     # side-to-move; direct
+        teacher_policy = _parse_teacher_policy(case, legal)
+        return PositionRecord(
+            board_tensor=board_hwc,
+            to_move=state.to_move,
+            legal_moves=legal,
+            visit_counts=teacher_policy,                 # float "counts"; make_padded_batch normalizes
+            outcome=teacher_value,
+            active_size=state.active_size,
+            ply=position_ply,
+            game_n_moves=None,
+        )
     return PositionRecord(
         board_tensor=board_hwc,
         to_move=state.to_move,
@@ -116,8 +142,15 @@ def build_calibration_sample(case: dict, calibration_target: float) -> Calibrati
     weight_scale, _ = _parse_weight_scale(case)
     tag = case.get("tag") or ""
     target_black = _resolve_target_black(case, calibration_target)
+    loss_mode = case.get("loss_mode") or "hard_value"
+    teacher_value = (float(case["teacher_value"])
+                     if loss_mode == "teacher_retention" else None)
+    teacher_policy_len = (len(record.visit_counts)
+                          if loss_mode == "teacher_retention" else None)
     return CalibrationSample(record=record, weight_scale=weight_scale,
-                             tag=tag, target_black_value=target_black)
+                             tag=tag, target_black_value=target_black,
+                             loss_mode=loss_mode, teacher_value=teacher_value,
+                             teacher_policy_len=teacher_policy_len)
 
 
 class CalibrationPool:
@@ -185,9 +218,12 @@ class CalibrationPool:
         cases = load_csv_manifest(manifest_path)["cases"]
         samples = [build_calibration_sample(c, calibration_target) for c in cases]
         has_weight_scale = any(c.get("weight_scale") not in (None, "") for c in cases)
-        schema = ("per_row_target"
-                  if any(c.get("target_black_value") not in (None, "") for c in cases)
-                  else "global_target")
+        if any((c.get("loss_mode") or "hard_value") == "teacher_retention" for c in cases):
+            schema = "teacher_retention"
+        elif any(c.get("target_black_value") not in (None, "") for c in cases):
+            schema = "per_row_target"
+        else:
+            schema = "global_target"
         return cls(samples, has_weight_scale=has_weight_scale, schema=schema)
 
 

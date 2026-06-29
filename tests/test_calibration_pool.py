@@ -312,3 +312,49 @@ def test_legal_moves_sha1_stable_and_order_sensitive():
     assert a != c                       # catches a same-length reorder
     assert len(a) == 40
     assert all(ch in "0123456789abcdef" for ch in a)
+
+
+def _teacher_case(tmp_path, position_ply=5, game_idx=7):
+    """A teacher_retention row: black to move (odd ply), with a teacher policy
+    aligned to the reconstructed legal_moves order."""
+    from scripts.GPU.alphazero.calibration_pool import legal_moves_sha1
+    from scripts.GPU.alphazero.goal_line_trigger_probe_cases import position_state
+    import json as _json
+    case = _write_case_side(tmp_path, "black", position_ply, game_idx=game_idx)
+    replay = _json.loads((tmp_path / f"game_{game_idx:06d}.json").read_text())
+    state = position_state(replay, position_ply, "black")
+    legal = state.legal_moves()
+    n = len(legal)
+    policy = [1.0 / n] * n                       # uniform teacher policy
+    case.update({
+        "loss_mode": "teacher_retention",
+        "teacher_value": "0.20",                 # side-to-move
+        "teacher_policy_json": _json.dumps(policy),
+        "teacher_legal_moves_sha1": legal_moves_sha1(legal),
+    })
+    return case, n
+
+
+def test_teacher_retention_row_uses_teacher_value_and_policy(tmp_path):
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_position
+    case, n = _teacher_case(tmp_path)
+    rec = build_calibration_position(case, calibration_target=-0.5)
+    assert rec.outcome == 0.20                   # teacher_value, NOT through target_in_to_move
+    assert len(rec.visit_counts) == n
+    assert abs(sum(rec.visit_counts) - 1.0) < 1e-6
+    assert rec.to_move == "black"
+
+
+def test_from_manifest_detects_teacher_schema(tmp_path):
+    import csv as _csv
+    from scripts.GPU.alphazero.calibration_pool import CalibrationPool
+    case, _ = _teacher_case(tmp_path)
+    manifest = tmp_path / "v4.csv"
+    with manifest.open("w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=list(case.keys()))
+        w.writeheader()
+        w.writerow(case)
+    pool = CalibrationPool.from_manifest(str(manifest), calibration_target=-0.35)
+    assert pool.schema == "teacher_retention"
+    assert pool._samples[0].loss_mode == "teacher_retention"
+    assert pool._samples[0].teacher_value == 0.20
