@@ -526,7 +526,8 @@ def test_policy_ce_zero_when_no_retention_rows():
         teacher_value_weight=1.0, teacher_policy_kl_weight=0.25,
     )
     assert len(out) == 14
-    assert abs(float(out[11])) < 1e-6              # policy_ce == 0 (guarded denominator)
+    *_head, value_term, policy_ce, policy_kl_est, n_ret = out   # named, not magic indices
+    assert abs(float(policy_ce)) < 1e-6            # policy_ce == 0 (guarded denominator, no retention rows)
 
 
 def test_make_padded_batch_correction_vs_retention_target_pi():
@@ -555,7 +556,17 @@ Expected: the three new-behavior tests FAIL with `TypeError: alphazero_loss_batc
 
 - [ ] **Step 3: Write minimal implementation**
 
-(a) Add the three params to the `alphazero_loss_batch` signature (after `calibration_loss_weight: float = 0.0,`):
+(a) Add return-index constants at module level in `trainer.py` (after the imports) so callers never use magic indices. These name the four v4 telemetry slots of the teacher 14-tuple and are imported by Task 8 (accumulation) and Task 10 (smoke):
+
+```python
+# v4 calibration teacher 14-tuple telemetry indices (positions 10-13).
+CALIB_VALUE_TERM_IDX = 10
+CALIB_POLICY_CE_IDX = 11
+CALIB_POLICY_KL_EST_IDX = 12
+CALIB_N_RETENTION_IDX = 13
+```
+
+(b) Add the three params to the `alphazero_loss_batch` signature (after `calibration_loss_weight: float = 0.0,`):
 
 ```python
     calibration_teacher_policy_mask=None,             # v4: (N,) 1.0 retention / 0.0 correction
@@ -563,7 +574,7 @@ Expected: the three new-behavior tests FAIL with `TypeError: alphazero_loss_batc
     teacher_policy_kl_weight: float = 0.25,           # v4 (CE gradient term)
 ```
 
-(b) Replace the calib block (current lines ~1189–1219, from `if calib_active:` through its `return`) with:
+(c) Replace the calib block (current lines ~1189–1219, from `if calib_active:` through its `return`) with:
 
 ```python
     if calib_active:
@@ -607,7 +618,7 @@ Expected: the three new-behavior tests FAIL with `TypeError: alphazero_loss_batc
         per_ce = -mx.sum(cb_pi * cb_log_probs, axis=1)          # (B,) cross-entropy
         policy_ce = mx.sum(wm * per_ce) / denom_p
         # Telemetry-only KL estimate: CE - teacher entropy (NOT in the gradient path).
-        safe_pi = mx.where(cb_pi > 0, cb_pi, mx.array(1.0, dtype=cb_pi.dtype))
+        safe_pi = mx.maximum(cb_pi, mx.array(1e-12, dtype=cb_pi.dtype))  # avoid log(0); 0*log(1e-12)=0
         per_H = -mx.sum(cb_pi * mx.log(safe_pi), axis=1)        # (B,) teacher entropy
         teacher_H = mx.sum(wm * per_H) / denom_p
         policy_kl_est = policy_ce - teacher_H
@@ -758,6 +769,8 @@ The unpack of the `train_step` return on the teacher path is handled in Task 8 (
 
 ```python
                             _ret = train_step(... )
+                            # TEMPORARY slice: Task 8 consumes _ret[10:14] (teacher telemetry).
+                            # Do NOT leave _ret[:10] as the only handling after Task 8 lands.
                             (loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov,
                              aux_neli, _calib_loss, _calib_value_pred, _calib_n) = _ret[:10]
 ```
@@ -911,11 +924,13 @@ Expected: FAIL (`KeyError: 'calib_value_term_avg_iter'`).
 
 ```python
                             if _calib_tp_mask is not None and len(_ret) == 14:
-                                sum_calib_value_term += _ret[10]
-                                sum_calib_policy_ce += _ret[11]
-                                sum_calib_policy_kl_est += _ret[12]
-                                sum_n_teacher_retention += int(_ret[13])
+                                sum_calib_value_term += _ret[CALIB_VALUE_TERM_IDX]
+                                sum_calib_policy_ce += _ret[CALIB_POLICY_CE_IDX]
+                                sum_calib_policy_kl_est += _ret[CALIB_POLICY_KL_EST_IDX]
+                                sum_n_teacher_retention += int(_ret[CALIB_N_RETENTION_IDX])
 ```
+
+(The `CALIB_*_IDX` constants are module-level in `trainer.py` from Task 5(a); this accumulation runs inside `train()` in the same module, so they are referenced directly — no import.)
 
 (d) Add the four sums to the sidecar `loss_accumulator` dict (~3963–3967, after `"sum_calib_n_drawn_by_tag": sum_calib_n_drawn_by_tag,`):
 
@@ -1000,9 +1015,10 @@ def test_builder_blanks_correction_and_fills_retention(tmp_path):
     ret = next(r for r in out if r["case_id"] == "ret1")
     assert corr["loss_mode"] == "hard_value"
     assert corr["teacher_value"] == "" and corr["teacher_policy_json"] == ""
+    assert corr["target_black_value"] == "-0.35"    # correction hard target PRESERVED (not blanked)
     assert ret["loss_mode"] == "teacher_retention"
     assert float(ret["teacher_value"]) == 0.2
-    assert ret["target_black_value"] == ""          # stale MCTS scalar blanked
+    assert ret["target_black_value"] == ""          # retention-only: stale MCTS scalar blanked
     policy = json.loads(ret["teacher_policy_json"])
     assert abs(sum(policy) - 1.0) < 1e-6
 
@@ -1055,12 +1071,10 @@ from .goal_line_trigger_probe_cases import position_state
 from .calibration_pool import legal_moves_sha1
 
 CORRECTION_TAG = "black_predrop_correction"
-OUT_COLUMNS = [
-    "case_rank", "tag", "source", "source_rank", "target_black_value", "weight_scale",
-    "game_idx", "case_id", "replay_path", "position_ply", "side_to_move",
-    "anchor_checkpoint", "drop_ply", "largest_drop_phase", "collapse_type",
-    "loss_mode", "teacher_value", "teacher_policy_json", "teacher_legal_moves_sha1",
-]
+# v4 columns appended to whatever the source manifest already carries. We preserve
+# ALL source columns (don't drop future metadata — analysis IDs, probe scores,
+# diagnostics) and only add/override these four.
+NEW_COLUMNS = ["loss_mode", "teacher_value", "teacher_policy_json", "teacher_legal_moves_sha1"]
 
 
 def _teacher_infer(state, evaluator):
@@ -1081,9 +1095,11 @@ def _teacher_infer(state, evaluator):
 def build_rows(rows: list, evaluator) -> list:
     out = []
     for r in rows:
-        row = {c: r.get(c, "") for c in OUT_COLUMNS}
-        is_correction = (r.get("tag") == CORRECTION_TAG)
-        if is_correction:
+        row = dict(r)                            # preserve ALL source columns
+        if r.get("tag") == CORRECTION_TAG:
+            # Correction rows: hard value target stays; teacher columns blank.
+            # IMPORTANT: do NOT touch target_black_value here — blanking it would
+            # destroy the A correction target (-0.35).
             row["loss_mode"] = "hard_value"
             row["teacher_value"] = ""
             row["teacher_policy_json"] = ""
@@ -1097,7 +1113,7 @@ def build_rows(rows: list, evaluator) -> list:
         row["teacher_value"] = repr(value)
         row["teacher_policy_json"] = json.dumps(policy)
         row["teacher_legal_moves_sha1"] = legal_moves_sha1(legal)
-        row["target_black_value"] = ""          # blank the stale v3 MCTS-root scalar
+        row["target_black_value"] = ""          # RETENTION ONLY: blank stale v3 MCTS-root scalar
         out.append(row)
     return out
 
@@ -1115,8 +1131,11 @@ def main(argv=None):
     network = load_network_for_scoring(args.teacher_checkpoint)
     evaluator = LocalGPUEvaluator(network)
     out_rows = build_rows(rows, evaluator)
+    # Preserve source column order; append any v4 columns not already present.
+    base_columns = list(rows[0].keys()) if rows else []
+    fieldnames = base_columns + [c for c in NEW_COLUMNS if c not in base_columns]
     with open(args.out, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=OUT_COLUMNS)
+        w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(out_rows)
     n_ret = sum(1 for r in out_rows if r["loss_mode"] == "teacher_retention")
@@ -1128,7 +1147,7 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-Note: `load_network_for_scoring` (in `probe_eval.py`) does `create_network()` + `net.load_weights(path)` — the canonical "load a checkpoint for inference" helper used by the probes. `build_rows` is evaluator-injected, so the unit tests drive it with a fake evaluator and never touch `main()`.
+Note: `load_network_for_scoring` (in `probe_eval.py`) does `create_network()` + `net.load_weights(path)` — the canonical "load a checkpoint for inference" helper used by the probes. `build_rows` is evaluator-injected, so the unit tests drive it with a fake evaluator and never touch `main()`. The `main()` CLI (real checkpoint load, heavy/integration) is exercised **manually per the operator runbook**, not in unit tests — checkpoint loading is too heavy for the unit suite.
 
 - [ ] **Step 4: Run tests to verify they pass, then add docs**
 
@@ -1226,7 +1245,8 @@ import argparse
 import sys
 
 from .calibration_pool import CalibrationPool, split_samples_with_modes
-from .trainer import alphazero_loss_batch
+from .trainer import (
+    alphazero_loss_batch, CALIB_VALUE_TERM_IDX, CALIB_POLICY_KL_EST_IDX)
 
 
 def assert_self_distillation(network, manifest_path: str, tol: float = 1e-4) -> dict:
@@ -1237,16 +1257,18 @@ def assert_self_distillation(network, manifest_path: str, tol: float = 1e-4) -> 
     if not retention:
         raise AssertionError("no teacher_retention rows in manifest")
     records, weights, mask = split_samples_with_modes(retention, pool.has_weight_scale)
+    # The main-batch losses are IGNORED here — we only read the calibration outputs.
+    # Reusing `records` as the main batch avoids constructing unrelated dummy positions.
     out = alphazero_loss_batch(
-        network, records,                       # dummy main batch == calib batch is fine
+        network, records,
         calibration_positions=records,
         calibration_weights=weights,
         calibration_loss_weight=1.0,
         calibration_teacher_policy_mask=mask,
         teacher_value_weight=1.0, teacher_policy_kl_weight=1.0,
     )
-    value_mse = float(out[10])                  # calib_value_term
-    kl_est = float(out[12])                     # calib_policy_kl_est_term
+    value_mse = float(out[CALIB_VALUE_TERM_IDX])
+    kl_est = float(out[CALIB_POLICY_KL_EST_IDX])
     if abs(value_mse) > tol or abs(kl_est) > tol:
         raise AssertionError(
             f"self-distillation FAILED: value_mse={value_mse:.3e}, kl_est={kl_est:.3e} "
@@ -1292,7 +1314,7 @@ git commit -m "feat(calibration): v4 gate-0 self-distillation pre-flight smoke"
 ## Operator runbook (after implementation, not a code task)
 
 1. **Build the manifest** (Task 9 CLI) → `logs/eval/targeted_calibration_v4_teacher_from_calib020_0001.csv`.
-2. **Gate 0** (Task 10 CLI): `smoke_teacher_calibration_v4.py --manifest <v4.csv> --teacher-checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors` — must print PASS.
+2. **Gate 0** (Task 10 CLI): `smoke_teacher_calibration_v4.py --manifest <v4.csv> --teacher-checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors` — must print PASS. **Stop if Gate 0 fails: do NOT run v4 training, do NOT tune weights, and do NOT proceed to the A–D gates until the manifest/checkpoint mismatch is fixed.** A Gate-0 failure means the teacher cache and the loaded network disagree (wrong checkpoint / canonicalization / perspective / policy alignment / accidental MCTS targets) — every downstream number would be meaningless.
 3. **Run** the v4 training command (spec §11 — the v3 command with the three deltas; `--iterations 1`).
 4. **Gates A–D**: 400-sim probes vs `calib020_0001` (spec §2). No promotion match unless all four pass.
 5. **Record**: append the v4 row to `docs/2026-06-26-...experiment-ledger.md` (template in spec §11) and update do-not-repeat / severe-overlap.
