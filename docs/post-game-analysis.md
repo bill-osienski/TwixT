@@ -398,6 +398,26 @@ additively — it simply reports the manifest's natural tag distribution).
 
 ---
 
+## 7. `build_teacher_calibration_manifest` — v4 teacher-retention manifest
+
+**Purpose:** Read the v3 stratified manifest and cache the teacher checkpoint's
+RAW forward (`infer`, no MCTS) over each retention row, writing `loss_mode`,
+`teacher_value` (side-to-move), `teacher_policy_json` (dense, aligned to
+legal_moves), and `teacher_legal_moves_sha1`. Correction rows pass through with
+blank teacher columns.
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.build_teacher_calibration_manifest \
+  --source logs/eval/targeted_calibration_v3_strat_from_calib020_0001.csv \
+  --teacher-checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --out logs/eval/targeted_calibration_v4_teacher_from_calib020_0001.csv
+```
+
+**Gate 0:** run `smoke_teacher_calibration_v4.py` after building — must pass
+(`value_mse ≈ 0`, `kl_est ≈ 0`) before any training run.
+
+---
+
 ## Internal libraries (not run directly)
 
 - `eval_runner` — the game-playing task queue / worker pool used by the match and
