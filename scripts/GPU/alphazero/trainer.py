@@ -2852,6 +2852,10 @@ def train(
     sum_calib_n_drawn: int = 0
     sum_calib_value_pred: float = 0.0
     sum_calib_n_drawn_by_tag: dict = {}
+    sum_calib_value_term: float = 0.0
+    sum_calib_policy_ce: float = 0.0
+    sum_calib_policy_kl_est: float = 0.0
+    sum_n_teacher_retention: int = 0
 
     for iteration in range(start_iteration, n_iterations):
         iter_start = time.perf_counter()
@@ -3827,6 +3831,10 @@ def train(
                 sum_calib_n_drawn = 0
                 sum_calib_value_pred = 0.0
                 sum_calib_n_drawn_by_tag = {}
+                sum_calib_value_term = 0.0
+                sum_calib_policy_ce = 0.0
+                sum_calib_policy_kl_est = 0.0
+                sum_n_teacher_retention = 0
 
                 train_rng = random.Random(master_rng.randint(0, 2**31))
 
@@ -3888,6 +3896,11 @@ def train(
                             sum_calib_loss += _calib_loss
                             sum_calib_n_drawn += _calib_n
                             sum_calib_value_pred += _calib_value_pred
+                            if _calib_tp_mask is not None and len(_ret) == 14:
+                                sum_calib_value_term += _ret[CALIB_VALUE_TERM_IDX]
+                                sum_calib_policy_ce += _ret[CALIB_POLICY_CE_IDX]
+                                sum_calib_policy_kl_est += _ret[CALIB_POLICY_KL_EST_IDX]
+                                sum_n_teacher_retention += int(_ret[CALIB_N_RETENTION_IDX])
                         else:
                             loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli = train_step(
                                 network=network,
@@ -4038,6 +4051,10 @@ def train(
                         "sum_calib_n_drawn": sum_calib_n_drawn,
                         "sum_calib_value_pred": sum_calib_value_pred,
                         "sum_calib_n_drawn_by_tag": sum_calib_n_drawn_by_tag,
+                        "sum_calib_value_term": sum_calib_value_term,
+                        "sum_calib_policy_ce": sum_calib_policy_ce,
+                        "sum_calib_policy_kl_est": sum_calib_policy_kl_est,
+                        "sum_n_teacher_retention": sum_n_teacher_retention,
                         "steps_done": steps_done,
                     },
                 )

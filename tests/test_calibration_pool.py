@@ -414,3 +414,21 @@ def test_split_samples_with_modes_builds_mask(tmp_path):
     assert len(records) == 3
     assert mask.tolist() == [0.0, 1.0, 0.0]
     assert mask.dtype == np.float32
+
+
+def test_calibration_block_includes_teacher_telemetry():
+    from scripts.GPU.alphazero.calibration_pool import build_post_opening_calibration_block
+    block = build_post_opening_calibration_block(
+        config={"enabled": True, "schema": "teacher_retention"},
+        enabled=True,
+        loss_accumulator={
+            "sum_calib_loss": 4.0, "sum_calib_n_drawn": 60,
+            "sum_calib_value_pred": 3.0, "steps_done": 10,
+            "sum_calib_value_term": 2.0, "sum_calib_policy_ce": 5.0,
+            "sum_calib_policy_kl_est": 0.1, "sum_n_teacher_retention": 20,
+        },
+    )
+    np.testing.assert_allclose(block["loss"]["calib_value_term_avg_iter"], 0.2)
+    np.testing.assert_allclose(block["loss"]["calib_policy_ce_avg_iter"], 0.5)
+    np.testing.assert_allclose(block["loss"]["calib_policy_kl_est_avg_iter"], 0.01)
+    assert block["loss"]["n_teacher_retention_drawn"] == 20

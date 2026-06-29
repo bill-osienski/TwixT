@@ -299,6 +299,14 @@ def build_post_opening_calibration_block(config: dict, enabled: bool,
                 float(loss_accumulator.get("sum_calib_value_pred", 0.0)) / steps,
             "calib_n_drawn_total": n_drawn,
             "calib_n_drawn_per_step": n_drawn / steps,
+            "calib_value_term_avg_iter":
+                float(loss_accumulator.get("sum_calib_value_term", 0.0)) / steps,
+            "calib_policy_ce_avg_iter":
+                float(loss_accumulator.get("sum_calib_policy_ce", 0.0)) / steps,
+            "calib_policy_kl_est_avg_iter":
+                float(loss_accumulator.get("sum_calib_policy_kl_est", 0.0)) / steps,
+            "n_teacher_retention_drawn":
+                int(loss_accumulator.get("sum_n_teacher_retention", 0)),
         },
         "draws_by_tag": dict(loss_accumulator.get("sum_calib_n_drawn_by_tag", {})),
     }
