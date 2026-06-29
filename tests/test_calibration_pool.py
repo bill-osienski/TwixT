@@ -301,3 +301,14 @@ def test_sidecar_block_surfaces_draws_by_tag():
                           "sum_calib_n_drawn_by_tag": {"correction": 40,
                                                        "retention": 20}})
     assert block["draws_by_tag"] == {"correction": 40, "retention": 20}
+
+
+def test_legal_moves_sha1_stable_and_order_sensitive():
+    from scripts.GPU.alphazero.calibration_pool import legal_moves_sha1
+    a = legal_moves_sha1([(0, 0), (1, 2), (3, 4)])
+    b = legal_moves_sha1([(0, 0), (1, 2), (3, 4)])
+    c = legal_moves_sha1([(1, 2), (0, 0), (3, 4)])  # same length, reordered
+    assert a == b                       # deterministic
+    assert a != c                       # catches a same-length reorder
+    assert len(a) == 40
+    assert all(ch in "0123456789abcdef" for ch in a)

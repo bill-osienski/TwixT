@@ -7,6 +7,7 @@ step; the value-only MSE term is added to total_loss in alphazero_loss_batch.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from dataclasses import dataclass
@@ -17,6 +18,15 @@ import numpy as np
 from .goal_line_trigger_probe_cases import position_state
 from .position_probe_cases import load_csv_manifest
 from .self_play import PositionRecord
+
+
+def legal_moves_sha1(legal) -> str:
+    """SHA-1 over the canonical legal-move ordering. Order-sensitive: pins the
+    alignment between teacher_policy_json and legal_moves between build time and
+    train time (legal_moves() is sorted/deterministic, so the same reconstructed
+    position yields the same hash)."""
+    canonical = ";".join(f"{r},{c}" for r, c in legal)
+    return hashlib.sha1(canonical.encode("utf-8")).hexdigest()
 
 
 def target_in_to_move(side_to_move: str, calibration_target: float) -> float:
