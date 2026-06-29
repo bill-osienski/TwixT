@@ -390,6 +390,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
              "'black_predrop_correction=2,goal_line_retention=1,"
              "old_post_opening_retention=2,red_predrop_retention=1'. When set, "
              "replaces uniform batch-fraction sampling (batch-fraction is ignored).")
+    parser.add_argument("--post-opening-calibration-teacher-value-weight", type=float, default=1.0,
+        help="v4: weight on the calibration value-MSE term (correction + teacher "
+             "retention rows). Default 1.0.")
+    parser.add_argument("--post-opening-calibration-teacher-policy-kl-weight", type=float, default=0.25,
+        help="v4: weight on the teacher policy cross-entropy (KL) term on "
+             "teacher_retention rows only. Default 0.25; 0.0 = value-only ablation.")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
@@ -836,6 +842,8 @@ def main():
         post_opening_calibration_batch_fraction=args.post_opening_calibration_batch_fraction,
         post_opening_calibration_tag_schedule=parse_calibration_tag_schedule(
             args.post_opening_calibration_tag_schedule),
+        post_opening_calibration_teacher_value_weight=args.post_opening_calibration_teacher_value_weight,
+        post_opening_calibration_teacher_policy_kl_weight=args.post_opening_calibration_teacher_policy_kl_weight,
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,

@@ -73,3 +73,18 @@ def test_parse_calibration_tag_schedule_duplicate_raises():
 def test_parse_calibration_tag_schedule_zero_total_raises():
     with pytest.raises(ValueError):
         parse_calibration_tag_schedule("black_predrop_correction=0")
+
+
+def test_calibration_teacher_weight_flag_defaults():
+    args = build_arg_parser().parse_args([])
+    assert args.post_opening_calibration_teacher_value_weight == 1.0
+    assert args.post_opening_calibration_teacher_policy_kl_weight == 0.25
+
+
+def test_calibration_teacher_weight_flags_set():
+    args = build_arg_parser().parse_args([
+        "--post-opening-calibration-teacher-value-weight", "0.5",
+        "--post-opening-calibration-teacher-policy-kl-weight", "0.0",
+    ])
+    assert args.post_opening_calibration_teacher_value_weight == 0.5
+    assert args.post_opening_calibration_teacher_policy_kl_weight == 0.0
