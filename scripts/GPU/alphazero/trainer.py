@@ -58,6 +58,24 @@ CALIB_POLICY_KL_EST_IDX = 12
 CALIB_N_RETENTION_IDX = 13
 
 
+def freeze_batchnorm_running_stats(network) -> int:
+    """Set momentum=0 on every BatchNorm so its running mean/var stay frozen at
+    their current (base-checkpoint) values. Train-mode normalization still uses
+    per-batch statistics; only the running-stat *tracking* is frozen.
+
+    Used by the teacher-retention calibration run: the eval-mode calibration
+    forward (alphazero_loss_batch, teacher path) reads BatchNorm running stats, so
+    freezing them at the base keeps the cached teacher targets reproducible
+    instead of drifting as self-play training proceeds. Returns the count frozen.
+    """
+    count = 0
+    for _, module in network.named_modules():
+        if isinstance(module, nn.BatchNorm):
+            module.momentum = 0.0
+            count += 1
+    return count
+
+
 def _inject_iteration(record: Optional[dict], iteration: Optional[int]) -> Optional[dict]:
     """Set iteration on a goal_completion_record OR recovery_retargeting_record copy.
 
@@ -1211,9 +1229,22 @@ def alphazero_loss_batch(
         )
         teacher_mode = calibration_teacher_policy_mask is not None
         if teacher_mode:
-            cb_logits, cb_values, _ = network.forward_padded(
-                cb_boards, cb_rows, cb_cols, cb_mask,
-                active_size=calibration_positions[0].active_size)
+            # Teacher-retention targets were cached from the network's EVAL-mode
+            # (running-stats) outputs, which are batch-independent. BatchNorm in
+            # train mode normalizes by per-batch statistics, so forward the
+            # calibration batch in eval mode (restoring the prior mode after) to
+            # reproduce the teacher target batch-independently. Pair with frozen
+            # BatchNorm running stats (train(freeze_batchnorm_stats=True)) so eval
+            # reads the *base* stats. Gated to teacher_mode → the v2/v3 path
+            # (mask is None) below stays byte-identical.
+            _prev_training = network.training
+            network.eval()
+            try:
+                cb_logits, cb_values, _ = network.forward_padded(
+                    cb_boards, cb_rows, cb_cols, cb_mask,
+                    active_size=calibration_positions[0].active_size)
+            finally:
+                network.train(_prev_training)
         else:
             _, cb_values, _ = network.forward_padded(
                 cb_boards, cb_rows, cb_cols, cb_mask,
@@ -2426,6 +2457,7 @@ def train(
     post_opening_calibration_tag_schedule: Optional[dict] = None,
     post_opening_calibration_teacher_value_weight: float = 1.0,
     post_opening_calibration_teacher_policy_kl_weight: float = 0.25,
+    freeze_batchnorm_stats: bool = False,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2476,6 +2508,19 @@ def train(
 
     # Create network
     network = create_network(hidden=hidden, n_blocks=n_blocks)
+    if freeze_batchnorm_stats:
+        # Freeze BatchNorm running stats (momentum=0) BEFORE weights are loaded;
+        # load_weights then fills in the base running mean/var, and momentum=0
+        # keeps them from drifting during the run. The teacher-retention
+        # calibration eval-forward reads these (base) running stats, so the cached
+        # teacher targets stay reproducible (~0 retention loss at step 0).
+        if not (load_weights_from or resume_from):
+            print("WARNING: --freeze-batchnorm-stats set without --load-weights / "
+                  "resume; BatchNorm will be frozen at RANDOM INIT, not base stats "
+                  "(teacher-retention self-distillation would be meaningless).")
+        _n_bn_frozen = freeze_batchnorm_running_stats(network)
+        print(f"Froze BatchNorm running stats on {_n_bn_frozen} modules "
+              f"(momentum=0; teacher-retention calibration reads base stats)")
 
     # Create evaluator (wraps network for MCTS)
     evaluator = LocalGPUEvaluator(network)

@@ -396,6 +396,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--post-opening-calibration-teacher-policy-kl-weight", type=float, default=0.25,
         help="v4: weight on the teacher policy cross-entropy (KL) term on "
              "teacher_retention rows only. Default 0.25; 0.0 = value-only ablation.")
+    parser.add_argument("--freeze-batchnorm-stats", action="store_true",
+        help="v4 teacher-retention: freeze BatchNorm running stats (momentum=0) for the "
+             "run so the eval-mode calibration forward reads the BASE running stats and "
+             "the cached teacher targets stay reproducible (~0 retention loss at step 0). "
+             "Train-mode normalization still uses batch stats.")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
@@ -844,6 +849,7 @@ def main():
             args.post_opening_calibration_tag_schedule),
         post_opening_calibration_teacher_value_weight=args.post_opening_calibration_teacher_value_weight,
         post_opening_calibration_teacher_policy_kl_weight=args.post_opening_calibration_teacher_policy_kl_weight,
+        freeze_batchnorm_stats=args.freeze_batchnorm_stats,
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,

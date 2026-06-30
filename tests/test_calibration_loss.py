@@ -1,9 +1,11 @@
 import numpy as np
 import mlx.core as mx
+import mlx.nn as nn
 import mlx.optimizers as optim
 
 from scripts.GPU.alphazero.trainer import (
     alphazero_loss_batch, train_step, MainModule, flatten_params,
+    CALIB_VALUE_TERM_IDX,
 )
 from scripts.GPU.alphazero.network import create_network
 from scripts.GPU.alphazero.self_play import PositionRecord
@@ -296,3 +298,77 @@ def test_make_padded_batch_correction_vs_retention_target_pi():
     assert np.allclose(tp[0], 0.0)                 # correction row: all-zero target
     np.testing.assert_allclose(tp[1].sum(), 1.0, atol=1e-6)  # retention row sums to 1
     assert tp[0, 2] == 0.0 and msk[0, 2] == 0.0    # corr's padded slot: masked, no mass
+
+
+def _freeze_bn(net):
+    """momentum=0 → running stats never update (frozen at base); train-mode
+    normalization still uses batch stats. Lets eval-mode forwards read fixed
+    base running stats with no drift, isolating the calibration eval-toggle."""
+    for _, m in net.named_modules():
+        if isinstance(m, nn.BatchNorm):
+            m.momentum = 0.0
+
+
+def _distinct_teacher_pos(board_fill, moves):
+    n = len(moves)
+    return PositionRecord(
+        board_tensor=np.full((24, 24, 30), board_fill, dtype=np.float32),
+        to_move="black", legal_moves=list(moves),
+        visit_counts=[1.0 / n] * n, outcome=0.0, active_size=24,
+        ply=20, game_n_moves=None)
+
+
+def _eval_value(net, rec):
+    net.eval()
+    n = len(rec.legal_moves)
+    rr = np.zeros((1, n), np.int32); cc = np.zeros((1, n), np.int32); mm = np.ones((1, n), np.float32)
+    for j, (r, c) in enumerate(rec.legal_moves):
+        rr[0, j], cc[0, j] = r, c
+    _, v, _ = net.forward_padded(mx.array(rec.board_tensor[None]),
+                                 mx.array(rr), mx.array(cc), mx.array(mm), active_size=24)
+    return float(np.array(v)[0])
+
+
+def test_teacher_calib_forward_uses_eval_running_stats():
+    """The network uses BatchNorm, so a TRAIN-mode batched calibration forward
+    normalizes by per-batch statistics (batch-dependent). The teacher-path
+    calibration forward must instead run in EVAL mode (running stats) so its
+    value reproduces the per-position eval-cached teacher target — even with the
+    net in TRAIN mode and a multi-board batch. (BN frozen here so eval reads
+    fixed base stats; the ignored main-batch forward cannot perturb them.)"""
+    net = create_network(hidden=64, n_blocks=2)
+    _freeze_bn(net)
+    a = _distinct_teacher_pos(0.0, [(0, 0), (1, 1)])
+    b = _distinct_teacher_pos(1.0, [(0, 0), (1, 1), (2, 2)])   # different board → batch stats differ
+    a.outcome = _eval_value(net, a)                            # eval-mode (running-stats) teacher value
+    b.outcome = _eval_value(net, b)
+    net.train()                                               # net in TRAIN mode (like training)
+    out = alphazero_loss_batch(
+        net, [_main_pos() for _ in range(3)],
+        calibration_positions=[a, b],
+        calibration_weights=np.array([1.0, 1.0], dtype=np.float32),
+        calibration_loss_weight=1.0,
+        calibration_teacher_policy_mask=np.array([1.0, 1.0], dtype=np.float32),
+        teacher_value_weight=1.0, teacher_policy_kl_weight=0.0)
+    assert float(out[CALIB_VALUE_TERM_IDX]) < 1e-5
+
+
+def test_freeze_batchnorm_running_stats():
+    """freeze_batchnorm_running_stats sets momentum=0 on every BatchNorm so the
+    running stats stay frozen at their loaded (base) values; a train-mode forward
+    no longer moves them. (Train-mode normalization still uses batch stats.)"""
+    from scripts.GPU.alphazero.trainer import freeze_batchnorm_running_stats
+    net = create_network(hidden=64, n_blocks=2)
+    n_frozen = freeze_batchnorm_running_stats(net)
+    assert n_frozen >= 1
+    assert all(m.momentum == 0.0 for _, m in net.named_modules()
+               if isinstance(m, nn.BatchNorm))
+    bn = net.encoder.blocks[0].bn1
+    rm0 = np.array(bn.running_mean).copy()
+    net.train()
+    # Non-zero input so activations (hence batch stats) are non-zero regardless of
+    # conv-bias init — an UNfrozen BN would move running_mean here; momentum=0 must not.
+    b = np.ones((5, 24, 24, 30), np.float32)
+    rr = np.zeros((5, 3), np.int32); cc = np.zeros((5, 3), np.int32); mm = np.ones((5, 3), np.float32)
+    net.forward_padded(mx.array(b), mx.array(rr), mx.array(cc), mx.array(mm), active_size=24)
+    assert np.allclose(rm0, np.array(bn.running_mean))

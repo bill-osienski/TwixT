@@ -88,3 +88,9 @@ def test_calibration_teacher_weight_flags_set():
     ])
     assert args.post_opening_calibration_teacher_value_weight == 0.5
     assert args.post_opening_calibration_teacher_policy_kl_weight == 0.0
+
+
+def test_freeze_batchnorm_stats_flag_default_and_set():
+    assert build_arg_parser().parse_args([]).freeze_batchnorm_stats is False
+    assert build_arg_parser().parse_args(
+        ["--freeze-batchnorm-stats"]).freeze_batchnorm_stats is True
