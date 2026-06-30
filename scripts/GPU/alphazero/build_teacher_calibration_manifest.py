@@ -76,7 +76,13 @@ def main(argv=None):
     from .local_evaluator import LocalGPUEvaluator
     from .probe_eval import load_network_for_scoring
     rows = load_csv_manifest(args.source)["cases"]
-    network = load_network_for_scoring(args.teacher_checkpoint)
+    network, *_ = load_network_for_scoring(args.teacher_checkpoint)
+    # BatchNorm: cache the teacher's EVAL-mode outputs (running stats) so each
+    # row is deterministic and batch-independent. A train-mode forward would
+    # normalize per-batch (here batch=1 per row), and those targets could not be
+    # reproduced by the batched calibration forward at train time (see the gate-0
+    # self-distillation smoke).
+    network.eval()
     evaluator = LocalGPUEvaluator(network)
     out_rows = build_rows(rows, evaluator)
     # Preserve source column order; append any v4 columns not already present.

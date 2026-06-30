@@ -77,6 +77,7 @@ def test_self_distillation_holds_for_matching_teacher(tmp_path):
     rp = tmp_path / "game_000001.json"
     rp.write_text(json.dumps(legal_replay(9, game_idx=1)))
     net = create_network(hidden=64, n_blocks=2)
+    net.eval()                                           # cache in eval mode (mirrors builder main())
     rows = [{"game_idx": "1", "case_id": "ret1", "replay_path": str(rp),
              "position_ply": "5", "side_to_move": "black",
              "tag": "old_post_opening_retention", "weight_scale": "1.0"}]
@@ -89,3 +90,42 @@ def test_self_distillation_holds_for_matching_teacher(tmp_path):
     stats = assert_self_distillation(net, str(manifest), tol=1e-3)
     assert abs(stats["value_mse"]) < 1e-3
     assert abs(stats["kl_est"]) < 1e-3
+
+
+def test_self_distillation_holds_for_multi_position_batch(tmp_path):
+    """Multi-position guard: the network uses BatchNorm, so a TRAIN-mode batched
+    forward is batch-statistics-dependent. Self-distillation over >1 retention
+    row therefore only holds when the teacher cache AND the smoke forward both
+    use EVAL mode (running stats, batch-independent). The single-row test above
+    cannot catch this (batch==1 is trivially batch-independent)."""
+    import csv as _csv
+    from scripts.GPU.alphazero.smoke_teacher_calibration_v4 import assert_self_distillation
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+
+    net = create_network(hidden=64, n_blocks=2)
+    net.eval()                                   # cache uses base running stats (mirrors builder main())
+    rp = tmp_path / "game_000001.json"
+    rp.write_text(json.dumps(legal_replay(9, game_idx=1)))
+    # 3 distinct boards (different plies) + both sides → a real padded batch.
+    rows = [
+        {"game_idx": "1", "case_id": "r1", "replay_path": str(rp),
+         "position_ply": "5", "side_to_move": "black",
+         "tag": "old_post_opening_retention", "weight_scale": "1.0"},
+        {"game_idx": "1", "case_id": "r2", "replay_path": str(rp),
+         "position_ply": "6", "side_to_move": "red",
+         "tag": "red_predrop_retention", "weight_scale": "1.0"},
+        {"game_idx": "1", "case_id": "r3", "replay_path": str(rp),
+         "position_ply": "7", "side_to_move": "black",
+         "tag": "goal_line_retention", "weight_scale": "1.0"},
+    ]
+    built = build_rows(rows, LocalGPUEvaluator(net))     # teacher = net itself
+    manifest = tmp_path / "v4_multi.csv"
+    with manifest.open("w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=list(built[0].keys()))
+        w.writeheader(); w.writerows(built)
+
+    net.train()                                  # net in TRAIN at smoke time (production-faithful)
+    stats = assert_self_distillation(net, str(manifest), tol=1e-4)
+    assert abs(stats["value_mse"]) < 1e-4
+    assert abs(stats["kl_est"]) < 1e-4
