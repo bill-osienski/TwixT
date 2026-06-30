@@ -1315,7 +1315,7 @@ git commit -m "feat(calibration): v4 gate-0 self-distillation pre-flight smoke"
 
 1. **Build the manifest** (Task 9 CLI) → `logs/eval/targeted_calibration_v4_teacher_from_calib020_0001.csv`.
 2. **Gate 0** (Task 10 CLI): `smoke_teacher_calibration_v4.py --manifest <v4.csv> --teacher-checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors` — must print PASS. **Stop if Gate 0 fails: do NOT run v4 training, do NOT tune weights, and do NOT proceed to the A–D gates until the manifest/checkpoint mismatch is fixed.** A Gate-0 failure means the teacher cache and the loaded network disagree (wrong checkpoint / canonicalization / perspective / policy alignment / accidental MCTS targets) — every downstream number would be meaningless.
-3. **Run** the v4 training command (spec §11 — the v3 command with the three deltas; `--iterations 1`).
+3. **Run** the v4 training command (spec §11 — the v3 command with the four deltas; `--iterations 1`). The 4th delta `--freeze-batchnorm-stats` is REQUIRED (BatchNorm: freezes running stats at the base so the eval-mode teacher-path calibration forward reproduces the cached targets — without it the retention loss reads drifting batch stats; see the gate-0 / training-path fix, commits `1d2d1ce`+`543d66d`).
 4. **Gates A–D**: 400-sim probes vs `calib020_0001` (spec §2). No promotion match unless all four pass.
 5. **Record**: append the v4 row to `docs/2026-06-26-...experiment-ledger.md` (template in spec §11) and update do-not-repeat / severe-overlap.
 

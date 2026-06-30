@@ -192,11 +192,12 @@ Extend the `post_opening_calibration` sidecar block with `calib_value_term_avg_i
 
 ## 11. First experiment + operator gates
 
-Self-distillation run: base = teacher = `calib020_0001`. **"Match v3's run length" resolves to a concrete config** — confirmed from the v3 plan operator section (`docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md`, §"Run the 1-iteration v3 experiment"): **`--iterations 1`**, 100 games/iter, 400 sims, batch 64, lr 0.0003. The v4 run is the **v3 command verbatim with exactly three deltas vs v3**:
+Self-distillation run: base = teacher = `calib020_0001`. **"Match v3's run length" resolves to a concrete config** — confirmed from the v3 plan operator section (`docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md`, §"Run the 1-iteration v3 experiment"): **`--iterations 1`**, 100 games/iter, 400 sims, batch 64, lr 0.0003. The v4 run is the **v3 command verbatim with exactly four deltas vs v3**:
 
 1. `--checkpoint-dir` → `checkpoints/alphazero-v4-teacher-from-calib020-0001` (new output dir)
 2. `--post-opening-calibration-manifest` → `logs/eval/targeted_calibration_v4_teacher_from_calib020_0001.csv` (v4 teacher manifest)
 3. add `--post-opening-calibration-teacher-value-weight 1.0` and `--post-opening-calibration-teacher-policy-kl-weight 0.25`
+4. add `--freeze-batchnorm-stats` (**REQUIRED** — the network is BatchNorm-based, and train-mode BatchNorm normalizes by per-batch statistics. This flag freezes BN running stats at the base (`momentum=0`) so the teacher-path calibration forward — which runs in eval mode — reproduces the cached eval-mode teacher targets batch-independently. Without it the retention loss reads drifting batch statistics and is **not** the clean ~0-at-step-0 self-distillation signal. See the gate-0 / training-path BatchNorm fix, commits `1d2d1ce` + `543d66d`.)
 
 ```bash
 .venv/bin/python -m scripts.GPU.alphazero.train \
@@ -216,7 +217,8 @@ Self-distillation run: base = teacher = `calib020_0001`. **"Match v3's run lengt
   --post-opening-calibration-target -0.35 \
   --post-opening-calibration-tag-schedule black_predrop_correction=2,goal_line_retention=1,old_post_opening_retention=2,red_predrop_retention=1 \
   --post-opening-calibration-teacher-value-weight 1.0 \
-  --post-opening-calibration-teacher-policy-kl-weight 0.25
+  --post-opening-calibration-teacher-policy-kl-weight 0.25 \
+  --freeze-batchnorm-stats
 ```
 
 Everything else (1 iteration, 100 games, 400 sims, batch 64, lr 0.0003, resign/adjudicate knobs, schedule, global weight 0.01, correction target −0.35) is **identical to v3** — the only changed variable is the retention objective. The integration plan re-confirms the iteration count from the v3 artifact and records the resolved value in both the run command and the ledger row.
