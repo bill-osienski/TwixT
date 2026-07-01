@@ -63,10 +63,11 @@ def freeze_batchnorm_running_stats(network) -> int:
     their current (base-checkpoint) values. Train-mode normalization still uses
     per-batch statistics; only the running-stat *tracking* is frozen.
 
-    Used by the teacher-retention calibration run: the eval-mode calibration
-    forward (alphazero_loss_batch, teacher path) reads BatchNorm running stats, so
-    freezing them at the base keeps the cached teacher targets reproducible
-    instead of drifting as self-play training proceeds. Returns the count frozen.
+    Primary use: the v4 teacher-retention calibration run, whose eval-mode
+    calibration forward (alphazero_loss_batch, teacher path) reads BatchNorm
+    running stats, so freezing them at the base keeps the cached teacher targets
+    reproducible instead of drifting as self-play training proceeds. Also usable
+    as a general frozen-BN control. Returns the count frozen.
     """
     count = 0
     for _, module in network.named_modules():
@@ -2520,7 +2521,7 @@ def train(
                   "(teacher-retention self-distillation would be meaningless).")
         _n_bn_frozen = freeze_batchnorm_running_stats(network)
         print(f"Froze BatchNorm running stats on {_n_bn_frozen} modules "
-              f"(momentum=0; teacher-retention calibration reads base stats)")
+              f"(momentum=0; running stats stay at the loaded base checkpoint)")
 
     # Create evaluator (wraps network for MCTS)
     evaluator = LocalGPUEvaluator(network)

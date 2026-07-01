@@ -397,10 +397,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="v4: weight on the teacher policy cross-entropy (KL) term on "
              "teacher_retention rows only. Default 0.25; 0.0 = value-only ablation.")
     parser.add_argument("--freeze-batchnorm-stats", action="store_true",
-        help="v4 teacher-retention: freeze BatchNorm running stats (momentum=0) for the "
-             "run so the eval-mode calibration forward reads the BASE running stats and "
-             "the cached teacher targets stay reproducible (~0 retention loss at step 0). "
-             "Train-mode normalization still uses batch stats.")
+        help="Freeze BatchNorm running stats (momentum=0) for the run so they stay at the "
+             "loaded base checkpoint; train-mode normalization still uses batch stats. Used "
+             "by the v4 teacher-retention calibration (its eval-mode forward reads base "
+             "stats so cached teacher targets stay reproducible) and as a frozen-BN control.")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
