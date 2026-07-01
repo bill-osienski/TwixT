@@ -4480,6 +4480,19 @@ def train(
         metrics_path = os.path.join(checkpoint_dir, "metrics.csv")
         append_metrics_csv(metrics_path, iteration_metrics, CSV_FIELDNAMES)
 
+        # v4 teacher-retention flat scalars, mirrored from the sidecar calibration
+        # block into the per-checkpoint state so model_iter_*.json is self-contained
+        # (the full nested block still lives in the iter_<N>_stats.json sidecar).
+        _poc_block = _sidecar.get("post_opening_calibration") if _calib_active else None
+        _teacher_calib_scalars = {}
+        if _poc_block:
+            _poc_loss = _poc_block.get("loss", {})
+            _teacher_calib_scalars = {
+                k: _poc_loss[k] for k in (
+                    "n_teacher_retention_drawn", "calib_policy_ce_avg_iter",
+                    "calib_policy_kl_est_avg_iter", "calib_value_term_avg_iter")
+                if k in _poc_loss}
+
         # Build expanded state dict for JSON checkpoint
         state = {
             **iteration_metrics,
@@ -4503,6 +4516,11 @@ def train(
             # Tag-stratified calibration draw counts (dict; JSON sibling only,
             # never iteration_metrics/CSV). Empty when calibration is disabled.
             "calib_n_drawn_by_tag": sum_calib_n_drawn_by_tag if _calib_active else {},
+            # v4 teacher-retention flat telemetry (JSON sibling of the sidecar block).
+            **_teacher_calib_scalars,
+            # Run config: whether BatchNorm running stats were frozen at base
+            # (v4 teacher-retention self-distillation reads base stats).
+            "freeze_batchnorm_stats": freeze_batchnorm_stats,
         }
 
         state_path = ckpt_path.replace(".safetensors", ".json")

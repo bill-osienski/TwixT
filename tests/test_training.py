@@ -451,6 +451,66 @@ def test_calibration_telemetry_persisted_to_metrics_and_model_iter_json():
     print("PASS: calibration telemetry persisted to metrics.csv + model_iter JSON")
 
 
+def test_teacher_calibration_scalars_and_freeze_flag_in_model_iter_json():
+    """v4: a teacher-retention run must persist freeze_batchnorm_stats AND the
+    teacher telemetry scalars (n_teacher_retention_drawn, calib_policy_ce/kl_est/
+    value_term) into the per-checkpoint model_iter JSON state (flat scalars,
+    alongside calib_n_drawn_by_tag; the full dict block stays in the sidecar)."""
+    import csv as _csv
+    import json as _json
+    import math as _math
+    from scripts.GPU.alphazero.trainer import train
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+    from scripts.GPU.alphazero.build_teacher_calibration_manifest import build_rows
+    from tests.goal_line_probe_fixtures import legal_replay
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        replay = legal_replay(8, game_idx=1)
+        rpath = tmp / "game_000001.json"
+        rpath.write_text(_json.dumps(replay))
+        # Tiny teacher-retention manifest (1 retention row) built via the real
+        # builder in eval mode, so the pool schema is teacher_retention and every
+        # draw is a teacher row.
+        net_t = create_network(hidden=64, n_blocks=2)
+        net_t.eval()
+        built = build_rows(
+            [{"game_idx": "1", "case_id": "ret1", "replay_path": str(rpath),
+              "position_ply": "5", "side_to_move": "black",
+              "tag": "old_post_opening_retention", "weight_scale": "1.0"}],
+            LocalGPUEvaluator(net_t))
+        manifest = tmp / "teacher.csv"
+        with manifest.open("w", newline="") as f:
+            w = _csv.DictWriter(f, fieldnames=list(built[0].keys()))
+            w.writeheader(); w.writerows(built)
+
+        ckpt_dir = tmp / "ckpt"
+        train(
+            n_iterations=1, games_per_iteration=1, train_steps_per_iteration=5,
+            batch_size=4, buffer_size=1000, checkpoint_dir=str(ckpt_dir),
+            mcts_simulations=10, learning_rate=1e-3, hidden=64, n_blocks=2,
+            max_moves=10, seed=42,
+            post_opening_calibration_enabled=True,
+            post_opening_calibration_manifest=str(manifest),
+            post_opening_calibration_weight=0.02,
+            post_opening_calibration_batch_fraction=0.10,
+            freeze_batchnorm_stats=True,
+            games_dir_override=str(tmp / "games"),
+        )
+
+        state = _json.loads(sorted(ckpt_dir.glob("model_iter_*.json"))[-1].read_text())
+        assert state.get("freeze_batchnorm_stats") is True, "freeze_batchnorm_stats not persisted"
+        for k in ("n_teacher_retention_drawn", "calib_policy_ce_avg_iter",
+                  "calib_policy_kl_est_avg_iter", "calib_value_term_avg_iter"):
+            assert k in state, f"{k} missing from model_iter JSON state"
+        assert state["n_teacher_retention_drawn"] > 0
+        assert _math.isfinite(float(state["calib_policy_ce_avg_iter"]))
+        assert _math.isfinite(float(state["calib_value_term_avg_iter"]))
+
+    print("PASS: v4 teacher scalars + freeze flag persisted to model_iter JSON")
+
+
 def test_calibration_tag_schedule_draw_counts_persisted():
     """v3: a tag schedule draws per-tag counts each step and persists
     calib_n_drawn_by_tag (a dict) into model_iter_*.json state -- in the
