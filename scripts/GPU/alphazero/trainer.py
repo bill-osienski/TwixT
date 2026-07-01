@@ -2885,7 +2885,15 @@ def train(
             f"tag_schedule={post_opening_calibration_tag_schedule}"
             if post_opening_calibration_tag_schedule
             else f"batch_fraction={post_opening_calibration_batch_fraction}")
-        if _calib_pool.schema == "per_row_target":
+        if _calib_pool.schema == "teacher_retention":
+            _n_teacher = sum(1 for _s in _calib_pool._samples
+                             if _s.loss_mode == "teacher_retention")
+            print(f"Post-opening calibration: {len(_calib_pool)} positions, "
+                  f"mode=teacher_retention ({_n_teacher} teacher / "
+                  f"{len(_calib_pool) - _n_teacher} hard-value rows), "
+                  f"weight={effective_post_opening_calibration_weight}, "
+                  f"{_sampling_desc}")
+        elif _calib_pool.schema == "per_row_target":
             print(f"Post-opening calibration: {len(_calib_pool)} positions, "
                   f"mode=per_row_target, "
                   f"weight={effective_post_opening_calibration_weight}, "
