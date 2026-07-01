@@ -276,30 +276,71 @@ def run_forced_probes_inline(
     expected_signs: list[int] = []
     sign_correct = 0
 
+    # Batched inference. Single-probe inference in a tight loop (batch=1,
+    # one infer() call per probe) accumulates Metal buffer handles past the
+    # ~500k device limit on wide ranges (~7860 probes for 40 iters trips it
+    # around probe 5938 even with per-call clear_cache, because clear_cache
+    # returns buffers to the cache pool but Metal still tracks handles).
+    # Batching collapses N calls into N/BATCH_SIZE, bounding handle growth.
+    #
+    # Per-batch clear_cache is OK here (unlike training's hot MCTS path —
+    # see local_evaluator.py docstring) because we're doing ~490 large
+    # calls instead of ~7860 tiny ones; the buffer-reuse benefit clear_cache
+    # would otherwise discard is small at this granularity.
+    BATCH_SIZE = 16
+
+    # Pre-extract per-probe inputs (CPU-side; no MLX state).
+    prep: list[dict] = []
     for probe in applicable:
         state = _replay_probe(probe)
         tensor = evaluator.build_input_tensor(state)
-        tensor = np.transpose(tensor, (1, 2, 0))
-        boards_np = np.expand_dims(tensor.astype(np.float32), axis=0)
+        tensor = np.transpose(tensor, (1, 2, 0)).astype(np.float32)
         moves = state.legal_moves()
-        move_rows_np = np.array([[m[0] for m in moves]], dtype=np.int32)
-        move_cols_np = np.array([[m[1] for m in moves]], dtype=np.int32)
-        move_mask_np = np.ones((1, len(moves)), dtype=np.float32)
-        _, values_np = evaluator.infer(
-            boards_np, move_rows_np, move_cols_np, move_mask_np, state.active_size
-        )
-        nn_value = float(values_np[0])
-        # Red-perspective convention (matches _eval_probe)
-        if state.to_move == "black":
-            nn_value = -nn_value
-        nn_values.append(nn_value)
+        prep.append({
+            "tensor": tensor,
+            "moves": moves,
+            "active_size": state.active_size,
+            "to_move": state.to_move,
+            "expected_sign": probe.get("expected_value_sign", 0),
+        })
 
-        exp_sign = probe.get("expected_value_sign", 0)
-        expected_signs.append(exp_sign)
-        if (exp_sign > 0 and nn_value > 0) or \
-           (exp_sign < 0 and nn_value < 0) or \
-           (exp_sign == 0 and abs(nn_value) < 0.1):
-            sign_correct += 1
+    for start in range(0, len(prep), BATCH_SIZE):
+        chunk = prep[start:start + BATCH_SIZE]
+        B = len(chunk)
+        max_moves = max(len(p["moves"]) for p in chunk)
+        H, W, C = chunk[0]["tensor"].shape
+
+        boards_np = np.zeros((B, H, W, C), dtype=np.float32)
+        move_rows_np = np.zeros((B, max_moves), dtype=np.int32)
+        move_cols_np = np.zeros((B, max_moves), dtype=np.int32)
+        move_mask_np = np.zeros((B, max_moves), dtype=np.float32)
+        for i, p in enumerate(chunk):
+            boards_np[i] = p["tensor"]
+            for j, (r, c) in enumerate(p["moves"]):
+                move_rows_np[i, j] = r
+                move_cols_np[i, j] = c
+            move_mask_np[i, :len(p["moves"])] = 1.0
+
+        # All probes here share active_size (caller filtered by it).
+        active_size_chunk = chunk[0]["active_size"]
+        _, values_np = evaluator.infer(
+            boards_np, move_rows_np, move_cols_np, move_mask_np, active_size_chunk
+        )
+
+        for i, p in enumerate(chunk):
+            v = float(values_np[i])
+            # Red-perspective convention (matches _eval_probe).
+            if p["to_move"] == "black":
+                v = -v
+            nn_values.append(v)
+            exp_sign = p["expected_sign"]
+            expected_signs.append(exp_sign)
+            if (exp_sign > 0 and v > 0) or \
+               (exp_sign < 0 and v < 0) or \
+               (exp_sign == 0 and abs(v) < 0.1):
+                sign_correct += 1
+
+        mx.clear_cache()
 
     n = len(applicable)
     abs_values = sorted(abs(v) for v in nn_values)
