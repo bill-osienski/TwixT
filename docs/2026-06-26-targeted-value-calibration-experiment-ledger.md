@@ -4,7 +4,7 @@
 
 A durable, append-only record of every value-calibration experiment: what changed, how it scored on the four acceptance gates, what we learned, and what **not** to retry. **Read this before proposing any new calibration knob** — if the change is on the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of a knob we've already swept), the answer is probably "no, we already saw the tradeoff."
 
-> **Key conclusion (2026-06-26):** Targeted **correction works** — we can pull the black pre-drop overvalue toward a hard target. But **scalar-MSE retention does not reliably preserve the guardrail families (B/C/D).** Uniform sampling, retention-weight sweeps, and global-weight sweeps have all failed. The next work (**v4**) should shift from scalar-row retention to **teacher-retention distillation** from the current best.
+> **Key conclusion (updated 2026-06-30):** Targeted **correction works** — every successful branch can move the black pre-drop family (A), and v4 produced the strongest A correction so far. But every tested retention strategy has still failed to preserve the guardrail families (B/C/D). v4 teacher-retention fixed A but broke B/C/D, so it is rejected. Because train-mode BatchNorm was found to be a calibration confound, the next controlled step is **`v3-frozenBN-control`**, not another weight/schedule sweep.
 
 ## Before proposing a new calibration experiment
 
@@ -62,7 +62,7 @@ v4 was run with `--freeze-batchnorm-stats`; v2/v3 behavior should not be reinter
 
 ## What got better vs worse
 
-**Improved — A (black pre-drop):** targeted correction is **real**. Best so far is **v3 @ global weight 0.01**: mean **−0.047**, severe **10.0%** (from baseline mean +0.257 / severe 43.3%).
+**Improved — A (black pre-drop):** targeted correction is **real**. The strongest A correction so far is **v4 teacher-retention**: mean **−0.305**, over **13.3%**, severe **6.7%** (from baseline mean +0.257 / over 50.0% / severe 43.3%). This is an A-only success, not a promotion candidate, because B/C/D failed.
 
 **Worsened / unstable — C (old post-opening):** regresses under every v2/v3 approach. Crucially, **v3 and v3b share 5 severe C cases** — the same positions break regardless of the scalar weight:
 
@@ -87,37 +87,42 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 3. **Only lowering global calibration weight.** v3b (0.005) did not preserve guardrails and weakened correction. → **stop scalar weight sweeps.**
 4. **Promotion matches before A/B/C/D all pass.** Every rejected branch failed gates clearly enough that a match would be wasted compute.
 5. **More scalar-MSE-only rows as the main strategy.** The C/D failures show scalar row anchors aren't enough to hold the guardrails.
+6. **Another v4 teacher-retention weight/schedule tweak before the frozen-BN control.** v4 fixed A but failed B/C/D. Before changing teacher value/policy weights or schedule ratios, run the controlled `v3-frozenBN-control` to isolate the BatchNorm confound.
 
-Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps. The next step is a new **design (v4)**, not a v3c re-tuning of the same knobs.
+Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, and ungrounded v4 weight/schedule tweaks. The next step is a controlled historical check, not a new knob sweep.
 
 ## Severe-overlap findings (why the next step changes shape)
 
 - **C — stable repeat offenders:** 5 of the severe cases repeat across v3/v3b (listed above). C should be treated as a fixed fragile family needing **direct retention of current-best behavior**, not as eval noise.
 - **D — diffuse:** only 1 shared severe case across v3/v3b. D reads as **broad value-head drift**; unlikely to be solved by adding a few hard D rows.
 
-## Next planned hypothesis — v4: Teacher-Retention Anchors
+## Current next hypothesis after v4
 
-Shift retention from "match a frozen **scalar** target" to "**match the current-best teacher's output**" on the guardrail positions — explicitly preserving current-best behavior on B/C/D instead of approximating it with a scalar.
+v4 tested teacher-retention distillation from `calib020_0001` using raw-NN teacher value plus dense teacher policy CE/KL on B/C/D retention rows. It fixed A strongly but still failed B/C/D, so **teacher-retention at the tested settings is rejected**.
 
-**Core idea**
-- **Correction rows:** hard-target MSE (e.g. `black_predrop_correction` target = −0.35) — unchanged.
-- **Retention rows:** the candidate should **match the frozen `calib020_0001` teacher output** on those positions.
+The BatchNorm finding means the next disciplined step is not a new v4 weight/schedule change. The next run should be a controlled historical check:
 
-**Minimum v4 — value teacher retention:** candidate value MSE to the teacher's value on B/C/D retention rows.
+**`v3-frozenBN-control`**
+- Same base checkpoint: `calib020_0001`.
+- Same v3 scalar-retention manifest and `2:1:2:1` tag schedule.
+- Same global calibration weight `0.01`, correction target `−0.35`, one iteration, 100 games, 400 sims, batch 64, lr `0.0003`.
+- Add only `--freeze-batchnorm-stats`.
+- Score with the same A/B/C/D 400-sim gates.
 
-**Potential v4+ — value + policy teacher retention:** candidate value MSE to teacher value **and** candidate policy KL to the teacher policy/prior on retention rows.
+**Decision value of this control:**
+- If `v3-frozenBN-control` still fails like v3, then scalar retention remains rejected under the corrected BN regime.
+- If it materially improves B/C/D, BatchNorm batch-dependence was a major confound and the scalar-retention conclusions need a narrower frozen-BN interpretation.
+- If it beats v4 on B/C/D while holding A, revisit the teacher-retention design only with a clear reason, not as a sweep.
+- If it passes all A/B/C/D gates, then it earns the promotion-match decision point.
 
-**Where each likely matters:**
-- **C** failures have **high top-1 confidence** ⇒ **policy retention** may matter (hold the move distribution, not just the value).
-- **D** failures are **low top-1 / diffuse** ⇒ **value retention** may matter more.
-
-> **Conclusion to carry into v4 design:** targeted correction works, but scalar-MSE retention does not preserve guardrails reliably. v4 = **teacher-retention distillation** from the current best.
+Until that control is run, do **not** reinterpret old v2/v3 results as invalid and do **not** start a v4 weight/schedule sweep.
 
 ## Code / artifact pointers
 
 - **v2** manifest builder + mixed-pool weighted loss: `scripts/GPU/alphazero/build_targeted_calibration_manifest.py`; operator guide `docs/post-game-analysis.md` §6.
 - **v3** tag-stratified sampling: `--post-opening-calibration-tag-schedule` (commits `0c122cb` / `0e0fd24` / `282998d` / `b27d60b` on `main`); telemetry `state.calib_n_drawn_by_tag` + sidecar `post_opening_calibration.draws_by_tag`; operator guide `docs/post-game-analysis.md` §6 (tag-stratified block).
-- **Plans:** `docs/superpowers/plans/2026-06-24-targeted-value-calibration-v2.md`, `docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md`.
+- **v4** teacher-retention builder/smoke/training path: `scripts/GPU/alphazero/build_teacher_calibration_manifest.py`, `scripts/GPU/alphazero/smoke_teacher_calibration_v4.py`, `--post-opening-calibration-teacher-value-weight`, `--post-opening-calibration-teacher-policy-kl-weight`, and `--freeze-batchnorm-stats`.
+- **Plans:** `docs/superpowers/plans/2026-06-24-targeted-value-calibration-v2.md`, `docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md`, `docs/superpowers/plans/2026-06-29-targeted-value-calibration-v4-teacher-retention.md`.
 
 ---
 
