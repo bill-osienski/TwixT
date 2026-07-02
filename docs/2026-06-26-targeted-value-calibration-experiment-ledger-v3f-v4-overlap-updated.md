@@ -4,7 +4,7 @@
 
 A durable, append-only record of every value-calibration experiment: what changed, how it scored on the four acceptance gates, what we learned, and what **not** to retry. **Read this before proposing any new calibration knob** — if the change is on the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of a knob we've already swept), the answer is probably "no, we already saw the tradeoff."
 
-> **Key conclusion (updated 2026-07-02):** Targeted **correction works** — every successful branch can move the black pre-drop family (A). But every tested retention strategy has failed to preserve the guardrail families (B/C/D): scalar root-value targets (v2/v3/v3b/v3F), raw teacher value+priors (v4), and now **position-level root-visit policy anchors (v5, REJECTED 2026-07-02)**. The BN confound is resolved (v3F), and the raw-NN diagnostic showed v4's raw head held while the MCTS root drifted — v5 tested the natural fix (anchor the search-improved root policy) and it was **insufficient**. **Next step is NOT another training run or weight sweep: first diagnose whether v5 actually held its stored root-policy anchors on the retention rows.** Anchors held ⇒ the drift is tree/path-level (deeper than any per-position anchor can reach); anchors not held ⇒ inspect the loss/weighting before concluding anything.
+> **Key conclusion (updated 2026-07-02, post path-diagnostic):** Targeted **correction works** — every successful branch can move the black pre-drop family (A). But every **root-position-level** retention strategy has failed B/C/D: scalar root-value targets (v2/v3/v3b/v3F), raw teacher value+priors (v4), and root-visit policy anchors (v5). The failure mechanism is now **identified, not hypothesized**: the v5 path diagnostic shows v5 **held its root anchors** (same dominant root moves, near-identical visit shares on the C rows) while the **searched continuation/child values drifted massively** (D rows: top-child NN value +0.03 → +0.80 pro-black). Root-level anchors do not constrain what search finds one ply down. **Next = v6 searched-continuation/PV retention** — add child/PV states from BASE MCTS under the fragile rows as retention rows (raw teacher values; policy only where distributions are sharp). Not another root-row design, weight, or schedule variant.
 
 ## Before proposing a new calibration experiment
 
@@ -93,7 +93,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 7. **Another v4 teacher-retention weight/schedule tweak before raw-NN candidate scoring.** v4 included the shared fragile C/D rows, but raw-NN teacher-retention still failed to preserve 400-sim MCTS gate behavior. Before changing teacher value/policy weights or schedule ratios, inspect whether v4 actually matched the raw teacher values on the shared C/D rows. *(Scoring done 2026-07-01 — see #8.)*
 8. **Any further raw teacher-retention weight/schedule sweep.** The 2026-07-01 raw-NN focus-row diagnostic shows v4 **mostly matched the raw teacher values** on the shared C/D rows (e.g. `game_000369_ply_051` delta +0.1127 raw vs a severe MCTS gate) while the 400-sim gates still failed — the **objective**, not its weighting, is wrong for the gate. The next branch must target MCTS-root/root-behavior retention.
 9. **"Root-value-only retention" as a new branch.** It has already been run: v2/v3 retention rows' `target_black_value` came from `probe_black_root_value` (`build_targeted_calibration_manifest.py:105,137`), i.e. BASE's own 400-sim MCTS root values — and failed B/C/D, including under frozen BN (v3F). Any v5+ proposal whose only value signal is the BASE root value is a v3 rerun. The new signal must be the root **visit distribution** (or deeper tree/path structure), not the root scalar.
-10. **Any root-policy weight/schedule sweep, or a new retention design, before the v5 anchor-hold diagnosis.** v5 (root-visit policy anchors, CE weight 0.25) failed B/C/D like every predecessor. Before touching a knob or proposing v6: measure whether the trained v5 checkpoint actually **holds the stored root-policy/value anchors on its own retention rows** (compare candidate raw policy vs stored `root_visits_json`, and candidate raw value vs `teacher_value`, on the v5 manifest — the raw-NN diagnostic CLI + manifest columns make this cheap). Anchors held ⇒ tree/path-level drift is the mechanism and per-position anchoring is a dead end; anchors not held ⇒ the loss/weighting under-trained them and the objective was never really tested.
+10. **Any root-policy weight/schedule sweep, or a new retention design, before the v5 anchor-hold diagnosis.** *(DISCHARGED 2026-07-02 — the path diagnostic ran: anchors HELD, continuations drifted; see the v5 path-diagnostic entry.)* The rule's successor is #11.
+11. **Any further root-position-level anchoring as the primary retention strategy.** The v5 path diagnostic proves the mechanism: v5 held its root anchors (dominant moves + visit shares) on the fragile C rows yet stayed severe, because the drift lives in the **searched continuation/child values** one-plus plies below the anchored roots (D top-child NN values +0.03→+0.80). Adding more root rows, sharper root targets, or heavier root weights cannot reach it. Retention designs must anchor **continuation/PV states** (or deeper tree structure), i.e. v6's shape.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, and raw-teacher weight/schedule tweaks. The next step is an MCTS-root/root-behavior retention design, not a new raw-objective knob sweep.
 
@@ -208,6 +209,34 @@ Decision: REJECT. No promotion match.
 Lesson: Position-level root-visit policy retention did not preserve B/C/D after A correction. v5 tested the hypothesis that v4 failed because it preserved raw priors rather than search-improved root policy; that hypothesis is insufficient. The next step should not be a root-policy weight sweep. First diagnose whether v5 actually held the stored root-policy anchors on the retention rows. If held, the remaining failure points to deeper tree/path-level drift rather than root-row anchoring.
 
 Run telemetry (provenance): `mode=mcts_root_retention`, draws_by_tag 320/160/320/160 (exact 2:1:2:1 over 160 steps), `n_teacher_retention_drawn=640`, `calib_policy_ce_avg_iter=3.83`, `calib_policy_kl_est_avg_iter=1.24` (vs v4's 0.19 — the root-visit target was genuinely non-trivial), `calib_value_term_avg_iter≈0.12`, `freeze_batchnorm_stats=true`.
+
+### v5 path diagnostic — searched continuation drift (2026-07-02)
+
+A gate-faithful path diagnostic was run on six representative failed v5 rows using the same synchronous `MCTS.search` path as the gates/builders. BASE root values matched the stored manifest values exactly, validating the diagnostic.
+
+Findings:
+- On C rows (`game_000433`, `game_000065`, `game_000565`), v5 preserved the same dominant root move and similar root visit share:
+  - `game_000433`: BASE 19:9 share 0.9975, V5 19:9 share 0.9850.
+  - `game_000065`: BASE 13:18 share 0.8800, V5 13:18 share 0.8650.
+  - `game_000565`: BASE 21:5 share 1.0000, V5 21:5 share 0.9850.
+  Despite this, v5 remained severe/overvalued, showing root-policy retention is insufficient.
+- The child/continuation values shifted materially. Example: `game_000565` retained the same root move 21:5, but child NN value moved from BASE −0.4707 to V5 +0.4791.
+- On D rows, BASE root visit distributions were diffuse, and v5 child NN values shifted strongly pro-black:
+  - `red_loss_000780`: top child NN +0.0976 → +0.8258.
+  - `red_loss_000362`: top child NN +0.0322 → +0.8013.
+  - `red_loss_000176`: top child NN −0.1810 → +0.8613.
+
+Conclusion: **v5 failed because root-level anchors do not constrain searched continuation values.** The next branch should be **v6 searched-continuation/PV retention**: add child/PV states from BASE MCTS under fragile rows and retain their raw teacher values, with policy retention only where distributions are sharp.
+
+## Current next hypothesis — v6 searched-continuation/PV retention
+
+**Working shape (2026-07-02, pre-design):** stop anchoring only the fragile root positions; anchor what search actually visits beneath them.
+
+- **Retention rows:** for each fragile B/C/D row, run BASE MCTS (gate-faithful, 400 sims) and extract **child/PV states** (the searched continuations whose values drifted in v5). Each extracted state becomes its own retention row with a **raw teacher value** anchor (BASE eval-mode forward at that state — the v4/v5 value mechanism that provably holds). **Policy retention only where the visit distribution is sharp** (diffuse D-row distributions gave weak/noisy targets in v5).
+- **Correction rows:** unchanged A hard-value family.
+- **Training:** should ride the existing retention machinery (`teacher_retention`-style rows over the masked 14-tuple path) — continuation rows are just additional positions.
+- **Known open design questions (resolve in brainstorm/spec):** (1) manifest encoding — continuation states are NOT prefixes of the source replay, so `replay_path + position_ply` cannot reconstruct them; the manifest/loader needs an extension (e.g. an extra-moves column applied after `position_ply`) or a new sidecar replay per continuation; (2) which states to extract (top-k children by visits vs PV line to depth n vs drifted-child targeting) and how many rows per fragile root before the pool dilutes; (3) whether continuation anchors need their own tag(s) + schedule slot.
+- **Gate:** same A/B/C/D probes vs `calib020_0001`. No promotion unless all four pass.
 
 
 ## Code / artifact pointers
