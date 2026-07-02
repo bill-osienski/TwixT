@@ -2,7 +2,7 @@
 
 **Created:** 2026-06-29 · **Status:** approved (brainstorming), pending implementation plan · **Scope:** the value-head calibration line of work — fix the black pre-drop overvalue (gate A) without breaking the guardrail families (gates B/C/D).
 
-Supersedes the rejected scalar-MSE-retention branches (calib010 / v2 / v2b / v3 / v3b). Read the experiment ledger first: `docs/2026-06-26-targeted-value-calibration-experiment-ledger.md`. This design implements the ledger's "Next planned hypothesis — v4: Teacher-Retention Anchors."
+Supersedes the rejected scalar-MSE-retention branches (calib010 / v2 / v2b / v3 / v3b). Read the experiment ledger first: `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated.md`. This design implements the ledger's "Next planned hypothesis — v4: Teacher-Retention Anchors."
 
 ## 1. Goal & controlled-comparison framing
 
@@ -244,7 +244,7 @@ Everything else (1 iteration, 100 games, 400 sims, batch 64, lr 0.0003, resign/a
 | `scripts/GPU/alphazero/train.py` | Two new CLI flags + thread into `train()`. |
 | `tests/test_calibration_pool.py`, `tests/test_training.py`, `tests/test_calibration_cli_flags.py`, + a new builder test module | All §10 tests, incl. the mandatory mask-None regression, no-MCTS builder, strict-blank, post-padding shape/mask, and pre-flight self-distillation tests. |
 | `docs/post-game-analysis.md` | Add a section cataloguing `build_teacher_calibration_manifest` + the gate-0 smoke, mirroring how the v2/v3 builders are documented in §6 (operator-guide parity). |
-| `docs/2026-06-26-targeted-value-calibration-experiment-ledger.md` | Append the v4 result row (template in §11) after the run; update do-not-repeat / severe-overlap. |
+| `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated.md` | Append the v4 result row (template in §11) after the run; update do-not-repeat / severe-overlap. |
 
 ## 13. Non-goals (YAGNI)
 
