@@ -437,7 +437,12 @@ def test_retention_policy_loss_modes_registry():
     from scripts.GPU.alphazero.calibration_pool import (
         RETENTION_POLICY_LOSS_MODES, VALID_LOSS_MODES)
     assert RETENTION_POLICY_LOSS_MODES == frozenset({"teacher_retention", "mcts_root_retention"})
-    assert VALID_LOSS_MODES == frozenset({"hard_value", "teacher_retention", "mcts_root_retention"})
+    # v6 adds searched_continuation_retention as a fourth valid (teacher-mode)
+    # loss mode; it is intentionally NOT in RETENTION_POLICY_LOSS_MODES (see
+    # tests/test_calibration_pool_continuation.py::test_mode_sets).
+    assert VALID_LOSS_MODES == frozenset({
+        "hard_value", "teacher_retention", "mcts_root_retention",
+        "searched_continuation_retention"})
 
 
 def _sample_with_mode(loss_mode):

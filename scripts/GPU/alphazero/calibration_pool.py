@@ -30,7 +30,19 @@ def legal_moves_sha1(legal) -> str:
 
 
 RETENTION_POLICY_LOSS_MODES = frozenset({"teacher_retention", "mcts_root_retention"})
-VALID_LOSS_MODES = frozenset({"hard_value"}) | RETENTION_POLICY_LOSS_MODES
+CONTINUATION_LOSS_MODE = "searched_continuation_retention"
+# Modes whose pools use the teacher-mode (masked 14-tuple) loss path. The
+# continuation mode is NOT in RETENTION_POLICY_LOSS_MODES: its rows carry a
+# policy target only per-row (has_policy_target), not by mode.
+TEACHER_MODE_LOSS_MODES = RETENTION_POLICY_LOSS_MODES | {CONTINUATION_LOSS_MODE}
+VALID_LOSS_MODES = frozenset({"hard_value"}) | TEACHER_MODE_LOSS_MODES
+# A manifest may mix at most these retention-mode combinations (v6 keeps the
+# inert v5 root rows alongside the new continuation rows):
+_ALLOWED_RETENTION_MODE_SETS = (
+    frozenset(), frozenset({"teacher_retention"}), frozenset({"mcts_root_retention"}),
+    frozenset({CONTINUATION_LOSS_MODE}),
+    frozenset({"mcts_root_retention", CONTINUATION_LOSS_MODE}),
+)
 
 
 def target_in_to_move(side_to_move: str, calibration_target: float) -> float:
@@ -60,6 +72,15 @@ class CalibrationSample:
     loss_mode: str = "hard_value"            # one of VALID_LOSS_MODES
     teacher_value: float | None = None        # side-to-move; telemetry/validation
     teacher_policy_len: int | None = None      # == len(legal_moves); validation
+    has_policy_target: bool = False            # per-row policy-CE mask input
+
+    def __post_init__(self):
+        # RETENTION_POLICY_LOSS_MODES rows always carry a policy target, even
+        # when a CalibrationSample is constructed directly (bypassing
+        # build_calibration_sample) -- preserves pre-v6 mask semantics for
+        # teacher_retention/mcts_root_retention regardless of construction path.
+        if self.loss_mode in RETENTION_POLICY_LOSS_MODES and not self.has_policy_target:
+            object.__setattr__(self, "has_policy_target", True)
 
 
 def _resolve_target_black(case: dict, fallback: float) -> float:
@@ -129,6 +150,53 @@ def _parse_teacher_value(case: dict) -> float:
     return v
 
 
+def _parse_extra_moves(case: dict) -> list[tuple[int, int]]:
+    """Required non-empty extra_moves_json for continuation rows: JSON list of
+    {"row": int, "col": int} applied after the position_ply reconstruction."""
+    cid = case.get("case_id")
+    raw = case.get("extra_moves_json")
+    if raw in (None, ""):
+        raise ValueError(f"{cid}: continuation row needs extra_moves_json")
+    try:
+        moves = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"{cid}: extra_moves_json invalid JSON: {e}") from e
+    if not isinstance(moves, list) or not moves:
+        raise ValueError(f"{cid}: extra_moves_json must be a non-empty list")
+    out = []
+    for m in moves:
+        if not isinstance(m, dict) or "row" not in m or "col" not in m:
+            raise ValueError(f"{cid}: extra_moves_json entries need row/col: {m!r}")
+        out.append((int(m["row"]), int(m["col"])))
+    return out
+
+
+def _apply_extra_moves(state, case: dict):
+    """Apply extra_moves_json, then verify continuation_side_to_move and
+    continuation_legal_moves_sha1 against the reconstructed state. Fail loud."""
+    cid = case.get("case_id")
+    extra = _parse_extra_moves(case)
+    for (r, c) in extra:
+        if (r, c) not in set(state.legal_moves()):
+            raise ValueError(
+                f"{cid}: extra move ({r},{c}) illegal at reconstructed state")
+        state = state.apply_move((r, c))
+    expected_side = case.get("continuation_side_to_move")
+    if expected_side in (None, ""):
+        raise ValueError(f"{cid}: continuation row needs continuation_side_to_move")
+    if state.to_move != expected_side:
+        raise ValueError(
+            f"{cid}: continuation_side_to_move {expected_side!r} != reconstructed "
+            f"{state.to_move!r}")
+    stored = case.get("continuation_legal_moves_sha1") or ""
+    recomputed = legal_moves_sha1(state.legal_moves())
+    if stored != recomputed:
+        raise ValueError(
+            f"{cid}: continuation_legal_moves_sha1 mismatch; stored {stored!r} "
+            f"!= recomputed {recomputed!r}")
+    return state, len(extra)
+
+
 def build_calibration_position(case: dict, calibration_target: float) -> PositionRecord:
     """Reconstruct a case to a board and build a PositionRecord.
 
@@ -148,15 +216,20 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
     side = case["side_to_move"]
     state = position_state(replay, position_ply, side)
 
-    board_chw = state.to_tensor()                       # (30, 24, 24) CHW
-    board_hwc = np.transpose(board_chw, (1, 2, 0)).astype(np.float32)  # (24,24,30)
-    legal = state.legal_moves()
-
     loss_mode = case.get("loss_mode") or "hard_value"
     if loss_mode not in VALID_LOSS_MODES:
         raise ValueError(
             f"{case.get('case_id')}: unknown loss_mode {loss_mode!r} "
             f"(valid: {sorted(VALID_LOSS_MODES)})")
+    record_ply = position_ply
+    if loss_mode == CONTINUATION_LOSS_MODE:
+        state, n_extra = _apply_extra_moves(state, case)
+        record_ply = position_ply + n_extra
+
+    board_chw = state.to_tensor()                       # (30, 24, 24) CHW
+    board_hwc = np.transpose(board_chw, (1, 2, 0)).astype(np.float32)  # (24,24,30)
+    legal = state.legal_moves()
+
     if loss_mode == "teacher_retention":
         teacher_value = _parse_teacher_value(case)
         teacher_policy = _parse_teacher_policy(case, legal)
@@ -167,7 +240,7 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
             visit_counts=teacher_policy,                 # float "counts"; make_padded_batch normalizes
             outcome=teacher_value,
             active_size=state.active_size,
-            ply=position_ply,
+            ply=record_ply,
             game_n_moves=None,
         )
     if loss_mode == "mcts_root_retention":
@@ -181,7 +254,23 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
             visit_counts=root_policy,        # BASE MCTS root visit distribution (normalized)
             outcome=teacher_value,           # raw eval-mode value anchor, stm, DIRECT
             active_size=state.active_size,
-            ply=position_ply,
+            ply=record_ply,
+            game_n_moves=None,
+        )
+    if loss_mode == CONTINUATION_LOSS_MODE:
+        teacher_value = _parse_teacher_value(case)
+        if case.get("teacher_policy_json") not in (None, ""):
+            visit_counts = _parse_teacher_policy(case, legal)
+        else:
+            visit_counts = [0] * len(legal)
+        return PositionRecord(
+            board_tensor=board_hwc,
+            to_move=state.to_move,
+            legal_moves=legal,
+            visit_counts=visit_counts,       # dense teacher policy or zeros (mask 0)
+            outcome=teacher_value,           # raw eval-mode value anchor, stm, DIRECT
+            active_size=state.active_size,
+            ply=record_ply,
             game_n_moves=None,
         )
     return PositionRecord(
@@ -191,7 +280,7 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
         visit_counts=[0] * len(legal),
         outcome=target_in_to_move(state.to_move, _resolve_target_black(case, calibration_target)),
         active_size=state.active_size,
-        ply=position_ply,
+        ply=record_ply,
         game_n_moves=None,
     )
 
@@ -202,7 +291,9 @@ def build_calibration_sample(case: dict, calibration_target: float) -> Calibrati
     if loss_mode == "hard_value":
         populated = [k for k in ("teacher_value", "teacher_policy_json",
                                  "teacher_legal_moves_sha1",
-                                 "root_visits_json", "root_legal_moves_sha1")
+                                 "root_visits_json", "root_legal_moves_sha1",
+                                 "extra_moves_json", "continuation_side_to_move",
+                                 "continuation_legal_moves_sha1")
                      if case.get(k) not in (None, "")]
         if populated:
             raise ValueError(
@@ -213,18 +304,28 @@ def build_calibration_sample(case: dict, calibration_target: float) -> Calibrati
             raise ValueError(
                 f"{case.get('case_id')}: mcts_root_retention row must leave "
                 f"teacher_policy_json blank (root_visits_json is the policy target)")
+    elif loss_mode == CONTINUATION_LOSS_MODE:
+        if case.get("root_visits_json") not in (None, ""):
+            raise ValueError(
+                f"{case.get('case_id')}: continuation row must leave "
+                f"root_visits_json blank (it is not a root-policy target)")
     record = build_calibration_position(case, calibration_target)
     weight_scale, _ = _parse_weight_scale(case)
     tag = case.get("tag") or ""
     target_black = _resolve_target_black(case, calibration_target)
     teacher_value = (float(case["teacher_value"])
-                     if loss_mode in RETENTION_POLICY_LOSS_MODES else None)
+                     if loss_mode in TEACHER_MODE_LOSS_MODES else None)
     teacher_policy_len = (len(record.visit_counts)
-                          if loss_mode in RETENTION_POLICY_LOSS_MODES else None)
+                          if loss_mode in TEACHER_MODE_LOSS_MODES else None)
+    has_policy_target = (
+        loss_mode in RETENTION_POLICY_LOSS_MODES
+        or (loss_mode == CONTINUATION_LOSS_MODE
+            and case.get("teacher_policy_json") not in (None, "")))
     return CalibrationSample(record=record, weight_scale=weight_scale,
                              tag=tag, target_black_value=target_black,
                              loss_mode=loss_mode, teacher_value=teacher_value,
-                             teacher_policy_len=teacher_policy_len)
+                             teacher_policy_len=teacher_policy_len,
+                             has_policy_target=has_policy_target)
 
 
 class CalibrationPool:
@@ -291,14 +392,17 @@ class CalibrationPool:
     def from_manifest(cls, manifest_path, calibration_target: float):
         cases = load_csv_manifest(manifest_path)["cases"]
         modes = {(c.get("loss_mode") or "hard_value") for c in cases}
-        retention_modes = sorted(modes & RETENTION_POLICY_LOSS_MODES)
-        if len(retention_modes) > 1:
+        retention_modes = frozenset(modes - {"hard_value"})
+        if retention_modes not in _ALLOWED_RETENTION_MODE_SETS:
             raise ValueError(
-                f"manifest mixes retention loss_modes {retention_modes}; "
-                f"one retention mode per manifest")
+                f"manifest mixes retention loss_modes {sorted(retention_modes)}; "
+                f"allowed combinations: "
+                f"{sorted(sorted(s) for s in _ALLOWED_RETENTION_MODE_SETS)}")
         samples = [build_calibration_sample(c, calibration_target) for c in cases]
         has_weight_scale = any(c.get("weight_scale") not in (None, "") for c in cases)
-        if "mcts_root_retention" in modes:
+        if CONTINUATION_LOSS_MODE in modes:
+            schema = CONTINUATION_LOSS_MODE
+        elif "mcts_root_retention" in modes:
             schema = "mcts_root_retention"
         elif "teacher_retention" in modes:
             schema = "teacher_retention"
@@ -325,7 +429,7 @@ def split_samples_with_modes(samples, has_weight_scale: bool):
     gate the policy-CE term to retention rows only."""
     records, weights = split_samples(samples, has_weight_scale)
     mask = np.asarray(
-        [1.0 if s.loss_mode in RETENTION_POLICY_LOSS_MODES else 0.0 for s in samples],
+        [1.0 if s.has_policy_target else 0.0 for s in samples],
         dtype=np.float32)
     return records, weights, mask
 
