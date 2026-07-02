@@ -110,3 +110,44 @@ def test_delta_vs_teacher_falls_back_to_base_when_no_manifest_value():
     assert v4["teacher_value"] == pytest.approx(0.11)             # BASE raw is the teacher
     assert v4["value_delta_vs_teacher"] == pytest.approx(0.31)    # 0.42 - 0.11
     assert base["value_delta_vs_teacher"] == pytest.approx(0.0)   # base vs itself
+
+
+def _write_manifest(path, cases):
+    cols = [
+        "game_idx", "case_id", "replay_path", "position_ply", "side_to_move",
+        "tag", "target_black_value", "teacher_value", "source", "source_rank",
+        "loss_mode", "teacher_legal_moves_sha1",
+    ]
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
+        w.writeheader()
+        for c in cases:
+            w.writerow(c)
+
+
+def test_case_id_filter(tmp_path):
+    rp = _replay_file(tmp_path)
+    man = tmp_path / "m.csv"
+    _write_manifest(man, [_case(rp, "keep", 5, "black"), _case(rp, "drop", 5, "black")])
+    cases = R.load_and_filter_cases([str(man)], case_ids={"keep"})
+    assert [c["case_id"] for c in cases] == ["keep"]
+
+
+def test_union_across_manifests_and_dedup(tmp_path):
+    rp = _replay_file(tmp_path)
+    m1, m2 = tmp_path / "m1.csv", tmp_path / "m2.csv"
+    _write_manifest(m1, [_case(rp, "a", 5, "black")])
+    _write_manifest(m2, [_case(rp, "a", 5, "black"), _case(rp, "b", 4, "red")])  # 'a' duplicated
+    cases = R.load_and_filter_cases([str(m1), str(m2)])
+    assert sorted(c["case_id"] for c in cases) == ["a", "b"]   # dedup 'a'
+
+
+def test_tag_and_limit_filters(tmp_path):
+    rp = _replay_file(tmp_path)
+    man = tmp_path / "m.csv"
+    _write_manifest(man, [
+        _case(rp, "c1", 5, "black", tag="old_post_opening_retention"),
+        _case(rp, "c2", 5, "black", tag="goal_line_retention"),
+    ])
+    assert [c["case_id"] for c in R.load_and_filter_cases([str(man)], tags={"goal_line_retention"})] == ["c2"]
+    assert len(R.load_and_filter_cases([str(man)], limit=1)) == 1

@@ -94,3 +94,23 @@ def resolve_deltas(rows: list, base_checkpoint: str) -> None:
             delta = r["raw_value_stm"] - tv
             r["value_delta_vs_teacher"] = delta
             r["abs_value_delta_vs_teacher"] = abs(delta)
+
+
+def load_and_filter_cases(manifest_paths, case_ids=None, tags=None, limit=None) -> list:
+    """Union rows across manifests; dedup; filter by case_id/tag; cap at limit."""
+    seen, cases = set(), []
+    for path in manifest_paths:
+        for case in load_csv_manifest(path)["cases"]:
+            cid = case["case_id"]
+            if case_ids and cid not in case_ids:
+                continue
+            if tags and case.get("tag", "") not in tags:
+                continue
+            key = (cid, case.get("replay_path"), case["position_ply"], case["side_to_move"])
+            if key in seen:
+                continue
+            seen.add(key)
+            cases.append(case)
+            if limit and len(cases) >= limit:
+                return cases
+    return cases
