@@ -431,3 +431,41 @@ def test_calibration_block_includes_teacher_telemetry():
     np.testing.assert_allclose(block["loss"]["calib_policy_ce_avg_iter"], 0.5)
     np.testing.assert_allclose(block["loss"]["calib_policy_kl_est_avg_iter"], 0.01)
     assert block["loss"]["n_teacher_retention_drawn"] == 20
+
+
+def test_retention_policy_loss_modes_registry():
+    from scripts.GPU.alphazero.calibration_pool import (
+        RETENTION_POLICY_LOSS_MODES, VALID_LOSS_MODES)
+    assert RETENTION_POLICY_LOSS_MODES == frozenset({"teacher_retention", "mcts_root_retention"})
+    assert VALID_LOSS_MODES == frozenset({"hard_value", "teacher_retention", "mcts_root_retention"})
+
+
+def _sample_with_mode(loss_mode):
+    """Direct CalibrationSample construction (no manifest parse needed) to test
+    the mask predicate in isolation."""
+    from scripts.GPU.alphazero.calibration_pool import CalibrationSample
+    from scripts.GPU.alphazero.self_play import PositionRecord
+    import numpy as _np
+    rec = PositionRecord(
+        board_tensor=_np.zeros((24, 24, 30), dtype=_np.float32), to_move="black",
+        legal_moves=[(0, 0), (1, 1)], visit_counts=[0.5, 0.5], outcome=0.1,
+        active_size=24, ply=5, game_n_moves=None)
+    return CalibrationSample(record=rec, loss_mode=loss_mode)
+
+
+def test_split_samples_with_modes_masks_all_retention_modes():
+    from scripts.GPU.alphazero.calibration_pool import split_samples_with_modes
+    samples = [_sample_with_mode("hard_value"),
+               _sample_with_mode("teacher_retention"),
+               _sample_with_mode("mcts_root_retention")]
+    _, _, mask = split_samples_with_modes(samples, has_weight_scale=False)
+    assert mask.tolist() == [0.0, 1.0, 1.0]   # root rows MUST be 1.0 (the v5 make-or-break)
+    assert mask.dtype.name == "float32"
+
+
+def test_unknown_loss_mode_rejected(tmp_path):
+    case = _write_case_side(tmp_path, "black", 5)          # existing helper in this file
+    case["loss_mode"] = "typo_mode"
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_position
+    with pytest.raises(ValueError, match="loss_mode"):
+        build_calibration_position(case, calibration_target=-0.35)

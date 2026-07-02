@@ -29,6 +29,10 @@ def legal_moves_sha1(legal) -> str:
     return hashlib.sha1(canonical.encode("utf-8")).hexdigest()
 
 
+RETENTION_POLICY_LOSS_MODES = frozenset({"teacher_retention", "mcts_root_retention"})
+VALID_LOSS_MODES = frozenset({"hard_value"}) | RETENTION_POLICY_LOSS_MODES
+
+
 def target_in_to_move(side_to_move: str, calibration_target: float) -> float:
     """Express the black-perspective target in the side-to-move perspective.
 
@@ -53,7 +57,7 @@ class CalibrationSample:
     weight_scale: float = 1.0
     tag: str = ""
     target_black_value: float | None = None
-    loss_mode: str = "hard_value"            # "hard_value" | "teacher_retention"
+    loss_mode: str = "hard_value"            # one of VALID_LOSS_MODES
     teacher_value: float | None = None        # side-to-move; telemetry/validation
     teacher_policy_len: int | None = None      # == len(legal_moves); validation
 
@@ -131,6 +135,10 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
     legal = state.legal_moves()
 
     loss_mode = case.get("loss_mode") or "hard_value"
+    if loss_mode not in VALID_LOSS_MODES:
+        raise ValueError(
+            f"{case.get('case_id')}: unknown loss_mode {loss_mode!r} "
+            f"(valid: {sorted(VALID_LOSS_MODES)})")
     if loss_mode == "teacher_retention":
         teacher_value = float(case["teacher_value"])
         if not math.isfinite(teacher_value) or not (-1.0 <= teacher_value <= 1.0):
@@ -274,7 +282,7 @@ def split_samples_with_modes(samples, has_weight_scale: bool):
     gate the policy-CE term to retention rows only."""
     records, weights = split_samples(samples, has_weight_scale)
     mask = np.asarray(
-        [1.0 if s.loss_mode == "teacher_retention" else 0.0 for s in samples],
+        [1.0 if s.loss_mode in RETENTION_POLICY_LOSS_MODES else 0.0 for s in samples],
         dtype=np.float32)
     return records, weights, mask
 
