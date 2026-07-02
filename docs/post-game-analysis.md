@@ -433,7 +433,11 @@ Build (offline, once, frozen):
       --base-checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
       --gate-cases-csv <BASE position_probe_cases.csv> \
       --gate-cases-csv <BASE goal_line_trigger_probe_cases.csv> \
+      --gate-checkpoint-label 0001 \
       --out logs/eval/targeted_calibration_v5_root_from_calib020_0001.csv
+
+The label selects BASE's rows inside gate cases CSVs that mix multiple
+checkpoints (one row per checkpoint x case_id).
 
 Gate-0 smoke (value ~0 REQUIRED; policy CE > 0 EXPECTED — do not "fix" it):
 

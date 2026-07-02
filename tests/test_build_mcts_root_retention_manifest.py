@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 
 from scripts.GPU.alphazero.build_mcts_root_retention_manifest import (
-    build_rows, cross_check_gate_values, dense_normalized_visits, row_seed)
+    build_rows, cross_check_gate_values, dense_normalized_visits,
+    output_fieldnames, row_seed)
 from scripts.GPU.alphazero.calibration_pool import (
     build_calibration_sample, legal_moves_sha1)
 from scripts.GPU.alphazero.goal_line_trigger_probe_cases import position_state
@@ -128,6 +129,48 @@ def test_cross_check_gate_values(tmp_path):
         "calib020_0001,game_000001_ply_005,0.9\n")
     with pytest.raises(ValueError, match="cross-check"):
         cross_check_gate_values(out, [str(bad_csv)], tol=1e-3)
+
+
+def test_cross_check_rejects_multi_checkpoint_without_label(tmp_path):
+    out = _build(tmp_path)
+    multi_csv = tmp_path / "multi_checkpoint.csv"
+    multi_csv.write_text(
+        "checkpoint,case_id,probe_black_root_value\n"
+        "0001,game_000001_ply_005,-0.1389\n"
+        "0002,game_000001_ply_005,0.9\n")
+    with pytest.raises(ValueError, match="ambiguous"):
+        cross_check_gate_values(out, [str(multi_csv)], tol=1e-3)
+
+
+def test_cross_check_filters_by_checkpoint_label(tmp_path):
+    out = _build(tmp_path)
+    multi_csv = tmp_path / "multi_checkpoint.csv"
+    multi_csv.write_text(
+        "checkpoint,case_id,probe_black_root_value\n"
+        "0001,game_000001_ply_005,-0.1389\n"
+        "0002,game_000001_ply_005,0.9\n")
+    stats = cross_check_gate_values(out, [str(multi_csv)], tol=1e-3,
+                                    checkpoint_label="0001")
+    assert stats == {"checked": 1, "unmatched": 0}
+
+    suffix_csv = tmp_path / "suffix_checkpoint.csv"
+    suffix_csv.write_text(
+        "checkpoint,case_id,probe_black_root_value\n"
+        "alphazero-v2:0001,game_000001_ply_005,-0.1389\n")
+    stats = cross_check_gate_values(out, [str(suffix_csv)], tol=1e-3,
+                                    checkpoint_label="0001")
+    assert stats == {"checked": 1, "unmatched": 0}
+
+    with pytest.raises(ValueError):
+        cross_check_gate_values(out, [str(multi_csv)], tol=1e-3,
+                                checkpoint_label="9999")
+
+
+def test_output_fieldnames_includes_builder_added_columns(tmp_path):
+    out = _build(tmp_path)
+    fields = output_fieldnames(["game_idx", "case_id"], out)
+    assert fields[:2] == ["game_idx", "case_id"]
+    assert fields.count("target_black_value") == 1
 
 
 def test_builder_module_defers_heavy_imports():

@@ -126,16 +126,52 @@ def build_rows(rows: list, raw_evaluator, search_fn, *, sims: int,
     return out
 
 
-def cross_check_gate_values(out_rows: list, gate_csv_paths: list, tol: float) -> dict:
+def _gate_rows_for_checkpoint(rows: list, checkpoint_label: str) -> list:
+    """Rows whose checkpoint == label (exact); else the unique set whose
+    checkpoint endswith ':' + label. Raise if the label matches nothing.
+
+    Mirrors resolve_anchor_rows in build_targeted_calibration_manifest.py."""
+    exact = [r for r in rows if r.get("checkpoint") == checkpoint_label]
+    if exact:
+        return exact
+    suffix = [r for r in rows if str(r.get("checkpoint", "")).endswith(":" + checkpoint_label)]
+    if suffix:
+        return suffix
+    raise ValueError(f"no gate CSV row matches --gate-checkpoint-label {checkpoint_label!r}")
+
+
+def cross_check_gate_values(out_rows: list, gate_csv_paths: list, tol: float,
+                            checkpoint_label: str | None = None) -> dict:
     """Builder sanity gate: for every retention row whose case_id appears in a
     gate cases CSV, the recomputed root_black_value must match the gate's
     probe_black_root_value within tol. Proves the search config/seeds/BN mode
-    reproduce the gate setup. Raises on any mismatch."""
-    gate = {}
+    reproduce the gate setup. Raises on any mismatch.
+
+    Gate cases CSVs contain one row per (checkpoint x case_id); when
+    checkpoint_label is given, only rows for that checkpoint (exact match, or
+    the unique 'parent:label' suffix form) are kept. Without a label, a
+    case_id that appears under more than one distinct checkpoint is ambiguous
+    and raises rather than silently keeping whichever row sorts last."""
+    all_rows = []
     for path in gate_csv_paths:
         with open(path, newline="") as f:
-            for r in csv.DictReader(f):
-                gate[r["case_id"]] = float(r["probe_black_root_value"])
+            all_rows.extend(csv.DictReader(f))
+    if checkpoint_label is not None:
+        all_rows = _gate_rows_for_checkpoint(all_rows, checkpoint_label)
+
+    gate = {}
+    gate_checkpoint = {}
+    for r in all_rows:
+        cid = r["case_id"]
+        ckpt = r.get("checkpoint")
+        seen_ckpt = gate_checkpoint.get(cid)
+        if seen_ckpt is not None and seen_ckpt != ckpt:
+            raise ValueError(
+                f"{cid}: ambiguous gate row — matched checkpoints "
+                f"{sorted({seen_ckpt, ckpt})}; pass --gate-checkpoint-label "
+                f"to select BASE's rows")
+        gate_checkpoint[cid] = ckpt
+        gate[cid] = float(r["probe_black_root_value"])
     checked, unmatched, errors = 0, 0, []
     for row in out_rows:
         if row.get("loss_mode") != "mcts_root_retention":
@@ -154,6 +190,15 @@ def cross_check_gate_values(out_rows: list, gate_csv_paths: list, tol: float) ->
             "gate cross-check FAILED (wrong seeds / BN mode / config?): "
             + "; ".join(errors))
     return {"checked": checked, "unmatched": unmatched}
+
+
+def output_fieldnames(base_columns: list, out_rows: list) -> list:
+    """Source column order first, then NEW_COLUMNS, then any remaining keys
+    build_rows introduced (e.g. target_black_value when the source lacked it)."""
+    fields = list(base_columns) + [c for c in NEW_COLUMNS if c not in base_columns]
+    for row in out_rows[:1]:
+        fields += [k for k in row.keys() if k not in fields]
+    return fields
 
 
 def _real_search_fn(base_checkpoint: str, sims: int,
@@ -188,6 +233,11 @@ def main(argv=None):
                     help="gate cases CSV (repeatable) for the root-value cross-check; "
                          "STRONGLY recommended")
     ap.add_argument("--gate-tolerance", type=float, default=1e-3)
+    ap.add_argument("--gate-checkpoint-label", default=None,
+                    help="checkpoint label of BASE inside the gate cases CSVs "
+                         "(short_id, e.g. 0001, or its disambiguated parent:short "
+                         "form); required when the CSVs contain multiple "
+                         "checkpoints")
     args = ap.parse_args(argv)
 
     from .local_evaluator import LocalGPUEvaluator
@@ -211,7 +261,8 @@ def main(argv=None):
                           stall_flush_sims=args.stall_flush_sims)
     if args.gate_cases_csv:
         stats = cross_check_gate_values(out_rows, args.gate_cases_csv,
-                                        args.gate_tolerance)
+                                        args.gate_tolerance,
+                                        checkpoint_label=args.gate_checkpoint_label)
         print(f"gate cross-check PASS: {stats['checked']} matched, "
               f"{stats['unmatched']} retention rows without a gate row")
     else:
@@ -219,7 +270,7 @@ def main(argv=None):
               "against the gate CSVs")
 
     base_columns = list(rows[0].keys()) if rows else []
-    fieldnames = base_columns + [c for c in NEW_COLUMNS if c not in base_columns]
+    fieldnames = output_fieldnames(base_columns, out_rows)
     with open(args.out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
