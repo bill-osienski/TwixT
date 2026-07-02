@@ -65,3 +65,32 @@ def score_row(evaluator, case: dict) -> dict:
         "overvalue": raw_black >= OVERVALUE_THRESHOLD,
         "severe_overvalue": raw_black >= SEVERE_OVERVALUE_THRESHOLD,
     }
+
+
+def resolve_deltas(rows: list, base_checkpoint: str) -> None:
+    """Second pass: resolve each row's teacher_value and delta, in place.
+
+    teacher_value = manifest teacher_value if present/non-empty, else the BASE
+    checkpoint's raw_value_stm for the same case (BASE = the v4 teacher/anchor).
+    Delta is computed in side-to-move space (raw_value_stm - teacher_value); NO flip.
+    """
+    base_raw = {
+        r["case_id"]: r["raw_value_stm"]
+        for r in rows
+        if r["checkpoint"] == base_checkpoint
+    }
+    for r in rows:
+        manifest_tv = r.get("teacher_value", "")
+        if manifest_tv not in (None, ""):
+            tv, source = float(manifest_tv), "manifest"
+        else:
+            tv, source = base_raw.get(r["case_id"]), "base_checkpoint"
+        r["teacher_value"] = "" if tv is None else tv
+        r["teacher_value_source"] = source
+        if tv is None:
+            r["value_delta_vs_teacher"] = ""
+            r["abs_value_delta_vs_teacher"] = ""
+        else:
+            delta = r["raw_value_stm"] - tv
+            r["value_delta_vs_teacher"] = delta
+            r["abs_value_delta_vs_teacher"] = abs(delta)

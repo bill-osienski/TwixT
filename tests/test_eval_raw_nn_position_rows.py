@@ -83,3 +83,30 @@ def test_score_row_side_to_move_mismatch_raises(tmp_path):
     rp = _replay_file(tmp_path)
     with pytest.raises(ValueError, match="side_to_move"):
         R.score_row(_FakeEval(), _case(rp, "bad", 4, "black"))   # ply 4 -> red; claims black
+
+
+def test_delta_vs_teacher_uses_manifest_value_stm_perspective():
+    rows = [
+        {"checkpoint": "/ck/base.st", "case_id": "x", "raw_value_stm": 0.10, "teacher_value": "-0.50"},
+        {"checkpoint": "/ck/cand.st", "case_id": "x", "raw_value_stm": 0.30, "teacher_value": "-0.50"},
+    ]
+    R.resolve_deltas(rows, base_checkpoint="/ck/base.st")
+    cand = next(r for r in rows if r["checkpoint"] == "/ck/cand.st")
+    assert cand["teacher_value_source"] == "manifest"
+    assert cand["teacher_value"] == pytest.approx(-0.50)
+    assert cand["value_delta_vs_teacher"] == pytest.approx(0.30 - (-0.50))  # stm - stm, NO flip
+    assert cand["abs_value_delta_vs_teacher"] == pytest.approx(0.80)
+
+
+def test_delta_vs_teacher_falls_back_to_base_when_no_manifest_value():
+    rows = [
+        {"checkpoint": "/ck/base.st", "case_id": "y", "raw_value_stm": 0.11, "teacher_value": ""},
+        {"checkpoint": "/ck/v4.st",   "case_id": "y", "raw_value_stm": 0.42, "teacher_value": ""},
+    ]
+    R.resolve_deltas(rows, base_checkpoint="/ck/base.st")
+    base = next(r for r in rows if r["checkpoint"] == "/ck/base.st")
+    v4 = next(r for r in rows if r["checkpoint"] == "/ck/v4.st")
+    assert v4["teacher_value_source"] == "base_checkpoint"
+    assert v4["teacher_value"] == pytest.approx(0.11)             # BASE raw is the teacher
+    assert v4["value_delta_vs_teacher"] == pytest.approx(0.31)    # 0.42 - 0.11
+    assert base["value_delta_vs_teacher"] == pytest.approx(0.0)   # base vs itself
