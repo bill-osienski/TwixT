@@ -1,7 +1,7 @@
 # Targeted Value Calibration v6 — Searched-Continuation / PV Retention (Design)
 
 **Date:** 2026-07-02
-**Status:** spec — pending user review
+**Status:** spec — APPROVED for implementation 2026-07-02 (user review incorporated)
 **Ledger:** `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated-v6-prep.md`
 **Supersedes as next-branch:** v5 (`mcts_root_retention`, REJECTED 2026-07-02)
 
@@ -47,9 +47,11 @@ taken without live user input and are **flagged for review**):
   `red_predrop_retention` are inert under the v6 schedule. v6 is continuation-first;
   root retention can be re-enabled later by editing only the schedule string.
 - **D4 — `--max-total-continuation-rows 250`, hard-fail.** True worst case is
-  B 18×2=36, C 30×3=90, D 30×(3+3)=180 before the child-PV visit threshold; the
+  B 18×2=36, C 30×3=90, D 30×(3+3)=180 → 306 before the child-PV visit threshold; the
   threshold (§3) is what pulls D toward the intended ~90–120. Exceeding any cap fails
-  loudly; the builder never silently trims.
+  loudly; the builder never silently trims. **Operator expectation:** if D is denser
+  than expected, the first full build may hard-fail at the cap — that is a tuning point
+  (raise the cap or `--d-child-pv-min-visits`), not an implementation failure.
 
 ## 2. Manifest schema
 
@@ -86,8 +88,13 @@ New columns (blank on all non-continuation rows):
   continuation state via `_teacher_infer`; `teacher_value_source=base_raw_continuation`.
   `teacher_policy_json`/`teacher_legal_moves_sha1` stay blank unless
   `--emit-continuation-policy`.
-- **`case_id`:** `<parent_case_id>__cont_<source><depth>_<path>` (e.g.
-  `game_000433_ply_029__cont_pv2_19:9>18:11`) — unique, greppable, parent recoverable.
+- **`case_id`:** `<parent_case_id>__cont_<source><depth>_<path>` with filesystem/shell-safe
+  path characters (e.g. `game_000433_ply_029__cont_pv2_19-9_18-11`) — unique, greppable,
+  parent recoverable, safe if a downstream tool ever embeds case_id in a filename. The
+  human-readable `continuation_path_moves` column keeps the `19:9>18:11` form.
+- **`weight_scale`:** continuation rows inherit the parent root row's `weight_scale`
+  verbatim (1.0 across the current manifest; explicit, never blank — though the pool
+  treats blank as 1.0 via `_parse_weight_scale`).
 
 Root-search provenance columns (`root_sims`, `root_seed`, …) are stamped on continuation
 rows with the parent root's values.
@@ -172,9 +179,13 @@ directly on the v5 builder (`build_mcts_root_retention_manifest.py`):
   `--gate-tolerance 1e-3`), extraction flags (`--b-pv-depth 2 --c-pv-depth 3
   --d-top-k 3 --d-child-pv-depth 1 --d-child-pv-min-visits 40`), caps (§3),
   `--emit-continuation-policy` (default off), `--limit-cases` (small diagnostic runs).
-- **Per source row:** `black_predrop_correction` → pass through unchanged. v5 root
-  retention rows → pass through unchanged (they stay in the manifest, D3) AND serve as
-  the extraction roots: reconstruct root via `position_state`, seed via the v5
+- **Per source row:** `black_predrop_correction` → pass through unchanged. **Extraction
+  sources are exactly the rows with `loss_mode == mcts_root_retention` AND tag in
+  {`goal_line_retention`, `old_post_opening_retention`, `red_predrop_retention`}** —
+  any other row (hard_value, or continuation rows if the builder is ever rerun on a v6
+  output) passes through untouched and is never extracted from; an unknown
+  loss_mode/tag combination is a hard error. The qualifying v5 root rows pass through
+  unchanged (they stay in the manifest, D3) AND serve as the extraction roots: reconstruct root via `position_state`, seed via the v5
   `row_seed()` formula, run the root-returning gate-faithful search with
   `add_noise=False` (train-mode-BN search evaluator via the same evaluator factory as
   v5), cross-check recomputed `root_black_value` against the gate CSVs (v5's
@@ -200,8 +211,10 @@ directly on the v5 builder (`build_mcts_root_retention_manifest.py`):
    BASE's own eval-mode values); policy CE finite where a policy target exists, exactly
    0 contribution where not; no NaN.
 4. Correction rows unchanged (hard_value, no continuation fields).
-5. Tag schedule validation: all scheduled tags present; report draws by tag for one
-   sample round; startup log reports mode + per-family continuation counts.
+5. Tag schedule validation: all scheduled tags present; **hard assertion** that a
+   sample round's draws-by-tag contain all three `*_continuation_retention` tags with
+   positive counts in the scheduled 1:2:2 ratio; startup log reports mode + per-family
+   continuation counts.
 
 Expected: `PASS v6 continuation retention mechanics: n_continuation=<N>, value_mse≈0,
 policy_ce=0 (value-only run), no NaN`.
@@ -219,7 +232,10 @@ Unchanged: `--post-opening-calibration-weight 0.01 --post-opening-calibration-ta
 Gates: same A/B/C/D 400-sim probes vs `calib020_0001`,
 `OUT=logs/eval/v6_continuation_from_calib020_0001_gates_400s`. Acceptance:
 
-1. Build + smoke pass; telemetry proves continuation draws matched the schedule.
+1. Build + smoke pass; the training run's `calib_n_drawn_by_tag` telemetry shows all
+   three `*_continuation_retention` tags drawn in schedule ratio (hard check — do NOT
+   use `n_teacher_retention_drawn`, which is policy-mask-derived and stays 0 on a
+   value-only run).
 2. **A:** mean ≤ 0.0 and severe materially below 43.3% (baseline).
 3. **B:** severe 0.0%, over ≤ 11.1%.
 4. **C:** severe ≤ 13.3%, over ≤ 33.3%, mean ≤ +0.099.
