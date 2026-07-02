@@ -151,3 +151,75 @@ def test_tag_and_limit_filters(tmp_path):
     ])
     assert [c["case_id"] for c in R.load_and_filter_cases([str(man)], tags={"goal_line_retention"})] == ["c2"]
     assert len(R.load_and_filter_cases([str(man)], limit=1)) == 1
+
+
+def test_main_end_to_end_with_fake_factory(tmp_path):
+    rp = _replay_file(tmp_path)
+    man = tmp_path / "m.csv"
+    _write_manifest(man, [
+        _case(rp, "b1", 5, "black", teacher_value="-0.50"),  # manifest teacher present
+        _case(rp, "r1", 4, "red"),                           # no teacher -> base fallback
+    ])
+    base = tmp_path / "base.safetensors"; base.write_text("x")
+    cand = tmp_path / "cand.safetensors"; cand.write_text("x")
+    out = tmp_path / "out.csv"
+
+    rc = R.main(
+        ["--manifest", str(man),
+         "--checkpoint", str(base), "--checkpoint", str(cand),
+         "--out", str(out)],
+        evaluator_factory=lambda ckpt: _FakeEval(value=0.2 if "base" in ckpt else 0.4),
+    )
+    assert rc == 0
+
+    with out.open() as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 4                                     # 2 checkpoints x 2 cases
+    for col in ["raw_value_stm", "raw_black_value", "value_delta_vs_teacher",
+                "teacher_value_source", "top1_move", "top1_prob",
+                "overvalue", "severe_overvalue"]:
+        assert col in rows[0]
+
+    b1_cand = next(r for r in rows if r["case_id"] == "b1" and r["checkpoint"] == str(cand))
+    assert b1_cand["teacher_value_source"] == "manifest"
+    assert float(b1_cand["value_delta_vs_teacher"]) == pytest.approx(0.4 - (-0.5))  # 0.9
+
+    r1_cand = next(r for r in rows if r["case_id"] == "r1" and r["checkpoint"] == str(cand))
+    assert r1_cand["teacher_value_source"] == "base_checkpoint"
+    assert float(r1_cand["value_delta_vs_teacher"]) == pytest.approx(0.4 - 0.2)     # stm-space, 0.2
+    assert float(r1_cand["raw_black_value"]) == pytest.approx(-0.4)                 # red -> flip
+
+
+def test_case_id_filter_reflected_in_output(tmp_path):
+    rp = _replay_file(tmp_path)
+    man = tmp_path / "m.csv"
+    _write_manifest(man, [_case(rp, "keep", 5, "black"), _case(rp, "drop", 5, "black")])
+    base = tmp_path / "base.safetensors"; base.write_text("x")
+    out = tmp_path / "out.csv"
+    rc = R.main(
+        ["--manifest", str(man), "--checkpoint", str(base),
+         "--case-id", "keep", "--out", str(out)],
+        evaluator_factory=lambda ckpt: _FakeEval(),
+    )
+    assert rc == 0
+    with out.open() as f:
+        rows = list(csv.DictReader(f))
+    assert {r["case_id"] for r in rows} == {"keep"}
+
+
+def test_main_side_to_move_mismatch_raises(tmp_path):
+    rp = _replay_file(tmp_path)
+    man = tmp_path / "m.csv"
+    _write_manifest(man, [_case(rp, "bad", 4, "black")])      # ply 4 -> red; claims black
+    base = tmp_path / "base.safetensors"; base.write_text("x")
+    out = tmp_path / "o.csv"
+    with pytest.raises(ValueError, match="side_to_move"):
+        R.main(["--manifest", str(man), "--checkpoint", str(base), "--out", str(out)],
+               evaluator_factory=lambda ckpt: _FakeEval())
+
+
+def test_module_does_not_import_mcts():
+    import importlib
+    mod = importlib.import_module("scripts.GPU.alphazero.eval_raw_nn_position_rows")
+    src = open(mod.__file__).read()
+    assert "from .mcts" not in src and "MCTS(" not in src
