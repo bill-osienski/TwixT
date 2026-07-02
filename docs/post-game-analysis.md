@@ -418,6 +418,41 @@ blank teacher columns.
 
 ---
 
+## 8. Targeted Value Calibration v5 — MCTS-root-visit policy retention
+
+v5 keeps the v4 raw-teacher VALUE anchor on retention rows but replaces the
+policy target with BASE's 400-sim MCTS root visit distribution (dense,
+normalized, sha1-pinned). Rationale + full experiment record: the v5 section
+of `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated.md`
+(root-value-only = v3, rejected; raw-priors policy = v4, rejected).
+
+Build (offline, once, frozen):
+
+    .venv/bin/python -m scripts.GPU.alphazero.build_mcts_root_retention_manifest \
+      --source logs/eval/targeted_calibration_v3_strat_from_calib020_0001.csv \
+      --base-checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+      --gate-cases-csv <BASE position_probe_cases.csv> \
+      --gate-cases-csv <BASE goal_line_trigger_probe_cases.csv> \
+      --out logs/eval/targeted_calibration_v5_root_from_calib020_0001.csv
+
+Gate-0 smoke (value ~0 REQUIRED; policy CE > 0 EXPECTED — do not "fix" it):
+
+    .venv/bin/python -m scripts.GPU.alphazero.smoke_mcts_root_retention_v5 \
+      --manifest logs/eval/targeted_calibration_v5_root_from_calib020_0001.csv \
+      --base-checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+
+Training reuses the v4 command verbatim with two deltas: the v5 manifest path
+and a fresh checkpoint dir. Same flags: weight 0.01, teacher-value-weight 1.0,
+teacher-policy-kl-weight 0.25, tag schedule 2:1:2:1, --freeze-batchnorm-stats.
+Gates A–D vs calib020_0001; no promotion unless all four pass.
+
+Known limitation (recorded in the ledger): root-visit anchors constrain the
+candidate's policy AT the anchored root positions only. If gate drift comes
+from value/prior changes deeper in the tree, v5 can still fail — in that case
+the next hypothesis is tree/path-level retention, not more rows or weights.
+
+---
+
 ## Internal libraries (not run directly)
 
 - `eval_runner` — the game-playing task queue / worker pool used by the match and
