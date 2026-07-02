@@ -407,12 +407,14 @@ class MCTS:
         record["argmax_class_before_override"] = selected_argmax_class
         return new_counts, record
 
-    def search(
+    def search_with_root(
         self,
         root_state: TwixtState,
         add_noise: bool = True,
-    ) -> Tuple[Dict[Tuple[int, int], int], float]:
-        """Run MCTS from given state.
+    ) -> Tuple[Dict[Tuple[int, int], int], float, "MCTSNode"]:
+        """Gate-faithful search returning the root node for tree extraction
+        (v6 builder). Same synchronous per-sim path as search(); NOT
+        search_from_root's batched waiter path.
 
         Args:
             root_state: Current game state
@@ -452,7 +454,25 @@ class MCTS:
         # Snapshot final-root stats for per-game persistence (spec 2026-04-29).
         self._capture_final_root_stats(root)
 
-        return visit_counts, root.q_value
+        return visit_counts, root.q_value, root
+
+    def search(
+        self,
+        root_state: TwixtState,
+        add_noise: bool = True,
+    ) -> Tuple[Dict[Tuple[int, int], int], float]:
+        """Run MCTS from given state.
+
+        Args:
+            root_state: Current game state
+            add_noise: Whether to add Dirichlet noise at root (for training)
+
+        Returns:
+            visit_counts: Dict mapping (row, col) tuple -> visit count (decoded for callers)
+            root_value: Estimated value of position for current player
+        """
+        visit_counts, root_value, _root = self.search_with_root(root_state, add_noise)
+        return visit_counts, root_value
 
     def search_from_root(
         self,
