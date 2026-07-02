@@ -44,7 +44,7 @@ These deviate from the task's literal draft. They are the result of verifying ev
 
 The task's first command points `--manifest` at the v4 **training** manifest `logs/eval/targeted_calibration_v4_teacher_from_calib020_0001.csv` and filters the 5 focus `case_id`s. **Verified: that manifest (128 rows) contains only 1 of the 5** (`red_loss_game_000362_predrop_ply_52_drop_54`, a `red_predrop_retention` row). The other four are **not** in it.
 
-The 5 focus rows are the **shared severe C/D gate cases** from the overlap doc (`docs/2026-06-26-...-v3f-v4-overlap-updated.md` §"v4/v3-frozenBN severe-overlap follow-up"). Their real, on-disk homes (both **gitignored** local artifacts — invisible to a default `rg`; use `--no-ignore`):
+The 5 focus rows are the **shared severe C/D gate cases** from the overlap doc (`docs/2026-06-26-...-v3f-v4-overlap-updated-v6-prep.md` §"v4/v3-frozenBN severe-overlap follow-up"). Their real, on-disk homes (both **gitignored** local artifacts — invisible to a default `rg`; use `--no-ignore`):
 
 | case_id | home manifest | ply | side | replay exists |
 |---|---|---|---|---|

@@ -15,7 +15,7 @@ columns blank and target_black_value PRESERVED. Retention rows blank
 target_black_value (stale v3 MCTS-root scalar) and teacher_policy_json.
 
 See the v5 section of docs/2026-06-26-targeted-value-calibration-experiment-
-ledger-v3f-v4-overlap-updated.md and the plan doc for the two-evaluator split.
+ledger-v3f-v4-overlap-updated-v6-prep.md and the plan doc for the two-evaluator split.
 """
 from __future__ import annotations
 

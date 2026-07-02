@@ -441,7 +441,7 @@ log must print `mode=teacher_retention` (v4) / `mode=mcts_root_retention` (v5).
 v5 keeps the v4 raw-teacher VALUE anchor on retention rows but replaces the
 policy target with BASE's 400-sim MCTS root visit distribution (dense,
 normalized, sha1-pinned). Rationale + full experiment record: the v5 section
-of `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated.md`
+of `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated-v6-prep.md`
 (root-value-only = v3, rejected; raw-priors policy = v4, rejected).
 
 Build (offline, once, frozen):
@@ -472,6 +472,22 @@ Known limitation (recorded in the ledger): root-visit anchors constrain the
 candidate's policy AT the anchored root positions only. If gate drift comes
 from value/prior changes deeper in the tree, v5 can still fail — in that case
 the next hypothesis is tree/path-level retention, not more rows or weights.
+
+**After v5 rejection:** the next calibration shape is v6 searched-continuation/PV
+retention, not another root-position-level retention design. Use the ledger as
+the source of truth, but the working operator shape is:
+
+- Continue using the A black-predrop correction rows unchanged.
+- Add continuation retention rows below fragile B/C/D roots, with raw teacher
+  value anchors from BASE eval-mode forward.
+- Prefer an `extra_moves_json` column for continuation rows: reconstruct
+  `replay_path + position_ply`, then apply the extra moves to reach the child/PV
+  state. Avoid sidecar replay files unless this proves too invasive.
+- Start with a conservative extraction set: root + top BASE child / PV depth 2–3
+  for sharp C rows; top-k children only for diffuse D rows where no single PV
+  dominates.
+- Keep continuation rows in separate tags. Initial schedule candidate:
+  `black_predrop_correction=2,goal_line_root_retention=1,old_post_opening_continuation_retention=2,red_predrop_continuation_retention=2`, adjusted after builder row counts.
 
 ---
 
@@ -591,7 +607,7 @@ root retention — 2026-07-01, see the experiment ledger.)
   `2026-07-01-targeted-value-calibration-v5-mcts-root-retention.md`.
 - Experiment record (which calibration branches were tried, why they were
   rejected, do-not-repeat list):
-  `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated.md`.
+  `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated-v6-prep.md`.
 - Metric definitions: [`analysis-metrics-guide.md`](analysis-metrics-guide.md).
 - MLX/Metal eval performance and the `--workers` gotcha:
   [`mlx-memory-management.md`](mlx-memory-management.md).

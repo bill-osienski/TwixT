@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3 / MLX (lazily, in builder `main()` + smoke only), numpy, csv/json/argparse, pytest.
 
-**Spec:** the locked v5 section of `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated.md` (§"Current next hypothesis — v5 MCTS-root-visit policy retention (LOCKED 2026-07-01)").
+**Spec:** the locked v5 section of `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated-v6-prep.md` (§"Current next hypothesis — v5 MCTS-root-visit policy retention (LOCKED 2026-07-01)").
 
 ## Global Constraints
 
@@ -849,7 +849,7 @@ columns blank and target_black_value PRESERVED. Retention rows blank
 target_black_value (stale v3 MCTS-root scalar) and teacher_policy_json.
 
 See the v5 section of docs/2026-06-26-targeted-value-calibration-experiment-
-ledger-v3f-v4-overlap-updated.md and the plan doc for the two-evaluator split.
+ledger-v3f-v4-overlap-updated-v6-prep.md and the plan doc for the two-evaluator split.
 """
 from __future__ import annotations
 
@@ -1280,7 +1280,7 @@ Then append to `docs/post-game-analysis.md`, directly after the v4 §7 block, a 
 v5 keeps the v4 raw-teacher VALUE anchor on retention rows but replaces the
 policy target with BASE's 400-sim MCTS root visit distribution (dense,
 normalized, sha1-pinned). Rationale + full experiment record: the v5 section
-of `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated.md`
+of `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated-v6-prep.md`
 (root-value-only = v3, rejected; raw-priors policy = v4, rejected).
 
 Build (offline, once, frozen):
