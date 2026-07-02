@@ -132,9 +132,8 @@ def test_cross_check_gate_values(tmp_path):
 
 def test_builder_module_defers_heavy_imports():
     """MLX/MCTS must not load at import time (tests run with fakes)."""
-    import importlib, sys
-    for mod in ("mlx", "mlx.core"):
-        sys.modules.pop(mod, None)
+    import importlib
+    # NOTE: never pop mlx from sys.modules here — re-importing the native module later in the same process aborts (Metal re-init).
     m = importlib.import_module(
         "scripts.GPU.alphazero.build_mcts_root_retention_manifest")
     src = open(m.__file__).read()
