@@ -23,6 +23,8 @@ plans under `docs/superpowers/`; for *metric definitions* see
 | **Why** does A lose — value collapse vs search diffusion vs low-confidence, and **when** in the game? | `eval_loss_replay_analyzer` (V2) | **yes** — the match must have run with `--save-eval-replays` |
 | **Is a checkpoint's value head blind to red's goal-line trigger?** (fast targeted screen across checkpoints) | `eval_goal_line_trigger_probe` | n/a — re-evaluates a fixed manifest of captured positions |
 | Found value-head errors — **how do I turn them into a calibration training signal** that corrects them *without* moving the fragile guardrails? | `build_targeted_calibration_manifest` (then `train.py --post-opening-calibration-*`) | n/a — consumes the probe / loss-analysis CSVs |
+| Is a checkpoint **over-valuing a fixed set of positions** (broad post-opening / pre-drop families — the A/C/D gate screens)? | `eval_position_probe` (§9) | n/a — re-evaluates a fixed CSV manifest of positions |
+| Did a candidate's **raw value head drift from its teacher** on specific rows, or does the drift only appear at the **MCTS root**? | `eval_raw_nn_position_rows` (§10) | n/a — raw NN forward only, no search |
 
 **The one thing to decide up front:** per-ply replay data is captured *only if
 you ask for it at match time* (`--save-eval-replays`), and it cannot be
@@ -414,7 +416,23 @@ blank teacher columns.
 ```
 
 **Gate 0:** run `smoke_teacher_calibration_v4.py` after building — must pass
-(`value_mse ≈ 0`, `kl_est ≈ 0`) before any training run.
+(`value_mse ≈ 0`, `kl_est ≈ 0`) before any training run:
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.smoke_teacher_calibration_v4 \
+  --manifest logs/eval/targeted_calibration_v4_teacher_from_calib020_0001.csv \
+  --teacher-checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+```
+
+**Telemetry (v4+; v5 reuses the same keys):** a teacher/root-retention run persists,
+per iteration, into `model_iter_<N>.json` state — `n_teacher_retention_drawn`,
+`calib_policy_ce_avg_iter`, `calib_policy_kl_est_avg_iter`,
+`calib_value_term_avg_iter`, `freeze_batchnorm_stats` — and the full block into
+the sidecar `iter_<N>_stats.json` under `post_opening_calibration.loss`
+(alongside `draws_by_tag`). Sanity-check after any run: `n_teacher_retention_drawn > 0`
+and a finite `calib_policy_ce_avg_iter` prove retention rows actually took the
+masked policy path (0 would mean value-only — a silent v3 rerun). The startup
+log must print `mode=teacher_retention` (v4) / `mode=mcts_root_retention` (v5).
 
 ---
 
@@ -457,6 +475,71 @@ the next hypothesis is tree/path-level retention, not more rows or weights.
 
 ---
 
+## 9. `eval_position_probe` — generic fixed-position value probe (gates A/C/D)
+
+**Purpose:** Re-evaluate a fixed CSV manifest of replay positions across
+checkpoints with a full 400-sim MCTS search, reporting per-case black-perspective
+root value + top-1 visit share and the over/severe flags. This is the runner
+behind the **A (black pre-drop), C (old broad post-opening), and D (red pre-drop)
+gates**; the goal-line probe (§5) is its B-gate sibling with a JSON manifest.
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.eval_position_probe \
+  --manifest logs/eval/tvc_v3_gate_C_old_post_opening_manifest.csv \
+  --checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --checkpoint checkpoints/<candidate>/model_iter_0001.safetensors \
+  --output-dir logs/eval/<run-name>
+```
+
+- Manifest needs at least `game_idx, case_id, replay_path, position_ply,
+  side_to_move` (extra columns pass through to the output).
+- Defaults: `--mcts-sims 400 --mcts-eval-batch-size 14 --mcts-stall-flush-sims 48
+  --base-seed 20260616`; per-case rng seed = `base_seed ^ game_idx ^ position_ply`
+  (the goal-line probe uses `base_seed ^ game_idx`, default 20260614).
+- Outputs: `position_probe_summary.json` (per-checkpoint mean/median black root
+  value, overvalue ≥ **0.25** and severe ≥ **0.50** rates) and
+  `position_probe_cases.csv` (per-case `probe_black_root_value`,
+  `probe_top1_share`, flags).
+- **Gotcha:** the cases CSV is **one row per (checkpoint × case_id)**; checkpoint
+  labels are the iter short-id (`0001`) or `parent-dir:short-id` when two runs
+  share an iter number. Any case-keyed downstream lookup must filter by
+  checkpoint first (see `--gate-checkpoint-label` in §8).
+
+---
+
+## 10. `eval_raw_nn_position_rows` — raw-NN (no-MCTS) drift-from-teacher diagnostic
+
+**Purpose:** Score fixed manifest rows across checkpoints with the RAW network
+forward only (eval-mode BatchNorm, no search) and quantify per-position
+`value_delta_vs_teacher`. Separates **value-head drift** from **MCTS-root
+drift**: when a candidate's raw values match the teacher but its §9 gate values
+went severe, the failure is root/search behavior, not the raw net. (This is the
+diagnostic that redirected the calibration line from raw-teacher sweeps to v5
+root retention — 2026-07-01, see the experiment ledger.)
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.eval_raw_nn_position_rows \
+  --manifest logs/eval/tvc_v3_gate_C_old_post_opening_manifest.csv \
+  --manifest logs/eval/tvc_v2_gate_D_red_predrop_manifest.csv \
+  --checkpoint <BASE.safetensors> --checkpoint <candidate.safetensors> \
+  --base-checkpoint <BASE.safetensors> \
+  --case-id game_000369_ply_051 \
+  --out logs/eval/raw_nn_rows.csv
+```
+
+- `--manifest` is repeatable (rows unioned + deduped); `--case-id` / `--tag` /
+  `--limit` filter; `--base-checkpoint` defaults to the first `--checkpoint`.
+- Teacher reference per row: the manifest's `teacher_value` if present, else the
+  **BASE checkpoint's own raw value** for that case (`teacher_value_source`
+  column says which). `value_delta_vs_teacher` is side-to-move space (no flip);
+  `raw_black_value` / `overvalue` / `severe_overvalue` are black-perspective
+  (same 0.25/0.50 thresholds as §9).
+- Also emits `top1_move` / `top1_prob` (raw policy argmax) for a value-vs-policy
+  drift lens. Booleans serialize as the strings `"True"`/`"False"` — string-compare,
+  don't truthy-test.
+
+---
+
 ## Internal libraries (not run directly)
 
 - `eval_runner` — the game-playing task queue / worker pool used by the match and
@@ -467,7 +550,19 @@ the next hypothesis is tree/path-level retention, not more rows or weights.
 - `eval_loss_analysis`, `eval_loss_replay_analysis` — the pure analysis modules
   behind the V1 and V2 CLIs (importable, fully unit-tested).
 - `goal_line_trigger_probe_cases` — pure selection / board-reconstruction /
-  summary helpers behind the goal-line trigger probe (no MLX, unit-tested).
+  summary helpers behind the goal-line trigger probe (no MLX, unit-tested);
+  its `position_state` is the canonical replay→board reconstructor shared by
+  every probe, diagnostic, and calibration builder.
+- `position_probe_cases` — CSV-manifest loader (`load_csv_manifest`) + the
+  shared `OVERVALUE_THRESHOLD`/`SEVERE_OVERVALUE_THRESHOLD` (0.25/0.50) and
+  summary helpers behind the generic position probe (§9) and the raw-NN
+  diagnostic (§10).
+- `calibration_pool` — training-side loader/validator for every calibration
+  manifest (§6/§7/§8): `loss_mode` registry (`hard_value` / `teacher_retention` /
+  `mcts_root_retention`), per-row parsing + sha1 alignment checks, sampling,
+  and the retention mask consumed by the trainer's masked loss path.
+- `build_teacher_calibration_manifest._teacher_infer` — the shared
+  single-position raw forward (no MCTS) reused by §10 and the §8 builder.
 
 ## Typical end-to-end workflow
 
@@ -491,7 +586,12 @@ the next hypothesis is tree/path-level retention, not more rows or weights.
   and the calibration builder's `2026-06-23-targeted-value-calibration-v2-design.md`
   + `2026-06-24-targeted-value-calibration-v2.md` (per-tag baselines, gates A–D,
   promotion). The v1 single-target predecessor is
-  `2026-06-16-post-opening-sharp-drop-calibration-*`.
+  `2026-06-16-post-opening-sharp-drop-calibration-*`. For §10 and §8:
+  `2026-07-01-eval-raw-nn-position-rows-diagnostic.md` and
+  `2026-07-01-targeted-value-calibration-v5-mcts-root-retention.md`.
+- Experiment record (which calibration branches were tried, why they were
+  rejected, do-not-repeat list):
+  `docs/2026-06-26-targeted-value-calibration-experiment-ledger-v3f-v4-overlap-updated.md`.
 - Metric definitions: [`analysis-metrics-guide.md`](analysis-metrics-guide.md).
 - MLX/Metal eval performance and the `--workers` gotcha:
   [`mlx-memory-management.md`](mlx-memory-management.md).
