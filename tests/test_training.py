@@ -610,6 +610,61 @@ def test_calibration_tag_schedule_unknown_tag_fails_before_selfplay():
     print("PASS: unknown scheduled tag fails before self-play")
 
 
+def test_root_retention_run_persists_retention_telemetry():
+    """v5 make-or-break: a mcts_root_retention manifest must route through the
+    schema gate -> split_samples_with_modes -> mask=1.0 -> 14-tuple ->
+    n_teacher_retention_drawn > 0 in model_iter JSON. If the mask predicate or
+    the trainer schema gate misses the new mode, this reads 0 (silent v3 rerun)."""
+    import csv as _csv
+    import json as _json
+    import math as _math
+    from scripts.GPU.alphazero.trainer import train
+    from scripts.GPU.alphazero.calibration_pool import legal_moves_sha1
+    from scripts.GPU.alphazero.goal_line_trigger_probe_cases import position_state
+    from tests.goal_line_probe_fixtures import legal_replay
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        replay = legal_replay(8, game_idx=1)
+        rpath = tmp / "game_000001.json"
+        rpath.write_text(_json.dumps(replay))
+        state = position_state(replay, 5, "black")
+        legal = state.legal_moves()
+        n = len(legal)
+        row = {"game_idx": "1", "case_id": "root1", "replay_path": str(rpath),
+               "position_ply": "5", "side_to_move": "black",
+               "tag": "old_post_opening_retention", "weight_scale": "1.0",
+               "loss_mode": "mcts_root_retention", "teacher_value": "0.2",
+               "root_visits_json": _json.dumps([1.0 / n] * n),
+               "root_legal_moves_sha1": legal_moves_sha1(legal)}
+        manifest = tmp / "v5_root.csv"
+        with manifest.open("w", newline="") as f:
+            w = _csv.DictWriter(f, fieldnames=list(row.keys()))
+            w.writeheader(); w.writerows([row])
+
+        ckpt_dir = tmp / "ckpt"
+        train(
+            n_iterations=1, games_per_iteration=1, train_steps_per_iteration=5,
+            batch_size=4, buffer_size=1000, checkpoint_dir=str(ckpt_dir),
+            mcts_simulations=10, learning_rate=1e-3, hidden=64, n_blocks=2,
+            max_moves=10, seed=42,
+            post_opening_calibration_enabled=True,
+            post_opening_calibration_manifest=str(manifest),
+            post_opening_calibration_weight=0.02,
+            post_opening_calibration_batch_fraction=0.10,
+            freeze_batchnorm_stats=True,
+            games_dir_override=str(tmp / "games"),
+        )
+
+        state_json = _json.loads(sorted(ckpt_dir.glob("model_iter_*.json"))[-1].read_text())
+        assert state_json.get("n_teacher_retention_drawn", 0) > 0, \
+            "root rows fell through mask=0.0 (v3-rerun hazard) or schema gate missed mcts_root_retention"
+        assert _math.isfinite(float(state_json["calib_policy_ce_avg_iter"]))
+        assert float(state_json["calib_policy_ce_avg_iter"]) > 0.0
+
+    print("PASS: v5 root-retention telemetry persisted (mask flowed end-to-end)")
+
+
 def main():
     """Run all tests."""
     print("=" * 60)

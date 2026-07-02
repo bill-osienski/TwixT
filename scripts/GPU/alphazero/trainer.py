@@ -2879,19 +2879,19 @@ def train(
             raise ValueError(
                 "post_opening_calibration_enabled requires "
                 "post_opening_calibration_manifest")
-        from .calibration_pool import CalibrationPool
+        from .calibration_pool import CalibrationPool, RETENTION_POLICY_LOSS_MODES
         _calib_pool = CalibrationPool.from_manifest(
             post_opening_calibration_manifest, post_opening_calibration_target)
         _sampling_desc = (
             f"tag_schedule={post_opening_calibration_tag_schedule}"
             if post_opening_calibration_tag_schedule
             else f"batch_fraction={post_opening_calibration_batch_fraction}")
-        if _calib_pool.schema == "teacher_retention":
-            _n_teacher = sum(1 for _s in _calib_pool._samples
-                             if _s.loss_mode == "teacher_retention")
+        if _calib_pool.schema in RETENTION_POLICY_LOSS_MODES:
+            _n_retention = sum(1 for _s in _calib_pool._samples
+                               if _s.loss_mode in RETENTION_POLICY_LOSS_MODES)
             print(f"Post-opening calibration: {len(_calib_pool)} positions, "
-                  f"mode=teacher_retention ({_n_teacher} teacher / "
-                  f"{len(_calib_pool) - _n_teacher} hard-value rows), "
+                  f"mode={_calib_pool.schema} ({_n_retention} retention / "
+                  f"{len(_calib_pool) - _n_retention} hard-value rows), "
                   f"weight={effective_post_opening_calibration_weight}, "
                   f"{_sampling_desc}")
         elif _calib_pool.schema == "per_row_target":
@@ -3907,7 +3907,9 @@ def train(
                         )
                         # Pass active_size to training (use current curriculum stage)
                         if _calib_pool is not None:
-                            from .calibration_pool import split_samples, split_samples_with_modes
+                            from .calibration_pool import (
+                                split_samples, split_samples_with_modes,
+                                RETENTION_POLICY_LOSS_MODES)
                             if post_opening_calibration_tag_schedule:
                                 _calib_samples = _calib_pool.sample_by_tag(
                                     post_opening_calibration_tag_schedule, train_rng)
@@ -3918,7 +3920,7 @@ def train(
                             for _s in _calib_samples:
                                 sum_calib_n_drawn_by_tag[_s.tag] = (
                                     sum_calib_n_drawn_by_tag.get(_s.tag, 0) + 1)
-                            if _calib_pool.schema == "teacher_retention":
+                            if _calib_pool.schema in RETENTION_POLICY_LOSS_MODES:
                                 _calib_batch, _calib_weights, _calib_tp_mask = (
                                     split_samples_with_modes(_calib_samples,
                                                              _calib_pool.has_weight_scale))

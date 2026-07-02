@@ -372,3 +372,50 @@ def test_freeze_batchnorm_running_stats():
     rr = np.zeros((5, 3), np.int32); cc = np.zeros((5, 3), np.int32); mm = np.ones((5, 3), np.float32)
     net.forward_padded(mx.array(b), mx.array(rr), mx.array(cc), mx.array(mm), active_size=24)
     assert np.allclose(rm0, np.array(bn.running_mean))
+
+
+def test_root_retention_flows_masked_policy_ce_path(tmp_path):
+    """mcts_root_retention samples must produce mask=1.0 and drive the 14-tuple
+    masked policy-CE path with a finite, positive CE (root visits != raw priors
+    for a fresh network, so CE > 0 is expected — NOT ~0 like v4 self-distillation)."""
+    import json as _json
+    import math as _math
+    from scripts.GPU.alphazero.calibration_pool import (
+        build_calibration_sample, legal_moves_sha1, split_samples_with_modes)
+    from scripts.GPU.alphazero.goal_line_trigger_probe_cases import position_state
+    from tests.goal_line_probe_fixtures import legal_replay
+
+    replay = legal_replay(9, game_idx=1)
+    rp = tmp_path / "game_000001.json"
+    rp.write_text(_json.dumps(replay))
+    state = position_state(replay, 5, "black")
+    legal = state.legal_moves()
+    n = len(legal)
+    # A sharp (non-uniform) root-visit target so CE > H(target) is comfortably > 0.
+    visits = [0.0] * n
+    visits[0] = 0.9
+    if n > 1:
+        visits[1] = 0.1
+    case = {"game_idx": "1", "case_id": "root1", "replay_path": str(rp),
+            "position_ply": "5", "side_to_move": "black",
+            "tag": "old_post_opening_retention", "weight_scale": "1.0",
+            "loss_mode": "mcts_root_retention", "teacher_value": "0.2",
+            "root_visits_json": _json.dumps(visits),
+            "root_legal_moves_sha1": legal_moves_sha1(legal)}
+    sample = build_calibration_sample(case, calibration_target=-0.35)
+    records, weights, mask = split_samples_with_modes([sample], has_weight_scale=True)
+    assert mask.tolist() == [1.0]
+
+    net = create_network(hidden=64, n_blocks=2)
+    out = alphazero_loss_batch(
+        net, records,
+        calibration_positions=records,
+        calibration_weights=weights,
+        calibration_loss_weight=1.0,
+        calibration_teacher_policy_mask=mask,
+        teacher_value_weight=1.0, teacher_policy_kl_weight=0.25,
+    )
+    assert len(out) == 14                                  # 14-tuple teacher path
+    ce = float(out[11])                                    # CALIB_POLICY_CE_IDX
+    assert _math.isfinite(ce) and ce > 0.0
+    assert int(out[13]) == 1                               # n_retention counts the root row
