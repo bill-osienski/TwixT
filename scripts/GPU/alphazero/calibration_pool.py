@@ -86,40 +86,58 @@ def _parse_weight_scale(case: dict) -> tuple[float, bool]:
     return w, True
 
 
-def _parse_teacher_policy(case: dict, legal) -> list[float]:
-    """Parse and validate teacher_policy_json against the reconstructed legal_moves.
-
-    Checks: non-empty, length == len(legal), all entries >= 0 and finite,
-    sum in 1 ± 1e-3, and teacher_legal_moves_sha1 matches the recomputed hash
-    over legal (catches a same-length reorder).
-    """
+def _parse_policy_json(case: dict, legal, policy_col: str, sha1_col: str) -> list[float]:
+    """Parse and validate a dense policy JSON column against the reconstructed
+    legal_moves. Checks: non-empty, length == len(legal), all entries >= 0 and
+    finite, sum in 1 ± 1e-3, and the stored sha1 matches the recomputed hash
+    over legal (catches a same-length reorder / stale alignment)."""
     cid = case.get("case_id")
-    raw = case.get("teacher_policy_json")
+    raw = case.get(policy_col)
     if raw in (None, ""):
-        raise ValueError(f"{cid}: teacher_retention row needs teacher_policy_json")
+        raise ValueError(f"{cid}: retention row needs {policy_col}")
     policy = [float(x) for x in json.loads(raw)]
     if len(policy) != len(legal):
         raise ValueError(
-            f"{cid}: teacher_policy length {len(policy)} != legal_moves {len(legal)}")
+            f"{cid}: {policy_col} length {len(policy)} != legal_moves {len(legal)}")
     if any(p < 0.0 or not math.isfinite(p) for p in policy):
-        raise ValueError(f"{cid}: teacher_policy has negative/non-finite entries")
+        raise ValueError(f"{cid}: {policy_col} has negative/non-finite entries")
     if abs(sum(policy) - 1.0) > 1e-3:
-        raise ValueError(f"{cid}: teacher_policy not normalized (sum={sum(policy)})")
-    stored = case.get("teacher_legal_moves_sha1") or ""
+        raise ValueError(f"{cid}: {policy_col} not normalized (sum={sum(policy)})")
+    stored = case.get(sha1_col) or ""
     expected = legal_moves_sha1(legal)
     if stored != expected:
         raise ValueError(
-            f"{cid}: teacher_legal_moves_sha1 mismatch (alignment); "
+            f"{cid}: {sha1_col} mismatch (alignment); "
             f"stored {stored!r} != recomputed {expected!r}")
     return policy
+
+
+def _parse_teacher_policy(case: dict, legal) -> list[float]:
+    return _parse_policy_json(case, legal, "teacher_policy_json", "teacher_legal_moves_sha1")
+
+
+def _parse_teacher_value(case: dict) -> float:
+    """Required raw eval-mode value anchor (side-to-move), finite in [-1, 1]."""
+    raw = case.get("teacher_value")
+    if raw in (None, ""):
+        raise ValueError(
+            f"{case.get('case_id')}: retention row needs teacher_value (raw stm anchor)")
+    v = float(raw)
+    if not math.isfinite(v) or not (-1.0 <= v <= 1.0):
+        raise ValueError(
+            f"{case.get('case_id')}: teacher_value {v!r} must be finite in [-1,1]")
+    return v
 
 
 def build_calibration_position(case: dict, calibration_target: float) -> PositionRecord:
     """Reconstruct a case to a board and build a PositionRecord.
 
     For hard_value rows visit_counts is a zero vector (policy is not supervised);
-    for teacher_retention rows visit_counts holds the dense teacher policy.
-    outcome carries the soft target in side-to-move perspective.
+    for teacher_retention rows visit_counts holds the dense teacher policy;
+    for mcts_root_retention rows visit_counts holds the dense base MCTS root
+    visit distribution. outcome carries the soft target (hard_value,
+    teacher_retention) or the raw eval-mode value anchor (mcts_root_retention),
+    always in side-to-move perspective.
     """
     replay_path = Path(case["replay_path"])
     if not replay_path.exists():
@@ -140,10 +158,7 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
             f"{case.get('case_id')}: unknown loss_mode {loss_mode!r} "
             f"(valid: {sorted(VALID_LOSS_MODES)})")
     if loss_mode == "teacher_retention":
-        teacher_value = float(case["teacher_value"])
-        if not math.isfinite(teacher_value) or not (-1.0 <= teacher_value <= 1.0):
-            raise ValueError(
-                f"{case.get('case_id')}: teacher_value {teacher_value!r} must be finite in [-1,1]")
+        teacher_value = _parse_teacher_value(case)
         teacher_policy = _parse_teacher_policy(case, legal)
         return PositionRecord(
             board_tensor=board_hwc,
@@ -151,6 +166,20 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
             legal_moves=legal,
             visit_counts=teacher_policy,                 # float "counts"; make_padded_batch normalizes
             outcome=teacher_value,
+            active_size=state.active_size,
+            ply=position_ply,
+            game_n_moves=None,
+        )
+    if loss_mode == "mcts_root_retention":
+        teacher_value = _parse_teacher_value(case)
+        root_policy = _parse_policy_json(
+            case, legal, "root_visits_json", "root_legal_moves_sha1")
+        return PositionRecord(
+            board_tensor=board_hwc,
+            to_move=state.to_move,
+            legal_moves=legal,
+            visit_counts=root_policy,        # BASE MCTS root visit distribution (normalized)
+            outcome=teacher_value,           # raw eval-mode value anchor, stm, DIRECT
             active_size=state.active_size,
             ply=position_ply,
             game_n_moves=None,
@@ -169,23 +198,29 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
 
 def build_calibration_sample(case: dict, calibration_target: float) -> CalibrationSample:
     """Wrap a value-only PositionRecord with per-row weight/tag/target metadata."""
-    if (case.get("loss_mode") or "hard_value") == "hard_value":
+    loss_mode = case.get("loss_mode") or "hard_value"
+    if loss_mode == "hard_value":
         populated = [k for k in ("teacher_value", "teacher_policy_json",
-                                 "teacher_legal_moves_sha1")
+                                 "teacher_legal_moves_sha1",
+                                 "root_visits_json", "root_legal_moves_sha1")
                      if case.get(k) not in (None, "")]
         if populated:
             raise ValueError(
-                f"{case.get('case_id')}: hard_value row must leave teacher columns "
+                f"{case.get('case_id')}: hard_value row must leave retention columns "
                 f"blank; found {populated}")
+    elif loss_mode == "mcts_root_retention":
+        if case.get("teacher_policy_json") not in (None, ""):
+            raise ValueError(
+                f"{case.get('case_id')}: mcts_root_retention row must leave "
+                f"teacher_policy_json blank (root_visits_json is the policy target)")
     record = build_calibration_position(case, calibration_target)
     weight_scale, _ = _parse_weight_scale(case)
     tag = case.get("tag") or ""
     target_black = _resolve_target_black(case, calibration_target)
-    loss_mode = case.get("loss_mode") or "hard_value"
     teacher_value = (float(case["teacher_value"])
-                     if loss_mode == "teacher_retention" else None)
+                     if loss_mode in RETENTION_POLICY_LOSS_MODES else None)
     teacher_policy_len = (len(record.visit_counts)
-                          if loss_mode == "teacher_retention" else None)
+                          if loss_mode in RETENTION_POLICY_LOSS_MODES else None)
     return CalibrationSample(record=record, weight_scale=weight_scale,
                              tag=tag, target_black_value=target_black,
                              loss_mode=loss_mode, teacher_value=teacher_value,
@@ -255,9 +290,17 @@ class CalibrationPool:
     @classmethod
     def from_manifest(cls, manifest_path, calibration_target: float):
         cases = load_csv_manifest(manifest_path)["cases"]
+        modes = {(c.get("loss_mode") or "hard_value") for c in cases}
+        retention_modes = sorted(modes & RETENTION_POLICY_LOSS_MODES)
+        if len(retention_modes) > 1:
+            raise ValueError(
+                f"manifest mixes retention loss_modes {retention_modes}; "
+                f"one retention mode per manifest")
         samples = [build_calibration_sample(c, calibration_target) for c in cases]
         has_weight_scale = any(c.get("weight_scale") not in (None, "") for c in cases)
-        if any((c.get("loss_mode") or "hard_value") == "teacher_retention" for c in cases):
+        if "mcts_root_retention" in modes:
+            schema = "mcts_root_retention"
+        elif "teacher_retention" in modes:
             schema = "teacher_retention"
         elif any(c.get("target_black_value") not in (None, "") for c in cases):
             schema = "per_row_target"

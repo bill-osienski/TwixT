@@ -469,3 +469,112 @@ def test_unknown_loss_mode_rejected(tmp_path):
     from scripts.GPU.alphazero.calibration_pool import build_calibration_position
     with pytest.raises(ValueError, match="loss_mode"):
         build_calibration_position(case, calibration_target=-0.35)
+
+
+def _root_case(tmp_path, **overrides):
+    """A valid mcts_root_retention case dict with matching sha1/policy computed
+    from the actually reconstructed position."""
+    import json as _json
+    from scripts.GPU.alphazero.calibration_pool import legal_moves_sha1
+    from scripts.GPU.alphazero.goal_line_trigger_probe_cases import position_state
+    from tests.goal_line_probe_fixtures import legal_replay
+    replay = legal_replay(9, game_idx=1)
+    rp = tmp_path / "game_000001.json"
+    rp.write_text(_json.dumps(replay))
+    state = position_state(replay, 5, "black")
+    legal = state.legal_moves()
+    n = len(legal)
+    case = {
+        "game_idx": "1", "case_id": "root1", "replay_path": str(rp),
+        "position_ply": "5", "side_to_move": "black",
+        "tag": "old_post_opening_retention", "weight_scale": "1.0",
+        "loss_mode": "mcts_root_retention",
+        "teacher_value": "0.2",
+        "root_visits_json": _json.dumps([1.0 / n] * n),
+        "root_legal_moves_sha1": legal_moves_sha1(legal),
+    }
+    case.update(overrides)
+    return case
+
+
+def test_root_retention_row_parses(tmp_path):
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_sample
+    sample = build_calibration_sample(_root_case(tmp_path), calibration_target=-0.35)
+    assert sample.loss_mode == "mcts_root_retention"
+    rec = sample.record
+    assert abs(rec.outcome - 0.2) < 1e-9                       # raw teacher anchor, stm, DIRECT
+    assert len(rec.visit_counts) == len(rec.legal_moves)       # dense root policy
+    assert abs(sum(rec.visit_counts) - 1.0) < 1e-6
+    assert abs(sample.teacher_value - 0.2) < 1e-9              # metadata reused
+
+
+def test_root_retention_requires_teacher_value(tmp_path):
+    import pytest as _pytest
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_sample
+    with _pytest.raises(ValueError, match="teacher_value"):
+        build_calibration_sample(_root_case(tmp_path, teacher_value=""),
+                                 calibration_target=-0.35)
+
+
+def test_root_retention_rejects_bad_policy(tmp_path):
+    import json as _json
+    import pytest as _pytest
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_sample
+    # wrong length
+    with _pytest.raises(ValueError, match="length"):
+        build_calibration_sample(_root_case(tmp_path, root_visits_json=_json.dumps([1.0])),
+                                 calibration_target=-0.35)
+    # bad sum
+    base = _root_case(tmp_path)
+    n = len(_json.loads(base["root_visits_json"]))
+    with _pytest.raises(ValueError, match="normal"):
+        build_calibration_sample(_root_case(tmp_path, root_visits_json=_json.dumps([2.0 / n] * n)),
+                                 calibration_target=-0.35)
+    # sha1 mismatch (alignment)
+    with _pytest.raises(ValueError, match="alignment|sha1"):
+        build_calibration_sample(_root_case(tmp_path, root_legal_moves_sha1="0" * 40),
+                                 calibration_target=-0.35)
+
+
+def test_hard_value_rejects_populated_root_columns(tmp_path):
+    import pytest as _pytest
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_sample
+    case = _root_case(tmp_path, loss_mode="hard_value", target_black_value="-0.35",
+                      teacher_value="")
+    # root_visits_json / root_legal_moves_sha1 still populated -> must fail loudly
+    with _pytest.raises(ValueError, match="blank"):
+        build_calibration_sample(case, calibration_target=-0.35)
+
+
+def test_root_retention_rejects_populated_teacher_policy(tmp_path):
+    import json as _json
+    import pytest as _pytest
+    from scripts.GPU.alphazero.calibration_pool import build_calibration_sample
+    case = _root_case(tmp_path, teacher_policy_json=_json.dumps([0.5, 0.5]))
+    with _pytest.raises(ValueError, match="teacher_policy_json"):
+        build_calibration_sample(case, calibration_target=-0.35)
+
+
+def test_from_manifest_detects_root_schema_and_rejects_mixed(tmp_path):
+    import csv as _csv
+    import pytest as _pytest
+    from scripts.GPU.alphazero.calibration_pool import CalibrationPool
+    root = _root_case(tmp_path)
+    hard = dict(_root_case(tmp_path), case_id="corr1", loss_mode="hard_value",
+                teacher_value="", root_visits_json="", root_legal_moves_sha1="",
+                target_black_value="-0.35")
+    cols = sorted(set(root) | set(hard))
+    man = tmp_path / "v5.csv"
+    with man.open("w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=cols, restval="")
+        w.writeheader(); w.writerows([root, hard])
+    pool = CalibrationPool.from_manifest(str(man), calibration_target=-0.35)
+    assert pool.schema == "mcts_root_retention"
+
+    # mixed retention modes in one manifest -> loud error
+    teacher = dict(_root_case(tmp_path), case_id="t1", loss_mode="teacher_retention")
+    with (tmp_path / "mixed.csv").open("w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=sorted(set(root) | set(teacher)), restval="")
+        w.writeheader(); w.writerows([root, teacher])
+    with _pytest.raises(ValueError, match="mixes"):
+        CalibrationPool.from_manifest(str(tmp_path / "mixed.csv"), calibration_target=-0.35)
