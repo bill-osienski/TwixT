@@ -2879,16 +2879,16 @@ def train(
             raise ValueError(
                 "post_opening_calibration_enabled requires "
                 "post_opening_calibration_manifest")
-        from .calibration_pool import CalibrationPool, RETENTION_POLICY_LOSS_MODES
+        from .calibration_pool import CalibrationPool, TEACHER_MODE_LOSS_MODES
         _calib_pool = CalibrationPool.from_manifest(
             post_opening_calibration_manifest, post_opening_calibration_target)
         _sampling_desc = (
             f"tag_schedule={post_opening_calibration_tag_schedule}"
             if post_opening_calibration_tag_schedule
             else f"batch_fraction={post_opening_calibration_batch_fraction}")
-        if _calib_pool.schema in RETENTION_POLICY_LOSS_MODES:
+        if _calib_pool.schema in TEACHER_MODE_LOSS_MODES:
             _n_retention = sum(1 for _s in _calib_pool._samples
-                               if _s.loss_mode in RETENTION_POLICY_LOSS_MODES)
+                               if _s.loss_mode in TEACHER_MODE_LOSS_MODES)
             print(f"Post-opening calibration: {len(_calib_pool)} positions, "
                   f"mode={_calib_pool.schema} ({_n_retention} retention / "
                   f"{len(_calib_pool) - _n_retention} hard-value rows), "
@@ -3909,7 +3909,7 @@ def train(
                         if _calib_pool is not None:
                             from .calibration_pool import (
                                 split_samples, split_samples_with_modes,
-                                RETENTION_POLICY_LOSS_MODES)
+                                TEACHER_MODE_LOSS_MODES)
                             if post_opening_calibration_tag_schedule:
                                 _calib_samples = _calib_pool.sample_by_tag(
                                     post_opening_calibration_tag_schedule, train_rng)
@@ -3920,7 +3920,7 @@ def train(
                             for _s in _calib_samples:
                                 sum_calib_n_drawn_by_tag[_s.tag] = (
                                     sum_calib_n_drawn_by_tag.get(_s.tag, 0) + 1)
-                            if _calib_pool.schema in RETENTION_POLICY_LOSS_MODES:
+                            if _calib_pool.schema in TEACHER_MODE_LOSS_MODES:
                                 _calib_batch, _calib_weights, _calib_tp_mask = (
                                     split_samples_with_modes(_calib_samples,
                                                              _calib_pool.has_weight_scale))

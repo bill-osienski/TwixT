@@ -419,3 +419,27 @@ def test_root_retention_flows_masked_policy_ce_path(tmp_path):
     ce = float(out[11])                                    # CALIB_POLICY_CE_IDX
     assert _math.isfinite(ce) and ce > 0.0
     assert int(out[13]) == 1                               # n_retention counts the root row
+
+
+def test_zero_mask_teacher_mode_policy_ce_is_zero():
+    """v6 value-only continuation batch: mask all zeros -> 14-tuple,
+    policy_ce exactly 0, n_retention 0, all terms finite."""
+    import math
+    net = create_network(hidden=64, n_blocks=2)
+    pos = [_main_pos() for _ in range(3)]
+    calib = [_calib_pos(-0.25), _calib_pos(-0.25)]
+    mask = np.zeros((2,), dtype=np.float32)
+    out = alphazero_loss_batch(
+        net, pos,
+        calibration_positions=calib,
+        calibration_loss_weight=0.01,
+        calibration_teacher_policy_mask=mask,
+        teacher_value_weight=1.0, teacher_policy_kl_weight=0.25,
+    )
+    assert len(out) == 14
+    value_term = float(out[CALIB_VALUE_TERM_IDX])
+    policy_ce = float(out[11])       # CALIB_POLICY_CE_IDX
+    n_retention = int(out[13])       # CALIB_N_RETENTION_IDX
+    assert math.isfinite(value_term)
+    assert policy_ce == 0.0
+    assert n_retention == 0
