@@ -42,6 +42,8 @@ from .continuation_extraction import (
     extract_continuations, format_path_moves, root_max_visit_share)
 
 CORRECTION_TAG = "black_predrop_correction"
+D_ROOT_VALUE_TAG = "red_predrop_root_value_retention"
+D_ROOT_VALUE_SOURCE_TAG = "red_predrop_retention"
 NEW_COLUMNS_V6 = [
     "extra_moves_json", "continuation_side_to_move",
     "continuation_legal_moves_sha1", "continuation_depth",
@@ -64,6 +66,8 @@ def classify_row(r: dict) -> str:
     if (mode == CONTINUATION_LOSS_MODE
             and tag in CONTINUATION_TAG_BY_SOURCE_TAG.values()):
         return "passthrough"                        # rerun on a v6 output
+    if mode == CONTINUATION_LOSS_MODE and tag == D_ROOT_VALUE_TAG:
+        return "passthrough"                        # rerun on a v6c output
     raise ValueError(f"{r.get('case_id')}: unknown loss_mode/tag combination "
                      f"({mode!r}, {tag!r})")
 
@@ -101,17 +105,51 @@ def _continuation_row(parent: dict, spec, raw_evaluator, emit_policy: bool) -> d
     return row
 
 
+def _root_value_row(parent: dict, root_state) -> dict:
+    """Depth-0 value-only clone of a D root row (v6c): anchors the raw
+    eval-mode teacher_value at the ROOT state with no policy signal.
+    teacher_value is INHERITED from the source row (raw eval anchor) —
+    NEVER root_black_value/root_value_stm (the MCTS root scalar; experiment
+    ledger do-not-repeat #9)."""
+    if (parent.get("teacher_value") or "") == "":
+        raise ValueError(
+            f"{parent.get('case_id')}: D root row lacks teacher_value; cannot "
+            f"emit a root-value clone")
+    row = dict(parent)                              # inherit ALL parent columns
+    for c in NEW_COLUMNS_V6:
+        row.setdefault(c, "")
+    legal = root_state.legal_moves()
+    row["case_id"] = f"{parent['case_id']}__root_value"
+    row["tag"] = D_ROOT_VALUE_TAG
+    row["loss_mode"] = CONTINUATION_LOSS_MODE
+    row["teacher_value_source"] = "base_raw_root_clone"
+    row["extra_moves_json"] = "[]"
+    row["continuation_side_to_move"] = root_state.to_move
+    row["continuation_legal_moves_sha1"] = legal_moves_sha1(legal)
+    row["continuation_depth"] = "0"
+    row["continuation_parent_case_id"] = parent["case_id"]
+    row["continuation_source"] = "root_value"
+    row["continuation_path_moves"] = ""
+    row["continuation_tree_visits"] = ""
+    row["continuation_tree_nn_value"] = ""
+    row["target_black_value"] = ""                  # never a hard target
+    row["root_visits_json"] = ""                    # NO policy signal
+    row["teacher_policy_json"] = ""
+    row["teacher_legal_moves_sha1"] = ""
+    return row
+
+
 def build_rows_v6(rows, raw_evaluator, search_fn, *, pos_base_seed,
                   goal_base_seed, b_pv_depth, c_pv_depth, d_top_k,
                   d_child_pv_depth, d_child_pv_min_visits, max_per_root,
                   max_total, emit_policy, source_root_tolerance,
-                  limit_cases, only_case_ids):
+                  limit_cases, only_case_ids, emit_d_root_value=False):
     # NOTE: continuation rows inherit their parent's root_* provenance stamps
     # (sims/seed/checkpoint/batch/stall) via dict(parent) — the search config
     # itself is proven equivalent by the source-root cross-check, so this
     # function does not take sims/base_checkpoint/batch/stall parameters.
     out, fresh_root_black = [], {}
-    stats = {"n_continuation": 0, "by_tag": {}, "excluded": []}
+    stats = {"n_continuation": 0, "n_root_value": 0, "by_tag": {}, "excluded": []}
     n_extracted_roots = 0
     for r in rows:
         row = dict(r)
@@ -132,6 +170,12 @@ def build_rows_v6(rows, raw_evaluator, search_fn, *, pos_base_seed,
         ply = int(float(r["position_ply"]))
         side = r["side_to_move"]
         state = position_state(replay, ply, side)
+        if emit_d_root_value and r["tag"] == D_ROOT_VALUE_SOURCE_TAG:
+            rv_row = _root_value_row(r, state)
+            out.append(rv_row)
+            stats["n_root_value"] += 1
+            stats["by_tag"][D_ROOT_VALUE_TAG] = (
+                stats["by_tag"].get(D_ROOT_VALUE_TAG, 0) + 1)
         seed = row_seed(r.get("tag", ""), r["game_idx"], ply,
                         pos_base_seed, goal_base_seed)
         counts, root_value_stm, root = search_fn(state, seed)
@@ -222,6 +266,10 @@ def main(argv=None):
                     help="extract from only the first N eligible roots")
     ap.add_argument("--only-case-id", action="append", default=None,
                     help="extract only from these root case_ids (repeatable)")
+    ap.add_argument("--emit-d-root-value-rows", action="store_true",
+                    help="v6c: for each red_predrop_retention source row, also "
+                         "emit a depth-0 value-only red_predrop_root_value_retention "
+                         "clone (default OFF = byte-identical v6 output)")
     args = ap.parse_args(argv)
 
     from .local_evaluator import LocalGPUEvaluator
@@ -245,7 +293,8 @@ def main(argv=None):
         emit_policy=args.emit_continuation_policy,
         source_root_tolerance=args.source_root_tolerance,
         limit_cases=args.limit_cases,
-        only_case_ids=set(args.only_case_id) if args.only_case_id else None)
+        only_case_ids=set(args.only_case_id) if args.only_case_id else None,
+        emit_d_root_value=args.emit_d_root_value_rows)
 
     if args.gate_cases_csv:
         check_rows = [{"loss_mode": "mcts_root_retention", "case_id": cid,
@@ -271,8 +320,8 @@ def main(argv=None):
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(out_rows)
-    print(f"wrote {len(out_rows)} rows ({stats['n_continuation']} continuation: "
-          f"{stats['by_tag']}) -> {args.out}")
+    print(f"wrote {len(out_rows)} rows ({stats['n_continuation']} continuation, "
+          f"{stats['n_root_value']} root-value: {stats['by_tag']}) -> {args.out}")
     return 0
 
 

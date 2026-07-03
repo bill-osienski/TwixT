@@ -179,3 +179,101 @@ def test_module_defers_heavy_imports():
     head = open(m.__file__).read().split("def ", 1)[0]
     assert "eval_runner" not in head and "local_evaluator" not in head
     assert "probe_eval" not in head and "import mlx" not in head
+
+
+def _rows_with_d(tmp_path):
+    """The standard fixture rows plus one D-family root row on the same replay."""
+    rows = _rows(tmp_path)
+    state = position_state(json.loads(open(rows[0]["replay_path"]).read()), 5, "black")
+    legal = state.legal_moves()
+    dense = [0.0] * len(legal); dense[0] = 300 / 399; dense[1] = 99 / 399
+    d_row = dict(rows[1])
+    d_row["case_id"] = "red_loss_game_000001_predrop_ply_5_drop_7"
+    d_row["tag"] = "red_predrop_retention"
+    d_row["teacher_value"] = "-0.4173"
+    d_row["root_visits_json"] = json.dumps(dense)
+    return rows + [d_row], state
+
+
+def _build_d(tmp_path, emit_d_root_value, **kw):
+    rows, _ = _rows_with_d(tmp_path)
+    params = dict(pos_base_seed=20260616, goal_base_seed=20260614,
+                  b_pv_depth=2, c_pv_depth=3, d_top_k=3, d_child_pv_depth=1,
+                  d_child_pv_min_visits=40, max_per_root=6, max_total=250,
+                  emit_policy=False, source_root_tolerance=1e-3,
+                  limit_cases=None, only_case_ids=None,
+                  emit_d_root_value=emit_d_root_value)
+    params.update(kw)
+    return build_rows_v6(rows, _FakeRawEval(), _fake_search, **params)
+
+
+def test_flag_off_emits_no_root_value_rows(tmp_path):
+    out, stats = _build_d(tmp_path, emit_d_root_value=False)
+    assert stats["n_root_value"] == 0
+    assert not [r for r in out if r["tag"] == "red_predrop_root_value_retention"]
+
+
+def test_root_value_clone_fields(tmp_path):
+    from scripts.GPU.alphazero.build_searched_continuation_retention_manifest import (
+        D_ROOT_VALUE_TAG)
+    out, stats = _build_d(tmp_path, emit_d_root_value=True)
+    assert stats["n_root_value"] == 1
+    parent_idx = next(i for i, r in enumerate(out)
+                      if r["case_id"] == "red_loss_game_000001_predrop_ply_5_drop_7")
+    clone = out[parent_idx + 1]                      # appended right after parent
+    assert clone["case_id"] == out[parent_idx]["case_id"] + "__root_value"
+    assert clone["tag"] == D_ROOT_VALUE_TAG
+    assert clone["loss_mode"] == CONTINUATION_LOSS_MODE
+    assert clone["teacher_value"] == "-0.4173"       # COPIED raw anchor, verbatim
+    assert clone["teacher_value_source"] == "base_raw_root_clone"
+    assert clone["extra_moves_json"] == "[]"
+    assert clone["continuation_source"] == "root_value"
+    assert clone["continuation_depth"] == "0"
+    assert clone["continuation_parent_case_id"] == out[parent_idx]["case_id"]
+    assert clone["continuation_side_to_move"] == "black"
+    assert clone["root_visits_json"] == ""           # NO policy signal of any kind
+    assert clone["teacher_policy_json"] == ""
+    assert clone["target_black_value"] == ""
+    # C parent (non-D) must NOT get a clone
+    assert not [r for r in out
+                if r["case_id"] == "game_000001_ply_005__root_value"]
+
+
+def test_root_value_clone_loads_value_only(tmp_path):
+    from scripts.GPU.alphazero.calibration_pool import split_samples_with_modes
+    out, _ = _build_d(tmp_path, emit_d_root_value=True)
+    clone = next(r for r in out if r["tag"] == "red_predrop_root_value_retention")
+    sample = build_calibration_sample(clone, calibration_target=-0.35)
+    assert sample.has_policy_target is False
+    assert sample.record.outcome == pytest.approx(-0.4173)
+    assert sample.record.ply == 5
+    _, _, mask = split_samples_with_modes([sample], has_weight_scale=False)
+    assert mask.tolist() == [0.0]
+
+
+def test_root_value_clone_deterministic_and_unique(tmp_path):
+    out1, _ = _build_d(tmp_path, emit_d_root_value=True)
+    out2, _ = _build_d(tmp_path, emit_d_root_value=True)
+    assert out1 == out2
+    ids = [r["case_id"] for r in out1]
+    assert len(ids) == len(set(ids))
+
+
+def test_classify_row_accepts_root_value_rerun():
+    from scripts.GPU.alphazero.build_searched_continuation_retention_manifest import (
+        D_ROOT_VALUE_TAG)
+    assert classify_row({"loss_mode": CONTINUATION_LOSS_MODE,
+                         "tag": D_ROOT_VALUE_TAG}) == "passthrough"
+
+
+def test_missing_teacher_value_on_d_parent_fails(tmp_path):
+    rows, _ = _rows_with_d(tmp_path)
+    rows[2]["teacher_value"] = ""
+    with pytest.raises(ValueError, match="teacher_value"):
+        build_rows_v6(rows, _FakeRawEval(), _fake_search,
+                      pos_base_seed=20260616, goal_base_seed=20260614,
+                      b_pv_depth=2, c_pv_depth=3, d_top_k=3, d_child_pv_depth=1,
+                      d_child_pv_min_visits=40, max_per_root=6, max_total=250,
+                      emit_policy=False, source_root_tolerance=1e-3,
+                      limit_cases=None, only_case_ids=None,
+                      emit_d_root_value=True)
