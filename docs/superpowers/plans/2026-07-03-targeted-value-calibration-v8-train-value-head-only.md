@@ -310,7 +310,11 @@ def test_value_head_only_change_passes(tmp_path, base_and_net):
     report = compare_value_head_only(base, cand)
     assert report["frozen_diffs"] == []
     assert max(report["value_deltas"].values()) > 0
-    assert report["n_tensors"] == 44           # 64x2 arch: full flat tensor count
+    # 4 value-head tensors (fc1.weight/bias, fc2.weight/bias) — the property
+    # that matters; do NOT pin the total tensor count (schema drift is the
+    # checkpoint format's concern, not this verifier's).
+    assert len(report["value_deltas"]) == 4
+    assert report["n_tensors"] > 0
     assert main(["--base", base, "--candidate", cand]) == 0
 
 
