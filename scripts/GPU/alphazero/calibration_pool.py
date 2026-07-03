@@ -152,17 +152,32 @@ def _parse_teacher_value(case: dict) -> float:
 
 def _parse_extra_moves(case: dict) -> list[tuple[int, int]]:
     """Required non-empty extra_moves_json for continuation rows: JSON list of
-    {"row": int, "col": int} applied after the position_ply reconstruction."""
+    {"row": int, "col": int} applied after the position_ply reconstruction.
+
+    Depth-0 exception (v6c): rows with continuation_source == "root_value"
+    anchor the ROOT state itself — they carry an explicit empty list (or
+    blank) and MUST NOT list any moves. Side/sha1 verification still runs
+    against the root state in _apply_extra_moves."""
     cid = case.get("case_id")
     raw = case.get("extra_moves_json")
+    is_root_value = case.get("continuation_source") == "root_value"
     if raw in (None, ""):
+        if is_root_value:
+            return []
         raise ValueError(f"{cid}: continuation row needs extra_moves_json")
     try:
         moves = json.loads(raw)
     except json.JSONDecodeError as e:
         raise ValueError(f"{cid}: extra_moves_json invalid JSON: {e}") from e
-    if not isinstance(moves, list) or not moves:
+    if not isinstance(moves, list):
         raise ValueError(f"{cid}: extra_moves_json must be a non-empty list")
+    if not moves:
+        if is_root_value:
+            return []
+        raise ValueError(f"{cid}: extra_moves_json must be a non-empty list")
+    if is_root_value:
+        raise ValueError(
+            f"{cid}: root_value row must have empty extra_moves_json; got {raw!r}")
     out = []
     for m in moves:
         if not isinstance(m, dict) or "row" not in m or "col" not in m:

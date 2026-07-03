@@ -173,3 +173,78 @@ def test_from_manifest_still_rejects_teacher_plus_root_mix(tmp_path):
     p = _write_manifest(tmp_path, [teach, root])
     with pytest.raises(ValueError, match="retention loss_modes"):
         CalibrationPool.from_manifest(p, calibration_target=-0.35)
+
+
+def _root_value_case(tmp_path, **overrides):
+    """Depth-0 D root-value clone: continuation state IS the root state."""
+    rp = tmp_path / "game_000002.json"
+    replay = legal_replay(9, game_idx=2)
+    rp.write_text(json.dumps(replay))
+    state = _root_state(replay)
+    case = {
+        "game_idx": "2",
+        "case_id": "game_000002_ply_005__root_value",
+        "replay_path": str(rp), "position_ply": "5", "side_to_move": "black",
+        "tag": "red_predrop_root_value_retention",
+        "loss_mode": CONTINUATION_LOSS_MODE,
+        "teacher_value": "-0.4173", "weight_scale": "1.0",
+        "extra_moves_json": "[]",
+        "continuation_source": "root_value",
+        "continuation_depth": "0",
+        "continuation_side_to_move": state.to_move,
+        "continuation_legal_moves_sha1": legal_moves_sha1(state.legal_moves()),
+    }
+    case.update(overrides)
+    return case, state
+
+
+def test_root_value_row_loads_at_root_state(tmp_path):
+    case, root = _root_value_case(tmp_path)
+    sample = build_calibration_sample(case, calibration_target=-0.35)
+    assert sample.loss_mode == CONTINUATION_LOSS_MODE
+    assert sample.tag == "red_predrop_root_value_retention"
+    assert sample.has_policy_target is False
+    rec = sample.record
+    assert rec.outcome == pytest.approx(-0.4173)         # teacher_value, stm, direct
+    assert rec.to_move == root.to_move                   # root side, no moves applied
+    assert rec.legal_moves == root.legal_moves()         # root legal set
+    assert rec.visit_counts == [0] * len(rec.legal_moves)
+    assert rec.ply == 5                                  # position_ply + 0
+    _, _, mask = split_samples_with_modes([sample], has_weight_scale=False)
+    assert mask.tolist() == [0.0]                        # value-only: never policy
+
+
+def test_root_value_row_blank_extra_moves_also_accepted(tmp_path):
+    case, root = _root_value_case(tmp_path, extra_moves_json="")
+    sample = build_calibration_sample(case, calibration_target=-0.35)
+    assert sample.record.legal_moves == root.legal_moves()
+
+
+def test_root_value_row_rejects_nonempty_extra_moves(tmp_path):
+    case, root = _root_value_case(tmp_path)
+    m = root.legal_moves()[0]
+    case["extra_moves_json"] = json.dumps([{"row": m[0], "col": m[1]}])
+    with pytest.raises(ValueError, match="root_value"):
+        build_calibration_sample(case, calibration_target=-0.35)
+
+
+def test_root_value_row_still_verifies_sha1(tmp_path):
+    case, _ = _root_value_case(tmp_path, continuation_legal_moves_sha1="deadbeef")
+    with pytest.raises(ValueError, match="sha1"):
+        build_calibration_sample(case, calibration_target=-0.35)
+
+
+def test_empty_extra_moves_without_root_value_marker_still_fails(tmp_path):
+    # non-root_value continuation rows keep today's fail-loud behavior
+    case, _ = _case(tmp_path, extra_moves_json="[]")
+    with pytest.raises(ValueError, match="extra_moves_json"):
+        build_calibration_sample(case, calibration_target=-0.35)
+    case2, _ = _case(tmp_path, extra_moves_json="")
+    with pytest.raises(ValueError, match="extra_moves_json"):
+        build_calibration_sample(case2, calibration_target=-0.35)
+
+
+def test_root_value_row_rejects_root_visits_json(tmp_path):
+    case, _ = _root_value_case(tmp_path, root_visits_json=json.dumps([1.0]))
+    with pytest.raises(ValueError, match="root_visits_json"):
+        build_calibration_sample(case, calibration_target=-0.35)
