@@ -224,7 +224,7 @@ def test_root_value_row_rejects_nonempty_extra_moves(tmp_path):
     case, root = _root_value_case(tmp_path)
     m = root.legal_moves()[0]
     case["extra_moves_json"] = json.dumps([{"row": m[0], "col": m[1]}])
-    with pytest.raises(ValueError, match="root_value"):
+    with pytest.raises(ValueError, match="must have empty extra_moves_json"):
         build_calibration_sample(case, calibration_target=-0.35)
 
 
