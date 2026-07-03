@@ -401,6 +401,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
              "loaded base checkpoint; train-mode normalization still uses batch stats. Used "
              "by the v4 teacher-retention calibration (its eval-mode forward reads base "
              "stats so cached teacher targets stay reproducible) and as a frozen-BN control.")
+    parser.add_argument("--train-value-head-only", action="store_true",
+        help="v8: freeze encoder+policy_head (skip opt_main updates); "
+             "only value_head.* tensors train. Pair with "
+             "--freeze-batchnorm-stats.")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
@@ -850,6 +854,7 @@ def main():
         post_opening_calibration_teacher_value_weight=args.post_opening_calibration_teacher_value_weight,
         post_opening_calibration_teacher_policy_kl_weight=args.post_opening_calibration_teacher_policy_kl_weight,
         freeze_batchnorm_stats=args.freeze_batchnorm_stats,
+        train_value_head_only=args.train_value_head_only,
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,

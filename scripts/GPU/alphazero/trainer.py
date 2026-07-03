@@ -1320,6 +1320,7 @@ def train_step(
     calibration_teacher_policy_mask=None,             # v4
     teacher_value_weight: float = 1.0,                # v4
     teacher_policy_kl_weight: float = 0.25,           # v4
+    train_value_head_only: bool = False,              # v8: skip opt_main.update
 ) -> tuple:
     """Single training step with two optimizers and separate gradient clipping.
 
@@ -1414,7 +1415,11 @@ def train_step(
     mx.eval(main_grads, value_grads, main_gnorm, value_gnorm)
 
     # Update REAL modules (guaranteed to mutate network)
-    opt_main.update(main_module, main_grads)
+    if not train_value_head_only:
+        opt_main.update(main_module, main_grads)
+    # v8: with train_value_head_only, encoder+policy grads are computed and
+    # clipped (telemetry unchanged) but never applied — only the value head
+    # trains. BN running stats need --freeze-batchnorm-stats separately.
     opt_value.update(network.value_head, value_grads)
 
     # Evaluate all arrays before extracting Python floats
@@ -2459,6 +2464,7 @@ def train(
     post_opening_calibration_teacher_value_weight: float = 1.0,
     post_opening_calibration_teacher_policy_kl_weight: float = 0.25,
     freeze_batchnorm_stats: bool = False,
+    train_value_head_only: bool = False,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2534,6 +2540,11 @@ def train(
     opt_main = optim.Adam(learning_rate=learning_rate)
     value_lr = learning_rate * value_lr_scale
     opt_value = optim.Adam(learning_rate=value_lr)
+
+    if train_value_head_only:
+        print("TRAIN VALUE HEAD ONLY: encoder+policy_head updates DISABLED "
+              "(opt_main.update skipped; value head lr unchanged). Pair with "
+              "--freeze-batchnorm-stats so BN running stats stay at base.")
 
     buffer = ReplayBuffer(max_size=buffer_size)
 
@@ -3949,6 +3960,7 @@ def train(
                                 calibration_teacher_policy_mask=_calib_tp_mask,
                                 teacher_value_weight=post_opening_calibration_teacher_value_weight,
                                 teacher_policy_kl_weight=post_opening_calibration_teacher_policy_kl_weight,
+                                train_value_head_only=train_value_head_only,
                             )
                             # First 10 returns are the standard losses; _ret[10:14] (teacher telemetry)
                             # is consumed by the accumulation block below when the teacher mask is active.
@@ -3978,6 +3990,7 @@ def train(
                                 conversion_loss_weight=effective_conversion_loss_weight,
                                 conversion_completion_weight=conversion_completion_weight,
                                 conversion_reducer_weight=conversion_reducer_weight,
+                                train_value_head_only=train_value_head_only,
                             )
 
                         # Sums first, then steps_done (ensures denominator matches included samples)
@@ -4524,6 +4537,8 @@ def train(
             # Run config: whether BatchNorm running stats were frozen at base
             # (v4 teacher-retention self-distillation reads base stats).
             "freeze_batchnorm_stats": freeze_batchnorm_stats,
+            # v8: whether encoder/policy updates were skipped (value-head-only run).
+            "train_value_head_only": train_value_head_only,
         }
 
         state_path = ckpt_path.replace(".safetensors", ".json")
