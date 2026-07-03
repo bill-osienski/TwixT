@@ -31,10 +31,19 @@ V6_TAG_SCHEDULE = {
     "old_post_opening_continuation_retention": 2,
     "red_predrop_continuation_retention": 2,
 }
+V6C_TAG_SCHEDULE = {
+    "black_predrop_correction": 2,
+    "goal_line_continuation_retention": 1,
+    "old_post_opening_continuation_retention": 2,
+    "red_predrop_root_value_retention": 1,
+    "red_predrop_continuation_retention": 2,
+}
+SCHEDULES = {"v6": V6_TAG_SCHEDULE, "v6c": V6C_TAG_SCHEDULE}
 
 
 def assert_continuation_retention_mechanics(network, manifest_path: str,
-                                            value_tol: float = 1e-4) -> dict:
+                                            value_tol: float = 1e-4,
+                                            schedule: dict | None = None) -> dict:
     pool = CalibrationPool.from_manifest(manifest_path, calibration_target=-0.35)
     if pool.schema != CONTINUATION_LOSS_MODE:
         raise AssertionError(
@@ -79,13 +88,14 @@ def assert_continuation_retention_mechanics(network, manifest_path: str,
         raise AssertionError(
             f"mask count {n_retention} != policy-carrying rows {n_policy_rows}")
     # HARD schedule assertion (acceptance criterion 1 source of truth).
-    draws = pool.sample_by_tag(V6_TAG_SCHEDULE, random.Random(0))
+    schedule = V6_TAG_SCHEDULE if schedule is None else schedule
+    draws = pool.sample_by_tag(schedule, random.Random(0))
     draws_by_tag: dict = {}
     for s in draws:
         draws_by_tag[s.tag] = draws_by_tag.get(s.tag, 0) + 1
-    if draws_by_tag != V6_TAG_SCHEDULE:
+    if draws_by_tag != schedule:
         raise AssertionError(
-            f"schedule draw mismatch: {draws_by_tag} != {V6_TAG_SCHEDULE}")
+            f"schedule draw mismatch: {draws_by_tag} != {schedule}")
     return {"n_continuation": len(continuation), "n_policy_rows": n_policy_rows,
             "value_mse": value_mse, "policy_ce": policy_ce, "kl_est": kl_est,
             "draws_by_tag": draws_by_tag,
@@ -97,11 +107,14 @@ def main(argv=None):
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--base-checkpoint", required=True)
     ap.add_argument("--value-tol", type=float, default=1e-4)
+    ap.add_argument("--schedule", choices=sorted(SCHEDULES), default="v6c",
+                    help="which locked tag schedule to hard-assert (default v6c)")
     args = ap.parse_args(argv)
     from .probe_eval import load_network_for_scoring
     network, *_ = load_network_for_scoring(args.base_checkpoint)
     report = assert_continuation_retention_mechanics(
-        network, args.manifest, value_tol=args.value_tol)
+        network, args.manifest, value_tol=args.value_tol,
+        schedule=SCHEDULES[args.schedule])
     print(f"PASS v6 continuation retention mechanics: "
           f"n_continuation={report['n_continuation']}, "
           f"value_mse={report['value_mse']:.3e}, "

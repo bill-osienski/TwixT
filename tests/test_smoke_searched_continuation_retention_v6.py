@@ -116,3 +116,87 @@ def test_smoke_fails_on_wrong_schema(tmp_path):
     net = create_network(hidden=64, n_blocks=2)
     with pytest.raises(AssertionError, match="schema"):
         assert_continuation_retention_mechanics(net, str(p))
+
+
+def _manifest_v6c(tmp_path, cont_teacher_value, root_teacher_value):
+    """The v6 fixture manifest plus one depth-0 D root-value row. Continuation
+    rows anchor the CONTINUATION-state value; the root-value row anchors the
+    ROOT-state value — pass each state's actual network value so both anchors
+    reproduce simultaneously."""
+    base = _manifest(tmp_path, cont_teacher_value)
+    replay = legal_replay(9, game_idx=1)
+    state = position_state(replay, 5, "black")
+    root_value_row = {
+        "game_idx": "1", "replay_path": str(tmp_path / "game_000001.json"),
+        "position_ply": "5", "side_to_move": "black", "weight_scale": "1.0",
+        "case_id": "rv1", "tag": "red_predrop_root_value_retention",
+        "loss_mode": CONTINUATION_LOSS_MODE,
+        "teacher_value": repr(root_teacher_value),
+        "extra_moves_json": "[]",
+        "continuation_source": "root_value",
+        "continuation_depth": "0",
+        "continuation_side_to_move": state.to_move,
+        "continuation_legal_moves_sha1": legal_moves_sha1(state.legal_moves()),
+    }
+    rows = list(csv.DictReader(open(base)))
+    fields = sorted(set(rows[0].keys()) | set(root_value_row.keys()))
+    p = tmp_path / "v6c_manifest.csv"
+    with open(p, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: r.get(k, "") for k in fields})
+        w.writerow({k: root_value_row.get(k, "") for k in fields})
+    return p
+
+
+def _root_network_value(net):
+    """Network's eval-mode stm value at the ROOT state (ply 5, black)."""
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+    from scripts.GPU.alphazero.build_teacher_calibration_manifest import _teacher_infer
+    replay = legal_replay(9, game_idx=1)
+    state = position_state(replay, 5, "black")
+    prev = net.training
+    net.eval()
+    try:
+        _, _, v = _teacher_infer(state, LocalGPUEvaluator(net))
+    finally:
+        net.train(prev)
+    return float(v)
+
+
+def test_v6c_schedule_passes_with_root_value_rows(tmp_path):
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.smoke_searched_continuation_retention_v6 import (
+        V6C_TAG_SCHEDULE)
+    net = create_network(hidden=64, n_blocks=2)
+    p = _manifest_v6c(tmp_path, cont_teacher_value=_network_value(net),
+                      root_teacher_value=_root_network_value(net))
+    report = assert_continuation_retention_mechanics(
+        net, str(p), schedule=V6C_TAG_SCHEDULE)
+    assert report["n_continuation"] == 4          # 3 continuation + 1 root_value
+    assert report["policy_ce"] == 0.0
+    assert report["n_policy_rows"] == 0
+    assert abs(report["value_mse"]) < 1e-4
+    assert report["draws_by_tag"] == V6C_TAG_SCHEDULE
+
+
+def test_default_schedule_unchanged_for_v6_manifests(tmp_path):
+    from scripts.GPU.alphazero.network import create_network
+    net = create_network(hidden=64, n_blocks=2)
+    v = _network_value(net)
+    p = _manifest(tmp_path, teacher_value=v)
+    report = assert_continuation_retention_mechanics(net, str(p))
+    assert report["draws_by_tag"] == V6_TAG_SCHEDULE
+
+
+def test_v6c_schedule_on_v6_manifest_fails_loud(tmp_path):
+    from scripts.GPU.alphazero.network import create_network
+    from scripts.GPU.alphazero.smoke_searched_continuation_retention_v6 import (
+        V6C_TAG_SCHEDULE)
+    net = create_network(hidden=64, n_blocks=2)
+    v = _network_value(net)
+    p = _manifest(tmp_path, teacher_value=v)      # no root_value rows
+    with pytest.raises(ValueError, match="missing tags"):
+        assert_continuation_retention_mechanics(
+            net, str(p), schedule=V6C_TAG_SCHEDULE)
