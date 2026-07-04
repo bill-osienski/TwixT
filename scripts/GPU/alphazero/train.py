@@ -405,6 +405,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="v8: freeze encoder+policy_head (skip opt_main updates); "
              "only value_head.* tensors train. Pair with "
              "--freeze-batchnorm-stats.")
+    parser.add_argument("--train-value-head-and-final-block", action="store_true",
+        help="v9: train only value_head.* plus the final residual block "
+             "encoder.blocks[last] (skip the whole-trunk opt_main update; "
+             "apply just the final block). Mutually exclusive with "
+             "--train-value-head-only. Pair with --freeze-batchnorm-stats.")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
@@ -560,6 +565,9 @@ def main():
     args = parser.parse_args()
     _validate_conversion_args(parser, args)
     _validate_closeout_td1_args(parser, args)
+    if args.train_value_head_only and args.train_value_head_and_final_block:
+        parser.error("--train-value-head-only and "
+                     "--train-value-head-and-final-block are mutually exclusive")
 
     # Propagate opening debug to workers via env var
     if args.opening_debug:
@@ -855,6 +863,7 @@ def main():
         post_opening_calibration_teacher_policy_kl_weight=args.post_opening_calibration_teacher_policy_kl_weight,
         freeze_batchnorm_stats=args.freeze_batchnorm_stats,
         train_value_head_only=args.train_value_head_only,
+        train_value_head_and_final_block=args.train_value_head_and_final_block,
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,

@@ -1321,6 +1321,7 @@ def train_step(
     teacher_value_weight: float = 1.0,                # v4
     teacher_policy_kl_weight: float = 0.25,           # v4
     train_value_head_only: bool = False,              # v8: skip opt_main.update
+    train_value_head_and_final_block: bool = False,   # v9: only value head + final block
 ) -> tuple:
     """Single training step with two optimizers and separate gradient clipping.
 
@@ -1356,6 +1357,10 @@ def train_step(
           training but may be larger if the replay buffer returned fewer
           positions than requested.
     """
+    if train_value_head_only and train_value_head_and_final_block:
+        raise ValueError(
+            "train_value_head_only and train_value_head_and_final_block are "
+            "mutually exclusive")
     calib_active = (
         calibration_loss_weight > 0.0
         and calibration_positions is not None
@@ -1415,11 +1420,21 @@ def train_step(
     mx.eval(main_grads, value_grads, main_gnorm, value_gnorm)
 
     # Update REAL modules (guaranteed to mutate network)
-    if not train_value_head_only:
+    if train_value_head_only:
+        # v8: encoder+policy grads are computed and clipped (telemetry
+        # unchanged) but never applied — only the value head trains.
+        pass
+    elif train_value_head_and_final_block:
+        # v9: apply ONLY the final residual block's (already-clipped) grads.
+        # One opt_main.update on the live block submodule — no Adam double-step,
+        # trunk learning rate, and structurally cannot touch policy_head, the
+        # stem, or earlier blocks (they are never passed to any optimizer).
+        last = len(network.encoder.blocks) - 1
+        opt_main.update(network.encoder.blocks[last],
+                        main_grads["encoder"]["blocks"][last])
+    else:
         opt_main.update(main_module, main_grads)
-    # v8: with train_value_head_only, encoder+policy grads are computed and
-    # clipped (telemetry unchanged) but never applied — only the value head
-    # trains. BN running stats need --freeze-batchnorm-stats separately.
+    # BN running stats need --freeze-batchnorm-stats separately (v8/v9 pair the flags).
     opt_value.update(network.value_head, value_grads)
 
     # Evaluate all arrays before extracting Python floats
@@ -2465,6 +2480,7 @@ def train(
     post_opening_calibration_teacher_policy_kl_weight: float = 0.25,
     freeze_batchnorm_stats: bool = False,
     train_value_head_only: bool = False,
+    train_value_head_and_final_block: bool = False,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2545,6 +2561,13 @@ def train(
         print("TRAIN VALUE HEAD ONLY: encoder+policy_head updates DISABLED "
               "(opt_main.update skipped; value head lr unchanged). Pair with "
               "--freeze-batchnorm-stats so BN running stats stay at base.")
+
+    if train_value_head_and_final_block:
+        _vh_last = len(network.encoder.blocks) - 1
+        print(f"TRAIN VALUE HEAD + FINAL BLOCK: only value_head.* and "
+              f"encoder.blocks.{_vh_last}.* train (opt_main applies just the "
+              f"final block; policy_head + earlier trunk frozen). Pair with "
+              f"--freeze-batchnorm-stats so BN running stats stay at base.")
 
     buffer = ReplayBuffer(max_size=buffer_size)
 
@@ -3961,6 +3984,7 @@ def train(
                                 teacher_value_weight=post_opening_calibration_teacher_value_weight,
                                 teacher_policy_kl_weight=post_opening_calibration_teacher_policy_kl_weight,
                                 train_value_head_only=train_value_head_only,
+                                train_value_head_and_final_block=train_value_head_and_final_block,
                             )
                             # First 10 returns are the standard losses; _ret[10:14] (teacher telemetry)
                             # is consumed by the accumulation block below when the teacher mask is active.
@@ -3991,6 +4015,7 @@ def train(
                                 conversion_completion_weight=conversion_completion_weight,
                                 conversion_reducer_weight=conversion_reducer_weight,
                                 train_value_head_only=train_value_head_only,
+                                train_value_head_and_final_block=train_value_head_and_final_block,
                             )
 
                         # Sums first, then steps_done (ensures denominator matches included samples)
@@ -4539,6 +4564,12 @@ def train(
             "freeze_batchnorm_stats": freeze_batchnorm_stats,
             # v8: whether encoder/policy updates were skipped (value-head-only run).
             "train_value_head_only": train_value_head_only,
+            # v9: whether only value head + final residual block trained, and
+            # which block index was unfrozen (null when the flag is off).
+            "train_value_head_and_final_block": train_value_head_and_final_block,
+            "unfrozen_block_index": (
+                len(network.encoder.blocks) - 1
+                if train_value_head_and_final_block else None),
         }
 
         state_path = ckpt_path.replace(".safetensors", ".json")
