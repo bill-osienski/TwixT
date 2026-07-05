@@ -107,6 +107,10 @@ Explicitly NOT scheduled: `red_predrop_retention` (D's `mcts_root_retention` roo
 
 Treat v10 as the **last partial-unfreeze attempt** unless it produces a near-miss.
 
+### Interpreting a v10 failure (narrow, not global)
+
+If v10 fails, do **not** conclude "root preservation can never work." The correct, narrow reading is: **the existing v7 root-retention rows — B/C root with root-visit policy CE, D root value-only — were not enough under final-block training.** That leaves a distinct, still-open v11 objective space that v10 does not test: **value-only B/C root clones** (new `goal_line_root_value_retention` / `old_post_opening_root_value_retention` rows, no policy CE) or **explicit delta-to-BASE preservation** (a different objective, not just anchor rows). Those would each require new extraction / a new objective, so they are out of scope for v10 (which stays strictly config-only) and belong to a future v11 if warranted.
+
 ## Not doing (explicit)
 
 - No v9b last-2 blocks. No A draw pressure = 3 with v9. No raw-preservation-only-and-expect-D-to-pass (D already shows root-raw preservation is not enough on its own).
