@@ -279,6 +279,101 @@ VALUE_MIN_ELIGIBLE = 10     # don't evaluate rolling logic until this many eligi
 VALUE_MIN_SAMPLES = 128     # minimum sanity sample count to be eligible
 
 
+def _tree_dot(a, b):
+    """Sum of elementwise products over matching leaves of two aligned pytrees."""
+    if isinstance(a, mx.array):
+        return mx.sum(a.astype(mx.float32) * b.astype(mx.float32))
+    if isinstance(a, dict):
+        acc = mx.array(0.0, dtype=mx.float32)
+        for k in a:
+            acc = acc + _tree_dot(a[k], b[k])
+        return acc
+    if isinstance(a, (list, tuple)):
+        acc = mx.array(0.0, dtype=mx.float32)
+        for x, y in zip(a, b):
+            acc = acc + _tree_dot(x, y)
+        return acc
+    return mx.array(0.0, dtype=mx.float32)          # None / non-array leaf
+
+
+def _tree_axpy(total, coef: float, g):
+    """Leaf-wise total + coef*g over aligned pytrees (coef a Python float)."""
+    if isinstance(total, mx.array):
+        return total + coef * g
+    if isinstance(total, dict):
+        return {k: _tree_axpy(total[k], coef, g[k]) for k in total}
+    if isinstance(total, (list, tuple)):
+        return type(total)(_tree_axpy(x, coef, y) for x, y in zip(total, g))
+    return total                                    # None / non-array leaf
+
+
+def project_conflicting_gradient(surf_total, surf_A, surf_G, weight: float,
+                                 eps: float = 1e-8):
+    """Asymmetric, conflict-only projection of A away from G on the applied
+    surface. surf_* are aligned pytrees (dict/list/mx.array) over the trainable
+    surface (value_head + final block). Returns (surf_final, telem).
+
+    surf_final = surf_total - weight * c * surf_G   when dot(A,G) < 0 and
+    ||G|| > eps, with c = dot/(||G||**2 + 1e-12); otherwise surf_final IS
+    surf_total (same object, elementwise unchanged) and c = 0.
+    """
+    dot = float(_tree_dot(surf_A, surf_G).item())
+    normsq = float(_tree_dot(surf_G, surf_G).item())
+    norm_G = normsq ** 0.5
+    norm_A = float(_tree_dot(surf_A, surf_A).item()) ** 0.5
+    if norm_G <= eps:
+        skip_reason = "tiny_guardrail"
+        conflict = False
+    elif dot >= 0.0:
+        skip_reason = None
+        conflict = False
+    else:
+        skip_reason = None
+        conflict = True
+    c = dot / (normsq + 1e-12) if conflict else 0.0
+    surf_final = _tree_axpy(surf_total, -weight * c, surf_G) if conflict else surf_total
+    telem = {
+        "evaluated": True, "conflict": conflict, "skip_reason": skip_reason,
+        "dot": dot, "cos": dot / (norm_A * norm_G + 1e-12),
+        "c": c, "removed_norm": abs(weight * c) * norm_G,
+        "norm_G": norm_G, "norm_A": norm_A,
+    }
+    return surf_final, telem
+
+
+def _calibration_component_loss(model, calibration_positions, calibration_weights,
+                                calibration_guardrail_sign, guardrail_margin,
+                                component: str, max_moves_cap: int = 512):
+    """Eval-mode calibration-ONLY component scalar (no self-play, no policy CE).
+    Reproduces alphazero_loss_batch's guardrail-branch value_term / hinge, split
+    by the guardrail-sign mask. component in {"a_correction","guardrail_hinge"}."""
+    cb_boards, cb_rows, cb_cols, cb_mask, _cb_pi, cb_targets = make_padded_batch(
+        calibration_positions, max_moves_cap=max_moves_cap)
+    _prev = model.training
+    model.eval()
+    try:
+        _, cb_values, _ = model.forward_padded(
+            cb_boards, cb_rows, cb_cols, cb_mask,
+            active_size=calibration_positions[0].active_size)
+    finally:
+        model.train(_prev)
+    per_value = (cb_values - cb_targets) ** 2
+    base_w = (mx.reshape(mx.array(calibration_weights), per_value.shape)
+              if calibration_weights is not None else mx.ones(per_value.shape))
+    gmask = mx.abs(mx.reshape(mx.array(calibration_guardrail_sign), per_value.shape))
+    if component == "a_correction":
+        ng_w = base_w * (1.0 - gmask)
+        return mx.sum(ng_w * per_value) / mx.maximum(mx.sum(ng_w), 1e-8)
+    if component == "guardrail_hinge":
+        sign = mx.reshape(mx.array(calibration_guardrail_sign), per_value.shape)
+        signed_over = sign * (cb_values - cb_targets) - guardrail_margin
+        hinge = mx.maximum(signed_over, 0.0) ** 2
+        g_w = base_w * gmask
+        return mx.sum(g_w * hinge) / mx.maximum(mx.sum(g_w), 1e-8)
+    raise ValueError(f"unknown component {component!r} "
+                     "(expected 'a_correction' or 'guardrail_hinge')")
+
+
 def clip_grad_norm(grads: Any, max_norm: float = 1.0) -> Tuple[Any, mx.array]:
     """Clip gradients by global norm (memory-efficient, no concat).
 
