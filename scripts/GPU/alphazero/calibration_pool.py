@@ -239,7 +239,10 @@ def build_calibration_position(case: dict, calibration_target: float) -> Positio
             f"{case.get('case_id')}: unknown loss_mode {loss_mode!r} "
             f"(valid: {sorted(VALID_LOSS_MODES)})")
     record_ply = position_ply
-    if loss_mode == CONTINUATION_LOSS_MODE:
+    is_guardrail_continuation = (
+        loss_mode == GUARDRAIL_LOSS_MODE
+        and case.get("extra_moves_json") not in (None, ""))
+    if loss_mode == CONTINUATION_LOSS_MODE or is_guardrail_continuation:
         state, n_extra = _apply_extra_moves(state, case)
         record_ply = position_ply + n_extra
 
