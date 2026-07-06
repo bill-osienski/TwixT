@@ -517,6 +517,45 @@ def build_post_opening_calibration_block(config: dict, enabled: bool,
                 float(loss_accumulator.get("sum_guardrail_active_frac", 0.0)) / steps,
             "guardrail_margin":
                 float(loss_accumulator.get("guardrail_margin", 0.0)),
+            "calib_projection_enabled":
+                bool(loss_accumulator.get("proj_enabled", False)),
+            "calib_projection_scope": "value_head_and_final_block",
+            "calib_projection_conflict_steps":
+                int(loss_accumulator.get("proj_conflict_steps", 0)),
+            "calib_projection_no_a_steps":
+                int(loss_accumulator.get("proj_no_a_steps", 0)),
+            "calib_projection_no_guardrail_steps":
+                int(loss_accumulator.get("proj_no_guardrail_steps", 0)),
+            "calib_projection_tiny_guardrail_steps":
+                int(loss_accumulator.get("proj_tiny_guardrail_steps", 0)),
+            "calib_projection_no_conflict_steps":
+                int(loss_accumulator.get("proj_no_conflict_steps", 0)),
+            "calib_projection_conflict_rate": (
+                int(loss_accumulator.get("proj_conflict_steps", 0))
+                / max(int(loss_accumulator.get("proj_conflict_steps", 0))
+                      + int(loss_accumulator.get("proj_no_conflict_steps", 0)), 1)),
+            "calib_projection_dot_avg": (
+                float(loss_accumulator.get("sum_proj_dot", 0.0))
+                / max(int(loss_accumulator.get("proj_conflict_steps", 0))
+                      + int(loss_accumulator.get("proj_no_conflict_steps", 0)), 1)),
+            "calib_projection_cos_avg": (
+                float(loss_accumulator.get("sum_proj_cos", 0.0))
+                / max(int(loss_accumulator.get("proj_conflict_steps", 0))
+                      + int(loss_accumulator.get("proj_no_conflict_steps", 0)), 1)),
+            "calib_projection_c_avg": (
+                float(loss_accumulator.get("sum_proj_c", 0.0))
+                / max(int(loss_accumulator.get("proj_conflict_steps", 0)), 1)),
+            "calib_projection_removed_norm_avg": (
+                float(loss_accumulator.get("sum_proj_removed_norm", 0.0))
+                / max(int(loss_accumulator.get("proj_conflict_steps", 0)), 1)),
+            "calib_projection_guardrail_grad_norm_avg": (
+                float(loss_accumulator.get("sum_proj_norm_g", 0.0))
+                / max(int(loss_accumulator.get("proj_conflict_steps", 0))
+                      + int(loss_accumulator.get("proj_no_conflict_steps", 0)), 1)),
+            "calib_projection_a_grad_norm_avg": (
+                float(loss_accumulator.get("sum_proj_norm_a", 0.0))
+                / max(int(loss_accumulator.get("proj_conflict_steps", 0))
+                      + int(loss_accumulator.get("proj_no_conflict_steps", 0)), 1)),
         },
         "draws_by_tag": dict(loss_accumulator.get("sum_calib_n_drawn_by_tag", {})),
     }

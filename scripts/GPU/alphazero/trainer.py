@@ -4139,6 +4139,17 @@ def train(
                 sum_n_teacher_retention = 0
                 sum_guardrail_hinge_loss = 0.0
                 sum_guardrail_active_frac = 0.0
+                proj_conflict_steps = 0
+                proj_no_a_steps = 0
+                proj_no_guardrail_steps = 0
+                proj_tiny_guardrail_steps = 0
+                proj_no_conflict_steps = 0
+                sum_proj_dot = 0.0
+                sum_proj_cos = 0.0
+                sum_proj_c = 0.0
+                sum_proj_removed_norm = 0.0
+                sum_proj_norm_g = 0.0
+                sum_proj_norm_a = 0.0
 
                 train_rng = random.Random(master_rng.randint(0, 2**31))
 
@@ -4221,6 +4232,31 @@ def train(
                             if _calib_guard_sign is not None and len(_ret) == 13:
                                 sum_guardrail_hinge_loss += _ret[10]
                                 sum_guardrail_active_frac += _ret[11]
+                            if (_calib_guard_sign is not None
+                                    and len(_ret) == 14):
+                                sum_guardrail_hinge_loss += _ret[10]
+                                sum_guardrail_active_frac += _ret[11]
+                                proj = _ret[13]
+                                if proj["skip_reason"] == "no_a":
+                                    proj_no_a_steps += 1
+                                elif proj["skip_reason"] == "no_guardrail":
+                                    proj_no_guardrail_steps += 1
+                                elif proj["skip_reason"] == "tiny_guardrail":
+                                    proj_tiny_guardrail_steps += 1
+                                elif proj["conflict"]:
+                                    proj_conflict_steps += 1
+                                    sum_proj_dot += proj["dot"]
+                                    sum_proj_cos += proj["cos"]
+                                    sum_proj_c += proj["c"]
+                                    sum_proj_removed_norm += proj["removed_norm"]
+                                    sum_proj_norm_g += proj["norm_G"]
+                                    sum_proj_norm_a += proj["norm_A"]
+                                else:
+                                    proj_no_conflict_steps += 1
+                                    sum_proj_dot += proj["dot"]
+                                    sum_proj_cos += proj["cos"]
+                                    sum_proj_norm_g += proj["norm_G"]
+                                    sum_proj_norm_a += proj["norm_A"]
                         else:
                             loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli = train_step(
                                 network=network,
@@ -4375,6 +4411,18 @@ def train(
                         "sum_calib_n_drawn_by_tag": sum_calib_n_drawn_by_tag,
                         "sum_guardrail_hinge_loss": sum_guardrail_hinge_loss,
                         "sum_guardrail_active_frac": sum_guardrail_active_frac,
+                        "proj_enabled": post_opening_calibration_gradient_projection,
+                        "proj_conflict_steps": proj_conflict_steps,
+                        "proj_no_a_steps": proj_no_a_steps,
+                        "proj_no_guardrail_steps": proj_no_guardrail_steps,
+                        "proj_tiny_guardrail_steps": proj_tiny_guardrail_steps,
+                        "proj_no_conflict_steps": proj_no_conflict_steps,
+                        "sum_proj_dot": sum_proj_dot,
+                        "sum_proj_cos": sum_proj_cos,
+                        "sum_proj_c": sum_proj_c,
+                        "sum_proj_removed_norm": sum_proj_removed_norm,
+                        "sum_proj_norm_g": sum_proj_norm_g,
+                        "sum_proj_norm_a": sum_proj_norm_a,
                         "guardrail_margin": post_opening_guardrail_margin,
                         "sum_calib_value_term": sum_calib_value_term,
                         "sum_calib_policy_ce": sum_calib_policy_ce,

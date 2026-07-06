@@ -100,3 +100,25 @@ def test_cli_projection_flag_and_plumb():
     # forwarded to train_step at the calibration call site(s)
     assert ("post_opening_calibration_gradient_projection="
             "post_opening_calibration_gradient_projection,") in rsrc
+
+
+def test_projection_telemetry_accumulation_and_json():
+    from scripts.GPU.alphazero import trainer as trainer_mod
+    from scripts.GPU.alphazero import calibration_pool as cp_mod
+    rsrc = open(trainer_mod.__file__).read()
+    # accumulators + the 14-tuple telemetry read
+    assert "sum_proj_dot" in rsrc
+    assert "proj_conflict_steps" in rsrc
+    assert "len(_ret) == 14" in rsrc
+    assert 'proj["skip_reason"]' in rsrc
+    csrc = open(cp_mod.__file__).read()
+    for k in ('"calib_projection_enabled"', '"calib_projection_conflict_steps"',
+              '"calib_projection_conflict_rate"', '"calib_projection_dot_avg"',
+              '"calib_projection_cos_avg"', '"calib_projection_c_avg"',
+              '"calib_projection_removed_norm_avg"',
+              '"calib_projection_guardrail_grad_norm_avg"',
+              '"calib_projection_a_grad_norm_avg"',
+              '"calib_projection_no_a_steps"', '"calib_projection_no_guardrail_steps"',
+              '"calib_projection_tiny_guardrail_steps"',
+              '"calib_projection_no_conflict_steps"', '"calib_projection_scope"'):
+        assert k in csrc, k
