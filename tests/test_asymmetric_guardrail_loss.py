@@ -97,3 +97,18 @@ def test_byte_identical_when_sign_absent():
                      calibration_loss_weight=0.01,
                      train_value_head_and_final_block=True)
     assert len(out) == 10                 # unchanged calib value-only path
+
+
+def test_teacher_mask_and_guardrail_sign_together_raises():
+    # Task 3 review: teacher_mode and guardrail_mode must be mutually
+    # exclusive. If a caller ever passes both non-None, train_step must fail
+    # loud with a clear ValueError instead of an opaque tuple-unpack crash.
+    net, mm, om, ov = _setup()
+    calib = _guardrail_calib("black", 0.2)
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        train_step(network=net, main_module=mm, opt_main=om, opt_value=ov,
+                   batch=[_pos() for _ in range(3)],
+                   calibration_positions=calib, calibration_loss_weight=0.01,
+                   calibration_teacher_policy_mask=np.zeros(len(calib), dtype=np.float32),
+                   calibration_guardrail_sign=np.ones(len(calib), dtype=np.float32),
+                   train_value_head_and_final_block=True)

@@ -508,6 +508,12 @@ def build_post_opening_calibration_block(config: dict, enabled: bool,
                 float(loss_accumulator.get("sum_calib_policy_kl_est", 0.0)) / steps,
             "n_teacher_retention_drawn":
                 int(loss_accumulator.get("sum_n_teacher_retention", 0)),
+            "guardrail_hinge_loss":
+                float(loss_accumulator.get("sum_guardrail_hinge_loss", 0.0)) / steps,
+            "guardrail_active_frac":
+                float(loss_accumulator.get("sum_guardrail_active_frac", 0.0)) / steps,
+            "guardrail_margin":
+                float(loss_accumulator.get("guardrail_margin", 0.0)),
         },
         "draws_by_tag": dict(loss_accumulator.get("sum_calib_n_drawn_by_tag", {})),
     }

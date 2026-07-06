@@ -410,6 +410,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
              "encoder.blocks[last] (skip the whole-trunk opt_main update; "
              "apply just the final block). Mutually exclusive with "
              "--train-value-head-only. Pair with --freeze-batchnorm-stats.")
+    parser.add_argument("--guardrail-margin", type=float, default=0.10,
+        help="v12: tolerance band (black-value units) for the asymmetric "
+             "guardrail hinge; penalize pro-black drift above BASE by more "
+             "than this. Default 0.10.")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
@@ -864,6 +868,7 @@ def main():
         freeze_batchnorm_stats=args.freeze_batchnorm_stats,
         train_value_head_only=args.train_value_head_only,
         train_value_head_and_final_block=args.train_value_head_and_final_block,
+        post_opening_guardrail_margin=args.guardrail_margin,
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,

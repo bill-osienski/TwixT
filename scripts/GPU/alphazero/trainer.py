@@ -1140,6 +1140,10 @@ def alphazero_loss_batch(
         returns a 14-tuple extending the 10-tuple with
         (calib_value_term, calib_policy_ce, calib_policy_kl_est,
         n_teacher_retention) at positions 10–13.
+        When a guardrail sign vector is present instead (v12 asymmetric
+        guardrail hinge), returns a 13-tuple extending the 10-tuple with
+        (guardrail_hinge_loss, guardrail_active_frac, guardrail_n) at
+        positions 10–12.
 
     IMPORTANT: total_loss MUST be first because nn.value_and_grad() only
     differentiates the first returned value.
@@ -1381,6 +1385,9 @@ def train_step(
         When calibration is active (calibration_loss_weight > 0 and
         calibration_positions is non-empty), returns a 10-tuple extending the
         above with (calib_loss, calib_value_mean, calib_n).
+        When a guardrail sign vector is present (v12 asymmetric guardrail
+        hinge), returns a 13-tuple extending the 10-tuple with
+        (guardrail_hinge_loss, guardrail_active_frac, guardrail_n).
         - aux_coverage: float — n_eligible / len(batch) (fraction of this
           batch that was eligible). Equals n_eligible/batch_size in normal
           training but may be larger if the replay buffer returned fewer
@@ -1424,6 +1431,11 @@ def train_step(
     # Unpack losses (7-tuple, 10-tuple when calibration active, or 14-tuple when teacher mode)
     teacher_mode = calibration_teacher_policy_mask is not None
     guardrail_mode = calibration_guardrail_sign is not None
+    if teacher_mode and guardrail_mode:
+        raise ValueError(
+            "calibration_teacher_policy_mask and calibration_guardrail_sign are "
+            "mutually exclusive (a calibration manifest is either teacher_retention "
+            "or asymmetric_guardrail_retention, never both)")
     if calib_active and teacher_mode:
         (total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage,
          aux_n_eligible, calib_loss, calib_value_mean, calib_n,
@@ -2526,6 +2538,7 @@ def train(
     freeze_batchnorm_stats: bool = False,
     train_value_head_only: bool = False,
     train_value_head_and_final_block: bool = False,
+    post_opening_guardrail_margin: float = 0.1,
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -3974,6 +3987,8 @@ def train(
                 sum_calib_policy_ce = 0.0
                 sum_calib_policy_kl_est = 0.0
                 sum_n_teacher_retention = 0
+                sum_guardrail_hinge_loss = 0.0
+                sum_guardrail_active_frac = 0.0
 
                 train_rng = random.Random(master_rng.randint(0, 2**31))
 
@@ -3988,7 +4003,8 @@ def train(
                         if _calib_pool is not None:
                             from .calibration_pool import (
                                 split_samples, split_samples_with_modes,
-                                TEACHER_MODE_LOSS_MODES)
+                                split_samples_with_guardrail,
+                                TEACHER_MODE_LOSS_MODES, GUARDRAIL_LOSS_MODE)
                             if post_opening_calibration_tag_schedule:
                                 _calib_samples = _calib_pool.sample_by_tag(
                                     post_opening_calibration_tag_schedule, train_rng)
@@ -3999,10 +4015,16 @@ def train(
                             for _s in _calib_samples:
                                 sum_calib_n_drawn_by_tag[_s.tag] = (
                                     sum_calib_n_drawn_by_tag.get(_s.tag, 0) + 1)
+                            _calib_guard_sign = None
                             if _calib_pool.schema in TEACHER_MODE_LOSS_MODES:
                                 _calib_batch, _calib_weights, _calib_tp_mask = (
                                     split_samples_with_modes(_calib_samples,
                                                              _calib_pool.has_weight_scale))
+                            elif _calib_pool.schema == GUARDRAIL_LOSS_MODE:
+                                _calib_batch, _calib_weights, _calib_guard_sign = (
+                                    split_samples_with_guardrail(
+                                        _calib_samples, _calib_pool.has_weight_scale))
+                                _calib_tp_mask = None
                             else:
                                 _calib_batch, _calib_weights = split_samples(
                                     _calib_samples, _calib_pool.has_weight_scale)
@@ -4030,6 +4052,8 @@ def train(
                                 teacher_policy_kl_weight=post_opening_calibration_teacher_policy_kl_weight,
                                 train_value_head_only=train_value_head_only,
                                 train_value_head_and_final_block=train_value_head_and_final_block,
+                                calibration_guardrail_sign=_calib_guard_sign,
+                                guardrail_margin=post_opening_guardrail_margin,
                             )
                             # First 10 returns are the standard losses; _ret[10:14] (teacher telemetry)
                             # is consumed by the accumulation block below when the teacher mask is active.
@@ -4043,6 +4067,9 @@ def train(
                                 sum_calib_policy_ce += _ret[CALIB_POLICY_CE_IDX]
                                 sum_calib_policy_kl_est += _ret[CALIB_POLICY_KL_EST_IDX]
                                 sum_n_teacher_retention += int(_ret[CALIB_N_RETENTION_IDX])
+                            if _calib_guard_sign is not None and len(_ret) == 13:
+                                sum_guardrail_hinge_loss += _ret[10]
+                                sum_guardrail_active_frac += _ret[11]
                         else:
                             loss_total, loss_policy, loss_value, loss_l2, loss_aux, aux_cov, aux_neli = train_step(
                                 network=network,
@@ -4195,6 +4222,9 @@ def train(
                         "sum_calib_n_drawn": sum_calib_n_drawn,
                         "sum_calib_value_pred": sum_calib_value_pred,
                         "sum_calib_n_drawn_by_tag": sum_calib_n_drawn_by_tag,
+                        "sum_guardrail_hinge_loss": sum_guardrail_hinge_loss,
+                        "sum_guardrail_active_frac": sum_guardrail_active_frac,
+                        "guardrail_margin": post_opening_guardrail_margin,
                         "sum_calib_value_term": sum_calib_value_term,
                         "sum_calib_policy_ce": sum_calib_policy_ce,
                         "sum_calib_policy_kl_est": sum_calib_policy_kl_est,
@@ -4566,9 +4596,10 @@ def train(
         metrics_path = os.path.join(checkpoint_dir, "metrics.csv")
         append_metrics_csv(metrics_path, iteration_metrics, CSV_FIELDNAMES)
 
-        # v4 teacher-retention flat scalars, mirrored from the sidecar calibration
-        # block into the per-checkpoint state so model_iter_*.json is self-contained
-        # (the full nested block still lives in the iter_<N>_stats.json sidecar).
+        # v4 teacher-retention / v12 guardrail flat scalars, mirrored from the
+        # sidecar calibration block into the per-checkpoint state so
+        # model_iter_*.json is self-contained (the full nested block still
+        # lives in the iter_<N>_stats.json sidecar).
         _poc_block = _sidecar.get("post_opening_calibration") if _calib_active else None
         _teacher_calib_scalars = {}
         if _poc_block:
@@ -4576,7 +4607,9 @@ def train(
             _teacher_calib_scalars = {
                 k: _poc_loss[k] for k in (
                     "n_teacher_retention_drawn", "calib_policy_ce_avg_iter",
-                    "calib_policy_kl_est_avg_iter", "calib_value_term_avg_iter")
+                    "calib_policy_kl_est_avg_iter", "calib_value_term_avg_iter",
+                    "guardrail_hinge_loss", "guardrail_active_frac",
+                    "guardrail_margin")
                 if k in _poc_loss}
 
         # Build expanded state dict for JSON checkpoint
