@@ -55,6 +55,8 @@ Create `tests/test_asymmetric_guardrail_pool.py`:
 ```python
 """v12 guardrail loss_mode: value-only rows whose target_black_value is the
 BASE black-perspective value, emitting a per-row black-perspective sign."""
+import json
+
 import numpy as np
 import pytest
 
@@ -63,6 +65,7 @@ from scripts.GPU.alphazero.calibration_pool import (
     GUARDRAIL_LOSS_MODE, build_calibration_sample, split_samples_with_guardrail,
     target_in_to_move, VALID_LOSS_MODES, RETENTION_POLICY_LOSS_MODES,
     TEACHER_MODE_LOSS_MODES)
+from tests.goal_line_probe_fixtures import legal_replay
 
 
 def test_guardrail_mode_registered_value_only():
@@ -132,6 +135,37 @@ def test_split_emits_black_perspective_sign():
     ]
     _records, _weights, sign = split_samples_with_guardrail(samples, False)
     assert list(sign) == [1.0, -1.0, 0.0]     # black=+1, red=-1, non-guardrail=0
+
+
+def _real_guardrail_case(tmp_path, side, position_ply, target_black):
+    # legal_replay alternates from red: odd ply => black to move, even => red.
+    replay = legal_replay(position_ply + 3, game_idx=1)
+    rpath = tmp_path / "game_000001.json"
+    rpath.write_text(json.dumps(replay))
+    return {"game_idx": 1, "case_id": f"g_ply_{position_ply}",
+            "replay_path": str(rpath), "position_ply": position_ply,
+            "side_to_move": side, "loss_mode": GUARDRAIL_LOSS_MODE,
+            "target_black_value": repr(target_black),
+            "teacher_value": repr(target_black),
+            "teacher_policy_json": "", "root_visits_json": ""}
+
+
+def test_guardrail_correctness_triple_real_pool(tmp_path):
+    """The core correctness triple through the REAL pool path (no stubs):
+    (1) cb_targets = target_black converted to side-to-move (record.outcome);
+    (2) guardrail_sign = +1 black-to-move / -1 red-to-move; (3) policy mask 0."""
+    # (1)+(3) black-to-move (odd ply): stm outcome == +target_black
+    sb = build_calibration_sample(
+        _real_guardrail_case(tmp_path, "black", 5, 0.20), calibration_target=-0.35)
+    assert sb.record.outcome == pytest.approx(target_in_to_move("black", 0.20))  # +0.20
+    assert sb.has_policy_target is False
+    # (1) red-to-move (even ply): stm outcome == -target_black
+    sr = build_calibration_sample(
+        _real_guardrail_case(tmp_path, "red", 4, 0.20), calibration_target=-0.35)
+    assert sr.record.outcome == pytest.approx(target_in_to_move("red", 0.20))    # -0.20
+    # (2) sign emission for the two real rows
+    _r, _w, sign = split_samples_with_guardrail([sb, sr], False)
+    assert list(sign) == [1.0, -1.0]
 ```
 
 - [ ] **Step 2: Run to verify failure**
