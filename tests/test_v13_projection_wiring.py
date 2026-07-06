@@ -122,3 +122,29 @@ def test_projection_telemetry_accumulation_and_json():
               '"calib_projection_tiny_guardrail_steps"',
               '"calib_projection_no_conflict_steps"', '"calib_projection_scope"'):
         assert k in csrc, k
+
+
+# The sidecar loss block (calibration_pool.py, asserted above) is NOT the row the
+# operator inspects — model_iter_*.json is a FLATTENED copy built by the
+# `_teacher_calib_scalars` mirror in trainer.py's train() loop. That mirror must
+# also list every calib_projection_* key, or the projection telemetry is silently
+# dropped from the per-iteration row (the v13-run bug this guards against).
+_PROJECTION_FLAT_KEYS = (
+    '"calib_projection_enabled"', '"calib_projection_scope"',
+    '"calib_projection_conflict_steps"', '"calib_projection_conflict_rate"',
+    '"calib_projection_dot_avg"', '"calib_projection_cos_avg"',
+    '"calib_projection_c_avg"', '"calib_projection_removed_norm_avg"',
+    '"calib_projection_guardrail_grad_norm_avg"', '"calib_projection_a_grad_norm_avg"',
+    '"calib_projection_no_a_steps"', '"calib_projection_no_guardrail_steps"',
+    '"calib_projection_tiny_guardrail_steps"', '"calib_projection_no_conflict_steps"',
+)
+
+
+def test_projection_telemetry_flattened_into_model_iter_row():
+    from scripts.GPU.alphazero import trainer as trainer_mod
+    rsrc = open(trainer_mod.__file__).read()
+    # trainer.py never defines the sidecar keys (those live in calibration_pool);
+    # the only place these quoted strings appear is the flattening mirror, so this
+    # pins that the mirror surfaces the projection telemetry into the flat row.
+    for k in _PROJECTION_FLAT_KEYS:
+        assert k in rsrc, k

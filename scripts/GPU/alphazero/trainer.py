@@ -4808,7 +4808,19 @@ def train(
                     "n_teacher_retention_drawn", "calib_policy_ce_avg_iter",
                     "calib_policy_kl_est_avg_iter", "calib_value_term_avg_iter",
                     "guardrail_hinge_loss", "guardrail_active_frac",
-                    "guardrail_margin")
+                    "guardrail_margin",
+                    # v13: mirror the gradient-projection telemetry into the
+                    # flattened model_iter_*.json row (not just the sidecar block).
+                    "calib_projection_enabled", "calib_projection_scope",
+                    "calib_projection_conflict_steps",
+                    "calib_projection_conflict_rate", "calib_projection_dot_avg",
+                    "calib_projection_cos_avg", "calib_projection_c_avg",
+                    "calib_projection_removed_norm_avg",
+                    "calib_projection_guardrail_grad_norm_avg",
+                    "calib_projection_a_grad_norm_avg", "calib_projection_no_a_steps",
+                    "calib_projection_no_guardrail_steps",
+                    "calib_projection_tiny_guardrail_steps",
+                    "calib_projection_no_conflict_steps")
                 if k in _poc_loss}
 
         # Build expanded state dict for JSON checkpoint
