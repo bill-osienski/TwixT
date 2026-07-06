@@ -1,34 +1,59 @@
 import csv
 
+import pytest
+
 from scripts.GPU.alphazero.build_v12b_continuation_guardrail_manifest import (
     make_root_guardrail_clone, make_continuation_guardrail_clone,
     ROOT_TO_GUARDRAIL_TAG, CONTINUATION_TO_GUARDRAIL_TAG)
 
+# reconstruction/identity columns the continuation clone must PRESERVE
+# (and the root clone must BLANK).
+_CONTINUATION_KEEP = (
+    "extra_moves_json", "continuation_side_to_move", "continuation_legal_moves_sha1",
+    "continuation_depth", "continuation_parent_case_id", "continuation_source",
+    "continuation_path_moves")
+# policy/root/search-metadata columns EVERY guardrail clone must BLANK.
+_ALWAYS_BLANK = (
+    "teacher_policy_json", "teacher_legal_moves_sha1",
+    "root_visits_json", "root_legal_moves_sha1",
+    "root_value_stm", "root_black_value", "root_sims", "root_base_checkpoint",
+    "root_seed", "root_mcts_eval_batch_size", "root_mcts_stall_flush_sims",
+    "continuation_tree_visits", "continuation_tree_nn_value")
+
+
+def _seed_blankables(d):
+    """Populate every to-be-blanked column non-blank so a blank assertion means
+    the code actively blanked it (not that it was absent)."""
+    for i, c in enumerate(_ALWAYS_BLANK):
+        d[c] = f"seed_{i}"
+    return d
+
 
 def _root_parent(side, tv):
-    return {"case_id": "game_1_ply_9", "tag": "goal_line_retention",
-            "loss_mode": "mcts_root_retention", "side_to_move": side,
-            "teacher_value": tv, "target_black_value": "",
-            "root_visits_json": "[0.5,0.5]", "root_legal_moves_sha1": "abc",
-            "root_black_value": "0.83", "teacher_policy_json": "",
-            "extra_moves_json": "", "continuation_side_to_move": ""}
+    # a root parent carries the continuation cols too (populated) so the root
+    # clone's blanking of all 7 is a meaningful assertion.
+    d = {"case_id": "game_1_ply_9", "tag": "goal_line_retention",
+         "loss_mode": "mcts_root_retention", "side_to_move": side,
+         "teacher_value": tv, "target_black_value": ""}
+    for c in _CONTINUATION_KEEP:
+        d[c] = f"c_{c}"
+    return _seed_blankables(d)
 
 
 def _cont_parent(cont_side, tv, depth="2"):
-    return {"case_id": "game_1_ply_9__cont_pv2",
-            "tag": "old_post_opening_continuation_retention",
-            "loss_mode": "searched_continuation_retention", "side_to_move": "black",
-            "teacher_value": tv, "target_black_value": "",
-            "extra_moves_json": '[{"row":3,"col":4},{"row":5,"col":6}]',
-            "continuation_side_to_move": cont_side,
-            "continuation_legal_moves_sha1": "abc123", "continuation_depth": depth,
-            "continuation_parent_case_id": "game_1_ply_9", "continuation_source": "pv",
-            "continuation_path_moves": "d4 f6", "continuation_tree_visits": "400",
-            "continuation_tree_nn_value": "0.31",
-            "teacher_policy_json": "", "root_visits_json": ""}
+    d = {"case_id": "game_1_ply_9__cont_pv2",
+         "tag": "old_post_opening_continuation_retention",
+         "loss_mode": "searched_continuation_retention", "side_to_move": "black",
+         "teacher_value": tv, "target_black_value": "",
+         "extra_moves_json": '[{"row":3,"col":4},{"row":5,"col":6}]',
+         "continuation_side_to_move": cont_side,
+         "continuation_legal_moves_sha1": "abc123", "continuation_depth": depth,
+         "continuation_parent_case_id": "game_1_ply_9", "continuation_source": "pv",
+         "continuation_path_moves": "d4 f6"}
+    return _seed_blankables(d)
 
 
-def test_root_clone_uses_root_side_and_blanks_continuation():
+def test_root_clone_uses_root_side_and_blanks_continuation_and_metadata():
     b = make_root_guardrail_clone(_root_parent("black", "0.30"))
     assert b["loss_mode"] == "asymmetric_guardrail_retention"
     assert b["tag"] == "goal_line_guardrail_retention"
@@ -37,10 +62,11 @@ def test_root_clone_uses_root_side_and_blanks_continuation():
     r = make_root_guardrail_clone(_root_parent("red", "-0.97"))
     assert float(r["target_black_value"]) == 0.97             # red root: -tv
     for row in (b, r):
-        assert row["extra_moves_json"] == ""
-        assert row["continuation_side_to_move"] == ""
-        assert row["root_black_value"] == ""
-        assert row["teacher_policy_json"] == ""
+        for c in _CONTINUATION_KEEP:        # root clones blank all 7 continuation cols
+            assert row[c] == "", c
+        for c in _ALWAYS_BLANK:             # and all 13 policy/root/search cols
+            assert row[c] == "", c
+        assert row["teacher_value"] in ("0.30", "-0.97")      # provenance kept
 
 
 def test_continuation_clone_uses_continuation_side_and_preserves_reconstruction():
@@ -54,18 +80,31 @@ def test_continuation_clone_uses_continuation_side_and_preserves_reconstruction(
     c2 = make_continuation_guardrail_clone(_cont_parent("black", "0.22", depth="2"))
     assert float(c2["target_black_value"]) == 0.22           # 0.22 * +1
     for row in (c, c2):
-        # reconstruction/identity fields PRESERVED
+        for col in _CONTINUATION_KEEP:      # all 7 reconstruction cols preserved
+            assert row[col] != "", col
+        # exact reconstruction values survive
         assert row["extra_moves_json"] == '[{"row":3,"col":4},{"row":5,"col":6}]'
         assert row["continuation_legal_moves_sha1"] == "abc123"
         assert row["continuation_source"] == "pv"
-        assert row["continuation_depth"] in ("1", "2")
-        # policy/root/search-scalar fields BLANKED
-        assert row["teacher_policy_json"] == ""
-        assert row["root_visits_json"] == ""
-        assert row["continuation_tree_visits"] == ""
-        assert row["continuation_tree_nn_value"] == ""
-        # teacher_value kept as provenance
-        assert row["teacher_value"] in ("-0.40", "0.22")
+        assert row["continuation_parent_case_id"] == "game_1_ply_9"
+        assert row["continuation_path_moves"] == "d4 f6"
+        assert row["continuation_side_to_move"] in ("red", "black")
+        for col in _ALWAYS_BLANK:           # all 13 policy/root/search cols blanked
+            assert row[col] == "", col
+        assert row["teacher_value"] in ("-0.40", "0.22")      # provenance kept
+
+
+def test_continuation_clone_requires_non_empty_extra_moves():
+    # a continuation guardrail clone must reconstruct a continuation state, so it
+    # must carry extra_moves_json (guards against future depth-0/root_value reuse).
+    blank = _cont_parent("black", "0.22")
+    blank["extra_moves_json"] = ""
+    with pytest.raises(ValueError, match="extra_moves_json"):
+        make_continuation_guardrail_clone(blank)
+    missing = _cont_parent("black", "0.22")
+    missing.pop("extra_moves_json")
+    with pytest.raises(ValueError, match="extra_moves_json"):
+        make_continuation_guardrail_clone(missing)
 
 
 def test_tag_maps():

@@ -77,6 +77,11 @@ def make_continuation_guardrail_clone(parent: dict) -> dict:
     tag = parent["tag"]
     if tag not in CONTINUATION_TO_GUARDRAIL_TAG:
         raise ValueError(f"{parent.get('case_id')}: not a C/D continuation tag: {tag}")
+    if parent.get("extra_moves_json") in (None, ""):
+        raise ValueError(
+            f"{parent.get('case_id')}: continuation guardrail clone requires "
+            "non-empty extra_moves_json (it must reconstruct a continuation state; "
+            "depth-0/root_value rows do not belong here)")
     side = parent.get("continuation_side_to_move")
     if side in (None, ""):
         raise ValueError(
