@@ -1450,6 +1450,7 @@ def train_step(
     train_value_head_and_final_block: bool = False,   # v9: only value head + final block
     calibration_guardrail_sign=None,                  # v12
     guardrail_margin: float = 0.1,                    # v12
+    post_opening_calibration_gradient_projection: bool = False,   # v13
 ) -> tuple:
     """Single training step with two optimizers and separate gradient clipping.
 
@@ -1545,6 +1546,56 @@ def train_step(
     else:
         total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage, aux_n_eligible = loss_tuple
 
+    # v13: asymmetric A-yields-to-guardrail projection on the applied surface.
+    _proj_telem = None
+    if post_opening_calibration_gradient_projection:
+        if train_value_head_only:
+            raise ValueError(
+                "post_opening_calibration_gradient_projection requires "
+                "--train-value-head-and-final-block (the value-head-only surface "
+                "does not define the A-vs-guardrail final-block conflict)")
+        if calib_active and calibration_guardrail_sign is not None:
+            _sgn = np.asarray(calibration_guardrail_sign)
+            _has_a = bool((np.abs(_sgn) < 0.5).any())
+            _has_g = bool((np.abs(_sgn) > 0.5).any())
+            if not _has_a:
+                _proj_telem = {"evaluated": False, "conflict": False,
+                               "skip_reason": "no_a", "dot": 0.0, "cos": 0.0,
+                               "c": 0.0, "removed_norm": 0.0, "norm_G": 0.0,
+                               "norm_A": 0.0}
+            elif not _has_g:
+                _proj_telem = {"evaluated": False, "conflict": False,
+                               "skip_reason": "no_guardrail", "dot": 0.0,
+                               "cos": 0.0, "c": 0.0, "removed_norm": 0.0,
+                               "norm_G": 0.0, "norm_A": 0.0}
+            else:
+                _last = len(network.encoder.blocks) - 1
+
+                def _a_fn(m):
+                    return _calibration_component_loss(
+                        m, calibration_positions, calibration_weights,
+                        calibration_guardrail_sign, guardrail_margin,
+                        "a_correction", max_moves_cap)
+
+                def _g_fn(m):
+                    return _calibration_component_loss(
+                        m, calibration_positions, calibration_weights,
+                        calibration_guardrail_sign, guardrail_margin,
+                        "guardrail_hinge", max_moves_cap)
+
+                _, _g_a = nn.value_and_grad(network, _a_fn)(network)
+                _, _g_g = nn.value_and_grad(network, _g_fn)(network)
+                _surf_total = {"value_head": grads["value_head"],
+                               "block": grads["encoder"]["blocks"][_last]}
+                _surf_a = {"value_head": _g_a["value_head"],
+                           "block": _g_a["encoder"]["blocks"][_last]}
+                _surf_g = {"value_head": _g_g["value_head"],
+                           "block": _g_g["encoder"]["blocks"][_last]}
+                _surf_final, _proj_telem = project_conflicting_gradient(
+                    _surf_total, _surf_a, _surf_g, weight=calibration_loss_weight)
+                grads["value_head"] = _surf_final["value_head"]
+                grads["encoder"]["blocks"][_last] = _surf_final["block"]
+
     # Slice GRADS only (not params) into module-shaped trees
     # NOTE: Assumes network.parameters() / grads use top-level keys: encoder, policy_head, value_head
     main_grads = {
@@ -1593,7 +1644,7 @@ def train_step(
             float(calib_policy_kl_est.item()), int(calib_n_retention),
         )
     if calib_active and guardrail_mode:
-        return (
+        _guard_ret = (
             float(total_loss.item()), float(policy_loss.item()),
             float(value_loss.item()), float(l2_loss.item()),
             float(aux_loss.item()), float(aux_coverage), int(aux_n_eligible),
@@ -1601,6 +1652,9 @@ def train_step(
             float(guardrail_hinge_loss.item()), float(guardrail_active_frac.item()),
             int(guardrail_n),
         )
+        if _proj_telem is not None:
+            return _guard_ret + (_proj_telem,)
+        return _guard_ret
     if calib_active:
         return (
             float(total_loss.item()),
