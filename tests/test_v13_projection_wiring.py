@@ -87,3 +87,16 @@ def test_projection_no_guardrail_rows_skips():
                      post_opening_calibration_gradient_projection=True)
     assert len(out) == 14
     assert out[13]["evaluated"] is False and out[13]["skip_reason"] == "no_guardrail"
+
+
+def test_cli_projection_flag_and_plumb():
+    from scripts.GPU.alphazero import train as train_mod
+    from scripts.GPU.alphazero import trainer as trainer_mod
+    tsrc = open(train_mod.__file__).read()
+    assert '"--post-opening-calibration-gradient-projection"' in tsrc
+    assert ("post_opening_calibration_gradient_projection="
+            "args.post_opening_calibration_gradient_projection,") in tsrc
+    rsrc = open(trainer_mod.__file__).read()
+    # forwarded to train_step at the calibration call site(s)
+    assert ("post_opening_calibration_gradient_projection="
+            "post_opening_calibration_gradient_projection,") in rsrc

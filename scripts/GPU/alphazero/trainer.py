@@ -2688,6 +2688,7 @@ def train(
     train_value_head_only: bool = False,
     train_value_head_and_final_block: bool = False,
     post_opening_guardrail_margin: float = 0.1,
+    post_opening_calibration_gradient_projection: bool = False,   # v13
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -4203,6 +4204,7 @@ def train(
                                 train_value_head_and_final_block=train_value_head_and_final_block,
                                 calibration_guardrail_sign=_calib_guard_sign,
                                 guardrail_margin=post_opening_guardrail_margin,
+                                post_opening_calibration_gradient_projection=post_opening_calibration_gradient_projection,
                             )
                             # First 10 returns are the standard losses; _ret[10:14] (teacher telemetry)
                             # is consumed by the accumulation block below when the teacher mask is active.

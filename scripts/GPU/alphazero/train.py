@@ -414,6 +414,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="v12: tolerance band (black-value units) for the asymmetric "
              "guardrail hinge; penalize pro-black drift above BASE by more "
              "than this. Default 0.10.")
+    parser.add_argument("--post-opening-calibration-gradient-projection",
+        action="store_true",
+        help="v13: project the A-correction gradient away from the guardrail "
+             "hinge gradient on the value_head + final-block surface when they "
+             "conflict (dot<0). Requires --train-value-head-and-final-block. "
+             "Off by default; byte-identical to v12b when off.")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
@@ -869,6 +875,7 @@ def main():
         train_value_head_only=args.train_value_head_only,
         train_value_head_and_final_block=args.train_value_head_and_final_block,
         post_opening_guardrail_margin=args.guardrail_margin,
+        post_opening_calibration_gradient_projection=args.post_opening_calibration_gradient_projection,
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,
