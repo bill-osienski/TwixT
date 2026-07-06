@@ -440,9 +440,12 @@ def test_retention_policy_loss_modes_registry():
     # v6 adds searched_continuation_retention as a fourth valid (teacher-mode)
     # loss mode; it is intentionally NOT in RETENTION_POLICY_LOSS_MODES (see
     # tests/test_calibration_pool_continuation.py::test_mode_sets).
+    # v12 adds asymmetric_guardrail_retention as a fifth valid, value-only
+    # loss mode; also intentionally NOT in RETENTION_POLICY_LOSS_MODES (see
+    # tests/test_asymmetric_guardrail_pool.py::test_guardrail_mode_registered_value_only).
     assert VALID_LOSS_MODES == frozenset({
         "hard_value", "teacher_retention", "mcts_root_retention",
-        "searched_continuation_retention"})
+        "searched_continuation_retention", "asymmetric_guardrail_retention"})
 
 
 def _sample_with_mode(loss_mode):

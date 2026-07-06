@@ -35,13 +35,15 @@ CONTINUATION_LOSS_MODE = "searched_continuation_retention"
 # continuation mode is NOT in RETENTION_POLICY_LOSS_MODES: its rows carry a
 # policy target only per-row (has_policy_target), not by mode.
 TEACHER_MODE_LOSS_MODES = RETENTION_POLICY_LOSS_MODES | {CONTINUATION_LOSS_MODE}
-VALID_LOSS_MODES = frozenset({"hard_value"}) | TEACHER_MODE_LOSS_MODES
+GUARDRAIL_LOSS_MODE = "asymmetric_guardrail_retention"  # v12: value-only one-sided hinge
+VALID_LOSS_MODES = frozenset({"hard_value", GUARDRAIL_LOSS_MODE}) | TEACHER_MODE_LOSS_MODES
 # A manifest may mix at most these retention-mode combinations (v6 keeps the
 # inert v5 root rows alongside the new continuation rows):
 _ALLOWED_RETENTION_MODE_SETS = (
     frozenset(), frozenset({"teacher_retention"}), frozenset({"mcts_root_retention"}),
     frozenset({CONTINUATION_LOSS_MODE}),
     frozenset({"mcts_root_retention", CONTINUATION_LOSS_MODE}),
+    frozenset({GUARDRAIL_LOSS_MODE}),                    # v12: guardrail-only B/C/D
 )
 
 
@@ -324,6 +326,19 @@ def build_calibration_sample(case: dict, calibration_target: float) -> Calibrati
             raise ValueError(
                 f"{case.get('case_id')}: continuation row must leave "
                 f"root_visits_json blank (it is not a root-policy target)")
+    elif loss_mode == GUARDRAIL_LOSS_MODE:
+        if case.get("target_black_value") in (None, ""):
+            raise ValueError(
+                f"{case.get('case_id')}: asymmetric_guardrail_retention row must "
+                f"populate target_black_value (BASE black-perspective value)")
+        if case.get("teacher_policy_json") not in (None, ""):
+            raise ValueError(
+                f"{case.get('case_id')}: asymmetric_guardrail_retention row must "
+                f"leave teacher_policy_json blank (value-only, no policy CE)")
+        if case.get("root_visits_json") not in (None, ""):
+            raise ValueError(
+                f"{case.get('case_id')}: asymmetric_guardrail_retention row must "
+                f"leave root_visits_json blank (not a policy target)")
     record = build_calibration_position(case, calibration_target)
     weight_scale, _ = _parse_weight_scale(case)
     tag = case.get("tag") or ""
@@ -421,6 +436,8 @@ class CalibrationPool:
             schema = "mcts_root_retention"
         elif "teacher_retention" in modes:
             schema = "teacher_retention"
+        elif GUARDRAIL_LOSS_MODE in modes:
+            schema = GUARDRAIL_LOSS_MODE
         elif any(c.get("target_black_value") not in (None, "") for c in cases):
             schema = "per_row_target"
         else:
@@ -447,6 +464,20 @@ def split_samples_with_modes(samples, has_weight_scale: bool):
         [1.0 if s.has_policy_target else 0.0 for s in samples],
         dtype=np.float32)
     return records, weights, mask
+
+
+def split_samples_with_guardrail(samples, has_weight_scale: bool):
+    """Like split_samples, plus a guardrail_sign (float32 (N,)): +1.0 for a
+    black-to-move guardrail row, -1.0 for a red-to-move guardrail row, 0.0 for
+    non-guardrail rows. The v12 hinge uses this to convert the candidate value
+    to black perspective per row (relu(sign*(v - target) - margin)**2)."""
+    records, weights = split_samples(samples, has_weight_scale)
+    sign = np.asarray(
+        [(1.0 if s.record.to_move == "black" else -1.0)
+         if s.loss_mode == GUARDRAIL_LOSS_MODE else 0.0
+         for s in samples],
+        dtype=np.float32)
+    return records, weights, sign
 
 
 def build_post_opening_calibration_block(config: dict, enabled: bool,
