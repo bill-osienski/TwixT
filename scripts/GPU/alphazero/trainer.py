@@ -1118,6 +1118,8 @@ def alphazero_loss_batch(
     calibration_teacher_policy_mask=None,             # v4: (N,) 1.0 retention / 0.0 correction
     teacher_value_weight: float = 1.0,                # v4
     teacher_policy_kl_weight: float = 0.25,           # v4 (CE gradient term)
+    calibration_guardrail_sign=None,                  # v12: (N,) +1/-1 guardrail / 0 else
+    guardrail_margin: float = 0.1,                    # v12: hinge tolerance band
 ):
     """Batched policy + value + l2 + (optional) conversion auxiliary loss.
 
@@ -1229,7 +1231,8 @@ def alphazero_loss_batch(
             calibration_positions, max_moves_cap=max_moves_cap
         )
         teacher_mode = calibration_teacher_policy_mask is not None
-        if teacher_mode:
+        guardrail_mode = calibration_guardrail_sign is not None
+        if teacher_mode or guardrail_mode:
             # Teacher-retention targets were cached from the network's EVAL-mode
             # (running-stats) outputs, which are batch-independent. BatchNorm in
             # train mode normalizes by per-batch statistics, so forward the
@@ -1260,6 +1263,30 @@ def alphazero_loss_batch(
             _w = None
             value_term = mx.mean(per_value)
         calib_value_mean = mx.mean(cb_values)
+
+        if guardrail_mode:
+            # v12: one-sided black-perspective hinge on guardrail rows; symmetric
+            # MSE on the remaining (A hard_value) rows. Value-only, no policy CE.
+            sign = mx.reshape(mx.array(calibration_guardrail_sign), per_value.shape)
+            gmask = mx.abs(sign)                              # 1.0 guardrail / 0.0 else
+            base_w = _w if _w is not None else mx.ones(per_value.shape)
+            ng_w = base_w * (1.0 - gmask)
+            value_term = mx.sum(ng_w * per_value) / mx.maximum(mx.sum(ng_w), 1e-8)
+            signed_over = sign * (cb_values - cb_targets) - guardrail_margin
+            hinge = mx.maximum(signed_over, 0.0) ** 2
+            g_w = base_w * gmask
+            denom_g = mx.maximum(mx.sum(g_w), 1e-8)
+            guardrail_hinge_loss = mx.sum(g_w * hinge) / denom_g
+            active = (signed_over > 0.0).astype(cb_values.dtype)
+            guardrail_active_frac = mx.sum(g_w * active) / denom_g
+            calib_loss = value_term + guardrail_hinge_loss
+            total_loss = total_loss + calibration_loss_weight * calib_loss
+            # CRITICAL: total_loss must be first for nn.value_and_grad()
+            return (total_loss, policy_loss, value_loss, l2_loss,
+                    aux_loss, aux_coverage, aux_n_eligible,
+                    calib_loss, calib_value_mean, len(calibration_positions),
+                    guardrail_hinge_loss, guardrail_active_frac,
+                    int(mx.sum(gmask).item()))
 
         if not teacher_mode:
             # v2/v3 byte-identical path: value-only, 10-tuple.
@@ -1322,6 +1349,8 @@ def train_step(
     teacher_policy_kl_weight: float = 0.25,           # v4
     train_value_head_only: bool = False,              # v8: skip opt_main.update
     train_value_head_and_final_block: bool = False,   # v9: only value head + final block
+    calibration_guardrail_sign=None,                  # v12
+    guardrail_margin: float = 0.1,                    # v12
 ) -> tuple:
     """Single training step with two optimizers and separate gradient clipping.
 
@@ -1385,6 +1414,8 @@ def train_step(
             calibration_teacher_policy_mask=calibration_teacher_policy_mask,
             teacher_value_weight=teacher_value_weight,
             teacher_policy_kl_weight=teacher_policy_kl_weight,
+            calibration_guardrail_sign=calibration_guardrail_sign,
+            guardrail_margin=guardrail_margin,
         )
 
     # value_and_grad differentiates first element (total_loss)
@@ -1392,10 +1423,15 @@ def train_step(
 
     # Unpack losses (7-tuple, 10-tuple when calibration active, or 14-tuple when teacher mode)
     teacher_mode = calibration_teacher_policy_mask is not None
+    guardrail_mode = calibration_guardrail_sign is not None
     if calib_active and teacher_mode:
         (total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage,
          aux_n_eligible, calib_loss, calib_value_mean, calib_n,
          calib_value_term, calib_policy_ce, calib_policy_kl_est, calib_n_retention) = loss_tuple
+    elif calib_active and guardrail_mode:
+        (total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage,
+         aux_n_eligible, calib_loss, calib_value_mean, calib_n,
+         guardrail_hinge_loss, guardrail_active_frac, guardrail_n) = loss_tuple
     elif calib_active:
         (total_loss, policy_loss, value_loss, l2_loss, aux_loss, aux_coverage,
          aux_n_eligible, calib_loss, calib_value_mean, calib_n) = loss_tuple
@@ -1448,6 +1484,15 @@ def train_step(
             float(calib_loss.item()), float(calib_value_mean.item()), int(calib_n),
             float(calib_value_term.item()), float(calib_policy_ce.item()),
             float(calib_policy_kl_est.item()), int(calib_n_retention),
+        )
+    if calib_active and guardrail_mode:
+        return (
+            float(total_loss.item()), float(policy_loss.item()),
+            float(value_loss.item()), float(l2_loss.item()),
+            float(aux_loss.item()), float(aux_coverage), int(aux_n_eligible),
+            float(calib_loss.item()), float(calib_value_mean.item()), int(calib_n),
+            float(guardrail_hinge_loss.item()), float(guardrail_active_frac.item()),
+            int(guardrail_n),
         )
     if calib_active:
         return (
