@@ -86,11 +86,9 @@ Tensor-diff two safetensors checkpoints (base vs v14) analogous to `verify_value
 
 ## §7 Telemetry
 
-Surface into **both** JSON sites (the recurring two-site gotcha — sidecar `build_post_opening_calibration_block` loss block in `calibration_pool.py` **and** the flattened `model_iter_*.json` `_teacher_calib_scalars` mirror in `trainer.py`):
-- `value_adapter_gate` — the scalar gate value (watch it open from 0.0).
-- `value_adapter_grad_norm` — the adapter's grad norm (bootstrap progress).
+Surface `value_adapter_gate` — the scalar gate value (watch it open from 0.0) — into **both** JSON sites (the recurring two-site gotcha — sidecar `build_post_opening_calibration_block` loss block in `calibration_pool.py` **and** the flattened `model_iter_*.json` `_teacher_calib_scalars` mirror in `trainer.py`). It is read from `network.value_adapter.gate[0]` at telemetry-build time (where the network is in scope), fed through `loss_accumulator`, and mirrored — no change to `train_step`'s return arity. Plus the top-level run field `train_value_head_and_value_adapter: bool` in the state dict. Existing guardrail/A/projection telemetry is unchanged.
 
-Plus the top-level run field `train_value_head_and_value_adapter: bool`. Existing guardrail/A/projection telemetry is unchanged.
+(A separate `value_adapter_grad_norm` is intentionally **not** shipped: it would require adding an element to `train_step`'s return tuple, and the gate value is the sufficient bootstrap signal — a gate stuck near 0 means the adapter is not engaging. Deferred as YAGNI.)
 
 ## §8 Byte-identical / determinism semantics
 
