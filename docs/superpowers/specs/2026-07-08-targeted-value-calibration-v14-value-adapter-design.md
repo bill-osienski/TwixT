@@ -86,9 +86,12 @@ Tensor-diff two safetensors checkpoints (base vs v14) analogous to `verify_value
 
 ## §7 Telemetry
 
-Surface `value_adapter_gate` — the scalar gate value (watch it open from 0.0) — into **both** JSON sites (the recurring two-site gotcha — sidecar `build_post_opening_calibration_block` loss block in `calibration_pool.py` **and** the flattened `model_iter_*.json` `_teacher_calib_scalars` mirror in `trainer.py`). It is read from `network.value_adapter.gate[0]` at telemetry-build time (where the network is in scope), fed through `loss_accumulator`, and mirrored — no change to `train_step`'s return arity. Plus the top-level run field `train_value_head_and_value_adapter: bool` in the state dict. Existing guardrail/A/projection telemetry is unchanged.
+Surface **both** `value_adapter_gate` and `value_adapter_grad_norm` into **both** JSON sites (the recurring two-site gotcha — sidecar `build_post_opening_calibration_block` loss block in `calibration_pool.py` **and** the flattened `model_iter_*.json` `_teacher_calib_scalars` mirror in `trainer.py`), plus the top-level run field `train_value_head_and_value_adapter: bool` in the state dict.
 
-(A separate `value_adapter_grad_norm` is intentionally **not** shipped: it would require adding an element to `train_step`'s return tuple, and the gate value is the sufficient bootstrap signal — a gate stuck near 0 means the adapter is not engaging. Deferred as YAGNI.)
+- **`value_adapter_gate`** — the scalar gate value (watch it open from 0.0). Read from `network.value_adapter.gate[0]` at telemetry-build time (network in scope), fed through `loss_accumulator`, mirrored. No change to `train_step`'s return arity.
+- **`value_adapter_grad_norm`** — the per-step L2 norm of the adapter grad subtree (gate + fc_down + fc_up), averaged over the iteration (bootstrap "how hard is the adapter being pushed"). Computed in `train_step` (reusing `clip_grad_norm`'s global-norm on `grads["value_adapter"]`) and returned as **one extra trailing float** on the guardrail return tuple — exactly mirroring how `_proj_telem` is appended. This is safe because **projection and v14 are mutually exclusive** (projection is rejected on the v14 surface), so the 14th slot is unambiguous: `train()` disambiguates by the `train_value_head_and_value_adapter` flag it already holds (v14 → the slot is a float grad norm; v13 → the slot is the projection dict; plain guardrail → 13-tuple, unchanged). `train()` accumulates `sum_value_adapter_grad_norm` and divides by steps.
+
+Existing guardrail/A/projection telemetry is unchanged (byte-identical when v14 is off — the extra trailing float appears only when `train_value_head_and_value_adapter` is set).
 
 ## §8 Byte-identical / determinism semantics
 
