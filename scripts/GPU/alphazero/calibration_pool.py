@@ -520,6 +520,8 @@ def build_post_opening_calibration_block(config: dict, enabled: bool,
             "calib_projection_enabled":
                 bool(loss_accumulator.get("proj_enabled", False)),
             "calib_projection_scope": "value_head_and_final_block",
+            "calib_projection_strength":
+                float(loss_accumulator.get("proj_strength", 1.0)),
             "calib_projection_conflict_steps":
                 int(loss_accumulator.get("proj_conflict_steps", 0)),
             "calib_projection_no_a_steps":

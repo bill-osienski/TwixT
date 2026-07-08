@@ -420,6 +420,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
              "hinge gradient on the value_head + final-block surface when they "
              "conflict (dot<0). Requires --train-value-head-and-final-block. "
              "Off by default; byte-identical to v12b when off.")
+    parser.add_argument("--post-opening-calibration-projection-strength", type=float,
+        default=1.0,
+        help="v13c: scale the gradient-conflict correction by folding this into "
+             "the effective projection weight (strength * calibration weight). "
+             "Only affects conflicting steps; 1.0 = v13 behavior.")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
@@ -876,6 +881,7 @@ def main():
         train_value_head_and_final_block=args.train_value_head_and_final_block,
         post_opening_guardrail_margin=args.guardrail_margin,
         post_opening_calibration_gradient_projection=args.post_opening_calibration_gradient_projection,
+        post_opening_calibration_projection_strength=args.post_opening_calibration_projection_strength,
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,

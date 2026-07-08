@@ -1451,6 +1451,7 @@ def train_step(
     calibration_guardrail_sign=None,                  # v12
     guardrail_margin: float = 0.1,                    # v12
     post_opening_calibration_gradient_projection: bool = False,   # v13
+    post_opening_calibration_projection_strength: float = 1.0,   # v13c
 ) -> tuple:
     """Single training step with two optimizers and separate gradient clipping.
 
@@ -1591,8 +1592,10 @@ def train_step(
                            "block": _g_a["encoder"]["blocks"][_last]}
                 _surf_g = {"value_head": _g_g["value_head"],
                            "block": _g_g["encoder"]["blocks"][_last]}
+                _effective_projection_weight = (
+                    post_opening_calibration_projection_strength * calibration_loss_weight)
                 _surf_final, _proj_telem = project_conflicting_gradient(
-                    _surf_total, _surf_a, _surf_g, weight=calibration_loss_weight)
+                    _surf_total, _surf_a, _surf_g, weight=_effective_projection_weight)
                 grads["value_head"] = _surf_final["value_head"]
                 grads["encoder"]["blocks"][_last] = _surf_final["block"]
 
@@ -2689,6 +2692,7 @@ def train(
     train_value_head_and_final_block: bool = False,
     post_opening_guardrail_margin: float = 0.1,
     post_opening_calibration_gradient_projection: bool = False,   # v13
+    post_opening_calibration_projection_strength: float = 1.0,   # v13c
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -4216,6 +4220,7 @@ def train(
                                 calibration_guardrail_sign=_calib_guard_sign,
                                 guardrail_margin=post_opening_guardrail_margin,
                                 post_opening_calibration_gradient_projection=post_opening_calibration_gradient_projection,
+                                post_opening_calibration_projection_strength=post_opening_calibration_projection_strength,
                             )
                             # First 10 returns are the standard losses; _ret[10:14] (teacher telemetry)
                             # is consumed by the accumulation block below when the teacher mask is active.
@@ -4412,6 +4417,7 @@ def train(
                         "sum_guardrail_hinge_loss": sum_guardrail_hinge_loss,
                         "sum_guardrail_active_frac": sum_guardrail_active_frac,
                         "proj_enabled": post_opening_calibration_gradient_projection,
+                        "proj_strength": post_opening_calibration_projection_strength,
                         "proj_conflict_steps": proj_conflict_steps,
                         "proj_no_a_steps": proj_no_a_steps,
                         "proj_no_guardrail_steps": proj_no_guardrail_steps,
@@ -4820,7 +4826,7 @@ def train(
                     "calib_projection_a_grad_norm_avg", "calib_projection_no_a_steps",
                     "calib_projection_no_guardrail_steps",
                     "calib_projection_tiny_guardrail_steps",
-                    "calib_projection_no_conflict_steps")
+                    "calib_projection_no_conflict_steps", "calib_projection_strength")
                 if k in _poc_loss}
 
         # Build expanded state dict for JSON checkpoint
