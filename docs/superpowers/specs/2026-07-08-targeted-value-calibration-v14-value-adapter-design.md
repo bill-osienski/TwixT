@@ -31,7 +31,10 @@ v14 is a **code** change (a new third training surface), not an argument variant
 ```
 fc_down = nn.Linear(C, b)          # pointwise over channels == 1×1 conv; matches ValueHead's nn.Linear idiom
 fc_up   = nn.Linear(b, C)
-gate    = mx.array(0.0)            # folded scalar gate, init 0.0 (ReZero-style); a named parameter "value_adapter.gate"
+gate    = mx.zeros((1,))           # folded scalar gate, init 0.0 (ReZero-style); a named parameter of the adapter
+                                   # module, so it saves/loads under the key "value_adapter.gate". Shape (1,) (not
+                                   # 0-d) so MLX safetensors save_weights and the verifier see the key cleanly; the
+                                   # forward/telemetry read the scalar via gate[0].
 __call__(features) -> gate * fc_up(relu(fc_down(features)))
 ```
 
@@ -77,7 +80,7 @@ The **policy** path keeps raw `features` (unchanged). The guardrail-hinge / A-co
 ## §6 Verifier — `verify_value_head_and_adapter_checkpoint.py` (new)
 
 Tensor-diff two safetensors checkpoints (base vs v14) analogous to `verify_value_head_and_final_block_checkpoint.py`:
-- **Allowed-to-change:** `value_head.*` and `value_adapter.*` (the adapter keys are *new*, allowed to appear in the v14 checkpoint only).
+- **Allowed-to-change:** `value_head.*` and `value_adapter.*` (the adapter keys are *new*, allowed to appear in the v14 checkpoint only). The gate saves as `value_adapter.gate`, so it is covered by the `value_adapter.*` prefix — the verifier asserts the gate key is present under that prefix; if a future refactor ever hoists the gate to a top-level `value_gate` key, the verifier's allow-set must add it explicitly (the design mandates `value_adapter.gate`).
 - **Must be byte-identical:** every shared key that is not `value_head.*` — the entire encoder **including the final block** (catches accidental trunk edits), `policy_head.*`, and **all BatchNorm running stats everywhere** (catches a forgotten `--freeze-batchnorm-stats`).
 - Exit codes: `0` pass / `1` leak (a forbidden key changed) / `2` value-path no-op (gate never left 0.0 / adapter identical — collapsed to no correction) / `3` new-key set is not exactly `value_adapter.*`.
 
