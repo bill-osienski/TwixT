@@ -476,6 +476,29 @@ class ValueHead(nn.Module):
         return value
 
 
+class ValueAdapter(nn.Module):
+    """v14: small value-only feature-correction adapter (pointwise 1x1 bottleneck
+    + folded scalar gate). Inserted between the shared encoder features and the
+    value head so it corrects ONLY the value path (policy path untouched).
+
+    __call__(features) -> gate * fc_up(relu(fc_down(features)))   over (B,H,W,C).
+    The gate is init 0.0 (identity at init; ReZero-style bootstrap) and stored as
+    shape (1,) so it saves/loads under the key "value_adapter.gate" (MLX
+    safetensors are cleanest with >=1-d arrays).
+    """
+
+    def __init__(self, channels: int, bottleneck_width: Optional[int] = None):
+        super().__init__()
+        b = bottleneck_width if bottleneck_width else channels // 4
+        self.fc_down = nn.Linear(channels, b)
+        self.fc_up = nn.Linear(b, channels)
+        self.gate = mx.zeros((1,))
+
+    def __call__(self, features: mx.array) -> mx.array:
+        h = nn.relu(self.fc_down(features))
+        return self.gate * self.fc_up(h)
+
+
 class AlphaZeroNetwork(nn.Module):
     """Combined network with shared encoder (in_channels defaults to NUM_CHANNELS).
 
@@ -497,12 +520,25 @@ class AlphaZeroNetwork(nn.Module):
         in_channels: int = NUM_CHANNELS,
         hidden: int = 128,
         n_blocks: int = 6,
+        value_adapter: bool = False,
+        value_adapter_bottleneck_width: Optional[int] = None,
     ):
         super().__init__()
         self.in_channels = in_channels
         self.encoder = BoardEncoder(in_channels, hidden, n_blocks)
         self.policy_head = PolicyHead(hidden)
         self.value_head = ValueHead(hidden)
+        # v14: opt-in value-only adapter (None when off -> byte-identical, no
+        # value_adapter.* params).
+        self.value_adapter = (
+            ValueAdapter(hidden, value_adapter_bottleneck_width)
+            if value_adapter else None)
+
+    def _value_features(self, features: mx.array) -> mx.array:
+        """v14: value-only adapter correction (identity when the adapter is absent)."""
+        if self.value_adapter is None:
+            return features
+        return features + self.value_adapter(features)
 
     def forward_padded(
         self,
@@ -539,11 +575,12 @@ class AlphaZeroNetwork(nn.Module):
             features, move_rows, move_cols, move_mask
         )  # (B, M)
 
+        value_feats = self._value_features(features)  # v14: value-only adapter
         if return_value_pretanh:
-            value, pretanh = self.value_head(features, active_size, return_pretanh=True)
+            value, pretanh = self.value_head(value_feats, active_size, return_pretanh=True)
             return policy_logits, value, pretanh
 
-        value = self.value_head(features, active_size)  # (B,)
+        value = self.value_head(value_feats, active_size)  # (B,)
         return policy_logits, value, None
 
     def __call__(
@@ -587,7 +624,7 @@ class AlphaZeroNetwork(nn.Module):
                 active_size,
             )
             features = self.encoder(board_canon)
-            value = self.value_head(features, active_size)
+            value = self.value_head(self._value_features(features), active_size)  # v14
             return mx.array([]), value
 
         # Build padded format for single position
@@ -636,6 +673,8 @@ def create_network(
     hidden: int = 128,
     n_blocks: int = 6,
     in_channels: Optional[int] = None,
+    value_adapter: bool = False,
+    value_adapter_bottleneck_width: Optional[int] = None,
 ) -> AlphaZeroNetwork:
     """Build an AlphaZero network.
 
@@ -655,6 +694,8 @@ def create_network(
         in_channels=in_channels,
         hidden=hidden,
         n_blocks=n_blocks,
+        value_adapter=value_adapter,
+        value_adapter_bottleneck_width=value_adapter_bottleneck_width,
     )
 
 

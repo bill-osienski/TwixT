@@ -35,6 +35,7 @@ import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
 import numpy as np
+from mlx.utils import tree_flatten
 
 from .network import AlphaZeroNetwork, create_network
 from .curriculum import CurriculumManager
@@ -56,6 +57,25 @@ CALIB_VALUE_TERM_IDX = 10
 CALIB_POLICY_CE_IDX = 11
 CALIB_POLICY_KL_EST_IDX = 12
 CALIB_N_RETENTION_IDX = 13
+
+
+def _load_base_weights_grafting_adapter(network, path: str) -> None:
+    """v14: load a base checkpoint (which has NO value_adapter.* keys) into an
+    adapter-augmented network with strict=False, asserting the ONLY keys missing
+    from the file are exactly the value_adapter.* set — so a real load bug cannot
+    hide behind strict=False. The gate stays at its 0.0 init after the graft."""
+    file_keys = set(mx.load(str(path)).keys())
+    net_keys = {k for k, _ in tree_flatten(network.parameters())}
+    missing = net_keys - file_keys                       # in net, absent from file
+    extra = file_keys - net_keys                          # in file, not in net
+    expected_missing = {k for k in net_keys if k.startswith("value_adapter.")}
+    if missing != expected_missing or extra:
+        raise ValueError(
+            "graft-load mismatch (adapter present): "
+            f"missing-from-file={sorted(missing)}, "
+            f"expected-missing={sorted(expected_missing)}, "
+            f"extra-in-file={sorted(extra)}")
+    network.load_weights(str(path), strict=False)
 
 
 def freeze_batchnorm_running_stats(network) -> int:
