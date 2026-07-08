@@ -126,6 +126,8 @@ def test_cli_flag_exists_plumbs_and_mutually_exclusive():
     assert '"--train-value-head-and-final-block"' in src
     assert ("train_value_head_and_final_block="
             "args.train_value_head_and_final_block,") in src
-    # argparse-level mutual exclusion
-    assert ("args.train_value_head_only and "
-            "args.train_value_head_and_final_block") in src
+    # argparse-level mutual exclusion (v14: rewritten from a pairwise `and` into
+    # a 3-way sum() check over train_value_head_only /
+    # train_value_head_and_final_block / train_value_head_and_value_adapter).
+    assert "if sum([args.train_value_head_only," in src
+    assert "args.train_value_head_and_value_adapter]) > 1:" in src

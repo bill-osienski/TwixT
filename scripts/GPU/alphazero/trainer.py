@@ -248,6 +248,18 @@ class MainModule(nn.Module):
         self.encoder = encoder
         self.policy_head = policy_head
 
+
+class ValueModule(nn.Module):
+    """Holds references to the live value_head + value_adapter (v14).
+
+    Used so opt_value updates value_head AND the value adapter in ONE update()
+    call (no Adam double-step), mirroring MainModule for the value side.
+    """
+    def __init__(self, value_head: nn.Module, value_adapter: nn.Module):
+        super().__init__()
+        self.value_head = value_head
+        self.value_adapter = value_adapter
+
 # Per-size max moves table (tuned to give Black time to convert)
 # NOTE: These are PLIES (half-moves), not full moves. TwixT alternates turns,
 # so 200 plies = 100 moves per player at size 16.
@@ -1472,6 +1484,8 @@ def train_step(
     guardrail_margin: float = 0.1,                    # v12
     post_opening_calibration_gradient_projection: bool = False,   # v13
     post_opening_calibration_projection_strength: float = 1.0,   # v13c
+    train_value_head_and_value_adapter: bool = False,   # v14
+    value_module=None,                                   # v14: ValueModule(value_head, value_adapter)
 ) -> tuple:
     """Single training step with two optimizers and separate gradient clipping.
 
@@ -1514,6 +1528,11 @@ def train_step(
         raise ValueError(
             "train_value_head_only and train_value_head_and_final_block are "
             "mutually exclusive")
+    if train_value_head_and_value_adapter and (
+            train_value_head_only or train_value_head_and_final_block):
+        raise ValueError(
+            "train_value_head_and_value_adapter is mutually exclusive with "
+            "train_value_head_only and train_value_head_and_final_block")
     calib_active = (
         calibration_loss_weight > 0.0
         and calibration_positions is not None
@@ -1570,11 +1589,12 @@ def train_step(
     # v13: asymmetric A-yields-to-guardrail projection on the applied surface.
     _proj_telem = None
     if post_opening_calibration_gradient_projection:
-        if train_value_head_only:
+        if train_value_head_only or train_value_head_and_value_adapter:
             raise ValueError(
                 "post_opening_calibration_gradient_projection requires "
-                "--train-value-head-and-final-block (the value-head-only surface "
-                "does not define the A-vs-guardrail final-block conflict)")
+                "--train-value-head-and-final-block (the value-head-only and "
+                "value-adapter surfaces do not define the A-vs-guardrail "
+                "final-block conflict; adapter-surface projection is v14b)")
         if calib_active and calibration_guardrail_sign is not None:
             _sgn = np.asarray(calibration_guardrail_sign)
             _has_a = bool((np.abs(_sgn) < 0.5).any())
@@ -1625,7 +1645,14 @@ def train_step(
         "encoder": grads["encoder"],
         "policy_head": grads["policy_head"],
     }
-    value_grads = grads["value_head"]
+    if train_value_head_and_value_adapter:
+        value_grads = {"value_head": grads["value_head"],
+                       "value_adapter": grads["value_adapter"]}
+        _, _agn = clip_grad_norm(grads["value_adapter"], max_norm=1e9)  # raw norm (no real clip)
+        _adapter_grad_norm = float(_agn.item())
+    else:
+        value_grads = grads["value_head"]
+        _adapter_grad_norm = 0.0
 
     # Clip main grads (encoder + policy) at 1.0
     main_grads, main_gnorm = clip_grad_norm(main_grads, max_norm=1.0)
@@ -1637,9 +1664,10 @@ def train_step(
     mx.eval(main_grads, value_grads, main_gnorm, value_gnorm)
 
     # Update REAL modules (guaranteed to mutate network)
-    if train_value_head_only:
-        # v8: encoder+policy grads are computed and clipped (telemetry
-        # unchanged) but never applied — only the value head trains.
+    if train_value_head_only or train_value_head_and_value_adapter:
+        # v8 / v14: encoder+policy grads are computed and clipped (telemetry
+        # unchanged) but never applied — only the value side (head, and for v14
+        # the adapter) trains.
         pass
     elif train_value_head_and_final_block:
         # v9: apply ONLY the final residual block's (already-clipped) grads.
@@ -1652,7 +1680,10 @@ def train_step(
     else:
         opt_main.update(main_module, main_grads)
     # BN running stats need --freeze-batchnorm-stats separately (v8/v9 pair the flags).
-    opt_value.update(network.value_head, value_grads)
+    if train_value_head_and_value_adapter:
+        opt_value.update(value_module, value_grads)   # v14: value_head + value_adapter, one update
+    else:
+        opt_value.update(network.value_head, value_grads)
 
     # Evaluate all arrays before extracting Python floats
     mx.eval(network.parameters(), opt_main.state, opt_value.state, loss_tuple)
@@ -1676,7 +1707,9 @@ def train_step(
             int(guardrail_n),
         )
         if _proj_telem is not None:
-            return _guard_ret + (_proj_telem,)
+            return _guard_ret + (_proj_telem,)          # v13: dict at [13]
+        if train_value_head_and_value_adapter:
+            return _guard_ret + (_adapter_grad_norm,)   # v14: float at [13] (projection is off)
         return _guard_ret
     if calib_active:
         return (
@@ -2713,6 +2746,9 @@ def train(
     post_opening_guardrail_margin: float = 0.1,
     post_opening_calibration_gradient_projection: bool = False,   # v13
     post_opening_calibration_projection_strength: float = 1.0,   # v13c
+    value_adapter: bool = False,                              # v14
+    value_adapter_bottleneck_width: Optional[int] = None,     # v14
+    train_value_head_and_value_adapter: bool = False,         # v14
 ) -> AlphaZeroNetwork:
     """Full AlphaZero training loop with curriculum learning.
 
@@ -2762,7 +2798,9 @@ def train(
     Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
     # Create network
-    network = create_network(hidden=hidden, n_blocks=n_blocks)
+    network = create_network(hidden=hidden, n_blocks=n_blocks,
+                             value_adapter=value_adapter,
+                             value_adapter_bottleneck_width=value_adapter_bottleneck_width)
     if freeze_batchnorm_stats:
         # Freeze BatchNorm running stats (momentum=0) BEFORE weights are loaded;
         # load_weights then fills in the base running mean/var, and momentum=0
@@ -2783,6 +2821,10 @@ def train(
     # Create wrapper module that references encoder + policy_head
     # This ensures opt_main.update() mutates the live network params
     main_module = MainModule(network.encoder, network.policy_head)
+    # v14: value-side wrapper so opt_value updates value_head + value_adapter in
+    # one call (None off).
+    value_module = (ValueModule(network.value_head, network.value_adapter)
+                    if train_value_head_and_value_adapter else None)
 
     # Create TWO optimizers: main (encoder+policy) and value head
     opt_main = optim.Adam(learning_rate=learning_rate)
@@ -2974,7 +3016,10 @@ def train(
 
     # Load weights-only if specified (no state restore)
     if load_weights_from:
-        network.load_weights(load_weights_from)
+        if value_adapter:
+            _load_base_weights_grafting_adapter(network, load_weights_from)  # v14 strict-except-adapter
+        else:
+            network.load_weights(load_weights_from)
         print(f"Loaded weights-only from {load_weights_from} (no state restored)")
 
     # Resume from checkpoint if specified (full state restore)
@@ -4163,6 +4208,7 @@ def train(
                 sum_n_teacher_retention = 0
                 sum_guardrail_hinge_loss = 0.0
                 sum_guardrail_active_frac = 0.0
+                sum_value_adapter_grad_norm = 0.0   # v14
                 proj_conflict_steps = 0
                 proj_no_a_steps = 0
                 proj_no_guardrail_steps = 0
@@ -4241,6 +4287,8 @@ def train(
                                 guardrail_margin=post_opening_guardrail_margin,
                                 post_opening_calibration_gradient_projection=post_opening_calibration_gradient_projection,
                                 post_opening_calibration_projection_strength=post_opening_calibration_projection_strength,
+                                train_value_head_and_value_adapter=train_value_head_and_value_adapter,
+                                value_module=value_module,
                             )
                             # First 10 returns are the standard losses; _ret[10:14] (teacher telemetry)
                             # is consumed by the accumulation block below when the teacher mask is active.
@@ -4261,14 +4309,20 @@ def train(
                                     and len(_ret) == 14):
                                 sum_guardrail_hinge_loss += _ret[10]
                                 sum_guardrail_active_frac += _ret[11]
-                                proj = _ret[13]
-                                if proj["skip_reason"] == "no_a":
+                                if train_value_head_and_value_adapter:
+                                    # v14: the 14th slot is the adapter grad norm
+                                    # (float), NOT a projection dict.
+                                    sum_value_adapter_grad_norm += float(_ret[13])
+                                    proj = None
+                                else:
+                                    proj = _ret[13]
+                                if proj is not None and proj["skip_reason"] == "no_a":
                                     proj_no_a_steps += 1
-                                elif proj["skip_reason"] == "no_guardrail":
+                                elif proj is not None and proj["skip_reason"] == "no_guardrail":
                                     proj_no_guardrail_steps += 1
-                                elif proj["skip_reason"] == "tiny_guardrail":
+                                elif proj is not None and proj["skip_reason"] == "tiny_guardrail":
                                     proj_tiny_guardrail_steps += 1
-                                elif proj["conflict"]:
+                                elif proj is not None and proj["conflict"]:
                                     proj_conflict_steps += 1
                                     sum_proj_dot += proj["dot"]
                                     sum_proj_cos += proj["cos"]
@@ -4276,7 +4330,7 @@ def train(
                                     sum_proj_removed_norm += proj["removed_norm"]
                                     sum_proj_norm_g += proj["norm_G"]
                                     sum_proj_norm_a += proj["norm_A"]
-                                else:
+                                elif proj is not None:
                                     proj_no_conflict_steps += 1
                                     sum_proj_dot += proj["dot"]
                                     sum_proj_cos += proj["cos"]
@@ -4300,6 +4354,8 @@ def train(
                                 conversion_reducer_weight=conversion_reducer_weight,
                                 train_value_head_only=train_value_head_only,
                                 train_value_head_and_final_block=train_value_head_and_final_block,
+                                train_value_head_and_value_adapter=train_value_head_and_value_adapter,
+                                value_module=value_module,
                             )
 
                         # Sums first, then steps_done (ensures denominator matches included samples)
@@ -4450,6 +4506,10 @@ def train(
                         "sum_proj_norm_g": sum_proj_norm_g,
                         "sum_proj_norm_a": sum_proj_norm_a,
                         "guardrail_margin": post_opening_guardrail_margin,
+                        "value_adapter_gate": (
+                            float(network.value_adapter.gate[0])
+                            if train_value_head_and_value_adapter else 0.0),
+                        "sum_value_adapter_grad_norm": sum_value_adapter_grad_norm,
                         "sum_calib_value_term": sum_calib_value_term,
                         "sum_calib_policy_ce": sum_calib_policy_ce,
                         "sum_calib_policy_kl_est": sum_calib_policy_kl_est,
@@ -4846,7 +4906,8 @@ def train(
                     "calib_projection_a_grad_norm_avg", "calib_projection_no_a_steps",
                     "calib_projection_no_guardrail_steps",
                     "calib_projection_tiny_guardrail_steps",
-                    "calib_projection_no_conflict_steps", "calib_projection_strength")
+                    "calib_projection_no_conflict_steps", "calib_projection_strength",
+                    "value_adapter_gate", "value_adapter_grad_norm")
                 if k in _poc_loss}
 
         # Build expanded state dict for JSON checkpoint
@@ -4885,6 +4946,8 @@ def train(
             "unfrozen_block_index": (
                 len(network.encoder.blocks) - 1
                 if train_value_head_and_final_block else None),
+            # v14: whether only value_head + value_adapter trained.
+            "train_value_head_and_value_adapter": train_value_head_and_value_adapter,
         }
 
         state_path = ckpt_path.replace(".safetensors", ".json")

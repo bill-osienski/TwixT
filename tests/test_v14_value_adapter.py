@@ -100,3 +100,109 @@ def test_graft_load_fails_loud_on_unexpected_missing(tmp_path):
     adapter_net = create_network(hidden=64, n_blocks=2, value_adapter=True)
     with pytest.raises(ValueError, match="graft-load mismatch"):
         _load_base_weights_grafting_adapter(adapter_net, p)
+
+
+import mlx.optimizers as optim
+from scripts.GPU.alphazero.trainer import (
+    MainModule, ValueModule, train_step, freeze_batchnorm_running_stats)
+from scripts.GPU.alphazero.self_play import PositionRecord
+
+
+def _pos():
+    return PositionRecord(board_tensor=np.zeros((24, 24, 30), dtype=np.float32),
+                          to_move="red", legal_moves=[(0, 0), (1, 1), (2, 2)],
+                          visit_counts=[10, 5, 3], outcome=1.0, active_size=24,
+                          ply=0, game_n_moves=10)
+
+
+def _adapter_net():
+    net = create_network(hidden=64, n_blocks=2, value_adapter=True)
+    freeze_batchnorm_running_stats(net)
+    return net
+
+
+def _v14_kwargs(net):
+    return dict(
+        network=net, main_module=MainModule(net.encoder, net.policy_head),
+        opt_main=optim.Adam(learning_rate=1e-3), opt_value=optim.Adam(learning_rate=1e-3),
+        batch=[_pos() for _ in range(3)],
+        train_value_head_and_value_adapter=True,
+        value_module=ValueModule(net.value_head, net.value_adapter))
+
+
+def test_v14_mutually_exclusive_with_v8():
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        train_step(**{**_v14_kwargs(_adapter_net()), "train_value_head_only": True})
+
+
+def test_v14_mutually_exclusive_with_v9():
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        train_step(**{**_v14_kwargs(_adapter_net()), "train_value_head_and_final_block": True})
+
+
+def test_projection_rejected_on_adapter_surface():
+    with pytest.raises(ValueError, match="requires --train-value-head-and-final-block"):
+        train_step(**{**_v14_kwargs(_adapter_net()),
+                      "post_opening_calibration_gradient_projection": True})
+
+
+def test_v14_surface_isolation():
+    net = _adapter_net()
+    before = {k: np.array(v) for k, v in tree_flatten(net.parameters())}
+    train_step(**_v14_kwargs(net))
+    after = {k: np.array(v) for k, v in tree_flatten(net.parameters())}
+    for k in after:
+        changed = not np.array_equal(before[k], after[k])
+        if k.startswith("value_head.") or k.startswith("value_adapter."):
+            continue                                   # allowed to change
+        assert not changed, f"frozen tensor changed under v14: {k}"
+    assert not np.array_equal(before["value_adapter.gate"], after["value_adapter.gate"])  # gate moved
+    assert any(not np.array_equal(before[k], after[k])
+               for k in after if k.startswith("value_head."))                             # value head trained
+
+
+def test_guardrail_hinge_sees_adapter():
+    from scripts.GPU.alphazero.trainer import _calibration_component_loss
+    from scripts.GPU.alphazero.calibration_pool import target_in_to_move
+    net = _adapter_net()
+    row = PositionRecord(board_tensor=np.zeros((24, 24, 30), dtype=np.float32),
+                         to_move="black", legal_moves=[(0, 0), (1, 1)],
+                         visit_counts=[0, 0], outcome=target_in_to_move("black", -0.9),
+                         active_size=24, ply=20, game_n_moves=None)
+    sign = np.array([1.0], dtype=np.float32)
+    h0 = float(_calibration_component_loss(net, [row], None, sign, 0.10, "guardrail_hinge").item())
+    net.value_adapter.gate = mx.array([3.0])
+    h1 = float(_calibration_component_loss(net, [row], None, sign, 0.10, "guardrail_hinge").item())
+    assert h0 != h1                                     # the hinge reads the adapter-corrected value
+
+
+def test_build_block_emits_gate_and_grad_norm():
+    from scripts.GPU.alphazero.calibration_pool import build_post_opening_calibration_block
+    block = build_post_opening_calibration_block(
+        config={}, enabled=True,
+        loss_accumulator={"steps_done": 2, "value_adapter_gate": 0.37,
+                          "sum_value_adapter_grad_norm": 0.5})
+    assert block["loss"]["value_adapter_gate"] == pytest.approx(0.37)
+    assert block["loss"]["value_adapter_grad_norm"] == pytest.approx(0.25)   # 0.5 / 2 steps
+
+
+def test_cli_and_telemetry_wiring():
+    from scripts.GPU.alphazero import train as train_mod
+    from scripts.GPU.alphazero import trainer as trainer_mod
+    from scripts.GPU.alphazero import calibration_pool as cp_mod
+    tsrc = open(train_mod.__file__).read()
+    assert '"--value-adapter"' in tsrc
+    assert '"--value-adapter-bottleneck-width"' in tsrc
+    assert '"--train-value-head-and-value-adapter"' in tsrc
+    assert "value_adapter=args.value_adapter," in tsrc
+    assert ("train_value_head_and_value_adapter="
+            "args.train_value_head_and_value_adapter,") in tsrc
+    assert "requires --value-adapter" in tsrc
+    rsrc = open(trainer_mod.__file__).read()
+    assert '"value_adapter_gate"' in rsrc
+    assert '"sum_value_adapter_grad_norm"' in rsrc
+    assert '"value_adapter_grad_norm"' in rsrc            # mirror tuple
+    assert '"train_value_head_and_value_adapter": train_value_head_and_value_adapter,' in rsrc
+    csrc = open(cp_mod.__file__).read()
+    assert '"value_adapter_gate"' in csrc
+    assert '"value_adapter_grad_norm"' in csrc

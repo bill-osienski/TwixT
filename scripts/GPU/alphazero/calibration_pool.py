@@ -517,6 +517,11 @@ def build_post_opening_calibration_block(config: dict, enabled: bool,
                 float(loss_accumulator.get("sum_guardrail_active_frac", 0.0)) / steps,
             "guardrail_margin":
                 float(loss_accumulator.get("guardrail_margin", 0.0)),
+            "value_adapter_gate":
+                float(loss_accumulator.get("value_adapter_gate", 0.0)),
+            "value_adapter_grad_norm": (
+                float(loss_accumulator.get("sum_value_adapter_grad_norm", 0.0))
+                / max(int(loss_accumulator.get("steps_done", 0)), 1)),
             "calib_projection_enabled":
                 bool(loss_accumulator.get("proj_enabled", False)),
             "calib_projection_scope": "value_head_and_final_block",

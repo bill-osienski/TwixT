@@ -425,6 +425,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="v13c: scale the gradient-conflict correction by folding this into "
              "the effective projection weight (strength * calibration weight). "
              "Only affects conflicting steps; 1.0 = v13 behavior.")
+    parser.add_argument("--value-adapter", action="store_true",
+        help="v14: build a value-only feature-correction adapter (1x1 bottleneck "
+             "+ scalar gate init 0) between the encoder and the value head. Off "
+             "by default (byte-identical). Required by "
+             "--train-value-head-and-value-adapter.")
+    parser.add_argument("--value-adapter-bottleneck-width", type=int, default=None,
+        help="v14: adapter bottleneck width. Default (None) = hidden // 4.")
+    parser.add_argument("--train-value-head-and-value-adapter", action="store_true",
+        help="v14: train only value_head.* + value_adapter.* (skip the whole-trunk "
+             "opt_main update; encoder/policy/final-block frozen). Mutually "
+             "exclusive with --train-value-head-only / "
+             "--train-value-head-and-final-block. Requires --value-adapter. Pair "
+             "with --freeze-batchnorm-stats.")
 
     # Track 4: recovery / extreme-closeout-drift telemetry (default on; free)
     parser.add_argument("--recovery-bucket-enabled", action="store_true", default=True,
@@ -580,9 +593,13 @@ def main():
     args = parser.parse_args()
     _validate_conversion_args(parser, args)
     _validate_closeout_td1_args(parser, args)
-    if args.train_value_head_only and args.train_value_head_and_final_block:
-        parser.error("--train-value-head-only and "
-                     "--train-value-head-and-final-block are mutually exclusive")
+    if sum([args.train_value_head_only,
+            args.train_value_head_and_final_block,
+            args.train_value_head_and_value_adapter]) > 1:
+        parser.error("--train-value-head-only, --train-value-head-and-final-block, "
+                     "and --train-value-head-and-value-adapter are mutually exclusive")
+    if args.train_value_head_and_value_adapter and not args.value_adapter:
+        parser.error("--train-value-head-and-value-adapter requires --value-adapter")
 
     # Propagate opening debug to workers via env var
     if args.opening_debug:
@@ -882,6 +899,9 @@ def main():
         post_opening_guardrail_margin=args.guardrail_margin,
         post_opening_calibration_gradient_projection=args.post_opening_calibration_gradient_projection,
         post_opening_calibration_projection_strength=args.post_opening_calibration_projection_strength,
+        value_adapter=args.value_adapter,
+        value_adapter_bottleneck_width=args.value_adapter_bottleneck_width,
+        train_value_head_and_value_adapter=args.train_value_head_and_value_adapter,
     ))
     train_kwargs.update(
         recovery_retargeting_enabled=not args.recovery_retargeting_disabled,
