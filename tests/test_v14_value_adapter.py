@@ -176,6 +176,28 @@ def test_guardrail_hinge_sees_adapter():
     assert h0 != h1                                     # the hinge reads the adapter-corrected value
 
 
+def test_v14_guardrail_mode_return_appends_adapter_grad_norm_float():
+    # Highest-risk edit (h + n): when calib_active AND guardrail_mode AND the
+    # v14 surface is active (and projection is off, the default), train_step
+    # must append the adapter grad-norm as a trailing FLOAT -> 14-tuple, with
+    # out[13] a float (NOT the v13 projection dict at the same index).
+    from scripts.GPU.alphazero.calibration_pool import target_in_to_move
+    net = _adapter_net()
+    row = PositionRecord(board_tensor=np.zeros((24, 24, 30), dtype=np.float32),
+                         to_move="black", legal_moves=[(0, 0), (1, 1)],
+                         visit_counts=[0, 0], outcome=target_in_to_move("black", -0.9),
+                         active_size=24, ply=20, game_n_moves=None)
+    sign = np.array([1.0], dtype=np.float32)
+    out = train_step(**{**_v14_kwargs(net),
+                        "calibration_positions": [row],
+                        "calibration_loss_weight": 0.01,
+                        "calibration_guardrail_sign": sign,
+                        "guardrail_margin": 0.10})
+    assert len(out) == 14
+    assert isinstance(out[13], float)                   # v14: float, not the v13 proj dict
+    assert out[13] >= 0.0                                # adapter grad-norm is non-negative
+
+
 def test_build_block_emits_gate_and_grad_norm():
     from scripts.GPU.alphazero.calibration_pool import build_post_opening_calibration_block
     block = build_post_opening_calibration_block(
