@@ -26,10 +26,12 @@
 - Row reconstruction/seed: **copy the exact import lines for `position_state` and `row_seed` from `build_searched_continuation_retention_manifest.py`** (grep its top-of-file imports — do not guess the module). Usage: `state = position_state(replay, position_ply, side)`; `seed = row_seed(tag, game_idx, ply, pos_base_seed=20260616, goal_base_seed=20260614)` — same seed args the v6 builder passes (see its `build_rows_v6`). Read `game_idx`/`position_ply`/`side_to_move`/`tag`/`replay_path` from each A manifest row (columns confirmed present in the A probe manifest).
 - Raw forward: `from scripts.GPU.alphazero.build_teacher_calibration_manifest import _teacher_infer` → `legal, priors, value_stm = _teacher_infer(state, evaluator)`; convert to black perspective with the existing helper (`to_black` in `eval_raw_nn_position_rows` / `target_in_to_move` in `calibration_pool` — import one, do not re-implement).
 - **MCTS node fields** (`MCTSNode`): `root.children` is `Dict[move_id, MCTSNode]`; each child has `.visit_count`, `.value_sum`, `.q_value` (== `value_sum/visit_count`), `.state` (live `TwixtState`), `.move` (encoded; `decode_move(move_id) -> (r,c)`). `root.visit_count == sum(child.visit_count)`. Continuation helpers to COPY (do not import — `extract_continuations` raises for the A tag): `path_moves_of(node)` from `continuation_extraction` gives the root-relative move path (for depth/PV).
-- **The metric math (derived + must be unit-tested):** for each root child,
+- **The metric math (derived — unit-test on synthetic trees AND verify once on a real root, Step 5):** for each root child,
   - `visit_share = child.visit_count / root.visit_count`
-  - `child_contribution_share = visit_share * (-child.q_value)`  (root perspective)
-  - `sum(child_contribution_share for all children) == root.q_value`  (invariant to assert in tests)
+  - `child_contribution_share = visit_share * (-child.q_value)`  (root / side-to-move perspective)
+  - `positive_contribution_share = max(contribution, 0) / sum(positive contributions in the root)`  (fraction of the POSITIVE backup mass; defensive/negative children → 0)
+  - invariant: `sum(child_contribution_share) == root.q_value`, AND `root.q_value == root_value_stm` (the search's returned value — this is the sign check; if `sum` matches `-root.q_value` instead, the metric is sign-flipped).
+- **Classification uses POSITIVE backup mass, not net root value** — negative/defensive children can cancel the optimism and make a concentrated optimistic child look artificially harmless. `classify_concentration` sums the top-`n` positive contributions over total positive contribution.
 - A probe manifest (roots): `logs/eval/loss_analysis_v2_calib020_0001_vs_0379_black/0001_black_post_opening_top30_predrop_probe_manifest.csv`. BASE = `checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors`; v14b = `checkpoints/alphazero-v14b-value-adapter-projection-from-calib020-0001/model_iter_0001.safetensors`.
 
 ## File Structure
@@ -85,6 +87,16 @@ def test_visit_share_and_contribution_values():
     assert abs(m[(1, 1)]["child_contribution_share"] - 0.675) < 1e-9
 
 
+def test_positive_contribution_share_normalizes_positive_mass():
+    # one optimistic child (+contribution), one defensive (-contribution)
+    root = _root_with_children([((1, 1), 300, -0.9), ((2, 2), 100, +0.5)])
+    m = {tuple(c["move"]): c for c in per_child_metrics(root)}
+    assert m[(2, 2)]["child_contribution_share"] < 0                      # defensive
+    assert m[(2, 2)]["positive_contribution_share"] == 0.0               # -> 0 positive mass
+    assert abs(m[(1, 1)]["positive_contribution_share"] - 1.0) < 1e-9    # carries all positive mass
+    assert abs(sum(c["positive_contribution_share"] for c in m.values()) - 1.0) < 1e-9
+
+
 def test_classify_concentrated():
     # top child carries ~96% of the positive backup mass
     root = _root_with_children([((1, 1), 380, -0.9), ((2, 2), 20, -0.1)])
@@ -106,7 +118,9 @@ def test_classify_broad():
 ```python
 def per_child_metrics(root) -> list[dict]:
     """Per root-child visit_share + contribution (root perspective). Contributions
-    sum to root.q_value; visit_shares sum to 1. Children with 0 visits are dropped."""
+    sum to root.q_value; visit_shares sum to 1. positive_contribution_share is each
+    child's fraction of the POSITIVE backup mass (negative/defensive children -> 0),
+    for sorting within a root. Children with 0 visits are dropped."""
     from scripts.GPU.alphazero.mcts import decode_move
     total = root.visit_count or sum(c.visit_count for c in root.children.values())
     out = []
@@ -121,6 +135,11 @@ def per_child_metrics(root) -> list[dict]:
             "q_value": ch.q_value,
             "child_contribution_share": vs * (-ch.q_value),   # root perspective
         })
+    total_pos = sum(r["child_contribution_share"] for r in out
+                    if r["child_contribution_share"] > 0)
+    for r in out:
+        r["positive_contribution_share"] = (
+            max(r["child_contribution_share"], 0.0) / total_pos if total_pos > 0 else 0.0)
     return out
 
 
@@ -139,7 +158,33 @@ def classify_concentration(metrics: list[dict], top_n: int = 3) -> tuple[str, fl
 
 - [ ] **Step 4: Run the logic tests** → `.venv/bin/python -m pytest tests/test_v15_concentration_diagnostic.py -v` → all PASS.
 
-- [ ] **Step 5: Implement `main(argv)`** — the read-only driver (reconstruct roots, run gate-faithful MCTS, compute per-child metrics + raw values under BASE & v14b, write the CSV, print per-root + aggregate classification). Use the Interfaces block above verbatim. Per (root, child) CSV columns: `root_case_id, child_move, depth, visit_count, visit_share, child_contribution_share, child_q_value, child_raw_black_BASE, child_raw_black_v14b, root_mcts_black_value, root_case_classification, root_top3_positive_share`. Compute `child_raw_black_*` via `_teacher_infer(child.state, evaluator)` on the two eval-mode evaluators; `depth` via `len(path_moves_of(child))`. `--out` default `logs/eval/v15prep_a_continuation_concentration.csv`. Guard: assert `abs(sum(child_contribution_share) - root_mcts_black_value) < 1e-6` per root (the backup invariant) and fail loud if violated.
+- [ ] **Step 5: Implement `main(argv)`** — the read-only driver (reconstruct roots, run gate-faithful MCTS, compute per-child metrics + raw values under BASE & v14b, write the CSV, print per-root + aggregate classification). Use the Interfaces block above verbatim.
+
+  **MUST-FIX — real-root sign sanity check (before trusting any concentration read).** The contribution sign/invariant is *derived*, not yet verified against a real `MCTSNode`. On the **first** root processed, assert and loudly print:
+  ```python
+  _sum = sum(m["child_contribution_share"] for m in metrics)
+  # invariant: contributions sum to the root's own Q (both in root/side-to-move perspective)
+  assert abs(_sum - root.q_value) < 1e-6, (
+      f"contribution invariant broken: sum={_sum:+.6f} != root.q_value={root.q_value:+.6f} "
+      f"(check the (-child.q_value) sign)")
+  # perspective: root.q_value must match the search's returned root_value_stm (same sign)
+  assert abs(root.q_value - root_value_stm) < 1e-6, (
+      f"SIGN/PERSPECTIVE MISMATCH: root.q_value={root.q_value:+.6f} != "
+      f"root_value_stm={root_value_stm:+.6f}; the contribution metric is likely sign-flipped "
+      f"(sum matches -root.q_value) — DO NOT trust the concentration read")
+  print(f"[v15 phase0] sign sanity OK on {root_case_id}: sum(contrib)={_sum:+.4f} "
+        f"== root.q={root.q_value:+.4f} == root_value_stm={root_value_stm:+.4f}")
+  ```
+  Keep the invariant assert (`abs(sum - root.q_value) < 1e-6`) on **every** root, fail loud if violated. (Do NOT assert against `root_mcts_black_value` — that is the black-converted value; the invariant lives in side-to-move perspective. For the A family `side_to_move == black`, so they coincide, but assert against `root.q_value`/`root_value_stm` to stay correct.)
+
+  Per (root, child) CSV columns (one row per child; `child_raw_black_*` via `to_black`/`target_in_to_move` of `_teacher_infer(child.state, evaluator)[2]` on the two eval-mode evaluators; `root_mcts_black_value = to_black(root_value_stm, side)`; `depth = len(path_moves_of(child))`):
+  ```
+  root_case_id, child_move, depth, visit_count, visit_share,
+  child_contribution_share, positive_contribution_share, child_q_value,
+  child_raw_black_BASE, child_raw_black_v14b, root_mcts_black_value,
+  root_case_classification, root_top3_positive_share
+  ```
+  `--out` default `logs/eval/v15prep_a_continuation_concentration.csv`.
 
 - [ ] **Step 6: Commit**
 
