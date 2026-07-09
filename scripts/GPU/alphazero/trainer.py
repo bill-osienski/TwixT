@@ -4523,6 +4523,12 @@ def train(
                         "sum_guardrail_active_frac": sum_guardrail_active_frac,
                         "proj_enabled": post_opening_calibration_gradient_projection,
                         "proj_strength": post_opening_calibration_projection_strength,
+                        # v14b: the projected surface depends on the training mode
+                        # (adapter for v14b, final block for v13/v9) — label it so
+                        # the telemetry doesn't hardcode the v13 surface.
+                        "proj_scope": ("value_head_and_value_adapter"
+                                       if train_value_head_and_value_adapter
+                                       else "value_head_and_final_block"),
                         "proj_conflict_steps": proj_conflict_steps,
                         "proj_no_a_steps": proj_no_a_steps,
                         "proj_no_guardrail_steps": proj_no_guardrail_steps,

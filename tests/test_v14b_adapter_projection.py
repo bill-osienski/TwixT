@@ -122,3 +122,21 @@ def test_accumulator_branches_by_type_not_flag():
     src = open(trainer_mod.__file__).read()
     assert "isinstance(_extra, dict)" in src
     assert 'get("value_adapter_grad_norm", 0.0)' in src
+
+
+def test_calib_projection_scope_reflects_surface():
+    # Fast-follow: calib_projection_scope was a hardcoded v13 string, so v14b runs
+    # mislabeled their surface. It now reflects proj_scope from the accumulator.
+    from scripts.GPU.alphazero.calibration_pool import build_post_opening_calibration_block
+    b_adapter = build_post_opening_calibration_block(
+        config={}, enabled=True,
+        loss_accumulator={"steps_done": 1, "proj_enabled": True,
+                          "proj_scope": "value_head_and_value_adapter"})
+    assert b_adapter["loss"]["calib_projection_scope"] == "value_head_and_value_adapter"
+    # v13 / no proj_scope key -> the final-block default (byte-identical to before)
+    b_default = build_post_opening_calibration_block(
+        config={}, enabled=True, loss_accumulator={"steps_done": 1, "proj_enabled": True})
+    assert b_default["loss"]["calib_projection_scope"] == "value_head_and_final_block"
+    # trainer.py sets proj_scope conditionally on the v14b flag
+    from scripts.GPU.alphazero import trainer as trainer_mod
+    assert '"proj_scope": ("value_head_and_value_adapter"' in open(trainer_mod.__file__).read()
