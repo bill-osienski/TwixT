@@ -47,6 +47,12 @@ def _detect_input_channels(weights_path: str) -> int:
     return shape[-1]
 
 
+def _detect_value_adapter(weights_path: str) -> bool:
+    """Return True when the checkpoint contains v14 value-adapter parameters."""
+    weights = mx.load(weights_path)
+    return any(str(k).startswith("value_adapter.") for k in weights.keys())
+
+
 def _load_network(
     weights_path: str,
     hidden: int | None = None,
@@ -81,17 +87,28 @@ def _load_network(
     # Do NOT duplicate the hidden=128, n_blocks=6 literals here — a future
     # architecture bump should change the default in one place (create_network)
     # and have it flow through to all evaluators.
+    has_value_adapter = _detect_value_adapter(weights_path)
     kwargs = {"in_channels": in_channels}
     if hidden is not None:
         kwargs["hidden"] = hidden
     if n_blocks is not None:
         kwargs["n_blocks"] = n_blocks
+    if has_value_adapter:
+        kwargs["value_adapter"] = True
+        # Match the checkpoint's actual bottleneck width (fc_down.weight is
+        # (bottleneck, channels)) so a non-default width (e.g. the width-64
+        # branch) loads too — not just width == create_network's hidden//4 default.
+        kwargs["value_adapter_bottleneck_width"] = int(
+            mx.load(weights_path)["value_adapter.fc_down.weight"].shape[0])
     net = create_network(**kwargs)
     # Resolve the actual hidden / n_blocks used so we can echo them in metadata
     actual_hidden = hidden if hidden is not None else _default_create_network_param("hidden")
     actual_n_blocks = n_blocks if n_blocks is not None else _default_create_network_param("n_blocks")
     if verbose:
-        print(f"[probe_eval] Network architecture: hidden={actual_hidden}, n_blocks={actual_n_blocks}")
+        print(
+            f"[probe_eval] Network architecture: hidden={actual_hidden}, "
+            f"n_blocks={actual_n_blocks}, value_adapter={has_value_adapter}"
+        )
     net.load_weights(weights_path)
     return net, in_channels, actual_hidden, actual_n_blocks
 
