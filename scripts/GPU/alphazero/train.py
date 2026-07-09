@@ -416,10 +416,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
              "than this. Default 0.10.")
     parser.add_argument("--post-opening-calibration-gradient-projection",
         action="store_true",
-        help="v13: project the A-correction gradient away from the guardrail "
-             "hinge gradient on the value_head + final-block surface when they "
-             "conflict (dot<0). Requires --train-value-head-and-final-block. "
-             "Off by default; byte-identical to v12b when off.")
+        help="v13/v14b: project the A-correction gradient away from the "
+             "guardrail hinge gradient on the caller-selected value-side "
+             "surface when they conflict (dot<0). Requires a multi-component "
+             "surface: --train-value-head-and-final-block (v13, value_head + "
+             "final block) or --train-value-head-and-value-adapter (v14b, "
+             "value_head + value_adapter). Off by default; byte-identical to "
+             "v12b when off.")
     parser.add_argument("--post-opening-calibration-projection-strength", type=float,
         default=1.0,
         help="v13c: scale the gradient-conflict correction by folding this into "

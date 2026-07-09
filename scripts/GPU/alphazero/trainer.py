@@ -342,8 +342,9 @@ def _tree_axpy(total, coef: float, g):
 def project_conflicting_gradient(surf_total, surf_A, surf_G, weight: float,
                                  eps: float = 1e-8):
     """Asymmetric, conflict-only projection of A away from G on the applied
-    surface. surf_* are aligned pytrees (dict/list/mx.array) over the trainable
-    surface (value_head + final block). Returns (surf_final, telem).
+    surface. surf_* are aligned pytrees (dict/list/mx.array) over the
+    caller-selected trainable surface (value_head + final block for v13, or
+    value_head + value_adapter for v14b). Returns (surf_final, telem).
 
     surf_final = surf_total - weight * c * surf_G   when dot(A,G) < 0 and
     ||G|| > eps, with c = dot/(||G||**2 + 1e-12); otherwise surf_final IS
