@@ -137,6 +137,6 @@ def test_calib_projection_scope_reflects_surface():
     b_default = build_post_opening_calibration_block(
         config={}, enabled=True, loss_accumulator={"steps_done": 1, "proj_enabled": True})
     assert b_default["loss"]["calib_projection_scope"] == "value_head_and_final_block"
-    # trainer.py sets proj_scope conditionally on the v14b flag
+    # trainer.py derives proj_scope from the single-source-of-truth helper
     from scripts.GPU.alphazero import trainer as trainer_mod
-    assert '"proj_scope": ("value_head_and_value_adapter"' in open(trainer_mod.__file__).read()
+    assert '"proj_scope": training_surface_label(' in open(trainer_mod.__file__).read()

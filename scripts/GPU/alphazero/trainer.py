@@ -59,6 +59,27 @@ CALIB_POLICY_KL_EST_IDX = 12
 CALIB_N_RETENTION_IDX = 13
 
 
+def training_surface_label(
+    train_value_head_only: bool = False,
+    train_value_head_and_final_block: bool = False,
+    train_value_head_and_value_adapter: bool = False,
+) -> str:
+    """Single source of truth for the name of the restricted training surface.
+
+    Used by BOTH the startup banner AND the projection-scope telemetry so a new
+    surface can never leave one of them stale (the recurring v13-era hardcoded
+    -label bug). Full training (no restriction flag) returns "all_trainable".
+    When a new surface is added, add its branch HERE and every consumer updates.
+    """
+    if train_value_head_and_value_adapter:
+        return "value_head_and_value_adapter"
+    if train_value_head_and_final_block:
+        return "value_head_and_final_block"
+    if train_value_head_only:
+        return "value_head_only"
+    return "all_trainable"
+
+
 def _load_base_weights_grafting_adapter(network, path: str) -> None:
     """v14: load a base checkpoint (which has NO value_adapter.* keys) into an
     adapter-augmented network with strict=False, asserting the ONLY keys missing
@@ -2854,17 +2875,23 @@ def train(
     value_lr = learning_rate * value_lr_scale
     opt_value = optim.Adam(learning_rate=value_lr)
 
-    if train_value_head_only:
-        print("TRAIN VALUE HEAD ONLY: encoder+policy_head updates DISABLED "
-              "(opt_main.update skipped; value head lr unchanged). Pair with "
-              "--freeze-batchnorm-stats so BN running stats stay at base.")
-
-    if train_value_head_and_final_block:
-        _vh_last = len(network.encoder.blocks) - 1
-        print(f"TRAIN VALUE HEAD + FINAL BLOCK: only value_head.* and "
-              f"encoder.blocks.{_vh_last}.* train (opt_main applies just the "
-              f"final block; policy_head + earlier trunk frozen). Pair with "
-              f"--freeze-batchnorm-stats so BN running stats stay at base.")
+    # Startup banner for a restricted training surface + projection status. Both
+    # the surface name and the projection scope come from training_surface_label()
+    # so the log can never disagree with the telemetry (calib_projection_scope).
+    _surface = training_surface_label(
+        train_value_head_only, train_value_head_and_final_block,
+        train_value_head_and_value_adapter)
+    if _surface != "all_trainable":
+        if train_value_head_and_final_block:
+            _how = f"opt_main applies only encoder.blocks.{len(network.encoder.blocks) - 1}.*"
+        else:
+            _how = "opt_main.update skipped"
+        print(f"TRAIN SURFACE: {_surface} ({_how}; other trunk + policy_head "
+              f"frozen). Pair with --freeze-batchnorm-stats so BN running stats "
+              f"stay at base.")
+    if post_opening_calibration_gradient_projection:
+        print(f"Gradient projection: ON (strength="
+              f"{post_opening_calibration_projection_strength}, scope={_surface}).")
 
     buffer = ReplayBuffer(max_size=buffer_size)
 
@@ -4523,12 +4550,13 @@ def train(
                         "sum_guardrail_active_frac": sum_guardrail_active_frac,
                         "proj_enabled": post_opening_calibration_gradient_projection,
                         "proj_strength": post_opening_calibration_projection_strength,
-                        # v14b: the projected surface depends on the training mode
-                        # (adapter for v14b, final block for v13/v9) — label it so
-                        # the telemetry doesn't hardcode the v13 surface.
-                        "proj_scope": ("value_head_and_value_adapter"
-                                       if train_value_head_and_value_adapter
-                                       else "value_head_and_final_block"),
+                        # Projected-surface label from the single source of truth
+                        # (same helper the startup banner uses) so telemetry + log
+                        # never disagree and a new surface can't leave this stale.
+                        "proj_scope": training_surface_label(
+                            train_value_head_only,
+                            train_value_head_and_final_block,
+                            train_value_head_and_value_adapter),
                         "proj_conflict_steps": proj_conflict_steps,
                         "proj_no_a_steps": proj_no_a_steps,
                         "proj_no_guardrail_steps": proj_no_guardrail_steps,
