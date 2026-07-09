@@ -103,7 +103,7 @@ plus the run-level bool `train_value_head_and_value_adapter` (as v14). No new te
 
 ## §J Operator run (USER's, after merge)
 
-The v14 command PLUS `--post-opening-calibration-gradient-projection` (+ optional `--post-opening-calibration-projection-strength N`), new checkpoint dir `checkpoints/alphazero-v14b-adapter-projection-from-calib020-0001`. Confirm: `train_value_head_and_value_adapter=true`, projection active (`calib_projection_conflict_steps > 0`), `value_adapter_gate` off 0, `value_adapter_grad_norm` present (post-projection), `verify_value_head_and_adapter_checkpoint` exit 0; then gates A/B/C/D vs `calib020_0001` (no promotion unless all four pass).
+The v14 command PLUS `--post-opening-calibration-gradient-projection` (+ optional `--post-opening-calibration-projection-strength N`), new checkpoint dir `checkpoints/alphazero-v14b-value-adapter-projection-from-calib020-0001`. Confirm: `train_value_head_and_value_adapter=true`, projection active (`calib_projection_conflict_steps > 0`), `value_adapter_gate` off 0, `value_adapter_grad_norm` present (post-projection), `verify_value_head_and_adapter_checkpoint` exit 0; then gates A/B/C/D vs `calib020_0001` (no promotion unless all four pass).
 
 ## §K Branch order / interpreting v14b
 
