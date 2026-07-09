@@ -140,10 +140,14 @@ def test_v14_mutually_exclusive_with_v9():
         train_step(**{**_v14_kwargs(_adapter_net()), "train_value_head_and_final_block": True})
 
 
-def test_projection_rejected_on_adapter_surface():
-    with pytest.raises(ValueError, match="requires --train-value-head-and-final-block"):
-        train_step(**{**_v14_kwargs(_adapter_net()),
-                      "post_opening_calibration_gradient_projection": True})
+def test_projection_no_longer_rejected_on_adapter_surface():
+    # v14 rejected this combo; v14b (see test_v14b_adapter_projection.py) lifts the
+    # restriction and permits projection over {value_head, value_adapter}. No
+    # calibration_positions here -> calib_active is False -> plain 7-tuple, but the
+    # point of this test is that the ValueError guard no longer fires on this combo.
+    out = train_step(**{**_v14_kwargs(_adapter_net()),
+                        "post_opening_calibration_gradient_projection": True})
+    assert isinstance(out, tuple) and len(out) == 7
 
 
 def test_v14_surface_isolation():
