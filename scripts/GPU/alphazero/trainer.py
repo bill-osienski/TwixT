@@ -1589,12 +1589,13 @@ def train_step(
     # v13: asymmetric A-yields-to-guardrail projection on the applied surface.
     _proj_telem = None
     if post_opening_calibration_gradient_projection:
-        if train_value_head_only or train_value_head_and_value_adapter:
+        if train_value_head_only:
             raise ValueError(
-                "post_opening_calibration_gradient_projection requires "
-                "--train-value-head-and-final-block (the value-head-only and "
-                "value-adapter surfaces do not define the A-vs-guardrail "
-                "final-block conflict; adapter-surface projection is v14b)")
+                "post_opening_calibration_gradient_projection requires a "
+                "multi-component trainable surface (value-head-only offers only "
+                "value_head, with no A-vs-guardrail conflict to project); use "
+                "--train-value-head-and-final-block (v13) or "
+                "--train-value-head-and-value-adapter (v14b)")
         if calib_active and calibration_guardrail_sign is not None:
             _sgn = np.asarray(calibration_guardrail_sign)
             _has_a = bool((np.abs(_sgn) < 0.5).any())
@@ -1610,8 +1611,6 @@ def train_step(
                                "cos": 0.0, "c": 0.0, "removed_norm": 0.0,
                                "norm_G": 0.0, "norm_A": 0.0}
             else:
-                _last = len(network.encoder.blocks) - 1
-
                 def _a_fn(m):
                     return _calibration_component_loss(
                         m, calibration_positions, calibration_weights,
@@ -1626,18 +1625,34 @@ def train_step(
 
                 _, _g_a = nn.value_and_grad(network, _a_fn)(network)
                 _, _g_g = nn.value_and_grad(network, _g_fn)(network)
-                _surf_total = {"value_head": grads["value_head"],
-                               "block": grads["encoder"]["blocks"][_last]}
-                _surf_a = {"value_head": _g_a["value_head"],
-                           "block": _g_a["encoder"]["blocks"][_last]}
-                _surf_g = {"value_head": _g_g["value_head"],
-                           "block": _g_g["encoder"]["blocks"][_last]}
+                if train_value_head_and_value_adapter:
+                    # v14b: project over the value-only adapter surface. The A/G
+                    # passes include value_adapter grads (the adapter is in
+                    # forward_padded).
+                    _surf_total = {"value_head": grads["value_head"],
+                                   "value_adapter": grads["value_adapter"]}
+                    _surf_a = {"value_head": _g_a["value_head"],
+                               "value_adapter": _g_a["value_adapter"]}
+                    _surf_g = {"value_head": _g_g["value_head"],
+                               "value_adapter": _g_g["value_adapter"]}
+                else:
+                    # v13/v9: project over value_head + the final residual block.
+                    _last = len(network.encoder.blocks) - 1
+                    _surf_total = {"value_head": grads["value_head"],
+                                   "block": grads["encoder"]["blocks"][_last]}
+                    _surf_a = {"value_head": _g_a["value_head"],
+                               "block": _g_a["encoder"]["blocks"][_last]}
+                    _surf_g = {"value_head": _g_g["value_head"],
+                               "block": _g_g["encoder"]["blocks"][_last]}
                 _effective_projection_weight = (
                     post_opening_calibration_projection_strength * calibration_loss_weight)
                 _surf_final, _proj_telem = project_conflicting_gradient(
                     _surf_total, _surf_a, _surf_g, weight=_effective_projection_weight)
                 grads["value_head"] = _surf_final["value_head"]
-                grads["encoder"]["blocks"][_last] = _surf_final["block"]
+                if train_value_head_and_value_adapter:
+                    grads["value_adapter"] = _surf_final["value_adapter"]
+                else:
+                    grads["encoder"]["blocks"][_last] = _surf_final["block"]
 
     # Slice GRADS only (not params) into module-shaped trees
     # NOTE: Assumes network.parameters() / grads use top-level keys: encoder, policy_head, value_head
@@ -1653,6 +1668,13 @@ def train_step(
     else:
         value_grads = grads["value_head"]
         _adapter_grad_norm = 0.0
+
+    # v14b: fold the (post-projection) adapter grad norm into the projection dict
+    # so slot [13] stays one self-describing object (dict = projection, float =
+    # v14 grad-norm only). Covers the no-A / no-guardrail / no-conflict skip dicts
+    # too, so train()'s accumulator always finds the key.
+    if _proj_telem is not None and train_value_head_and_value_adapter:
+        _proj_telem["value_adapter_grad_norm"] = _adapter_grad_norm
 
     # Clip main grads (encoder + policy) at 1.0
     main_grads, main_gnorm = clip_grad_norm(main_grads, max_norm=1.0)
@@ -4309,13 +4331,19 @@ def train(
                                     and len(_ret) == 14):
                                 sum_guardrail_hinge_loss += _ret[10]
                                 sum_guardrail_active_frac += _ret[11]
-                                if train_value_head_and_value_adapter:
-                                    # v14: the 14th slot is the adapter grad norm
-                                    # (float), NOT a projection dict.
-                                    sum_value_adapter_grad_norm += float(_ret[13])
-                                    proj = None
+                                _extra = _ret[13]
+                                if isinstance(_extra, dict):
+                                    # v13 / v14b: slot [13] is the projection dict.
+                                    # v14b folds the (post-projection) adapter grad
+                                    # norm into it; v13 has no such key (-> 0.0).
+                                    proj = _extra
+                                    sum_value_adapter_grad_norm += float(
+                                        _extra.get("value_adapter_grad_norm", 0.0))
                                 else:
-                                    proj = _ret[13]
+                                    # v14 (projection off): slot [13] is the adapter
+                                    # grad norm float.
+                                    proj = None
+                                    sum_value_adapter_grad_norm += float(_extra)
                                 if proj is not None and proj["skip_reason"] == "no_a":
                                     proj_no_a_steps += 1
                                 elif proj is not None and proj["skip_reason"] == "no_guardrail":
