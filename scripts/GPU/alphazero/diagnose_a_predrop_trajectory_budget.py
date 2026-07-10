@@ -199,6 +199,11 @@ def main(argv=None) -> int:
                     row, search_fns[sims],
                     pos_base_seed=args.position_probe_base_seed,
                     goal_base_seed=args.goal_line_base_seed)
+                if root.visit_count != sims:
+                    raise SystemExit(
+                        f"{cid} ply {ply}: search ran {root.visit_count} sims, expected {sims} "
+                        f"-- the per-budget MCTSConfig did not take effect (late-binding "
+                        f"closure in _search_fns?); the budget comparison would be meaningless")
                 root_black = to_black(root_value_stm, side_out)
 
                 stored_black = to_black(

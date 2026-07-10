@@ -24,11 +24,13 @@ def test_ply_window_clips_negative_plies_and_dedupes():
     assert ply_window(2, 4, n_moves=7) == [0, 2, 4, 6]
 
 
-def test_ply_window_dedupes_when_drop_overlaps_predrop_offsets():
-    # a hypothetical drop only 2 plies later still yields 6 distinct plies,
-    # but a larger predrop offset overlap must not double-count
-    assert ply_window(10, 12, n_moves=100) == [6, 8, 10, 12, 14, 16]
-    assert len(ply_window(10, 12, n_moves=100)) == 6
+def test_ply_window_dedupes_when_drop_and_predrop_offsets_collide():
+    # A genuine collision needs drop_ply <= predrop_ply (never true of the real
+    # A cases, where drop == predrop + 2, but the set-union dedup must hold):
+    # predrop=20, drop=20 -> {16,18,20} u {20,22,24} -> 20 appears once.
+    assert ply_window(20, 20, n_moves=100) == [16, 18, 20, 22, 24]
+    # predrop=20, drop=18 -> {16,18,20} u {18,20,22} -> 18 and 20 each once.
+    assert ply_window(20, 18, n_moves=100) == [16, 18, 20, 22]
 
 
 def test_summarize_case_splits_at_drop_ply():
