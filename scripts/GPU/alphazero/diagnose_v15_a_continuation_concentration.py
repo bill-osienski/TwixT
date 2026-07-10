@@ -138,6 +138,30 @@ def _build_raw_evaluator(checkpoint_path: str):
     return LocalGPUEvaluator(net)
 
 
+def search_for_row(row, search_fn, *, pos_base_seed, goal_base_seed):
+    """Reconstruct an A probe row's root state and run the seeded gate-faithful
+    search. Returns (state, side, root_value_stm, root). The seed is row_seed's
+    position-probe branch (CORRECTION_TAG is never the goal-line tag), which
+    reproduces the A gate's per-case rng exactly."""
+    replay = json.loads(Path(row["replay_path"]).read_text())
+    ply = int(float(row["position_ply"]))
+    side = row["side_to_move"]
+    state = position_state(replay, ply, side)
+    seed = row_seed(CORRECTION_TAG, row["game_idx"], ply,
+                    pos_base_seed=pos_base_seed, goal_base_seed=goal_base_seed)
+    _counts, root_value_stm, root = search_fn(state, seed)
+    return state, side, root_value_stm, root
+
+
+def raw_black_value(state, evaluator) -> float:
+    """Raw (non-MCTS) value at `state`, converted to BLACK's perspective.
+    _teacher_infer returns the value in the state's OWN to-move perspective, so
+    the conversion must use state.to_move -- not the root's side, which differs
+    at every odd depth."""
+    _legal, _priors, value_stm = _teacher_infer(state, evaluator)
+    return to_black(value_stm, state.to_move)
+
+
 def _parse_args(argv):
     ap = argparse.ArgumentParser(
         description="v15 Phase-0 (READ-ONLY) diagnostic: measure whether the "
@@ -186,14 +210,10 @@ def main(argv=None) -> int:
     root_labels = []
     for i, row in enumerate(rows):
         case_id = row["case_id"]
-        replay = json.loads(Path(row["replay_path"]).read_text())
-        ply = int(float(row["position_ply"]))
-        side = row["side_to_move"]
-        state = position_state(replay, ply, side)
-        seed = row_seed(CORRECTION_TAG, row["game_idx"], ply,
-                        pos_base_seed=args.position_probe_base_seed,
-                        goal_base_seed=args.goal_line_base_seed)
-        counts, root_value_stm, root = search_fn(state, seed)
+        state, side, root_value_stm, root = search_for_row(
+            row, search_fn,
+            pos_base_seed=args.position_probe_base_seed,
+            goal_base_seed=args.goal_line_base_seed)
 
         metrics = per_child_metrics(root)
         _sum = sum(m["child_contribution_share"] for m in metrics)
@@ -226,8 +246,6 @@ def main(argv=None) -> int:
         for m in metrics:
             child = root.children[encode_move(*m["move"])]
             depth = len(path_moves_of(child))
-            _, _, child_raw_stm_base = _teacher_infer(child.state, base_raw_evaluator)
-            _, _, child_raw_stm_v14b = _teacher_infer(child.state, v14b_raw_evaluator)
             out_rows.append({
                 "root_case_id": case_id,
                 "child_move": f"{m['move'][0]}:{m['move'][1]}",
@@ -237,8 +255,8 @@ def main(argv=None) -> int:
                 "child_contribution_share": m["child_contribution_share"],
                 "positive_contribution_share": m["positive_contribution_share"],
                 "child_q_value": m["q_value"],
-                "child_raw_black_BASE": to_black(child_raw_stm_base, child.state.to_move),
-                "child_raw_black_v14b": to_black(child_raw_stm_v14b, child.state.to_move),
+                "child_raw_black_BASE": raw_black_value(child.state, base_raw_evaluator),
+                "child_raw_black_v14b": raw_black_value(child.state, v14b_raw_evaluator),
                 "root_mcts_black_value": root_mcts_black_value,
                 "root_case_classification": label,
                 "root_top3_positive_share": share,
