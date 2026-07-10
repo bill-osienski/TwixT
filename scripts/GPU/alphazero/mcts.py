@@ -97,6 +97,11 @@ class MCTSConfig:
     """MCTS hyperparameters."""
 
     c_puct: float = 1.5  # Exploration constant in PUCT
+    fpu_value: float = 0.0   # First-Play Urgency: assumed Q for an unvisited
+                             # child, in the MOVER's perspective. 0.0 reproduces
+                             # the prior hardcoded value exactly. Negative =>
+                             # pessimistic => the mover revisits known-good
+                             # children before scanning unexplored ones.
     n_simulations: int = 800  # Simulations per move
     dirichlet_alpha: float = 0.3  # Dirichlet noise parameter
     dirichlet_eps: float = 0.25  # Noise mixing weight (0 = no noise)
@@ -955,7 +960,7 @@ class MCTS:
                 q = -child.q_value
                 child_visits = child.visit_count
             else:
-                q = 0.0
+                q = self.config.fpu_value
                 child_visits = 0
 
             # Virtual visit penalty for pending leaves
