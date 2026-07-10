@@ -93,18 +93,19 @@ def n_visited_children(node) -> int:
 
 
 def summarize(rows) -> dict:
-    """Per-c_puct aggregate. `over`/`severe` use the gate thresholds;
-    `positive` is the separate `> 0` statistic, reported alongside so the two
-    can never again be confused."""
+    """Per-c_puct aggregate. `over`/`severe` are derived from `gate_flags` --
+    the same function the per-case rows use -- so this can never drift out of
+    sync with the gate's own thresholds; `positive` is the separate `> 0`
+    statistic, reported alongside so the two can never again be confused."""
     vals = [r["root_mcts_black_value"] for r in rows]
     n = len(vals)
+    flags = [gate_flags(v) for v in vals]
     return {
         "n": n,
         "mean_black_value": sum(vals) / n,
-        "over_pct_ge_0_25": 100.0 * sum(
-            1 for v in vals if v >= OVERVALUE_THRESHOLD) / n,
+        "over_pct_ge_0_25": 100.0 * sum(1 for over, _ in flags if over) / n,
         "severe_pct_ge_0_50": 100.0 * sum(
-            1 for v in vals if v >= SEVERE_OVERVALUE_THRESHOLD) / n,
+            1 for _, severe in flags if severe) / n,
         "positive_pct_gt_0": 100.0 * sum(1 for v in vals if v > 0) / n,
         "min": min(vals),
         "max": max(vals),
@@ -115,28 +116,32 @@ def summarize(rows) -> dict:
     }
 
 
+def _make_search_fn(evaluator, cfg):
+    """Own scope per config: late binding is structurally impossible here."""
+    from .mcts import MCTS
+
+    def fn(state, seed):
+        return MCTS(evaluator, cfg, random.Random(seed)).search_with_root(
+            state, add_noise=False)
+
+    return fn
+
+
 def _search_fns(checkpoint: str, cpucts, eval_batch_size: int,
                 stall_flush_sims: int) -> dict:
     """One evaluator, reused across all c_puct values. `cfg_from` builds the
     gate's exact MCTSConfig; `dataclasses.replace` changes c_puct and nothing
-    else. The `cfg=cfg` default argument binds per value -- without it every
-    entry would close over the LAST cfg and the sweep would show a spurious
-    flat line."""
+    else. Each value's closure is built by `_make_search_fn`, which gives it
+    its own scope -- late binding is structurally impossible, not merely
+    guarded against by a default-argument trick."""
     from .eval_runner import EvalConfig, cfg_from, _default_evaluator_factory
-    from .mcts import MCTS
     evaluator = _default_evaluator_factory(checkpoint)
     base = cfg_from(EvalConfig(mcts_sims=SIMS,
                                mcts_eval_batch_size=eval_batch_size,
                                mcts_stall_flush_sims=stall_flush_sims))
     fns = {}
     for c in cpucts:
-        cfg = dataclasses.replace(base, c_puct=c)
-
-        def fn(state, seed, cfg=cfg):
-            return MCTS(evaluator, cfg, random.Random(seed)).search_with_root(
-                state, add_noise=False)
-
-        fns[c] = fn
+        fns[c] = _make_search_fn(evaluator, dataclasses.replace(base, c_puct=c))
     return fns
 
 
@@ -175,6 +180,11 @@ def _parse_args(argv):
 def main(argv=None) -> int:
     args = _parse_args(argv)
     cpucts = [float(c) for c in args.c_pucts.split(",") if c.strip()]
+    if BASELINE_CPUCT not in cpucts:
+        raise SystemExit(
+            f"--c-pucts must include the baseline {BASELINE_CPUCT} (the gate's own "
+            f"value): it is the only check that the per-value config binding took "
+            f"effect and that this sweep reproduces the gate. Got {cpucts}")
     cases = load_csv_manifest(args.a_manifest)["cases"]
     if args.limit_cases is not None:
         cases = cases[:args.limit_cases]
@@ -195,13 +205,16 @@ def main(argv=None) -> int:
             if root.visit_count != SIMS:
                 raise SystemExit(
                     f"c_puct={c} {cid}: search ran {root.visit_count} sims, "
-                    f"expected {SIMS} -- the per-value MCTSConfig did not take "
-                    f"effect (late-binding closure in _search_fns?)")
+                    f"expected {SIMS} -- the MCTSConfig's n_simulations did "
+                    f"not take effect")
 
             black = to_black(root_value_stm, side)
 
             # MANDATORY integrity check: c_puct=1.5 IS the gate's config, so it
             # must reproduce Phase 0 exactly. If not, the sweep is worthless.
+            # This check -- not the visit-count guard above, which only
+            # catches a wrong n_simulations -- is what actually verifies the
+            # per-value MCTSConfig binding took effect.
             if c == BASELINE_CPUCT:
                 if cid not in baseline:
                     raise SystemExit(f"{cid} missing from {args.phase0_csv}")

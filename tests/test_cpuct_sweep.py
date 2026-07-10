@@ -60,3 +60,14 @@ def test_summarize_over_and_positive_differ():
              "top_child_n_visited_children": 1}]
     s = summarize(rows)
     assert s["over_pct_ge_0_25"] == 0.0 and s["positive_pct_gt_0"] == 100.0
+
+
+def test_summarize_boundary_values_are_inclusive():
+    # exactly on both gate thresholds; `>` instead of `>=` would drop them
+    rows = [{"root_mcts_black_value": 0.25, "root_n_visited_children": 1,
+             "top_child_n_visited_children": 1},
+            {"root_mcts_black_value": 0.50, "root_n_visited_children": 1,
+             "top_child_n_visited_children": 1}]
+    s = summarize(rows)
+    assert s["over_pct_ge_0_25"] == 100.0     # both are >= 0.25
+    assert s["severe_pct_ge_0_50"] == 50.0    # only 0.50 is >= 0.50
