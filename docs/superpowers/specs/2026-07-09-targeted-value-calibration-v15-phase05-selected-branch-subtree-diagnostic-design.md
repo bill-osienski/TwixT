@@ -123,7 +123,7 @@ visit_count, visit_share_from_parent, visit_share_from_root,
 q_value_node_perspective, q_value_root_perspective,
 raw_black_BASE, raw_black_v14b, raw_delta_v14b_minus_BASE,
 raw_positive_BASE, raw_positive_v14b,
-is_pv_path, pv_depth_index, num_children
+is_pv_path, pv_depth_index, num_children, unvisited_children_count, is_terminal
 ```
 
 Definitions:
@@ -141,6 +141,10 @@ Definitions:
 - `num_children` — count of created children, including `visit_count == 0` ones.
 - `path_moves` — `(r,c)` moves from the **root** to this node.
 - `root_case_classification` — carried through verbatim from the Phase-0 CSV, so the file is self-contained when reopened later. Every selected root is `concentrated` by construction (all 17 `root_mcts_black_value > 0` roots classified that way); the column is provenance, not a signal.
+- `unvisited_children_count` — created children of this node with `visit_count == 0`. Per-node because the by-depth summary (§7) aggregates it.
+- `is_terminal` — `node.state.is_terminal()`.
+
+**Terminal nodes.** A subtree walk reaches terminal nodes; Phase 0 never could, because the depth-1 children of a midgame root are never terminal. A terminal node is visited but never expanded, has no legal moves, and has no NN evaluation — `_teacher_infer` would build zero-width arrays on it. Such nodes are emitted with `is_terminal = True`, `num_children = 0`, their real `visit_count` and `q_value_*`, and **blank** `raw_black_BASE` / `raw_black_v14b` / `raw_delta_v14b_minus_BASE` / `raw_positive_*`. The by-depth summary excludes blank-raw nodes from every `raw_*` statistic (they have no raw value to average) but still counts them in `nodes_count` and `total_visit_share_from_root`, so visit mass is never silently dropped. If terminal nodes carry non-trivial visit mass at some depth, that itself is a finding — the summary's `nodes_count` minus the raw-scored count makes it visible.
 
 ---
 
@@ -152,13 +156,17 @@ Per group, for BASE and for v14b:
 
 ```
 scope (full_subtree | pv_only), depth_from_root,
-nodes_count, unvisited_children_count, total_visit_share_from_root,
+nodes_count, raw_scored_nodes_count, unvisited_children_count,
+total_visit_share_from_root,
 mean_raw_black, weighted_mean_raw_black,
 pct_raw_positive, pct_visit_mass_raw_positive,
 max_raw_black
 ```
 
+(the four `raw_*` columns and `mean/weighted_mean/max` are each emitted twice, suffixed `_BASE` and `_v14b`)
+
 - `nodes_count` — walked nodes (`visit_count ≥ 1`) at that depth, within scope.
+- `raw_scored_nodes_count` — walked nodes at that depth that carry a raw value (i.e. non-terminal). Every `raw_*` statistic below is computed over these only; `nodes_count − raw_scored_nodes_count` is the terminal count.
 - `unvisited_children_count` — created-but-never-visited children **of the nodes at that depth**; measures how much of the branching the search declined to explore. Never scored (no NN value exists for them).
 - `total_visit_share_from_root` — summed `visit_share_from_root` over the walked nodes at that depth.
 - `weighted_mean_raw_black` weights by `visit_share_from_root`.
