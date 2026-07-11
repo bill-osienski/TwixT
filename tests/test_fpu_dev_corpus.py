@@ -1,19 +1,28 @@
-"""Tests for the FPU dev-corpus PURE sampler (Task 5).
+"""Tests for the FPU dev-corpus PURE sampler (Task 5) + PURE scan helpers
+(Task 6).
 
 Frozen design ref: docs/superpowers/specs/2026-07-10-context-relative-fpu-policy-mass-design.md
 Plan Task 5: two-stage classify + contribution-aware whole-game split +
-EXACT frozen composition.
+EXACT frozen composition. Plan Task 6: two-stage scan pure helpers
+(per-ply n_legal + fallback, candidate-ply enumeration, raw-policy geometry
+features, forbidden-hash union + disjointness, the RESERVE constant).
 
-This exercises only the PURE section of build_fpu_dev_corpus.py -- classifiers,
-the whole-game split assigner, and the 240-row sampler operating on plain dict
-"rows" (no MCTS/GPU/MLX; canonical_sha1 values are synthetic strings, NOT real
-hashes -- the real hashing/scan is Task 6).
+This exercises only the PURE helpers of build_fpu_dev_corpus.py -- classifiers,
+the whole-game split assigner, the 240-row sampler operating on plain dict
+"rows", and (Task 6) the per-ply/candidate/policy-feature/hash-union/
+disjointness helpers. Still NO MCTS/GPU/MLX/checkpoint/evaluator anywhere, and
+NO reads of the real seed20116 replay corpus: in the Task-5 tests
+canonical_sha1 values are synthetic strings, NOT real hashes; the Task-6
+fallback/reconstruction tests below build small SYNTHETIC real replays/CSVs on
+disk (via plain TwixtState.apply_move / tmp_path), never the real corpus. The
+real hashing/scan is `main()` (operator-run, never invoked here).
 
 The crux is test_exact_split_composition_and_totals: every (role, band, split)
 cell must equal its SPLIT_ALLOC quota EXACTLY and simultaneously satisfy no-dup
 hash, ply-bucket <=50% cap, and per-split side balance. `_abundant_pool()` is
 co-designed with the sampler to make all of those hold at once.
 """
+import json
 from collections import Counter, defaultdict
 
 import pytest
@@ -26,13 +35,26 @@ from scripts.GPU.alphazero.build_fpu_dev_corpus import (
     TARGET_PER_BAND,
     CONTROL_PER_BAND,
     BANDS,
+    RESERVE,
     band_of,
     ply_bucket_of,
     raw_policy_role,
     anchor_eligible,
     assign_split,
     sample_dev_rows,
+    per_ply_n_legal,
+    enumerate_candidate_plies,
+    _policy_features_from_priors,
+    load_forbidden_hashes,
+    assert_disjoint,
 )
+
+# Task 6 fallback/reconstruction tests build small REAL replays/positions via
+# TwixtState directly (still no MCTS/GPU/MLX/checkpoint -- TwixtState is pure
+# numpy) rather than reading the real seed20116 corpus.
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero.goal_line_trigger_probe_cases import position_state
+from scripts.GPU.alphazero.fpu_state_hash import canonical_state_sha1
 
 # ---------------------------------------------------------------------------
 # Synthetic pool construction (co-designed with the sampler).
@@ -445,3 +467,217 @@ def test_stats_cell_counts_are_real_counts():
             assert stats["cell_counts"][key] == actual[(role, band, split)]
             assert stats["cell_counts"][key] == quota
     assert sum(stats["cell_counts"].values()) == len(rows) == 240
+
+
+# ---------------------------------------------------------------------------
+# Task 6 -- per-ply n_legal (primary + fallback)
+# ---------------------------------------------------------------------------
+
+def test_per_ply_n_legal_primary_reads_stored_values():
+    moves = [{"n_legal": 528}, {"n_legal": 527}, {"n_legal": 200}, {"n_legal": 199}]
+    replay = {"moves": moves}
+    assert per_ply_n_legal(replay) == [528, 527, 200, 199]
+
+
+def test_per_ply_n_legal_fallback_reconstructs_every_fourth_ply():
+    # No "n_legal" on any move -> fallback path. Build a REAL small replay via
+    # repeated TwixtState.apply_move (still no GPU/MLX -- TwixtState is pure
+    # numpy), independently tracking the legal count at each of the
+    # reconstructed (every-4th) plies as we go, so the assertion is a genuine
+    # cross-check against the function's own reconstruction, not a restatement
+    # of it.
+    state = TwixtState(active_size=24, to_move="red", max_plies_limit=50)
+    moves = []
+    expected_at_stride = {}
+    for ply in range(10):
+        legal = state.legal_moves()
+        if ply % 4 == 0:
+            expected_at_stride[ply] = len(legal)
+        mv = legal[0]
+        moves.append({"row": mv[0], "col": mv[1]})   # deliberately no n_legal/player
+        state = state.apply_move(mv)
+    replay = {"board_size": 24, "n_moves": len(moves), "moves": moves}
+
+    result = per_ply_n_legal(replay)
+
+    assert len(result) == 10
+    for ply in range(10):
+        if ply % 4 == 0:
+            assert result[ply] == expected_at_stride[ply]
+        else:
+            assert result[ply] is None
+
+
+def test_per_ply_n_legal_partial_n_legal_still_uses_fallback():
+    # Only ONE move carries "n_legal" -- the primary-path guard must require
+    # ALL moves to carry it (`all(...)`), not just one (`any(...)`): an
+    # `any(...)` bug would wrongly take the primary list comprehension, which
+    # KeyErrors on every OTHER move lacking "n_legal". Reuses the real small
+    # replay construction from the fallback test above, with one deliberately
+    # WRONG stored value injected to also prove it gets ignored.
+    state = TwixtState(active_size=24, to_move="red", max_plies_limit=50)
+    moves = []
+    expected_at_stride = {}
+    for ply in range(8):
+        legal = state.legal_moves()
+        if ply % 4 == 0:
+            expected_at_stride[ply] = len(legal)
+        mv = legal[0]
+        move = {"row": mv[0], "col": mv[1]}
+        if ply == 1:
+            move["n_legal"] = 999999          # bogus -- must be ignored (fallback, not primary)
+        moves.append(move)
+        state = state.apply_move(mv)
+    replay = {"board_size": 24, "n_moves": len(moves), "moves": moves}
+
+    result = per_ply_n_legal(replay)
+
+    assert len(result) == 8
+    for ply in range(8):
+        if ply % 4 == 0:
+            assert result[ply] == expected_at_stride[ply]
+        else:
+            assert result[ply] is None
+    assert result[1] is None                  # bogus stored value at a non-stride ply: ignored
+
+
+# ---------------------------------------------------------------------------
+# Task 6 -- candidate-ply enumeration (stride/cap over the qualifying subseq)
+# ---------------------------------------------------------------------------
+
+def test_enumerate_candidate_plies_takes_first_fifth_ninth_qualifying():
+    # All 20 plies qualify (n_legal=250 >= 200) -> the qualifying subsequence
+    # IS the ply index itself, so "1st/5th/9th... qualifying" is exactly
+    # ply 0/4/8/....
+    moves = [{"n_legal": 250} for _ in range(20)]
+    replay = {"moves": moves}
+    result = enumerate_candidate_plies(replay, stride=4, cap=6)
+    assert result == [0, 4, 8, 12, 16]        # 5 qualifying picks (20/4); cap not reached
+
+
+def test_enumerate_candidate_plies_irregular_qualifying_stride_and_cap():
+    # 30 hand-picked, strictly ascending "qualifying" plies interleaved with
+    # non-qualifying gaps of irregular width, so stride selection cannot be
+    # confused with a raw-ply-index stride, and the cap genuinely binds
+    # (30 qualifying -> 8 strided -> capped to 6).
+    qualifying_plies = [1, 3, 4, 7, 10, 11, 15, 20, 21, 22, 30, 40, 41, 50, 60,
+                        61, 70, 80, 90, 99, 101, 103, 105, 110, 120, 121, 130,
+                        140, 150, 160]
+    assert len(qualifying_plies) == 30
+    qual_set = set(qualifying_plies)
+    n_plies = qualifying_plies[-1] + 1
+    moves = [{"n_legal": 250 if p in qual_set else 50} for p in range(n_plies)]
+    replay = {"moves": moves}
+
+    result = enumerate_candidate_plies(replay, stride=4, cap=6)
+
+    expected = [qualifying_plies[i] for i in (0, 4, 8, 12, 16, 20)]
+    assert result == expected == [1, 10, 21, 41, 70, 101]
+    assert len(result) == 6
+
+
+def test_enumerate_candidate_plies_empty_when_none_qualify():
+    moves = [{"n_legal": 50} for _ in range(20)]
+    replay = {"moves": moves}
+    assert enumerate_candidate_plies(replay, stride=4, cap=6) == []
+
+
+# ---------------------------------------------------------------------------
+# Task 6 -- raw-policy geometry features
+# ---------------------------------------------------------------------------
+
+def test_policy_features_flat_prior_high_entropy_low_top1():
+    n = 250
+    priors = [1.0 / n] * n
+    feats = _policy_features_from_priors(priors)
+    assert feats["normalized_entropy"] == pytest.approx(1.0, abs=1e-6)
+    assert feats["top1_prior"] == pytest.approx(1.0 / n, abs=1e-9)
+    assert feats["top1_prior"] < 0.01
+    assert feats["top4_mass"] >= feats["top1_prior"]
+    assert feats["top8_mass"] >= feats["top4_mass"]
+
+
+def test_policy_features_peaked_prior_top1_about_0_9():
+    # The peak sits at index 100 (mid-list), NOT index 0: a buggy
+    # `top1_prior = priors[0]` (or an unsorted `priors[:4]`/`priors[:8]` for
+    # the mass features) would coincidentally pass if the peak were first --
+    # placing it mid-list forces a genuine max/sort over the whole list.
+    n = 250
+    rest = (1.0 - 0.9) / (n - 1)
+    priors = [rest] * 100 + [0.9] + [rest] * (n - 101)
+    assert len(priors) == n
+    feats = _policy_features_from_priors(priors)
+    assert feats["top1_prior"] == pytest.approx(0.9, abs=1e-9)
+    assert feats["normalized_entropy"] < 0.3      # concentrated -> low normalized entropy
+    assert feats["top4_mass"] >= feats["top1_prior"]
+    assert feats["top8_mass"] >= feats["top4_mass"]
+
+
+# ---------------------------------------------------------------------------
+# Task 6 -- forbidden-hash union (primary hash column + fallback reconstruction)
+# ---------------------------------------------------------------------------
+
+def test_load_forbidden_hashes_union_from_hash_column(tmp_path):
+    p1 = tmp_path / "a.csv"
+    p1.write_text("canonical_position_sha1,note\nh1,x\nh2,y\n")
+    p2 = tmp_path / "b.csv"
+    p2.write_text("canonical_position_sha1,note\nh2,z\nh3,w\n")
+    result = load_forbidden_hashes([str(p1), str(p2)])
+    assert result == {"h1", "h2", "h3"}
+
+
+def test_load_forbidden_hashes_fallback_reconstructs_from_replay(tmp_path):
+    # selected-A / v16a manifests carry replay_path+position_ply+side_to_move
+    # but NO canonical_position_sha1 column (both predate Task 4's hash) --
+    # this is the path load_forbidden_hashes must take against them. Build a
+    # tiny SYNTHETIC replay on disk (not the real seed20116 corpus) + a CSV
+    # row pointing at it, and independently compute the expected hash via the
+    # already-tested Task-4/goal_line_trigger_probe_cases primitives.
+    state = TwixtState(active_size=8, to_move="red", max_plies_limit=20)
+    moves = []
+    for _ in range(3):
+        mv = state.legal_moves()[0]
+        moves.append({"row": mv[0], "col": mv[1]})
+        state = state.apply_move(mv)
+    replay = {"board_size": 8, "n_moves": len(moves), "moves": moves}
+    replay_path = tmp_path / "game_000000.json"
+    replay_path.write_text(json.dumps(replay))
+
+    expected_state = position_state(replay, 2, "red")     # ply0 red, ply1 black, ply2 red
+    expected_hash = canonical_state_sha1(expected_state)
+
+    csv_path = tmp_path / "manifest.csv"
+    csv_path.write_text(
+        "game_idx,replay_path,position_ply,side_to_move\n"
+        f"0,{replay_path},2,red\n"
+    )
+
+    result = load_forbidden_hashes([str(csv_path)])
+    assert result == {expected_hash}
+
+
+# ---------------------------------------------------------------------------
+# Task 6 -- disjointness assertion
+# ---------------------------------------------------------------------------
+
+def test_assert_disjoint_raises_on_forbidden_collision():
+    with pytest.raises((ValueError, AssertionError)):
+        assert_disjoint(["h1", "h2"], forbidden={"h2", "h9"})
+
+
+def test_assert_disjoint_raises_on_internal_duplicate():
+    with pytest.raises((ValueError, AssertionError)):
+        assert_disjoint(["h1", "h1", "h2"], forbidden=set())
+
+
+def test_assert_disjoint_passes_when_clean():
+    assert assert_disjoint(["h1", "h2", "h3"], forbidden={"h9", "h10"}) is None
+
+
+# ---------------------------------------------------------------------------
+# Task 6 -- RESERVE constant
+# ---------------------------------------------------------------------------
+
+def test_reserve_is_2x_per_band_quota():
+    assert RESERVE == {"target": 2 * TARGET_PER_BAND, "control": 2 * CONTROL_PER_BAND}
+    assert RESERVE == {"target": 120, "control": 40}
