@@ -141,3 +141,173 @@ def sample_neutral_rows(game_records, *, base_seed, source_replay,
                        "games_used": len({g for g, _ in sel}),
                        "eligible_games": len(pools[name]), "side_balance": side_count}
     return rows, stats
+
+
+DEFAULT_SOURCE_JSONL = ("logs/eval/"
+                        "calib020_0001_vs_0379_800g_w4_seed20115_replay_games.jsonl")
+DEFAULT_OUT = "logs/eval/v16a_fpu_unbiased/neutral_position_manifest.csv"
+DEFAULT_SEED = 20260710
+
+
+def load_game_index(jsonl_path, *, require_winner=False):
+    """Read the replay-eval JSONL INDEX (per line: game_idx, n_moves, winner,
+    replay_path -- not the moves). Winner-null games are KEPT with
+    winner='unknown' (require_winner=False); they reconstruct like any other and
+    are the most search-stressed samples. Returns (records sorted, dropped)."""
+    recs, dropped = [], 0
+    with open(jsonl_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            g = json.loads(line)
+            w = g.get("winner")
+            if w not in ("red", "black"):
+                if require_winner:
+                    dropped += 1
+                    continue
+                w = "unknown"
+            recs.append({"game_idx": int(g["game_idx"]), "n_moves": int(g["n_moves"]),
+                         "winner": w, "replay_path": g["replay_path"]})
+    recs.sort(key=lambda r: r["game_idx"])
+    return recs, dropped
+
+
+def load_excluded_game_ids(paths):
+    out = set()
+    for p in paths:
+        with open(p, newline="") as f:
+            for r in csv.DictReader(f):
+                out.add(int(r["game_idx"]))
+    return out
+
+
+def opening_prefix_key(moves, ply):
+    """Ordered move-prefix key. TwixT has no captures, so identical prefixes reach
+    identical states; transpositions (same pegs, different order) are NOT merged
+    -- this is opening-PREFIX dedup, not full board-state dedup."""
+    return tuple((m["row"], m["col"]) for m in moves[:ply])
+
+
+def make_opening_key_fn(records_by_idx):
+    cache = {}
+
+    def keyfn(game_idx, ply):
+        moves = cache.get(game_idx)
+        if moves is None:
+            moves = json.loads(Path(records_by_idx[game_idx]["replay_path"]).read_text())["moves"]
+            cache[game_idx] = moves
+        return opening_prefix_key(moves, ply)
+
+    return keyfn
+
+
+def validate_row(row):
+    replay = json.loads(Path(row["replay_path"]).read_text())
+    position_state(replay, int(row["position_ply"]), row["side_to_move"])
+
+
+def write_manifest(rows, out_csv):
+    Path(out_csv).parent.mkdir(parents=True, exist_ok=True)
+    with open(out_csv, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=NEUTRAL_FIELDNAMES)
+        w.writeheader()
+        w.writerows(rows)
+
+
+def write_meta(out_csv, meta):
+    Path(str(out_csv) + ".meta.json").write_text(json.dumps(meta, indent=2))
+
+
+def _parse_args(argv):
+    ap = argparse.ArgumentParser(
+        description="Build a deterministic, game-held-out, non-A-selected neutral "
+                    "position manifest for the v16a FPU collateral screen. "
+                    "READ-ONLY; writes one CSV + meta JSON. Does NOT run the sweep.")
+    ap.add_argument("--source-jsonl", default=DEFAULT_SOURCE_JSONL)
+    ap.add_argument("--out", default=DEFAULT_OUT)
+    ap.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    ap.add_argument("--exclude-manifest", action="append", default=None,
+                    help="CSV(s) whose game_idx values are held out (repeatable). "
+                         "The A probe manifest is added unless --no-default-exclude.")
+    ap.add_argument("--no-default-exclude", action="store_true")
+    ap.add_argument("--exclude-winnerless", action="store_true",
+                    help="drop winner-null games (default: keep as game_result=unknown).")
+    ap.add_argument("--min-ply-gap", type=int, default=DEFAULT_MIN_PLY_GAP)
+    ap.add_argument("--quota-opening", type=int, default=DEFAULT_QUOTAS["opening"])
+    ap.add_argument("--quota-early-mid", type=int, default=DEFAULT_QUOTAS["early_mid"])
+    ap.add_argument("--quota-midgame", type=int, default=DEFAULT_QUOTAS["midgame"])
+    ap.add_argument("--quota-late", type=int, default=DEFAULT_QUOTAS["late"])
+    ap.add_argument("--no-validate", action="store_true")
+    return ap.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    # DEFAULT_A_MANIFEST is the SINGLE source of truth for the discovery set;
+    # import (deferred: diagnose_fpu_sweep pulls mcts) so the holdout cannot drift.
+    from .diagnose_fpu_sweep import DEFAULT_A_MANIFEST
+    args = _parse_args(argv)
+    quotas = {"opening": args.quota_opening, "early_mid": args.quota_early_mid,
+              "midgame": args.quota_midgame, "late": args.quota_late}
+
+    records, dropped = load_game_index(args.source_jsonl,
+                                       require_winner=args.exclude_winnerless)
+    excludes = list(args.exclude_manifest or [])
+    if not args.no_default_exclude:
+        excludes.append(DEFAULT_A_MANIFEST)
+    requested_ids = load_excluded_game_ids(excludes) if excludes else set()
+    corpus_ids = {r["game_idx"] for r in records}
+    matched_ids = requested_ids & corpus_ids
+    held = [r for r in records if r["game_idx"] not in matched_ids]
+    print(f"[v16a] {len(records)} games (dropped winnerless {dropped}); excluded "
+          f"{len(matched_ids)}/{len(requested_ids)} requested A-games -> {len(held)} held-out")
+
+    records_by_idx = {r["game_idx"]: r for r in held}
+    rows, stats = sample_neutral_rows(
+        held, base_seed=args.seed, source_replay=args.source_jsonl,
+        quotas=quotas, min_ply_gap=args.min_ply_gap,
+        state_key_fn_by_bucket={"opening": make_opening_key_fn(records_by_idx)})
+
+    for name in BUCKET_ORDER:
+        st = stats[name]
+        flag = ("  <-- SHORTFALL (data-limited)" if st["achieved"] < st["requested"] else "")
+        print(f"[v16a] {name:10s} {st['achieved']:3d}/{st['requested']:<3d} across "
+              f"{st['games_used']} games  sides={st['side_balance']}{flag}")
+
+    validate_dropped = 0
+    if not args.no_validate:
+        kept = []
+        for r in rows:
+            try:
+                validate_row(r)
+                kept.append(r)
+            except Exception:
+                if r["game_result"] == "unknown":     # tolerate odd winner-null games
+                    validate_dropped += 1
+                    continue
+                raise                                  # winner-having failure is a real bug
+        rows = kept
+        print(f"[v16a] validated {len(rows)} rows (dropped {validate_dropped} "
+              f"unreconstructable winner-null rows)")
+
+    write_manifest(rows, args.out)
+    write_meta(args.out, {
+        "source_jsonl": args.source_jsonl, "base_seed": args.seed,
+        "buckets": {n: [lo, hi] for n, lo, hi in BUCKETS}, "quotas": quotas,
+        "per_game_caps": DEFAULT_PER_GAME_CAPS, "min_ply_gap": args.min_ply_gap,
+        "excluded_manifests": excludes,
+        "requested_excluded_game_count": len(requested_ids),
+        "matched_excluded_game_count": len(matched_ids),
+        "matched_excluded_game_ids": sorted(matched_ids),
+        "winnerless_dropped": dropped, "validate_dropped": validate_dropped,
+        "num_rows": len(rows), "per_bucket_stats": stats,
+        "fieldnames": NEUTRAL_FIELDNAMES,
+        "sample_kind": "stratified_game_held_out_non_selected",
+    })
+    print(f"[v16a] wrote {len(rows)} rows -> {args.out}  (+ .meta.json)")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())

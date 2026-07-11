@@ -69,3 +69,43 @@ def test_row_schema_no_a_labels_and_result_passthrough():
     assert set(r.keys()) == set(NEUTRAL_FIELDNAMES)
     assert not any(k in r for k in ("drop_ply", "largest_a_value_drop", "case_rank"))
     assert any(x["game_result"] == "unknown" for x in rows)     # null-winner passthrough
+
+
+import json
+from scripts.GPU.alphazero.build_v16a_neutral_position_manifest import (
+    load_game_index, load_excluded_game_ids, opening_prefix_key, write_manifest, write_meta)
+
+
+def test_load_game_index_keeps_null_winner_as_unknown_and_sorts(tmp_path):
+    p = tmp_path / "g.jsonl"
+    p.write_text("\n".join(json.dumps(x) for x in [
+        {"game_idx": 5, "n_moves": 60, "winner": "red", "replay_path": "a"},
+        {"game_idx": 2, "n_moves": 40, "winner": "black", "replay_path": "b"},
+        {"game_idx": 9, "n_moves": 280, "winner": None, "replay_path": "c"}]) + "\n")
+    recs, dropped = load_game_index(str(p))                 # require_winner False default
+    assert dropped == 0 and [r["game_idx"] for r in recs] == [2, 5, 9]
+    assert recs[2]["winner"] == "unknown"
+
+
+def test_load_excluded_game_ids(tmp_path):
+    p = tmp_path / "a.csv"
+    p.write_text("game_idx,case_id\n347,x\n631,y\n347,z\n")
+    assert load_excluded_game_ids([str(p)]) == {347, 631}
+
+
+def test_opening_prefix_key():
+    moves = [{"row": 1, "col": 2}, {"row": 3, "col": 4}, {"row": 5, "col": 6}]
+    assert opening_prefix_key(moves, 2) == ((1, 2), (3, 4))
+
+
+def test_write_roundtrip(tmp_path):
+    import csv
+    out = tmp_path / "s" / "n.csv"
+    write_manifest([{"case_id": "c", "game_idx": 1, "replay_path": "r",
+                     "position_ply": 20, "side_to_move": "red", "ply_bucket": "early_mid",
+                     "game_result": "red", "total_game_plies": 60,
+                     "source_replay": "s", "sample_seed": 9}], str(out))
+    write_meta(str(out), {"base_seed": 9})
+    with open(out, newline="") as f:
+        assert list(csv.DictReader(f))[0]["case_id"] == "c"
+    assert json.loads((tmp_path / "s" / "n.csv.meta.json").read_text())["base_seed"] == 9
