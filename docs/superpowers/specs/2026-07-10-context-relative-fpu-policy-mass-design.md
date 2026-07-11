@@ -124,10 +124,11 @@ Optional observer on the single real 400-sim run. Interface:
 ```python
 observer.on_root_simulation(completed_simulation_count: int,
                             root,
-                            updated_root_move: int | None)
+                            updated_root_move: int | None,
+                            current_root_leader_move: int | None)
 ```
 
-Fires **once per completed root-simulation backup** (once per backed-up leaf, in backup order — not once per batch flush covering several sims), passing the monotonic completed count and the root move on that simulation's path for **incremental** updates (no 200–500-child rescan/sim).
+Fires **once per completed root-simulation backup** (once per backed-up leaf, in backup order — not once per batch flush covering several sims), passing the monotonic completed count, the root move on that simulation's path, and the canonical visit-leader move for **incremental** updates (no 200–500-child rescan/sim).
 
 - **Edge case:** the first completed simulation may expand/back up the root without traversing a root move → `updated_root_move` may be `None`; the observer ignores `None` for first-visit/mass bookkeeping but still advances the completed-simulation counter.
 - `completed_simulation_count` counts completed sims, never attempted/pending; explored mass excludes virtual/pending visits.

@@ -45,6 +45,12 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 # for the pure-helper tests still touches no GPU/MLX/checkpoint/evaluator code.
 from .fpu_state_hash import canonical_state_sha1
 from .goal_line_trigger_probe_cases import position_state
+# Review followup (dedup): side_to_move_for_ply is verbatim-identical to
+# build_v16a_neutral_position_manifest's; imported rather than duplicated.
+# That module's own top-level imports are equally pure (__future__/argparse/
+# csv/json/random/pathlib/.goal_line_trigger_probe_cases) and it does not
+# import this module, so this stays circular-import-free.
+from .build_v16a_neutral_position_manifest import side_to_move_for_ply
 
 # ---------------------------------------------------------------------------
 # Frozen constants (verbatim from the design + Task-5 brief)
@@ -358,23 +364,18 @@ def sample_dev_rows(confirmed: List[dict], *, seed: int) -> Tuple[List[dict], di
 # seed20116 replay positions, and runs 400-sim MCTS. It is NEVER invoked by
 # this task's tests. Everything below down to `_build_anchor_search_fn` /
 # `_scan_two_stage` / `main` is importable without GPU/MLX (only stdlib +
-# the two pure imports above); the GPU/MLX/checkpoint/evaluator modules
-# (`.eval_runner`, `.diagnose_fpu_sweep`, `.build_teacher_calibration_manifest`,
-# `.build_v16a_neutral_position_manifest`, `.mcts`'s MCTS class) are imported
-# LAZILY, inside the functions that actually need them, so merely importing
-# this module (as the pure-helper tests do) never touches them.
+# the pure imports above, incl. `side_to_move_for_ply` imported from
+# `.build_v16a_neutral_position_manifest` -- itself verified import-clean);
+# the GPU/MLX/checkpoint/evaluator modules (`.eval_runner`,
+# `.diagnose_fpu_sweep`, `.build_teacher_calibration_manifest`, `.mcts`'s
+# MCTS class, and `.build_v16a_neutral_position_manifest`'s OTHER names) are
+# imported LAZILY, inside the functions that actually need them, so merely
+# importing this module (as the pure-helper tests do) never touches them.
 # =============================================================================
 
 # ---------------------------------------------------------------------------
 # Per-ply legal-move counts (primary: stored; fallback: sparse reconstruction)
 # ---------------------------------------------------------------------------
-
-def side_to_move_for_ply(ply: int) -> str:
-    """Ply 0 is red's opener; TwixtState alternates each ply (same rule as
-    build_v16a_neutral_position_manifest.side_to_move_for_ply -- duplicated
-    here, not imported, so this module's only intra-package deps stay the two
-    pure ones above)."""
-    return "red" if ply % 2 == 0 else "black"
 
 
 def per_ply_n_legal(replay: Mapping[str, Any]) -> List[Optional[int]]:

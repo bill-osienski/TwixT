@@ -27,7 +27,7 @@ import os
 import random
 import sys
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Protocol, Set, Tuple
 
 import numpy as np
 
@@ -266,6 +266,13 @@ class MCTSNode:
         return self.priors is not None
 
 
+class MCTSObserver(Protocol):
+    """Read-only per-completed-simulation trace hook (see FpuTraceObserver)."""
+    def on_root_simulation(self, completed_simulation_count: int, root: "MCTSNode",
+                           updated_root_move: Optional[int],
+                           current_root_leader_move: Optional[int]) -> None: ...
+
+
 class MCTS:
     """Monte Carlo Tree Search with neural network guidance.
 
@@ -280,7 +287,7 @@ class MCTS:
         evaluator: Evaluator,
         config: Optional[MCTSConfig] = None,
         rng: Optional[random.Random] = None,
-        observer=None,
+        observer: Optional["MCTSObserver"] = None,
     ):
         """Initialize MCTS.
 

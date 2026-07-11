@@ -652,13 +652,22 @@ def _load_dev_rows(dev_manifest: str, mode: str) -> List[dict]:
     return rows
 
 
+def _make_base_cfg(eval_batch_size: int, stall_flush_sims: int):
+    """Config-only half of `_make_evaluator_and_base_cfg` -- no checkpoint/
+    evaluator load, so it's cheap enough to call before fingerprint
+    validation (e.g. to derive the candidate stage's fingerprint c_puct
+    independently, rather than echoing it from the loaded controls gate)."""
+    from .eval_runner import EvalConfig, cfg_from
+    return cfg_from(EvalConfig(mcts_sims=MCTS_SIMS,
+                               mcts_eval_batch_size=eval_batch_size,
+                               mcts_stall_flush_sims=stall_flush_sims))
+
+
 def _make_evaluator_and_base_cfg(checkpoint: str, eval_batch_size: int,
                                  stall_flush_sims: int):
-    from .eval_runner import EvalConfig, cfg_from, _default_evaluator_factory
+    from .eval_runner import _default_evaluator_factory
     evaluator = _default_evaluator_factory(checkpoint)
-    base_cfg = cfg_from(EvalConfig(mcts_sims=MCTS_SIMS,
-                                   mcts_eval_batch_size=eval_batch_size,
-                                   mcts_stall_flush_sims=stall_flush_sims))
+    base_cfg = _make_base_cfg(eval_batch_size, stall_flush_sims)
     return evaluator, base_cfg
 
 
@@ -825,9 +834,16 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
     gate = _load_controls_gate(args.out_dir)
 
     # Recompute the fingerprint from the SAME args; refuse stale/mismatched
-    # controls, then require r0 to have qualified (§5 step 0).
+    # controls, then require r0 to have qualified (§5 step 0). c_puct is
+    # derived from OUR OWN config (base_cfg_for_fp), not echoed from the
+    # loaded gate -- echoing would make validate_controls_fingerprint compare
+    # the gate's c_puct against itself (tautology; can't catch a divergence).
+    # Value is unchanged (both sources are the same EvalConfig default), and
+    # this is config-only (no checkpoint/evaluator load), so it's still cheap
+    # to compute before validation.
+    base_cfg_for_fp = _make_base_cfg(args.eval_batch_size, args.stall_flush_sims)
     search_cfg = _search_cfg_dict(args.eval_batch_size, args.stall_flush_sims,
-                                  gate["fingerprint"].get("search_cfg", {}).get("c_puct"))
+                                  base_cfg_for_fp.c_puct)
     expected = _build_fingerprint(
         dev_manifest=args.dev_manifest, selected_a_manifest=args.selected_a_manifest,
         checkpoint=args.checkpoint, search_cfg=search_cfg,
@@ -843,7 +859,14 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
     evaluator, base_cfg = _make_evaluator_and_base_cfg(
         args.checkpoint, args.eval_batch_size, args.stall_flush_sims)
 
-    # Rerun both references (joinable controls) + every candidate config.
+    # References are recomputed here rather than joined from the persisted
+    # controls_cases.csv: CONTROLS_CASE_FIELDNAMES omits top_move/
+    # top_move_prior, which _position_features produces and the control-flip
+    # gate (_dev_control_row's control_flip_to_lower_prior, consumed by
+    # dev_safety_verdict) needs -- so the persisted CSV can't feed that gate.
+    # The fingerprint validated above pins determinism, so these recomputed
+    # reference features are bit-identical to the persisted ones for the
+    # fields the two do share.
     ref_configs = [ABSOLUTE_OFF, R0]
     all_configs = ref_configs + list(run_configs)
     by_label = _run_configs_over_corpus(
