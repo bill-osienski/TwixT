@@ -1,0 +1,6 @@
+[fpu] integrity check SKIPPED (neutral manifest, no baseline); fpu=0.0 remains the delta baseline.
+[fpu] fpu=0.0    mover_dmean=+0.0000 flip=0.0% new_collapse=0.0% eff_child_d=+0.00
+[fpu] fpu=-0.2   mover_dmean=+0.0028 flip=27.2% new_collapse=4.6% eff_child_d=-36.66
+
+wrote 648 case rows -> logs/eval/v16a_fpu_unbiased/neutral_fpu_sweep_cases.csv
+wrote 2 overall + 28 stratified summary rows
