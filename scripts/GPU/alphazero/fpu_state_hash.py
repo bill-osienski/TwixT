@@ -24,15 +24,19 @@ Field inventory against `TwixtState` (scripts/GPU/alphazero/game/twixt_state.py)
                           without changing pegs/bridges) -- MUST serialize
                           None as JSON null, not be silently dropped
     ply               -- EXCLUDED. Every `apply_move` call adds exactly one
-                          peg and increments ply by exactly one, and no
-                          production path mutates pegs without going through
-                          apply_move, so ply == len(pegs) always holds for
-                          reachable states; pegs already determines it. The
-                          equal-hash-implies-equal-to_tensor test is the
-                          completeness guard: to_tensor encodes ply in its
-                          MOVE_NUMBER channel (ply / MAX_PLIES), so if ply
-                          could ever diverge from len(pegs) that test would
-                          catch it.
+                          peg and increments ply by exactly one, so
+                          ply == len(pegs) holds for apply_move-reconstructed
+                          states -- the only states this tooling hashes.
+                          (Not a universal TwixtState invariant:
+                          `TwixtState.from_dict` takes `ply` from its input
+                          dict and can produce ply != len(pegs); this
+                          tooling never hashes a from_dict-built state.)
+                          pegs already determines ply on the states this
+                          module sees. The equal-hash-implies-equal-to_tensor
+                          test is the completeness guard: to_tensor encodes
+                          ply in its MOVE_NUMBER channel (ply / MAX_PLIES),
+                          so if ply could ever diverge from len(pegs) on a
+                          state this module hashes, that test would catch it.
     _adj              -- EXCLUDED. A derived, lazily-built adjacency cache
                           (peg -> neighbor pegs) backing connected-component
                           queries; fully determined by pegs/bridges and

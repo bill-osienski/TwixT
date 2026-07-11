@@ -45,3 +45,19 @@ def test_each_future_relevant_field_changes_hash():
     assert canonical_state_sha1(base) != canonical_state_sha1(_play([(3, 3), (5, 5)], max_plies=40))
     flip = dataclasses.replace(base, to_move=("black" if base.to_move == "red" else "red"))
     assert canonical_state_sha1(base) != canonical_state_sha1(flip)                               # side
+
+
+def test_bridges_participate_in_hash():
+    # FIX (review finding #6): every other hash test above uses bridge-free
+    # (interior) positions, so nothing confirms `bridges` actually
+    # participates in the digest. Red (3,3) then (4,5) is a (+1,+2)
+    # knight step with no prior bridges to cross, so it self-forms a bridge
+    # on `apply_move`; black's (2,0) in between is irrelevant filler.
+    state = _play([(3, 3), (2, 0), (4, 5)])
+    assert len(state.bridges) >= 1     # self-check: a bridge actually formed
+
+    # Isolate `bridges` as the ONLY differing field and prove it changes the
+    # digest.
+    state_no_bridges = dataclasses.replace(state, bridges=set())
+    assert state_no_bridges.bridges == set() and state.pegs == state_no_bridges.pegs
+    assert canonical_state_sha1(state) != canonical_state_sha1(state_no_bridges)

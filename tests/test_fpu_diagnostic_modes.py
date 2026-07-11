@@ -30,7 +30,8 @@ from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
     dev_safety_verdict, selected_a_verdict)
 from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
     V_REF, top_share, validate_controls_fingerprint, require_r0_qualified,
-    require_matching_mode)
+    require_matching_mode, _leader_child)
+from scripts.GPU.alphazero.mcts import MCTSNode, encode_move, visit_leader_move
 
 
 # ---------------------------------------------------------------------------
@@ -289,3 +290,40 @@ def test_require_matching_mode_refuses_cross_mode_controls():
         require_matching_mode({"mode": "frozen_check"}, "tuning")
     with pytest.raises(ValueError):
         require_matching_mode({}, "tuning")                          # mode absent
+
+
+# ---------------------------------------------------------------------------
+# Comparator parity (review finding #1): the canonical visit-leader
+# comparator `min(visited, key=lambda c: (-c.visit_count, c.move))` is
+# spelled independently in THREE places -- `mcts.visit_leader_move`,
+# `continuation_extraction._best_child`, and this module's `_leader_child`.
+# They are byte-identical today, but nothing pins the two test-importable
+# copies together, so a future tie-break tweak to either one alone would
+# silently desync the observer's leader from the diagnostic's. Synthetic
+# trees follow the same hand-built `MCTSNode` pattern as
+# tests/test_fpu_trace_observer.py; no real search/GPU/MLX involved.
+# ---------------------------------------------------------------------------
+
+def test_visit_leader_move_matches_diagnostic_leader_child():
+    A, B, C = encode_move(0, 0), encode_move(0, 1), encode_move(0, 2)
+
+    # Genuine tie decides the outcome: A and B are BOTH visit_count=4, so the
+    # winner is only decidable by the lowest-move-id tie-break -- this
+    # exercises the tie-break itself, not just the max.
+    tie_root = MCTSNode(state=None)
+    tie_root.children[A] = MCTSNode(state=None, parent=tie_root, move=A, visit_count=4, value_sum=1.0)
+    tie_root.children[B] = MCTSNode(state=None, parent=tie_root, move=B, visit_count=4, value_sum=-2.0)
+    assert visit_leader_move(tie_root) == _leader_child(tie_root).move == A
+
+    # Clear max: C strictly leads on visit_count, no tie-break needed.
+    max_root = MCTSNode(state=None)
+    max_root.children[A] = MCTSNode(state=None, parent=max_root, move=A, visit_count=4, value_sum=1.0)
+    max_root.children[B] = MCTSNode(state=None, parent=max_root, move=B, visit_count=4, value_sum=-2.0)
+    max_root.children[C] = MCTSNode(state=None, parent=max_root, move=C, visit_count=9, value_sum=0.5)
+    assert visit_leader_move(max_root) == _leader_child(max_root).move == C
+
+    # No completed visits anywhere (only a pending, zero-visit child) -> both
+    # copies agree on None.
+    root_no_visits = MCTSNode(state=None)
+    root_no_visits.children[A] = MCTSNode(state=None, parent=root_no_visits, move=A, visit_count=0)
+    assert visit_leader_move(root_no_visits) is None and _leader_child(root_no_visits) is None
