@@ -105,6 +105,26 @@ def policy_mass_fpu(parent_q: float, explored_mass: float, r: float) -> float:
     return parent_q - r * math.sqrt(m)
 
 
+def explored_policy_mass(node: "MCTSNode") -> float:
+    """P_explored = sum of `node.priors[move_id]` over children with a
+    COMPLETED (backed-up) visit -- i.e. `child.visit_count > 0`.
+
+    Zero-visit / pending / virtual children are EXCLUDED: `_select_child`'s
+    virtual-visit penalty is a local var and never mutates `child.visit_count`,
+    so a pending leaf's `visit_count` stays 0 until its backup completes. A
+    move with no child node at all (never selected) is equally excluded.
+    One pass over `node.priors` per call; no clamp here -- `policy_mass_fpu`
+    clamps the result to [0, 1]. See design doc §1 "Completed-visits-only
+    (safeguard 6a)".
+    """
+    total = 0.0
+    for move_id, prior in node.priors.items():
+        child = node.children.get(move_id)
+        if child is not None and child.visit_count > 0:
+            total += prior
+    return total
+
+
 @dataclass
 class MCTSConfig:
     """MCTS hyperparameters."""
@@ -978,6 +998,17 @@ class MCTS:
         c = self.config.c_puct
         sqrt_parent = math.sqrt(node.visit_count + 1)
 
+        # Context-relative FPU (policy-mass rule, opt-in): computed ONCE per
+        # call, before the child loop. When `fpu_policy_mass_reduction` is
+        # None (default), `_fpu_pm` is None and neither `explored_policy_mass`
+        # nor `policy_mass_fpu` is evaluated -- the off path below is
+        # byte-identical to the prior hardcoded `self.config.fpu_value`.
+        _pm = self.config.fpu_policy_mass_reduction
+        _fpu_pm = (
+            policy_mass_fpu(node.q_value, explored_policy_mass(node), _pm)
+            if _pm is not None else None
+        )
+
         best_score = float("-inf")
         best_moves = []  # List of (move_id, child) tuples
         eps = 1e-8  # Tie tolerance (slightly larger to catch float jitter)
@@ -990,7 +1021,7 @@ class MCTS:
                 q = -child.q_value
                 child_visits = child.visit_count
             else:
-                q = self.config.fpu_value
+                q = _fpu_pm if _pm is not None else self.config.fpu_value
                 child_visits = 0
 
             # Virtual visit penalty for pending leaves
