@@ -1,0 +1,130 @@
+{
+  "source_jsonl": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replay_games.jsonl",
+  "base_seed": 20260710,
+  "buckets": {
+    "opening": [
+      1,
+      15
+    ],
+    "early_mid": [
+      16,
+      40
+    ],
+    "midgame": [
+      41,
+      90
+    ],
+    "late": [
+      91,
+      null
+    ]
+  },
+  "quotas": {
+    "opening": 40,
+    "early_mid": 100,
+    "midgame": 100,
+    "late": 100
+  },
+  "per_game_caps": {
+    "opening": 1,
+    "early_mid": 2,
+    "midgame": 2,
+    "late": 2
+  },
+  "min_ply_gap": 8,
+  "excluded_manifests": [
+    "logs/eval/loss_analysis_v2_calib020_0001_vs_0379_black/0001_black_post_opening_top30_predrop_probe_manifest.csv"
+  ],
+  "requested_excluded_game_count": 30,
+  "matched_excluded_game_count": 30,
+  "matched_excluded_game_ids": [
+    21,
+    27,
+    93,
+    123,
+    127,
+    151,
+    183,
+    217,
+    249,
+    259,
+    281,
+    291,
+    337,
+    347,
+    449,
+    455,
+    467,
+    503,
+    505,
+    507,
+    539,
+    611,
+    627,
+    629,
+    631,
+    633,
+    735,
+    753,
+    757,
+    765
+  ],
+  "winnerless_dropped": 0,
+  "validate_dropped": 0,
+  "num_rows": 324,
+  "per_bucket_stats": {
+    "opening": {
+      "requested": 40,
+      "achieved": 40,
+      "games_used": 40,
+      "eligible_games": 770,
+      "side_balance": {
+        "red": 20,
+        "black": 20
+      }
+    },
+    "early_mid": {
+      "requested": 100,
+      "achieved": 100,
+      "games_used": 100,
+      "eligible_games": 770,
+      "side_balance": {
+        "red": 50,
+        "black": 50
+      }
+    },
+    "midgame": {
+      "requested": 100,
+      "achieved": 100,
+      "games_used": 100,
+      "eligible_games": 645,
+      "side_balance": {
+        "red": 50,
+        "black": 50
+      }
+    },
+    "late": {
+      "requested": 100,
+      "achieved": 84,
+      "games_used": 48,
+      "eligible_games": 48,
+      "side_balance": {
+        "red": 42,
+        "black": 42
+      }
+    }
+  },
+  "fieldnames": [
+    "case_id",
+    "game_idx",
+    "replay_path",
+    "position_ply",
+    "side_to_move",
+    "ply_bucket",
+    "game_result",
+    "total_game_plies",
+    "source_replay",
+    "sample_seed"
+  ],
+  "sample_kind": "stratified_game_held_out_non_selected"
+}
