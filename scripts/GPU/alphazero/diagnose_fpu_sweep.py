@@ -51,8 +51,10 @@ from __future__ import annotations
 import argparse
 import csv
 import dataclasses
+import math
 import random
 from pathlib import Path
+from statistics import median
 
 from .continuation_extraction import _best_child
 from .diagnose_v15_a_continuation_concentration import search_for_row
@@ -152,6 +154,67 @@ def resolve_output_paths(out, summary_out, strata_out, manifest, neutral):
     return (out or str(base / "neutral_fpu_sweep_cases.csv"),
             summary_out or str(base / "neutral_fpu_sweep_summary.csv"),
             strata_out or str(base / "neutral_fpu_sweep_by_stratum.csv"))
+
+
+GENERIC_CASE_FIELDNAMES = [
+    "fpu_value", "case_id", "game_id", "ply", "ply_bucket", "side_to_move",
+    "root_mcts_stm_value", "root_mcts_black_value", "top_move",
+    "top_child_visit_share", "root_visit_entropy", "root_effective_children",
+    "root_collapsed_ge_0_95", "root_n_visited_children",
+    "top_child_n_visited_children",
+    "root_value_delta_stm_vs_fpu0", "root_value_delta_black_vs_fpu0",
+    "top_move_changed_vs_fpu0", "root_children_delta_vs_fpu0",
+    "top_child_children_delta_vs_fpu0", "top_child_visit_share_delta_vs_fpu0",
+    "root_effective_children_delta_vs_fpu0", "root_visit_entropy_delta_vs_fpu0",
+    "new_collapse_vs_fpu0", "resolved_collapse_vs_fpu0",
+]
+
+
+def visit_entropy(visit_counts) -> float:
+    """Shannon entropy (nats) of the root children's visit distribution.
+    exp(entropy) = effective children; it falls as search concentrates even when
+    the raw visited-children COUNT stays flat (the c_puct result). Empty -> 0."""
+    total = sum(visit_counts)
+    if total <= 0:
+        return 0.0
+    h = 0.0
+    for c in visit_counts:
+        if c > 0:
+            p = c / total
+            h -= p * math.log(p)
+    return h
+
+
+def _num_delta(a, b):
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return a - b
+    return ""
+
+
+def enrich_with_deltas(rows):
+    """Attach fpu=0.0-relative deltas per case_id, in place. Mover (_stm_) and
+    black (_black_) value deltas both recorded (summaries lead with mover, which
+    does not cancel across colors). Paired search-shape deltas + collapse
+    accounting (new = candidate collapses where baseline did not; resolved =
+    the reverse)."""
+    baseline = {r["case_id"]: r for r in rows if r["fpu_value"] == BASELINE_FPU}
+    for r in rows:
+        b = baseline.get(r["case_id"])
+        if b is None:
+            raise ValueError(f"no fpu={BASELINE_FPU} baseline for {r['case_id']!r}")
+        r["root_value_delta_stm_vs_fpu0"] = r["root_mcts_stm_value"] - b["root_mcts_stm_value"]
+        r["root_value_delta_black_vs_fpu0"] = r["root_mcts_black_value"] - b["root_mcts_black_value"]
+        r["top_move_changed_vs_fpu0"] = r["top_child_move"] != b["top_child_move"]
+        r["root_children_delta_vs_fpu0"] = r["root_n_visited_children"] - b["root_n_visited_children"]
+        r["top_child_children_delta_vs_fpu0"] = r["top_child_n_visited_children"] - b["top_child_n_visited_children"]
+        r["top_child_visit_share_delta_vs_fpu0"] = _num_delta(
+            r["top_child_visit_share"], b["top_child_visit_share"])
+        r["root_effective_children_delta_vs_fpu0"] = _num_delta(
+            r["root_effective_children"], b["root_effective_children"])
+        r["root_visit_entropy_delta_vs_fpu0"] = r["root_visit_entropy"] - b["root_visit_entropy"]
+        r["new_collapse_vs_fpu0"] = bool(r["root_collapsed_ge_0_95"]) and not bool(b["root_collapsed_ge_0_95"])
+        r["resolved_collapse_vs_fpu0"] = bool(b["root_collapsed_ge_0_95"]) and not bool(r["root_collapsed_ge_0_95"])
+    return rows
 
 
 def gate_flags(value: float) -> tuple[bool, bool]:

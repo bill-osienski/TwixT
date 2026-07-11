@@ -51,3 +51,52 @@ def test_resolve_output_paths_mode_scoped():
                   "logs/eval/v16a/neutral_fpu_sweep_summary.csv",
                   "logs/eval/v16a/neutral_fpu_sweep_by_stratum.csv")
     assert resolve_output_paths("o", "s", "t", "m.csv", True) == ("o", "s", "t")  # explicit wins
+
+
+import math
+from scripts.GPU.alphazero.diagnose_fpu_sweep import (
+    visit_entropy, enrich_with_deltas, GENERIC_CASE_FIELDNAMES)
+
+
+def test_visit_entropy():
+    assert abs(visit_entropy([5, 5, 5, 5]) - math.log(4)) < 1e-12
+    assert visit_entropy([10]) == 0.0 and visit_entropy([]) == 0.0
+
+
+def _rich(fpu, cid, stm, blk, top, rootc, topc, share, eff, ent, col):
+    return {"fpu_value": fpu, "case_id": cid, "root_mcts_stm_value": stm,
+            "root_mcts_black_value": blk, "top_child_move": top,
+            "root_n_visited_children": rootc, "top_child_n_visited_children": topc,
+            "top_child_visit_share": share, "root_effective_children": eff,
+            "root_visit_entropy": ent, "root_collapsed_ge_0_95": col}
+
+
+def test_enrich_mover_black_shape_and_collapse_deltas():
+    rows = [_rich(0.0, "A", 0.20, -0.20, "3:4", 5, 200, 0.60, 6.0, 1.8, False),
+            _rich(-0.2, "A", 0.05, -0.05, "3:4", 8, 120, 0.97, 2.0, 0.3, True)]
+    enrich_with_deltas(rows)
+    c = rows[1]
+    assert abs(c["root_value_delta_stm_vs_fpu0"] - (-0.15)) < 1e-12
+    assert abs(c["root_value_delta_black_vs_fpu0"] - 0.15) < 1e-12
+    assert c["root_children_delta_vs_fpu0"] == 3
+    assert c["top_child_children_delta_vs_fpu0"] == -80
+    assert abs(c["root_effective_children_delta_vs_fpu0"] - (-4.0)) < 1e-12
+    assert abs(c["root_visit_entropy_delta_vs_fpu0"] - (-1.5)) < 1e-12
+    assert c["new_collapse_vs_fpu0"] is True and c["resolved_collapse_vs_fpu0"] is False
+    assert rows[0]["new_collapse_vs_fpu0"] is False
+
+
+def test_enrich_resolved_collapse_and_blank_share():
+    rows = [_rich(0.0, "A", 0.2, -0.2, "", 5, 0, "", 1.0, 0.0, True),
+            _rich(-0.2, "A", 0.2, -0.2, "9:9", 5, 200, 0.6, 3.0, 1.0, False)]
+    enrich_with_deltas(rows)
+    assert rows[1]["resolved_collapse_vs_fpu0"] is True
+    assert rows[1]["top_move_changed_vs_fpu0"] is True
+    assert rows[1]["top_child_visit_share_delta_vs_fpu0"] == ""    # baseline blank
+
+
+def test_generic_case_fieldnames_no_redundant_top1_share():
+    assert "root_top1_visit_share" not in GENERIC_CASE_FIELDNAMES
+    for k in ("root_mcts_stm_value", "top_child_visit_share", "root_collapsed_ge_0_95",
+              "root_value_delta_stm_vs_fpu0", "new_collapse_vs_fpu0"):
+        assert k in GENERIC_CASE_FIELDNAMES
