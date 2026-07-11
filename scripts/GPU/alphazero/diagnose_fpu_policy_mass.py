@@ -343,6 +343,16 @@ def require_r0_qualified(gate_json: Mapping[str, Any]) -> None:
             "control-qualification vs absolute_off; the candidate stage is refused")
 
 
+def require_matching_mode(gate_json: Mapping[str, Any], expected_mode: str) -> None:
+    """Refuse a controls artifact produced for a different --mode (its
+    split-specific lock-in baselines and r0_qualified do not transfer)."""
+    got = gate_json.get("mode")
+    if got != expected_mode:
+        raise ValueError(
+            f"controls artifact mode {got!r} != requested mode {expected_mode!r}; "
+            f"regenerate controls for --mode {expected_mode}")
+
+
 # ---------------------------------------------------------------------------
 # §4 trace observer -- INCREMENTAL per-completed-simulation collector.
 # Consumes on_root_simulation(count, root, updated_root_move,
@@ -825,6 +835,7 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
                "stall_flush_sims": args.stall_flush_sims})
     validate_controls_fingerprint(gate, expected)
     require_r0_qualified(gate)
+    require_matching_mode(gate, args.mode)
 
     from .build_fpu_dev_corpus import load_game_index
     replay_by_game = {r["game_idx"]: r["replay_path"]
@@ -842,7 +853,7 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
     r0_lockin = gate["r0_target_lockin_count"]
     absoff_lockin = gate["absoff_target_lockin_count"]
 
-    a_rows_source = _load_selected_a(args, replay_by_game, evaluator, base_cfg, run_configs)
+    a_rows_source = _load_selected_a(args, evaluator, base_cfg, run_configs)
 
     results = []
     smallest_safe = None
@@ -875,7 +886,7 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
     return 0
 
 
-def _load_selected_a(args, replay_by_game, evaluator, base_cfg, run_configs):
+def _load_selected_a(args, evaluator, base_cfg, run_configs):
     """{config_label: [A rows]} over the selected-A manifest (30 roots), each
     config vs absolute_off. Returns {} when no selected-A manifest is given."""
     if not args.selected_a_manifest:
@@ -883,7 +894,6 @@ def _load_selected_a(args, replay_by_game, evaluator, base_cfg, run_configs):
     from .position_probe_cases import load_csv_manifest
     from .goal_line_trigger_probe_cases import position_state
     cases = load_csv_manifest(args.selected_a_manifest)["cases"]
-    a_off: Dict[str, dict] = {}
     per_config: Dict[str, List[dict]] = {c.label: [] for c in run_configs}
     for case in cases:
         replay = json.loads(Path(case["replay_path"]).read_text())

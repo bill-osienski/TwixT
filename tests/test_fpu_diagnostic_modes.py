@@ -12,10 +12,15 @@ The `_dev_rejects` / `_a_passes` builders below are THIN: each constructs a
 MINIMAL `rows` set isolating exactly one gate metric at a given value and calls
 the module verdict fn. To realise a rate boundary exactly the builders pick the
 denominator the brief pins (0.05=5/100, 0.0499=499/10000, band 0.10=2/20 /
-0.0999=999/10000, control-flip 0.10=1/10 / 0.099=99/1000). For the p95 boundary
-every |delta| is made identical, so the pinned value is the p95 under ANY
-percentile convention (the gate fn uses the linear-interpolation `_percentile`
-shared with diagnose_fpu_sweep).
+0.0999=999/10000, control-flip 0.10=1/10 / 0.099=99/1000). The band case
+additionally dilutes with a second all-clean band so the OVERALL target rate
+independently stays < 0.05 -- this isolates the per-band gate from the
+overall target-rate gate (band A alone at 2/20==0.10 would otherwise ALSO
+trip target_new_collapse_rate>=0.05, so the boundary assertion would not
+actually pin the band-gate comparator). For the p95 boundary every |delta|
+is made identical, so the pinned value is the p95 under ANY percentile
+convention (the gate fn uses the linear-interpolation `_percentile` shared
+with diagnose_fpu_sweep).
 """
 import pytest
 
@@ -24,7 +29,8 @@ from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
     lock_in_event, progress, reply_reduction, prior_rank,
     dev_safety_verdict, selected_a_verdict)
 from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
-    V_REF, top_share, validate_controls_fingerprint, require_r0_qualified)
+    V_REF, top_share, validate_controls_fingerprint, require_r0_qualified,
+    require_matching_mode)
 
 
 # ---------------------------------------------------------------------------
@@ -138,11 +144,16 @@ def _dev_rejects(**metric):
         return _rejects(rows)          # single band, both values < 0.10 so per-band never fires
     if "band_new_collapse_rate" in metric:
         x = metric["band_new_collapse_rate"]
-        num, den = {0.10: (2, 20), 0.0999: (999, 10000)}[x]
+        # Isolate the BAND gate from the independent overall target-rate gate:
+        # band A alone carries the pinned rate (n>=20 so the band gate is
+        # active); band B is a second, all-clean band sized so the OVERALL
+        # target new-collapse rate stays < 0.05 even at x==0.10. Without this
+        # dilution, band A alone (2/20==0.10) would ALSO trip
+        # target_new_collapse_rate>=0.05 on its own, so the boundary
+        # assertion would still pass even if the band gate were deleted.
+        num, den, dilution = {0.10: (2, 20, 21), 0.0999: (999, 10000, 10000)}[x]
         rows = [_safe_target(band="A", new_collapse=(i < num)) for i in range(den)]
-        if x < 0.10:
-            # band passes (< 0.10); dilute so the OVERALL target rate stays < 0.05
-            rows += [_safe_target(band="B", new_collapse=False) for _ in range(den)]
+        rows += [_safe_target(band="B", new_collapse=False) for _ in range(dilution)]
         return _rejects(rows)
     if "lockin_count" in metric:
         count = metric["lockin_count"](_LOCKIN_BASE)
@@ -262,3 +273,19 @@ def test_r0_fail_blocks_candidates():
     for bad in ({"r0_qualified": False}, {}, {"r0_qualified": None}):
         with pytest.raises(ValueError):
             require_r0_qualified(bad)
+
+
+def test_require_matching_mode_refuses_cross_mode_controls():
+    # A controls artifact carries the split it was produced for (`mode`); its
+    # lock-in baselines and r0_qualified are split-specific and must not be
+    # reused across modes (e.g. a tuning-derived controls run consumed by a
+    # frozen_check candidates run would silently apply the wrong lock-in
+    # baselines / r0_qualified with no error).
+    require_matching_mode({"mode": "tuning"}, "tuning")              # matching -> no raise
+    require_matching_mode({"mode": "frozen_check"}, "frozen_check")  # matching -> no raise
+    with pytest.raises(ValueError):
+        require_matching_mode({"mode": "tuning"}, "frozen_check")
+    with pytest.raises(ValueError):
+        require_matching_mode({"mode": "frozen_check"}, "tuning")
+    with pytest.raises(ValueError):
+        require_matching_mode({}, "tuning")                          # mode absent
