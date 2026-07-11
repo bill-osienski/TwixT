@@ -193,3 +193,127 @@ def test_one_callback_per_completed_sim():
 def test_observer_off_matches_prebranch_golden():
     out, _r, _m = run_search()                    # default config, observer None
     assert out == json.load(open("tests/golden/fpu_prebranch_search.json"))
+
+
+# ===========================================================================
+# FpuTraceObserver (Task 7) -- the diagnostic-side observer that consumes the
+# `on_root_simulation(count, root, updated_root_move, current_root_leader_move)`
+# callback INCREMENTALLY (no 200-child rescan/sim). Records: first-visit sim
+# per root move; explored-mass 25/50/75% crossings; leader-change timeline
+# (leader taken from the PASSED arg, never recomputed); final-leader
+# last-takeover == stabilization; a `None` root move ignored for first-visit/
+# mass but still counted; end-state selected-move prior + rank + top share.
+# Driven by direct synthetic call sequences AND the real CPU FakeEvaluator
+# search (no GPU/MLX).
+# ===========================================================================
+from scripts.GPU.alphazero.diagnose_fpu_policy_mass import FpuTraceObserver
+from scripts.GPU.alphazero.mcts import visit_leader_move as _vlm
+
+
+def _root_with_priors(priors_by_move, *, visits=None, root_visits=0):
+    """Synthetic root: `priors_by_move` = {move_id: prior}. `visits` (optional)
+    = {move_id: visit_count} instantiates children with those counts so the
+    finalize-time top-share / prior-rank read a realistic end state."""
+    root = MCTSNode(state=None, visit_count=root_visits)
+    root.priors = dict(priors_by_move)
+    for mid in priors_by_move:
+        vc = (visits or {}).get(mid, 0)
+        if vc:
+            root.children[mid] = MCTSNode(state=None, parent=root, move=mid, visit_count=vc)
+    return root
+
+
+def test_observer_first_visit_sims_and_mass_crossings():
+    A, B, C = encode_move(0, 0), encode_move(1, 1), encode_move(2, 2)
+    root = _root_with_priors({A: 0.5, B: 0.3, C: 0.2})
+    obs = FpuTraceObserver()
+    obs.on_root_simulation(1, root, A, A)      # A first visited -> mass 0.5 (>=0.25,>=0.50)
+    obs.on_root_simulation(2, root, A, A)      # revisit A -> no new first-visit, mass unchanged
+    obs.on_root_simulation(3, root, B, A)      # B -> mass 0.8 (>=0.75)
+    obs.on_root_simulation(4, root, C, A)      # C -> mass 1.0
+    assert obs.first_visit_sim == {A: 1, B: 3, C: 4}
+    assert obs.mass_cross_sim == {0.25: 1, 0.50: 1, 0.75: 3}
+
+
+def test_observer_leader_timeline_and_stabilization():
+    A, B = encode_move(0, 0), encode_move(1, 1)
+    root = _root_with_priors({A: 0.6, B: 0.4})
+    obs = FpuTraceObserver()
+    for count, leader in enumerate([A, A, B, B, A], start=1):
+        obs.on_root_simulation(count, root, A, leader)     # move fixed; leader is the PASSED arg
+    assert obs.leader_timeline == [(1, A), (3, B), (5, A)]  # change-points only
+    assert obs.final_leader_move == A
+    assert obs.stabilization_sim == 5                      # final leader's LAST takeover
+
+
+def test_observer_takes_leader_from_passed_arg_not_recomputed():
+    # Build an end state whose ACTUAL visit-leader is B, but PASS A as the
+    # leader every sim -> the observer must report A (proving it never recomputes).
+    A, B = encode_move(0, 0), encode_move(4, 4)
+    root = _root_with_priors({A: 0.5, B: 0.5}, visits={A: 3, B: 9}, root_visits=12)
+    assert _vlm(root) == B                                  # the recomputed leader would be B
+    obs = FpuTraceObserver()
+    for count in range(1, 6):
+        obs.on_root_simulation(count, root, A, A)           # pass A, contradicting the tree
+    assert obs.final_leader_move == A
+    assert obs.leader_timeline == [(1, A)]
+
+
+def test_observer_ignores_none_root_move_but_counts_the_sim():
+    A = encode_move(0, 0)
+    root = _root_with_priors({A: 0.5, encode_move(1, 1): 0.5})
+    obs = FpuTraceObserver()
+    obs.on_root_simulation(1, root, None, None)             # None: no first-visit, no mass
+    obs.on_root_simulation(2, root, A, A)                   # A first visited AT sim 2, not 1
+    assert obs.first_visit_sim == {A: 2}                    # None never created a phantom move
+    assert abs(obs.explored_mass - 0.5) < 1e-12             # only A's prior counted
+    assert obs.completed_simulation_count == 2              # counter still advanced past the None sim
+
+
+def test_observer_finalize_selected_move_prior_rank_and_top_share():
+    # Final leader is the LOW-prior move C (prior 0.2 -> rank 3); its subtree
+    # dominates the visits (top share 0.8). This is the lock-in geometry §6.1
+    # is built to catch.
+    A, B, C = encode_move(0, 0), encode_move(1, 1), encode_move(2, 2)
+    root = _root_with_priors({A: 0.5, B: 0.3, C: 0.2},
+                             visits={A: 1, B: 1, C: 8}, root_visits=10)
+    obs = FpuTraceObserver()
+    obs.on_root_simulation(1, root, A, A)
+    obs.on_root_simulation(2, root, B, A)
+    obs.on_root_simulation(3, root, C, C)          # C takes over and holds
+    res = obs.result()
+    assert res["selected_move_prior"] == 0.2
+    assert res["selected_move_prior_rank"] == 3
+    assert abs(res["final_root_top_share"] - 0.8) < 1e-12
+    assert res["stabilization_sim"] == 3
+    assert abs(res["explored_mass_at_stabilization"] - 1.0) < 1e-12   # A+B+C all visited by sim 3
+
+
+def test_observer_over_real_cpu_search_is_consistent():
+    obs = FpuTraceObserver(); spy = _Spy()
+
+    class _Fan:                                     # fan the callback to both observers
+        def on_root_simulation(self, *a):
+            obs.on_root_simulation(*a); spy.on_root_simulation(*a)
+
+    _out, root, _m = run_search(n_sims=200, observer=_Fan())
+    assert obs.completed_simulation_count == 200
+    # final leader agrees with the real visit-leader and the spy's last leader
+    assert obs.final_leader_move == visit_leader_move(root) == spy.calls[-1][2]
+    assert 1 <= obs.stabilization_sim <= 200
+    legal = set(root.priors.keys())
+    assert set(obs.first_visit_sim).issubset(legal)
+    assert all(1 <= s <= 200 for s in obs.first_visit_sim.values())
+    # uniform priors + fpu=0 visit every root move once before revisiting, so all
+    # three mass thresholds are crossed, in order
+    xs = obs.mass_cross_sim
+    assert xs[0.25] is not None and xs[0.50] is not None and xs[0.75] is not None
+    assert xs[0.25] <= xs[0.50] <= xs[0.75]
+    res = obs.result()
+    assert res["selected_move_prior_rank"] >= 1
+    assert 0.0 <= res["final_root_top_share"] <= 1.0
+    # explored mass is the raw summed prior of first-visited children (mirrors
+    # mcts.explored_policy_mass, which is unclamped -- policy_mass_fpu clamps
+    # only at point of use); float summation of ~N uniform priors can land a
+    # hair over 1.0, so tolerate epsilon rather than clamp away information.
+    assert 0.0 <= res["explored_mass_at_stabilization"] <= 1.0 + 1e-6
