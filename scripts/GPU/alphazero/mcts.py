@@ -92,6 +92,19 @@ def _is_near_corner_cheb(r: int, c: int, S: int, R: int) -> bool:
     return False
 
 
+def policy_mass_fpu(parent_q: float, explored_mass: float, r: float) -> float:
+    """Context-relative FPU (policy-mass rule): FPU = Q_parent - r * sqrt(clamp(explored_mass, 0, 1)).
+
+    `explored_mass` is the summed prior mass over a node's children that have
+    a COMPLETED (backed-up) visit -- never virtual/pending. See design doc
+    §1 (docs/superpowers/specs/2026-07-10-context-relative-fpu-policy-mass-design.md).
+    """
+    if not (math.isfinite(parent_q) and math.isfinite(explored_mass) and math.isfinite(r)):
+        raise ValueError("policy_mass_fpu requires finite inputs")   # NaN would pass both clamp comparisons
+    m = 0.0 if explored_mass < 0.0 else (1.0 if explored_mass > 1.0 else explored_mass)
+    return parent_q - r * math.sqrt(m)
+
+
 @dataclass
 class MCTSConfig:
     """MCTS hyperparameters."""
@@ -102,6 +115,12 @@ class MCTSConfig:
                              # the prior hardcoded value exactly. Negative =>
                              # pessimistic => the mover revisits known-good
                              # children before scanning unexplored ones.
+    # Opt-in context-relative FPU (policy-mass rule): None (default) =>
+    # existing absolute fpu_value path, byte-identical. Not None =>
+    # FPU = Q_parent - r*sqrt(clamp(explored_policy_mass, 0, 1)); 0.0 is
+    # an ENABLED mode (FPU = Q_parent), NOT equivalent to None. Mutually
+    # exclusive with a nonzero fpu_value (see __post_init__).
+    fpu_policy_mass_reduction: Optional[float] = None
     n_simulations: int = 800  # Simulations per move
     dirichlet_alpha: float = 0.3  # Dirichlet noise parameter
     dirichlet_eps: float = 0.25  # Noise mixing weight (0 = no noise)
@@ -151,6 +170,17 @@ class MCTSConfig:
             raise ValueError("pending_virtual_visits must be >= 0")
         if self.stall_flush_sims < 0:
             raise ValueError("stall_flush_sims must be >= 0")
+        if self.fpu_policy_mass_reduction is not None and self.fpu_value != 0.0:
+            raise ValueError(
+                "fpu_policy_mass_reduction is mutually exclusive with a nonzero "
+                "fpu_value (the policy-mass rule is parent-relative and conflicts "
+                "with an absolute floor)"
+            )
+        if self.fpu_policy_mass_reduction is not None and (
+            not math.isfinite(self.fpu_policy_mass_reduction)
+            or self.fpu_policy_mass_reduction < 0
+        ):
+            raise ValueError("fpu_policy_mass_reduction must be finite and >= 0")
 
 
 @dataclass
