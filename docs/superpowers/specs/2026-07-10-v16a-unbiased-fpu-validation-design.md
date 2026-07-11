@@ -37,9 +37,9 @@ First rung of the FPU validation ladder. The whole "Targeted Value Calibration" 
 | opening | 1–15 | 40 | cap 1 + cross-game prefix dedup |
 | early_mid | 16–40 | 100 | cap 2, min-gap 8 |
 | midgame | 41–90 | 100 | cap 2, min-gap 8 |
-| late | 91+ | 84 | cap 2, min-gap 8; SHORTFALL vs 100 (data-limited: only 48 eligible games; 47 rows come from the 19 `state_cap` 280-ply marathons kept as `game_result=unknown` — the most search-stressed samples). |
+| late | 91+ | 84 | cap 2, min-gap 8; SHORTFALL vs 100 (data-limited: only 48 eligible games; **38** of the 84 come from the 19 `state_cap` 280-ply marathons kept as `game_result=unknown` — the most search-stressed samples). |
 
-Late is intentionally coverage-first: 84 well-separated positions across 48 games beats a round 100 built from correlated plies. Outcomes: red 129 / black 148 / unknown 47.
+Late is intentionally coverage-first: 84 well-separated positions across 48 games beats a round 100 built from correlated plies. Outcomes: red 129 / black 148 / unknown 47 — all 47 `unknown` are the 280-ply marathons, distributed opening 1 / early-mid 6 / midgame 2 / late 38.
 
 ## Protocol
 
