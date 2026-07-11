@@ -125,6 +125,23 @@ def explored_policy_mass(node: "MCTSNode") -> float:
     return total
 
 
+def visit_leader_move(node: "MCTSNode") -> Optional[int]:
+    """Canonical MCTS visit-leader move id: max `visit_count` among children,
+    ties broken by lowest encoded move id; `None` if no child has a
+    completed visit.
+
+    Comparator kept IDENTICAL to `continuation_extraction._best_child` --
+    that module already does `from .mcts import decode_move`, so importing
+    its comparator back here would be circular. This is the single source
+    of truth the optional per-completed-simulation observer (`_backup`)
+    reports as the "current root leader" after each backup.
+    """
+    visited = [c for c in node.children.values() if c.visit_count > 0]
+    if not visited:
+        return None
+    return min(visited, key=lambda c: (-c.visit_count, c.move)).move
+
+
 @dataclass
 class MCTSConfig:
     """MCTS hyperparameters."""
@@ -263,6 +280,7 @@ class MCTS:
         evaluator: Evaluator,
         config: Optional[MCTSConfig] = None,
         rng: Optional[random.Random] = None,
+        observer=None,
     ):
         """Initialize MCTS.
 
@@ -270,10 +288,18 @@ class MCTS:
             evaluator: Evaluator for leaf node evaluation (implements Evaluator protocol)
             config: MCTS hyperparameters (uses defaults if None)
             rng: Random number generator (uses new Random if None)
+            observer: Optional read-only per-completed-simulation trace hook
+                (see `_backup`). `None` (default) adds/mutates no state --
+                the observer-off path is part of the byte-identical-off
+                proof against the pre-branch golden.
         """
         self.evaluator = evaluator
         self.config = config or MCTSConfig()
         self.rng = rng or random.Random()
+
+        self._observer = observer
+        if observer is not None:
+            self._observer_completed_count = 0      # observer-off mutates nothing (fix 5b)
 
         # For testing: track NN calls
         self._nn_call_count = 0
@@ -1060,6 +1086,10 @@ class MCTS:
         Args:
             search_path: Path from root to leaf
             leaf_value: Value at leaf node (from perspective of leaf's to_move)
+
+        If an observer is attached (see `__init__`), it is notified exactly
+        once, after the loop below completes, with the just-updated tree
+        state -- so `visit_leader_move(root)` reflects this backup's counts.
         """
         self._total_backups += 1  # Track total backups for diagnostics
         value = leaf_value
@@ -1067,6 +1097,13 @@ class MCTS:
             node.visit_count += 1
             node.value_sum += value
             value = -value  # Flip for parent (opponent's perspective)
+
+        if self._observer is not None:
+            self._observer_completed_count += 1
+            root = search_path[0]
+            move = search_path[1].move if len(search_path) >= 2 else None
+            self._observer.on_root_simulation(
+                self._observer_completed_count, root, move, visit_leader_move(root))
 
     def _add_dirichlet_noise(self, root: MCTSNode, ply: int = 0) -> None:
         """Add Dirichlet noise to root priors for exploration.
