@@ -88,6 +88,72 @@ SUMMARY_FIELDNAMES = [
 ]
 
 
+DEFAULT_STRATA_SUMMARY_OUT = "logs/eval/fpu_check/a_predrop_fpu_sweep_summary_by_stratum.csv"
+PROTOCOL_FPUS = [0.0, -0.20]   # frozen v16a validation candidate set (0.0 = control)
+
+
+def manifest_is_neutral(cases) -> bool:
+    """Neutral / v16a iff EVERY row has a non-empty ply_bucket; legacy iff none
+    do. A mixed or empty manifest is a construction error -> raise (a first-row
+    check would silently misclassify a malformed manifest)."""
+    if not cases:
+        raise ValueError("empty manifest: cannot determine legacy/neutral mode")
+    flags = [bool(c.get("ply_bucket")) for c in cases]
+    if all(flags):
+        return True
+    if not any(flags):
+        return False
+    raise ValueError(
+        f"mixed manifest: {sum(flags)}/{len(flags)} rows carry ply_bucket; "
+        "all-or-none is required")
+
+
+def resolve_integrity_csv(integrity_csv, skip, neutral, default_csv):
+    """fpu=0.0 exact-reproduction baseline, or None to skip. --skip wins; explicit
+    csv next; neutral-unspecified skips; legacy-unspecified uses default_csv (so a
+    bare legacy run still checks)."""
+    if skip:
+        return None
+    if integrity_csv:
+        return integrity_csv
+    return None if neutral else default_csv
+
+
+def _parse_fpu_list(s):
+    return [float(x) for x in s.split(",") if x.strip()]
+
+
+def resolve_fpu_values(fpu_values_arg, neutral, allow_non_protocol):
+    """Frozen-protocol default: a neutral run with no explicit values uses
+    PROTOCOL_FPUS (0.0, -0.20). Any other value set on a neutral manifest needs
+    --allow-non-protocol-fpu (screening extra candidates on the holdout is tuning
+    on the holdout). 0.0 must be present (delta baseline + integrity)."""
+    if fpu_values_arg is None:
+        values = list(PROTOCOL_FPUS) if neutral else _parse_fpu_list(DEFAULT_FPUS)
+    else:
+        values = _parse_fpu_list(fpu_values_arg)
+    if BASELINE_FPU not in values:
+        raise SystemExit(f"--fpu-values must include the baseline {BASELINE_FPU}")
+    if neutral and set(values) != set(PROTOCOL_FPUS) and not allow_non_protocol:
+        raise SystemExit(
+            f"neutral (held-out) manifest: the frozen v16a protocol is "
+            f"{PROTOCOL_FPUS} only. Screening other values on the holdout is "
+            f"tuning on the holdout. Pass --allow-non-protocol-fpu to override.")
+    return values
+
+
+def resolve_output_paths(out, summary_out, strata_out, manifest, neutral):
+    """Legacy -> the exact A defaults. Neutral -> beside the manifest, so held-out
+    results never land in the selected-A directory. Explicit paths always win."""
+    if not neutral:
+        return (out or DEFAULT_OUT, summary_out or DEFAULT_SUMMARY_OUT,
+                strata_out or DEFAULT_STRATA_SUMMARY_OUT)
+    base = Path(manifest).parent
+    return (out or str(base / "neutral_fpu_sweep_cases.csv"),
+            summary_out or str(base / "neutral_fpu_sweep_summary.csv"),
+            strata_out or str(base / "neutral_fpu_sweep_by_stratum.csv"))
+
+
 def gate_flags(value: float) -> tuple[bool, bool]:
     """(over, severe) using the GATE's own inclusive thresholds -- 0.25 / 0.50,
     never `> 0`. An earlier ad-hoc summarizer used `> 0` for `over`, which made
@@ -183,13 +249,20 @@ def _parse_args(argv):
                     "roots and records the gate metric plus two tree-shape "
                     "counters. No mcts.py change (Task 1 already finished "
                     "it).")
-    ap.add_argument("--a-manifest", default=DEFAULT_A_MANIFEST)
+    ap.add_argument("--manifest", "--a-manifest", dest="manifest",
+                    default=DEFAULT_A_MANIFEST)
     ap.add_argument("--checkpoint", default=DEFAULT_CHECKPOINT)
-    ap.add_argument("--phase0-csv", default=DEFAULT_PHASE0_CSV,
-                    help="baseline for the mandatory fpu_value=0.0 integrity check")
-    ap.add_argument("--fpu-values", default=DEFAULT_FPUS)
-    ap.add_argument("--out", default=DEFAULT_OUT)
-    ap.add_argument("--summary-out", default=DEFAULT_SUMMARY_OUT)
+    ap.add_argument("--integrity-csv", "--phase0-csv", dest="integrity_csv",
+                    default=None)
+    ap.add_argument("--skip-integrity-check", action="store_true")
+    ap.add_argument("--fpu-values", default=None,
+                    help="comma list; neutral manifests default to the frozen "
+                         "protocol 0.0,-0.20.")
+    ap.add_argument("--allow-non-protocol-fpu", action="store_true",
+                    help="permit non-protocol --fpu-values on a neutral manifest.")
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--summary-out", default=None)
+    ap.add_argument("--strata-summary-out", default=None)
     ap.add_argument("--eval-batch-size", type=int, default=14)
     ap.add_argument("--stall-flush-sims", type=int, default=48)
     ap.add_argument("--position-probe-base-seed", type=int, default=20260616)
@@ -200,17 +273,24 @@ def _parse_args(argv):
 
 def main(argv=None) -> int:
     args = _parse_args(argv)
-    fpus = [float(x) for x in args.fpu_values.split(",") if x.strip()]
-    if BASELINE_FPU not in fpus:
-        raise SystemExit(
-            f"--fpu-values must include the baseline {BASELINE_FPU} (the "
-            f"gate's own value): it is the only check that the per-value "
-            f"config binding took effect and that this sweep reproduces the "
-            f"gate. Got {fpus}")
-    cases = load_csv_manifest(args.a_manifest)["cases"]
+    cases = load_csv_manifest(args.manifest)["cases"]
     if args.limit_cases is not None:
         cases = cases[:args.limit_cases]
-    baseline = _phase0_baseline(args.phase0_csv)
+    neutral = manifest_is_neutral(cases)
+    fpus = resolve_fpu_values(args.fpu_values, neutral, args.allow_non_protocol_fpu)
+    if neutral and set(fpus) != set(PROTOCOL_FPUS):
+        print(f"[fpu] WARNING: non-protocol values {fpus} on a held-out manifest "
+              f"(--allow-non-protocol-fpu); this is not the frozen v16a protocol.")
+    out_path, summary_path, strata_path = resolve_output_paths(
+        args.out, args.summary_out, args.strata_summary_out, args.manifest, neutral)
+    resolved_integrity = resolve_integrity_csv(
+        args.integrity_csv, args.skip_integrity_check, neutral, DEFAULT_PHASE0_CSV)
+    run_integrity = resolved_integrity is not None
+    baseline = _phase0_baseline(resolved_integrity) if run_integrity else {}
+    if not run_integrity:
+        why = ("--skip-integrity-check" if args.skip_integrity_check
+               else "neutral manifest, no baseline" if neutral else "no baseline")
+        print(f"[fpu] integrity check SKIPPED ({why}); fpu=0.0 remains the delta baseline.")
     search_fns = _search_fns(args.checkpoint, fpus, args.eval_batch_size,
                              args.stall_flush_sims)
 
@@ -237,9 +317,9 @@ def main(argv=None) -> int:
             # worthless. This check -- not the visit-count guard above, which
             # only catches a wrong n_simulations -- is what actually verifies
             # the per-value MCTSConfig binding took effect.
-            if x == BASELINE_FPU:
+            if run_integrity and x == BASELINE_FPU:
                 if cid not in baseline:
-                    raise SystemExit(f"{cid} missing from {args.phase0_csv}")
+                    raise SystemExit(f"{cid} missing from {resolved_integrity}")
                 if abs(black - baseline[cid]) > TOLERANCE:
                     raise SystemExit(
                         f"INTEGRITY CHECK FAILED at fpu_value=0.0 on {cid}: "
@@ -265,7 +345,7 @@ def main(argv=None) -> int:
                 "top_child_n_visited_children": 0 if top is None else
                                                 n_visited_children(top),
             })
-        if x == BASELINE_FPU:
+        if run_integrity and x == BASELINE_FPU:
             print(f"[fpu] integrity check PASSED at fpu_value=0.0 on "
                   f"{len(rows)} cases (reproduces Phase 0 within {TOLERANCE})")
         s = summarize(rows)
@@ -279,18 +359,18 @@ def main(argv=None) -> int:
               f"top_child_children={s['top_child_children_mean']:.1f} "
               f"top_child_share={s['top_child_visit_share_mean']:.3f}")
 
-    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    with open(args.out, "w", newline="") as f:
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDNAMES)
         w.writeheader()
         w.writerows(out_rows)
-    Path(args.summary_out).parent.mkdir(parents=True, exist_ok=True)
-    with open(args.summary_out, "w", newline="") as f:
+    Path(summary_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(summary_path, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=SUMMARY_FIELDNAMES)
         w.writeheader()
         w.writerows(summary_rows)
-    print(f"\nwrote {len(out_rows)} case rows -> {args.out}")
-    print(f"wrote {len(summary_rows)} summary rows -> {args.summary_out}")
+    print(f"\nwrote {len(out_rows)} case rows -> {out_path}")
+    print(f"wrote {len(summary_rows)} summary rows -> {summary_path}")
     return 0
 
 
