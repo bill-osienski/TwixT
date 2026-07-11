@@ -331,6 +331,40 @@ def summarize_grouped(rows, group_kind):
     return out
 
 
+def _legacy_case_row(r):
+    return {k: r[k] for k in FIELDNAMES}
+
+
+def _generic_case_row(r):
+    m = {"fpu_value": r["fpu_value"], "case_id": r["case_id"],
+         "game_id": r["game_idx"], "ply": r["position_ply"],
+         "ply_bucket": r["ply_bucket"], "side_to_move": r["side_to_move"],
+         "root_mcts_stm_value": r["root_mcts_stm_value"],
+         "root_mcts_black_value": r["root_mcts_black_value"],
+         "top_move": r["top_child_move"],
+         "top_child_visit_share": r["top_child_visit_share"],
+         "root_visit_entropy": r["root_visit_entropy"],
+         "root_effective_children": r["root_effective_children"],
+         "root_collapsed_ge_0_95": r["root_collapsed_ge_0_95"],
+         "root_n_visited_children": r["root_n_visited_children"],
+         "top_child_n_visited_children": r["top_child_n_visited_children"]}
+    for k in ("root_value_delta_stm_vs_fpu0", "root_value_delta_black_vs_fpu0",
+              "top_move_changed_vs_fpu0", "root_children_delta_vs_fpu0",
+              "top_child_children_delta_vs_fpu0", "top_child_visit_share_delta_vs_fpu0",
+              "root_effective_children_delta_vs_fpu0", "root_visit_entropy_delta_vs_fpu0",
+              "new_collapse_vs_fpu0", "resolved_collapse_vs_fpu0"):
+        m[k] = r[k]
+    return m
+
+
+def _write_csv(path, fieldnames, rows):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        w.writerows(rows)
+
+
 def gate_flags(value: float) -> tuple[bool, bool]:
     """(over, severe) using the GATE's own inclusive thresholds -- 0.25 / 0.50,
     never `> 0`. An earlier ad-hoc summarizer used `> 0` for `over`, which made
@@ -471,7 +505,7 @@ def main(argv=None) -> int:
     search_fns = _search_fns(args.checkpoint, fpus, args.eval_batch_size,
                              args.stall_flush_sims)
 
-    out_rows, summary_rows = [], []
+    all_rows = []
     for x in fpus:
         rows = []
         for case in cases:
@@ -480,74 +514,81 @@ def main(argv=None) -> int:
                 case, search_fns[x],
                 pos_base_seed=args.position_probe_base_seed,
                 goal_base_seed=args.goal_line_base_seed)
-
             if root.visit_count != SIMS:
                 raise SystemExit(
-                    f"fpu_value={x} {cid}: search ran {root.visit_count} "
-                    f"sims, expected {SIMS} -- the MCTSConfig's "
-                    f"n_simulations did not take effect")
-
+                    f"fpu_value={x} {cid}: {root.visit_count} sims != {SIMS}")
             black = to_black(root_value_stm, side)
-
-            # MANDATORY integrity check: fpu_value=0.0 IS the gate's config,
-            # so it must reproduce Phase 0 exactly. If not, the sweep is
-            # worthless. This check -- not the visit-count guard above, which
-            # only catches a wrong n_simulations -- is what actually verifies
-            # the per-value MCTSConfig binding took effect.
             if run_integrity and x == BASELINE_FPU:
                 if cid not in baseline:
                     raise SystemExit(f"{cid} missing from {resolved_integrity}")
                 if abs(black - baseline[cid]) > TOLERANCE:
                     raise SystemExit(
-                        f"INTEGRITY CHECK FAILED at fpu_value=0.0 on {cid}: "
-                        f"fresh root_mcts_black_value={black:+.6f} != Phase-0 "
-                        f"{baseline[cid]:+.6f} -- the baseline config drifted; "
-                        f"DO NOT INTERPRET THE SWEEP")
-
+                        f"INTEGRITY CHECK FAILED at fpu=0.0 on {cid}: "
+                        f"{black:+.6f} != Phase-0 {baseline[cid]:+.6f}")
             over, severe = gate_flags(black)
             top = _best_child(root)
+            top_share = "" if top is None else top.visit_count / root.visit_count
+            child_visits = [c.visit_count for c in root.children.values()
+                            if c.visit_count > 0]
+            entropy = visit_entropy(child_visits)
             rows.append({
-                "fpu_value": x,
-                "case_id": cid,
-                "root_mcts_black_value": black,
-                "gate_over_ge_0_25": over,
-                "gate_severe_ge_0_50": severe,
+                "fpu_value": x, "case_id": cid,
+                "game_idx": case["game_idx"], "position_ply": case["position_ply"],
+                "ply_bucket": case.get("ply_bucket", ""), "side_to_move": side,
+                "root_mcts_stm_value": root_value_stm, "root_mcts_black_value": black,
+                "gate_over_ge_0_25": over, "gate_severe_ge_0_50": severe,
                 "root_n_visited_children": n_visited_children(root),
-                "top_child_move": "" if top is None else
-                                  "{}:{}".format(*decode_move(top.move)),
-                "top_child_visit_share": "" if top is None else
-                                         top.visit_count / root.visit_count,
-                "top_child_q_black": "" if top is None else
-                                     to_black(top.q_value, top.state.to_move),
-                "top_child_n_visited_children": 0 if top is None else
-                                                n_visited_children(top),
+                "root_visit_entropy": entropy,
+                "root_effective_children": math.exp(entropy) if child_visits else 0.0,
+                "root_collapsed_ge_0_95": isinstance(top_share, float) and top_share >= 0.95,
+                "top_child_move": "" if top is None else "{}:{}".format(*decode_move(top.move)),
+                "top_child_visit_share": top_share,
+                "top_child_q_black": "" if top is None else to_black(top.q_value, top.state.to_move),
+                "top_child_n_visited_children": 0 if top is None else n_visited_children(top),
             })
         if run_integrity and x == BASELINE_FPU:
-            print(f"[fpu] integrity check PASSED at fpu_value=0.0 on "
-                  f"{len(rows)} cases (reproduces Phase 0 within {TOLERANCE})")
-        s = summarize(rows)
-        s["fpu_value"] = x
-        summary_rows.append(s)
-        out_rows.extend(rows)
-        print(f"[fpu] fpu={x:<6} mean={s['mean_black_value']:+.4f} "
-              f"over={s['over_pct_ge_0_25']:.1f}% "
-              f"severe={s['severe_pct_ge_0_50']:.1f}% "
-              f"root_children={s['root_children_mean']:.1f} "
-              f"top_child_children={s['top_child_children_mean']:.1f} "
-              f"top_child_share={s['top_child_visit_share_mean']:.3f}")
+            print(f"[fpu] integrity check PASSED at fpu=0.0 on {len(rows)} cases")
+        all_rows.extend(rows)
 
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        w.writeheader()
-        w.writerows(out_rows)
-    Path(summary_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(summary_path, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=SUMMARY_FIELDNAMES)
-        w.writeheader()
-        w.writerows(summary_rows)
-    print(f"\nwrote {len(out_rows)} case rows -> {out_path}")
-    print(f"wrote {len(summary_rows)} summary rows -> {summary_path}")
+    if neutral:
+        enrich_with_deltas(all_rows)
+        _write_csv(out_path, GENERIC_CASE_FIELDNAMES,
+                   [_generic_case_row(r) for r in all_rows])
+        overall = []
+        for x in fpus:
+            g = summarize_grouped([r for r in all_rows if r["fpu_value"] == x], "all")[0]
+            g["fpu_value"] = x
+            overall.append({k: g[k] for k in GENERIC_SUMMARY_FIELDNAMES})
+        _write_csv(summary_path, GENERIC_SUMMARY_FIELDNAMES, overall)
+        strata = []
+        for x in fpus:
+            xr = [r for r in all_rows if r["fpu_value"] == x]
+            for kind in ("bucket", "side", "bucket_x_side"):
+                for g in summarize_grouped(xr, kind):
+                    g["fpu_value"] = x
+                    strata.append({k: g[k] for k in STRATA_SUMMARY_FIELDNAMES})
+        _write_csv(strata_path, STRATA_SUMMARY_FIELDNAMES, strata)
+        for row in overall:
+            print(f"[fpu] fpu={row['fpu_value']:<6} "
+                  f"mover_dmean={row['mean_root_value_delta_stm_vs_fpu0']:+.4f} "
+                  f"flip={row['top_move_flip_rate_vs_fpu0']*100:.1f}% "
+                  f"new_collapse={row['new_collapse_rate']*100:.1f}% "
+                  f"eff_child_d={row['mean_root_effective_children_delta_vs_fpu0']:+.2f}")
+        print(f"\nwrote {len(all_rows)} case rows -> {out_path}")
+        print(f"wrote {len(overall)} overall + {len(strata)} stratified summary rows")
+    else:
+        _write_csv(out_path, FIELDNAMES, [_legacy_case_row(r) for r in all_rows])
+        summary_rows = []
+        for x in fpus:
+            s = summarize([r for r in all_rows if r["fpu_value"] == x])
+            s["fpu_value"] = x
+            summary_rows.append(s)
+        _write_csv(summary_path, SUMMARY_FIELDNAMES, summary_rows)
+        for s in summary_rows:
+            print(f"[fpu] fpu={s['fpu_value']:<6} mean={s['mean_black_value']:+.4f} "
+                  f"over={s['over_pct_ge_0_25']:.1f}% severe={s['severe_pct_ge_0_50']:.1f}%")
+        print(f"\nwrote {len(all_rows)} case rows -> {out_path}")
+        print(f"wrote {len(summary_rows)} summary rows -> {summary_path}")
     return 0
 
 

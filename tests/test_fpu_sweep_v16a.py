@@ -161,3 +161,89 @@ def test_summarize_grouped_strata():
         "midgame|black", "midgame|red", "late|black"}
     assert STRATA_SUMMARY_FIELDNAMES[:3] == ["fpu_value", "group_kind", "group"]
     assert "mean_root_value_delta_stm_vs_fpu0" in GENERIC_SUMMARY_FIELDNAMES
+
+
+import csv as _csv
+from scripts.GPU.alphazero.diagnose_fpu_sweep import (
+    _legacy_case_row, _generic_case_row, _write_csv, FIELDNAMES)
+
+
+def test_legacy_projection_exact_columns():
+    rich = {k: 0 for k in FIELDNAMES}
+    rich.update({"fpu_value": 0.0, "case_id": "A", "extra_key": 99})
+    assert list(_legacy_case_row(rich).keys()) == FIELDNAMES     # no extras -> DictWriter safe
+
+
+def test_legacy_case_csv_golden_bytes(tmp_path):
+    r = {"fpu_value": 0.0, "case_id": "game_x", "root_mcts_black_value": 0.5,
+         "gate_over_ge_0_25": True, "gate_severe_ge_0_50": False,
+         "root_n_visited_children": 3, "top_child_move": "12:8",
+         "top_child_visit_share": 0.75, "top_child_q_black": -0.25,
+         "top_child_n_visited_children": 42}
+    p = tmp_path / "c.csv"
+    _write_csv(str(p), FIELDNAMES, [_legacy_case_row(r)])
+    expected = (
+        "fpu_value,case_id,root_mcts_black_value,gate_over_ge_0_25,"
+        "gate_severe_ge_0_50,root_n_visited_children,top_child_move,"
+        "top_child_visit_share,top_child_q_black,top_child_n_visited_children\r\n"
+        "0.0,game_x,0.5,True,False,3,12:8,0.75,-0.25,42\r\n")
+    assert p.read_bytes() == expected.encode()
+
+
+import types
+from pathlib import Path as _P
+import scripts.GPU.alphazero.diagnose_fpu_sweep as sweep
+from scripts.GPU.alphazero.mcts import MCTSNode, encode_move
+
+
+def _fake_root(root_stm, children):
+    """children: [(rc, visits, q_value, to_move)]. Root has visit_count = SIMS so
+    the sim-count guard passes; children give _best_child / entropy something to
+    read. q_value = value_sum / visit_count, so value_sum = q * v."""
+    root = MCTSNode(state=types.SimpleNamespace(to_move="black"), visit_count=sweep.SIMS)
+    for rc, v, q, tm in children:
+        ch = MCTSNode(state=types.SimpleNamespace(to_move=tm), parent=root,
+                      move=encode_move(*rc), visit_count=v, value_sum=q * v)
+        root.children[ch.move] = ch
+    return root, root_stm
+
+
+_FAKE = {
+    ("game_000005_ply_020", 0.0): _fake_root(0.5, [((12, 8), 300, -0.25, "red"), ((1, 1), 100, 0.1, "red")]),
+    ("game_000005_ply_020", -0.20): _fake_root(0.3, [((12, 8), 260, -0.10, "red"), ((1, 1), 140, 0.2, "red")]),
+}
+
+
+def _fake_search_for_row(case, fn, **kw):
+    root, stm = _FAKE[(case["case_id"], fn)]
+    return None, case["side_to_move"], stm, root
+
+
+def _legacy_manifest(tmp_path):
+    p = tmp_path / "legacy.csv"
+    p.write_text("game_idx,case_id,replay_path,position_ply,side_to_move\n"
+                 "5,game_000005_ply_020,r.json,20,black\n")
+    return str(p)
+
+
+def test_main_legacy_end_to_end_matches_golden(tmp_path, monkeypatch):
+    monkeypatch.setattr(sweep, "_search_fns", lambda *a, **k: {x: x for x in a[1]})
+    monkeypatch.setattr(sweep, "search_for_row", _fake_search_for_row)
+    monkeypatch.setattr(sweep, "_phase0_baseline", lambda p: {"game_000005_ply_020": 0.5})
+    out, summ = tmp_path / "cases.csv", tmp_path / "summary.csv"
+    rc = sweep.main(["--manifest", _legacy_manifest(tmp_path), "--fpu-values", "0.0,-0.20",
+                     "--integrity-csv", "dummy", "--out", str(out), "--summary-out", str(summ)])
+    assert rc == 0
+    golden = _P("tests/golden")
+    assert out.read_bytes() == (golden / "fpu_sweep_legacy_cases.csv").read_bytes()
+    assert summ.read_bytes() == (golden / "fpu_sweep_legacy_summary.csv").read_bytes()
+
+
+def test_main_legacy_integrity_mismatch_raises(tmp_path, monkeypatch):
+    monkeypatch.setattr(sweep, "_search_fns", lambda *a, **k: {x: x for x in a[1]})
+    monkeypatch.setattr(sweep, "search_for_row", _fake_search_for_row)
+    monkeypatch.setattr(sweep, "_phase0_baseline", lambda p: {"game_000005_ply_020": 0.99})
+    with pytest.raises(SystemExit):
+        sweep.main(["--manifest", _legacy_manifest(tmp_path), "--fpu-values", "0.0,-0.20",
+                    "--integrity-csv", "dummy", "--out", str(tmp_path / "o.csv"),
+                    "--summary-out", str(tmp_path / "s.csv")])

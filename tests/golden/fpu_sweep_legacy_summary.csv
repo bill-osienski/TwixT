@@ -1,0 +1,3 @@
+fpu_value,n,mean_black_value,over_pct_ge_0_25,severe_pct_ge_0_50,positive_pct_gt_0,root_children_mean,top_child_children_mean,top_child_visit_share_mean,min,max
+0.0,1,0.5,100.0,100.0,100.0,2.0,0.0,0.75,0.5,0.5
+-0.2,1,0.3,100.0,0.0,100.0,2.0,0.0,0.65,0.3,0.3

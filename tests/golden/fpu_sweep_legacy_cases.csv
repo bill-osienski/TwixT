@@ -1,0 +1,3 @@
+fpu_value,case_id,root_mcts_black_value,gate_over_ge_0_25,gate_severe_ge_0_50,root_n_visited_children,top_child_move,top_child_visit_share,top_child_q_black,top_child_n_visited_children
+0.0,game_000005_ply_020,0.5,True,True,2,12:8,0.75,0.25,0
+-0.2,game_000005_ply_020,0.3,True,False,2,12:8,0.65,0.1,0
