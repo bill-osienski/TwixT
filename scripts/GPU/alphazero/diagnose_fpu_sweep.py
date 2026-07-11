@@ -217,6 +217,120 @@ def enrich_with_deltas(rows):
     return rows
 
 
+BUCKET_ORDER = ["opening", "early_mid", "midgame", "late"]
+_METRIC_FIELDS = [
+    "num_positions",
+    "mean_root_value_delta_stm_vs_fpu0", "median_abs_root_value_delta_stm_vs_fpu0",
+    "p90_abs_root_value_delta_stm_vs_fpu0", "p95_abs_root_value_delta_stm_vs_fpu0",
+    "mean_root_value_delta_black_vs_fpu0", "top_move_flip_rate_vs_fpu0",
+    "mean_root_visit_entropy_delta_vs_fpu0",
+    "mean_root_effective_children_delta_vs_fpu0",
+    "mean_root_children_delta_vs_fpu0", "mean_top_child_children_delta_vs_fpu0",
+    "mean_top_child_children_delta_stable_top_vs_fpu0",
+    "mean_top_child_visit_share_delta_vs_fpu0",
+    "new_collapse_count", "new_collapse_rate", "resolved_collapse_count",
+    "mean_root_effective_children", "mean_root_n_visited_children",
+    "mean_top_child_n_visited_children", "mean_top_child_visit_share",
+    "collapsed_ge_0_95_rate",
+]
+GENERIC_SUMMARY_FIELDNAMES = ["fpu_value"] + _METRIC_FIELDS
+STRATA_SUMMARY_FIELDNAMES = ["fpu_value", "group_kind", "group"] + _METRIC_FIELDS
+
+
+def _percentile(values, q):
+    xs = sorted(values)
+    n = len(xs)
+    if n == 0:
+        raise ValueError("percentile of empty sequence")
+    if n == 1:
+        return float(xs[0])
+    rank = (q / 100.0) * (n - 1)
+    lo = int(rank)
+    if lo + 1 >= n:
+        return float(xs[-1])
+    return float(xs[lo] + (rank - lo) * (xs[lo + 1] - xs[lo]))
+
+
+def _mean_num(rows, key):
+    vals = [r[key] for r in rows if isinstance(r[key], (int, float))
+            and not isinstance(r[key], bool)]
+    return sum(vals) / len(vals) if vals else 0.0
+
+
+def _delta_metrics(rows):
+    """Metric dict over ENRICHED rows of one group. Mover deltas are primary;
+    black mean is continuity (cancels across colors). Search-shape and reply
+    metrics are PAIRED (vs fpu=0.0); reply is also reported over unchanged-top
+    rows. Collapse is counted as newly-introduced vs resolved."""
+    n = len(rows)
+    if n == 0:
+        raise ValueError("no rows to summarize")
+    stm = [r["root_value_delta_stm_vs_fpu0"] for r in rows]
+    abs_stm = [abs(d) for d in stm]
+    stable = [r for r in rows if not r["top_move_changed_vs_fpu0"]]
+    stable_d = [r["top_child_children_delta_vs_fpu0"] for r in stable
+                if isinstance(r["top_child_children_delta_vs_fpu0"], (int, float))]
+    new_c = sum(1 for r in rows if r["new_collapse_vs_fpu0"])
+    return {
+        "num_positions": n,
+        "mean_root_value_delta_stm_vs_fpu0": sum(stm) / n,
+        "median_abs_root_value_delta_stm_vs_fpu0": median(abs_stm),
+        "p90_abs_root_value_delta_stm_vs_fpu0": _percentile(abs_stm, 90),
+        "p95_abs_root_value_delta_stm_vs_fpu0": _percentile(abs_stm, 95),
+        "mean_root_value_delta_black_vs_fpu0":
+            sum(r["root_value_delta_black_vs_fpu0"] for r in rows) / n,
+        "top_move_flip_rate_vs_fpu0":
+            sum(1 for r in rows if r["top_move_changed_vs_fpu0"]) / n,
+        "mean_root_visit_entropy_delta_vs_fpu0": _mean_num(rows, "root_visit_entropy_delta_vs_fpu0"),
+        "mean_root_effective_children_delta_vs_fpu0": _mean_num(rows, "root_effective_children_delta_vs_fpu0"),
+        "mean_root_children_delta_vs_fpu0": _mean_num(rows, "root_children_delta_vs_fpu0"),
+        "mean_top_child_children_delta_vs_fpu0": _mean_num(rows, "top_child_children_delta_vs_fpu0"),
+        "mean_top_child_children_delta_stable_top_vs_fpu0":
+            (sum(stable_d) / len(stable_d) if stable_d else ""),
+        "mean_top_child_visit_share_delta_vs_fpu0": _mean_num(rows, "top_child_visit_share_delta_vs_fpu0"),
+        "new_collapse_count": new_c,
+        "new_collapse_rate": new_c / n,
+        "resolved_collapse_count": sum(1 for r in rows if r["resolved_collapse_vs_fpu0"]),
+        "mean_root_effective_children": _mean_num(rows, "root_effective_children"),
+        "mean_root_n_visited_children": _mean_num(rows, "root_n_visited_children"),
+        "mean_top_child_n_visited_children": _mean_num(rows, "top_child_n_visited_children"),
+        "mean_top_child_visit_share": _mean_num(rows, "top_child_visit_share"),
+        "collapsed_ge_0_95_rate": sum(1 for r in rows if r["root_collapsed_ge_0_95"]) / n,
+    }
+
+
+def _ordered(values, canonical):
+    return [v for v in canonical if v in values] + sorted(v for v in values if v not in canonical)
+
+
+def summarize_grouped(rows, group_kind):
+    if group_kind == "all":
+        groups = [("all", rows)]
+    elif group_kind == "bucket":
+        groups = [(b, [r for r in rows if r["ply_bucket"] == b])
+                  for b in _ordered({r["ply_bucket"] for r in rows}, BUCKET_ORDER)]
+    elif group_kind == "side":
+        groups = [(s, [r for r in rows if r["side_to_move"] == s])
+                  for s in _ordered({r["side_to_move"] for r in rows}, ["red", "black"])]
+    elif group_kind == "bucket_x_side":
+        groups = []
+        for b in _ordered({r["ply_bucket"] for r in rows}, BUCKET_ORDER):
+            for s in ["red", "black"]:
+                sub = [r for r in rows if r["ply_bucket"] == b and r["side_to_move"] == s]
+                if sub:
+                    groups.append((f"{b}|{s}", sub))
+    else:
+        raise ValueError(f"unknown group_kind {group_kind!r}")
+    out = []
+    for gname, grows in groups:
+        if not grows:
+            continue
+        m = _delta_metrics(grows)
+        m["group_kind"], m["group"] = group_kind, gname
+        out.append(m)
+    return out
+
+
 def gate_flags(value: float) -> tuple[bool, bool]:
     """(over, severe) using the GATE's own inclusive thresholds -- 0.25 / 0.50,
     never `> 0`. An earlier ad-hoc summarizer used `> 0` for `over`, which made

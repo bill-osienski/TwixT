@@ -100,3 +100,64 @@ def test_generic_case_fieldnames_no_redundant_top1_share():
     for k in ("root_mcts_stm_value", "top_child_visit_share", "root_collapsed_ge_0_95",
               "root_value_delta_stm_vs_fpu0", "new_collapse_vs_fpu0"):
         assert k in GENERIC_CASE_FIELDNAMES
+
+
+from scripts.GPU.alphazero.diagnose_fpu_sweep import (
+    _percentile, _delta_metrics, summarize_grouped,
+    GENERIC_SUMMARY_FIELDNAMES, STRATA_SUMMARY_FIELDNAMES)
+
+
+def test_percentile():
+    assert abs(_percentile([0, 1, 2, 3, 4], 90) - 3.6) < 1e-12
+    assert _percentile([7.0], 95) == 7.0
+
+
+def _e(cid, bucket, side, stm, blk, changed, rootc, topc, share, eff, ent, col,
+       ecd=0.0, entd=0.0, tccd=0, newc=False, resc=False, rcd=0, tcsd=0.0):
+    return {"fpu_value": -0.2, "case_id": cid, "ply_bucket": bucket,
+            "side_to_move": side, "root_value_delta_stm_vs_fpu0": stm,
+            "root_value_delta_black_vs_fpu0": blk, "top_move_changed_vs_fpu0": changed,
+            "root_n_visited_children": rootc, "top_child_n_visited_children": topc,
+            "top_child_visit_share": share, "root_effective_children": eff,
+            "root_visit_entropy": ent, "root_collapsed_ge_0_95": col,
+            "root_effective_children_delta_vs_fpu0": ecd,
+            "root_visit_entropy_delta_vs_fpu0": entd,
+            "top_child_children_delta_vs_fpu0": tccd,
+            "root_children_delta_vs_fpu0": rcd,
+            "top_child_visit_share_delta_vs_fpu0": tcsd,
+            "new_collapse_vs_fpu0": newc, "resolved_collapse_vs_fpu0": resc}
+
+
+def test_black_cancels_mover_preserved():
+    rows = [_e(f"c{i}", "midgame", s, -0.10, (-0.10 if s == "black" else 0.10),
+               False, 6, 100, 0.5, 5, 1.5, False)
+            for i, s in enumerate(["black", "red", "black", "red"])]
+    m = _delta_metrics(rows)
+    assert abs(m["mean_root_value_delta_black_vs_fpu0"]) < 1e-12       # cancels
+    assert abs(m["mean_root_value_delta_stm_vs_fpu0"] - (-0.10)) < 1e-12  # preserved
+
+
+def test_paired_shape_deltas_and_collapse_counts_and_stable_top():
+    rows = [_e("a", "late", "black", -0.2, -0.2, False, 6, 100, 0.96, 4, 1.0, True,
+               ecd=-2.0, tccd=-50, newc=True),
+            _e("b", "late", "red", 0.1, -0.1, True, 4, 300, 0.5, 8, 2.0, False,
+               ecd=1.0, tccd=+30, resc=True)]
+    m = _delta_metrics(rows)
+    assert m["new_collapse_count"] == 1 and m["resolved_collapse_count"] == 1
+    assert abs(m["new_collapse_rate"] - 0.5) < 1e-12
+    assert abs(m["mean_root_effective_children_delta_vs_fpu0"] - (-0.5)) < 1e-12
+    # stable-top paired reply delta uses only the unchanged-top row (a): -50
+    assert abs(m["mean_top_child_children_delta_stable_top_vs_fpu0"] - (-50)) < 1e-12
+    assert abs(m["mean_top_child_children_delta_vs_fpu0"] - (-10)) < 1e-12
+
+
+def test_summarize_grouped_strata():
+    rows = [_e("a", "midgame", "black", -0.2, -0.2, True, 6, 100, 0.5, 5, 1.5, False),
+            _e("b", "midgame", "red", 0.0, 0.0, False, 4, 200, 0.5, 6, 1.6, False),
+            _e("c", "late", "black", 0.4, 0.4, True, 2, 300, 0.7, 3, 1.0, False)]
+    assert [g["group"] for g in summarize_grouped(rows, "bucket")] == ["midgame", "late"]
+    assert {g["group"] for g in summarize_grouped(rows, "side")} == {"black", "red"}
+    assert {g["group"] for g in summarize_grouped(rows, "bucket_x_side")} == {
+        "midgame|black", "midgame|red", "late|black"}
+    assert STRATA_SUMMARY_FIELDNAMES[:3] == ["fpu_value", "group_kind", "group"]
+    assert "mean_root_value_delta_stm_vs_fpu0" in GENERIC_SUMMARY_FIELDNAMES
