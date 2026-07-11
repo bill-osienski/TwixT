@@ -75,6 +75,16 @@ def _game_rows(game_idx, role, band):
     ]
 
 
+def _pos(game_idx, role, band, side, ply, bucket):
+    """One synthetic row (distinct 'pos-' hash) for a hand-built game -- used by
+    the multi-position / multi-cell / gap-starved fixtures below."""
+    return {
+        "game_idx": game_idx, "role": role, "band": band, "side": side,
+        "ply": ply, "ply_bucket": bucket,
+        "canonical_sha1": f"pos-{game_idx:05d}-{ply}-{side}",
+    }
+
+
 # games per cell -- comfortably above the whole-game minimum for every cell
 # (target needs 30 games = ceil(40/2)+ceil(20/2); control needs <=11).
 _GAMES_PER_CELL = {"target": 50, "control": 30}
@@ -101,6 +111,87 @@ def _insufficient_pool():
         for _ in range(n):
             rows.extend(_game_rows(gi, role, band))
             gi += 1
+    return rows
+
+
+# --- discriminating fixtures (review-fix pass) -----------------------------
+
+def _pool_with_multiposition_game():
+    """Abundant pool, but game 0 holds FOUR positions in ONE (role, band) cell
+    with two of them <MIN_PLY_GAP apart. A correct sampler must BOTH cap the
+    game at MAX_PER_GAME and skip the sub-gap position; the single-cell
+    _abundant_pool never exercises either (its games have exactly two positions,
+    already >=MIN_PLY_GAP apart). Plies 41,45,57,70 in one bucket: cap+gap pick
+    {41,57}; dropping the cap would add 70, dropping the gap-skip would take 45.
+    """
+    rows = [r for r in _abundant_pool() if r["game_idx"] != 0]
+    role, band = _CELLS[0]
+    for side, ply in (("red", 41), ("red", 45), ("black", 57), ("black", 70)):
+        rows.append(_pos(0, role, band, side, ply, "midgame"))
+    return rows
+
+
+def _pool_with_multicell_games():
+    """Abundant single-cell pool PLUS two genuine MULTI-CELL games: games 0 and 1
+    each contribute one position to (target,b200_299) AND one to
+    (target,b300_399) -- a game whose positions straddle two bands as n_legal
+    fell. This drives _greedy_assign's multi-cell branch, which every single-cell
+    fixture leaves dead. The pair is side-mirrored so EXACT composition (side
+    balance included) still holds."""
+    rows = [
+        _pos(0, "target", "b200_299", "red",   41, "midgame"),
+        _pos(0, "target", "b300_399", "black", 57, "midgame"),
+        _pos(1, "target", "b200_299", "black", 41, "midgame"),
+        _pos(1, "target", "b300_399", "red",   57, "midgame"),
+    ]
+    gi = 2
+    for role, band in _CELLS:
+        for _ in range(_GAMES_PER_CELL[role]):
+            rows.extend(_game_rows(gi, role, band))
+            gi += 1
+    return rows
+
+
+_DUP_SHA1 = "dup-shared-red-41"
+
+
+def _pool_with_duplicate_hash():
+    """Games 0 and 1 (both (target,b200_299)) each carry THREE positions sharing
+    ONE canonical_sha1 on a gap-valid red@41. Whichever game the round-robin
+    draws first claims the shared hash; the other's red@41 is otherwise gap-valid
+    and would be picked, so it MUST be dropped by the used_sha1 filter. Each game
+    still yields MAX_PER_GAME from its two unique positions, so the dedup fires
+    without starving the cell (both games stay live in the output)."""
+    rows = [r for r in _abundant_pool() if r["game_idx"] not in (0, 1)]
+    role, band = _CELLS[0]
+    for gi in (0, 1):
+        rows.append({"game_idx": gi, "role": role, "band": band, "side": "red",
+                     "ply": 41, "ply_bucket": "midgame",
+                     "canonical_sha1": _DUP_SHA1})
+        rows.append(_pos(gi, role, band, "black", 57, "midgame"))
+        rows.append(_pos(gi, role, band, "red", 73, "midgame"))
+    return rows
+
+
+def _pool_gap_starved_cell():
+    """Abundant for five cells, but (control,b400_plus) is supplied only by games
+    whose two positions sit <MIN_PLY_GAP apart, so each yields just ONE pickable
+    row via the gap-skip. assign_split's capacity precheck PASSES (12 games * 2
+    positions exceed the demand of 20) yet the round-robin cannot reach the
+    cell's quota -> the final-manifest `picked != quota` raise, DISTINCT from the
+    capacity precheck that _insufficient_pool trips."""
+    rows = []
+    gi = 0
+    for role, band in _CELLS:
+        if (role, band) == ("control", "b400_plus"):
+            continue
+        for _ in range(_GAMES_PER_CELL[role]):
+            rows.extend(_game_rows(gi, role, band))
+            gi += 1
+    for _ in range(12):
+        rows.append(_pos(gi, "control", "b400_plus", "red",   91, "late"))
+        rows.append(_pos(gi, "control", "b400_plus", "black", 96, "late"))
+        gi += 1
     return rows
 
 
@@ -196,13 +287,19 @@ def test_determinism_same_seed():
 
 
 def test_at_most_two_per_game():
-    rows, _ = sample_dev_rows(_abundant_pool(), seed=1)
+    # Discriminating: game 0 has FOUR positions in one cell, so the MAX_PER_GAME
+    # cap actually binds (a single-cell 2-position fixture would pass even with
+    # the cap deleted). Mutation-verified in the review-fix report.
+    rows, _ = sample_dev_rows(_pool_with_multiposition_game(), seed=1)
     counts = Counter(r["game_idx"] for r in rows)
     assert counts and max(counts.values()) <= MAX_PER_GAME
+    assert counts[0] == MAX_PER_GAME          # the 4-position game 0, capped at 2
 
 
 def test_min_ply_gap_within_game():
-    rows, _ = sample_dev_rows(_abundant_pool(), seed=1)
+    # Discriminating: game 0's four positions include a pair 4 plies apart
+    # (41 & 45), so the gap-skip actually binds. Mutation-verified in the report.
+    rows, _ = sample_dev_rows(_pool_with_multiposition_game(), seed=1)
     by_game = defaultdict(list)
     for r in rows:
         by_game[r["game_idx"]].append(r["ply"])
@@ -210,6 +307,8 @@ def test_min_ply_gap_within_game():
         plies.sort()
         for lo, hi in zip(plies, plies[1:]):
             assert hi - lo >= MIN_PLY_GAP
+    # game 0 skips the sub-gap 45 and stops before 70: exactly {41, 57}.
+    assert sorted(by_game[0]) == [41, 57]
 
 
 def test_whole_game_split_isolation():
@@ -256,3 +355,93 @@ def test_constants_match_frozen_spec():
     target = sum(sum(a.values()) for c, a in SPLIT_ALLOC.items() if c[0] == "target")
     control = sum(sum(a.values()) for c, a in SPLIT_ALLOC.items() if c[0] == "control")
     assert (target, control) == (180, 60)
+
+
+# ---------------------------------------------------------------------------
+# Multi-cell split assignment (review-fix pass) -- exercises _greedy_assign's
+# multi-cell branch, its reversed-order retry, and its "no ordering" raise, none
+# of which any single-cell fixture reaches.
+# ---------------------------------------------------------------------------
+
+def test_multicell_game_split_exact_composition():
+    pool = _pool_with_multicell_games()
+    # a genuinely multi-cell game must be present, else the branch stays dead
+    prof = defaultdict(Counter)
+    for r in pool:
+        prof[r["game_idx"]][(r["role"], r["band"])] += 1
+    assert any(len(cells) > 1 for cells in prof.values())
+
+    rows, stats = sample_dev_rows(pool, seed=1)
+    cell = Counter((r["role"], r["band"], r["split"]) for r in rows)
+    for (role, band), alloc in SPLIT_ALLOC.items():
+        for split, n in alloc.items():
+            assert cell[(role, band, split)] == n        # exact composition holds
+    assert len(rows) == 240
+    for split in ("tuning", "frozen_check"):
+        sc = Counter(r["side"] for r in rows if r["split"] == split)
+        assert abs(sc["red"] - sc["black"]) <= SIDE_TOL
+    # the multi-cell game is placed WHOLE -- its two cells share one split
+    game_splits = defaultdict(set)
+    for r in rows:
+        game_splits[r["game_idx"]].add(r["split"])
+    assert game_splits[0] and len(game_splits[0]) == 1
+
+
+def test_assign_split_raises_on_infeasible_multicell_partition():
+    # Every cell clears the capacity precheck, but (control,b200_299)'s realizable
+    # capacity is exactly its demand (20) supplied as ten MULTI-CELL games each
+    # realizing <= MAX_PER_GAME. No whole-game tuning/frozen partition can give
+    # tuning >= 13 AND frozen >= 7 for it (that needs >= 11 games), so BOTH greedy
+    # orderings fail -- the reversed-order retry runs -- and assign_split raises
+    # the "no ordering" error, distinct from the capacity precheck error.
+    profile = {}
+    for gi in range(10):
+        profile[gi] = Counter({("control", "b200_299"): 2,
+                               ("control", "b300_399"): 1})
+    gi = 10
+    for (role, band), alloc in SPLIT_ALLOC.items():
+        if (role, band) == ("control", "b200_299"):
+            continue
+        for _ in range(alloc["tuning"] + alloc["frozen_check"]):
+            profile[gi] = Counter({(role, band): 2})
+            gi += 1
+    with pytest.raises(ValueError, match="no deterministic ordering"):
+        assign_split(profile, seed=1)
+
+
+# ---------------------------------------------------------------------------
+# Per-pick filters: dedup exclusion + a shortfall distinct from the precheck.
+# ---------------------------------------------------------------------------
+
+def test_duplicate_hash_is_excluded():
+    rows, _ = sample_dev_rows(_pool_with_duplicate_hash(), seed=1)
+    shas = [r["canonical_sha1"] for r in rows]
+    assert len(shas) == len(set(shas))            # used_sha1 filter left no dup
+    assert shas.count(_DUP_SHA1) == 1             # the collided hash survives once
+    # both colliding games stay live in the output, so the exclusion was FORCED
+    # (the loser lost its red@41 to the filter, not by going unselected).
+    assert {0, 1} <= {r["game_idx"] for r in rows}
+
+
+def test_final_manifest_shortfall_from_pick_filters():
+    # Distinct from _insufficient_pool (which trips assign_split's capacity
+    # precheck): here every cell has enough capacity, but the gap-skip per-pick
+    # filter starves (control,b400_plus) so the round-robin hits its
+    # picked != quota raise.
+    with pytest.raises(ValueError, match="final-manifest shortfall"):
+        sample_dev_rows(_pool_gap_starved_cell(), seed=1)
+
+
+def test_stats_cell_counts_are_real_counts():
+    # cell_counts must be an INDEPENDENT witness counted from the selected rows,
+    # not a re-emission of the SPLIT_ALLOC quotas: it must equal the actual
+    # per-cell tally (and, since exact-or-raise held, the frozen quotas), and sum
+    # to the 240 selected rows.
+    rows, stats = sample_dev_rows(_abundant_pool(), seed=1)
+    actual = Counter((r["role"], r["band"], r["split"]) for r in rows)
+    for (role, band), alloc in SPLIT_ALLOC.items():
+        for split, quota in alloc.items():
+            key = f"{role}|{band}|{split}"
+            assert stats["cell_counts"][key] == actual[(role, band, split)]
+            assert stats["cell_counts"][key] == quota
+    assert sum(stats["cell_counts"].values()) == len(rows) == 240

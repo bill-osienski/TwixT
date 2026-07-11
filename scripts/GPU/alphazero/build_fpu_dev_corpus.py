@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import random
 from collections import Counter, defaultdict
-from typing import Any, Dict, List, Mapping, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 # ---------------------------------------------------------------------------
 # Frozen constants (verbatim from the design + Task-5 brief)
@@ -82,7 +82,7 @@ CORPUS_SIZE = sum(a["tuning"] + a["frozen_check"] for a in SPLIT_ALLOC.values())
 # Two-stage classifiers (pure)
 # ---------------------------------------------------------------------------
 
-def band_of(n_legal: int):
+def band_of(n_legal: int) -> Optional[str]:
     """Branching band for a legal-move count, or None below the target floor.
 
     b200_299: 200-299, b300_399: 300-399, b400_plus: 400+. Below 200 is not an
@@ -109,7 +109,7 @@ def ply_bucket_of(ply: int) -> str:
     return "late"
 
 
-def raw_policy_role(normalized_entropy: float, top1_prior: float):
+def raw_policy_role(normalized_entropy: float, top1_prior: float) -> Optional[str]:
     """Stage-2 raw-policy role from geometry, or None for the grey zone.
 
     target  iff normalized_entropy >= 0.90 AND top1_prior <= 0.025 (flat, diffuse)
@@ -136,7 +136,7 @@ def anchor_eligible(root_value_stm: float) -> bool:
 # Whole-game split assignment (contribution-aware, deterministic)
 # ---------------------------------------------------------------------------
 
-def _greedy_assign(games_profile, seed, attempt):
+def _greedy_assign(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
     """One deterministic greedy pass. Returns {game_idx: split} if it satisfies
     every per-(role, band, split) quota (capacity), else None.
 
@@ -144,6 +144,12 @@ def _greedy_assign(games_profile, seed, attempt):
     most; ties break toward the split with the larger total remaining need, then
     toward tuning. Games are visited in a seed-shuffled order (attempt 0) or its
     deterministic reverse (attempt 1, the secondary-ordering retry).
+
+    A game's per-cell contribution is capped at MAX_PER_GAME because the sampler
+    never draws more than MAX_PER_GAME rows from one game per cell; counting all
+    of a >MAX_PER_GAME-position game's positions would over-state realizable
+    capacity and let assign_split hand back an assignment the round-robin cannot
+    fill (a spurious final-manifest shortfall).
     """
     rng = random.Random(seed * 1_000_003 + attempt)
     order = sorted(games_profile)
@@ -158,7 +164,7 @@ def _greedy_assign(games_profile, seed, attempt):
         cells = [c for c in prof if c in need]
 
         def useful(split, _cells=cells, _prof=prof):
-            return sum(min(_prof[c], need[c][split]) for c in _cells)
+            return sum(min(_prof[c], MAX_PER_GAME, need[c][split]) for c in _cells)
 
         u_t, u_f = useful("tuning"), useful("frozen_check")
         if u_t > u_f:
@@ -172,7 +178,7 @@ def _greedy_assign(games_profile, seed, attempt):
 
         assign[gi] = split
         for c in cells:
-            need[c][split] = max(0, need[c][split] - prof[c])
+            need[c][split] = max(0, need[c][split] - min(prof[c], MAX_PER_GAME))
 
     if all(v == 0 for cell in need for v in need[cell].values()):
         return assign
@@ -193,7 +199,7 @@ def assign_split(games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
     capacity: Counter = Counter()
     for prof in games_profile.values():
         for cell, n in prof.items():
-            capacity[cell] += n
+            capacity[cell] += min(n, MAX_PER_GAME)   # realizable, not raw, capacity
     for cell, alloc in SPLIT_ALLOC.items():
         demand = alloc["tuning"] + alloc["frozen_check"]
         have = capacity.get(cell, 0)
@@ -306,11 +312,19 @@ def sample_dev_rows(confirmed: List[dict], *, seed: int) -> Tuple[List[dict], di
                     f"final-manifest shortfall: cell {(cell[0], cell[1], split)} "
                     f"filled {picked} of required {quota}")
 
+    # Count the rows actually selected per (role, band, split) so cell_counts is
+    # an INDEPENDENT composition witness (not a re-emission of the SPLIT_ALLOC
+    # quotas). On success these equal the quotas -- the exact-or-raise guard
+    # above already fired if any cell fell short -- but computing them from the
+    # selected rows makes the stats a real cross-check rather than a tautology.
+    cell_counts_actual: Counter = Counter(
+        (r["role"], r["band"], r["split"]) for r in selected)
+
     stats = {
         "n_rows": len(selected),
         "seed": seed,
         "cell_counts": {
-            f"{role}|{band}|{split}": SPLIT_ALLOC[(role, band)][split]
+            f"{role}|{band}|{split}": cell_counts_actual[(role, band, split)]
             for (role, band) in SPLIT_ALLOC for split in SPLITS},
         "side_count": {s: dict(side_count[s]) for s in SPLITS},
         "bucket_count": dict(bucket_count),
