@@ -37,10 +37,11 @@ from __future__ import annotations
 import argparse
 import csv
 import dataclasses
+import hashlib
 import json
 import math
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -51,12 +52,19 @@ from . import fpu_provenance
 # The effective result-determining source files whose BYTES the shared
 # selection-context fingerprint pins (design §12.5). Referenced by PATH (from
 # this package dir) so fingerprinting mcts.py never requires importing it --
-# which would pull GPU/MLX -- keeping the pure import path clean.
+# which would pull GPU/MLX -- keeping the pure import path clean. Includes the
+# state-RECONSTRUCTION deps (goal_line_trigger_probe_cases.py +
+# game/twixt_state.py): the diagnostic rebuilds every searched position via
+# position_state -> TwixtState, so their bytes are as result-determining as the
+# search core, and the builder already hashes goal_line_trigger_probe_cases.py
+# (RF1; kept aligned with build_fpu_dev_corpus._CORPUS_SOURCES).
 _MODULE_DIR = Path(__file__).resolve().parent
 RESULT_DETERMINING_SOURCES: Tuple[Path, ...] = (
     _MODULE_DIR / "diagnose_fpu_policy_mass.py",
     _MODULE_DIR / "mcts.py",
     _MODULE_DIR / "build_fpu_dev_corpus.py",
+    _MODULE_DIR / "goal_line_trigger_probe_cases.py",
+    _MODULE_DIR / "game" / "twixt_state.py",
 )
 
 # ---------------------------------------------------------------------------
@@ -195,6 +203,12 @@ def _mean(values) -> float:
 class SafetyVerdict:
     rejected: bool
     reasons: Tuple[str, ...]
+    # #4a: every number the §6.2 gate ALREADY computes, exposed for the persisted
+    # candidate artifacts. `compare=False` keeps the frozen dataclass hashable and
+    # leaves eq keyed on (rejected, reasons) -- so exposing metrics changes NO gate
+    # semantics. The gate LOGIC (thresholds/comparators/AND-OR -> rejected/reasons)
+    # is untouched; metrics is written where each value is already computed.
+    metrics: Mapping[str, Any] = field(default_factory=dict, compare=False)
 
 
 @dataclass(frozen=True)
@@ -217,45 +231,60 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
     target = [r for r in rows if r.get("role") == "target"]
     control = [r for r in rows if r.get("role") == "control"]
     reasons: List[str] = []
+    # #4a: expose the SAME numbers the gate computes below (populated at each
+    # computation point). Adding these lines changes NO threshold/comparator/
+    # AND-OR and NO reason string, so `rejected`/`reasons` stay byte-identical.
+    metrics: Dict[str, Any] = {}
 
     if target:
         n = len(target)
         nc_rate = sum(1 for r in target if r["new_collapse"]) / n
+        metrics["target_new_collapse_rate"] = nc_rate
         if nc_rate >= DEV_NEW_COLLAPSE_TARGET:
             reasons.append(f"target_new_collapse_rate={nc_rate:.4f}>={DEV_NEW_COLLAPSE_TARGET}")
 
         by_band: Dict[Any, List] = defaultdict(list)
         for r in target:
             by_band[r["band"]].append(r)
+        band_rates: Dict[Any, float] = {}
         for band, brows in by_band.items():
             if len(brows) >= DEV_BAND_MIN_N:
                 brate = sum(1 for r in brows if r["new_collapse"]) / len(brows)
+                band_rates[band] = brate
                 if brate >= DEV_NEW_COLLAPSE_BAND:
                     reasons.append(f"band[{band}]_new_collapse={brate:.4f}>={DEV_NEW_COLLAPSE_BAND}")
+        metrics["band_new_collapse_rates"] = band_rates
 
         baseline = r0_lockin if getattr(ref, "reduction", None) == 0.0 else absoff_lockin
         lockins = sum(1 for r in target if r["lock_in"])
+        metrics["target_lockin_count"] = lockins
+        metrics["lockin_baseline"] = baseline
         if lockins > baseline + DEV_LOCKIN_MARGIN:
             reasons.append(f"lockin_count={lockins}>baseline+2={baseline + DEV_LOCKIN_MARGIN}")
 
         p95 = _percentile([abs(r["mover_delta"]) for r in target], PERCENTILE_Q)
+        metrics["target_p95_mover_delta"] = p95
         if p95 >= DEV_P95_MOVER:
             reasons.append(f"target_p95_mover_delta={p95:.4f}>={DEV_P95_MOVER}")
 
         eff = _mean(r["eff_children_reduction"] for r in target)
         tsi = _mean(r["top_share_inc"] for r in target)
+        metrics["mean_eff_children_reduction"] = eff
+        metrics["mean_top_share_increase"] = tsi
         if eff >= DEV_COMPOUND_EFF and tsi >= DEV_COMPOUND_TOPSHARE:
             reasons.append(f"compound eff_reduction={eff:.4f}&top_share_inc={tsi:.4f}")
 
     if control:
         flip = sum(1 for r in control if r["control_flip_to_lower_prior"]) / len(control)
+        metrics["control_flip_rate"] = flip
         if flip >= DEV_CONTROL_FLIP:
             reasons.append(f"control_flip_rate={flip:.4f}>={DEV_CONTROL_FLIP}")
         cp95 = _percentile([abs(r["mover_delta"]) for r in control], PERCENTILE_Q)
+        metrics["control_p95_mover_delta"] = cp95
         if cp95 >= DEV_CONTROL_P95:
             reasons.append(f"control_p95_mover_delta={cp95:.4f}>={DEV_CONTROL_P95}")
 
-    return SafetyVerdict(rejected=bool(reasons), reasons=tuple(reasons))
+    return SafetyVerdict(rejected=bool(reasons), reasons=tuple(reasons), metrics=metrics)
 
 
 def selected_a_verdict(rows: Sequence[Mapping[str, Any]]) -> AVerdict:
@@ -727,6 +756,73 @@ def _write_csv(path: str, fieldnames: Sequence[str], rows: Sequence[Mapping]) ->
         w.writerows(rows)
 
 
+def _read_csv_rows(path: str) -> List[dict]:
+    """Read a CSV written by `_write_csv` back as a list of dict rows (every cell
+    is a string -- csv-native)."""
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def _controls_cell(value: Any) -> str:
+    """The EXACT text `csv.writer` emits for a `_controls_case_row` cell: ``None``
+    -> ``""`` (empty), everything else -> ``str(value)``. Used both when a value
+    is persisted and when the recompute is verified against the persisted CSV
+    (§12.4), so a faithful round-trip compares byte-equal. Floats round-trip
+    EXACTLY: Python 3's ``str(float)`` is the shortest round-tripping repr and is
+    injective over finite floats, so equal cell text <=> bit-identical value (a
+    1-ULP difference yields different text and is caught)."""
+    return "" if value is None else str(value)
+
+
+def verify_recomputed_controls(
+        persisted_rows: Sequence[Mapping[str, Any]],
+        recomputed_by_config: Mapping[str, Mapping[str, Mapping[str, Any]]]
+) -> Tuple[int, str]:
+    """§12.4 VERIFIED recompute. The candidate stage recomputes absolute_off/r0
+    (the persisted controls_cases.csv omits top_move/top_move_prior the low-prior-
+    flip gate needs); this proves the recompute is bit-identical to what was
+    persisted rather than merely asserting it.
+
+    `persisted_rows`: controls_cases.csv rows read back (csv-native strings).
+    `recomputed_by_config`: ``{config_label: {canonical_sha1: recomputed_case_row}}``
+    where each recomputed row is a freshly-built `_controls_case_row` (native
+    types). For EVERY persisted row, look up the recompute by (config,
+    canonical_sha1) and compare EVERY persisted field against the canonicalized
+    recomputed value (`_controls_cell`); RAISE ValueError on a missing recompute,
+    a missing field, or any mismatch. Returns ``(count, rows_sha1)`` -- the number
+    of rows verified and a deterministic SHA1 over the compared rows (sorted by
+    (canonical_sha1, config), fields in CONTROLS_CASE_FIELDNAMES order). Pure --
+    unit-testable with fabricated dicts / temp files."""
+    verified: List[Mapping[str, Any]] = []
+    for prow in persisted_rows:
+        config = prow.get("config")
+        sha = prow.get("canonical_sha1")
+        by_sha = recomputed_by_config.get(config)
+        if by_sha is None or sha not in by_sha:
+            raise ValueError(
+                "verify_recomputed_controls: no recompute for "
+                f"(config={config!r}, canonical_sha1={sha!r})")
+        rec = by_sha[sha]
+        for k, persisted_v in prow.items():
+            if k not in rec:
+                raise ValueError(
+                    f"verify_recomputed_controls: recomputed row missing field {k!r} "
+                    f"for (config={config!r}, canonical_sha1={sha!r})")
+            rec_text = _controls_cell(rec[k])
+            if str(persisted_v) != rec_text:
+                raise ValueError(
+                    f"verify_recomputed_controls: field {k!r} mismatch for "
+                    f"(config={config!r}, canonical_sha1={sha!r}): persisted "
+                    f"{persisted_v!r} != recomputed {rec_text!r}")
+        verified.append(prow)
+
+    verified.sort(key=lambda r: (str(r.get("canonical_sha1", "")), str(r.get("config", ""))))
+    payload = json.dumps(
+        [[str(r.get(fn, "")) for fn in CONTROLS_CASE_FIELDNAMES] for r in verified],
+        separators=(",", ":"))
+    return len(verified), hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
+
 # ---------------------------------------------------------------------------
 # Dev-corpus loading + per-config search (operator; lazy heavy imports)
 # ---------------------------------------------------------------------------
@@ -844,6 +940,51 @@ def _dev_rows_vs(target_control_rows, cand_by_sha: Mapping[str, dict],
     return rows
 
 
+# #4c: per-position candidate-vs-reference rows persisted for audit -- the SAME
+# _dev_target_row/_dev_control_row metrics `_dev_rows_vs` feeds the gate, tagged
+# with canonical_sha1 + candidate config + reference so candidate_dev_rows.csv
+# joins to controls_cases.csv (and across both references) by canonical_sha1.
+# Target and control rows share a unioned schema; a column that doesn't apply to
+# a role is written as "" (empty).
+CANDIDATE_DEV_ROW_FIELDNAMES = [
+    "canonical_sha1", "candidate_config", "reference", "role", "band",
+    "new_collapse", "lock_in", "mover_delta", "eff_children_reduction",
+    "top_share_inc", "control_flip_to_lower_prior",
+]
+
+
+def _candidate_dev_records(target_control_rows, cand_by_sha: Mapping[str, dict],
+                           ref_by_sha: Mapping[str, dict], cand_label: str,
+                           ref_label: str) -> List[dict]:
+    """Joinable persistence rows mirroring `_dev_rows_vs` EXACTLY (same join, same
+    skip condition, same _dev_target_row/_dev_control_row), tagged for audit. Does
+    NOT feed any gate -- purely the persisted evidence trail."""
+    records: List[dict] = []
+    for r in target_control_rows:
+        sha = r["canonical_position_sha1"]
+        cand, ref = cand_by_sha.get(sha), ref_by_sha.get(sha)
+        if cand is None or ref is None:
+            continue
+        base = {"canonical_sha1": sha, "candidate_config": cand_label,
+                "reference": ref_label}
+        if r["role"] == "target":
+            tr = _dev_target_row(r["branching_band"], cand, ref)
+            records.append({**base, "role": "target", "band": tr["band"],
+                            "new_collapse": tr["new_collapse"], "lock_in": tr["lock_in"],
+                            "mover_delta": tr["mover_delta"],
+                            "eff_children_reduction": tr["eff_children_reduction"],
+                            "top_share_inc": tr["top_share_inc"],
+                            "control_flip_to_lower_prior": ""})
+        else:
+            cr = _dev_control_row(cand, ref)
+            records.append({**base, "role": "control", "band": "",
+                            "new_collapse": "", "lock_in": "",
+                            "mover_delta": cr["mover_delta"],
+                            "eff_children_reduction": "", "top_share_inc": "",
+                            "control_flip_to_lower_prior": cr["control_flip_to_lower_prior"]})
+    return records
+
+
 def _lockin_count(target_rows, feats_by_sha: Mapping[str, dict]) -> int:
     return sum(1 for r in target_rows if r["role"] == "target"
                and lock_in_event(feats_by_sha[r["canonical_position_sha1"]]["trace"]))
@@ -924,6 +1065,42 @@ def _load_tuning_result(path: str) -> dict:
     return json.loads(Path(path).read_text())
 
 
+# #4c: the selected-A case rows (`_a_row` outputs) persisted per config (tuning
+# only) -- tuning evidence for the §6.3 mechanism gate.
+SELECTED_A_CASE_FIELDNAMES = [
+    "config", "off_value", "r_value", "replies_ref", "replies_x",
+    "new_collapse", "top_share_inc",
+]
+
+
+def _a_metrics(a_verdict: Optional[AVerdict]) -> Optional[dict]:
+    """The §6.3 AVerdict numbers as a JSON-native dict (None when selected-A did
+    not participate -- e.g. frozen_check)."""
+    if a_verdict is None:
+        return None
+    return {"reply_reduction": a_verdict.reply_reduction, "progress": a_verdict.progress,
+            "a_new_collapse": a_verdict.a_new_collapse,
+            "a_top_share_inc": a_verdict.a_top_share_inc, "passed": a_verdict.passed}
+
+
+def _candidate_result_record(config: FpuRunConfig, v_off: SafetyVerdict,
+                             v_r0: SafetyVerdict, a_verdict: Optional[AVerdict],
+                             safe: bool) -> dict:
+    """#4c: one candidate's `candidates_result.json` record -- the pass/fail
+    reasons AND the FULL numeric §6.2/§6.3 gate summaries (both references). Pure:
+    reads only the verdicts' exposed numbers, so `safe` (computed by the caller
+    with the UNCHANGED gate logic) is passed in, not recomputed here."""
+    return {
+        "config": config.label, "reduction": config.reduction, "safe": safe,
+        "reject_vs_absolute_off": list(v_off.reasons),
+        "reject_vs_r0": list(v_r0.reasons),
+        "selected_a_passed": None if a_verdict is None else a_verdict.passed,
+        "metrics_vs_absolute_off": dict(v_off.metrics),
+        "metrics_vs_r0": dict(v_r0.metrics),
+        "selected_a_metrics": _a_metrics(a_verdict),
+    }
+
+
 def run_candidates_stage(args, dev_rows, run_configs) -> int:
     validate_stage_mode(dev_rows, mode=args.mode, stage="candidates", run_configs=run_configs)
     # §12.3 selected-A is tuning-only -- checked BEFORE any load (tuning REQUIRES
@@ -986,6 +1163,18 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
     r0_lockin = gate["r0_target_lockin_count"]
     absoff_lockin = gate["absoff_target_lockin_count"]
 
+    # #4b VERIFIED recompute (§12.4): rebuild the controls_cases rows from THESE
+    # recomputed reference features and compare every field to the persisted CSV,
+    # aborting on any mismatch -- so "recompute == join" is proven, not asserted.
+    persisted_controls = _read_csv_rows(str(Path(args.out_dir) / "controls_cases.csv"))
+    recomputed_controls = {ABSOLUTE_OFF.label: {}, R0.label: {}}
+    for row in dev_rows:
+        sha = row["canonical_position_sha1"]
+        for label in (ABSOLUTE_OFF.label, R0.label):
+            recomputed_controls[label][sha] = _controls_case_row(row, label, by_label[label][sha])
+    controls_verified_count, controls_verified_rows_sha1 = verify_recomputed_controls(
+        persisted_controls, recomputed_controls)
+
     # §12.3: selected-A participates ONLY in tuning (in frozen_check it is
     # forbidden above, and the frozen `safe` verdict must not depend on it).
     a_rows_source = (_load_selected_a(args, evaluator, base_cfg, run_configs)
@@ -993,6 +1182,8 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
 
     results = []
     smallest_safe = None
+    smallest_safe_reduction = None
+    candidate_dev_records: List[dict] = []          # #4c joinable per-position rows
     for c in run_configs:
         cand_by_sha = by_label[c.label]
         v_off = dev_safety_verdict(
@@ -1010,21 +1201,36 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
             safe = dev_safe and a_verdict is not None and a_verdict.passed
         else:
             safe = dev_safe
-        results.append({
-            "config": c.label, "reduction": c.reduction, "safe": safe,
-            "reject_vs_absolute_off": list(v_off.reasons),
-            "reject_vs_r0": list(v_r0.reasons),
-            "selected_a_passed": None if a_verdict is None else a_verdict.passed,
-        })
+        results.append(_candidate_result_record(c, v_off, v_r0, a_verdict, safe))
+        candidate_dev_records += _candidate_dev_records(
+            dev_rows, cand_by_sha, off_by_sha, c.label, ABSOLUTE_OFF.label)
+        candidate_dev_records += _candidate_dev_records(
+            dev_rows, cand_by_sha, r0_by_sha, c.label, R0.label)
         if safe and smallest_safe is None:
             smallest_safe = c.label
+            smallest_safe_reduction = c.reduction
+
+    # #4c: persist the complete evidence trail (joinable per-position rows +
+    # selected-A cases) alongside the numeric-summary candidates_result.json.
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    _write_csv(str(out_dir / "candidate_dev_rows.csv"),
+               CANDIDATE_DEV_ROW_FIELDNAMES, candidate_dev_records)
+    if a_rows_source:                               # tuning only
+        _write_csv(str(out_dir / "selected_a_cases.csv"), SELECTED_A_CASE_FIELDNAMES,
+                   [{"config": label, **ar}
+                    for label, arows in a_rows_source.items() for ar in arows])
 
     out = {"mode": args.mode, "smallest_safe_r": smallest_safe,
-           "candidates": results, "fingerprint": expected_fp}
-    Path(args.out_dir).mkdir(parents=True, exist_ok=True)
-    (Path(args.out_dir) / "candidates_result.json").write_text(json.dumps(out, indent=2))
+           "smallest_safe_reduction": smallest_safe_reduction,
+           "candidates": results, "fingerprint": expected_fp,
+           "controls_provenance": "recomputed_and_verified",
+           "controls_verified_row_count": controls_verified_count,
+           "controls_verified_rows_sha1": controls_verified_rows_sha1}
+    (out_dir / "candidates_result.json").write_text(json.dumps(out, indent=2))
     print(f"[fpu-candidates] smallest_safe_r={smallest_safe} -> "
-          f"{Path(args.out_dir)/'candidates_result.json'}")
+          f"{out_dir/'candidates_result.json'} "
+          f"(controls verified: {controls_verified_count} rows)")
     return 0
 
 

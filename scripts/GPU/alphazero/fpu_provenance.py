@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import platform
+import struct
 import subprocess
 import sys
 from importlib import metadata as _metadata
@@ -56,12 +57,25 @@ def replay_data_sha1(replay_paths: Iterable[str]) -> str:
     """A single deterministic SHA1 over the CONTENTS of the replay files, taken
     in sorted-by-path order (so it is order-independent-by-path) and sensitive to
     every byte -- it fingerprints the replay DATA, not the paths. Empty input
-    hashes to the SHA1 of nothing (a stable, well-defined value)."""
+    hashes to the SHA1 of nothing (a stable, well-defined value).
+
+    Each file's bytes are length-DELIMITED before folding into the rolling hash:
+    an 8-byte big-endian byte count precedes that file's own content digest
+    (streamed, so large replays stay memory-bounded). Without this delimiter a
+    byte-repartition across two replays -- moving a byte from the end of one file
+    to the start of the next -- would leave the concatenated stream unchanged and
+    COLLIDE; the length prefix + per-file digest boundary makes the partition part
+    of the hash, so it cannot (RF2)."""
     h = hashlib.sha1()
     for p in sorted(str(x) for x in replay_paths):
+        fh = hashlib.sha1()
+        n = 0
         with open(p, "rb") as f:
             for chunk in iter(lambda: f.read(1 << 20), b""):
-                h.update(chunk)
+                fh.update(chunk)
+                n += len(chunk)
+        h.update(struct.pack(">Q", n))   # exact streamed byte count (no TOCTOU stat)
+        h.update(fh.digest())            # fixed 20-byte, self-delimiting boundary
     return h.hexdigest()
 
 

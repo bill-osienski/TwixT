@@ -15,15 +15,21 @@ cross-matched, so a legitimate difference there (selected-A present in tuning
 vs absent in frozen, a different stage, git/runtime provenance) must NOT fail
 the join.
 """
+import csv
 import json
+import math
 from dataclasses import dataclass
 
 import pytest
 
 from scripts.GPU.alphazero import fpu_provenance as prov
 from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
-    GRID, build_run_fingerprint, validate_controls_fingerprint,
-    require_frozen_matches_tuning, validate_selected_a_mode)
+    ABSOLUTE_OFF, CONTROLS_CASE_FIELDNAMES, GRID, R0, V_REF,
+    build_run_fingerprint, dev_safety_verdict, selected_a_verdict,
+    validate_controls_fingerprint, require_frozen_matches_tuning,
+    validate_selected_a_mode, verify_recomputed_controls,
+    _candidate_dev_records, _candidate_result_record, _controls_case_row,
+    _write_csv)
 
 
 # ---------------------------------------------------------------------------
@@ -119,8 +125,12 @@ def test_build_run_fingerprint_split_structure(tmp_path):
     assert sel["mcts_sims"] == 400
     assert sel["base_mcts_config"]["c_puct"] == 1.5          # FULL asdict, not a subset
     assert sel["grid"] == [[c.label, c.reduction] for c in GRID]
+    # RF1: the hard-matched source set includes the state-RECONSTRUCTION deps
+    # (goal_line_trigger_probe_cases.py + game/twixt_state.py), which are equally
+    # result-determining -- they rebuild the position every search runs on.
     assert set(sel["source_file_sha1s"]) == {
-        "diagnose_fpu_policy_mass.py", "mcts.py", "build_fpu_dev_corpus.py"}
+        "diagnose_fpu_policy_mass.py", "mcts.py", "build_fpu_dev_corpus.py",
+        "goal_line_trigger_probe_cases.py", "twixt_state.py"}
 
     run = fp["run_context"]
     assert set(run) >= {"selected_a", "add_noise", "git_commit", "worktree_clean",
@@ -266,3 +276,222 @@ def test_validate_selected_a_mode():
         validate_selected_a_mode("tuning", False)         # tuning REQUIRES selected-A
     with pytest.raises(SystemExit):
         validate_selected_a_mode("frozen_check", True)    # frozen FORBIDS selected-A
+
+
+# ---------------------------------------------------------------------------
+# RF2 -- replay_data_sha1 length-delimits each file's bytes (Part-1 fix)
+# ---------------------------------------------------------------------------
+
+def test_replay_data_sha1_delimits_file_boundaries(tmp_path):
+    # Same total concatenated bytes ("XYZ" in sorted [a,b] order), different file
+    # PARTITION. Without a per-file delimiter both fold to sha1(b"XYZ") and
+    # COLLIDE; delimiting each file's bytes must make the two partitions differ.
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    a.write_bytes(b"XY"); b.write_bytes(b"Z")
+    h1 = prov.replay_data_sha1([str(a), str(b)])
+    a.write_bytes(b"X"); b.write_bytes(b"YZ")
+    h2 = prov.replay_data_sha1([str(a), str(b)])
+    assert h1 != h2 and len(h1) == 40 and len(h2) == 40
+    # a genuinely empty file is still delimited distinctly from an absent boundary
+    a.write_bytes(b""); b.write_bytes(b"XYZ")
+    h3 = prov.replay_data_sha1([str(a), str(b)])
+    assert h3 != h1 and h3 != h2
+
+
+# ---------------------------------------------------------------------------
+# #4a -- SafetyVerdict.metrics EXPOSES the computed numbers; the §6 gate LOGIC
+# (rejected + reasons) stays byte-identical (thresholds/comparators/AND-OR).
+# ---------------------------------------------------------------------------
+
+def _tgt(**over):
+    row = dict(role="target", band="b200_299", new_collapse=False, lock_in=False,
+               mover_delta=0.0, eff_children_reduction=0.0, top_share_inc=0.0)
+    row.update(over)
+    return row
+
+
+def _ctl(**over):
+    row = dict(role="control", mover_delta=0.0, control_flip_to_lower_prior=False)
+    row.update(over)
+    return row
+
+
+def test_safety_verdict_reasons_and_rejected_unchanged_plus_metrics():
+    # A single-gate input (overall target new-collapse rate == 0.05, one n>=20
+    # band whose 0.05 < 0.10 so the band gate does NOT fire, no lock-ins, zero
+    # mover/eff/top-share). The §6 logic must yield EXACTLY this rejected/reasons
+    # pair -- pinned byte-for-byte -- and metrics must carry every computed number.
+    rows = [_tgt(new_collapse=(i < 5)) for i in range(100)]
+    v = dev_safety_verdict(rows, ref=R0, r0_lockin=5, absoff_lockin=9)
+    assert v.rejected is True
+    assert v.reasons == ("target_new_collapse_rate=0.0500>=0.05",)   # UNCHANGED
+    assert v.metrics == {
+        "target_new_collapse_rate": 0.05,
+        "band_new_collapse_rates": {"b200_299": 0.05},
+        "target_lockin_count": 0,
+        "lockin_baseline": 5,                       # ref=R0 -> r0_lockin
+        "target_p95_mover_delta": 0.0,
+        "mean_eff_children_reduction": 0.0,
+        "mean_top_share_increase": 0.0,
+    }
+
+
+def test_safety_verdict_lockin_baseline_follows_ref_in_metrics():
+    # Same rows, different ref -> the exposed lockin_baseline follows ref, exactly
+    # as the (unchanged) gate picks its baseline.
+    rows = [_tgt(lock_in=True) for _ in range(6)]
+    v_off = dev_safety_verdict(rows, ref=ABSOLUTE_OFF, r0_lockin=10, absoff_lockin=3)
+    v_r0 = dev_safety_verdict(rows, ref=R0, r0_lockin=10, absoff_lockin=3)
+    assert v_off.rejected is True and v_off.metrics["lockin_baseline"] == 3   # absoff
+    assert v_r0.rejected is False and v_r0.metrics["lockin_baseline"] == 10   # r0
+    assert v_off.metrics["target_lockin_count"] == 6 == v_r0.metrics["target_lockin_count"]
+
+
+def test_safety_verdict_control_metrics_and_clean_case():
+    # Control subset only -> control metrics present, target metrics absent.
+    ctl = [_ctl(control_flip_to_lower_prior=(i < 1), mover_delta=0.4) for i in range(10)]
+    v = dev_safety_verdict(ctl, ref=R0, r0_lockin=5, absoff_lockin=5)
+    assert v.rejected is True                       # flip 0.10 AND p95 0.40 both trip
+    assert v.reasons == ("control_flip_rate=0.1000>=0.1",
+                         "control_p95_mover_delta=0.4000>=0.35")
+    assert v.metrics == {"control_flip_rate": 0.1, "control_p95_mover_delta": 0.4}
+    # a wholly clean target set: not rejected, no reasons, metrics still populated
+    clean = dev_safety_verdict([_tgt() for _ in range(30)],
+                               ref=R0, r0_lockin=5, absoff_lockin=5)
+    assert clean.rejected is False and clean.reasons == ()
+    assert clean.metrics["target_new_collapse_rate"] == 0.0
+    assert clean.metrics["target_p95_mover_delta"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# #4b -- verify_recomputed_controls: EXACT round-trip passes, a real diff aborts.
+# ---------------------------------------------------------------------------
+
+def _dev_row(sha="s1", role="target", band="b200_299", game_idx="7", ply="42",
+             side="red"):
+    return {"canonical_position_sha1": sha, "role": role, "branching_band": band,
+            "game_idx": game_idx, "position_ply": ply, "side": side}
+
+
+def _feats(root_value=0.1, top_share=0.5, eff=3.25, replies=4, collapsed=False,
+           prior=0.02, rank=3, mass=0.4, stab=80, final_top=0.5):
+    return {
+        "root_value_stm": root_value, "top_share": top_share,
+        "effective_children": eff, "replies": replies, "collapsed": collapsed,
+        "top_move": 111, "top_move_prior": 0.3,
+        "trace": {"selected_move_prior": prior, "selected_move_prior_rank": rank,
+                  "explored_mass_at_stabilization": mass, "stabilization_sim": stab,
+                  "final_root_top_share": final_top},
+    }
+
+
+def _persist_and_read(tmp_path, dev_rows, feats_by_label):
+    """Write controls_cases.csv exactly as run_controls_stage does, read it back
+    (csv-native strings)."""
+    rows = []
+    for r in dev_rows:
+        for label, by_sha in feats_by_label.items():
+            rows.append(_controls_case_row(r, label, by_sha[r["canonical_position_sha1"]]))
+    path = tmp_path / "controls_cases.csv"
+    _write_csv(str(path), CONTROLS_CASE_FIELDNAMES, rows)
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def test_verify_recomputed_controls_faithful_round_trip(tmp_path):
+    dev_rows = [_dev_row("s1"), _dev_row("s2", side="black")]
+    # A None-valued field (stab=None -> stabilization_sim None) exercises the
+    # None->'' round-trip; a not-exactly-representable float (0.1) exercises the
+    # shortest-repr exactness.
+    off = {"s1": _feats(root_value=0.1, stab=None), "s2": _feats(root_value=1/3)}
+    r0 = {"s1": _feats(root_value=-0.2), "s2": _feats(root_value=0.0, collapsed=True)}
+    feats_by_label = {ABSOLUTE_OFF.label: off, R0.label: r0}
+    persisted = _persist_and_read(tmp_path, dev_rows, feats_by_label)
+
+    recomputed = {ABSOLUTE_OFF.label: {}, R0.label: {}}
+    for r in dev_rows:
+        sha = r["canonical_position_sha1"]
+        for label, by_sha in feats_by_label.items():
+            recomputed[label][sha] = _controls_case_row(r, label, by_sha[sha])
+    count, rows_sha1 = verify_recomputed_controls(persisted, recomputed)
+    assert count == 4 and len(rows_sha1) == 40
+    # deterministic hash: re-running on the same faithful recompute is identical
+    count2, rows_sha1_2 = verify_recomputed_controls(persisted, recomputed)
+    assert (count2, rows_sha1_2) == (count, rows_sha1)
+
+
+def test_verify_recomputed_controls_aborts_on_real_diff(tmp_path):
+    dev_rows = [_dev_row("s1")]
+    off = {"s1": _feats(root_value=0.1)}
+    r0 = {"s1": _feats(root_value=-0.2)}
+    persisted = _persist_and_read(tmp_path, dev_rows,
+                                  {ABSOLUTE_OFF.label: off, R0.label: r0})
+
+    def _recompute(off_by_sha, r0_by_sha):
+        return {ABSOLUTE_OFF.label: {s: _controls_case_row(dev_rows[0], ABSOLUTE_OFF.label, f)
+                                     for s, f in off_by_sha.items()},
+                R0.label: {s: _controls_case_row(dev_rows[0], R0.label, f)
+                           for s, f in r0_by_sha.items()}}
+
+    # a faithful recompute passes (sanity)
+    count, _ = verify_recomputed_controls(persisted, _recompute(off, r0))
+    assert count == 2
+    # a 1-ULP float difference is caught (shortest-repr is injective over floats)
+    off_ulp = {"s1": _feats(root_value=math.nextafter(0.1, 1.0))}
+    with pytest.raises(ValueError):
+        verify_recomputed_controls(persisted, _recompute(off_ulp, r0))
+    # a bool flip is caught
+    off_bool = {"s1": _feats(root_value=0.1, collapsed=True)}
+    with pytest.raises(ValueError):
+        verify_recomputed_controls(persisted, _recompute(off_bool, r0))
+    # a missing (config, sha) recompute is caught
+    with pytest.raises(ValueError):
+        verify_recomputed_controls(persisted, {ABSOLUTE_OFF.label: {}, R0.label: {}})
+
+
+# ---------------------------------------------------------------------------
+# #4c -- complete candidate artifacts: joinable dev rows + numeric summaries.
+# ---------------------------------------------------------------------------
+
+def test_candidate_dev_records_joinable_by_sha(tmp_path):
+    dev_rows = [_dev_row("s1", role="target"), _dev_row("s2", role="control")]
+    cand = {"s1": _feats(root_value=0.3, top_share=0.6, collapsed=True),
+            "s2": _feats(root_value=0.3)}
+    ref = {"s1": _feats(root_value=0.1, top_share=0.5),
+           "s2": _feats(root_value=0.1)}
+    recs = _candidate_dev_records(dev_rows, cand, ref, "r0.20", ABSOLUTE_OFF.label)
+    assert {r["canonical_sha1"] for r in recs} == {"s1", "s2"}       # joinable
+    assert all(r["candidate_config"] == "r0.20"
+               and r["reference"] == "absolute_off" for r in recs)
+    trow = next(r for r in recs if r["role"] == "target")
+    crow = next(r for r in recs if r["role"] == "control")
+    assert trow["band"] == "b200_299" and trow["new_collapse"] is True     # collapsed & not ref
+    assert crow["mover_delta"] == pytest.approx(0.2) and crow["band"] == ""
+    # round-trips through the CSV writer with a stable union schema
+    from scripts.GPU.alphazero.diagnose_fpu_policy_mass import CANDIDATE_DEV_ROW_FIELDNAMES
+    path = tmp_path / "candidate_dev_rows.csv"
+    _write_csv(str(path), CANDIDATE_DEV_ROW_FIELDNAMES, recs)
+    with open(path, newline="") as f:
+        back = list(csv.DictReader(f))
+    assert len(back) == 2 and {r["canonical_sha1"] for r in back} == {"s1", "s2"}
+
+
+def test_candidate_result_record_carries_numeric_summaries():
+    clean = [_tgt() for _ in range(30)] + [_ctl() for _ in range(10)]
+    v_off = dev_safety_verdict(clean, ref=ABSOLUTE_OFF, r0_lockin=5, absoff_lockin=5)
+    v_r0 = dev_safety_verdict(clean, ref=R0, r0_lockin=5, absoff_lockin=5)
+    a_rows = [dict(off_value=0.0, r_value=0.5 * V_REF, replies_ref=1.0,
+                   replies_x=0.5, top_share_inc=0.0, new_collapse=False)]
+    a_verdict = selected_a_verdict(a_rows)
+    rec = _candidate_result_record(GRID[1], v_off, v_r0, a_verdict, safe=True)
+    assert rec["config"] == "r0.20" and rec["reduction"] == 0.20 and rec["safe"] is True
+    assert rec["metrics_vs_absolute_off"]["target_new_collapse_rate"] == 0.0
+    assert rec["metrics_vs_r0"]["control_flip_rate"] == 0.0
+    assert set(rec["selected_a_metrics"]) >= {
+        "reply_reduction", "progress", "a_new_collapse", "a_top_share_inc", "passed"}
+    json.dumps(rec)                                     # fully JSON-serializable
+    # no selected-A (frozen_check) -> selected_a_metrics is None, still serializable
+    rec2 = _candidate_result_record(GRID[0], v_off, v_r0, None, safe=False)
+    assert rec2["selected_a_metrics"] is None and rec2["selected_a_passed"] is None
+    json.dumps(rec2)

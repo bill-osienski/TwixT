@@ -56,13 +56,18 @@ from . import fpu_provenance
 
 # The corpus's effective result-determining source files, whose BYTES the
 # evidence-grade manifest provenance pins (design §12.5). Referenced by PATH
-# (from this package dir) so fingerprinting mcts.py never imports it.
+# (from this package dir) so fingerprinting mcts.py never imports it. Includes
+# the state-RECONSTRUCTION deps (goal_line_trigger_probe_cases.py +
+# game/twixt_state.py): the builder rebuilds each corpus position via
+# position_state -> TwixtState, so their bytes are equally result-determining
+# (RF1; aligns with the diagnostic's RESULT_DETERMINING_SOURCES).
 _MODULE_DIR = Path(__file__).resolve().parent
 _CORPUS_SOURCES: Tuple[Path, ...] = (
     _MODULE_DIR / "build_fpu_dev_corpus.py",
     _MODULE_DIR / "mcts.py",
     _MODULE_DIR / "fpu_state_hash.py",
     _MODULE_DIR / "goal_line_trigger_probe_cases.py",
+    _MODULE_DIR / "game" / "twixt_state.py",
 )
 
 # ---------------------------------------------------------------------------
