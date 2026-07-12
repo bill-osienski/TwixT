@@ -424,6 +424,363 @@ def enumerate_candidate_plies(replay: Mapping[str, Any], stride: int = 4,
 
 
 # ---------------------------------------------------------------------------
+# Pure replay-geometry feasibility preflight (design AMENDMENT 2026-07-11 §11.4)
+# ---------------------------------------------------------------------------
+# A hard gate that runs BEFORE the evaluator loads in `main()`: it proves, from
+# replay GEOMETRY ALONE (stored/reconstructed n_legal + ply + side; NO NN, NO
+# MCTS, NO raw-policy), that a (source corpus, enumeration) pair can JOINTLY
+# satisfy the four STRUCTURAL sampler constraints -- band quota, <=MAX_PER_GAME/
+# game (+ >=MIN_PLY_GAP), per-split side balance, and the <=50% ply-bucket cap
+# -- or it reports the binding constraint so `main()` stops before wasting
+# evaluator setup (the first seed20116 build hard-stopped deep in the scan).
+#
+# SCOPE: ROLE (target vs control) is OUT of scope -- it needs the evaluator's
+# raw policy, so the preflight checks only the per-band TOTAL (QUOTA_PER_BAND =
+# 80 = 60 target + 20 control). It proves the geometric/structural upper bound;
+# the role/eligibility fill stays an operator-runtime check under the
+# stop-don't-retune rule (§11.4 pre-registration).
+#
+# SOUNDNESS: feasible=True is NEVER returned on necessary-check evidence alone
+# (per-constraint capacity can each pass while the joint problem is infeasible
+# -- §11.2.3). It is returned ONLY when a constructive WITNESS actually selects
+# QUOTA_PER_BAND positions per band as whole-game red+black PAIRS (the sampler's
+# own side-neutral mechanism -- see SIDE_TOL's note and `_choose_positions`),
+# jointly honouring the per-game <=MAX_PER_GAME cap ACROSS bands, >=MIN_PLY_GAP
+# spacing, the global ply-bucket cap, and a whole-game split into the frozen
+# 160/80 budgets with |red-black| <= SIDE_TOL in each split. A successful
+# witness IS a feasible selection, so the gate can never be false-feasible; it
+# may be mildly conservative (false-infeasible) for an exotic corpus that could
+# only balance via single-side games taken one apiece -- an accepted, documented
+# limitation that never yields a silent false pass.
+
+# Per-band TOTAL quota implied by the frozen SPLIT_ALLOC (60 target + 20 control
+# = 80 for every band). DERIVED (not hard-coded) so it cannot drift from the
+# real allocation; asserted uniform across bands.
+_PER_BAND_TOTALS: Dict[str, int] = {}
+for (_pf_role, _pf_band), _pf_alloc in SPLIT_ALLOC.items():
+    _PER_BAND_TOTALS[_pf_band] = (_PER_BAND_TOTALS.get(_pf_band, 0)
+                                  + _pf_alloc["tuning"] + _pf_alloc["frozen_check"])
+assert set(_PER_BAND_TOTALS) == set(BANDS), _PER_BAND_TOTALS
+assert len(set(_PER_BAND_TOTALS.values())) == 1, _PER_BAND_TOTALS
+QUOTA_PER_BAND: int = _PER_BAND_TOTALS[BANDS[0]]   # 80
+
+# Whole-game position budget per split (SPLIT_ALLOC totals: tuning 160 / 80).
+_SPLIT_POS_BUDGET: Dict[str, int] = {
+    split: sum(alloc[split] for alloc in SPLIT_ALLOC.values()) for split in SPLITS}
+
+
+@dataclasses.dataclass(frozen=True)
+class PreflightReport:
+    """Structured result of `geometry_feasibility`.
+
+    `feasible` is True IFF the constructive `witness` (a real QUOTA_PER_BAND-per-
+    band selection satisfying all four constraints) was built. The remaining
+    fields are the per-band / per-bucket DIAGNOSTICS that name which constraint
+    bound when `feasible` is False (and, on success, corroborate the witness).
+    """
+    feasible: bool
+    binding_constraint: Optional[str]
+    quota_per_band: int
+    bucket_cap: float
+    n_games: int
+    n_candidates: int
+    realizable_by_band: Dict[str, int]      # positions realizable under <=2/game + gap
+    pairs_by_band: Dict[str, int]           # distinct whole-game red+black pair-games
+    red_by_band: Dict[str, int]             # total red candidate positions
+    black_by_band: Dict[str, int]           # total black candidate positions
+    forced_bucket_min: Dict[str, int]       # positions a band forces into ONE bucket
+    witness: Optional[Tuple[dict, ...]]     # the selected rows (split-stamped) or None
+
+    def format(self) -> str:
+        head = ("FEASIBLE" if self.feasible
+                else f"INFEASIBLE (binding: {self.binding_constraint})")
+        lines = [
+            f"[preflight] {head}",
+            f"  games={self.n_games} candidates={self.n_candidates} "
+            f"quota/band={self.quota_per_band} bucket_cap={self.bucket_cap:g}",
+        ]
+        for band in BANDS:
+            lines.append(
+                f"  {band}: realizable={self.realizable_by_band.get(band, 0)} "
+                f"pairs={self.pairs_by_band.get(band, 0)} "
+                f"red={self.red_by_band.get(band, 0)} "
+                f"black={self.black_by_band.get(band, 0)}")
+        if self.forced_bucket_min:
+            forced = ", ".join(f"{b}={n}" for b, n in
+                               sorted(self.forced_bucket_min.items()))
+            lines.append(f"  forced-bucket-min: {forced}")
+        return "\n".join(lines)
+
+    __str__ = format
+
+
+def build_candidates_by_game(replays_by_game: Mapping[Any, Mapping[str, Any]], *,
+                             stride: int, cap: int) -> Dict[Any, List[dict]]:
+    """Pure candidate builder -- REUSES the real scan primitives so the preflight
+    cannot drift from `main()`'s enumeration. For each game, run the SAME
+    `enumerate_candidate_plies(replay, stride, cap)` selection, and for each
+    selected ply emit the geometry row {game_idx, ply, band, ply_bucket, side}
+    via the SAME `band_of` / `ply_bucket_of` / `side_to_move_for_ply` the sampler
+    uses. `band` is read from that ply's own `per_ply_n_legal` value, never
+    re-derived. NO NN / MCTS / raw-policy -- pure n_legal geometry.
+    """
+    out: Dict[Any, List[dict]] = {}
+    for game_idx, replay in replays_by_game.items():
+        n_legal = per_ply_n_legal(replay)
+        rows: List[dict] = []
+        for ply in enumerate_candidate_plies(replay, stride=stride, cap=cap):
+            band = band_of(n_legal[ply])
+            if band is None:
+                continue   # enumerate yields only qualifying plies; defensive
+            rows.append({
+                "game_idx": game_idx, "ply": ply, "band": band,
+                "ply_bucket": ply_bucket_of(ply),
+                "side": side_to_move_for_ply(ply),
+            })
+        out[game_idx] = rows
+    return out
+
+
+def _gap_selectable(plies_sorted: List[int], gap: int, cap: int) -> int:
+    """How many of one game's `plies_sorted` are realizable under >=gap spacing,
+    capped at `cap` -- the greedy earliest-first chain, matching
+    `_choose_positions`' take_n>=2 branch and `assign_split`'s min(n, MAX_PER_GAME)
+    capacity idiom."""
+    chosen = 0
+    last = None
+    for p in plies_sorted:
+        if last is None or (p - last) >= gap:
+            chosen += 1
+            last = p
+            if chosen >= cap:
+                break
+    return chosen
+
+
+def _first_gap_pair(reds: List[dict], blacks: List[dict], gap: int):
+    """First (red_row, black_row) whose plies are >= gap apart (reds/blacks each
+    ascending by ply), else None. Deterministic: lowest red then lowest black."""
+    for r in reds:
+        for b in blacks:
+            if abs(r["ply"] - b["ply"]) >= gap:
+                return r, b
+    return None
+
+
+def _fit_pair(reds: List[dict], blacks: List[dict], gap: int,
+              bucket_count: "Counter", bucket_cap: float):
+    """First gap-valid red+black pair whose ply_buckets BOTH stay within
+    `bucket_cap` once added, else None -- so the witness never overfills a
+    bucket (matches the sampler's `bucket_count < cap` filter: a bucket may
+    reach, but not exceed, the cap)."""
+    for r in reds:
+        for b in blacks:
+            if abs(r["ply"] - b["ply"]) < gap:
+                continue
+            add: Counter = Counter()
+            add[r["ply_bucket"]] += 1
+            add[b["ply_bucket"]] += 1
+            if all(bucket_count[bk] + n <= bucket_cap for bk, n in add.items()):
+                return r, b
+    return None
+
+
+def _build_witness(candidates_by_game, bands, quota, max_per_game, min_gap,
+                   side_tol, bucket_cap):
+    """Constructive witness. Greedily select `quota` positions per band as
+    whole-game red+black PAIRS, honouring the JOINT <=max_per_game/game cap (a
+    game used for a pair in ANY band is consumed -- the cross-band coupling the
+    per-band necessary checks miss), >=min_gap spacing, and the global bucket
+    cap; then split whole games into the frozen 160/80 budgets and verify
+    per-split side balance. Returns (selected_rows, None) on success, else
+    (None, binding_constraint). `quota` is even (QUOTA_PER_BAND=80), so `quota//2`
+    pairs realize it exactly.
+    """
+    per_game_band: Dict[Any, Dict[str, List[dict]]] = {}
+    for gi in sorted(candidates_by_game):
+        m: Dict[str, List[dict]] = defaultdict(list)
+        for c in candidates_by_game[gi]:
+            if c["band"] in bands:
+                m[c["band"]].append(c)
+        per_game_band[gi] = m
+
+    used_games: Set[Any] = set()
+    bucket_count: Counter = Counter()
+    selected: List[dict] = []
+    selected_games_in_order: List[Any] = []
+    pairs_per_band = quota // 2
+
+    for band in bands:
+        got = 0
+        for gi in sorted(per_game_band):
+            if got >= pairs_per_band:
+                break
+            if gi in used_games:
+                continue
+            rows = per_game_band[gi].get(band)
+            if not rows:
+                continue
+            reds = sorted((r for r in rows if r["side"] == "red"),
+                          key=lambda r: r["ply"])
+            blacks = sorted((r for r in rows if r["side"] == "black"),
+                            key=lambda r: r["ply"])
+            pair = _fit_pair(reds, blacks, min_gap, bucket_count, bucket_cap)
+            if pair is None:
+                continue
+            used_games.add(gi)
+            selected_games_in_order.append(gi)
+            for row in pair:
+                selected.append(dict(row))
+                bucket_count[row["ply_bucket"]] += 1
+            got += 1
+        if got < pairs_per_band:
+            return None, (f"joint-band-quota:{band} (witness realized "
+                          f"{got * 2} < {quota} positions under the JOINT "
+                          f"<=2/game + gap + bucket-cap constraints)")
+
+    # Whole-game split into the frozen 160/80 budgets. Every selected game
+    # contributes exactly one side-neutral (red+black) pair, so any whole-game
+    # partition is side-balanced; place each game in the first split with room.
+    rows_by_game: Dict[Any, List[dict]] = defaultdict(list)
+    for row in selected:
+        rows_by_game[row["game_idx"]].append(row)
+    split_of: Dict[Any, str] = {}
+    filled = {s: 0 for s in SPLITS}
+    for gi in selected_games_in_order:
+        n = len(rows_by_game[gi])
+        placed = False
+        for split in SPLITS:
+            if filled[split] + n <= _SPLIT_POS_BUDGET[split]:
+                split_of[gi] = split
+                filled[split] += n
+                placed = True
+                break
+        if not placed:                       # no split has room (over-selection)
+            return None, "split-budget:overflow (no split had room for a game)"
+    for row in selected:
+        row["split"] = split_of[row["game_idx"]]
+
+    # Verify split budgets and per-split side balance (belt-and-suspenders:
+    # all-pairs => imbalance 0, but verify a real witness rather than assume).
+    side = {s: Counter() for s in SPLITS}
+    per_split_pos: Counter = Counter()
+    for row in selected:
+        side[row["split"]][row["side"]] += 1
+        per_split_pos[row["split"]] += 1
+    for split in SPLITS:
+        if per_split_pos[split] != _SPLIT_POS_BUDGET[split]:
+            return None, (f"split-budget:{split} (realized {per_split_pos[split]} "
+                          f"!= {_SPLIT_POS_BUDGET[split]})")
+        imbalance = abs(side[split]["red"] - side[split]["black"])
+        if imbalance > side_tol:
+            return None, (f"side-balance:{split} (|red-black|={imbalance} "
+                          f"> {side_tol})")
+    return selected, None
+
+
+def geometry_feasibility(
+        candidates_by_game: Mapping[Any, List[Mapping[str, Any]]], *,
+        quota_per_band: int = QUOTA_PER_BAND,
+        max_per_game: int = MAX_PER_GAME,
+        min_gap: int = MIN_PLY_GAP,
+        side_tol: int = SIDE_TOL,
+        bucket_cap: float = 0.5 * CORPUS_SIZE,
+        bands: Tuple[str, ...] = BANDS) -> PreflightReport:
+    """Pure JOINT feasibility core (design §11.4).
+
+    `candidates_by_game`: {game_idx: [ {game_idx, ply, band, ply_bucket, side} ]}
+    -- pure geometry rows (no file paths, no NN), as produced by
+    `build_candidates_by_game`. Computes per-band / per-bucket capacity
+    DIAGNOSTICS, short-circuits with a named binding constraint on any per-band
+    NECESSARY violation, and only then attempts the constructive `_build_witness`
+    that GOVERNS feasible=True. Deterministic (sorted iteration throughout).
+    """
+    realizable = {b: 0 for b in bands}
+    pairs = {b: 0 for b in bands}
+    red_tot = {b: 0 for b in bands}
+    black_tot = {b: 0 for b in bands}
+    band_buckets: Dict[str, Set[str]] = {b: set() for b in bands}
+    n_candidates = 0
+
+    for gi in sorted(candidates_by_game):
+        by_band: Dict[str, List[dict]] = defaultdict(list)
+        for c in candidates_by_game[gi]:
+            n_candidates += 1
+            if c["band"] in realizable:
+                by_band[c["band"]].append(c)
+        for band, rows in by_band.items():
+            plies = sorted(r["ply"] for r in rows)
+            realizable[band] += _gap_selectable(plies, min_gap, max_per_game)
+            reds = sorted((r for r in rows if r["side"] == "red"),
+                          key=lambda r: r["ply"])
+            blacks = sorted((r for r in rows if r["side"] == "black"),
+                            key=lambda r: r["ply"])
+            red_tot[band] += len(reds)
+            black_tot[band] += len(blacks)
+            if _first_gap_pair(reds, blacks, min_gap) is not None:
+                pairs[band] += 1
+            for r in rows:
+                band_buckets[band].add(r["ply_bucket"])
+
+    # forced-bucket-min: a band whose candidates ALL sit in one bucket forces its
+    # entire quota into that bucket (a sound lower bound on that bucket's count).
+    forced_bucket: Counter = Counter()
+    for band in bands:
+        if len(band_buckets[band]) == 1:
+            (only_bucket,) = tuple(band_buckets[band])
+            forced_bucket[only_bucket] += quota_per_band
+    forced_bucket_min = dict(forced_bucket)
+
+    def _report(feasible, binding, witness):
+        return PreflightReport(
+            feasible=feasible, binding_constraint=binding,
+            quota_per_band=quota_per_band, bucket_cap=float(bucket_cap),
+            n_games=len(candidates_by_game), n_candidates=n_candidates,
+            realizable_by_band=dict(realizable), pairs_by_band=dict(pairs),
+            red_by_band=dict(red_tot), black_by_band=dict(black_tot),
+            forced_bucket_min=forced_bucket_min, witness=witness)
+
+    # Necessary checks (fast; name the binding constraint). NONE of these drives
+    # feasible=True -- they only short-circuit clear INfeasibility with a reason.
+    for band in bands:
+        if realizable[band] < quota_per_band:
+            return _report(False, f"band-capacity:{band} (realizable "
+                           f"{realizable[band]} < quota {quota_per_band})", None)
+    for band in bands:
+        if pairs[band] * 2 < quota_per_band:
+            return _report(False, f"side-aliasing:{band} (both-side pair-games "
+                           f"{pairs[band]} < {quota_per_band // 2} needed for "
+                           f"per-split side balance)", None)
+    for bucket, forced in forced_bucket_min.items():
+        if forced > bucket_cap:
+            return _report(False, f"ply-bucket:{bucket} (forced {forced} > cap "
+                           f"{bucket_cap:g})", None)
+
+    # Constructive witness GOVERNS feasible=True (§11.2.3: necessary != sufficient).
+    witness, binding = _build_witness(candidates_by_game, bands, quota_per_band,
+                                      max_per_game, min_gap, side_tol, bucket_cap)
+    if witness is None:
+        return _report(False, binding, None)
+    return _report(True, None, tuple(witness))
+
+
+def preflight_source(records: List[Mapping[str, Any]], *,
+                     stride: int, cap: int) -> PreflightReport:
+    """I/O wrapper (the ONLY impure part -- kept thin). Read each
+    `rec["replay_path"]`, build `candidates_by_game` via
+    `build_candidates_by_game`, and run the pure `geometry_feasibility`. All
+    feasibility logic lives in the pure core; this only does the file reads.
+    """
+    replays_by_game: Dict[Any, Mapping[str, Any]] = {}
+    for rec in records:
+        replay = json.loads(Path(rec["replay_path"]).read_text())
+        replays_by_game[rec["game_idx"]] = replay
+    candidates_by_game = build_candidates_by_game(
+        replays_by_game, stride=stride, cap=cap)
+    return geometry_feasibility(candidates_by_game)
+
+
+# ---------------------------------------------------------------------------
 # Stage-2 raw-policy geometry features (cheap prefilter input)
 # ---------------------------------------------------------------------------
 
@@ -789,6 +1146,20 @@ def main(argv=None) -> int:
 
     records = load_game_index(args.source_jsonl)
     print(f"[fpu-dev-corpus] {len(records)} source games from {args.source_jsonl}")
+
+    # Pure replay-geometry feasibility preflight (design §11.4). Proves from
+    # n_legal/ply/side ALONE that this (source, enumeration) pair can jointly
+    # satisfy the four structural constraints. Runs BEFORE the evaluator loads,
+    # so an infeasible source hard-stops cheaply instead of deep in the scan.
+    report = preflight_source(records, stride=args.stride, cap=args.cap)
+    print(report.format())
+    if not report.feasible:
+        print(f"[fpu-dev-corpus] PREFLIGHT INFEASIBLE -- binding constraint: "
+              f"{report.binding_constraint}. Stopping BEFORE evaluator load "
+              f"(design §11.4 stop-don't-retune).")
+        return 2
+    print("[fpu-dev-corpus] preflight OK -- geometry can jointly satisfy the "
+          "four structural constraints; loading evaluator.")
 
     evaluator, search_fn = _build_anchor_search_fn(
         checkpoint, args.eval_batch_size, args.stall_flush_sims)
