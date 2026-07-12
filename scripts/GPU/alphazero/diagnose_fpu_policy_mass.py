@@ -37,14 +37,27 @@ from __future__ import annotations
 import argparse
 import csv
 import dataclasses
-import hashlib
 import json
 import math
-import subprocess
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+
+# Stdlib-only provenance helpers (design §12.5). Importing it keeps this module
+# GPU/MLX-free (fpu_provenance imports no MCTS/evaluator/mlx).
+from . import fpu_provenance
+
+# The effective result-determining source files whose BYTES the shared
+# selection-context fingerprint pins (design §12.5). Referenced by PATH (from
+# this package dir) so fingerprinting mcts.py never requires importing it --
+# which would pull GPU/MLX -- keeping the pure import path clean.
+_MODULE_DIR = Path(__file__).resolve().parent
+RESULT_DETERMINING_SOURCES: Tuple[Path, ...] = (
+    _MODULE_DIR / "diagnose_fpu_policy_mass.py",
+    _MODULE_DIR / "mcts.py",
+    _MODULE_DIR / "build_fpu_dev_corpus.py",
+)
 
 # ---------------------------------------------------------------------------
 # Typed run-configs (fix 9) -- explicit labels so absolute_off / r0 / grid are
@@ -313,24 +326,92 @@ def validate_stage_mode(cases: Sequence[Mapping[str, Any]], *, mode: str, stage:
 # Controls-artifact guards (pure; driven in tests by a fabricated gate dict)
 # ---------------------------------------------------------------------------
 
-FINGERPRINT_KEYS = (
-    "dev_manifest_sha1", "selected_a_manifest_sha1", "checkpoint_identity",
-    "mcts_sims", "search_cfg", "seeds", "git_commit", "observer_schema_version",
-)
+def _canonical(obj: Any) -> Any:
+    """JSON-normalize (tuples -> lists, key order irrelevant) so an in-memory
+    fingerprint block compares equal to the JSON-persisted one field-for-field.
+    All fingerprint values are JSON-native today; this is cheap insurance
+    against a future tuple field silently failing a legitimate match."""
+    return json.loads(json.dumps(obj, sort_keys=True))
 
 
 def validate_controls_fingerprint(gate_json: Mapping[str, Any],
                                   expected: Mapping[str, Any]) -> None:
-    """Raise ValueError if the controls artifact's fingerprint is missing or
-    differs from `expected` in ANY key (stale/mismatched controls => the
-    candidate stage must refuse to reuse them)."""
+    """Raise ValueError unless the controls artifact's SELECTION-CONTEXT
+    fingerprint matches `expected` (the shared, result-determining identity).
+    ONLY `selection_context` is compared: a differing `run_context` -- e.g.
+    selected-A present in tuning vs absent in frozen_check, a different stage,
+    or git/runtime provenance -- must NOT fail the join (design §12.2). A
+    stale/mismatched selection_context => the candidate stage refuses to reuse
+    the controls. `expected` may be a full fingerprint or a bare
+    selection_context block. Pure/testable with fabricated dicts."""
     fp = gate_json.get("fingerprint")
     if fp is None:
         raise ValueError("controls_gate.json has no 'fingerprint' block")
-    mismatched = sorted(k for k in set(fp) | set(expected) if fp.get(k) != expected.get(k))
-    if mismatched:
+    got = fp.get("selection_context")
+    if got is None:
+        raise ValueError("controls_gate.json fingerprint has no 'selection_context' block")
+    exp = expected.get("selection_context", expected)
+    got_n, exp_n = _canonical(got), _canonical(exp)
+    if got_n != exp_n:
+        mismatched = sorted(k for k in set(got_n) | set(exp_n) if got_n.get(k) != exp_n.get(k))
         raise ValueError(
-            f"stale/mismatched controls fingerprint (differing keys: {mismatched})")
+            f"stale/mismatched controls selection-context (differing keys: {mismatched})")
+
+
+def require_frozen_matches_tuning(tuning_result: Mapping[str, Any], *,
+                                  frozen_reduction: Optional[float],
+                                  expected_selection_context: Mapping[str, Any]) -> None:
+    """§12.2 immutable frozen coefficient. The frozen_check candidate MUST equal
+    the coefficient the tuning split selected. Raise ValueError unless ALL hold:
+      (a) `tuning_result['mode'] == 'tuning'` (frozen must consume a TUNING
+          selection artifact, not another frozen one);
+      (b) `tuning_result['smallest_safe_r']` is non-null (a coefficient WAS
+          selected -- otherwise there is nothing to lock to);
+      (c) that result's `fingerprint.selection_context` equals
+          `expected_selection_context` (the frozen stage's OWN shared identity)
+          exactly -- same checkpoint / manifest / base config / source;
+      (d) `frozen_reduction` equals the reduction the selected label maps to via
+          GRID -- so an arbitrary `--frozen-r` cannot be smuggled past
+          "one nonzero r". Pure -- testable with a fabricated tuning_result."""
+    if tuning_result.get("mode") != "tuning":
+        raise ValueError(
+            f"tuning-result mode {tuning_result.get('mode')!r} != 'tuning' "
+            "(frozen_check must consume a TUNING selection artifact)")
+    selected = tuning_result.get("smallest_safe_r")
+    if selected is None:
+        raise ValueError(
+            "tuning-result smallest_safe_r is null -- no coefficient was selected; "
+            "frozen_check has nothing to lock to")
+    fp = tuning_result.get("fingerprint") or {}
+    tun_sel = fp.get("selection_context")
+    if tun_sel is None:
+        raise ValueError("tuning-result fingerprint has no 'selection_context' block")
+    if _canonical(tun_sel) != _canonical(expected_selection_context):
+        raise ValueError(
+            "frozen_check selection-context != tuning selection-context "
+            "(different checkpoint/manifest/config/source -- refusing to lock)")
+    grid_reduction = {c.label: c.reduction for c in GRID}
+    if selected not in grid_reduction:
+        raise ValueError(f"tuning smallest_safe_r {selected!r} is not a GRID label")
+    if frozen_reduction != grid_reduction[selected]:
+        raise ValueError(
+            f"--frozen-r reduction {frozen_reduction!r} != tuning-selected "
+            f"{selected!r} reduction {grid_reduction[selected]!r} (immutable §12.2)")
+
+
+def validate_selected_a_mode(mode: str, has_selected_a: bool) -> None:
+    """§12.3 selected-A is tuning-only. Raise SystemExit if tuning candidates
+    lack a selected-A manifest (the §6.3 mechanism gate is mandatory there) or
+    if frozen_check is given one (frozen is a held-out dev screen; its `safe`
+    verdict must not depend on selected-A). Pure -- extracted so the guard is
+    testable without invoking the operator stage."""
+    if mode == "tuning" and not has_selected_a:
+        raise SystemExit(
+            "tuning candidates require --selected-a-manifest (the §6.3 mechanism gate)")
+    if mode == "frozen_check" and has_selected_a:
+        raise SystemExit(
+            "selected-A is tuning-only; do not pass --selected-a-manifest in "
+            "frozen_check mode")
 
 
 def require_r0_qualified(gate_json: Mapping[str, Any]) -> None:
@@ -491,31 +572,8 @@ DEFAULT_SEED_BASE = 20260711
 COLLAPSE_TOP_SHARE = 0.95        # a root "collapsed" iff top share >= 0.95 (v16a)
 
 
-def _git_commit() -> str:
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
-    except Exception:
-        return "unknown"
-
-
-def _file_sha1(path: Optional[str]) -> str:
-    """Streaming SHA1 of a file's bytes (identity for the fingerprint), or a
-    sentinel when the path is absent/unreadable."""
-    if not path:
-        return "none"
-    try:
-        h = hashlib.sha1()
-        with open(path, "rb") as f:
-            for chunk in iter(lambda: f.read(1 << 20), b""):
-                h.update(chunk)
-        return h.hexdigest()
-    except OSError:
-        return "missing"
-
-
 def _checkpoint_identity(checkpoint: str) -> str:
-    return f"{Path(checkpoint).name}:{_file_sha1(checkpoint)}"
+    return f"{Path(checkpoint).name}:{fpu_provenance.file_sha1(checkpoint)}"
 
 
 def _run_seed(seed_base: int, game_idx: int, ply: int) -> int:
@@ -523,25 +581,55 @@ def _run_seed(seed_base: int, game_idx: int, ply: int) -> int:
     return int(seed_base) ^ int(game_idx) ^ int(ply)
 
 
-def _search_cfg_dict(eval_batch_size: int, stall_flush_sims: int, c_puct: float) -> dict:
-    return {"mcts_sims": MCTS_SIMS, "eval_batch_size": eval_batch_size,
-            "stall_flush_sims": stall_flush_sims, "c_puct": c_puct}
+def build_run_fingerprint(*, dev_manifest: str, checkpoint: str, base_cfg: Any,
+                          source_jsonl: Optional[str], replay_paths: Sequence[str],
+                          seeds: Mapping[str, Any], selected_a_manifest: Optional[str],
+                          mode: str, stage: str) -> dict:
+    """Split run-identity fingerprint (design §12.2/§12.5), computed identically
+    from the same args in every stage. TWO blocks:
 
+    `selection_context` -- the SHARED, result-determining identity every stage of
+    one protocol run (and tuning vs frozen) must match EXACTLY:
+      - source-file BYTE hashes of the effective result-determining modules
+        (§12.5: a git commit alone misses uncommitted edits);
+      - checkpoint identity (name + sha1); dev-manifest sha1;
+      - source-index sha1 + a deterministic replay-DATA hash (contents, not
+        paths);
+      - the FULL effective base MCTS config via `dataclasses.asdict` (this base
+        has `fpu_policy_mass_reduction=None`; it captures c_puct / eval_batch_size
+        / stall_flush_sims / n_simulations / ...);
+      - mcts_sims; seeds; the frozen GRID as `[[label, reduction], ...]`.
 
-def _build_fingerprint(*, dev_manifest: str, selected_a_manifest: Optional[str],
-                       checkpoint: str, search_cfg: dict, seeds: dict) -> dict:
-    """Reproducible controls fingerprint (both stages compute it identically
-    from the same args, so a stale/mismatched controls artifact is detectable)."""
-    return {
-        "dev_manifest_sha1": _file_sha1(dev_manifest),
-        "selected_a_manifest_sha1": _file_sha1(selected_a_manifest),
+    `run_context` -- RECORDED but NOT cross-matched (it legitimately differs):
+    selected-A present (tuning) vs absent (frozen); explicit `add_noise=False`;
+    git commit + clean-worktree flag; runtime provenance; mode; stage; observer
+    schema version."""
+    selection_context = {
+        "source_file_sha1s": fpu_provenance.source_file_sha1s(RESULT_DETERMINING_SOURCES),
         "checkpoint_identity": _checkpoint_identity(checkpoint),
+        "dev_manifest_sha1": fpu_provenance.file_sha1(dev_manifest),
+        "source_index_sha1": fpu_provenance.file_sha1(source_jsonl),
+        "replay_data_sha1": fpu_provenance.replay_data_sha1(replay_paths),
+        "base_mcts_config": dataclasses.asdict(base_cfg),
         "mcts_sims": MCTS_SIMS,
-        "search_cfg": search_cfg,
-        "seeds": seeds,
-        "git_commit": _git_commit(),
+        "seeds": dict(seeds),
+        "grid": [[c.label, c.reduction] for c in GRID],
+    }
+    run_context = {
+        "selected_a": {
+            "present": bool(selected_a_manifest),
+            "manifest_sha1": (fpu_provenance.file_sha1(selected_a_manifest)
+                              if selected_a_manifest else None),
+        },
+        "add_noise": False,
+        "git_commit": fpu_provenance.git_commit(),
+        "worktree_clean": fpu_provenance.worktree_clean(),
+        "runtime_provenance": fpu_provenance.runtime_provenance(),
+        "mode": mode,
+        "stage": stage,
         "observer_schema_version": OBSERVER_SCHEMA_VERSION,
     }
+    return {"selection_context": selection_context, "run_context": run_context}
 
 
 def _n_visited_children(node: Any) -> int:
@@ -790,12 +878,12 @@ def run_controls_stage(args, dev_rows, run_configs) -> int:
                                  r0_lockin=r0_lockin, absoff_lockin=absoff_lockin)
     r0_qualified = not verdict.rejected
 
-    search_cfg = _search_cfg_dict(args.eval_batch_size, args.stall_flush_sims, base_cfg.c_puct)
-    fingerprint = _build_fingerprint(
-        dev_manifest=args.dev_manifest, selected_a_manifest=args.selected_a_manifest,
-        checkpoint=args.checkpoint, search_cfg=search_cfg,
+    fingerprint = build_run_fingerprint(
+        dev_manifest=args.dev_manifest, checkpoint=args.checkpoint, base_cfg=base_cfg,
+        source_jsonl=args.source_jsonl, replay_paths=list(replay_by_game.values()),
         seeds={"seed_base": args.seed_base, "eval_batch_size": args.eval_batch_size,
-               "stall_flush_sims": args.stall_flush_sims})
+               "stall_flush_sims": args.stall_flush_sims},
+        selected_a_manifest=args.selected_a_manifest, mode=args.mode, stage="controls")
 
     _write_csv(str(out_dir / "controls_summary.csv"),
                ["config", "n_positions", "target_lockin_count", "mean_top_share"],
@@ -829,33 +917,55 @@ def _load_controls_gate(out_dir: str) -> dict:
     return json.loads((Path(out_dir) / "controls_gate.json").read_text())
 
 
+def _load_tuning_result(path: str) -> dict:
+    """Load the tuning `candidates_result.json` whose selected `smallest_safe_r`
+    a frozen_check run must lock to (§12.2). A frozen/non-tuning artifact is
+    caught downstream by `require_frozen_matches_tuning`."""
+    return json.loads(Path(path).read_text())
+
+
 def run_candidates_stage(args, dev_rows, run_configs) -> int:
     validate_stage_mode(dev_rows, mode=args.mode, stage="candidates", run_configs=run_configs)
+    # §12.3 selected-A is tuning-only -- checked BEFORE any load (tuning REQUIRES
+    # it for the §6.3 mechanism gate; frozen_check FORBIDS it).
+    validate_selected_a_mode(args.mode, bool(args.selected_a_manifest))
     gate = _load_controls_gate(args.out_dir)
 
-    # Recompute the fingerprint from the SAME args; refuse stale/mismatched
-    # controls, then require r0 to have qualified (§5 step 0). c_puct is
-    # derived from OUR OWN config (base_cfg_for_fp), not echoed from the
-    # loaded gate -- echoing would make validate_controls_fingerprint compare
-    # the gate's c_puct against itself (tautology; can't catch a divergence).
-    # Value is unchanged (both sources are the same EvalConfig default), and
-    # this is config-only (no checkpoint/evaluator load), so it's still cheap
-    # to compute before validation.
-    base_cfg_for_fp = _make_base_cfg(args.eval_batch_size, args.stall_flush_sims)
-    search_cfg = _search_cfg_dict(args.eval_batch_size, args.stall_flush_sims,
-                                  base_cfg_for_fp.c_puct)
-    expected = _build_fingerprint(
-        dev_manifest=args.dev_manifest, selected_a_manifest=args.selected_a_manifest,
-        checkpoint=args.checkpoint, search_cfg=search_cfg,
-        seeds={"seed_base": args.seed_base, "eval_batch_size": args.eval_batch_size,
-               "stall_flush_sims": args.stall_flush_sims})
-    validate_controls_fingerprint(gate, expected)
-    require_r0_qualified(gate)
-    require_matching_mode(gate, args.mode)
-
+    # Load the replay index up-front (a pure jsonl read -- no evaluator): the
+    # shared selection-context fingerprint hashes the replay DATA, so the paths
+    # are needed BEFORE fingerprint validation.
     from .build_fpu_dev_corpus import load_game_index
     replay_by_game = {r["game_idx"]: r["replay_path"]
                       for r in load_game_index(args.source_jsonl)}
+
+    # Recompute OUR selection-context from the SAME args; refuse a
+    # stale/mismatched controls artifact, then require r0 to have qualified
+    # (§5 step 0) and a matching mode. base_cfg_for_fp is config-only (no
+    # checkpoint/evaluator load), so this stays cheap to compute before
+    # validation, and it is the SAME EvalConfig the search below uses -- so the
+    # fingerprint's base_mcts_config exactly matches the search config.
+    base_cfg_for_fp = _make_base_cfg(args.eval_batch_size, args.stall_flush_sims)
+    expected_fp = build_run_fingerprint(
+        dev_manifest=args.dev_manifest, checkpoint=args.checkpoint,
+        base_cfg=base_cfg_for_fp, source_jsonl=args.source_jsonl,
+        replay_paths=list(replay_by_game.values()),
+        seeds={"seed_base": args.seed_base, "eval_batch_size": args.eval_batch_size,
+               "stall_flush_sims": args.stall_flush_sims},
+        selected_a_manifest=args.selected_a_manifest, mode=args.mode, stage="candidates")
+    validate_controls_fingerprint(gate, expected_fp)
+    require_r0_qualified(gate)
+    require_matching_mode(gate, args.mode)
+
+    # §12.2 immutable frozen coefficient: the single --frozen-r MUST equal the
+    # coefficient the tuning split selected, under a matching selection-context.
+    # ("One nonzero r" alone would permit an arbitrary value.)
+    if args.mode == "frozen_check":
+        tuning_result = _load_tuning_result(
+            args.tuning_result or str(Path(args.out_dir) / "candidates_result.json"))
+        require_frozen_matches_tuning(
+            tuning_result, frozen_reduction=run_configs[0].reduction,
+            expected_selection_context=expected_fp["selection_context"])
+
     evaluator, base_cfg = _make_evaluator_and_base_cfg(
         args.checkpoint, args.eval_batch_size, args.stall_flush_sims)
 
@@ -876,7 +986,10 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
     r0_lockin = gate["r0_target_lockin_count"]
     absoff_lockin = gate["absoff_target_lockin_count"]
 
-    a_rows_source = _load_selected_a(args, evaluator, base_cfg, run_configs)
+    # §12.3: selected-A participates ONLY in tuning (in frozen_check it is
+    # forbidden above, and the frozen `safe` verdict must not depend on it).
+    a_rows_source = (_load_selected_a(args, evaluator, base_cfg, run_configs)
+                     if args.mode == "tuning" else {})
 
     results = []
     smallest_safe = None
@@ -890,8 +1003,13 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
             r0_lockin=r0_lockin, absoff_lockin=absoff_lockin)
         a_rows = a_rows_source.get(c.label, [])
         a_verdict = selected_a_verdict(a_rows) if a_rows else None
-        safe = (not v_off.rejected and not v_r0.rejected
-                and a_verdict is not None and a_verdict.passed)
+        dev_safe = not v_off.rejected and not v_r0.rejected
+        # tuning: dev-safety (both refs) AND the §6.3 selected-A mechanism gate.
+        # frozen_check: a held-out dev screen -- dev-safety ONLY (§12.3).
+        if args.mode == "tuning":
+            safe = dev_safe and a_verdict is not None and a_verdict.passed
+        else:
+            safe = dev_safe
         results.append({
             "config": c.label, "reduction": c.reduction, "safe": safe,
             "reject_vs_absolute_off": list(v_off.reasons),
@@ -901,7 +1019,8 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
         if safe and smallest_safe is None:
             smallest_safe = c.label
 
-    out = {"mode": args.mode, "smallest_safe_r": smallest_safe, "candidates": results}
+    out = {"mode": args.mode, "smallest_safe_r": smallest_safe,
+           "candidates": results, "fingerprint": expected_fp}
     Path(args.out_dir).mkdir(parents=True, exist_ok=True)
     (Path(args.out_dir) / "candidates_result.json").write_text(json.dumps(out, indent=2))
     print(f"[fpu-candidates] smallest_safe_r={smallest_safe} -> "
@@ -969,6 +1088,12 @@ def _parse_args(argv):
     ap.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
     ap.add_argument("--frozen-r", type=float, default=None,
                     help="the single nonzero r for frozen_check candidates.")
+    ap.add_argument("--tuning-result", default=None,
+                    help="frozen_check candidates only: path to the TUNING "
+                         "candidates_result.json whose selected smallest_safe_r "
+                         "this frozen run must match (§12.2 immutable "
+                         "coefficient). Defaults to "
+                         "<out_dir>/candidates_result.json.")
     ap.add_argument("--seed-base", type=int, default=DEFAULT_SEED_BASE)
     ap.add_argument("--eval-batch-size", type=int, default=14)
     ap.add_argument("--stall-flush-sims", type=int, default=48)

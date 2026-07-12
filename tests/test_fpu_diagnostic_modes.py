@@ -22,6 +22,8 @@ is made identical, so the pinned value is the p95 under ANY percentile
 convention (the gate fn uses the linear-interpolation `_percentile` shared
 with diagnose_fpu_sweep).
 """
+import json
+
 import pytest
 
 from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
@@ -247,12 +249,26 @@ def test_dev_safety_lockin_baseline_follows_ref():
 # ---------------------------------------------------------------------------
 
 def _fingerprint():
+    # The split selection-context / run-context fingerprint (design §12.2/§12.5).
     return {
-        "dev_manifest_sha1": "aaaa1111", "selected_a_manifest_sha1": "bbbb2222",
-        "checkpoint_identity": "model_iter_0001:deadbeef", "mcts_sims": 400,
-        "search_cfg": {"c_puct": 1.5, "eval_batch_size": 14, "stall_flush_sims": 48},
-        "seeds": {"anchor_seed_base": 20260711, "eval_batch_size": 14},
-        "git_commit": "cafef00d", "observer_schema_version": 1,
+        "selection_context": {
+            "source_file_sha1s": {"mcts.py": "h1", "diagnose_fpu_policy_mass.py": "h2",
+                                  "build_fpu_dev_corpus.py": "h3"},
+            "checkpoint_identity": "model_iter_0001:deadbeef",
+            "dev_manifest_sha1": "aaaa1111", "source_index_sha1": "src1",
+            "replay_data_sha1": "rd1", "mcts_sims": 400,
+            "base_mcts_config": {"c_puct": 1.5, "eval_batch_size": 14,
+                                 "stall_flush_sims": 48, "fpu_policy_mass_reduction": None},
+            "seeds": {"seed_base": 20260711, "eval_batch_size": 14},
+            "grid": [["r0.10", 0.10], ["r0.20", 0.20]],
+        },
+        "run_context": {
+            "selected_a": {"present": False, "manifest_sha1": None}, "add_noise": False,
+            "git_commit": "cafef00d", "worktree_clean": True, "mode": "tuning",
+            "stage": "controls", "observer_schema_version": 1,
+            "runtime_provenance": {"python_version": "x", "mlx_version": None,
+                                   "platform": "p", "machine": "m"},
+        },
     }
 
 
@@ -260,9 +276,16 @@ def test_candidate_stage_refuses_stale_controls():
     fp = _fingerprint()
     gate = {"r0_qualified": True, "fingerprint": fp}
     validate_controls_fingerprint(gate, fp)                       # exact match -> no raise
-    for bad_key in ("dev_manifest_sha1", "selected_a_manifest_sha1",
-                    "checkpoint_identity", "git_commit", "observer_schema_version"):
-        stale = dict(fp); stale[bad_key] = "CHANGED"
+    # a differing run_context (e.g. selected-A present, different stage) must NOT
+    # fail it -- only the shared selection_context is hard-matched.
+    other_run = json.loads(json.dumps(fp))
+    other_run["run_context"]["selected_a"]["present"] = True
+    other_run["run_context"]["stage"] = "candidates"
+    validate_controls_fingerprint(gate, other_run)
+    # ANY selection_context field change DOES fail it
+    for bad_key in ("checkpoint_identity", "dev_manifest_sha1", "source_index_sha1",
+                    "replay_data_sha1", "mcts_sims"):
+        stale = json.loads(json.dumps(fp)); stale["selection_context"][bad_key] = "CHANGED"
         with pytest.raises(ValueError):
             validate_controls_fingerprint(gate, stale)
     with pytest.raises(ValueError):

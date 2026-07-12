@@ -51,6 +51,19 @@ from .goal_line_trigger_probe_cases import position_state
 # csv/json/random/pathlib/.goal_line_trigger_probe_cases) and it does not
 # import this module, so this stays circular-import-free.
 from .build_v16a_neutral_position_manifest import side_to_move_for_ply
+# Stdlib-only provenance helpers (design §12.5) -- keeps this module GPU/MLX-free.
+from . import fpu_provenance
+
+# The corpus's effective result-determining source files, whose BYTES the
+# evidence-grade manifest provenance pins (design §12.5). Referenced by PATH
+# (from this package dir) so fingerprinting mcts.py never imports it.
+_MODULE_DIR = Path(__file__).resolve().parent
+_CORPUS_SOURCES: Tuple[Path, ...] = (
+    _MODULE_DIR / "build_fpu_dev_corpus.py",
+    _MODULE_DIR / "mcts.py",
+    _MODULE_DIR / "fpu_state_hash.py",
+    _MODULE_DIR / "goal_line_trigger_probe_cases.py",
+)
 
 # ---------------------------------------------------------------------------
 # Frozen constants (verbatim from the design + Task-5 brief)
@@ -964,7 +977,10 @@ def _build_anchor_search_fn(checkpoint: str, eval_batch_size: int,
         return MCTS(evaluator, cfg, random.Random(seed)).search_with_root(
             state, add_noise=False)
 
-    return evaluator, search_fn
+    # Also return the frozen anchor cfg so main() can record its FULL effective
+    # MCTS config in the manifest provenance (design §12.5) from the single
+    # source of truth, rather than reconstructing it.
+    return evaluator, search_fn, cfg
 
 
 def _manifest_row(r: dict) -> dict:
@@ -1095,8 +1111,42 @@ def write_manifest(rows: List[dict], out_csv: str) -> None:
         w.writerows(rows)
 
 
+def corpus_provenance(*, source_jsonl: Optional[str], checkpoint: Optional[str],
+                      base_mcts_config: Optional[dict]) -> dict:
+    """Evidence-grade provenance for the dev-corpus manifest (design §12.5):
+    source-file BYTE hashes, the source-index sha1 + a deterministic replay-DATA
+    hash (contents, not paths), the anchor's checkpoint identity + FULL MCTS
+    config, the explicit `add_noise=False`, and runtime identity. Pure /
+    stdlib-only (via `fpu_provenance`): it reads the source index + replays but
+    NO MCTS/GPU/MLX. `replay_paths` come from the same `load_game_index` the
+    scan used, so the hash covers exactly the games the corpus was built from."""
+    replay_paths = ([r["replay_path"] for r in load_game_index(source_jsonl)]
+                    if source_jsonl else [])
+    return {
+        "source_file_sha1s": fpu_provenance.source_file_sha1s(_CORPUS_SOURCES),
+        "source_index_sha1": fpu_provenance.file_sha1(source_jsonl),
+        "replay_data_sha1": fpu_provenance.replay_data_sha1(replay_paths),
+        "checkpoint_identity": (
+            f"{Path(checkpoint).name}:{fpu_provenance.file_sha1(checkpoint)}"
+            if checkpoint else "none"),
+        "base_mcts_config": base_mcts_config,
+        "add_noise": False,
+        "runtime_provenance": fpu_provenance.runtime_provenance(),
+    }
+
+
 def write_meta(out_csv: str, meta: dict) -> None:
-    Path(str(out_csv) + ".meta.json").write_text(json.dumps(meta, indent=2))
+    """Write `<out_csv>.meta.json`, ENRICHED with an evidence-grade `provenance`
+    block (design §12.5) computed from the meta's own source_jsonl / checkpoint /
+    base_mcts_config -- so the corpus manifest carries the same run-identity the
+    diagnostic fingerprint's selection-context does. `provenance` is DERIVED, so
+    it never clobbers a caller key."""
+    enriched = dict(meta)
+    enriched["provenance"] = corpus_provenance(
+        source_jsonl=meta.get("source_jsonl"),
+        checkpoint=meta.get("checkpoint"),
+        base_mcts_config=meta.get("base_mcts_config"))
+    Path(str(out_csv) + ".meta.json").write_text(json.dumps(enriched, indent=2))
 
 
 def _parse_args(argv):
@@ -1161,7 +1211,7 @@ def main(argv=None) -> int:
     print("[fpu-dev-corpus] preflight OK -- geometry can jointly satisfy the "
           "four structural constraints; loading evaluator.")
 
-    evaluator, search_fn = _build_anchor_search_fn(
+    evaluator, search_fn, anchor_cfg = _build_anchor_search_fn(
         checkpoint, args.eval_batch_size, args.stall_flush_sims)
 
     rows, stats = _scan_two_stage(
@@ -1180,6 +1230,7 @@ def main(argv=None) -> int:
         "forbidden_manifests": forbidden_paths, "n_forbidden_hashes": len(forbidden),
         "n_rows": len(manifest_rows), "stats": stats,
         "fieldnames": MANIFEST_FIELDNAMES,
+        "base_mcts_config": dataclasses.asdict(anchor_cfg),
     })
     print(f"[fpu-dev-corpus] wrote {len(manifest_rows)} rows -> {args.out} "
           f"(+ .meta.json)")
