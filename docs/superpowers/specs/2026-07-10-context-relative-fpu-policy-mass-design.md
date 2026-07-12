@@ -219,3 +219,47 @@ seed20116 geometry-confirmed dev corpus (complete-state disjointness-proven)
   → same-checkpoint, same-400-sim, balanced-color strength match  ← decisive
   → (only then) controlled self-play pilot
 ```
+
+## 11. AMENDMENT (2026-07-11) — seed20116 retired as the dev-corpus source; feasibility preflight added
+
+The first real operator corpus build (`build_fpu_dev_corpus` on `0379_vs_calib020_0001_800g_w4_seed20116`) hard-stopped at `assign_split: cell ('target','b200_299') capacity 0 < demand 60`. Read-only geometry analysis (stored/reconstructed `n_legal`, no evaluator) established the following. **These findings are frozen; the rejected variants below must not be retried.**
+
+### 11.1 Corpus geometry (verified)
+- `n_legal ≈ 528 − ply`, near-deterministic; **red and black branching are identical** (median 496 vs 497). So on this corpus **branching band ≡ ply window**: `400+` ↔ ply 0–131, `300–399` ↔ ply ~131–233, `200–299` ↔ ply ~233+. Game lengths: min 27, **median 53**, max 280.
+- Low-branching positions exist only in the rare long/marathon games: `300–399` in **27** distinct games, `200–299` in **21**.
+
+### 11.2 What was rejected, and why (do not retry)
+1. **Original 200/300/400 protocol — INFEASIBLE on seed20116.** Under the frozen `≤2/game` cap, `b300_399` tops out at **52** and `b200_299` at **42** realizable positions (21–27 distinct source games) vs the demand of **80** per band — before the raw-policy eligibility filters. No enumeration change can fix a source that lacks the distinct low-band games. (The `assign_split` capacity precheck correctly detected genuine infeasibility; this is not a tooling bug.)
+2. **Original stride-4 enumeration — INDEPENDENTLY INVALID.** Because `n_legal` is monotone in ply, the qualifying-ply set is a contiguous prefix, so `qualifying[::4]` aliases ply-parity and selects a **single side** (measured: original global stride-4 → 4800 red / 0 black). It cannot satisfy the side-balance gate on any such corpus. (Masked previously only because the band-capacity stop fired first.)
+3. **Revised high-band protocol (450–499 / 500–524 / 525–549, per-band stride-1 cap-6) — REJECTED.** It is *feasible for count and side* (red≈black), but it is **deliberately phase-confounded**: the bands map to plies 0–3 / 4–28 / 29–78 (all early game). `b525_549` is intrinsically the opening (plies 0–3, ~80 rows = 33% of the corpus). Stride-1 puts `b500_524` in the opening too → opening 160/240 > the ≤50% ply-bucket cap (120). An odd-stride workaround only reaches ~120 opening with **no feasibility margin** after eligibility filters. **The ply-bucket ≤50% cap is the safeguard against exactly this confounding**, so a corpus that violates it cannot screen the known **late/midgame collateral collapse mode** that v16a flagged. Rejected.
+
+### 11.3 Decision (Option 3)
+- **Retire seed20116** as the development-corpus source for this protocol. Obtain a source corpus with enough **distinct games across the intended 200–399 and later-ply geometry**.
+- **Preserve the original protocol unchanged:** `200–299 / 300–399 / 400+` bands; original quotas, whole-game split, side balance, 12-ply spacing, **≤50% ply-bucket cap**; all §2 membership criteria and §6 safety gates. (The stride-4 enumeration is a rejected variant per 11.2.2 — the enumeration rule is re-validated per corpus by the preflight below, not frozen to stride-4.)
+- **Add a pure feasibility preflight (§11.4).**
+
+### 11.4 Pure feasibility preflight (REQUIRED before any operator MCTS build)
+Before evaluator loading, `build_fpu_dev_corpus` must run a **pure, replay-geometry-only** preflight (no NN, no MCTS, no raw-policy) that proves the (source corpus, enumeration) pair can **jointly** satisfy the four structural constraints, or stops:
+1. **Band quotas** — ≥ the per-band total (80 = 60 target + 20 control) selectable per band. (Role/target-vs-control is evaluator-dependent and remains an operator-runtime check under the stop-don't-retune rule — out of the geometric preflight's scope.)
+2. **≤2/game capacity** — under `MAX_PER_GAME` and `MIN_PLY_GAP`.
+3. **Side balance** — `|red − black| ≤ SIDE_TOL` per split is achievable.
+4. **Ply-bucket ≤50% cap.**
+"Jointly" = a single selection satisfying all four simultaneously (independent per-constraint capacity is necessary but not sufficient — see 11.2.3). If the preflight cannot prove feasibility from replay geometry, **stop before evaluator loading** and report which constraint bound.
+
+**Pre-registration:** once a source + enumeration pass the preflight and the operator build runs, no boundary/quota/cap/stride may be retuned in response to a downstream eligibility-filter shortfall — record the shortfall and stop, as in 11.2.1.
+
+## 12. AMENDMENT (2026-07-11) — evidence-chain hardening (required before any renewed corpus build)
+
+Re-review of the executed plan confirmed the MCTS core (§1: None-vs-0.0, formula, bounds, completed-visit mass, observer-off golden, frozen grid), the dual-reference §6 gates + boundary/p95 semantics, and whole-game split isolation + exact quotas + fail-loud sampler are correct. The following operator/evidence-chain additions are REQUIRED before renewed implementation or corpus build.
+
+- **12.1 Feasibility preflight (Tasks 5–6 gap) — DONE** as §11.4 (`build_fpu_dev_corpus`, commit on branch `fpu-corpus-feasibility-preflight`): pure joint witness over real replay geometry, gates `main()` before evaluator loading. Validated on seed20116 (INFEASIBLE, binding `band-capacity:b200_299`).
+
+- **12.2 Immutable frozen-check coefficient (Task 7).** The `frozen_check` candidate must equal the `smallest_safe_r` selected on the tuning split: `run_candidates_stage(--mode frozen_check)` loads the tuning `candidates_result.json` artifact, validates its fingerprint matches, and REJECTS unless the single frozen `r` is byte-exactly that selected grid coefficient. "One nonzero r" (current §3/Task 7) is insufficient — it permits an arbitrary value.
+
+- **12.3 Selected-A is tuning-only (Task 7).** Require selected-A presence/participation for `--mode tuning` candidates (the §6.3 mechanism gate); REJECT its presence in `--mode frozen_check`. frozen_check is a held-out dev screen only.
+
+- **12.4 Complete persisted candidate artifacts (Task 7).** Persist, not just pass/fail reasons: per-position `candidate-vs-absolute_off` AND `candidate-vs-r0` rows (joinable by `canonical_sha1`); selected-A case rows; full NUMERIC §6.2/§6.3 gate summaries (every computed metric, both references); and the selected-coefficient record. **Join-vs-recompute:** the persisted `controls_cases.csv` omits `top_move`/`top_move_prior` needed by the low-prior-flip gate, so the candidate stage recomputes references. Either (a) persist those fields and make the candidate stage TRULY join the controls rows, or (b) explicitly define + persist the recomputation provenance (that it re-derives, and the fingerprint that guarantees recomputed == persisted). Pick one and make it explicit.
+
+- **12.5 Strengthened fingerprints (Task 7 + builder).** A git commit alone does not detect uncommitted edits, and a replay PATH does not fingerprint replay CONTENTS. Every fingerprint must include: clean-worktree assertion (or hashes of the effective source files), source-index hash + a deterministic replay-DATA hash (contents, not paths), checkpoint hash, the FULL effective MCTS config (not a subset), and an explicit `add_noise=False` record.
+
+- **12.6 Decisive-match preregistration (FUTURE — before the strength phase, not now).** The plan correctly stops before strength testing. Before that later operator phase, a SEPARATE preregistration is required: game count or sequential-testing rule, confidence-interval method, effect-size threshold, color/seed pairing, and stop criteria. No code in this branch.
