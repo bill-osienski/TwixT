@@ -318,25 +318,71 @@ assert sum(LATE_TARGET_FLOORS.values()) <= sum(
     SPLIT_ALLOC_V2[LATE_TARGET_CELL].values()), LATE_TARGET_FLOORS
 
 
+# How many deterministic whole-game split assignments `sample_v2_rows` will try
+# before giving up. Each is a distinct seeded ordering of `_greedy_assign_v2`, and
+# each is judged by the REAL fill (see `sample_v2_rows`), never by the greedy's own
+# optimistic accounting.
+#
+# Justified by the measured curve, not guessed: on 50 realistic randomized screens
+# of 4,800 games, EVERY pool that the old sampler failed on was in fact satisfiable,
+# and a valid manifest was found within the first few orderings (the deepest needed
+# was the 5th). 8 leaves headroom over that observed maximum while staying in the
+# small single digits -- the cost of an unused attempt is zero (the loop returns on
+# the first success) and the cost of a used one is a single extra fill.
+ASSIGN_ATTEMPTS = 8
+
+# Rows each split needs in total (tuning 160, frozen_check 80) -- DERIVED from the
+# frozen allocation, never hard-coded. `_greedy_assign_v2` scores a game by the
+# FRACTION of a split's remaining need it closes, so it needs these denominators.
+SPLIT_TOTALS: Dict[str, int] = {
+    s: sum(alloc[s] for alloc in SPLIT_ALLOC_V2.values()) for s in SPLITS}
+
+
 def _greedy_assign_v2(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
     """One deterministic greedy pass (v1 `_greedy_assign`'s shape). Returns
     {game_idx: split} if it satisfies every per-(role, phase, split) quota, else
     None.
 
-    Each WHOLE game is placed in the split whose still-unmet quotas it fills most;
-    ties break toward the split with the larger total remaining need, then toward
-    tuning. Games are visited in a seed-shuffled order (attempt 0) or its
-    deterministic reverse (attempt 1, the secondary-ordering retry).
+    Games are visited in a seed-shuffled order that is unique per `attempt`
+    (attempt 1 is the deterministic REVERSE of attempt 0 -- v1's secondary-ordering
+    retry, kept verbatim; attempts >= 2 are fresh independent shuffles). Its caller
+    `sample_v2_rows` walks up to ASSIGN_ATTEMPTS of them, because THIS function's
+    verdict is only a necessary condition -- see below.
 
     A game's contribution is capped at MAX_PER_GAME in TOTAL across its cells --
     NOT per cell, as v1 does -- because that is v2's actual selection rule. Both
     the `realizable` scoring and the `need` decrement spend one shared per-game
     budget over the game's cells in CELL_ORDER_V2 order, which is exactly the
     order (and the greedy "as many as this cell still needs" rule) the round-robin
-    in `sample_v2_rows` will use. Crediting a multi-cell game with MAX_PER_GAME in
-    EVERY cell would over-state realizable capacity, drive `need` to zero early,
-    and hand back an assignment the round-robin cannot fill -- a spurious
-    final-manifest shortfall.
+    in `sample_v2_rows` will use.
+
+    PLACEMENT RULE -- by FILL FRACTION, not by raw row count. `tuning` needs 160
+    rows and `frozen_check` only 80, so a raw-count comparison (v1's rule, which v2
+    inherited) TIES on nearly every game -- both splits can use its 2 rows -- and
+    the tie-break "prefer the split with the larger total remaining need" then sends
+    it to tuning EVERY time, until tuning is full. Measured on a realistic 4,800-game
+    screen: 2,227 games to tuning vs 78 to frozen_check. frozen_check is the SCARCE
+    split (it must cover 80 rows across all 8 cells, and every game it uses costs a
+    whole <=2-row budget), so that sliver left its cells one gap-blocked or
+    side-degenerate game away from an unfillable quota -- the dominant cause of both
+    the false `final-manifest shortfall` and the residual side-balance raises.
+    Comparing `realizable / remaining_need` instead makes a game that closes 2 of
+    frozen's remaining 80 outrank one that closes 2 of tuning's remaining 160, so
+    the two candidate pools grow roughly in proportion to the need they must serve.
+    The comparison is done by CROSS-MULTIPLICATION in exact integers -- never floats
+    -- so it is bit-for-bit reproducible.
+
+    Games that neither split can currently use are spread to keep BOTH candidate
+    pools rich (in the 160:80 ratio of the splits themselves): the fill can only
+    ever choose among a split's OWN games, so an over-stuffed tuning pool is not
+    just wasted, it is starvation for frozen_check.
+
+    NECESSARY, NOT SUFFICIENT: reaching `need == 0` here only means this optimistic
+    accounting is satisfied. It ignores >=MIN_PLY_GAP, dedup and side balance, so an
+    assignment it accepts can still be unfillable -- measured: on EVERY pool the old
+    sampler failed, this function returned OK on attempt 0 and the FILL then failed.
+    That is exactly why `sample_v2_rows` re-runs the real fill per ordering rather
+    than trusting this verdict.
     """
     rng = random.Random(seed * 1_000_003 + attempt)
     order = sorted(games_profile)
@@ -345,6 +391,7 @@ def _greedy_assign_v2(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
         order = order[::-1]
 
     need = {cell: dict(alloc) for cell, alloc in SPLIT_ALLOC_V2.items()}
+    placed: Counter = Counter()
     assign: Dict[Any, str] = {}
     for gi in order:
         prof = games_profile[gi]
@@ -364,16 +411,35 @@ def _greedy_assign_v2(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
             return total
 
         u_t, u_f = realizable("tuning"), realizable("frozen_check")
-        if u_t > u_f:
-            split = "tuning"
-        elif u_f > u_t:
+        rem_t = sum(need[c]["tuning"] for c in CELL_ORDER_V2)
+        rem_f = sum(need[c]["frozen_check"] for c in CELL_ORDER_V2)
+
+        if u_t == 0 and u_f == 0:
+            # Useless to both splits right now -- spread it, keeping the two
+            # candidate pools in the splits' own 160:80 ratio.
+            split = ("tuning"
+                     if placed["tuning"] * SPLIT_TOTALS["frozen_check"]
+                     <= placed["frozen_check"] * SPLIT_TOTALS["tuning"]
+                     else "frozen_check")
+        elif rem_t == 0:
             split = "frozen_check"
+        elif rem_f == 0:
+            split = "tuning"
         else:
-            tot_t = sum(need[c]["tuning"] for c in cells)
-            tot_f = sum(need[c]["frozen_check"] for c in cells)
-            split = "tuning" if tot_t >= tot_f else "frozen_check"
+            # u_t / rem_t  vs  u_f / rem_f, by exact-integer cross-multiplication.
+            lhs, rhs = u_t * rem_f, u_f * rem_t
+            if lhs > rhs:
+                split = "tuning"
+            elif rhs > lhs:
+                split = "frozen_check"
+            else:
+                split = ("tuning"
+                         if placed["tuning"] * SPLIT_TOTALS["frozen_check"]
+                         <= placed["frozen_check"] * SPLIT_TOTALS["tuning"]
+                         else "frozen_check")
 
         assign[gi] = split
+        placed[split] += 1
         budget = MAX_PER_GAME
         for c in cells:
             if budget <= 0:
@@ -387,24 +453,16 @@ def _greedy_assign_v2(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
     return None
 
 
-def assign_split_v2(games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
-                    seed: int) -> Dict[Any, str]:
-    """Assign each WHOLE game to "tuning" or "frozen_check" so every
-    per-(role, phase, split) SPLIT_ALLOC_V2 quota is satisfiable.
+def _capacity_precheck(
+        games_profile: Mapping[Any, Mapping[Tuple[str, str], int]]) -> None:
+    """The two GENUINE-infeasibility checks. Both are NECESSARY conditions only --
+    each is a true UPPER BOUND on what the selection can realize, so falling short
+    of demand PROVES infeasibility and names it cheaply, while passing them proves
+    nothing. (Once a game's rows span cells, no per-cell sum can be exact: its
+    <=2-row global budget is claimable by any one of them.)
 
-    `games_profile`: {game_idx: {(role, phase): n_available_kept_rows}}.
-
-    The two capacity checks below are NECESSARY conditions only -- each is a true
-    UPPER BOUND on what the selection can realize, so falling short of demand
-    PROVES infeasibility and names it cheaply, while passing them proves nothing.
-    (Once a game's rows span cells, no per-cell sum can be exact: its <=2-row
-    global budget is claimable by any one of them.) The exact-or-raise round-robin
-    in `sample_v2_rows` remains the authority on feasibility.
-
-    Raises ValueError if a cell's capacity is below its demand, if the whole pool
-    cannot yield CORPUS_SIZE rows under the global <=MAX_PER_GAME rule, or if
-    neither the primary nor the deterministic secondary ordering yields a
-    quota-satisfying assignment.
+    Both are independent of the split assignment, so `sample_v2_rows` runs them ONCE
+    and never retries them: a pool that fails here cannot be rescued by any ordering.
     """
     # (1) Per-cell upper bound (v1's `assign_split` check): a game can never give
     # a cell more than min(its rows there, MAX_PER_GAME). Over-states capacity for
@@ -437,12 +495,31 @@ def assign_split_v2(games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
             f"{CORPUS_SIZE} under the global <=MAX_PER_GAME ({MAX_PER_GAME}) "
             f"per-game rule ({len(games_profile)} games)")
 
-    for attempt in range(2):
-        result = _greedy_assign_v2(games_profile, seed, attempt)
-        if result is not None:
-            return result
-    raise ValueError(
-        "assign_split_v2: no deterministic ordering satisfied the split quotas")
+
+def assign_split_v2(games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
+                    seed: int, *, attempt: int = 0) -> Dict[Any, str]:
+    """Assign each WHOLE game to "tuning" or "frozen_check" so every
+    per-(role, phase, split) SPLIT_ALLOC_V2 quota is satisfiable.
+
+    `games_profile`: {game_idx: {(role, phase): n_available_kept_rows}}.
+    `attempt` selects ONE of the deterministic candidate orderings.
+
+    This returns a CANDIDATE assignment, not a verdict: `_greedy_assign_v2`'s
+    accounting is optimistic (it ignores >=MIN_PLY_GAP, dedup and side balance), so
+    an assignment it accepts can still be unfillable. Only the fill can tell -- so
+    `sample_v2_rows` walks up to ASSIGN_ATTEMPTS orderings and keeps the first whose
+    manifest passes EVERY exact-or-raise verification. Callers wanting a single
+    assignment (tests, diagnostics) can use the default `attempt=0`.
+
+    Raises ValueError if a capacity precheck proves the pool infeasible outright, or
+    if this ordering's greedy cannot satisfy the split quotas.
+    """
+    _capacity_precheck(games_profile)
+    result = _greedy_assign_v2(games_profile, seed, attempt)
+    if result is None:
+        raise ValueError(
+            f"assign_split_v2: ordering {attempt} did not satisfy the split quotas")
+    return result
 
 
 def _pickable(rows_of_game: List[dict], cell: Tuple[str, str],
@@ -523,17 +600,16 @@ def _side_delta(rows: List[dict]) -> int:
     return sum(1 if r["side"] == "red" else -1 for r in rows)
 
 
-def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
-    """Sample the frozen 240-row v2 dev corpus from the screen's KEPT rows.
+def _select_manifest(games: Mapping[Any, List[dict]],
+                     profile: Mapping[Any, Mapping[Tuple[str, str], int]],
+                     split_of: Mapping[Any, str]) -> Tuple[List[dict], dict]:
+    """ONE selection attempt, for ONE candidate whole-game split assignment.
 
-    Steps: (1) build each game's (role, phase) contribution profile; (2)
-    `assign_split_v2` places WHOLE games into tuning / frozen_check; (3) a
-    round-robin fills every SPLIT_ALLOC_V2 cell EXACTLY, subject -- jointly -- to
-    the GLOBAL <=MAX_PER_GAME (<=2 selected rows per game across all cells and
-    both splits), a GLOBAL >=MIN_PLY_GAP between any two rows taken from one game,
-    a per-split side balance |red-black| <= SIDE_TOL, no duplicate
-    canonical_sha1, and -- on the (target, late) cell -- the hard
-    LATE_TARGET_FLOORS.
+    Fills every SPLIT_ALLOC_V2 cell EXACTLY via the side-aware round-robin, subject
+    -- jointly -- to the GLOBAL <=MAX_PER_GAME (<=2 selected rows per game across
+    all cells and both splits), a GLOBAL >=MIN_PLY_GAP between any two rows taken
+    from one game, a per-split side balance |red-black| <= SIDE_TOL, no duplicate
+    canonical_sha1, and -- on the (target, late) cell -- the hard LATE_TARGET_FLOORS.
 
     The floors are met by a FLOOR-SATISFACTION PASS on that one cell: before its
     ordinary fill, rows are drawn from each floor band (in LATE_TARGET_FLOORS
@@ -554,29 +630,13 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
     game whose rows leave the split closest to balanced. |red - black| <= SIDE_TOL
     is then RE-VERIFIED per split on the SELECTED rows.
 
-    The fill is a GREEDY, so it stays CONSERVATIVE by design: it may still RAISE on
-    a pool that some perfect selection could balance -- notably because
-    `assign_split_v2` is side-BLIND and can deal one split a side-degenerate set of
-    games for a cell, which no fill order can then repair -- but it never silently
-    emits a side-skewed manifest. (Task 6's `post_screen_qualification` is the
-    pre-registered place to catch such a screen earlier, before the sampler is ever
-    reached.)
-
-    Every cell must reach its quota exactly, every floor must be met, and every
-    split must be side-balanced: a shortfall or violation of any kind is an ERROR
-    (raises ValueError), never a silent truncation or a silent skew. Deterministic
-    under `seed`. Returns (rows, stats); each returned row is a COPY of its input
-    row stamped with `split`.
+    Raises ValueError on ANY shortfall, unmet floor or side-balance violation --
+    never a silent truncation, never a silent skew. It builds ALL of its own running
+    state from its arguments and mutates nothing outside itself, which is precisely
+    what lets `sample_v2_rows` simply RE-RUN it on the next candidate assignment: the
+    fill, not the assignment greedy's optimistic accounting, is the authority on
+    whether an assignment actually works.
     """
-    games: Dict[Any, List[dict]] = defaultdict(list)
-    for r in kept:
-        games[r["game_idx"]].append(r)
-
-    profile = {gi: Counter((r["role"], r["phase"]) for r in rows_)
-               for gi, rows_ in games.items()}
-
-    split_of = assign_split_v2(profile, seed)   # may raise ValueError (infeasible)
-
     used_sha1: Set[str] = set()
     game_used: Counter = Counter()                        # GLOBAL rows per game
     game_plies: Dict[Any, List[int]] = defaultdict(list)  # GLOBAL plies per game
@@ -806,7 +866,6 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
 
     stats = {
         "n_rows": len(selected),
-        "seed": seed,
         "cell_counts": {
             f"{role}|{phase}|{split}": cell_counts_actual[(role, phase, split)]
             for (role, phase) in SPLIT_ALLOC_V2 for split in SPLITS},
@@ -822,3 +881,66 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
         "n_games_total": len(split_of),
     }
     return selected, stats
+
+
+def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
+    """Sample the frozen 240-row v2 dev corpus from the screen's KEPT rows.
+
+    (1) Build each game's (role, phase) contribution profile. (2) Run the two
+    capacity PRECHECKS once -- they are assignment-independent, so a pool that fails
+    them is GENUINELY infeasible and is never retried. (3) Walk up to
+    ASSIGN_ATTEMPTS deterministic whole-game split assignments, and for each, run
+    the REAL selection (`_select_manifest`). The first assignment whose manifest
+    passes every exact-or-raise verification -- exact composition, the hard
+    LATE_TARGET_FLOORS, and per-split side balance -- wins.
+
+    Why the retry is driven by the FILL and not by the assignment greedy: that
+    greedy's accounting is OPTIMISTIC (it ignores >=MIN_PLY_GAP, dedup and side
+    balance), so it happily returns an assignment the fill cannot realize. Measured
+    on 50 realistic 4,800-game screens: on EVERY pool the sampler failed,
+    `_greedy_assign_v2` returned OK on its FIRST ordering -- so a retry loop that
+    only re-ran when the GREEDY refused (as v1's did, and as v2 inherited) never
+    fired even once. Every one of those pools was in fact satisfiable. Only the fill
+    can tell a workable assignment from an unworkable one, so only the fill may
+    decide whether to try another.
+
+    This makes the sampler CONSERVATIVE, never a silent false pass: it may still
+    raise on a pool some perfect selection could satisfy (it is a greedy, over a
+    finite set of orderings), but it will never emit a manifest that is short, that
+    misses a floor, or that is side-skewed. Deterministic under `seed`: the
+    orderings, the fill and the tie-breaks are all reproducible, so the same input
+    and seed always yield identical rows AND stats.
+
+    Returns (rows, stats); each returned row is a COPY of its input row stamped with
+    `split`. `stats["assignment_attempt"]` records which ordering won.
+    """
+    games: Dict[Any, List[dict]] = defaultdict(list)
+    for r in kept:
+        games[r["game_idx"]].append(r)
+
+    profile = {gi: Counter((r["role"], r["phase"]) for r in rows_)
+               for gi, rows_ in games.items()}
+
+    # GENUINE infeasibility -- assignment-independent, so raise now and never retry.
+    _capacity_precheck(profile)
+
+    last_error: Optional[ValueError] = None
+    for attempt in range(ASSIGN_ATTEMPTS):
+        split_of = _greedy_assign_v2(profile, seed, attempt)
+        if split_of is None:
+            last_error = ValueError(
+                f"assign_split_v2: ordering {attempt} did not satisfy the split "
+                f"quotas")
+            continue
+        try:
+            rows, stats = _select_manifest(games, profile, split_of)
+        except ValueError as exc:
+            last_error = exc          # this ORDERING failed -- try the next one
+            continue
+        stats["seed"] = seed
+        stats["assignment_attempt"] = attempt
+        return rows, stats
+
+    raise ValueError(
+        f"sample_v2_rows: no valid manifest after {ASSIGN_ATTEMPTS} deterministic "
+        f"whole-game split assignments (seed {seed}); last failure -- {last_error}")

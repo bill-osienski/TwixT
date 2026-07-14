@@ -57,6 +57,7 @@ from scripts.GPU.alphazero.build_fpu_dev_corpus import (
     ply_bucket_of,
 )
 from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
+    ASSIGN_ATTEMPTS,
     CELL_ORDER_V2,
     CORPUS_SIZE as CORPUS_SIZE_V2,
     LATE_TARGET_CELL,
@@ -68,6 +69,7 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     PROPOSAL_CELLS,
     SIDE_TOL,
     SPLIT_ALLOC_V2,
+    SPLIT_TOTALS,
     SPLITS,
     assign_split_v2,
     enumerate_v2_proposals,
@@ -797,6 +799,123 @@ def _pool_same_side_late_floor():
     return rows
 
 
+# --- the WHOLE-GAME SPLIT ASSIGNMENT fixtures --------------------------------
+# Sub-MIN_PLY_GAP side-opposed pairs: the two rows sit only 7 plies apart, so the
+# game's PROFILE reports 2 rows for the cell but the fill can only ever pick ONE
+# (`_choose_positions` cannot take a second row inside the gap). That gap between
+# the assignment greedy's optimistic accounting and what the fill can realize is
+# exactly what turns a starved `frozen_check` candidate pool into a shortfall.
+_V2_TIGHT_PHASE_PLIES = {          # red on EVEN plies, black on ODD, 7 apart
+    "opening": (2, 9),             # ply_bucket_of: 1-15
+    "early_mid": (16, 23),         # 16-40
+    "midgame": (42, 49),           # 41-90
+    "late": (92, 99),              # 91+  (n_legal >= 528-99 = 429 => b400_plus)
+}
+# The four phases a single replay really does span, with the honest per-phase plies
+# `_V2_PHASE_PLIES` / `_V2_LATE_BAND_PLIES` already pin.
+_V2_ALL_PHASE_CELLS = ("opening", "early_mid", "midgame", "late")
+
+
+def _v2_tight_game(game_idx, role, phase):
+    """A GAP-CRIPPLED game: a side-opposed pair < MIN_PLY_GAP apart, so its profile
+    claims 2 rows for the cell but it can only ever yield 1."""
+    p_red, p_black = _V2_TIGHT_PHASE_PLIES[phase]
+    return [_v2_row(game_idx, role, phase, "b400_plus", "red", p_red),
+            _v2_row(game_idx, role, phase, "b400_plus", "black", p_black)]
+
+
+def _v2_multicell_game(game_idx, role):
+    """One game spanning ALL FOUR phases -- what a real replay does. It holds 8 rows
+    but the GLOBAL <=MAX_PER_GAME budget still lets it give only 2, so its cells
+    CONTEND for it. A large surplus of these is what made the old raw-count greedy
+    dump nearly every game into `tuning`."""
+    rows = []
+    for phase in _V2_ALL_PHASE_CELLS:
+        rows.extend(_v2_game(game_idx, role, phase, "b400_plus"))
+    return rows
+
+
+def _pool_frozen_starving_multicell():
+    """The SPLIT-ASSIGNMENT regression pool -- a deterministic, fast (~400-game)
+    distillation of what realistic screens actually do to the old greedy.
+
+    Two ingredients, both real:
+      * 60 multi-cell TARGET games (each spanning all four phases, 8 rows, but a
+        <=2-row global budget) -- so the cells contend for every game; and
+      * 240 GAP-CRIPPLED games (30 per role per phase) whose profile claims 2 rows
+        but which can only ever yield 1 -- the optimistic-accounting trap.
+
+    The OLD greedy compared RAW realizable row counts and broke ties toward "the
+    split with the larger total remaining need". Because a multi-cell game keeps
+    `realizable("tuning") == 2` for as long as ANY of its cells still wants a tuning
+    row, and tuning's need (160) dwarfs frozen_check's (80), essentially every game
+    went to tuning: measured on this pool, `frozen_check` is pinned at ~42 games no
+    matter how large the pool grows (tuning 275, frozen 137 here vs 42 before). 42
+    games x 2 rows = 84 for an 80-row demand -- and once a few of them are
+    gap-crippled, `frozen_check` cannot reach its quota and the sampler raised a
+    `final-manifest shortfall`. A valid assignment plainly exists (the pool has a
+    large healthy surplus), so that was a FALSE infeasibility.
+
+    Scoring by FILL FRACTION instead makes a game that closes 2 of frozen's
+    remaining 80 outrank one that closes 2 of tuning's remaining 160, so the two
+    candidate pools grow in the splits' own 160:80 ratio and frozen keeps real slack.
+    """
+    rows, gi = [], 0
+    for _ in range(60):                                   # multi-cell TARGET games
+        rows.extend(_v2_multicell_game(gi, "target"))
+        gi += 1
+    for phase in _V2_ALL_PHASE_CELLS:                     # the gap-crippled trap
+        for role in ("target", "control"):
+            for _ in range(30):
+                rows.extend(_v2_tight_game(gi, role, phase))
+                gi += 1
+    for band in LATE_TARGET_FLOORS:                       # the late floors' supply
+        for _ in range(20):
+            rows.extend(_v2_game(gi, "target", "late", band))
+            gi += 1
+    for phase in ("opening", "early_mid", "midgame"):     # healthy CONTROL supply
+        for _ in range(12):
+            rows.extend(_v2_game(gi, "control", phase, "b400_plus"))
+            gi += 1
+    for band in ("b400_plus", "b300_399", "b200_299"):
+        for _ in range(12):
+            rows.extend(_v2_game(gi, "control", "late", band))
+            gi += 1
+    return rows
+
+
+# Two RED plies per cell -- even (red) and >= MIN_PLY_GAP apart, each inside its
+# phase's real ply_bucket_of range and its band's honest n_legal >= 528 - ply floor
+# (b300_399 needs ply >= 129, b200_299 needs ply >= 229).
+_V2_ALL_RED_PLIES = {
+    ("opening", "b400_plus"): (2, 14),        # ply_bucket_of: 1-15
+    ("early_mid", "b400_plus"): (16, 28),     # 16-40
+    ("midgame", "b400_plus"): (42, 56),       # 41-90
+    ("late", "b400_plus"): (92, 104),         # 91+
+    ("late", "b300_399"): (130, 142),         # ...and ply >= 129
+    ("late", "b200_299"): (230, 242),         # ...and ply >= 229
+}
+
+
+def _pool_all_red():
+    """A pool holding NO black row anywhere: every game contributes TWO RED rows
+    (even plies, >= MIN_PLY_GAP apart) to one cell. Composition is comfortably
+    satisfiable and both late floors are reachable, so the sampler fills all 240
+    rows and clears every floor -- and then MUST refuse, because every split is 100%
+    red. GENUINELY side-infeasible: no split assignment, no draw order and no number
+    of retries can conjure a black row that does not exist, so the raise is CORRECT.
+    """
+    rows, gi = [], 0
+    for cell in CELL_ORDER_V2:
+        for band, n_games in _V2_POOL_SPEC[cell]:
+            for _ in range(n_games):
+                p1, p2 = _V2_ALL_RED_PLIES[(cell[1], band)]
+                rows.append(_v2_row(gi, cell[0], cell[1], band, "red", p1))
+                rows.append(_v2_row(gi, cell[0], cell[1], band, "red", p2))
+                gi += 1
+    return rows
+
+
 def _pool_side_sorted_by_game_idx():
     """The GAME-ORDER regression pool. (target, midgame) is supplied by THREE
     blocks, deliberately ordered so that ascending game_idx is the WORST possible
@@ -1270,12 +1389,119 @@ def test_v2_same_side_only_supply_raises_rather_than_skewing():
         sample_v2_rows(pool, seed=1)
 
 
-def test_v2_same_side_only_supply_raises_across_seeds():
-    """The refusal is a property of the sampler, not of one seed / one lucky
-    whole-game split assignment."""
+def test_v2_same_side_late_floor_pool_is_never_skewed_across_seeds():
+    """The CONTRACT, on the reviewer's original falsifying pool: under every seed
+    the sampler either RAISES or returns a manifest that is exactly composed,
+    floor-satisfying AND side-balanced. It never emits a skewed one.
+
+    Both branches are legitimate and both occur here, which is the point. This pool
+    is genuinely HARD -- its whole floor-band target supply is red -- but it is not
+    infeasible: the retry over whole-game split assignments plus the fill's
+    deficit-side correction does find a perfectly balanced selection under some
+    seeds (e.g. seed 3, on the 3rd ordering: tuning 80/80, frozen_check 40/40).
+    Under others, 8 orderings are not enough and it conservatively refuses. Pinning
+    "always raises" would therefore be pinning the GREEDY's luck, not the contract.
+
+    The unconditional exact-or-raise pin lives in
+    `test_v2_all_red_pool_always_raises_on_side_balance`, on a pool that is
+    GENUINELY side-infeasible -- no retry can ever rescue it.
+    """
+    for seed in (1, 2, 3, 7, 20260712):
+        try:
+            rows, stats = sample_v2_rows(_pool_same_side_late_floor(), seed=seed)
+        except ValueError as exc:                       # conservative refusal: fine
+            assert "side balance violated" in str(exc)
+            continue
+        # ...but if it DID return a manifest, that manifest must be fully valid.
+        assert len(rows) == CORPUS_SIZE_V2 == 240
+        cell = Counter((r["role"], r["phase"], r["split"]) for r in rows)
+        for (role, phase), alloc in SPLIT_ALLOC_V2.items():
+            for split, n in alloc.items():
+                assert cell[(role, phase, split)] == n
+        band_counts = Counter(r["band"] for r in rows
+                              if (r["role"], r["phase"]) == LATE_TARGET_CELL)
+        for band, floor in LATE_TARGET_FLOORS.items():
+            assert band_counts[band] >= floor
+        for split in SPLITS:
+            sc = Counter(r["side"] for r in rows if r["split"] == split)
+            assert abs(sc["red"] - sc["black"]) <= SIDE_TOL
+            assert stats["side_count"][split] == dict(sc)
+
+
+def test_v2_assignment_feeds_the_scarce_split_and_avoids_a_false_shortfall():
+    """The whole-game split assignment must be CAPACITY-AWARE. `frozen_check` is the
+    scarce split -- 80 rows, and every game it uses costs a whole <=2-row budget --
+    so a greedy that compares RAW remaining need over-feeds `tuning` (160) and pins
+    frozen at a starved sliver of games. With multi-cell games contending for the
+    global budget and some games gap-crippled, that sliver cannot reach frozen's
+    quota and the sampler raised a `final-manifest shortfall` on a pool that plainly
+    has a valid assignment -- a FALSE infeasibility.
+    """
+    pool = _pool_frozen_starving_multicell()
+    by_game = defaultdict(list)
+    for r in pool:
+        by_game[r["game_idx"]].append(r)
+
+    # Fixture honesty: multi-cell games really do span 4 cells with 8 rows...
+    multi = [g for g, v in by_game.items()
+             if len({(r["role"], r["phase"]) for r in v}) == 4]
+    assert len(multi) == 60
+    assert all(len(by_game[g]) == 8 for g in multi)
+    # ...and the gap-crippled games really are crippled: their profile claims 2 rows
+    # for the cell, but the two are < MIN_PLY_GAP apart, so the fill can pick ONE.
+    tight = [g for g, v in by_game.items()
+             if len(v) == 2 and abs(v[0]["ply"] - v[1]["ply"]) < MIN_PLY_GAP]
+    assert len(tight) == 240
+    for g in tight:
+        v = by_game[g]
+        assert {r["side"] for r in v} == {"red", "black"}      # a real opposed pair
+        assert len({(r["role"], r["phase"]) for r in v}) == 1  # ...in ONE cell
+
+    rows, stats = sample_v2_rows(pool, seed=1)
+
+    # No false shortfall: a complete, exactly-composed, floor-satisfying, balanced
+    # manifest (pre-fix: `final-manifest shortfall` in a frozen_check cell).
+    assert len(rows) == CORPUS_SIZE_V2 == 240
+    cell = Counter((r["role"], r["phase"], r["split"]) for r in rows)
+    for (role, phase), alloc in SPLIT_ALLOC_V2.items():
+        for split, n in alloc.items():
+            assert cell[(role, phase, split)] == n
+    band_counts = Counter(r["band"] for r in rows
+                          if (r["role"], r["phase"]) == LATE_TARGET_CELL)
+    for band, floor in LATE_TARGET_FLOORS.items():
+        assert band_counts[band] >= floor
+    for split in SPLITS:
+        sc = Counter(r["side"] for r in rows if r["split"] == split)
+        assert abs(sc["red"] - sc["black"]) <= SIDE_TOL
+
+    # The MECHANISM: the candidate pools now grow in the splits' own 160:80 ratio,
+    # so frozen_check keeps real slack. Pre-fix it was pinned near 42 games however
+    # big the pool grew -- 84 rows for an 80-row demand, and any gap-crippled game
+    # in that sliver broke it.
+    per_split = stats["n_games_per_split"]
+    assert sum(per_split.values()) == stats["n_games_total"] == len(by_game)
+    ratio = per_split["tuning"] / per_split["frozen_check"]
+    want = SPLIT_TOTALS["tuning"] / SPLIT_TOTALS["frozen_check"]      # 160/80 == 2
+    assert want == 2
+    assert abs(ratio - want) < 0.5                    # ~2:1, NOT a starved sliver
+    assert per_split["frozen_check"] > 100            # pre-fix: ~42
+
+
+def test_v2_all_red_pool_always_raises_on_side_balance():
+    """The UNCONDITIONAL exact-or-raise pin. `_pool_all_red` holds no BLACK row at
+    all, so every split is 100% red and NO assignment, ordering or fill can ever
+    balance it -- the raise is CORRECT, and no number of retries may paper over it.
+
+    It must fail on SIDE BALANCE specifically, not on composition or a floor: the
+    pool fills every cell exactly and clears both late floors, so reaching the side
+    check proves the manifest was otherwise perfectly valid and was refused solely
+    for being skewed. That is the guarantee the whole check exists for.
+    """
+    pool = _pool_all_red()
+    assert {r["side"] for r in pool} == {"red"}          # fixture honesty: NO black
     for seed in (1, 2, 3, 7, 20260712):
         with pytest.raises(ValueError, match="per-split side balance violated"):
-            sample_v2_rows(_pool_same_side_late_floor(), seed=seed)
+            sample_v2_rows(pool, seed=seed)
 
 
 def test_v2_no_duplicate_hash():
@@ -1366,9 +1592,11 @@ def test_v2_stats_shape_and_independent_counts():
     ROWS (an independent composition + floor witness), not re-emitted from the
     frozen quotas. v1's `bucket_count` is GONE (no bucket cap in v2)."""
     rows, stats = sample_v2_rows(_abundant_pool_v2(), seed=1)
-    assert set(stats) == {"n_rows", "seed", "cell_counts", "side_count",
-                          "late_target_band_count", "n_games_per_split",
-                          "n_games_total"}
+    assert set(stats) == {"n_rows", "seed", "assignment_attempt", "cell_counts",
+                          "side_count", "late_target_band_count",
+                          "n_games_per_split", "n_games_total"}
+    # PROVENANCE: which of the ASSIGN_ATTEMPTS whole-game split orderings won.
+    assert stats["assignment_attempt"] in range(ASSIGN_ATTEMPTS)
     assert "bucket_count" not in stats
     assert stats["n_rows"] == len(rows) == 240
     assert stats["seed"] == 1
