@@ -515,6 +515,14 @@ def _choose_positions_v2(positions: List[dict], take_n: int,
     return _choose_positions(positions, take_n, side_count, gap)
 
 
+def _side_delta(rows: List[dict]) -> int:
+    """Signed effect of taking `rows` on a split's (red - black) balance. A
+    side-opposed pair scores exactly 0 -- which is why `sample_v2_rows`' cell fill
+    can rank candidate GAMES by the balance their rows would leave behind, without
+    ever needing to name "opposed pair" as a special case (see `fill`)."""
+    return sum(1 if r["side"] == "red" else -1 for r in rows)
+
+
 def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
     """Sample the frozen 240-row v2 dev corpus from the screen's KEPT rows.
 
@@ -539,13 +547,20 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
     counter) before returning.
 
     Side balance gets the SAME exact-or-raise treatment as the floors, because v2
-    -- unlike v1 -- cannot assume it (see `_choose_positions_v2`): every 2-take
-    PREFERS a side-opposed pair, every 1-take steers toward the split's deficit
-    side, and |red - black| <= SIDE_TOL is then RE-VERIFIED per split on the
-    SELECTED rows. A pool whose only way to fill a cell is same-side rows makes
-    the sampler RAISE -- never silently emit a side-skewed manifest. (Task 6's
-    `post_screen_qualification` is the pre-registered place to catch such a screen
-    earlier, before the sampler is ever reached.)
+    -- unlike v1 -- cannot assume it (see `_choose_positions_v2`). It is steered at
+    BOTH levels: WITHIN a game (a 2-take prefers a side-opposed pair; a 1-take
+    prefers the split's deficit side) and, because that alone leaves the sampler
+    with no cross-game choice at all, ACROSS games -- `fill` picks the candidate
+    game whose rows leave the split closest to balanced. |red - black| <= SIDE_TOL
+    is then RE-VERIFIED per split on the SELECTED rows.
+
+    The fill is a GREEDY, so it stays CONSERVATIVE by design: it may still RAISE on
+    a pool that some perfect selection could balance -- notably because
+    `assign_split_v2` is side-BLIND and can deal one split a side-degenerate set of
+    games for a cell, which no fill order can then repair -- but it never silently
+    emits a side-skewed manifest. (Task 6's `post_screen_qualification` is the
+    pre-registered place to catch such a screen earlier, before the sampler is ever
+    reached.)
 
     Every cell must reach its quota exactly, every floor must be met, and every
     split must be side-balanced: a shortfall or violation of any kind is an ERROR
@@ -566,19 +581,35 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
     game_used: Counter = Counter()                        # GLOBAL rows per game
     game_plies: Dict[Any, List[int]] = defaultdict(list)  # GLOBAL plies per game
     side_count = {s: {"red": 0, "black": 0} for s in SPLITS}
-    floor_count: Counter = Counter()      # selected late-TARGET rows, by band,
-    selected: List[dict] = []             # GLOBAL across both splits
+    floor_count: Counter = Counter()      # selected late-TARGET rows by band --
+                                          # GLOBAL across both splits (the floors
+                                          # are a COMBINED requirement)
+    picked_in: Counter = Counter()        # rows SELECTED per (cell, split): the
+                                          # fill's authoritative budget counter,
+                                          # maintained by `take` alone
+    selected: List[dict] = []
 
-    def take(gi, cell, split, band, limit) -> int:
-        """Select up to `limit` of game `gi`'s rows for `cell` (band-restricted
-        when `band` is not None), honouring every per-game/per-split constraint,
-        and record them. Returns how many were ACTUALLY selected (0 is normal: the
-        game may have spent its budget, or hold no row of `band`)."""
+    def rows_for(gi, cell, split, band, limit) -> List[dict]:
+        """The rows game `gi` WOULD contribute to `cell`/`split` right now -- the
+        single source of truth for a game's contribution.
+
+        PURE with respect to the running state: it reads `used_sha1` / `game_used`
+        / `game_plies` / `side_count` but mutates NOTHING, so the cell fill can
+        PREVIEW a game (and its `_side_delta`) to decide the draw order before
+        committing to it, and `take` can then commit exactly what was previewed.
+        """
         positions = _pickable(games[gi], cell, band, used_sha1, game_plies[gi])
         take_n = min(MAX_PER_GAME - game_used[gi], limit, len(positions))
+        return _choose_positions_v2(positions, take_n, side_count[split],
+                                    MIN_PLY_GAP)
+
+    def take(gi, cell, split, band, limit) -> int:
+        """COMMIT up to `limit` of game `gi`'s rows for `cell` (band-restricted when
+        `band` is not None), honouring every per-game/per-split constraint. Returns
+        how many were ACTUALLY selected (0 is normal: the game may have spent its
+        budget, or hold no row of `band`)."""
         n_taken = 0
-        for r in _choose_positions_v2(positions, take_n, side_count[split],
-                                      MIN_PLY_GAP):
+        for r in rows_for(gi, cell, split, band, limit):
             # `_pickable` screened these against `used_sha1` as a BATCH, so a game
             # holding the same hash twice could otherwise smuggle both into one
             # `_choose_positions` result. Re-check per row so "no duplicate
@@ -595,37 +626,134 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
             game_used[gi] += 1
             game_plies[gi].append(r["ply"])
             side_count[split][r["side"]] += 1
+            picked_in[(cell, split)] += 1
             if cell == LATE_TARGET_CELL:
                 floor_count[r["band"]] += 1
             n_taken += 1
         return n_taken
 
+    def fill(cand_games, cell, split, band, budget_fn) -> None:
+        """Draw rows for `cell`/`split` from `cand_games` in a SIDE-AWARE,
+        deterministic order, until `budget_fn()` -- the rows this PASS still wants
+        -- reaches 0 or no candidate game can yield anything. Used by BOTH the
+        floor-satisfaction pass (band-restricted) and the ordinary fill.
+
+        Why the order must be side-aware at all: the sampler has NO cross-game side
+        choice otherwise. `_choose_positions_v2` steers WITHIN one game (its 2-take
+        prefers a side-opposed pair; its 1-take prefers the split's deficit side),
+        but a game that can ONLY offer same-side rows forces a same-side take no
+        matter how skewed the split already is -- and a plain `sorted(cand_games)`
+        walk cannot prefer a game that would fix the balance, because it never
+        looks at a second game. On realistic screens (roles assigned per ROW, so a
+        proposal pair's red can be `target` while its black is `control`) opposed
+        pairs are the MINORITY and same-side-only games dominate, which made the
+        exact-or-raise side-balance check fire on 34 of 35 satisfiable pools.
+
+        The rule: at each step, preview every still-unused candidate game at every
+        take size it could give (2 rows, or just 1), and take the (game, size) whose
+        rows leave the split CLOSEST to side-balanced. That single score subsumes
+        both halves of the intended behaviour:
+
+          * BALANCED split -> a side-OPPOSED PAIR scores |0 + 0| = 0, beating any
+            singleton (|+-1|) or same-side pair (|+-2|), so all opposed-pair games
+            are drawn FIRST, in ascending game_idx (the final tie-break) -- exactly
+            the historical round-robin order, at the maximum 2 rows per game.
+          * SKEWED split -> the score reaches for the correction: a deficit-side
+            pair (|imb| - 2) or, failing that, a deficit-side SINGLETON (|imb| - 1)
+            now outranks a neutral opposed pair (|imb|), which merely preserves the
+            skew. This is what makes an opposed-pair-rich cell able to REPAIR an
+            imbalance it inherited from an earlier cell -- and it must, because
+            `assign_split_v2` is side-BLIND: it can hand one split a side-skewed
+            set of games for a cell (e.g. 2 red-only vs 6 black-only), and NO
+            ordering within that cell can then balance it. Taking opposed pairs
+            unconditionally would lock the skew in permanently.
+
+        Each step re-previews, because every take moves the running balance, the
+        games' own <=MAX_PER_GAME budgets and the >=MIN_PLY_GAP/dedup filters. The
+        chosen game is then retired from this cell (as the historical single visit
+        per game per cell did), which also guarantees termination.
+
+        This is a GREEDY, not a global optimizer: it can still be CONSERVATIVE
+        (raise on a pool a perfect selection could balance), but it is never a
+        silent false PASS -- the exact-or-raise verifications below remain the
+        authority.
+        """
+        candidates = list(cand_games)               # ascending game_idx
+        while candidates:
+            budget = budget_fn()
+            if budget <= 0:
+                return
+            imbalance = side_count[split]["red"] - side_count[split]["black"]
+
+            # ONE preview per game: its NATURAL (largest affordable) take.
+            full = {}
+            for gi in candidates:
+                rows = rows_for(gi, cell, split, band, budget)
+                if rows:
+                    full[gi] = rows
+                # else: nothing pickable -- and MONOTONE (the budget only shrinks;
+                # used_sha1/game_plies only grow), so it can never revive. Dropped
+                # from `candidates` below, for good.
+            if not full:
+                return
+            candidates = sorted(full)
+            # Rows the remaining games could still yield, from those same previews.
+            capacity = sum(len(rows) for rows in full.values())
+
+            scored = []
+            for gi, rows in full.items():
+                # Keys are a STRICT TOTAL order -- (game_idx, limit) is unique -- so
+                # the draw is fully deterministic. Prefer, in order: the smallest
+                # resulting |red - black|; then the bigger take (2 rows over 1, so a
+                # cell burns as few games as it can); then the lowest game_idx.
+                scored.append(((abs(imbalance + _side_delta(rows)), -len(rows), gi),
+                               gi, budget))
+                # The deficit-side SINGLETON alternative to a 2-take. It is what
+                # lets an opposed-pair-rich cell REPAIR an inherited skew (a neutral
+                # pair would merely preserve it), but it spends a whole extra game
+                # on one row -- so offer it ONLY while the cell can still afford its
+                # quota without this game's other row: the remaining games must
+                # still cover the budget. Otherwise correcting the balance here
+                # would just trade a side-balance raise for a SHORTFALL raise.
+                if len(rows) > 1 and capacity - len(rows) >= budget - 1:
+                    one = rows_for(gi, cell, split, band, 1)
+                    if one:
+                        scored.append(
+                            ((abs(imbalance + _side_delta(one)), -len(one), gi),
+                             gi, 1))
+            scored.sort()
+            _key, best_gi, best_limit = scored[0]
+            candidates = [gi for gi in candidates if gi != best_gi]
+            take(best_gi, cell, split, band, best_limit)
+
     for split in SPLITS:
         for cell in CELL_ORDER_V2:
             quota = SPLIT_ALLOC_V2[cell][split]
-            picked = 0
             cand_games = sorted(
                 gi for gi in games
                 if split_of.get(gi) == split and cell in profile[gi])
 
-            # Floor-satisfaction pass: floor bands FIRST, only while their
-            # (global, cross-split) counters are still short. A no-op once the
-            # floors are already met -- e.g. in frozen_check when tuning met them.
+            # The rows this cell/split still wants. Read from `picked_in`, which
+            # `take` -- the single commit point -- maintains, so no fill pass can
+            # drift from the authoritative count.
+            def ordinary_budget(_cell=cell, _split=split, _quota=quota):
+                return _quota - picked_in[(_cell, _split)]
+
+            # Floor-satisfaction pass: floor bands FIRST, only while their (global,
+            # cross-split) counters are still short. A no-op once the floors are
+            # already met -- e.g. in frozen_check when tuning met them. Side-aware
+            # too: a floor band is exactly where same-side-only games cluster (a
+            # game's b300_399 red can be `target` while its black is `control`).
             if cell == LATE_TARGET_CELL:
                 for band, floor in LATE_TARGET_FLOORS.items():
-                    for gi in cand_games:
-                        if picked >= quota or floor_count[band] >= floor:
-                            break
-                        picked += take(gi, cell, split, band,
-                                       min(floor - floor_count[band],
-                                           quota - picked))
+                    def floor_budget(_band=band, _floor=floor, _ord=ordinary_budget):
+                        return min(_floor - floor_count[_band], _ord())
+                    fill(cand_games, cell, split, band, floor_budget)
 
-            # Ordinary fill: any band, earliest game first (v1's round-robin).
-            for gi in cand_games:
-                if picked >= quota:
-                    break
-                picked += take(gi, cell, split, None, quota - picked)
+            # Ordinary fill: any band.
+            fill(cand_games, cell, split, None, ordinary_budget)
 
+            picked = picked_in[(cell, split)]
             if picked != quota:
                 raise ValueError(
                     f"final-manifest shortfall: cell {(cell[0], cell[1], split)} "

@@ -602,13 +602,26 @@ _V2_POOL_SPEC = {
 }
 
 
-def _v2_pool(overrides=None):
+def _v2_singleton_game(game_idx, role, phase, band, side):
+    """One game contributing a SINGLE row to one cell -- because the screen
+    classified its side-opposed partner into the OTHER role, or grey-dropped it
+    (`raw_policy_role` reads each row independently). Routine on a real screen, and
+    the ONLY way a game can be forced to shift a split's side balance."""
+    p_red, p_black = (_V2_LATE_BAND_PLIES[band] if phase == "late"
+                      else _V2_PHASE_PLIES[phase])
+    return [_v2_row(game_idx, role, phase, band, side,
+                    p_red if side == "red" else p_black)]
+
+
+def _v2_pool(overrides=None, start_gi=0):
     """Build a fabricated `kept` pool from a {(role, phase): [(band, n_games)]}
-    spec (defaulting to `_V2_POOL_SPEC`), game_idx ascending in CELL_ORDER_V2
-    order."""
+    spec (defaulting to `_V2_POOL_SPEC`), game_idx ascending from `start_gi` in
+    CELL_ORDER_V2 order. (`start_gi` lets a fixture reserve the LOW game_idx range
+    for its own probe games -- the sampler's deterministic tie-breaks favour the
+    lowest game_idx, so a probe game must be able to sit below the bulk supply.)"""
     spec = dict(_V2_POOL_SPEC)
     spec.update(overrides or {})
-    rows, gi = [], 0
+    rows, gi = [], start_gi
     for cell in CELL_ORDER_V2:
         for band, n_games in spec[cell]:
             for _ in range(n_games):
@@ -703,8 +716,26 @@ def _pool_v2_gap_probe():
     game 1 -- v1's within-cell probe, re-cut: FOUR (target, midgame) rows red@42,
     red@46, black@55, black@71. cap+gap pick exactly {42, 55}: dropping the
     gap-skip would take 46 (4 plies away), dropping the <=2 cap would add 71.
+
+    A game can only ever contribute to TWO cells by giving ONE row to each -- and a
+    one-row take is, by definition, not a side-opposed pair, so under the sampler's
+    side-aware fill it is a PASS-2 (steered) draw. Pass 1 would otherwise fill both
+    of game 0's cells from side-opposed-pair games alone and game 0 would simply
+    never be reached, making the cross-cell probe vacuous. So this pool supplies
+    (target, opening) and (target, early_mid) with SINGLETON games only (70 each,
+    alternating red-only / black-only, so Pass 2's steering can still balance
+    them): both cells are then genuinely filled by Pass 2, and game 0 -- holding
+    the LOWEST game_idx, which is Pass 2's final tie-break -- is reliably drawn in
+    each. The bulk supply is pushed to game_idx >= 100 to keep that range free.
     """
-    rows = [r for r in _abundant_pool_v2() if r["game_idx"] not in (0, 1)]
+    rows = _v2_pool({("target", "opening"): [], ("target", "early_mid"): []},
+                    start_gi=100)
+    gi = 40_000
+    for cell in (("target", "opening"), ("target", "early_mid")):
+        for k in range(70):
+            rows.extend(_v2_singleton_game(gi, cell[0], cell[1], "b400_plus",
+                                           "red" if k % 2 == 0 else "black"))
+            gi += 1
     rows += [
         _v2_row(0, "target", "opening", "b400_plus", "red", 8),
         _v2_row(0, "target", "early_mid", "b400_plus", "red", 16),
@@ -762,6 +793,53 @@ def _pool_same_side_late_floor():
         for band, (p_red, p_black) in _V2_SAME_SIDE_LATE_PLIES.items():
             rows.append(_v2_row(gi, "target", "late", band, "red", p_red))
             rows.append(_v2_row(gi, "control", "late", band, "black", p_black))
+        gi += 1
+    return rows
+
+
+def _pool_side_sorted_by_game_idx():
+    """The GAME-ORDER regression pool. (target, midgame) is supplied by THREE
+    blocks, deliberately ordered so that ascending game_idx is the WORST possible
+    draw order:
+
+      gi   0- 29  30 RED-only games   (red@42 + red@56)      <- naive order hits
+      gi  30- 59  30 BLACK-only games (black@43 + black@57)      these first
+      gi  60-139  80 side-OPPOSED-pair games (red@42 + black@55)
+
+    The first two blocks hold NO gap-valid side-opposed pair, so
+    `_choose_positions_v2` cannot rescue them: every take from one MUST move the
+    balance by +-2. The third block is side-neutral and, on its own, can fill the
+    cell's whole 45-row demand in EITHER split.
+
+    So a side-balanced 240-row manifest plainly exists -- just draw the opposed
+    block. But the naive `sorted(cand_games)` walk never looks at side: it drains
+    the RED block first, filling tuning's 30-row quota with 30 REDS
+    (|red - black| = 30), and the exact-or-raise side check fires. A FALSE
+    INFEASIBILITY, purely from the draw order.
+
+    The opposed block is what makes this test isolate the ORDERING and nothing
+    else: because each of its games is side-neutral by itself, ANY subset of them
+    that `assign_split_v2` hands a split can still fill that split balanced. (That
+    matters -- `assign_split_v2` is side-BLIND, so a cell supplied ONLY by
+    same-side games can be dealt a side-degenerate candidate set for one split,
+    which no cell-fill order can repair. See the report's residual analysis.)
+
+    Physically honest: midgame is ply 41-90, red on EVEN plies (42, 56), black on
+    ODD (43, 55, 57); every pair is >= MIN_PLY_GAP apart; all are necessarily
+    b400_plus at ply <= 90.
+    """
+    rows = _v2_pool({("target", "midgame"): []}, start_gi=200)
+    gi = 0
+    for _ in range(30):                       # RED-only games FIRST (low game_idx)
+        rows.append(_v2_row(gi, "target", "midgame", "b400_plus", "red", 42))
+        rows.append(_v2_row(gi, "target", "midgame", "b400_plus", "red", 56))
+        gi += 1
+    for _ in range(30):                       # BLACK-only games NEXT
+        rows.append(_v2_row(gi, "target", "midgame", "b400_plus", "black", 43))
+        rows.append(_v2_row(gi, "target", "midgame", "b400_plus", "black", 57))
+        gi += 1
+    for _ in range(80):                       # SIDE-OPPOSED games LAST (high gi)
+        rows.extend(_v2_game(gi, "target", "midgame", "b400_plus"))
         gi += 1
     return rows
 
@@ -1079,6 +1157,73 @@ def test_v2_same_side_two_take_prefers_a_side_opposed_pair():
         if len(picked) == MAX_PER_GAME:
             assert {r["side"] for r in picked} == {"red", "black"}
             assert sorted(r["ply"] for r in picked) == [42, 71]
+
+
+def test_v2_cell_fill_game_order_is_side_aware():
+    """The cell fill must choose WHICH GAME to draw from by side, not just by
+    game_idx. Where every candidate game forces a same-side 2-take, the naive
+    `sorted(cand_games)` walk drains the RED block first and skews tuning by 30 --
+    a FALSE INFEASIBILITY, since alternating red/black games fills the identical
+    quota from the identical pool, side-balanced. Steering at the game-selection
+    level finds that selection; the row-level steering inside a single game cannot.
+    """
+    pool = _pool_side_sorted_by_game_idx()
+    mid = [r for r in pool if (r["role"], r["phase"]) == ("target", "midgame")]
+    by_game = defaultdict(list)
+    for r in mid:
+        by_game[r["game_idx"]].append(r)
+    sides = {g: {r["side"] for r in v} for g, v in by_game.items()}
+    reds = sorted(g for g, s in sides.items() if s == {"red"})
+    blacks = sorted(g for g, s in sides.items() if s == {"black"})
+    opposed = sorted(g for g, s in sides.items() if s == {"red", "black"})
+    assert len(reds) == len(blacks) == 30       # fixture honesty: 30 + 30 same-side
+    assert len(opposed) == 80                   # ...and an ample side-NEUTRAL block
+    assert max(reds) < min(blacks) < min(opposed)      # but ascending game_idx hits
+    for v in by_game.values():                         # every RED one FIRST.
+        assert len(v) == MAX_PER_GAME                  # Each game is a real 2-take
+        plies = sorted(r["ply"] for r in v)            # (both rows gap-valid), so a
+        assert plies[1] - plies[0] >= MIN_PLY_GAP      # same-side game moves the
+                                                       # balance by a full +-2.
+    rows, stats = sample_v2_rows(pool, seed=1)
+
+    assert len(rows) == CORPUS_SIZE_V2 == 240              # no shortfall
+    cell = Counter((r["role"], r["phase"], r["split"]) for r in rows)
+    for (role, phase), alloc in SPLIT_ALLOC_V2.items():
+        for split, n in alloc.items():
+            assert cell[(role, phase, split)] == n         # exact composition
+    band_counts = Counter(r["band"] for r in rows
+                          if (r["role"], r["phase"]) == LATE_TARGET_CELL)
+    for band, floor in LATE_TARGET_FLOORS.items():
+        assert band_counts[band] >= floor                  # floors still met
+    for split in SPLITS:
+        sc = Counter(r["side"] for r in rows if r["split"] == split)
+        assert abs(sc["red"] - sc["black"]) <= SIDE_TOL    # ...and BALANCED
+        assert stats["side_count"][split] == dict(sc)
+
+    # The discriminator: the fill reached PAST the two same-side blocks sitting at
+    # the LOWEST game_idx and drew the side-neutral block instead -- the one thing a
+    # `sorted(cand_games)` walk can never do, because it never looks at side.
+    # Pre-fix it takes 15 RED-only games for tuning: 30 RED rows out of the red
+    # block, ZERO opposed, |red - black| = 30.
+    mid_sel = [r for r in rows if (r["role"], r["phase"]) == ("target", "midgame")]
+    assert len(mid_sel) == 45
+    from_reds = [r for r in mid_sel if r["game_idx"] in set(reds)]
+    from_opposed = [r for r in mid_sel if r["game_idx"] in set(opposed)]
+    assert len(from_opposed) >= 35        # the side-NEUTRAL block did the work (0!)
+    assert len(from_reds) <= 10           # the low-game_idx RED trap: avoided (30!)
+    msc = Counter(r["side"] for r in mid_sel)      # and the trap cell itself came
+    assert abs(msc["red"] - msc["black"]) <= 5     # out near-balanced (30/0 pre-fix)
+
+
+def test_v2_side_aware_order_is_deterministic():
+    """Same input + same seed => byte-identical rows AND stats. The new draw order
+    must be a TOTAL, reproducible sort (no set iteration, no dict-order reliance)."""
+    for pool_fn in (_pool_side_sorted_by_game_idx, _pool_same_side_earliest_chain,
+                    _abundant_pool_v2):
+        a, sa = sample_v2_rows(pool_fn(), seed=3)
+        b, sb = sample_v2_rows(pool_fn(), seed=3)
+        assert a == b
+        assert sa == sb
 
 
 def test_v2_same_side_only_supply_raises_rather_than_skewing():
