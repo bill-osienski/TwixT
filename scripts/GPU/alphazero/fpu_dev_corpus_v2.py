@@ -997,11 +997,7 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
 #   geometry that passes HERE can still fail THERE (e.g. ample late/b200_299
 #   CANDIDATES, too few of which classify as `target`) -- by design.
 #
-# SOUNDNESS: feasible=True is NEVER returned on necessary-check evidence alone
-# (each per-constraint check is a true UPPER BOUND, so failing one PROVES
-# infeasibility, while passing them all proves nothing -- the per-phase checks
-# cannot see the CROSS-PHASE coupling of the GLOBAL <=MAX_PER_GAME cap; v1
-# §11.2.3's "necessary != sufficient", transposed from bands to phases). It is
+# SOUNDNESS: feasible=True is NEVER returned on pre-screen evidence alone. It is
 # returned ONLY when the constructive WITNESS actually selects QUOTA_PER_PHASE
 # positions per phase as whole-game red+black PAIRS -- 30 pair-games per phase, 120
 # distinct games, each used by AT MOST ONE pair, which is precisely how the global
@@ -1011,6 +1007,35 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
 # selection, so the gate can never be FALSE-feasible; it may be mildly conservative
 # (false-INfeasible) for exotic geometry -- an accepted, documented limitation that
 # never yields a silent false pass (v1 says exactly this at :465-472).
+#
+# The pre-screen checks come in TWO KINDS, and they carry DIFFERENT strengths. Do
+# not read them as one thing:
+#
+#   * The two CAPACITY checks (`phase-capacity`, `late-candidate`) are TRUE UPPER
+#     BOUNDS on what ANY selection could realize, so falling short of one genuinely
+#     PROVES infeasibility. Passing them proves nothing: they are per-phase /
+#     per-cell, so they cannot see the CROSS-PHASE coupling of the GLOBAL
+#     <=MAX_PER_GAME cap (v1 §11.2.3's "necessary != sufficient", transposed from
+#     bands to phases) -- which is exactly why the WITNESS, not they, governs
+#     feasible=True.
+#   * The two SIDE-ALIASING checks (`side-aliasing:{phase}`,
+#     `side-aliasing:late/{band}`) are NOT upper bounds on feasibility. They bound
+#     only the PAIR-BASED WITNESS STRATEGY: they fire precisely when the witness
+#     could not have found its pair-games anyway, and so only turn a downstream
+#     `joint-*` refusal into a sharper diagnostic -- they never change a verdict. A
+#     geometry can fail them and still be genuinely FEASIBLE, because per-split side
+#     balance is a per-SPLIT constraint, not a per-phase one: one game may supply two
+#     SAME-SIDE rows from DIFFERENT phases (e.g. black@13 opening + black@29
+#     early_mid, 16 plies apart), so a corpus can balance ACROSS phases with no
+#     single phase holding a side-opposed pair-game at all. Refusing such a geometry
+#     is a FALSE-INFEASIBLE -- the conservative direction, never a false pass -- and
+#     it is pinned, with a constructive counter-selection, by
+#     tests/test_fpu_dev_corpus_v2.py::
+#     test_v2_side_aliasing_bounds_the_witness_strategy_not_feasibility.
+#     It cannot fire on real `enumerate_v2_proposals` output at all: that enumerator
+#     emits ONLY side-opposed pairs, so pair_games * PAIR_POSITIONS == realizable
+#     identically and the capacity check always fires first. These are a contract
+#     guard on the PURE core, which accepts ANY proposal geometry.
 
 # Per-phase TOTAL candidate quota implied by the frozen SPLIT_ALLOC_V2 (45 target +
 # 15 control = 60 for every phase). DERIVED (not hard-coded) so it cannot drift from
@@ -1180,11 +1205,16 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
     BEFORE the remainder is filled from any late cell.
 
     PASS 2 fills each phase to its `quota_per_phase // PAIR_POSITIONS` pair-games, in
-    `phases` order, from the games PASS 1 left. The late phase's pass counts the floor pairs
-    PASS 1 already claimed for it, and draws its remainder from the phase's whole
+    `phases` order, from the games PASS 1 left. The late phase's pass counts the floor
+    pairs PASS 1 already claimed for it, and draws its remainder from the phase's whole
     candidate set (any late cell) -- which is exactly what the real sampler's
     (role, "late") cell does: it aggregates all three late proposal cells (see
     `_choose_positions_v2`).
+
+    PRECONDITION: `late_candidate_floors` is the caller's EFFECTIVE floors -- already
+    empty when LATE_PHASE is out of `phases`, so PASS 1 can never reserve games for a
+    phase PASS 2 will not fill. `v2_geometry_feasibility` resolves that once, and is
+    the only caller.
 
     Returns (selected_rows, None) on success, else (None, binding_constraint). This
     is a GREEDY, so it can be CONSERVATIVE (false-infeasible on exotic geometry a
@@ -1193,7 +1223,10 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
     """
     # Index each game's proposals by PHASE (pooled across the phase's cells -- what
     # the sampler's (role, phase) cell aggregates) and, for the late phase, by
-    # CANDIDATE CELL (band-restricted -- what a floor actually counts).
+    # CANDIDATE CELL (band-restricted -- what a floor actually counts). Only the FLOOR
+    # cells are indexed: PASS 1 draws from those alone, and the late phase's remainder
+    # comes from `per_game_phase` (all late cells pooled), so indexing the unfloored
+    # b400_plus cell here would build lists nothing ever reads.
     per_game_phase: Dict[Any, Dict[str, List[dict]]] = {}
     per_game_late_cell: Dict[Any, Dict[str, List[dict]]] = {}
     for gi in sorted(proposals_by_game):
@@ -1203,7 +1236,7 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
             if p["phase"] in phases:
                 by_phase[p["phase"]].append(p)
             cell = p["proposal_cell"]
-            if cell[0] == LATE_PHASE and cell[1] in LATE_CELL_BANDS:
+            if cell[0] == LATE_PHASE and cell[1] in late_candidate_floors:
                 by_cell[cell[1]].append(p)
         per_game_phase[gi] = by_phase
         per_game_late_cell[gi] = by_cell
@@ -1241,16 +1274,18 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
         return got
 
     # --- PASS 1: reserve the late floor CANDIDATE cells' pair-games (role-agnostic).
-    if LATE_PHASE in phases:
-        for band, floor in late_candidate_floors.items():
-            want = _floor_pair_games(floor)
-            got = draw(per_game_late_cell, band, LATE_PHASE, want)
-            if got < want:
-                return None, (
-                    f"joint-late-floor:{LATE_PHASE}/{band} (witness realized "
-                    f"{got * PAIR_POSITIONS} < {floor} CANDIDATE positions under the "
-                    f"JOINT per-game cap (<={max_per_game}/game) + >={min_gap}-gap "
-                    f"constraints)")
+    # No LATE_PHASE-in-`phases` guard: the caller already resolved that into the
+    # floors themselves (see PRECONDITION above), so an out-of-scope late phase
+    # arrives here as an empty dict and this loop is simply a no-op.
+    for band, floor in late_candidate_floors.items():
+        want = _floor_pair_games(floor)
+        got = draw(per_game_late_cell, band, LATE_PHASE, want)
+        if got < want:
+            return None, (
+                f"joint-late-floor:{LATE_PHASE}/{band} (witness realized "
+                f"{got * PAIR_POSITIONS} < {floor} CANDIDATE positions under the "
+                f"JOINT per-game cap (<={max_per_game}/game) + >={min_gap}-gap "
+                f"constraints)")
 
     # --- PASS 2: fill each phase to its pair quota from the games PASS 1 left.
     for phase in phases:
@@ -1271,10 +1306,11 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
     #
     # This tail is the one part that structurally ECHOES v1's `_build_witness`, because
     # it implements the same FROZEN whole-game 160/80 rule. It cannot be shared: v1
-    # budgets against its own private `_SPLIT_POS_BUDGET` (derived from v1's SPLIT_ALLOC),
-    # while v2 must budget against SPLIT_TOTALS (derived from SPLIT_ALLOC_V2) -- two
-    # different sources of truth that merely happen to agree today -- and v1 is frozen
-    # byte-identical, so the budget cannot be parameterized out of it.
+    # budgets against its own private `_SPLIT_POS_BUDGET` (derived from v1's
+    # SPLIT_ALLOC), while v2 must budget against SPLIT_TOTALS (derived from
+    # SPLIT_ALLOC_V2) -- two different sources of truth that merely happen to agree
+    # today -- and v1 is frozen byte-identical, so the budget cannot be parameterized
+    # out of it.
     rows_by_game: Dict[Any, List[dict]] = defaultdict(list)
     for row in selected:
         rows_by_game[row["game_idx"]].append(row)
@@ -1330,10 +1366,19 @@ def v2_geometry_feasibility(
     proposal_cell). No file paths, no NN, no hashes, no roles.
 
     Computes the per-phase / per-late-cell capacity DIAGNOSTICS, short-circuits with a
-    NAMED binding constraint on any NECESSARY violation, and only then attempts the
+    NAMED binding constraint on any PRE-SCREEN violation, and only then attempts the
     constructive `_build_v2_witness` that GOVERNS feasible=True. Deterministic (sorted
     iteration throughout).
     """
+    # The late floors only mean anything while the late PHASE is in scope. Resolve the
+    # EFFECTIVE floors ONCE, here, so the pre-screen checks below and the witness's own
+    # PASS-1 reservation can never disagree about whether they apply. (`phases` is a
+    # v1-parallel knob; only a caller that narrows it can make the two differ, and the
+    # default always contains LATE_PHASE.) The report carries these EFFECTIVE floors --
+    # i.e. the ones actually enforced -- not the requested ones.
+    late_floors: Dict[str, int] = (
+        dict(late_candidate_floors) if LATE_PHASE in phases else {})
+
     realizable = {p: 0 for p in phases}
     pair_games = {p: 0 for p in phases}
     red_tot = {p: 0 for p in phases}
@@ -1378,7 +1423,7 @@ def v2_geometry_feasibility(
         return V2PreflightReport(
             feasible=feasible, binding_constraint=binding,
             quota_per_phase=quota_per_phase,
-            late_candidate_floors=dict(late_candidate_floors),
+            late_candidate_floors=dict(late_floors),
             n_games=len(proposals_by_game), n_proposals=n_proposals,
             realizable_by_phase=dict(realizable),
             pair_games_by_phase=dict(pair_games),
@@ -1387,35 +1432,49 @@ def v2_geometry_feasibility(
             pair_games_by_late_cell=dict(late_pair_games),
             witness=witness)
 
-    # --- NECESSARY checks (fast; each names its binding constraint). Every one is a
-    # true UPPER BOUND, so falling short PROVES infeasibility -- but NONE of them ever
-    # drives feasible=True; they only short-circuit clear INfeasibility with a reason.
+    # --- PRE-SCREEN checks (fast; each names its binding constraint). NONE of them
+    # ever drives feasible=True -- they only short-circuit a refusal with a reason.
+    # They are of TWO DIFFERENT STRENGTHS; see this section's header.
+
+    # (1) CAPACITY -- TRUE UPPER BOUNDS on what any selection could realize, so
+    # falling short of one genuinely PROVES infeasibility.
     for phase in phases:
         if realizable[phase] < quota_per_phase:
             return _report(False, f"phase-capacity:{phase} (realizable "
                            f"{realizable[phase]} < quota {quota_per_phase})", None)
-    for band, floor in late_candidate_floors.items():
+    for band, floor in late_floors.items():
         if late_realizable.get(band, 0) < floor:
             return _report(False, f"late-candidate:{LATE_PHASE}/{band} (realizable "
                            f"{late_realizable.get(band, 0)} < candidate floor {floor}; "
-                           f"ROLE-AGNOSTIC -- the target-role floor is the post-screen "
-                           f"`select` stage's)", None)
+                           f"ROLE-AGNOSTIC -- the target-role floor is the "
+                           f"post-screen `select` stage's)", None)
+
+    # (2) SIDE-ALIASING -- NOT upper bounds on feasibility: they bound the PAIR-BASED
+    # WITNESS STRATEGY only. Each fires exactly when the witness could not have found
+    # its pair-games anyway, so they never change a verdict -- they only turn the
+    # downstream `joint-*` refusal into a sharper diagnostic. A geometry that fails
+    # one CAN still be genuinely feasible (a corpus may balance ACROSS phases via
+    # same-side rows drawn from different phases), in which case refusing it is a
+    # FALSE-INFEASIBLE: conservative, never a false pass. See the header.
     for phase in phases:
         if pair_games[phase] * PAIR_POSITIONS < quota_per_phase:
             return _report(False, f"side-aliasing:{phase} (both-side pair-games "
                            f"{pair_games[phase]} < "
-                           f"{quota_per_phase // PAIR_POSITIONS} needed for per-split "
-                           f"side balance)", None)
-    for band, floor in late_candidate_floors.items():
+                           f"{quota_per_phase // PAIR_POSITIONS} the pair-based "
+                           f"witness needs; conservative -- bounds the WITNESS "
+                           f"STRATEGY, not feasibility)", None)
+    for band, floor in late_floors.items():
         want = _floor_pair_games(floor)
         if late_pair_games.get(band, 0) < want:
             return _report(False, f"side-aliasing:{LATE_PHASE}/{band} (both-side "
-                           f"pair-games {late_pair_games.get(band, 0)} < {want} needed "
-                           f"for the late CANDIDATE floor)", None)
+                           f"pair-games {late_pair_games.get(band, 0)} < {want} the "
+                           f"pair-based witness needs for the late CANDIDATE floor; "
+                           f"conservative -- bounds the WITNESS STRATEGY, not "
+                           f"feasibility)", None)
 
-    # --- The constructive WITNESS GOVERNS feasible=True (necessary != sufficient).
+    # --- The constructive WITNESS GOVERNS feasible=True (pre-screen != sufficient).
     witness, binding = _build_v2_witness(
-        proposals_by_game, phases, quota_per_phase, late_candidate_floors,
+        proposals_by_game, phases, quota_per_phase, late_floors,
         max_per_game, min_gap, side_tol)
     if witness is None:
         return _report(False, binding, None)

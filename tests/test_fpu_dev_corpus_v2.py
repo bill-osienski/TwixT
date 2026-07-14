@@ -1752,8 +1752,13 @@ def _late_cell_missing_by_game():
 def _side_aliased_phase_by_game():
     """(c) `midgame` is supplied ONLY by SAME-SIDE (all-RED) pairs -- red@42 + red@56,
     both even, 14 plies apart, both necessarily b400_plus at ply <= 90. Its CAPACITY
-    is ample (130 games x 2 = 260 >= 60) but NO game holds a side-opposed midgame
-    pair, so no per-split side-balanced selection can exist."""
+    is ample (130 games x 2 = 260 >= 60), so the PAIR-BASED WITNESS cannot realize the
+    phase and the gate refuses CONSERVATIVELY.
+
+    NOT "no side-balanced selection can exist" -- one DOES (a corpus can balance
+    ACROSS phases via same-side rows drawn from different phases). See
+    `test_v2_side_aliasing_bounds_the_witness_strategy_not_feasibility`, which builds
+    it: this is a FALSE-INFEASIBLE, the conservative direction, never a false pass."""
     return _replace_cell_rows(_v2_full_games(130), ("midgame", None),
                               _V2_SAME_SIDE_RED_PLIES[("midgame", None)])
 
@@ -1762,8 +1767,8 @@ def _side_aliased_late_cell_by_game():
     """(c') The FLOOR cell's own side wall. `late/b200_299` is supplied ONLY by
     SAME-SIDE (all-RED) pairs -- red@230 + red@242 (honest: b200_299 needs ply >= 229)
     -- so its CANDIDATE availability is ample (260 >= 12) AND the late PHASE still
-    holds ample opposed pairs (from b400_plus / b300_399), yet no side-balanced
-    pair-game can ever be drawn from that floor cell."""
+    holds ample opposed pairs (from b400_plus / b300_399), yet the pair-based witness
+    can draw no PAIR-game from that floor cell (same conservative refusal as (c))."""
     return _replace_cell_rows(_v2_full_games(130), ("late", "b200_299"),
                               _V2_SAME_SIDE_RED_PLIES[("late", "b200_299")])
 
@@ -1896,10 +1901,19 @@ def test_v2_wall_late_candidate_cell_unreachable_infeasible():
 
 
 def test_v2_wall_side_aliased_phase_infeasible():
-    """(c) A phase whose every candidate pair is ONE-SIDED -> infeasible on SIDE, even
-    though its candidate capacity is ample. (Unreachable from today's
-    `enumerate_v2_proposals`, which only ever emits side-OPPOSED pairs -- this is a
-    contract guard on the PURE core, which accepts ANY proposal geometry.)"""
+    """(c) A phase whose every candidate pair is ONE-SIDED -> the gate refuses on SIDE,
+    even though its candidate capacity is ample.
+
+    CONSERVATIVE, not proven-infeasible: unlike the two CAPACITY walls above, this
+    check bounds the PAIR-BASED WITNESS STRATEGY, not feasibility itself -- a valid
+    selection over this very geometry does exist (built in
+    `test_v2_side_aliasing_bounds_the_witness_strategy_not_feasibility`). Refusing is
+    still correct behaviour; it just must not be described as a proof.
+
+    (Unreachable from today's `enumerate_v2_proposals`, which only ever emits
+    side-OPPOSED pairs -- so pair_games * 2 == realizable identically and the capacity
+    wall always fires first. This is a contract guard on the PURE core, which accepts
+    ANY proposal geometry.)"""
     report = v2_geometry_feasibility(_side_aliased_phase_by_game())
     assert report.feasible is False
     assert report.witness is None
@@ -1913,9 +1927,10 @@ def test_v2_wall_side_aliased_phase_infeasible():
 
 
 def test_v2_wall_side_aliased_late_floor_cell_infeasible():
-    """(c') A FLOOR cell whose every candidate pair is one-sided -> infeasible on
+    """(c') A FLOOR cell whose every candidate pair is one-sided -> the gate refuses on
     SIDE, even though the cell's candidate availability AND the late phase's own side
-    supply are both ample."""
+    supply are both ample. Conservative in exactly the same way as (c): it bounds the
+    pair-based witness strategy, not feasibility."""
     report = v2_geometry_feasibility(_side_aliased_late_cell_by_game())
     assert report.feasible is False
     assert report.witness is None
@@ -1924,6 +1939,81 @@ def test_v2_wall_side_aliased_late_floor_cell_infeasible():
     assert report.realizable_by_late_cell["b200_299"] >= LATE_TARGET_FLOORS["b200_299"]
     assert report.pair_games_by_late_cell["b200_299"] == 0
     assert report.pair_games_by_phase[LATE_PHASE] * 2 >= QUOTA_PER_PHASE   # phase is OK
+
+
+def test_v2_side_aliasing_bounds_the_witness_strategy_not_feasibility():
+    """THE CLAIM-CORRECTION PIN (review finding). The two SIDE-ALIASING checks are a
+    CONSERVATIVE pre-screen -- NOT true upper bounds like the two CAPACITY checks -- so
+    no docstring may say a side-aliasing refusal PROVES infeasibility.
+
+    Fixture (c)'s geometry is refused with `side-aliasing:midgame`, yet a genuine
+    240-row selection over it satisfies EVERY constraint the gate claims. Built here
+    as a real COUNTER-SELECTION:
+
+      *  30 games x 2 midgame REDS   (red@42  + red@56,  gap  14) -> 60 midgame
+      *  60 games x 2 BLACKS SPANNING TWO PHASES
+                                     (black@13 opening + black@29 early_mid, gap 16)
+                                                                  -> 60 + 60
+      *  30 games x 2 late REDS      (red@130 + red@230, gap 100) -> 60 late
+
+    The mechanism the pair-based witness structurally cannot see: per-split side
+    balance is a per-SPLIT constraint, NOT a per-phase one, so one game may supply two
+    SAME-SIDE rows from DIFFERENT phases and the corpus balances ACROSS phases -- with
+    no phase holding a single side-opposed pair-game.
+
+    The refusal remains CORRECT behaviour (a false-INfeasible is the conservative
+    direction, and it cannot fire on real enumerator output at all). It is only the
+    CLAIM that had to be corrected. This test is what keeps it corrected.
+    """
+    by_game = _side_aliased_phase_by_game()
+    report = v2_geometry_feasibility(by_game)
+    assert report.feasible is False                       # the gate REFUSES...
+    assert "side-aliasing:midgame" in report.binding_constraint
+    assert "not feasibility" in report.binding_constraint   # ...and says why it may err
+
+    # ...yet here is a fully valid selection over that same geometry.
+    def row(gi, ply):
+        return next(p for p in by_game[gi] if p["ply"] == ply)
+
+    selected, split_of, red_games, black_games = [], {}, [], []
+    for gi in range(0, 30):            # 2 same-side REDS, one phase (midgame)
+        selected += [row(gi, 42), row(gi, 56)]
+        red_games.append(gi)
+    for gi in range(30, 90):           # 2 same-side BLACKS, ACROSS two phases
+        selected += [row(gi, 13), row(gi, 29)]
+        black_games.append(gi)
+    for gi in range(90, 120):          # 2 same-side REDS, both late floor cells
+        selected += [row(gi, 130), row(gi, 230)]
+        red_games.append(gi)
+    for games in (red_games, black_games):             # whole-game 160/80 split:
+        for i, gi in enumerate(games):                 # 40+40 games -> tuning,
+            split_of[gi] = "tuning" if i < 40 else "frozen_check"   # 20+20 -> frozen
+
+    # EVERY constraint the preflight claims, checked on the counter-selection:
+    assert len(selected) == CORPUS_SIZE_V2 == 240                       # size
+    assert Counter(r["phase"] for r in selected) == {p: QUOTA_PER_PHASE
+                                                    for p in PHASES}    # 60/phase
+    plies_by_game = defaultdict(list)
+    for r in selected:
+        plies_by_game[r["game_idx"]].append(r["ply"])
+    assert len(plies_by_game) == 120
+    assert max(len(v) for v in plies_by_game.values()) <= MAX_PER_GAME  # <=2/game
+    for plies in plies_by_game.values():                                # >=12 gap
+        assert abs(plies[0] - plies[1]) >= MIN_PLY_GAP
+    late_cells = Counter(r["proposal_cell"] for r in selected
+                         if r["phase"] == LATE_PHASE)
+    for band, floor in LATE_TARGET_FLOORS.items():                      # late floors
+        assert late_cells[(LATE_PHASE, band)] == 30 >= floor
+    for split in SPLITS:                                   # 160/80 + side balance
+        rows = [r for r in selected if split_of[r["game_idx"]] == split]
+        assert len(rows) == SPLIT_TOTALS[split]
+        sc = Counter(r["side"] for r in rows)
+        assert abs(sc["red"] - sc["black"]) == 0 <= SIDE_TOL            # PERFECT
+
+    # ...and NO phase held a single side-opposed pair-game -- which is exactly why the
+    # pair-based witness could not find this selection, and why the check is a
+    # strategy bound rather than a proof of infeasibility.
+    assert report.pair_games_by_phase["midgame"] == 0
 
 
 # --- (d) the GLOBAL <=2/game cap -- a WITNESS failure, not a proposal count ---
