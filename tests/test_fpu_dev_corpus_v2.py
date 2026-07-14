@@ -85,6 +85,7 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     SCREEN_ARTIFACT_IDENTITY,
     SCREEN_FIELDNAMES,
     SCREEN_IDENTITY_KEYS,
+    SCREEN_ROW_KEY_FIELDS,
     SELF_REFERENTIAL_IDENTITY,
     SIDE_TOL,
     SPLIT_ALLOC_V2,
@@ -110,6 +111,7 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     run_screen,
     sample_v2_rows,
     screen_row,
+    screen_row_counts,
     select_final_manifest,
     v2_geometry_feasibility,
     v2_preflight_source,
@@ -3013,6 +3015,7 @@ def _v2_screen_artifact(tmp_path, screen_rows, *,
         "screen_csv": config.screen_out,
         "n_proposals": len(screen_rows),
         "status_counts": dict(Counter(r["exclusion_status"] for r in screen_rows)),
+        "row_counts": screen_row_counts(screen_rows),
         "base_mcts_config": {"n_simulations": ANCHOR_SIMS_V2},
         **paths,
     })
@@ -3022,17 +3025,46 @@ def _v2_screen_artifact(tmp_path, screen_rows, *,
     return config, meta, files
 
 
-def _select(screen_rows, meta, config, *, forbidden=None, screen_csv_path=None):
+def _select(meta, config, *, forbidden=None, screen_csv_path=None):
     """`select_final_manifest`, wired the ONE way it accepts: `forbidden` loaded from
     the very manifests whose bytes the identity check hard-matches, and the screen
-    artifact's own path (whose bytes are the seventh identity). A test that means to
-    BREAK one of those wirings passes it explicitly."""
+    artifact's own path (whose bytes are the seventh identity, and from which `select`
+    READS its own rows -- there is no row argument to pass). A test that means to BREAK
+    one of those wirings passes it explicitly."""
     return select_final_manifest(
-        screen_rows, meta, config,
+        meta, config,
         forbidden=(load_forbidden_hashes(config.forbidden_manifests)
                    if forbidden is None else forbidden),
         screen_csv_path=(config.screen_out if screen_csv_path is None
                          else screen_csv_path))
+
+
+def _forge_screen_csv(csv_path, predicate, replacements, *, n):
+    """Hand-edit exactly `n` matching rows of a PERSISTED screen CSV -- the forger's
+    tool: a text editor. Returns nothing; asserts the forgery actually landed, so a
+    fixture that silently matches zero rows can never make an attack test vacuous."""
+    lines = Path(csv_path).read_text().splitlines(keepends=True)
+    forged = 0
+    for i, line in enumerate(lines):
+        if forged == n:
+            break
+        if predicate(line):
+            for old, new in replacements:
+                line = line.replace(old, new)
+            lines[i] = line
+            forged += 1
+    assert forged == n, f"the forgery fixture matched {forged} rows, expected {n}"
+    Path(csv_path).write_text("".join(lines))
+
+
+def _restamp_screen_csv_hash(meta, csv_path):
+    """What a forger does after editing the artifact: re-record its hash in the meta.
+    Isolates the SECOND lock (`row_counts`) so it can be proven independently of the
+    first (`screen_csv_sha1`)."""
+    meta["provenance"]["screen_csv_sha1"] = v2_screen_provenance(
+        config_path=None, source_index_path=None, checkpoint=None,
+        forbidden_manifests=[], base_mcts_config=None,
+        screen_csv=str(csv_path))["screen_csv_sha1"]
 
 
 def _validate(meta, config, *, forbidden_paths=None, screen_csv_path=None):
@@ -3270,13 +3302,26 @@ def test_v2_a_screen_meta_without_provenance_raises(tmp_path):
 
 # --- validate_screen_rows_against_meta: the rows must match their own meta ----
 
+def test_v2_the_cross_checked_row_key_covers_what_selection_reads():
+    """The composition key is `(exclusion_status, raw_policy_role, phase, band)` --
+    every field `post_screen_qualification` and `sample_v2_rows` key on to decide which
+    SPLIT_ALLOC_V2 cell a row fills and which LATE_TARGET_FLOORS band it counts toward.
+
+    `exclusion_status` ALONE is not enough, and that is the whole point: see
+    `test_v2_screen_role_flip_on_already_kept_rows_raises`."""
+    assert SCREEN_ROW_KEY_FIELDS == (
+        "exclusion_status", "raw_policy_role", "phase", "band")
+    assert set(SCREEN_ROW_KEY_FIELDS) <= set(SCREEN_FIELDNAMES)
+
+
 def test_v2_screen_rows_matching_their_meta_pass(tmp_path):
     """The happy path: rows read back from the artifact agree with the screen's own
-    recorded n_proposals + status_counts -> returns None, silently."""
+    recorded n_proposals + row_counts -> returns None, silently."""
     screen = _screen_from_pool(_abundant_pool_v2())
-    _config, meta, _files = _v2_screen_artifact(tmp_path, screen)
+    _config, meta, files = _v2_screen_artifact(tmp_path, screen)
 
-    assert validate_screen_rows_against_meta(screen, meta) is None
+    assert validate_screen_rows_against_meta(
+        read_screen_csv(files["screen_csv"]), meta) is None
 
 
 def test_v2_screen_row_count_disagreeing_with_the_meta_raises(tmp_path):
@@ -3288,30 +3333,61 @@ def test_v2_screen_row_count_disagreeing_with_the_meta_raises(tmp_path):
         validate_screen_rows_against_meta(screen[:-1], meta)     # one row dropped
 
 
-def test_v2_screen_status_histogram_disagreeing_with_the_meta_raises(tmp_path):
-    """The status/role FLIP the byte hash reports only as "something changed": one
-    `kept` row edited to `collision` leaves the row count identical, but the
-    `exclusion_status` histogram no longer matches the meta -- and the raise SAYS
-    which status drifted, and by how much."""
+def test_v2_screen_status_flip_disagreeing_with_the_meta_raises(tmp_path):
+    """One `kept` row edited to `collision`: the row count is identical, but the
+    composition histogram no longer matches the meta -- and the raise SAYS which
+    composition key drifted, and by how much."""
     screen = _screen_from_pool(_abundant_pool_v2())
     _config, meta, _files = _v2_screen_artifact(tmp_path, screen)
 
     flipped = copy.deepcopy(screen)
     flipped[0]["exclusion_status"] = "collision"
 
-    with pytest.raises(ValueError, match="exclusion_status") as excinfo:
+    with pytest.raises(ValueError, match="ROW COMPOSITION") as excinfo:
         validate_screen_rows_against_meta(flipped, meta)
     assert "kept" in str(excinfo.value) and "collision" in str(excinfo.value)
 
 
-def test_v2_a_meta_that_cannot_cross_check_its_rows_raises(tmp_path):
-    """A meta recording NEITHER n_proposals NOR status_counts is REFUSED, not
-    vacuously passed: a screen whose rows cannot be cross-checked is not an
-    evidence artifact."""
+def test_v2_screen_role_flip_on_already_kept_rows_raises(tmp_path):
+    """*** THE HOLE AN `exclusion_status`-ONLY HISTOGRAM LEAVES OPEN. ***
+
+    Flip `raw_policy_role` from `control` to `target` on rows that are ALREADY `kept`.
+    The row COUNT is unchanged and the `exclusion_status` histogram is unchanged -- so
+    the meta's `n_proposals` and `status_counts` both remain CORRECT AND UNTOUCHED --
+    yet an unmeetable >=12 late-TARGET floor becomes satisfiable, which is the one
+    thing STAGE 2 exists to prevent.
+
+    Only a histogram over the fields SELECTION actually reads can see it, and it must.
+    """
     screen = _screen_from_pool(_abundant_pool_v2())
     _config, meta, _files = _v2_screen_artifact(tmp_path, screen)
-    blind = {k: v for k, v in meta.items()
-             if k not in ("n_proposals", "status_counts")}
+
+    flipped = copy.deepcopy(screen)
+    n = 0
+    for r in flipped:
+        if n < 4 and r["exclusion_status"] == "kept" and r["raw_policy_role"] == "control":
+            r["raw_policy_role"] = "target"
+            n += 1
+    assert n == 4
+
+    # The two OLD attestations are still perfectly honest about these rows...
+    assert len(flipped) == meta["n_proposals"]
+    assert (dict(Counter(r["exclusion_status"] for r in flipped))
+            == meta["status_counts"])
+    # ...and the composition histogram still catches it.
+    with pytest.raises(ValueError, match="ROW COMPOSITION") as excinfo:
+        validate_screen_rows_against_meta(flipped, meta)
+    assert "kept|control" in str(excinfo.value)
+    assert "kept|target" in str(excinfo.value)
+
+
+def test_v2_a_meta_that_cannot_cross_check_its_rows_raises(tmp_path):
+    """A meta recording no `row_counts` is REFUSED, not vacuously passed -- an
+    `exclusion_status`-only attestation cannot prove row COMPOSITION, and a screen
+    whose composition cannot be cross-checked is not an evidence artifact."""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    _config, meta, _files = _v2_screen_artifact(tmp_path, screen)
+    blind = {k: v for k, v in meta.items() if k != "row_counts"}
 
     with pytest.raises(ValueError, match="cannot be cross-checked"):
         validate_screen_rows_against_meta(screen, blind)
@@ -3401,7 +3477,7 @@ def test_v2_select_final_manifest_yields_the_exact_v2_composition_and_floors(tmp
     screen = _screen_from_pool(_abundant_pool_v2())
     config, meta, _files = _v2_screen_artifact(tmp_path, screen)
 
-    rows, stats = _select(screen, meta, config)
+    rows, stats = _select(meta, config)
 
     assert len(rows) == CORPUS_SIZE_V2 == 240
     counts = Counter((r["role"], r["ply_bucket"], r["split"]) for r in rows)
@@ -3438,17 +3514,48 @@ def test_v2_select_final_manifest_is_deterministic(tmp_path):
     screen = _screen_from_pool(_abundant_pool_v2())
     config, meta, _files = _v2_screen_artifact(tmp_path, screen)
 
-    rows_a, stats_a = _select(screen, meta, config)
-    rows_b, stats_b = _select(screen, meta, config)
+    rows_a, stats_a = _select(meta, config)
+    rows_b, stats_b = _select(meta, config)
 
     assert rows_a == rows_b
     assert stats_a == stats_b
 
 
+def test_v2_select_reads_its_rows_from_the_hashed_artifact_not_from_an_argument():
+    """*** THE DECOY-ROWS HOLE, closed STRUCTURALLY. ***
+
+    `screen_csv_sha1` hashes the FILE. If `select_final_manifest` also took a
+    `screen_rows` argument, it would hash one thing and select from another: an honest
+    CSV and an honest meta on disk, both matching perfectly, while the ROWS handed in
+    were a decoy -- and rows are never hashed. So the parameter does not exist. The
+    rows are READ from `screen_csv_path`, the artifact whose bytes were just
+    hard-matched, and can come from nowhere else: the bug class is UNREPRESENTABLE, not
+    merely detected.
+
+    (Same principle that binds `forbidden` to `config.forbidden_manifests`: verify --
+    or better, structurally prevent -- rather than trust the caller to wire it right.)
+    """
+    params = list(inspect.signature(select_final_manifest).parameters)
+    assert "screen_rows" not in params
+    assert params == ["screen_meta", "config", "forbidden", "screen_csv_path"]
+
+    body = _function_body(select_final_manifest)
+    assert "read_screen_csv(screen_csv_path)" in body
+    # ...and the read happens AFTER the hard-match: never parse an artifact you have
+    # not first proven is the right one.
+    assert body.index("validate_screen_identities(") < body.index("read_screen_csv(")
+    assert body.index("read_screen_csv(") < body.index("validate_screen_rows_against_meta(")
+
+    # `main` must not read the rows either -- it hands over the PATH, nothing else.
+    main_body = _function_body(main)
+    assert "screen_csv_path=args.screen" in main_body
+    assert "read_screen_csv(" not in main_body
+
+
 def test_v2_select_refuses_on_failed_identities_BEFORE_any_selection(tmp_path, monkeypatch):
     """ORDER, proven: a bad identity refuses BEFORE selection runs at all.
 
-    The very same screen rows sample FINE (asserted first, as a positive control),
+    The very same screen artifact samples FINE (asserted first, as a positive control),
     so the refusal is attributable to the identity and nothing else -- and with
     `sample_v2_rows` replaced by a landmine, the identity error still surfaces,
     which proves selection was never even attempted.
@@ -3457,8 +3564,8 @@ def test_v2_select_refuses_on_failed_identities_BEFORE_any_selection(tmp_path, m
     screen = _screen_from_pool(_abundant_pool_v2())
     config, meta, _files = _v2_screen_artifact(tmp_path, screen)
 
-    rows, _stats = _select(screen, meta, config)
-    assert len(rows) == CORPUS_SIZE_V2            # these rows WOULD sample fine
+    rows, _stats = _select(meta, config)
+    assert len(rows) == CORPUS_SIZE_V2            # this artifact WOULD sample fine
 
     def _landmine(*args, **kwargs):
         raise AssertionError("select must refuse BEFORE any selection")
@@ -3468,7 +3575,7 @@ def test_v2_select_refuses_on_failed_identities_BEFORE_any_selection(tmp_path, m
     tampered = copy.deepcopy(meta)
     tampered["provenance"]["source_index_sha1"] = "tampered"
     with pytest.raises(ValueError, match="source_index_sha1"):
-        _select(screen, tampered, config)
+        _select(tampered, config)
 
 
 def test_v2_select_refuses_on_failed_qualification_BEFORE_any_selection(tmp_path, monkeypatch):
@@ -3484,7 +3591,7 @@ def test_v2_select_refuses_on_failed_qualification_BEFORE_any_selection(tmp_path
     monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
 
     with pytest.raises(ValueError, match="b200_299"):
-        _select(screen, meta, config)
+        _select(meta, config)
 
 
 def test_v2_select_refuses_a_screen_csv_edited_after_screening(tmp_path, monkeypatch):
@@ -3502,24 +3609,18 @@ def test_v2_select_refuses_a_screen_csv_edited_after_screening(tmp_path, monkeyp
     monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
 
     with pytest.raises(ValueError, match="screen_csv_sha1"):
-        _select(read_screen_csv(str(csv_path)), meta, config)
+        _select(meta, config)
 
 
-def test_v2_select_refuses_the_hand_edited_screen_attack(tmp_path, monkeypatch):
-    """*** THE ATTACK ***, end to end -- no evaluator, no MCTS, just typing.
+def test_v2_select_refuses_the_status_flip_forgery(tmp_path, monkeypatch):
+    """*** FORGERY 1 ***: flip EIGHT `ineligible_role` late/b200_299 rows to
+    `kept`/`target` in the persisted CSV. No evaluator, no MCTS -- just typing. The row
+    count is unchanged and every INPUT file is untouched, so all six input identities
+    still match; an unmeetable >=12 late-TARGET floor becomes satisfiable.
 
-    Start from the HONEST floor-unmeetable screen: only 10 late-TARGET b200_299 rows
-    against the >= 12 floor, so `select` correctly REFUSES it. Now hand-edit EIGHT
-    `ineligible_role` late/b200_299 rows in the persisted CSV into `kept`/`target`
-    (the row COUNT is unchanged, every INPUT file is untouched, and all six input
-    identities still match) -- which would forge an unmeetable floor into a
-    satisfiable one and produce a 240-row manifest from positions the network never
-    classified.
-
-    It must be REFUSED, and it is -- TWICE OVER, each layer proven independently:
-      1. `screen_csv_sha1`: the artifact's own bytes changed;
-      2. and even for an attacker who ALSO re-stamps that hash in the meta, the
-         row/meta cross-check sees `status_counts` no longer describe the rows.
+    REFUSED twice over, each layer proven independently:
+      1. `screen_csv_sha1` -- the artifact's own bytes changed;
+      2. and, after the forger ALSO re-stamps that hash, the ROW-COMPOSITION histogram.
     """
     from scripts.GPU.alphazero import fpu_dev_corpus_v2 as mod
     screen = _screen_late_target_floor_unmeetable()
@@ -3528,43 +3629,83 @@ def test_v2_select_refuses_the_hand_edited_screen_attack(tmp_path, monkeypatch):
 
     # 0. the HONEST screen is refused for the RIGHT reason (the unmeetable floor).
     with pytest.raises(ValueError, match="b200_299"):
-        _select(read_screen_csv(str(csv_path)), meta, config)
+        _select(meta, config)
 
-    # 1. the attack: flip 8 excluded late/b200_299 rows to kept/target, in the CSV.
-    lines = csv_path.read_text().splitlines(keepends=True)
-    flipped = 0
-    for i, line in enumerate(lines):
-        if flipped == 8:
-            break
-        if ",late,298,b200_299," in line and line.rstrip().endswith(",ineligible_role"):
-            lines[i] = (line.replace(",,False,,,", ",target,True,0.1,True,")
-                        .replace(",ineligible_role", ",kept"))
-            flipped += 1
-    assert flipped == 8, "the attack fixture must actually flip 8 rows"
-    csv_path.write_text("".join(lines))
+    _forge_screen_csv(
+        csv_path,
+        lambda ln: (",late,298,b200_299," in ln
+                    and ln.rstrip().endswith(",ineligible_role")),
+        [(",,False,,,", ",target,True,0.1,True,"), (",ineligible_role", ",kept")],
+        n=8)
 
+    # the forgery WORKS on the rows: qualification now (dishonestly) passes...
     attacked = read_screen_csv(str(csv_path))
-    # The attack WORKED on the rows: the floor is now (dishonestly) satisfiable...
-    assert len(attacked) == len(screen)                       # row count unchanged
+    assert len(attacked) == len(screen)                        # row count unchanged
     assert len(_late_target_kept(attacked, "b200_299")) >= LATE_TARGET_FLOORS["b200_299"]
-    post_screen_qualification(kept_rows_from_screen(attacked))   # ...qualification passes!
+    post_screen_qualification(kept_rows_from_screen(attacked))
 
-    # ...and `select` REFUSES it anyway, before any selection, on the artifact's hash.
     def _landmine(*args, **kwargs):
         raise AssertionError("select must refuse BEFORE any selection")
     monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
-    with pytest.raises(ValueError, match="screen_csv_sha1"):
-        _select(attacked, meta, config)
 
-    # 2. LAYER TWO, proven independently: even after re-stamping the artifact hash,
-    # the rows no longer agree with the meta's own status_counts.
+    # LAYER 1: the artifact's bytes.
+    with pytest.raises(ValueError, match="screen_csv_sha1"):
+        _select(meta, config)
+
+    # LAYER 2, independently: re-stamp the hash, and the composition histogram fires.
     restamped = copy.deepcopy(meta)
-    restamped["provenance"]["screen_csv_sha1"] = v2_screen_provenance(
-        config_path=None, source_index_path=None, checkpoint=None,
-        forbidden_manifests=[], base_mcts_config=None,
-        screen_csv=str(csv_path))["screen_csv_sha1"]
-    with pytest.raises(ValueError, match="exclusion_status"):
-        _select(attacked, restamped, config)
+    _restamp_screen_csv_hash(restamped, csv_path)
+    with pytest.raises(ValueError, match="ROW COMPOSITION"):
+        _select(restamped, config)
+
+
+def test_v2_select_refuses_the_role_flip_forgery_that_leaves_status_counts_honest(
+        tmp_path, monkeypatch):
+    """*** FORGERY 2 -- the one an `exclusion_status`-only histogram let through. ***
+
+    Flip `raw_policy_role` from `control` to `target` on rows that are ALREADY `kept`.
+    The row count is unchanged AND the `exclusion_status` histogram is unchanged, so
+    the meta's `n_proposals` and `status_counts` stay CORRECT AND UNTOUCHED -- the
+    forger need only re-stamp `screen_csv_sha1`. Yet the honest 10 late-TARGET
+    b200_299 rows become 12+, forging the >=12 floor.
+
+    REFUSED: the ROW-COMPOSITION histogram (which keys on `raw_policy_role`) sees it,
+    BEFORE any selection.
+    """
+    from scripts.GPU.alphazero import fpu_dev_corpus_v2 as mod
+    screen = _screen_late_target_floor_unmeetable()
+    config, meta, files = _v2_screen_artifact(tmp_path, screen)
+    csv_path = Path(files["screen_csv"])
+
+    # 4 kept CONTROL late/b200_299 rows -> target. `_V2_POOL_SPEC` gives (control, late)
+    # ten b200_299 games (20 kept rows), so there is ample honest supply to corrupt.
+    _forge_screen_csv(
+        csv_path,
+        lambda ln: (",late,298,b200_299," in ln and ",control,True," in ln
+                    and ln.rstrip().endswith(",kept")),
+        [(",control,True,", ",target,True,")],
+        n=4)
+
+    forged = read_screen_csv(str(csv_path))
+    # The OLD attestations remain perfectly honest about these rows...
+    assert len(forged) == meta["n_proposals"]
+    assert dict(Counter(r["exclusion_status"] for r in forged)) == meta["status_counts"]
+    # ...and the floor really is forged: an honest 10 becomes >= the 12 required.
+    assert len(_late_target_kept(forged, "b200_299")) >= LATE_TARGET_FLOORS["b200_299"]
+    post_screen_qualification(kept_rows_from_screen(forged))     # would have SELECTED
+
+    # The forger re-stamps the ONE meta field that changed -- and is still refused.
+    restamped = copy.deepcopy(meta)
+    _restamp_screen_csv_hash(restamped, csv_path)
+
+    def _landmine(*args, **kwargs):
+        raise AssertionError("select must refuse BEFORE any selection")
+    monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
+
+    with pytest.raises(ValueError, match="ROW COMPOSITION") as excinfo:
+        _select(restamped, config)
+    assert "kept|control|late|b200_299" in str(excinfo.value)
+    assert "kept|target|late|b200_299" in str(excinfo.value)
 
 
 def test_v2_select_binds_forbidden_to_the_manifests_it_hard_matched(tmp_path):
@@ -3578,12 +3719,12 @@ def test_v2_select_binds_forbidden_to_the_manifests_it_hard_matched(tmp_path):
     screen = _screen_from_pool(_abundant_pool_v2())
     config, meta, _files = _v2_screen_artifact(tmp_path, screen)
 
-    _select(screen, meta, config)                    # correctly wired: fine
+    _select(meta, config)                            # correctly wired: fine
 
     with pytest.raises(ValueError, match="forbidden"):
-        _select(screen, meta, config, forbidden=set())            # the no-op set
+        _select(meta, config, forbidden=set())                    # the no-op set
     with pytest.raises(ValueError, match="forbidden"):
-        _select(screen, meta, config, forbidden={"a-hash-from-somewhere-else"})
+        _select(meta, config, forbidden={"a-hash-from-somewhere-else"})
 
 
 def test_v2_select_enforces_disjointness_against_forbidden(tmp_path):
@@ -3598,21 +3739,25 @@ def test_v2_select_enforces_disjointness_against_forbidden(tmp_path):
     and only `assert_disjoint` can fire."""
     screen = _screen_from_pool(_abundant_pool_v2())
     config, meta, _files = _v2_screen_artifact(tmp_path / "clean", screen)
-    rows, _stats = _select(screen, meta, config)
+    rows, _stats = _select(meta, config)
     collide = rows[0]["canonical_position_sha1"]
 
     config2, meta2, _f2 = _v2_screen_artifact(
         tmp_path / "collide", screen, forbidden_hashes=(collide,))
 
     with pytest.raises(ValueError, match="assert_disjoint"):
-        _select(screen, meta2, config2)
+        _select(meta2, config2)
 
 
 def test_v2_select_reruns_identically_from_the_persisted_screen_csv(tmp_path):
     """The whole point of the two-artifact workflow: `select` is re-runnable from the
-    PERSISTED screen alone. Rows read back through `read_screen_csv` re-derive the
-    IDENTICAL manifest the in-memory rows do -- so the CSV's own type coercions
-    (int/float/bool/null) are provably lossless for everything `select` reads."""
+    PERSISTED screen alone -- it now READS every row through `read_screen_csv`, so the
+    CSV's own type coercions (int/float/bool/null) are on the ONLY path there is, and
+    a lossy one would break selection outright.
+
+    Pinned here: the collision row's nulls survive as nulls (never a fabricated 0.0),
+    the tuple-valued `proposal_cell` round-trips as its persisted text without
+    disturbing selection, and two runs over the same artifact are identical."""
     screen = _screen_from_pool(
         _abundant_pool_v2(),
         extra=[(r, "collision") for r in _v2_game(70_000, "target", "opening",
@@ -3629,11 +3774,14 @@ def test_v2_select_reruns_identically_from_the_persisted_screen_csv(tmp_path):
         r["normalized_entropy"] is None and r["root_value_stm"] is None
         and r["anchor_eligible"] is None and r["anchor_run"] is False
         for r in collided)
+    # `proposal_cell` comes back as its persisted TEXT, not a tuple -- `select` never
+    # reads it, which is exactly why that is safe.
+    assert reread[0]["proposal_cell"] == str(screen[0]["proposal_cell"])
 
-    from_memory, stats_mem = _select(screen, meta, config)
-    from_csv, stats_csv = _select(reread, meta, config)
-    assert from_csv == from_memory
-    assert stats_csv == stats_mem
+    rows_a, stats_a = _select(meta, config)
+    rows_b, stats_b = _select(meta, config)
+    assert rows_a == rows_b and stats_a == stats_b
+    assert len(rows_a) == CORPUS_SIZE_V2
 
 
 def test_v2_write_select_csv_round_trips_the_manifest(tmp_path):
@@ -3643,7 +3791,7 @@ def test_v2_write_select_csv_round_trips_the_manifest(tmp_path):
     by `diagnose_fpu_policy_mass` unchanged."""
     screen = _screen_from_pool(_abundant_pool_v2())
     config, meta, _files = _v2_screen_artifact(tmp_path, screen)
-    rows, _stats = _select(screen, meta, config)
+    rows, _stats = _select(meta, config)
     out_csv = tmp_path / "fpu_dev_corpus_v2_manifest.csv"
 
     write_select_csv(rows, str(out_csv))
@@ -3664,10 +3812,13 @@ def test_v2_write_select_csv_round_trips_the_manifest(tmp_path):
 def _function_body(fn):
     """A function's source with its DOCSTRING stripped, so an assertion about what
     the code DOES (and in what ORDER) can never be satisfied by prose that merely
-    describes it."""
-    parts = inspect.getsource(fn).split('"""')
-    assert len(parts) >= 3, fn.__name__            # def ... """docstring""" body
-    return '"""'.join(parts[2:])
+    describes it. A function with NO docstring (e.g. `main`) has no prose to strip, so
+    its source IS its body."""
+    src = inspect.getsource(fn)
+    parts = src.split('"""')
+    if len(parts) < 3:                             # no docstring: nothing to strip
+        return src
+    return '"""'.join(parts[2:])                   # def ... """docstring""" body
 
 
 def test_v2_select_stage_never_touches_the_evaluator():
@@ -3691,13 +3842,14 @@ def test_v2_select_stage_never_touches_the_evaluator():
 def test_v2_select_call_order_puts_every_refusal_before_any_selection():
     """The refusal ORDER is structural, not incidental: in `select_final_manifest`'s
     executable BODY (docstring stripped -- prose must not be able to satisfy this),
-    the identity hard-match, the row/meta cross-check, the forbidden-set binding and
-    the qualification ALL precede the sampler, which precedes `assert_disjoint`. So
-    every one of the four refusals ALWAYS fires before a single row is selected."""
+    the identity hard-match, the row READ from the artifact it just matched, the
+    row/meta cross-check, the forbidden-set binding and the qualification ALL precede
+    the sampler, which precedes `assert_disjoint`. So every refusal ALWAYS fires before
+    a single row is selected."""
     body = _function_body(select_final_manifest)
-    calls = ("validate_screen_identities(", "validate_screen_rows_against_meta(",
-             "load_forbidden_hashes(", "post_screen_qualification(",
-             "sample_v2_rows(", "assert_disjoint(")
+    calls = ("validate_screen_identities(", "read_screen_csv(",
+             "validate_screen_rows_against_meta(", "load_forbidden_hashes(",
+             "post_screen_qualification(", "sample_v2_rows(", "assert_disjoint(")
     for needle in calls:
         assert needle in body, needle
     order = [body.index(needle) for needle in calls]
@@ -3728,13 +3880,13 @@ def test_v2_preflight_infeasible_is_a_dedicated_exception():
 
 def test_v2_main_select_branch_is_wired(tmp_path):
     """STATIC wiring of `main`'s select branch (`main` itself is never invoked --
-    plan Global Constraints): it reads the PERSISTED screen (`--screen`) and its
-    DERIVED `.meta.json`, loads the forbidden hashes from the CONFIG (the one wiring
-    `select_final_manifest` accepts), passes the screen's PATH (whose bytes are the
-    seventh identity), and writes `config.select_out` + its meta -- reusing the
-    VERIFIED recompute rather than re-hashing the reservoir a second time."""
+    plan Global Constraints): it reads only the DERIVED `.meta.json`, loads the
+    forbidden hashes from the CONFIG (the one wiring `select_final_manifest` accepts),
+    hands over the screen's PATH (`select` reads the rows itself, from the artifact it
+    hard-matches), and writes `config.select_out` + its meta -- reusing the VERIFIED
+    recompute rather than re-hashing the reservoir a second time."""
     src = inspect.getsource(main)
-    for needle in ('args.mode == "select"', "read_screen_csv(", "meta.json",
+    for needle in ('args.mode == "select"', "meta.json",
                    "load_forbidden_hashes(config.forbidden_manifests)",
                    "select_final_manifest(", "screen_csv_path=args.screen",
                    "write_select_csv(", "write_screen_meta(", "config.select_out",
@@ -3742,14 +3894,17 @@ def test_v2_main_select_branch_is_wired(tmp_path):
         assert needle in src, needle
 
 
-def test_v2_run_screen_fingerprints_the_artifact_it_just_wrote():
+def test_v2_run_screen_attests_to_the_artifact_it_just_wrote():
     """STATIC wiring of `run_screen` (never invoked -- it is the operator/GPU stage):
     it records `screen_csv` in the meta (so `write_screen_meta` hashes the artifact it
-    just produced) and the `n_proposals`/`status_counts` that `select` cross-checks
-    the rows against -- and it writes the CSV BEFORE the meta, so the hash covers the
-    bytes actually on disk."""
+    just produced) plus the `n_proposals` / `row_counts` that `select` cross-checks the
+    rows against -- and it writes the CSV BEFORE the meta, so the hash covers the bytes
+    actually on disk.
+
+    `row_counts` (the COMPOSITION histogram), not `status_counts`, is the load-bearing
+    attestation: see `SCREEN_ROW_KEY_FIELDS`."""
     body = _function_body(run_screen)
     for needle in ('"screen_csv": config.screen_out', '"n_proposals": len(rows)',
-                   '"status_counts": dict(status_counts)'):
+                   '"row_counts": screen_row_counts(rows)'):
         assert needle in body, needle
     assert body.index("write_screen_csv(") < body.index("write_screen_meta(")

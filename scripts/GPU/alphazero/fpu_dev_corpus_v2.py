@@ -1643,6 +1643,45 @@ SCREEN_FIELDNAMES: List[str] = [
     "anchor_eligible", "canonical_sha1", "exclusion_status",
 ]
 
+# The row fields that decide COMPOSITION -- which SPLIT_ALLOC_V2 cell a row can fill,
+# and which LATE_TARGET_FLOORS band it counts toward. `run_screen` histograms them into
+# the meta's `row_counts` (the screen's own attestation of what it contains) and
+# `validate_screen_rows_against_meta` recomputes that histogram from the rows `select`
+# reads back.
+#
+# WHY NOT JUST `exclusion_status`: an `exclusion_status`-only histogram is BLIND to the
+# forgery that matters most. Flip `raw_policy_role` from `control` to `target` on rows
+# that are ALREADY `kept` and the row COUNT is unchanged and the `exclusion_status`
+# histogram is unchanged -- `n_proposals` and `status_counts` stay CORRECT and
+# UNTOUCHED -- yet an unmeetable >=12 late-TARGET floor becomes satisfiable, which is
+# the one thing STAGE 2 exists to prevent. `phase` and `band` are here for exactly the
+# same reason: with `raw_policy_role` they are the fields `post_screen_qualification`
+# and `sample_v2_rows` actually key on.
+#
+# NOT A SUBSTITUTE for `screen_csv_sha1`, and not a weaker version of it: that hash
+# covers EVERY byte (a `ply`, `side`, `game_idx` or `canonical_sha1` edit moves no
+# histogram at all). The hash is the INTEGRITY pin; this is the readable attestation of
+# what the artifact CONTAINS, and the two are independent locks.
+SCREEN_ROW_KEY_FIELDS: Tuple[str, ...] = (
+    "exclusion_status", "raw_policy_role", "phase", "band")
+
+
+def _screen_row_key(row: Mapping[str, Any]) -> str:
+    """One row's `SCREEN_ROW_KEY_FIELDS` signature as a `|`-joined string -- a JSON
+    OBJECT KEY (JSON has no tuple keys). An unclassified `raw_policy_role` (`None`)
+    renders as `"None"`, identically in memory and after a CSV round-trip (where
+    `read_screen_csv` restores the empty field to `None`), so the histogram is stable
+    across persistence."""
+    return "|".join(str(row[f]) for f in SCREEN_ROW_KEY_FIELDS)
+
+
+def screen_row_counts(rows: Iterable[Mapping[str, Any]]) -> Dict[str, int]:
+    """The screen's ROW-COMPOSITION histogram over `SCREEN_ROW_KEY_FIELDS`. ONE
+    function, used BOTH to write the attestation (`run_screen`) and to verify it
+    (`validate_screen_rows_against_meta`) -- so the claim and its check can never
+    drift apart."""
+    return dict(sorted(Counter(_screen_row_key(r) for r in rows).items()))
+
 
 def classify_exclusion(*, collided: bool, role: Optional[str],
                        anchor_eligible_val: Optional[bool]) -> Tuple[str, bool]:
@@ -2064,9 +2103,11 @@ def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
 
     # The CSV is written FIRST so `write_screen_meta` can fingerprint the artifact
     # it just produced (`screen_csv` -> the provenance's `screen_csv_sha1`), and so
-    # `n_proposals` / `status_counts` -- the rows' own self-description, which
-    # `select` cross-checks against the rows it reads back -- describe exactly the
-    # bytes on disk.
+    # `n_proposals` / `row_counts` -- the rows' own self-description, which `select`
+    # cross-checks against the rows it reads back -- describe exactly the bytes on
+    # disk. `row_counts` is the load-bearing one: `status_counts` is a human-readable
+    # MARGINAL of it, kept for the operator banner, and cannot see a `control` ->
+    # `target` flip on an already-`kept` row (see `SCREEN_ROW_KEY_FIELDS`).
     write_screen_csv(rows, config.screen_out)
     meta = {
         "config_path": config.config_path,
@@ -2078,6 +2119,7 @@ def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
         "n_games": len(records),
         "n_proposals": len(rows),
         "status_counts": dict(status_counts),
+        "row_counts": screen_row_counts(rows),
         "fieldnames": SCREEN_FIELDNAMES,
         "base_mcts_config": dataclasses.asdict(anchor_cfg),
     }
@@ -2341,12 +2383,20 @@ assert set(_IDENTITY_REMEDIATION) == set(SCREEN_IDENTITY_KEYS), _IDENTITY_REMEDI
 # draws (diagnose_fpu_policy_mass.build_run_fingerprint, design Sec 12.2).
 #
 # THE TRUST BOUNDARY, stated plainly: the screen's `.meta.json` is an UNSIGNED
-# attestation. Everything above proves the screen's inputs and its own bytes are
-# what the meta says they are -- so no file can drift, and no artifact can be
-# edited, without `select` refusing. What it cannot do is defend the meta against
-# ITSELF: an editor who rewrites the screen CSV *and* correspondingly rewrites its
-# meta (`screen_csv_sha1` + `n_proposals` + `status_counts`) has forged the evidence
-# artifact, not merely drifted from it, and no unsigned attestation can detect that.
+# attestation, and THE META ITSELF is the boundary -- not any particular field of it.
+# Everything above proves that the screen's INPUTS did not drift, that the ARTIFACT's
+# bytes are the ones the meta attests to, and that the ROWS `select` acts on are the
+# rows that artifact contains (`select_final_manifest` READS them from it -- there is
+# no `screen_rows` parameter to substitute a decoy through) and are composed as the
+# meta claims (`row_counts`, over the fields selection actually keys on).
+#
+# What none of it can do is defend the meta against ITSELF. An editor who rewrites the
+# screen CSV *and* rewrites its meta to match -- whatever fields that takes -- has
+# FORGED the evidence artifact rather than drifted from it, and no unsigned attestation
+# can detect that. Do NOT read the checks above as "a forger must edit N specific
+# fields": that framing invites hunting for the field nobody checked, which is exactly
+# how the `raw_policy_role` flip slipped past an `exclusion_status`-only histogram. The
+# honest statement is the simple one: THE META'S INTEGRITY IS THE ROOT OF TRUST.
 # Closing that would need a signature over the meta, which is out of scope here.
 
 
@@ -2481,29 +2531,39 @@ def validate_screen_identities(screen_meta: Mapping[str, Any], config: V2Config,
 def validate_screen_rows_against_meta(screen_rows: List[dict],
                                       screen_meta: Mapping[str, Any]) -> None:
     """Cross-check the screen ROWS against the screen's OWN meta, and raise on any
-    disagreement. The readable complement to the `screen_csv_sha1` byte hash: that
-    one proves the artifact did not change, this one says WHAT changed.
+    disagreement. The readable complement to the `screen_csv_sha1` byte hash: that one
+    proves the artifact's bytes did not change, this one says WHAT its contents claim.
 
-    Both sides already existed and were simply never compared -- `run_screen` records
-    `n_proposals` and `status_counts` in the meta, and `select` re-reads the rows
-    those numbers describe. Compared here:
-      * the ROW COUNT (catches truncation, appended rows, deleted rows);
-      * the `exclusion_status` HISTOGRAM (catches the status/role flips a byte-level
-        hash reports only as "something changed" -- e.g. eight `ineligible_role` rows
-        hand-edited to `kept`, which is exactly how an unmeetable late-TARGET floor
-        would be forged into a satisfiable one).
+    Compared here:
+      * the ROW COUNT vs `n_proposals` -- a crisp, early diagnostic for truncation /
+        appended / deleted rows (subsumed by the histogram below, which would catch the
+        same thing more noisily);
+      * the ROW-COMPOSITION HISTOGRAM vs `row_counts` -- over `SCREEN_ROW_KEY_FIELDS`
+        (`exclusion_status`, `raw_policy_role`, `phase`, `band`): every field that
+        decides which SPLIT_ALLOC_V2 cell a row can fill and which LATE_TARGET_FLOORS
+        band it counts toward.
 
-    A meta that records NEITHER field is REFUSED rather than vacuously passed: a
-    screen whose rows cannot be cross-checked is not an evidence artifact.
+    IT MUST BE THE FULL COMPOSITION KEY, NOT `exclusion_status` ALONE. A `control` ->
+    `target` flip on rows that are ALREADY `kept` leaves the row count AND the
+    `exclusion_status` histogram exactly correct -- `n_proposals` and `status_counts`
+    would both still be honest -- while turning an unmeetable >=12 late-TARGET floor
+    into a satisfiable one. That forgery is precisely what STAGE 2 exists to prevent,
+    and only a histogram over the fields selection actually keys on can see it.
+
+    A meta that records no `row_counts` is REFUSED rather than vacuously passed: a
+    screen whose row COMPOSITION cannot be cross-checked is not an evidence artifact.
     """
-    n_expected = screen_meta.get("n_proposals")
-    status_expected = screen_meta.get("status_counts")
-    if n_expected is None and status_expected is None:
+    expected_counts = screen_meta.get("row_counts")
+    if expected_counts is None:
         raise ValueError(
-            "validate_screen_rows_against_meta: the screen meta records neither "
-            "'n_proposals' nor 'status_counts' -- its rows cannot be cross-checked, "
-            "so it is REFUSED (was it written by `run_screen`?)")
+            "validate_screen_rows_against_meta: the screen meta records no "
+            "'row_counts' -- its rows' COMPOSITION cannot be cross-checked, so it is "
+            "REFUSED rather than vacuously passed. (An `exclusion_status`-only "
+            "attestation is blind to a `control` -> `target` flip on an already-`kept` "
+            "row, which is exactly how an unmeetable late-TARGET floor gets forged.) "
+            "Re-screen with a current `run_screen`.")
 
+    n_expected = screen_meta.get("n_proposals")
     if n_expected is not None and len(screen_rows) != n_expected:
         raise ValueError(
             f"validate_screen_rows_against_meta: the screen rows disagree with their "
@@ -2511,19 +2571,21 @@ def validate_screen_rows_against_meta(screen_rows: List[dict],
             f"n_proposals={n_expected}. The screen artifact was truncated, appended "
             f"to, or otherwise edited after it was written.")
 
-    if status_expected is not None:
-        actual = dict(Counter(r["exclusion_status"] for r in screen_rows))
-        if actual != dict(status_expected):
-            differing = sorted(set(actual) | set(status_expected))
-            detail = ", ".join(
-                f"{s}: meta {dict(status_expected).get(s, 0)} vs rows {actual.get(s, 0)}"
-                for s in differing
-                if dict(status_expected).get(s, 0) != actual.get(s, 0))
-            raise ValueError(
-                f"validate_screen_rows_against_meta: the screen rows disagree with "
-                f"their own meta on `exclusion_status` ({detail}). Rows were "
-                f"RECLASSIFIED after the screen was written -- e.g. an excluded "
-                f"proposal edited to `kept`, which no evaluator ever decided.")
+    actual = screen_row_counts(screen_rows)
+    expected = dict(expected_counts)
+    if actual != expected:
+        detail = ", ".join(
+            f"[{k}]: meta {expected.get(k, 0)} vs rows {actual.get(k, 0)}"
+            for k in sorted(set(actual) | set(expected))
+            if expected.get(k, 0) != actual.get(k, 0))
+        raise ValueError(
+            f"validate_screen_rows_against_meta: the screen rows disagree with their "
+            f"own meta on ROW COMPOSITION "
+            f"({'|'.join(SCREEN_ROW_KEY_FIELDS)}) -- {detail}. Rows were RECLASSIFIED "
+            f"after the screen was written: an excluded proposal edited to `kept`, or "
+            f"a `control` row edited to `target` -- neither of which any evaluator ever "
+            f"decided, and either of which can forge an unmeetable late-TARGET floor "
+            f"into a satisfiable one.")
 
 
 # ---------------------------------------------------------------------------
@@ -2667,25 +2729,35 @@ def _manifest_row_v2(r: Mapping[str, Any]) -> dict:
     }
 
 
-def select_final_manifest(screen_rows: List[dict], screen_meta: Mapping[str, Any],
-                          config: V2Config, *, forbidden: Set[str],
+def select_final_manifest(screen_meta: Mapping[str, Any], config: V2Config, *,
+                          forbidden: Set[str],
                           screen_csv_path: str) -> Tuple[List[dict], dict]:
     """The PURE `select` stage (design Sec 1.6/1.7), in its one frozen order:
 
       1. `validate_screen_identities` -- hard-match all seven identities across the
          config (A), the screen meta (B) and a fresh recompute (C), INCLUDING the
          screen artifact's own bytes (`screen_csv_path`);
-      2. `validate_screen_rows_against_meta` -- the rows we just read must agree with
-         the screen's own recorded `n_proposals` / `status_counts`;
-      3. bind `forbidden` to the manifests step 1 matched (below);
-      4. filter to the screen's `kept` rows (`kept_rows_from_screen`);
-      5. `post_screen_qualification` -- STAGE 2: prove the exact role counts AND the
+      2. READ the rows -- from that same artifact, and only after its bytes matched;
+      3. `validate_screen_rows_against_meta` -- those rows must agree with the
+         screen's own recorded `n_proposals` / `row_counts`;
+      4. bind `forbidden` to the manifests step 1 matched (below);
+      5. filter to the screen's `kept` rows (`kept_rows_from_screen`);
+      6. `post_screen_qualification` -- STAGE 2: prove the exact role counts AND the
          late-TARGET floors are satisfiable;
-      6. `sample_v2_rows(kept, seed=config.selection_seed)` -- the deterministic,
+      7. `sample_v2_rows(kept, seed=config.selection_seed)` -- the deterministic,
          exact-or-raise selection;
-      7. `assert_disjoint` -- v1's completed-manifest backstop, against `forbidden`.
+      8. `assert_disjoint` -- v1's completed-manifest backstop, against `forbidden`.
 
-    THE ORDER IS THE POINT. Steps 1, 2, 3 and 5 ALL refuse BEFORE any selection is
+    THERE IS NO `screen_rows` PARAMETER, deliberately. The rows are READ HERE, from
+    `screen_csv_path` -- the artifact whose bytes step 1 just hard-matched -- and can
+    come from nowhere else. A `screen_rows` argument would hash one thing and select
+    from another: an honest CSV and an honest meta on disk, both matching, while the
+    ROWS handed in were a decoy (rows are never hashed). That is not merely a hazard
+    to detect, it is a hazard to make UNREPRESENTABLE, so the parameter is gone rather
+    than guarded. Steps 1 and 2 are in this order for the same reason: never parse an
+    artifact you have not first proven is the right one.
+
+    THE ORDER IS THE POINT. Steps 1, 3, 4 and 6 ALL refuse BEFORE any selection is
     attempted, so a screen whose identities do not check out -- whose rows do not
     match its own meta, whose forbidden set is not the one the screen excluded
     against, or whose kept rows provably cannot meet the roles/floors -- never
@@ -2699,7 +2771,8 @@ def select_final_manifest(screen_rows: List[dict], screen_meta: Mapping[str, Any
     collision check evaporates) while `stats["n_forbidden_hashes"]` is written into
     the manifest's own meta AS EVIDENCE -- an artifact misrepresenting its own
     provenance. Verifying it here (rather than trusting `main` to wire it correctly)
-    is what makes the disjointness guarantee hold for EVERY caller.
+    is what makes the disjointness guarantee hold for EVERY caller -- the same
+    principle that deletes `screen_rows` above.
 
     Deterministic: the same persisted screen + the same `config.selection_seed`
     re-derive a byte-identical manifest and identical stats, at zero GPU cost. That
@@ -2714,6 +2787,9 @@ def select_final_manifest(screen_rows: List[dict], screen_meta: Mapping[str, Any
         screen_meta, config, forbidden_paths=config.forbidden_manifests,
         screen_csv_path=screen_csv_path)
 
+    # ONLY now -- the bytes are proven -- parse them. This is the sole source of the
+    # rows: see the "THERE IS NO `screen_rows` PARAMETER" note above.
+    screen_rows = read_screen_csv(screen_csv_path)
     validate_screen_rows_against_meta(screen_rows, screen_meta)
 
     matched_forbidden = load_forbidden_hashes(config.forbidden_manifests)
@@ -2903,13 +2979,14 @@ def main(argv=None) -> int:
         # `select_final_manifest` BEFORE a single row is selected; those are
         # evidence-chain failures, so they propagate raw rather than becoming a
         # terse exit code.
-        screen_rows = read_screen_csv(args.screen)
+        # `main` does NOT read the screen's rows: `select_final_manifest` reads them
+        # itself, from the artifact whose bytes it hard-matches, so no caller -- not
+        # even this one -- can hand it a row-set that is not in that file.
         screen_meta = json.loads(Path(str(args.screen) + ".meta.json").read_text())
         forbidden = load_forbidden_hashes(config.forbidden_manifests)
 
         rows, stats = select_final_manifest(
-            screen_rows, screen_meta, config, forbidden=forbidden,
-            screen_csv_path=args.screen)
+            screen_meta, config, forbidden=forbidden, screen_csv_path=args.screen)
 
         # The VERIFIED recompute, threaded into the manifest's own provenance rather
         # than re-derived: the artifact then records exactly the identities that were
