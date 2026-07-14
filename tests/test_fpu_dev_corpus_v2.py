@@ -50,6 +50,7 @@ import dataclasses
 import inspect
 import json
 from collections import Counter, defaultdict
+from pathlib import Path
 
 import pytest
 
@@ -59,6 +60,7 @@ from scripts.GPU.alphazero.build_fpu_dev_corpus import (
     SPLIT_ALLOC,
     anchor_eligible,
     band_of,
+    load_forbidden_hashes,
     ply_bucket_of,
     side_to_move_for_ply,
 )
@@ -80,6 +82,7 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     PREREGISTERED_IDENTITY_KEYS,
     PROPOSAL_CELLS,
     QUOTA_PER_PHASE,
+    SCREEN_ARTIFACT_IDENTITY,
     SCREEN_FIELDNAMES,
     SCREEN_IDENTITY_KEYS,
     SELF_REFERENTIAL_IDENTITY,
@@ -87,6 +90,7 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     SPLIT_ALLOC_V2,
     SPLIT_TOTALS,
     SPLITS,
+    UNPREREGISTERABLE_IDENTITIES,
     V2Config,
     V2PreflightInfeasible,
     V2PreflightReport,
@@ -111,6 +115,7 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     v2_preflight_source,
     v2_screen_provenance,
     validate_screen_identities,
+    validate_screen_rows_against_meta,
     write_screen_csv,
     write_screen_meta,
     write_select_csv,
@@ -2706,8 +2711,10 @@ def test_v2_screen_provenance_has_the_sec_1_8_fingerprint_keys(tmp_path):
     """v2_screen_provenance -- pure/stdlib-only via fpu_provenance -- carries
     every fingerprint the brief names (config hash + source_file_sha1s,
     replay_data_sha1, source_index_sha1, checkpoint identity,
-    forbidden-manifest hashes, runtime_provenance). None inputs resolve to
-    fpu_provenance's own "none" sentinel rather than raising."""
+    forbidden-manifest hashes, runtime_provenance) PLUS `screen_csv_sha1`, the
+    screen ARTIFACT's own hash (Task 6: the one link the six INPUT identities
+    leave unfingerprinted). None inputs resolve to fpu_provenance's own "none"
+    sentinel rather than raising."""
     config_path = tmp_path / "config.json"
     config_path.write_text("{}")
 
@@ -2718,14 +2725,32 @@ def test_v2_screen_provenance_has_the_sec_1_8_fingerprint_keys(tmp_path):
     assert set(prov) == {
         "config_sha1", "source_file_sha1s", "source_index_sha1",
         "replay_data_sha1", "checkpoint_identity", "forbidden_manifest_sha1s",
-        "base_mcts_config", "add_noise", "runtime_provenance"}
+        "screen_csv_sha1", "base_mcts_config", "add_noise", "runtime_provenance"}
     assert prov["config_sha1"] != "none"            # config_path IS a real file
     assert prov["source_index_sha1"] == "none"       # source_index_path was None
     assert prov["checkpoint_identity"] == "none"
+    assert prov["screen_csv_sha1"] == "none"         # screen_csv defaulted to None
     assert prov["add_noise"] is False
     assert prov["base_mcts_config"] == {"n_simulations": 400}
     assert "fpu_dev_corpus_v2.py" in prov["source_file_sha1s"]
     assert "python_version" in prov["runtime_provenance"]
+
+
+def test_v2_screen_provenance_fingerprints_the_screen_artifact_itself(tmp_path):
+    """`screen_csv_sha1` really is the screen CSV's own bytes: it changes when the
+    artifact changes. Without it the screen's OUTPUT -- the very rows `select`
+    re-derives the manifest from -- is the one unfingerprinted link in the chain."""
+    screen_csv = tmp_path / "fpu_dev_source_screen.csv"
+    screen_csv.write_text("game_idx,ply\n1,2\n")
+    kw = dict(config_path=None, source_index_path=None, checkpoint=None,
+              forbidden_manifests=[], base_mcts_config=None)
+
+    before = v2_screen_provenance(screen_csv=str(screen_csv), **kw)["screen_csv_sha1"]
+    screen_csv.write_text("game_idx,ply\n1,3\n")          # one byte of one row
+    after = v2_screen_provenance(screen_csv=str(screen_csv), **kw)["screen_csv_sha1"]
+
+    assert before != "none" and after != "none"
+    assert before != after
 
 
 def test_write_screen_meta_enriches_with_provenance_without_clobbering(tmp_path):
@@ -2924,21 +2949,32 @@ def _screen_target_role_starved():
     return _screen_from_pool(pool, extra=extra)
 
 
-def _v2_identity_env(tmp_path):
-    """Real on-disk inputs for all six identities, a config PRE-REGISTERING the five
-    recomputable ones, and a screen meta whose `provenance` is the REAL
-    `v2_screen_provenance` over those same files.
+def _v2_screen_artifact(tmp_path, screen_rows, *,
+                        forbidden_hashes=("not-a-real-dev-corpus-hash",)):
+    """A COMPLETE, self-consistent screen artifact -- exactly what `run_screen`
+    writes -- over REAL files on disk, plus the loaded `V2Config`.
 
-    The IDENTITY axis and the ROW axis of `select` are INDEPENDENT: no identity ever
-    reads a screen row, and no row ever reads a file hash. So the fixture's screen
-    ROWS are the Task-3 fabricated pools while its META's fingerprints are genuine
-    hashes of genuine files -- and each test perturbs exactly one axis.
+    Writes the reservoir replays + index, a checkpoint, a forbidden manifest, the
+    config (PRE-REGISTERING the five fingerprints it can know), and the screen CSV
+    ITSELF; then derives the `.meta.json` through the REAL `write_screen_meta` and
+    reads it back. So the fixture's provenance -- including `screen_csv_sha1` -- and
+    its `n_proposals` / `status_counts` are the genuine values for these very rows,
+    never hand-typed, and a test that tampers with anything is tampering with a real
+    artifact.
 
     Ordering is load-bearing and NOT circular: the five pre-registered fingerprints
-    are config-INDEPENDENT (a config file cannot contain its own hash), so they are
-    computed FIRST, written INTO the config, and only THEN is the config's own hash
-    taken -- which is what the screen meta records as `config_sha1`.
+    are independent of BOTH the config (a file cannot contain its own hash) and the
+    screen (which does not exist when the config is authored), so they are computed
+    FIRST, written INTO the config, and only THEN are the config's and the screen's
+    own hashes taken.
+
+    The IDENTITY axis and the ROW axis of `select` remain independent -- no identity
+    reads a row's contents, and no row reads a file hash -- so each test below can
+    perturb exactly one. `forbidden_hashes` is a knob so a test can make the config's
+    OWN forbidden manifest hold a hash the manifest will select (the only honest way
+    to exercise `assert_disjoint` now that `forbidden` is bound to those files).
     """
+    tmp_path.mkdir(parents=True, exist_ok=True)
     replays = []
     for gi in range(3):
         p = tmp_path / f"replay_{gi}.json"
@@ -2952,14 +2988,16 @@ def _v2_identity_env(tmp_path):
     checkpoint = tmp_path / "checkpoint.npz"
     checkpoint.write_bytes(b"fake-checkpoint-bytes-never-loaded-by-select")
     forbidden = tmp_path / "forbidden_a.csv"
-    forbidden.write_text("canonical_position_sha1\nnot-a-real-dev-corpus-hash\n")
+    forbidden.write_text("canonical_position_sha1\n"
+                         + "".join(f"{h}\n" for h in forbidden_hashes))
     paths = dict(source_index_path=str(index), checkpoint=str(checkpoint),
                  forbidden_manifests=[str(forbidden)])
 
     # (A) the five PRE-REGISTERED fingerprints, from the SAME provenance helper the
     # screen stage itself uses -- so a config can never pre-register a value the
     # screen would compute differently.
-    prov = v2_screen_provenance(config_path=None, base_mcts_config=None, **paths)
+    prov = v2_screen_provenance(config_path=None, screen_csv=None,
+                                base_mcts_config=None, **paths)
     expected = {k: prov[k] for k in PREREGISTERED_IDENTITY_KEYS}
 
     config_path = tmp_path / "config.json"
@@ -2967,16 +3005,54 @@ def _v2_identity_env(tmp_path):
         tmp_path, expected_fingerprints=expected, **paths)))
     config = load_v2_config(str(config_path))
 
-    # (B) the screen's OWN recorded provenance -- now over the WRITTEN config too.
-    meta = {
-        "config_path": str(config_path), "n_proposals": 0,
-        "provenance": v2_screen_provenance(
-            config_path=str(config_path),
-            base_mcts_config={"n_simulations": ANCHOR_SIMS_V2}, **paths),
+    # The screen artifact itself, through the REAL writers. CSV FIRST, so the meta
+    # fingerprints the bytes it just produced -- exactly the order `run_screen` uses.
+    write_screen_csv(screen_rows, config.screen_out)
+    write_screen_meta(config.screen_out, {
+        "config_path": str(config_path),
+        "screen_csv": config.screen_out,
+        "n_proposals": len(screen_rows),
+        "status_counts": dict(Counter(r["exclusion_status"] for r in screen_rows)),
+        "base_mcts_config": {"n_simulations": ANCHOR_SIMS_V2},
         **paths,
-    }
-    files = dict(paths, config_path=str(config_path), replays=replays)
+    })
+    meta = json.loads(Path(config.screen_out + ".meta.json").read_text())
+    files = dict(paths, config_path=str(config_path), replays=replays,
+                 screen_csv=config.screen_out)
     return config, meta, files
+
+
+def _select(screen_rows, meta, config, *, forbidden=None, screen_csv_path=None):
+    """`select_final_manifest`, wired the ONE way it accepts: `forbidden` loaded from
+    the very manifests whose bytes the identity check hard-matches, and the screen
+    artifact's own path (whose bytes are the seventh identity). A test that means to
+    BREAK one of those wirings passes it explicitly."""
+    return select_final_manifest(
+        screen_rows, meta, config,
+        forbidden=(load_forbidden_hashes(config.forbidden_manifests)
+                   if forbidden is None else forbidden),
+        screen_csv_path=(config.screen_out if screen_csv_path is None
+                         else screen_csv_path))
+
+
+def _validate(meta, config, *, forbidden_paths=None, screen_csv_path=None):
+    """`validate_screen_identities`, wired the same one way (see `_select`)."""
+    return validate_screen_identities(
+        meta, config,
+        forbidden_paths=(config.forbidden_manifests if forbidden_paths is None
+                         else forbidden_paths),
+        screen_csv_path=(config.screen_out if screen_csv_path is None
+                         else screen_csv_path))
+
+
+def _restamp_config_hash(meta, config_path):
+    """Re-record the screen meta's `config_sha1` for a config whose BYTES a test just
+    changed. Necessary to ISOLATE another identity: `config_sha1` is checked first, so
+    without this the self-referential check would fire and the test would pass for the
+    wrong reason."""
+    meta["provenance"]["config_sha1"] = v2_screen_provenance(
+        config_path=config_path, source_index_path=None, checkpoint=None,
+        forbidden_manifests=[], base_mcts_config=None)["config_sha1"]
 
 
 # --- the required config: every key the plan names is REQUIRED ---------------
@@ -3009,40 +3085,56 @@ def test_v2_load_config_raises_on_each_missing_required_key(tmp_path, key):
 
 # --- validate_screen_identities: the SIX identities, hard-matched -------------
 
-def test_v2_the_six_identities_are_frozen():
-    """The frozen identity list (design Sec 1.8): config hash, source-index hash,
-    replay-data hash, checkpoint hash, source-file hashes, forbidden-manifest
-    hashes. `config_sha1` is the SELF-REFERENTIAL one -- a config file cannot
-    contain its own hash, so it alone has no pre-registered (A) value and is
-    matched screen-recorded (B) vs fresh-recompute (C)."""
+def test_v2_the_seven_identities_are_frozen():
+    """The frozen identity list (design Sec 1.8, + Task 6's review fix): the six
+    that fingerprint the screen's INPUTS -- config, source index, replay data,
+    checkpoint, source files, forbidden manifests -- plus `screen_csv_sha1`, which
+    fingerprints the screen's OUTPUT (the artifact `select` re-derives the manifest
+    FROM; without it the screen's own rows are the one unfingerprinted link).
+
+    TWO of them cannot be pre-registered by a config and are matched
+    screen-recorded(B) vs fresh-recompute(C): `config_sha1` (a file cannot contain
+    its own hash) and `screen_csv_sha1` (the screen does not exist when the config
+    is authored)."""
     assert set(SCREEN_IDENTITY_KEYS) == {
         "config_sha1", "source_index_sha1", "replay_data_sha1",
-        "checkpoint_identity", "source_file_sha1s", "forbidden_manifest_sha1s"}
+        "checkpoint_identity", "source_file_sha1s", "forbidden_manifest_sha1s",
+        "screen_csv_sha1"}
     assert SELF_REFERENTIAL_IDENTITY == "config_sha1"
+    assert SCREEN_ARTIFACT_IDENTITY == "screen_csv_sha1"
+    assert set(UNPREREGISTERABLE_IDENTITIES) == {"config_sha1", "screen_csv_sha1"}
     assert set(PREREGISTERED_IDENTITY_KEYS) == (
-        set(SCREEN_IDENTITY_KEYS) - {SELF_REFERENTIAL_IDENTITY})
+        set(SCREEN_IDENTITY_KEYS) - set(UNPREREGISTERABLE_IDENTITIES))
 
 
 def test_v2_identities_pass_when_all_three_sources_agree(tmp_path):
     """The happy path: config-expected (A) == screen-recorded (B) == fresh
-    recompute (C) for every one of the six -> returns None, silently."""
-    config, meta, files = _v2_identity_env(tmp_path)
+    recompute (C) for every identity -> no raise, and the VERIFIED recompute is
+    RETURNED so the caller can record what was proven without re-hashing the
+    reservoir a second time."""
+    config, meta, _files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
 
-    assert validate_screen_identities(
-        meta, config, forbidden_paths=config.forbidden_manifests) is None
+    verified = _validate(meta, config)
+
+    assert set(SCREEN_IDENTITY_KEYS) <= set(verified)
+    for key in SCREEN_IDENTITY_KEYS:
+        assert verified[key] == meta["provenance"][key]      # (C) == (B), verbatim
 
 
 @pytest.mark.parametrize("key", sorted(SCREEN_IDENTITY_KEYS))
-def test_v2_any_of_the_six_identities_differing_raises_naming_it(tmp_path, key):
-    """ANY of the six recorded identities differing from the recompute is a HARD
-    STOP naming that identity -- proven INDEPENDENTLY, one identity at a time."""
-    config, meta, _files = _v2_identity_env(tmp_path)
+def test_v2_any_of_the_seven_identities_differing_raises_naming_it(tmp_path, key):
+    """ANY of the seven recorded identities differing from the recompute is a HARD
+    STOP naming that identity -- proven INDEPENDENTLY, one identity at a time -- and
+    the message says what to DO about it."""
+    config, meta, _files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
     tampered = copy.deepcopy(meta)
     tampered["provenance"][key] = "tampered-identity-value"
 
-    with pytest.raises(ValueError, match=key):
-        validate_screen_identities(tampered, config,
-                                   forbidden_paths=config.forbidden_manifests)
+    with pytest.raises(ValueError, match=key) as excinfo:
+        _validate(tampered, config)
+    assert "->" in str(excinfo.value)                     # the remediation guidance
 
 
 @pytest.mark.parametrize("key", sorted(PREREGISTERED_IDENTITY_KEYS))
@@ -3051,20 +3143,16 @@ def test_v2_config_pre_registration_is_not_decorative(tmp_path, key):
     config whose PRE-REGISTERED expectation differs still hard-stops -- so the Sec
     1.8 pre-registration is a real gate, not decoration. (A (B)-vs-(C)-only check
     would let a config that expected a DIFFERENT reservoir/checkpoint through.)"""
-    config, meta, files = _v2_identity_env(tmp_path)
-    raw = json.loads(open(files["config_path"]).read())
+    config, meta, files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
+    raw = json.loads(Path(files["config_path"]).read_text())
     raw["expected_fingerprints"][key] = "a-pre-registration-that-does-not-match"
-    open(files["config_path"], "w").write(json.dumps(raw))
+    Path(files["config_path"]).write_text(json.dumps(raw))
     config = load_v2_config(files["config_path"])
-    # The config's own bytes changed, so re-stamp the screen's `config_sha1`: this
-    # test must isolate the PRE-REGISTRATION, not trip the self-referential check.
-    meta["provenance"]["config_sha1"] = v2_screen_provenance(
-        config_path=files["config_path"], source_index_path=None, checkpoint=None,
-        forbidden_manifests=[], base_mcts_config=None)["config_sha1"]
+    _restamp_config_hash(meta, files["config_path"])
 
     with pytest.raises(ValueError, match=key):
-        validate_screen_identities(meta, config,
-                                   forbidden_paths=config.forbidden_manifests)
+        _validate(meta, config)
 
 
 def test_v2_identity_catches_a_replay_mutated_after_screening(tmp_path):
@@ -3073,15 +3161,15 @@ def test_v2_identity_catches_a_replay_mutated_after_screening(tmp_path):
     -- yet a replay file was MUTATED ON DISK after the screen was written. Only a
     recompute from the inputs the config NAMES can see it, and it must hard-stop on
     `replay_data_sha1`."""
-    config, meta, files = _v2_identity_env(tmp_path)
+    config, meta, files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
     assert (config.expected_fingerprints["replay_data_sha1"]
             == meta["provenance"]["replay_data_sha1"])          # (A) == (B): agreed
 
     files["replays"][1].write_text(json.dumps(_honest_replay(1, 331)))   # mutated!
 
     with pytest.raises(ValueError, match="replay_data_sha1"):
-        validate_screen_identities(meta, config,
-                                   forbidden_paths=config.forbidden_manifests)
+        _validate(meta, config)
 
 
 def test_v2_identity_catches_a_config_rewritten_after_screening(tmp_path):
@@ -3089,15 +3177,30 @@ def test_v2_identity_catches_a_config_rewritten_after_screening(tmp_path):
     file we were HANDED and require the screen to have recorded it -- which is what
     PROVES this screen was produced by THIS config. Rewriting the config's bytes
     after the screen was written must hard-stop."""
-    config, meta, files = _v2_identity_env(tmp_path)
-    raw = json.loads(open(files["config_path"]).read())
+    config, meta, files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
+    raw = json.loads(Path(files["config_path"]).read_text())
     raw["eval_batch_size"] = 7                       # a real, if harmless, edit
-    open(files["config_path"], "w").write(json.dumps(raw))
+    Path(files["config_path"]).write_text(json.dumps(raw))
     rewritten = load_v2_config(files["config_path"])
 
     with pytest.raises(ValueError, match="config_sha1"):
-        validate_screen_identities(meta, rewritten,
-                                   forbidden_paths=rewritten.forbidden_manifests)
+        _validate(meta, rewritten)
+
+
+def test_v2_identity_catches_a_screen_csv_edited_after_screening(tmp_path):
+    """The SCREEN-ARTIFACT identity, (B) vs (C) -- the hole the six INPUT identities
+    left open. Every input is untouched, so all six still match; only the screen's
+    OWN bytes changed. `select` must refuse, naming `screen_csv_sha1`."""
+    config, meta, files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
+    _validate(meta, config)                               # clean: passes
+
+    csv_path = Path(files["screen_csv"])
+    csv_path.write_text(csv_path.read_text().replace("kept", "collision", 1))
+
+    with pytest.raises(ValueError, match="screen_csv_sha1"):
+        _validate(meta, config)
 
 
 def test_v2_identity_hard_matches_the_forbidden_manifests_actually_used(tmp_path):
@@ -3105,47 +3208,113 @@ def test_v2_identity_hard_matches_the_forbidden_manifests_actually_used(tmp_path
     `select` a DIFFERENT forbidden file than the one `screen` excluded against
     hard-stops, so the hashes fed to `assert_disjoint` are provably the ones the
     screen's collision filter used."""
-    config, meta, _files = _v2_identity_env(tmp_path)
+    config, meta, _files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
     other = tmp_path / "forbidden_a.csv.other"
     other.write_text("canonical_position_sha1\na-different-forbidden-hash\n")
 
     with pytest.raises(ValueError, match="forbidden_manifest_sha1s"):
-        validate_screen_identities(meta, config, forbidden_paths=[str(other)])
+        _validate(meta, config, forbidden_paths=[str(other)])
+
+
+def test_v2_source_file_mismatch_names_the_module_and_says_what_to_do(tmp_path):
+    """The identity likeliest to fire in practice (any edit to the seven frozen
+    modules) must not just dump two seven-entry dicts: it names the DIFFERING
+    basename(s) and tells the operator what to do."""
+    config, meta, _files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
+    tampered = copy.deepcopy(meta)
+    tampered["provenance"]["source_file_sha1s"]["mcts.py"] = "as-if-mcts-were-edited"
+
+    with pytest.raises(ValueError, match="source_file_sha1s") as excinfo:
+        _validate(tampered, config)
+
+    msg = str(excinfo.value)
+    assert "mcts.py" in msg                       # WHICH module
+    assert "fpu_state_hash.py" not in msg.split("differing entr")[1]   # only that one
+    assert "FROZEN for the life of a screen artifact" in msg
+    assert "re-screen" in msg
 
 
 @pytest.mark.parametrize("key", sorted(PREREGISTERED_IDENTITY_KEYS))
 def test_v2_a_missing_pre_registration_raises(tmp_path, key):
     """A config that pre-registers only SOME identities cannot silently skip the
     rest: every one of the five is REQUIRED in `expected_fingerprints`."""
-    config, meta, files = _v2_identity_env(tmp_path)
-    raw = json.loads(open(files["config_path"]).read())
+    config, meta, files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
+    raw = json.loads(Path(files["config_path"]).read_text())
     del raw["expected_fingerprints"][key]
-    open(files["config_path"], "w").write(json.dumps(raw))
+    Path(files["config_path"]).write_text(json.dumps(raw))
     config = load_v2_config(files["config_path"])
-    meta["provenance"]["config_sha1"] = v2_screen_provenance(
-        config_path=files["config_path"], source_index_path=None, checkpoint=None,
-        forbidden_manifests=[], base_mcts_config=None)["config_sha1"]
+    _restamp_config_hash(meta, files["config_path"])
 
     with pytest.raises(ValueError, match=key):
-        validate_screen_identities(meta, config,
-                                   forbidden_paths=config.forbidden_manifests)
+        _validate(meta, config)
 
 
 def test_v2_a_screen_meta_without_provenance_raises(tmp_path):
     """A screen meta carrying no `provenance` block -- or one missing an identity
     -- cannot be validated, so it is REFUSED rather than vacuously passed."""
-    config, meta, _files = _v2_identity_env(tmp_path)
+    config, meta, _files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
 
     no_block = {k: v for k, v in meta.items() if k != "provenance"}
     with pytest.raises(ValueError, match="provenance"):
-        validate_screen_identities(no_block, config,
-                                   forbidden_paths=config.forbidden_manifests)
+        _validate(no_block, config)
 
     missing_key = copy.deepcopy(meta)
     del missing_key["provenance"]["checkpoint_identity"]
     with pytest.raises(ValueError, match="checkpoint_identity"):
-        validate_screen_identities(missing_key, config,
-                                   forbidden_paths=config.forbidden_manifests)
+        _validate(missing_key, config)
+
+
+# --- validate_screen_rows_against_meta: the rows must match their own meta ----
+
+def test_v2_screen_rows_matching_their_meta_pass(tmp_path):
+    """The happy path: rows read back from the artifact agree with the screen's own
+    recorded n_proposals + status_counts -> returns None, silently."""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    _config, meta, _files = _v2_screen_artifact(tmp_path, screen)
+
+    assert validate_screen_rows_against_meta(screen, meta) is None
+
+
+def test_v2_screen_row_count_disagreeing_with_the_meta_raises(tmp_path):
+    """Truncation / appended rows: the row COUNT must match `n_proposals`."""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    _config, meta, _files = _v2_screen_artifact(tmp_path, screen)
+
+    with pytest.raises(ValueError, match="n_proposals"):
+        validate_screen_rows_against_meta(screen[:-1], meta)     # one row dropped
+
+
+def test_v2_screen_status_histogram_disagreeing_with_the_meta_raises(tmp_path):
+    """The status/role FLIP the byte hash reports only as "something changed": one
+    `kept` row edited to `collision` leaves the row count identical, but the
+    `exclusion_status` histogram no longer matches the meta -- and the raise SAYS
+    which status drifted, and by how much."""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    _config, meta, _files = _v2_screen_artifact(tmp_path, screen)
+
+    flipped = copy.deepcopy(screen)
+    flipped[0]["exclusion_status"] = "collision"
+
+    with pytest.raises(ValueError, match="exclusion_status") as excinfo:
+        validate_screen_rows_against_meta(flipped, meta)
+    assert "kept" in str(excinfo.value) and "collision" in str(excinfo.value)
+
+
+def test_v2_a_meta_that_cannot_cross_check_its_rows_raises(tmp_path):
+    """A meta recording NEITHER n_proposals NOR status_counts is REFUSED, not
+    vacuously passed: a screen whose rows cannot be cross-checked is not an
+    evidence artifact."""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    _config, meta, _files = _v2_screen_artifact(tmp_path, screen)
+    blind = {k: v for k, v in meta.items()
+             if k not in ("n_proposals", "status_counts")}
+
+    with pytest.raises(ValueError, match="cannot be cross-checked"):
+        validate_screen_rows_against_meta(screen, blind)
 
 
 # --- post_screen_qualification: STAGE 2 (role + floors) ----------------------
@@ -3191,13 +3360,18 @@ def test_v2_qualification_raises_when_a_late_target_floor_is_unmeetable_though_t
 def test_v2_qualification_raises_when_a_role_count_is_unmeetable_though_the_geometry_is_fine():
     """The ROLE half of the same correction: midgame CANDIDATES are abundant (and
     stage 1 passes), but only 40 of them survive as `target` against the (target,
-    midgame) cell's 45-row demand -- so stage 2 refuses, naming the cell."""
+    midgame) cell's 45-row demand -- so stage 2 refuses, NAMING THE CELL.
+
+    Matched on `midgame` (not the stage label, which the FLOOR error carries too),
+    so this test can actually tell a role failure from a floor failure."""
     screen = _screen_target_role_starved()
     report = v2_geometry_feasibility(_proposals_from_screen(screen))
     assert report.feasible, report.binding_constraint
 
-    with pytest.raises(ValueError, match="post_screen_qualification"):
+    with pytest.raises(ValueError, match="midgame") as excinfo:
         post_screen_qualification(kept_rows_from_screen(screen))
+    assert "target" in str(excinfo.value)
+    assert "b200_299" not in str(excinfo.value)      # NOT the late-floor failure
 
 
 def test_v2_qualification_is_necessary_not_sufficient():
@@ -3224,10 +3398,10 @@ def test_v2_select_final_manifest_yields_the_exact_v2_composition_and_floors(tmp
     (role, phase, split) cell exact), both late-target floors met, no duplicate
     hash, and every manifest row carrying BOTH `band` AND `ply_bucket` (design Sec
     1.4 -- the diagnostic stratifies by phase while still recording bands)."""
-    config, meta, _files = _v2_identity_env(tmp_path)
     screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, _files = _v2_screen_artifact(tmp_path, screen)
 
-    rows, stats = select_final_manifest(screen, meta, config, forbidden=set())
+    rows, stats = _select(screen, meta, config)
 
     assert len(rows) == CORPUS_SIZE_V2 == 240
     counts = Counter((r["role"], r["ply_bucket"], r["split"]) for r in rows)
@@ -3249,6 +3423,11 @@ def test_v2_select_final_manifest_yields_the_exact_v2_composition_and_floors(tmp
     assert stats["n_rows"] == CORPUS_SIZE_V2
     assert stats["selection_seed"] == config.selection_seed
     assert sorted(stats["identities_verified"]) == sorted(SCREEN_IDENTITY_KEYS)
+    assert stats["screen_rows_cross_checked"] is True
+    # The VERIFIED recompute is handed back so the caller records what was PROVEN
+    # rather than re-hashing the whole reservoir a second time.
+    assert stats["verified_screen_provenance"]["screen_csv_sha1"] == (
+        meta["provenance"]["screen_csv_sha1"])
 
 
 def test_v2_select_final_manifest_is_deterministic(tmp_path):
@@ -3256,11 +3435,11 @@ def test_v2_select_final_manifest_is_deterministic(tmp_path):
     SAME config seed always re-derive a BYTE-identical manifest (and identical
     stats) -- which is what makes `select` re-runnable and reviewable from the
     screen artifact alone (design Sec 1.6)."""
-    config, meta, _files = _v2_identity_env(tmp_path)
     screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, _files = _v2_screen_artifact(tmp_path, screen)
 
-    rows_a, stats_a = select_final_manifest(screen, meta, config, forbidden=set())
-    rows_b, stats_b = select_final_manifest(screen, meta, config, forbidden=set())
+    rows_a, stats_a = _select(screen, meta, config)
+    rows_b, stats_b = _select(screen, meta, config)
 
     assert rows_a == rows_b
     assert stats_a == stats_b
@@ -3275,10 +3454,10 @@ def test_v2_select_refuses_on_failed_identities_BEFORE_any_selection(tmp_path, m
     which proves selection was never even attempted.
     """
     from scripts.GPU.alphazero import fpu_dev_corpus_v2 as mod
-    config, meta, _files = _v2_identity_env(tmp_path)
     screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, _files = _v2_screen_artifact(tmp_path, screen)
 
-    rows, _stats = select_final_manifest(screen, meta, config, forbidden=set())
+    rows, _stats = _select(screen, meta, config)
     assert len(rows) == CORPUS_SIZE_V2            # these rows WOULD sample fine
 
     def _landmine(*args, **kwargs):
@@ -3289,7 +3468,7 @@ def test_v2_select_refuses_on_failed_identities_BEFORE_any_selection(tmp_path, m
     tampered = copy.deepcopy(meta)
     tampered["provenance"]["source_index_sha1"] = "tampered"
     with pytest.raises(ValueError, match="source_index_sha1"):
-        select_final_manifest(screen, tampered, config, forbidden=set())
+        _select(screen, tampered, config)
 
 
 def test_v2_select_refuses_on_failed_qualification_BEFORE_any_selection(tmp_path, monkeypatch):
@@ -3297,45 +3476,150 @@ def test_v2_select_refuses_on_failed_qualification_BEFORE_any_selection(tmp_path
     `sample_v2_rows` replaced by a landmine, the floor error still surfaces -- so
     the sampler was never reached."""
     from scripts.GPU.alphazero import fpu_dev_corpus_v2 as mod
-    config, meta, _files = _v2_identity_env(tmp_path)
     screen = _screen_late_target_floor_unmeetable()
+    config, meta, _files = _v2_screen_artifact(tmp_path, screen)
 
     def _landmine(*args, **kwargs):
         raise AssertionError("select must refuse BEFORE any selection")
     monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
 
     with pytest.raises(ValueError, match="b200_299"):
-        select_final_manifest(screen, meta, config, forbidden=set())
+        _select(screen, meta, config)
+
+
+def test_v2_select_refuses_a_screen_csv_edited_after_screening(tmp_path, monkeypatch):
+    """The artifact identity, end-to-end through `select`: an otherwise-perfect
+    invocation whose screen CSV was edited on disk is refused BEFORE any selection."""
+    from scripts.GPU.alphazero import fpu_dev_corpus_v2 as mod
+    screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, files = _v2_screen_artifact(tmp_path, screen)
+
+    csv_path = Path(files["screen_csv"])
+    csv_path.write_text(csv_path.read_text().replace("kept", "collision", 1))
+
+    def _landmine(*args, **kwargs):
+        raise AssertionError("select must refuse BEFORE any selection")
+    monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
+
+    with pytest.raises(ValueError, match="screen_csv_sha1"):
+        _select(read_screen_csv(str(csv_path)), meta, config)
+
+
+def test_v2_select_refuses_the_hand_edited_screen_attack(tmp_path, monkeypatch):
+    """*** THE ATTACK ***, end to end -- no evaluator, no MCTS, just typing.
+
+    Start from the HONEST floor-unmeetable screen: only 10 late-TARGET b200_299 rows
+    against the >= 12 floor, so `select` correctly REFUSES it. Now hand-edit EIGHT
+    `ineligible_role` late/b200_299 rows in the persisted CSV into `kept`/`target`
+    (the row COUNT is unchanged, every INPUT file is untouched, and all six input
+    identities still match) -- which would forge an unmeetable floor into a
+    satisfiable one and produce a 240-row manifest from positions the network never
+    classified.
+
+    It must be REFUSED, and it is -- TWICE OVER, each layer proven independently:
+      1. `screen_csv_sha1`: the artifact's own bytes changed;
+      2. and even for an attacker who ALSO re-stamps that hash in the meta, the
+         row/meta cross-check sees `status_counts` no longer describe the rows.
+    """
+    from scripts.GPU.alphazero import fpu_dev_corpus_v2 as mod
+    screen = _screen_late_target_floor_unmeetable()
+    config, meta, files = _v2_screen_artifact(tmp_path, screen)
+    csv_path = Path(files["screen_csv"])
+
+    # 0. the HONEST screen is refused for the RIGHT reason (the unmeetable floor).
+    with pytest.raises(ValueError, match="b200_299"):
+        _select(read_screen_csv(str(csv_path)), meta, config)
+
+    # 1. the attack: flip 8 excluded late/b200_299 rows to kept/target, in the CSV.
+    lines = csv_path.read_text().splitlines(keepends=True)
+    flipped = 0
+    for i, line in enumerate(lines):
+        if flipped == 8:
+            break
+        if ",late,298,b200_299," in line and line.rstrip().endswith(",ineligible_role"):
+            lines[i] = (line.replace(",,False,,,", ",target,True,0.1,True,")
+                        .replace(",ineligible_role", ",kept"))
+            flipped += 1
+    assert flipped == 8, "the attack fixture must actually flip 8 rows"
+    csv_path.write_text("".join(lines))
+
+    attacked = read_screen_csv(str(csv_path))
+    # The attack WORKED on the rows: the floor is now (dishonestly) satisfiable...
+    assert len(attacked) == len(screen)                       # row count unchanged
+    assert len(_late_target_kept(attacked, "b200_299")) >= LATE_TARGET_FLOORS["b200_299"]
+    post_screen_qualification(kept_rows_from_screen(attacked))   # ...qualification passes!
+
+    # ...and `select` REFUSES it anyway, before any selection, on the artifact's hash.
+    def _landmine(*args, **kwargs):
+        raise AssertionError("select must refuse BEFORE any selection")
+    monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
+    with pytest.raises(ValueError, match="screen_csv_sha1"):
+        _select(attacked, meta, config)
+
+    # 2. LAYER TWO, proven independently: even after re-stamping the artifact hash,
+    # the rows no longer agree with the meta's own status_counts.
+    restamped = copy.deepcopy(meta)
+    restamped["provenance"]["screen_csv_sha1"] = v2_screen_provenance(
+        config_path=None, source_index_path=None, checkpoint=None,
+        forbidden_manifests=[], base_mcts_config=None,
+        screen_csv=str(csv_path))["screen_csv_sha1"]
+    with pytest.raises(ValueError, match="exclusion_status"):
+        _select(attacked, restamped, config)
+
+
+def test_v2_select_binds_forbidden_to_the_manifests_it_hard_matched(tmp_path):
+    """`forbidden` is not an opaque caller argument. Passing anything other than
+    `load_forbidden_hashes(config.forbidden_manifests)` -- the very files whose bytes
+    the identity check just matched -- is REFUSED.
+
+    Without this, `forbidden=set()` silently turns `assert_disjoint` into a no-op
+    while `stats["n_forbidden_hashes"] = 0` is written into the manifest's own meta
+    AS EVIDENCE: an artifact misrepresenting its own provenance."""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, _files = _v2_screen_artifact(tmp_path, screen)
+
+    _select(screen, meta, config)                    # correctly wired: fine
+
+    with pytest.raises(ValueError, match="forbidden"):
+        _select(screen, meta, config, forbidden=set())            # the no-op set
+    with pytest.raises(ValueError, match="forbidden"):
+        _select(screen, meta, config, forbidden={"a-hash-from-somewhere-else"})
 
 
 def test_v2_select_enforces_disjointness_against_forbidden(tmp_path):
-    """`assert_disjoint` is a REAL backstop on the completed manifest: a hash the
-    screen's collision filter should have excluded (here: one it actually selected)
-    is refused rather than silently shipped."""
-    config, meta, _files = _v2_identity_env(tmp_path)
+    """`assert_disjoint` is a REAL backstop on the COMPLETED manifest (v1's own
+    contract: "a raise here means that per-candidate discard had a gap"). A screen
+    whose kept rows include a position the config's forbidden manifest names -- a
+    collision the screen's own filter should have excluded -- is refused, not
+    shipped.
+
+    Honest by construction: the colliding hash is put in the config's REAL forbidden
+    manifest BEFORE its fingerprints are taken, so all seven identities still match
+    and only `assert_disjoint` can fire."""
     screen = _screen_from_pool(_abundant_pool_v2())
-    rows, _stats = select_final_manifest(screen, meta, config, forbidden=set())
+    config, meta, _files = _v2_screen_artifact(tmp_path / "clean", screen)
+    rows, _stats = _select(screen, meta, config)
     collide = rows[0]["canonical_position_sha1"]
 
+    config2, meta2, _f2 = _v2_screen_artifact(
+        tmp_path / "collide", screen, forbidden_hashes=(collide,))
+
     with pytest.raises(ValueError, match="assert_disjoint"):
-        select_final_manifest(screen, meta, config, forbidden={collide})
+        _select(screen, meta2, config2)
 
 
 def test_v2_select_reruns_identically_from_the_persisted_screen_csv(tmp_path):
     """The whole point of the two-artifact workflow: `select` is re-runnable from the
-    PERSISTED screen alone. A real `write_screen_csv` -> `read_screen_csv` round trip
-    re-derives the IDENTICAL manifest the in-memory rows do -- so the CSV's own type
-    coercions (int/float/bool/null) are provably lossless for everything `select`
-    reads."""
-    config, meta, _files = _v2_identity_env(tmp_path)
+    PERSISTED screen alone. Rows read back through `read_screen_csv` re-derive the
+    IDENTICAL manifest the in-memory rows do -- so the CSV's own type coercions
+    (int/float/bool/null) are provably lossless for everything `select` reads."""
     screen = _screen_from_pool(
         _abundant_pool_v2(),
         extra=[(r, "collision") for r in _v2_game(70_000, "target", "opening",
                                                   "b400_plus")])
-    out_csv = tmp_path / "fpu_dev_source_screen.csv"
-    write_screen_csv(screen, str(out_csv))
+    config, meta, files = _v2_screen_artifact(tmp_path, screen)
 
-    reread = read_screen_csv(str(out_csv))
+    reread = read_screen_csv(files["screen_csv"])
     assert len(reread) == len(screen)
     assert [r["exclusion_status"] for r in reread] == [
         r["exclusion_status"] for r in screen]
@@ -3346,8 +3630,8 @@ def test_v2_select_reruns_identically_from_the_persisted_screen_csv(tmp_path):
         and r["anchor_eligible"] is None and r["anchor_run"] is False
         for r in collided)
 
-    from_memory, stats_mem = select_final_manifest(screen, meta, config, forbidden=set())
-    from_csv, stats_csv = select_final_manifest(reread, meta, config, forbidden=set())
+    from_memory, stats_mem = _select(screen, meta, config)
+    from_csv, stats_csv = _select(reread, meta, config)
     assert from_csv == from_memory
     assert stats_csv == stats_mem
 
@@ -3357,9 +3641,9 @@ def test_v2_write_select_csv_round_trips_the_manifest(tmp_path):
     column names the diagnostic reads (`position_ply`, `canonical_position_sha1`,
     `branching_band`, `ply_bucket`, `split`, `role`) so a v2 manifest is consumable
     by `diagnose_fpu_policy_mass` unchanged."""
-    config, meta, _files = _v2_identity_env(tmp_path)
-    rows, _stats = select_final_manifest(
-        _screen_from_pool(_abundant_pool_v2()), meta, config, forbidden=set())
+    screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, _files = _v2_screen_artifact(tmp_path, screen)
+    rows, _stats = _select(screen, meta, config)
     out_csv = tmp_path / "fpu_dev_corpus_v2_manifest.csv"
 
     write_select_csv(rows, str(out_csv))
@@ -3388,29 +3672,31 @@ def _function_body(fn):
 
 def test_v2_select_stage_never_touches_the_evaluator():
     """`select` is PURE: its whole call chain -- `select_final_manifest`,
-    `validate_screen_identities`, `post_screen_qualification`,
-    `kept_rows_from_screen`, `read_screen_csv` -- mentions no evaluator / MCTS /
-    checkpoint-loading machinery ANYWHERE (docstrings included), so it holds for
-    every code path, not just the ones a test happens to drive. The same
-    `inspect.getsource` idiom Tasks 4-5 already use."""
+    `validate_screen_identities`, `validate_screen_rows_against_meta`,
+    `post_screen_qualification`, `kept_rows_from_screen`, `read_screen_csv` --
+    mentions no evaluator / MCTS / checkpoint-loading machinery ANYWHERE (docstrings
+    included), so it holds for every code path, not just the ones a test happens to
+    drive. The same `inspect.getsource` idiom Tasks 4-5 already use."""
     heavy = ("eval_runner", "from .mcts", "MCTS(", "_teacher_infer",
              "_build_v2_anchor_search_fn", "search_with_root",
              "_default_evaluator_factory")
     for fn in (select_final_manifest, validate_screen_identities,
-               post_screen_qualification, kept_rows_from_screen, read_screen_csv):
+               validate_screen_rows_against_meta, post_screen_qualification,
+               kept_rows_from_screen, read_screen_csv):
         src = inspect.getsource(fn)
         for needle in heavy:
             assert needle not in src, (fn.__name__, needle)
 
 
-def test_v2_select_call_order_is_identities_then_qualification_then_sampling():
+def test_v2_select_call_order_puts_every_refusal_before_any_selection():
     """The refusal ORDER is structural, not incidental: in `select_final_manifest`'s
     executable BODY (docstring stripped -- prose must not be able to satisfy this),
-    the identity hard-match precedes the qualification, which precedes the sampler,
-    which precedes `assert_disjoint`. So an identity or qualification failure ALWAYS
-    refuses before any row is selected."""
+    the identity hard-match, the row/meta cross-check, the forbidden-set binding and
+    the qualification ALL precede the sampler, which precedes `assert_disjoint`. So
+    every one of the four refusals ALWAYS fires before a single row is selected."""
     body = _function_body(select_final_manifest)
-    calls = ("validate_screen_identities(", "post_screen_qualification(",
+    calls = ("validate_screen_identities(", "validate_screen_rows_against_meta(",
+             "load_forbidden_hashes(", "post_screen_qualification(",
              "sample_v2_rows(", "assert_disjoint(")
     for needle in calls:
         assert needle in body, needle
@@ -3443,10 +3729,27 @@ def test_v2_preflight_infeasible_is_a_dedicated_exception():
 def test_v2_main_select_branch_is_wired(tmp_path):
     """STATIC wiring of `main`'s select branch (`main` itself is never invoked --
     plan Global Constraints): it reads the PERSISTED screen (`--screen`) and its
-    DERIVED `.meta.json`, loads the forbidden hashes from the config, runs the pure
-    `select_final_manifest`, and writes `config.select_out` + its meta."""
+    DERIVED `.meta.json`, loads the forbidden hashes from the CONFIG (the one wiring
+    `select_final_manifest` accepts), passes the screen's PATH (whose bytes are the
+    seventh identity), and writes `config.select_out` + its meta -- reusing the
+    VERIFIED recompute rather than re-hashing the reservoir a second time."""
     src = inspect.getsource(main)
     for needle in ('args.mode == "select"', "read_screen_csv(", "meta.json",
-                   "load_forbidden_hashes(", "select_final_manifest(",
-                   "write_select_csv(", "write_screen_meta(", "config.select_out"):
+                   "load_forbidden_hashes(config.forbidden_manifests)",
+                   "select_final_manifest(", "screen_csv_path=args.screen",
+                   "write_select_csv(", "write_screen_meta(", "config.select_out",
+                   'stats.pop("verified_screen_provenance")', "provenance=verified"):
         assert needle in src, needle
+
+
+def test_v2_run_screen_fingerprints_the_artifact_it_just_wrote():
+    """STATIC wiring of `run_screen` (never invoked -- it is the operator/GPU stage):
+    it records `screen_csv` in the meta (so `write_screen_meta` hashes the artifact it
+    just produced) and the `n_proposals`/`status_counts` that `select` cross-checks
+    the rows against -- and it writes the CSV BEFORE the meta, so the hash covers the
+    bytes actually on disk."""
+    body = _function_body(run_screen)
+    for needle in ('"screen_csv": config.screen_out', '"n_proposals": len(rows)',
+                   '"status_counts": dict(status_counts)'):
+        assert needle in body, needle
+    assert body.index("write_screen_csv(") < body.index("write_screen_meta(")
