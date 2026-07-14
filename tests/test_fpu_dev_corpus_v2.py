@@ -44,7 +44,10 @@ Task 3's tests (bottom of the file) exercise the phase-stratified sampler
 (plain dicts; synthetic canonical_sha1 strings, never real hashes) -- the
 same pure, evaluator-free shape as v1's tests/test_fpu_dev_corpus.py.
 """
+import copy
+import dataclasses
 import inspect
+import json
 from collections import Counter, defaultdict
 
 import pytest
@@ -55,26 +58,33 @@ from scripts.GPU.alphazero.build_fpu_dev_corpus import (
     SPLIT_ALLOC,
     band_of,
     ply_bucket_of,
+    side_to_move_for_ply,
 )
 from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     ASSIGN_ATTEMPTS,
     CELL_ORDER_V2,
     CORPUS_SIZE as CORPUS_SIZE_V2,
+    LATE_PHASE,
     LATE_TARGET_CELL,
     LATE_TARGET_FLOORS,
     MAX_PER_CELL_PER_GAME,
     MAX_PER_GAME,
     MIN_PLY_GAP,
+    PAIR_POSITIONS,
     PHASES,
     PROPOSAL_CELLS,
+    QUOTA_PER_PHASE,
     SIDE_TOL,
     SPLIT_ALLOC_V2,
     SPLIT_TOTALS,
     SPLITS,
+    V2PreflightReport,
     assign_split_v2,
     enumerate_v2_proposals,
     proposal_cell_of,
     sample_v2_rows,
+    v2_geometry_feasibility,
+    v2_preflight_source,
 )
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
 
@@ -1619,3 +1629,563 @@ def test_v2_stats_shape_and_independent_counts():
     assert (stats["n_games_per_split"]["tuning"]
             + stats["n_games_per_split"]["frozen_check"]) == stats["n_games_total"]
     assert stats["n_games_total"] == len({r["game_idx"] for r in _abundant_pool_v2()})
+
+
+# ---------------------------------------------------------------------------
+# Task 4 -- the v2 GEOMETRIC preflight (role-AGNOSTIC, witness-backed)
+#
+# Frozen design ref: docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md
+#   Sec 1.7 ("Two-stage feasibility"), Sec 1.2 (SPLIT_ALLOC_V2), Sec 1.3 (the
+#   late floors), Sec 1.5 (proposal cells).
+# v2 plan Task 4. Exercises `v2_geometry_feasibility` (pure core) and
+# `v2_preflight_source` (the thin file-read wrapper) in
+# scripts/GPU/alphazero/fpu_dev_corpus_v2.py.
+#
+# STAGE 1 OF TWO. Role (target vs control) comes from the evaluator's raw
+# policy, so it is NOT provable from geometry. This preflight therefore proves
+# ONLY what geometry can prove -- per-PHASE CANDIDATE capacity (60/phase), late
+# CANDIDATE availability per band cell (>=12 / >=12 IGNORING role), the GLOBAL
+# <=MAX_PER_GAME cap, >=MIN_PLY_GAP, per-split side balance and the whole-game
+# 160/80 split -- JOINTLY, via a constructive witness. It does NOT prove the
+# target-ROLE floors and does NOT prove DISJOINTNESS; both are Task 6's
+# post-screen `select` step. Two tests below assert that NON-CLAIM explicitly.
+#
+# Everything here is SYNTHETIC geometry, in the exact `enumerate_v2_proposals`
+# schema: either the REAL enumerator run over honest synthetic replays
+# (`_v2_full_games`, reusing Task 2's `_honest_replay`) or hand-built proposals
+# (`_v2_proposal`) for the pathological cases the enumerator CANNOT emit. No
+# evaluator, no MCTS, no GPU/MLX, no real replay files.
+#
+# Fixtures stay PHYSICALLY HONEST (Task 0's `n_legal >= 528 - ply` floor, held
+# as the tight equality `n_legal = 528 - ply`, plus red-on-even-ply parity), so
+# b300_399 appears only at ply >= 129 and b200_299 only at ply >= 229 -- both
+# "late", which is exactly why the floors live in the late phase.
+# ---------------------------------------------------------------------------
+
+# The REAL enumerator's output on a 330-ply honest replay, pinned by
+# `test_full_replay_yields_up_to_twelve_proposals_in_cell_then_ply_order` above:
+# one side-opposed pair per PROPOSAL_CELLS cell, at exactly these (red, black)
+# plies. Restated here so the hand-built fixtures below sit on the same geometry
+# as the real enumerator's, and cross-checked against it in
+# `test_v2_synthetic_proposals_match_the_real_enumerator`.
+_V2_CELL_PLIES = {
+    ("opening", None): (0, 13),
+    ("early_mid", None): (16, 29),
+    ("midgame", None): (42, 55),
+    ("late", "b400_plus"): (92, 105),
+    ("late", "b300_399"): (130, 143),
+    ("late", "b200_299"): (230, 243),
+}
+
+# SAME-SIDE (both RED, i.e. both EVEN, >= MIN_PLY_GAP apart) ply pairs -- the
+# side-aliasing fixtures. Still honest: midgame (ply <= 90) is necessarily
+# b400_plus; b300_399 needs ply >= 129; b200_299 needs ply >= 229.
+_V2_SAME_SIDE_RED_PLIES = {
+    ("midgame", None): (42, 56),
+    ("late", "b300_399"): (130, 142),
+    ("late", "b200_299"): (230, 242),
+}
+
+
+def _v2_proposal(game_idx, ply, cell):
+    """One hand-built proposal in the EXACT `enumerate_v2_proposals` schema, on the
+    TIGHT physical floor `n_legal = 528 - ply` -- so `band_of(n_legal)` really is
+    the cell's band, `side_to_move_for_ply` red-on-even parity really holds, and
+    `ply_bucket_of(ply)` really is the cell's phase. Every field is DERIVED from the
+    real v1/v2 primitives, never hand-typed."""
+    n_legal = 528 - ply
+    return {
+        "game_idx": game_idx,
+        "ply": ply,
+        "side": side_to_move_for_ply(ply),
+        "phase": ply_bucket_of(ply),
+        "n_legal": n_legal,
+        "band": band_of(n_legal),
+        "proposal_cell": cell,
+    }
+
+
+def _v2_full_games(n_games, n_moves=330):
+    """`n_games` games of REAL `enumerate_v2_proposals` output over Task 2's honest
+    330-ply replay: 12 proposals each -- a side-opposed pair in EVERY one of the 6
+    PROPOSAL_CELLS, hence a candidate pair in every one of the 4 PHASES.
+
+    This is the shape a real reservoir game has, and it is what makes the GLOBAL
+    <=MAX_PER_GAME cap the binding cross-phase coupling: a game rich enough to serve
+    all four phases can still only ever give TWO selected positions, so 240 rows need
+    >= 120 DISTINCT games no matter how many proposals each game offers.
+    """
+    return {gi: enumerate_v2_proposals(_honest_replay(gi, n_moves))
+            for gi in range(n_games)}
+
+
+def _replace_cell_rows(by_game, cell, plies):
+    """Swap every game's `cell` proposals for hand-built ones at `plies` (used to
+    force a same-side cell the real enumerator can never emit -- it only ever emits
+    side-OPPOSED pairs)."""
+    out = {}
+    for gi, rows in by_game.items():
+        kept = [p for p in rows if p["proposal_cell"] != cell]
+        kept += [_v2_proposal(gi, ply, cell) for ply in plies]
+        out[gi] = sorted(kept, key=lambda p: p["ply"])
+    return out
+
+
+def _phase_short_by_game():
+    """(a) `early_mid` is supplied by only 20 games (40 candidate positions) against
+    its 60-position phase quota -- every OTHER phase is amply supplied, so the
+    per-phase CANDIDATE capacity wall is what binds."""
+    by_game = _v2_full_games(130)
+    return {gi: ([p for p in rows if p["phase"] != "early_mid"] if gi >= 20 else rows)
+            for gi, rows in by_game.items()}
+
+
+def _late_cell_missing_by_game():
+    """(b) The late CANDIDATE cell `late/b200_299` is unreachable -- ZERO proposals
+    -- so the >=12 late-b200_299 candidate floor cannot be met, IGNORING role. The
+    late PHASE itself is amply supplied (b400_plus + b300_399), so it is specifically
+    the candidate CELL that binds, not phase capacity."""
+    return {gi: [p for p in rows if p["proposal_cell"] != ("late", "b200_299")]
+            for gi, rows in _v2_full_games(130).items()}
+
+
+def _side_aliased_phase_by_game():
+    """(c) `midgame` is supplied ONLY by SAME-SIDE (all-RED) pairs -- red@42 + red@56,
+    both even, 14 plies apart, both necessarily b400_plus at ply <= 90. Its CAPACITY
+    is ample (130 games x 2 = 260 >= 60) but NO game holds a side-opposed midgame
+    pair, so no per-split side-balanced selection can exist."""
+    return _replace_cell_rows(_v2_full_games(130), ("midgame", None),
+                              _V2_SAME_SIDE_RED_PLIES[("midgame", None)])
+
+
+def _side_aliased_late_cell_by_game():
+    """(c') The FLOOR cell's own side wall. `late/b200_299` is supplied ONLY by
+    SAME-SIDE (all-RED) pairs -- red@230 + red@242 (honest: b200_299 needs ply >= 229)
+    -- so its CANDIDATE availability is ample (260 >= 12) AND the late PHASE still
+    holds ample opposed pairs (from b400_plus / b300_399), yet no side-balanced
+    pair-game can ever be drawn from that floor cell."""
+    return _replace_cell_rows(_v2_full_games(130), ("late", "b200_299"),
+                              _V2_SAME_SIDE_RED_PLIES[("late", "b200_299")])
+
+
+# --- the geometry's own honesty ---------------------------------------------
+
+def test_v2_synthetic_proposals_match_the_real_enumerator():
+    """The hand-built `_v2_proposal` geometry is the REAL `enumerate_v2_proposals`
+    schema at the REAL enumerated plies -- so the pathological fixtures below differ
+    from a real proposal set ONLY in the one property under test, never in shape."""
+    real = enumerate_v2_proposals(_honest_replay(7, 330))
+    fake = [_v2_proposal(7, ply, cell)
+            for cell, plies in _V2_CELL_PLIES.items() for ply in plies]
+    assert sorted(real, key=lambda p: (p["proposal_cell"], p["ply"])) == \
+        sorted(fake, key=lambda p: (p["proposal_cell"], p["ply"]))
+
+    # ...and every same-side fixture ply is PHYSICALLY HONEST + genuinely same-side.
+    for cell, (p1, p2) in _V2_SAME_SIDE_RED_PLIES.items():
+        for ply in (p1, p2):
+            row = _v2_proposal(0, ply, cell)
+            assert row["side"] == "red"                      # even ply
+            assert row["n_legal"] == 528 - ply               # the tight floor
+            assert proposal_cell_of(row["phase"], row["n_legal"]) == cell
+        assert p2 - p1 >= MIN_PLY_GAP                        # a real gap-valid 2-take
+
+
+# --- (e) the FEASIBLE case: a real constructive witness ----------------------
+
+def test_v2_feasible_geometry_returns_true_with_a_witness():
+    """(e) 120 games, each offering a side-opposed pair in all 6 proposal cells --
+    the MINIMUM possible under the global <=2/game cap (120 x 2 = 240 = CORPUS_SIZE).
+    The witness must realize it exactly, and satisfy EVERY constraint the preflight
+    claims."""
+    by_game = _v2_full_games(120)
+    report = v2_geometry_feasibility(by_game)
+    assert report.feasible is True
+    assert report.binding_constraint is None
+    assert report.n_games == 120
+    assert report.quota_per_phase == QUOTA_PER_PHASE == 60
+
+    w = report.witness
+    assert w is not None
+    assert len(w) == CORPUS_SIZE_V2 == 240
+
+    # (1) per-PHASE candidate capacity: exactly 60 selected per phase (45 target +
+    # 15 control, but role-AGNOSTICALLY -- only the TOTAL is provable here).
+    by_phase = Counter(r["phase"] for r in w)
+    for phase in PHASES:
+        assert by_phase[phase] == QUOTA_PER_PHASE == 60
+    assert QUOTA_PER_PHASE * len(PHASES) == CORPUS_SIZE_V2
+
+    # (2) late CANDIDATE availability per band cell: the witness's 60 late positions
+    # include >= 12 in late/b300_399 AND >= 12 in late/b200_299 -- necessary (NOT
+    # sufficient) for the real >=12/>=12 late-TARGET floors, which need role.
+    late_cells = Counter(r["proposal_cell"] for r in w if r["phase"] == LATE_PHASE)
+    assert sum(late_cells.values()) == 60
+    for band, floor in LATE_TARGET_FLOORS.items():
+        assert late_cells[(LATE_PHASE, band)] >= floor == 12
+
+    # (3) GLOBAL <=MAX_PER_GAME per game (across ALL phases/cells) + >=MIN_PLY_GAP.
+    plies_by_game = defaultdict(list)
+    for r in w:
+        plies_by_game[r["game_idx"]].append(r["ply"])
+    assert len(plies_by_game) == 120                       # 120 DISTINCT games...
+    assert max(len(v) for v in plies_by_game.values()) <= MAX_PER_GAME
+    assert all(len(v) == MAX_PER_GAME for v in plies_by_game.values())   # ...x 2 = 240
+    for plies in plies_by_game.values():
+        plies.sort()
+        for lo, hi in zip(plies, plies[1:]):
+            assert hi - lo >= MIN_PLY_GAP
+
+    # (4) whole-game split into the frozen 160/80 budgets, + per-split side balance.
+    split_of = defaultdict(set)
+    for r in w:
+        split_of[r["game_idx"]].add(r["split"])
+    assert all(len(s) == 1 for s in split_of.values())     # whole-game isolation
+    for split in SPLITS:
+        n = sum(1 for r in w if r["split"] == split)
+        assert n == SPLIT_TOTALS[split]                    # tuning 160 / frozen 80
+        sc = Counter(r["side"] for r in w if r["split"] == split)
+        assert abs(sc["red"] - sc["black"]) <= SIDE_TOL
+
+
+def test_v2_preflight_report_is_frozen_with_a_readable_role_agnostic_str():
+    report = v2_geometry_feasibility(_v2_full_games(120))
+    assert isinstance(report, V2PreflightReport)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        report.feasible = False                            # frozen: cannot mutate
+    s = str(report)
+    assert "feasible" in s.lower()
+    for phase in PHASES:
+        assert phase in s                                  # per-phase diagnostics
+    for band in LATE_TARGET_FLOORS:
+        assert band in s                                   # per-late-cell diagnostics
+    # The rendered gate must SAY what it does not claim, so nobody reads a pass as
+    # a role/disjointness guarantee.
+    assert "ROLE-AGNOSTIC" in s
+
+
+# --- (a)-(c) the NECESSARY walls: infeasible, binding constraint named -------
+
+def test_v2_wall_phase_capacity_infeasible():
+    """(a) A phase short of its 60 CANDIDATE positions -> infeasible, binding names
+    the phase."""
+    report = v2_geometry_feasibility(_phase_short_by_game())
+    assert report.feasible is False
+    assert report.witness is None
+    assert "phase-capacity" in report.binding_constraint
+    assert "early_mid" in report.binding_constraint
+    assert report.realizable_by_phase["early_mid"] == 40 < QUOTA_PER_PHASE
+    # ...and it really is that ONE phase: every other is amply supplied.
+    for phase in PHASES:
+        if phase != "early_mid":
+            assert report.realizable_by_phase[phase] >= QUOTA_PER_PHASE
+
+
+def test_v2_wall_late_candidate_cell_unreachable_infeasible():
+    """(b) A late CANDIDATE band cell with ZERO proposals -> infeasible, binding names
+    that candidate CELL (not merely the phase: the late PHASE is amply supplied)."""
+    report = v2_geometry_feasibility(_late_cell_missing_by_game())
+    assert report.feasible is False
+    assert report.witness is None
+    assert "late-candidate" in report.binding_constraint
+    assert "b200_299" in report.binding_constraint
+    assert report.realizable_by_late_cell["b200_299"] == 0
+    assert report.pair_games_by_late_cell["b200_299"] == 0
+    # phase capacity is NOT what binds -- the late phase alone clears its quota.
+    assert report.realizable_by_phase[LATE_PHASE] >= QUOTA_PER_PHASE
+    assert report.realizable_by_late_cell["b300_399"] >= LATE_TARGET_FLOORS["b300_399"]
+
+
+def test_v2_wall_side_aliased_phase_infeasible():
+    """(c) A phase whose every candidate pair is ONE-SIDED -> infeasible on SIDE, even
+    though its candidate capacity is ample. (Unreachable from today's
+    `enumerate_v2_proposals`, which only ever emits side-OPPOSED pairs -- this is a
+    contract guard on the PURE core, which accepts ANY proposal geometry.)"""
+    report = v2_geometry_feasibility(_side_aliased_phase_by_game())
+    assert report.feasible is False
+    assert report.witness is None
+    assert "side" in report.binding_constraint
+    assert "midgame" in report.binding_constraint
+    # capacity itself is fine -- the wall is purely side (no both-side pair-game).
+    assert report.realizable_by_phase["midgame"] >= QUOTA_PER_PHASE
+    assert report.pair_games_by_phase["midgame"] == 0
+    assert report.red_by_phase["midgame"] == 260
+    assert report.black_by_phase["midgame"] == 0
+
+
+def test_v2_wall_side_aliased_late_floor_cell_infeasible():
+    """(c') A FLOOR cell whose every candidate pair is one-sided -> infeasible on
+    SIDE, even though the cell's candidate availability AND the late phase's own side
+    supply are both ample."""
+    report = v2_geometry_feasibility(_side_aliased_late_cell_by_game())
+    assert report.feasible is False
+    assert report.witness is None
+    assert "side" in report.binding_constraint
+    assert "b200_299" in report.binding_constraint
+    assert report.realizable_by_late_cell["b200_299"] >= LATE_TARGET_FLOORS["b200_299"]
+    assert report.pair_games_by_late_cell["b200_299"] == 0
+    assert report.pair_games_by_phase[LATE_PHASE] * 2 >= QUOTA_PER_PHASE   # phase is OK
+
+
+# --- (d) the GLOBAL <=2/game cap -- a WITNESS failure, not a proposal count ---
+
+def test_v2_per_game_cap_exceeded_is_infeasible_and_named():
+    """(d) The <=MAX_PER_GAME cap is about the SELECTION, not the proposals: one game
+    may legitimately offer up to 12 proposals across the 6 cells (and every game here
+    does), but it can only ever CONTRIBUTE 2 selected rows. So 240 rows need >= 120
+    DISTINCT games -- and 119 games can yield at most 238.
+
+    GENUINELY infeasible (238 < 240), not a witness artifact -- yet EVERY per-phase /
+    per-cell necessary check passes with room to spare, so only the constructive
+    witness, which spends one shared per-game budget ACROSS the phases, can see it.
+    The binding constraint must NAME the per-game cap.
+    """
+    by_game = _v2_full_games(119)
+    # Fixture honesty: each game offers 12 proposals -- 2 in every proposal cell...
+    assert all(len(rows) == 12 for rows in by_game.values())
+    assert all(Counter(p["proposal_cell"] for p in rows) ==
+               Counter({c: 2 for c in PROPOSAL_CELLS}) for rows in by_game.values())
+    # ...and 119 games x 2 selectable rows CANNOT reach the 240-row corpus.
+    assert 119 * MAX_PER_GAME == 238 < CORPUS_SIZE_V2 == 240
+
+    report = v2_geometry_feasibility(by_game)
+    assert report.feasible is False
+    assert report.witness is None
+    assert "per-game" in report.binding_constraint          # the cap is NAMED...
+    assert f"<={MAX_PER_GAME}/game" in report.binding_constraint
+    assert "joint" in report.binding_constraint             # ...by the WITNESS
+
+    # Every per-constraint NECESSARY check passes -- the coupling is cross-phase.
+    for phase in PHASES:
+        assert report.realizable_by_phase[phase] == 238 >= QUOTA_PER_PHASE
+        assert report.pair_games_by_phase[phase] * 2 >= QUOTA_PER_PHASE
+    for band, floor in LATE_TARGET_FLOORS.items():
+        assert report.realizable_by_late_cell[band] >= floor
+        assert report.pair_games_by_late_cell[band] * 2 >= floor
+
+
+def test_v2_one_more_game_flips_it_feasible():
+    """The knife-edge that proves (d) is the per-game cap and nothing else: adding a
+    SINGLE game (119 -> 120) -- not a single extra proposal to an existing game --
+    flips the identical geometry to feasible."""
+    assert v2_geometry_feasibility(_v2_full_games(119)).feasible is False
+    assert v2_geometry_feasibility(_v2_full_games(120)).feasible is True
+
+
+# --- (f) SOUNDNESS: necessary != sufficient (the load-bearing test) ----------
+
+def test_v2_soundness_joint_infeasible_but_all_necessary_checks_pass():
+    """(f) 60 games, each offering a side-opposed pair in ALL FOUR phases. EVERY
+    per-constraint necessary check passes (60 x 2 = 120 >= 60 realizable per phase; 60
+    pair-games >= the 30 needed; both late candidate cells amply supplied), yet under
+    the GLOBAL <=MAX_PER_GAME cap those 60 games can yield at most 120 < 240
+    positions IN TOTAL. That cross-phase coupling is invisible to any per-phase
+    accounting -- only the constructive WITNESS, which consumes each game exactly
+    once GLOBALLY, can catch it (v1 §11.2.3, transposed from bands to phases).
+    """
+    report = v2_geometry_feasibility(_v2_full_games(60))
+
+    # Every per-phase / per-cell NECESSARY check passes individually...
+    for phase in PHASES:
+        assert report.realizable_by_phase[phase] >= QUOTA_PER_PHASE          # capacity
+        assert report.pair_games_by_phase[phase] * 2 >= QUOTA_PER_PHASE      # side
+    for band, floor in LATE_TARGET_FLOORS.items():
+        assert report.realizable_by_late_cell[band] >= floor                 # candidate
+        assert report.pair_games_by_late_cell[band] * 2 >= floor             # ...+ side
+
+    # ...but the JOINT problem is infeasible, and ONLY the witness catches it.
+    assert report.feasible is False
+    assert report.witness is None
+    assert "joint" in report.binding_constraint
+    assert 60 * MAX_PER_GAME == 120 < CORPUS_SIZE_V2      # genuinely infeasible
+
+
+def test_v2_feasible_true_only_ever_via_a_completed_witness():
+    """SOUNDNESS, structurally + behaviourally: `feasible=True` is returned from
+    exactly ONE place in the source -- AFTER `_build_v2_witness` handed back a real
+    witness -- so no NECESSARY check can ever certify feasibility on its own. A
+    completed witness IS a feasible selection, so the gate can never be
+    FALSE-feasible; it may be mildly conservative (false-INfeasible) for exotic
+    geometry, which is the accepted, documented limitation (v1 :465-472)."""
+    src = inspect.getsource(v2_geometry_feasibility)
+    assert src.count("_report(True") == 1                 # ONE feasible=True site...
+    assert "if witness is None:" in src                   # ...unreachable without one
+
+    for by_game in (_v2_full_games(120), _v2_full_games(119), _v2_full_games(60),
+                    _phase_short_by_game(), _late_cell_missing_by_game(),
+                    _side_aliased_phase_by_game(), _side_aliased_late_cell_by_game()):
+        rep = v2_geometry_feasibility(by_game)
+        assert (rep.witness is not None) is rep.feasible
+        assert (rep.binding_constraint is None) is rep.feasible
+
+
+# --- the NON-CLAIMS: role floors and disjointness are Task 6's, NOT this gate -
+
+def test_v2_preflight_does_not_claim_target_role_floors():
+    """The geometric preflight must NOT claim the >=12/>=12 late-TARGET floors -- only
+    the role-AGNOSTIC late CANDIDATE availability. A geometry with ample late
+    candidates whose ROLES would later fail the target floor MUST still pass here;
+    rejecting it is Task 6's post-screen qualification's job (design Sec 1.7).
+    """
+    by_game = _v2_full_games(120)
+    report = v2_geometry_feasibility(by_game)
+    assert report.feasible is True
+
+    # What it DOES prove: the CANDIDATE floors, ignoring role (necessary only).
+    for band, floor in LATE_TARGET_FLOORS.items():
+        assert report.realizable_by_late_cell[band] >= floor
+        assert sum(1 for r in report.witness
+                   if r["proposal_cell"] == (LATE_PHASE, band)) >= floor
+
+    # ROLE is not even REPRESENTABLE here: it comes from the evaluator's raw policy
+    # at the (later) screen stage, so a proposal has no role field and the report has
+    # no role/target field to carry a claim in.
+    for rows in by_game.values():
+        for p in rows:
+            assert "role" not in p
+    names = {f.name for f in dataclasses.fields(V2PreflightReport)}
+    assert not any(("role" in n) or ("target" in n) for n in names)
+
+    # The CONCRETE non-claim. `raw_policy_role` classifies each row INDEPENDENTLY, so
+    # this role assignment is entirely legal -- and under it ZERO of the (abundant)
+    # late/b200_299 candidates are `target`, so the >=12 late-TARGET floor is
+    # UNSATISFIABLE. The preflight still returns feasible=True: it never looked.
+    def hostile_role(p):
+        return "control" if p["proposal_cell"] == (LATE_PHASE, "b200_299") else "target"
+
+    late_b200 = [p for rows in by_game.values() for p in rows
+                 if p["proposal_cell"] == (LATE_PHASE, "b200_299")]
+    assert len(late_b200) == 240                        # candidates: hugely abundant
+    assert sum(1 for p in late_b200 if hostile_role(p) == "target") == 0 \
+        < LATE_TARGET_FLOORS["b200_299"]                # ...targets: NONE. Floor dead.
+    assert v2_geometry_feasibility(by_game).feasible is True         # UNCHANGED.
+
+
+def test_v2_preflight_does_not_claim_disjointness():
+    """The geometric preflight must NOT claim disjointness -- it cannot even SEE a
+    position identity. Proposals carry no `canonical_sha1` (that is computed at the
+    screen stage from a reconstructed state), so `assert_disjoint` over the screen's
+    hashes, in Task 6's `select`, is the ONLY place disjointness is ever proven.
+
+    Concretely: `_v2_full_games` is 120 IDENTICAL replays, so game g's ply-k position
+    IS game h's ply-k position -- the witness's 240 "distinct" rows are really at most
+    12 distinct canonical states, maximally NON-disjoint. The preflight passes anyway.
+    """
+    by_game = _v2_full_games(120)
+    for rows in by_game.values():
+        for p in rows:
+            assert "canonical_sha1" not in p            # not even representable
+    geometries = {tuple(sorted((p["ply"], p["side"]) for p in rows))
+                  for rows in by_game.values()}
+    assert len(geometries) == 1                        # 120 games, ONE geometry
+
+    report = v2_geometry_feasibility(by_game)
+    assert report.feasible is True                     # ...and it PASSES anyway
+    w = report.witness
+    assert len(w) == CORPUS_SIZE_V2 == 240             # 240 selected rows...
+    assert len({(r["ply"], r["side"]) for r in w}) == 12    # ...<= 12 real positions
+
+    names = {f.name for f in dataclasses.fields(V2PreflightReport)}
+    assert not any(("sha" in n) or ("hash" in n) or ("disjoint" in n) for n in names)
+
+
+# --- (g) determinism ---------------------------------------------------------
+
+def test_v2_preflight_determinism_same_input_same_report():
+    """(g) Same geometry -> byte-identical report (witness included). Sorted iteration
+    throughout: no set-order or dict-order reliance."""
+    feasible = _v2_full_games(120)
+    assert v2_geometry_feasibility(feasible) == v2_geometry_feasibility(feasible)
+
+    for by_game in (_v2_full_games(60), _phase_short_by_game(),
+                    _late_cell_missing_by_game(), _side_aliased_late_cell_by_game()):
+        assert v2_geometry_feasibility(by_game) == v2_geometry_feasibility(by_game)
+
+
+def test_v2_preflight_core_does_not_mutate_its_input():
+    """PURITY: the core stamps `split` onto its WITNESS rows, which must be COPIES --
+    the caller's proposals are never touched (they are re-read by the screen stage)."""
+    by_game = _v2_full_games(120)
+    before = copy.deepcopy(by_game)
+    report = v2_geometry_feasibility(by_game)
+    assert by_game == before                              # input byte-for-byte intact
+    assert all("split" not in p for rows in by_game.values() for p in rows)
+    assert all("split" in r for r in report.witness)      # ...stamped on the COPIES
+
+
+def test_v2_pair_positions_is_a_distinct_constant_from_the_per_game_cap():
+    """The witness's atomic unit is a side-opposed PAIR = 2 positions. That is a pair
+    SIZE, not the per-game selection CAP -- they are numerically equal, and the
+    witness's whole mechanism depends on it (one pair per game is exactly what makes
+    "<=MAX_PER_GAME rows/game GLOBALLY across phases" true by construction), so they
+    are tied by an assert rather than sharing one name for two meanings."""
+    assert PAIR_POSITIONS == 2
+    assert PAIR_POSITIONS <= MAX_PER_GAME
+    assert PAIR_POSITIONS == MAX_PER_CELL_PER_GAME        # the enumerator's 0-or-2/cell
+    # ...and the frozen quota/floors really do divide into whole pairs.
+    assert QUOTA_PER_PHASE % PAIR_POSITIONS == 0
+    assert QUOTA_PER_PHASE // PAIR_POSITIONS == 30        # 30 pair-games per phase
+    assert sum(-(-f // PAIR_POSITIONS) for f in LATE_TARGET_FLOORS.values()) == 12 <= 30
+
+
+# --- the thin I/O wrapper ----------------------------------------------------
+
+def test_v2_preflight_source_composes_reads_enumerator_and_pure_core(tmp_path):
+    """`v2_preflight_source` is the ONLY impure part: read each `rec["replay_path"]`,
+    run the REAL `enumerate_v2_proposals`, then the pure core. A 2-game toy source
+    cannot reach 240 rows, so it is infeasible -- what matters is that the wrapper
+    composes read -> enumerate -> geometry and returns a real report.
+
+    It also pins that the SOURCE INDEX record's `game_idx` is authoritative (v1's
+    `build_candidates_by_game` keys by the record's, never the replay's): both
+    replays here carry a bogus `game_idx: 999`, so a wrapper that trusted the FILE
+    would collapse them into ONE game.
+    """
+    records = []
+    for gi in range(2):
+        replay = {"game_idx": 999,                       # bogus on purpose
+                  "moves": [{"n_legal": 528 - ply} for ply in range(330)]}
+        p = tmp_path / f"game_{gi:06d}.json"
+        p.write_text(json.dumps(replay))
+        records.append({"game_idx": gi, "replay_path": str(p)})
+
+    report = v2_preflight_source(records)
+    assert isinstance(report, V2PreflightReport)
+    assert report.n_games == 2                          # NOT 1 -- the record wins
+    assert report.n_proposals == 24                     # 2 games x 12 proposals
+    assert report.feasible is False                     # 2 games << 240 rows
+    assert set(report.realizable_by_phase) == set(PHASES)
+    assert set(report.realizable_by_late_cell) == {"b400_plus", "b300_399", "b200_299"}
+
+
+def test_v2_preflight_source_feasible_end_to_end(tmp_path):
+    """End-to-end on the smallest FEASIBLE source: 120 honest replay files -> read ->
+    enumerate -> witness. Proves the gate can actually PASS from disk, not only from
+    an in-memory geometry."""
+    records = []
+    moves = [{"n_legal": 528 - ply} for ply in range(330)]
+    for gi in range(120):
+        p = tmp_path / f"game_{gi:06d}.json"
+        p.write_text(json.dumps({"game_idx": gi, "moves": moves}))
+        records.append({"game_idx": gi, "replay_path": str(p)})
+
+    report = v2_preflight_source(records)
+    assert report.feasible is True
+    assert report.binding_constraint is None
+    assert len(report.witness) == CORPUS_SIZE_V2 == 240
+    assert report.n_games == 120
+
+
+# --- import purity -----------------------------------------------------------
+
+def test_v2_module_import_pulls_no_gpu_or_mlx():
+    """The whole v2 PURE SECTION -- constants, enumerator, sampler and now the
+    preflight (whose only impure part is a stdlib json/pathlib file read) -- must
+    stay importable without ever touching GPU/MLX."""
+    import subprocess
+    import sys
+    out = subprocess.run(
+        [sys.executable, "-c",
+         "import sys; import scripts.GPU.alphazero.fpu_dev_corpus_v2 as m; "
+         "print(sorted(k for k in sys.modules if 'mlx' in k or 'torch' in k))"],
+        capture_output=True, text=True, check=True)
+    assert out.stdout.strip() == "[]"
