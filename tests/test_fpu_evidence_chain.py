@@ -365,6 +365,125 @@ def test_safety_verdict_control_metrics_and_clean_case():
 
 
 # ---------------------------------------------------------------------------
+# Task 7 -- dev_safety_verdict(..., *, stratum_key=...): band -> phase stratum
+# for the §6.2 stratified new-collapse sub-gate. Default stays "band" (v1
+# byte-identical; no existing call site passes stratum_key, no threshold
+# change). v2 opts in via stratum_key="ply_bucket": the reason prefix and the
+# GATED metrics key both derive from stratum_key; band rates stay in
+# `metrics` under either stratum (report-only + ungated when a non-band
+# stratum is the gate). Brief: .superpowers/sdd/v2-task-7-brief.md.
+# ---------------------------------------------------------------------------
+
+def _other_key(key):
+    return "ply_bucket" if key == "band" else "band"
+
+
+def test_dev_safety_verdict_stratum_key_default_matches_explicit_band():
+    # Same fixture as test_safety_verdict_reasons_and_rejected_unchanged_plus_metrics.
+    # Omitting stratum_key and passing stratum_key="band" explicitly must be
+    # 100% interchangeable -- proof the new keyword-only parameter changes
+    # NOTHING about the default path (no existing call site passes it).
+    rows = [_tgt(new_collapse=(i < 5)) for i in range(100)]
+    v_implicit = dev_safety_verdict(rows, ref=R0, r0_lockin=5, absoff_lockin=9)
+    v_explicit = dev_safety_verdict(rows, ref=R0, r0_lockin=5, absoff_lockin=9,
+                                    stratum_key="band")
+    assert v_implicit.rejected is True and v_explicit.rejected is True
+    assert v_implicit.reasons == v_explicit.reasons == ("target_new_collapse_rate=0.0500>=0.05",)
+    expected_metrics = {
+        "target_new_collapse_rate": 0.05,
+        "band_new_collapse_rates": {"b200_299": 0.05},
+        "target_lockin_count": 0,
+        "lockin_baseline": 5,
+        "target_p95_mover_delta": 0.0,
+        "mean_eff_children_reduction": 0.0,
+        "mean_top_share_increase": 0.0,
+    }
+    assert v_implicit.metrics == expected_metrics
+    assert v_explicit.metrics == expected_metrics
+
+
+def test_dev_safety_verdict_missing_stratum_key_raises():
+    rows = [_tgt(new_collapse=False) for _ in range(3)]    # carries 'band', not 'ply_bucket'
+    dev_safety_verdict(rows, ref=R0, r0_lockin=5, absoff_lockin=5)   # default 'band' -- unaffected
+    with pytest.raises(ValueError, match="ply_bucket"):
+        dev_safety_verdict(rows, ref=R0, r0_lockin=5, absoff_lockin=5,
+                           stratum_key="ply_bucket")
+
+
+def test_stratifies_by_whichever_key_is_requested():
+    # v2-shaped rows: BOTH band and ply_bucket populated on every row. `band`
+    # is held CONSTANT across the whole set (so grouping by band can never
+    # isolate a hot subgroup); `ply_bucket` carries a genuine n=20 hot group
+    # ("pA" @ 2/20 == 10%) diluted by a clean "pB" group. Requesting each key
+    # on the IDENTICAL rows must diverge -- proof the gate groups by whichever
+    # key the caller names, not a hardcoded field.
+    hot = [_tgt(band="ALL", ply_bucket="pA", new_collapse=(i < 2)) for i in range(20)]
+    dilute = [_tgt(band="ALL", ply_bucket="pB", new_collapse=False) for _ in range(21)]
+    rows = hot + dilute
+
+    v_band = dev_safety_verdict(rows, ref=R0, r0_lockin=5, absoff_lockin=5,
+                                stratum_key="band")
+    v_phase = dev_safety_verdict(rows, ref=R0, r0_lockin=5, absoff_lockin=5,
+                                 stratum_key="ply_bucket")
+    assert v_band.rejected is False and v_band.reasons == ()       # single band "ALL" @ 2/41 < 10%
+    assert v_phase.rejected is True
+    assert v_phase.reasons == ("ply_bucket[pA]_new_collapse=0.1000>=0.1",)
+
+
+@pytest.mark.parametrize("key", ["band", "ply_bucket"])
+def test_stratum_gate_boundaries_identical_under_both_keys(key):
+    # The 10% threshold and n>=20 floor (DEV_NEW_COLLAPSE_BAND / DEV_BAND_MIN_N)
+    # are UNCHANGED regardless of which field is the gated stratum. Isolation
+    # (dilution at a second stratum value) mirrors
+    # test_fpu_diagnostic_modes.py::_dev_rejects's band_new_collapse_rate case
+    # so the independent overall target_new_collapse_rate gate (>=0.05) never
+    # fires and only the per-stratum gate under test is exercised.
+    other = _other_key(key)
+
+    # 0.10 rejects, n=20 exactly -> also proves n=20 is ACTIVE.
+    hot = [_tgt(new_collapse=(i < 2), **{key: "A", other: "c"}) for i in range(20)]
+    dilute = [_tgt(new_collapse=False, **{key: "B", other: "c"}) for _ in range(21)]
+    v = dev_safety_verdict(hot + dilute, ref=R0, r0_lockin=5, absoff_lockin=5,
+                           stratum_key=key)
+    assert v.rejected is True
+    assert v.reasons == (f"{key}[A]_new_collapse=0.1000>=0.1",)
+    assert v.metrics[f"{key}_new_collapse_rates"]["A"] == pytest.approx(0.10)
+
+    # 0.0999 passes, n=10000.
+    hot2 = [_tgt(new_collapse=(i < 999), **{key: "A", other: "c"}) for i in range(10000)]
+    dilute2 = [_tgt(new_collapse=False, **{key: "B", other: "c"}) for _ in range(10000)]
+    v2 = dev_safety_verdict(hot2 + dilute2, ref=R0, r0_lockin=5, absoff_lockin=5,
+                            stratum_key=key)
+    assert v2.rejected is False and v2.reasons == ()
+    assert v2.metrics[f"{key}_new_collapse_rates"]["A"] == pytest.approx(0.0999)
+
+    # n=19 inactive: a 100%-local-rate group below the n>=20 floor must be
+    # excluded from the gate ENTIRELY (no rates entry, no reason) -- proof the
+    # floor, not the rate, decides membership.
+    starved = [_tgt(new_collapse=True, **{key: "A", other: "c"}) for _ in range(19)]
+    v3 = dev_safety_verdict(starved, ref=R0, r0_lockin=5, absoff_lockin=5,
+                            stratum_key=key)
+    assert v3.metrics[f"{key}_new_collapse_rates"] == {}
+    assert not any(f"{key}[A]" in r for r in v3.reasons)
+
+
+def test_ply_bucket_stratum_also_reports_ungated_band_rates():
+    # "hotband" would trip the 10% gate on its own IF band were the active
+    # stratum (3/30 == 10%), but here ply_bucket is the gated stratum and
+    # every row shares one ply_bucket value diluted well under 10% -- so band
+    # coverage must still surface in metrics (report-only), but must NEVER
+    # contribute a reason (ungated).
+    rows = [_tgt(ply_bucket="p0", band="hotband", new_collapse=(i < 3)) for i in range(30)]
+    rows += [_tgt(ply_bucket="p0", band="coldband", new_collapse=False) for _ in range(40)]
+    v = dev_safety_verdict(rows, ref=R0, r0_lockin=5, absoff_lockin=5,
+                           stratum_key="ply_bucket")
+    assert v.metrics["band_new_collapse_rates"]["hotband"] == pytest.approx(0.10)
+    assert v.metrics["band_new_collapse_rates"]["coldband"] == pytest.approx(0.0)
+    assert v.metrics["ply_bucket_new_collapse_rates"]["p0"] == pytest.approx(3 / 70)
+    assert v.reasons == ()                                    # ungated: never a reason
+
+
+# ---------------------------------------------------------------------------
 # #4b -- verify_recomputed_controls: EXACT round-trip passes, a real diff aborts.
 # ---------------------------------------------------------------------------
 

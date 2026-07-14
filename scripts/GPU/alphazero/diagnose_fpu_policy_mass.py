@@ -221,13 +221,26 @@ class AVerdict:
 
 
 def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
-                       r0_lockin: int, absoff_lockin: int) -> SafetyVerdict:
+                       r0_lockin: int, absoff_lockin: int, *,
+                       stratum_key: str = "band") -> SafetyVerdict:
     """§6.2 development-safety verdict vs a single reference `X` (`ref`). REJECT
     (rejected=True) if ANY frozen gate trips. Target and control rows are split
     by `role`; each subset is evaluated only when non-empty (so a test can
     isolate one gate by supplying just the rows it needs). The lock-in baseline
     follows `ref`: `r0_lockin` when ref is r0 (reduction 0.0), else
-    `absoff_lockin` (ref absolute_off / reduction None)."""
+    `absoff_lockin` (ref absolute_off / reduction None).
+
+    `stratum_key` picks the per-stratum new-collapse sub-gate's grouping key.
+    Default `"band"` reproduces v1 byte-for-byte (reason string
+    `band[{value}]_new_collapse=...`, metrics key `band_new_collapse_rates`) --
+    no existing call site passes this kwarg. Passing `stratum_key="ply_bucket"`
+    (v2's opt-in) renames both the reason prefix and the GATED metrics key to
+    `ply_bucket`; band rates are THEN ALSO recorded in
+    `metrics["band_new_collapse_rates"]` as a report-only, ungated entry (same
+    n>=DEV_BAND_MIN_N rule) so band coverage stays visible when phase is the
+    gated stratum. `DEV_NEW_COLLAPSE_BAND` (10%) and `DEV_BAND_MIN_N` (20) are
+    unchanged either way. A `target` row missing a key needed for grouping
+    raises `ValueError` (never a silent skip)."""
     target = [r for r in rows if r.get("role") == "target"]
     control = [r for r in rows if r.get("role") == "control"]
     reasons: List[str] = []
@@ -236,6 +249,23 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
     # AND-OR and NO reason string, so `rejected`/`reasons` stay byte-identical.
     metrics: Dict[str, Any] = {}
 
+    def _new_collapse_rates_by(key: str) -> Dict[Any, float]:
+        """n>=DEV_BAND_MIN_N new-collapse rate per distinct `target` row[key]
+        value, insertion-ordered by first occurrence -- for key=="band" this is
+        byte-identical to the pre-stratum-parameterization band-only loop."""
+        grouped: Dict[Any, List] = defaultdict(list)
+        for r in target:
+            if key not in r:
+                raise ValueError(
+                    f"dev_safety_verdict: target row missing required "
+                    f"stratum key {key!r} (row keys: {sorted(r.keys())})")
+            grouped[r[key]].append(r)
+        rates: Dict[Any, float] = {}
+        for value, srows in grouped.items():
+            if len(srows) >= DEV_BAND_MIN_N:
+                rates[value] = sum(1 for r in srows if r["new_collapse"]) / len(srows)
+        return rates
+
     if target:
         n = len(target)
         nc_rate = sum(1 for r in target if r["new_collapse"]) / n
@@ -243,17 +273,15 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
         if nc_rate >= DEV_NEW_COLLAPSE_TARGET:
             reasons.append(f"target_new_collapse_rate={nc_rate:.4f}>={DEV_NEW_COLLAPSE_TARGET}")
 
-        by_band: Dict[Any, List] = defaultdict(list)
-        for r in target:
-            by_band[r["band"]].append(r)
-        band_rates: Dict[Any, float] = {}
-        for band, brows in by_band.items():
-            if len(brows) >= DEV_BAND_MIN_N:
-                brate = sum(1 for r in brows if r["new_collapse"]) / len(brows)
-                band_rates[band] = brate
-                if brate >= DEV_NEW_COLLAPSE_BAND:
-                    reasons.append(f"band[{band}]_new_collapse={brate:.4f}>={DEV_NEW_COLLAPSE_BAND}")
-        metrics["band_new_collapse_rates"] = band_rates
+        stratum_rates = _new_collapse_rates_by(stratum_key)
+        for value, srate in stratum_rates.items():
+            if srate >= DEV_NEW_COLLAPSE_BAND:
+                reasons.append(f"{stratum_key}[{value}]_new_collapse={srate:.4f}>={DEV_NEW_COLLAPSE_BAND}")
+        metrics[f"{stratum_key}_new_collapse_rates"] = stratum_rates
+        if stratum_key != "band":
+            # Report-only, ungated -- keeps band coverage visible when phase
+            # (ply_bucket) is the gated stratum. Never feeds `reasons`.
+            metrics["band_new_collapse_rates"] = _new_collapse_rates_by("band")
 
         baseline = r0_lockin if getattr(ref, "reduction", None) == 0.0 else absoff_lockin
         lockins = sum(1 for r in target if r["lock_in"])
