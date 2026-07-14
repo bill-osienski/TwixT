@@ -42,7 +42,7 @@ each import's inline comment for why.
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 # Deliberately-shared v1 frozen constants (identical semantics in v2):
 # MIN_PLY_GAP = the >=12-ply side-opposed-pair gap; MAX_PER_GAME = the <=2
@@ -50,11 +50,22 @@ from typing import Dict, List, Optional, Tuple
 # by the v2 sampler -- Task 3); SIDE_TOL = the per-split |red-black| side
 # balance tolerance. Imported (not restated) so a v1 drift is felt here
 # too; pinned in tests/test_fpu_dev_corpus_v2.py.
+#
+# Task-2 additions (the enumerator below): `per_ply_n_legal` (per-ply legal
+# count, incl. its reconstruction fallback), `ply_bucket_of` (phase), and
+# `side_to_move_for_ply` (red on even plies) are the same pure per-ply
+# primitives v1's own scan uses; `_first_gap_pair` is v1's deterministic
+# earliest-satisfying side-opposed-pair search (build_fpu_dev_corpus.py:578).
+# All reused verbatim (DRY) -- never reimplemented here.
 from .build_fpu_dev_corpus import (
     MAX_PER_GAME,
     MIN_PLY_GAP,
     SIDE_TOL,
+    _first_gap_pair,
     band_of,
+    per_ply_n_legal,
+    ply_bucket_of,
+    side_to_move_for_ply,
 )
 
 # ---------------------------------------------------------------------------
@@ -145,3 +156,89 @@ def proposal_cell_of(phase: str, n_legal: int) -> Tuple[str, Optional[str]]:
     if phase != "late":
         return (phase, None)
     return (phase, band_of(n_legal))
+
+
+# ---------------------------------------------------------------------------
+# Phase-aware proposal enumerator (pure) -- Task 2
+# ---------------------------------------------------------------------------
+
+def enumerate_v2_proposals(replay: Mapping[str, Any]) -> List[dict]:
+    """Phase-aware side-opposed proposal pairs for one replay (design Sec
+    1.5). Proposals are CANDIDATES for the later operator `screen` stage
+    (Task 5) -- not the final manifest; Task 3's sampler selects the final
+    rows from screened proposals.
+
+    Per `PROPOSAL_CELLS` cell (in that fixed, load-bearing order: the three
+    non-late phases, band `None`, then the three late bands descending), a
+    ply is eligible for the cell iff, reading per-ply legal counts via v1's
+    own `per_ply_n_legal` (never reimplemented -- also handles its
+    reconstruction fallback, where some plies are `None`):
+      - its n_legal is not None and >= 200 (an independent guard, not solely
+        reliant on `proposal_cell_of`'s own `("late", None)` sub-200
+        sentinel -- "belt-and-suspenders", per that function's docstring);
+      - `proposal_cell_of(ply_bucket_of(ply), n_legal) == cell` -- the SAME
+        Task-1 classifier used to build `PROPOSAL_CELLS` itself, so phase
+        and (for late cells only) band membership can never drift from it.
+
+    From a cell's eligible plies, `_first_gap_pair` (v1's deterministic
+    earliest-satisfying-pair search over ascending-ply reds/blacks,
+    `build_fpu_dev_corpus.py:578` -- imported, not copied) selects ONE
+    side-opposed pair (`side_to_move_for_ply`: red on even plies, black on
+    odd) at least `MIN_PLY_GAP` plies apart. Because an opposed pair's ply
+    difference is always odd, this floors the smallest realizable gap at
+    `MIN_PLY_GAP + 1`. No valid pair means the cell contributes 0 proposals
+    -- never a lone unpaired one -- so every cell yields exactly 0 or
+    `MAX_PER_CELL_PER_GAME` (2) rows; one game can thus yield up to 12
+    proposals across the 6 cells. (The GLOBAL <=2-per-game rule is a Task-3
+    SAMPLER concern over SELECTED rows, never enforced here.)
+
+    Each proposal dict carries exactly `game_idx, ply, side, phase, n_legal,
+    band, proposal_cell`. `band` is ALWAYS the real `band_of(n_legal)` -- the
+    recorded branching covariate -- so e.g. an `("opening", None)` cell's
+    proposals still record their real band (typically `"b400_plus"` on this
+    board), never the cell's own `None` band component. `phase` is the
+    cell's phase (`cell[0]`), `== ply_bucket_of(ply)`.
+
+    Fully deterministic: cells in `PROPOSAL_CELLS` order, and within a cell
+    the pair in ascending ply -- NOT necessarily red-then-black, since
+    `_first_gap_pair` can return either side first depending on which plies
+    are actually eligible.
+    """
+    game_idx = replay["game_idx"]
+    n_legal_by_ply = per_ply_n_legal(replay)
+
+    proposals: List[dict] = []
+    for cell in PROPOSAL_CELLS:
+        # Ascending by construction (a single forward pass over `ply` in
+        # increasing order), so reds/blacks need no re-sort before
+        # `_first_gap_pair`, which requires each list pre-sorted by ply.
+        reds: List[dict] = []
+        blacks: List[dict] = []
+        for ply, n_legal in enumerate(n_legal_by_ply):
+            if n_legal is None or n_legal < 200:
+                continue
+            # The single canonical eligibility test (DRY): matches `cell`
+            # iff ply_bucket_of(ply) is the cell's phase AND -- late cells
+            # only -- band_of(n_legal) is the cell's band. Never restated.
+            if proposal_cell_of(ply_bucket_of(ply), n_legal) != cell:
+                continue
+            side = side_to_move_for_ply(ply)
+            row = {
+                "game_idx": game_idx,
+                "ply": ply,
+                "side": side,
+                "phase": cell[0],
+                "n_legal": n_legal,
+                "band": band_of(n_legal),
+                "proposal_cell": cell,
+            }
+            (reds if side == "red" else blacks).append(row)
+
+        pair = _first_gap_pair(reds, blacks, MIN_PLY_GAP)
+        if pair is None:
+            continue   # no valid side-opposed pair -- 0 proposals, never 1
+        cell_proposals = sorted(pair, key=lambda row: row["ply"])
+        assert len(cell_proposals) == MAX_PER_CELL_PER_GAME
+        proposals.extend(cell_proposals)
+
+    return proposals

@@ -56,6 +56,7 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     PROPOSAL_CELLS,
     SIDE_TOL,
     SPLIT_ALLOC_V2,
+    enumerate_v2_proposals,
     proposal_cell_of,
 )
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
@@ -295,3 +296,202 @@ def test_proposal_cell_of_outputs_land_in_proposal_cells():
         cell = proposal_cell_of("late", n_legal)
         assert cell in PROPOSAL_CELLS
         assert cell == ("late", band)
+
+
+# ---------------------------------------------------------------------------
+# Task 2 -- enumerate_v2_proposals (phase-aware side-opposed proposal
+# enumerator, no global stride)
+#
+# Frozen design ref: docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md
+#   Sec 1.5 (proposal enumerator / proposal cells).
+# v2 plan Task 2. Exercises scripts/GPU/alphazero/fpu_dev_corpus_v2.py's
+# `enumerate_v2_proposals` -- still stdlib-only synthetic replays (a dict
+# with `game_idx` + `moves`, each move carrying `n_legal`), no
+# evaluator/MCTS/GPU/MLX/I-O; `per_ply_n_legal`'s reconstruction fallback
+# (real TwixtState replay) is v1's own concern and already covered by v1's
+# tests, not re-exercised here.
+#
+# Fixtures use the board's own physical lower bound, `n_legal >= 528 - ply`
+# (Task 0's regression), so every fixture's n_legal values are REACHABLE at
+# the plies they claim -- most via `_honest_replay`'s default TIGHT schedule
+# `n_legal(ply) = 528 - ply`, which conveniently makes each phase/band's
+# eligible-ply range exactly the contiguous span the design's own geometry
+# predicts (matching the canonical example pairs already used elsewhere in
+# this suite, e.g. tests/test_fpu_corpus_preflight.py's `_BUCKET_PAIR`).
+# One test (`test_pair_output_order_is_ascending_ply_not_side_order`)
+# overrides specific plies to a HIGHER (still honest -- the invariant is a
+# LOWER bound only) band on purpose, to construct a cell whose selected pair
+# is black-before-red; another (sub-200 guard) is explicitly and only
+# unrealistic on purpose -- see its own docstring.
+# ---------------------------------------------------------------------------
+
+def _honest_replay(game_idx, n_moves, overrides=None):
+    """Synthetic replay `{"game_idx": ..., "moves": [{"n_legal": ...}, ...]}`
+    covering plies `0..n_moves-1`. Defaults every ply to the TIGHT physical
+    floor `528 - ply` (Task 0's `n_legal >= 528 - ply` invariant, held as an
+    equality) -- monotonically decreasing, so every phase/band region is
+    reachable exactly where the design geometry predicts. `overrides` (ply ->
+    n_legal) replaces individual plies; every caller-supplied override in
+    this file still respects the >= 528 - ply LOWER bound (never below it),
+    so all fixtures stay physically honest even when overridden.
+    """
+    overrides = overrides or {}
+    moves = [{"n_legal": overrides.get(ply, 528 - ply)} for ply in range(n_moves)]
+    return {"game_idx": game_idx, "moves": moves}
+
+
+def test_cell_yields_side_opposed_pair_at_least_min_gap_apart():
+    """Brief case 1: a cell yields a red+black pair >=12 apart -- the two
+    sides differ and |ply gap| >= MIN_PLY_GAP. Opening (ply 0-15, all
+    n_legal>=513 hence eligible): the earliest-satisfying pair is (0, 13)."""
+    replay = _honest_replay(game_idx=1, n_moves=16)
+    proposals = enumerate_v2_proposals(replay)
+    opening_rows = [p for p in proposals if p["proposal_cell"] == ("opening", None)]
+    assert len(opening_rows) == 2
+    sides = {row["side"] for row in opening_rows}
+    assert sides == {"red", "black"}
+    plies = [row["ply"] for row in opening_rows]
+    assert abs(plies[0] - plies[1]) >= MIN_PLY_GAP
+    assert sorted(plies) == [0, 13]
+
+
+def test_cell_caps_at_max_per_cell_per_game_despite_abundant_candidates():
+    """Brief case 2: a cell with MANY eligible plies still yields <=2.
+    Midgame (ply 41-90, 50 plies, all honestly eligible) has far more than 2
+    valid opposed plies on each side, yet the cell still yields exactly
+    MAX_PER_CELL_PER_GAME (2) proposals -- one pair, not every possible
+    pair."""
+    replay = _honest_replay(game_idx=2, n_moves=91)
+    proposals = enumerate_v2_proposals(replay)
+    midgame_rows = [p for p in proposals if p["proposal_cell"] == ("midgame", None)]
+    assert len(midgame_rows) == MAX_PER_CELL_PER_GAME
+    assert len(midgame_rows) <= 2
+
+
+def test_cell_with_no_valid_gap_pair_yields_zero():
+    """Brief case 3: a cell with no valid opposed-gap pair yields 0 for that
+    cell -- never a lone unpaired proposal. A 9-ply game (ply 0-8, all
+    "opening") has BOTH reds ([0,2,4,6,8]) and blacks ([1,3,5,7]) present,
+    but the widest possible span is only 8 (< MIN_PLY_GAP), so no pair
+    qualifies and the whole game yields nothing (every other cell has zero
+    candidates at all, trivially)."""
+    replay = _honest_replay(game_idx=20, n_moves=9)
+    assert enumerate_v2_proposals(replay) == []
+
+
+def test_late_cell_only_selects_matching_band():
+    """Brief case 4: late cells only select plies whose band_of(n_legal)
+    matches the cell's band. late x b300_399 is reachable only at ply>=129
+    (Task 0's floor); under the tight honest schedule this cell's pair is
+    (130, 143), both genuinely in the 300-399 range -- never a b400_plus or
+    b200_299 ply leaking in from the same "late" phase."""
+    replay = _honest_replay(game_idx=3, n_moves=230)
+    proposals = enumerate_v2_proposals(replay)
+    cell_rows = [p for p in proposals if p["proposal_cell"] == ("late", "b300_399")]
+    assert len(cell_rows) == 2
+    for row in cell_rows:
+        assert row["ply"] >= 129
+        assert band_of(row["n_legal"]) == "b300_399"
+    assert {row["side"] for row in cell_rows} == {"red", "black"}
+    plies = [row["ply"] for row in cell_rows]
+    assert abs(plies[0] - plies[1]) >= MIN_PLY_GAP
+    assert sorted(plies) == [130, 143]
+
+
+def test_determinism_same_replay_same_proposals():
+    """Brief case 5: same replay -> same proposals, called twice."""
+    replay = _honest_replay(game_idx=42, n_moves=330)
+    first = enumerate_v2_proposals(replay)
+    second = enumerate_v2_proposals(replay)
+    assert first == second
+
+
+def test_full_replay_yields_up_to_twelve_proposals_in_cell_then_ply_order():
+    """A single game can yield up to 12 proposals (2 x 6 cells) -- NOT
+    capped by the global <=2/game rule, which is a Task-3 SAMPLER concern
+    over SELECTED rows, never enforced by the enumerator (brief note). A
+    330-ply honest game reaches every one of the 6 PROPOSAL_CELLS (opening,
+    early_mid, midgame, late x b400_plus, late x b300_399, late x b200_299).
+    Output order is deterministic: cells in PROPOSAL_CELLS order, each cell's
+    pair in ascending ply."""
+    replay = _honest_replay(game_idx=42, n_moves=330)
+    proposals = enumerate_v2_proposals(replay)
+
+    assert len(proposals) == 12
+    got_cells_in_order = [proposals[i]["proposal_cell"] for i in range(0, 12, 2)]
+    assert got_cells_in_order == PROPOSAL_CELLS
+    for i in range(0, 12, 2):
+        pair = proposals[i:i + 2]
+        assert pair[0]["proposal_cell"] == pair[1]["proposal_cell"]
+        assert pair[0]["ply"] < pair[1]["ply"]   # ascending ply within the cell
+
+    expected_plies = [(0, 13), (16, 29), (42, 55), (92, 105), (130, 143), (230, 243)]
+    got_plies = [(proposals[i]["ply"], proposals[i + 1]["ply"]) for i in range(0, 12, 2)]
+    assert got_plies == expected_plies
+
+    for row in proposals:
+        assert row["game_idx"] == 42
+        assert row["phase"] == row["proposal_cell"][0]
+        assert row["phase"] == ply_bucket_of(row["ply"])
+        assert row["side"] in ("red", "black")
+
+
+def test_proposal_dict_has_exact_schema():
+    """Interface: each proposal dict carries EXACTLY game_idx, ply, side,
+    phase, n_legal, band, proposal_cell -- no more, no fewer."""
+    replay = _honest_replay(game_idx=5, n_moves=16)
+    proposals = enumerate_v2_proposals(replay)
+    expected_keys = {"game_idx", "ply", "side", "phase", "n_legal", "band", "proposal_cell"}
+    assert proposals   # sanity: this fixture is non-empty
+    for row in proposals:
+        assert set(row.keys()) == expected_keys
+        assert row["game_idx"] == 5
+
+
+def test_band_field_is_band_of_n_legal_not_cell_band_component():
+    """Interface note: `band` is ALWAYS the real `band_of(n_legal)`, never
+    the cell's own band component -- an `("opening", None)` cell's proposals
+    still record their real band (b400_plus: opening n_legal>=513 on this
+    board), not None."""
+    replay = _honest_replay(game_idx=6, n_moves=16)
+    proposals = enumerate_v2_proposals(replay)
+    opening_rows = [p for p in proposals if p["proposal_cell"] == ("opening", None)]
+    assert len(opening_rows) == 2
+    for row in opening_rows:
+        assert row["band"] == band_of(row["n_legal"])
+        assert row["band"] == "b400_plus"
+        assert row["proposal_cell"][1] is None   # the cell's OWN band component
+
+
+def test_low_n_legal_excludes_ply_even_when_phase_matches():
+    """n_legal >= 200 is an independent eligibility guard, not solely reliant
+    on proposal_cell_of's own ("late", None) sub-200 sentinel
+    ("belt-and-suspenders", per that function's docstring) -- checked
+    directly with an otherwise phase-matching low value. NOTE: unlike this
+    file's other fixtures, this one is deliberately NOT physically honest (an
+    opening ply can never really have n_legal < 200 on this board -- Task
+    0's floor already forces >=513 that early); it exists solely to prove
+    the enumerator's OWN n_legal>=200 guard fires independently of
+    proposal_cell_of, not to claim a reachable position."""
+    moves = [{"n_legal": 150} for _ in range(16)]
+    replay = {"game_idx": 10, "moves": moves}
+    assert enumerate_v2_proposals(replay) == []
+
+
+def test_pair_output_order_is_ascending_ply_not_side_order():
+    """Interface: within a cell the pair is output in ASCENDING PLY, not
+    "red always first". Constructed (still honestly -- the >=528-ply
+    invariant is a LOWER bound, so pushing a ply's n_legal UP into a higher
+    band is always honest) so late x b300_399's only eligible black is ply
+    129 and its only eligible red is ply 142 (plies 130-141 pushed into
+    b400_plus, hence ineligible for THIS cell) -- the pair is (black@129,
+    red@142), so a naive "always emit red then black" implementation would
+    emit them in the wrong order."""
+    overrides = {129: 399, 142: 390}
+    for ply in range(130, 142):
+        overrides[ply] = 450   # honest (>= the ply's floor); b400_plus, not b300_399
+    replay = _honest_replay(game_idx=7, n_moves=143, overrides=overrides)
+    proposals = enumerate_v2_proposals(replay)
+    cell_rows = [p for p in proposals if p["proposal_cell"] == ("late", "b300_399")]
+    assert [p["ply"] for p in cell_rows] == [129, 142]
+    assert [p["side"] for p in cell_rows] == ["black", "red"]
