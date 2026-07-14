@@ -57,6 +57,7 @@ from scripts.GPU.alphazero.build_fpu_dev_corpus import (
     CORPUS_SIZE,
     QUOTA_PER_BAND,
     SPLIT_ALLOC,
+    anchor_eligible,
     band_of,
     ply_bucket_of,
     side_to_move_for_ply,
@@ -70,37 +71,49 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     LATE_PHASE,
     LATE_TARGET_CELL,
     LATE_TARGET_FLOORS,
+    MANIFEST_FIELDNAMES_V2,
     MAX_PER_CELL_PER_GAME,
     MAX_PER_GAME,
     MIN_PLY_GAP,
     PAIR_POSITIONS,
     PHASES,
+    PREREGISTERED_IDENTITY_KEYS,
     PROPOSAL_CELLS,
     QUOTA_PER_PHASE,
     SCREEN_FIELDNAMES,
+    SCREEN_IDENTITY_KEYS,
+    SELF_REFERENTIAL_IDENTITY,
     SIDE_TOL,
     SPLIT_ALLOC_V2,
     SPLIT_TOTALS,
     SPLITS,
     V2Config,
+    V2PreflightInfeasible,
     V2PreflightReport,
+    _V2_CONFIG_REQUIRED_KEYS,
     _build_v2_anchor_search_fn,
     _parse_v2_args,
     _v2_anchor_seed,
     assign_split_v2,
     classify_exclusion,
     enumerate_v2_proposals,
+    kept_rows_from_screen,
     load_v2_config,
     main,
+    post_screen_qualification,
     proposal_cell_of,
+    read_screen_csv,
     run_screen,
     sample_v2_rows,
     screen_row,
+    select_final_manifest,
     v2_geometry_feasibility,
     v2_preflight_source,
     v2_screen_provenance,
+    validate_screen_identities,
     write_screen_csv,
     write_screen_meta,
+    write_select_csv,
 )
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
 
@@ -2585,21 +2598,36 @@ def test_v2_operator_functions_exist_with_expected_call_signatures():
         "anchor_eligible", "canonical_sha1", "exclusion_status"}
 
 
-def test_v2_mode_argument_accepts_only_screen_so_far():
-    """argparse wiring: --mode/--config are both required; --mode is
-    restricted to ("screen",) -- Task 6 will widen this to include "select",
-    but shipping a broken/dead "select" path now is explicitly disallowed, so
-    "select" must be REJECTED until Task 6 actually adds it."""
+def test_v2_mode_argument_accepts_screen_and_select():
+    """argparse wiring (widened by Task 6): --mode is `("screen", "select")` and
+    --config is required for BOTH. `--screen` (the PERSISTED screen artifact
+    `select` re-reads) is REQUIRED by `select` and REJECTED by `screen` -- which is
+    how "screen and select are NEVER the same invocation" is enforced at the CLI,
+    and how an operator cannot mistake `--screen` for naming the screen's OUTPUT
+    (that is `config.screen_out`)."""
     args = _parse_v2_args(["--mode", "screen", "--config", "cfg.json"])
     assert args.mode == "screen"
     assert args.config == "cfg.json"
+    assert args.screen is None
+
+    args = _parse_v2_args(["--mode", "select", "--config", "cfg.json",
+                           "--screen", "screen.csv"])
+    assert args.mode == "select"
+    assert args.screen == "screen.csv"
 
     with pytest.raises(SystemExit):
+        _parse_v2_args(["--config", "cfg.json"])           # --mode is required
+    with pytest.raises(SystemExit):
+        _parse_v2_args(["--mode", "screen"])                # --config is required
+    with pytest.raises(SystemExit):
+        _parse_v2_args(["--mode", "select"])                # --config is required
+    with pytest.raises(SystemExit):                         # select REQUIRES --screen
         _parse_v2_args(["--mode", "select", "--config", "cfg.json"])
+    with pytest.raises(SystemExit):                         # ...and screen REJECTS it
+        _parse_v2_args(["--mode", "screen", "--config", "cfg.json",
+                        "--screen", "screen.csv"])
     with pytest.raises(SystemExit):
-        _parse_v2_args(["--config", "cfg.json"])          # --mode is required
-    with pytest.raises(SystemExit):
-        _parse_v2_args(["--mode", "screen"])               # --config is required
+        _parse_v2_args(["--mode", "nonsense", "--config", "cfg.json"])
 
 
 def test_v2_operator_lazy_imports_resolve_without_executing_them():
@@ -2740,3 +2768,685 @@ def test_v2_module_import_pulls_no_gpu_or_mlx():
          "print(sorted(k for k in sys.modules if 'mlx' in k or 'torch' in k))"],
         capture_output=True, text=True, check=True)
     assert out.stdout.strip() == "[]"
+
+
+# ---------------------------------------------------------------------------
+# Task 6 -- the PURE `select` stage: identity hard-match + post-screen
+# role/floor qualification + deterministic selection
+#
+# Frozen design ref: docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md
+#   Sec 1.6 (`screen`/`select` are SEPARATE operator invocations; `select` is
+#   PURE and re-runnable from the persisted screen alone), Sec 1.7 (STAGE 2 of
+#   the two-stage feasibility split -- the post-screen qualification the
+#   role-AGNOSTIC geometric preflight structurally could not make), Sec 1.8
+#   (the pre-registered fingerprints the select stage hard-matches).
+# v2 plan Task 6.
+#
+# EVERYTHING HERE IS PURE. `select` never loads the evaluator, MCTS, GPU/MLX or
+# a checkpoint -- it reads FILE BYTES (config / index / replays / checkpoint /
+# forbidden manifests) for the identity hashes and nothing else. So unlike the
+# Task-5 `screen` tests, these exercise the real functions end-to-end on real
+# tmp_path files; only `main` itself stays uninvoked (plan Global Constraints:
+# "No main()/MCTS/operator run in tests"), verified STATICALLY instead, exactly
+# as Task 5 verifies `run_screen`'s wiring.
+#
+# The fixtures below fabricate a complete SCREEN (rows in the real
+# SCREEN_FIELDNAMES schema, built by the real `screen_row`/`classify_exclusion`)
+# from the Task-3 sampler pools, staying PHYSICALLY HONEST throughout: n_legal is
+# the tight floor `528 - ply`, so `band_of(n_legal)` really is the row's band,
+# `side_to_move_for_ply` really is its side and `ply_bucket_of` really is its
+# phase -- all ASSERTED in `_screen_row_for`, never hand-typed.
+# ---------------------------------------------------------------------------
+
+def _screen_row_for(r, status="kept"):
+    """One physically-honest SCREEN_FIELDNAMES row for a fabricated Task-3
+    sampler row `r` (game_idx, role, phase, band, side, ply, canonical_sha1), at
+    exclusion status `status`.
+
+    Every derived field comes from the REAL v1/v2 primitives -- `band_of`,
+    `side_to_move_for_ply`, `ply_bucket_of`, `anchor_eligible`,
+    `classify_exclusion`, `screen_row` -- so a fixture can never drift from the
+    screen the operator stage would actually write, and the row's own
+    role/anchor nullness obeys `screen_row`'s contract by construction rather
+    than by hand.
+    """
+    ply, n_legal = r["ply"], 528 - r["ply"]           # the tight physical floor
+    assert band_of(n_legal) == r["band"], (r, n_legal)
+    assert side_to_move_for_ply(ply) == r["side"], r
+    assert ply_bucket_of(ply) == r["phase"], r
+
+    proposal = {
+        "game_idx": r["game_idx"], "ply": ply, "side": r["side"],
+        "phase": r["phase"], "n_legal": n_legal, "band": r["band"],
+        "proposal_cell": (r["phase"], r["band"] if r["phase"] == "late" else None),
+    }
+    collided = status == "collision"
+    # A collided/grey-zone proposal has NO role: the raw-policy pass either never
+    # ran (collision) or landed in the grey band (ineligible_role).
+    role = None if status in ("collision", "ineligible_role") else r["role"]
+    # The anchor only ever runs for a real role; a `kept` root is near-even, an
+    # `ineligible_anchor` root is not -- and the REAL `anchor_eligible` predicate
+    # is what decides, from the fixture's own root value.
+    root_value_stm = None if role is None else (0.1 if status == "kept" else 0.4)
+    anchor_elig = None if role is None else anchor_eligible(root_value_stm)
+    assert anchor_elig is (None if role is None else status == "kept"), status
+
+    got_status, anchor_run = classify_exclusion(
+        collided=collided, role=role, anchor_eligible_val=anchor_elig)
+    assert got_status == status, (got_status, status)
+    return screen_row(
+        proposal, feats=(None if collided else _SCREEN_FEATS), role=role,
+        anchor_run=anchor_run, root_value_stm=root_value_stm,
+        anchor_eligible=anchor_elig, canonical_sha1=r["canonical_sha1"],
+        exclusion_status=status)
+
+
+def _screen_from_pool(pool_rows, extra=()):
+    """A complete fabricated SCREEN: every Task-3 pool row as `kept`, plus each
+    `(row, status)` in `extra` as a NON-kept proposal -- the excluded rows a real
+    screen persists alongside the kept ones (design Sec 1.6: every proposal is
+    recorded, never only the survivors)."""
+    return ([_screen_row_for(r, "kept") for r in pool_rows]
+            + [_screen_row_for(r, st) for r, st in extra])
+
+
+def _proposals_from_screen(screen_rows):
+    """The ROLE-AGNOSTIC proposal geometry the Task-4 preflight would have seen:
+    EVERY screened proposal -- kept and excluded alike -- projected back to the
+    `enumerate_v2_proposals` schema. The screen schema is a strict superset of the
+    proposal schema, so this is a pure PROJECTION, never a re-derivation -- which
+    is what lets a test run stage 1 and stage 2 over the very same geometry."""
+    by_game = defaultdict(list)
+    for row in screen_rows:
+        by_game[row["game_idx"]].append(
+            {k: row[k] for k in ("game_idx", "ply", "side", "phase", "n_legal",
+                                 "band", "proposal_cell")})
+    return dict(by_game)
+
+
+def _late_candidates(screen_rows, band):
+    """Every screened late/`band` proposal, IGNORING role -- what the role-agnostic
+    geometric preflight counts as a late CANDIDATE for the floor."""
+    return [r for r in screen_rows if r["proposal_cell"] == ("late", band)]
+
+
+def _late_target_kept(screen_rows, band):
+    """The late/`band` rows that actually survived the screen AS TARGETS -- what
+    LATE_TARGET_FLOORS really counts. The gap between this and `_late_candidates`
+    is precisely why the two-stage feasibility split exists."""
+    return [r for r in screen_rows
+            if r["exclusion_status"] == "kept" and r["raw_policy_role"] == "target"
+            and r["phase"] == "late" and r["band"] == band]
+
+
+def _extra_late_b200_299_candidates(start_gi, per_status=10):
+    """(row, status) pairs supplying ABUNDANT late/b200_299 CANDIDATES that no
+    role-aware count can use: `per_status` games each of `ineligible_role`,
+    `ineligible_anchor` and `collision`. Physically honest (b200_299 needs ply >=
+    229, so red@230 / black@243 -- both 'late')."""
+    extra, gi = [], start_gi
+    for status in ("ineligible_role", "ineligible_anchor", "collision"):
+        for _ in range(per_status):
+            extra += [(r, status) for r in _v2_game(gi, "target", "late", "b200_299")]
+            gi += 1
+    return extra
+
+
+def _screen_late_target_floor_unmeetable():
+    """THE correction-1 fixture: ample late/b200_299 CANDIDATES, too few TARGETS.
+
+    The (target, late) cell is amply supplied for its 45-row quota (85 games / 170
+    rows) and its b300_399 floor (20 games / 40 rows), but holds only FIVE
+    b200_299 target games -- 10 rows against the >= 12 floor. Meanwhile the SAME
+    screen carries 40 further late/b200_299 games (10 kept `control` from the pool
+    spec + 30 excluded as ineligible_role/ineligible_anchor/collision), so the
+    ROLE-AGNOSTIC geometry is comfortably fine: the Task-4 preflight passes on it.
+    Only a ROLE-AWARE, post-screen check can see the floor is unmeetable.
+    """
+    pool = _v2_pool({("target", "late"): [("b400_plus", 60), ("b300_399", 20),
+                                          ("b200_299", 5)]})
+    return _screen_from_pool(pool, extra=_extra_late_b200_299_candidates(90_000))
+
+
+def _screen_target_role_starved():
+    """The ROLE half of the same correction: ample midgame CANDIDATES, too few
+    TARGETS. (target, midgame) is supplied by only 20 kept games (40 rows) against
+    its 45-row demand, while 40 further midgame games are screened as
+    ineligible_role / ineligible_anchor -- so the geometry is fine and only the
+    role-aware capacity check can refuse."""
+    pool = _v2_pool({("target", "midgame"): [("b400_plus", 20)]})
+    extra, gi = [], 80_000
+    for status in ("ineligible_role", "ineligible_anchor"):
+        for _ in range(20):
+            extra += [(r, status)
+                      for r in _v2_game(gi, "target", "midgame", "b400_plus")]
+            gi += 1
+    return _screen_from_pool(pool, extra=extra)
+
+
+def _v2_identity_env(tmp_path):
+    """Real on-disk inputs for all six identities, a config PRE-REGISTERING the five
+    recomputable ones, and a screen meta whose `provenance` is the REAL
+    `v2_screen_provenance` over those same files.
+
+    The IDENTITY axis and the ROW axis of `select` are INDEPENDENT: no identity ever
+    reads a screen row, and no row ever reads a file hash. So the fixture's screen
+    ROWS are the Task-3 fabricated pools while its META's fingerprints are genuine
+    hashes of genuine files -- and each test perturbs exactly one axis.
+
+    Ordering is load-bearing and NOT circular: the five pre-registered fingerprints
+    are config-INDEPENDENT (a config file cannot contain its own hash), so they are
+    computed FIRST, written INTO the config, and only THEN is the config's own hash
+    taken -- which is what the screen meta records as `config_sha1`.
+    """
+    replays = []
+    for gi in range(3):
+        p = tmp_path / f"replay_{gi}.json"
+        p.write_text(json.dumps(_honest_replay(gi, 330)))
+        replays.append(p)
+    index = tmp_path / "reservoir_index.jsonl"
+    index.write_text("".join(
+        json.dumps({"game_idx": gi, "n_moves": 330, "winner": "red",
+                    "replay_path": str(p)}) + "\n"
+        for gi, p in enumerate(replays)))
+    checkpoint = tmp_path / "checkpoint.npz"
+    checkpoint.write_bytes(b"fake-checkpoint-bytes-never-loaded-by-select")
+    forbidden = tmp_path / "forbidden_a.csv"
+    forbidden.write_text("canonical_position_sha1\nnot-a-real-dev-corpus-hash\n")
+    paths = dict(source_index_path=str(index), checkpoint=str(checkpoint),
+                 forbidden_manifests=[str(forbidden)])
+
+    # (A) the five PRE-REGISTERED fingerprints, from the SAME provenance helper the
+    # screen stage itself uses -- so a config can never pre-register a value the
+    # screen would compute differently.
+    prov = v2_screen_provenance(config_path=None, base_mcts_config=None, **paths)
+    expected = {k: prov[k] for k in PREREGISTERED_IDENTITY_KEYS}
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(_complete_v2_config_dict(
+        tmp_path, expected_fingerprints=expected, **paths)))
+    config = load_v2_config(str(config_path))
+
+    # (B) the screen's OWN recorded provenance -- now over the WRITTEN config too.
+    meta = {
+        "config_path": str(config_path), "n_proposals": 0,
+        "provenance": v2_screen_provenance(
+            config_path=str(config_path),
+            base_mcts_config={"n_simulations": ANCHOR_SIMS_V2}, **paths),
+        **paths,
+    }
+    files = dict(paths, config_path=str(config_path), replays=replays)
+    return config, meta, files
+
+
+# --- the required config: every key the plan names is REQUIRED ---------------
+
+def test_v2_config_required_keys_are_exactly_the_plan_s_list():
+    """The config REQUIRES every key the plan names -- source reservoir + seed
+    range, selection seed, allocation, floors, enumerator params,
+    `new_collapse_stratum`, expected fingerprints -- plus the checkpoint /
+    forbidden manifests / output paths the two stages consume. Pinned as a SET so
+    a later key can be added but none silently dropped."""
+    assert set(_V2_CONFIG_REQUIRED_KEYS) == {
+        "source_index_path", "seed_range", "selection_seed", "phase_allocation",
+        "late_floors", "enumerator_params", "new_collapse_stratum", "checkpoint",
+        "forbidden_manifests", "screen_out", "select_out", "expected_fingerprints",
+    }
+
+
+@pytest.mark.parametrize("key", sorted(_V2_CONFIG_REQUIRED_KEYS))
+def test_v2_load_config_raises_on_each_missing_required_key(tmp_path, key):
+    """EVERY required key, dropped one at a time, makes `load_v2_config` raise
+    NAMING it -- never a silent default ("no default source, no default stride")."""
+    raw = _complete_v2_config_dict(tmp_path)
+    del raw[key]
+    p = tmp_path / "config.json"
+    p.write_text(json.dumps(raw))
+
+    with pytest.raises(ValueError, match=key):
+        load_v2_config(str(p))
+
+
+# --- validate_screen_identities: the SIX identities, hard-matched -------------
+
+def test_v2_the_six_identities_are_frozen():
+    """The frozen identity list (design Sec 1.8): config hash, source-index hash,
+    replay-data hash, checkpoint hash, source-file hashes, forbidden-manifest
+    hashes. `config_sha1` is the SELF-REFERENTIAL one -- a config file cannot
+    contain its own hash, so it alone has no pre-registered (A) value and is
+    matched screen-recorded (B) vs fresh-recompute (C)."""
+    assert set(SCREEN_IDENTITY_KEYS) == {
+        "config_sha1", "source_index_sha1", "replay_data_sha1",
+        "checkpoint_identity", "source_file_sha1s", "forbidden_manifest_sha1s"}
+    assert SELF_REFERENTIAL_IDENTITY == "config_sha1"
+    assert set(PREREGISTERED_IDENTITY_KEYS) == (
+        set(SCREEN_IDENTITY_KEYS) - {SELF_REFERENTIAL_IDENTITY})
+
+
+def test_v2_identities_pass_when_all_three_sources_agree(tmp_path):
+    """The happy path: config-expected (A) == screen-recorded (B) == fresh
+    recompute (C) for every one of the six -> returns None, silently."""
+    config, meta, files = _v2_identity_env(tmp_path)
+
+    assert validate_screen_identities(
+        meta, config, forbidden_paths=config.forbidden_manifests) is None
+
+
+@pytest.mark.parametrize("key", sorted(SCREEN_IDENTITY_KEYS))
+def test_v2_any_of_the_six_identities_differing_raises_naming_it(tmp_path, key):
+    """ANY of the six recorded identities differing from the recompute is a HARD
+    STOP naming that identity -- proven INDEPENDENTLY, one identity at a time."""
+    config, meta, _files = _v2_identity_env(tmp_path)
+    tampered = copy.deepcopy(meta)
+    tampered["provenance"][key] = "tampered-identity-value"
+
+    with pytest.raises(ValueError, match=key):
+        validate_screen_identities(tampered, config,
+                                   forbidden_paths=config.forbidden_manifests)
+
+
+@pytest.mark.parametrize("key", sorted(PREREGISTERED_IDENTITY_KEYS))
+def test_v2_config_pre_registration_is_not_decorative(tmp_path, key):
+    """(A) really participates. Screen (B) and recompute (C) agree perfectly, yet a
+    config whose PRE-REGISTERED expectation differs still hard-stops -- so the Sec
+    1.8 pre-registration is a real gate, not decoration. (A (B)-vs-(C)-only check
+    would let a config that expected a DIFFERENT reservoir/checkpoint through.)"""
+    config, meta, files = _v2_identity_env(tmp_path)
+    raw = json.loads(open(files["config_path"]).read())
+    raw["expected_fingerprints"][key] = "a-pre-registration-that-does-not-match"
+    open(files["config_path"], "w").write(json.dumps(raw))
+    config = load_v2_config(files["config_path"])
+    # The config's own bytes changed, so re-stamp the screen's `config_sha1`: this
+    # test must isolate the PRE-REGISTRATION, not trip the self-referential check.
+    meta["provenance"]["config_sha1"] = v2_screen_provenance(
+        config_path=files["config_path"], source_index_path=None, checkpoint=None,
+        forbidden_manifests=[], base_mcts_config=None)["config_sha1"]
+
+    with pytest.raises(ValueError, match=key):
+        validate_screen_identities(meta, config,
+                                   forbidden_paths=config.forbidden_manifests)
+
+
+def test_v2_identity_catches_a_replay_mutated_after_screening(tmp_path):
+    """THE rationale for the fresh recompute (C). The config (A) and the screen
+    meta (B) agree perfectly with each other -- so an (A)-vs-(B)-only check passes
+    -- yet a replay file was MUTATED ON DISK after the screen was written. Only a
+    recompute from the inputs the config NAMES can see it, and it must hard-stop on
+    `replay_data_sha1`."""
+    config, meta, files = _v2_identity_env(tmp_path)
+    assert (config.expected_fingerprints["replay_data_sha1"]
+            == meta["provenance"]["replay_data_sha1"])          # (A) == (B): agreed
+
+    files["replays"][1].write_text(json.dumps(_honest_replay(1, 331)))   # mutated!
+
+    with pytest.raises(ValueError, match="replay_data_sha1"):
+        validate_screen_identities(meta, config,
+                                   forbidden_paths=config.forbidden_manifests)
+
+
+def test_v2_identity_catches_a_config_rewritten_after_screening(tmp_path):
+    """The SELF-REFERENTIAL identity, (B) vs (C): recompute the hash of the config
+    file we were HANDED and require the screen to have recorded it -- which is what
+    PROVES this screen was produced by THIS config. Rewriting the config's bytes
+    after the screen was written must hard-stop."""
+    config, meta, files = _v2_identity_env(tmp_path)
+    raw = json.loads(open(files["config_path"]).read())
+    raw["eval_batch_size"] = 7                       # a real, if harmless, edit
+    open(files["config_path"], "w").write(json.dumps(raw))
+    rewritten = load_v2_config(files["config_path"])
+
+    with pytest.raises(ValueError, match="config_sha1"):
+        validate_screen_identities(meta, rewritten,
+                                   forbidden_paths=rewritten.forbidden_manifests)
+
+
+def test_v2_identity_hard_matches_the_forbidden_manifests_actually_used(tmp_path):
+    """The forbidden manifests are matched BY CONTENT, not by path: handing
+    `select` a DIFFERENT forbidden file than the one `screen` excluded against
+    hard-stops, so the hashes fed to `assert_disjoint` are provably the ones the
+    screen's collision filter used."""
+    config, meta, _files = _v2_identity_env(tmp_path)
+    other = tmp_path / "forbidden_a.csv.other"
+    other.write_text("canonical_position_sha1\na-different-forbidden-hash\n")
+
+    with pytest.raises(ValueError, match="forbidden_manifest_sha1s"):
+        validate_screen_identities(meta, config, forbidden_paths=[str(other)])
+
+
+@pytest.mark.parametrize("key", sorted(PREREGISTERED_IDENTITY_KEYS))
+def test_v2_a_missing_pre_registration_raises(tmp_path, key):
+    """A config that pre-registers only SOME identities cannot silently skip the
+    rest: every one of the five is REQUIRED in `expected_fingerprints`."""
+    config, meta, files = _v2_identity_env(tmp_path)
+    raw = json.loads(open(files["config_path"]).read())
+    del raw["expected_fingerprints"][key]
+    open(files["config_path"], "w").write(json.dumps(raw))
+    config = load_v2_config(files["config_path"])
+    meta["provenance"]["config_sha1"] = v2_screen_provenance(
+        config_path=files["config_path"], source_index_path=None, checkpoint=None,
+        forbidden_manifests=[], base_mcts_config=None)["config_sha1"]
+
+    with pytest.raises(ValueError, match=key):
+        validate_screen_identities(meta, config,
+                                   forbidden_paths=config.forbidden_manifests)
+
+
+def test_v2_a_screen_meta_without_provenance_raises(tmp_path):
+    """A screen meta carrying no `provenance` block -- or one missing an identity
+    -- cannot be validated, so it is REFUSED rather than vacuously passed."""
+    config, meta, _files = _v2_identity_env(tmp_path)
+
+    no_block = {k: v for k, v in meta.items() if k != "provenance"}
+    with pytest.raises(ValueError, match="provenance"):
+        validate_screen_identities(no_block, config,
+                                   forbidden_paths=config.forbidden_manifests)
+
+    missing_key = copy.deepcopy(meta)
+    del missing_key["provenance"]["checkpoint_identity"]
+    with pytest.raises(ValueError, match="checkpoint_identity"):
+        validate_screen_identities(missing_key, config,
+                                   forbidden_paths=config.forbidden_manifests)
+
+
+# --- post_screen_qualification: STAGE 2 (role + floors) ----------------------
+
+def test_v2_qualification_passes_on_a_qualifying_screen():
+    """A screen whose kept rows can satisfy the exact SPLIT_ALLOC_V2 roles AND both
+    late-target floors qualifies silently (returns None)."""
+    kept = kept_rows_from_screen(_screen_from_pool(_abundant_pool_v2()))
+
+    assert post_screen_qualification(kept) is None
+
+
+def test_v2_qualification_raises_when_a_late_target_floor_is_unmeetable_though_the_geometry_is_fine():
+    """THE load-bearing STAGE-2 test (design Sec 1.7's own worked example).
+
+    The SAME screen, read two ways:
+      * ROLE-AGNOSTIC (what the Task-4 geometric preflight sees): late/b200_299
+        CANDIDATES are abundant -- 45 games, 90 proposals -- and the preflight,
+        run over exactly this geometry, returns feasible=True with a witness.
+      * ROLE-AWARE (what only the post-screen `select` can see): just 10 of those
+        proposals survive the screen AS TARGETS, below the >= 12 floor.
+    So stage 1 passes and stage 2 must REFUSE, naming the band. This is precisely
+    the correction the two-stage split exists for, and it is why the preflight's
+    pass can never be mistaken for a corpus guarantee.
+    """
+    screen = _screen_late_target_floor_unmeetable()
+    floor = LATE_TARGET_FLOORS["b200_299"]
+
+    # 1. the geometry really is fine -- ample CANDIDATES, and stage 1 says FEASIBLE.
+    assert len(_late_candidates(screen, "b200_299")) >= 4 * floor
+    report = v2_geometry_feasibility(_proposals_from_screen(screen))
+    assert report.feasible, report.binding_constraint
+    assert report.witness is not None
+
+    # 2. ...yet too few of those candidates classify as TARGET.
+    assert len(_late_target_kept(screen, "b200_299")) < floor
+
+    # 3. stage 2 refuses, naming the floor's band -- BEFORE any selection.
+    with pytest.raises(ValueError, match="b200_299"):
+        post_screen_qualification(kept_rows_from_screen(screen))
+
+
+def test_v2_qualification_raises_when_a_role_count_is_unmeetable_though_the_geometry_is_fine():
+    """The ROLE half of the same correction: midgame CANDIDATES are abundant (and
+    stage 1 passes), but only 40 of them survive as `target` against the (target,
+    midgame) cell's 45-row demand -- so stage 2 refuses, naming the cell."""
+    screen = _screen_target_role_starved()
+    report = v2_geometry_feasibility(_proposals_from_screen(screen))
+    assert report.feasible, report.binding_constraint
+
+    with pytest.raises(ValueError, match="post_screen_qualification"):
+        post_screen_qualification(kept_rows_from_screen(screen))
+
+
+def test_v2_qualification_is_necessary_not_sufficient():
+    """The honest scope, pinned. Qualification is a NECESSARY-condition check, NOT a
+    simulation of the sampler: `_pool_gap_starved_cell_v2` clears every role count
+    (8 games x <=2 = 16 >= the 15-row demand) and both floors, so it QUALIFIES --
+    and the sampler still (correctly) refuses it, because each of those games'
+    rows sit < MIN_PLY_GAP apart and only ONE of them is ever pickable.
+
+    `sample_v2_rows` remains the exact-or-raise authority; qualification passing is
+    never a promise that selection will succeed -- only that it is not already
+    provably doomed on roles or floors."""
+    kept = kept_rows_from_screen(_screen_from_pool(_pool_gap_starved_cell_v2()))
+
+    assert post_screen_qualification(kept) is None            # qualifies...
+    with pytest.raises(ValueError, match="shortfall"):        # ...and still refused
+        sample_v2_rows(kept, seed=20260712)
+
+
+# --- select_final_manifest: composition, determinism, refusal ORDER -----------
+
+def test_v2_select_final_manifest_yields_the_exact_v2_composition_and_floors(tmp_path):
+    """The end-to-end pure select: exact SPLIT_ALLOC_V2 composition (240 rows, every
+    (role, phase, split) cell exact), both late-target floors met, no duplicate
+    hash, and every manifest row carrying BOTH `band` AND `ply_bucket` (design Sec
+    1.4 -- the diagnostic stratifies by phase while still recording bands)."""
+    config, meta, _files = _v2_identity_env(tmp_path)
+    screen = _screen_from_pool(_abundant_pool_v2())
+
+    rows, stats = select_final_manifest(screen, meta, config, forbidden=set())
+
+    assert len(rows) == CORPUS_SIZE_V2 == 240
+    counts = Counter((r["role"], r["ply_bucket"], r["split"]) for r in rows)
+    for (role, phase), alloc in SPLIT_ALLOC_V2.items():
+        for split, quota in alloc.items():
+            assert counts[(role, phase, split)] == quota, (role, phase, split)
+
+    late_target_bands = Counter(
+        r["band"] for r in rows if r["role"] == "target" and r["ply_bucket"] == "late")
+    for band, floor in LATE_TARGET_FLOORS.items():
+        assert late_target_bands[band] >= floor, (band, late_target_bands)
+
+    for r in rows:
+        assert set(r) == set(MANIFEST_FIELDNAMES_V2)
+        assert r["band"] == r["branching_band"]        # the deliberate v1-name alias
+        assert r["ply_bucket"] in PHASES
+    hashes = [r["canonical_position_sha1"] for r in rows]
+    assert len(set(hashes)) == len(hashes)
+    assert stats["n_rows"] == CORPUS_SIZE_V2
+    assert stats["selection_seed"] == config.selection_seed
+    assert sorted(stats["identities_verified"]) == sorted(SCREEN_IDENTITY_KEYS)
+
+
+def test_v2_select_final_manifest_is_deterministic(tmp_path):
+    """The screen-cache reproducibility property: the SAME persisted screen + the
+    SAME config seed always re-derive a BYTE-identical manifest (and identical
+    stats) -- which is what makes `select` re-runnable and reviewable from the
+    screen artifact alone (design Sec 1.6)."""
+    config, meta, _files = _v2_identity_env(tmp_path)
+    screen = _screen_from_pool(_abundant_pool_v2())
+
+    rows_a, stats_a = select_final_manifest(screen, meta, config, forbidden=set())
+    rows_b, stats_b = select_final_manifest(screen, meta, config, forbidden=set())
+
+    assert rows_a == rows_b
+    assert stats_a == stats_b
+
+
+def test_v2_select_refuses_on_failed_identities_BEFORE_any_selection(tmp_path, monkeypatch):
+    """ORDER, proven: a bad identity refuses BEFORE selection runs at all.
+
+    The very same screen rows sample FINE (asserted first, as a positive control),
+    so the refusal is attributable to the identity and nothing else -- and with
+    `sample_v2_rows` replaced by a landmine, the identity error still surfaces,
+    which proves selection was never even attempted.
+    """
+    from scripts.GPU.alphazero import fpu_dev_corpus_v2 as mod
+    config, meta, _files = _v2_identity_env(tmp_path)
+    screen = _screen_from_pool(_abundant_pool_v2())
+
+    rows, _stats = select_final_manifest(screen, meta, config, forbidden=set())
+    assert len(rows) == CORPUS_SIZE_V2            # these rows WOULD sample fine
+
+    def _landmine(*args, **kwargs):
+        raise AssertionError("select must refuse BEFORE any selection")
+    monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
+    monkeypatch.setattr(mod, "post_screen_qualification", _landmine)
+
+    tampered = copy.deepcopy(meta)
+    tampered["provenance"]["source_index_sha1"] = "tampered"
+    with pytest.raises(ValueError, match="source_index_sha1"):
+        select_final_manifest(screen, tampered, config, forbidden=set())
+
+
+def test_v2_select_refuses_on_failed_qualification_BEFORE_any_selection(tmp_path, monkeypatch):
+    """ORDER, proven: a failed qualification refuses BEFORE selection runs. With
+    `sample_v2_rows` replaced by a landmine, the floor error still surfaces -- so
+    the sampler was never reached."""
+    from scripts.GPU.alphazero import fpu_dev_corpus_v2 as mod
+    config, meta, _files = _v2_identity_env(tmp_path)
+    screen = _screen_late_target_floor_unmeetable()
+
+    def _landmine(*args, **kwargs):
+        raise AssertionError("select must refuse BEFORE any selection")
+    monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
+
+    with pytest.raises(ValueError, match="b200_299"):
+        select_final_manifest(screen, meta, config, forbidden=set())
+
+
+def test_v2_select_enforces_disjointness_against_forbidden(tmp_path):
+    """`assert_disjoint` is a REAL backstop on the completed manifest: a hash the
+    screen's collision filter should have excluded (here: one it actually selected)
+    is refused rather than silently shipped."""
+    config, meta, _files = _v2_identity_env(tmp_path)
+    screen = _screen_from_pool(_abundant_pool_v2())
+    rows, _stats = select_final_manifest(screen, meta, config, forbidden=set())
+    collide = rows[0]["canonical_position_sha1"]
+
+    with pytest.raises(ValueError, match="assert_disjoint"):
+        select_final_manifest(screen, meta, config, forbidden={collide})
+
+
+def test_v2_select_reruns_identically_from_the_persisted_screen_csv(tmp_path):
+    """The whole point of the two-artifact workflow: `select` is re-runnable from the
+    PERSISTED screen alone. A real `write_screen_csv` -> `read_screen_csv` round trip
+    re-derives the IDENTICAL manifest the in-memory rows do -- so the CSV's own type
+    coercions (int/float/bool/null) are provably lossless for everything `select`
+    reads."""
+    config, meta, _files = _v2_identity_env(tmp_path)
+    screen = _screen_from_pool(
+        _abundant_pool_v2(),
+        extra=[(r, "collision") for r in _v2_game(70_000, "target", "opening",
+                                                  "b400_plus")])
+    out_csv = tmp_path / "fpu_dev_source_screen.csv"
+    write_screen_csv(screen, str(out_csv))
+
+    reread = read_screen_csv(str(out_csv))
+    assert len(reread) == len(screen)
+    assert [r["exclusion_status"] for r in reread] == [
+        r["exclusion_status"] for r in screen]
+    # the collision row's nulls survive as nulls, never as fabricated zeros
+    collided = [r for r in reread if r["exclusion_status"] == "collision"]
+    assert collided and all(
+        r["normalized_entropy"] is None and r["root_value_stm"] is None
+        and r["anchor_eligible"] is None and r["anchor_run"] is False
+        for r in collided)
+
+    from_memory, stats_mem = select_final_manifest(screen, meta, config, forbidden=set())
+    from_csv, stats_csv = select_final_manifest(reread, meta, config, forbidden=set())
+    assert from_csv == from_memory
+    assert stats_csv == stats_mem
+
+
+def test_v2_write_select_csv_round_trips_the_manifest(tmp_path):
+    """The select artifact persists in MANIFEST_FIELDNAMES_V2 order, carrying the v1
+    column names the diagnostic reads (`position_ply`, `canonical_position_sha1`,
+    `branching_band`, `ply_bucket`, `split`, `role`) so a v2 manifest is consumable
+    by `diagnose_fpu_policy_mass` unchanged."""
+    config, meta, _files = _v2_identity_env(tmp_path)
+    rows, _stats = select_final_manifest(
+        _screen_from_pool(_abundant_pool_v2()), meta, config, forbidden=set())
+    out_csv = tmp_path / "fpu_dev_corpus_v2_manifest.csv"
+
+    write_select_csv(rows, str(out_csv))
+
+    with open(out_csv, newline="") as f:
+        reader = csv.DictReader(f)
+        assert reader.fieldnames == MANIFEST_FIELDNAMES_V2
+        back = list(reader)
+    assert len(back) == CORPUS_SIZE_V2
+    assert {r["split"] for r in back} == set(SPLITS)
+    assert {r["role"] for r in back} == {"target", "control"}
+    assert all(r["branching_band"] == r["band"] for r in back)
+    assert all(r["ply_bucket"] in PHASES for r in back)
+
+
+# --- `select` is PURE by contract -------------------------------------------
+
+def _function_body(fn):
+    """A function's source with its DOCSTRING stripped, so an assertion about what
+    the code DOES (and in what ORDER) can never be satisfied by prose that merely
+    describes it."""
+    parts = inspect.getsource(fn).split('"""')
+    assert len(parts) >= 3, fn.__name__            # def ... """docstring""" body
+    return '"""'.join(parts[2:])
+
+
+def test_v2_select_stage_never_touches_the_evaluator():
+    """`select` is PURE: its whole call chain -- `select_final_manifest`,
+    `validate_screen_identities`, `post_screen_qualification`,
+    `kept_rows_from_screen`, `read_screen_csv` -- mentions no evaluator / MCTS /
+    checkpoint-loading machinery ANYWHERE (docstrings included), so it holds for
+    every code path, not just the ones a test happens to drive. The same
+    `inspect.getsource` idiom Tasks 4-5 already use."""
+    heavy = ("eval_runner", "from .mcts", "MCTS(", "_teacher_infer",
+             "_build_v2_anchor_search_fn", "search_with_root",
+             "_default_evaluator_factory")
+    for fn in (select_final_manifest, validate_screen_identities,
+               post_screen_qualification, kept_rows_from_screen, read_screen_csv):
+        src = inspect.getsource(fn)
+        for needle in heavy:
+            assert needle not in src, (fn.__name__, needle)
+
+
+def test_v2_select_call_order_is_identities_then_qualification_then_sampling():
+    """The refusal ORDER is structural, not incidental: in `select_final_manifest`'s
+    executable BODY (docstring stripped -- prose must not be able to satisfy this),
+    the identity hard-match precedes the qualification, which precedes the sampler,
+    which precedes `assert_disjoint`. So an identity or qualification failure ALWAYS
+    refuses before any row is selected."""
+    body = _function_body(select_final_manifest)
+    calls = ("validate_screen_identities(", "post_screen_qualification(",
+             "sample_v2_rows(", "assert_disjoint(")
+    for needle in calls:
+        assert needle in body, needle
+    order = [body.index(needle) for needle in calls]
+    assert order == sorted(order), order
+
+
+# --- the dedicated preflight-refusal exception (Task-5 review Minor) ----------
+
+def test_v2_preflight_infeasible_is_a_dedicated_exception():
+    """A ZERO-COST preflight refusal and a crash after HOURS of real GPU work must
+    not be indistinguishable. `run_screen` raises the dedicated
+    `V2PreflightInfeasible` at its one preflight site and `main` catches ONLY that
+    -- so any OTHER failure propagates as a raw traceback instead of masquerading as
+    a cheap "stop-don't-retune" exit 2."""
+    assert issubclass(V2PreflightInfeasible, ValueError)
+
+    screen_src = inspect.getsource(run_screen)
+    assert "raise V2PreflightInfeasible(" in screen_src
+    assert "raise ValueError(" not in screen_src
+
+    main_src = inspect.getsource(main)
+    assert "except V2PreflightInfeasible" in main_src
+    assert "except ValueError" not in main_src
+    assert "except Exception" not in main_src
+
+
+# --- `main --mode select` (argparse only -- main() itself is never invoked) ---
+
+def test_v2_main_select_branch_is_wired(tmp_path):
+    """STATIC wiring of `main`'s select branch (`main` itself is never invoked --
+    plan Global Constraints): it reads the PERSISTED screen (`--screen`) and its
+    DERIVED `.meta.json`, loads the forbidden hashes from the config, runs the pure
+    `select_final_manifest`, and writes `config.select_out` + its meta."""
+    src = inspect.getsource(main)
+    for needle in ('args.mode == "select"', "read_screen_csv(", "meta.json",
+                   "load_forbidden_hashes(", "select_final_manifest(",
+                   "write_select_csv(", "write_screen_meta(", "config.select_out"):
+        assert needle in src, needle
