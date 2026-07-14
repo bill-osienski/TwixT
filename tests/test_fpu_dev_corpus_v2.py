@@ -45,6 +45,7 @@ Task 3's tests (bottom of the file) exercise the phase-stratified sampler
 same pure, evaluator-free shape as v1's tests/test_fpu_dev_corpus.py.
 """
 import copy
+import csv
 import dataclasses
 import inspect
 import json
@@ -61,6 +62,8 @@ from scripts.GPU.alphazero.build_fpu_dev_corpus import (
     side_to_move_for_ply,
 )
 from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
+    ANCHOR_SEED_BASE_V2,
+    ANCHOR_SIMS_V2,
     ASSIGN_ATTEMPTS,
     CELL_ORDER_V2,
     CORPUS_SIZE as CORPUS_SIZE_V2,
@@ -74,17 +77,30 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     PHASES,
     PROPOSAL_CELLS,
     QUOTA_PER_PHASE,
+    SCREEN_FIELDNAMES,
     SIDE_TOL,
     SPLIT_ALLOC_V2,
     SPLIT_TOTALS,
     SPLITS,
+    V2Config,
     V2PreflightReport,
+    _build_v2_anchor_search_fn,
+    _parse_v2_args,
+    _v2_anchor_seed,
     assign_split_v2,
+    classify_exclusion,
     enumerate_v2_proposals,
+    load_v2_config,
+    main,
     proposal_cell_of,
+    run_screen,
     sample_v2_rows,
+    screen_row,
     v2_geometry_feasibility,
     v2_preflight_source,
+    v2_screen_provenance,
+    write_screen_csv,
+    write_screen_meta,
 )
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
 
@@ -2265,12 +2281,457 @@ def test_v2_preflight_source_feasible_end_to_end(tmp_path):
     assert report.n_games == 120
 
 
+# ---------------------------------------------------------------------------
+# Task 5 -- the operator `screen` stage: row schema + the two pure per-
+# proposal helpers (`classify_exclusion`, `screen_row`), the required config
+# loader (`V2Config` / `load_v2_config`), and STATIC verification that
+# `run_screen` / `main` / `_build_v2_anchor_search_fn` are wired correctly
+# WITHOUT ever invoking them -- `run_screen` loads a real checkpoint and runs
+# 400-sim MCTS, an OPERATOR phase never run by this suite.
+#
+# Frozen design ref: docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md
+#   Sec 1.6 (`screen`/`select` two-artifact workflow, screen row schema), Sec
+#   1.8 (the required versioned config).
+# v2 plan Task 5. `_v2_proposal` (Task 4's fixture helper, defined above) is
+# reused here to build fabricated proposal dicts in the exact
+# `enumerate_v2_proposals` schema -- still no evaluator/MCTS/GPU/MLX/I-O.
+# ---------------------------------------------------------------------------
+
+def test_screen_fieldnames_exact_schema_in_order():
+    """Interface: SCREEN_FIELDNAMES is EXACTLY these 18 columns, in this
+    order (design Sec 1.6) -- `phase` and `ply_bucket` are BOTH present
+    (deliberately duplicated; Task 7's diagnostic opts into stratifying by
+    ply_bucket, so every row must carry it independently of `phase`)."""
+    assert SCREEN_FIELDNAMES == [
+        "game_idx", "ply", "side", "phase", "n_legal", "band", "ply_bucket",
+        "proposal_cell", "normalized_entropy", "top1_prior", "top4_mass",
+        "top8_mass", "raw_policy_role", "anchor_run", "root_value_stm",
+        "anchor_eligible", "canonical_sha1", "exclusion_status",
+    ]
+
+
+# --- classify_exclusion: the brief's four cases -----------------------------
+
+def test_classify_exclusion_collision_short_circuits_role_and_anchor():
+    """Brief case 1: collided=True -> ("collision", anchor_run=False) --
+    checked with role/anchor_eligible_val SET (not None) too, proving
+    collision is checked FIRST and unconditionally overrides them (a collided
+    proposal never even reaches the raw-policy pass)."""
+    assert classify_exclusion(collided=True, role=None,
+                              anchor_eligible_val=None) == ("collision", False)
+    assert classify_exclusion(collided=True, role="target",
+                              anchor_eligible_val=True) == ("collision", False)
+
+
+def test_classify_exclusion_ineligible_role():
+    """Brief case 2: collided=False, role=None -> ("ineligible_role", False)."""
+    assert classify_exclusion(
+        collided=False, role=None,
+        anchor_eligible_val=None) == ("ineligible_role", False)
+
+
+def test_classify_exclusion_ineligible_anchor():
+    """Brief case 3: role set, anchor_eligible_val=False ->
+    ("ineligible_anchor", True) -- checked for BOTH roles, since any non-None
+    role reaches the anchor branch."""
+    assert classify_exclusion(
+        collided=False, role="target",
+        anchor_eligible_val=False) == ("ineligible_anchor", True)
+    assert classify_exclusion(
+        collided=False, role="control",
+        anchor_eligible_val=False) == ("ineligible_anchor", True)
+
+
+def test_classify_exclusion_kept():
+    """Brief case 4: role set, anchor_eligible_val=True -> ("kept", True)."""
+    assert classify_exclusion(
+        collided=False, role="target",
+        anchor_eligible_val=True) == ("kept", True)
+    assert classify_exclusion(
+        collided=False, role="control",
+        anchor_eligible_val=True) == ("kept", True)
+
+
+# --- screen_row: full schema + the nullable-field rules ---------------------
+
+_SCREEN_FEATS = {"normalized_entropy": 0.95, "top1_prior": 0.01,
+                 "top4_mass": 0.03, "top8_mass": 0.05}
+
+
+def test_screen_row_full_schema_kept_case():
+    """`screen_row` yields the full SCREEN_FIELDNAMES schema -- exact key
+    set, BOTH `band` and `ply_bucket` carried (and equal to `phase`), every
+    field correctly placed from `proposal` / `feats` / the explicit kwargs."""
+    proposal = _v2_proposal(7, 42, ("midgame", None))
+    row = screen_row(proposal, feats=_SCREEN_FEATS, role="target",
+                     anchor_run=True, root_value_stm=0.125, anchor_eligible=True,
+                     canonical_sha1="deadbeef", exclusion_status="kept")
+
+    assert set(row.keys()) == set(SCREEN_FIELDNAMES)
+    assert row["game_idx"] == 7
+    assert row["ply"] == 42
+    assert row["side"] == proposal["side"]
+    assert row["phase"] == "midgame"
+    assert row["n_legal"] == proposal["n_legal"]
+    assert row["band"] == proposal["band"]
+    assert row["ply_bucket"] == row["phase"] == "midgame"    # deliberately equal
+    assert row["proposal_cell"] == ("midgame", None)
+    assert row["normalized_entropy"] == 0.95
+    assert row["top1_prior"] == 0.01
+    assert row["top4_mass"] == 0.03
+    assert row["top8_mass"] == 0.05
+    assert row["raw_policy_role"] == "target"
+    assert row["anchor_run"] is True
+    assert row["root_value_stm"] == 0.125
+    assert row["anchor_eligible"] is True
+    assert row["canonical_sha1"] == "deadbeef"
+    assert row["exclusion_status"] == "kept"
+
+
+def test_screen_row_collision_nulls_policy_and_anchor_fields():
+    """Collision: the raw-policy pass NEVER ran, so feats=None -> the four
+    policy columns are null, NOT a fabricated 0.0 -- and anchor_run=False ->
+    root_value_stm/anchor_eligible null too. band/ply_bucket stay populated
+    (from the proposal, unaffected by the collision)."""
+    proposal = _v2_proposal(3, 130, ("late", "b300_399"))
+    row = screen_row(proposal, feats=None, role=None, anchor_run=False,
+                     root_value_stm=None, anchor_eligible=None,
+                     canonical_sha1="collided-hash", exclusion_status="collision")
+
+    assert row["normalized_entropy"] is None
+    assert row["top1_prior"] is None
+    assert row["top4_mass"] is None
+    assert row["top8_mass"] is None
+    assert row["raw_policy_role"] is None
+    assert row["anchor_run"] is False
+    assert row["root_value_stm"] is None
+    assert row["anchor_eligible"] is None
+    assert row["exclusion_status"] == "collision"
+    assert row["band"] == proposal["band"]
+    assert row["ply_bucket"] == "late"
+
+
+def test_screen_row_ineligible_role_keeps_populated_policy_feats():
+    """ineligible_role: the raw-policy pass DID run (feats populated) even
+    though the CLASSIFICATION landed in the grey zone (role=None) -- only
+    raw_policy_role and the (never-run) anchor fields are null."""
+    proposal = _v2_proposal(9, 16, ("early_mid", None))
+    row = screen_row(proposal, feats=_SCREEN_FEATS, role=None, anchor_run=False,
+                     root_value_stm=None, anchor_eligible=None,
+                     canonical_sha1="grey-zone-hash",
+                     exclusion_status="ineligible_role")
+
+    assert row["normalized_entropy"] == 0.95
+    assert row["top1_prior"] == 0.01
+    assert row["top4_mass"] == 0.03
+    assert row["top8_mass"] == 0.05
+    assert row["raw_policy_role"] is None
+    assert row["anchor_run"] is False
+    assert row["root_value_stm"] is None
+    assert row["anchor_eligible"] is None
+    assert row["exclusion_status"] == "ineligible_role"
+
+
+def test_screen_row_ineligible_anchor_has_non_null_anchor_fields():
+    """ineligible_anchor: the anchor DID run (anchor_run=True) -- unlike
+    collision/ineligible_role, root_value_stm/anchor_eligible are non-null
+    even though the row is ultimately excluded."""
+    proposal = _v2_proposal(11, 92, ("late", "b400_plus"))
+    row = screen_row(proposal, feats=_SCREEN_FEATS, role="control", anchor_run=True,
+                     root_value_stm=0.4, anchor_eligible=False,
+                     canonical_sha1="far-from-even-hash",
+                     exclusion_status="ineligible_anchor")
+
+    assert row["raw_policy_role"] == "control"
+    assert row["anchor_run"] is True
+    assert row["root_value_stm"] == 0.4
+    assert row["anchor_eligible"] is False
+    assert row["exclusion_status"] == "ineligible_anchor"
+
+
+def test_screen_row_enforces_anchor_run_nullness_contract():
+    """screen_row's own defensive contract: anchor_run=True requires
+    non-null root_value_stm/anchor_eligible, and anchor_run=False requires
+    them null -- violating either raises rather than silently persisting an
+    inconsistent row."""
+    proposal = _v2_proposal(1, 0, ("opening", None))
+    with pytest.raises(AssertionError):
+        screen_row(proposal, feats=_SCREEN_FEATS, role="target", anchor_run=True,
+                  root_value_stm=None, anchor_eligible=True,
+                  canonical_sha1="x", exclusion_status="kept")
+    with pytest.raises(AssertionError):
+        screen_row(proposal, feats=None, role=None, anchor_run=False,
+                  root_value_stm=0.1, anchor_eligible=None,
+                  canonical_sha1="x", exclusion_status="collision")
+
+
+# --- the required config: V2Config / load_v2_config -------------------------
+
+def _complete_v2_config_dict(tmp_path, **overrides):
+    cfg = {
+        "source_index_path": str(tmp_path / "reservoir_index.jsonl"),
+        "seed_range": [20270000, 20274800],
+        "selection_seed": 20260712,
+        "phase_allocation": {f"{role}|{phase}": alloc
+                             for (role, phase), alloc in SPLIT_ALLOC_V2.items()},
+        "late_floors": dict(LATE_TARGET_FLOORS),
+        "enumerator_params": {"min_ply_gap": MIN_PLY_GAP,
+                              "max_per_cell_per_game": MAX_PER_CELL_PER_GAME},
+        "new_collapse_stratum": "ply_bucket",
+        "checkpoint": str(tmp_path / "checkpoint.npz"),
+        "forbidden_manifests": [str(tmp_path / "forbidden_a.csv")],
+        "screen_out": str(tmp_path / "fpu_dev_source_screen.csv"),
+        "select_out": str(tmp_path / "fpu_dev_corpus_v2_manifest.csv"),
+        "expected_fingerprints": {"source_index_sha1": "deadbeef"},
+    }
+    cfg.update(overrides)
+    return cfg
+
+
+def test_load_v2_config_loads_a_complete_config(tmp_path):
+    p = tmp_path / "config.json"
+    p.write_text(json.dumps(_complete_v2_config_dict(tmp_path)))
+
+    config = load_v2_config(str(p))
+
+    assert isinstance(config, V2Config)
+    assert config.config_path == str(p)
+    assert config.source_index_path == str(tmp_path / "reservoir_index.jsonl")
+    assert config.seed_range == (20270000, 20274800)
+    assert config.selection_seed == 20260712
+    assert config.new_collapse_stratum == "ply_bucket"
+    assert config.checkpoint == str(tmp_path / "checkpoint.npz")
+    assert config.forbidden_manifests == (str(tmp_path / "forbidden_a.csv"),)
+    assert config.screen_out == str(tmp_path / "fpu_dev_source_screen.csv")
+    assert config.select_out == str(tmp_path / "fpu_dev_corpus_v2_manifest.csv")
+    assert config.expected_fingerprints == {"source_index_sha1": "deadbeef"}
+    # v1-matching defaults when the config itself omits these two knobs.
+    assert config.eval_batch_size == 14
+    assert config.stall_flush_sims == 48
+
+
+def test_load_v2_config_honors_explicit_throughput_overrides(tmp_path):
+    p = tmp_path / "config.json"
+    p.write_text(json.dumps(_complete_v2_config_dict(
+        tmp_path, eval_batch_size=7, stall_flush_sims=99)))
+
+    config = load_v2_config(str(p))
+
+    assert config.eval_batch_size == 7
+    assert config.stall_flush_sims == 99
+
+
+def test_load_v2_config_raises_on_missing_required_key(tmp_path):
+    raw = _complete_v2_config_dict(tmp_path)
+    del raw["checkpoint"]
+    p = tmp_path / "config.json"
+    p.write_text(json.dumps(raw))
+
+    with pytest.raises(ValueError, match="checkpoint"):
+        load_v2_config(str(p))
+
+
+def test_load_v2_config_raises_naming_every_missing_key(tmp_path):
+    raw = _complete_v2_config_dict(tmp_path)
+    del raw["checkpoint"]
+    del raw["late_floors"]
+    p = tmp_path / "config.json"
+    p.write_text(json.dumps(raw))
+
+    with pytest.raises(ValueError, match="checkpoint") as excinfo:
+        load_v2_config(str(p))
+    assert "late_floors" in str(excinfo.value)
+
+
+# --- the fpu-off 400-sim anchor's own small pure pieces ----------------------
+
+def test_v2_anchor_sims_is_400():
+    assert ANCHOR_SIMS_V2 == 400
+
+
+def test_v2_anchor_seed_is_deterministic_and_input_sensitive():
+    assert _v2_anchor_seed(3, 41) == _v2_anchor_seed(3, 41)          # deterministic
+    assert _v2_anchor_seed(3, 41) != _v2_anchor_seed(3, 42)          # ply-sensitive
+    assert _v2_anchor_seed(3, 41) != _v2_anchor_seed(4, 41)          # game-sensitive
+    assert _v2_anchor_seed(3, 41) == ANCHOR_SEED_BASE_V2 ^ 3 ^ 41
+
+
+# --- static wiring: signatures, argparse, and lazy-import resolution --------
+# NONE of these invoke run_screen/main/MCTS -- only signature/source-text/
+# find_spec inspection, exactly like Task 4's own
+# test_v2_feasible_true_only_ever_via_a_completed_witness (inspect.getsource).
+
+def test_v2_operator_functions_exist_with_expected_call_signatures():
+    """run_screen/main/load_v2_config exist, are callable, and take exactly
+    the parameters the brief's interfaces specify."""
+    assert callable(run_screen)
+    assert list(inspect.signature(run_screen).parameters) == ["config"]
+
+    assert callable(main)
+    main_params = inspect.signature(main).parameters
+    assert list(main_params) == ["argv"]
+    assert main_params["argv"].default is None
+
+    assert callable(load_v2_config)
+    assert list(inspect.signature(load_v2_config).parameters) == ["path"]
+
+    assert callable(classify_exclusion)
+    assert set(inspect.signature(classify_exclusion).parameters) == {
+        "collided", "role", "anchor_eligible_val"}
+
+    assert callable(screen_row)
+    assert set(inspect.signature(screen_row).parameters) == {
+        "proposal", "feats", "role", "anchor_run", "root_value_stm",
+        "anchor_eligible", "canonical_sha1", "exclusion_status"}
+
+
+def test_v2_mode_argument_accepts_only_screen_so_far():
+    """argparse wiring: --mode/--config are both required; --mode is
+    restricted to ("screen",) -- Task 6 will widen this to include "select",
+    but shipping a broken/dead "select" path now is explicitly disallowed, so
+    "select" must be REJECTED until Task 6 actually adds it."""
+    args = _parse_v2_args(["--mode", "screen", "--config", "cfg.json"])
+    assert args.mode == "screen"
+    assert args.config == "cfg.json"
+
+    with pytest.raises(SystemExit):
+        _parse_v2_args(["--mode", "select", "--config", "cfg.json"])
+    with pytest.raises(SystemExit):
+        _parse_v2_args(["--config", "cfg.json"])          # --mode is required
+    with pytest.raises(SystemExit):
+        _parse_v2_args(["--mode", "screen"])               # --config is required
+
+
+def test_v2_operator_lazy_imports_resolve_without_executing_them():
+    """Every heavy import inside the operator functions (`.eval_runner`,
+    `.mcts`, `.build_teacher_calibration_manifest`) must resolve to a REAL,
+    importable module -- checked via `importlib.util.find_spec`, which
+    locates a module's spec WITHOUT running its top-level code (unlike
+    `import`/`importlib.import_module`), so this check can never itself pull
+    mlx/torch into sys.modules, regardless of what those modules do at
+    import time. Source-text inspection (the SAME `inspect.getsource`
+    pattern Task 4 already uses, e.g.
+    test_v2_feasible_true_only_ever_via_a_completed_witness) confirms each
+    import statement lives INSIDE the relevant operator function's own body
+    -- never at this module's top level, which is exactly why importing
+    fpu_dev_corpus_v2 never triggers them (see
+    test_v2_module_import_pulls_no_gpu_or_mlx below) -- and that the
+    expected call sites are actually present."""
+    import importlib.util
+
+    for mod_name in ("scripts.GPU.alphazero.eval_runner",
+                     "scripts.GPU.alphazero.mcts",
+                     "scripts.GPU.alphazero.build_teacher_calibration_manifest"):
+        assert importlib.util.find_spec(mod_name) is not None, mod_name
+
+    anchor_src = inspect.getsource(_build_v2_anchor_search_fn)
+    assert "from .eval_runner import" in anchor_src
+    assert "from .mcts import MCTS" in anchor_src
+    assert "search_with_root" in anchor_src
+    assert "fpu_policy_mass_reduction=None" in anchor_src
+
+    screen_src = inspect.getsource(run_screen)
+    assert "from .build_teacher_calibration_manifest import _teacher_infer" in screen_src
+    assert "_build_v2_anchor_search_fn(" in screen_src
+    assert "enumerate_v2_proposals(" in screen_src
+    assert "classify_exclusion(" in screen_src
+    assert "screen_row(" in screen_src
+    assert "v2_preflight_source(" in screen_src   # gates before the evaluator loads
+    assert "write_screen_csv(" in screen_src
+    assert "write_screen_meta(" in screen_src
+
+
+# --- screen artifact persistence: pure stdlib I/O, safe to exercise directly
+# (no MCTS/GPU/MLX/checkpoint anywhere in write_screen_csv / write_screen_meta
+# / v2_screen_provenance -- unlike run_screen/main, these are ordinary file
+# writers over already-computed data, so calling them directly does not
+# violate "never invoke run_screen/main/MCTS").
+
+def test_write_screen_csv_round_trips_null_and_tuple_fields(tmp_path):
+    """A kept row's real values and a collision row's null policy/anchor
+    columns both round-trip through a real CSV write + read: None becomes an
+    empty field (never a fabricated value) and the tuple-valued
+    proposal_cell round-trips as its str()."""
+    kept_row = screen_row(
+        _v2_proposal(5, 13, ("opening", None)), feats=_SCREEN_FEATS, role="target",
+        anchor_run=True, root_value_stm=0.2, anchor_eligible=True,
+        canonical_sha1="kept-hash", exclusion_status="kept")
+    collision_row = screen_row(
+        _v2_proposal(6, 0, ("opening", None)), feats=None, role=None,
+        anchor_run=False, root_value_stm=None, anchor_eligible=None,
+        canonical_sha1="collided-hash", exclusion_status="collision")
+    out_csv = tmp_path / "fpu_dev_source_screen.csv"
+
+    write_screen_csv([kept_row, collision_row], str(out_csv))
+
+    with open(out_csv, newline="") as f:
+        rows = list(csv.DictReader(f))
+    assert [r["exclusion_status"] for r in rows] == ["kept", "collision"]
+    assert rows[0]["proposal_cell"] == str(("opening", None))
+    assert rows[0]["root_value_stm"] == "0.2"
+    assert rows[1]["root_value_stm"] == ""          # None -> empty CSV field
+    assert rows[1]["anchor_eligible"] == ""
+    assert rows[1]["normalized_entropy"] == ""
+
+
+def test_v2_screen_provenance_has_the_sec_1_8_fingerprint_keys(tmp_path):
+    """v2_screen_provenance -- pure/stdlib-only via fpu_provenance -- carries
+    every fingerprint the brief names (config hash + source_file_sha1s,
+    replay_data_sha1, source_index_sha1, checkpoint identity,
+    forbidden-manifest hashes, runtime_provenance). None inputs resolve to
+    fpu_provenance's own "none" sentinel rather than raising."""
+    config_path = tmp_path / "config.json"
+    config_path.write_text("{}")
+
+    prov = v2_screen_provenance(
+        config_path=str(config_path), source_index_path=None, checkpoint=None,
+        forbidden_manifests=[], base_mcts_config={"n_simulations": 400})
+
+    assert set(prov) == {
+        "config_sha1", "source_file_sha1s", "source_index_sha1",
+        "replay_data_sha1", "checkpoint_identity", "forbidden_manifest_sha1s",
+        "base_mcts_config", "add_noise", "runtime_provenance"}
+    assert prov["config_sha1"] != "none"            # config_path IS a real file
+    assert prov["source_index_sha1"] == "none"       # source_index_path was None
+    assert prov["checkpoint_identity"] == "none"
+    assert prov["add_noise"] is False
+    assert prov["base_mcts_config"] == {"n_simulations": 400}
+    assert "fpu_dev_corpus_v2.py" in prov["source_file_sha1s"]
+    assert "python_version" in prov["runtime_provenance"]
+
+
+def test_write_screen_meta_enriches_with_provenance_without_clobbering(tmp_path):
+    """write_screen_meta adds a DERIVED "provenance" block without disturbing
+    the caller's own meta keys (mirrors v1's write_meta contract)."""
+    config_path = tmp_path / "config.json"
+    config_path.write_text("{}")
+    out_csv = tmp_path / "fpu_dev_source_screen.csv"
+
+    write_screen_meta(str(out_csv), {
+        "config_path": str(config_path), "source_index_path": None,
+        "checkpoint": None, "forbidden_manifests": [], "n_proposals": 0,
+        "base_mcts_config": None,
+    })
+
+    meta_path = out_csv.with_name(out_csv.name + ".meta.json")
+    meta = json.loads(meta_path.read_text())
+    assert meta["n_proposals"] == 0                  # caller key passes through untouched
+    assert meta["source_index_path"] is None
+    assert "provenance" in meta
+    assert meta["provenance"]["config_sha1"] != "none"
+
+
 # --- import purity -----------------------------------------------------------
 
 def test_v2_module_import_pulls_no_gpu_or_mlx():
-    """The whole v2 PURE SECTION -- constants, enumerator, sampler and now the
-    preflight (whose only impure part is a stdlib json/pathlib file read) -- must
-    stay importable without ever touching GPU/MLX."""
+    """The whole v2 module -- the PURE SECTION (constants, enumerator,
+    sampler, preflight; the preflight's only impure part is a stdlib
+    json/pathlib file read) AND the Task-5 OPERATOR SHELL (`run_screen`,
+    `main`, `_build_v2_anchor_search_fn`, `load_v2_config`) -- must stay
+    importable without ever touching GPU/MLX: the operator shell's heavy
+    imports (`.eval_runner`, `.mcts`, `.build_teacher_calibration_manifest`)
+    are all LAZY, inside the functions that need them, never at module top
+    level."""
     import subprocess
     import sys
     out = subprocess.run(

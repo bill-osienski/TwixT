@@ -22,8 +22,13 @@ parsing. The ONE impure function is `v2_preflight_source`, the deliberately
 thin file-read wrapper over the pure preflight core -- stdlib json/pathlib
 only, exactly like v1's own `preflight_source` (build_fpu_dev_corpus.py:785).
 Later tasks append BELOW this section, in order:
-  Task 5: the operator `screen` stage (evaluator/MCTS; lazy heavy imports).
-  Task 6: the pure `select` stage + config loader + `main`.
+  Task 5: the operator `screen` stage (evaluator/MCTS; lazy heavy imports),
+    plus the required config loader (`V2Config` / `load_v2_config`) and
+    `main` itself -- `main --mode screen` already needs the config to record
+    its own hash in the screen's `.meta.json`, so both live here rather than
+    waiting for Task 6 (see fpu_dev_corpus_v2.py's own Task-5 section header).
+  Task 6: the pure `select` stage, extending `main` with `--mode select`
+    (`screen` and `select` are never the same invocation).
 Keep this section cleanly separated and importable without ever triggering a
 GPU/MLX import -- any future heavy import goes lazily inside the Task-5
 operator functions, exactly as build_fpu_dev_corpus.py's own `main` /
@@ -55,12 +60,14 @@ import's inline comment for why.
 """
 from __future__ import annotations
 
+import argparse
+import csv
 import dataclasses
 import json
 import random
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
 # Deliberately-shared v1 frozen constants (identical semantics in v2):
 # MIN_PLY_GAP = the >=12-ply side-opposed-pair gap; MAX_PER_GAME = the <=2
@@ -103,6 +110,12 @@ from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
 # must spend ONE shared per-game budget across PHASES -- see `_build_v2_witness`.)
 #
 # All reused verbatim (DRY) -- never reimplemented here.
+#
+# Task-5 additions (the operator `screen` stage at the bottom of this file):
+# `anchor_eligible` / `raw_policy_role` / `_policy_features_from_priors` /
+# `load_forbidden_hashes` / `load_game_index` are v1's own Stage-2/scan pure
+# helpers (build_fpu_dev_corpus.py Tasks 5-6) -- reused verbatim, exactly as
+# the design's Sec 2 reuse list names them, never reimplemented here.
 from .build_fpu_dev_corpus import (
     MAX_PER_GAME,
     MIN_PLY_GAP,
@@ -111,11 +124,27 @@ from .build_fpu_dev_corpus import (
     _choose_positions,
     _first_gap_pair,
     _gap_selectable,
+    _policy_features_from_priors,
+    anchor_eligible,
     band_of,
+    load_forbidden_hashes,
+    load_game_index,
     per_ply_n_legal,
     ply_bucket_of,
+    raw_policy_role,
     side_to_move_for_ply,
 )
+# Task-5 additions: both pure (no MCTS/GPU/MLX) -- `canonical_state_sha1`
+# imports only `TwixtState` (fpu_state_hash's own module docstring);
+# `position_state` imports only `statistics` + `TwixtState`
+# (goal_line_trigger_probe_cases' own module docstring). DRY per the design's
+# Sec 2 reuse list -- reused, never reimplemented, exactly as v1's own
+# operator shell does (build_fpu_dev_corpus.py:46-47).
+from .fpu_state_hash import canonical_state_sha1
+from .goal_line_trigger_probe_cases import position_state
+# Stdlib-only provenance helpers (design Sec 1.8) -- keeps this module
+# GPU/MLX-free, exactly as v1's own reuse (build_fpu_dev_corpus.py:55).
+from . import fpu_provenance
 
 # ---------------------------------------------------------------------------
 # Frozen constants (verbatim from the design + Task-1 brief)
@@ -1499,3 +1528,624 @@ def v2_preflight_source(records: List[Mapping[str, Any]]) -> V2PreflightReport:
         replay = {**replay, "game_idx": rec["game_idx"]}
         proposals_by_game[rec["game_idx"]] = enumerate_v2_proposals(replay)
     return v2_geometry_feasibility(proposals_by_game)
+
+
+# =============================================================================
+# OPERATOR SHELL (Task 5: the `screen` stage, its config loader, and `main`;
+# Task 6 appends the pure `select` stage below this and extends `main` with
+# `--mode select`).
+#
+# Frozen design ref: docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md
+#   Sec 1.6 (two-artifact `screen`/`select` workflow), Sec 1.7 (two-stage
+#   feasibility -- the geometric preflight above GATES this stage), Sec 1.8
+#   (the required versioned config).
+#
+# `run_screen()` / `main --mode screen` are an OPERATOR phase: `run_screen`
+# loads a real checkpoint (`config.checkpoint`), reconstructs real reservoir
+# replay positions, and runs 400-sim MCTS. NEITHER is ever invoked by this
+# task's tests -- every test exercises only the pure `classify_exclusion` /
+# `screen_row` / `load_v2_config`, plus STATIC verification (signature/
+# source-text/`importlib.util.find_spec` inspection, never execution) that
+# the operator path is wired correctly.
+#
+# Nothing ABOVE this banner imports MCTS/GPU/MLX or performs I/O beyond
+# `v2_preflight_source`'s own thin, stdlib-only file reads. Below it,
+# `SCREEN_FIELDNAMES` / `classify_exclusion` / `screen_row` / `V2Config` /
+# `load_v2_config` / `write_screen_csv` / `v2_screen_provenance` /
+# `write_screen_meta` / `_parse_v2_args` stay equally stdlib-only and
+# importable without GPU/MLX. The GPU/MLX/checkpoint/evaluator modules
+# (`.eval_runner`, `.mcts`'s MCTS class, `.build_teacher_calibration_manifest`)
+# are imported LAZILY, inside the two functions that actually need each --
+# `_build_v2_anchor_search_fn` and `run_screen` -- exactly as
+# build_fpu_dev_corpus.py's own `main` / `_build_anchor_search_fn` /
+# `_scan_two_stage` do (see that file's OWN banner at :375-392).
+#
+# `_build_anchor_search_fn` / `_anchor_seed` / `ANCHOR_SIMS` / `_scan_two_stage`
+# are DELIBERATELY NOT imported from build_fpu_dev_corpus here, unlike the
+# pure helpers imported at the top of this file: the Global Constraints
+# reserve cross-module reuse to v1's PURE helpers only ("do NOT alter the v1
+# build_fpu_dev_corpus.py behavior except by importing its pure helpers"),
+# and those four are v1's own IMPURE operator plumbing (checkpoint/GPU/MLX
+# work) -- so v2 MIRRORS their shape with its own `_build_v2_anchor_search_fn`
+# / `_v2_anchor_seed` / `ANCHOR_SIMS_V2` / `run_screen` instead (design Sec 2:
+# "the fpu-off anchor + raw-policy forward pass mirror the v1 shell").
+# `_teacher_infer` (from `.build_teacher_calibration_manifest`, a DIFFERENT
+# module than build_fpu_dev_corpus) IS reused verbatim, imported lazily
+# inside `run_screen`, exactly as v1's own `_scan_two_stage` does.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Screen row schema + the two pure per-proposal helpers (design Sec 1.6)
+# ---------------------------------------------------------------------------
+
+# The screen artifact's COMPLETE row schema, in this exact order. `phase` and
+# `ply_bucket` deliberately carry the SAME value (`screen_row` always sets
+# `ply_bucket = proposal["phase"]`) under two distinct column names: Task 7's
+# diagnostic opts into stratifying by `ply_bucket` (design Sec 1.4), so every
+# row must carry it independently of `phase`, even though the two never
+# diverge today (`enumerate_v2_proposals` derives `phase` from
+# `ply_bucket_of`). `band` is the recorded branching covariate (Sec 1.2/1.3);
+# `proposal_cell` is the enumerator's own (phase, band-or-None) cell tuple,
+# carried through for review. The four raw-policy geometry columns
+# (`normalized_entropy` .. `top4_mass`/`top8_mass`) and `raw_policy_role` are
+# nullable (null on `collision`, populated but possibly role=None on
+# `ineligible_role`); `root_value_stm`/`anchor_eligible` are nullable
+# precisely when `anchor_run` is False.
+SCREEN_FIELDNAMES: List[str] = [
+    "game_idx", "ply", "side", "phase", "n_legal", "band", "ply_bucket",
+    "proposal_cell", "normalized_entropy", "top1_prior", "top4_mass",
+    "top8_mass", "raw_policy_role", "anchor_run", "root_value_stm",
+    "anchor_eligible", "canonical_sha1", "exclusion_status",
+]
+
+
+def classify_exclusion(*, collided: bool, role: Optional[str],
+                       anchor_eligible_val: Optional[bool]) -> Tuple[str, bool]:
+    """Pure per-proposal exclusion classifier (design Sec 1.6) -- the SAME
+    facts `run_screen` computes while scoring one proposal, in the SAME
+    cheap-filters-before-the-anchor order:
+
+      1. `collided` (sha1 in forbidden-union-kept) -> `"collision"`,
+         `anchor_run=False` -- checked FIRST and UNCONDITIONALLY: a collision
+         short-circuits regardless of `role`/`anchor_eligible_val` (the
+         raw-policy pass never even ran for a collided proposal, so those
+         arguments are meaningless here -- see `screen_row`'s own
+         `feats=None` contract for the collision path).
+      2. else `role is None` (the raw-policy pass ran but landed in the grey
+         zone) -> `"ineligible_role"`, `anchor_run=False` -- the anchor is
+         NEVER run for either of the two cheap-filter rejections above.
+      3. else (role is "target" or "control", so BOTH cheap filters passed
+         and the 400-sim anchor DID run) -> `anchor_eligible_val` decides
+         `"ineligible_anchor"` (False) or `"kept"` (True); `anchor_run=True`
+         in both of these cases.
+
+    `anchor_eligible_val` is named (not `anchor_eligible`, the imported
+    Stage-2 predicate `run_screen` calls to PRODUCE this value) so this
+    function's own parameter can never shadow that import.
+    """
+    if collided:
+        return "collision", False
+    if role is None:
+        return "ineligible_role", False
+    if not anchor_eligible_val:
+        return "ineligible_anchor", True
+    return "kept", True
+
+
+def screen_row(proposal: Mapping[str, Any], *, feats: Optional[Mapping[str, float]],
+               role: Optional[str], anchor_run: bool,
+               root_value_stm: Optional[float], anchor_eligible: Optional[bool],
+               canonical_sha1: str, exclusion_status: str) -> dict:
+    """Assemble ONE complete `SCREEN_FIELDNAMES` row (design Sec 1.6) from a
+    Task-2 `enumerate_v2_proposals` proposal dict (`game_idx, ply, side,
+    phase, n_legal, band, proposal_cell`) plus this proposal's own screening
+    outcome. Pure dict assembly -- v1's `_manifest_row` shape -- performing NO
+    filtering/classification itself (`classify_exclusion` decides
+    `exclusion_status`/`anchor_run`; this only projects the result into the
+    frozen schema) and touching no evaluator/MCTS.
+
+    `ply_bucket` is ALWAYS set to `proposal["phase"]` -- see `SCREEN_FIELDNAMES`'s
+    own comment for why the schema carries both under separate names.
+
+    `feats=None` (the COLLISION path -- the raw-policy forward pass never
+    ran) leaves all four policy-geometry columns `None`: explicitly NULL,
+    never a fabricated `0.0` (a real `0.0` would misreport a
+    maximally-concentrated prior that was never observed). Any other `feats`
+    (a real `_policy_features_from_priors(...)` result) populates all four,
+    REGARDLESS of whether `role` itself is `None` -- `ineligible_role` rows
+    still carry their (grey-zone) policy geometry; only `raw_policy_role`
+    itself is `None` there.
+
+    `anchor_run` and `root_value_stm`/`anchor_eligible` nullness are a
+    two-way CONTRACT, asserted here rather than silently trusted: `run_screen`
+    -- this function's one caller -- derives `anchor_run` via
+    `classify_exclusion` from the SAME facts that determine whether the
+    anchor search actually ran, so the two can never legitimately disagree.
+    """
+    if anchor_run:
+        assert root_value_stm is not None and anchor_eligible is not None, (
+            "screen_row: anchor_run=True requires a non-null root_value_stm "
+            "and anchor_eligible (the anchor DID run)")
+    else:
+        assert root_value_stm is None and anchor_eligible is None, (
+            "screen_row: anchor_run=False requires null root_value_stm and "
+            "anchor_eligible (the anchor was never run)")
+
+    if feats is None:
+        normalized_entropy = top1_prior = top4_mass = top8_mass = None
+    else:
+        normalized_entropy = feats["normalized_entropy"]
+        top1_prior = feats["top1_prior"]
+        top4_mass = feats["top4_mass"]
+        top8_mass = feats["top8_mass"]
+
+    return {
+        "game_idx": proposal["game_idx"],
+        "ply": proposal["ply"],
+        "side": proposal["side"],
+        "phase": proposal["phase"],
+        "n_legal": proposal["n_legal"],
+        "band": proposal["band"],
+        "ply_bucket": proposal["phase"],
+        "proposal_cell": proposal["proposal_cell"],
+        "normalized_entropy": normalized_entropy,
+        "top1_prior": top1_prior,
+        "top4_mass": top4_mass,
+        "top8_mass": top8_mass,
+        "raw_policy_role": role,
+        "anchor_run": anchor_run,
+        "root_value_stm": root_value_stm,
+        "anchor_eligible": anchor_eligible,
+        "canonical_sha1": canonical_sha1,
+        "exclusion_status": exclusion_status,
+    }
+
+
+# ---------------------------------------------------------------------------
+# The required v2 config (design Sec 1.8) -- "controller resolution": defined
+# HERE (not Task 6) because `main --mode screen` already needs it to record
+# the config's own hash in the screen's `.meta.json`. Task 6 reuses
+# `load_v2_config` unchanged and adds its own tests pinning its required-key
+# behavior; validating `expected_fingerprints` against a real screen's meta
+# is Task 6's `validate_screen_identities`, not this loader's job.
+# ---------------------------------------------------------------------------
+
+# v1-matching CLI defaults (build_fpu_dev_corpus.py `_parse_args`) for the
+# two pure evaluator-throughput knobs -- the SOLE config keys with a
+# builder-side default; every other key below is REQUIRED (no default
+# source, no default stride -- design Sec 1.8).
+DEFAULT_EVAL_BATCH_SIZE = 14
+DEFAULT_STALL_FLUSH_SIMS = 48
+
+# Every REQUIRED top-level config key (design Sec 1.8): source reservoir
+# index path + predeclared seed range, selection seed, phase allocation, late
+# floors, proposal-enumerator policy params, `new_collapse_stratum`,
+# checkpoint, forbidden manifests, output paths (screen + select), and the
+# expected-fingerprint block.
+_V2_CONFIG_REQUIRED_KEYS: Tuple[str, ...] = (
+    "source_index_path",
+    "seed_range",
+    "selection_seed",
+    "phase_allocation",
+    "late_floors",
+    "enumerator_params",
+    "new_collapse_stratum",
+    "checkpoint",
+    "forbidden_manifests",
+    "screen_out",
+    "select_out",
+    "expected_fingerprints",
+)
+
+
+@dataclasses.dataclass(frozen=True)
+class V2Config:
+    """The v2 pipeline's ONE required config (design Sec 1.8) -- `screen` and
+    (Task 6's) `select` both load the SAME file, so a config-hash mismatch
+    between the two stages is detectable (Task 6's
+    `validate_screen_identities`). `load_v2_config` is the only constructor.
+
+    config_path: this file's OWN path (set by `load_v2_config`, never read
+      from the JSON) -- so `screen` can hash ITSELF into its `.meta.json`
+      provenance (the "config hash" the brief requires alongside the Sec 1.8
+      fingerprints).
+    source_index_path: the reservoir's replay-eval JSONL index (v1's
+      `--source-jsonl` analogue; `load_game_index`'s own input shape).
+    seed_range: the reservoir's PREDECLARED (start, end) self-play seed range
+      (design Sec 1.1) -- evidence the reservoir is a fixed, audited set,
+      never silently topped up; carried through as data, not algorithmically
+      consumed by `screen` itself.
+    selection_seed: Task 6's `select_final_manifest` seed for
+      `sample_v2_rows` (`sample_v2_rows(kept, seed=config.selection_seed)`).
+    phase_allocation / late_floors / enumerator_params: recorded copies of
+      this run's intended SPLIT_ALLOC_V2 / LATE_TARGET_FLOORS / proposal-
+      enumerator parameters -- evidentiary. This module's OWN frozen
+      constants are what actually governs `enumerate_v2_proposals` /
+      `sample_v2_rows`; these fields are not cross-validated against them
+      here (YAGNI beyond "present" -- see `load_v2_config`).
+    new_collapse_stratum: Task 7's diagnostic knob (e.g. `"ply_bucket"`) --
+      carried through as data; consumed only by that diagnostic.
+    checkpoint: the ONE checkpoint used for BOTH the raw-policy forward pass
+      and the 400-sim fpu-off anchor (design Sec 1.6: "one network, both
+      roles").
+    forbidden_manifests: CSV manifest path(s) whose canonical hashes
+      `screen`'s collision cheap-filter excludes (`load_forbidden_hashes`).
+    screen_out / select_out: output paths for the screen artifact
+      (`fpu_dev_source_screen.csv`) and (Task 6's) final selected manifest.
+    expected_fingerprints: the Sec 1.8 fingerprint block this config EXPECTS
+      a screen to match -- carried through as opaque data; hard-matching it
+      against a real screen's `.meta.json` is Task 6's
+      `validate_screen_identities`.
+    eval_batch_size / stall_flush_sims: pure evaluator-throughput knobs
+      (never result-determining -- they change how the evaluator BATCHES,
+      never WHICH position is screened or its anchor value); default to v1's
+      own CLI defaults when the config omits them.
+    """
+    config_path: str
+    source_index_path: str
+    seed_range: Tuple[int, int]
+    selection_seed: int
+    phase_allocation: Dict[str, Any]
+    late_floors: Dict[str, Any]
+    enumerator_params: Dict[str, Any]
+    new_collapse_stratum: str
+    checkpoint: str
+    forbidden_manifests: Tuple[str, ...]
+    screen_out: str
+    select_out: str
+    expected_fingerprints: Dict[str, Any]
+    eval_batch_size: int = DEFAULT_EVAL_BATCH_SIZE
+    stall_flush_sims: int = DEFAULT_STALL_FLUSH_SIMS
+
+
+def load_v2_config(path: str) -> V2Config:
+    """Load + validate the v2 pipeline's REQUIRED config (design Sec 1.8).
+
+    Raises `ValueError` naming EVERY missing required key (see
+    `_V2_CONFIG_REQUIRED_KEYS`) rather than silently defaulting -- "no
+    default source, no default stride." `eval_batch_size` / `stall_flush_sims`
+    are the sole exception (see `V2Config`'s own docstring). Task 6 adds its
+    OWN tests pinning this required-key behavior; this is the one and only
+    implementation of `load_v2_config`.
+    """
+    raw = json.loads(Path(path).read_text())
+    missing = sorted(k for k in _V2_CONFIG_REQUIRED_KEYS if k not in raw)
+    if missing:
+        raise ValueError(
+            f"load_v2_config: {path} is missing required key(s): "
+            f"{', '.join(missing)}")
+    return V2Config(
+        config_path=str(path),
+        source_index_path=raw["source_index_path"],
+        seed_range=tuple(raw["seed_range"]),
+        selection_seed=int(raw["selection_seed"]),
+        phase_allocation=raw["phase_allocation"],
+        late_floors=raw["late_floors"],
+        enumerator_params=raw["enumerator_params"],
+        new_collapse_stratum=raw["new_collapse_stratum"],
+        checkpoint=raw["checkpoint"],
+        forbidden_manifests=tuple(raw["forbidden_manifests"]),
+        screen_out=raw["screen_out"],
+        select_out=raw["select_out"],
+        expected_fingerprints=raw["expected_fingerprints"],
+        eval_batch_size=int(raw.get("eval_batch_size", DEFAULT_EVAL_BATCH_SIZE)),
+        stall_flush_sims=int(raw.get("stall_flush_sims", DEFAULT_STALL_FLUSH_SIMS)),
+    )
+
+
+# ---------------------------------------------------------------------------
+# The fpu-off 400-sim anchor (mirrors v1's `_build_anchor_search_fn` /
+# `_anchor_seed` -- re-implemented, not imported; see this banner's own note)
+# ---------------------------------------------------------------------------
+
+ANCHOR_SIMS_V2 = 400
+# XORs a fixed base with (game_idx, ply) for a deterministic, reproducible
+# per-position seed -- v1's own `ANCHOR_SEED_BASE` idiom (2026-07-11, the day
+# v1's dev-corpus module was authored). Deliberately a DISTINCT value (the day
+# the v2 design was frozen -- see this design doc's own filename) rather than
+# a re-export of v1's constant, so v1's and v2's anchor-search RNG streams can
+# never collide even where the two pipelines happen to touch the same
+# (game_idx, ply) coordinate on overlapping source data.
+ANCHOR_SEED_BASE_V2 = 20260712
+
+
+def _v2_anchor_seed(game_idx: int, ply: int) -> int:
+    return ANCHOR_SEED_BASE_V2 ^ int(game_idx) ^ int(ply)
+
+
+def _build_v2_anchor_search_fn(checkpoint: str, eval_batch_size: int,
+                               stall_flush_sims: int):
+    """Load ONE evaluator + build the fpu-off 400-sim anchor search_fn.
+    Checkpoint/GPU/MLX work -- only ever called from `run_screen`. Mirrors
+    v1's `_build_anchor_search_fn` (build_fpu_dev_corpus.py:962) shape
+    exactly, re-implemented here rather than imported (this banner's own
+    note): same `cfg_from(EvalConfig(...))` base config (so v2's anchor
+    shares every OTHER MCTS hyperparameter with v1's, differing only in
+    `fpu_policy_mass_reduction`), same `dataclasses.replace(..., fpu_policy_
+    mass_reduction=None)` frozen fpu-off override, same single evaluator
+    reused for BOTH the raw-policy forward pass and the anchor search (design
+    Sec 1.6: "the fpu-off ... anchor + raw policy" -- one network, both
+    roles, exactly as v1's `_scan_two_stage` does).
+    """
+    from .eval_runner import EvalConfig, cfg_from, _default_evaluator_factory
+    from .mcts import MCTS
+    evaluator = _default_evaluator_factory(checkpoint)
+    base_cfg = cfg_from(EvalConfig(mcts_sims=ANCHOR_SIMS_V2,
+                                   mcts_eval_batch_size=eval_batch_size,
+                                   mcts_stall_flush_sims=stall_flush_sims))
+    # Explicit even though it's already the default -- this IS the frozen
+    # fpu-off anchor config (design Sec 1.6's `MCTSConfig(fpu_policy_mass_
+    # reduction=None)`).
+    cfg = dataclasses.replace(base_cfg, fpu_policy_mass_reduction=None)
+
+    def search_fn(state, seed):
+        return MCTS(evaluator, cfg, random.Random(seed)).search_with_root(
+            state, add_noise=False)
+
+    # Also return the frozen anchor cfg so run_screen() can record its FULL
+    # effective MCTS config in the screen's meta (design Sec 1.8), from the
+    # single source of truth, rather than reconstructing it.
+    return evaluator, search_fn, cfg
+
+
+# ---------------------------------------------------------------------------
+# `run_screen` -- the operator `screen` stage itself (design Sec 1.6)
+# ---------------------------------------------------------------------------
+
+def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
+    """Operator `screen` stage: the evaluator/MCTS phase. For EVERY proposal
+    `enumerate_v2_proposals` yields, over EVERY game in the reservoir
+    (ascending game_idx -- `load_game_index`'s own sorted order), apply the
+    CHEAP filters -- collision, then raw-policy role -- BEFORE the expensive
+    400-sim fpu-off anchor, and persist the outcome of EVERY proposal (kept,
+    excluded, or ineligible alike) via `screen_row`. Screening NEVER stops
+    early because a cell/reserve has "filled" -- unlike v1's own
+    `_scan_two_stage`, v2 defers ALL selection to the separate, pure `select`
+    stage (Task 6); this stage is a complete, reusable, reviewable evidence
+    artifact over EVERY proposal (design Sec 1.6).
+
+    Order per proposal (design Sec 1.6, exact):
+      1. reconstruct the state (`position_state`) and its `canonical_state_sha1`;
+      2. cheap filter 1 -- collision (sha1 in forbidden UNION this run's own
+         kept-so-far hashes) -> `exclusion_status="collision"`, the anchor is
+         NEVER run, and (per `screen_row`'s own contract) the raw-policy
+         pass never ran either, so its four feature columns are null too;
+      3. cheap filter 2 -- one raw-policy forward pass (`_teacher_infer` ->
+         `_policy_features_from_priors`) then `raw_policy_role`; `None` ->
+         `"ineligible_role"`, anchor never run (features ARE populated: the
+         pass ran);
+      4. ONLY survivors of BOTH cheap filters get the 400-sim fpu-off anchor
+         (`search_with_root`, `MCTSConfig(fpu_policy_mass_reduction=None)`,
+         `add_noise=False`) -> `anchor_run=True`, then `anchor_eligible(
+         root_value_stm)` decides `"kept"` vs `"ineligible_anchor"`.
+    A `"kept"` proposal's hash is added to the run's own kept-hash set
+    immediately, so a LATER proposal that collides with an EARLIER kept one
+    (not just with the caller's `forbidden` union) is itself excluded as a
+    collision -- v1's own `_scan_two_stage` `kept_hashes` idiom.
+
+    BEFORE any evaluator/checkpoint load, runs the PURE geometric preflight
+    (`v2_preflight_source`, Task 4) over the SAME reservoir index and raises
+    `ValueError` naming the binding constraint if it is infeasible (design
+    Sec 1.7: "gates before any evaluator loads" -- v1's own `main()` "stop-
+    don't-retune" gate, mirrored here rather than in `main` so `run_screen`
+    is correct even when called directly, not only via the CLI).
+
+    OPERATOR: loads a real checkpoint via `config.checkpoint` and runs
+    400-sim MCTS. Never invoked by this task's tests -- exercised only via
+    the pure `classify_exclusion` / `screen_row` / `load_v2_config` and
+    static wiring checks (signature/source-text/`find_spec` inspection).
+
+    Returns `(rows, meta)` and, as a side effect, writes `config.screen_out`
+    + its `.meta.json` (`write_screen_csv` / `write_screen_meta` -- mirrors
+    v1's `write_manifest` / `write_meta`).
+    """
+    records = load_game_index(config.source_index_path)
+    report = v2_preflight_source(records)
+    if not report.feasible:
+        raise ValueError(
+            f"run_screen: v2 geometric preflight INFEASIBLE -- binding "
+            f"constraint: {report.binding_constraint}. Stopping BEFORE "
+            f"evaluator load (design Sec 1.7 stop-don't-retune).\n"
+            f"{report.format()}")
+
+    from .build_teacher_calibration_manifest import _teacher_infer
+
+    forbidden = load_forbidden_hashes(config.forbidden_manifests)
+    evaluator, search_fn, anchor_cfg = _build_v2_anchor_search_fn(
+        config.checkpoint, config.eval_batch_size, config.stall_flush_sims)
+
+    kept_hashes: Set[str] = set()
+    rows: List[dict] = []
+    status_counts: Counter = Counter()
+
+    for rec in records:
+        replay = json.loads(Path(rec["replay_path"]).read_text())
+        replay = {**replay, "game_idx": rec["game_idx"]}
+        for proposal in enumerate_v2_proposals(replay):
+            ply, side = proposal["ply"], proposal["side"]
+            state = position_state(replay, ply, side)
+            sha1 = canonical_state_sha1(state)
+            collided = sha1 in forbidden or sha1 in kept_hashes
+
+            feats = role = root_value_stm = anchor_elig = None
+            if not collided:
+                _legal, priors, _raw_value = _teacher_infer(state, evaluator)
+                feats = _policy_features_from_priors(priors)
+                role = raw_policy_role(feats["normalized_entropy"], feats["top1_prior"])
+                if role is not None:
+                    _counts, root_value_stm, root = search_fn(
+                        state, _v2_anchor_seed(rec["game_idx"], ply))
+                    if root.visit_count != ANCHOR_SIMS_V2:
+                        raise RuntimeError(
+                            f"v2 anchor confirm game_idx={rec['game_idx']} "
+                            f"ply={ply}: {root.visit_count} sims != "
+                            f"{ANCHOR_SIMS_V2}")
+                    anchor_elig = anchor_eligible(root_value_stm)
+
+            exclusion_status, anchor_run = classify_exclusion(
+                collided=collided, role=role, anchor_eligible_val=anchor_elig)
+            row = screen_row(
+                proposal, feats=feats, role=role, anchor_run=anchor_run,
+                root_value_stm=root_value_stm, anchor_eligible=anchor_elig,
+                canonical_sha1=sha1, exclusion_status=exclusion_status)
+            rows.append(row)
+            status_counts[exclusion_status] += 1
+            if exclusion_status == "kept":
+                kept_hashes.add(sha1)
+        # No early stop (design Sec 1.6): every game's every proposal is
+        # screened and persisted, however "full" any cell already looks --
+        # selection is entirely deferred to the separate `select` stage.
+
+    write_screen_csv(rows, config.screen_out)
+    meta = {
+        "config_path": config.config_path,
+        "source_index_path": config.source_index_path,
+        "checkpoint": config.checkpoint,
+        "forbidden_manifests": list(config.forbidden_manifests),
+        "n_forbidden_hashes": len(forbidden),
+        "n_games": len(records),
+        "n_proposals": len(rows),
+        "status_counts": dict(status_counts),
+        "fieldnames": SCREEN_FIELDNAMES,
+        "base_mcts_config": dataclasses.asdict(anchor_cfg),
+    }
+    write_screen_meta(config.screen_out, meta)
+    return rows, meta
+
+
+# ---------------------------------------------------------------------------
+# Screen artifact persistence (mirrors v1's `write_manifest` / `corpus_
+# provenance` / `write_meta`, build_fpu_dev_corpus.py:1111-1154)
+# ---------------------------------------------------------------------------
+
+# The v2 screen's own effective result-determining source files (design Sec
+# 1.8), mirroring v1's `_CORPUS_SOURCES` (build_fpu_dev_corpus.py:64-71):
+# this module itself (the enumerator/screen logic), v1's module (v2 imports
+# its pure helpers from it), the teacher-inference module (source of
+# `_teacher_infer`), the MCTS engine, the hash + state-reconstruction deps.
+_V2_MODULE_DIR = Path(__file__).resolve().parent
+_V2_CORPUS_SOURCES: Tuple[Path, ...] = (
+    _V2_MODULE_DIR / "fpu_dev_corpus_v2.py",
+    _V2_MODULE_DIR / "build_fpu_dev_corpus.py",
+    _V2_MODULE_DIR / "build_teacher_calibration_manifest.py",
+    _V2_MODULE_DIR / "mcts.py",
+    _V2_MODULE_DIR / "fpu_state_hash.py",
+    _V2_MODULE_DIR / "goal_line_trigger_probe_cases.py",
+    _V2_MODULE_DIR / "game" / "twixt_state.py",
+)
+
+
+def write_screen_csv(rows: List[dict], out_csv: str) -> None:
+    """Write the screen artifact CSV (mirrors v1's `write_manifest`). EVERY
+    proposal's row -- kept, excluded and ineligible alike -- lands here. A
+    tuple-valued `proposal_cell` and the nullable anchor/policy columns are
+    written via `csv.DictWriter`'s ordinary `str()` / empty-string coercion
+    (`None` -> an empty field), exactly like any other CSV field -- no special
+    casing needed here.
+    """
+    Path(out_csv).parent.mkdir(parents=True, exist_ok=True)
+    with open(out_csv, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=SCREEN_FIELDNAMES)
+        w.writeheader()
+        w.writerows(rows)
+
+
+def v2_screen_provenance(*, config_path: Optional[str], source_index_path: Optional[str],
+                         checkpoint: Optional[str], forbidden_manifests: Iterable[str],
+                         base_mcts_config: Optional[dict]) -> dict:
+    """Evidence-grade provenance for the v2 screen artifact (design Sec 1.8):
+    the config-file hash + the SAME fingerprint shape as v1's
+    `corpus_provenance` (build_fpu_dev_corpus.py:1119) -- source-file BYTE
+    hashes, the source-index sha1 + a deterministic replay-DATA hash, the
+    checkpoint identity, the forbidden manifests' OWN hashes (so `select` can
+    hard-match that they are the SAME files `screen` excluded against, not
+    merely the same paths), and runtime identity. Pure / stdlib-only (via
+    `fpu_provenance`): reads the source index + replays + config + checkpoint
+    BYTES but touches NO MCTS/GPU/MLX. `replay_paths` come from the SAME
+    `load_game_index` `run_screen` scans, so the hash covers exactly the
+    games the screen was built from.
+    """
+    replay_paths = ([r["replay_path"] for r in load_game_index(source_index_path)]
+                    if source_index_path else [])
+    return {
+        "config_sha1": fpu_provenance.file_sha1(config_path),
+        "source_file_sha1s": fpu_provenance.source_file_sha1s(_V2_CORPUS_SOURCES),
+        "source_index_sha1": fpu_provenance.file_sha1(source_index_path),
+        "replay_data_sha1": fpu_provenance.replay_data_sha1(replay_paths),
+        "checkpoint_identity": (
+            f"{Path(checkpoint).name}:{fpu_provenance.file_sha1(checkpoint)}"
+            if checkpoint else "none"),
+        "forbidden_manifest_sha1s": fpu_provenance.source_file_sha1s(
+            forbidden_manifests),
+        "base_mcts_config": base_mcts_config,
+        "add_noise": False,
+        "runtime_provenance": fpu_provenance.runtime_provenance(),
+    }
+
+
+def write_screen_meta(out_csv: str, meta: dict) -> None:
+    """Write `<out_csv>.meta.json`, ENRICHED with the evidence-grade
+    `provenance` block (design Sec 1.8) computed from the meta's own
+    `config_path` / `source_index_path` / `checkpoint` / `forbidden_
+    manifests` / `base_mcts_config` -- mirrors v1's `write_meta`
+    (build_fpu_dev_corpus.py:1143). `provenance` is DERIVED, so it never
+    clobbers a caller key.
+    """
+    enriched = dict(meta)
+    enriched["provenance"] = v2_screen_provenance(
+        config_path=meta.get("config_path"),
+        source_index_path=meta.get("source_index_path"),
+        checkpoint=meta.get("checkpoint"),
+        forbidden_manifests=meta.get("forbidden_manifests") or [],
+        base_mcts_config=meta.get("base_mcts_config"))
+    Path(str(out_csv) + ".meta.json").write_text(json.dumps(enriched, indent=2))
+
+
+# ---------------------------------------------------------------------------
+# CLI (design Sec 1.8: `--config` is required, no default; `--mode` is
+# restricted to `("screen",)` -- Task 6 widens it to include `"select"`.
+# `screen` and `select` are NEVER the same invocation, so there is no
+# `elif args.mode == "select":` branch here yet -- shipping one now, ahead of
+# Task 6's pure `select_final_manifest`, would be a broken/dead path.)
+# ---------------------------------------------------------------------------
+
+def _parse_v2_args(argv):
+    ap = argparse.ArgumentParser(
+        description="v2 phase-primary FPU dev-corpus pipeline (design Sec "
+                    "1.6). `screen` (operator; evaluator+MCTS) screens EVERY "
+                    "proposal from the reservoir against the cheap "
+                    "collision/raw-policy filters before the 400-sim fpu-off "
+                    "anchor, persisting every outcome -- never stopping "
+                    "early. `select` (pure, no evaluator) is added by Task "
+                    "6; screen and select are never the same invocation.")
+    ap.add_argument("--mode", required=True, choices=("screen",),
+                    help='pipeline stage to run. Only "screen" exists so '
+                         'far -- Task 6 adds "select".')
+    ap.add_argument("--config", required=True,
+                    help="path to the required fpu_dev_corpus_v2_config.json "
+                         "(design Sec 1.8) -- no default source, no default "
+                         "stride.")
+    return ap.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    args = _parse_v2_args(argv)
+    config = load_v2_config(args.config)
+
+    if args.mode == "screen":
+        try:
+            rows, meta = run_screen(config)
+        except ValueError as exc:
+            print(f"[fpu-dev-corpus-v2] screen FAILED: {exc}")
+            return 2
+        print(f"[fpu-dev-corpus-v2] screen: wrote {len(rows)} proposal "
+              f"row(s) -> {config.screen_out} (+ .meta.json); "
+              f"status_counts={meta['status_counts']}")
+        return 0
+
+    raise AssertionError(   # unreachable: argparse's own `choices` guards this
+        f"main: unreachable --mode {args.mode!r}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
