@@ -55,7 +55,11 @@ from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
 # MIN_PLY_GAP = the >=12-ply side-opposed-pair gap; MAX_PER_GAME = the <=2
 # SELECTED rows per game cap (global, across all proposal cells, enforced
 # by the v2 sampler -- Task 3); SIDE_TOL = the per-split |red-black| side
-# balance tolerance; SPLITS = the ("tuning", "frozen_check") split vocabulary
+# balance tolerance -- the same NUMBER as v1's but no longer met by v1's
+# mechanism: v1 got side neutrality for FREE (see its own SIDE_TOL note) and
+# never had to enforce it, whereas v2 must both STEER toward it
+# (`_choose_positions_v2`) and ENFORCE it (`sample_v2_rows`' exact-or-raise
+# check); SPLITS = the ("tuning", "frozen_check") split vocabulary
 # and its deterministic fill order. Imported (not restated) so a v1 drift is
 # felt here too; pinned in tests/test_fpu_dev_corpus_v2.py.
 #
@@ -68,11 +72,14 @@ from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
 # Task-3 addition (the sampler below): `_choose_positions`
 # (build_fpu_dev_corpus.py:259) is v1's per-game pick rule -- take_n == 1
 # steers toward the split's deficit side; take_n >= 2 walks the earliest
-# >=gap-apart chain -- semantics v2 needs UNCHANGED, so it is imported, never
-# copied. (v1's `_greedy_assign` / `assign_split` / `sample_dev_rows` are NOT
-# reusable: they close over v1's SPLIT_ALLOC/CELL_ORDER/bucket-cap globals and
-# apply the <=MAX_PER_GAME cap PER CELL, where v2's rule is GLOBAL -- see
-# `_greedy_assign_v2` / `sample_v2_rows`.)
+# >=gap-apart chain -- semantics v2 needs for every take_n EXCEPT 2, so it is
+# imported (never copied) and WRAPPED by `_choose_positions_v2`, whose 2-take
+# prefers a side-opposed pair (via the same `_first_gap_pair`) because v1's
+# "a 2-take is side-neutral for free" premise is FALSE in v2 -- see that
+# function's docstring. (v1's `_greedy_assign` / `assign_split` /
+# `sample_dev_rows` are NOT reusable: they close over v1's
+# SPLIT_ALLOC/CELL_ORDER/bucket-cap globals and apply the <=MAX_PER_GAME cap PER
+# CELL, where v2's rule is GLOBAL -- see `_greedy_assign_v2` / `sample_v2_rows`.)
 # All reused verbatim (DRY) -- never reimplemented here.
 from .build_fpu_dev_corpus import (
     MAX_PER_GAME,
@@ -283,6 +290,13 @@ def enumerate_v2_proposals(replay: Mapping[str, Any]) -> List[dict]:
 #   3. v1's <=50% ply-bucket cap is DROPPED -- subsumed, since each phase is
 #      exactly 60/240 = 25% by construction (design Sec 1.2). There is no
 #      `bucket_cap` parameter and no `bucket_count` stat.
+#   4. Per-split side balance must be actively STEERED and then ENFORCED. v1
+#      enjoyed it for free -- its SIDE_TOL note says "Every game supplies one red
+#      + one black position, so whole-game (2-per-game) picks are side-neutral",
+#      true because a v1 (role, band) cell can receive at most ONE side-opposed
+#      pair from a game. That premise is FALSE in v2 (see `_choose_positions_v2`),
+#      so v2 prefers a side-opposed pair on every 2-take and then RE-VERIFIES
+#      |red - black| <= SIDE_TOL on the selected rows, exact-or-raise.
 #
 # The floors (design Sec 1.3) are a COVERAGE requirement over the (target, late)
 # cell's 45 rows COMBINED across splits -- not a stratum, not extra quota. A
@@ -451,6 +465,56 @@ def _pickable(rows_of_game: List[dict], cell: Tuple[str, str],
     return out
 
 
+def _choose_positions_v2(positions: List[dict], take_n: int,
+                         side_count: Mapping[str, int], gap: int) -> List[dict]:
+    """v1's `_choose_positions` with ONE v2 amendment: a 2-take PREFERS a
+    side-opposed pair. `positions` is one game's pickable rows, ascending by ply.
+
+    v1 could walk the earliest >=gap-apart chain and stay side-neutral for free.
+    Its own SIDE_TOL note states the premise: "Every game supplies one red + one
+    black position, so whole-game (2-per-game) picks are side-neutral" -- true
+    there because a v1 (role, band) cell can only ever receive ONE side-opposed
+    pair from a game.
+
+    That premise is FALSE in v2, for two independent reasons:
+      * v2's (role, "late") SAMPLER cell aggregates THREE proposal cells
+        (late/b400_plus, late/b300_399, late/b200_299), so ONE game can offer
+        that single cell up to 3 reds + 3 blacks; and
+      * `raw_policy_role` classifies each row INDEPENDENTLY, so a proposal
+        pair's red can be classified `target` while its black goes `control`
+        (or is dropped in the grey zone).
+    Same-side-only -- or merely same-side-EARLIEST -- candidate sets are
+    therefore routine in v2, not pathological, and v1's chain walk would happily
+    take two REDS, silently skewing the split's side balance.
+
+    So for `take_n == 2` we first ask `_first_gap_pair` (v1's own deterministic
+    earliest-satisfying side-opposed-pair search -- imported, never copied) for a
+    gap-valid red+black pair among `positions`, and use it whenever one exists.
+    It yields the SAME 2 rows, so this can never introduce a shortfall: it only
+    chooses a side-NEUTRAL 2 rows over a possibly same-side 2 rows. When no such
+    pair exists (a genuinely same-side-only candidate set) we fall back to v1's
+    `_choose_positions` unchanged -- and `sample_v2_rows`' exact-or-raise
+    side-balance check is then what refuses to emit a skewed manifest.
+
+    Every other `take_n` delegates to `_choose_positions` VERBATIM -- notably its
+    take_n == 1 path, which already steers toward the split's deficit side (that
+    steering is what absorbs the odd-quota leftovers; it is vacuous over a
+    single-candidate list, which is precisely why the 2-take needs its own rule
+    and why the exact-or-raise check has to be the backstop).
+
+    Both `positions` and, hence, the reds/blacks split out of it are ascending by
+    ply -- exactly `_first_gap_pair`'s precondition. The pair is returned in
+    ascending ply order, matching `_choose_positions`' own return order.
+    """
+    if take_n == 2:
+        pair = _first_gap_pair([r for r in positions if r["side"] == "red"],
+                               [r for r in positions if r["side"] == "black"],
+                               gap)
+        if pair is not None:
+            return sorted(pair, key=lambda r: r["ply"])
+    return _choose_positions(positions, take_n, side_count, gap)
+
+
 def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
     """Sample the frozen 240-row v2 dev corpus from the screen's KEPT rows.
 
@@ -474,10 +538,20 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
     RE-VERIFIED on the SELECTED rows (an independent witness, not the running
     counter) before returning.
 
-    Every cell must reach its quota exactly and every floor must be met: a
-    shortfall of either kind is an ERROR (raises ValueError), never a silent
-    truncation. Deterministic under `seed`. Returns (rows, stats); each returned
-    row is a COPY of its input row stamped with `split`.
+    Side balance gets the SAME exact-or-raise treatment as the floors, because v2
+    -- unlike v1 -- cannot assume it (see `_choose_positions_v2`): every 2-take
+    PREFERS a side-opposed pair, every 1-take steers toward the split's deficit
+    side, and |red - black| <= SIDE_TOL is then RE-VERIFIED per split on the
+    SELECTED rows. A pool whose only way to fill a cell is same-side rows makes
+    the sampler RAISE -- never silently emit a side-skewed manifest. (Task 6's
+    `post_screen_qualification` is the pre-registered place to catch such a screen
+    earlier, before the sampler is ever reached.)
+
+    Every cell must reach its quota exactly, every floor must be met, and every
+    split must be side-balanced: a shortfall or violation of any kind is an ERROR
+    (raises ValueError), never a silent truncation or a silent skew. Deterministic
+    under `seed`. Returns (rows, stats); each returned row is a COPY of its input
+    row stamped with `split`.
     """
     games: Dict[Any, List[dict]] = defaultdict(list)
     for r in kept:
@@ -503,8 +577,8 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
         positions = _pickable(games[gi], cell, band, used_sha1, game_plies[gi])
         take_n = min(MAX_PER_GAME - game_used[gi], limit, len(positions))
         n_taken = 0
-        for r in _choose_positions(positions, take_n, side_count[split],
-                                   MIN_PLY_GAP):
+        for r in _choose_positions_v2(positions, take_n, side_count[split],
+                                      MIN_PLY_GAP):
             # `_pickable` screened these against `used_sha1` as a BATCH, so a game
             # holding the same hash twice could otherwise smuggle both into one
             # `_choose_positions` result. Re-check per row so "no duplicate
@@ -571,6 +645,29 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
                 f"{late_band_counts[band]} of the required {floor} among the "
                 f"{sum(late_band_counts.values())} selected late-target rows")
 
+    # Hard per-split side-balance verification -- likewise counted FROM THE
+    # SELECTED ROWS, independently of the running `side_count` the take-time
+    # steering consumed, so that bookkeeping cannot certify itself either.
+    #
+    # This is the constraint v1 never had to ENFORCE: there, one game gave a cell
+    # exactly one red + one black, so every whole-game pick was side-neutral by
+    # construction and SIDE_TOL was only ever a slack bound on the odd-quota
+    # leftovers. v2 breaks that premise (`_choose_positions_v2`), so side balance
+    # is a real constraint that a pool can genuinely fail -- and an out-of-tolerance
+    # split is an ERROR, exactly like an unmet floor or a cell shortfall. Never
+    # emit a silently side-skewed manifest.
+    side_actual: Dict[str, Dict[str, int]] = {
+        s: {"red": 0, "black": 0} for s in SPLITS}
+    for r in selected:
+        side_actual[r["split"]][r["side"]] += 1
+    for split in SPLITS:
+        red, black = side_actual[split]["red"], side_actual[split]["black"]
+        if abs(red - black) > SIDE_TOL:
+            raise ValueError(
+                f"per-split side balance violated: split {split} has red {red} / "
+                f"black {black} (|red - black| = {abs(red - black)} > SIDE_TOL "
+                f"{SIDE_TOL}); the pool can only fill a cell with same-side rows")
+
     # Counted per (role, phase, split) FROM THE SELECTED ROWS so cell_counts is an
     # INDEPENDENT composition witness, not a re-emission of the SPLIT_ALLOC_V2
     # quotas (v1's `cell_counts_actual` idiom). On success these equal the quotas
@@ -585,7 +682,10 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
         "cell_counts": {
             f"{role}|{phase}|{split}": cell_counts_actual[(role, phase, split)]
             for (role, phase) in SPLIT_ALLOC_V2 for split in SPLITS},
-        "side_count": {s: dict(side_count[s]) for s in SPLITS},
+        # The side WITNESS: recomputed from the selected rows and already VERIFIED
+        # against SIDE_TOL above -- a real witness, not a report of the running
+        # steering counter.
+        "side_count": {s: dict(side_actual[s]) for s in SPLITS},
         # The floor WITNESS (v2-specific; v1's `bucket_count` is gone with the
         # bucket cap): the selected late-TARGET rows' band histogram.
         "late_target_band_count": dict(sorted(late_band_counts.items())),

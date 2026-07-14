@@ -717,6 +717,78 @@ def _pool_v2_gap_probe():
     return rows
 
 
+# --- the SAME-SIDE fixtures (the side-balance regression) --------------------
+# `_abundant_pool_v2` and every fixture above it is built from `_v2_game`: one
+# game = ONE side-opposed pair in ONE cell. Such a pool is STRUCTURALLY INCAPABLE
+# of offering a cell two same-side rows, so it can never express this regression
+# -- which is exactly how v1's "a whole-game 2-take is side-neutral for free"
+# premise (build_fpu_dev_corpus.SIDE_TOL's own note) survived into v2 untested.
+#
+# It is FALSE in v2 for two independent reasons, and each gets a fixture below:
+#   * v2's (role, "late") SAMPLER cell aggregates THREE proposal cells
+#     (late/b400_plus, late/b300_399, late/b200_299), so ONE game can offer that
+#     single cell up to 3 reds + 3 blacks; and
+#   * the screen's `raw_policy_role` classifies each row INDEPENDENTLY, so a
+#     proposal pair's red can land in `target` while its black lands in `control`.
+# Both stay PHYSICALLY HONEST (n_legal >= 528 - ply; red on even plies): the
+# same-side rows below are all REDS on EVEN plies, b300_399 only at ply >= 129 and
+# b200_299 only at ply >= 229.
+
+# One game's (target, late) contribution = TWO REDS from two DIFFERENT floor
+# bands -- red@130 (b300_399, ply >= 129 OK) and red@230 (b200_299, ply >= 229
+# OK), 100 plies apart so NO gap filter binds -- while the opposed blacks of those
+# very proposal pairs (143 / 243, odd plies) are classified `control`.
+_V2_SAME_SIDE_LATE_PLIES = {"b300_399": (130, 143), "b200_299": (230, 243)}
+
+
+def _pool_same_side_late_floor():
+    """(target, late)'s ONLY floor-band supply is 20 SAME-SIDE (red) multi-band
+    games, so the LATE_TARGET_FLOORS themselves FORCE the sampler to draw
+    same-side rows: its 40 b400_plus late-target games (opposed pairs) cannot
+    reach either floor, and every b300_399 / b200_299 target row in the pool is
+    red. The floor pass then draws each floor band from a game via a SEPARATE
+    band-restricted take_n == 1 call, so no 2-take rule can pair them -- 12 + 12
+    = 24 RED late-target rows, and tuning ends up ~24 reds heavy.
+
+    A side-balanced selection does exist in principle (the sampler could steer the
+    other cells' leftovers black), but the greedy round-robin fills every other
+    cell with side-opposed PAIRS and has no such slack -- so the correct behaviour
+    is to RAISE, never to emit the skewed manifest. This is the reviewer's
+    falsifying pool.
+    """
+    rows = _v2_pool({("target", "late"): [("b400_plus", 40)]})
+    gi = 20_000
+    for _ in range(20):
+        for band, (p_red, p_black) in _V2_SAME_SIDE_LATE_PLIES.items():
+            rows.append(_v2_row(gi, "target", "late", band, "red", p_red))
+            rows.append(_v2_row(gi, "control", "late", band, "black", p_black))
+        gi += 1
+    return rows
+
+
+def _pool_same_side_earliest_chain():
+    """(target, midgame) is supplied by 50 games whose THREE rows are red@42,
+    red@56, black@71 -- the EARLIEST >= MIN_PLY_GAP-apart chain (42 -> 56) is
+    SAME-SIDE, while a gap-valid side-OPPOSED pair (42 + 71, 29 apart) also
+    exists. v1's `_choose_positions` take_n >= 2 path walks that earliest chain
+    with no side steering, so it takes two REDS from every such game; preferring
+    the opposed pair takes the SAME TWO rows' worth (no shortfall) side-neutrally.
+
+    Unlike `_pool_same_side_late_floor`, this pool is comfortably satisfiable, so
+    the fixed sampler must EMIT a balanced 240-row manifest here -- not raise.
+    (Physically honest: midgame is ply 41-90, so red@42/red@56 are even, black@71
+    is odd, and all three are necessarily b400_plus at ply <= 90.)
+    """
+    rows = _v2_pool({("target", "midgame"): []})
+    gi = 30_000
+    for _ in range(50):
+        rows.append(_v2_row(gi, "target", "midgame", "b400_plus", "red", 42))
+        rows.append(_v2_row(gi, "target", "midgame", "b400_plus", "red", 56))
+        rows.append(_v2_row(gi, "target", "midgame", "b400_plus", "black", 71))
+        gi += 1
+    return rows
+
+
 _V2_DUP_SHA1 = "v2-dup-shared-red-42"
 
 
@@ -945,11 +1017,120 @@ def test_v2_min_ply_gap_within_game_holds_across_cells():
 
 
 def test_v2_per_split_side_balance():
+    """The HAPPY path only. `_abundant_pool_v2` gives every cell exactly one
+    side-opposed pair per game, so it is STRUCTURALLY INCAPABLE of producing a
+    same-side 2-take -- it cannot express the real side-balance regression at all.
+    The two tests below carry that load."""
     rows, stats = sample_v2_rows(_abundant_pool_v2(), seed=1)
     for split in SPLITS:
         sc = Counter(r["side"] for r in rows if r["split"] == split)
         assert abs(sc["red"] - sc["black"]) <= SIDE_TOL
         assert stats["side_count"][split] == dict(sc)      # stats is a real witness
+
+
+def test_v2_same_side_two_take_prefers_a_side_opposed_pair():
+    """A 2-take whose EARLIEST >=gap chain is SAME-SIDE must instead take the
+    gap-valid side-OPPOSED pair -- the same 2 rows' worth, so no shortfall, but
+    side-neutral.
+
+    v1's `_choose_positions` take_n >= 2 path walks the earliest chain with NO
+    side steering (only its take_n == 1 branch steers), which was safe in v1 only
+    because a v1 (role, band) cell could receive at most ONE side-opposed pair
+    from a game. v2 breaks that premise, so the unfixed sampler takes red@42 +
+    red@56 from all 50 of this pool's (target, midgame) games and emits a
+    240-row manifest with tuning at red 95 / black 65 -- |diff| 30, a silent
+    SIDE_TOL (2) violation.
+    """
+    pool = _pool_same_side_earliest_chain()
+    g = sorted((r for r in pool if r["game_idx"] == 30_000), key=lambda r: r["ply"])
+    assert [(r["ply"], r["side"]) for r in g] == [        # fixture honesty:
+        (42, "red"), (56, "red"), (71, "black")]
+    assert 56 - 42 >= MIN_PLY_GAP                         # the earliest chain is
+    assert g[0]["side"] == g[1]["side"] == "red"          # ...gap-valid AND same-side
+    assert 71 - 42 >= MIN_PLY_GAP                         # ...yet an OPPOSED pair
+    assert len({r["canonical_sha1"] for r in g}) == 3     # ...is also gap-valid, and
+    assert len({(r["role"], r["phase"]) for r in g}) == 1  # nothing else can bind
+
+    rows, stats = sample_v2_rows(pool, seed=1)
+
+    # No shortfall: preferring the opposed pair still yields 2 rows per game.
+    assert len(rows) == CORPUS_SIZE_V2 == 240
+    cell = Counter((r["role"], r["phase"], r["split"]) for r in rows)
+    for (role, phase), alloc in SPLIT_ALLOC_V2.items():
+        for split, n in alloc.items():
+            assert cell[(role, phase, split)] == n
+    for split in SPLITS:                                   # ...and it is BALANCED
+        sc = Counter(r["side"] for r in rows if r["split"] == split)
+        assert abs(sc["red"] - sc["black"]) <= SIDE_TOL
+        assert stats["side_count"][split] == dict(sc)
+
+    # The discriminator: every same-side game that gave 2 rows gave one red + one
+    # black -- the opposed pair (42, 71) -- and red@56, the unfixed sampler's
+    # second pick, is NEVER selected.
+    same_side_rows = [r for r in rows if r["game_idx"] >= 30_000]
+    assert same_side_rows
+    assert 56 not in {r["ply"] for r in same_side_rows}
+    by_game = defaultdict(list)
+    for r in same_side_rows:
+        by_game[r["game_idx"]].append(r)
+    assert any(len(v) == MAX_PER_GAME for v in by_game.values())   # 2-takes happened
+    for picked in by_game.values():
+        assert len(picked) <= MAX_PER_GAME
+        if len(picked) == MAX_PER_GAME:
+            assert {r["side"] for r in picked} == {"red", "black"}
+            assert sorted(r["ply"] for r in picked) == [42, 71]
+
+
+def test_v2_same_side_only_supply_raises_rather_than_skewing():
+    """When a cell can ONLY be filled with same-side rows, the sampler must RAISE
+    -- never silently emit a side-skewed manifest. Side balance is a hard
+    constraint under the SAME exact-or-raise contract as the floors.
+
+    Here the LATE_TARGET_FLOORS themselves force the skew: every b300_399 /
+    b200_299 TARGET row in the pool is RED (their opposed blacks were classified
+    `control` -- `raw_policy_role` classifies each row independently), and one
+    game offers the single (target, late) cell both of them, in two different
+    bands. The floor pass draws each band via its own band-restricted take_n == 1
+    call, so NO 2-take rule can pair them: the 24 floor rows are all red.
+
+    The unfixed sampler SUCCEEDS here -- 240 rows, exact composition, floors met
+    -- and hands back tuning at red 92 / black 68 (|diff| 24 vs SIDE_TOL 2). The
+    raise below is therefore reached only AFTER the composition round-robin and
+    the floor verification have both PASSED, which is what makes it specifically a
+    side-balance failure and not a shortfall in disguise. (Task 6's
+    `post_screen_qualification` is the pre-registered place to reject such a screen
+    earlier, before the sampler is ever reached.)
+    """
+    pool = _pool_same_side_late_floor()
+    late_target = [r for r in pool if (r["role"], r["phase"]) == LATE_TARGET_CELL]
+    floor_rows = [r for r in late_target if r["band"] in LATE_TARGET_FLOORS]
+    assert {r["side"] for r in floor_rows} == {"red"}     # fixture honesty: the ONLY
+    assert len(floor_rows) == 40                          # floor-band supply is RED,
+    for band, floor in LATE_TARGET_FLOORS.items():        # ...ample for the floors,
+        assert sum(1 for r in floor_rows if r["band"] == band) == 20 > floor
+    assert {r["side"] for r in late_target                # ...while b400_plus (which
+            if r["band"] == "b400_plus"} == {"red", "black"}   # cannot reach a floor)
+    by_game = defaultdict(list)                                # is side-opposed.
+    for r in floor_rows:
+        by_game[r["game_idx"]].append(r)
+    two_band_games = [g for g, v in by_game.items()
+                      if {r["band"] for r in v} == set(LATE_TARGET_FLOORS)]
+    assert len(two_band_games) == 20      # ONE game, ONE cell, TWO same-side bands
+    probe = sorted(by_game[two_band_games[0]], key=lambda r: r["ply"])
+    assert [(r["ply"], r["side"], r["band"]) for r in probe] == [
+        (130, "red", "b300_399"), (230, "red", "b200_299")]
+    assert 230 - 130 >= MIN_PLY_GAP       # no gap filter binds -- only the side rule
+
+    with pytest.raises(ValueError, match="per-split side balance violated"):
+        sample_v2_rows(pool, seed=1)
+
+
+def test_v2_same_side_only_supply_raises_across_seeds():
+    """The refusal is a property of the sampler, not of one seed / one lucky
+    whole-game split assignment."""
+    for seed in (1, 2, 3, 7, 20260712):
+        with pytest.raises(ValueError, match="per-split side balance violated"):
+            sample_v2_rows(_pool_same_side_late_floor(), seed=seed)
 
 
 def test_v2_no_duplicate_hash():
