@@ -38,7 +38,17 @@ constants (PHASES, SPLIT_ALLOC_V2, LATE_TARGET_FLOORS, PROPOSAL_CELLS, the
 v2-specific MAX_PER_CELL_PER_GAME, the derived CORPUS_SIZE, and the shared
 v1 MIN_PLY_GAP/MAX_PER_GAME/SIDE_TOL re-exports) and its one classifier,
 `proposal_cell_of` -- still pure stdlib, still no evaluator/MCTS/GPU/MLX.
+
+Task 3's tests (bottom of the file) exercise the phase-stratified sampler
+`sample_v2_rows` + `assign_split_v2` over FABRICATED `kept` screen rows
+(plain dicts; synthetic canonical_sha1 strings, never real hashes) -- the
+same pure, evaluator-free shape as v1's tests/test_fpu_dev_corpus.py.
 """
+import inspect
+from collections import Counter, defaultdict
+
+import pytest
+
 from scripts.GPU.alphazero.build_fpu_dev_corpus import (
     CORPUS_SIZE,
     QUOTA_PER_BAND,
@@ -47,7 +57,9 @@ from scripts.GPU.alphazero.build_fpu_dev_corpus import (
     ply_bucket_of,
 )
 from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
+    CELL_ORDER_V2,
     CORPUS_SIZE as CORPUS_SIZE_V2,
+    LATE_TARGET_CELL,
     LATE_TARGET_FLOORS,
     MAX_PER_CELL_PER_GAME,
     MAX_PER_GAME,
@@ -56,8 +68,11 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     PROPOSAL_CELLS,
     SIDE_TOL,
     SPLIT_ALLOC_V2,
+    SPLITS,
+    assign_split_v2,
     enumerate_v2_proposals,
     proposal_cell_of,
+    sample_v2_rows,
 )
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
 
@@ -495,3 +510,558 @@ def test_pair_output_order_is_ascending_ply_not_side_order():
     cell_rows = [p for p in proposals if p["proposal_cell"] == ("late", "b300_399")]
     assert [p["ply"] for p in cell_rows] == [129, 142]
     assert [p["side"] for p in cell_rows] == ["black", "red"]
+
+
+# ---------------------------------------------------------------------------
+# Task 3 -- phase-stratified sampler (`sample_v2_rows`) + hard late floors
+#
+# Frozen design ref: docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md
+#   Sec 1.2 (SPLIT_ALLOC_V2), Sec 1.3 (late coverage floors).
+# v2 plan Task 3. Operates on FABRICATED `kept` screen rows (the Task-5 screen
+# stage produces the real ones): plain dicts carrying game_idx, role, phase,
+# band, side, ply, canonical_sha1. Synthetic sha1 strings, no evaluator/MCTS/
+# GPU/MLX/I-O -- exactly v1's tests/test_fpu_dev_corpus.py shape, re-cut for
+# v2's (role, phase) cells, its GLOBAL <=MAX_PER_GAME rule, and the floors.
+#
+# Fixture geometry is PHYSICALLY HONEST on the 24x24 board (Task 0's
+# `n_legal >= 528 - ply` floor + `side_to_move_for_ply`'s red-on-even parity):
+#   * red rows sit on EVEN plies, black rows on ODD plies;
+#   * b300_399 exists only at ply >= 528-399 = 129 and b200_299 only at
+#     ply >= 528-299 = 229 -- BOTH "late", which is exactly why the floors live
+#     in the late phase;
+#   * every non-late position is necessarily b400_plus (ply <= 90 =>
+#     n_legal >= 438), so all opening/early_mid/midgame rows carry that band as
+#     their recorded covariate.
+# ---------------------------------------------------------------------------
+
+# (red_ply, black_ply) per phase: >= MIN_PLY_GAP apart, both inside the phase's
+# real ply_bucket_of range, correct side parity.
+_V2_PHASE_PLIES = {
+    "opening": (2, 15),       # ply_bucket_of: 1-15
+    "early_mid": (16, 29),    # 16-40
+    "midgame": (42, 55),      # 41-90
+}
+# late-only, per BAND -- the floors' geometry (b400_plus anywhere late;
+# b300_399 only at ply >= 129; b200_299 only at ply >= 229).
+_V2_LATE_BAND_PLIES = {
+    "b400_plus": (92, 105),
+    "b300_399": (130, 143),
+    "b200_299": (230, 243),
+}
+
+
+def _v2_row(game_idx, role, phase, band, side, ply):
+    """One fabricated KEPT screen row (globally-unique synthetic sha1)."""
+    return {
+        "game_idx": game_idx, "role": role, "phase": phase, "band": band,
+        "side": side, "ply": ply,
+        "canonical_sha1": f"v2-{game_idx:05d}-{ply:04d}-{side}",
+    }
+
+
+def _v2_game(game_idx, role, phase, band):
+    """One game = ONE side-opposed pair (red on an even ply + black on an odd
+    ply, >= MIN_PLY_GAP apart) in ONE (role, phase) cell -- v1 `_game_rows`'
+    shape, re-cut for v2's phase cells and honest band geometry."""
+    p_red, p_black = (_V2_LATE_BAND_PLIES[band] if phase == "late"
+                      else _V2_PHASE_PLIES[phase])
+    return [
+        _v2_row(game_idx, role, phase, band, "red", p_red),
+        _v2_row(game_idx, role, phase, band, "black", p_black),
+    ]
+
+
+# Per-cell game supply. 240 rows at <=2 rows/game needs >=120 games; the
+# whole-game split assignment additionally needs ~23 games per TARGET cell (15
+# to fill tuning's 30 + 8 to fill frozen_check's 15) and ~8 per CONTROL cell --
+# so every cell here carries a real surplus over its own minimum.
+#
+# The (target, late) cell's band mix is the FLOOR DISCRIMINATOR: its 40
+# b400_plus games (80 rows -- more than the whole 45-row late-target quota) come
+# FIRST, i.e. at the LOWEST game_idx, and the round-robin visits candidate games
+# in ascending game_idx. So an earliest-game fill with NO floor-satisfaction pass
+# takes all 45 late-target rows from b400_plus and misses BOTH floors, even
+# though a floor-satisfying selection plainly exists. 20 games (40 rows) per
+# floor band is a surplus that survives the split assignment sending up to 8
+# late-target games to frozen_check (>=12 floor-band games always remain in
+# tuning), so the floors are reachable under ANY seed.
+#
+# The (control, late) cell deliberately carries floor-BAND rows too, floor-band
+# games FIRST so they are actually SELECTED: the floors count ONLY late TARGET
+# rows, so a sampler that credited a late CONTROL row to a floor counter would
+# under-fill the real floor and the final floor verification would fire.
+_V2_POOL_SPEC = {
+    ("target", "opening"): [("b400_plus", 50)],
+    ("control", "opening"): [("b400_plus", 30)],
+    ("target", "early_mid"): [("b400_plus", 50)],
+    ("control", "early_mid"): [("b400_plus", 30)],
+    ("target", "midgame"): [("b400_plus", 50)],
+    ("control", "midgame"): [("b400_plus", 30)],
+    ("target", "late"): [("b400_plus", 40), ("b300_399", 20), ("b200_299", 20)],
+    ("control", "late"): [("b300_399", 10), ("b200_299", 10), ("b400_plus", 10)],
+}
+
+
+def _v2_pool(overrides=None):
+    """Build a fabricated `kept` pool from a {(role, phase): [(band, n_games)]}
+    spec (defaulting to `_V2_POOL_SPEC`), game_idx ascending in CELL_ORDER_V2
+    order."""
+    spec = dict(_V2_POOL_SPEC)
+    spec.update(overrides or {})
+    rows, gi = [], 0
+    for cell in CELL_ORDER_V2:
+        for band, n_games in spec[cell]:
+            for _ in range(n_games):
+                rows.extend(_v2_game(gi, cell[0], cell[1], band))
+                gi += 1
+    return rows
+
+
+def _abundant_pool_v2():
+    return _v2_pool()
+
+
+def _insufficient_pool_v2():
+    """Abundant everywhere except (target, midgame), starved to 3 games (6 rows)
+    against its 45-row demand -> assign_split_v2's per-cell capacity PRECHECK
+    fires before any selection."""
+    return _v2_pool({("target", "midgame"): [("b400_plus", 3)]})
+
+
+def _pool_late_floor_unmeetable():
+    """Every phase quota is comfortably fillable -- the (target, late) cell holds
+    85 games (170 rows) for its 45-row quota -- but the pool contains only FIVE
+    b300_399 target games (10 rows), below the 12-row floor, so NO selection can
+    satisfy LATE_TARGET_FLOORS. The composition round-robin therefore SUCCEEDS
+    and only the hard floor verification can catch it."""
+    return _v2_pool({("target", "late"): [("b400_plus", 60), ("b300_399", 5),
+                                          ("b200_299", 20)]})
+
+
+def _pool_gap_starved_cell_v2():
+    """(control, opening) is supplied ONLY by games whose two rows sit
+    < MIN_PLY_GAP apart (red@2 + black@9), so each yields exactly ONE pickable
+    row. Both capacity PRECHECKS pass (8 games x min(2, MAX_PER_GAME) = 16 >= the
+    15-row demand), yet the round-robin cannot reach the cell's quota -> the
+    exact-or-raise `final-manifest shortfall`, a DIFFERENT failure from
+    _insufficient_pool_v2's capacity precheck. Proves a shortfall is never
+    silently truncated."""
+    rows = _v2_pool({("control", "opening"): []})
+    gi = 10_000
+    for _ in range(8):
+        rows.append(_v2_row(gi, "control", "opening", "b400_plus", "red", 2))
+        rows.append(_v2_row(gi, "control", "opening", "b400_plus", "black", 9))
+        gi += 1
+    return rows
+
+
+def _pool_global_two_per_game_starved():
+    """100 games, each offering a side-opposed pair in ALL EIGHT cells (16 rows
+    per game). Every PER-CELL capacity is ample (100 games x min(2, MAX_PER_GAME)
+    = 200 >= every cell's demand), so a v1-style per-cell accounting sees a
+    healthy pool -- but under v2's GLOBAL <=MAX_PER_GAME rule those 100 games can
+    yield at most 200 < CORPUS_SIZE (240) rows, so the corpus is impossible. Only
+    an accounting that caps a game's TOTAL contribution can see it."""
+    rows = []
+    for gi in range(100):
+        for cell in CELL_ORDER_V2:
+            band = "b400_plus" if cell[1] != "late" else "b400_plus"
+            rows.extend(_v2_game(gi, cell[0], cell[1], band))
+    return rows
+
+
+def _pool_with_multicell_game_v2():
+    """Abundant pool, but game 0 spans TWO cells with FOUR rows:
+    (target, opening) red@2 + black@15 and (target, early_mid) black@27 + red@40.
+    EVERY pair of those four plies is >= MIN_PLY_GAP apart and no hash repeats,
+    so nothing but the GLOBAL <=MAX_PER_GAME rule can hold game 0 to 2 rows -- a
+    v1-style PER-CELL cap would take all four (2 from each cell), because the
+    round-robin reaches game 0 first (lowest game_idx) in BOTH of its cells,
+    which share one split (whole-game isolation)."""
+    rows = [r for r in _abundant_pool_v2() if r["game_idx"] != 0]
+    rows += [
+        _v2_row(0, "target", "opening", "b400_plus", "red", 2),
+        _v2_row(0, "target", "opening", "b400_plus", "black", 15),
+        _v2_row(0, "target", "early_mid", "b400_plus", "black", 27),
+        _v2_row(0, "target", "early_mid", "b400_plus", "red", 40),
+    ]
+    return rows
+
+
+def _pool_v2_gap_probe():
+    """Two gap discriminators the abundant pool cannot reach.
+
+    game 0 -- a CROSS-CELL gap: ONE row in (target, opening) (red@8) and TWO in
+    (target, early_mid) (red@16, red@28). Once red@8 is taken, red@16 is only 8
+    plies away: a sampler enforcing the gap only WITHIN a cell (v1's
+    `sample_dev_rows` does exactly that -- its `positions` are pre-filtered to
+    one cell) would take it. Both early_mid rows are RED, so `_choose_positions`'
+    take_n==1 side-steering is a TIE and breaks to the LOWER ply -- such a mutant
+    deterministically picks 16 regardless of the running side balance, while the
+    correct GLOBAL gap filter leaves only 28.
+
+    game 1 -- v1's within-cell probe, re-cut: FOUR (target, midgame) rows red@42,
+    red@46, black@55, black@71. cap+gap pick exactly {42, 55}: dropping the
+    gap-skip would take 46 (4 plies away), dropping the <=2 cap would add 71.
+    """
+    rows = [r for r in _abundant_pool_v2() if r["game_idx"] not in (0, 1)]
+    rows += [
+        _v2_row(0, "target", "opening", "b400_plus", "red", 8),
+        _v2_row(0, "target", "early_mid", "b400_plus", "red", 16),
+        _v2_row(0, "target", "early_mid", "b400_plus", "red", 28),
+        _v2_row(1, "target", "midgame", "b400_plus", "red", 42),
+        _v2_row(1, "target", "midgame", "b400_plus", "red", 46),
+        _v2_row(1, "target", "midgame", "b400_plus", "black", 55),
+        _v2_row(1, "target", "midgame", "b400_plus", "black", 71),
+    ]
+    return rows
+
+
+_V2_DUP_SHA1 = "v2-dup-shared-red-42"
+
+
+def _pool_with_duplicate_hash_v2():
+    """Games 0 and 1 (both (target, midgame)) each carry THREE rows sharing ONE
+    canonical_sha1 on a gap-valid red@42. Whichever game the round-robin draws
+    first claims the shared hash; the other's red@42 is otherwise gap-valid AND
+    earliest, so it MUST be dropped by the used_sha1 filter. Each game still
+    yields MAX_PER_GAME from its two unique rows, so the dedup fires without
+    starving the cell (both games stay live in the output)."""
+    rows = [r for r in _abundant_pool_v2() if r["game_idx"] not in (0, 1)]
+    for gi in (0, 1):
+        rows.append({"game_idx": gi, "role": "target", "phase": "midgame",
+                     "band": "b400_plus", "side": "red", "ply": 42,
+                     "canonical_sha1": _V2_DUP_SHA1})
+        rows.append(_v2_row(gi, "target", "midgame", "b400_plus", "black", 55))
+        rows.append(_v2_row(gi, "target", "midgame", "b400_plus", "red", 68))
+    return rows
+
+
+# --- frozen v2 sampler surface ---------------------------------------------
+
+def test_v2_cell_order_and_late_target_cell():
+    """CELL_ORDER_V2 is the frozen (role, phase) cell order (SPLIT_ALLOC_V2
+    insertion order, mirroring v1's CELL_ORDER), and LATE_TARGET_CELL is the ONE
+    allocation cell the floors constrain -- pinned so a PHASES/role rename cannot
+    silently orphan the floors."""
+    assert CELL_ORDER_V2 == list(SPLIT_ALLOC_V2.keys())
+    assert len(CELL_ORDER_V2) == 8
+    assert set(CELL_ORDER_V2) == {(role, phase)
+                                  for role in ("target", "control")
+                                  for phase in PHASES}
+    assert LATE_TARGET_CELL == ("target", "late")
+    assert LATE_TARGET_CELL in SPLIT_ALLOC_V2
+    assert SPLITS == ("tuning", "frozen_check")
+    # The floors are a COMBINED requirement over that cell's 45 rows (30 tuning
+    # + 15 frozen_check), and 12 + 12 = 24 <= 45 -- satisfiable in principle.
+    assert sum(SPLIT_ALLOC_V2[LATE_TARGET_CELL].values()) == 45
+    assert sum(LATE_TARGET_FLOORS.values()) <= 45
+
+
+def test_sample_v2_rows_has_no_bucket_cap_parameter():
+    """v2 DROPS v1's <=50% ply-bucket cap (design Sec 1.2: subsumed -- each phase
+    is exactly 60/240 = 25%). It must not survive as a vestigial knob."""
+    sig = inspect.signature(sample_v2_rows)
+    assert list(sig.parameters) == ["kept", "seed"]
+    assert sig.parameters["seed"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert not any("bucket" in name for name in sig.parameters)
+
+
+# --- EXACT composition (the crux) ------------------------------------------
+
+def test_v2_exact_split_composition_and_totals():
+    rows, _stats = sample_v2_rows(_abundant_pool_v2(), seed=1)
+    cell = Counter((r["role"], r["phase"], r["split"]) for r in rows)
+    for (role, phase), alloc in SPLIT_ALLOC_V2.items():
+        for split, n in alloc.items():
+            assert cell[(role, phase, split)] == n        # every cell EXACTLY full
+    assert len(rows) == CORPUS_SIZE_V2 == 240
+    assert sum(1 for r in rows if r["split"] == "tuning") == 160
+    assert sum(1 for r in rows if r["split"] == "frozen_check") == 80
+    assert sum(1 for r in rows if r["role"] == "target") == 180
+    assert sum(1 for r in rows if r["role"] == "control") == 60
+    for phase in PHASES:
+        assert sum(1 for r in rows if r["phase"] == phase) == 60
+    assert len({r["canonical_sha1"] for r in rows}) == len(rows)     # no dup hash
+    for split in SPLITS:
+        sc = Counter(r["side"] for r in rows if r["split"] == split)
+        assert abs(sc["red"] - sc["black"]) <= SIDE_TOL
+
+
+def test_v2_every_row_carries_a_valid_split():
+    rows, _ = sample_v2_rows(_abundant_pool_v2(), seed=1)
+    assert all(r["split"] in SPLITS for r in rows)
+
+
+def test_v2_phase_quota_subsumes_the_v1_bucket_cap():
+    """Each phase is exactly 60/240 = 25% of the corpus, so v1's <=50%
+    ply-bucket cap is structurally unreachable -- verified against the REAL
+    ply_bucket_of of each selected row's PLY (the fixtures' plies are physically
+    honest), which simultaneously pins phase == ply_bucket_of(ply)."""
+    rows, _ = sample_v2_rows(_abundant_pool_v2(), seed=1)
+    buckets = Counter(ply_bucket_of(r["ply"]) for r in rows)
+    assert set(buckets) == set(PHASES)
+    for phase in PHASES:
+        assert buckets[phase] == 60 == 0.25 * CORPUS_SIZE_V2
+    assert max(buckets.values()) <= 0.5 * len(rows)        # v1's cap, now free
+    for r in rows:
+        assert r["phase"] == ply_bucket_of(r["ply"])
+
+
+# --- the late coverage floors (hard) ---------------------------------------
+
+def test_v2_late_target_floors_are_met():
+    """Among the 45 late TARGET rows -- the 30 tuning + 15 frozen_check rows
+    COMBINED, not per split (design Sec 1.3) -- >= 12 b300_399 AND >= 12
+    b200_299.
+
+    Discriminating by construction: the pool's 80 b400_plus late-target rows all
+    sit at LOWER game_idx than any floor-band game and alone exceed the whole
+    45-row quota, so an earliest-game fill WITHOUT the floor-satisfaction pass
+    takes 45 b400_plus rows and misses both floors.
+    """
+    pool = _abundant_pool_v2()
+    late_target_pool = [r for r in pool if (r["role"], r["phase"]) == LATE_TARGET_CELL]
+    b400_pool = [r for r in late_target_pool if r["band"] == "b400_plus"]
+    floor_pool = [r for r in late_target_pool if r["band"] in LATE_TARGET_FLOORS]
+    assert len(b400_pool) == 80 > 45          # b400_plus alone could fill the cell
+    assert (max(r["game_idx"] for r in b400_pool)
+            < min(r["game_idx"] for r in floor_pool))     # ...and it is visited FIRST
+
+    rows, stats = sample_v2_rows(pool, seed=1)
+    late_target = [r for r in rows if (r["role"], r["phase"]) == LATE_TARGET_CELL]
+    assert len(late_target) == 45
+    band_counts = Counter(r["band"] for r in late_target)
+    for band, floor in LATE_TARGET_FLOORS.items():
+        assert band_counts[band] >= floor                  # >= 12 / >= 12
+    assert stats["late_target_band_count"] == dict(sorted(band_counts.items()))
+
+    # The floors are a COMBINED requirement: frozen_check holds only 15 late
+    # target rows, so a per-SPLIT reading of ">= 12 and >= 12" (24 rows) would be
+    # arithmetically impossible -- the combined reading is the only coherent one.
+    frozen_late = [r for r in late_target if r["split"] == "frozen_check"]
+    assert len(frozen_late) == 15 < sum(LATE_TARGET_FLOORS.values())
+
+    # Late CONTROL rows in the floor bands ARE selected -- yet they must NOT be
+    # credited to the floors (which count late TARGET rows only).
+    control_floor_rows = [r for r in rows
+                          if (r["role"], r["phase"]) == ("control", "late")
+                          and r["band"] in LATE_TARGET_FLOORS]
+    assert control_floor_rows
+
+
+def test_v2_late_floors_hold_across_seeds():
+    """The floors (and the exact composition) are a property of the sampler, not
+    of one lucky seed / one lucky whole-game split assignment."""
+    for seed in (1, 2, 3, 7, 20260712):
+        rows, _ = sample_v2_rows(_abundant_pool_v2(), seed=seed)
+        assert len(rows) == 240
+        cell = Counter((r["role"], r["phase"], r["split"]) for r in rows)
+        for (role, phase), alloc in SPLIT_ALLOC_V2.items():
+            for split, n in alloc.items():
+                assert cell[(role, phase, split)] == n
+        band_counts = Counter(r["band"] for r in rows
+                              if (r["role"], r["phase"]) == LATE_TARGET_CELL)
+        for band, floor in LATE_TARGET_FLOORS.items():
+            assert band_counts[band] >= floor
+
+
+def test_v2_unmeetable_late_floor_raises():
+    """A pool that MEETS every phase quota but cannot reach a late floor (only 10
+    b300_399 target rows exist, floor 12) must RAISE -- the floor is a hard
+    requirement, never a best-effort. The failure must be the FLOOR one, not a
+    composition shortfall."""
+    pool = _pool_late_floor_unmeetable()
+    supply = Counter(r["band"] for r in pool
+                     if (r["role"], r["phase"]) == LATE_TARGET_CELL)
+    assert supply["b300_399"] == 10 < LATE_TARGET_FLOORS["b300_399"]   # unmeetable
+    assert sum(supply.values()) == 170 > 45          # ...yet the cell is fillable
+    with pytest.raises(ValueError, match="late-target coverage floor unmet"):
+        sample_v2_rows(pool, seed=1)
+
+
+# --- per-game / per-split invariants ---------------------------------------
+
+def test_v2_whole_game_split_isolation():
+    rows, _ = sample_v2_rows(_pool_with_multicell_game_v2(), seed=1)
+    game_splits = defaultdict(set)
+    for r in rows:
+        game_splits[r["game_idx"]].add(r["split"])
+    assert game_splits
+    assert all(len(splits) == 1 for splits in game_splits.values())
+
+
+def test_v2_at_most_two_rows_per_game_globally():
+    """v2's <=MAX_PER_GAME rule is GLOBAL -- across ALL cells and both splits --
+    where v1 applied it PER CELL. Game 0 offers 2 mutually gap-valid rows in EACH
+    of two cells, so a per-cell cap would take FOUR."""
+    pool = _pool_with_multicell_game_v2()
+    g0 = sorted((r for r in pool if r["game_idx"] == 0), key=lambda r: r["ply"])
+    assert len(g0) == 4                                         # fixture honesty:
+    assert len({(r["role"], r["phase"]) for r in g0}) == 2      # two cells,
+    plies = [r["ply"] for r in g0]
+    assert all(hi - lo >= MIN_PLY_GAP for lo, hi in zip(plies, plies[1:]))
+    assert len({r["canonical_sha1"] for r in g0}) == 4          # no filter can bind
+
+    rows, _ = sample_v2_rows(pool, seed=1)
+    assert len(rows) == 240                       # no shortfall from the cap
+    counts = Counter(r["game_idx"] for r in rows)
+    assert counts and max(counts.values()) <= MAX_PER_GAME
+    assert counts[0] == MAX_PER_GAME              # game 0 IS selected -- capped at 2
+    assert {(r["role"], r["phase"]) for r in rows if r["game_idx"] == 0} == {
+        ("target", "opening")}                    # ...all from its first cell
+
+
+def test_v2_global_two_per_game_capacity_is_enforced():
+    """100 games x 16 rows: every PER-CELL capacity is ample, but under the GLOBAL
+    <=2/game rule the pool can yield at most 200 < 240 rows. A per-cell-only
+    accounting would happily proceed; the global one must refuse."""
+    pool = _pool_global_two_per_game_starved()
+    per_cell = Counter((r["role"], r["phase"]) for r in pool)
+    for cell, alloc in SPLIT_ALLOC_V2.items():
+        assert per_cell[cell] == 200 >= alloc["tuning"] + alloc["frozen_check"]
+    with pytest.raises(ValueError, match="global capacity"):
+        sample_v2_rows(pool, seed=1)
+
+
+def test_v2_min_ply_gap_within_game_holds_across_cells():
+    """>= MIN_PLY_GAP between ANY two rows selected from one game -- including
+    rows drawn from DIFFERENT cells (v1 only enforced it within a cell)."""
+    rows, _ = sample_v2_rows(_pool_v2_gap_probe(), seed=1)
+    assert len(rows) == 240
+    by_game = defaultdict(list)
+    for r in rows:
+        by_game[r["game_idx"]].append(r["ply"])
+    for plies in by_game.values():
+        plies.sort()
+        for lo, hi in zip(plies, plies[1:]):
+            assert hi - lo >= MIN_PLY_GAP
+    # game 0's two rows come from two DIFFERENT cells -- so the cross-cell gap
+    # filter was genuinely exercised -- and red@16 (8 plies from red@8) is skipped.
+    assert len({(r["role"], r["phase"]) for r in rows if r["game_idx"] == 0}) == 2
+    assert sorted(by_game[0]) == [8, 28]
+    # game 1: the sub-gap 46 is skipped and the <=2 cap stops before 71.
+    assert sorted(by_game[1]) == [42, 55]
+
+
+def test_v2_per_split_side_balance():
+    rows, stats = sample_v2_rows(_abundant_pool_v2(), seed=1)
+    for split in SPLITS:
+        sc = Counter(r["side"] for r in rows if r["split"] == split)
+        assert abs(sc["red"] - sc["black"]) <= SIDE_TOL
+        assert stats["side_count"][split] == dict(sc)      # stats is a real witness
+
+
+def test_v2_no_duplicate_hash():
+    rows, _ = sample_v2_rows(_abundant_pool_v2(), seed=1)
+    shas = [r["canonical_sha1"] for r in rows]
+    assert len(shas) == len(set(shas))
+
+
+def test_v2_duplicate_hash_is_excluded():
+    rows, _ = sample_v2_rows(_pool_with_duplicate_hash_v2(), seed=1)
+    shas = [r["canonical_sha1"] for r in rows]
+    assert len(shas) == len(set(shas))            # used_sha1 filter left no dup
+    assert shas.count(_V2_DUP_SHA1) == 1          # the collided hash survives once
+    # both colliding games stay live, so the exclusion was FORCED (the loser lost
+    # its red@42 to the filter, not by going unselected).
+    assert {0, 1} <= {r["game_idx"] for r in rows}
+
+
+def test_v2_duplicate_hash_within_one_game_is_excluded():
+    """The dedup must hold for ANY input, not only for a (hash-deduped) real
+    screen: game 0 carries the SAME canonical_sha1 on TWO gap-valid rows of its
+    OWN, which `_choose_positions` would otherwise return in a single batch --
+    the batch is screened against `used_sha1` BEFORE any of it is claimed.
+
+    Deliberately NOT physically honest (two positions 26 plies apart in one game
+    have different peg counts, so they can never share a canonical hash, and the
+    screen stage's collision filter would drop such a row anyway) -- it exists
+    solely to prove the per-row re-check fires, mirroring this file's other
+    intentionally-unrealistic guard fixture."""
+    rows_pool = [r for r in _abundant_pool_v2() if r["game_idx"] != 0]
+    same = "v2-same-hash-in-one-game"
+    for ply, side in ((42, "red"), (68, "red")):        # 26 plies apart: gap-valid
+        rows_pool.append({"game_idx": 0, "role": "target", "phase": "midgame",
+                          "band": "b400_plus", "side": side, "ply": ply,
+                          "canonical_sha1": same})
+    rows_pool.append(_v2_row(0, "target", "midgame", "b400_plus", "black", 55))
+
+    rows, _ = sample_v2_rows(rows_pool, seed=1)
+    assert len(rows) == 240
+    shas = [r["canonical_sha1"] for r in rows]
+    assert len(shas) == len(set(shas))            # no dup ANYWHERE in the output
+    assert shas.count(same) == 1                  # claimed exactly once
+    g0 = [r["ply"] for r in rows if r["game_idx"] == 0]
+    assert len(g0) <= MAX_PER_GAME
+    assert 42 in g0 and 68 not in g0              # the 2nd copy of the hash dropped
+
+
+# --- determinism ------------------------------------------------------------
+
+def test_v2_determinism_same_seed():
+    a, sa = sample_v2_rows(_abundant_pool_v2(), seed=1)
+    b, sb = sample_v2_rows(_abundant_pool_v2(), seed=1)
+    assert a == b
+    assert sa == sb
+
+
+def test_v2_assign_split_v2_is_whole_game_and_deterministic():
+    pool = _abundant_pool_v2()
+    profile = {}
+    for r in pool:
+        profile.setdefault(r["game_idx"], Counter())[(r["role"], r["phase"])] += 1
+    a = assign_split_v2(profile, seed=1)
+    b = assign_split_v2(profile, seed=1)
+    assert a == b                                  # deterministic under seed
+    assert set(a) == set(profile)                  # every game assigned
+    assert all(v in SPLITS for v in a.values())
+
+
+# --- shortfalls are ERRORS, never silent truncation -------------------------
+
+def test_v2_insufficient_pool_raises():
+    with pytest.raises(ValueError, match="capacity"):
+        sample_v2_rows(_insufficient_pool_v2(), seed=1)
+
+
+def test_v2_final_manifest_shortfall_from_pick_filters_raises():
+    """Distinct from the capacity precheck: every capacity check passes, but the
+    gap-skip per-pick filter starves (control, opening), so the round-robin hits
+    its exact-or-raise guard instead of returning a short manifest."""
+    with pytest.raises(ValueError, match="final-manifest shortfall"):
+        sample_v2_rows(_pool_gap_starved_cell_v2(), seed=1)
+
+
+# --- stats are an INDEPENDENT witness --------------------------------------
+
+def test_v2_stats_shape_and_independent_counts():
+    """cell_counts / late_target_band_count must be counted FROM THE SELECTED
+    ROWS (an independent composition + floor witness), not re-emitted from the
+    frozen quotas. v1's `bucket_count` is GONE (no bucket cap in v2)."""
+    rows, stats = sample_v2_rows(_abundant_pool_v2(), seed=1)
+    assert set(stats) == {"n_rows", "seed", "cell_counts", "side_count",
+                          "late_target_band_count", "n_games_per_split",
+                          "n_games_total"}
+    assert "bucket_count" not in stats
+    assert stats["n_rows"] == len(rows) == 240
+    assert stats["seed"] == 1
+
+    actual = Counter((r["role"], r["phase"], r["split"]) for r in rows)
+    for (role, phase), alloc in SPLIT_ALLOC_V2.items():
+        for split, quota in alloc.items():
+            key = f"{role}|{phase}|{split}"
+            assert stats["cell_counts"][key] == actual[(role, phase, split)]
+            assert stats["cell_counts"][key] == quota
+    assert sum(stats["cell_counts"].values()) == len(rows) == 240
+
+    late_actual = Counter(r["band"] for r in rows
+                          if (r["role"], r["phase"]) == LATE_TARGET_CELL)
+    assert stats["late_target_band_count"] == dict(sorted(late_actual.items()))
+    assert sum(stats["late_target_band_count"].values()) == 45
+    for band, floor in LATE_TARGET_FLOORS.items():
+        assert stats["late_target_band_count"][band] >= floor
+
+    assert (stats["n_games_per_split"]["tuning"]
+            + stats["n_games_per_split"]["frozen_check"]) == stats["n_games_total"]
+    assert stats["n_games_total"] == len({r["game_idx"] for r in _abundant_pool_v2()})
