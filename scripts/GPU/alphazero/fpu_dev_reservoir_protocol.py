@@ -7,15 +7,18 @@ Frozen design ref: docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-q
   atomicity+immutability contract), Sec 8 (canonical JSON, determinism,
   reviewability).
 Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-hardening-plan.md
-  Task B1 -- the FIRST task of the new Group-2 subsystem (B1-B11), which
-  will qualify a generated reservoir zero-GPU (B3-B7) and emit an immutable
-  `fpu_dev_corpus_v2_config.json` (B7-B10). B1 lays the foundation ONLY:
-  the protocol's field set (`PROTOCOL_SCHEMA_KEYS`), the canonical-JSON
-  encoder, the atomic-write primitive, and the schema builder + emitter.
-  `emit-gen-command` (B2), `measure_reservoir`/`ReservoirMeasurements` (B3),
-  `qualify` (B4-B7), the `V2Config` extension (B8), the `run_screen`
-  precheck (B9), the final 11-identity chain (B10) and the CLI `main`
-  (B11) are ALL later tasks -- none of that exists here.
+  Tasks B1-B2 -- the first two tasks of the new Group-2 subsystem (B1-B11),
+  which will qualify a generated reservoir zero-GPU (B3-B7) and emit an
+  immutable `fpu_dev_corpus_v2_config.json` (B7-B10). B1 laid the
+  foundation: the protocol's field set (`PROTOCOL_SCHEMA_KEYS`), the
+  canonical-JSON encoder, the atomic-write primitive, and the schema
+  builder + emitter. B2 adds `gen_command` -- the exact
+  `eval_checkpoint_match` argv derived from an already-frozen protocol, so
+  the operator's generation command cannot drift from the frozen
+  decisions. `measure_reservoir`/`ReservoirMeasurements` (B3), `qualify`
+  (B4-B7), the `V2Config` extension (B8), the `run_screen` precheck (B9),
+  the final 11-identity chain (B10) and the CLI `main` (B11) are ALL later
+  tasks -- none of that exists here.
 
 =============================================================================
 TOOLING ONLY. PURE, stdlib-only module: no evaluator / MCTS / GPU / MLX /
@@ -81,6 +84,27 @@ Measuring a REAL generated reservoir against a frozen protocol is
 `--check` (`check=True`) NEVER writes: it recomputes the canonical bytes and
 reports whether they match what's on disk (`EXIT_OK`) or not
 (`EXIT_MISMATCH`), purely as a read + compare.
+
+`gen_command`: the exact `eval_checkpoint_match` argv derived from an
+ALREADY-FROZEN `protocol` dict (design Sec 2.1's "every explicit generation
+flag needed to reconstruct the command is present"; Sec 3's
+`emit-gen-command` -- "so generation cannot drift from the frozen
+decisions"). A pure data transform (dict lookups + `str()` formatting) --
+it performs NO validation of its own (that is `build_protocol`'s job, and
+is expected to have already run before a protocol reaches this function)
+and no filesystem I/O. Deterministic: every value is read from `protocol`
+by an explicit key (never by iterating `protocol`'s own items), so the
+same protocol dict always produces the same argv regardless of Python
+dict-construction/iteration order. `--save-eval-replays` is
+`eval_checkpoint_match`'s `action="store_true"` flag: emitted bare (no
+following value) and ONLY when `protocol["save_eval_replays"]` is true --
+never emitted with a `false`/`0` value when it is false, since that is not
+how `store_true` works. `protocol["source_index_path"]` is deliberately
+NEVER emitted as a flag: `eval_checkpoint_match` has no such flag, and
+instead derives that JSONL path itself from `--output`'s stem
+(`eval_checkpoint_match._write_outputs`: `f"{stem}_games.jsonl"`) --
+`source_index_path` exists in the protocol only so a LATER qualification
+stage can verify the generator's derivation rule was actually followed.
 """
 from __future__ import annotations
 
@@ -89,7 +113,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Mapping, Tuple, Union
+from typing import Any, Dict, List, Mapping, Tuple, Union
 
 # ---------------------------------------------------------------------------
 # Exit-code vocabulary (design Sec 3) -- shared across the WHOLE module's
@@ -325,3 +349,85 @@ def emit_protocol(
 
     write_atomic(out_path, data)
     return EXIT_OK
+
+
+# ---------------------------------------------------------------------------
+# Exact generation command (design Sec 2.1/Sec 3) -- Task B2.
+# ---------------------------------------------------------------------------
+def gen_command(protocol: Mapping[str, Any]) -> List[str]:
+    """The exact `eval_checkpoint_match` argv derived from an
+    already-frozen `protocol` (design Sec 2.1: "Every explicit generation
+    flag needed to reconstruct the command is present [...]"; Sec 3:
+    `emit-gen-command` -- "print the exact `eval_checkpoint_match` command
+    derived from the frozen protocol [...] so generation cannot drift from
+    the frozen decisions").
+
+    A pure data transform, zero-GPU and zero-I/O: every flag's value is
+    read from `protocol` by an explicit key (never by iterating
+    `protocol`'s own items), so the SAME protocol dict always produces the
+    SAME argv -- independent of Python dict-construction/insertion order,
+    and this function never runs anything itself. Flag order mirrors
+    `eval_checkpoint_match._build_arg_parser()`'s own `add_argument`
+    sequence, so the reconstructed command lines up with that CLI's own
+    declaration order.
+
+    - `--checkpoint-a` / `--checkpoint-b` -- each checkpoint's `"path"`
+      (never its `"identity"`: the generator takes a filesystem path to
+      run, not the `name:sha1` identity string that a LATER qualification
+      stage verifies against the generated reservoir).
+    - `--games` / `--board-size` / `--mcts-sims` /
+      `--mcts-eval-batch-size` / `--mcts-stall-flush-sims` /
+      `--selection-mode` / `--opening-temp-plies` / `--temp-high` /
+      `--temp-low` / `--max-moves` / `--workers` / `--base-seed` -- each
+      maps one-to-one onto its same-named protocol field, stringified
+      (`json` round-trips an int/float to the same digits `str` produces,
+      so this changes no value's meaning).
+    - `--save-eval-replays` is `eval_checkpoint_match`'s
+      `action="store_true"` flag: emitted BARE (no following value) and
+      ONLY when `protocol["save_eval_replays"]` is true; omitted entirely
+      when false (never emitted with a `false`/`0` value -- that is not
+      how `store_true` works).
+    - `--replay-dir` is always emitted from `protocol["replay_dir"]`,
+      regardless of `save_eval_replays` -- the protocol declares it
+      unconditionally (design Sec 2.1 "Output relationships"; it would
+      simply go unused by the generator when replay capture is off).
+    - `--output` is `protocol["match_summary_path"]`.
+    - `protocol["source_index_path"]` is deliberately NEVER emitted:
+      `eval_checkpoint_match` has no such flag -- it derives that JSONL
+      path itself from `--output`'s stem
+      (`eval_checkpoint_match._write_outputs`: `f"{stem}_games.jsonl"`).
+      `source_index_path` exists in the protocol only so a later
+      qualification stage can verify the generator's derivation rule was
+      actually followed (spec Sec 4.1 "Output-path relationships").
+
+    Assumes `protocol` is already a valid, fully-populated protocol dict
+    (e.g. `build_protocol`'s return value, or a `reservoir_protocol.json`
+    already loaded from disk) -- a missing field raises `KeyError` from the
+    plain dict lookup rather than a friendlier message, since re-validating
+    an already-frozen protocol is `build_protocol`'s job, not this one's.
+    """
+    checkpoint_a_path = protocol["checkpoint_a"]["path"]
+    checkpoint_b_path = protocol["checkpoint_b"]["path"]
+
+    argv: List[str] = [
+        ".venv/bin/python", "-m", "scripts.GPU.alphazero.eval_checkpoint_match",
+    ]
+    argv += ["--checkpoint-a", str(checkpoint_a_path)]
+    argv += ["--checkpoint-b", str(checkpoint_b_path)]
+    argv += ["--games", str(protocol["games"])]
+    argv += ["--board-size", str(protocol["board_size"])]
+    argv += ["--mcts-sims", str(protocol["mcts_sims"])]
+    argv += ["--mcts-eval-batch-size", str(protocol["mcts_eval_batch_size"])]
+    argv += ["--mcts-stall-flush-sims", str(protocol["mcts_stall_flush_sims"])]
+    argv += ["--selection-mode", str(protocol["selection_mode"])]
+    argv += ["--opening-temp-plies", str(protocol["opening_temp_plies"])]
+    argv += ["--temp-high", str(protocol["temp_high"])]
+    argv += ["--temp-low", str(protocol["temp_low"])]
+    argv += ["--max-moves", str(protocol["max_moves"])]
+    argv += ["--workers", str(protocol["workers"])]
+    argv += ["--base-seed", str(protocol["base_seed"])]
+    if protocol["save_eval_replays"]:
+        argv.append("--save-eval-replays")
+    argv += ["--replay-dir", str(protocol["replay_dir"])]
+    argv += ["--output", str(protocol["match_summary_path"])]
+    return argv

@@ -18,6 +18,7 @@ another test module in the same pytest session may have already pulled mlx
 into `sys.modules` first).
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -34,6 +35,7 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     build_protocol,
     canonical_json_bytes,
     emit_protocol,
+    gen_command,
     write_atomic,
 )
 
@@ -420,6 +422,173 @@ def test_emit_protocol_propagates_missing_param_in_check_mode(tmp_path):
     with pytest.raises(ValueError):
         emit_protocol(params, out, check=True)
     assert not out.exists()
+
+
+# ---------------------------------------------------------------------------
+# gen_command -- Task B2.
+# ---------------------------------------------------------------------------
+
+def test_gen_command_produces_the_exact_argv_for_a_fixed_protocol():
+    """The load-bearing case: every flag maps to the right protocol field
+    with the right value, in one fixed, fully-specified argv -- so an
+    accidental typo'd flag name, swapped value, or dropped flag can never
+    pass unnoticed."""
+    protocol = build_protocol(_protocol_params())
+    assert gen_command(protocol) == [
+        ".venv/bin/python", "-m", "scripts.GPU.alphazero.eval_checkpoint_match",
+        "--checkpoint-a", "checkpoints/calib020_0001.safetensors",
+        "--checkpoint-b", "checkpoints/0379.safetensors",
+        "--games", "6",
+        "--board-size", "24",
+        "--mcts-sims", "400",
+        "--mcts-eval-batch-size", "14",
+        "--mcts-stall-flush-sims", "48",
+        "--selection-mode", "visit_count",
+        "--opening-temp-plies", "6",
+        "--temp-high", "1.0",
+        "--temp-low", "0.1",
+        "--max-moves", "300",
+        "--workers", "4",
+        "--base-seed", "900000",
+        "--save-eval-replays",
+        "--replay-dir", "runs/reservoir_v2/match_summary_replays",
+        "--output", "runs/reservoir_v2/match_summary.json",
+    ]
+
+
+def test_gen_command_invocation_prefix():
+    """Matches how `eval_checkpoint_match` is invoked elsewhere in this repo
+    (e.g. docs/post-game-analysis.md) -- module invocation via `-m`, not a
+    script path."""
+    argv = gen_command(build_protocol(_protocol_params()))
+    assert argv[:3] == [
+        ".venv/bin/python", "-m", "scripts.GPU.alphazero.eval_checkpoint_match",
+    ]
+
+
+def test_gen_command_uses_checkpoint_path_not_identity():
+    """`checkpoint_a`/`checkpoint_b` are each `{"path", "identity"}` --
+    the generator takes a filesystem path (the `name:sha1` identity is
+    qualification's job to verify AFTER generation, not a generator arg)."""
+    protocol = build_protocol(_protocol_params())
+    argv = gen_command(protocol)
+    assert argv[argv.index("--checkpoint-a") + 1] == protocol["checkpoint_a"]["path"]
+    assert argv[argv.index("--checkpoint-b") + 1] == protocol["checkpoint_b"]["path"]
+    assert protocol["checkpoint_a"]["identity"] not in argv
+    assert protocol["checkpoint_b"]["identity"] not in argv
+
+
+def test_gen_command_omits_save_eval_replays_flag_when_false():
+    """`--save-eval-replays` is `eval_checkpoint_match`'s `store_true` flag
+    -- when `save_eval_replays` is false it must be OMITTED entirely, never
+    emitted with a `false`/`0` value (that is not how `store_true` works).
+    `--replay-dir` is still emitted (protocol Sec 2.1: declared
+    unconditionally) even though it would go unused by the generator in
+    that case."""
+    protocol = build_protocol(_protocol_params(save_eval_replays=False))
+    argv = gen_command(protocol)
+    assert "--save-eval-replays" not in argv
+    assert argv[argv.index("--replay-dir") + 1] == protocol["replay_dir"]
+
+
+def test_gen_command_emits_bare_save_eval_replays_flag_when_true():
+    """A bare flag -- the token immediately after it is the NEXT flag, not
+    a value for `--save-eval-replays` itself."""
+    protocol = build_protocol(_protocol_params(save_eval_replays=True))
+    argv = gen_command(protocol)
+    idx = argv.index("--save-eval-replays")
+    assert argv[idx + 1].startswith("--")
+
+
+def test_gen_command_does_not_emit_source_index_path_as_a_flag():
+    """`source_index_path` is a `PROTOCOL_SCHEMA_KEYS` field (so a later
+    stage can verify the generator's derivation), but `eval_checkpoint_match`
+    has no such flag -- it derives the JSONL path itself from `--output`'s
+    stem. Neither a `--source-index-path` flag nor the bare value may
+    appear anywhere in the argv."""
+    protocol = build_protocol(_protocol_params())
+    argv = gen_command(protocol)
+    assert not any("source-index" in tok for tok in argv)
+    assert protocol["source_index_path"] not in argv
+
+
+def test_gen_command_output_stem_implies_source_index_path():
+    """Pins the derivability claim itself: the frozen protocol's declared
+    `source_index_path` agrees with what `eval_checkpoint_match._write_outputs`
+    would actually derive from the emitted `--output` value
+    (`f"{stem}_games.jsonl"`) -- so the missing flag above is provably not
+    a silent gap, just a value the generator computes on its own."""
+    protocol = build_protocol(_protocol_params())
+    argv = gen_command(protocol)
+    output = argv[argv.index("--output") + 1]
+    stem, _ext = os.path.splitext(output)
+    assert f"{stem}_games.jsonl" == protocol["source_index_path"]
+
+
+def test_gen_command_all_elements_are_strings():
+    protocol = build_protocol(_protocol_params())
+    argv = gen_command(protocol)
+    assert all(isinstance(tok, str) for tok in argv)
+
+
+def test_gen_command_is_deterministic():
+    """The same protocol -- even two SEPARATELY constructed but
+    equal-valued protocol dicts -- always produces the same argv."""
+    protocol_1 = build_protocol(_protocol_params())
+    protocol_2 = build_protocol(_protocol_params())
+    assert protocol_1 is not protocol_2
+    assert gen_command(protocol_1) == gen_command(protocol_2)
+    assert gen_command(protocol_1) == gen_command(protocol_1)  # repeat call
+
+
+def test_gen_command_reflects_overridden_numeric_knobs():
+    """Every one of the ten match knobs, plus `games`/`workers`, is READ
+    from the protocol rather than hardcoded -- overriding each
+    independently changes the corresponding flag's value."""
+    protocol = build_protocol(_protocol_params(
+        games=42, board_size=18, mcts_sims=111, mcts_eval_batch_size=7,
+        mcts_stall_flush_sims=9, selection_mode="argmax",
+        opening_temp_plies=3, temp_high=2.5, temp_low=0.25, max_moves=99,
+        base_seed=555, workers=2,
+    ))
+    argv = gen_command(protocol)
+
+    def value_of(flag):
+        return argv[argv.index(flag) + 1]
+
+    assert value_of("--games") == "42"
+    assert value_of("--board-size") == "18"
+    assert value_of("--mcts-sims") == "111"
+    assert value_of("--mcts-eval-batch-size") == "7"
+    assert value_of("--mcts-stall-flush-sims") == "9"
+    assert value_of("--selection-mode") == "argmax"
+    assert value_of("--opening-temp-plies") == "3"
+    assert value_of("--temp-high") == "2.5"
+    assert value_of("--temp-low") == "0.25"
+    assert value_of("--max-moves") == "99"
+    assert value_of("--base-seed") == "555"
+    assert value_of("--workers") == "2"
+
+
+def test_gen_command_reflects_overridden_matchup_and_output_paths():
+    protocol = build_protocol(_protocol_params(
+        checkpoint_a={"path": "checkpoints/other_a.safetensors",
+                      "identity": "other_a:cccccccc"},
+        checkpoint_b={"path": "checkpoints/other_b.safetensors",
+                      "identity": "other_b:dddddddd"},
+        match_summary_path="runs/other/match_summary.json",
+        source_index_path="runs/other/match_summary_games.jsonl",
+        replay_dir="runs/other/match_summary_replays",
+    ))
+    argv = gen_command(protocol)
+
+    def value_of(flag):
+        return argv[argv.index(flag) + 1]
+
+    assert value_of("--checkpoint-a") == "checkpoints/other_a.safetensors"
+    assert value_of("--checkpoint-b") == "checkpoints/other_b.safetensors"
+    assert value_of("--output") == "runs/other/match_summary.json"
+    assert value_of("--replay-dir") == "runs/other/match_summary_replays"
 
 
 # ---------------------------------------------------------------------------
