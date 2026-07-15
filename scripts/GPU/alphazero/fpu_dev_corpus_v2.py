@@ -2078,14 +2078,31 @@ def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
     (not just with the caller's `forbidden` union) is itself excluded as a
     collision -- v1's own `_scan_two_stage` `kept_hashes` idiom.
 
-    BEFORE any evaluator/checkpoint load, runs the PURE geometric preflight
-    (`v2_preflight_source`, Task 4) over the SAME reservoir index and raises
-    `V2PreflightInfeasible` naming the binding constraint if it is infeasible
-    (design Sec 1.7: "gates before any evaluator loads" -- v1's own `main()`
-    "stop-don't-retune" gate, mirrored here rather than in `main` so
-    `run_screen` is correct even when called directly, not only via the CLI).
-    That raise is the ONLY one this function makes deliberately; every other
-    failure it can hit is a genuine fault and propagates raw (see
+    BEFORE ANYTHING ELSE -- before even this function's own geometric
+    preflight below, let alone the evaluator -- calls the pre-operator
+    hardening precheck, `fpu_dev_reservoir_protocol.precheck_before_screen
+    (config)` (Task B9, design Sec 5/Sec 6): re-derives the canonical config
+    from `config`'s own pinned `(protocol, reservoir)` and byte-compares it
+    against `config` itself (the real config-tamper check -- catches an
+    edited `selection_seed`/`select_out`/etc. that carries no hash of its
+    own), plus a per-identity hash recheck, an explicit protocol-binding
+    check, and its own defensive geometric preflight. Imported LAZILY, inside
+    this function's own body -- never at this module's top level, which
+    would cycle (design Sec 6: `fpu_dev_reservoir_protocol` already
+    top-level-imports FROM this module). Raises `ValueError` on any failure,
+    stopping before a single other byte of this function runs -- so an
+    hours-long screen never starts on stale/tampered inputs.
+
+    THEN, still before any evaluator/checkpoint load, runs the PURE
+    geometric preflight (`v2_preflight_source`, Task 4) over the SAME
+    reservoir index and raises `V2PreflightInfeasible` naming the binding
+    constraint if it is infeasible (design Sec 1.7: "gates before any
+    evaluator loads" -- v1's own `main()` "stop-don't-retune" gate, mirrored
+    here rather than in `main` so `run_screen` is correct even when called
+    directly, not only via the CLI). That raise is the ONLY one this
+    function's OWN body makes deliberately (the lazily-imported precheck
+    above raises its own `ValueError`s); every other failure this function
+    can hit is a genuine fault and propagates raw (see
     `V2PreflightInfeasible`'s own docstring, and `main`).
 
     OPERATOR: loads a real checkpoint via `config.checkpoint` and runs
@@ -2097,6 +2114,9 @@ def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
     + its `.meta.json` (`write_screen_csv` / `write_screen_meta` -- mirrors
     v1's `write_manifest` / `write_meta`).
     """
+    from .fpu_dev_reservoir_protocol import precheck_before_screen
+    precheck_before_screen(config)
+
     records = load_game_index(config.source_index_path)
     report = v2_preflight_source(records)
     if not report.feasible:

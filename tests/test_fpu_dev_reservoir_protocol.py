@@ -43,8 +43,10 @@ from scripts.GPU.alphazero import fpu_provenance
 from scripts.GPU.alphazero.eval_runner import EvalGameResult
 from scripts.GPU.alphazero.eval_summary import summarize_match
 from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
+    _V2_CONFIG_REQUIRED_KEYS,
     _V2_CORPUS_SOURCES,
     enumerate_v2_proposals,
+    load_v2_config,
     v2_geometry_feasibility,
 )
 from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
@@ -72,6 +74,7 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     is_passed,
     is_retired,
     measure_reservoir,
+    precheck_before_screen,
     qualify_core,
     reason_histogram,
     run_qualify,
@@ -3256,6 +3259,277 @@ def test_run_qualify_execution_pulls_no_gpu_or_mlx(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# precheck_before_screen -- Task B9 (design Sec 5/Sec 6). `run_screen`'s
+# pre-evaluator gate: re-derive + byte-compare the config against a fresh
+# `(protocol, measurements)` is the REAL config-tamper check (catches an
+# edited field that carries no hash of its own, e.g. `selection_seed`/
+# `select_out`) -- a hash-only recheck of `expected_fingerprints` cannot see
+# it (see the RED-proof companion test below). Every fixture here is a
+# GENUINELY on-disk, qualification-PASSED (config, protocol, reservoir)
+# triple (`_write_precheckable_config`, reusing B3's `_write_qualifiable_
+# reservoir` + B7's `run_qualify` + B8's `load_v2_config`) -- `precheck_
+# before_screen` is exercised directly, never through `run_screen` (the
+# operator/GPU shell -- see tests/test_fpu_dev_corpus_v2.py for its STATIC
+# wiring test instead, since invoking `run_screen` would require a real
+# checkpoint/evaluator).
+# ---------------------------------------------------------------------------
+
+def _write_precheckable_config(tmp_path: Path, **reservoir_kwargs):
+    """A faithful, ENTIRELY on-disk (protocol, reservoir, config) triple:
+    `_write_qualifiable_reservoir` (B3) + a real `run_qualify` PASS (B7),
+    then loading the emitted config back through the REAL `load_v2_config`
+    (B8) -- exactly the artifact chain `precheck_before_screen` verifies.
+
+    The `_fake_preflight(True)` at THIS `run_qualify` call is necessary --
+    this reservoir is far too small to clear the REAL 240-row/4-phase
+    geometric quotas, the same reason every other `_write_qualifiable_
+    reservoir`-based test in this file injects one. A caller of `precheck_
+    before_screen` itself must inject its OWN `preflight` for the same
+    reason; this helper deliberately does not do that on the caller's
+    behalf, since some tests below want a DIFFERENT (infeasible) fake at
+    that second, independent call site.
+
+    Returns `(config, protocol, protocol_path, info)`."""
+    protocol, protocol_path, info = _write_qualifiable_reservoir(
+        tmp_path, **reservoir_kwargs)
+    exit_code = run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    assert exit_code == EXIT_OK, "fixture setup: qualification did not PASS"
+    config = load_v2_config(protocol["config_out"])
+    return config, protocol, protocol_path, info
+
+
+def test_precheck_before_screen_signature_and_defaults():
+    """Pins the brief's exact interface: `precheck_before_screen(config, *,
+    measure=measure_reservoir, preflight=default_preflight) -> None`."""
+    import inspect
+    sig = inspect.signature(precheck_before_screen)
+    assert list(sig.parameters) == ["config", "measure", "preflight"]
+    assert sig.parameters["measure"].kind == inspect.Parameter.KEYWORD_ONLY
+    assert sig.parameters["preflight"].kind == inspect.Parameter.KEYWORD_ONLY
+    assert sig.parameters["measure"].default is measure_reservoir
+    assert sig.parameters["preflight"].default is default_preflight
+
+
+def test_precheck_before_screen_passes_and_returns_none_on_a_faithful_config(tmp_path):
+    config, _protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    calls: list = []
+    result = precheck_before_screen(
+        config, preflight=_fake_preflight(True, calls=calls))
+    assert result is None
+    assert len(calls) == 1   # the defensive preflight (step 5) really ran
+
+
+def test_precheck_before_screen_preflight_receives_the_freshly_measured_measurements(tmp_path):
+    """Step 5 consumes the SAME `ReservoirMeasurements` step 1 just produced
+    -- not a stale copy, and not a second, independent `measure` call --
+    proven by injecting a `measure` that returns a recognizable sentinel and
+    asserting `preflight` was invoked with THAT exact object."""
+    config, protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    sentinel = measure_reservoir(protocol)
+
+    calls: list = []
+    precheck_before_screen(
+        config, measure=lambda _proto: sentinel,
+        preflight=_fake_preflight(True, calls=calls))
+    assert calls == [sentinel]
+
+
+def test_precheck_before_screen_raises_on_byte_changed_reservoir_replay(tmp_path):
+    """A byte-changed RESERVOIR (one replay sidecar's content) is caught by
+    the hash recheck (step 2) via `replay_data_sha1` -- the ONE identity
+    that covers replay CONTENT, not paths."""
+    config, _protocol, _protocol_path, info = _write_precheckable_config(tmp_path)
+    tampered_replay = Path(info["rows"][0]["replay_path"])
+    sidecar = json.loads(tampered_replay.read_text())
+    sidecar["moves"][0]["n_legal"] = int(sidecar["moves"][0]["n_legal"]) + 1
+    tampered_replay.write_text(json.dumps(sidecar))
+
+    with pytest.raises(ValueError, match="replay_data_sha1"):
+        precheck_before_screen(config, preflight=_fake_preflight(True))
+
+
+def test_precheck_before_screen_raises_on_byte_changed_protocol_file(tmp_path):
+    """A byte-changed PROTOCOL (in place, at `config.protocol_path`) is
+    caught via `protocol_sha1` -- the identity computed from the freshly
+    LOADED protocol's own canonical bytes, not from the (unaffected) files
+    it names."""
+    config, protocol, protocol_path, _info = _write_precheckable_config(tmp_path)
+    tampered = dict(protocol)
+    tampered["workers"] = int(protocol["workers"]) + 1
+    protocol_path.write_bytes(canonical_json_bytes(tampered))
+
+    with pytest.raises(ValueError, match="protocol_sha1"):
+        precheck_before_screen(config, preflight=_fake_preflight(True))
+
+
+def test_precheck_before_screen_raises_on_byte_changed_match_summary_file(tmp_path):
+    """A byte-changed SUMMARY is caught via `match_summary_sha1`."""
+    config, protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    summary_path = Path(protocol["match_summary_path"])
+    summary = json.loads(summary_path.read_text())
+    summary["a_win_rate"] = float(summary.get("a_win_rate") or 0.0) + 0.001
+    summary_path.write_text(json.dumps(summary))
+
+    with pytest.raises(ValueError, match="match_summary_sha1"):
+        precheck_before_screen(config, preflight=_fake_preflight(True))
+
+
+def test_precheck_before_screen_raises_on_byte_changed_checkpoint_file(tmp_path):
+    """A byte-changed CHECKPOINT is caught via the checkpoint identity block
+    -- here `checkpoint_a` doubles as the protocol's declared anchor, so
+    BOTH `reservoir_checkpoint_a_identity` and `anchor_checkpoint_identity`
+    are affected; the loop's first (alphabetically earliest) hit is enough
+    to raise, so this matches EITHER key name rather than pinning which of
+    the two fires first. (A bare 'checkpoint' substring would too easily
+    false-pass: `_fingerprint_mismatch`'s own boilerplate remediation text
+    -- "...source-file/checkpoint this identity covers changed..." -- names
+    every identity kind, including unrelated ones, so it alone would not
+    prove a CHECKPOINT identity specifically tripped.)"""
+    config, protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    ckpt_path = Path(protocol["checkpoint_a"]["path"])
+    ckpt_path.write_bytes(ckpt_path.read_bytes() + b"-tampered")
+
+    with pytest.raises(
+            ValueError,
+            match="reservoir_checkpoint_a_identity|anchor_checkpoint_identity"):
+        precheck_before_screen(config, preflight=_fake_preflight(True))
+
+
+def test_precheck_before_screen_raises_on_stale_source_file_hash_via_injected_measure(tmp_path):
+    """A changed result-determining SOURCE FILE is simulated by INJECTING a
+    `measure` that returns a genuine `measure_reservoir` result with ONE
+    `source_file_sha1s` entry overwritten -- this test suite must never edit
+    a real repo .py file to prove this. The observable symptom `precheck_
+    before_screen` reacts to is identical either way: a `measure` call whose
+    `source_file_sha1s` disagrees with what the config pinned."""
+    config, protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+
+    def _measure_with_tampered_source_file(proto):
+        real = measure_reservoir(proto)
+        some_name = next(iter(real.source_file_sha1s))
+        tampered_sources = {**real.source_file_sha1s, some_name: "0" * 40}
+        return dataclasses.replace(real, source_file_sha1s=tampered_sources)
+
+    with pytest.raises(ValueError, match="source_file_sha1s"):
+        precheck_before_screen(
+            config, measure=_measure_with_tampered_source_file,
+            preflight=_fake_preflight(True))
+
+
+def test_precheck_before_screen_hash_recheck_alone_cannot_see_a_tampered_selection_seed(tmp_path):
+    """The RED-proof companion to the load-bearing test below: tampering
+    `selection_seed` changes NO pinned hash -- it is not part of `expected_
+    fingerprints` at all (see `derive_config`'s field list: `selection_seed`
+    is carried verbatim from the protocol, `expected_fingerprints` is a
+    SEPARATE, measured-identities-only block). So a hash-only recheck of
+    `expected_fingerprints` genuinely cannot see this tamper -- proven here
+    directly (no call into `precheck_before_screen`): a fresh re-derivation's
+    `expected_fingerprints` block still equals the tampered config's, even
+    though the tampered config's `selection_seed` itself does not equal the
+    re-derivation's. This is what makes the FULL re-derive+byte-compare
+    (step 3) the real tamper check, not the per-identity hash recheck (step
+    2) -- see the B9 task report for the RED run that removed step 3 and
+    watched the test below fail."""
+    config, protocol, protocol_path, _info = _write_precheckable_config(tmp_path)
+    tampered = dataclasses.replace(config, selection_seed=config.selection_seed + 1)
+
+    measurements = measure_reservoir(protocol)
+    recomputed = derive_config(
+        protocol, measurements, protocol_path=str(protocol_path))
+    assert recomputed["expected_fingerprints"] == tampered.expected_fingerprints
+    assert recomputed["selection_seed"] != tampered.selection_seed
+
+
+def test_precheck_before_screen_raises_on_tampered_selection_seed(tmp_path):
+    """THE load-bearing case (design Sec 5): `selection_seed` carries no
+    hash of its own, so only the re-derive-and-byte-compare (step 3) can
+    catch an edit to it."""
+    config, _protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    tampered = dataclasses.replace(config, selection_seed=config.selection_seed + 1)
+
+    with pytest.raises(ValueError, match="re-derivation"):
+        precheck_before_screen(tampered, preflight=_fake_preflight(True))
+
+
+def test_precheck_before_screen_raises_on_tampered_select_out(tmp_path):
+    """The load-bearing case's second named field (design Sec 5 explicitly
+    names both `selection_seed` and `select_out`): `select_out` likewise
+    carries no hash of its own."""
+    config, _protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    tampered = dataclasses.replace(config, select_out=config.select_out + ".tampered")
+
+    with pytest.raises(ValueError, match="re-derivation"):
+        precheck_before_screen(tampered, preflight=_fake_preflight(True))
+
+
+@pytest.mark.parametrize("field", [
+    "source_index_path", "checkpoint", "screen_out", "match_summary_path",
+    "replay_dir", "report_out", "new_collapse_stratum",
+])
+def test_precheck_before_screen_raises_on_tampered_non_hashed_string_field(tmp_path, field):
+    """Broader sweep of design Sec 5's "ANY edited field, hashed or not"
+    claim, beyond the two fields the brief names explicitly (`selection_
+    seed`/`select_out`, covered above): every OTHER carried-verbatim string
+    field in `_V2_CONFIG_REQUIRED_KEYS` is likewise invisible to the
+    hash-only recheck (none of them is part of `expected_fingerprints`) and
+    likewise caught only by the full re-derive+byte-compare (step 3)."""
+    config, _protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    assert field in _V2_CONFIG_REQUIRED_KEYS
+    tampered = dataclasses.replace(
+        config, **{field: getattr(config, field) + ".tampered"})
+
+    with pytest.raises(ValueError, match="re-derivation"):
+        precheck_before_screen(tampered, preflight=_fake_preflight(True))
+
+
+def test_precheck_before_screen_raises_when_config_binds_a_different_protocol(tmp_path):
+    """A config whose `protocol_path` is swapped to point at a DIFFERENT,
+    independently-generated (but individually faithful) protocol is
+    refused -- whichever identity the per-key loop (step 2) or the
+    whole-document compare (step 3) disagrees on first, SOME check fires;
+    which exact key is an implementation detail, not asserted here."""
+    config_a, protocol_a, _protocol_path_a, _info_a = _write_precheckable_config(
+        tmp_path / "a")
+    _config_b, protocol_b, protocol_path_b, _info_b = _write_precheckable_config(
+        tmp_path / "b")
+    assert protocol_a != protocol_b   # genuinely different, not a vacuous test
+
+    swapped = dataclasses.replace(config_a, protocol_path=str(protocol_path_b))
+    with pytest.raises(ValueError):
+        precheck_before_screen(swapped, preflight=_fake_preflight(True))
+
+
+def test_precheck_before_screen_raises_when_defensive_preflight_infeasible(tmp_path):
+    """Step 5: an infeasible reservoir (per the injected `preflight`) is
+    refused -- the DEFENSIVE repeat of the geometric preflight."""
+    config, _protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    with pytest.raises(ValueError, match="INFEASIBLE"):
+        precheck_before_screen(
+            config, preflight=_fake_preflight(False, "not enough late rows"))
+
+
+def test_precheck_before_screen_performs_no_gpu_or_mlx_work(tmp_path):
+    """Fresh-subprocess import-purity of CALLING `precheck_before_screen`
+    end to end (real `measure`/`preflight` defaults) -- same idiom as
+    `test_run_qualify_execution_pulls_no_gpu_or_mlx`, and necessary because
+    `run_screen` (fpu_dev_corpus_v2.py) will call this BEFORE its own lazy
+    evaluator import; this function itself must never be what pulls mlx in."""
+    config, _protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    script = (
+        "import sys\n"
+        "from scripts.GPU.alphazero.fpu_dev_corpus_v2 import load_v2_config\n"
+        "from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import precheck_before_screen\n"
+        f"config = load_v2_config({config.config_path!r})\n"
+        "precheck_before_screen(config, preflight=lambda m: "
+        "type('F', (), {'feasible': True, 'binding_constraint': None})())\n"
+        "print(sorted(k for k in sys.modules if 'mlx' in k or 'torch' in k))\n"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=True)
+    assert out.stdout.strip().splitlines()[-1] == "[]"
+
+
+# ---------------------------------------------------------------------------
 # Exit-code vocabulary (design Sec 3) -- shared module-wide constants.
 # ---------------------------------------------------------------------------
 
@@ -3304,19 +3578,25 @@ def test_module_import_does_not_pull_eval_runner_or_eval_summary():
 
 
 def test_module_imports_only_pure_names_from_fpu_dev_corpus_v2():
-    """B3 narrows (not lifts) the B1 scope guard (plan Task B3 / spec Sec 6
-    "import only the shared ... constant" seam): `fpu_dev_corpus_v2` IS
-    imported, but ONLY three names -- `_V2_CORPUS_SOURCES` (B3, needed by
-    `QUALIFICATION_SOURCE_FILES`) plus `enumerate_v2_proposals` and
-    `v2_geometry_feasibility` (B6, needed by `default_preflight`), both Task
-    2/Task 4 functions from that module's own PURE SECTION -- never
-    `V2Config`, `run_screen`, `load_v2_config`, or a bare `import
-    fpu_dev_corpus_v2` that would pull in its whole surface. This is what
-    keeps the Sec 6 circular-import risk one-directional:
-    `fpu_dev_corpus_v2.run_screen` -> (lazily, a LATER task, B9) this
-    module -> `fpu_dev_corpus_v2` (top-level, THIS import,
+    """B3/B6 narrow (not lift) the B1 scope guard (plan Task B3 / spec Sec 6
+    "import only the shared ... constant" seam); B9 completes it. Top level,
+    `fpu_dev_corpus_v2` IS imported, but ONLY four names -- `_V2_CORPUS_
+    SOURCES` (B3, needed by `QUALIFICATION_SOURCE_FILES`), `enumerate_v2_
+    proposals` and `v2_geometry_feasibility` (B6, needed by `default_
+    preflight`), both Task 2/Task 4 functions from that module's own PURE
+    SECTION, and `_V2_CONFIG_REQUIRED_KEYS` (B9, needed by `precheck_before_
+    screen` to build the supplied-config dict it byte-compares against a
+    fresh `derive_config` re-derivation -- literally "the shared config
+    schema-key constant" spec Sec 6 names) -- never `V2Config`, `run_screen`,
+    `load_v2_config`, or a bare `import fpu_dev_corpus_v2` that would pull in
+    its whole surface. This is what keeps the Sec 6 circular-import risk
+    one-directional: `fpu_dev_corpus_v2.run_screen` -> (lazily, B9's
+    `precheck_before_screen` call, function-body-local -- see
+    tests/test_fpu_dev_corpus_v2.py::
+    test_run_screen_calls_precheck_before_screen_before_the_lazy_evaluator_import)
+    this module -> `fpu_dev_corpus_v2` (top-level, THIS import,
     already-proven-import-pure) is not a cycle, since it never imports
-    `run_screen` back.
+    `run_screen` (or `V2Config`) back.
 
     Parsed via `ast` (not a raw substring check) so a legitimate prose
     mention of the module's name -- e.g. this file's own docstring naming
@@ -3341,5 +3621,6 @@ def test_module_imports_only_pure_names_from_fpu_dev_corpus_v2():
     assert not any("fpu_dev_corpus_v2" in m for m in whole_module_imports), (
         whole_module_imports)
     assert from_imports == {
-        "_V2_CORPUS_SOURCES", "enumerate_v2_proposals", "v2_geometry_feasibility",
+        "_V2_CONFIG_REQUIRED_KEYS", "_V2_CORPUS_SOURCES",
+        "enumerate_v2_proposals", "v2_geometry_feasibility",
     }, from_imports

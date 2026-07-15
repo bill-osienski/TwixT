@@ -73,9 +73,21 @@ Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-harden
   retirement report, config refused; MISMATCH: replaceable report, no
   config). It refuses outright (no measurement at all) against an
   already-RETIRED protocol, and refuses to re-qualify (no re-emit; use
-  `--check`) an already-PASSED one. The `V2Config` extension (B8), the
-  `run_screen` precheck (B9), the final 11-identity chain (B10) and the CLI
-  `main` (B11) are still later tasks -- none of that exists here.
+  `--check`) an already-PASSED one. B8 (in fpu_dev_corpus_v2.py) extended
+  `V2Config`/`load_v2_config` with the Sec 2.2 fields and added this module to
+  the v2 corpus source set. B9 adds `precheck_before_screen(config, *,
+  measure=measure_reservoir, preflight=default_preflight)` -- the
+  `run_screen` pre-evaluator gate (Sec 5/Sec 6): re-derives + byte-compares
+  the WHOLE config against a fresh `(protocol, measurements)` (the real
+  config-tamper check -- a hash-only recheck cannot see an edited
+  `selection_seed`/`select_out`, since neither carries a hash of its own),
+  plus a per-identity hash recheck, an explicit protocol-binding check, and a
+  defensive preflight repeat. `fpu_dev_corpus_v2.run_screen` calls it via a
+  LAZY, function-body-local import (never at that module's top level -- Sec
+  6's circular-import resolution: this module already top-level-imports FROM
+  `fpu_dev_corpus_v2`, so a top-level import back would cycle). The final
+  11-identity chain (B10) and the CLI `main` (B11) are still later tasks --
+  neither exists here.
 
 =============================================================================
 TOOLING ONLY. No evaluator / MCTS / GPU / MLX / checkpoint-WEIGHTS import,
@@ -484,6 +496,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 from . import fpu_provenance
 from .fpu_dev_corpus_v2 import (
+    _V2_CONFIG_REQUIRED_KEYS,
     _V2_CORPUS_SOURCES,
     enumerate_v2_proposals,
     v2_geometry_feasibility,
@@ -2299,3 +2312,161 @@ def run_qualify(
 
     write_report(report_out, result)
     return _EXIT_CODE_FOR_STATUS[result.status]
+
+
+# ---------------------------------------------------------------------------
+# precheck_before_screen -- Task B9 (design Sec 5/Sec 6). The `run_screen`
+# pre-evaluator gate: called BEFORE any checkpoint/evaluator work, so an
+# hours-long screen never starts against a stale or tampered
+# config/protocol/reservoir. `run_screen` (fpu_dev_corpus_v2.py) LAZILY
+# imports this function inside its own body -- never at that module's top
+# level -- which is what keeps the Sec 6 circular-import risk
+# one-directional: this module already top-level-imports FROM
+# fpu_dev_corpus_v2 (`_V2_CONFIG_REQUIRED_KEYS`, `_V2_CORPUS_SOURCES`,
+# `enumerate_v2_proposals`, `v2_geometry_feasibility`), so a top-level import
+# back from that module into this one would cycle.
+# ---------------------------------------------------------------------------
+
+def _fingerprint_mismatch(key: str, supplied: Any, fresh: Any, *,
+                          protocol_path: Union[str, Path]) -> ValueError:
+    """One `expected_fingerprints[key]` hard-match failure (Task B9 step 2),
+    formatted like the rest of this module's raises: names the identity,
+    what each side says, and what to do. When both sides are `{basename:
+    sha1}` blocks (`source_file_sha1s`/`forbidden_manifest_sha1s`), narrows
+    the report to just the differing basename(s) -- dumping the whole block
+    twice over would bury the one fact an operator needs (WHICH file
+    changed), mirroring `fpu_dev_corpus_v2._identity_mismatch`'s own
+    narrowing for the same reason (a distinct helper, not a shared import:
+    that one's remediation table is keyed to the legacy 7-identity
+    `SCREEN_IDENTITY_KEYS` set, not this module's 9-identity
+    `expected_fingerprints`)."""
+    if isinstance(supplied, Mapping) and isinstance(fresh, Mapping):
+        names = sorted(set(supplied) | set(fresh))
+        differing = [n for n in names if supplied.get(n) != fresh.get(n)]
+        detail = "differing basename(s): " + ", ".join(
+            f"{n}: {supplied.get(n)!r} -> {fresh.get(n)!r}" for n in differing)
+    else:
+        detail = f"config declares {supplied!r}, fresh recompute is {fresh!r}"
+    return ValueError(
+        f"precheck_before_screen: expected_fingerprints[{key!r}] MISMATCH -- "
+        f"{detail}. The reservoir/protocol/summary/source-file/checkpoint "
+        f"this identity covers changed since the config at {protocol_path!r} "
+        f"was derived -- re-qualify (fpu_dev_reservoir_protocol qualify) "
+        f"before screening.")
+
+
+def precheck_before_screen(
+        config: Any,
+        *,
+        measure: Callable[[Mapping[str, Any]], ReservoirMeasurements] = measure_reservoir,
+        preflight: Callable[[ReservoirMeasurements], Any] = default_preflight,
+) -> None:
+    """`run_screen`'s pre-evaluator gate (design Sec 5/Sec 6, Task B9).
+    Raises `ValueError` on ANY failure; returns `None` on success. `config`
+    is duck-typed -- a real `V2Config`, or anything exposing the same
+    attributes (`protocol_path`, `expected_fingerprints`, and every
+    `_V2_CONFIG_REQUIRED_KEYS` field) -- this module never imports
+    `V2Config` itself (see this section's banner).
+
+    Five checks, run in this order:
+
+    1. Loads the frozen protocol from `config.protocol_path` and calls
+       `measure(protocol)` (default `measure_reservoir`, B3) -- the ONE
+       real-world filesystem read this function performs, through its
+       injected dependency.
+    2. Recomputes `derive_config`'s (B7) `expected_fingerprints` block from
+       the FRESH `(protocol, measurements)` and hard-matches it, identity by
+       identity, against `config.expected_fingerprints` -- catches a
+       reservoir, protocol, match-summary, result-determining source file,
+       or checkpoint that changed on disk since this config was derived
+       (`_fingerprint_mismatch` names which one).
+    3. Re-derives the WHOLE canonical config (`derive_config(protocol,
+       measurements, protocol_path=config.protocol_path)`) and
+       byte-compares it (`canonical_json_bytes`) against the supplied
+       `config` -- THE real config-tamper check (design Sec 5). Unlike step
+       2, which can only ever see the nine HASHED identities, this compares
+       the entire derived document, so it catches an edit to ANY field --
+       hashed or not: `selection_seed`, `select_out`, `phase_allocation`,
+       .... Step 2 could never see a `selection_seed` edit (it carries no
+       hash of its own); this step is what makes the tamper check complete.
+    4. Explicitly re-confirms the config binds THIS protocol
+       (`expected_fingerprints["protocol_sha1"]` against the freshly-loaded
+       protocol's own hash). Already implied by steps 2 and 3
+       (`protocol_sha1` is one of the nine fingerprints step 2 checks, and
+       is part of the whole-config comparison step 3 makes) -- kept as its
+       own explicit check so a config that binds a completely different
+       protocol fails with a message naming exactly that, rather than a
+       generic fingerprint diff.
+    5. Repeats the geometric preflight DEFENSIVELY (`preflight(
+       measurements)`, default `default_preflight`, B6) -- the same
+       feasibility gate `qualify_core` ran when this config was first
+       emitted, re-run here in case the reservoir's *content* regressed
+       into infeasibility in a way steps 2-4 cannot see. Infeasible ->
+       raise, stopping before the evaluator loads.
+
+    PURE apart from `measure`'s one real read: no evaluator/MCTS/GPU of its
+    own. Deliberately does NOT call `check_protocol_conformance` or
+    `check_summary_binding` (B4/B5) a second time -- those already ran once,
+    at `qualify` time, verifying the RESERVOIR against the PROTOCOL; this
+    function verifies the CONFIG against the (protocol, reservoir) pair --
+    the one thing `qualify_core` never checked, since it takes no `config`
+    parameter at all.
+    """
+    protocol = json.loads(Path(config.protocol_path).read_text())
+    measurements = measure(protocol)
+    recomputed_config = derive_config(
+        protocol, measurements, protocol_path=config.protocol_path)
+    recomputed_fingerprints = recomputed_config["expected_fingerprints"]
+    expected_fingerprints = config.expected_fingerprints or {}
+
+    # (2) Hash recheck: every pinned identity, hard-matched individually so
+    # a failure names exactly which one drifted.
+    for key in sorted(recomputed_fingerprints):
+        supplied_value = expected_fingerprints.get(key)
+        fresh_value = recomputed_fingerprints[key]
+        if supplied_value != fresh_value:
+            raise _fingerprint_mismatch(
+                key, supplied_value, fresh_value,
+                protocol_path=config.protocol_path)
+
+    # (3) The real config-tamper check: re-derive the WHOLE canonical config
+    # and byte-compare -- catches an edited field that carries no hash of
+    # its own (selection_seed, select_out, ...).
+    supplied_config = {key: getattr(config, key) for key in _V2_CONFIG_REQUIRED_KEYS}
+    supplied_config["eval_batch_size"] = config.eval_batch_size
+    supplied_config["stall_flush_sims"] = config.stall_flush_sims
+    supplied_bytes = canonical_json_bytes(supplied_config)
+    recomputed_bytes = canonical_json_bytes(recomputed_config)
+    if supplied_bytes != recomputed_bytes:
+        differing = sorted(k for k in recomputed_config
+                           if supplied_config.get(k) != recomputed_config[k])
+        raise ValueError(
+            "precheck_before_screen: the supplied config does not "
+            "byte-equal a fresh re-derivation from (protocol, reservoir) "
+            f"-- differing top-level key(s): {differing}. Some config field "
+            "was edited after qualification (design Sec 5's re-derive + "
+            "byte-compare tamper check -- it catches ANY edited field, "
+            "hashed or not, e.g. selection_seed, select_out, that the hash "
+            "recheck above cannot see).")
+
+    # (4) The config must bind THIS protocol -- already implied by (2)/(3),
+    # re-checked explicitly for a message that names the failure directly.
+    supplied_protocol_sha1 = expected_fingerprints.get("protocol_sha1")
+    measured_protocol_sha1 = recomputed_fingerprints["protocol_sha1"]
+    if supplied_protocol_sha1 != measured_protocol_sha1:
+        raise ValueError(
+            f"precheck_before_screen: config does not bind the protocol at "
+            f"{config.protocol_path!r} -- expected_fingerprints["
+            f"'protocol_sha1']={supplied_protocol_sha1!r} but that protocol "
+            f"hashes to {measured_protocol_sha1!r}. The config was derived "
+            f"from a DIFFERENT protocol (or the protocol changed since).")
+
+    # (5) Repeat the geometric preflight, defensively.
+    preflight_result = preflight(measurements)
+    if not preflight_result.feasible:
+        raise ValueError(
+            f"precheck_before_screen: geometric preflight is INFEASIBLE on "
+            f"defensive re-check -- binding constraint: "
+            f"{getattr(preflight_result, 'binding_constraint', None)}. "
+            f"Stopping BEFORE the evaluator loads (an hours-long screen "
+            f"must never start on an infeasible reservoir).")

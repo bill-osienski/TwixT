@@ -4130,3 +4130,81 @@ def test_v2_run_screen_attests_to_the_artifact_it_just_wrote():
                    '"row_counts": screen_row_counts(rows)'):
         assert needle in body, needle
     assert body.index("write_screen_csv(") < body.index("write_screen_meta(")
+
+
+# ---------------------------------------------------------------------------
+# Task B9 (pre-op hardening plan, design Sec 5/Sec 6) -- the `run_screen`
+# pre-evaluator precheck. `precheck_before_screen` itself (fpu_dev_reservoir_
+# protocol.py) is verified DIRECTLY and exhaustively in tests/test_fpu_dev_
+# reservoir_protocol.py -- it is pure of GPU, unlike `run_screen`. Here: ONLY
+# the STATIC wiring -- that `run_screen` calls it, via a lazy import, BEFORE
+# any other work -- and that importing both modules, in EITHER order, never
+# cycles. `run_screen` itself is never invoked (plan Global Constraints: it
+# is the operator/GPU stage).
+# ---------------------------------------------------------------------------
+
+def test_run_screen_calls_precheck_before_screen_before_the_lazy_evaluator_import():
+    """Spec Sec 5/Sec 6: an hours-long screen must never start on stale or
+    tampered inputs, so `run_screen` calls `precheck_before_screen` BEFORE
+    any checkpoint/evaluator work -- in fact before EVERYTHING else in the
+    function, including its own pre-existing v1-style geometric preflight
+    (`v2_preflight_source`). `run_screen` lazily imports it INSIDE its own
+    body (never at this module's top level -- Sec 6's circular-import
+    resolution: `fpu_dev_reservoir_protocol` already top-level-imports FROM
+    this module, so a top-level import back here would cycle -- see
+    `test_fpu_dev_corpus_v2_and_fpu_dev_reservoir_protocol_import_fresh_
+    without_cycling` below). Source-order assertion only, docstring
+    stripped (`_function_body`) so prose can never satisfy it."""
+    body = _function_body(run_screen)
+    assert "from .fpu_dev_reservoir_protocol import precheck_before_screen" in body
+    assert "precheck_before_screen(config)" in body
+
+    precheck_import_idx = body.index(
+        "from .fpu_dev_reservoir_protocol import precheck_before_screen")
+    precheck_call_idx = body.index("precheck_before_screen(config)")
+    v1_style_preflight_idx = body.index("v2_preflight_source(")
+    evaluator_import_idx = body.index(
+        "from .build_teacher_calibration_manifest import _teacher_infer")
+
+    assert precheck_import_idx < precheck_call_idx, body
+    assert precheck_call_idx < v1_style_preflight_idx, body
+    assert precheck_call_idx < evaluator_import_idx, body
+
+
+def test_fpu_dev_corpus_v2_and_fpu_dev_reservoir_protocol_import_fresh_without_cycling():
+    """Verifies the Sec 6 circular-import resolution actually holds, by
+    IMPORTING both modules fresh, in a subprocess, in EACH order -- an
+    in-process import would be unreliable (a prior test in this same pytest
+    session may already have imported one or both, masking a genuine
+    cycle). Also confirms `run_screen`'s lazy import genuinely never fires at
+    IMPORT time: merely `import`ing `fpu_dev_corpus_v2` (never calling `run_
+    screen`) must leave `fpu_dev_reservoir_protocol` out of `sys.modules` --
+    the complement to tests/test_fpu_dev_reservoir_protocol.py::
+    test_module_imports_only_pure_names_from_fpu_dev_corpus_v2, which proves
+    the same one-directional shape from that OTHER module's own top-level
+    imports."""
+    import subprocess
+    import sys
+
+    for script in (
+        # fpu_dev_corpus_v2 first, then fpu_dev_reservoir_protocol.
+        "import scripts.GPU.alphazero.fpu_dev_corpus_v2 as a\n"
+        "import scripts.GPU.alphazero.fpu_dev_reservoir_protocol as b\n"
+        "print('ok')\n",
+        # fpu_dev_reservoir_protocol first, then fpu_dev_corpus_v2 (reverse
+        # order -- proves neither module's TOP LEVEL depends on import
+        # order, which is what "no cycle" actually guarantees).
+        "import scripts.GPU.alphazero.fpu_dev_reservoir_protocol as b\n"
+        "import scripts.GPU.alphazero.fpu_dev_corpus_v2 as a\n"
+        "print('ok')\n",
+    ):
+        out = subprocess.run(
+            [sys.executable, "-c", script], capture_output=True, text=True)
+        assert out.returncode == 0 and out.stdout.strip() == "ok", (out.returncode, out.stderr)
+
+    out = subprocess.run(
+        [sys.executable, "-c",
+         "import sys; import scripts.GPU.alphazero.fpu_dev_corpus_v2 as m; "
+         "print(any('fpu_dev_reservoir_protocol' in k for k in sys.modules))"],
+        capture_output=True, text=True, check=True)
+    assert out.stdout.strip() == "False"
