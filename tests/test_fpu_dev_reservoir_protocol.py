@@ -29,6 +29,7 @@ another test module in the same pytest session may have already pulled mlx
 into `sys.modules` first).
 """
 import dataclasses
+import hashlib
 import json
 import os
 import subprocess
@@ -65,12 +66,17 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     check_protocol_conformance,
     check_summary_binding,
     default_preflight,
+    derive_config,
     emit_protocol,
     gen_command,
+    is_passed,
+    is_retired,
     measure_reservoir,
     qualify_core,
     reason_histogram,
+    run_qualify,
     write_atomic,
+    write_report,
 )
 
 # ---------------------------------------------------------------------------
@@ -2505,6 +2511,704 @@ def test_qualify_core_gate_fail_with_real_default_preflight_on_infeasible_but_fa
     assert result.reason is not None
     assert result.report["preflight"]["feasible"] is False
     assert result.report["preflight"]["binding_constraint"] == result.reason
+
+
+# ---------------------------------------------------------------------------
+# derive_config -- Task B7 (design Sec 2.2, the derivability invariant
+# "config = derive(protocol, reservoir)"). PURE over `(protocol,
+# measurements, protocol_path)` -- every fixture below reuses B4's
+# `_conformant_reservoir` (already fabricated directly, no disk): correct
+# CONFORMANCE is irrelevant to `derive_config` (it never checks anything,
+# it only maps fields), so the same in-memory backbone every B4/B5 test
+# already uses is a perfectly good, DRY source of a fixed `(protocol,
+# measurements)` pair here too.
+# ---------------------------------------------------------------------------
+
+_DERIVED_CONFIG_TOP_LEVEL_KEYS = {
+    "source_index_path", "seed_range", "selection_seed", "phase_allocation",
+    "late_floors", "enumerator_params", "new_collapse_stratum", "checkpoint",
+    "forbidden_manifests", "screen_out", "select_out", "eval_batch_size",
+    "stall_flush_sims", "config_schema_version", "protocol_path",
+    "match_summary_path", "replay_dir", "report_out", "expected_fingerprints",
+}
+
+_EXPECTED_FINGERPRINTS_KEYS = {
+    "protocol_sha1", "source_index_sha1", "replay_data_sha1",
+    "match_summary_sha1", "source_file_sha1s", "forbidden_manifest_sha1s",
+    "reservoir_checkpoint_a_identity", "reservoir_checkpoint_b_identity",
+    "anchor_checkpoint_identity",
+}
+
+
+def test_derive_config_has_exactly_the_spec_2_2_top_level_keys():
+    """Pins the EXACT top-level membership -- no more, no less -- the set
+    Task B8 will make `fpu_dev_corpus_v2._V2_CONFIG_REQUIRED_KEYS`/
+    `V2Config` hard-match for the current `config_schema_version`."""
+    protocol, measurements = _conformant_reservoir()
+    config = derive_config(
+        protocol, measurements,
+        protocol_path="runs/reservoir_v2/reservoir_protocol.json")
+    assert set(config) == _DERIVED_CONFIG_TOP_LEVEL_KEYS
+    assert len(_DERIVED_CONFIG_TOP_LEVEL_KEYS) == 19
+
+
+def test_derive_config_expected_fingerprints_has_exactly_the_nine_measured_identities():
+    """The three checkpoint identities REPLACE the legacy single
+    `checkpoint_identity` -- nine total, not the old ten-minus-two-plus-one
+    miscount a careless edit could introduce."""
+    protocol, measurements = _conformant_reservoir()
+    config = derive_config(protocol, measurements, protocol_path="p.json")
+    assert set(config["expected_fingerprints"]) == _EXPECTED_FINGERPRINTS_KEYS
+    assert len(_EXPECTED_FINGERPRINTS_KEYS) == 9
+
+
+def test_derive_config_carries_protocol_fields_verbatim():
+    protocol, measurements = _conformant_reservoir()
+    config = derive_config(protocol, measurements, protocol_path="p.json")
+    assert config["source_index_path"] == protocol["source_index_path"]
+    assert config["selection_seed"] == protocol["selection_seed"]
+    assert config["phase_allocation"] == protocol["phase_allocation"]
+    assert config["late_floors"] == protocol["late_floors"]
+    assert config["enumerator_params"] == protocol["enumerator_params"]
+    assert config["new_collapse_stratum"] == protocol["new_collapse_stratum"]
+    assert config["forbidden_manifests"] == list(protocol["forbidden_manifests"])
+    assert config["screen_out"] == protocol["screen_out"]
+    assert config["select_out"] == protocol["select_out"]
+    assert config["config_schema_version"] == protocol["config_schema_version"]
+    assert config["match_summary_path"] == protocol["match_summary_path"]
+    assert config["replay_dir"] == protocol["replay_dir"]
+    assert config["report_out"] == protocol["report_out"]
+
+
+def test_derive_config_checkpoint_is_the_anchor_path_when_anchor_is_checkpoint_a():
+    protocol, measurements = _conformant_reservoir(anchor="checkpoint_a")
+    config = derive_config(protocol, measurements, protocol_path="p.json")
+    assert config["checkpoint"] == protocol["checkpoint_a"]["path"]
+
+
+def test_derive_config_checkpoint_is_the_anchor_path_when_anchor_is_checkpoint_b():
+    """The anchor is a NAMED role, not always checkpoint_a -- `checkpoint`
+    must follow `protocol["anchor"]`, not default to A."""
+    protocol, measurements = _conformant_reservoir(anchor="checkpoint_b")
+    config = derive_config(protocol, measurements, protocol_path="p.json")
+    assert config["checkpoint"] == protocol["checkpoint_b"]["path"]
+    assert config["checkpoint"] != protocol["checkpoint_a"]["path"]
+
+
+def test_derive_config_seed_range_is_half_open_base_seed_to_base_seed_plus_games():
+    protocol, measurements = _conformant_reservoir(games=10, base_seed=12345)
+    config = derive_config(protocol, measurements, protocol_path="p.json")
+    assert config["seed_range"] == [12345, 12355]
+
+
+def test_derive_config_eval_batch_size_and_stall_flush_sims_come_from_protocol_mcts_knobs():
+    """Amendment 1: RENAMED fields -- `eval_batch_size`/`stall_flush_sims`
+    come from `protocol["mcts_eval_batch_size"]`/`["mcts_stall_flush_sims"]`,
+    not from any same-named `protocol` key (there is none)."""
+    protocol, measurements = _conformant_reservoir(
+        mcts_eval_batch_size=99, mcts_stall_flush_sims=77)
+    config = derive_config(protocol, measurements, protocol_path="p.json")
+    assert config["eval_batch_size"] == 99
+    assert config["stall_flush_sims"] == 77
+
+
+def test_derive_config_expected_fingerprints_checkpoint_identities_come_from_measurements():
+    protocol, measurements = _conformant_reservoir()
+    config = derive_config(protocol, measurements, protocol_path="p.json")
+    fp = config["expected_fingerprints"]
+    assert fp["reservoir_checkpoint_a_identity"] == measurements.checkpoint_identities["reservoir_a"]
+    assert fp["reservoir_checkpoint_b_identity"] == measurements.checkpoint_identities["reservoir_b"]
+    assert fp["anchor_checkpoint_identity"] == measurements.checkpoint_identities["anchor"]
+    assert fp["source_index_sha1"] == measurements.source_index_sha1
+    assert fp["replay_data_sha1"] == measurements.replay_data_sha1
+    assert fp["match_summary_sha1"] == measurements.match_summary_sha1
+    assert fp["source_file_sha1s"] == dict(measurements.source_file_sha1s)
+    assert fp["forbidden_manifest_sha1s"] == dict(measurements.forbidden_manifest_sha1s)
+
+
+def test_derive_config_protocol_sha1_equals_hashlib_sha1_of_canonical_json_bytes_of_protocol():
+    """The design decision this task carries forward verbatim: `protocol_
+    sha1` is computed from the IN-MEMORY protocol via B1's `canonical_json_
+    bytes`, never by reading a file."""
+    protocol, measurements = _conformant_reservoir()
+    config = derive_config(protocol, measurements, protocol_path="p.json")
+    expected = hashlib.sha1(canonical_json_bytes(protocol)).hexdigest()
+    assert config["expected_fingerprints"]["protocol_sha1"] == expected
+
+
+def test_derive_config_protocol_sha1_equals_file_sha1_of_a_canonically_emitted_protocol_file(tmp_path):
+    """By construction, `protocol_sha1` equals `fpu_provenance.file_sha1` of
+    a canonically-emitted protocol file: `emit_protocol` (B1) writes EXACTLY
+    `canonical_json_bytes(protocol)`'s bytes, so a whole-file SHA1 of those
+    bytes is the same computation, just reached by reading a file instead of
+    re-serializing the dict."""
+    protocol, measurements = _conformant_reservoir()
+    protocol_path = tmp_path / "reservoir_protocol.json"
+    emit_protocol(protocol, protocol_path)
+    config = derive_config(
+        protocol, measurements, protocol_path=str(protocol_path))
+    assert (config["expected_fingerprints"]["protocol_sha1"]
+            == fpu_provenance.file_sha1(str(protocol_path)))
+
+
+def test_derive_config_is_pure_repeated_calls_produce_identical_bytes():
+    """Same inputs -> identical bytes (brief's own wording) -- re-derivable,
+    which is what the Sec 5 pre-screen tamper check depends on."""
+    protocol, measurements = _conformant_reservoir()
+    first = derive_config(
+        protocol, measurements,
+        protocol_path="runs/reservoir_v2/reservoir_protocol.json")
+    second = derive_config(
+        protocol, measurements,
+        protocol_path="runs/reservoir_v2/reservoir_protocol.json")
+    assert first == second
+    assert canonical_json_bytes(first) == canonical_json_bytes(second)
+
+
+def test_derive_config_forbidden_manifests_and_seed_range_are_json_native_lists():
+    """Not tuples -- so `derive_config`'s own return value is already
+    exactly what `canonical_json_bytes` will serialize, no container-type
+    surprises (a tuple round-trips fine through JSON too, but a golden-dict
+    equality check on the raw Python value would not)."""
+    protocol, measurements = _conformant_reservoir()
+    config = derive_config(protocol, measurements, protocol_path="p.json")
+    assert isinstance(config["forbidden_manifests"], list)
+    assert isinstance(config["seed_range"], list)
+
+
+def test_derive_config_performs_no_io():
+    """PURE -- every path-shaped protocol/measurements field points
+    somewhere that does not exist on this machine; if `derive_config`
+    performed any I/O (including re-reading `protocol_path`) it would raise
+    (mirrors `check_summary_binding`'s own `test_check_summary_binding_
+    performs_no_io`)."""
+    protocol, measurements = _conformant_reservoir(
+        match_summary_path="/definitely/does/not/exist/match_summary.json",
+        source_index_path="/definitely/does/not/exist/match_summary_games.jsonl",
+        replay_dir="/definitely/does/not/exist/replays",
+        checkpoint_a={"path": "/definitely/does/not/exist/a.safetensors",
+                      "identity": "a:deadbeef"},
+        checkpoint_b={"path": "/definitely/does/not/exist/b.safetensors",
+                      "identity": "b:deadbeef"},
+    )
+    config = derive_config(
+        protocol, measurements,
+        protocol_path="/definitely/does/not/exist/reservoir_protocol.json")
+    assert config["checkpoint"] == "/definitely/does/not/exist/a.safetensors"
+
+
+def test_derive_config_equals_a_golden_dict_for_fixed_inputs():
+    """The load-bearing pin: the COMPLETE returned dict, for a fixed
+    `(protocol, measurements, protocol_path)`, equals a fully-spelled-out
+    golden -- not just a subset of fields -- so an accidental rename/
+    miswiring of any single Sec 2.2 field is caught immediately."""
+    protocol, measurements = _conformant_reservoir()
+    config = derive_config(
+        protocol, measurements,
+        protocol_path="runs/reservoir_v2/reservoir_protocol.json")
+    expected_protocol_sha1 = hashlib.sha1(canonical_json_bytes(protocol)).hexdigest()
+    assert config == {
+        "source_index_path": "runs/reservoir_v2/match_summary_games.jsonl",
+        "seed_range": [900000, 900006],
+        "selection_seed": 20260714,
+        "phase_allocation": {"target|opening": {"tuning": 30, "frozen_check": 15}},
+        "late_floors": {"b300_399": 12, "b200_299": 12},
+        "enumerator_params": {"min_ply_gap": 12, "max_per_game": 2},
+        "new_collapse_stratum": "ply_bucket",
+        "checkpoint": "checkpoints/calib020_0001.safetensors",
+        "forbidden_manifests": ["manifests/v1_controls.csv"],
+        "screen_out": "runs/reservoir_v2/fpu_dev_source_screen.csv",
+        "select_out": "runs/reservoir_v2/fpu_dev_manifest_v2.csv",
+        "eval_batch_size": 14,
+        "stall_flush_sims": 48,
+        "config_schema_version": 1,
+        "protocol_path": "runs/reservoir_v2/reservoir_protocol.json",
+        "match_summary_path": "runs/reservoir_v2/match_summary.json",
+        "replay_dir": "runs/reservoir_v2/match_summary_replays",
+        "report_out": "runs/reservoir_v2/qualify_report.json",
+        "expected_fingerprints": {
+            "protocol_sha1": expected_protocol_sha1,
+            "source_index_sha1": "index-sha1-placeholder",
+            "replay_data_sha1": "replay-data-sha1-placeholder",
+            "match_summary_sha1": "summary-sha1-placeholder",
+            "source_file_sha1s": {"fpu_dev_reservoir_protocol.py": "src-sha1-placeholder"},
+            "forbidden_manifest_sha1s": {"v1_controls.csv": "manifest-sha1-placeholder"},
+            "reservoir_checkpoint_a_identity": "calib020_0001:aaaaaaaa",
+            "reservoir_checkpoint_b_identity": "0379:bbbbbbbb",
+            "anchor_checkpoint_identity": "calib020_0001:aaaaaaaa",
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# write_report / is_passed / is_retired -- Task B7 (design Sec 3, the report
+# state machine). `write_report` persists a `QualifyResult` as canonical
+# JSON tagged with an explicit `"status"` marker; `is_passed`/`is_retired`
+# classify an EXISTING report file by that marker alone -- no
+# re-qualification, no filesystem access beyond the report file itself.
+# ---------------------------------------------------------------------------
+
+def _ok_result(reason=None) -> QualifyResult:
+    return QualifyResult(
+        status=QualifyStatus.OK, reason=reason,
+        report={"conformance": {"ok": True, "reason": None},
+                "summary_binding": {"ok": True, "reason": None},
+                "preflight": {"feasible": True, "binding_constraint": None},
+                "reason_histogram": {"win": 6}})
+
+
+def _mismatch_result(reason: str = "seed: bad") -> QualifyResult:
+    return QualifyResult(
+        status=QualifyStatus.MISMATCH, reason=reason,
+        report={"conformance": {"ok": False, "reason": reason},
+                "summary_binding": None, "preflight": None,
+                "reason_histogram": {"win": 6}})
+
+
+def _gate_fail_result(reason: str = "not enough late rows") -> QualifyResult:
+    return QualifyResult(
+        status=QualifyStatus.GATE_FAIL, reason=reason,
+        report={"conformance": {"ok": True, "reason": None},
+                "summary_binding": {"ok": True, "reason": None},
+                "preflight": {"feasible": False, "binding_constraint": reason},
+                "reason_histogram": {"win": 6}})
+
+
+def test_is_passed_false_when_report_absent(tmp_path):
+    assert is_passed(tmp_path / "no_such_report.json") is False
+
+
+def test_is_retired_false_when_report_absent(tmp_path):
+    assert is_retired(tmp_path / "no_such_report.json") is False
+
+
+def test_write_report_writes_fresh_when_absent(tmp_path):
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _ok_result())
+    assert report_path.exists()
+
+
+def test_write_report_persists_status_reason_and_report(tmp_path):
+    report_path = tmp_path / "qualify_report.json"
+    result = _mismatch_result(reason="seed: bad game_idx=3")
+    write_report(report_path, result)
+    document = json.loads(report_path.read_text())
+    assert document == {
+        "status": "MISMATCH",
+        "reason": "seed: bad game_idx=3",
+        "report": result.report,
+    }
+
+
+def test_write_report_is_canonical_json(tmp_path):
+    report_path = tmp_path / "qualify_report.json"
+    result = _ok_result()
+    write_report(report_path, result)
+    assert report_path.read_bytes() == canonical_json_bytes(
+        {"status": "OK", "reason": None, "report": result.report})
+
+
+def test_is_passed_true_after_ok_report(tmp_path):
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _ok_result())
+    assert is_passed(report_path) is True
+    assert is_retired(report_path) is False
+
+
+def test_is_retired_true_after_gate_fail_report(tmp_path):
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _gate_fail_result())
+    assert is_retired(report_path) is True
+    assert is_passed(report_path) is False
+
+
+def test_is_passed_and_is_retired_both_false_after_mismatch_report(tmp_path):
+    """MISMATCH is the one NON-terminal status -- neither classifier fires."""
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _mismatch_result())
+    assert is_passed(report_path) is False
+    assert is_retired(report_path) is False
+
+
+def test_write_report_refuses_to_overwrite_pass_report(tmp_path):
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _ok_result())
+    original_bytes = report_path.read_bytes()
+    with pytest.raises(ValueError):
+        write_report(report_path, _mismatch_result())
+    # terminal + immutable: the existing PASS report is untouched, never
+    # partially clobbered by the refused write.
+    assert report_path.read_bytes() == original_bytes
+
+
+def test_write_report_refuses_to_overwrite_gate_fail_report(tmp_path):
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _gate_fail_result())
+    original_bytes = report_path.read_bytes()
+    with pytest.raises(ValueError):
+        write_report(report_path, _ok_result())
+    assert report_path.read_bytes() == original_bytes
+
+
+def test_write_report_replaces_a_mismatch_report(tmp_path):
+    """The load-bearing REPLACEABLE case (design Sec 3): a second,
+    genuinely DIFFERENT qualify attempt's content -- e.g. after
+    regeneration, a different failing check -- may overwrite an existing
+    MISMATCH report; a mismatch never burns a protocol version."""
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _mismatch_result(reason="seed: bad"))
+    write_report(report_path, _mismatch_result(reason="matchup: bad"))
+    document = json.loads(report_path.read_text())
+    assert document["reason"] == "matchup: bad"
+
+
+def test_write_report_replaces_a_mismatch_report_with_a_pass(tmp_path):
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _mismatch_result())
+    write_report(report_path, _ok_result())
+    assert is_passed(report_path) is True
+
+
+def test_write_report_replaces_a_mismatch_report_with_a_gate_fail(tmp_path):
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _mismatch_result())
+    write_report(report_path, _gate_fail_result())
+    assert is_retired(report_path) is True
+
+
+def test_write_report_never_leaves_a_temp_file_on_the_refused_path(tmp_path):
+    """Mirrors `write_atomic`'s own `test_write_atomic_never_leaves_a_temp_
+    file_on_the_refused_path` -- a refused write leaves no `.tmp` litter."""
+    report_path = tmp_path / "qualify_report.json"
+    write_report(report_path, _ok_result())
+    for _ in range(3):
+        with pytest.raises(ValueError):
+            write_report(report_path, _mismatch_result())
+    assert [p.name for p in tmp_path.iterdir()] == ["qualify_report.json"]
+
+
+# ---------------------------------------------------------------------------
+# run_qualify -- Task B7 (design Sec 3/Sec 7). Unlike every fixture above
+# (fabricated directly, no disk -- B4/B5/B6's `_conformant_reservoir`/
+# `_faithful_summary_binding_reservoir`), `run_qualify` itself calls the
+# REAL `measure_reservoir` (it OWNS the I/O, design Sec 3) -- so its own
+# tests need a GENUINELY on-disk reservoir, mirroring B3's `_write_mini_
+# reservoir` but with two things that fixture deliberately does not need
+# (B3's own tests never validate conformance/binding, only measurement):
+# (1) a summary that is ACTUALLY `summarize_match`'s own output over these
+# exact rows (so `check_summary_binding`, B5, accepts it), and (2)
+# `generation_git_commit`/`generation_source_sha1s` set to THIS repo's real,
+# CURRENT values (`measure_reservoir` always measures the real repo state --
+# there is no way to fake generation provenance without editing real
+# files). The geometric preflight itself is left INJECTABLE (`run_qualify`'s
+# own `preflight=` parameter) so this fixture can stay small -- geometric
+# feasibility is already thoroughly covered where it belongs (B6).
+# ---------------------------------------------------------------------------
+
+def _write_qualifiable_reservoir(tmp_path: Path, *, games: int = 4,
+                                 n_moves: int = 4, protocol_overrides=None):
+    """Fabricate a genuinely ON-DISK reservoir under `tmp_path` that clears
+    BOTH `check_protocol_conformance` (B4) AND `check_summary_binding` (B5)
+    when read back through the REAL `measure_reservoir`. Also freezes the
+    protocol itself to `tmp_path/reservoir_protocol.json` via `write_atomic`
+    (so `run_qualify(protocol_path)` has a real file to load).
+
+    Returns `(protocol, protocol_path, info)`: `protocol` is the dict
+    `run_qualify` will re-load from `protocol_path`; `info` is a plain dict
+    of the raw fabricated rows/paths for a test's own independent
+    assertions or tampering (e.g. a MISMATCH test edits one sidecar file
+    after this fixture returns)."""
+    ckpt_a_path = tmp_path / "checkpoints" / "calib020_0001.safetensors"
+    ckpt_b_path = tmp_path / "checkpoints" / "0379.safetensors"
+    ckpt_a_path.parent.mkdir(parents=True, exist_ok=True)
+    ckpt_a_path.write_bytes(b"fake-checkpoint-a-bytes")
+    ckpt_b_path.write_bytes(b"fake-checkpoint-b-bytes-different")
+
+    board_size = 24
+    base_seed = 900000
+    replay_dir = tmp_path / "replays"
+    moves = [_ply_record(ply) for ply in range(n_moves)]
+
+    rows = []
+    for game_idx in range(games):
+        red_is_a = (game_idx % 2 == 0)
+        red_ckpt = str(ckpt_a_path) if red_is_a else str(ckpt_b_path)
+        black_ckpt = str(ckpt_b_path) if red_is_a else str(ckpt_a_path)
+        seed = base_seed + game_idx
+        replay_path = replay_dir / f"game_{game_idx:06d}.json"
+        replay_path.parent.mkdir(parents=True, exist_ok=True)
+        sidecar = {
+            "schema_version": 1, "pairing_id": "calib020_0001_vs_0379",
+            "game_idx": game_idx, "task_id": game_idx, "seed": seed,
+            "board_size": board_size, "red_checkpoint": red_ckpt,
+            "black_checkpoint": black_ckpt, "winner": "red",
+            "winner_checkpoint": red_ckpt, "reason": "win",
+            "n_moves": n_moves, "moves": [dict(m) for m in moves],
+        }
+        replay_path.write_text(json.dumps(sidecar))
+        rows.append({
+            "task_id": game_idx, "pairing_id": "calib020_0001_vs_0379",
+            "game_idx": game_idx, "red_checkpoint": red_ckpt,
+            "black_checkpoint": black_ckpt, "winner": "red",
+            "winner_checkpoint": red_ckpt, "reason": "win",
+            "n_moves": n_moves, "red_score": 1.0, "black_score": 0.0,
+            "replay_path": str(replay_path),
+        })
+
+    index_path = tmp_path / "match_summary_games.jsonl"
+    with open(index_path, "w") as f:
+        for row in rows:
+            f.write(json.dumps(row) + "\n")
+
+    manifest_path = tmp_path / "manifests" / "v1_controls.csv"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text("state_sha1\nabc\n")
+
+    real_git_commit = fpu_provenance.git_commit()
+    real_generation_sha1s = fpu_provenance.source_file_sha1s(GENERATION_SOURCE_MODULES)
+
+    params = _protocol_params(
+        games=games,
+        # `identity` must match `measure_reservoir`'s own `_checkpoint_
+        # identity` idiom EXACTLY: `f"{Path(path).name}:{sha1}"` -- the
+        # full FILENAME (with extension), not a hand-picked short label.
+        checkpoint_a={"path": str(ckpt_a_path),
+                      "identity": f"{ckpt_a_path.name}:{fpu_provenance.file_sha1(str(ckpt_a_path))}"},
+        checkpoint_b={"path": str(ckpt_b_path),
+                      "identity": f"{ckpt_b_path.name}:{fpu_provenance.file_sha1(str(ckpt_b_path))}"},
+        anchor="checkpoint_a",
+        base_seed=base_seed,
+        board_size=board_size,
+        source_index_path=str(index_path),
+        match_summary_path=str(tmp_path / "match_summary.json"),
+        replay_dir=str(replay_dir),
+        forbidden_manifests=[str(manifest_path)],
+        generation_git_commit=real_git_commit,
+        generation_source_sha1s=real_generation_sha1s,
+        config_out=str(tmp_path / "fpu_dev_corpus_v2_config.json"),
+        report_out=str(tmp_path / "qualify_report.json"),
+    )
+    if protocol_overrides:
+        params.update(protocol_overrides)
+    protocol = build_protocol(params)
+
+    results = [EvalGameResult(**row) for row in
+               sorted(rows, key=lambda r: int(r["game_idx"]))]
+    summary_config = {knob: protocol[knob] for knob in TEN_MATCH_KNOBS}
+    summary_config["workers"] = protocol["workers"]
+    summary = summarize_match(
+        results, protocol["checkpoint_a"]["path"], protocol["checkpoint_b"]["path"],
+        "calib020_0001_vs_0379", summary_config)
+    summary["git_commit"] = real_git_commit
+    summary["generated_at"] = "2026-07-14T00:00:00+00:00"
+    Path(protocol["match_summary_path"]).write_text(json.dumps(summary))
+
+    protocol_path = tmp_path / "reservoir_protocol.json"
+    write_atomic(protocol_path, canonical_json_bytes(protocol))
+
+    info = {"rows": rows, "summary": summary, "index_path": index_path,
+            "manifest_path": manifest_path}
+    return protocol, protocol_path, info
+
+
+def test_run_qualify_preflight_parameter_defaults_to_default_preflight():
+    import inspect
+    sig = inspect.signature(run_qualify)
+    assert sig.parameters["preflight"].default is default_preflight
+    assert sig.parameters["check"].default is False
+
+
+def test_run_qualify_clean_run_emits_config_and_pass_report(tmp_path):
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    exit_code = run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    assert exit_code == EXIT_OK
+
+    config_path = Path(protocol["config_out"])
+    report_path = Path(protocol["report_out"])
+    assert config_path.exists()
+    assert report_path.exists()
+    assert is_passed(report_path) is True
+    assert is_retired(report_path) is False
+
+    config = json.loads(config_path.read_text())
+    assert config["checkpoint"] == protocol["checkpoint_a"]["path"]
+    assert config["protocol_path"] == str(protocol_path)
+    assert (config["expected_fingerprints"]["protocol_sha1"]
+            == fpu_provenance.file_sha1(str(protocol_path)))
+
+    report = json.loads(report_path.read_text())
+    assert report["status"] == "OK"
+
+
+def test_run_qualify_emitted_config_equals_a_fresh_derive_config_rederivation(tmp_path):
+    """Proves `run_qualify` truly calls the real `derive_config` (B7) --
+    not some ad hoc, independently-drifting dict construction -- by
+    independently re-deriving the config from a FRESH `measure_reservoir`
+    call and byte-comparing against what actually landed on disk."""
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    measurements = measure_reservoir(protocol)
+    expected = derive_config(
+        protocol, measurements, protocol_path=str(protocol_path))
+    actual = json.loads(Path(protocol["config_out"]).read_text())
+    assert actual == expected
+
+
+def test_run_qualify_gate_fail_writes_retirement_report_and_refuses_config(tmp_path):
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    exit_code = run_qualify(
+        str(protocol_path),
+        preflight=_fake_preflight(False, "not enough late rows"))
+    assert exit_code == EXIT_GATE_FAIL
+    assert not Path(protocol["config_out"]).exists()
+
+    report_path = Path(protocol["report_out"])
+    assert is_retired(report_path) is True
+    assert is_passed(report_path) is False
+    document = json.loads(report_path.read_text())
+    assert document["status"] == "GATE_FAIL"
+    assert document["reason"] == "not enough late rows"
+
+
+def test_run_qualify_mismatch_writes_replaceable_report_and_no_config(tmp_path):
+    protocol, protocol_path, info = _write_qualifiable_reservoir(tmp_path)
+    # Tamper one sidecar's recorded seed -- breaks `_check_seed` (B4), a
+    # protocol-conformance MISMATCH (design Sec 4.1).
+    broken_replay = Path(info["rows"][1]["replay_path"])
+    sidecar = json.loads(broken_replay.read_text())
+    sidecar["seed"] = sidecar["seed"] + 1
+    broken_replay.write_text(json.dumps(sidecar))
+
+    exit_code = run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    assert exit_code == EXIT_MISMATCH
+    assert not Path(protocol["config_out"]).exists()
+
+    report_path = Path(protocol["report_out"])
+    assert is_passed(report_path) is False
+    assert is_retired(report_path) is False
+    document = json.loads(report_path.read_text())
+    assert document["status"] == "MISMATCH"
+    assert "seed" in document["reason"]
+
+
+def test_run_qualify_mismatch_report_is_replaced_by_a_later_clean_run(tmp_path):
+    """End-to-end proof of MISMATCH replaceability (design Sec 3) through
+    `run_qualify` itself: a broken first attempt does not burn the protocol
+    -- fixing the underlying defect (as an operator regeneration would) and
+    re-running succeeds."""
+    protocol, protocol_path, info = _write_qualifiable_reservoir(tmp_path)
+    broken_replay = Path(info["rows"][1]["replay_path"])
+    original_bytes = broken_replay.read_bytes()
+    sidecar = json.loads(broken_replay.read_text())
+    sidecar["seed"] = sidecar["seed"] + 1
+    broken_replay.write_text(json.dumps(sidecar))
+
+    first_exit = run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    assert first_exit == EXIT_MISMATCH
+
+    broken_replay.write_bytes(original_bytes)   # "regenerate" -- fix the tamper
+    second_exit = run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    assert second_exit == EXIT_OK
+    assert is_passed(protocol["report_out"]) is True
+
+
+def test_run_qualify_refuses_to_requalify_an_already_passed_protocol(tmp_path):
+    """PASS-terminal (correction 3): no re-emit, no re-write -- both
+    artifacts are byte-for-byte untouched by the refused second call."""
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    first_exit = run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    assert first_exit == EXIT_OK
+    config_bytes = Path(protocol["config_out"]).read_bytes()
+    report_bytes = Path(protocol["report_out"]).read_bytes()
+
+    second_exit = run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    assert second_exit == EXIT_USAGE
+
+    assert Path(protocol["config_out"]).read_bytes() == config_bytes
+    assert Path(protocol["report_out"]).read_bytes() == report_bytes
+
+
+def test_run_qualify_check_true_reviews_an_already_passed_protocol_without_writing(tmp_path):
+    """"A passed protocol is thereafter reviewed with --check" (design Sec
+    3) -- `check=True` is the one way to re-run qualification against an
+    already-PASSED protocol, and even then writes nothing."""
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    config_bytes = Path(protocol["config_out"]).read_bytes()
+    report_bytes = Path(protocol["report_out"]).read_bytes()
+
+    exit_code = run_qualify(
+        str(protocol_path), check=True, preflight=_fake_preflight(True))
+    assert exit_code == EXIT_OK
+    assert Path(protocol["config_out"]).read_bytes() == config_bytes
+    assert Path(protocol["report_out"]).read_bytes() == report_bytes
+
+
+def test_run_qualify_check_true_never_writes_on_a_fresh_protocol(tmp_path):
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    exit_code = run_qualify(
+        str(protocol_path), check=True, preflight=_fake_preflight(True))
+    assert exit_code == EXIT_OK
+    assert not Path(protocol["config_out"]).exists()
+    assert not Path(protocol["report_out"]).exists()
+
+
+def test_run_qualify_refuses_on_an_already_retired_protocol(tmp_path):
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    first_exit = run_qualify(
+        str(protocol_path), preflight=_fake_preflight(False, "infeasible"))
+    assert first_exit == EXIT_GATE_FAIL
+
+    second_exit = run_qualify(str(protocol_path), preflight=_fake_preflight(True))
+    assert second_exit == EXIT_GATE_FAIL
+    assert not Path(protocol["config_out"]).exists()
+
+
+def test_run_qualify_check_true_also_refuses_on_a_retired_protocol(tmp_path):
+    """No `--check` carve-out for a retirement record (design Sec 3: "qualify
+    refuses to run again" -- unconditional)."""
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    run_qualify(str(protocol_path), preflight=_fake_preflight(False, "infeasible"))
+    exit_code = run_qualify(
+        str(protocol_path), check=True, preflight=_fake_preflight(True))
+    assert exit_code == EXIT_GATE_FAIL
+
+
+def test_run_qualify_refuses_on_a_retired_protocol_without_remeasuring(tmp_path):
+    """The strong proof: after retirement, destroy the on-disk reservoir
+    entirely -- if `run_qualify` attempted to re-measure it (even under the
+    real default preflight), `measure_reservoir` would raise
+    `FileNotFoundError`. It must not even try."""
+    protocol, protocol_path, info = _write_qualifiable_reservoir(tmp_path)
+    first_exit = run_qualify(
+        str(protocol_path), preflight=_fake_preflight(False, "infeasible"))
+    assert first_exit == EXIT_GATE_FAIL
+
+    Path(info["index_path"]).unlink()
+
+    second_exit = run_qualify(str(protocol_path))   # real default preflight
+    assert second_exit == EXIT_GATE_FAIL
+
+
+def test_run_qualify_execution_pulls_no_gpu_or_mlx(tmp_path):
+    """Unlike the MODULE-import checks (which only prove IMPORTING the
+    module is clean), this proves CALLING `run_qualify` end to end -- the
+    operator entry point itself, including its `measure_reservoir` ->
+    `qualify_core` -> `check_summary_binding` -> `default_preflight` chain
+    -- never pulls mlx/torch into `sys.modules` either. A fresh subprocess
+    (same idiom as `test_module_import_pulls_no_gpu_or_mlx`) so another test
+    module's prior import in this SAME pytest session cannot mask a genuine
+    violation."""
+    _protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    script = (
+        "import sys\n"
+        "from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import run_qualify\n"
+        f"run_qualify({str(protocol_path)!r})\n"
+        "print(sorted(k for k in sys.modules if 'mlx' in k or 'torch' in k))\n"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=True)
+    assert out.stdout.strip().splitlines()[-1] == "[]"
 
 
 # ---------------------------------------------------------------------------

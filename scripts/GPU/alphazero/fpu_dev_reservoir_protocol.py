@@ -1,19 +1,22 @@
 """FPU (policy-mass) v2 reservoir-protocol schema + canonical-JSON/atomic-write
 primitives + the `emit-protocol` builder + the `measure_reservoir` I/O
-boundary.
+boundary + config derivation + the qualification report state machine.
 
 Frozen design ref: docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-qualification-design.md
   Sec 2.1 (the `reservoir_protocol.json` schema -- the single source of ALL
-  declared pre-generation decisions), Sec 3 (CLI stages / exit codes /
-  atomicity+immutability contract), Sec 4 (qualification: the measurement
-  boundary), Sec 4.1 (protocol conformance, IN FULL: every check including
+  declared pre-generation decisions), Sec 2.2 (the `fpu_dev_corpus_v2_
+  config.json` schema -- the COMPLETE, derivable field set), Sec 3 (CLI
+  stages / exit codes / atomicity+immutability contract / the report state
+  machine), Sec 4 (qualification: the measurement boundary), Sec 4.1
+  (protocol conformance, IN FULL: every check including
   summary-binding-by-reconstruction, amendments 3 + 5), Sec 4.2 (the
   geometric preflight, now WIRED into the pure qualification decision), Sec
   6 (module boundary / circular-import resolution, including the "preflight
-  injection for tests" clarification), Sec 8 (canonical JSON, determinism,
-  reviewability).
+  injection for tests" clarification), Sec 7 (no-top-up & versioning --
+  MISMATCH regenerates under the same protocol, GATE-FAIL retires it), Sec 8
+  (canonical JSON, determinism, reviewability).
 Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-hardening-plan.md
-  Tasks B1-B6 -- the first six tasks of the new Group-2 subsystem
+  Tasks B1-B7 -- the first seven tasks of the new Group-2 subsystem
   (B1-B11), which will qualify a generated reservoir zero-GPU (B3-B7) and
   emit an immutable `fpu_dev_corpus_v2_config.json` (B7-B10). B1 laid the
   foundation: the protocol's field set (`PROTOCOL_SCHEMA_KEYS`), the
@@ -46,10 +49,33 @@ Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-harden
   wrapper, per its own docstring) -- that builds v2 proposals from the
   ALREADY-LOADED `measurements.sidecars_by_idx` (no second disk read of
   data `measure_reservoir`, B3, already loaded) and hands them to the pure
-  `fpu_dev_corpus_v2.v2_geometry_feasibility` core. Config derivation (B7),
-  the `V2Config` extension (B8), the `run_screen` precheck (B9), the final
-  11-identity chain (B10) and the CLI `main` (B11) are ALL later tasks --
-  none of that exists here.
+  `fpu_dev_corpus_v2.v2_geometry_feasibility` core. B7 adds config
+  derivation + the report state machine + the operator entry point (Sec
+  2.2/Sec 3/Sec 7): `derive_config(protocol, measurements, *,
+  protocol_path)` is the PURE `config = derive(protocol, reservoir)`
+  function itself -- every Sec 2.2 field, carried from the protocol
+  (verbatim, or RENAMED where the config's own field name differs, e.g.
+  `eval_batch_size` <- `protocol["mcts_eval_batch_size"]`) or MEASURED
+  (`expected_fingerprints`, including the three checkpoint identities that
+  REPLACE the legacy single `checkpoint_identity`); `protocol_sha1` is
+  computed from the IN-MEMORY protocol via `canonical_json_bytes` (never a
+  file read), by construction equal to `fpu_provenance.file_sha1` of a
+  canonically-emitted protocol file. `write_report`/`is_passed`/
+  `is_retired` implement the Sec 3 report state machine: a MISMATCH report
+  is REPLACEABLE (the next attempt may overwrite it), while an OK (PASS) or
+  GATE_FAIL report is TERMINAL and IMMUTABLE (`write_report` raises rather
+  than overwrite either). `run_qualify` is the operator entry point that
+  OWNS the I/O this whole pipeline was built to keep out of every earlier
+  stage: it loads the protocol file, calls `measure_reservoir` (B3, the ONE
+  filesystem-I/O function that reads a GENERATED reservoir), runs the pure
+  `qualify_core` (B6), and -- unless `check=True` -- emits the config +
+  report per the state machine (OK: config + PASS report; GATE_FAIL:
+  retirement report, config refused; MISMATCH: replaceable report, no
+  config). It refuses outright (no measurement at all) against an
+  already-RETIRED protocol, and refuses to re-qualify (no re-emit; use
+  `--check`) an already-PASSED one. The `V2Config` extension (B8), the
+  `run_screen` precheck (B9), the final 11-identity chain (B10) and the CLI
+  `main` (B11) are still later tasks -- none of that exists here.
 
 =============================================================================
 TOOLING ONLY. No evaluator / MCTS / GPU / MLX / checkpoint-WEIGHTS import,
@@ -131,7 +157,16 @@ dependencies (`eval_runner.EvalGameResult`, `eval_summary.summarize_match`)
 are function-local (see above) -- the module-level import surface is
 byte-identical to B4's. B6 widens the `fpu_dev_corpus_v2` import from one
 name to three (above) -- its only module-level import change; `enum` (for
-`QualifyStatus`) is already imported (B1, for `WriteStatus`).
+`QualifyStatus`) is already imported (B1, for `WriteStatus`). B7 adds ONE
+new stdlib import, `hashlib` (for `protocol_sha1 = hashlib.sha1(
+canonical_json_bytes(protocol)).hexdigest()`, computed from the already
+in-memory protocol -- never a file read) -- no new import from
+`fpu_dev_corpus_v2` (still exactly the same three names B6 established) and
+no new lazy import: `derive_config`/`write_report`/`is_passed`/`is_retired`/
+`run_qualify` read/write only via B1's `canonical_json_bytes`/
+`write_atomic`, stdlib `json`/`pathlib`, and the already-imported B3/B6
+production functions (`measure_reservoir`, `qualify_core`,
+`default_preflight`).
 =============================================================================
 
 What this section does
@@ -440,6 +475,7 @@ from __future__ import annotations
 
 import dataclasses
 import enum
+import hashlib
 import json
 import os
 import tempfile
@@ -1873,3 +1909,417 @@ def qualify_core(
         status=QualifyStatus.GATE_FAIL,
         reason=preflight_report["binding_constraint"],
         report=report)
+
+
+# ---------------------------------------------------------------------------
+# Config derivation -- Task B7 (design Sec 2.2, the derivability invariant
+# "config = derive(protocol, reservoir)", Sec 2). PURE: reads only the
+# already in-memory `protocol` dict, the already-loaded `measurements` (B3),
+# and the caller-supplied `protocol_path` STRING -- no filesystem I/O, no
+# hash not already computed by `measure_reservoir` or `canonical_json_bytes`
+# itself. `measure_reservoir` (B3) remains the ONE filesystem-I/O function
+# in the whole qualification pipeline; this function never touches it.
+# ---------------------------------------------------------------------------
+
+# Spec Sec 2.2 "Carried from the protocol (the derivable decisions)" -- every
+# name here is EITHER copied verbatim from the SAME-named protocol field
+# (`source_index_path` .. `select_out`) OR copied from a DIFFERENTLY-named
+# protocol field (`eval_batch_size` <- `protocol["mcts_eval_batch_size"]`,
+# `stall_flush_sims` <- `protocol["mcts_stall_flush_sims"]`, amendment 1) --
+# see `derive_config`'s own body for exactly which. Pinned as a module-level
+# tuple (mirrors `PROTOCOL_SCHEMA_KEYS`'s own idiom) so a test can assert the
+# config's exact top-level membership without re-deriving it from prose.
+_CONFIG_CARRIED_FROM_PROTOCOL_KEYS: Tuple[str, ...] = (
+    "source_index_path",
+    "seed_range",
+    "selection_seed",
+    "phase_allocation",
+    "late_floors",
+    "enumerator_params",
+    "new_collapse_stratum",
+    "checkpoint",
+    "forbidden_manifests",
+    "screen_out",
+    "select_out",
+    "eval_batch_size",
+    "stall_flush_sims",
+)
+
+# Spec Sec 2.2 "New top-level (paths -- amendments 1, 2)".
+_CONFIG_NEW_PATH_KEYS: Tuple[str, ...] = (
+    "config_schema_version",
+    "protocol_path",
+    "match_summary_path",
+    "replay_dir",
+    "report_out",
+)
+
+# Spec Sec 2.2 "expected_fingerprints (extended)" -- the MEASURED identities
+# nested one level down, inside the config's own `expected_fingerprints` key
+# (itself the 19th top-level key -- neither carried-verbatim nor a bare new
+# path, it is the config's own sub-schema). The three checkpoint identities
+# REPLACE the legacy single `checkpoint_identity`
+# (`fpu_dev_corpus_v2.v2_screen_provenance`'s own field, predating this
+# design) -- B10 finalizes the screen/select side of that replacement; this
+# task only emits the three into the config.
+EXPECTED_FINGERPRINT_KEYS: Tuple[str, ...] = (
+    "protocol_sha1",
+    "source_index_sha1",
+    "replay_data_sha1",
+    "match_summary_sha1",
+    "source_file_sha1s",
+    "forbidden_manifest_sha1s",
+    "reservoir_checkpoint_a_identity",
+    "reservoir_checkpoint_b_identity",
+    "anchor_checkpoint_identity",
+)
+
+assert len(_CONFIG_CARRIED_FROM_PROTOCOL_KEYS) == len(
+    set(_CONFIG_CARRIED_FROM_PROTOCOL_KEYS)), _CONFIG_CARRIED_FROM_PROTOCOL_KEYS
+assert len(_CONFIG_NEW_PATH_KEYS) == len(set(_CONFIG_NEW_PATH_KEYS)), _CONFIG_NEW_PATH_KEYS
+assert len(EXPECTED_FINGERPRINT_KEYS) == len(set(EXPECTED_FINGERPRINT_KEYS)), (
+    EXPECTED_FINGERPRINT_KEYS)
+
+
+def derive_config(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements,
+        *,
+        protocol_path: Union[str, Path]) -> Dict[str, Any]:
+    """The canonical `fpu_dev_corpus_v2_config.json` (design Sec 2.2) -- a
+    PURE deterministic function of `(protocol, measurements, protocol_path)`
+    (design Sec 2: "config = derive(protocol, reservoir)"). Every value is
+    either carried from `protocol` (verbatim, or renamed per amendment 1),
+    the caller-supplied `protocol_path` itself, or a MEASURED identity read
+    from `measurements` (B3) -- never a fresh filesystem read or hash of its
+    own. `measure_reservoir` (B3) remains the ONE filesystem-I/O function in
+    the whole qualification pipeline; calling `derive_config` twice on the
+    SAME `(protocol, measurements, protocol_path)` always returns an EQUAL
+    dict (and, once passed through `canonical_json_bytes`, IDENTICAL bytes)
+    -- this is the re-derivability the Sec 5 pre-screen tamper check depends
+    on ("re-derive the canonical config from the pinned protocol + reservoir
+    and byte-compare it against the supplied config").
+
+    `protocol_path` is a REQUIRED keyword-only parameter, not something this
+    function derives or reads: the config's own `protocol_path` field must
+    record WHERE the frozen `reservoir_protocol.json` this config was
+    derived from actually lives, and there is no way to recover a file path
+    from the in-memory `protocol` dict alone (the dict has no such key --
+    `PROTOCOL_SCHEMA_KEYS` records `config_out`/`report_out`/etc, paths the
+    protocol itself POINTS AT, never the protocol's OWN path). Threading it
+    in as a parameter -- rather than, say, reading it back off disk inside
+    this function -- is what keeps `derive_config` pure: `run_qualify` (the
+    I/O-owning caller, below) is the ONLY place that knows the path it just
+    read `protocol` from, and passes it straight through.
+
+    `expected_fingerprints["protocol_sha1"]` is computed from the IN-MEMORY
+    `protocol` dict via `hashlib.sha1(canonical_json_bytes(protocol))` --
+    NOT by hashing the file at `protocol_path` (that would be a SECOND,
+    redundant filesystem read this function has no business performing). By
+    construction this equals `fpu_provenance.file_sha1(protocol_path)` for
+    any protocol file that was itself written via `emit_protocol`/
+    `write_atomic` (B1): that emitter writes EXACTLY `canonical_json_bytes
+    (protocol)`'s bytes to disk, so a whole-file SHA1 of those bytes is the
+    same computation over the same bytes, just reached by reading a file
+    instead of re-serializing the dict -- pinned as its own test
+    (`test_derive_config_protocol_sha1_equals_file_sha1_of_a_canonically_
+    emitted_protocol_file`), not merely asserted in prose.
+
+    Returns a dict whose top-level keys are EXACTLY
+    `_CONFIG_CARRIED_FROM_PROTOCOL_KEYS | _CONFIG_NEW_PATH_KEYS |
+    {"expected_fingerprints"}` -- this IS the complete Sec 2.2 schema (no
+    more, no less): the same set Task B8 will make `fpu_dev_corpus_v2.
+    _V2_CONFIG_REQUIRED_KEYS`/`V2Config` hard-match for the current
+    `config_schema_version`. Every value is already JSON-shaped (lists, not
+    tuples; plain dicts) so the returned dict is already exactly what
+    `canonical_json_bytes` will serialize -- no container-type surprises at
+    the caller's `canonical_json_bytes(derive_config(...))` call site.
+    """
+    anchor_role = protocol["anchor"]
+    base_seed = protocol["base_seed"]
+    games = protocol["games"]
+    protocol_sha1 = hashlib.sha1(canonical_json_bytes(protocol)).hexdigest()
+    checkpoint_identities = measurements.checkpoint_identities
+
+    return {
+        # Carried from the protocol, verbatim (Sec 2.2 "Carried from the
+        # protocol").
+        "source_index_path": protocol["source_index_path"],
+        "seed_range": [base_seed, base_seed + games],   # half-open [a, b)
+        "selection_seed": protocol["selection_seed"],
+        "phase_allocation": protocol["phase_allocation"],
+        "late_floors": protocol["late_floors"],
+        "enumerator_params": protocol["enumerator_params"],
+        "new_collapse_stratum": protocol["new_collapse_stratum"],
+        "checkpoint": protocol[anchor_role]["path"],   # the ANCHOR, singular
+        "forbidden_manifests": list(protocol["forbidden_manifests"]),
+        "screen_out": protocol["screen_out"],
+        "select_out": protocol["select_out"],
+        # Carried, RENAMED (amendment 1) -- the screen-anchor MCTS
+        # throughput knobs.
+        "eval_batch_size": protocol["mcts_eval_batch_size"],
+        "stall_flush_sims": protocol["mcts_stall_flush_sims"],
+        # New top-level paths (amendments 1, 2).
+        "config_schema_version": protocol["config_schema_version"],
+        "protocol_path": str(protocol_path),
+        "match_summary_path": protocol["match_summary_path"],
+        "replay_dir": protocol["replay_dir"],
+        "report_out": protocol["report_out"],
+        # Measured identities (Sec 2.2 "expected_fingerprints (extended)").
+        "expected_fingerprints": {
+            "protocol_sha1": protocol_sha1,
+            "source_index_sha1": measurements.source_index_sha1,
+            "replay_data_sha1": measurements.replay_data_sha1,
+            "match_summary_sha1": measurements.match_summary_sha1,
+            "source_file_sha1s": dict(measurements.source_file_sha1s),
+            "forbidden_manifest_sha1s": dict(measurements.forbidden_manifest_sha1s),
+            "reservoir_checkpoint_a_identity": checkpoint_identities["reservoir_a"],
+            "reservoir_checkpoint_b_identity": checkpoint_identities["reservoir_b"],
+            "anchor_checkpoint_identity": checkpoint_identities["anchor"],
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Report state machine -- Task B7 (design Sec 3). `write_report` persists a
+# `QualifyResult` as canonical JSON, tagged with an explicit `"status"`
+# marker; `is_passed`/`is_retired` classify an EXISTING report file by that
+# marker alone (no re-qualification, no filesystem access beyond the report
+# file itself).
+#
+# The three `QualifyStatus` outcomes map onto exactly two write policies
+# (design Sec 3):
+#   - MISMATCH is REPLACEABLE: the next `qualify` attempt (after complete
+#     regeneration under the SAME protocol) may overwrite it -- a mismatch
+#     never burns a protocol version.
+#   - OK (PASS) and GATE_FAIL are each TERMINAL and IMMUTABLE:
+#     `write_report` raises rather than overwrite either -- a passed
+#     protocol is thereafter reviewed with `--check` only (never
+#     re-qualified, `run_qualify` below); a gate-failed protocol's version
+#     is permanently RETIRED (`run_qualify` refuses to run again at all).
+# ---------------------------------------------------------------------------
+
+# The two TERMINAL status values (design Sec 3) -- `write_report` refuses to
+# overwrite a report already carrying either one. `QualifyStatus.MISMATCH`
+# is deliberately absent from this tuple: it is the one REPLACEABLE status.
+_TERMINAL_REPORT_STATUSES: Tuple[str, str] = (
+    QualifyStatus.OK.value, QualifyStatus.GATE_FAIL.value)
+
+
+def _read_report_status(path: Union[str, Path]) -> Optional[str]:
+    """The persisted `"status"` marker of the report at `path`, or `None`
+    when no report exists there yet (the ordinary, expected state for a
+    protocol that has never been qualified). Reads and parses the file when
+    present -- a PRESENT-but-corrupt report (unparseable JSON, or JSON
+    missing the `"status"` key) raises rather than silently returning
+    `None`: `is_retired` guards `run_qualify` against re-running a
+    permanently-blocked protocol, so silently treating a corrupt retirement
+    record as "not retired" would defeat the one property that guard exists
+    to enforce. The single implementation `is_passed`/`is_retired`/
+    `write_report` all share, so the report's on-disk shape (the `"status"`
+    key `_qualify_result_document` writes) has exactly one reader.
+    """
+    target = Path(path)
+    if not target.is_file():
+        return None
+    document = json.loads(target.read_text())
+    return document["status"]
+
+
+def is_passed(report_path: Union[str, Path]) -> bool:
+    """True iff the report at `report_path` records a PASS (`QualifyStatus.
+    OK`) -- design Sec 3: "A passed protocol is thereafter reviewed with
+    `--check`, never re-qualified." `False` both when no report exists yet
+    and when it records MISMATCH or GATE_FAIL -- only an actual PASS
+    counts."""
+    return _read_report_status(report_path) == QualifyStatus.OK.value
+
+
+def is_retired(report_path: Union[str, Path]) -> bool:
+    """True iff the report at `report_path` records a GATE_FAIL (design
+    Sec 3: "records the protocol version as RETIRED and permanently
+    prevents config emission for that protocol"). `False` both when no
+    report exists yet and when it records MISMATCH or PASS."""
+    return _read_report_status(report_path) == QualifyStatus.GATE_FAIL.value
+
+
+def _qualify_result_document(qualify_result: QualifyResult) -> Dict[str, Any]:
+    """`qualify_result` as a plain, JSON-shaped dict -- the exact document
+    `write_report` persists. `status` is the Enum's own `.value` string
+    (`"OK"`/`"MISMATCH"`/`"GATE_FAIL"`) -- the explicit marker `is_passed`/
+    `is_retired` classify a report by; `reason`/`report` are carried through
+    verbatim (already plain JSON-shaped values -- see `QualifyResult`/
+    `qualify_core`'s own docstrings, B6)."""
+    return {
+        "status": qualify_result.status.value,
+        "reason": qualify_result.reason,
+        "report": qualify_result.report,
+    }
+
+
+def write_report(path: Union[str, Path], qualify_result: QualifyResult) -> None:
+    """Persist `qualify_result` as canonical JSON at `path` (design Sec 3),
+    implementing the report state machine's write policy:
+
+    - **Absent**, or an existing report whose `"status"` is `MISMATCH` --
+      writes/REPLACES freely. A MISMATCH report is explicitly the
+      REPLACEABLE state (design Sec 3): the next `qualify` attempt's content
+      may legitimately differ from the old one (e.g. a different failing
+      check after the operator regenerates the reservoir), so this does NOT
+      route through `write_atomic`'s own refuse-overwrite-DIFFERENT guard
+      (that guard exists for IMMUTABLE artifacts; a MISMATCH report is the
+      opposite). The stale file is removed first, so the ONE reused
+      `write_atomic` primitive performs the actual write via its own
+      "absent" branch, rather than a second, parallel implementation of its
+      temp+rename mechanics existing just for this case.
+    - **An existing PASS or GATE_FAIL report** -- raises `ValueError` and
+      leaves the existing report file completely untouched (checked, and
+      refused, BEFORE any write is attempted -- the stale-MISMATCH removal
+      above never runs in this branch). Both are TERMINAL (design Sec 3): a
+      PASS is reviewed with `--check`, never re-qualified; a GATE_FAIL
+      permanently retires the protocol version. Mirrors `write_atomic`'s own
+      "refuses to overwrite ... raises `ValueError`" idiom exactly, one
+      level up: the object being protected here is the REPORT's recorded
+      OUTCOME, not (only) its bytes.
+    """
+    target = Path(path)
+    existing_status = _read_report_status(target)
+    if existing_status in _TERMINAL_REPORT_STATUSES:
+        raise ValueError(
+            f"write_report: refusing to overwrite {target} -- an existing "
+            f"report already records {existing_status!r}, a TERMINAL and "
+            f"immutable outcome (a PASS is reviewed with --check, never "
+            f"re-qualified; a GATE_FAIL permanently retires the protocol "
+            f"version)")
+    if existing_status is not None:
+        # The only remaining classified value is QualifyStatus.MISMATCH --
+        # replaceable. Remove the stale file so `write_atomic` below takes
+        # its own "absent" branch (see this function's own docstring for why
+        # this is not routed through write_atomic's refuse-overwrite-
+        # different guard).
+        target.unlink()
+    data = canonical_json_bytes(_qualify_result_document(qualify_result))
+    write_atomic(target, data)
+
+
+# ---------------------------------------------------------------------------
+# run_qualify -- Task B7 (design Sec 3/Sec 7). The OPERATOR entry point that
+# OWNS the I/O this whole pipeline was built to keep out of every earlier,
+# pure stage: it loads the frozen protocol, calls `measure_reservoir` (B3 --
+# the ONE filesystem-I/O function that reads a GENERATED reservoir), runs
+# the pure `qualify_core` (B6), and -- unless `check=True` -- emits the
+# config + report per the Sec 3 state machine. Never runs the evaluator/
+# MCTS/generation itself (design's TOOLING ONLY constraint) -- everything it
+# calls (`measure_reservoir`, `qualify_core`, `derive_config`,
+# `write_atomic`, `write_report`) is either pure or restricted to reading/
+# hashing already-generated files.
+# ---------------------------------------------------------------------------
+
+# `QualifyStatus` -> the design Sec 3 exit-code vocabulary, for the three
+# outcomes `qualify_core` can return. The fourth vocabulary member,
+# `EXIT_USAGE`, belongs to `run_qualify`'s OWN pre-measurement refusals
+# (already-PASSED without `--check`) -- never a `qualify_core` outcome, so
+# it is deliberately not a value in this mapping.
+_EXIT_CODE_FOR_STATUS: Dict[QualifyStatus, int] = {
+    QualifyStatus.OK: EXIT_OK,
+    QualifyStatus.MISMATCH: EXIT_MISMATCH,
+    QualifyStatus.GATE_FAIL: EXIT_GATE_FAIL,
+}
+
+
+def run_qualify(
+        protocol_path: Union[str, Path],
+        *,
+        check: bool = False,
+        preflight: Callable[[ReservoirMeasurements], Any] = default_preflight,
+) -> int:
+    """Qualify the reservoir declared by the frozen protocol at
+    `protocol_path` (design Sec 3/Sec 7) and, on success, emit the immutable
+    `fpu_dev_corpus_v2_config.json`. Returns the design's Sec 3 exit-code
+    vocabulary (`EXIT_OK`/`EXIT_MISMATCH`/`EXIT_GATE_FAIL`, plus
+    `EXIT_USAGE` for the PASS-terminal refusal below) -- never raises for an
+    ordinary qualification outcome, only for a malformed `protocol_path` /
+    protocol document (propagated from the plain `json.loads`/dict-lookup
+    calls below, exactly like `measure_reservoir`/`gen_command`'s own
+    "assumes already-valid input" contract) or a write refused by
+    `write_atomic`/`write_report` (which should never trigger in the normal
+    flow below -- each is only ever reached once per report/config path per
+    the state-machine checks that precede it).
+
+    `preflight` is an INJECTED dependency, defaulting to the real
+    `default_preflight` -- forwarded straight through to `qualify_core`
+    (B6). This mirrors the same "preflight injection for tests" principle
+    design Sec 6 establishes for `qualify_core` itself: the real geometric
+    feasibility only turns OK on a genuinely large reservoir (>= ~120
+    protocol-conformant games, the same boundary `qualify_core`'s own
+    real-preflight tests exercise) -- far too heavy to fabricate ON DISK
+    (unlike `qualify_core`'s own tests, this function's tests cannot
+    fabricate a `ReservoirMeasurements` directly; `run_qualify` calls the
+    real `measure_reservoir`, so they must write real files under
+    `tmp_path`) for every test of THIS function's own, DIFFERENT concern:
+    the report state machine and config emission, not geometric feasibility
+    (already thoroughly covered where it belongs, B6). `measure_reservoir`
+    itself is deliberately NOT injectable here -- it is, by design, the ONE
+    filesystem-I/O function in the whole qualification pipeline, and this
+    function's whole job is to OWN that one real call, against a real (if
+    small, in tests) on-disk reservoir.
+
+    The Sec 3 state machine, in the order this function checks it:
+
+    1. **Already RETIRED** (`is_retired(protocol["report_out"])`) --
+       refuses UNCONDITIONALLY, even under `--check`: returns
+       `EXIT_GATE_FAIL` immediately, calling `measure_reservoir` NOT AT ALL
+       (design Sec 3: "GATE-FAIL ... qualify refuses to run again against a
+       protocol whose report_out carries a retirement record" -- no
+       carve-out for review). No config is ever written in this branch.
+    2. **Already PASSED** (`is_passed(...)`) **and `check=False`** --
+       refuses re-qualification: returns `EXIT_USAGE`, again calling
+       `measure_reservoir` not at all. This is the PASS-terminal rule
+       (design Sec 3: "A passed protocol is thereafter reviewed with
+       `--check`, never re-qualified") -- `EXIT_USAGE` (not
+       `EXIT_OK`/`EXIT_MISMATCH`/`EXIT_GATE_FAIL`) because this refusal is
+       not a finding about the CURRENT reservoir at all (it is never even
+       measured); it is a usage error against the ALREADY-COMPLETE prior
+       qualification, matching the design's own "usage/IO" bucket for exit
+       code 2. **Already PASSED with `check=True`** falls through to step 3
+       instead -- exactly the "reviewed with `--check`" path.
+    3. Otherwise (never qualified, a replaceable MISMATCH, or a PASS being
+       reviewed under `--check`): calls `measure_reservoir(protocol)` (the
+       ONE real I/O) then `qualify_core(protocol, measurements,
+       preflight=preflight)`.
+       - **`check=True`** -- returns the status's mapped exit code and
+         writes NOTHING (design Sec 8: "`--check` recomputes and diffs but
+         never writes"), regardless of which status was computed.
+       - **`check=False`, status OK** -- `derive_config(protocol,
+         measurements, protocol_path=str(protocol_path))`, emits the config
+         atomically to `protocol["config_out"]`, then `write_report`s a PASS
+         record to `protocol["report_out"]`; returns `EXIT_OK`.
+       - **`check=False`, status GATE_FAIL** -- `write_report`s the
+         retirement record (no config is ever derived or written); returns
+         `EXIT_GATE_FAIL`.
+       - **`check=False`, status MISMATCH** -- `write_report`s the
+         (replaceable) mismatch record; returns `EXIT_MISMATCH`.
+    """
+    protocol = json.loads(Path(protocol_path).read_text())
+    report_out = protocol["report_out"]
+
+    if is_retired(report_out):
+        return EXIT_GATE_FAIL
+    if is_passed(report_out) and not check:
+        return EXIT_USAGE
+
+    measurements = measure_reservoir(protocol)
+    result = qualify_core(protocol, measurements, preflight=preflight)
+
+    if check:
+        return _EXIT_CODE_FOR_STATUS[result.status]
+
+    if result.status == QualifyStatus.OK:
+        config = derive_config(
+            protocol, measurements, protocol_path=str(protocol_path))
+        write_atomic(protocol["config_out"], canonical_json_bytes(config))
+        write_report(report_out, result)
+        return EXIT_OK
+
+    write_report(report_out, result)
+    return _EXIT_CODE_FOR_STATUS[result.status]
