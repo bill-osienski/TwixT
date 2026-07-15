@@ -1,41 +1,66 @@
 """FPU (policy-mass) v2 reservoir-protocol schema + canonical-JSON/atomic-write
-primitives + the `emit-protocol` builder.
+primitives + the `emit-protocol` builder + the `measure_reservoir` I/O
+boundary.
 
 Frozen design ref: docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-qualification-design.md
   Sec 2.1 (the `reservoir_protocol.json` schema -- the single source of ALL
   declared pre-generation decisions), Sec 3 (CLI stages / exit codes /
-  atomicity+immutability contract), Sec 8 (canonical JSON, determinism,
-  reviewability).
+  atomicity+immutability contract), Sec 4 (qualification: the measurement
+  boundary), Sec 6 (module boundary / circular-import resolution), Sec 8
+  (canonical JSON, determinism, reviewability).
 Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-hardening-plan.md
-  Tasks B1-B2 -- the first two tasks of the new Group-2 subsystem (B1-B11),
-  which will qualify a generated reservoir zero-GPU (B3-B7) and emit an
-  immutable `fpu_dev_corpus_v2_config.json` (B7-B10). B1 laid the
+  Tasks B1-B3 -- the first three tasks of the new Group-2 subsystem
+  (B1-B11), which will qualify a generated reservoir zero-GPU (B3-B7) and
+  emit an immutable `fpu_dev_corpus_v2_config.json` (B7-B10). B1 laid the
   foundation: the protocol's field set (`PROTOCOL_SCHEMA_KEYS`), the
   canonical-JSON encoder, the atomic-write primitive, and the schema
-  builder + emitter. B2 adds `gen_command` -- the exact
+  builder + emitter. B2 added `gen_command` -- the exact
   `eval_checkpoint_match` argv derived from an already-frozen protocol, so
   the operator's generation command cannot drift from the frozen
-  decisions. `measure_reservoir`/`ReservoirMeasurements` (B3), `qualify`
-  (B4-B7), the `V2Config` extension (B8), the `run_screen` precheck (B9),
-  the final 11-identity chain (B10) and the CLI `main` (B11) are ALL later
-  tasks -- none of that exists here.
+  decisions. B3 adds `ReservoirMeasurements` + `measure_reservoir` -- the
+  ONE filesystem-I/O boundary of qualification (Sec 4): it loads and hashes
+  a GENERATED reservoir into a frozen, pure-data structure, so every later
+  qualification stage (`qualify` protocol-conformance B4, summary-binding
+  B5, preflight B6, config-derivation B7) reads only THAT structure and
+  performs no I/O of its own. The `V2Config` extension (B8), the
+  `run_screen` precheck (B9), the final 11-identity chain (B10) and the CLI
+  `main` (B11) are ALL later tasks -- none of that exists here.
 
 =============================================================================
-TOOLING ONLY. PURE, stdlib-only module: no evaluator / MCTS / GPU / MLX /
-checkpoint import, and no reservoir generation. Every function below is a
-plain data transform over already-supplied Python values (dicts, strings,
-bytes, paths) -- `write_atomic` is the ONE function that touches the
-filesystem, and it does only a read-back-and-compare plus a temp+rename
-write, never anything checkpoint/evaluator/MCTS-shaped. Verified at test
-time via a subprocess import check (mirrors fpu_dev_corpus_v2.py's own
+TOOLING ONLY. No evaluator / MCTS / GPU / MLX / checkpoint-WEIGHTS import,
+and no reservoir generation. Through B2, every function was a plain data
+transform over already-supplied Python values, and `write_atomic` was the
+ONE function that touched the filesystem (a read-back-and-compare plus a
+temp+rename write). B3 adds a SECOND, deliberately isolated filesystem
+toucher: `measure_reservoir` is now the ONE AND ONLY function in this
+module -- and, by design Sec 4, in the WHOLE qualification pipeline -- that
+reads a GENERATED reservoir off disk: the JSONL index, its replay sidecars,
+the match summary, the two reservoir checkpoints + the anchor, the
+generation-source modules, the v2 corpus source files, and the forbidden
+manifests, hashing/loading every one of them into `ReservoirMeasurements`.
+It still never touches a checkpoint's WEIGHTS (only its file BYTES, for a
+sha1), never runs the evaluator/MCTS, and never imports GPU/MLX.
+`ReservoirMeasurements` itself is frozen, pure data: constructing one
+directly (as every later B4-B6 test will) performs NO I/O at all -- it is
+an ordinary `@dataclass(frozen=True)` with no `__post_init__`. Verified at
+test time via a subprocess import check (mirrors fpu_dev_corpus_v2.py's own
 `test_v2_module_import_pulls_no_gpu_or_mlx`): importing this module leaves
 `mlx` and `torch` out of `sys.modules`.
 
-Module-level imports are stdlib ONLY for this task (json, os, tempfile,
-enum, pathlib, typing). This module does NOT yet import `fpu_dev_corpus_v2`
--- the design's Sec 6 "import only the shared config schema-key constant"
-seam into that module is a LATER task's concern (B3+, once this module has
-a config-deriving stage that needs it), not this one.
+Module-level imports are stdlib ONLY, PLUS one intra-package import: `from
+.fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES` (design Sec 6's "import only
+the shared ... constant" seam -- here narrowed to the v2 corpus's own
+result-determining source-file tuple, needed so THIS module's
+`source_file_sha1s` measurement can include the v2 corpus sources without
+duplicating that list). This is deliberately NOT the Sec 6 circular-import
+risk: `fpu_dev_corpus_v2.py` is itself import-pure (verified by its own
+`test_v2_module_import_pulls_no_gpu_or_mlx`), and the cycle Sec 6 actually
+warns about runs the OTHER direction -- `fpu_dev_corpus_v2.run_screen`
+importing (part of) THIS module -- which stays a lazy, in-function import,
+a LATER task's concern (B9), not this one. Nothing else is imported from
+`fpu_dev_corpus_v2` here: no `V2Config`, no `run_screen`, no evaluator/MCTS
+plumbing (verified: tests/test_fpu_dev_reservoir_protocol.py::
+test_module_imports_only_v2_corpus_sources_from_fpu_dev_corpus_v2).
 =============================================================================
 
 What this section does
@@ -105,15 +130,65 @@ instead derives that JSONL path itself from `--output`'s stem
 (`eval_checkpoint_match._write_outputs`: `f"{stem}_games.jsonl"`) --
 `source_index_path` exists in the protocol only so a LATER qualification
 stage can verify the generator's derivation rule was actually followed.
+
+`ReservoirMeasurements`: a frozen (`@dataclass(frozen=True)`), pure-data
+structure holding everything a generated reservoir's identity requires
+(design Sec 4): the loaded JSONL rows (`jsonl_rows`, one dict per line --
+EVERY field `eval_checkpoint_match._write_outputs` wrote, not the narrower
+subset `build_fpu_dev_corpus.load_game_index` keeps, since a LATER stage
+(B5) reconstructs full `EvalGameResult` rows from them); each game's
+replay sidecar keyed by `game_idx` (`sidecars_by_idx`); the loaded match
+summary (`summary`); the THREE checkpoint identities
+(`checkpoint_identities` -- `reservoir_a`/`reservoir_b`/`anchor`, each a
+`name:sha1` string, mirroring `fpu_dev_corpus_v2.v2_screen_provenance`'s
+own `checkpoint_identity` idiom); the generation-source hashes + git
+commit (`generation_source_sha1s`, `generation_git_commit`); three
+whole-file hashes (`source_index_sha1`, `replay_data_sha1` -- over the
+replay DATA, not paths, via `fpu_provenance.replay_data_sha1` -- and
+`match_summary_sha1`); the v2 corpus's own result-determining source files
+PLUS this qualification module itself (`source_file_sha1s`); and the
+forbidden manifests' hashes (`forbidden_manifest_sha1s`). Every field is a
+plain Python value (list, dict, str) -- constructing a
+`ReservoirMeasurements` directly never touches a filesystem, which is
+exactly what lets B4 (protocol conformance), B5 (summary binding) and B6
+(preflight) stay genuinely pure: each takes a `ReservoirMeasurements` and
+performs no I/O of its own.
+
+`measure_reservoir`: the ONE function in the whole qualification pipeline
+that touches a GENERATED reservoir's filesystem (design Sec 4/Sec 6).
+Reads the JSONL index at `protocol["source_index_path"]` into
+`jsonl_rows` (file order -- contiguity/ordering is B4's concern, not this
+measurement boundary's); reads every row's replay sidecar (keyed by
+`game_idx`) into `sidecars_by_idx`; reads the match summary at
+`protocol["match_summary_path"]`; hashes `checkpoint_a`/`checkpoint_b`/the
+anchor (whichever of the two `protocol["anchor"]` names) into
+`checkpoint_identities`; hashes the THIRTEEN generation-source modules
+(`GENERATION_SOURCE_MODULES`, design Sec 2.1 amendment 8) and reads the
+current `git_commit()`; whole-file-hashes the index and the match summary,
+and content-hashes the replay DATA (`fpu_provenance.replay_data_sha1`,
+contents not paths, over every row's `replay_path`); hashes
+`QUALIFICATION_SOURCE_FILES` -- `fpu_dev_corpus_v2._V2_CORPUS_SOURCES`
+PLUS this module itself (design Sec 2.2 amendment 4: "the qualification
+module is result-determining for the corpus it produces"); and hashes
+`protocol["forbidden_manifests"]`. Every hash/read routes through the SAME
+`fpu_provenance` helpers `fpu_dev_corpus_v2.py`'s own `v2_screen_
+provenance` uses (`file_sha1`, `source_file_sha1s`, `replay_data_sha1`,
+`git_commit`) -- reused, never reimplemented. It performs NO validation
+(that is B4/B5/B6's job, over the measurements it returns) and loads NO
+evaluator/MCTS/GPU/checkpoint weights -- only file BYTES.
 """
 from __future__ import annotations
 
+import dataclasses
 import enum
 import json
 import os
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Tuple, Union
+
+from . import fpu_provenance
+from .fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES
 
 # ---------------------------------------------------------------------------
 # Exit-code vocabulary (design Sec 3) -- shared across the WHOLE module's
@@ -431,3 +506,186 @@ def gen_command(protocol: Mapping[str, Any]) -> List[str]:
     argv += ["--replay-dir", str(protocol["replay_dir"])]
     argv += ["--output", str(protocol["match_summary_path"])]
     return argv
+
+
+# ---------------------------------------------------------------------------
+# Result-determining source-file sets (design Sec 2.1 amendment 8, Sec 2.2
+# amendment 4) -- Task B3. Pinned as module-level tuples of PATHS, mirroring
+# `fpu_dev_corpus_v2._V2_MODULE_DIR` / `_V2_CORPUS_SOURCES`'s own idiom, so a
+# reviewer can see the exact frozen file set without running anything.
+# ---------------------------------------------------------------------------
+_MODULE_DIR = Path(__file__).resolve().parent
+
+# The THIRTEEN generation-source modules (spec Sec 2.1 amendment 8) -- the
+# modules whose bytes, given the checkpoint bytes, determine the generated
+# games and the summary. Order mirrors the spec's own presentation order.
+GENERATION_SOURCE_MODULES: Tuple[Path, ...] = (
+    _MODULE_DIR / "eval_checkpoint_match.py",
+    _MODULE_DIR / "eval_runner.py",
+    _MODULE_DIR / "mcts.py",
+    _MODULE_DIR / "opening_diagnostics.py",
+    _MODULE_DIR / "evaluator.py",
+    _MODULE_DIR / "game" / "twixt_state.py",
+    _MODULE_DIR / "game" / "__init__.py",
+    _MODULE_DIR / "eval_replay.py",
+    _MODULE_DIR / "probe_eval.py",
+    _MODULE_DIR / "network.py",
+    _MODULE_DIR / "local_evaluator.py",
+    _MODULE_DIR / "eval_summary.py",
+    _MODULE_DIR / "eval_elo.py",
+)
+assert len(GENERATION_SOURCE_MODULES) == 13, GENERATION_SOURCE_MODULES
+
+# The v2 corpus's own result-determining source set (`_V2_CORPUS_SOURCES`,
+# imported from `fpu_dev_corpus_v2`) PLUS this qualification module itself
+# (spec Sec 2.2 amendment 4: "the qualification module is result-determining
+# for the corpus it produces" -- added to the v2 set ONLY, this module never
+# touches v1's own `_CORPUS_SOURCES`).
+QUALIFICATION_SOURCE_FILES: Tuple[Path, ...] = _V2_CORPUS_SOURCES + (
+    _MODULE_DIR / "fpu_dev_reservoir_protocol.py",
+)
+assert len(QUALIFICATION_SOURCE_FILES) == len(set(QUALIFICATION_SOURCE_FILES)), (
+    "QUALIFICATION_SOURCE_FILES has a duplicate entry")
+
+
+# ---------------------------------------------------------------------------
+# ReservoirMeasurements -- Task B3 (design Sec 4).
+# ---------------------------------------------------------------------------
+@dataclasses.dataclass(frozen=True)
+class ReservoirMeasurements:
+    """Everything `measure_reservoir` reads/hashes off a generated
+    reservoir, frozen into ONE pure-data structure (design Sec 4/Sec 6) --
+    the boundary that lets every later qualification stage (B4 protocol
+    conformance, B5 summary binding, B6 preflight) take THIS structure and
+    perform no I/O of its own. An ordinary `@dataclass(frozen=True)` with no
+    `__post_init__`: constructing one directly is always pure -- see this
+    module's own tests for the proof.
+
+    jsonl_rows: every row of `protocol["source_index_path"]`, in FILE order,
+      each dict carrying every field `eval_checkpoint_match._write_outputs`
+      wrote (task_id, pairing_id, game_idx, red/black_checkpoint, winner,
+      winner_checkpoint, reason, n_moves, red/black_score, replay_path) --
+      NOT the narrower subset `build_fpu_dev_corpus.load_game_index` keeps,
+      since B5 reconstructs full `EvalGameResult` rows from these.
+    sidecars_by_idx: each row's replay sidecar (the JSON `eval_replay.
+      write_replay` wrote), keyed by `game_idx` (int).
+    summary: the loaded `protocol["match_summary_path"]` JSON, verbatim.
+    checkpoint_identities: THREE `name:sha1` identities -- `reservoir_a`
+      (`protocol["checkpoint_a"]["path"]`'s bytes), `reservoir_b`
+      (`protocol["checkpoint_b"]["path"]`'s bytes), and `anchor` (whichever
+      of the two `protocol["anchor"]` names -- the SAME file as `reservoir_a`
+      or `reservoir_b`, hashed again under its own role name, per the
+      design's "three distinct roles" -- Sec 2.1 amendment 1).
+    generation_source_sha1s: `{basename: sha1}` over `GENERATION_SOURCE_
+      MODULES` (the 13 spec Sec 2.1 modules).
+    generation_git_commit: `fpu_provenance.git_commit()` at measurement time
+      (the Sec 10 trust boundary applies: this proves the sources AS THEY
+      EXIST AT QUALIFY TIME, not that those exact bytes executed).
+    source_index_sha1 / match_summary_sha1: whole-file hashes of
+      `protocol["source_index_path"]` / `protocol["match_summary_path"]`.
+    replay_data_sha1: a single content hash (not path-based) over every
+      row's replay sidecar, via `fpu_provenance.replay_data_sha1`.
+    source_file_sha1s: `{basename: sha1}` over `QUALIFICATION_SOURCE_FILES`
+      (the v2 corpus sources PLUS this qualification module itself).
+    forbidden_manifest_sha1s: `{basename: sha1}` over
+      `protocol["forbidden_manifests"]`.
+    """
+    jsonl_rows: List[dict]
+    sidecars_by_idx: Dict[int, dict]
+    summary: dict
+    checkpoint_identities: Dict[str, str]
+    generation_source_sha1s: Dict[str, str]
+    generation_git_commit: str
+    source_index_sha1: str
+    replay_data_sha1: str
+    match_summary_sha1: str
+    source_file_sha1s: Dict[str, str]
+    forbidden_manifest_sha1s: Dict[str, str]
+
+
+def _checkpoint_identity(path: Union[str, Path]) -> str:
+    """`name:sha1` -- mirrors `fpu_dev_corpus_v2.v2_screen_provenance`'s own
+    `checkpoint_identity` idiom (`f"{Path(checkpoint).name}:{fpu_provenance.
+    file_sha1(checkpoint)}"`)."""
+    return f"{Path(path).name}:{fpu_provenance.file_sha1(path)}"
+
+
+def _load_jsonl_rows(path: Union[str, Path]) -> List[dict]:
+    """Read a `*_games.jsonl` index file into a list of dicts, one per
+    non-blank line, in FILE order (`eval_checkpoint_match._write_outputs`'s
+    own comment: "already sorted by (pairing_id, game_idx)" -- contiguity
+    is re-verified, not re-sorted, by a LATER stage, B4). Every field
+    `json.dumps(asdict(r))` wrote is preserved verbatim -- unlike v1's
+    narrower `build_fpu_dev_corpus.load_game_index` (game_idx/n_moves/
+    winner/replay_path only), B5 needs every field to reconstruct
+    `EvalGameResult` rows for the summary<->JSONL binding check (spec Sec
+    4.1)."""
+    rows: List[dict] = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            rows.append(json.loads(line))
+    return rows
+
+
+def _load_sidecars(jsonl_rows: List[dict]) -> Dict[int, dict]:
+    """Read every row's replay sidecar (design Sec 2.1: `save_eval_replays:
+    true` is mandatory, so every row is expected to carry a `replay_path`),
+    keyed by `game_idx` (int) -- the same key B4's replay-linkage check
+    (spec Sec 4.1) looks each row up by."""
+    sidecars: Dict[int, dict] = {}
+    for row in jsonl_rows:
+        sidecar_path = row["replay_path"]
+        sidecars[int(row["game_idx"])] = json.loads(Path(sidecar_path).read_text())
+    return sidecars
+
+
+def measure_reservoir(protocol: Mapping[str, Any]) -> ReservoirMeasurements:
+    """Load + hash a GENERATED reservoir into a `ReservoirMeasurements`
+    (design Sec 4) -- the ONE filesystem-I/O function in the whole
+    qualification pipeline. See the module docstring's `measure_reservoir`
+    paragraph and `ReservoirMeasurements`'s own docstring for the full field
+    derivation. Performs NO validation (that is B4/B5/B6's job over the
+    returned measurements) and loads NO evaluator/MCTS/GPU/checkpoint
+    weights -- only file BYTES, via the same `fpu_provenance` helpers
+    `fpu_dev_corpus_v2.v2_screen_provenance` reuses.
+
+    Assumes `protocol` is already a valid, fully-populated protocol dict
+    (e.g. `build_protocol`'s return value, or a `reservoir_protocol.json`
+    already loaded from disk) -- a missing field raises `KeyError`, exactly
+    like `gen_command`, since re-validating an already-frozen protocol is
+    `build_protocol`'s job, not this one's. A missing/unreadable file at any
+    declared path raises `OSError` (e.g. `FileNotFoundError`) -- fail loud
+    rather than silently produce a partial measurement.
+    """
+    jsonl_rows = _load_jsonl_rows(protocol["source_index_path"])
+    sidecars_by_idx = _load_sidecars(jsonl_rows)
+    summary = json.loads(Path(protocol["match_summary_path"]).read_text())
+
+    anchor_role = protocol["anchor"]
+    checkpoint_identities = {
+        "reservoir_a": _checkpoint_identity(protocol["checkpoint_a"]["path"]),
+        "reservoir_b": _checkpoint_identity(protocol["checkpoint_b"]["path"]),
+        "anchor": _checkpoint_identity(protocol[anchor_role]["path"]),
+    }
+
+    replay_paths = [row["replay_path"] for row in jsonl_rows]
+
+    return ReservoirMeasurements(
+        jsonl_rows=jsonl_rows,
+        sidecars_by_idx=sidecars_by_idx,
+        summary=summary,
+        checkpoint_identities=checkpoint_identities,
+        generation_source_sha1s=fpu_provenance.source_file_sha1s(
+            GENERATION_SOURCE_MODULES),
+        generation_git_commit=fpu_provenance.git_commit(),
+        source_index_sha1=fpu_provenance.file_sha1(protocol["source_index_path"]),
+        replay_data_sha1=fpu_provenance.replay_data_sha1(replay_paths),
+        match_summary_sha1=fpu_provenance.file_sha1(protocol["match_summary_path"]),
+        source_file_sha1s=fpu_provenance.source_file_sha1s(
+            QUALIFICATION_SOURCE_FILES),
+        forbidden_manifest_sha1s=fpu_provenance.source_file_sha1s(
+            protocol["forbidden_manifests"]),
+    )
