@@ -739,9 +739,13 @@ def _eff_reduction(ref_eff: float, cand_eff: float) -> float:
     return (ref_eff - cand_eff) / ref_eff if ref_eff > 0 else 0.0
 
 
-def _dev_target_row(band: str, cand: dict, ref: dict) -> dict:
-    """One §6.2 target row: candidate metrics computed VS the reference `ref`."""
-    return {
+def _dev_target_row(band: str, cand: dict, ref: dict, *,
+                    ply_bucket: Optional[str] = None) -> dict:
+    """One §6.2 target row: candidate metrics computed VS the reference `ref`.
+    `ply_bucket` is v2-only plumbing (Task A1, spec §0/§9): when not None, the
+    row carries a `"ply_bucket"` key; the default None reproduces today's row
+    byte-for-byte (no key at all) -- no v1 call site passes it."""
+    row = {
         "role": "target", "band": band,
         "new_collapse": bool(cand["collapsed"] and not ref["collapsed"]),
         "lock_in": lock_in_event(cand["trace"]),
@@ -750,20 +754,28 @@ def _dev_target_row(band: str, cand: dict, ref: dict) -> dict:
                                                  cand["effective_children"]),
         "top_share_inc": cand["top_share"] - ref["top_share"],
     }
+    if ply_bucket is not None:
+        row["ply_bucket"] = ply_bucket
+    return row
 
 
-def _dev_control_row(cand: dict, ref: dict) -> dict:
-    """One §6.2 control row: mover Δ + top-move-flip-to-lower-prior flag."""
+def _dev_control_row(cand: dict, ref: dict, *,
+                     ply_bucket: Optional[str] = None) -> dict:
+    """One §6.2 control row: mover Δ + top-move-flip-to-lower-prior flag.
+    `ply_bucket` behaves exactly as in `_dev_target_row`."""
     flipped_lower = False
     if cand["top_move"] is not None and ref["top_move"] is not None:
         if cand["top_move"] != ref["top_move"]:
             cp, rp = cand["top_move_prior"], ref["top_move_prior"]
             flipped_lower = (cp is not None and rp is not None and cp < rp)
-    return {
+    row = {
         "role": "control",
         "mover_delta": cand["root_value_stm"] - ref["root_value_stm"],
         "control_flip_to_lower_prior": flipped_lower,
     }
+    if ply_bucket is not None:
+        row["ply_bucket"] = ply_bucket
+    return row
 
 
 def _a_row(off: dict, cand: dict) -> dict:
@@ -953,18 +965,24 @@ def _controls_case_row(row: dict, label: str, feats: dict) -> dict:
 
 
 def _dev_rows_vs(target_control_rows, cand_by_sha: Mapping[str, dict],
-                 ref_by_sha: Mapping[str, dict]) -> List[dict]:
-    """Build §6.2 rows for a candidate config vs a reference, joined by sha1."""
+                 ref_by_sha: Mapping[str, dict], *,
+                 carry_ply_bucket: bool = False) -> List[dict]:
+    """Build §6.2 rows for a candidate config vs a reference, joined by sha1.
+    `carry_ply_bucket` (Task A1, spec §0/§9; default False) is v2-only: when
+    True, each source row's `ply_bucket` (both v1 and v2 manifests carry the
+    column) is read and passed through to the returned gate row. Default False
+    never reads it -- the v1 path stays byte-identical to today."""
     rows: List[dict] = []
     for r in target_control_rows:
         sha = r["canonical_position_sha1"]
         cand, ref = cand_by_sha.get(sha), ref_by_sha.get(sha)
         if cand is None or ref is None:
             continue
+        pb = r.get("ply_bucket") if carry_ply_bucket else None
         if r["role"] == "target":
-            rows.append(_dev_target_row(r["branching_band"], cand, ref))
+            rows.append(_dev_target_row(r["branching_band"], cand, ref, ply_bucket=pb))
         else:
-            rows.append(_dev_control_row(cand, ref))
+            rows.append(_dev_control_row(cand, ref, ply_bucket=pb))
     return rows
 
 
@@ -980,13 +998,27 @@ CANDIDATE_DEV_ROW_FIELDNAMES = [
     "top_share_inc", "control_flip_to_lower_prior",
 ]
 
+# v2 (phase-primary corpus, Task A1, spec §0/§9) sibling schema: the v1 list
+# above is left UNCHANGED (byte-identical persisted CSV); this ADDS
+# `ply_bucket` for `_candidate_dev_records(..., carry_ply_bucket=True)` rows.
+# The caller (not this module) picks which fieldnames list to hand
+# `_write_csv` -- A2 wires that selection from the resolved corpus mode.
+CANDIDATE_DEV_ROW_FIELDNAMES_V2 = CANDIDATE_DEV_ROW_FIELDNAMES + ["ply_bucket"]
+
 
 def _candidate_dev_records(target_control_rows, cand_by_sha: Mapping[str, dict],
                            ref_by_sha: Mapping[str, dict], cand_label: str,
-                           ref_label: str) -> List[dict]:
+                           ref_label: str, *,
+                           carry_ply_bucket: bool = False) -> List[dict]:
     """Joinable persistence rows mirroring `_dev_rows_vs` EXACTLY (same join, same
     skip condition, same _dev_target_row/_dev_control_row), tagged for audit. Does
-    NOT feed any gate -- purely the persisted evidence trail."""
+    NOT feed any gate -- purely the persisted evidence trail.
+
+    `carry_ply_bucket` (Task A1, spec §0/§9; default False) mirrors
+    `_dev_rows_vs`: when True, each record also carries the source row's
+    `ply_bucket` (schema `CANDIDATE_DEV_ROW_FIELDNAMES_V2`). Default False
+    never adds the key -- the persisted v1 schema (`CANDIDATE_DEV_ROW_FIELDNAMES`)
+    stays byte-identical to today."""
     records: List[dict] = []
     for r in target_control_rows:
         sha = r["canonical_position_sha1"]
@@ -995,6 +1027,9 @@ def _candidate_dev_records(target_control_rows, cand_by_sha: Mapping[str, dict],
             continue
         base = {"canonical_sha1": sha, "candidate_config": cand_label,
                 "reference": ref_label}
+        pb = r.get("ply_bucket") if carry_ply_bucket else None
+        if pb is not None:
+            base["ply_bucket"] = pb
         if r["role"] == "target":
             tr = _dev_target_row(r["branching_band"], cand, ref)
             records.append({**base, "role": "target", "band": tr["band"],

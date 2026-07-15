@@ -33,6 +33,9 @@ from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
 from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
     V_REF, top_share, validate_controls_fingerprint, require_r0_qualified,
     require_matching_mode, _leader_child)
+from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
+    CANDIDATE_DEV_ROW_FIELDNAMES, _dev_target_row, _dev_control_row,
+    _dev_rows_vs, _candidate_dev_records)
 from scripts.GPU.alphazero.mcts import MCTSNode, encode_move, visit_leader_move
 
 
@@ -350,3 +353,137 @@ def test_visit_leader_move_matches_diagnostic_leader_child():
     root_no_visits = MCTSNode(state=None)
     root_no_visits.children[A] = MCTSNode(state=None, parent=root_no_visits, move=A, visit_count=0)
     assert visit_leader_move(root_no_visits) is None and _leader_child(root_no_visits) is None
+
+
+# ---------------------------------------------------------------------------
+# Task A1 -- propagate ply_bucket into the dev rows (v2-gated; v1 stays
+# byte-identical). Spec §0/§9: docs/superpowers/specs/
+# 2026-07-14-fpu-v2-reservoir-protocol-qualification-design.md. Brief:
+# .superpowers/sdd/preop-task-A1-brief.md.
+#
+# `_dev_target_row`/`_dev_control_row`/`_dev_rows_vs`/`_candidate_dev_records`
+# consume `_position_features`-shaped `cand`/`ref` dicts (NOT the already-built
+# gate-row dicts `_safe_target`/`_safe_control` fabricate above), so this
+# section has its own minimal feature + manifest-row fixtures.
+# ---------------------------------------------------------------------------
+
+def _feat(root_value_stm=0.0, top_share=0.5, effective_children=3.0, collapsed=False,
+         top_move=1, top_move_prior=0.3, trace=None):
+    return {
+        "root_value_stm": root_value_stm, "top_share": top_share,
+        "effective_children": effective_children, "collapsed": collapsed,
+        "top_move": top_move, "top_move_prior": top_move_prior,
+        "trace": trace or {"selected_move_prior_rank": 1, "selected_move_prior": 0.5,
+                           "explored_mass_at_stabilization": 0.9, "stabilization_sim": 10,
+                           "final_root_top_share": 0.5},
+    }
+
+
+def _manifest_row(sha, role, band="b200_299", ply_bucket=None):
+    """A raw dev-corpus manifest row as `_load_dev_rows` (csv.DictReader)
+    produces it. Both v1 and v2 manifests carry a `ply_bucket` column, so it is
+    present here whenever the caller supplies one -- carrying it in the SOURCE
+    row is not what gates propagation into the gate/persisted rows;
+    `carry_ply_bucket` is."""
+    row = {"canonical_position_sha1": sha, "role": role, "branching_band": band}
+    if ply_bucket is not None:
+        row["ply_bucket"] = ply_bucket
+    return row
+
+
+def test_dev_target_control_row_default_omits_ply_bucket():
+    cand, ref = _feat(root_value_stm=0.3, collapsed=True), _feat(root_value_stm=0.1)
+    trow = _dev_target_row("b200_299", cand, ref)
+    crow = _dev_control_row(cand, ref)
+    assert "ply_bucket" not in trow
+    assert "ply_bucket" not in crow
+
+
+def test_dev_target_control_row_carries_ply_bucket_when_given():
+    cand, ref = _feat(root_value_stm=0.3, collapsed=True), _feat(root_value_stm=0.1)
+    trow = _dev_target_row("b200_299", cand, ref, ply_bucket="late")
+    crow = _dev_control_row(cand, ref, ply_bucket="late")
+    assert trow["ply_bucket"] == "late"
+    assert crow["ply_bucket"] == "late"
+
+
+def test_dev_rows_vs_carries_ply_bucket_when_enabled():
+    cand = {"s1": _feat(root_value_stm=0.3, collapsed=True), "s2": _feat(root_value_stm=0.2)}
+    ref = {"s1": _feat(root_value_stm=0.1), "s2": _feat(root_value_stm=0.1)}
+    rows = [_manifest_row("s1", "target", ply_bucket="late"),
+           _manifest_row("s2", "control", ply_bucket="late")]
+    out = _dev_rows_vs(rows, cand, ref, carry_ply_bucket=True)
+    assert len(out) == 2
+    assert all(r["ply_bucket"] == "late" for r in out)
+
+
+def test_dev_rows_vs_default_is_byte_identical_to_today():
+    cand = {"s1": _feat(root_value_stm=0.3, top_share=0.6, effective_children=2.0,
+                       collapsed=True, top_move=5, top_move_prior=0.2),
+           "s2": _feat(root_value_stm=0.2)}
+    ref = {"s1": _feat(root_value_stm=0.1, top_share=0.5, effective_children=4.0,
+                      top_move=5, top_move_prior=0.4),
+          "s2": _feat(root_value_stm=0.1)}
+    # Source rows carry ply_bucket -- exactly like a real v1 OR v2 manifest row
+    # would (both have the column). Default carry_ply_bucket=False must still
+    # drop it entirely: the FLAG, not the source data, decides.
+    rows = [_manifest_row("s1", "target", ply_bucket="late"),
+           _manifest_row("s2", "control", ply_bucket="late")]
+    out = _dev_rows_vs(rows, cand, ref)
+    assert len(out) == 2
+    for r in out:
+        assert "ply_bucket" not in r
+    # Literal dict match, hand-computed from the inputs above (not re-derived
+    # from _dev_target_row/_dev_control_row) so a shared bug could not hide a
+    # regression here.
+    assert out[0] == {
+        "role": "target", "band": "b200_299", "new_collapse": True,
+        "lock_in": False, "mover_delta": pytest.approx(0.2),
+        "eff_children_reduction": pytest.approx(0.5),
+        "top_share_inc": pytest.approx(0.1),
+    }
+    assert out[1] == {
+        "role": "control", "mover_delta": pytest.approx(0.1),
+        "control_flip_to_lower_prior": False,
+    }
+
+
+def test_candidate_dev_records_v1_mode_emits_exact_fieldnames():
+    cand = {"s1": _feat(root_value_stm=0.3, collapsed=True), "s2": _feat(root_value_stm=0.2)}
+    ref = {"s1": _feat(root_value_stm=0.1), "s2": _feat(root_value_stm=0.1)}
+    rows = [_manifest_row("s1", "target", ply_bucket="late"),
+           _manifest_row("s2", "control", ply_bucket="late")]
+    recs = _candidate_dev_records(rows, cand, ref, "r0.20", "absolute_off")
+    assert len(recs) == 2
+    for r in recs:
+        assert set(r.keys()) == set(CANDIDATE_DEV_ROW_FIELDNAMES)
+        assert "ply_bucket" not in r
+
+
+def test_candidate_dev_records_v2_mode_carries_ply_bucket(tmp_path):
+    cand = {"s1": _feat(root_value_stm=0.3, collapsed=True), "s2": _feat(root_value_stm=0.2)}
+    ref = {"s1": _feat(root_value_stm=0.1), "s2": _feat(root_value_stm=0.1)}
+    rows = [_manifest_row("s1", "target", ply_bucket="late"),
+           _manifest_row("s2", "control", ply_bucket="mid")]
+    recs = _candidate_dev_records(rows, cand, ref, "r0.20", "absolute_off",
+                                  carry_ply_bucket=True)
+    assert len(recs) == 2
+    by_sha = {r["canonical_sha1"]: r for r in recs}
+    assert by_sha["s1"]["ply_bucket"] == "late"
+    assert by_sha["s2"]["ply_bucket"] == "mid"
+
+    # v2 sibling fieldnames list: additive, v1 constant left untouched.
+    from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
+        CANDIDATE_DEV_ROW_FIELDNAMES_V2, _write_csv)
+    assert set(CANDIDATE_DEV_ROW_FIELDNAMES_V2) == set(CANDIDATE_DEV_ROW_FIELDNAMES) | {"ply_bucket"}
+    assert "ply_bucket" not in CANDIDATE_DEV_ROW_FIELDNAMES
+    for r in recs:
+        assert set(r.keys()) == set(CANDIDATE_DEV_ROW_FIELDNAMES_V2)
+
+    # round-trips through the CSV writer against the v2 schema
+    import csv
+    path = tmp_path / "candidate_dev_rows_v2.csv"
+    _write_csv(str(path), CANDIDATE_DEV_ROW_FIELDNAMES_V2, recs)
+    with open(path, newline="") as f:
+        back = list(csv.DictReader(f))
+    assert {r["canonical_sha1"]: r["ply_bucket"] for r in back} == {"s1": "late", "s2": "mid"}
