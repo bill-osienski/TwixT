@@ -6,10 +6,11 @@ Frozen design ref: docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-q
   Sec 2.1 (the `reservoir_protocol.json` schema -- the single source of ALL
   declared pre-generation decisions), Sec 3 (CLI stages / exit codes /
   atomicity+immutability contract), Sec 4 (qualification: the measurement
-  boundary), Sec 6 (module boundary / circular-import resolution), Sec 8
-  (canonical JSON, determinism, reviewability).
+  boundary), Sec 4.1 (protocol conformance -- every check except
+  summary-binding and preflight), Sec 6 (module boundary / circular-import
+  resolution), Sec 8 (canonical JSON, determinism, reviewability).
 Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-hardening-plan.md
-  Tasks B1-B3 -- the first three tasks of the new Group-2 subsystem
+  Tasks B1-B4 -- the first four tasks of the new Group-2 subsystem
   (B1-B11), which will qualify a generated reservoir zero-GPU (B3-B7) and
   emit an immutable `fpu_dev_corpus_v2_config.json` (B7-B10). B1 laid the
   foundation: the protocol's field set (`PROTOCOL_SCHEMA_KEYS`), the
@@ -17,14 +18,19 @@ Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-harden
   builder + emitter. B2 added `gen_command` -- the exact
   `eval_checkpoint_match` argv derived from an already-frozen protocol, so
   the operator's generation command cannot drift from the frozen
-  decisions. B3 adds `ReservoirMeasurements` + `measure_reservoir` -- the
+  decisions. B3 added `ReservoirMeasurements` + `measure_reservoir` -- the
   ONE filesystem-I/O boundary of qualification (Sec 4): it loads and hashes
   a GENERATED reservoir into a frozen, pure-data structure, so every later
-  qualification stage (`qualify` protocol-conformance B4, summary-binding
-  B5, preflight B6, config-derivation B7) reads only THAT structure and
-  performs no I/O of its own. The `V2Config` extension (B8), the
-  `run_screen` precheck (B9), the final 11-identity chain (B10) and the CLI
-  `main` (B11) are ALL later tasks -- none of that exists here.
+  qualification stage reads only THAT structure and performs no I/O of its
+  own. B4 adds `check_protocol_conformance` -- the FIRST such stage: every
+  Sec 4.1 protocol-vs-reservoir check EXCEPT summary-binding (B5, which
+  calls the real `eval_summary.summarize_match`) and the geometric
+  preflight (B6), returning the FIRST failing check's reason (design's "any
+  failure is MISMATCH exit 3" -- one outcome, not an accumulated list).
+  Summary-binding (B5), the geometric preflight (B6), config derivation
+  (B7), the `V2Config` extension (B8), the `run_screen` precheck (B9), the
+  final 11-identity chain (B10) and the CLI `main` (B11) are ALL later
+  tasks -- none of that exists here.
 
 =============================================================================
 TOOLING ONLY. No evaluator / MCTS / GPU / MLX / checkpoint-WEIGHTS import,
@@ -45,7 +51,13 @@ directly (as every later B4-B6 test will) performs NO I/O at all -- it is
 an ordinary `@dataclass(frozen=True)` with no `__post_init__`. Verified at
 test time via a subprocess import check (mirrors fpu_dev_corpus_v2.py's own
 `test_v2_module_import_pulls_no_gpu_or_mlx`): importing this module leaves
-`mlx` and `torch` out of `sys.modules`.
+`mlx` and `torch` out of `sys.modules`. B4 introduces NO new filesystem
+toucher: `check_protocol_conformance` reads only its two already-in-memory
+arguments (`protocol`, a `ReservoirMeasurements`) -- `measure_reservoir`
+remains the ONE AND ONLY I/O function in the whole qualification pipeline,
+and every B4 test fabricates a `ReservoirMeasurements` directly (never via
+`measure_reservoir`), exactly as this paragraph's B3 sentence anticipated
+("every later B4-B6 test will").
 
 Module-level imports are stdlib ONLY, PLUS one intra-package import: `from
 .fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES` (design Sec 6's "import only
@@ -60,7 +72,10 @@ importing (part of) THIS module -- which stays a lazy, in-function import,
 a LATER task's concern (B9), not this one. Nothing else is imported from
 `fpu_dev_corpus_v2` here: no `V2Config`, no `run_screen`, no evaluator/MCTS
 plumbing (verified: tests/test_fpu_dev_reservoir_protocol.py::
-test_module_imports_only_v2_corpus_sources_from_fpu_dev_corpus_v2).
+test_module_imports_only_v2_corpus_sources_from_fpu_dev_corpus_v2). B4 adds
+no new import beyond two more names from the already-imported `typing`
+module (`Callable`, `Optional`) -- the import surface is otherwise
+identical to B3's.
 =============================================================================
 
 What this section does
@@ -183,6 +198,43 @@ enters the tamper-evident measurements. Beyond that existence guard it
 performs NO protocol-conformance validation (that is B4/B5/B6's job, over
 the measurements it returns) and loads NO evaluator/MCTS/GPU/checkpoint
 weights -- only file BYTES.
+
+`ConformanceResult` / `check_protocol_conformance`: the first qualification
+stage (design Sec 4.1) -- PURE over an already-built `ReservoirMeasurements`
+(B3) and the frozen `protocol` dict: no filesystem I/O, no evaluator/MCTS/
+GPU. Runs, in the spec's own presentation order, every Sec 4.1
+protocol-vs-reservoir check EXCEPT summary-binding-by-reconstruction (a
+LATER task, B5, since it calls the real `eval_summary.summarize_match`) and
+the geometric preflight (B6): game count (JSONL rows AND replay sidecars
+each == `protocol["games"]`), `game_idx` contiguity (`0..games-1`, no
+gaps/dupes), each game's sidecar `seed == base_seed + game_idx` (the ONLY
+place a per-game seed is recorded -- `EvalGameResult` itself carries none),
+the matchup (`checkpoint_identities["reservoir_a"/"reservoir_b"]` == the
+protocol's declared `name:sha1` identities, and every row's checkpoints
+resolve to the pair), between-games model-color parity (even `game_idx` ->
+checkpoint-A red), replay linkage (every row's sidecar exists and its own
+`game_idx`/colors/`board_size` agree with the row), the ten
+result-determining match knobs (`TEN_MATCH_KNOBS`) PLUS `workers` recorded
+in `summary["config"]`, output-path derivation (`source_index_path` ==
+`<match_summary_path stem>_games.jsonl`; every replay's parent directory ==
+the declared `replay_dir`), within-game move-player parity (red on even
+ply, distinct from the between-games color check), and generation
+provenance (`generation_source_sha1s`/`generation_git_commit` == the
+protocol's, subject to the Sec 10 trust boundary). `ConformanceResult`
+carries `ok` plus the FIRST failing check's reason ONLY -- checks
+short-circuit at the first failure (design Sec 4.1: "any failure is
+MISMATCH exit 3", a single regenerate-under-the-same-protocol outcome)
+rather than accumulating every gate like
+`diagnose_fpu_policy_mass.SafetyVerdict`'s multi-reason tuple; a LATER
+task's report (B7) is where the FULL per-check diagnostic detail belongs.
+`_validate_protocol_shape` closes the one gap B1's `build_protocol`
+deliberately left open (key PRESENCE only, Sec 2.1): before any check runs,
+it validates the SHAPE of `checkpoint_a`/`checkpoint_b` (`path`+`identity`
+sub-keys) and that `anchor` is one of the two literal role names, raising
+`ValueError` (a USAGE error against a malformed protocol DOCUMENT) rather
+than letting a bare KeyError/TypeError surface from deep inside a check --
+deliberately minimal, covering only the nested shapes this module's OWN
+checks dereference, not a full re-validation of `build_protocol`'s job.
 """
 from __future__ import annotations
 
@@ -192,7 +244,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Tuple, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 from . import fpu_provenance
 from .fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES
@@ -751,3 +803,380 @@ def measure_reservoir(protocol: Mapping[str, Any]) -> ReservoirMeasurements:
         forbidden_manifest_sha1s=fpu_provenance.source_file_sha1s(
             protocol["forbidden_manifests"]),
     )
+
+
+# ---------------------------------------------------------------------------
+# Protocol conformance -- Task B4 (design Sec 4.1). PURE over `protocol` +
+# `measurements` (B3's `ReservoirMeasurements`): every check below is a
+# plain dict/string/Path comparison over already-in-memory values -- no
+# filesystem I/O, no evaluator/MCTS/GPU. `measure_reservoir` remains the
+# ONE filesystem-I/O function in the whole qualification pipeline.
+# ---------------------------------------------------------------------------
+
+# The two checkpoint roles a protocol's `anchor` field may name -- also the
+# two top-level protocol keys `_validate_protocol_shape` shape-checks
+# (design Sec 2.1: "checkpoint_a and checkpoint_b ... plus anchor:
+# 'checkpoint_a' | 'checkpoint_b'").
+_CHECKPOINT_ROLES: Tuple[str, str] = ("checkpoint_a", "checkpoint_b")
+
+# The ten result-determining match knobs (design Sec 2.1 amendment 4) --
+# recorded verbatim in `measurements.summary["config"]`
+# (`eval_checkpoint_match.run_match`: `config_dict = {**asdict(config),
+# "base_seed": base_seed, "workers": workers}`) and checked against the
+# SAME-named `protocol` fields by `_check_match_config_knobs`. `workers` is
+# checked alongside these (spec Sec 4.1: "the summary's recorded
+# config.workers equals protocol.workers") but is deliberately NOT one of
+# the ten -- it is operational, not result-determining (design Sec 2.1
+# amendment 2) -- so it stays a separate name, not an eleventh entry here.
+TEN_MATCH_KNOBS: Tuple[str, ...] = (
+    "board_size", "mcts_sims", "mcts_eval_batch_size", "mcts_stall_flush_sims",
+    "selection_mode", "opening_temp_plies", "temp_high", "temp_low",
+    "max_moves", "base_seed",
+)
+
+
+@dataclasses.dataclass(frozen=True)
+class ConformanceResult:
+    """`check_protocol_conformance`'s result (design Sec 4.1).
+
+    `ok=True` (`reason=None`): every check passed. `ok=False`: the FIRST
+    failing check's reason, a short human-readable string naming which
+    check tripped (`"game_count: ..."`, `"seed: ..."`, `"matchup: ..."`,
+    etc.) -- checks stop at the first failure rather than accumulating every
+    gate like `diagnose_fpu_policy_mass.SafetyVerdict`'s multi-reason
+    `reasons` tuple, since design Sec 4.1 defines a SINGLE outcome for any
+    conformance defect ("any failure is MISMATCH exit 3", one
+    regenerate-under-the-same-protocol action regardless of how many checks
+    would have failed). The full per-check diagnostic detail -- e.g. a
+    termination-reason histogram -- belongs to the report a LATER task (B7)
+    writes, not to this result.
+    """
+    ok: bool
+    reason: Optional[str] = None
+
+
+def _validate_protocol_shape(protocol: Mapping[str, Any]) -> None:
+    """Validate the nested protocol shapes `check_protocol_conformance`
+    actually dereferences, before any check runs.
+
+    B1's `build_protocol` validates top-level `PROTOCOL_SCHEMA_KEYS`
+    PRESENCE only (design Sec 2.1) -- it never inspects what is INSIDE
+    `checkpoint_a`/`checkpoint_b`, nor constrains `anchor` to its two-member
+    enum (a gap flagged in the B3 report: "`build_protocol` not
+    enum-constraining `anchor`"). This module's checks are the first to
+    DEREFERENCE those nested shapes (`protocol["checkpoint_a"]["identity"]`,
+    `protocol["checkpoint_b"]["path"]`, the `anchor` string), so this raises
+    a clear `ValueError` naming the problem -- a USAGE error against a
+    malformed protocol DOCUMENT -- rather than letting a bare
+    KeyError/TypeError surface from deep inside a later check. Deliberately
+    minimal: validates only `checkpoint_a`/`checkpoint_b` each being a
+    mapping with `path`/`identity` keys, and `anchor` being one of the two
+    literal role names -- NOT a full re-validation of `build_protocol`'s own
+    job (top-level key presence, or the other schema fields this module
+    never dereferences into).
+    """
+    for role in _CHECKPOINT_ROLES:
+        ckpt = protocol.get(role)
+        if (not isinstance(ckpt, Mapping) or "path" not in ckpt
+                or "identity" not in ckpt):
+            raise ValueError(
+                f"check_protocol_conformance: protocol[{role!r}] must be a "
+                f"mapping with 'path' and 'identity' keys, got {ckpt!r}")
+    if protocol.get("anchor") not in _CHECKPOINT_ROLES:
+        raise ValueError(
+            f"check_protocol_conformance: protocol['anchor'] must be one "
+            f"of {_CHECKPOINT_ROLES!r}, got {protocol.get('anchor')!r}")
+
+
+def _check_game_count(protocol: Mapping[str, Any],
+                      measurements: ReservoirMeasurements) -> Optional[str]:
+    """Game count (design Sec 4.1): exactly `protocol['games']` JSONL rows
+    AND exactly that many replay sidecars -- checked as two independent
+    sub-conditions so a reviewer can tell (from the reason text) which of
+    the two collections is short, but reported as a SINGLE `"game_count"`
+    check (whichever of the two disagrees first)."""
+    games = protocol["games"]
+    n_rows = len(measurements.jsonl_rows)
+    if n_rows != games:
+        return (f"game_count: protocol declares games={games} but "
+                f"jsonl_rows has {n_rows} row(s)")
+    n_sidecars = len(measurements.sidecars_by_idx)
+    if n_sidecars != games:
+        return (f"game_count: protocol declares games={games} but "
+                f"sidecars_by_idx has {n_sidecars} entry/entries")
+    return None
+
+
+def _check_contiguous_game_idx(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements) -> Optional[str]:
+    """Contiguity (design Sec 4.1): `jsonl_rows`' `game_idx` values run
+    `0..games-1` with no gaps and no duplicates."""
+    games = protocol["games"]
+    idxs = sorted(int(row["game_idx"]) for row in measurements.jsonl_rows)
+    expected = list(range(games))
+    if idxs != expected:
+        return (f"contiguity: jsonl_rows game_idx values {idxs} are not "
+                f"exactly contiguous 0..{games - 1} (a gap or a duplicate)")
+    return None
+
+
+def _check_seed(protocol: Mapping[str, Any],
+                measurements: ReservoirMeasurements) -> Optional[str]:
+    """Seed range (design Sec 4.1): each game's RECORDED seed --
+    `EvalGameResult` itself carries no `seed` field (`eval_runner.
+    EvalGameResult`'s field set), so the only place a per-game seed is
+    recorded is its replay sidecar (`eval_replay.build_replay_dict`) --
+    equals the half-open range's `base_seed + game_idx`
+    (`eval_runner.build_pairing_tasks`: `seed=base_seed + offset + g`,
+    `offset=0` for the reservoir's single pairing). A row whose sidecar is
+    altogether MISSING is skipped here -- that is `_check_replay_linkage`'s
+    failure to report, not a spurious empty-seed mismatch."""
+    base_seed = protocol["base_seed"]
+    for row in measurements.jsonl_rows:
+        game_idx = int(row["game_idx"])
+        sidecar = measurements.sidecars_by_idx.get(game_idx)
+        if sidecar is None:
+            continue
+        expected_seed = base_seed + game_idx
+        actual_seed = sidecar.get("seed")
+        if actual_seed != expected_seed:
+            return (f"seed: game_idx={game_idx} sidecar seed={actual_seed!r}, "
+                    f"expected base_seed({base_seed})+game_idx({game_idx})="
+                    f"{expected_seed}")
+    return None
+
+
+def _check_matchup(protocol: Mapping[str, Any],
+                   measurements: ReservoirMeasurements) -> Optional[str]:
+    """Matchup (design Sec 4.1): the measured `checkpoint_identities`
+    (`reservoir_a`/`reservoir_b`, B3) equal the protocol's DECLARED
+    `name:sha1` identities, and every JSONL row's
+    `red_checkpoint`/`black_checkpoint` PATHS resolve to exactly the
+    `{checkpoint_a, checkpoint_b}` path pair (as a set -- WHICH one is red
+    on a given game is `_check_color_parity`'s separate concern)."""
+    ckpt_a_identity = protocol["checkpoint_a"]["identity"]
+    ckpt_b_identity = protocol["checkpoint_b"]["identity"]
+    actual_a = measurements.checkpoint_identities.get("reservoir_a")
+    if actual_a != ckpt_a_identity:
+        return (f"matchup: checkpoint_identities['reservoir_a']={actual_a!r} "
+                f"!= protocol checkpoint_a identity={ckpt_a_identity!r}")
+    actual_b = measurements.checkpoint_identities.get("reservoir_b")
+    if actual_b != ckpt_b_identity:
+        return (f"matchup: checkpoint_identities['reservoir_b']={actual_b!r} "
+                f"!= protocol checkpoint_b identity={ckpt_b_identity!r}")
+
+    ckpt_a_path = protocol["checkpoint_a"]["path"]
+    ckpt_b_path = protocol["checkpoint_b"]["path"]
+    expected_paths = {ckpt_a_path, ckpt_b_path}
+    for row in measurements.jsonl_rows:
+        row_paths = {row["red_checkpoint"], row["black_checkpoint"]}
+        if row_paths != expected_paths:
+            return (f"matchup: game_idx={row['game_idx']} red/black "
+                    f"checkpoints {row_paths} do not resolve to "
+                    f"{{checkpoint_a, checkpoint_b}}={expected_paths}")
+    return None
+
+
+def _check_color_parity(protocol: Mapping[str, Any],
+                        measurements: ReservoirMeasurements) -> Optional[str]:
+    """Model-color parity BETWEEN games (design Sec 4.1 amendment 4):
+    even `game_idx` -> checkpoint-A plays red; odd -> checkpoint-B plays red
+    (`eval_runner.build_pairing_tasks`'s own rule: `red, black = (a_ckpt,
+    b_ckpt) if g % 2 == 0 else (b_ckpt, a_ckpt)`)."""
+    ckpt_a_path = protocol["checkpoint_a"]["path"]
+    ckpt_b_path = protocol["checkpoint_b"]["path"]
+    for row in measurements.jsonl_rows:
+        game_idx = int(row["game_idx"])
+        expected_red = ckpt_a_path if game_idx % 2 == 0 else ckpt_b_path
+        if row["red_checkpoint"] != expected_red:
+            parity = "even" if game_idx % 2 == 0 else "odd"
+            return (f"color_parity: game_idx={game_idx} ({parity}) expected "
+                    f"red_checkpoint={expected_red!r}, got "
+                    f"{row['red_checkpoint']!r}")
+    return None
+
+
+def _check_replay_linkage(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements) -> Optional[str]:
+    """Replay linkage (design Sec 4.1): every row has a linked sidecar in
+    `sidecars_by_idx`, and that sidecar's OWN `game_idx`, colors, and
+    `board_size` agree with the row (`seed` agreement is `_check_seed`'s
+    separate concern, so it is not re-checked here)."""
+    board_size = protocol["board_size"]
+    for row in measurements.jsonl_rows:
+        game_idx = int(row["game_idx"])
+        sidecar = measurements.sidecars_by_idx.get(game_idx)
+        if sidecar is None:
+            return (f"replay_linkage: game_idx={game_idx} has no linked "
+                    f"sidecar in sidecars_by_idx")
+        sidecar_game_idx = sidecar.get("game_idx")
+        if sidecar_game_idx is None or int(sidecar_game_idx) != game_idx:
+            return (f"replay_linkage: game_idx={game_idx} sidecar "
+                    f"game_idx={sidecar_game_idx!r} does not match "
+                    f"the row")
+        if (sidecar.get("red_checkpoint") != row["red_checkpoint"]
+                or sidecar.get("black_checkpoint") != row["black_checkpoint"]):
+            return (f"replay_linkage: game_idx={game_idx} sidecar colors "
+                    f"(red={sidecar.get('red_checkpoint')!r}, "
+                    f"black={sidecar.get('black_checkpoint')!r}) do not "
+                    f"match the row (red={row['red_checkpoint']!r}, "
+                    f"black={row['black_checkpoint']!r})")
+        if sidecar.get("board_size") != board_size:
+            return (f"replay_linkage: game_idx={game_idx} sidecar "
+                    f"board_size={sidecar.get('board_size')!r} != protocol "
+                    f"board_size={board_size!r}")
+    return None
+
+
+def _check_match_config_knobs(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements) -> Optional[str]:
+    """The ten result-determining match knobs (`TEN_MATCH_KNOBS`) PLUS
+    `workers`, recorded in `measurements.summary["config"]`
+    (`eval_checkpoint_match.run_match`'s `config_dict`), each equal the
+    SAME-named `protocol` field."""
+    config = measurements.summary.get("config") or {}
+    for knob in TEN_MATCH_KNOBS:
+        expected = protocol[knob]
+        actual = config.get(knob)
+        if actual != expected:
+            return (f"match_config: summary['config'][{knob!r}]={actual!r} "
+                    f"!= protocol[{knob!r}]={expected!r}")
+    expected_workers = protocol["workers"]
+    actual_workers = config.get("workers")
+    if actual_workers != expected_workers:
+        return (f"match_config: summary['config']['workers']="
+                f"{actual_workers!r} != protocol['workers']="
+                f"{expected_workers!r}")
+    return None
+
+
+def _check_output_path_derivation(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements) -> Optional[str]:
+    """Output-path derivation (design Sec 4.1 amendment 3):
+    `protocol['source_index_path']` equals
+    `<protocol['match_summary_path'] stem>_games.jsonl` (the
+    `eval_checkpoint_match._write_outputs` rule) -- a pure protocol
+    self-consistency check needing no `measurements` field; and every row's
+    `replay_path` lives directly under the protocol's declared
+    `replay_dir` (`eval_replay.write_replay`: `path = os.path.join(
+    replay_dir, replay_filename(game_idx))`), proving the generator
+    actually wrote into the DECLARED directory. (Existence of the files
+    themselves was already enforced by `measure_reservoir`'s own
+    `_require_readable_files`/raw-read guards at measurement time -- not
+    re-checked here, since this stage is pure over already-loaded data.)"""
+    stem, _ext = os.path.splitext(protocol["match_summary_path"])
+    expected_index = f"{stem}_games.jsonl"
+    if protocol["source_index_path"] != expected_index:
+        return (f"output_path: protocol source_index_path="
+                f"{protocol['source_index_path']!r} != derived "
+                f"{expected_index!r} (<match_summary_path stem>_games.jsonl)")
+
+    replay_dir = Path(protocol["replay_dir"])
+    for row in measurements.jsonl_rows:
+        actual_dir = Path(row["replay_path"]).parent
+        if actual_dir != replay_dir:
+            return (f"output_path: game_idx={row['game_idx']} replay_path="
+                    f"{row['replay_path']!r} is not directly under protocol "
+                    f"replay_dir={protocol['replay_dir']!r}")
+    return None
+
+
+def _check_move_player_parity(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements) -> Optional[str]:
+    """Within-game move-player parity (design Sec 4.1, checked separately
+    from the between-games `_check_color_parity` above): within each
+    replay's `moves` (`eval_replay.ply_record`), the mover alternates by
+    ply -- red on even ply, black on odd (`eval_runner.play_eval_game`:
+    `TwixtState(..., to_move="red", ...)`, red moves first at ply 0)."""
+    for game_idx, sidecar in measurements.sidecars_by_idx.items():
+        for record in sidecar.get("moves") or []:
+            ply = record["ply"]
+            expected_player = "red" if ply % 2 == 0 else "black"
+            if record["player"] != expected_player:
+                return (f"move_player_parity: game_idx={game_idx} ply={ply} "
+                        f"player={record['player']!r}, expected "
+                        f"{expected_player!r}")
+    return None
+
+
+def _check_generation_provenance(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements) -> Optional[str]:
+    """Generation provenance (design Sec 4.1/Sec 2.1 amendment 8): the
+    measured `generation_source_sha1s` (over the Sec 2.1 thirteen-module
+    list, B3) and `generation_git_commit` equal the protocol's declared
+    values -- subject to the Sec 10 trust boundary (this proves the sources
+    AS THEY EXIST AT QUALIFY TIME, not that those exact bytes executed)."""
+    expected_sources = protocol["generation_source_sha1s"]
+    if measurements.generation_source_sha1s != expected_sources:
+        return (f"generation_provenance: generation_source_sha1s="
+                f"{measurements.generation_source_sha1s!r} != protocol "
+                f"generation_source_sha1s={expected_sources!r}")
+    expected_commit = protocol["generation_git_commit"]
+    if measurements.generation_git_commit != expected_commit:
+        return (f"generation_provenance: generation_git_commit="
+                f"{measurements.generation_git_commit!r} != protocol "
+                f"generation_git_commit={expected_commit!r}")
+    return None
+
+
+# Spec Sec 4.1's own presentation order -- also the order checks run in:
+# `check_protocol_conformance` returns the FIRST failure, so this ordering
+# only affects WHICH single reason is reported when more than one check
+# would have failed (each defect test in the test suite isolates exactly
+# one broken check, so the order never changes a defect test's outcome).
+_CONFORMANCE_CHECKS: Tuple[
+    Callable[[Mapping[str, Any], ReservoirMeasurements], Optional[str]], ...
+] = (
+    _check_game_count,
+    _check_contiguous_game_idx,
+    _check_seed,
+    _check_matchup,
+    _check_color_parity,
+    _check_replay_linkage,
+    _check_match_config_knobs,
+    _check_output_path_derivation,
+    _check_move_player_parity,
+    _check_generation_provenance,
+)
+
+
+def check_protocol_conformance(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements) -> ConformanceResult:
+    """The first qualification stage (design Sec 4.1) -- PURE over an
+    already-built `ReservoirMeasurements` (B3) and the frozen `protocol`
+    dict: no filesystem I/O, no evaluator/MCTS/GPU (`measure_reservoir`
+    remains the ONE I/O function in the whole qualification pipeline).
+
+    Runs every Sec 4.1 protocol-vs-reservoir check EXCEPT summary-binding-
+    by-reconstruction (a LATER task, B5 -- it calls the real `eval_summary.
+    summarize_match`) and the geometric preflight (B6): game count,
+    `game_idx` contiguity, per-game seed, the matchup (identities + every
+    row's checkpoints), between-games model-color parity, replay linkage,
+    the ten match knobs + `workers`, output-path derivation, within-game
+    move-player parity, and generation provenance -- see each `_check_*`
+    helper's own docstring for its exact rule.
+
+    Returns `ConformanceResult(ok=True)` when every check passes, else
+    `ConformanceResult(ok=False, reason=<first failing check's reason>)` --
+    checks stop at the FIRST failure (design Sec 4.1: "any failure is
+    MISMATCH exit 3", a single outcome, not an accumulated list).
+
+    `_validate_protocol_shape` runs first and RAISES `ValueError` (a usage
+    error, not a `ConformanceResult`) for a malformed protocol DOCUMENT --
+    e.g. a `checkpoint_a` missing its `identity` key, or an `anchor` outside
+    its two-member enum -- closing the nested-shape validation gap B1's
+    `build_protocol` deliberately left open (key presence only).
+    """
+    _validate_protocol_shape(protocol)
+    for check in _CONFORMANCE_CHECKS:
+        reason = check(protocol, measurements)
+        if reason is not None:
+            return ConformanceResult(ok=False, reason=reason)
+    return ConformanceResult(ok=True, reason=None)

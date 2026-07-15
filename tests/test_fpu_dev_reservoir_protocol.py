@@ -36,6 +36,7 @@ import pytest
 from scripts.GPU.alphazero import fpu_provenance
 from scripts.GPU.alphazero.fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES
 from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
+    ConformanceResult,
     EXIT_GATE_FAIL,
     EXIT_MISMATCH,
     EXIT_OK,
@@ -44,9 +45,11 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     PROTOCOL_SCHEMA_KEYS,
     QUALIFICATION_SOURCE_FILES,
     ReservoirMeasurements,
+    TEN_MATCH_KNOBS,
     WriteStatus,
     build_protocol,
     canonical_json_bytes,
+    check_protocol_conformance,
     emit_protocol,
     gen_command,
     measure_reservoir,
@@ -80,7 +83,7 @@ def _protocol_params(**overrides) -> dict:
         "mcts_sims": 400,
         "mcts_eval_batch_size": 14,
         "mcts_stall_flush_sims": 48,
-        "selection_mode": "visit_count",
+        "selection_mode": "opening_temperature",
         "opening_temp_plies": 6,
         "temp_high": 1.0,
         "temp_low": 0.1,
@@ -287,7 +290,7 @@ def test_build_protocol_preserves_values():
     assert protocol["mcts_sims"] == 400
     assert protocol["mcts_eval_batch_size"] == 14
     assert protocol["mcts_stall_flush_sims"] == 48
-    assert protocol["selection_mode"] == "visit_count"
+    assert protocol["selection_mode"] == "opening_temperature"
     assert protocol["opening_temp_plies"] == 6
     assert protocol["temp_high"] == 1.0
     assert protocol["temp_low"] == 0.1
@@ -457,7 +460,7 @@ def test_gen_command_produces_the_exact_argv_for_a_fixed_protocol():
         "--mcts-sims", "400",
         "--mcts-eval-batch-size", "14",
         "--mcts-stall-flush-sims", "48",
-        "--selection-mode", "visit_count",
+        "--selection-mode", "opening_temperature",
         "--opening-temp-plies", "6",
         "--temp-high", "1.0",
         "--temp-low", "0.1",
@@ -1185,6 +1188,471 @@ def test_qualification_source_files_are_distinguishable_by_basename():
     for p in QUALIFICATION_SOURCE_FILES:
         assert p.name not in paths_by_name, (p.name, paths_by_name[p.name], p)
         paths_by_name[p.name] = p
+
+
+# ---------------------------------------------------------------------------
+# check_protocol_conformance / ConformanceResult -- Task B4 (design Sec 4.1).
+#
+# PURE over an already-built `ReservoirMeasurements` + `protocol`: every
+# fixture below is fabricated DIRECTLY (no disk, no `measure_reservoir`
+# call) -- mirrors the B3 "constructing a ReservoirMeasurements directly ...
+# performs NO I/O" convention this file already established.
+# ---------------------------------------------------------------------------
+
+def _ply_record(ply: int) -> dict:
+    """One minimal, schema-shaped `eval_replay.ply_record` dict -- alternates
+    red (even ply) / black (odd ply), matching `eval_runner.play_eval_game`
+    (`TwixtState(..., to_move="red", ...)`: red moves first, ply 0)."""
+    return {
+        "ply": ply, "player": "red" if ply % 2 == 0 else "black",
+        "row": 1, "col": 1, "root_value": 0.0, "root_top1_share": 1.0,
+        "selected_visit_rank": 1, "selected_visit_count": 1,
+        "root_total_visits": 1, "n_legal": 1,
+    }
+
+
+def _conformant_reservoir(games: int = 6, n_moves: int = 4, **protocol_overrides):
+    """Build a FULLY conformant `(protocol, measurements)` pair -- the
+    shared clean baseline every `check_protocol_conformance` defect test
+    below mutates exactly ONE field of. A faithful, internally consistent
+    reservoir mirroring the real shapes `eval_checkpoint_match`/
+    `eval_runner`/`eval_replay` produce (design Sec 4.1): balanced colors
+    (even `game_idx` -> checkpoint-A red, `eval_runner.build_pairing_tasks`'s
+    own rule), seeds `base_seed + game_idx`, replay sidecars filed directly
+    under `replay_dir`, a `summary["config"]` carrying the ten match knobs +
+    `workers` verbatim from the protocol, and per-ply mover alternation (red
+    on even ply). Fabricated directly -- no disk, no `measure_reservoir`
+    call.
+
+    `protocol_overrides` flow into the shared `_protocol_params()` fixture
+    (e.g. `replay_dir=...`, `checkpoint_a=...`) -- the fabricated rows /
+    sidecars / summary are all DERIVED from the resulting protocol, so an
+    override stays self-consistent (e.g. overriding `replay_dir` moves
+    where the fabricated rows' `replay_path`s point too).
+    """
+    params = _protocol_params(games=games, **protocol_overrides)
+    protocol = build_protocol(params)
+
+    ckpt_a_path = protocol["checkpoint_a"]["path"]
+    ckpt_b_path = protocol["checkpoint_b"]["path"]
+    ckpt_a_id = protocol["checkpoint_a"]["identity"]
+    ckpt_b_id = protocol["checkpoint_b"]["identity"]
+    base_seed = protocol["base_seed"]
+    replay_dir = protocol["replay_dir"]
+    board_size = protocol["board_size"]
+
+    moves = [_ply_record(ply) for ply in range(n_moves)]
+
+    jsonl_rows = []
+    sidecars_by_idx = {}
+    for game_idx in range(games):
+        red_is_a = (game_idx % 2 == 0)
+        red_ckpt = ckpt_a_path if red_is_a else ckpt_b_path
+        black_ckpt = ckpt_b_path if red_is_a else ckpt_a_path
+        seed = base_seed + game_idx
+        replay_path = f"{replay_dir}/game_{game_idx:06d}.json"
+
+        jsonl_rows.append({
+            "task_id": game_idx, "pairing_id": "calib020_0001_vs_0379",
+            "game_idx": game_idx, "red_checkpoint": red_ckpt,
+            "black_checkpoint": black_ckpt, "winner": "red",
+            "winner_checkpoint": red_ckpt, "reason": "win",
+            "n_moves": n_moves, "red_score": 1.0, "black_score": 0.0,
+            "replay_path": replay_path,
+        })
+        sidecars_by_idx[game_idx] = {
+            "schema_version": 1, "pairing_id": "calib020_0001_vs_0379",
+            "game_idx": game_idx, "task_id": game_idx, "seed": seed,
+            "board_size": board_size, "red_checkpoint": red_ckpt,
+            "black_checkpoint": black_ckpt, "winner": "red",
+            "winner_checkpoint": red_ckpt, "reason": "win",
+            "n_moves": n_moves, "moves": [dict(m) for m in moves],
+        }
+
+    summary_config = {
+        "board_size": protocol["board_size"],
+        "mcts_sims": protocol["mcts_sims"],
+        "mcts_eval_batch_size": protocol["mcts_eval_batch_size"],
+        "mcts_stall_flush_sims": protocol["mcts_stall_flush_sims"],
+        "selection_mode": protocol["selection_mode"],
+        "opening_temp_plies": protocol["opening_temp_plies"],
+        "temp_high": protocol["temp_high"], "temp_low": protocol["temp_low"],
+        "max_moves": protocol["max_moves"], "base_seed": base_seed,
+        "workers": protocol["workers"],
+    }
+    summary = {
+        "pairing_id": "calib020_0001_vs_0379",
+        "checkpoint_a": ckpt_a_path, "checkpoint_b": ckpt_b_path,
+        "games": games,
+        "config": summary_config,
+        "git_commit": protocol["generation_git_commit"],
+        "generated_at": "2026-07-14T00:00:00+00:00",
+    }
+
+    measurements = ReservoirMeasurements(
+        jsonl_rows=jsonl_rows,
+        sidecars_by_idx=sidecars_by_idx,
+        summary=summary,
+        checkpoint_identities={
+            "reservoir_a": ckpt_a_id, "reservoir_b": ckpt_b_id,
+            "anchor": ckpt_a_id if protocol["anchor"] == "checkpoint_a" else ckpt_b_id,
+        },
+        generation_source_sha1s=dict(protocol["generation_source_sha1s"]),
+        generation_git_commit=protocol["generation_git_commit"],
+        source_index_sha1="index-sha1-placeholder",
+        replay_data_sha1="replay-data-sha1-placeholder",
+        match_summary_sha1="summary-sha1-placeholder",
+        source_file_sha1s={"fpu_dev_reservoir_protocol.py": "src-sha1-placeholder"},
+        forbidden_manifest_sha1s={"v1_controls.csv": "manifest-sha1-placeholder"},
+    )
+    return protocol, measurements
+
+
+# ---------------------------------------------------------------------------
+# TEN_MATCH_KNOBS
+# ---------------------------------------------------------------------------
+
+def test_ten_match_knobs_is_the_exact_spec_2_1_amendment_4_set():
+    assert TEN_MATCH_KNOBS == (
+        "board_size", "mcts_sims", "mcts_eval_batch_size", "mcts_stall_flush_sims",
+        "selection_mode", "opening_temp_plies", "temp_high", "temp_low",
+        "max_moves", "base_seed",
+    )
+    assert "workers" not in TEN_MATCH_KNOBS  # operational, checked separately
+
+
+# ---------------------------------------------------------------------------
+# ConformanceResult -- shape / immutability.
+# ---------------------------------------------------------------------------
+
+def test_conformance_result_ok_shape():
+    result = ConformanceResult(ok=True, reason=None)
+    assert result.ok is True
+    assert result.reason is None
+
+
+def test_conformance_result_mismatch_shape():
+    result = ConformanceResult(ok=False, reason="game_count: mismatch")
+    assert result.ok is False
+    assert "game_count" in result.reason
+
+
+def test_conformance_result_is_frozen():
+    result = ConformanceResult(ok=True, reason=None)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        result.ok = False
+
+
+# ---------------------------------------------------------------------------
+# _conformant_reservoir fixture self-check + the clean/ok case.
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_ok_on_clean_reservoir():
+    protocol, measurements = _conformant_reservoir()
+    result = check_protocol_conformance(protocol, measurements)
+    assert result == ConformanceResult(ok=True, reason=None)
+
+
+def test_check_protocol_conformance_performs_no_io():
+    """PURE -- reads only `measurements`/`protocol`, never touches disk.
+    Every path-shaped field here points somewhere that does not exist on
+    this machine; if `check_protocol_conformance` performed any I/O it
+    would raise, not return a clean result (mirrors B3's own
+    `test_constructing_reservoir_measurements_directly_does_no_io`)."""
+    protocol, measurements = _conformant_reservoir(
+        match_summary_path="/definitely/does/not/exist/match_summary.json",
+        source_index_path="/definitely/does/not/exist/match_summary_games.jsonl",
+        replay_dir="/definitely/does/not/exist/replays",
+        checkpoint_a={"path": "/definitely/does/not/exist/a.safetensors",
+                      "identity": "a:deadbeef"},
+        checkpoint_b={"path": "/definitely/does/not/exist/b.safetensors",
+                      "identity": "b:deadbeef"},
+    )
+    result = check_protocol_conformance(protocol, measurements)
+    assert result == ConformanceResult(ok=True, reason=None)
+
+
+# ---------------------------------------------------------------------------
+# _validate_protocol_shape -- the B1-deferred nested-shape/enum validation.
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_rejects_non_mapping_checkpoint_a():
+    protocol, measurements = _conformant_reservoir()
+    protocol = {**protocol, "checkpoint_a": "not-a-mapping"}
+    with pytest.raises(ValueError, match="checkpoint_a"):
+        check_protocol_conformance(protocol, measurements)
+
+
+def test_check_protocol_conformance_rejects_checkpoint_b_missing_identity():
+    protocol, measurements = _conformant_reservoir()
+    protocol = {**protocol, "checkpoint_b": {"path": "checkpoints/0379.safetensors"}}
+    with pytest.raises(ValueError, match="checkpoint_b"):
+        check_protocol_conformance(protocol, measurements)
+
+
+def test_check_protocol_conformance_rejects_invalid_anchor_enum():
+    protocol, measurements = _conformant_reservoir()
+    protocol = {**protocol, "anchor": "checkpoint_c"}
+    with pytest.raises(ValueError, match="anchor"):
+        check_protocol_conformance(protocol, measurements)
+
+
+# ---------------------------------------------------------------------------
+# game_count
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_wrong_game_count_jsonl_rows():
+    protocol, measurements = _conformant_reservoir()
+    rows = measurements.jsonl_rows[:-1]  # drop the last row: 5 rows, games=6
+    bad = dataclasses.replace(measurements, jsonl_rows=rows)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "game_count" in result.reason
+
+
+def test_check_protocol_conformance_wrong_game_count_sidecars():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    del sidecars[5]
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "game_count" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# contiguity
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_non_contiguous_game_idx():
+    protocol, measurements = _conformant_reservoir()
+    rows = [dict(r) for r in measurements.jsonl_rows]
+    rows[5]["game_idx"] = 2  # duplicate 2, leaves a gap at 5
+    bad = dataclasses.replace(measurements, jsonl_rows=rows)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "contiguity" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# seed
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_wrong_seed():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[3] = {**sidecars[3], "seed": sidecars[3]["seed"] + 1}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "seed" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# matchup
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_wrong_matchup_identity():
+    protocol, measurements = _conformant_reservoir()
+    bad_identities = {**measurements.checkpoint_identities,
+                      "reservoir_a": "tampered:deadbeef"}
+    bad = dataclasses.replace(measurements, checkpoint_identities=bad_identities)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "matchup" in result.reason
+
+
+def test_check_protocol_conformance_wrong_matchup_row_checkpoint():
+    protocol, measurements = _conformant_reservoir()
+    rows = [dict(r) for r in measurements.jsonl_rows]
+    rows[0]["red_checkpoint"] = "checkpoints/some_other_model.safetensors"
+    bad = dataclasses.replace(measurements, jsonl_rows=rows)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "matchup" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# color_parity
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_wrong_color_parity():
+    protocol, measurements = _conformant_reservoir()
+    rows = [dict(r) for r in measurements.jsonl_rows]
+    # game_idx=0 is even -> should be red=checkpoint_a; swap red/black so the
+    # SET check (matchup) still passes but parity is now wrong.
+    rows[0]["red_checkpoint"], rows[0]["black_checkpoint"] = (
+        rows[0]["black_checkpoint"], rows[0]["red_checkpoint"])
+    bad = dataclasses.replace(measurements, jsonl_rows=rows)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "color_parity" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# replay_linkage
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_replay_linkage_missing_sidecar():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    orphan = dict(sidecars[3])
+    del sidecars[3]
+    orphan["game_idx"] = 99
+    sidecars[99] = orphan  # keeps len(sidecars_by_idx) == games == 6
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "replay_linkage" in result.reason
+
+
+def test_check_protocol_conformance_replay_linkage_game_idx_mismatch():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[2] = {**sidecars[2], "game_idx": 99}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "replay_linkage" in result.reason
+
+
+def test_check_protocol_conformance_replay_linkage_color_mismatch():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[1] = {**sidecars[1],
+                   "red_checkpoint": "checkpoints/unrelated.safetensors"}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "replay_linkage" in result.reason
+
+
+def test_check_protocol_conformance_replay_linkage_sidecar_game_idx_none():
+    """Hardening edge case: a sidecar with an explicitly-`None` `game_idx`
+    (as opposed to a simply-missing key) must report a clean MISMATCH, not
+    crash with a `TypeError` from `int(None)`."""
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[2] = {**sidecars[2], "game_idx": None}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "replay_linkage" in result.reason
+
+
+def test_check_protocol_conformance_replay_linkage_board_size_mismatch():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[0] = {**sidecars[0], "board_size": 18}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "replay_linkage" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# match_config -- the ten knobs + workers.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("knob,bad_value", [
+    ("board_size", 18),
+    ("mcts_sims", 111),
+    ("mcts_eval_batch_size", 7),
+    ("mcts_stall_flush_sims", 9),
+    ("selection_mode", "argmax"),
+    ("opening_temp_plies", 3),
+    ("temp_high", 2.5),
+    ("temp_low", 0.25),
+    ("max_moves", 99),
+    ("base_seed", 555),
+])
+def test_check_protocol_conformance_wrong_match_config_knob(knob, bad_value):
+    """Every one of the ten result-determining match knobs is independently
+    checked -- mirrors `test_build_protocol_rejects_each_individually_
+    missing_key`'s per-field coverage style for B1."""
+    protocol, measurements = _conformant_reservoir()
+    config = dict(measurements.summary["config"])
+    assert config[knob] != bad_value  # sanity: fixture's own value differs
+    config[knob] = bad_value
+    bad_summary = {**measurements.summary, "config": config}
+    bad = dataclasses.replace(measurements, summary=bad_summary)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "match_config" in result.reason
+    assert knob in result.reason
+
+
+def test_check_protocol_conformance_wrong_workers():
+    protocol, measurements = _conformant_reservoir()
+    config = dict(measurements.summary["config"])
+    config["workers"] = config["workers"] + 1
+    bad_summary = {**measurements.summary, "config": config}
+    bad = dataclasses.replace(measurements, summary=bad_summary)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "match_config" in result.reason
+    assert "workers" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# output_path -- source_index_path derivation + replay_dir.
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_wrong_source_index_path():
+    protocol, measurements = _conformant_reservoir(
+        source_index_path="runs/reservoir_v2/WRONG_games.jsonl")
+    result = check_protocol_conformance(protocol, measurements)
+    assert result.ok is False
+    assert "output_path" in result.reason
+
+
+def test_check_protocol_conformance_wrong_replay_dir():
+    protocol, measurements = _conformant_reservoir()
+    rows = [dict(r) for r in measurements.jsonl_rows]
+    rows[4]["replay_path"] = "some/other/dir/game_000004.json"
+    bad = dataclasses.replace(measurements, jsonl_rows=rows)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "output_path" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# move_player_parity
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_wrong_move_player_parity():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[2]["moves"]]
+    moves[1] = {**moves[1], "player": "red"}  # ply=1 is odd -> should be black
+    sidecars[2] = {**sidecars[2], "moves": moves}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "move_player_parity" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# generation_provenance
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_wrong_generation_source_sha1s():
+    protocol, measurements = _conformant_reservoir()
+    bad_sources = {**measurements.generation_source_sha1s,
+                   "eval_checkpoint_match.py": "tampered0000"}
+    bad = dataclasses.replace(measurements, generation_source_sha1s=bad_sources)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "generation_provenance" in result.reason
+
+
+def test_check_protocol_conformance_wrong_generation_git_commit():
+    protocol, measurements = _conformant_reservoir()
+    bad = dataclasses.replace(measurements,
+                              generation_git_commit="deadbeefdeadbeef")
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "generation_provenance" in result.reason
 
 
 # ---------------------------------------------------------------------------
