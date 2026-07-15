@@ -270,7 +270,9 @@ the matchup (`checkpoint_identities["reservoir_a"/"reservoir_b"]` == the
 protocol's declared `name:sha1` identities, and every row's checkpoints
 resolve to the pair), between-games model-color parity (even `game_idx` ->
 checkpoint-A red), replay linkage (every row's sidecar exists and its own
-`game_idx`/colors/`board_size` agree with the row), the ten
+`game_idx`/colors/`board_size` agree with the row), sidecar `"moves"`-list
+well-formedness (`_check_sidecar_moves_wellformed` -- a REVIEW-FIX addition,
+not part of the original Sec 4.1 list; see its own docstring), the ten
 result-determining match knobs (`TEN_MATCH_KNOBS`) PLUS `workers` recorded
 in `summary["config"]`, output-path derivation (`source_index_path` ==
 `<match_summary_path stem>_games.jsonl`; every replay's parent directory ==
@@ -400,6 +402,32 @@ each stage again. `qualify_core` performs NO filesystem I/O of its own
 (`check_summary_binding`'s lazy production import is a CODE import, not
 reservoir-data I/O) -- `measure_reservoir` (B3) remains the ONE
 filesystem-I/O function in the whole qualification pipeline.
+
+REVIEW FIX (this task, over the committed B6 work): a reviewer reproduced a
+raw, uncaught `KeyError: 'moves'` escaping `qualify_core` for a corrupt
+sidecar (a `"moves"` key deleted) that still passed BOTH `check_protocol_
+conformance` and `check_summary_binding` -- `_check_move_player_parity`
+softens an absent `"moves"` key to `sidecar.get("moves") or []` (vacuously
+passing), so `default_preflight` was the FIRST stage to dereference
+`sidecar["moves"]` (via `enumerate_v2_proposals` -> `build_fpu_dev_corpus.
+per_ply_n_legal`), raising raw instead of the spec-mandated MISMATCH (design
+Sec 4.2: "a corrupt/incomplete output that breaks preflight's inputs is a
+MISMATCH, not a gate failure"). Two independent layers now close this: (1) a
+new B4 check, `_check_sidecar_moves_wellformed`, requiring exactly the
+minimum shape `per_ply_n_legal`'s FAST path reads (`"moves"` present, a
+`list`, every element a mapping carrying an int-convertible `"n_legal"` --
+the field `eval_replay.ply_record` unconditionally writes, so a genuine
+reservoir never takes that function's sparse-reconstruction fallback, which
+this check deliberately does not validate the shape of); and (2)
+`qualify_core` itself now wraps its `preflight(measurements)` call in a
+narrow `try/except (KeyError, TypeError, ValueError, IndexError)`, mapping
+any such escaping data-shape exception to `QualifyStatus.MISMATCH` --
+belt-and-suspenders for any corrupt shape the conformance check does not
+enumerate. The except clause is deliberately narrow, not a bare `except`: a
+genuine LOGIC bug inside `v2_geometry_feasibility`/`enumerate_v2_proposals`
+(e.g. tripping one of their own internal `assert`s) still raises
+`AssertionError` uncaught -- only garden-variety data-shape complaints
+become MISMATCH.
 """
 from __future__ import annotations
 
@@ -1199,6 +1227,75 @@ def _check_replay_linkage(
     return None
 
 
+def _check_sidecar_moves_wellformed(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements) -> Optional[str]:
+    """Sidecar `"moves"`-list well-formedness -- a REVIEW-FIX addition to
+    B4, not part of the original Sec 4.1 list (see the module docstring's
+    "REVIEW FIX" paragraph for the full story).
+
+    Requires exactly the minimum shape `build_fpu_dev_corpus.
+    per_ply_n_legal`'s FAST path dereferences: `"moves"` PRESENT, a `list`,
+    and every element a mapping carrying an int-convertible `"n_legal"`
+    (`per_ply_n_legal`: `moves = replay["moves"]`; `"n_legal" in m` for
+    every `m`; `int(m["n_legal"])`). This is the ONLY path a
+    protocol-conformant reservoir ever exercises -- `eval_replay.ply_record`
+    unconditionally writes `"n_legal": len(counts)` onto every move it
+    records, so a genuine reservoir never falls into that function's
+    sparse-reconstruction FALLBACK (which needs a much deeper shape --
+    `"row"`/`"col"` + `goal_line_trigger_probe_cases.position_state`'s
+    whole-game replay). This check deliberately does NOT validate that
+    deeper fallback shape -- do not over-validate a path a conformant
+    reservoir never takes.
+
+    Without this check, a corrupt/incomplete sidecar (a `"moves"` key
+    entirely absent, or a malformed entry) sails past every OTHER B4 check
+    untouched -- `_check_move_player_parity` (below) softens an absent
+    `"moves"` key to `sidecar.get("moves") or []`, vacuously passing -- and
+    past B5 untouched too, so `default_preflight` (B6) becomes the FIRST
+    stage to dereference `sidecar["moves"]` (via `enumerate_v2_proposals` ->
+    `per_ply_n_legal`), raising a raw `KeyError`/`TypeError` instead of the
+    spec-mandated MISMATCH (design Sec 4.2: "a corrupt/incomplete output
+    that breaks preflight's inputs is a MISMATCH, not a gate failure").
+    Placed in `_CONFORMANCE_CHECKS` right after `_check_replay_linkage` --
+    once a row's sidecar is known to exist and match the row, THIS check
+    validates its `"moves"` list's shape, ahead of every LATER check that
+    also reads move records (`_check_move_player_parity`).
+
+    Returns the FIRST malformed game's reason (naming its `game_idx` and
+    the exact problem), mirroring every other `_check_*` helper's
+    first-failure contract; `None` when every linked sidecar's `"moves"` is
+    well-formed. A row with no linked sidecar at all is skipped (`_check_
+    replay_linkage`'s own failure to report), the same guard `_check_seed`
+    already uses.
+    """
+    for row in measurements.jsonl_rows:
+        game_idx = int(row["game_idx"])
+        sidecar = measurements.sidecars_by_idx.get(game_idx)
+        if sidecar is None:
+            continue
+        if "moves" not in sidecar:
+            return (f"sidecar_moves: game_idx={game_idx} sidecar has no "
+                    f"'moves' key")
+        moves = sidecar["moves"]
+        if not isinstance(moves, list):
+            return (f"sidecar_moves: game_idx={game_idx} sidecar 'moves' "
+                    f"is not a list (got {type(moves).__name__})")
+        for i, m in enumerate(moves):
+            if not isinstance(m, Mapping):
+                return (f"sidecar_moves: game_idx={game_idx} moves[{i}] is "
+                        f"not a mapping (got {type(m).__name__})")
+            if "n_legal" not in m:
+                return (f"sidecar_moves: game_idx={game_idx} moves[{i}] is "
+                        f"missing required field 'n_legal'")
+            try:
+                int(m["n_legal"])
+            except (TypeError, ValueError):
+                return (f"sidecar_moves: game_idx={game_idx} moves[{i}] "
+                        f"'n_legal'={m['n_legal']!r} is not int-convertible")
+    return None
+
+
 def _check_match_config_knobs(
         protocol: Mapping[str, Any],
         measurements: ReservoirMeasurements) -> Optional[str]:
@@ -1299,6 +1396,12 @@ def _check_generation_provenance(
 # only affects WHICH single reason is reported when more than one check
 # would have failed (each defect test in the test suite isolates exactly
 # one broken check, so the order never changes a defect test's outcome).
+# `_check_sidecar_moves_wellformed` is the ONE entry NOT from that spec list
+# (a review-fix addition -- see its own docstring): inserted right after
+# `_check_replay_linkage`, so a sidecar's `"moves"` shape is validated
+# immediately once that sidecar is known to exist and match its row, ahead
+# of every LATER check that also reads move records
+# (`_check_move_player_parity`).
 _CONFORMANCE_CHECKS: Tuple[
     Callable[[Mapping[str, Any], ReservoirMeasurements], Optional[str]], ...
 ] = (
@@ -1308,6 +1411,7 @@ _CONFORMANCE_CHECKS: Tuple[
     _check_matchup,
     _check_color_parity,
     _check_replay_linkage,
+    _check_sidecar_moves_wellformed,
     _check_match_config_knobs,
     _check_output_path_derivation,
     _check_move_player_parity,
@@ -1329,9 +1433,11 @@ def check_protocol_conformance(
     preflight (B6): game count,
     `game_idx` contiguity, per-game seed, the matchup (identities + every
     row's checkpoints), between-games model-color parity, replay linkage,
-    the ten match knobs + `workers`, output-path derivation, within-game
-    move-player parity, and generation provenance -- see each `_check_*`
-    helper's own docstring for its exact rule.
+    sidecar `"moves"`-list well-formedness (`_check_sidecar_moves_
+    wellformed` -- a REVIEW-FIX addition, not from the original Sec 4.1
+    list), the ten match knobs + `workers`, output-path derivation,
+    within-game move-player parity, and generation provenance -- see each
+    `_check_*` helper's own docstring for its exact rule.
 
     Returns `ConformanceResult(ok=True)` when every check passes, else
     `ConformanceResult(ok=False, reason=<first failing check's reason>)` --
@@ -1507,7 +1613,12 @@ class QualifyStatus(enum.Enum):
       LATER task, B7).
     `MISMATCH` -- a protocol-conformance (B4) or summary-binding (B5)
       defect: "regenerate under the same protocol" (spec Sec 4.1/Sec 7). The
-      preflight is never reached.
+      preflight is never reached in this case. A REVIEW-FIX addition adds a
+      THIRD MISMATCH path: the preflight itself WAS reached but raised a
+      data-shape exception (`KeyError`/`TypeError`/`ValueError`/
+      `IndexError`) on corrupt/incomplete input that slipped past
+      conformance and binding -- caught by `qualify_core`'s own guard (see
+      its docstring) and likewise mapped to MISMATCH, never a raw crash.
     `GATE_FAIL` -- a protocol-FAITHFUL reservoir whose geometry cannot
       support the v2 corpus: "retire this protocol version" (spec Sec
       4.2/Sec 7).
@@ -1528,8 +1639,10 @@ class QualifyResult:
     `status`: a `QualifyStatus` (`OK` / `MISMATCH` / `GATE_FAIL`).
     `reason`: `None` on `OK`; on `MISMATCH`, the tripped stage's own
       `ConformanceResult.reason` (conformance's, or -- only when conformance
-      itself passed -- summary binding's); on `GATE_FAIL`, the preflight
-      result's `binding_constraint`.
+      itself passed -- summary binding's, or -- a REVIEW-FIX addition, only
+      when BOTH passed -- a synthesized reason naming the exception an
+      injected/default preflight raised on corrupt/incomplete input); on
+      `GATE_FAIL`, the preflight result's `binding_constraint`.
     `report`: a plain dict recording every stage's own outcome PLUS the full
       termination-reason histogram (`reason_histogram(measurements.
       jsonl_rows)`, B5, computed UNCONDITIONALLY -- even on an early
@@ -1624,6 +1737,24 @@ def qualify_core(
     4.2: "the ONLY GATE-FAIL condition is a protocol-faithful reservoir with
     infeasible geometry").
 
+    REVIEW FIX (this task): `preflight(measurements)` itself is now called
+    inside a narrow `try/except (KeyError, TypeError, ValueError,
+    IndexError)`. A reviewer reproduced a corrupt sidecar (a `"moves"` key
+    deleted) that passed BOTH conformance and binding yet made
+    `default_preflight` raise a raw `KeyError` -- exactly the "corrupt/
+    incomplete output that breaks preflight's inputs" case design Sec 4.2
+    says must be MISMATCH, not a crash. `_check_sidecar_moves_wellformed`
+    (B4, see its own docstring) now catches THAT specific shape earlier, at
+    the conformance stage -- but this except clause is the general
+    belt-and-suspenders: ANY data-shape exception a conformance check does
+    not (or cannot, for an entirely custom-injected `preflight`) enumerate
+    still becomes `QualifyStatus.MISMATCH`, with a synthesized reason naming
+    the exception, rather than escaping `qualify_core` raw. Deliberately
+    NARROW, not a bare `except`: a genuine LOGIC bug inside
+    `v2_geometry_feasibility`/`enumerate_v2_proposals` (e.g. tripping one of
+    THEIR OWN internal `assert`s) still raises `AssertionError`, uncaught --
+    only garden-variety data-shape complaints are reclassified.
+
     `preflight` defaults to `default_preflight` (this module's own PURE
     wrapper over `v2_geometry_feasibility`, above) but is an INJECTED
     dependency (design Sec 6's "preflight injection for tests"): a test may
@@ -1631,7 +1762,14 @@ def qualify_core(
     constraint>` callable, so a small fabricated `ReservoirMeasurements` (far
     too small to ever clear the real 240-row/4-phase geometric quotas) can
     still exercise the OK/GATE_FAIL branches directly -- only a test of the
-    REAL default needs a genuinely large synthetic reservoir.
+    REAL default needs a genuinely large synthetic reservoir. `.feasible` is
+    read as a direct attribute (the ONE required signal every preflight
+    result must carry -- a fake omitting it should raise `AttributeError`
+    loudly, not silently default); `.binding_constraint` is read via
+    `getattr(..., None)` since it is only ever CONSULTED when infeasible (a
+    feasible=True fake need not bother setting it). Both are part of the
+    SAME documented duck-typed contract (design Sec 6) -- the asymmetry is
+    each attribute's own optionality, not an inconsistency.
 
     PURE: reads only `protocol`, `measurements`, and whatever `preflight`
     itself reads (the default reads only `measurements`) -- no filesystem
@@ -1646,45 +1784,43 @@ def qualify_core(
     unconditionally, even on an early MISMATCH, since it is a cheap, pure
     fact about the JSONL alone (design Sec 4.1: "qualify computes the full
     termination-reason histogram... into the report"). `summary_binding`/
-    `preflight` are `None` in the report when that stage was never reached.
+    `preflight` are `None` in the report when that stage was never reached
+    OR when `preflight` was reached but raised (its own result was never
+    obtained). The `report` dict is built ONCE, incrementally updated as
+    each stage is reached, rather than re-literalled at every return branch.
     """
     conformance = check_protocol_conformance(protocol, measurements)
     histogram = reason_histogram(measurements.jsonl_rows)
+    report: Dict[str, Any] = {
+        "conformance": dataclasses.asdict(conformance),
+        "summary_binding": None,
+        "preflight": None,
+        "reason_histogram": histogram,
+    }
 
     if not conformance.ok:
         return QualifyResult(
-            status=QualifyStatus.MISMATCH,
-            reason=conformance.reason,
-            report={
-                "conformance": dataclasses.asdict(conformance),
-                "summary_binding": None,
-                "preflight": None,
-                "reason_histogram": histogram,
-            })
+            status=QualifyStatus.MISMATCH, reason=conformance.reason, report=report)
 
     binding = check_summary_binding(protocol, measurements)
+    report["summary_binding"] = dataclasses.asdict(binding)
     if not binding.ok:
         return QualifyResult(
-            status=QualifyStatus.MISMATCH,
-            reason=binding.reason,
-            report={
-                "conformance": dataclasses.asdict(conformance),
-                "summary_binding": dataclasses.asdict(binding),
-                "preflight": None,
-                "reason_histogram": histogram,
-            })
+            status=QualifyStatus.MISMATCH, reason=binding.reason, report=report)
 
-    preflight_result = preflight(measurements)
+    try:
+        preflight_result = preflight(measurements)
+    except (KeyError, TypeError, ValueError, IndexError) as exc:
+        reason = (f"preflight: raised {type(exc).__name__}: {exc} -- treated "
+                  f"as a corrupt/incomplete input (MISMATCH, not a gate "
+                  f"failure)")
+        return QualifyResult(status=QualifyStatus.MISMATCH, reason=reason, report=report)
+
     preflight_report = {
         "feasible": bool(preflight_result.feasible),
         "binding_constraint": getattr(preflight_result, "binding_constraint", None),
     }
-    report = {
-        "conformance": dataclasses.asdict(conformance),
-        "summary_binding": dataclasses.asdict(binding),
-        "preflight": preflight_report,
-        "reason_histogram": histogram,
-    }
+    report["preflight"] = preflight_report
     if preflight_result.feasible:
         return QualifyResult(status=QualifyStatus.OK, reason=None, report=report)
     return QualifyResult(

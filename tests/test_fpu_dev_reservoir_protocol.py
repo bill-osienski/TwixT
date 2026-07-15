@@ -1587,6 +1587,97 @@ def test_check_protocol_conformance_replay_linkage_board_size_mismatch():
 
 
 # ---------------------------------------------------------------------------
+# sidecar_moves -- a REVIEW-FIX addition to B4 (not part of the original Sec
+# 4.1 list). A reviewer reproduced a raw, uncaught `KeyError: 'moves'`
+# escaping `qualify_core` for a corrupt sidecar that still passed every
+# OTHER B4 check (`_check_move_player_parity` softens an absent `"moves"`
+# key to `sidecar.get("moves") or []`, vacuously passing) plus B5 --
+# `default_preflight` was the FIRST stage to ever dereference
+# `sidecar["moves"]`. These tests isolate `_check_sidecar_moves_wellformed`
+# itself; the `qualify_core`-level end-to-end proof (the reviewer's own
+# repro, "MISMATCH not a raw exception") lives in the qualify_core section
+# below.
+# ---------------------------------------------------------------------------
+
+def test_check_protocol_conformance_sidecar_moves_missing_key():
+    """The reviewer's exact reproduction shape: `"moves"` deleted entirely."""
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[3] = {k: v for k, v in sidecars[3].items() if k != "moves"}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=3" in result.reason
+
+
+def test_check_protocol_conformance_sidecar_moves_not_a_list():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[2] = {**sidecars[2], "moves": "not-a-list"}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=2" in result.reason
+
+
+def test_check_protocol_conformance_sidecar_moves_element_not_a_mapping():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[1]["moves"]]
+    moves[0] = "not-a-mapping"
+    sidecars[1] = {**sidecars[1], "moves": moves}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=1" in result.reason
+
+
+def test_check_protocol_conformance_sidecar_moves_element_missing_n_legal():
+    """"A move missing a required field" -- the exact field `per_ply_n_legal`
+    reads (design: `"n_legal" in m` / `int(m["n_legal"])`)."""
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[4]["moves"]]
+    del moves[1]["n_legal"]
+    sidecars[4] = {**sidecars[4], "moves": moves}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=4" in result.reason
+    assert "n_legal" in result.reason
+
+
+def test_check_protocol_conformance_sidecar_moves_element_n_legal_not_int_convertible():
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[0]["moves"]]
+    moves[0] = {**moves[0], "n_legal": {"not": "an-int"}}
+    sidecars[0] = {**sidecars[0], "moves": moves}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=0" in result.reason
+
+
+def test_check_protocol_conformance_sidecar_moves_missing_key_names_the_only_broken_game():
+    """Only game_idx=5's sidecar is corrupt -- the reason names THAT game,
+    not any other (proves the check iterates and reports precisely, not just
+    "some game somewhere")."""
+    protocol, measurements = _conformant_reservoir(games=6)
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[5] = {k: v for k, v in sidecars[5].items() if k != "moves"}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "game_idx=5" in result.reason
+
+
+# ---------------------------------------------------------------------------
 # match_config -- the ten knobs + workers.
 # ---------------------------------------------------------------------------
 
@@ -2070,6 +2161,119 @@ def test_qualify_core_empty_rows_reservoir_is_mismatch_not_a_raw_exception():
     assert "game_count" in result.reason
     assert calls == []
     assert result.report["summary_binding"] is None
+
+
+# ---------------------------------------------------------------------------
+# Corrupt sidecar -> MISMATCH, never a raw exception (review fix, this
+# task). The reviewer's own reproduction: a sidecar broken in a way that
+# passes BOTH `check_protocol_conformance` and `check_summary_binding`
+# (pre-fix) yet made `default_preflight` raise raw, because it was the
+# FIRST stage to ever dereference `sidecar["moves"]`. Two independent
+# layers now guarantee MISMATCH here: `_check_sidecar_moves_wellformed`
+# (B4) catches the shapes it enumerates BEFORE preflight is ever reached;
+# `qualify_core`'s own `try/except` around `preflight(measurements)` is the
+# belt-and-suspenders net for anything a conformance check does not.
+# ---------------------------------------------------------------------------
+
+def test_qualify_core_corrupt_sidecar_missing_moves_key_is_mismatch_not_a_raw_exception():
+    """THE reviewer's exact reproduction: `del sidecars_by_idx[3]["moves"]`
+    on an otherwise-faithful reservoir used to raise `KeyError: 'moves'` raw
+    out of `qualify_core` (would have surfaced as CLI exit 1, not the
+    spec-mandated exit 3). Caught here by `_check_sidecar_moves_wellformed`
+    (B4) -- conformance itself now reports the MISMATCH, so binding/
+    preflight are never reached, exactly like every other B4 defect."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6, n_moves=4)
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[3] = {k: v for k, v in sidecars[3].items() if k != "moves"}
+    broken = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+
+    calls: list = []
+    result = qualify_core(protocol, broken, preflight=_fake_preflight(True, calls=calls))
+
+    assert result.status == QualifyStatus.MISMATCH
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=3" in result.reason
+    assert calls == []  # preflight never reached -- caught at conformance
+    assert result.report["conformance"] == {"ok": False, "reason": result.reason}
+    assert result.report["summary_binding"] is None
+    assert result.report["preflight"] is None
+
+
+def test_qualify_core_corrupt_sidecar_non_list_moves_is_mismatch_not_a_raw_exception():
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6, n_moves=4)
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[2] = {**sidecars[2], "moves": "not-a-list"}
+    broken = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+
+    result = qualify_core(protocol, broken)  # real default_preflight, not injected
+    assert result.status == QualifyStatus.MISMATCH
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=2" in result.reason
+
+
+def test_qualify_core_corrupt_sidecar_move_missing_required_field_is_mismatch_not_a_raw_exception():
+    """"a move missing a required field" -- the exact scenario the task
+    brief calls out alongside the missing-key and non-list cases."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6, n_moves=4)
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[1]["moves"]]
+    del moves[0]["n_legal"]
+    sidecars[1] = {**sidecars[1], "moves": moves}
+    broken = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+
+    result = qualify_core(protocol, broken)  # real default_preflight, not injected
+    assert result.status == QualifyStatus.MISMATCH
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=1" in result.reason
+
+
+def test_qualify_core_preflight_raising_data_shape_exception_is_mismatch_not_a_raw_exception():
+    """Belt-and-suspenders (review fix): even a shape `_check_sidecar_moves_
+    wellformed` does not enumerate -- proven here by injecting a preflight
+    that raises directly on an otherwise genuinely clean, faithful
+    reservoir -- must still classify as MISMATCH, never escape raw."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6, n_moves=4)
+
+    def _preflight_raises(_measurements):
+        raise KeyError("some_shape_this_conformance_check_does_not_enumerate")
+
+    result = qualify_core(protocol, measurements, preflight=_preflight_raises)
+
+    assert result.status == QualifyStatus.MISMATCH
+    assert "preflight" in result.reason
+    assert "KeyError" in result.reason
+    assert result.report["conformance"] == {"ok": True, "reason": None}
+    assert result.report["summary_binding"] == {"ok": True, "reason": None}
+    assert result.report["preflight"] is None
+
+
+@pytest.mark.parametrize("exc_type", [KeyError, TypeError, ValueError, IndexError])
+def test_qualify_core_preflight_raising_each_narrow_exception_type_is_mismatch(exc_type):
+    """The exact four types `qualify_core`'s guard names -- each is caught
+    and reclassified, independent of which one a given corrupt input
+    happens to trigger."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6, n_moves=4)
+
+    def _preflight_raises(_measurements):
+        raise exc_type("boom")
+
+    result = qualify_core(protocol, measurements, preflight=_preflight_raises)
+    assert result.status == QualifyStatus.MISMATCH
+    assert exc_type.__name__ in result.reason
+
+
+def test_qualify_core_preflight_raising_assertion_error_is_not_caught():
+    """Deliberately NARROW except (not a bare `except`): a genuine LOGIC bug
+    -- e.g. one of `v2_geometry_feasibility`'s/`enumerate_v2_proposals`'s
+    own internal `assert`s tripping -- must still propagate raw, never be
+    silently reclassified as an ordinary data-shape MISMATCH."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6, n_moves=4)
+
+    def _preflight_asserts(_measurements):
+        assert False, "a genuine internal invariant violation, not a data shape issue"
+
+    with pytest.raises(AssertionError):
+        qualify_core(protocol, measurements, preflight=_preflight_asserts)
 
 
 # ---------------------------------------------------------------------------
