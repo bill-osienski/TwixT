@@ -97,10 +97,13 @@ def _seeds():
     return {"seed_base": 20260711, "eval_batch_size": 14, "stall_flush_sims": 48}
 
 
-def _fp(tmp_path, *, mode, stage, selected_a):
+def _fp(tmp_path, *, mode, stage, selected_a,
+       new_collapse_stratum=None, dev_corpus_config_sha1=None):
     """Build a real split fingerprint from temp files (identical shared inputs
     across calls -> identical selection_context; selected_a only moves
-    run_context)."""
+    run_context). `new_collapse_stratum`/`dev_corpus_config_sha1` (Task A3,
+    spec §5/§9) default to None -- the v1 path -- and thread straight through
+    to `build_run_fingerprint`; a caller passing both opts into the v2 path."""
     ckpt = tmp_path / "ck.npz"; ckpt.write_bytes(b"CKPT-BYTES")
     devm = tmp_path / "dev.csv"; devm.write_text("split\ntuning\n")
     src = tmp_path / "src.jsonl"; src.write_text('{"game_idx": 0}\n')
@@ -111,7 +114,9 @@ def _fp(tmp_path, *, mode, stage, selected_a):
     return build_run_fingerprint(
         dev_manifest=str(devm), checkpoint=str(ckpt), base_cfg=_FakeCfg(),
         source_jsonl=str(src), replay_paths=[str(rp)], seeds=_seeds(),
-        selected_a_manifest=sa, mode=mode, stage=stage)
+        selected_a_manifest=sa, mode=mode, stage=stage,
+        new_collapse_stratum=new_collapse_stratum,
+        dev_corpus_config_sha1=dev_corpus_config_sha1)
 
 
 def test_build_run_fingerprint_split_structure(tmp_path):
@@ -152,6 +157,124 @@ def test_selection_context_shared_across_selected_a_presence(tmp_path):
     # validate_controls_fingerprint accepts across the run_context difference
     gate = {"r0_qualified": True, "mode": "tuning", "fingerprint": fp_present}
     validate_controls_fingerprint(gate, fp_absent)            # selection_context matches
+
+
+# ---------------------------------------------------------------------------
+# Task A3 -- build_run_fingerprint(..., *, new_collapse_stratum=None,
+#            dev_corpus_config_sha1=None): the v2 config identity + effective
+#            stratum recorded in selection_context, OMITTED ENTIRELY for v1
+#            (spec §5/§9; brief .superpowers/sdd/preop-task-A3-brief.md).
+#
+# The v1 compatibility promise is NOT literal byte-identity to an OLD
+# fingerprint: this module hashes its OWN source via
+# RESULT_DETERMINING_SOURCES, so this very edit necessarily moves
+# source_file_sha1s (correctly invalidating pre-existing controls artifacts).
+# The real guarantee, pinned below: (a) no v2 keys leak into a v1
+# selection_context and the schema is exactly today's 9 keys; (b) a v2 call
+# gains EXACTLY the two new keys with the passed values; (c) controls and
+# candidates fingerprints built under the new code over the SAME inputs still
+# have identical selection_context -- for both the v1 and v2 paths -- so
+# validate_controls_fingerprint (the real join guard, not a bare `==`) still
+# matches them.
+# ---------------------------------------------------------------------------
+
+_V1_SELECTION_CONTEXT_KEYS = frozenset({
+    "source_file_sha1s", "checkpoint_identity", "dev_manifest_sha1",
+    "source_index_sha1", "replay_data_sha1", "base_mcts_config",
+    "mcts_sims", "seeds", "grid",
+})
+
+_FAKE_CONFIG_SHA1 = "deadbeef" * 5   # 40 hex chars -- fabricated, sha1-shaped
+
+
+def test_build_run_fingerprint_v1_selection_context_exact_schema_and_values(tmp_path):
+    # v1 (no v2 kwargs): selection_context is EXACTLY today's 9-key schema --
+    # no v2 leakage -- and every non-source-hash field carries its known
+    # value. source_file_sha1s is excluded from the value pins: it hashes
+    # THIS module's own bytes, so it is expected to differ from any snapshot
+    # predating this task's edit (the corrected v1 promise above).
+    fp = _fp(tmp_path, mode="tuning", stage="candidates", selected_a=True)
+    sel = fp["selection_context"]
+
+    assert set(sel) == _V1_SELECTION_CONTEXT_KEYS
+    assert "new_collapse_stratum" not in sel
+    assert "dev_corpus_config_sha1" not in sel
+
+    assert sel["mcts_sims"] == 400
+    assert sel["base_mcts_config"] == {
+        "c_puct": 1.5, "fpu_policy_mass_reduction": None,
+        "eval_batch_size": 14, "stall_flush_sims": 48, "n_simulations": 400}
+    assert sel["grid"] == [[c.label, c.reduction] for c in GRID]
+    assert sel["seeds"] == _seeds()
+    assert sel["checkpoint_identity"].startswith("ck.npz:")
+    assert len(sel["dev_manifest_sha1"]) == 40
+    assert len(sel["source_index_sha1"]) == 40
+    assert len(sel["replay_data_sha1"]) == 40
+
+
+def test_build_run_fingerprint_v2_selection_context_gains_exactly_two_keys(tmp_path):
+    fp = _fp(tmp_path, mode="tuning", stage="candidates", selected_a=True,
+             new_collapse_stratum="ply_bucket",
+             dev_corpus_config_sha1=_FAKE_CONFIG_SHA1)
+    sel = fp["selection_context"]
+
+    assert set(sel) == _V1_SELECTION_CONTEXT_KEYS | {
+        "new_collapse_stratum", "dev_corpus_config_sha1"}
+    assert sel["new_collapse_stratum"] == "ply_bucket"
+    assert sel["dev_corpus_config_sha1"] == _FAKE_CONFIG_SHA1
+
+    # the shared v1 fields are UNCHANGED by the v2 kwargs' mere presence
+    fp_v1 = _fp(tmp_path, mode="tuning", stage="candidates", selected_a=True)
+    v1_only = {k: v for k, v in sel.items() if k in _V1_SELECTION_CONTEXT_KEYS}
+    assert v1_only == fp_v1["selection_context"]
+
+
+def test_selection_context_matches_controls_vs_candidates_v1_and_v2(tmp_path):
+    # v1: no --dev-corpus-config -> both kwargs None at both call sites.
+    ctrl_v1 = _fp(tmp_path, mode="tuning", stage="controls", selected_a=False)
+    cand_v1 = _fp(tmp_path, mode="tuning", stage="candidates", selected_a=True)
+    assert ctrl_v1["selection_context"] == cand_v1["selection_context"]
+    validate_controls_fingerprint({"fingerprint": ctrl_v1}, cand_v1)   # real guard
+
+    # v2: both call sites resolve the SAME stratum + config sha1 from the SAME
+    # args (A2's _resolve_v2_stratum) -- so both kwargs agree here too.
+    ctrl_v2 = _fp(tmp_path, mode="tuning", stage="controls", selected_a=False,
+                  new_collapse_stratum="ply_bucket",
+                  dev_corpus_config_sha1=_FAKE_CONFIG_SHA1)
+    cand_v2 = _fp(tmp_path, mode="tuning", stage="candidates", selected_a=True,
+                  new_collapse_stratum="ply_bucket",
+                  dev_corpus_config_sha1=_FAKE_CONFIG_SHA1)
+    assert ctrl_v2["selection_context"] == cand_v2["selection_context"]
+    validate_controls_fingerprint({"fingerprint": ctrl_v2}, cand_v2)
+
+    # a v1 controls artifact must NOT satisfy a v2 candidates expectation (and
+    # vice versa): the new keys make a stale v1/v2 mismatch DETECTABLE where
+    # it was previously invisible to this guard.
+    with pytest.raises(ValueError):
+        validate_controls_fingerprint({"fingerprint": ctrl_v1}, cand_v2)
+    with pytest.raises(ValueError):
+        validate_controls_fingerprint({"fingerprint": ctrl_v2}, cand_v1)
+
+
+def test_frozen_locks_to_tuning_selection_v2(tmp_path):
+    # §12.2 spans MODE (tuning vs frozen_check), not just stage -- the SAME v2
+    # identity must also agree across that split, reusing the same call site
+    # (build_run_fingerprint(..., stage="candidates", ...)) under differing
+    # --mode, exactly as it already does for v1
+    # (test_frozen_locks_to_tuning_selection_end_to_end).
+    tun_fp = _fp(tmp_path, mode="tuning", stage="candidates", selected_a=True,
+                 new_collapse_stratum="ply_bucket",
+                 dev_corpus_config_sha1=_FAKE_CONFIG_SHA1)
+    frz_fp = _fp(tmp_path, mode="frozen_check", stage="candidates", selected_a=False,
+                 new_collapse_stratum="ply_bucket",
+                 dev_corpus_config_sha1=_FAKE_CONFIG_SHA1)
+    tuning_result = json.loads(json.dumps(
+        {"mode": "tuning", "smallest_safe_r": "r0.35", "candidates": [], "fingerprint": tun_fp}))
+    require_frozen_matches_tuning(tuning_result, frozen_reduction=0.35,
+                                  expected_selection_context=frz_fp["selection_context"])
+    with pytest.raises(ValueError):                       # any other r is refused
+        require_frozen_matches_tuning(tuning_result, frozen_reduction=0.20,
+                                      expected_selection_context=frz_fp["selection_context"])
 
 
 # ---------------------------------------------------------------------------

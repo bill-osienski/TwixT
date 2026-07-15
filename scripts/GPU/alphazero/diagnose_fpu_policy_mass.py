@@ -641,7 +641,9 @@ def _run_seed(seed_base: int, game_idx: int, ply: int) -> int:
 def build_run_fingerprint(*, dev_manifest: str, checkpoint: str, base_cfg: Any,
                           source_jsonl: Optional[str], replay_paths: Sequence[str],
                           seeds: Mapping[str, Any], selected_a_manifest: Optional[str],
-                          mode: str, stage: str) -> dict:
+                          mode: str, stage: str,
+                          new_collapse_stratum: Optional[str] = None,
+                          dev_corpus_config_sha1: Optional[str] = None) -> dict:
     """Split run-identity fingerprint (design §12.2/§12.5), computed identically
     from the same args in every stage. TWO blocks:
 
@@ -655,7 +657,12 @@ def build_run_fingerprint(*, dev_manifest: str, checkpoint: str, base_cfg: Any,
       - the FULL effective base MCTS config via `dataclasses.asdict` (this base
         has `fpu_policy_mass_reduction=None`; it captures c_puct / eval_batch_size
         / stall_flush_sims / n_simulations / ...);
-      - mcts_sims; seeds; the frozen GRID as `[[label, reduction], ...]`.
+      - mcts_sims; seeds; the frozen GRID as `[[label, reduction], ...]`;
+      - (Task A3, spec §5/§9) `new_collapse_stratum` + `dev_corpus_config_sha1`
+        -- v2's effective dev-safety stratum (A2's `_resolve_v2_stratum`) and
+        the `--dev-corpus-config` file's sha1 -- included ONLY when at least
+        one is not None. v1 (both None, the default) omits BOTH keys entirely
+        rather than writing them as `null`, so the v1 schema is untouched.
 
     `run_context` -- RECORDED but NOT cross-matched (it legitimately differs):
     selected-A present (tuning) vs absent (frozen); explicit `add_noise=False`;
@@ -671,6 +678,10 @@ def build_run_fingerprint(*, dev_manifest: str, checkpoint: str, base_cfg: Any,
         "mcts_sims": MCTS_SIMS,
         "seeds": dict(seeds),
         "grid": [[c.label, c.reduction] for c in GRID],
+        **({"new_collapse_stratum": new_collapse_stratum,
+            "dev_corpus_config_sha1": dev_corpus_config_sha1}
+           if new_collapse_stratum is not None or dev_corpus_config_sha1 is not None
+           else {}),
     }
     run_context = {
         "selected_a": {
@@ -948,6 +959,21 @@ def _resolve_v2_stratum(args) -> str:
     return config.new_collapse_stratum
 
 
+def _fingerprint_v2_kwargs(args, stratum: str) -> Dict[str, Optional[str]]:
+    """The two `build_run_fingerprint` v2 kwargs (Task A3, spec §5/§9), derived
+    from A2's already-RESOLVED `stratum` -- never re-running the 5 identity
+    checks `_resolve_v2_stratum` already performed. `stratum` is that
+    resolver's return: `"band"` (v1) or `"ply_bucket"` (v2). Both call sites
+    (controls in `run_controls_stage`, candidates in `run_candidates_stage`)
+    call this with their own freshly-resolved `stratum` over the SAME `args`,
+    so one protocol run's controls and candidates fingerprints always agree."""
+    return {
+        "new_collapse_stratum": stratum if stratum != "band" else None,
+        "dev_corpus_config_sha1": (fpu_provenance.file_sha1(args.dev_corpus_config)
+                                   if args.dev_corpus_config else None),
+    }
+
+
 def _make_base_cfg(eval_batch_size: int, stall_flush_sims: int):
     """Config-only half of `_make_evaluator_and_base_cfg` -- no checkpoint/
     evaluator load, so it's cheap enough to call before fingerprint
@@ -1167,7 +1193,8 @@ def run_controls_stage(args, dev_rows, run_configs) -> int:
         source_jsonl=args.source_jsonl, replay_paths=list(replay_by_game.values()),
         seeds={"seed_base": args.seed_base, "eval_batch_size": args.eval_batch_size,
                "stall_flush_sims": args.stall_flush_sims},
-        selected_a_manifest=args.selected_a_manifest, mode=args.mode, stage="controls")
+        selected_a_manifest=args.selected_a_manifest, mode=args.mode, stage="controls",
+        **_fingerprint_v2_kwargs(args, stratum))
 
     _write_csv(str(out_dir / "controls_summary.csv"),
                ["config", "n_positions", "target_lockin_count", "mean_top_share"],
@@ -1276,7 +1303,8 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
         replay_paths=list(replay_by_game.values()),
         seeds={"seed_base": args.seed_base, "eval_batch_size": args.eval_batch_size,
                "stall_flush_sims": args.stall_flush_sims},
-        selected_a_manifest=args.selected_a_manifest, mode=args.mode, stage="candidates")
+        selected_a_manifest=args.selected_a_manifest, mode=args.mode, stage="candidates",
+        **_fingerprint_v2_kwargs(args, stratum))
     validate_controls_fingerprint(gate, expected_fp)
     require_r0_qualified(gate)
     require_matching_mode(gate, args.mode)
