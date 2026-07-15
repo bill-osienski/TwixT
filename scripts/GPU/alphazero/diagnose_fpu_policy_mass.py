@@ -920,7 +920,13 @@ def _resolve_v2_stratum(args) -> str:
             f"_resolve_v2_stratum: config.source_index_path "
             f"{config.source_index_path!r} != --source-jsonl {args.source_jsonl!r}")
     meta_path = f"{args.dev_manifest}.meta.json"
-    meta = json.loads(Path(meta_path).read_text())
+    meta_file = Path(meta_path)
+    if not meta_file.exists():
+        raise ValueError(
+            f"_resolve_v2_stratum: manifest meta {meta_path!r} does not exist "
+            "(a v2 --dev-manifest must carry its sibling .meta.json recording "
+            "the producing config's identity)")
+    meta = json.loads(meta_file.read_text())
     expected_config_sha1 = fpu_provenance.file_sha1(args.dev_corpus_config)
     recorded_config_sha1 = (meta.get("provenance") or {}).get("config_sha1")
     if recorded_config_sha1 != expected_config_sha1:

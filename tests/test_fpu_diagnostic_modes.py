@@ -610,6 +610,22 @@ def test_resolve_v2_stratum_manifest_config_sha1_mismatch_raises(tmp_path):
         _resolve_v2_stratum(args)
 
 
+def test_resolve_v2_stratum_missing_manifest_meta_raises_descriptively(tmp_path):
+    # A v2 --dev-corpus-config but NO sibling <dev_manifest>.meta.json: the
+    # check must raise the same descriptive ValueError style as the other four
+    # (naming the missing meta path), not a bare FileNotFoundError, and still
+    # before any evaluator work.
+    dev_manifest = str(tmp_path / "manifest.csv")
+    source_jsonl = str(tmp_path / "src.jsonl")
+    config_path = _write_v2_config(tmp_path, select_out=dev_manifest,
+                                   source_index_path=source_jsonl)
+    # deliberately do NOT write <dev_manifest>.meta.json
+    args = _stage_args(dev_corpus_config=config_path, dev_manifest=dev_manifest,
+                       source_jsonl=source_jsonl)
+    with pytest.raises(ValueError, match="meta"):
+        _resolve_v2_stratum(args)
+
+
 def test_resolve_v2_stratum_meta_stratum_disagrees_with_config_raises(tmp_path):
     dev_manifest, source_jsonl, config_path = _faithful_v2_setup(tmp_path)
     _write_manifest_meta(dev_manifest, config_sha1=prov.file_sha1(config_path),
@@ -762,11 +778,24 @@ def test_production_paths_carry_ply_bucket_and_resolved_stratum_with_v2_config(
         assert stratum_key == "ply_bucket"
         assert rows and all("ply_bucket" in r for r in rows)
 
-    # the persisted candidate_dev_rows.csv picks the v2 (ply_bucket) schema
+    # The persisted candidate_dev_rows.csv must pick the v2 schema AND every
+    # DATA row must carry its source bucket VALUE -- not merely have the column
+    # in the header. The header alone is controlled by the field-list-selection
+    # ternary; asserting a real per-row value is what actually pins the
+    # `carry_ply_bucket=` threading into `_candidate_dev_records` (strip it and
+    # DictWriter silently writes an EMPTY ply_bucket for every row while the
+    # header stays intact -- see the report's RED evidence).
     import csv
     with open(out_dir / "candidate_dev_rows.csv", newline="") as f:
-        header = next(csv.reader(f))
+        reader = csv.DictReader(f)
+        header = reader.fieldnames
+        data_rows = list(reader)
     assert "ply_bucket" in header
+    expected_bucket = {"s1": "late", "s2": "mid", "s3": "late"}   # from _v2_dev_rows()
+    assert data_rows
+    for row in data_rows:
+        assert row["ply_bucket"], f"empty ply_bucket on data row {row!r}"
+        assert row["ply_bucket"] == expected_bucket[row["canonical_sha1"]]
 
 
 def test_production_paths_v1_no_config_omit_ply_bucket_and_use_band(
@@ -792,7 +821,14 @@ def test_production_paths_v1_no_config_omit_ply_bucket_and_use_band(
         assert stratum_key == "band"
         assert rows and all("ply_bucket" not in r for r in rows)
 
+    # v1 persists the byte-identical schema: no ply_bucket in the header, and
+    # (DictReader keys come from the header) no ply_bucket key on any data row.
     import csv
     with open(out_dir / "candidate_dev_rows.csv", newline="") as f:
-        header = next(csv.reader(f))
+        reader = csv.DictReader(f)
+        header = reader.fieldnames
+        data_rows = list(reader)
     assert "ply_bucket" not in header
+    assert data_rows
+    for row in data_rows:
+        assert "ply_bucket" not in row
