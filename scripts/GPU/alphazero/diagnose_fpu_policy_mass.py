@@ -876,6 +876,72 @@ def _load_dev_rows(dev_manifest: str, mode: str) -> List[dict]:
     return rows
 
 
+def _resolve_v2_stratum(args) -> str:
+    """Resolve this run's dev-safety stratification key (Task A2, spec §0/§9).
+
+    No `--dev-corpus-config` -> `"band"` (v1): reads NO config at all, so the
+    legacy path can never be perturbed by this option's mere existence. With
+    `--dev-corpus-config`, FIVE identity checks run -- lazily importing
+    `load_v2_config` (keeps this module's own import GPU/MLX-free) -- and
+    raise ValueError, naming the failing check, BEFORE any evaluator/MCTS
+    work (both stage runners call this before loading a checkpoint):
+
+      (a) the config's OWN `select_out` must equal `--dev-manifest` (the
+          config claims to have PRODUCED this exact manifest);
+      (b) the config's `source_index_path` must equal `--source-jsonl` (same
+          reservoir index the config was built against);
+      (c) the manifest's sibling `<dev_manifest>.meta.json` must record, in
+          its `provenance.config_sha1`, the SHA1 of THIS config file (proof
+          the manifest was actually built from these config bytes, not a
+          same-named-but-different one);
+      (d) that meta's own top-level `new_collapse_stratum` must equal the
+          config's (the artifact and its producing config agree on the
+          stratum actually used);
+      (e) the config's `new_collapse_stratum` must be `"ply_bucket"` -- the
+          only v2 stratum this diagnostic understands today.
+
+    All five agree -> returns `config.new_collapse_stratum` (== `"ply_bucket"`),
+    which the caller couples to BOTH `dev_safety_verdict(stratum_key=...)` and
+    `carry_ply_bucket` at every production call site (the whole point of this
+    task -- see brief .superpowers/sdd/preop-task-A2-brief.md): a resolved
+    stratum without carried rows would hit `dev_safety_verdict`'s own
+    missing-key ValueError at runtime.
+    """
+    if not args.dev_corpus_config:
+        return "band"
+    from .fpu_dev_corpus_v2 import load_v2_config
+    config = load_v2_config(args.dev_corpus_config)
+    if config.select_out != args.dev_manifest:
+        raise ValueError(
+            f"_resolve_v2_stratum: config.select_out {config.select_out!r} != "
+            f"--dev-manifest {args.dev_manifest!r}")
+    if config.source_index_path != args.source_jsonl:
+        raise ValueError(
+            f"_resolve_v2_stratum: config.source_index_path "
+            f"{config.source_index_path!r} != --source-jsonl {args.source_jsonl!r}")
+    meta_path = f"{args.dev_manifest}.meta.json"
+    meta = json.loads(Path(meta_path).read_text())
+    expected_config_sha1 = fpu_provenance.file_sha1(args.dev_corpus_config)
+    recorded_config_sha1 = (meta.get("provenance") or {}).get("config_sha1")
+    if recorded_config_sha1 != expected_config_sha1:
+        raise ValueError(
+            f"_resolve_v2_stratum: {meta_path} provenance.config_sha1 "
+            f"{recorded_config_sha1!r} != file_sha1(--dev-corpus-config) "
+            f"{expected_config_sha1!r}")
+    meta_stratum = meta.get("new_collapse_stratum")
+    if meta_stratum != config.new_collapse_stratum:
+        raise ValueError(
+            f"_resolve_v2_stratum: {meta_path} new_collapse_stratum "
+            f"{meta_stratum!r} != config.new_collapse_stratum "
+            f"{config.new_collapse_stratum!r}")
+    if config.new_collapse_stratum != "ply_bucket":
+        raise ValueError(
+            f"_resolve_v2_stratum: config.new_collapse_stratum "
+            f"{config.new_collapse_stratum!r} != 'ply_bucket' (the only v2 "
+            "stratum this diagnostic supports)")
+    return config.new_collapse_stratum
+
+
 def _make_base_cfg(eval_batch_size: int, stall_flush_sims: int):
     """Config-only half of `_make_evaluator_and_base_cfg` -- no checkpoint/
     evaluator load, so it's cheap enough to call before fingerprint
@@ -1055,6 +1121,12 @@ def _lockin_count(target_rows, feats_by_sha: Mapping[str, dict]) -> int:
 
 def run_controls_stage(args, dev_rows, run_configs) -> int:
     validate_stage_mode(dev_rows, mode=args.mode, stage="controls", run_configs=run_configs)
+    # Task A2: resolve BEFORE any evaluator/MCTS work (the 5 identity checks
+    # raise here if a --dev-corpus-config is stale/mismatched). The resolved
+    # stratum is coupled to BOTH the gate's stratum_key AND whether the rows
+    # feeding it carry ply_bucket -- the two must never disagree (spec §0).
+    stratum = _resolve_v2_stratum(args)
+    carry_ply_bucket = stratum != "band"
     from .build_fpu_dev_corpus import load_game_index
     replay_by_game = {r["game_idx"]: r["replay_path"]
                       for r in load_game_index(args.source_jsonl)}
@@ -1075,11 +1147,13 @@ def run_controls_stage(args, dev_rows, run_configs) -> int:
     _write_csv(str(out_dir / "controls_cases.csv"), CONTROLS_CASE_FIELDNAMES, case_rows)
 
     # r0 must pass the FULL §6.2 table vs absolute_off (control-qualification)
-    r0_dev_rows = _dev_rows_vs(dev_rows, r0_by_sha, off_by_sha)
+    r0_dev_rows = _dev_rows_vs(dev_rows, r0_by_sha, off_by_sha,
+                               carry_ply_bucket=carry_ply_bucket)
     absoff_lockin = _lockin_count(dev_rows, off_by_sha)
     r0_lockin = _lockin_count(dev_rows, r0_by_sha)
     verdict = dev_safety_verdict(r0_dev_rows, ref=ABSOLUTE_OFF,
-                                 r0_lockin=r0_lockin, absoff_lockin=absoff_lockin)
+                                 r0_lockin=r0_lockin, absoff_lockin=absoff_lockin,
+                                 stratum_key=stratum)
     r0_qualified = not verdict.rejected
 
     fingerprint = build_run_fingerprint(
@@ -1169,6 +1243,11 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
     # §12.3 selected-A is tuning-only -- checked BEFORE any load (tuning REQUIRES
     # it for the §6.3 mechanism gate; frozen_check FORBIDS it).
     validate_selected_a_mode(args.mode, bool(args.selected_a_manifest))
+    # Task A2: resolve BEFORE any evaluator/MCTS work -- see run_controls_stage's
+    # matching comment; the SAME coupling (stratum_key <-> carry_ply_bucket)
+    # applies at both candidates-stage dev_safety_verdict call sites below.
+    stratum = _resolve_v2_stratum(args)
+    carry_ply_bucket = stratum != "band"
     gate = _load_controls_gate(args.out_dir)
 
     # Load the replay index up-front (a pure jsonl read -- no evaluator): the
@@ -1250,11 +1329,13 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
     for c in run_configs:
         cand_by_sha = by_label[c.label]
         v_off = dev_safety_verdict(
-            _dev_rows_vs(dev_rows, cand_by_sha, off_by_sha), ref=ABSOLUTE_OFF,
-            r0_lockin=r0_lockin, absoff_lockin=absoff_lockin)
+            _dev_rows_vs(dev_rows, cand_by_sha, off_by_sha,
+                        carry_ply_bucket=carry_ply_bucket), ref=ABSOLUTE_OFF,
+            r0_lockin=r0_lockin, absoff_lockin=absoff_lockin, stratum_key=stratum)
         v_r0 = dev_safety_verdict(
-            _dev_rows_vs(dev_rows, cand_by_sha, r0_by_sha), ref=R0,
-            r0_lockin=r0_lockin, absoff_lockin=absoff_lockin)
+            _dev_rows_vs(dev_rows, cand_by_sha, r0_by_sha,
+                        carry_ply_bucket=carry_ply_bucket), ref=R0,
+            r0_lockin=r0_lockin, absoff_lockin=absoff_lockin, stratum_key=stratum)
         a_rows = a_rows_source.get(c.label, [])
         a_verdict = selected_a_verdict(a_rows) if a_rows else None
         dev_safe = not v_off.rejected and not v_r0.rejected
@@ -1266,19 +1347,25 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
             safe = dev_safe
         results.append(_candidate_result_record(c, v_off, v_r0, a_verdict, safe))
         candidate_dev_records += _candidate_dev_records(
-            dev_rows, cand_by_sha, off_by_sha, c.label, ABSOLUTE_OFF.label)
+            dev_rows, cand_by_sha, off_by_sha, c.label, ABSOLUTE_OFF.label,
+            carry_ply_bucket=carry_ply_bucket)
         candidate_dev_records += _candidate_dev_records(
-            dev_rows, cand_by_sha, r0_by_sha, c.label, R0.label)
+            dev_rows, cand_by_sha, r0_by_sha, c.label, R0.label,
+            carry_ply_bucket=carry_ply_bucket)
         if safe and smallest_safe is None:
             smallest_safe = c.label
             smallest_safe_reduction = c.reduction
 
     # #4c: persist the complete evidence trail (joinable per-position rows +
     # selected-A cases) alongside the numeric-summary candidates_result.json.
+    # v2 (carry_ply_bucket) selects the sibling field list with `ply_bucket`;
+    # v1 keeps the exact byte-identical schema (Task A1, spec §0/§9).
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(str(out_dir / "candidate_dev_rows.csv"),
-               CANDIDATE_DEV_ROW_FIELDNAMES, candidate_dev_records)
+               CANDIDATE_DEV_ROW_FIELDNAMES_V2 if carry_ply_bucket
+               else CANDIDATE_DEV_ROW_FIELDNAMES,
+               candidate_dev_records)
     if a_rows_source:                               # tuning only
         _write_csv(str(out_dir / "selected_a_cases.csv"), SELECTED_A_CASE_FIELDNAMES,
                    [{"config": label, **ar}
@@ -1350,6 +1437,13 @@ def _parse_args(argv):
     ap.add_argument("--source-jsonl", default=None,
                     help="replay index (game_idx -> replay_path) for state "
                          "reconstruction; defaults to build_fpu_dev_corpus's source.")
+    ap.add_argument("--dev-corpus-config", default=None,
+                    help="v2 pipeline config (fpu_dev_corpus_v2_config.json). "
+                         "When given, its identity is hard-matched against "
+                         "--dev-manifest/--source-jsonl and the manifest's own "
+                         ".meta.json (spec §0) before the run adopts the v2 "
+                         "ply_bucket stratum; omitted -> v1 band-stratified "
+                         "path, byte-identical to today.")
     ap.add_argument("--selected-a-manifest", default=None,
                     help="30-root selected-A probe manifest for the §6.3 gate.")
     ap.add_argument("--checkpoint", default=None,

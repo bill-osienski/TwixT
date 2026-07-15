@@ -23,9 +23,15 @@ convention (the gate fn uses the linear-interpolation `_percentile` shared
 with diagnose_fpu_sweep).
 """
 import json
+import types
+from dataclasses import dataclass
+from pathlib import Path
 
 import pytest
 
+from scripts.GPU.alphazero import build_fpu_dev_corpus as bfdc
+from scripts.GPU.alphazero import diagnose_fpu_policy_mass as dfpm
+from scripts.GPU.alphazero import fpu_provenance as prov
 from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
     FpuRunConfig, ABSOLUTE_OFF, R0, GRID, validate_stage_mode,
     lock_in_event, progress, reply_reduction, prior_rank,
@@ -36,6 +42,8 @@ from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
 from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
     CANDIDATE_DEV_ROW_FIELDNAMES, _dev_target_row, _dev_control_row,
     _dev_rows_vs, _candidate_dev_records)
+from scripts.GPU.alphazero.diagnose_fpu_policy_mass import (
+    _resolve_v2_stratum, run_controls_stage, run_candidates_stage)
 from scripts.GPU.alphazero.mcts import MCTSNode, encode_move, visit_leader_move
 
 
@@ -487,3 +495,304 @@ def test_candidate_dev_records_v2_mode_carries_ply_bucket(tmp_path):
     with open(path, newline="") as f:
         back = list(csv.DictReader(f))
     assert {r["canonical_sha1"]: r["ply_bucket"] for r in back} == {"s1": "late", "s2": "mid"}
+
+
+# ---------------------------------------------------------------------------
+# Task A2 -- `--dev-corpus-config` option + 5 identity checks + coupled
+# stratum/ply_bucket threading into the 3 production `dev_safety_verdict`
+# call sites (spec §0/§9; brief .superpowers/sdd/preop-task-A2-brief.md).
+#
+# `_resolve_v2_stratum(args)` only ever reads the config JSON + the manifest's
+# sibling `.meta.json` -- fabricated with `tmp_path`, no MCTS/evaluator/GPU.
+# The COUPLING tests below go one level up: they invoke the REAL
+# `run_controls_stage` / `run_candidates_stage` (the actual production call
+# sites) with every heavy/lazy-imported dependency (evaluator load, MCTS
+# search, the replay-index reader, selected-A) monkeypatched to a
+# deterministic fake -- so the production WIRING is exercised end-to-end while
+# staying zero-GPU/zero-MCTS, and `dev_safety_verdict` itself is left REAL
+# (just spied) so a wiring bug would surface exactly as it would in
+# production (a missing-key ValueError when carry_ply_bucket and stratum_key
+# disagree).
+# ---------------------------------------------------------------------------
+
+def _v2_config_dict(**overrides):
+    """Every `_V2_CONFIG_REQUIRED_KEYS` key, fabricated. The three keys A2
+    hard-matches (`select_out`, `source_index_path`, `new_collapse_stratum`)
+    are steered by the caller; everything else is inert filler `load_v2_config`
+    requires present but `_resolve_v2_stratum` never reads."""
+    d = {
+        "source_index_path": "src.jsonl",
+        "seed_range": [0, 6],
+        "selection_seed": 1,
+        "phase_allocation": {},
+        "late_floors": {},
+        "enumerator_params": {},
+        "new_collapse_stratum": "ply_bucket",
+        "checkpoint": "ckpt.npz",
+        "forbidden_manifests": [],
+        "screen_out": "screen.csv",
+        "select_out": "manifest.csv",
+        "expected_fingerprints": {},
+    }
+    d.update(overrides)
+    return d
+
+
+def _write_v2_config(tmp_path, name="config.json", **overrides):
+    path = tmp_path / name
+    path.write_text(json.dumps(_v2_config_dict(**overrides)))
+    return str(path)
+
+
+def _write_manifest_meta(dev_manifest_path, *, config_sha1,
+                         new_collapse_stratum="ply_bucket"):
+    meta = {"new_collapse_stratum": new_collapse_stratum,
+            "provenance": {"config_sha1": config_sha1}}
+    Path(f"{dev_manifest_path}.meta.json").write_text(json.dumps(meta))
+
+
+def _faithful_v2_setup(tmp_path):
+    """A config + manifest `.meta.json` pair where all five A2 checks agree."""
+    dev_manifest = str(tmp_path / "manifest.csv")
+    source_jsonl = str(tmp_path / "src.jsonl")
+    config_path = _write_v2_config(tmp_path, select_out=dev_manifest,
+                                   source_index_path=source_jsonl)
+    _write_manifest_meta(dev_manifest, config_sha1=prov.file_sha1(config_path))
+    return dev_manifest, source_jsonl, config_path
+
+
+def _stage_args(**over):
+    base = dict(dev_corpus_config=None, dev_manifest="manifest.csv",
+               source_jsonl="src.jsonl")
+    base.update(over)
+    return types.SimpleNamespace(**base)
+
+
+def test_resolve_v2_stratum_v1_no_config_returns_band_and_reads_nothing():
+    # Paths point nowhere -- if the resolver tried to read ANYTHING it would
+    # raise (FileNotFoundError); returning cleanly proves it read no config.
+    args = _stage_args(dev_corpus_config=None,
+                       dev_manifest="/nonexistent/dir/manifest.csv",
+                       source_jsonl="/nonexistent/dir/src.jsonl")
+    assert _resolve_v2_stratum(args) == "band"
+
+
+def test_resolve_v2_stratum_v2_all_checks_agree_returns_ply_bucket(tmp_path):
+    dev_manifest, source_jsonl, config_path = _faithful_v2_setup(tmp_path)
+    args = _stage_args(dev_corpus_config=config_path, dev_manifest=dev_manifest,
+                       source_jsonl=source_jsonl)
+    assert _resolve_v2_stratum(args) == "ply_bucket"
+
+
+def test_resolve_v2_stratum_select_out_mismatch_raises(tmp_path):
+    dev_manifest, source_jsonl, config_path = _faithful_v2_setup(tmp_path)
+    args = _stage_args(dev_corpus_config=config_path,
+                       dev_manifest=str(tmp_path / "other_manifest.csv"),
+                       source_jsonl=source_jsonl)
+    with pytest.raises(ValueError, match="select_out"):
+        _resolve_v2_stratum(args)
+
+
+def test_resolve_v2_stratum_source_index_path_mismatch_raises(tmp_path):
+    dev_manifest, source_jsonl, config_path = _faithful_v2_setup(tmp_path)
+    args = _stage_args(dev_corpus_config=config_path, dev_manifest=dev_manifest,
+                       source_jsonl=str(tmp_path / "other_src.jsonl"))
+    with pytest.raises(ValueError, match="source_index_path"):
+        _resolve_v2_stratum(args)
+
+
+def test_resolve_v2_stratum_manifest_config_sha1_mismatch_raises(tmp_path):
+    dev_manifest, source_jsonl, config_path = _faithful_v2_setup(tmp_path)
+    _write_manifest_meta(dev_manifest, config_sha1="deadbeef" * 5)   # wrong hash
+    args = _stage_args(dev_corpus_config=config_path, dev_manifest=dev_manifest,
+                       source_jsonl=source_jsonl)
+    with pytest.raises(ValueError, match="config_sha1"):
+        _resolve_v2_stratum(args)
+
+
+def test_resolve_v2_stratum_meta_stratum_disagrees_with_config_raises(tmp_path):
+    dev_manifest, source_jsonl, config_path = _faithful_v2_setup(tmp_path)
+    _write_manifest_meta(dev_manifest, config_sha1=prov.file_sha1(config_path),
+                         new_collapse_stratum="band")   # config says ply_bucket
+    args = _stage_args(dev_corpus_config=config_path, dev_manifest=dev_manifest,
+                       source_jsonl=source_jsonl)
+    with pytest.raises(ValueError, match="new_collapse_stratum"):
+        _resolve_v2_stratum(args)
+
+
+def test_resolve_v2_stratum_non_ply_bucket_config_stratum_raises(tmp_path):
+    dev_manifest = str(tmp_path / "manifest.csv")
+    source_jsonl = str(tmp_path / "src.jsonl")
+    config_path = _write_v2_config(tmp_path, select_out=dev_manifest,
+                                   source_index_path=source_jsonl,
+                                   new_collapse_stratum="band")
+    _write_manifest_meta(dev_manifest, config_sha1=prov.file_sha1(config_path),
+                         new_collapse_stratum="band")   # meta agrees w/ config
+    args = _stage_args(dev_corpus_config=config_path, dev_manifest=dev_manifest,
+                       source_jsonl=source_jsonl)
+    with pytest.raises(ValueError, match="ply_bucket"):
+        _resolve_v2_stratum(args)
+
+
+# ---------------------------------------------------------------------------
+# Coupling: the resolved stratum + carry_ply_bucket actually reach the 3
+# production `dev_safety_verdict` call sites (1 controls + 2 candidates), and
+# the persisted candidate_dev_rows.csv picks the matching field list.
+# ---------------------------------------------------------------------------
+
+@dataclass
+class _FakeMctsCfg:
+    c_puct: float = 1.5
+    fpu_policy_mass_reduction: object = None
+    eval_batch_size: int = 14
+    stall_flush_sims: int = 48
+    n_simulations: int = 400
+
+
+def _fake_make_evaluator_and_base_cfg(checkpoint, eval_batch_size, stall_flush_sims):
+    return object(), _FakeMctsCfg(eval_batch_size=eval_batch_size,
+                                  stall_flush_sims=stall_flush_sims)
+
+
+def _fake_make_base_cfg(eval_batch_size, stall_flush_sims):
+    return _FakeMctsCfg(eval_batch_size=eval_batch_size,
+                        stall_flush_sims=stall_flush_sims)
+
+
+def _canned_feat():
+    """`_feat()` (Task A1's fixture) plus `replies` -- `_controls_case_row`
+    (exercised here via the real `run_controls_stage`) needs it; A1's own
+    tests never construct a `_controls_case_row`, so its shared `_feat()`
+    fixture has no reason to carry it. Kept local rather than widening A1's
+    fixture for a need that is specific to this production-path coupling
+    test."""
+    feat = _feat()
+    feat["replies"] = 0
+    return feat
+
+
+def _fake_run_configs_over_corpus(dev_rows, run_configs, *, evaluator, base_cfg,
+                                  replay_by_game, seed_base):
+    # A single canned, all-clean feature dict shared by every (config,
+    # position) pair -- the gate MATH is already pinned elsewhere; this test
+    # is purely about the ply_bucket/stratum_key WIRING.
+    canned = _canned_feat()
+    return {c.label: {r["canonical_position_sha1"]: canned for r in dev_rows}
+            for c in run_configs}
+
+
+def _fake_load_selected_a(args, evaluator, base_cfg, run_configs):
+    return {}
+
+
+def _fake_load_game_index(source_jsonl):
+    return []
+
+
+def _v2_dev_rows():
+    """A minimal (target + control) dev-row set carrying `ply_bucket` in the
+    SOURCE data -- exactly like a real v2 manifest. Carrying it in the source
+    does not by itself make it appear downstream (proven by the v1 coupling
+    test below): only the resolved stratum's `carry_ply_bucket` flag does."""
+    return [
+        {"canonical_position_sha1": "s1", "role": "target", "branching_band": "b200_299",
+         "ply_bucket": "late", "game_idx": "0", "position_ply": "10", "side": "red",
+         "split": "tuning"},
+        {"canonical_position_sha1": "s2", "role": "target", "branching_band": "b200_299",
+         "ply_bucket": "mid", "game_idx": "0", "position_ply": "20", "side": "black",
+         "split": "tuning"},
+        {"canonical_position_sha1": "s3", "role": "control", "branching_band": "b200_299",
+         "ply_bucket": "late", "game_idx": "1", "position_ply": "15", "side": "red",
+         "split": "tuning"},
+    ]
+
+
+def _patch_operator_internals(monkeypatch):
+    """Replace every heavy/lazy-imported piece `run_controls_stage`/
+    `run_candidates_stage` touch with a deterministic fake, so the REAL
+    functions run end to end with zero MCTS/evaluator/GPU. `dev_safety_verdict`
+    is deliberately left untouched by this helper -- callers wrap it with
+    their own recording spy so a wiring bug surfaces as a real ValueError."""
+    monkeypatch.setattr(dfpm, "_make_evaluator_and_base_cfg",
+                        _fake_make_evaluator_and_base_cfg)
+    monkeypatch.setattr(dfpm, "_make_base_cfg", _fake_make_base_cfg)
+    monkeypatch.setattr(dfpm, "_run_configs_over_corpus", _fake_run_configs_over_corpus)
+    monkeypatch.setattr(dfpm, "_load_selected_a", _fake_load_selected_a)
+    monkeypatch.setattr(bfdc, "load_game_index", _fake_load_game_index)
+
+
+def _spy_dev_safety_verdict(monkeypatch):
+    """Wrap the REAL `dev_safety_verdict` to record (rows, stratum_key) per
+    call while still executing the real gate -- a wiring bug (carry_ply_bucket
+    disagreeing with the passed stratum_key) raises exactly as it would in
+    production (dev_safety_verdict's own missing-key ValueError)."""
+    calls = []
+    real = dfpm.dev_safety_verdict
+
+    def _spy(rows, *a, **kw):
+        rows = list(rows)
+        calls.append((rows, kw.get("stratum_key", "band")))
+        return real(rows, *a, **kw)
+
+    monkeypatch.setattr(dfpm, "dev_safety_verdict", _spy)
+    return calls
+
+
+def test_production_paths_carry_ply_bucket_and_resolved_stratum_with_v2_config(
+        tmp_path, monkeypatch):
+    _patch_operator_internals(monkeypatch)
+    calls = _spy_dev_safety_verdict(monkeypatch)
+
+    dev_manifest, source_jsonl, config_path = _faithful_v2_setup(tmp_path)
+    dev_rows = _v2_dev_rows()
+    out_dir = tmp_path / "out"
+    args = types.SimpleNamespace(
+        mode="tuning", dev_manifest=dev_manifest, source_jsonl=source_jsonl,
+        selected_a_manifest="selected_a.csv", checkpoint="ckpt.npz",
+        out_dir=str(out_dir), frozen_r=None, tuning_result=None,
+        seed_base=20260711, eval_batch_size=14, stall_flush_sims=48,
+        dev_corpus_config=config_path)
+
+    assert run_controls_stage(args, dev_rows, [ABSOLUTE_OFF, R0]) == 0
+    assert run_candidates_stage(args, dev_rows, list(GRID)) == 0
+
+    # 1 controls-stage call site + 2 candidates-stage call sites x len(GRID)
+    assert len(calls) == 1 + 2 * len(GRID)
+    for rows, stratum_key in calls:
+        assert stratum_key == "ply_bucket"
+        assert rows and all("ply_bucket" in r for r in rows)
+
+    # the persisted candidate_dev_rows.csv picks the v2 (ply_bucket) schema
+    import csv
+    with open(out_dir / "candidate_dev_rows.csv", newline="") as f:
+        header = next(csv.reader(f))
+    assert "ply_bucket" in header
+
+
+def test_production_paths_v1_no_config_omit_ply_bucket_and_use_band(
+        tmp_path, monkeypatch):
+    _patch_operator_internals(monkeypatch)
+    calls = _spy_dev_safety_verdict(monkeypatch)
+
+    dev_rows = _v2_dev_rows()      # source carries ply_bucket -- must be dropped
+    out_dir = tmp_path / "out"
+    args = types.SimpleNamespace(
+        mode="tuning", dev_manifest=str(tmp_path / "manifest.csv"),
+        source_jsonl=str(tmp_path / "src.jsonl"),
+        selected_a_manifest="selected_a.csv", checkpoint="ckpt.npz",
+        out_dir=str(out_dir), frozen_r=None, tuning_result=None,
+        seed_base=20260711, eval_batch_size=14, stall_flush_sims=48,
+        dev_corpus_config=None)                           # v1 -- no config
+
+    assert run_controls_stage(args, dev_rows, [ABSOLUTE_OFF, R0]) == 0
+    assert run_candidates_stage(args, dev_rows, list(GRID)) == 0
+
+    assert len(calls) == 1 + 2 * len(GRID)
+    for rows, stratum_key in calls:
+        assert stratum_key == "band"
+        assert rows and all("ply_bucket" not in r for r in rows)
+
+    import csv
+    with open(out_dir / "candidate_dev_rows.csv", newline="") as f:
+        header = next(csv.reader(f))
+    assert "ply_bucket" not in header
