@@ -1078,6 +1078,59 @@ def test_measure_reservoir_raises_when_a_replay_sidecar_is_missing(tmp_path):
         measure_reservoir(protocol)
 
 
+def test_measure_reservoir_raises_naming_a_missing_reservoir_checkpoint(tmp_path):
+    """A missing checkpoint must FAIL LOUD, not silently bake
+    `fpu_provenance`'s `"missing"` sentinel into `checkpoint_identities`
+    (which -- being STABLE -- would keep hard-matching cleanly through the
+    config's re-derive-and-byte-compare, silently passing a genuinely-absent
+    network). The raise names the offending path so the operator can act."""
+    protocol, info = _write_mini_reservoir(tmp_path)
+    info["checkpoint_a_path"].unlink()
+    with pytest.raises(FileNotFoundError, match="calib020_0001"):
+        measure_reservoir(protocol)
+
+
+def test_measure_reservoir_raises_naming_a_missing_checkpoint_b(tmp_path):
+    """The same fail-loud guarantee for checkpoint B (not just A/anchor) --
+    proves the guard covers every one of the three checkpoint roles, not
+    only the anchor role that happens to alias A in the fixture."""
+    protocol, info = _write_mini_reservoir(tmp_path)
+    info["checkpoint_b_path"].unlink()
+    with pytest.raises(FileNotFoundError, match="0379"):
+        measure_reservoir(protocol)
+
+
+def test_measure_reservoir_raises_naming_a_missing_forbidden_manifest(tmp_path):
+    """A missing forbidden-manifest path must FAIL LOUD, not silently bake a
+    `"missing"` sentinel into `forbidden_manifest_sha1s` -- the exact
+    silent-partial-measurement the tamper-evident config cannot tolerate
+    (a genuinely-absent manifest would otherwise re-derive/byte-compare
+    cleanly). The raise names the offending path."""
+    protocol, info = _write_mini_reservoir(tmp_path)
+    info["manifest_path"].unlink()
+    with pytest.raises(FileNotFoundError, match="v1_controls"):
+        measure_reservoir(protocol)
+
+
+def test_measure_reservoir_no_missing_sentinel_leaks_into_any_field(tmp_path):
+    """Belt-and-braces over the whole clean-reservoir measurement: NONE of
+    the string/dict identity fields may EVER carry `fpu_provenance`'s
+    `"missing"`/`"none"` sentinel on a well-formed reservoir -- the guard's
+    net effect is that a sentinel can only mean 'this specific input was
+    absent', and on a complete reservoir there are none."""
+    protocol, _info = _write_mini_reservoir(tmp_path)
+    measurements = measure_reservoir(protocol)
+    flat = [measurements.source_index_sha1, measurements.replay_data_sha1,
+            measurements.match_summary_sha1, measurements.generation_git_commit]
+    flat += list(measurements.checkpoint_identities.values())
+    flat += list(measurements.generation_source_sha1s.values())
+    flat += list(measurements.source_file_sha1s.values())
+    flat += list(measurements.forbidden_manifest_sha1s.values())
+    for value in flat:
+        assert "missing" not in value, value
+        assert value != "none", value
+
+
 # ---------------------------------------------------------------------------
 # GENERATION_SOURCE_MODULES / QUALIFICATION_SOURCE_FILES -- Task B3.
 # ---------------------------------------------------------------------------
@@ -1121,6 +1174,17 @@ def test_qualification_source_files_extends_v2_corpus_sources_with_self():
 
 def test_qualification_source_files_has_no_duplicates():
     assert len(QUALIFICATION_SOURCE_FILES) == len(set(QUALIFICATION_SOURCE_FILES))
+
+
+def test_qualification_source_files_are_distinguishable_by_basename():
+    """`fpu_provenance.source_file_sha1s` keys by BASENAME -- so two entries
+    sharing a basename (even from different subdirs) would silently collide,
+    one overwriting the other's hash. Mirrors the same guard for
+    `GENERATION_SOURCE_MODULES`."""
+    paths_by_name = {}
+    for p in QUALIFICATION_SOURCE_FILES:
+        assert p.name not in paths_by_name, (p.name, paths_by_name[p.name], p)
+        paths_by_name[p.name] = p
 
 
 # ---------------------------------------------------------------------------

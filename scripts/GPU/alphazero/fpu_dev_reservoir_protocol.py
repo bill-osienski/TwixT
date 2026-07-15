@@ -173,9 +173,16 @@ module is result-determining for the corpus it produces"); and hashes
 `protocol["forbidden_manifests"]`. Every hash/read routes through the SAME
 `fpu_provenance` helpers `fpu_dev_corpus_v2.py`'s own `v2_screen_
 provenance` uses (`file_sha1`, `source_file_sha1s`, `replay_data_sha1`,
-`git_commit`) -- reused, never reimplemented. It performs NO validation
-(that is B4/B5/B6's job, over the measurements it returns) and loads NO
-evaluator/MCTS/GPU/checkpoint weights -- only file BYTES.
+`git_commit`) -- reused, never reimplemented. It FAILS LOUD on any missing
+declared path (a `FileNotFoundError` naming it): those `fpu_provenance`
+helpers deliberately swallow `OSError` into a stable `"missing"`/`"none"`
+sentinel, which -- being stable -- would sail through the config's §5
+re-derive-and-byte-compare, so `measure_reservoir` existence-guards every
+path it hashes FIRST (`_require_readable_files`), ensuring no sentinel ever
+enters the tamper-evident measurements. Beyond that existence guard it
+performs NO protocol-conformance validation (that is B4/B5/B6's job, over
+the measurements it returns) and loads NO evaluator/MCTS/GPU/checkpoint
+weights -- only file BYTES.
 """
 from __future__ import annotations
 
@@ -610,6 +617,31 @@ def _checkpoint_identity(path: Union[str, Path]) -> str:
     return f"{Path(path).name}:{fpu_provenance.file_sha1(path)}"
 
 
+def _require_readable_files(paths: Any, *, kind: str) -> None:
+    """Raise `FileNotFoundError` naming the FIRST declared path that is
+    absent (or not a regular file), BEFORE any hashing.
+
+    This is the fail-loud guard that makes `measure_reservoir`'s promise
+    true. `fpu_provenance.file_sha1` / `source_file_sha1s` deliberately
+    SWALLOW `OSError` and return a STABLE `"missing"` (or `"none"` for a
+    falsy path) sentinel rather than raising -- appropriate for a
+    best-effort run-context fingerprint, but WRONG for this measurement
+    boundary: a stable sentinel would (a) silently produce a partial
+    measurement and (b) keep hard-matching cleanly through the config's
+    re-derive-and-byte-compare (spec Sec 5), so a genuinely-absent
+    checkpoint / forbidden manifest / source file would pass UNDETECTED into
+    the tamper-evident config's `expected_fingerprints`. Existence-checking
+    every path we are about to hash closes that gap, so a sentinel can never
+    enter `ReservoirMeasurements`. (`is_file()` rather than `exists()`: a
+    directory at a checkpoint path would also make `file_sha1` fall back to
+    the sentinel, so it must be rejected too.)"""
+    for p in paths:
+        if not p or not Path(p).is_file():
+            raise FileNotFoundError(
+                f"measure_reservoir: {kind} path is missing or not a regular "
+                f"file: {p!r}")
+
+
 def _load_jsonl_rows(path: Union[str, Path]) -> List[dict]:
     """Read a `*_games.jsonl` index file into a list of dicts, one per
     non-blank line, in FILE order (`eval_checkpoint_match._write_outputs`'s
@@ -656,15 +688,45 @@ def measure_reservoir(protocol: Mapping[str, Any]) -> ReservoirMeasurements:
     (e.g. `build_protocol`'s return value, or a `reservoir_protocol.json`
     already loaded from disk) -- a missing field raises `KeyError`, exactly
     like `gen_command`, since re-validating an already-frozen protocol is
-    `build_protocol`'s job, not this one's. A missing/unreadable file at any
-    declared path raises `OSError` (e.g. `FileNotFoundError`) -- fail loud
-    rather than silently produce a partial measurement.
+    `build_protocol`'s job, not this one's.
+
+    FAILS LOUD on any missing declared path: a `FileNotFoundError` (an
+    `OSError` subclass) is raised -- naming the path -- for a missing
+    checkpoint, forbidden manifest, generation-source module, or v2 source
+    file (via the `_require_readable_files` existence guard, so
+    `fpu_provenance`'s OSError-swallowing `"missing"` sentinel can NEVER
+    enter the measurements -- see that helper's own docstring), and for a
+    missing index / summary / replay sidecar (via the raw reads below). This
+    is the whole point of the I/O boundary the evidence chain trusts: a
+    genuinely-absent input is a hard error here, never a silent partial
+    measurement that would still byte-compare cleanly in the config's §5
+    re-derive check. Beyond this existence guard it performs NO
+    protocol-conformance validation (that is B4/B5/B6's job over the
+    returned measurements) and loads NO evaluator/MCTS/GPU/checkpoint
+    weights -- only file BYTES.
     """
+    anchor_role = protocol["anchor"]
+    # Existence guard BEFORE hashing (see `_require_readable_files`): the two
+    # reservoir checkpoints + the anchor, the forbidden manifests, and both
+    # code-source sets are hashed via `fpu_provenance` helpers that swallow
+    # OSError into a stable `"missing"` sentinel -- so absence must be caught
+    # HERE or it would leak into the tamper-evident config. (The index /
+    # summary / replay sidecars fail loud on their own in the raw reads
+    # below, so they need no separate guard.)
+    _require_readable_files(
+        [protocol["checkpoint_a"]["path"], protocol["checkpoint_b"]["path"],
+         protocol[anchor_role]["path"]], kind="checkpoint")
+    _require_readable_files(protocol["forbidden_manifests"],
+                            kind="forbidden manifest")
+    _require_readable_files(GENERATION_SOURCE_MODULES,
+                            kind="generation source module")
+    _require_readable_files(QUALIFICATION_SOURCE_FILES,
+                            kind="qualification source file")
+
     jsonl_rows = _load_jsonl_rows(protocol["source_index_path"])
     sidecars_by_idx = _load_sidecars(jsonl_rows)
     summary = json.loads(Path(protocol["match_summary_path"]).read_text())
 
-    anchor_role = protocol["anchor"]
     checkpoint_identities = {
         "reservoir_a": _checkpoint_identity(protocol["checkpoint_a"]["path"]),
         "reservoir_b": _checkpoint_identity(protocol["checkpoint_b"]["path"]),
