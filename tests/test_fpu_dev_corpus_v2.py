@@ -58,6 +58,7 @@ from scripts.GPU.alphazero.build_fpu_dev_corpus import (
     CORPUS_SIZE,
     QUOTA_PER_BAND,
     SPLIT_ALLOC,
+    _CORPUS_SOURCES,
     anchor_eligible,
     band_of,
     load_forbidden_hashes,
@@ -96,6 +97,7 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     V2PreflightInfeasible,
     V2PreflightReport,
     _V2_CONFIG_REQUIRED_KEYS,
+    _V2_CORPUS_SOURCES,
     _build_v2_anchor_search_fn,
     _parse_v2_args,
     _v2_anchor_seed,
@@ -121,6 +123,10 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     write_screen_csv,
     write_screen_meta,
     write_select_csv,
+)
+from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
+    ReservoirMeasurements,
+    derive_config,
 )
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
 
@@ -2486,8 +2492,27 @@ def test_screen_row_enforces_anchor_run_nullness_contract():
 
 
 # --- the required config: V2Config / load_v2_config -------------------------
+#
+# `_v2_config_fixture` (Task B8) is the ONE place the v2 config's full schema
+# lives on this file's test side -- every fabricated-config test below routes
+# through it (`**overrides` steers exactly the fields a given test cares
+# about), so a future required-key addition needs exactly one edit here
+# instead of N independently hand-typed dicts silently drifting apart.
+# (tests/test_fpu_diagnostic_modes.py owns a second, deliberately-separate
+# `_v2_config_dict` for Group 1's own fixtures -- see that file's docstring;
+# both are kept in sync with `_V2_CONFIG_REQUIRED_KEYS`, the real source of
+# truth, and both are exercised against the REAL `load_v2_config`, so a drift
+# would fail loudly in whichever file forgot the key, not silently pass.)
 
-def _complete_v2_config_dict(tmp_path, **overrides):
+def _v2_config_fixture(tmp_path, **overrides):
+    """Every `_V2_CONFIG_REQUIRED_KEYS` key, fabricated -- including the five
+    Task B8 top-level paths (spec Sec 2.2 "New top-level (paths)":
+    `config_schema_version`, `protocol_path`, `match_summary_path`,
+    `replay_dir`, `report_out`) and `expected_fingerprints`'s real nine
+    measured-identity sub-keys (spec Sec 2.2 "expected_fingerprints
+    (extended)") -- the exact shape `fpu_dev_reservoir_protocol.derive_config`
+    emits, cross-checked directly by the producer/consumer round-trip tests
+    below (`test_derive_config_round_trips_through_load_v2_config` et al.)."""
     cfg = {
         "source_index_path": str(tmp_path / "reservoir_index.jsonl"),
         "seed_range": [20270000, 20274800],
@@ -2502,7 +2527,27 @@ def _complete_v2_config_dict(tmp_path, **overrides):
         "forbidden_manifests": [str(tmp_path / "forbidden_a.csv")],
         "screen_out": str(tmp_path / "fpu_dev_source_screen.csv"),
         "select_out": str(tmp_path / "fpu_dev_corpus_v2_manifest.csv"),
-        "expected_fingerprints": {"source_index_sha1": "deadbeef"},
+        # Task B8 -- spec Sec 2.2 "New top-level (paths)".
+        "config_schema_version": 1,
+        "protocol_path": str(tmp_path / "reservoir_protocol.json"),
+        "match_summary_path": str(tmp_path / "match_summary.json"),
+        "replay_dir": str(tmp_path / "replays"),
+        "report_out": str(tmp_path / "qualify_report.json"),
+        # Task B8 -- spec Sec 2.2 "expected_fingerprints (extended)": the
+        # real nine measured identities `derive_config` emits (the checkpoint
+        # identity split into three roles; `protocol_sha1`/`match_summary_
+        # sha1` added).
+        "expected_fingerprints": {
+            "protocol_sha1": "deadbeef-protocol",
+            "source_index_sha1": "deadbeef",
+            "replay_data_sha1": "deadbeef-replay",
+            "match_summary_sha1": "deadbeef-summary",
+            "source_file_sha1s": {},
+            "forbidden_manifest_sha1s": {},
+            "reservoir_checkpoint_a_identity": "ckpt_a.npz:deadbeef-a",
+            "reservoir_checkpoint_b_identity": "ckpt_b.npz:deadbeef-b",
+            "anchor_checkpoint_identity": "ckpt_a.npz:deadbeef-a",
+        },
     }
     cfg.update(overrides)
     return cfg
@@ -2510,7 +2555,7 @@ def _complete_v2_config_dict(tmp_path, **overrides):
 
 def test_load_v2_config_loads_a_complete_config(tmp_path):
     p = tmp_path / "config.json"
-    p.write_text(json.dumps(_complete_v2_config_dict(tmp_path)))
+    p.write_text(json.dumps(_v2_config_fixture(tmp_path)))
 
     config = load_v2_config(str(p))
 
@@ -2524,7 +2569,23 @@ def test_load_v2_config_loads_a_complete_config(tmp_path):
     assert config.forbidden_manifests == (str(tmp_path / "forbidden_a.csv"),)
     assert config.screen_out == str(tmp_path / "fpu_dev_source_screen.csv")
     assert config.select_out == str(tmp_path / "fpu_dev_corpus_v2_manifest.csv")
-    assert config.expected_fingerprints == {"source_index_sha1": "deadbeef"}
+    # Task B8: the five new required top-level paths round-trip onto V2Config.
+    assert config.config_schema_version == 1
+    assert config.protocol_path == str(tmp_path / "reservoir_protocol.json")
+    assert config.match_summary_path == str(tmp_path / "match_summary.json")
+    assert config.replay_dir == str(tmp_path / "replays")
+    assert config.report_out == str(tmp_path / "qualify_report.json")
+    assert config.expected_fingerprints == {
+        "protocol_sha1": "deadbeef-protocol",
+        "source_index_sha1": "deadbeef",
+        "replay_data_sha1": "deadbeef-replay",
+        "match_summary_sha1": "deadbeef-summary",
+        "source_file_sha1s": {},
+        "forbidden_manifest_sha1s": {},
+        "reservoir_checkpoint_a_identity": "ckpt_a.npz:deadbeef-a",
+        "reservoir_checkpoint_b_identity": "ckpt_b.npz:deadbeef-b",
+        "anchor_checkpoint_identity": "ckpt_a.npz:deadbeef-a",
+    }
     # v1-matching defaults when the config itself omits these two knobs.
     assert config.eval_batch_size == 14
     assert config.stall_flush_sims == 48
@@ -2532,7 +2593,7 @@ def test_load_v2_config_loads_a_complete_config(tmp_path):
 
 def test_load_v2_config_honors_explicit_throughput_overrides(tmp_path):
     p = tmp_path / "config.json"
-    p.write_text(json.dumps(_complete_v2_config_dict(
+    p.write_text(json.dumps(_v2_config_fixture(
         tmp_path, eval_batch_size=7, stall_flush_sims=99)))
 
     config = load_v2_config(str(p))
@@ -2542,7 +2603,7 @@ def test_load_v2_config_honors_explicit_throughput_overrides(tmp_path):
 
 
 def test_load_v2_config_raises_on_missing_required_key(tmp_path):
-    raw = _complete_v2_config_dict(tmp_path)
+    raw = _v2_config_fixture(tmp_path)
     del raw["checkpoint"]
     p = tmp_path / "config.json"
     p.write_text(json.dumps(raw))
@@ -2552,7 +2613,7 @@ def test_load_v2_config_raises_on_missing_required_key(tmp_path):
 
 
 def test_load_v2_config_raises_naming_every_missing_key(tmp_path):
-    raw = _complete_v2_config_dict(tmp_path)
+    raw = _v2_config_fixture(tmp_path)
     del raw["checkpoint"]
     del raw["late_floors"]
     p = tmp_path / "config.json"
@@ -2561,6 +2622,162 @@ def test_load_v2_config_raises_naming_every_missing_key(tmp_path):
     with pytest.raises(ValueError, match="checkpoint") as excinfo:
         load_v2_config(str(p))
     assert "late_floors" in str(excinfo.value)
+
+
+def test_load_v2_config_raises_naming_every_missing_new_schema_key(tmp_path):
+    """Task B8: the five NEW required top-level keys are enforced exactly
+    like the pre-existing ones -- dropping all five at once names every one
+    in the single raised error (no silent omission)."""
+    raw = _v2_config_fixture(tmp_path)
+    new_keys = ("config_schema_version", "protocol_path", "match_summary_path",
+               "replay_dir", "report_out")
+    for key in new_keys:
+        del raw[key]
+    p = tmp_path / "config.json"
+    p.write_text(json.dumps(raw))
+
+    with pytest.raises(ValueError) as excinfo:
+        load_v2_config(str(p))
+    for key in new_keys:
+        assert key in str(excinfo.value)
+
+
+# ---------------------------------------------------------------------------
+# Task B8 -- `_V2_CORPUS_SOURCES` gains the qualification module (v1's own
+# `_CORPUS_SOURCES` stays untouched), and the producer/consumer round-trip: a
+# config `fpu_dev_reservoir_protocol.derive_config` actually emits must load
+# cleanly through the extended `load_v2_config` (spec Sec 2.2/Sec 6/Sec 9).
+# ---------------------------------------------------------------------------
+
+def test_v2_corpus_sources_contains_the_qualification_module():
+    """Spec Sec 2.2 amendment 4: 'the qualification module is
+    result-determining for the corpus it produces' -- added to the v2 source
+    set only."""
+    names = [p.name for p in _V2_CORPUS_SOURCES]
+    assert "fpu_dev_reservoir_protocol.py" in names
+
+
+def test_v2_corpus_sources_paths_all_exist_on_disk():
+    """Sanity: a typo'd filename would otherwise silently hash to
+    `fpu_provenance`'s `"missing"` sentinel instead of failing loud."""
+    missing = [str(p) for p in _V2_CORPUS_SOURCES if not p.exists()]
+    assert missing == []
+
+
+def test_v1_corpus_sources_is_byte_unchanged_by_task_b8():
+    """v1's OWN result-determining source set must stay untouched -- Task B8
+    only ever touches `fpu_dev_corpus_v2._V2_CORPUS_SOURCES` (the v2 set),
+    never `build_fpu_dev_corpus._CORPUS_SOURCES`. Pinned as the exact prior
+    tuple (membership AND order), reconstructed from `_MODULE_DIR` rather
+    than a hardcoded absolute path so this stays portable across checkouts."""
+    module_dir = Path(inspect.getfile(load_forbidden_hashes)).resolve().parent
+    assert _CORPUS_SOURCES == (
+        module_dir / "build_fpu_dev_corpus.py",
+        module_dir / "mcts.py",
+        module_dir / "fpu_state_hash.py",
+        module_dir / "goal_line_trigger_probe_cases.py",
+        module_dir / "game" / "twixt_state.py",
+    )
+    assert len(_CORPUS_SOURCES) == 5
+
+
+def _minimal_protocol_and_measurements(**protocol_overrides):
+    """The SMALLEST `(protocol, measurements)` pair
+    `fpu_dev_reservoir_protocol.derive_config` will accept -- it never
+    validates protocol SHAPE (that is `build_protocol`'s job, in the sibling
+    module) or performs I/O, it only maps already-declared/measured fields
+    (see that function's own docstring), so a hand-built dict covering
+    exactly the keys it reads is sufficient for a producer/consumer
+    round-trip -- no need to reconstruct a fully protocol-CONFORMANT
+    reservoir (that machinery is tests/test_fpu_dev_reservoir_protocol.py's
+    own `_conformant_reservoir`, which this file does not import -- these two
+    test files stay independent)."""
+    protocol = {
+        "anchor": "checkpoint_a",
+        "base_seed": 20270000,
+        "games": 6,
+        "source_index_path": "reservoir_index.jsonl",
+        "selection_seed": 20260712,
+        "phase_allocation": {},
+        "late_floors": {},
+        "enumerator_params": {},
+        "new_collapse_stratum": "ply_bucket",
+        "checkpoint_a": {"path": "ckpt_a.npz", "identity": "ckpt_a.npz:aaa"},
+        "checkpoint_b": {"path": "ckpt_b.npz", "identity": "ckpt_b.npz:bbb"},
+        "forbidden_manifests": ["forbidden_a.csv"],
+        "screen_out": "fpu_dev_source_screen.csv",
+        "select_out": "fpu_dev_corpus_v2_manifest.csv",
+        "mcts_eval_batch_size": 14,
+        "mcts_stall_flush_sims": 48,
+        "config_schema_version": 1,
+        "match_summary_path": "match_summary.json",
+        "replay_dir": "replays",
+        "report_out": "qualify_report.json",
+    }
+    protocol.update(protocol_overrides)
+    measurements = ReservoirMeasurements(
+        jsonl_rows=[], sidecars_by_idx={}, summary={},
+        checkpoint_identities={"reservoir_a": "ckpt_a.npz:aaa",
+                               "reservoir_b": "ckpt_b.npz:bbb",
+                               "anchor": "ckpt_a.npz:aaa"},
+        generation_source_sha1s={}, generation_git_commit="deadbeef-git",
+        source_index_sha1="deadbeef-index", replay_data_sha1="deadbeef-replay",
+        match_summary_sha1="deadbeef-summary",
+        source_file_sha1s={"fpu_dev_corpus_v2.py": "deadbeef-src"},
+        forbidden_manifest_sha1s={"forbidden_a.csv": "deadbeef-forbidden"},
+    )
+    return protocol, measurements
+
+
+def test_derive_config_round_trips_through_load_v2_config(tmp_path):
+    """THE producer/consumer cross-check (Task B8 brief): a config
+    `fpu_dev_reservoir_protocol.derive_config` actually emits loads cleanly
+    through the extended `load_v2_config` -- proving `V2Config`'s new
+    required fields are not merely SHAPED like spec Sec 2.2, but hard-match
+    what the real producer emits, field for field."""
+    protocol, measurements = _minimal_protocol_and_measurements()
+    derived = derive_config(
+        protocol, measurements,
+        protocol_path=str(tmp_path / "reservoir_protocol.json"))
+    p = tmp_path / "config.json"
+    p.write_text(json.dumps(derived))
+
+    config = load_v2_config(str(p))
+
+    assert isinstance(config, V2Config)
+    assert config.config_schema_version == derived["config_schema_version"]
+    assert config.protocol_path == derived["protocol_path"]
+    assert config.match_summary_path == derived["match_summary_path"]
+    assert config.replay_dir == derived["replay_dir"]
+    assert config.report_out == derived["report_out"]
+    assert config.checkpoint == protocol["checkpoint_a"]["path"]
+    assert config.eval_batch_size == protocol["mcts_eval_batch_size"]
+    assert config.stall_flush_sims == protocol["mcts_stall_flush_sims"]
+    assert config.expected_fingerprints == derived["expected_fingerprints"]
+    assert set(config.expected_fingerprints) == {
+        "protocol_sha1", "source_index_sha1", "replay_data_sha1",
+        "match_summary_sha1", "source_file_sha1s", "forbidden_manifest_sha1s",
+        "reservoir_checkpoint_a_identity", "reservoir_checkpoint_b_identity",
+        "anchor_checkpoint_identity",
+    }
+
+
+@pytest.mark.parametrize("key", sorted(_V2_CONFIG_REQUIRED_KEYS))
+def test_derive_config_output_missing_any_required_key_raises(tmp_path, key):
+    """The same cross-check, inverted: a REAL `derive_config` output with any
+    ONE required key stripped is refused by `load_v2_config`, naming it --
+    exercised against the genuine producer shape, not just a hand-fabricated
+    test dict."""
+    protocol, measurements = _minimal_protocol_and_measurements()
+    derived = derive_config(
+        protocol, measurements,
+        protocol_path=str(tmp_path / "reservoir_protocol.json"))
+    del derived[key]
+    p = tmp_path / "config.json"
+    p.write_text(json.dumps(derived))
+
+    with pytest.raises(ValueError, match=key):
+        load_v2_config(str(p))
 
 
 # --- the fpu-off 400-sim anchor's own small pure pieces ----------------------
@@ -3003,7 +3220,7 @@ def _v2_screen_artifact(tmp_path, screen_rows, *,
     expected = {k: prov[k] for k in PREREGISTERED_IDENTITY_KEYS}
 
     config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(_complete_v2_config_dict(
+    config_path.write_text(json.dumps(_v2_config_fixture(
         tmp_path, expected_fingerprints=expected, **paths)))
     config = load_v2_config(str(config_path))
 
@@ -3093,12 +3310,17 @@ def test_v2_config_required_keys_are_exactly_the_plan_s_list():
     """The config REQUIRES every key the plan names -- source reservoir + seed
     range, selection seed, allocation, floors, enumerator params,
     `new_collapse_stratum`, expected fingerprints -- plus the checkpoint /
-    forbidden manifests / output paths the two stages consume. Pinned as a SET so
-    a later key can be added but none silently dropped."""
+    forbidden manifests / output paths the two stages consume, PLUS (Task B8,
+    spec Sec 2.2) the five new top-level paths a qualified config must also
+    carry (`config_schema_version`, `protocol_path`, `match_summary_path`,
+    `replay_dir`, `report_out`). Pinned as a SET so a later key can be added
+    but none silently dropped."""
     assert set(_V2_CONFIG_REQUIRED_KEYS) == {
         "source_index_path", "seed_range", "selection_seed", "phase_allocation",
         "late_floors", "enumerator_params", "new_collapse_stratum", "checkpoint",
         "forbidden_manifests", "screen_out", "select_out", "expected_fingerprints",
+        "config_schema_version", "protocol_path", "match_summary_path",
+        "replay_dir", "report_out",
     }
 
 
@@ -3106,7 +3328,7 @@ def test_v2_config_required_keys_are_exactly_the_plan_s_list():
 def test_v2_load_config_raises_on_each_missing_required_key(tmp_path, key):
     """EVERY required key, dropped one at a time, makes `load_v2_config` raise
     NAMING it -- never a silent default ("no default source, no default stride")."""
-    raw = _complete_v2_config_dict(tmp_path)
+    raw = _v2_config_fixture(tmp_path)
     del raw[key]
     p = tmp_path / "config.json"
     p.write_text(json.dumps(raw))

@@ -1192,10 +1192,16 @@ def test_generation_source_modules_paths_are_distinguishable_by_basename():
         paths_by_name[p.name] = p
 
 
-def test_qualification_source_files_extends_v2_corpus_sources_with_self():
+def test_qualification_source_files_equals_v2_corpus_sources_including_self():
+    """As of Task B8, `_V2_CORPUS_SOURCES` itself already carries this
+    module (spec Sec 2.2 amendment 4: added to the v2 corpus source set, not
+    concatenated a second time here) -- so `QUALIFICATION_SOURCE_FILES` is
+    now simply `_V2_CORPUS_SOURCES`, and this module's own path is a member
+    of it."""
     import inspect
     this_module_path = Path(inspect.getfile(measure_reservoir)).resolve()
-    assert QUALIFICATION_SOURCE_FILES == tuple(_V2_CORPUS_SOURCES) + (this_module_path,)
+    assert QUALIFICATION_SOURCE_FILES == tuple(_V2_CORPUS_SOURCES)
+    assert this_module_path in QUALIFICATION_SOURCE_FILES
 
 
 def test_qualification_source_files_has_no_duplicates():

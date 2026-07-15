@@ -1801,11 +1801,23 @@ def screen_row(proposal: Mapping[str, Any], *, feats: Optional[Mapping[str, floa
 DEFAULT_EVAL_BATCH_SIZE = 14
 DEFAULT_STALL_FLUSH_SIMS = 48
 
-# Every REQUIRED top-level config key (design Sec 1.8): source reservoir
-# index path + predeclared seed range, selection seed, phase allocation, late
-# floors, proposal-enumerator policy params, `new_collapse_stratum`,
-# checkpoint, forbidden manifests, output paths (screen + select), and the
-# expected-fingerprint block.
+# Every REQUIRED top-level config key (design Sec 1.8; extended by Task B8
+# per docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-
+# qualification-design.md Sec 2.2/Sec 6/Sec 9): source reservoir index path +
+# predeclared seed range, selection seed, phase allocation, late floors,
+# proposal-enumerator policy params, `new_collapse_stratum`, checkpoint,
+# forbidden manifests, output paths (screen + select), the expected-
+# fingerprint block, and (Task B8) the five new top-level paths a qualified
+# config must also carry: `config_schema_version` (the schema this config was
+# emitted under), `protocol_path` (the frozen `reservoir_protocol.json` this
+# config was derived from), `match_summary_path` / `replay_dir` (the
+# generated reservoir's own outputs), and `report_out` (the qualification
+# report this config's own evidence lives in). This is a HARD MATCH against
+# `fpu_dev_reservoir_protocol.derive_config`'s output for the current
+# `config_schema_version`: that function is the sole producer of a real v2
+# config, and every key it emits (other than the two defaultable throughput
+# knobs below) is required here -- a mismatch in either direction means the
+# config a real qualification run emits could not be loaded.
 _V2_CONFIG_REQUIRED_KEYS: Tuple[str, ...] = (
     "source_index_path",
     "seed_range",
@@ -1819,6 +1831,11 @@ _V2_CONFIG_REQUIRED_KEYS: Tuple[str, ...] = (
     "screen_out",
     "select_out",
     "expected_fingerprints",
+    "config_schema_version",
+    "protocol_path",
+    "match_summary_path",
+    "replay_dir",
+    "report_out",
 )
 
 
@@ -1859,7 +1876,27 @@ class V2Config:
     expected_fingerprints: the Sec 1.8 fingerprint block this config EXPECTS
       a screen to match -- carried through as opaque data; hard-matching it
       against a real screen's `.meta.json` is Task 6's
-      `validate_screen_identities`.
+      `validate_screen_identities`. Extended (Task B8, spec Sec 2.2
+      "expected_fingerprints (extended)") to NINE measured identities when
+      emitted by `fpu_dev_reservoir_protocol.derive_config`: `protocol_sha1`,
+      `source_index_sha1`, `replay_data_sha1`, `match_summary_sha1`,
+      `source_file_sha1s`, `forbidden_manifest_sha1s`, and the THREE
+      checkpoint identities (`reservoir_checkpoint_a_identity`,
+      `reservoir_checkpoint_b_identity`, `anchor_checkpoint_identity`) that
+      replace the legacy single `checkpoint_identity` -- still carried
+      through here as opaque data (this loader does not validate the nested
+      shape, only that the top-level key itself is present).
+    config_schema_version / protocol_path / match_summary_path / replay_dir /
+      report_out (Task B8, spec Sec 2.2 "New top-level (paths)"): the five
+      new required top-level fields a QUALIFIED v2 config carries --
+      respectively, the schema version this config was emitted under; the
+      frozen `reservoir_protocol.json` this config was derived from
+      (`derive(protocol, reservoir)`, spec Sec 2); the generated reservoir's
+      own match-summary path and replay directory; and the qualification
+      report (Sec 3's report state machine) this config's own PASS evidence
+      lives in. All five are carried through as opaque data -- consumed by
+      the `run_screen` pre-evaluator precheck (a later task, spec Sec 5), not
+      by this loader.
     eval_batch_size / stall_flush_sims: pure evaluator-throughput knobs
       (never result-determining -- they change how the evaluator BATCHES,
       never WHICH position is screened or its anchor value); default to v1's
@@ -1878,19 +1915,30 @@ class V2Config:
     screen_out: str
     select_out: str
     expected_fingerprints: Dict[str, Any]
+    config_schema_version: int
+    protocol_path: str
+    match_summary_path: str
+    replay_dir: str
+    report_out: str
     eval_batch_size: int = DEFAULT_EVAL_BATCH_SIZE
     stall_flush_sims: int = DEFAULT_STALL_FLUSH_SIMS
 
 
 def load_v2_config(path: str) -> V2Config:
-    """Load + validate the v2 pipeline's REQUIRED config (design Sec 1.8).
+    """Load + validate the v2 pipeline's REQUIRED config (design Sec 1.8;
+    extended Task B8, spec Sec 2.2/Sec 6/Sec 9).
 
     Raises `ValueError` naming EVERY missing required key (see
     `_V2_CONFIG_REQUIRED_KEYS`) rather than silently defaulting -- "no
     default source, no default stride." `eval_batch_size` / `stall_flush_sims`
     are the sole exception (see `V2Config`'s own docstring). Task 6 adds its
     OWN tests pinning this required-key behavior; this is the one and only
-    implementation of `load_v2_config`.
+    implementation of `load_v2_config`. A config produced by
+    `fpu_dev_reservoir_protocol.derive_config` for the current
+    `config_schema_version` round-trips through this loader unchanged --
+    proven directly by tests/test_fpu_dev_corpus_v2.py::
+    test_derive_config_round_trips_through_load_v2_config (the producer/
+    consumer cross-check).
     """
     raw = json.loads(Path(path).read_text())
     missing = sorted(k for k in _V2_CONFIG_REQUIRED_KEYS if k not in raw)
@@ -1912,6 +1960,11 @@ def load_v2_config(path: str) -> V2Config:
         screen_out=raw["screen_out"],
         select_out=raw["select_out"],
         expected_fingerprints=raw["expected_fingerprints"],
+        config_schema_version=int(raw["config_schema_version"]),
+        protocol_path=raw["protocol_path"],
+        match_summary_path=raw["match_summary_path"],
+        replay_dir=raw["replay_dir"],
+        report_out=raw["report_out"],
         eval_batch_size=int(raw.get("eval_batch_size", DEFAULT_EVAL_BATCH_SIZE)),
         stall_flush_sims=int(raw.get("stall_flush_sims", DEFAULT_STALL_FLUSH_SIMS)),
     )
@@ -2148,6 +2201,12 @@ def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
 # it is why `validate_screen_identities` names the offending basename when it
 # fires. Land every code change you intend BEFORE you screen.
 # ****************************************************************************
+# Task B8 (spec Sec 2.2 amendment 4) adds `fpu_dev_reservoir_protocol.py` to
+# this tuple: qualification is itself result-determining for the corpus it
+# produces (it derives the immutable config every downstream stage trusts),
+# so it belongs in the SAME hashed source set as the corpus-building code
+# above -- added to the v2 set ONLY; `build_fpu_dev_corpus._CORPUS_SOURCES`
+# (v1) is never touched by this task.
 _V2_MODULE_DIR = Path(__file__).resolve().parent
 _V2_CORPUS_SOURCES: Tuple[Path, ...] = (
     _V2_MODULE_DIR / "fpu_dev_corpus_v2.py",
@@ -2157,6 +2216,7 @@ _V2_CORPUS_SOURCES: Tuple[Path, ...] = (
     _V2_MODULE_DIR / "fpu_state_hash.py",
     _V2_MODULE_DIR / "goal_line_trigger_probe_cases.py",
     _V2_MODULE_DIR / "game" / "twixt_state.py",
+    _V2_MODULE_DIR / "fpu_dev_reservoir_protocol.py",
 )
 
 

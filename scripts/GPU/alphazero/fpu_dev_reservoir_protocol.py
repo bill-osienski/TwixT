@@ -836,15 +836,23 @@ GENERATION_SOURCE_MODULES: Tuple[Path, ...] = (
 assert len(GENERATION_SOURCE_MODULES) == 13, GENERATION_SOURCE_MODULES
 
 # The v2 corpus's own result-determining source set (`_V2_CORPUS_SOURCES`,
-# imported from `fpu_dev_corpus_v2`) PLUS this qualification module itself
-# (spec Sec 2.2 amendment 4: "the qualification module is result-determining
-# for the corpus it produces" -- added to the v2 set ONLY, this module never
-# touches v1's own `_CORPUS_SOURCES`).
-QUALIFICATION_SOURCE_FILES: Tuple[Path, ...] = _V2_CORPUS_SOURCES + (
-    _MODULE_DIR / "fpu_dev_reservoir_protocol.py",
-)
+# imported from `fpu_dev_corpus_v2`) -- which, as of Task B8, ALREADY
+# includes this qualification module itself (spec Sec 2.2 amendment 4: "the
+# qualification module is result-determining for the corpus it produces" --
+# added to the v2 set ONLY; `fpu_dev_corpus_v2._V2_CORPUS_SOURCES` never
+# touches v1's own `build_fpu_dev_corpus._CORPUS_SOURCES`). No further
+# concatenation happens here: appending this module's own path a SECOND time
+# would silently double-count it in `source_file_sha1s` (a basename-keyed
+# dict would just overwrite, but the no-duplicates assert below exists
+# precisely to catch this before that point) -- Task B8 is the single source
+# of truth for "is this module in the v2 source set," not this line.
+QUALIFICATION_SOURCE_FILES: Tuple[Path, ...] = _V2_CORPUS_SOURCES
 assert len(QUALIFICATION_SOURCE_FILES) == len(set(QUALIFICATION_SOURCE_FILES)), (
     "QUALIFICATION_SOURCE_FILES has a duplicate entry")
+assert (_MODULE_DIR / "fpu_dev_reservoir_protocol.py") in QUALIFICATION_SOURCE_FILES, (
+    "QUALIFICATION_SOURCE_FILES must include this qualification module "
+    "itself -- fpu_dev_corpus_v2._V2_CORPUS_SOURCES should carry it "
+    "(Task B8, spec Sec 2.2 amendment 4)")
 
 
 # ---------------------------------------------------------------------------

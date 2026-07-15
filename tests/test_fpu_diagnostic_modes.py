@@ -519,7 +519,15 @@ def _v2_config_dict(**overrides):
     """Every `_V2_CONFIG_REQUIRED_KEYS` key, fabricated. The three keys A2
     hard-matches (`select_out`, `source_index_path`, `new_collapse_stratum`)
     are steered by the caller; everything else is inert filler `load_v2_config`
-    requires present but `_resolve_v2_stratum` never reads."""
+    requires present but `_resolve_v2_stratum` never reads -- including the
+    five Task B8 top-level paths (spec Sec 2.2/Sec 9: "Fixture seam: Group 2
+    owns the V2Config schema bump; shared config fixtures (including any
+    Group 1 fabricates) are updated when Group 2 lands"). Kept independently
+    of (not shared with) tests/test_fpu_dev_corpus_v2.py::_v2_config_fixture
+    -- that file's fixture needs real tmp_path-anchored files for its own
+    screen/select tests; this one never does -- but both are checked against
+    the same real `load_v2_config`, so either one silently missing a key
+    fails loudly right here, not silently drifting."""
     d = {
         "source_index_path": "src.jsonl",
         "seed_range": [0, 6],
@@ -533,6 +541,11 @@ def _v2_config_dict(**overrides):
         "screen_out": "screen.csv",
         "select_out": "manifest.csv",
         "expected_fingerprints": {},
+        "config_schema_version": 1,
+        "protocol_path": "reservoir_protocol.json",
+        "match_summary_path": "match_summary.json",
+        "replay_dir": "replays",
+        "report_out": "qualify_report.json",
     }
     d.update(overrides)
     return d
