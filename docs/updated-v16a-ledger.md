@@ -4,7 +4,7 @@
 
 A durable, append-only record of every value-calibration experiment: what changed, how it scored on the four acceptance gates, what we learned, and what **not** to retry. **Read this before proposing any new calibration knob** — if the change is on the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of a knob we've already swept), the answer is probably "no, we already saw the tradeoff."
 
-> **Key conclusion (updated 2026-07-09, post v14c; v14d cleanup next):** Targeted **correction works**, but promotion still requires all four gates. The v13 final-block projection line is closed: v13c was the best final-block result (A/B/C passed, D missed by one barely-severe row), and v13d's only justified cleanup backfired. v14 changed the mechanism to a scalar-gated, value-only adapter (`value_head.*` + `value_adapter.*`) with the v12b hinge objective. v14 projection-OFF proved the adapter surface has useful capacity and is safer than final-block training, but A still failed by mean. v14b added A-yields-to-guardrail projection over the value-adapter surface and became the best adapter result: B/C/D all passed, A improved to mean +0.026 but still missed the A gate. v14c tested the obvious projection-strength follow-up (`strength=2.0`) and **rejected it**: B/C/D still passed, but A regressed to mean +0.060 and C/D margins degraded versus v14b. Therefore v14b remains the best adapter near-pass, but no checkpoint promotes. The only justified easy-lift cleanup is v14d: return to v14b (`projection_strength=1.0`, bottleneck 32) and increase only A draw pressure (`black_predrop_correction=2→3`). If v14d fails, stop argument-only adapter cleanups and require a new written design or keep `calib020_0001`.
+> **Key conclusion (updated 2026-07-10, post v16a held-out validation):** The A black-pre-drop calibration target is explained as a **400-sim search artifact**, not a stable value-head defect. v14 closed the adapter cleanup line; v15 showed the 400-sim backup came from broad depth-2 frontier optimism; and the budget/trajectory checks showed BASE A collapses with more search (**400/1600/6400 mean +0.2570 → +0.0626 → −0.0451**, gate-over **50.0% → 30.0% → 10.0%**, severe **43.3% → 6.7% → 3.3%**), with the apparent predrop “drop” mostly a selected shallow-search bump (**6400−400 = −0.573 at predrop, −0.001 at drop**). Therefore **value calibration against A remains unjustified**: no v15 Phase 1, no frontier hard-value correction, and no further adapter/projection/schedule cleanup. v16 then falsified c_puct and showed that negative FPU directly reaches the first-touch reply-scanning mechanism on the selected A set: `fpu_value=−0.20` moved mean **+0.2570 → −0.0344** and opponent replies **134.7 → 24.5**. However, the frozen v16a game-held-out test **rejected absolute `fpu_value=−0.20` as a general 400-sim setting**. Across 324 held-out positions it caused **15 new collapsed roots (4.63%)**, and the preregistered stratum reject gate fired in late play: **13/84 = 15.48%** new collapses, including **6/42 = 14.29% late-red** and **7/42 = 16.67% late-black**. Effective children fell **107.58 → 70.92** (−36.66; about −34.1%), top-move flips reached **27.16%**, and late collapsed roots rose **17/84 → 28/84**, despite small central value movement (mean mover delta **+0.0028**, median absolute **0.0180**, p95 absolute **0.2822**). The selected-A result remains valid **mechanistic evidence**, but the fixed absolute candidate does not generalize safely. **Do not run B/C/D or a strength match with `−0.20`.** Next: a read-only postmortem of the 15 new-collapse cases, followed by a new search candidate designed on discovery data only—likely adaptive or parent-relative FPU. The v16a held-out manifest is consumed and must not be used to tune that replacement. The decisive success benchmark remains an equal-checkpoint, equal-400-sim, balanced-color, statistically significant head-to-head strength gain after collateral and guardrail checks pass.
 
 ## Before proposing a new calibration experiment
 
@@ -78,6 +78,12 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **v14** — gated value-adapter, projection OFF | New value-only adapter surface (`value_head.*` + `value_adapter.*`, scalar gate, bottleneck 32), encoder/policy/final block/BN frozen; same v12b manifest/schedule/objective, `guardrail_margin=0.10`, projection OFF; telemetry/verifier clean (`value_adapter_gate=0.003018`, `value_adapter_grad_norm=0.001381`, `calib_n_drawn_total=1440`) | **fail / improved:** mean +0.064, over 26.7%, severe 20.0% | **pass:** mean −0.272, over 5.6%, severe 0.0% | **pass:** mean +0.063, over 30.0%, severe 6.7% | **pass but degraded margin:** mean −0.079, over 23.3%, severe 0.0% | no match | **Reject.** Adapter surface is not a no-op: A moved substantially and B/C/D formally held, but A still missed mean ≤ 0.0 and D moved toward black within the pass band. This is not underfit; do not run width 64 next. Next branch: v14b projection ON over `value_head.*` + `value_adapter.*`. |
 | **v14b** — value-adapter + projection strength 1.0 | Same v14 adapter surface/objective/schedule, but `--post-opening-calibration-gradient-projection` enabled over `value_head.*` + `value_adapter.*`; bottleneck 32; projection strength default 1.0; verifier passed (`value_head.*` + `value_adapter.*` only; final block byte-identical); telemetry clean after label fix (`conflict_steps=51`, `conflict_rate=39.8%`, `removed_norm_avg=0.0727`, `value_adapter_gate=0.001667`, `value_adapter_grad_norm=0.001518`, `calib_n_drawn_total=1440`) | **fail / near-pass:** mean +0.026, over 26.7%, severe 16.7% | **pass:** mean −0.254, over 11.1%, severe 0.0% | **pass:** mean +0.044, over 23.3%, severe 6.7% | **pass:** mean −0.047, over 23.3%, severe 0.0% | no match | **Reject / best adapter result so far.** Projection improved A while B/C/D stayed inside formal gates, but A still missed mean ≤ 0.0. No promotion. Since projection helped and guardrails held, the one justified follow-up is v14c: same setup with projection strength 2.0; do not redesign or widen before v14c gates. |
 | **v14c** — value-adapter + projection strength 2.0 | Same v14b adapter projection setup, but added `--post-opening-calibration-projection-strength 2.0`; label fix confirmed `calib_projection_scope=value_head_and_value_adapter`; verifier passed (`value_head.*` + `value_adapter.*` only; final block byte-identical); telemetry clean (`strength=2.0`, `conflict_steps=49`, `conflict_rate=44.5%`, `removed_norm_avg=0.1329`, `value_adapter_gate=-0.001048`, `value_adapter_grad_norm=0.001371`, `calib_n_drawn_total=1440`) | **fail / regressed vs v14b:** mean +0.060, over 30.0%, severe 20.0% | **pass:** mean −0.261, over 5.6%, severe 0.0% | **pass but at severe cap:** mean +0.052, over 30.0%, severe 13.3% | **pass:** mean −0.056, over 26.7%, severe 0.0% | no match | **Reject.** Strength 2.0 did not push A through; it regressed A versus v14b and narrowed C/D margins. Do not run strength 3.0. Best adapter checkpoint remains v14b. One final easy-lift cleanup is v14d: revert to strength 1.0 and increase only A draw pressure (`black_predrop_correction=2→3`). |
+| **v14d** — value-adapter + projection strength 1.0 + A draw 3 | Same v14b adapter projection setup (`projection_strength=1.0`, bottleneck 32, same v12b objective/surface), but increased only `black_predrop_correction=2→3`; all guardrail schedules unchanged; telemetry/verifier clean (`strength=1.0`, `conflict_steps=72`, `conflict_rate=54.5%`, `removed_norm_avg=0.0742`, `value_adapter_gate=-0.000585`, `value_adapter_grad_norm=0.001501`, `calib_n_drawn_total=1600`, A draws 480) | **fail:** mean +0.051, over 33.3%, severe 16.7% | **pass:** mean −0.299, over 5.6%, severe 0.0% | **pass:** mean +0.030, over 30.0%, severe 10.0% | **fail:** mean −0.049, over 40.0%, severe 3.3% | no match | **Reject.** The narrow A-pressure cleanup did not push A through and broke D severe. This closes the argument-only adapter cleanup line: do not run A=4/A=5, strength 3.0, width 64, or another schedule/projection tweak without a new written design. |
+| **v15 diagnostics** — A searched-continuation concentration + selected-branch subtree walk | Read-only diagnostics only. Phase 0 walked immediate children under the 30 A roots; Phase 0.5 re-ran deterministic BASE MCTS on the 17 positive A roots, selected positive branches to 90%/max-3, and walked every expanded descendant with PV annotation. No manifest, no training, no checkpoint. | **mechanism clarified:** Phase 0: all 17 positive roots concentrated at selected-child level; Phase 0.5: depth-2 frontier produced broad raw optimism, not child/PV path | n/a | n/a | n/a | no match | **Reject v15 Phase 1 / close v15.** Do not build depth-1 child rows, shallow PV rows, or semi-PV continuation rows. The raw optimism is broad: 5,837 nodes walked, 5,745 raw-scored, median 196 depth-2 nodes/root needed for 70% positive raw mass, median PV share of positive raw mass 0.335%. Next branch must be v16 frontier/tree-level correction or search/prior intervention. |
+| **post-v15 budget + trajectory diagnostics** — A search artifact confirmation | Read-only probe/trajectory checks on BASE `calib020_0001`; no checkpoint, no manifest, no training. Re-ran A at 400/1600/6400 sims and compared five high-A predrop→drop trajectories at 400 vs 6400. | **explained artifact:** A mean +0.2570 → +0.0626 → −0.0451 as sims increase; gate-over 50.0% → 30.0% → 10.0%; severe 43.3% → 6.7% → 3.3%. Predrop inflation 6400−400 averaged −0.573; drop-ply inflation −0.001. | n/a | n/a | n/a | no match | **Close A value-calibration line / reject v16 frontier correction before build.** The original “sharp value drop” was mostly a selected 400-sim predrop bump/winner's curse, not a stable value-head overvalue. Next branch is **v16 search reliability** (c_puct first; FPU only if needed), not value calibration. |
+| **v16 c_puct falsification diagnostic** — c_puct is not the fix | Read-only search-reliability diagnostic on BASE A probe rows; no checkpoint, no manifest, no training. Integrity check passed: c_puct=1.5 reproduced Phase 0 per-case root values within 1e-6, then only `MCTSConfig.c_puct` varied. | **c_puct worsens A:** c_puct 1.5→0.25 raised mean +0.2570→+0.3778, gate-over 50.0%→60.0%, severe 43.3%→50.0%. Top-child visit share rose 0.474→0.642; top-child visited children rose 134.7→232.9; corr(top_child_n_visited_children, root value)=+0.943. | n/a | n/a | n/a | no match | **Reject c_puct as a fix / continue v16 only via FPU diagnostic.** Lower c_puct funnels visits into the selected root child and increases one-visit opponent-reply frontier scanning. Raising c_puct must not be used to pass A because it would lower the metric by spreading visits onto inferior root moves, not by repairing the frontier. Next search-code lever is an opt-in FPU field with default 0.0 preserving current behavior exactly. |
+| **v16 FPU selected-A diagnostic** — first knob that reaches the measured mechanism | Search-code diagnostic on BASE A probe rows; no checkpoint, no manifest, no training. Added opt-in `MCTSConfig.fpu_value` with default 0.0, routing unvisited-child q through the field. Integrity check passed: fpu=0.0 reproduced Phase 0 within 1e-6 and the full suite passed, proving default behavior is byte-identical. | **FPU works on selected A:** fpu 0.0→−0.20 moved mean +0.2570→−0.0344, gate-over 50.0%→6.7%, severe 43.3%→6.7%, and opponent replies scanned 134.7→24.5. fpu −0.35/−0.50 reached severe 0.0% but with much narrower search. `−0.20` was frozen as the single held-out candidate because it was closest to the 6400 reference (mean −0.0451) while preserving more breadth than −0.35/−0.50. | n/a | n/a | n/a | no match | **Promising mechanism / not adoption.** FPU directly suppresses first-touch opponent-reply scanning, the mechanism c_puct could not reach. But the sample is biased by A selection, and FPU gets the value by narrowing search rather than searching deeper. The next rung was the frozen v16a comparison `0.0` vs `−0.20` on a game-held-out neutral sample; see the following row. |
+| **v16a held-out FPU validation** — frozen `0.0` vs `−0.20` collateral screen | Search-code diagnostic only on a deterministic stratified, game-held-out, non-selected manifest: 324 positions from 252 games, buckets 40 opening / 100 early-mid / 100 midgame / 84 late, exactly 162 red / 162 black, and zero games shared with A discovery. The 19 winner-null 280-ply state-cap marathons were retained as stressed valid samples. No checkpoint or training changes. | **Not an A gate. Neutral result:** mean mover delta +0.0028, median absolute 0.0180, p95 absolute 0.2822; top-move flips 27.16%; effective children 107.58→70.92 (−36.66, about −34.1%); top-share +0.0716; 15 new collapses / 2 resolved. | n/a | n/a | **Late collateral failure:** 13/84 = 15.48% new collapse; late-red 6/42 = 14.29%, late-black 7/42 = 16.67%; late collapsed roots 17/84→28/84. | no match | **REJECT absolute `fpu_value=−0.20` as a general 400-sim setting.** The preregistered reject rule (any n≥20 stratum with new-collapse rate ≥10%) fired independently for late overall and both late-side strata. Do not proceed to B/C/D or strength evaluation with this candidate. Selected-A success remains mechanistic evidence only. Next: read-only postmortem of the 15 new-collapse cases, then design a new adaptive/parent-relative candidate on discovery data only. The v16a held-out manifest is consumed and must not be used for tuning. |
 
 
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
@@ -137,10 +143,19 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 30. **Treating v14b as promotable because B/C/D passed.** v14b is the best adapter result so far and B/C/D passed, but A still missed the formal mean gate (+0.026 > 0.0). No promotion match until A/B/C/D all pass.
 31. **Redesigning or widening immediately after v14b before the strength-2 test.** v14b showed projection helps A and does not break formal guardrails. The next single-knob follow-up was v14c (`projection_strength=2.0`), not width 64, per-channel gates, margin changes, or objective changes.
 32. **Running projection strength 3.0 after v14c.** v14c strength 2.0 regressed A versus v14b and narrowed C/D margins. Stronger projection is not the cleanup; stop projection-strength escalation.
-33. **More than one A-pressure cleanup in the adapter line.** v14d (`black_predrop_correction=2→3` on top of v14b) is a deliberately narrow final cleanup because v14b missed only A mean by +0.026 while B/C/D passed. If v14d fails, do not run A=4/A=5, more guardrail count tweaks, width 64, per-channel gates, or objective changes without a new written design.
+33. **More than one A-pressure cleanup in the adapter line.** v14d (`black_predrop_correction=2→3` on top of v14b) was the deliberately narrow final cleanup because v14b missed only A mean by +0.026 while B/C/D passed. It failed: A still missed (mean +0.051) and D severe broke to 3.3%. Do not run A=4/A=5 or more guardrail-count tweaks inside the adapter line.
+34. **Another argument-only adapter cleanup after v14d.** v14b remains the best adapter near-pass, but v14c (strength 2.0) and v14d (A draw 3) both failed. Do not run strength 3.0, width 64, per-channel gates, margin changes, or objective changes as an incremental tweak. Any continuation must be a new written design with a new mechanism and explicit acceptance/falsification criteria.
+35. **Building v15 Phase 1 as depth-1 child rows or shallow PV/path rows.** Phase 0 made the A excess look targetable at the selected-child level, but Phase 0.5 falsified the few-row/PV interpretation. The positive raw mass that MCTS backs up is broad across the depth-2 frontier: median 196 depth-2 nodes per root are needed to cover 70% of positive raw mass, and the median PV share of positive raw mass is only 0.335%. Do not build `black_predrop_continuation_correction` as child/PV rows.
+36. **Treating the A overvalue as another raw-root/value-adapter cleanup.** Raw A is already non-positive at BASE and more negative under v14b, while MCTS re-amplifies it from policy-selected frontier states. Do not run more A draw pressure, width/capacity tweaks, projection tweaks, or root raw hard-value rows. The next value-calibration branch must target the frontier distribution explicitly, or the work should redirect to search/prior behavior.
+37. **Building v16 as policy-selected frontier hard-value correction.** The post-v15 budget/trajectory diagnostics falsified the remaining value-calibration interpretation. BASE A collapses with more search (400/1600/6400 mean +0.2570 → +0.0626 → −0.0451; gate-over 50.0% → 30.0% → 10.0%; severe 43.3% → 6.7% → 3.3%), and the trajectory check showed the selected predrop ply was inflated by 400-sim search while the drop ply was not. Do not train thousands of depth-2 `hard_value=-0.35` rows; that would gate-fit shallow-search noise.
+38. **Treating v16 as another calibration/training branch.** v16 is reserved for search reliability only. No trainer/network/manifest/value-adapter changes under the v16 name.
+39. **Using c_puct to fix or gate-pass A.** The v16 c_puct falsification diagnostic reproduced the gate at c_puct=1.5 and then showed lowering c_puct worsens A (mean +0.2570→+0.3778; over 50.0%→60.0%; severe 43.3%→50.0%) by increasing top-child visit share and top-child visited children. Raising c_puct is also disallowed as an A fix because it would reduce the metric by spreading visits onto inferior root moves, not by fixing the depth-2 frontier. c_puct is closed; the only allowed next search-code lever is opt-in FPU with default `0.0` preserving current behavior exactly.
+40. **Treating selected-A FPU success as adoption.** The v16 FPU selected-A diagnostic is the first positive search-mechanism result, but it is still on a biased set selected by the flawed 400-sim A statistic. Do not adopt FPU into gates, self-play, or promotion rules based on selected-A results alone. Validate on an unbiased/non-selected sample first, then B/C/D under the same setting, then a head-to-head strength evaluation before any self-play adoption.
+41. **Using absolute `fpu_value=−0.20` as a general 400-sim setting, or advancing it to B/C/D or a strength match.** v16a rejected it on the game-held-out sample: late new-collapse rate was 15.48% (13/84), with both late-red and late-black above the preregistered 10% stratum reject bar. The small mean value delta does not rescue a candidate that materially increases late root collapse.
+42. **Tuning the replacement FPU candidate on the v16a held-out manifest.** The 324-position v16a sample has been observed and is consumed. Do not select absolute values, formulas, thresholds, or schedules against it. Diagnose the failure read-only, but design/tune any adaptive or parent-relative replacement using discovery data only; use a fresh or separately preregistered confirmatory holdout before adoption.
 
 
-Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, and surgical B value-only root-clone manifest edits. The active credible continuation from this line is v14d: return to v14b (`projection_strength=1.0`, bottleneck 32, same adapter surface/objective) and change only `black_predrop_correction=2→3`. If v14d fails, stop argument-only adapter cleanups and require a new written design, or keep `calib020_0001`.
+Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 ## v14 adapter-projection cleanup status (2026-07-09)
 
@@ -158,14 +173,255 @@ Gate results:
 
 Decision: **REJECT / no promotion.** Projection strength 2.0 did not fix A and degraded the adapter-line shape versus v14b. Do **not** run strength 3.0. v14b remains the best adapter near-pass.
 
-### v14d — one final narrow A-pressure cleanup (PLANNED / RUN NEXT)
+### v14d — one final narrow A-pressure cleanup (RUN + REJECTED)
 
-Rationale: v14b had the desired guardrail profile (B/C/D pass) and missed only A mean by +0.026. v14c showed stronger projection is not the cleanup. The only easy-lift remaining cleanup is to revert to v14b mechanics (`projection_strength=1.0`) and change exactly one sampling knob: `black_predrop_correction=2→3`, leaving all guardrail schedules, margin, bottleneck width, projection mechanics, objective, and frozen surface unchanged.
+Checkpoint: `checkpoints/alphazero-v14d-value-adapter-projection-a3-from-calib020-0001/model_iter_0001.safetensors`
 
-Run interpretation:
-- If A mean crosses ≤0.0 and B/C/D still pass → promotion match is finally justified.
-- If A improves but any guardrail fails → reject; A pressure is coupled and not a safe cleanup.
-- If A does not improve enough → reject; stop argument-only adapter cleanups and require a new written design or keep `calib020_0001`.
+Setup: same v14b value-adapter projection surface and v12b manifest/objective (`projection_strength=1.0`, bottleneck 32), but changed exactly one sampling knob: `black_predrop_correction=2→3`. All guardrail schedules, margin, projection mechanics, objective, and frozen surface were unchanged.
+
+Telemetry/verifier:
+- `train_value_head_and_value_adapter=True`, `train_value_head_and_final_block=False`.
+- `calib_projection_enabled=True`, `calib_projection_scope=value_head_and_value_adapter`, `calib_projection_strength=1.0`.
+- `conflict_steps=72`, `conflict_rate=54.5%`, `removed_norm_avg=0.0742`.
+- `value_adapter_gate=-0.000585`, `value_adapter_grad_norm=0.001501`.
+- `calib_n_drawn_total=1600`, `calib_n_drawn_per_step=10.0`, with A draws 480 and all guardrail draw counts unchanged from v14b.
+- Adapter verifier passed: only `value_head.*` + `value_adapter.*` changed; frozen tensors byte-identical.
+
+Gate results:
+- A black pre-drop: mean +0.051, over 33.3%, severe 16.7% — **FAIL**; A did not cross mean ≤0.0.
+- B goal-line: mean −0.299, over 5.6%, severe 0.0% — **PASS**.
+- C old post-opening: mean +0.030, over 30.0%, severe 10.0% — **PASS**.
+- D red pre-drop: mean −0.049, over 40.0%, severe 3.3% — **FAIL**; D severe must be 0.0%.
+
+Decision: **REJECT / no promotion.** Extra A draw pressure did not push A through and broke D severe. This closes the argument-only v14 adapter cleanup line. Do not run A=4/A=5, projection strength 3.0, width 64, or another adapter schedule/projection tweak without a new written design.
+
+## Next-step plan after v16a held-out rejection (2026-07-10)
+
+**Default decision:** keep `calib020_0001` as current best. No v13/v14/v15 checkpoint earned a promotion match; v16/v16a were diagnostic-only and produced no model checkpoint.
+
+**Closed lines:**
+- v13 final-block projection cleanup is closed after v13d.
+- v14 value-adapter cleanup is closed after v14c/v14d and the raw/MCTS drift diagnostic.
+- v15 searched-continuation Phase 1 is closed before implementation: Phase 0.5 proved the optimism is broad depth-2 frontier mass, not a few child/PV states.
+- The proposed v16 frontier value-correction design is rejected before build: budget/trajectory diagnostics show the A signal was selected shallow-search inflation, not a valid value-head target.
+- c_puct is closed as an A/search-reliability fix.
+- **Fixed absolute `fpu_value=−0.20` is closed as a general 400-sim setting.** It reached the selected-A mechanism but failed the preregistered held-out late-collapse gate.
+
+**v16a result:** the frozen `0.0` vs `−0.20` test ran on 324 positions from 252 games, with 40/100/100/84 positions across opening/early-mid/midgame/late, exact red/black balance, and zero A-discovery game overlap. Overall new-collapse rate was 15/324 = 4.63%, just below the 5% overall reject line, but late play failed decisively: 13/84 = 15.48%, with late-red 6/42 = 14.29% and late-black 7/42 = 16.67%. Late collapsed roots rose from 17/84 to 28/84. The candidate also flipped the top move on 27.16% of positions and reduced effective children by 36.66 on average (107.58→70.92, about −34.1%). Central value movement stayed small (mean mover delta +0.0028; median absolute 0.0180; p95 absolute 0.2822), so the failure is search-shape concentration rather than broad mean-value drift.
+
+**Immediate next step — read-only postmortem:** characterize the 15 new-collapse cases without changing the gate or selecting a replacement on this holdout. Report whether the cases cluster in 280-ply state-cap games; whether collapse coincides with top-move changes; baseline/candidate top share, effective children, mover value, root breadth, and opponent-reply count; and relevant legal-move/root-value context. This analysis may explain the failure mechanism but may not tune the next candidate.
+
+**Next candidate design:** retire fixed absolute `−0.20`. A credible continuation should change the mechanism—most likely an adaptive or parent-relative FPU reduction—using the selected-A/discovery corpus and other non-v16a development data only. The v16a manifest is consumed and must not be used to choose the formula or its parameters. Do not run B/C/D or a strength match until a new candidate is frozen and passes an appropriate collateral screen.
+
+**Decisive benchmark remains unchanged:** after collateral and B/C/D guardrail checks pass under an explicitly frozen ship-form search rule, run a same-checkpoint / same-400-sim / balanced-color head-to-head against FPU-off. Adoption requires a statistically significant strength gain; matching 6400-sim A values is mechanistic evidence, not success.
+
+## Raw/MCTS drift diagnostic on A & D (RESOLVED 2026-07-09) — closes the v14 adapter line, sets v15
+
+Ran the line-196 candidate: `eval_raw_nn_position_rows` (raw NN, no MCTS, eval-mode BN) on the A black-pre-drop + D red-pre-drop probe rows for BASE / v14b / v14d, juxtaposed with the 400-sim MCTS gate means. Raw CSV: `logs/eval/v15prep_raw_AD_drift_base_v14b_v14d.csv`.
+
+**A — black pre-drop (want mean ≤ 0):**
+
+| ckpt | raw mean | MCTS mean | search Δ (MCTS−raw) |
+|---|---|---|---|
+| BASE | −0.015 | +0.257 | +0.272 |
+| v14b | −0.178 | +0.026 | +0.204 |
+| v14d | −0.070 | +0.051 | +0.121 |
+
+**D — red pre-drop (want mean ≤ 0, severe = 0):**
+
+| ckpt | raw mean | MCTS mean | search Δ |
+|---|---|---|---|
+| BASE | +0.052 | −0.188 | −0.240 |
+| v14b | +0.166 (raw severe 36.7%) | −0.047 | −0.213 |
+| v14d | +0.051 | −0.049 | −0.100 |
+
+**Conclusion — A is MCTS/search amplification, NOT raw-value undercorrection:**
+- Raw A is already ≤0 at BASE (−0.015); the entire +0.257 gate overvalue is *added by the search* (+0.272). v14b over-corrected raw A to −0.178 yet the search still delivered +0.026 (re-amplified +0.204). The failed v14b/v14d gate is not raw capacity — the search backs up optimistic black continuations from the pre-drop roots.
+- The search-Δ itself varies with training (v14b +0.204 → v14d +0.121), so the untapped lever is *reducing the search amplification*, not more raw correction (v14c/v14d proved that non-monotonic).
+- D confirms the danger: raw D drift (v14b +0.166 / severe 36.7%) is *masked* by the search (MCTS −0.047) until the mask thins — exactly why "push A harder" broke D severe in v14d.
+
+**Decision:** the v14 value-ADAPTER line did its job as a raw-surface experiment and is **CLOSED**. No width 64, per-channel gate, stronger projection, more A draws, or raw-adapter cleanup. **v15 = A searched-continuation correction on the v14b adapter+projection surface** — correct the child/PV states MCTS uses to produce the +0.20 backup, not the root raw value. Matches the line-291 tree/path hypothesis. First implementation step: a read-only A-continuation *concentration* diagnostic (is the +0.204 from a few child/PV states or broad?) to decide few-rows vs tree/path. Design: `docs/superpowers/specs/2026-07-09-targeted-value-calibration-v15-a-searched-continuation-correction-design.md`.
+
+## v15 searched-continuation diagnostics (RESOLVED 2026-07-09) — closes v15 Phase 1
+
+### Phase 0 — A-continuation concentration diagnostic
+
+Design/plan: `docs/superpowers/specs/2026-07-09-targeted-value-calibration-v15-a-searched-continuation-correction-design.md` and `docs/superpowers/plans/2026-07-09-targeted-value-calibration-v15-phase0-concentration-diagnostic.md`.
+
+Script: `scripts/GPU/alphazero/diagnose_v15_a_continuation_concentration.py`. Output: `logs/eval/v15prep_a_continuation_concentration.csv`.
+
+Read: **concentrated at the selected-child level**. Of the 30 A roots, the 17 with `root_mcts_black_value > 0` were all concentrated. Globally, top-3 children carried 98.1% of all positive backup mass; a top-3-positive-per-root selection yielded 27 depth-1 child branches under the locked 90%/max-3 rule. Integrity checks passed: the sign invariant `sum(visit_share * -child.q_value) == root.q_value` held, and the 30-root MCTS mean reproduced the A gate mean (+0.2570).
+
+Important finding: the depth-1 child raw values were already not the source of the backup. At the top-1 positive child of each overvaluing root, BASE raw black value averaged −0.087 while searched black value averaged +0.619. The +0.706 gap was search below the child, so depth-1 hard-value rows would only help if the value head generalized to deeper leaves.
+
+### Phase 0.5 — selected-branch subtree diagnostic
+
+Design/plan: `docs/superpowers/specs/2026-07-09-targeted-value-calibration-v15-phase05-selected-branch-subtree-diagnostic-design.md` and `docs/superpowers/plans/2026-07-09-targeted-value-calibration-v15-phase05-selected-branch-subtree-diagnostic.md`.
+
+Script: `scripts/GPU/alphazero/diagnose_v15_a_selected_branch_subtrees.py`. Outputs:
+- `logs/eval/v15prep_a_selected_branch_subtrees.csv`
+- `logs/eval/v15prep_a_selected_branch_subtrees_by_depth_summary.csv`
+- closure summaries: `logs/eval/v15prep_a_phase05_per_root_decomposition.csv`, `logs/eval/v15prep_a_phase05_depth2_coverage.csv`, `logs/eval/v15prep_a_phase05_pv_offpv_mass.csv`, `logs/eval/v15prep_a_phase05_closure_summary.txt`
+
+Scope: reran deterministic BASE 400-sim MCTS on the 17 positive A roots, selected positive branches by cumulative positive share ≥0.90 / max 3, then walked every expanded descendant with `visit_count >= 1`, PV annotated. No depth cap, no manifest, no replay JSONs, no training. All 17 roots passed three fail-loud checks: tree reproduction against Phase 0 CSV, contribution invariant, and depth-1 cross-CSV perspective tie.
+
+Result: **Case B — broad frontier optimism**.
+
+- Nodes walked: 5,837.
+- Raw-scored nodes: 5,745.
+- Terminal nodes: 92.
+- Depth-2 frontier: 4,443 nodes, 77.3% of leaf evaluations, mean raw_black(BASE) +0.793, 98.8% raw-positive.
+- PV nodes: 139 / 5,745 leaf evaluations (2.4%), mean raw_black(BASE) −0.207.
+- Off-PV mean raw_black(BASE): +0.618.
+- Depth-2 nodes needed per root to cover 70% positive raw mass: p25 164, median 196, p75 205, max 238.
+- PV share of positive raw mass: p25 0.176%, median 0.335%, p75 0.928%, max 23.53%.
+
+Interpretation: Phase 0 proved the A excess is concentrated at which child branch MCTS selects, but Phase 0.5 proved the actual raw optimism being backed up is **not** concentrated on the child/PV path. It is broad across the policy-selected depth-2 frontier. A few-row child/PV continuation manifest would train the wrong states and miss nearly all positive raw mass.
+
+**Decision:** v15 Phase 1 is **rejected before implementation**. Do not build depth-1 child rows, shallow PV/path rows, or semi-PV continuation rows. A temporary v16 frontier/tree-level value design was considered, but the later budget/trajectory diagnostics rejected it before build and redirected v16 to search reliability.
+
+## Post-v15 search-budget + trajectory diagnostics (RESOLVED 2026-07-10) — closes A value calibration, sets v16
+
+### A search-budget sweep on BASE
+
+Ran the same A black-pre-drop probe on BASE / `calib020_0001` at 400, 1600, and 6400 sims. The corrected gate threshold is `over >= 0.25` and `severe >= 0.50`.
+
+| sims | mean black value | gate over (>=0.25) | gate severe (>=0.50) |
+|---:|---:|---:|---:|
+| 400 | +0.2570 | 50.0% | 43.3% |
+| 1600 | +0.0626 | 30.0% | 6.7% |
+| 6400 | -0.0451 | 10.0% | 3.3% |
+
+Result: the A gate signal collapses with more search. The earlier quick summary's `positive>0` column was not the gate overvalue metric; the true gate-over rate falls 50.0% -> 30.0% -> 10.0%.
+
+### Predrop trajectory check
+
+Checked five high-A loss games across the predrop->drop window. The 400-sim rerun reproduced the replay-stored `root_value` with max absolute diff 0.0000 across all checked plies, validating the pipeline and perspective. Comparing 6400 vs 400 showed the “sharp value drop” is mostly a predrop bump:
+
+| position in window | mean (6400 - 400) |
+|---|---:|
+| predrop - 6 | -0.185 |
+| predrop - 4 | -0.152 |
+| predrop | -0.573 |
+| drop ply | -0.001 |
+| drop + 2 | +0.035 |
+| drop + 4 | +0.012 |
+
+At the predrop ply, four of five sampled high-A cases lost gate-over status at 6400 sims (`000281`, `000259`, `000127`, `000347`); `000611` remained overvalued and matches the full-30 result where only about 10% remain overvalued at 6400.
+
+Interpretation: the original loss-analysis selection maximized `predrop_value - drop_value` using a 400-sim root statistic. Because 400-sim inflation is large at predrop and absent at the drop ply, the selection criterion picked the plies where shallow-search inflation was largest. The “drop” was mostly the selected 400-sim bump unwinding; at 6400 sims the curve is mostly a smooth decline or already non-overvalued.
+
+**Decision:** value calibration against the A signal is not justified. The proposed v16 frontier hard-value correction is rejected before build. Do not train depth-2 frontier rows, child/PV rows, or any new A hard-value manifest from this signal. The remaining well-posed question is search reliability: can 400-sim MCTS be made to behave more like 6400 on these high-branching positions?
+
+**v16:** the first v16 artifact was the read-only c_puct falsification sweep; c_puct is now closed as a fix. Continue only with a minimal opt-in FPU diagnostic if the search-reliability line proceeds.
+
+## v16 c_puct falsification diagnostic (RESOLVED 2026-07-10) — c_puct is not the fix
+
+Ran a read-only c_puct sweep on the 30 A black-pre-drop probe rows using BASE / `calib020_0001`. Integrity check passed: at `c_puct=1.5`, all 30 cases reproduced Phase 0 `root_mcts_black_value` within 1e-6. The sweep then varied only `MCTSConfig.c_puct`.
+
+| c_puct | mean black value | gate over (>=0.25) | gate severe (>=0.50) | root children | top-child children | top-child visit share |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1.5 | +0.2570 | 50.0% | 43.3% | 80.4 | 134.7 | 0.474 |
+| 1.0 | +0.3018 | 53.3% | 46.7% | 82.2 | 160.4 | 0.506 |
+| 0.75 | +0.3027 | 53.3% | 40.0% | 82.0 | 175.8 | 0.552 |
+| 0.5 | +0.3237 | 56.7% | 43.3% | 79.9 | 197.1 | 0.577 |
+| 0.25 | +0.3778 | 60.0% | 50.0% | 79.1 | 232.9 | 0.642 |
+
+Result: c_puct does not merely fail to help; lowering it actively worsens the A metric. The mean black value rose monotonically from +0.2570 to +0.3778 and moved farther away from the 6400-sim reference (mean -0.0451, over 10.0%, severe 3.3%).
+
+Mechanism: lower c_puct increases root concentration (`top_child_visit_share` 0.474 -> 0.642), which sends more simulations into the selected root child. That child then scans more fresh opponent replies (`top_child_n_visited_children` 134.7 -> 232.9), exactly the depth-2 one-visit frontier mechanism implicated by Phase 0.5. Across all case/config rows, `top_child_n_visited_children` correlated with `root_mcts_black_value` at +0.943.
+
+Important non-fix: raising c_puct must not be used to pass A. It can lower the metric by spreading root visits onto inferior black moves, not by repairing the frontier; that would optimize the gate statistic by degrading search.
+
+**Decision:** c_puct is closed as a search-reliability fix. The next possible v16 code change is FPU/unvisited-child initialization, but only as an opt-in diagnostic with byte-identical default behavior and validation beyond the selected A set.
+
+## v16 FPU selected-A diagnostic (RESOLVED 2026-07-10) — first positive search-mechanism result, not adoption
+
+Added an opt-in FPU/unvisited-child initialization knob to MCTS with byte-identical default behavior: `MCTSConfig.fpu_value = 0.0`, and `_select_child` uses that value for unvisited-child q instead of hardcoded `0.0`. The default integrity check passed: `fpu_value=0.0` reproduced Phase 0 per-case root values within 1e-6, and the full suite passed.
+
+Ran the selected A black-pre-drop probe rows at 400 sims across negative FPU values.
+
+| fpu_value | mean black value | gate over (>=0.25) | gate severe (>=0.50) | opponent replies scanned | root moves |
+|---:|---:|---:|---:|---:|---:|
+| 0.0 | +0.2570 | 50.0% | 43.3% | 134.7 | 80.4 |
+| -0.05 | +0.1725 | 40.0% | 26.7% | 102.4 | 67.9 |
+| -0.10 | +0.0776 | 23.3% | 13.3% | 60.8 | 54.1 |
+| -0.20 | -0.0344 | 6.7% | 6.7% | 24.5 | 33.5 |
+| -0.35 | -0.1003 | 6.7% | 0.0% | 8.0 | 19.1 |
+| -0.50 | -0.1261 | 3.3% | 0.0% | 6.2 | 10.4 |
+
+Reference: 6400-sim BASE A was mean -0.0451, gate-over 10.0%, severe 3.3%.
+
+Interpretation: FPU is the first tested knob that directly reaches the measured mechanism. Unlike c_puct, which increased top-child reply scanning, negative FPU collapses the opponent's first-touch reply scan and moves the 400-sim metric toward the 6400-sim reference. fpu≈−0.20 is the preferred next validation setting because it is closest to the 6400 mean while preserving more breadth than −0.35/−0.50.
+
+Limitations:
+- The sample is biased: these 30 roots were selected by the same 400-sim statistic now known to be inflated.
+- FPU reaches the corrected value by narrowing first-touch exploration, while 6400 sims reaches it by deeper search; those are not automatically equivalent.
+- The constant `fpu_value` form is diagnostic. A future ship-form may be parent-relative/reduction-based and must be evaluated separately.
+
+**Decision at this stage:** selected-A FPU was promising but not adoptable. Freeze `−0.20` as the single candidate and proceed to a game-held-out v16a comparison against `0.0`; do not tune multiple values on the holdout. The completed v16a result below subsequently rejected the fixed absolute candidate.
+
+
+## v16a stratified, game-held-out FPU validation (RESOLVED 2026-07-10) — absolute `−0.20` rejected
+
+### Tooling and locked protocol
+
+The v16a tooling generalized the FPU diagnostic without changing the trusted position-reconstruction path or legacy selected-A output. The selected-A path remained byte-identical through golden-output and old-vs-new fake-search comparisons; `fpu_value=0.0` remained the default MCTS behavior. Neutral mode enforced the frozen protocol `0.0` versus `−0.20`, used mover-perspective deltas as primary, and emitted paired search-shape summaries overall and by bucket / side / bucket×side.
+
+The generated neutral manifest contained **324 positions from 252 held-out games**:
+
+| bucket | positions |
+|---|---:|
+| opening | 40 |
+| early-mid | 100 |
+| midgame | 100 |
+| late | 84 |
+
+The sample was exactly balanced at **162 red / 162 black**, shared **zero games** with the selected-A discovery manifest, and reconstructed every retained row through `position_state`. The 19 `winner=null` games were valid 280-ply `state_cap` marathons and were retained as `game_result=unknown`; they contributed 47 of the 84 late positions and intentionally strengthened the stressed late-game screen.
+
+### Overall paired result
+
+| metric | `fpu=0.0` | `fpu=−0.20` / delta |
+|---|---:|---:|
+| positions | 324 | 324 |
+| mean mover-value delta vs control | — | +0.0028 |
+| median absolute mover-value delta | — | 0.0180 |
+| p90 / p95 absolute mover-value delta | — | 0.2079 / 0.2822 |
+| top-move flip rate | — | 27.16% |
+| mean root entropy delta | — | −0.6106 |
+| mean effective children | 107.58 | 70.92 (−36.66; about −34.1%) |
+| mean visited root children | 132.49 | 90.81 (−41.68) |
+| mean top-child reply count | 105.42 | 75.87 (−29.55) |
+| stable-top reply-count delta | — | −24.56 |
+| mean top-child visit share | 0.4154 | 0.4870 (+0.0716) |
+| new / resolved collapses | — | 15 / 2 |
+| collapsed-root rate | 7.72% | 11.73% |
+
+The central value distribution did **not** show broad drift: the mean mover delta was nearly zero and the median absolute delta was only 0.018. The dominant effect was search narrowing and concentration.
+
+### Preregistered gate result
+
+The overall new-collapse rate was **15/324 = 4.63%**, narrowly below the 5% overall hard-reject threshold. The preregistered stratum rule nevertheless fired decisively: any stratum with `n ≥ 20` and new-collapse rate `≥10%` is an automatic reject.
+
+| stratum | n | new collapses | rate | top-move flips | effective-children delta | top-share delta |
+|---|---:|---:|---:|---:|---:|---:|
+| opening | 40 | 0 | 0.00% | 35.00% | −20.39 | +0.0646 |
+| early-mid | 100 | 2 | 2.00% | 29.00% | −45.09 | +0.0362 |
+| midgame | 100 | 0 | 0.00% | 15.00% | −19.73 | +0.0227 |
+| **late** | **84** | **13** | **15.48%** | **35.71%** | **−54.52** | **+0.1753** |
+| **late-red** | **42** | **6** | **14.29%** | **38.10%** | **−80.09** | **+0.2099** |
+| **late-black** | **42** | **7** | **16.67%** | **33.33%** | **−28.94** | **+0.1407** |
+
+Late collapsed roots rose from **17/84 (20.24%)** under control to **28/84 (33.33%)** under `−0.20`: 13 new collapses, only 2 resolved, for a net increase of 11. Both late-side strata independently exceeded the reject threshold.
+
+### Interpretation and decision
+
+The selected-A mechanism finding remains valid: pessimistic FPU suppresses broad one-touch opponent-reply scanning, which c_puct could not reach. But a fixed absolute `−0.20` applies that suppression too aggressively in ordinary late-game positions, producing materially more near-single-line roots. Matching the 6400-sim A mean was therefore not evidence that the 400-sim search had become generally more reliable.
+
+**Decision: REJECT absolute `MCTSConfig.fpu_value = −0.20` for general 400-sim search and self-play.** Do not run B/C/D or a head-to-head strength match with this candidate. Do not alter the preregistered threshold after observing the near-miss on the overall 5% line; the late-stratum reject is clear and independently repeated across red and black.
+
+**Next:** perform a read-only case-level postmortem on the 15 new collapses, then design a new candidate on discovery data only. The likely direction is an adaptive or parent-relative FPU reduction rather than a fixed absolute value. The v16a manifest is consumed and must not be used to select that replacement.
+
 
 ## Severe-overlap findings (why the next step changes shape)
 
@@ -817,6 +1073,9 @@ Lesson: v14b is the best adapter result so far. Projection helped A relative to 
 - **v13b margin 0.05:** arg-only projection branch; checkpoint `checkpoints/alphazero-v13b-gradient-projection-margin005-from-calib020-0001/model_iter_0001.safetensors`; gates `logs/eval/v13b_gradient_projection_margin005_from_calib020_0001_gates_400s`.
 - **v13c projection-strength scalar:** CLI `--post-opening-calibration-projection-strength`; effective projection weight folds in `projection_strength * calibration_loss_weight`; mandatory telemetry `calib_projection_strength` in sidecar + flattened row; design `docs/superpowers/specs/2026-07-07-targeted-value-calibration-v13c-projection-strength-design.md`; checkpoint `checkpoints/alphazero-v13c-projection-strength-from-calib020-0001/model_iter_0001.safetensors`; gates `logs/eval/v13c_projection_strength2_from_calib020_0001_gates_400s`.
 - **v13d red-root cleanup:** arg-only v13c cleanup with `red_predrop_guardrail_retention=2`; checkpoint `checkpoints/alphazero-v13d-projection-strength2-red-root-guardrail2-from-calib020-0001/model_iter_0001.safetensors`; gates `logs/eval/v13d_projection_strength2_red_root_guardrail2_from_calib020_0001_gates_400s`; rejected and closes the v13 projection/cleanup line.
+- **v14 adapter line:** value-adapter surface (`value_head.*` + `value_adapter.*`) with scalar gate/bottleneck 32; v14b best near-pass checkpoint `checkpoints/alphazero-v14b-value-adapter-projection-from-calib020-0001/model_iter_0001.safetensors`; v14c/v14d rejected and close cleanup.
+- **v15 raw/MCTS + continuation diagnostics:** raw A/D drift CSV `logs/eval/v15prep_raw_AD_drift_base_v14b_v14d.csv`; Phase 0 concentration script `scripts/GPU/alphazero/diagnose_v15_a_continuation_concentration.py` output `logs/eval/v15prep_a_continuation_concentration.csv`; Phase 0.5 subtree script `scripts/GPU/alphazero/diagnose_v15_a_selected_branch_subtrees.py` outputs `logs/eval/v15prep_a_selected_branch_subtrees.csv` and `logs/eval/v15prep_a_selected_branch_subtrees_by_depth_summary.csv`; closure summary files `logs/eval/v15prep_a_phase05_*.csv` / `.txt`; decision: no v15 Phase 1.
+- **v16/v16a search-reliability diagnostics:** FPU hook and sweep `scripts/GPU/alphazero/diagnose_fpu_sweep.py`; neutral-manifest builder `scripts/GPU/alphazero/build_v16a_neutral_position_manifest.py`; manifest/meta `logs/eval/v16a_fpu_unbiased/neutral_position_manifest.csv` and `.meta.json`; held-out outputs `neutral_fpu_sweep_cases.csv`, `neutral_fpu_sweep_summary.csv`, `neutral_fpu_sweep_by_stratum.csv`, and `operator_sweep.log` in the same directory; design `docs/superpowers/specs/2026-07-10-v16a-unbiased-fpu-validation-design.md`; result: fixed absolute `−0.20` rejected by the late-stratum collapse gate.
 - **Plans:** `docs/superpowers/plans/2026-06-24-targeted-value-calibration-v2.md`, `docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md`, `docs/superpowers/plans/2026-06-29-targeted-value-calibration-v4-teacher-retention.md`.
 
 ---
