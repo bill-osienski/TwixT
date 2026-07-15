@@ -1702,6 +1702,27 @@ def test_check_protocol_conformance_sidecar_moves_element_missing_player():
     assert "player" in result.reason
 
 
+@pytest.mark.parametrize("bad_ply", ["abc", None, [1, 2], {}])
+def test_check_protocol_conformance_sidecar_moves_element_ply_not_int_convertible(bad_ply):
+    """Value-validation (the last member of the finding class): `"ply"` is
+    present but not int-convertible. `_check_move_player_parity` does
+    `record["ply"] % 2` -- arithmetic that raises `TypeError` on a non-int
+    `ply` INSIDE `check_protocol_conformance` (which `qualify_core` does not
+    wrap). The moves-shape check now int-validates `ply` (the SAME guard
+    `n_legal` already gets), so it is a clean MISMATCH naming the field."""
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[0]["moves"]]
+    moves[0] = {**moves[0], "ply": bad_ply}
+    sidecars[0] = {**sidecars[0], "moves": moves}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=0" in result.reason
+    assert "ply" in result.reason
+
+
 def test_check_protocol_conformance_sidecar_moves_missing_key_names_the_only_broken_game():
     """Only game_idx=5's sidecar is corrupt -- the reason names THAT game,
     not any other (proves the check iterates and reports precisely, not just
@@ -2309,6 +2330,35 @@ def test_qualify_core_corrupt_sidecar_move_missing_player_is_mismatch_not_a_raw_
     assert "sidecar_moves" in result.reason
     assert "game_idx=4" in result.reason
     assert "player" in result.reason
+
+
+@pytest.mark.parametrize("bad_ply", ["abc", None])
+def test_qualify_core_corrupt_sidecar_move_non_int_ply_is_mismatch_not_a_raw_exception(bad_ply):
+    """Value-validation, the LAST member of the finding class: a move whose
+    `"ply"` is present but non-int (`"abc"`, `None`) used to raw-crash
+    `qualify_core` at `_check_move_player_parity`'s `record["ply"] % 2`
+    (`TypeError`) -- INSIDE `check_protocol_conformance`, which qualify_core's
+    preflight-scoped try/except does NOT cover, so it escaped as a would-be
+    CLI exit 1. The int-validated moves-shape check catches it at
+    conformance; the preflight-spy proves preflight is never reached."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6, n_moves=4)
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[3]["moves"]]
+    moves[0] = {**moves[0], "ply": bad_ply}
+    sidecars[3] = {**sidecars[3], "moves": moves}
+    broken = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+
+    calls: list = []
+    result = qualify_core(protocol, broken, preflight=_fake_preflight(True, calls=calls))
+
+    assert result.status == QualifyStatus.MISMATCH
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=3" in result.reason
+    assert "ply" in result.reason
+    assert calls == []  # caught at conformance -- preflight never reached
+    assert result.report["conformance"] == {"ok": False, "reason": result.reason}
+    assert result.report["summary_binding"] is None
+    assert result.report["preflight"] is None
 
 
 def test_qualify_core_preflight_raising_data_shape_exception_is_mismatch_not_a_raw_exception():

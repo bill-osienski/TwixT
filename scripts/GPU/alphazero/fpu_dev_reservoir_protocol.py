@@ -1237,12 +1237,15 @@ def _check_replay_linkage(
 # The fields EVERY move record in a sidecar's `"moves"` list must carry --
 # the UNION of what the two conformance/preflight consumers dereference per
 # move, so that once `_check_sidecar_moves_wellformed` passes, no LATER
-# per-move deref in `check_protocol_conformance` (nor in `default_preflight`)
+# per-move access in `check_protocol_conformance` (nor in `default_preflight`)
 # can raw-crash: `build_fpu_dev_corpus.per_ply_n_legal` reads `"n_legal"`
 # (`int(m["n_legal"])`) and `_check_move_player_parity` reads `"ply"` +
-# `"player"` (`record["ply"]`, `record["player"]`). Kept as a module-level
-# tuple so the check and this provenance comment stay a single source of
-# truth (a NEW per-move deref elsewhere must add its field here).
+# `"player"` (`record["ply"] % 2`, `record["player"] != ...`). Kept as a
+# module-level tuple so the check and this provenance comment stay a single
+# source of truth (a NEW per-move access elsewhere must add its field here).
+# Presence alone is guarded for all three here; the two whose VALUE an
+# unwrapped consumer OPERATES on -- `n_legal` (`int(...)`) and `ply`
+# (`... % 2`) -- are additionally int-validated inside the check itself.
 _REQUIRED_MOVE_FIELDS: Tuple[str, ...] = ("n_legal", "ply", "player")
 
 
@@ -1255,11 +1258,14 @@ def _check_sidecar_moves_wellformed(
 
     Requires the minimum shape the LATER per-move derefs in conformance +
     preflight consume: `"moves"` PRESENT, a `list`, and every element a
-    mapping carrying every `_REQUIRED_MOVE_FIELDS` key -- `"n_legal"`
-    (int-convertible, since `build_fpu_dev_corpus.per_ply_n_legal`'s FAST
-    path does `int(m["n_legal"])`) PLUS `"ply"` and `"player"` (which
-    `_check_move_player_parity`, a LATER conformance check, dereferences as
-    `record["ply"]` / `record["player"]`). This is the ONLY path a
+    mapping carrying every `_REQUIRED_MOVE_FIELDS` key -- with the two whose
+    VALUE a downstream UNWRAPPED consumer operates on ALSO int-validated:
+    `"n_legal"` (int-convertible, since `build_fpu_dev_corpus.
+    per_ply_n_legal`'s FAST path does `int(m["n_legal"])`) and `"ply"`
+    (int-convertible, since `_check_move_player_parity` does `record["ply"]
+    % 2` -- arithmetic that a non-int `ply` would raise `TypeError` on).
+    `"player"` is presence-only: `_check_move_player_parity` only compares
+    it with `!=`, which never raises on any value. This is the ONLY path a
     protocol-conformant reservoir ever exercises -- `eval_replay.ply_record`
     unconditionally writes all three (`{"ply", "player", ..., "n_legal"}`)
     onto every move it records, so a genuine reservoir never falls into
@@ -1320,6 +1326,19 @@ def _check_sidecar_moves_wellformed(
             except (TypeError, ValueError):
                 return (f"sidecar_moves: game_idx={game_idx} moves[{i}] "
                         f"'n_legal'={m['n_legal']!r} is not int-convertible")
+            # `_check_move_player_parity` (a LATER, unwrapped conformance
+            # check) does `record["ply"] % 2` -- arithmetic, not a deref --
+            # so a present-but-non-int `ply` (`"abc"`/`None`/`[1,2]`/`{}`)
+            # would raise a raw `TypeError` INSIDE check_protocol_conformance
+            # (which qualify_core does NOT wrap). Value-validate it here, the
+            # SAME int-convertibility guard `n_legal` already gets. `player`
+            # needs no such guard: `_check_move_player_parity` only compares
+            # it with `!=`, which never raises.
+            try:
+                int(m["ply"])
+            except (TypeError, ValueError):
+                return (f"sidecar_moves: game_idx={game_idx} moves[{i}] "
+                        f"'ply'={m['ply']!r} is not int-convertible")
     return None
 
 
