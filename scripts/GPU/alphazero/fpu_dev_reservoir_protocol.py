@@ -413,21 +413,28 @@ passing), so `default_preflight` was the FIRST stage to dereference
 per_ply_n_legal`), raising raw instead of the spec-mandated MISMATCH (design
 Sec 4.2: "a corrupt/incomplete output that breaks preflight's inputs is a
 MISMATCH, not a gate failure"). Two independent layers now close this: (1) a
-new B4 check, `_check_sidecar_moves_wellformed`, requiring exactly the
-minimum shape `per_ply_n_legal`'s FAST path reads (`"moves"` present, a
-`list`, every element a mapping carrying an int-convertible `"n_legal"` --
-the field `eval_replay.ply_record` unconditionally writes, so a genuine
-reservoir never takes that function's sparse-reconstruction fallback, which
-this check deliberately does not validate the shape of); and (2)
-`qualify_core` itself now wraps its `preflight(measurements)` call in a
-narrow `try/except (KeyError, TypeError, ValueError, IndexError)`, mapping
-any such escaping data-shape exception to `QualifyStatus.MISMATCH` --
-belt-and-suspenders for any corrupt shape the conformance check does not
-enumerate. The except clause is deliberately narrow, not a bare `except`: a
-genuine LOGIC bug inside `v2_geometry_feasibility`/`enumerate_v2_proposals`
-(e.g. tripping one of their own internal `assert`s) still raises
-`AssertionError` uncaught -- only garden-variety data-shape complaints
-become MISMATCH.
+new B4 check, `_check_sidecar_moves_wellformed`, requiring the minimum shape
+the LATER per-move derefs consume (`"moves"` present, a `list`, every element
+a mapping carrying every `_REQUIRED_MOVE_FIELDS` key -- int-convertible
+`"n_legal"` for `per_ply_n_legal`, PLUS `"ply"`/`"player"` for the later
+`_check_move_player_parity` -- all three unconditionally written by
+`eval_replay.ply_record`, so a genuine reservoir never takes
+`per_ply_n_legal`'s sparse-reconstruction fallback, which this check
+deliberately does not validate the shape of); and (2) `qualify_core` itself
+now wraps its `preflight(measurements)` call in a narrow `try/except
+(KeyError, TypeError, ValueError, IndexError)`, mapping any such escaping
+data-shape exception to `QualifyStatus.MISMATCH` -- belt-and-suspenders for
+any corrupt shape the conformance check does not enumerate. The except clause
+is deliberately narrow, not a bare `except`: a genuine LOGIC bug inside
+`v2_geometry_feasibility`/`enumerate_v2_proposals` (e.g. tripping one of their
+own internal `assert`s) still raises `AssertionError` uncaught -- only
+garden-variety data-shape complaints become MISMATCH. NOTE the layers are
+NOT redundant here: the `_check_move_player_parity` raw crash is INSIDE
+`check_protocol_conformance`, which `qualify_core`'s preflight-scoped
+try/except does NOT cover -- so for that specific field the CONFORMANCE check
+(layer 1) is the ONLY thing standing between a tampered sidecar and a raw
+exit-1 crash. A follow-up review extended layer 1 from `"n_legal"`-only to
+the full `_REQUIRED_MOVE_FIELDS` set to close exactly that gap.
 """
 from __future__ import annotations
 
@@ -1227,6 +1234,18 @@ def _check_replay_linkage(
     return None
 
 
+# The fields EVERY move record in a sidecar's `"moves"` list must carry --
+# the UNION of what the two conformance/preflight consumers dereference per
+# move, so that once `_check_sidecar_moves_wellformed` passes, no LATER
+# per-move deref in `check_protocol_conformance` (nor in `default_preflight`)
+# can raw-crash: `build_fpu_dev_corpus.per_ply_n_legal` reads `"n_legal"`
+# (`int(m["n_legal"])`) and `_check_move_player_parity` reads `"ply"` +
+# `"player"` (`record["ply"]`, `record["player"]`). Kept as a module-level
+# tuple so the check and this provenance comment stay a single source of
+# truth (a NEW per-move deref elsewhere must add its field here).
+_REQUIRED_MOVE_FIELDS: Tuple[str, ...] = ("n_legal", "ply", "player")
+
+
 def _check_sidecar_moves_wellformed(
         protocol: Mapping[str, Any],
         measurements: ReservoirMeasurements) -> Optional[str]:
@@ -1234,33 +1253,40 @@ def _check_sidecar_moves_wellformed(
     B4, not part of the original Sec 4.1 list (see the module docstring's
     "REVIEW FIX" paragraph for the full story).
 
-    Requires exactly the minimum shape `build_fpu_dev_corpus.
-    per_ply_n_legal`'s FAST path dereferences: `"moves"` PRESENT, a `list`,
-    and every element a mapping carrying an int-convertible `"n_legal"`
-    (`per_ply_n_legal`: `moves = replay["moves"]`; `"n_legal" in m` for
-    every `m`; `int(m["n_legal"])`). This is the ONLY path a
+    Requires the minimum shape the LATER per-move derefs in conformance +
+    preflight consume: `"moves"` PRESENT, a `list`, and every element a
+    mapping carrying every `_REQUIRED_MOVE_FIELDS` key -- `"n_legal"`
+    (int-convertible, since `build_fpu_dev_corpus.per_ply_n_legal`'s FAST
+    path does `int(m["n_legal"])`) PLUS `"ply"` and `"player"` (which
+    `_check_move_player_parity`, a LATER conformance check, dereferences as
+    `record["ply"]` / `record["player"]`). This is the ONLY path a
     protocol-conformant reservoir ever exercises -- `eval_replay.ply_record`
-    unconditionally writes `"n_legal": len(counts)` onto every move it
-    records, so a genuine reservoir never falls into that function's
-    sparse-reconstruction FALLBACK (which needs a much deeper shape --
-    `"row"`/`"col"` + `goal_line_trigger_probe_cases.position_state`'s
-    whole-game replay). This check deliberately does NOT validate that
-    deeper fallback shape -- do not over-validate a path a conformant
-    reservoir never takes.
+    unconditionally writes all three (`{"ply", "player", ..., "n_legal"}`)
+    onto every move it records, so a genuine reservoir never falls into
+    `per_ply_n_legal`'s sparse-reconstruction FALLBACK (which needs a much
+    deeper shape -- `"row"`/`"col"` + `goal_line_trigger_probe_cases.
+    position_state`'s whole-game replay). This check deliberately does NOT
+    validate that deeper fallback shape -- do not over-validate a path a
+    conformant reservoir never takes.
 
     Without this check, a corrupt/incomplete sidecar (a `"moves"` key
-    entirely absent, or a malformed entry) sails past every OTHER B4 check
-    untouched -- `_check_move_player_parity` (below) softens an absent
-    `"moves"` key to `sidecar.get("moves") or []`, vacuously passing -- and
-    past B5 untouched too, so `default_preflight` (B6) becomes the FIRST
-    stage to dereference `sidecar["moves"]` (via `enumerate_v2_proposals` ->
-    `per_ply_n_legal`), raising a raw `KeyError`/`TypeError` instead of the
-    spec-mandated MISMATCH (design Sec 4.2: "a corrupt/incomplete output
-    that breaks preflight's inputs is a MISMATCH, not a gate failure").
-    Placed in `_CONFORMANCE_CHECKS` right after `_check_replay_linkage` --
-    once a row's sidecar is known to exist and match the row, THIS check
-    validates its `"moves"` list's shape, ahead of every LATER check that
-    also reads move records (`_check_move_player_parity`).
+    entirely absent, or a move missing `"n_legal"`/`"ply"`/`"player"`) sails
+    past the other B4 checks -- `_check_move_player_parity` (below) softens
+    an absent `"moves"` key to `sidecar.get("moves") or []`, vacuously
+    passing, but then RAW-CRASHES on `record["ply"]`/`record["player"]` for
+    a present-but-fieldless move record -- and past B5 too, so
+    `default_preflight` (B6) becomes the first stage to dereference
+    `sidecar["moves"]`' `"n_legal"` (via `enumerate_v2_proposals` ->
+    `per_ply_n_legal`). EITHER raw crash violates the spec-mandated MISMATCH
+    (design Sec 4.2: "a corrupt/incomplete output that breaks preflight's
+    inputs is a MISMATCH, not a gate failure") -- and the `_check_move_
+    player_parity` crash is INSIDE `check_protocol_conformance` itself, which
+    `qualify_core` does NOT wrap in its preflight-only try/except, so only
+    catching it HERE keeps the exit-3 contract. Placed in
+    `_CONFORMANCE_CHECKS` right after `_check_replay_linkage` -- once a row's
+    sidecar is known to exist and match the row, THIS check validates its
+    `"moves"` list's shape, ahead of every LATER check that also reads move
+    records (`_check_move_player_parity`).
 
     Returns the FIRST malformed game's reason (naming its `game_idx` and
     the exact problem), mirroring every other `_check_*` helper's
@@ -1285,9 +1311,10 @@ def _check_sidecar_moves_wellformed(
             if not isinstance(m, Mapping):
                 return (f"sidecar_moves: game_idx={game_idx} moves[{i}] is "
                         f"not a mapping (got {type(m).__name__})")
-            if "n_legal" not in m:
-                return (f"sidecar_moves: game_idx={game_idx} moves[{i}] is "
-                        f"missing required field 'n_legal'")
+            for field in _REQUIRED_MOVE_FIELDS:
+                if field not in m:
+                    return (f"sidecar_moves: game_idx={game_idx} moves[{i}] is "
+                            f"missing required field {field!r}")
             try:
                 int(m["n_legal"])
             except (TypeError, ValueError):

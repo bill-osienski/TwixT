@@ -1664,6 +1664,44 @@ def test_check_protocol_conformance_sidecar_moves_element_n_legal_not_int_conver
     assert "game_idx=0" in result.reason
 
 
+def test_check_protocol_conformance_sidecar_moves_element_missing_ply():
+    """Residual-fix: `"ply"` is dereferenced by the LATER
+    `_check_move_player_parity` (`record["ply"]`), which sits AFTER this
+    check in `_CONFORMANCE_CHECKS` and is NOT wrapped by `qualify_core`'s
+    preflight-scoped try/except -- so a move record missing `"ply"` (but
+    carrying `"n_legal"`, passing the old check) used to raw-crash INSIDE
+    `check_protocol_conformance`. The extended moves-shape check now catches
+    it as a clean MISMATCH naming the game_idx and the field."""
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[3]["moves"]]
+    del moves[0]["ply"]
+    sidecars[3] = {**sidecars[3], "moves": moves}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=3" in result.reason
+    assert "ply" in result.reason
+
+
+def test_check_protocol_conformance_sidecar_moves_element_missing_player():
+    """Residual-fix companion: `"player"` is the OTHER field
+    `_check_move_player_parity` dereferences (`record["player"]`) -- likewise
+    now required by the moves-shape check."""
+    protocol, measurements = _conformant_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[2]["moves"]]
+    del moves[1]["player"]
+    sidecars[2] = {**sidecars[2], "moves": moves}
+    bad = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=2" in result.reason
+    assert "player" in result.reason
+
+
 def test_check_protocol_conformance_sidecar_moves_missing_key_names_the_only_broken_game():
     """Only game_idx=5's sidecar is corrupt -- the reason names THAT game,
     not any other (proves the check iterates and reports precisely, not just
@@ -2225,6 +2263,52 @@ def test_qualify_core_corrupt_sidecar_move_missing_required_field_is_mismatch_no
     assert result.status == QualifyStatus.MISMATCH
     assert "sidecar_moves" in result.reason
     assert "game_idx=1" in result.reason
+
+
+def test_qualify_core_corrupt_sidecar_move_missing_ply_is_mismatch_not_a_raw_exception():
+    """Residual-fix: a move missing `"ply"` (but carrying `"n_legal"`, so it
+    passed the ORIGINAL moves-shape check) used to raw-crash `qualify_core`
+    at `_check_move_player_parity`'s `record["ply"]` -- INSIDE `check_
+    protocol_conformance`, which `qualify_core`'s preflight-scoped try/except
+    does NOT cover, so it escaped as a would-be CLI exit 1, not the
+    spec-mandated MISMATCH (exit 3). The extended moves-shape check catches
+    it at conformance; the preflight-spy proves preflight is never reached."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6, n_moves=4)
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[3]["moves"]]
+    del moves[0]["ply"]
+    sidecars[3] = {**sidecars[3], "moves": moves}
+    broken = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+
+    calls: list = []
+    result = qualify_core(protocol, broken, preflight=_fake_preflight(True, calls=calls))
+
+    assert result.status == QualifyStatus.MISMATCH
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=3" in result.reason
+    assert "ply" in result.reason
+    assert calls == []  # caught at conformance -- preflight never reached
+    assert result.report["conformance"] == {"ok": False, "reason": result.reason}
+    assert result.report["summary_binding"] is None
+    assert result.report["preflight"] is None
+
+
+def test_qualify_core_corrupt_sidecar_move_missing_player_is_mismatch_not_a_raw_exception():
+    """Residual-fix companion: a move missing `"player"` (the OTHER field
+    `_check_move_player_parity` dereferences) -- likewise a clean MISMATCH,
+    never a raw crash."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6, n_moves=4)
+    sidecars = dict(measurements.sidecars_by_idx)
+    moves = [dict(m) for m in sidecars[4]["moves"]]
+    del moves[1]["player"]
+    sidecars[4] = {**sidecars[4], "moves": moves}
+    broken = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+
+    result = qualify_core(protocol, broken)  # real default_preflight, not injected
+    assert result.status == QualifyStatus.MISMATCH
+    assert "sidecar_moves" in result.reason
+    assert "game_idx=4" in result.reason
+    assert "player" in result.reason
 
 
 def test_qualify_core_preflight_raising_data_shape_exception_is_mismatch_not_a_raw_exception():
