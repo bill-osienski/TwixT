@@ -1921,66 +1921,6 @@ def qualify_core(
 # in the whole qualification pipeline; this function never touches it.
 # ---------------------------------------------------------------------------
 
-# Spec Sec 2.2 "Carried from the protocol (the derivable decisions)" -- every
-# name here is EITHER copied verbatim from the SAME-named protocol field
-# (`source_index_path` .. `select_out`) OR copied from a DIFFERENTLY-named
-# protocol field (`eval_batch_size` <- `protocol["mcts_eval_batch_size"]`,
-# `stall_flush_sims` <- `protocol["mcts_stall_flush_sims"]`, amendment 1) --
-# see `derive_config`'s own body for exactly which. Pinned as a module-level
-# tuple (mirrors `PROTOCOL_SCHEMA_KEYS`'s own idiom) so a test can assert the
-# config's exact top-level membership without re-deriving it from prose.
-_CONFIG_CARRIED_FROM_PROTOCOL_KEYS: Tuple[str, ...] = (
-    "source_index_path",
-    "seed_range",
-    "selection_seed",
-    "phase_allocation",
-    "late_floors",
-    "enumerator_params",
-    "new_collapse_stratum",
-    "checkpoint",
-    "forbidden_manifests",
-    "screen_out",
-    "select_out",
-    "eval_batch_size",
-    "stall_flush_sims",
-)
-
-# Spec Sec 2.2 "New top-level (paths -- amendments 1, 2)".
-_CONFIG_NEW_PATH_KEYS: Tuple[str, ...] = (
-    "config_schema_version",
-    "protocol_path",
-    "match_summary_path",
-    "replay_dir",
-    "report_out",
-)
-
-# Spec Sec 2.2 "expected_fingerprints (extended)" -- the MEASURED identities
-# nested one level down, inside the config's own `expected_fingerprints` key
-# (itself the 19th top-level key -- neither carried-verbatim nor a bare new
-# path, it is the config's own sub-schema). The three checkpoint identities
-# REPLACE the legacy single `checkpoint_identity`
-# (`fpu_dev_corpus_v2.v2_screen_provenance`'s own field, predating this
-# design) -- B10 finalizes the screen/select side of that replacement; this
-# task only emits the three into the config.
-EXPECTED_FINGERPRINT_KEYS: Tuple[str, ...] = (
-    "protocol_sha1",
-    "source_index_sha1",
-    "replay_data_sha1",
-    "match_summary_sha1",
-    "source_file_sha1s",
-    "forbidden_manifest_sha1s",
-    "reservoir_checkpoint_a_identity",
-    "reservoir_checkpoint_b_identity",
-    "anchor_checkpoint_identity",
-)
-
-assert len(_CONFIG_CARRIED_FROM_PROTOCOL_KEYS) == len(
-    set(_CONFIG_CARRIED_FROM_PROTOCOL_KEYS)), _CONFIG_CARRIED_FROM_PROTOCOL_KEYS
-assert len(_CONFIG_NEW_PATH_KEYS) == len(set(_CONFIG_NEW_PATH_KEYS)), _CONFIG_NEW_PATH_KEYS
-assert len(EXPECTED_FINGERPRINT_KEYS) == len(set(EXPECTED_FINGERPRINT_KEYS)), (
-    EXPECTED_FINGERPRINT_KEYS)
-
-
 def derive_config(
         protocol: Mapping[str, Any],
         measurements: ReservoirMeasurements,
@@ -2025,15 +1965,32 @@ def derive_config(
     (`test_derive_config_protocol_sha1_equals_file_sha1_of_a_canonically_
     emitted_protocol_file`), not merely asserted in prose.
 
-    Returns a dict whose top-level keys are EXACTLY
-    `_CONFIG_CARRIED_FROM_PROTOCOL_KEYS | _CONFIG_NEW_PATH_KEYS |
-    {"expected_fingerprints"}` -- this IS the complete Sec 2.2 schema (no
-    more, no less): the same set Task B8 will make `fpu_dev_corpus_v2.
-    _V2_CONFIG_REQUIRED_KEYS`/`V2Config` hard-match for the current
-    `config_schema_version`. Every value is already JSON-shaped (lists, not
-    tuples; plain dicts) so the returned dict is already exactly what
-    `canonical_json_bytes` will serialize -- no container-type surprises at
-    the caller's `canonical_json_bytes(derive_config(...))` call site.
+    Returns a dict with EXACTLY the complete spec Sec 2.2 field set (no more,
+    no less): the thirteen decisions carried from the protocol (`source_
+    index_path`, `seed_range`, `selection_seed`, `phase_allocation`,
+    `late_floors`, `enumerator_params`, `new_collapse_stratum`, `checkpoint`
+    = the anchor path, `forbidden_manifests`, `screen_out`, `select_out`,
+    and the two RENAMED throughput knobs `eval_batch_size`/`stall_flush_sims`
+    <- `protocol["mcts_eval_batch_size"]`/`["mcts_stall_flush_sims"]`), the
+    five new top-level paths (`config_schema_version`, `protocol_path`,
+    `match_summary_path`, `replay_dir`, `report_out`), and the nested
+    `expected_fingerprints` block of nine measured identities -- nineteen
+    top-level keys in all. The field set lives HERE, as this literal dict
+    (heterogeneous by nature: some values carried from the protocol, some
+    computed, some read from `measurements` -- so no key-only tuple could
+    build them); it is GUARDED by the test file's own independent key-set
+    literals (`_DERIVED_CONFIG_TOP_LEVEL_KEYS` / `_EXPECTED_FINGERPRINTS_
+    KEYS` in tests/test_fpu_dev_reservoir_protocol.py, spelled out from the
+    spec rather than imported from here -- the correct anti-tautology guard),
+    plus a full golden-dict equality test. Task B8 defines its OWN required-
+    key set on the `fpu_dev_corpus_v2` side (`_V2_CONFIG_REQUIRED_KEYS` /
+    `V2Config`, which cannot top-level-import from this module without
+    recreating the Sec 6 import cycle), hard-matched against this same
+    nineteen-key set for the current `config_schema_version`. Every value is
+    already JSON-shaped (lists, not tuples; plain dicts) so the returned dict
+    is already exactly what `canonical_json_bytes` will serialize -- no
+    container-type surprises at the caller's `canonical_json_bytes(derive_
+    config(...))` call site.
     """
     anchor_role = protocol["anchor"]
     base_seed = protocol["base_seed"]
@@ -2184,6 +2141,17 @@ def write_report(path: Union[str, Path], qualify_result: QualifyResult) -> None:
     """
     target = Path(path)
     existing_status = _read_report_status(target)
+    # DELIBERATELY stricter than the base Sec 3 prose's "idempotent-on-byte-
+    # identical": a terminal report is refused UNCONDITIONALLY, even when the
+    # incoming bytes would be identical. Correction 3 (the PASS-terminal
+    # amendment) supersedes that base prose -- a passed protocol is
+    # "reviewed with --check, NEVER re-qualified", so re-reaching this write
+    # for a terminal report is itself the error, regardless of byte-equality.
+    # In practice `run_qualify`'s `is_retired`/`is_passed` guards short-
+    # circuit before ever re-entering here for a terminal report, so this
+    # raise is a defensive backstop, not a normal path. Do NOT "fix" this
+    # toward literal byte-identical idempotency -- that would silently undo
+    # correction 3.
     if existing_status in _TERMINAL_REPORT_STATUSES:
         raise ValueError(
             f"write_report: refusing to overwrite {target} -- an existing "

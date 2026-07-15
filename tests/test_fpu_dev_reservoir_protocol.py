@@ -3153,6 +3153,44 @@ def test_run_qualify_check_true_never_writes_on_a_fresh_protocol(tmp_path):
     assert not Path(protocol["report_out"]).exists()
 
 
+def test_run_qualify_check_true_writes_nothing_on_a_fresh_protocol_that_would_mismatch(tmp_path):
+    """"--check never writes" holds across ALL statuses, not just OK (the
+    `if check: return` guard sits BEFORE status branching): a fresh protocol
+    whose reservoir would MISMATCH (a tampered sidecar seed) returns
+    EXIT_MISMATCH under `--check` while emitting NEITHER a config NOR a
+    report -- so a failing `--check` review never accidentally burns a
+    protocol into a replaceable-report state either."""
+    protocol, protocol_path, info = _write_qualifiable_reservoir(tmp_path)
+    broken_replay = Path(info["rows"][1]["replay_path"])
+    sidecar = json.loads(broken_replay.read_text())
+    sidecar["seed"] = sidecar["seed"] + 1
+    broken_replay.write_text(json.dumps(sidecar))
+
+    exit_code = run_qualify(
+        str(protocol_path), check=True, preflight=_fake_preflight(True))
+    assert exit_code == EXIT_MISMATCH
+    assert not Path(protocol["config_out"]).exists()
+    assert not Path(protocol["report_out"]).exists()
+
+
+def test_run_qualify_check_true_writes_nothing_on_a_fresh_protocol_that_would_gate_fail(tmp_path):
+    """The GATE_FAIL half of the same "--check never writes across all
+    statuses" contract: a fresh, protocol-faithful reservoir whose geometry
+    is infeasible returns EXIT_GATE_FAIL under `--check` but writes NO
+    retirement report -- so reviewing with `--check` can NEVER retire a
+    protocol (only a real, non-check `run_qualify` does), and the protocol
+    is left genuinely un-qualified afterward."""
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    exit_code = run_qualify(
+        str(protocol_path), check=True,
+        preflight=_fake_preflight(False, "infeasible"))
+    assert exit_code == EXIT_GATE_FAIL
+    assert not Path(protocol["config_out"]).exists()
+    assert not Path(protocol["report_out"]).exists()
+    # left genuinely un-qualified -- a later real run may still retire it.
+    assert is_retired(protocol["report_out"]) is False
+
+
 def test_run_qualify_refuses_on_an_already_retired_protocol(tmp_path):
     protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
     first_exit = run_qualify(
