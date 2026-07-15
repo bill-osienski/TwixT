@@ -6,13 +6,14 @@ Frozen design ref: docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-q
   Sec 2.1 (the `reservoir_protocol.json` schema -- the single source of ALL
   declared pre-generation decisions), Sec 3 (CLI stages / exit codes /
   atomicity+immutability contract), Sec 4 (qualification: the measurement
-  boundary), Sec 4.1 (protocol conformance, now IN FULL: every check
-  including summary-binding-by-reconstruction, amendments 3 + 5 -- only the
-  geometric preflight, Sec 4.2, remains a later task), Sec 6 (module
-  boundary / circular-import resolution), Sec 8 (canonical JSON,
-  determinism, reviewability).
+  boundary), Sec 4.1 (protocol conformance, IN FULL: every check including
+  summary-binding-by-reconstruction, amendments 3 + 5), Sec 4.2 (the
+  geometric preflight, now WIRED into the pure qualification decision), Sec
+  6 (module boundary / circular-import resolution, including the "preflight
+  injection for tests" clarification), Sec 8 (canonical JSON, determinism,
+  reviewability).
 Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-hardening-plan.md
-  Tasks B1-B5 -- the first five tasks of the new Group-2 subsystem
+  Tasks B1-B6 -- the first six tasks of the new Group-2 subsystem
   (B1-B11), which will qualify a generated reservoir zero-GPU (B3-B7) and
   emit an immutable `fpu_dev_corpus_v2_config.json` (B7-B10). B1 laid the
   foundation: the protocol's field set (`PROTOCOL_SCHEMA_KEYS`), the
@@ -28,16 +29,27 @@ Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-harden
   Sec 4.1 protocol-vs-reservoir check EXCEPT summary-binding (B5) and the
   geometric preflight (B6), returning the FIRST failing check's reason
   (design's "any failure is MISMATCH exit 3" -- one outcome, not an
-  accumulated list). B5 adds `check_summary_binding` -- the SECOND stage,
+  accumulated list). B5 added `check_summary_binding` -- the SECOND stage,
   completing Sec 4.1: reconstructs `eval_runner.EvalGameResult` rows from
   `measurements.jsonl_rows` and calls the REAL, pure `eval_summary.
   summarize_match` to prove the supplied `measurements.summary` really IS
   that reconstruction's output (catching a summary swapped in from a
   DIFFERENT run), plus the separate `git_commit`-vs-protocol check; also
-  adds `reason_histogram` for the qualification report. The geometric
-  preflight (B6), config derivation (B7), the `V2Config` extension (B8),
-  the `run_screen` precheck (B9), the final 11-identity chain (B10) and the
-  CLI `main` (B11) are ALL later tasks -- none of that exists here.
+  adds `reason_histogram` for the qualification report. B6 adds
+  `qualify_core` -- the pure qualification DECISION (Sec 4.2/Sec 6):
+  composes B4 -> B5 -> an INJECTED geometric `preflight`, short-circuiting
+  to `QualifyStatus.MISMATCH` on either of the first two (the preflight is
+  never reached), else running `preflight(measurements)` and mapping
+  feasible -> `OK` / infeasible -> `GATE_FAIL`. Its default `preflight`
+  (`default_preflight`) is a thin, PURE wrapper -- deliberately NOT
+  `fpu_dev_corpus_v2.v2_preflight_source` (that function is the I/O
+  wrapper, per its own docstring) -- that builds v2 proposals from the
+  ALREADY-LOADED `measurements.sidecars_by_idx` (no second disk read of
+  data `measure_reservoir`, B3, already loaded) and hands them to the pure
+  `fpu_dev_corpus_v2.v2_geometry_feasibility` core. Config derivation (B7),
+  the `V2Config` extension (B8), the `run_screen` precheck (B9), the final
+  11-identity chain (B10) and the CLI `main` (B11) are ALL later tasks --
+  none of that exists here.
 
 =============================================================================
 TOOLING ONLY. No evaluator / MCTS / GPU / MLX / checkpoint-WEIGHTS import,
@@ -81,28 +93,45 @@ torch` across `eval_runner.py`, `eval_summary.py`, `mcts.py`,
 (test_module_import_does_not_pull_eval_runner_or_eval_summary, the same
 subprocess idiom as the mlx/torch check): merely IMPORTING this module --
 never calling `check_summary_binding` -- leaves `eval_runner`/
-`eval_summary`/`mcts`/`evaluator` out of `sys.modules`.
+`eval_summary`/`mcts`/`evaluator` out of `sys.modules`. B6 likewise
+introduces NO new filesystem toucher and NO new lazy import: `qualify_core`
+and its default `preflight` (`default_preflight`) read only `protocol` and
+the already-loaded `measurements` -- specifically `measurements.
+sidecars_by_idx`, the replay sidecars B3's `measure_reservoir` already
+loaded, never a second read of a `replay_path` off disk (unlike
+`fpu_dev_corpus_v2.v2_preflight_source`, which is deliberately NOT used
+here for exactly that reason -- see `default_preflight`'s own docstring).
+It only WIDENS an existing MODULE-level import (see the next paragraph):
+two more names from the already-imported `fpu_dev_corpus_v2` -- both Task
+2/Task 4 functions from that module's own PURE SECTION (NO MCTS / evaluator
+/ GPU / MLX, per that module's own docstring), so this adds no
+import-purity risk despite widening the import surface from one name to
+three.
 
 Module-level imports are stdlib ONLY, PLUS one intra-package import: `from
-.fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES` (design Sec 6's "import only
-the shared ... constant" seam -- here narrowed to the v2 corpus's own
-result-determining source-file tuple, needed so THIS module's
+.fpu_dev_corpus_v2 import (_V2_CORPUS_SOURCES, enumerate_v2_proposals,
+v2_geometry_feasibility)` (design Sec 6's "import only the shared ...
+constant" seam -- here narrowed to exactly three names: the v2 corpus's own
+result-determining source-file tuple (needed so THIS module's
 `source_file_sha1s` measurement can include the v2 corpus sources without
-duplicating that list). This is deliberately NOT the Sec 6 circular-import
-risk: `fpu_dev_corpus_v2.py` is itself import-pure (verified by its own
+duplicating that list), plus the two PURE functions B6's `default_preflight`
+composes). This is deliberately NOT the Sec 6 circular-import risk:
+`fpu_dev_corpus_v2.py` is itself import-pure (verified by its own
 `test_v2_module_import_pulls_no_gpu_or_mlx`), and the cycle Sec 6 actually
 warns about runs the OTHER direction -- `fpu_dev_corpus_v2.run_screen`
 importing (part of) THIS module -- which stays a lazy, in-function import,
 a LATER task's concern (B9), not this one. Nothing else is imported from
 `fpu_dev_corpus_v2` here: no `V2Config`, no `run_screen`, no evaluator/MCTS
 plumbing (verified: tests/test_fpu_dev_reservoir_protocol.py::
-test_module_imports_only_v2_corpus_sources_from_fpu_dev_corpus_v2). B4 adds
-no new import beyond two more names from the already-imported `typing`
-module (`Callable`, `Optional`) -- the import surface is otherwise
-identical to B3's. B5 adds NO new MODULE-level import at all: its two new
-production dependencies (`eval_runner.EvalGameResult`, `eval_summary.
-summarize_match`) are function-local (see above) -- the module-level import
-surface is byte-identical to B4's.
+test_module_imports_only_pure_names_from_fpu_dev_corpus_v2). B4 adds no new
+import beyond two more names from the already-imported `typing` module
+(`Callable`, `Optional`) -- the import surface is otherwise identical to
+B3's. B5 adds NO new MODULE-level import at all: its two new production
+dependencies (`eval_runner.EvalGameResult`, `eval_summary.summarize_match`)
+are function-local (see above) -- the module-level import surface is
+byte-identical to B4's. B6 widens the `fpu_dev_corpus_v2` import from one
+name to three (above) -- its only module-level import change; `enum` (for
+`QualifyStatus`) is already imported (B1, for `WriteStatus`).
 =============================================================================
 
 What this section does
@@ -310,6 +339,67 @@ qualification REPORT (a LATER task's, B7's, `report_out`) rather than a
 pass/fail conformance compare -- `measurements.summary` has no such field
 to check it against (design Sec 4.1: "the summary has no such field to
 compare against").
+
+`QualifyStatus` / `QualifyResult` / `default_preflight` / `qualify_core`:
+Task B6 (design Sec 4.2, Sec 6) -- the pure qualification DECISION.
+`qualify_core(protocol, measurements, *, preflight=default_preflight) ->
+QualifyResult` composes `check_protocol_conformance` (B4) -> `check_summary_
+binding` (B5) -> the INJECTED `preflight`, in that order, stopping at the
+FIRST failure: a conformance OR summary-binding defect returns
+`QualifyStatus.MISMATCH` (the preflight is NEVER called -- design Sec 4.2:
+"any failure is MISMATCH exit 3"; "a corrupt/incomplete output that breaks
+preflight's INPUTS is a MISMATCH, not a gate failure") -- this ordering
+matters (a B5 review flagged getting it right): conformance runs FIRST so a
+structurally-short reservoir (e.g. an empty/truncated JSONL index) is
+caught by its game-count check before summary binding ever reconstructs
+anything, since `check_summary_binding` calls the real `eval_summary.
+summarize_match`, which raises a bare `ValueError` on an empty `results`
+list rather than returning a clean `ConformanceResult`. Only once BOTH pass
+does `preflight(measurements)` run: `feasible=True` -> `QualifyStatus.OK`;
+`feasible=False` -> `QualifyStatus.GATE_FAIL`, with the preflight result's
+`binding_constraint` as the reason (design Sec 4.2: "the ONLY GATE-FAIL
+condition is a protocol-faithful reservoir with infeasible geometry").
+
+`default_preflight` is the real-world default: a thin, PURE wrapper that
+builds v2 proposals from `measurements.sidecars_by_idx` (the replay
+sidecars B3's `measure_reservoir` already loaded -- never a second disk
+read) via the REAL `enumerate_v2_proposals`, and hands them to the pure
+`fpu_dev_corpus_v2.v2_geometry_feasibility` core, returning its
+`V2PreflightReport` verbatim. Deliberately NOT `fpu_dev_corpus_v2.
+v2_preflight_source`: that function is the I/O wrapper (it re-reads each
+`rec["replay_path"]` off disk) -- calling it here would make `qualify_core`,
+documented pure over `protocol` + `measurements` alone, perform a hidden
+SECOND filesystem read of data already sitting in `measurements`, breaking
+this module's "`measure_reservoir` is the ONE filesystem-I/O function"
+invariant. It mirrors `v2_preflight_source`'s own "the SOURCE INDEX
+record's game_idx is authoritative" rule -- `sidecars_by_idx` is already
+keyed by each JSONL row's OWN `game_idx` (B3's `_load_sidecars`), so this
+overrides the replay dict's own `game_idx` key with that authoritative int
+before calling `enumerate_v2_proposals`, the exact same override
+`v2_preflight_source` performs, just sourced from an already-loaded dict
+instead of a second disk read.
+
+`preflight` is an INJECTED dependency (design Sec 6's "preflight injection
+for tests" clarification): a test may supply a fake `measurements ->
+<object with .feasible / .binding_constraint>` callable, so a small
+fabricated `ReservoirMeasurements` (far too small to ever clear the real
+240-row/4-phase geometric quotas) can still exercise the OK/GATE_FAIL
+branches directly; a SEPARATE test exercises the real `default_preflight`
+on a genuinely large synthetic reservoir sized to clear (or just miss) the
+real quotas (see tests/test_fpu_dev_reservoir_protocol.py). Every
+`QualifyResult.report` records `conformance`'s outcome, and (when reached)
+`summary_binding`'s and `preflight`'s, as plain dicts (`{"ok", "reason"}`
+for the first two; `{"feasible", "binding_constraint"}` for the third) plus
+the unconditionally-computed `reason_histogram(measurements.jsonl_rows)`
+(B5) -- `summary_binding`/`preflight` are `None` in the report when that
+stage was never reached. Deliberately minimal per stage, mirroring
+`ConformanceResult`'s own "first failing reason only, no accumulated list"
+precedent -- the full persisted report artifact is a LATER task's concern
+(B7's `write_report`), which can always re-derive richer detail by calling
+each stage again. `qualify_core` performs NO filesystem I/O of its own
+(`check_summary_binding`'s lazy production import is a CODE import, not
+reservoir-data I/O) -- `measure_reservoir` (B3) remains the ONE
+filesystem-I/O function in the whole qualification pipeline.
 """
 from __future__ import annotations
 
@@ -322,7 +412,11 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 from . import fpu_provenance
-from .fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES
+from .fpu_dev_corpus_v2 import (
+    _V2_CORPUS_SOURCES,
+    enumerate_v2_proposals,
+    v2_geometry_feasibility,
+)
 
 # ---------------------------------------------------------------------------
 # Exit-code vocabulary (design Sec 3) -- shared across the WHOLE module's
@@ -1395,3 +1489,205 @@ def reason_histogram(jsonl_rows: List[dict]) -> Dict[str, int]:
         reason = row["reason"]
         histogram[reason] = histogram.get(reason, 0) + 1
     return histogram
+
+
+# ---------------------------------------------------------------------------
+# qualify_core -- Task B6 (design Sec 4.2, Sec 6). PURE: composes B4's
+# `check_protocol_conformance`, B5's `check_summary_binding`, and an
+# INJECTED geometric-feasibility `preflight` -- no filesystem I/O, no
+# evaluator/MCTS/GPU of its own (though `check_summary_binding`, which it
+# calls, still LAZILY imports `eval_runner`/`eval_summary` -- see that
+# function's own docstring; `qualify_core` introduces no NEW import).
+# ---------------------------------------------------------------------------
+
+class QualifyStatus(enum.Enum):
+    """`qualify_core`'s three possible outcomes (design Sec 4.2).
+
+    `OK` -- every stage passed; the caller may proceed to emit the config (a
+      LATER task, B7).
+    `MISMATCH` -- a protocol-conformance (B4) or summary-binding (B5)
+      defect: "regenerate under the same protocol" (spec Sec 4.1/Sec 7). The
+      preflight is never reached.
+    `GATE_FAIL` -- a protocol-FAITHFUL reservoir whose geometry cannot
+      support the v2 corpus: "retire this protocol version" (spec Sec
+      4.2/Sec 7).
+
+    Distinct from the module's `EXIT_*` int constants (design Sec 3's CLI
+    exit-code vocabulary) -- mapping a `QualifyStatus` to its process exit
+    code is the CLI's job (a LATER task, B11), not this pure core's.
+    """
+    OK = "OK"
+    MISMATCH = "MISMATCH"
+    GATE_FAIL = "GATE_FAIL"
+
+
+@dataclasses.dataclass(frozen=True)
+class QualifyResult:
+    """`qualify_core`'s result (design Sec 4.2).
+
+    `status`: a `QualifyStatus` (`OK` / `MISMATCH` / `GATE_FAIL`).
+    `reason`: `None` on `OK`; on `MISMATCH`, the tripped stage's own
+      `ConformanceResult.reason` (conformance's, or -- only when conformance
+      itself passed -- summary binding's); on `GATE_FAIL`, the preflight
+      result's `binding_constraint`.
+    `report`: a plain dict recording every stage's own outcome PLUS the full
+      termination-reason histogram (`reason_histogram(measurements.
+      jsonl_rows)`, B5, computed UNCONDITIONALLY -- even on an early
+      MISMATCH, since it is a cheap, pure fact about the JSONL alone) --
+      `{"conformance": {"ok", "reason"}, "summary_binding": {"ok", "reason"}
+      | None, "preflight": {"feasible", "binding_constraint"} | None,
+      "reason_histogram": {...}}`. `summary_binding`/`preflight` are `None`
+      when that stage was never REACHED (conformance short-circuits both; a
+      conformance-level MISMATCH never even attempts summary binding, per
+      this stage's own sequencing). Deliberately minimal per stage --
+      mirrors `ConformanceResult`'s own "first failing reason only, no
+      accumulated list" precedent; the FULL per-check diagnostic detail (if
+      ever needed beyond `ok`/`reason`/`feasible`/`binding_constraint`)
+      belongs to a LATER task's persisted report artifact (B7's
+      `write_report`), which can always re-derive it by calling each stage
+      again.
+    """
+    status: QualifyStatus
+    reason: Optional[str]
+    report: Dict[str, Any]
+
+
+def default_preflight(measurements: ReservoirMeasurements) -> Any:
+    """`qualify_core`'s DEFAULT `preflight` (design Sec 4.2/Sec 6) -- a thin,
+    PURE wrapper that builds v2 proposals from the ALREADY-LOADED
+    `measurements.sidecars_by_idx` and hands them to the pure
+    `fpu_dev_corpus_v2.v2_geometry_feasibility` core, returning its
+    `V2PreflightReport` verbatim.
+
+    Deliberately NOT `fpu_dev_corpus_v2.v2_preflight_source`: that function
+    is the I/O wrapper (that module's own docstring: "the ONE impure
+    function [in fpu_dev_corpus_v2.py] ... stdlib json/pathlib only") -- it
+    takes `records` and RE-READS each `rec["replay_path"]` off disk. Calling
+    it here would make `qualify_core` -- documented pure over `protocol` +
+    `measurements` alone -- perform a SECOND, hidden filesystem read of
+    exactly the replay data `measure_reservoir` (B3) already loaded into
+    `measurements.sidecars_by_idx`, breaking this module's own
+    "`measure_reservoir` is the ONE filesystem-I/O function in the whole
+    qualification pipeline" invariant. Design Sec 6 pins this: "the pure
+    qualification core accepts the preflight as an injected dependency" --
+    THIS is that dependency's real-world default; the CLI (a later task,
+    B11) always wires this same function, never `v2_preflight_source`.
+
+    Mirrors `v2_preflight_source`'s own "the SOURCE INDEX record's game_idx
+    is authoritative" rule -- `measurements.sidecars_by_idx` is already
+    keyed by each JSONL row's OWN `game_idx` (B3's `_load_sidecars`), so
+    this overrides the replay dict's own `game_idx` key with that
+    authoritative int (`{**sidecar, "game_idx": game_idx}`) before calling
+    the REAL `enumerate_v2_proposals` -- the exact same override
+    `v2_preflight_source` performs, just sourced from an already-loaded dict
+    instead of a second disk read, so the preflight can never drift from
+    the enumeration the (a later, operator) screen stage will actually use.
+    """
+    proposals_by_game: Dict[int, List[dict]] = {}
+    for game_idx, sidecar in measurements.sidecars_by_idx.items():
+        replay = {**sidecar, "game_idx": game_idx}
+        proposals_by_game[game_idx] = enumerate_v2_proposals(replay)
+    return v2_geometry_feasibility(proposals_by_game)
+
+
+def qualify_core(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements,
+        *,
+        preflight: Callable[[ReservoirMeasurements], Any] = default_preflight,
+) -> QualifyResult:
+    """The pure qualification decision (design Sec 4.2/Sec 6) -- composes
+    B4's `check_protocol_conformance`, B5's `check_summary_binding`, and the
+    (injectable) geometric `preflight`, in that ORDER, short-circuiting at
+    the first failure:
+
+      1. `check_protocol_conformance(protocol, measurements)` -- FIRST, so a
+         structurally-broken reservoir (e.g. an empty or short JSONL index)
+         is caught here, before summary binding ever runs (`check_summary_
+         binding` reconstructs `EvalGameResult` rows and calls the real
+         `eval_summary.summarize_match`, which would raise a raw exception
+         on a malformed/empty `jsonl_rows` rather than return a clean
+         `ConformanceResult` -- conformance's `_check_game_count` catches
+         that mismatch FIRST, so binding never sees it).
+      2. `check_summary_binding(protocol, measurements)` -- SECOND, only
+         once conformance has already passed.
+      3. `preflight(measurements)` -- LAST, only once both prior stages have
+         passed; the geometric feasibility (design Sec 4.2).
+
+    A conformance OR summary-binding failure returns `QualifyStatus.
+    MISMATCH` with that stage's own reason -- the preflight is NEVER called
+    (design Sec 4.2: "any failure is MISMATCH exit 3"; "a corrupt/incomplete
+    output that breaks preflight's INPUTS is a MISMATCH, not a gate
+    failure"). Only once both pass does `preflight` run: `feasible=True` ->
+    `QualifyStatus.OK`; `feasible=False` -> `QualifyStatus.GATE_FAIL` with
+    the preflight result's `binding_constraint` as the reason (design Sec
+    4.2: "the ONLY GATE-FAIL condition is a protocol-faithful reservoir with
+    infeasible geometry").
+
+    `preflight` defaults to `default_preflight` (this module's own PURE
+    wrapper over `v2_geometry_feasibility`, above) but is an INJECTED
+    dependency (design Sec 6's "preflight injection for tests"): a test may
+    supply a fake `measurements -> <object with .feasible/.binding_
+    constraint>` callable, so a small fabricated `ReservoirMeasurements` (far
+    too small to ever clear the real 240-row/4-phase geometric quotas) can
+    still exercise the OK/GATE_FAIL branches directly -- only a test of the
+    REAL default needs a genuinely large synthetic reservoir.
+
+    PURE: reads only `protocol`, `measurements`, and whatever `preflight`
+    itself reads (the default reads only `measurements`) -- no filesystem
+    I/O of its own (`check_summary_binding`'s lazy `eval_runner`/
+    `eval_summary` import is a CODE import, not a filesystem read of
+    reservoir data; `measure_reservoir`, B3, remains the ONE filesystem-I/O
+    function in the whole qualification pipeline).
+
+    Every branch's `report` records that stage's own outcome
+    (`ConformanceResult` as `{"ok", "reason"}`) plus
+    `reason_histogram(measurements.jsonl_rows)` (B5) -- computed
+    unconditionally, even on an early MISMATCH, since it is a cheap, pure
+    fact about the JSONL alone (design Sec 4.1: "qualify computes the full
+    termination-reason histogram... into the report"). `summary_binding`/
+    `preflight` are `None` in the report when that stage was never reached.
+    """
+    conformance = check_protocol_conformance(protocol, measurements)
+    histogram = reason_histogram(measurements.jsonl_rows)
+
+    if not conformance.ok:
+        return QualifyResult(
+            status=QualifyStatus.MISMATCH,
+            reason=conformance.reason,
+            report={
+                "conformance": dataclasses.asdict(conformance),
+                "summary_binding": None,
+                "preflight": None,
+                "reason_histogram": histogram,
+            })
+
+    binding = check_summary_binding(protocol, measurements)
+    if not binding.ok:
+        return QualifyResult(
+            status=QualifyStatus.MISMATCH,
+            reason=binding.reason,
+            report={
+                "conformance": dataclasses.asdict(conformance),
+                "summary_binding": dataclasses.asdict(binding),
+                "preflight": None,
+                "reason_histogram": histogram,
+            })
+
+    preflight_result = preflight(measurements)
+    preflight_report = {
+        "feasible": bool(preflight_result.feasible),
+        "binding_constraint": getattr(preflight_result, "binding_constraint", None),
+    }
+    report = {
+        "conformance": dataclasses.asdict(conformance),
+        "summary_binding": dataclasses.asdict(binding),
+        "preflight": preflight_report,
+        "reason_histogram": histogram,
+    }
+    if preflight_result.feasible:
+        return QualifyResult(status=QualifyStatus.OK, reason=None, report=report)
+    return QualifyResult(
+        status=QualifyStatus.GATE_FAIL,
+        reason=preflight_report["binding_constraint"],
+        report=report)

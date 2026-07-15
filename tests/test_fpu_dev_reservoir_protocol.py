@@ -1,16 +1,20 @@
-"""Tests for `fpu_dev_reservoir_protocol.py` Tasks B1-B3: the frozen
+"""Tests for `fpu_dev_reservoir_protocol.py` Tasks B1-B6: the frozen
 `reservoir_protocol.json` field set, the canonical-JSON encoder, the
 atomic/immutable write primitive, the `build_protocol` / `emit_protocol`
-schema builder + emitter, `gen_command`, and the `ReservoirMeasurements` /
-`measure_reservoir` I/O boundary.
+schema builder + emitter, `gen_command`, the `ReservoirMeasurements` /
+`measure_reservoir` I/O boundary, protocol conformance (`check_protocol_
+conformance`), summary binding by reconstruction (`check_summary_binding` /
+`reason_histogram`), and the pure qualification decision (`qualify_core` /
+`QualifyResult` / `QualifyStatus` / `default_preflight`).
 
 Frozen design ref: docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-qualification-design.md
   Sec 2.1 (protocol schema), Sec 3 (atomicity/immutability + `--check`
-  contract), Sec 4 (qualification measurement boundary), Sec 6 (module
-  boundary / circular-import resolution), Sec 8 (canonical JSON,
-  determinism).
+  contract), Sec 4 (qualification measurement boundary), Sec 4.1 (protocol
+  conformance + summary binding), Sec 4.2 (geometric preflight), Sec 6
+  (module boundary / circular-import resolution, preflight injection), Sec
+  8 (canonical JSON, determinism).
 Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-hardening-plan.md
-  Tasks B1, B2, B3.
+  Tasks B1-B6.
 
 Pure stdlib only, PLUS the same `fpu_provenance` helpers the module under
 test itself reuses (used here as the independent "hand-computed" oracle for
@@ -30,13 +34,18 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
 from scripts.GPU.alphazero import fpu_provenance
 from scripts.GPU.alphazero.eval_runner import EvalGameResult
 from scripts.GPU.alphazero.eval_summary import summarize_match
-from scripts.GPU.alphazero.fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES
+from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
+    _V2_CORPUS_SOURCES,
+    enumerate_v2_proposals,
+    v2_geometry_feasibility,
+)
 from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     ConformanceResult,
     EXIT_GATE_FAIL,
@@ -46,6 +55,8 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     GENERATION_SOURCE_MODULES,
     PROTOCOL_SCHEMA_KEYS,
     QUALIFICATION_SOURCE_FILES,
+    QualifyResult,
+    QualifyStatus,
     ReservoirMeasurements,
     TEN_MATCH_KNOBS,
     WriteStatus,
@@ -53,9 +64,11 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     canonical_json_bytes,
     check_protocol_conformance,
     check_summary_binding,
+    default_preflight,
     emit_protocol,
     gen_command,
     measure_reservoir,
+    qualify_core,
     reason_histogram,
     write_atomic,
 )
@@ -1203,19 +1216,27 @@ def test_qualification_source_files_are_distinguishable_by_basename():
 # performs NO I/O" convention this file already established.
 # ---------------------------------------------------------------------------
 
-def _ply_record(ply: int) -> dict:
+def _ply_record(ply: int, *, n_legal: int = 1) -> dict:
     """One minimal, schema-shaped `eval_replay.ply_record` dict -- alternates
     red (even ply) / black (odd ply), matching `eval_runner.play_eval_game`
-    (`TwixtState(..., to_move="red", ...)`: red moves first, ply 0)."""
+    (`TwixtState(..., to_move="red", ...)`: red moves first, ply 0).
+
+    `n_legal` defaults to a schema-shaped filler (1) -- `check_protocol_
+    conformance`/`check_summary_binding` (B4/B5) never inspect it. Task B6's
+    real-preflight tests override it (via `_conformant_reservoir`'s own
+    `n_legal_for_ply`) with the TIGHT physical floor `528 - ply` (the SAME
+    invariant tests/test_fpu_dev_corpus_v2.py::_honest_replay uses), so
+    `enumerate_v2_proposals` has genuine >=200-n_legal positions to find."""
     return {
         "ply": ply, "player": "red" if ply % 2 == 0 else "black",
         "row": 1, "col": 1, "root_value": 0.0, "root_top1_share": 1.0,
         "selected_visit_rank": 1, "selected_visit_count": 1,
-        "root_total_visits": 1, "n_legal": 1,
+        "root_total_visits": 1, "n_legal": n_legal,
     }
 
 
-def _conformant_reservoir(games: int = 6, n_moves: int = 4, **protocol_overrides):
+def _conformant_reservoir(games: int = 6, n_moves: int = 4, *,
+                          n_legal_for_ply=None, **protocol_overrides):
     """Build a FULLY conformant `(protocol, measurements)` pair -- the
     shared clean baseline every `check_protocol_conformance` defect test
     below mutates exactly ONE field of. A faithful, internally consistent
@@ -1233,6 +1254,13 @@ def _conformant_reservoir(games: int = 6, n_moves: int = 4, **protocol_overrides
     sidecars / summary are all DERIVED from the resulting protocol, so an
     override stays self-consistent (e.g. overriding `replay_dir` moves
     where the fabricated rows' `replay_path`s point too).
+
+    `n_legal_for_ply` (ply -> int), when given, overrides every ply's
+    `n_legal` (default `None`: every ply is `_ply_record`'s own filler, 1).
+    Task B6's real-preflight tests supply the TIGHT physical floor `528 -
+    ply` here, so `enumerate_v2_proposals`/`v2_geometry_feasibility` have
+    genuine geometry to find -- every OTHER caller (B4/B5) leaves it `None`
+    and gets the exact prior byte-for-byte behavior.
     """
     params = _protocol_params(games=games, **protocol_overrides)
     protocol = build_protocol(params)
@@ -1245,7 +1273,11 @@ def _conformant_reservoir(games: int = 6, n_moves: int = 4, **protocol_overrides
     replay_dir = protocol["replay_dir"]
     board_size = protocol["board_size"]
 
-    moves = [_ply_record(ply) for ply in range(n_moves)]
+    if n_legal_for_ply is None:
+        moves = [_ply_record(ply) for ply in range(n_moves)]
+    else:
+        moves = [_ply_record(ply, n_legal=n_legal_for_ply(ply))
+                 for ply in range(n_moves)]
 
     jsonl_rows = []
     sidecars_by_idx = {}
@@ -1674,16 +1706,20 @@ def test_check_protocol_conformance_wrong_generation_git_commit():
 # more than `summary["config"]`, so it never bothered computing the rest).
 # ---------------------------------------------------------------------------
 
-def _faithful_summary_binding_reservoir(games: int = 6, n_moves: int = 4,
+def _faithful_summary_binding_reservoir(games: int = 6, n_moves: int = 4, *,
+                                        n_legal_for_ply=None,
                                         **protocol_overrides):
     """`(protocol, measurements)` where `measurements.summary` is the REAL,
     independently-computed `summarize_match(...)` output over `measurements.
     jsonl_rows` (+ the correct `git_commit`/a `generated_at` stamp) -- a
     genuinely faithful summary a clean `check_summary_binding` call must
     accept. Every other field is `_conformant_reservoir`'s own (B4)
-    fabrication, reused verbatim."""
+    fabrication, reused verbatim -- including its `n_legal_for_ply` override
+    (Task B6's real-preflight tests; see `_conformant_reservoir`'s own
+    docstring)."""
     protocol, measurements = _conformant_reservoir(
-        games=games, n_moves=n_moves, **protocol_overrides)
+        games=games, n_moves=n_moves, n_legal_for_ply=n_legal_for_ply,
+        **protocol_overrides)
     results = [EvalGameResult(**row) for row in
                sorted(measurements.jsonl_rows, key=lambda r: int(r["game_idx"]))]
     pairing_id = measurements.jsonl_rows[0]["pairing_id"]
@@ -1847,6 +1883,293 @@ def test_reason_histogram_on_faithful_reservoir_matches_jsonl_reasons():
 
 
 # ---------------------------------------------------------------------------
+# qualify_core / QualifyResult / QualifyStatus / default_preflight -- Task B6
+# (design Sec 4.2, Sec 6).
+#
+# PURE composition of B4 -> B5 -> an injected geometric `preflight`. The
+# INJECTED-FAKE tests below reuse B4/B5's small (games=6, n_moves=4) fixture
+# builders unchanged -- `qualify_core`'s own sequencing/classification logic
+# needs no real geometry to exercise. The REAL-preflight tests need a
+# reservoir large enough to clear (or just miss) the actual 240-row/4-phase
+# geometric quotas, so they use the `n_legal_for_ply` override added (this
+# task) to `_conformant_reservoir`/`_faithful_summary_binding_reservoir` to
+# build genuinely-realistic replay geometry -- the SAME TIGHT-physical-floor
+# construction (`n_legal = 528 - ply`) and the SAME proven
+# 120-feasible/119-infeasible boundary
+# tests/test_fpu_dev_corpus_v2.py::test_v2_one_more_game_flips_it_feasible
+# already establishes for `v2_geometry_feasibility` directly.
+# ---------------------------------------------------------------------------
+
+def _honest_n_legal(ply: int) -> int:
+    """The TIGHT physical floor `n_legal = 528 - ply` (Task 0's `n_legal >=
+    528 - ply` invariant on this board, held as an equality) -- mirrors
+    tests/test_fpu_dev_corpus_v2.py::_honest_replay's default schedule, so
+    every phase/late-band region is reachable exactly where the v2 design
+    geometry predicts."""
+    return 528 - ply
+
+
+@dataclasses.dataclass(frozen=True)
+class _FakePreflightResult:
+    """Minimal stand-in for a `preflight` return value. `qualify_core`
+    dereferences only `.feasible` and (when infeasible) `.binding_
+    constraint` -- the whole duck-typed contract (design Sec 6) -- so a fake
+    need not be, or even resemble, a real `fpu_dev_corpus_v2.
+    V2PreflightReport`."""
+    feasible: bool
+    binding_constraint: Optional[str] = None
+
+
+def _fake_preflight(feasible: bool, binding_constraint: Optional[str] = None,
+                    *, calls: Optional[list] = None):
+    """Build an injectable `preflight` callable returning a fixed
+    `_FakePreflightResult`. When `calls` (a list the caller owns) is given,
+    every invocation appends the `measurements` it was called with, so a
+    test can assert the preflight was -- or, on a conformance/binding
+    MISMATCH, was NOT -- ever reached (design Sec 4.2: "the preflight is
+    never reached")."""
+    def _preflight(measurements):
+        if calls is not None:
+            calls.append(measurements)
+        return _FakePreflightResult(feasible, binding_constraint)
+    return _preflight
+
+
+# ---------------------------------------------------------------------------
+# QualifyStatus / QualifyResult -- shape.
+# ---------------------------------------------------------------------------
+
+def test_qualify_status_has_exactly_the_spec_sec_4_2_three_members():
+    assert {member.value for member in QualifyStatus} == {"OK", "MISMATCH", "GATE_FAIL"}
+
+
+def test_qualify_result_is_frozen():
+    result = QualifyResult(status=QualifyStatus.OK, reason=None, report={})
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        result.status = QualifyStatus.MISMATCH
+
+
+def test_qualify_core_preflight_parameter_defaults_to_default_preflight():
+    """The interface's own load-bearing default (brief: `preflight=<default
+    pure feasibility>`) -- pins that `default_preflight`, not some other
+    callable (and NOT `fpu_dev_corpus_v2.v2_preflight_source`), is what a
+    caller gets for free."""
+    import inspect
+    sig = inspect.signature(qualify_core)
+    assert sig.parameters["preflight"].default is default_preflight
+
+
+# ---------------------------------------------------------------------------
+# Injected-fake preflight -- OK / GATE_FAIL classification.
+# ---------------------------------------------------------------------------
+
+def test_qualify_core_ok_with_injected_feasible_preflight():
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    result = qualify_core(protocol, measurements, preflight=_fake_preflight(True))
+    assert result.status == QualifyStatus.OK
+    assert result.reason is None
+    assert result.report["preflight"] == {"feasible": True, "binding_constraint": None}
+
+
+def test_qualify_core_gate_fail_with_injected_infeasible_preflight():
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    result = qualify_core(
+        protocol, measurements,
+        preflight=_fake_preflight(False, "fake-binding-constraint"))
+    assert result.status == QualifyStatus.GATE_FAIL
+    assert result.reason == "fake-binding-constraint"
+    assert result.report["preflight"] == {
+        "feasible": False, "binding_constraint": "fake-binding-constraint"}
+
+
+# ---------------------------------------------------------------------------
+# Sequencing (a B5 review flagged getting this order right): conformance
+# (B4) -> summary binding (B5) -> preflight, each stage short-circuiting the
+# rest on failure. The fake preflight is INJECTED (with a call-spy) into
+# every defect test below specifically SO these tests can prove it was
+# never reached -- not just that the status happens to be MISMATCH.
+# ---------------------------------------------------------------------------
+
+def test_qualify_core_mismatch_on_conformance_defect_preflight_not_reached():
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[3] = {**sidecars[3], "seed": sidecars[3]["seed"] + 1}
+    broken = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+
+    calls: list = []
+    result = qualify_core(protocol, broken, preflight=_fake_preflight(True, calls=calls))
+
+    assert result.status == QualifyStatus.MISMATCH
+    assert "seed" in result.reason
+    assert calls == []
+    assert result.report["conformance"] == {"ok": False, "reason": result.reason}
+    assert result.report["summary_binding"] is None
+    assert result.report["preflight"] is None
+
+
+def test_qualify_core_mismatch_on_summary_binding_defect_preflight_not_reached():
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    tampered_summary = {**measurements.summary,
+                        "a_score_rate": measurements.summary["a_score_rate"] + 0.25}
+    broken = dataclasses.replace(measurements, summary=tampered_summary)
+
+    calls: list = []
+    result = qualify_core(protocol, broken, preflight=_fake_preflight(True, calls=calls))
+
+    assert result.status == QualifyStatus.MISMATCH
+    assert "summary_binding" in result.reason
+    assert calls == []
+    assert result.report["conformance"] == {"ok": True, "reason": None}
+    assert result.report["summary_binding"] == {"ok": False, "reason": result.reason}
+    assert result.report["preflight"] is None
+
+
+def test_qualify_core_reservoir_failing_both_conformance_and_binding_reports_conformance_first():
+    """The exact case the brief calls out: a reservoir broken in BOTH ways
+    reports the CONFORMANCE mismatch (never binding's) -- proving
+    `check_protocol_conformance` really runs FIRST and short-circuits,
+    rather than merely happening to agree with `check_summary_binding` on
+    the verdict."""
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[3] = {**sidecars[3], "seed": sidecars[3]["seed"] + 1}
+    tampered_summary = {**measurements.summary,
+                        "a_score_rate": measurements.summary["a_score_rate"] + 0.25}
+    broken = dataclasses.replace(
+        measurements, sidecars_by_idx=sidecars, summary=tampered_summary)
+
+    # Both stages really are independently broken.
+    assert check_protocol_conformance(protocol, broken).ok is False
+    assert check_summary_binding(protocol, broken).ok is False
+
+    calls: list = []
+    result = qualify_core(protocol, broken, preflight=_fake_preflight(True, calls=calls))
+    assert result.status == QualifyStatus.MISMATCH
+    assert "seed" in result.reason
+    assert "summary_binding" not in result.reason
+    assert calls == []
+    assert result.report["summary_binding"] is None
+
+
+def test_qualify_core_empty_rows_reservoir_is_mismatch_not_a_raw_exception():
+    """Sequencing's whole point (brief: "an empty/short reservoir must be
+    caught here [conformance], before B5, or B5's summarize_match([])
+    raises raw"): `eval_summary.summarize_match` raises a bare `ValueError`
+    on an empty `results` list (verified: `summarize_match([], ...)` raises
+    "no results for pairing ..."). `qualify_core` must never let that raw
+    exception escape -- `check_protocol_conformance`'s game-count check
+    catches the shortfall FIRST, so `check_summary_binding` (and its
+    `summarize_match` call) is never reached."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6)
+    empty = dataclasses.replace(measurements, jsonl_rows=[], sidecars_by_idx={})
+
+    calls: list = []
+    result = qualify_core(protocol, empty, preflight=_fake_preflight(True, calls=calls))
+
+    assert result.status == QualifyStatus.MISMATCH
+    assert "game_count" in result.reason
+    assert calls == []
+    assert result.report["summary_binding"] is None
+
+
+# ---------------------------------------------------------------------------
+# report -- shape + the unconditional reason_histogram.
+# ---------------------------------------------------------------------------
+
+def test_qualify_core_report_shape_on_ok():
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    result = qualify_core(protocol, measurements, preflight=_fake_preflight(True))
+    assert set(result.report) == {
+        "conformance", "summary_binding", "preflight", "reason_histogram"}
+    assert result.report["conformance"] == {"ok": True, "reason": None}
+    assert result.report["summary_binding"] == {"ok": True, "reason": None}
+    assert result.report["reason_histogram"] == reason_histogram(measurements.jsonl_rows)
+
+
+def test_qualify_core_report_reason_histogram_computed_even_on_early_mismatch():
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    sidecars = dict(measurements.sidecars_by_idx)
+    sidecars[3] = {**sidecars[3], "seed": sidecars[3]["seed"] + 1}
+    broken = dataclasses.replace(measurements, sidecars_by_idx=sidecars)
+    result = qualify_core(protocol, broken, preflight=_fake_preflight(True))
+    assert result.report["reason_histogram"] == reason_histogram(broken.jsonl_rows)
+    assert result.report["reason_histogram"]   # non-empty: every default row is "win"
+
+
+# ---------------------------------------------------------------------------
+# default_preflight -- the REAL default (design Sec 4.2/Sec 6): a PURE
+# wrapper over `enumerate_v2_proposals` + `v2_geometry_feasibility`, NOT
+# `fpu_dev_corpus_v2.v2_preflight_source` (the I/O wrapper).
+# ---------------------------------------------------------------------------
+
+def test_default_preflight_equals_manual_enumerate_and_geometry_feasibility():
+    """Pins the EXACT composition (not just "returns something plausible"):
+    hand-build `proposals_by_game` from `measurements.sidecars_by_idx` via
+    the SAME production `enumerate_v2_proposals`, call `v2_geometry_
+    feasibility` directly, and require the two reports to agree exactly."""
+    _protocol, measurements = _faithful_summary_binding_reservoir(
+        games=3, n_moves=40, n_legal_for_ply=_honest_n_legal)
+    expected_by_game = {
+        game_idx: enumerate_v2_proposals({**sidecar, "game_idx": game_idx})
+        for game_idx, sidecar in measurements.sidecars_by_idx.items()
+    }
+    expected = v2_geometry_feasibility(expected_by_game)
+    assert default_preflight(measurements) == expected
+
+
+def test_default_preflight_performs_no_io(monkeypatch):
+    """PURE -- unlike `fpu_dev_corpus_v2.v2_preflight_source` (the I/O
+    wrapper this default deliberately is NOT: it re-reads each
+    `rec["replay_path"]` off disk), `default_preflight` must build every
+    proposal from the ALREADY-LOADED `measurements.sidecars_by_idx` alone.
+    Proven by making any disk read explode -- `default_preflight` must
+    still return cleanly."""
+    _protocol, measurements = _faithful_summary_binding_reservoir(
+        games=2, n_moves=16, n_legal_for_ply=_honest_n_legal)
+
+    def _boom(*_args, **_kwargs):
+        raise AssertionError("default_preflight touched the filesystem")
+    monkeypatch.setattr(Path, "read_text", _boom)
+    monkeypatch.setattr(Path, "read_bytes", _boom)
+
+    report = default_preflight(measurements)
+    assert report.feasible is False   # 2 tiny games can't clear the real quotas
+
+
+# ---------------------------------------------------------------------------
+# End-to-end with the REAL default preflight, at the genuine 240-row/
+# 4-phase quota boundary tests/test_fpu_dev_corpus_v2.py::
+# test_v2_one_more_game_flips_it_feasible already establishes for
+# `v2_geometry_feasibility` directly (120 games feasible, 119 infeasible) --
+# same TIGHT-physical-floor construction, so the SAME boundary applies here.
+# ---------------------------------------------------------------------------
+
+def test_qualify_core_ok_with_real_default_preflight_on_genuinely_feasible_reservoir():
+    protocol, measurements = _faithful_summary_binding_reservoir(
+        games=120, n_moves=330, n_legal_for_ply=_honest_n_legal)
+    result = qualify_core(protocol, measurements)   # default preflight, not injected
+    assert result.status == QualifyStatus.OK
+    assert result.reason is None
+    assert result.report["preflight"]["feasible"] is True
+    assert result.report["preflight"]["binding_constraint"] is None
+
+
+def test_qualify_core_gate_fail_with_real_default_preflight_on_infeasible_but_faithful_reservoir():
+    protocol, measurements = _faithful_summary_binding_reservoir(
+        games=119, n_moves=330, n_legal_for_ply=_honest_n_legal)
+    result = qualify_core(protocol, measurements)   # default preflight, not injected
+
+    # Both earlier stages genuinely passed -- ONLY the geometry gates this.
+    assert result.report["conformance"] == {"ok": True, "reason": None}
+    assert result.report["summary_binding"] == {"ok": True, "reason": None}
+
+    assert result.status == QualifyStatus.GATE_FAIL
+    assert result.reason is not None
+    assert result.report["preflight"]["feasible"] is False
+    assert result.report["preflight"]["binding_constraint"] == result.reason
+
+
+# ---------------------------------------------------------------------------
 # Exit-code vocabulary (design Sec 3) -- shared module-wide constants.
 # ---------------------------------------------------------------------------
 
@@ -1894,15 +2217,18 @@ def test_module_import_does_not_pull_eval_runner_or_eval_summary():
     assert out.stdout.strip() == "[]"
 
 
-def test_module_imports_only_v2_corpus_sources_from_fpu_dev_corpus_v2():
+def test_module_imports_only_pure_names_from_fpu_dev_corpus_v2():
     """B3 narrows (not lifts) the B1 scope guard (plan Task B3 / spec Sec 6
-    "import only the shared ... constant" seam): `fpu_dev_corpus_v2` IS now
-    imported (for `_V2_CORPUS_SOURCES`, needed by `QUALIFICATION_SOURCE_
-    FILES`), but ONLY that one name -- never `V2Config`, `run_screen`,
-    `load_v2_config`, or a bare `import fpu_dev_corpus_v2` that would pull
-    in its whole surface. This is what keeps the Sec 6 circular-import risk
-    one-directional: `fpu_dev_corpus_v2.run_screen` -> (lazily, a LATER
-    task, B9) this module -> `fpu_dev_corpus_v2` (top-level, THIS import,
+    "import only the shared ... constant" seam): `fpu_dev_corpus_v2` IS
+    imported, but ONLY three names -- `_V2_CORPUS_SOURCES` (B3, needed by
+    `QUALIFICATION_SOURCE_FILES`) plus `enumerate_v2_proposals` and
+    `v2_geometry_feasibility` (B6, needed by `default_preflight`), both Task
+    2/Task 4 functions from that module's own PURE SECTION -- never
+    `V2Config`, `run_screen`, `load_v2_config`, or a bare `import
+    fpu_dev_corpus_v2` that would pull in its whole surface. This is what
+    keeps the Sec 6 circular-import risk one-directional:
+    `fpu_dev_corpus_v2.run_screen` -> (lazily, a LATER task, B9) this
+    module -> `fpu_dev_corpus_v2` (top-level, THIS import,
     already-proven-import-pure) is not a cycle, since it never imports
     `run_screen` back.
 
@@ -1928,4 +2254,6 @@ def test_module_imports_only_v2_corpus_sources_from_fpu_dev_corpus_v2():
                 from_imports.update(alias.name for alias in node.names)
     assert not any("fpu_dev_corpus_v2" in m for m in whole_module_imports), (
         whole_module_imports)
-    assert from_imports == {"_V2_CORPUS_SOURCES"}, from_imports
+    assert from_imports == {
+        "_V2_CORPUS_SOURCES", "enumerate_v2_proposals", "v2_geometry_feasibility",
+    }, from_imports
