@@ -49,39 +49,65 @@ never mutated; the protocol is never revisited (a failure regenerates or version
 
 ## 2. Artifacts & schemas (canonical JSON — sorted keys, fixed numeric formatting, no timestamps/RNG)
 
-### 2.1 `reservoir_protocol.json` (frozen pre-generation)
-- `protocol_version` (monotonic int/string), `no_top_up: true`.
-- Matchup: `checkpoint_a` / `checkpoint_b` — each a `{path, identity}` where identity = `name:sha1`.
-- `games` — **protocol-declared** game count (first frozen protocol = 4,800; a later version may declare
-  9,600). The qualifier validates against *this* number, never a hard-coded constant (amendment 7).
-- `base_seed` — the half-open seed range is `[base_seed, base_seed + games)`, one seed per game,
-  `seed == base_seed + game_idx` (verified against `eval_runner.build_pairing_tasks`, single pairing,
-  offset 0).
-- The ten result-determining match knobs (amendment 4): `board_size`, `mcts_sims`,
-  `mcts_eval_batch_size`, `mcts_stall_flush_sims`, `selection_mode`, `opening_temp_plies`, `temp_high`,
-  `temp_low`, `max_moves`, `base_seed`. (`workers` is non-determining → recorded-only.)
-- Output paths: `source_index_path` (the `*_games.jsonl`), `replay_dir`, `match_summary_path`.
-- Generation provenance (amendment 8): `generation_git_commit` + `generation_source_sha1s` over the
-  result-determining generation modules (`eval_checkpoint_match`, `eval_runner`, `mcts`, plus the
-  state/eval deps the games depend on). The exact module list is pinned in the implementation plan,
-  mirroring how the corpus's `RESULT_DETERMINING_SOURCES` was fixed. See the trust-boundary limitation in §10.
+**Derivability invariant (amendments 2 + 3):** the config is a **pure deterministic function of
+`(protocol, reservoir)`** — `config = derive(protocol, reservoir)`. Therefore the protocol carries *every*
+declared decision (reservoir params **and** selection settings **and** output/report paths), and the config
+adds only the *measured* identities (reservoir/code/checkpoint hashes). This is what makes the pre-screen
+"re-derive and byte-compare" tamper check (§5) complete rather than partial.
 
-### 2.2 `fpu_dev_corpus_v2_config.json` (emitted by `qualify`, immutable; amendment 2)
-Schema-versioned; every field below is **required** for the current `config_schema_version` — a newly
-generated v2 config may not silently omit them ("backward compatible" must not mean "may lack the new
-identities").
-- `config_schema_version`.
-- `protocol_path` + `protocol_sha1`; `match_summary_path` + `match_summary_sha1`;
-  `source_index_path` + `source_index_sha1`; `replay_dir` + `replay_data_sha1` (deterministic hash of the
-  sidecar *contents*); `source_file_sha1s` (the corpus result-determining code); `checkpoint_identity`
-  (the anchor/matchup checkpoints — carried through from the existing select identity set, not dropped).
-- Forbidden manifests + their hashes.
-- Selection settings: `selection_seed`, allocation (must equal `SPLIT_ALLOC_V2`), late floors,
-  enumerator params, `new_collapse_stratum: "ply_bucket"`.
-- `screen_out`, `select_out`.
+### 2.1 `reservoir_protocol.json` (frozen pre-generation) — the single source of all declared decisions
+- **Identity:** `protocol_version` (monotonic), `no_top_up: true`, `config_schema_version` (the schema the
+  emitted config will use).
+- **Matchup + anchor (amendment 1 disambiguation):** `checkpoint_a` and `checkpoint_b` — the two reservoir
+  players, each `{path, identity=name:sha1}` — **plus** `anchor: "checkpoint_a" | "checkpoint_b"` pinning
+  which one is the *single* screen anchor (the fpu-off value-head evaluator, `config.checkpoint`). These are
+  **three distinct roles**: reservoir player A, reservoir player B, and the anchor (= one of A/B). The first
+  frozen protocol pins `checkpoint_a = calib020_0001`, `checkpoint_b = 0379`, `anchor = "checkpoint_a"` — so
+  the anchor is **calib020_0001 = A** (verified: `diagnose_fpu_sweep.DEFAULT_CHECKPOINT` is calib020_0001).
+- **Reservoir params:** `games` (protocol-declared: first = 4,800, a later version may declare 9,600 —
+  validated against *this* number, never a constant, amendment 7); `base_seed` (half-open seed range
+  `[base_seed, base_seed + games)`, `seed == base_seed + game_idx`, verified against
+  `eval_runner.build_pairing_tasks`, single pairing, offset 0); the ten result-determining match knobs
+  (amendment 4): `board_size`, `mcts_sims`, `mcts_eval_batch_size`, `mcts_stall_flush_sims`,
+  `selection_mode`, `opening_temp_plies`, `temp_high`, `temp_low`, `max_moves`, `base_seed`; `save_eval_replays:
+  true` (capture is mandatory). `workers` is **not** a frozen decision (non-determining).
+- **Output relationships (amendment 3):** `match_summary_path` (= the generator's `--output`);
+  `source_index_path` — declared **and** required to equal `<match_summary stem>_games.jsonl` (the exact rule
+  in `eval_checkpoint_match._write_outputs`); `replay_dir` — `--replay-dir` or `<stem>_replays`
+  (`replay_dir_for`); `config_out`; `report_out`. Every explicit generation flag needed to reconstruct the
+  command is present (matchup, games, base_seed, the ten knobs, `--save-eval-replays`, `--replay-dir`,
+  `--output`).
+- **Selection settings** (so the config is derivable): `selection_seed`, `phase_allocation` (= `SPLIT_ALLOC_V2`),
+  `late_floors`, `enumerator_params`, `new_collapse_stratum: "ply_bucket"`, `forbidden_manifests`, `screen_out`,
+  `select_out`.
+- **Generation provenance (amendment 8):** `generation_git_commit` + `generation_source_sha1s` over the
+  **enumerated** result-determining generation modules (pinned here, not deferred): `eval_checkpoint_match.py`,
+  `eval_runner.py`, `mcts.py`, `game/twixt_state.py`, `eval_replay.py`, `probe_eval.py`
+  (`load_network_for_scoring`), `network.py`, `local_evaluator.py`. Rationale: these are the modules whose
+  bytes, given the checkpoint bytes, determine the generated games (task/seed/color assembly, the search, the
+  board rules, the replay serialization, and network load/forward). Trust boundary in §10.
 
-**Paths as well as hashes (amendment 2):** hashes alone can't be recomputed pre-screen/select — the path
-is needed to re-read the file. Every pinned identity carries both.
+### 2.2 `fpu_dev_corpus_v2_config.json` (emitted by `qualify`, immutable; amendments 1, 2)
+**This EXTENDS the current `_V2_CONFIG_REQUIRED_KEYS`** (`source_index_path`, `seed_range`, `selection_seed`,
+`phase_allocation`, `late_floors`, `enumerator_params`, `new_collapse_stratum`, `checkpoint`,
+`forbidden_manifests`, `screen_out`, `select_out`, `expected_fingerprints`; plus `eval_batch_size` with a
+default). It does **not** replace them. Complete final schema — every field **required** for the current
+`config_schema_version` (a newly generated v2 config may not silently omit them):
+
+- **Carried from the protocol (the derivable decisions):** `source_index_path`, `seed_range`, `selection_seed`,
+  `phase_allocation`, `late_floors`, `enumerator_params`, `new_collapse_stratum` (= `"ply_bucket"`),
+  `checkpoint` (= the **anchor** path, singular), `forbidden_manifests`, `screen_out`, `select_out`.
+- **New top-level (paths — amendment 2):** `config_schema_version`, `protocol_path`, `match_summary_path`,
+  `replay_dir`.
+- **`expected_fingerprints` (extended)** — the measured identities: `protocol_sha1`, `source_index_sha1`,
+  `replay_data_sha1` (hash of sidecar *contents*), `match_summary_sha1`, `source_file_sha1s` (the corpus
+  result-determining code), `forbidden_manifest_sha1s`, and **three distinct checkpoint identities**
+  (amendment 1) — `reservoir_checkpoint_a_identity`, `reservoir_checkpoint_b_identity`,
+  `anchor_checkpoint_identity` (= A). The prior single `checkpoint_identity` could not name all three; it is
+  replaced by these three keys.
+
+**Paths *and* hashes (amendment 2):** hashes alone can't be recomputed pre-screen/select — the path is needed
+to re-read the file. Every pinned identity carries both.
 
 ## 3. CLI stages, exit codes & operational immutability (amendment 5)
 
@@ -95,9 +121,16 @@ New module CLI (`fpu_dev_reservoir_protocol.py`):
 **Exit codes:** `0` ok · `3` MISMATCH · `4` GATE-FAIL · `2` usage/IO.
 
 **Both emitters must:** write **atomically** (temp file + rename); **refuse to overwrite an existing
-*different* artifact**; treat an existing **byte-identical** artifact as success (idempotent); emit a
-**deterministic qualification report** on pass *or* fail; emit the config **only after all conformance +
-preflight checks pass**. `--check` recomputes and diffs but **never writes**.
+*different* artifact**; treat an existing **byte-identical** artifact as success (idempotent); emit the config
+**only after all conformance + preflight checks pass**. `--check` recomputes and diffs but **never writes**.
+
+**Report lifecycle (amendment 3).** `qualify` always writes a **deterministic report** to the protocol's
+`report_out`, on pass *and* on fail, recording every check's outcome plus the computed reason histogram
+(§4.1). The report distinguishes the two failure classes: a **GATE-FAIL** report records the protocol version
+as **RETIRED** (a durable retirement marker); `qualify` refuses to re-qualify a protocol whose `report_out`
+already carries a retirement record. A **MISMATCH** report records the mismatch but **must not** retire the
+protocol — regeneration under the same protocol stays allowed (so an operator/generation mistake never burns
+a version). A pass report is the qualification evidence the config's `report_out` points back to.
 
 ## 4. Qualification (zero-GPU)
 
@@ -106,23 +139,31 @@ preflight checks pass**. `--check` recomputes and diffs but **never writes**.
 - **Contiguity:** `game_idx` runs `0..games-1` with no gaps/dupes.
 - **Seed range:** the half-open `[base_seed, base_seed + games)`; each game's recorded `seed == base_seed +
   game_idx`.
-- **Matchup:** the summary and every JSONL row's `red_checkpoint`/`black_checkpoint` resolve to the
-  protocol's `checkpoint_a`/`checkpoint_b` identities (name + sha1).
-- **Model color parity (amendment 4, corrected):** color alternates **between games** by `game_idx`
+- **Output-path relationships (amendment 3):** `protocol.source_index_path` equals
+  `<protocol.match_summary_path stem>_games.jsonl` (the `eval_checkpoint_match._write_outputs` rule); the
+  `replay_dir` equals `--replay-dir` or `<stem>_replays`; the files exist at those paths.
+- **Matchup:** the summary's `checkpoint_a`/`checkpoint_b` and every JSONL row's
+  `red_checkpoint`/`black_checkpoint` resolve to the protocol's `checkpoint_a`/`checkpoint_b` identities
+  (name + sha1).
+- **Model color parity (amendment 4, corrected):** model color alternates **between games** by `game_idx`
   parity — even `game_idx` → checkpoint-A red, odd → checkpoint-B red.
 - **Replay linkage / capture:** every `replay_path` exists and its sidecar's `game_idx`, `seed`,
   colors, and `board_size` match the JSONL row (this existence+linkage check is what *requires* replay
   capture — there is no separate capture flag to gate).
-- **Result-determining match config (amendment 4):** all ten knobs recorded in the summary's config equal
+- **Result-determining match config (amendment 4):** all ten knobs recorded in the summary's `config` equal
   the protocol. `workers` recorded-only.
-- **Summary ↔ JSONL binding (amendment 3):** recompute from the JSONL — game count, win/loss/state-cap
-  counts, termination `reason` counts (`state_cap`/`board_full`/`win`), red/black-win counts, per-checkpoint
-  winner counts — and require they equal the summary's recorded aggregates. (Otherwise a summary from a
-  *different* run with the same settings could be paired with this reservoir.)
-- **Generation provenance (amendment 8):** recompute `generation_source_sha1s` + `generation_git_commit`
-  and match the protocol (subject to the §10 trust boundary).
-- **Within-game move-player parity** is validated **separately** (red on even ply within each replay) —
-  distinct from the between-games model-color parity above.
+- **Summary ↔ JSONL binding (amendments 3, 5) — only against fields the summary *actually* records:**
+  recompute from the JSONL and require equality with the summary's real aggregates — `games`, `state_caps`,
+  `board_full`, `a_wins`, `b_wins`, `color_bias.red_win_rate_decisive`, `avg_plies`, `checkpoint_a`/`_b`,
+  `selection_mode` (verified against `eval_summary.summarize_match`'s return). Do **not** assert against a
+  nonexistent field. The summary has **no** complete termination-reason histogram, so `qualify` **computes the
+  full reason histogram from the JSONL and records it in the report** (§3) rather than comparing it to a
+  summary field. (Binding the summary to the JSONL prevents pairing a summary from a *different* run with the
+  same settings.)
+- **Generation provenance (amendment 8):** recompute `generation_source_sha1s` (over the §2.1 enumerated
+  module list) + `generation_git_commit` and match the protocol (subject to the §10 trust boundary).
+- **Within-game move-player parity** is validated **separately** (players alternate by ply within each
+  replay) — distinct from the between-games model-color parity above.
 
 ### 4.2 Geometric preflight (amendment 1)
 After protocol conformance passes, call the existing zero-GPU `v2_preflight_source(records)` (Task 4).
@@ -135,17 +176,27 @@ After protocol conformance passes, call the existing zero-GPU `v2_preflight_sour
 **The only GATE-FAIL condition is a protocol-faithful reservoir with infeasible geometry.** Every
 structural defect (colors, linkage, contiguity, seed, MCTS config, summary mismatch) is a MISMATCH.
 
-## 5. Fingerprint check split (amendment 2; decision #6)
-- `qualify` pins every §2.2 path+hash identity into the config.
-- **Before screen** — `run_screen` startup recomputes every pinned hash from its pinned path and
-  hard-matches; verifies the config binds *this* protocol (`protocol_sha1`); and **repeats the geometric
-  preflight defensively** (amendment 1). Any staleness (edited code, byte-changed reservoir, tampered
-  config/protocol/summary) aborts **before the evaluator loads** — so an hours-long screen never starts on
-  stale inputs.
-- **During select** — the existing Task 6 chain re-verifies the same reservoir/config identities, extended
-  to include the `protocol` and `match_summary` identities, **plus** the screen artifact (`screen_csv_sha1`
-  + the row cross-check). Reservoir/config identities are checked **twice** (pre-GPU and at select); the
-  screen output once (at select).
+## 5. Pre-screen & select verification (amendment 2; decision #6)
+
+**Config-tamper detection is by re-derivation, not embedded-hash rechecks (amendment 2).** Recomputing the
+hashes *embedded in* the config only proves the reservoir/protocol/code bytes are unchanged — it cannot catch
+an edit to a config field that isn't itself hashed (`selection_seed`, `select_out`, `screen_out`, a floor).
+Because the config is `derive(protocol, reservoir)` (§2), the complete check is to **re-derive the canonical
+config from the pinned protocol + reservoir and byte-compare it against the supplied config** — the *same*
+derivation `qualify --check` uses. Any tampered field, hashed or not, fails the byte-comparison.
+
+- `qualify` pins every §2.2 path+hash identity into the config and is the sole producer of the canonical
+  `derive(protocol, reservoir)`.
+- **Before screen** — `run_screen` startup, **before the evaluator loads**: (1) recompute every pinned hash
+  from its pinned path and hard-match (catches a changed reservoir/protocol/summary/code); (2) **re-derive the
+  canonical config from `(protocol, reservoir)` and byte-compare** against the supplied config (catches *any*
+  edited config field — this is the real config-tamper check, not the hash rechecks); (3) verify the config
+  binds *this* protocol (`protocol_sha1`); (4) **repeat the geometric preflight defensively** (amendment 1).
+  Any failure aborts before the hours-long screen starts.
+- **During select** — the existing Task 6 chain re-verifies the same reservoir/config identities, extended to
+  include the `protocol` and `match_summary` identities, and likewise **re-derives + byte-compares** the
+  config, **plus** verifies the screen artifact (`screen_csv_sha1` + row cross-check). Reservoir/config are
+  checked **twice** (pre-GPU and at select); the screen output once (at select).
 
 ## 6. Module boundary & circular-import resolution (amendment 6 — PINNED)
 New module `scripts/GPU/alphazero/fpu_dev_reservoir_protocol.py` (pure protocol/qualification/config-emit +
@@ -162,6 +213,12 @@ cycle exists, and the new module stays importable and unit-testable in isolation
 import sites and churn the audited evidence chain for no functional gain.)*
 
 `load_v2_config` **requires** the §2.2 fields for the current `config_schema_version` (no silent omission).
+
+**Preflight injection for tests (test clarification).** The pure qualification core accepts the preflight as
+an **injected dependency** (default = the real `v2_preflight_source`); the CLI always wires the real one. This
+lets protocol-conformance tests use a small fabricated reservoir with a fake preflight, while a *separate*
+test exercises the real `v2_preflight_source` on a genuinely feasible (larger) synthetic reservoir — because a
+6-game fixture cannot satisfy the frozen 240-row/4-phase geometric quotas (see §11).
 
 ## 7. No-top-up & versioning (decisions #4, #5)
 - `protocol_version` + `no_top_up: true`; one protocol ⇒ one reservoir ⇒ `protocol.games` games.
@@ -192,17 +249,37 @@ updated when Group 2 lands.
   select stage.
 - **Config/protocol are unsigned:** an actor who rewrites *both* a pinned file and its recorded hash forges
   the chain; the identity set is tamper-*evident*, not tamper-*proof*. Signing is out of scope (as in select).
+- **`no_top_up` is procedural, not enforceable (amendment 3):** `qualify` sees only the *final* directory of
+  `protocol.games` games — it cannot determine whether they were generated in one session or filled
+  incrementally across runs. The half-open seed range, contiguity, and per-game seed checks make an
+  *inconsistent* top-up detectable (a filled-in game with the wrong seed/params fails MISMATCH), but a
+  disciplined incremental fill that happens to match every declared parameter is indistinguishable from a
+  single-session generation. `no_top_up` is therefore an operator-discipline rule the protocol *declares*, not
+  a property qualification *proves*.
 
-## 11. Test matrix (all zero-GPU; fabricated ~6-game reservoirs; game count is protocol-declared)
+## 11. Test matrix (all zero-GPU; game count is protocol-declared)
+
+**Fixture sizing (test clarification).** Protocol-conformance and report/immutability tests use a small
+fabricated reservoir (a 6-game protocol) with the preflight **injected as a fake** (§6) — a 6-game reservoir
+cannot satisfy the frozen 240-row/4-phase geometric quotas, so it must never reach the *real* preflight. The
+geometric-feasibility paths are covered by a **separate** test that drives the **real `v2_preflight_source`**
+on a genuinely feasible (larger) synthetic reservoir sized to clear the quotas. The CLI always wires the real
+preflight.
+
 - **MISMATCH (exit 3):** wrong seed / wrong matchup / wrong game count / any of the ten MCTS knobs wrong /
   non-contiguous indices / broken replay linkage / wrong model colors / summary↔JSONL aggregate mismatch /
-  generation-provenance mismatch.
-- **GATE-FAIL (exit 4):** a protocol-faithful reservoir whose `v2_preflight_source` geometry is infeasible.
-- **Screen precheck:** a stale fingerprint (edited code / byte-changed reservoir / tampered config or
-  protocol or summary) is rejected **before evaluator load**; the defensive preflight re-runs.
+  wrong JSONL-vs-summary path derivation / generation-provenance mismatch. *(fake preflight → feasible.)*
+- **GATE-FAIL (exit 4):** a protocol-faithful reservoir whose **real** `v2_preflight_source` geometry is
+  infeasible (larger synthetic reservoir); the report records **retirement**, and re-qualifying the retired
+  protocol is refused.
+- **Screen precheck:** a stale fingerprint (edited code / byte-changed reservoir / tampered config or protocol
+  or summary) *and* an edited non-hashed config field (`selection_seed`, `select_out`) are each rejected
+  **before evaluator load** — the latter caught by the re-derive-and-byte-compare (§5); the defensive preflight
+  re-runs.
 - **Config bootstrap reproducibility:** byte-identical re-emit; `--check` diff; refuse-overwrite-different;
   idempotent-on-byte-identical; `--check` never writes.
-- **Immutability ops:** atomic write verified; deterministic report on pass and on fail.
+- **Immutability ops:** atomic write verified; deterministic report on pass and on fail; MISMATCH report does
+  **not** retire (regeneration still allowed) while GATE-FAIL does.
 - **Combined audit (with Group 1):** v1 byte-identity (build + diagnostic) and v2 phase-gated operator
   behavior.
 
