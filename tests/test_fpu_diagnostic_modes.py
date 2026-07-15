@@ -832,3 +832,248 @@ def test_production_paths_v1_no_config_omit_ply_bucket_and_use_band(
     assert data_rows
     for row in data_rows:
         assert "ply_bucket" not in row
+
+
+# ---------------------------------------------------------------------------
+# Task A4 -- Group 1 integration: phase-gated operator verdict + pre-evaluator
+# stratum-mismatch refusal, END TO END through the PRODUCTION path
+# (run_controls_stage / run_candidates_stage) -- closing out A1
+# (carry_ply_bucket helper), A2 (--dev-corpus-config / _resolve_v2_stratum /
+# coupled threading into the 3 production dev_safety_verdict call sites), and
+# A3 (build_run_fingerprint's new_collapse_stratum / dev_corpus_config_sha1).
+# Brief: .superpowers/sdd/preop-task-A4-brief.md. Spec §11.
+#
+# Test-only: no source change is made here. These exercise the ALREADY-SHIPPED
+# A1-A3 wiring end to end; a failure here means a real A1-A3 gap to report,
+# not something to patch in this task.
+# ---------------------------------------------------------------------------
+
+def _phase_feat(collapsed=False):
+    """A `_feat()`-shaped candidate/reference feature dict plus `replies`
+    (`_controls_case_row` needs it; mirrors `_canned_feat` above). `collapsed`
+    is the ONLY axis this fixture varies: root_value_stm/top_share/
+    effective_children are identical across every row and every config, so
+    mover_delta/eff_children_reduction/top_share_inc are all exactly 0 and no
+    OTHER §6.2 gate can fire; the default trace's prior rank (1) fails
+    lock_in_event's rank>10 requirement, so lock_in is always False too. This
+    isolates the fixture to the new-collapse stratum gate alone."""
+    feat = _feat(collapsed=collapsed)
+    feat["replies"] = 0
+    return feat
+
+
+def _phase_vs_band_dev_rows():
+    """41 role=target rows realising the brief's (a) discriminator: band-
+    stratification PASSES but the ply_bucket 'late' phase has an n=20,
+    rate=2/20==0.10 new-collapse group (>= the frozen DEV_NEW_COLLAPSE_BAND).
+
+    ply_bucket 'late' (20 rows): 10 in band 'bA' (2 collapsing under r0, 8
+    clean) + 10 in band 'bB' (all clean) -- EACH band group is n=10 <
+    DEV_BAND_MIN_N (20), so the band-stratified per-band gate never even
+    evaluates either group, regardless of bA's own 2/10==0.20 internal rate.
+    ply_bucket 'mid' (21 rows, band 'bC', all clean): n=21 >= 20 reaches the
+    per-band floor but its own rate is 0 -- and (the SAME dilution technique
+    `_dev_rejects(band_new_collapse_rate=...)` above already uses) keeps the
+    OVERALL target new-collapse rate at 2/41 ~= 0.0488 < DEV_NEW_COLLAPSE_
+    TARGET (0.05), so neither path's overall-rate gate fires either --
+    isolating this fixture to the per-stratum gate alone.
+
+    Returns (dev_rows, collapsing_shas): collapsing_shas is the set of
+    canonical_position_sha1 values whose r0 feature should be collapsed=True
+    (every reference/absolute_off feature and every OTHER row stays
+    collapsed=False) -- i.e. exactly the positions with new_collapse=True.
+    """
+    rows = []
+    collapsing_shas = set()
+    idx = 0
+    for band, n_collapsing in (("bA", 2), ("bB", 0)):
+        for i in range(10):
+            sha = f"late-{band}-{i}"
+            rows.append({
+                "canonical_position_sha1": sha, "role": "target",
+                "branching_band": band, "ply_bucket": "late",
+                "game_idx": str(idx), "position_ply": "50", "side": "red",
+                "split": "tuning",
+            })
+            if i < n_collapsing:
+                collapsing_shas.add(sha)
+            idx += 1
+    for i in range(21):
+        sha = f"mid-bC-{i}"
+        rows.append({
+            "canonical_position_sha1": sha, "role": "target",
+            "branching_band": "bC", "ply_bucket": "mid",
+            "game_idx": str(idx), "position_ply": "80", "side": "black",
+            "split": "tuning",
+        })
+        idx += 1
+    return rows, collapsing_shas
+
+
+def _fake_run_configs_over_corpus_new_collapse(collapsing_shas):
+    """A `_run_configs_over_corpus`-shaped fake: every position is clean
+    (collapsed=False) under every config EXCEPT that `collapsing_shas`
+    positions are collapsed=True under r0 only -- so `new_collapse`
+    (collapsed under the candidate, not under absolute_off) is True for
+    exactly those rows in an r0-vs-absolute_off comparison, False elsewhere."""
+    def _fake(dev_rows, run_configs, *, evaluator, base_cfg, replay_by_game, seed_base):
+        out = {c.label: {} for c in run_configs}
+        for row in dev_rows:
+            sha = row["canonical_position_sha1"]
+            for c in run_configs:
+                collapsed = c.label == R0.label and sha in collapsing_shas
+                out[c.label][sha] = _phase_feat(collapsed=collapsed)
+        return out
+    return _fake
+
+
+def test_controls_stage_phase_gate_rejects_where_band_gate_would_pass(
+        tmp_path, monkeypatch):
+    """(a) End to end through the PRODUCTION path (run_controls_stage): on the
+    IDENTICAL r0-vs-absolute_off dev-row data, resolving the v2 'ply_bucket'
+    stratum (via --dev-corpus-config) REJECTS r0-qualification with a
+    ply_bucket[late]_new_collapse reason, while the v1 'band' path (no config)
+    on the SAME dev_rows does not reject at all -- band-stratification is
+    structurally blind to this fixture's hot group (see
+    _phase_vs_band_dev_rows' docstring: neither 10-row band reaches
+    DEV_BAND_MIN_N). This is the discriminator: if _resolve_v2_stratum or the
+    stratum_key threading silently fell back to 'band' even when
+    --dev-corpus-config resolves, r0_qualified would wrongly stay True here.
+
+    Also asserts the rows dev_safety_verdict ACTUALLY received (not just some
+    helper exercised in isolation) carried ply_bucket under v2 and used
+    stratum_key='ply_bucket' -- proving A2's coupling into the real call site,
+    not just A1's carry_ply_bucket helper -- and did NOT carry ply_bucket
+    under v1 (still 'band') on the identical source rows, proving the v1 path
+    stays untouched."""
+    _patch_operator_internals(monkeypatch)
+    dev_rows, collapsing_shas = _phase_vs_band_dev_rows()
+    monkeypatch.setattr(dfpm, "_run_configs_over_corpus",
+                        _fake_run_configs_over_corpus_new_collapse(collapsing_shas))
+    calls = _spy_dev_safety_verdict(monkeypatch)
+
+    dev_manifest, source_jsonl, config_path = _faithful_v2_setup(tmp_path)
+
+    v2_out = tmp_path / "out_v2"
+    v2_args = types.SimpleNamespace(
+        mode="tuning", dev_manifest=dev_manifest, source_jsonl=source_jsonl,
+        selected_a_manifest="selected_a.csv", checkpoint="ckpt.npz",
+        out_dir=str(v2_out), frozen_r=None, tuning_result=None,
+        seed_base=20260711, eval_batch_size=14, stall_flush_sims=48,
+        dev_corpus_config=config_path)
+    assert run_controls_stage(v2_args, dev_rows, [ABSOLUTE_OFF, R0]) == 0
+
+    v1_out = tmp_path / "out_v1"
+    v1_args = types.SimpleNamespace(
+        mode="tuning", dev_manifest=dev_manifest, source_jsonl=source_jsonl,
+        selected_a_manifest="selected_a.csv", checkpoint="ckpt.npz",
+        out_dir=str(v1_out), frozen_r=None, tuning_result=None,
+        seed_base=20260711, eval_batch_size=14, stall_flush_sims=48,
+        dev_corpus_config=None)
+    assert run_controls_stage(v1_args, dev_rows, [ABSOLUTE_OFF, R0]) == 0
+
+    v2_gate = json.loads((v2_out / "controls_gate.json").read_text())
+    v1_gate = json.loads((v1_out / "controls_gate.json").read_text())
+
+    # the DISCRIMINATOR: v2 (phase) rejects with the exact pinned reason, v1
+    # (band) on the identical r0-vs-absolute_off data does not reject at all.
+    assert v2_gate["r0_qualified"] is False
+    assert v2_gate["r0_reject_reasons"] == ["ply_bucket[late]_new_collapse=0.1000>=0.1"]
+    assert v1_gate["r0_qualified"] is True
+    assert v1_gate["r0_reject_reasons"] == []
+
+    # A2's coupling: the rows dev_safety_verdict actually received carried
+    # ply_bucket under v2 (using the resolved stratum_key) and did NOT under
+    # v1 (still 'band') -- proven on the SAME source dev_rows both times.
+    assert len(calls) == 2
+    v2_rows, v2_stratum_key = calls[0]
+    v1_rows, v1_stratum_key = calls[1]
+    assert v2_stratum_key == "ply_bucket"
+    assert v2_rows and all("ply_bucket" in r for r in v2_rows)
+    assert v1_stratum_key == "band"
+    assert v1_rows and all("ply_bucket" not in r for r in v1_rows)
+
+
+def _spy_make_evaluator_and_base_cfg(monkeypatch):
+    """Wrap the CURRENTLY-installed `_make_evaluator_and_base_cfg` (the fake
+    `_patch_operator_internals` already set) with a call-counting spy, so a
+    heavy evaluator-load call is detectable without actually touching
+    GPU/checkpoint state. Mirrors `_spy_dev_safety_verdict`'s wrap-don't-
+    replace pattern."""
+    calls = []
+    current = dfpm._make_evaluator_and_base_cfg
+
+    def _spy(*a, **kw):
+        calls.append((a, kw))
+        return current(*a, **kw)
+
+    monkeypatch.setattr(dfpm, "_make_evaluator_and_base_cfg", _spy)
+    return calls
+
+
+def _spy_run_configs_over_corpus(monkeypatch):
+    """Same wrap-don't-replace pattern as `_spy_make_evaluator_and_base_cfg`,
+    for the actual per-position search sweep `_run_configs_over_corpus`."""
+    calls = []
+    current = dfpm._run_configs_over_corpus
+
+    def _spy(*a, **kw):
+        calls.append((a, kw))
+        return current(*a, **kw)
+
+    monkeypatch.setattr(dfpm, "_run_configs_over_corpus", _spy)
+    return calls
+
+
+def test_candidates_stage_refuses_config_stratum_mismatch_before_any_search(
+        tmp_path, monkeypatch):
+    """(b) A controls artifact persisted under v1 (no --dev-corpus-config,
+    stratum 'band') is reused -- on the SAME dev-manifest/checkpoint/seeds --
+    by a candidates run invoked WITH --dev-corpus-config (resolved stratum
+    'ply_bucket'). The ONLY thing that differs between the two runs' effective
+    identity is the v2 stratum/config-sha1 pair; every other selection_context
+    field (checkpoint, dev_manifest, source_index, replay data, base MCTS
+    config, seeds, grid, source hashes) is produced identically by the SAME
+    fake harness both times. The existing `validate_controls_fingerprint`
+    call inside `run_candidates_stage` -- which runs BEFORE
+    `_make_evaluator_and_base_cfg` (evaluator load) and
+    `_run_configs_over_corpus` (the actual search sweep) -- must refuse this,
+    and the refusal must happen strictly before either heavy call: proven by
+    wrapping both with call-counting spies and asserting their counts are
+    UNCHANGED after the candidates call raises (both spies also see the
+    controls stage's own legitimate calls first, so a count of zero would not
+    by itself prove the spies are even wired)."""
+    _patch_operator_internals(monkeypatch)
+    evaluator_calls = _spy_make_evaluator_and_base_cfg(monkeypatch)
+    search_calls = _spy_run_configs_over_corpus(monkeypatch)
+
+    dev_manifest, source_jsonl, config_path = _faithful_v2_setup(tmp_path)
+    dev_rows = _v2_dev_rows()
+    out_dir = tmp_path / "out"
+
+    controls_args = types.SimpleNamespace(
+        mode="tuning", dev_manifest=dev_manifest, source_jsonl=source_jsonl,
+        selected_a_manifest="selected_a.csv", checkpoint="ckpt.npz",
+        out_dir=str(out_dir), frozen_r=None, tuning_result=None,
+        seed_base=20260711, eval_batch_size=14, stall_flush_sims=48,
+        dev_corpus_config=None)                        # v1 -- persists 'band'
+    assert run_controls_stage(controls_args, dev_rows, [ABSOLUTE_OFF, R0]) == 0
+    assert len(evaluator_calls) == 1 and len(search_calls) == 1   # the spies ARE wired
+
+    candidates_args = types.SimpleNamespace(
+        mode="tuning", dev_manifest=dev_manifest, source_jsonl=source_jsonl,
+        selected_a_manifest="selected_a.csv", checkpoint="ckpt.npz",
+        out_dir=str(out_dir), frozen_r=None, tuning_result=None,
+        seed_base=20260711, eval_batch_size=14, stall_flush_sims=48,
+        dev_corpus_config=config_path)                  # v2 -- MISMATCHES persisted 'band'
+    with pytest.raises(ValueError) as excinfo:
+        run_candidates_stage(candidates_args, dev_rows, list(GRID))
+    msg = str(excinfo.value)
+    assert msg == (
+        "stale/mismatched controls selection-context (differing keys: "
+        "['dev_corpus_config_sha1', 'new_collapse_stratum'])")
+
+    # the refusal ran strictly before either heavy call in the candidates
+    # stage -- counts are UNCHANGED from just after the controls call.
+    assert len(evaluator_calls) == 1
+    assert len(search_calls) == 1
