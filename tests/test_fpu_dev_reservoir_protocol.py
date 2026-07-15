@@ -34,6 +34,8 @@ from pathlib import Path
 import pytest
 
 from scripts.GPU.alphazero import fpu_provenance
+from scripts.GPU.alphazero.eval_runner import EvalGameResult
+from scripts.GPU.alphazero.eval_summary import summarize_match
 from scripts.GPU.alphazero.fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES
 from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     ConformanceResult,
@@ -50,9 +52,11 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     build_protocol,
     canonical_json_bytes,
     check_protocol_conformance,
+    check_summary_binding,
     emit_protocol,
     gen_command,
     measure_reservoir,
+    reason_histogram,
     write_atomic,
 )
 
@@ -1656,6 +1660,193 @@ def test_check_protocol_conformance_wrong_generation_git_commit():
 
 
 # ---------------------------------------------------------------------------
+# check_summary_binding / reason_histogram -- Task B5 (design Sec 4.1
+# amendments 3, 5).
+#
+# PURE over `protocol` + `measurements`: every fixture below is fabricated
+# DIRECTLY (no disk, no `measure_reservoir` call), reusing `_conformant_
+# reservoir` (B4) for the protocol/jsonl_rows/sidecars backbone -- but
+# replacing its minimal config-only placeholder `summary` with the REAL
+# `eval_summary.summarize_match(...)` output (+ CLI-stamped
+# generated_at/git_commit, exactly as `eval_checkpoint_match.run_match`
+# computes them), since B5's own reconstruction must be checked against a
+# GENUINELY faithful summary, not B4's narrower placeholder (B4 never needed
+# more than `summary["config"]`, so it never bothered computing the rest).
+# ---------------------------------------------------------------------------
+
+def _faithful_summary_binding_reservoir(games: int = 6, n_moves: int = 4,
+                                        **protocol_overrides):
+    """`(protocol, measurements)` where `measurements.summary` is the REAL,
+    independently-computed `summarize_match(...)` output over `measurements.
+    jsonl_rows` (+ the correct `git_commit`/a `generated_at` stamp) -- a
+    genuinely faithful summary a clean `check_summary_binding` call must
+    accept. Every other field is `_conformant_reservoir`'s own (B4)
+    fabrication, reused verbatim."""
+    protocol, measurements = _conformant_reservoir(
+        games=games, n_moves=n_moves, **protocol_overrides)
+    results = [EvalGameResult(**row) for row in
+               sorted(measurements.jsonl_rows, key=lambda r: int(r["game_idx"]))]
+    pairing_id = measurements.jsonl_rows[0]["pairing_id"]
+    config = dict(measurements.summary["config"])
+    real_summary = summarize_match(
+        results, protocol["checkpoint_a"]["path"], protocol["checkpoint_b"]["path"],
+        pairing_id, config)
+    real_summary["git_commit"] = protocol["generation_git_commit"]
+    real_summary["generated_at"] = "2026-07-14T00:00:00+00:00"
+    measurements = dataclasses.replace(measurements, summary=real_summary)
+    return protocol, measurements
+
+
+def test_summarize_match_produces_no_generated_at_or_git_commit_keys():
+    """Pins the assumption `check_summary_binding`'s whole design rests on
+    (spec Sec 4.1: "excluding only the CLI-stamped generated_at and
+    git_commit ... which summarize_match does not produce"; this module's
+    own docstring: "no time, no git") -- if `summarize_match` ever grew
+    either key, comparing its raw output against a CLI-stamped summary
+    without excluding them would spuriously mismatch every faithful
+    reservoir."""
+    _protocol, measurements = _faithful_summary_binding_reservoir()
+    results = [EvalGameResult(**row) for row in
+               sorted(measurements.jsonl_rows, key=lambda r: int(r["game_idx"]))]
+    raw = summarize_match(
+        results, measurements.summary["checkpoint_a"],
+        measurements.summary["checkpoint_b"], measurements.summary["pairing_id"],
+        measurements.summary["config"])
+    assert "generated_at" not in raw
+    assert "git_commit" not in raw
+
+
+def test_check_summary_binding_ok_on_faithful_reservoir():
+    """The load-bearing clean case: a summary that is ACTUALLY the recorded
+    `summarize_match(...)` output over these exact JSONL rows (+ the correct
+    git_commit) reconstructs equal -- `check_summary_binding` must not
+    spuriously flag a genuinely faithful reservoir."""
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    result = check_summary_binding(protocol, measurements)
+    assert result == ConformanceResult(ok=True, reason=None)
+
+
+def test_check_summary_binding_performs_no_io():
+    """PURE -- reads only `measurements`/`protocol`, never touches disk.
+    Every path-shaped protocol field points somewhere that does not exist on
+    this machine; if `check_summary_binding` performed any I/O it would
+    raise, not return a clean result (mirrors B4's own `test_check_protocol_
+    conformance_performs_no_io`)."""
+    protocol, measurements = _faithful_summary_binding_reservoir(
+        match_summary_path="/definitely/does/not/exist/match_summary.json",
+        source_index_path="/definitely/does/not/exist/match_summary_games.jsonl",
+        replay_dir="/definitely/does/not/exist/replays",
+        checkpoint_a={"path": "/definitely/does/not/exist/a.safetensors",
+                      "identity": "a:deadbeef"},
+        checkpoint_b={"path": "/definitely/does/not/exist/b.safetensors",
+                      "identity": "b:deadbeef"},
+    )
+    result = check_summary_binding(protocol, measurements)
+    assert result == ConformanceResult(ok=True, reason=None)
+
+
+def test_check_summary_binding_is_order_independent_over_jsonl_rows():
+    """`check_summary_binding` explicitly orders reconstructed results by
+    `game_idx` (spec: "Build the list ordered by game_idx") -- so shuffling
+    `measurements.jsonl_rows`' ON-DISK order (contents unchanged) must not
+    change the outcome."""
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    shuffled = list(reversed(measurements.jsonl_rows))
+    assert shuffled != measurements.jsonl_rows  # actually reordered
+    reordered = dataclasses.replace(measurements, jsonl_rows=shuffled)
+    result = check_summary_binding(protocol, reordered)
+    assert result == ConformanceResult(ok=True, reason=None)
+
+
+def test_check_summary_binding_flipped_winner_is_mismatch():
+    """The load-bearing defect case (spec: "prevents pairing a summary from
+    a *different* run ... onto this reservoir"): the JSONL disagrees with
+    the recorded summary -- one game's winner is flipped relative to what
+    the (unchanged) summary was actually computed from -- so the
+    reconstructed a_wins/b_wins/elo/verdict/color-stats numbers differ from
+    the stored ones."""
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    rows = [dict(r) for r in measurements.jsonl_rows]
+    flipped = rows[0]
+    assert flipped["game_idx"] == 0 and flipped["winner"] == "red"
+    flipped["winner"] = "black"
+    flipped["winner_checkpoint"] = flipped["black_checkpoint"]
+    bad = dataclasses.replace(measurements, jsonl_rows=rows)
+    result = check_summary_binding(protocol, bad)
+    assert result.ok is False
+    assert "summary_binding" in result.reason
+
+
+def test_check_summary_binding_tampered_summary_field_is_mismatch():
+    """A second "different run" shape: the JSONL is untouched, but the
+    PAIRED summary itself carries a different computed number (as if a
+    summary from a different run -- with a different score -- had been
+    filed alongside this reservoir's JSONL). No second partial aggregate
+    list is consulted here -- the whole-dict compare catches this exactly
+    like the flipped-winner case above, with no dedicated `a_score_rate`
+    check needed."""
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    tampered_summary = {**measurements.summary,
+                        "a_score_rate": measurements.summary["a_score_rate"] + 0.25}
+    bad = dataclasses.replace(measurements, summary=tampered_summary)
+    result = check_summary_binding(protocol, bad)
+    assert result.ok is False
+    assert "summary_binding" in result.reason
+
+
+def test_check_summary_binding_wrong_git_commit_is_mismatch():
+    """The SEPARATE check (spec: "Separately require summary.git_commit ==
+    protocol.generation_git_commit") -- the body still matches (git_commit
+    is excluded from the body compare), so this is caught only by the
+    dedicated git_commit-vs-protocol comparison."""
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    tampered_summary = {**measurements.summary, "git_commit": "not-the-protocol-commit"}
+    bad = dataclasses.replace(measurements, summary=tampered_summary)
+    result = check_summary_binding(protocol, bad)
+    assert result.ok is False
+    assert "git_commit" in result.reason
+
+
+def test_check_summary_binding_generated_at_difference_alone_does_not_trip_body_compare():
+    """`generated_at`/`git_commit` are excluded from the body compare (spec:
+    "excluding only the CLI-stamped generated_at and git_commit"). A
+    `generated_at` value that could never equal anything `summarize_match`
+    produces (it never emits the key at all) must NOT, by itself, flip a
+    faithful reservoir to MISMATCH -- as long as `git_commit` still agrees
+    with the protocol."""
+    protocol, measurements = _faithful_summary_binding_reservoir()
+    tampered_summary = {**measurements.summary,
+                        "generated_at": "1999-01-01T00:00:00+00:00"}
+    assert tampered_summary["generated_at"] != measurements.summary["generated_at"]
+    good = dataclasses.replace(measurements, summary=tampered_summary)
+    result = check_summary_binding(protocol, good)
+    assert result == ConformanceResult(ok=True, reason=None)
+
+
+def test_reason_histogram_counts_win_state_cap_board_full():
+    rows = [
+        {"reason": "win"}, {"reason": "win"}, {"reason": "win"},
+        {"reason": "state_cap"}, {"reason": "state_cap"},
+        {"reason": "board_full"},
+    ]
+    assert reason_histogram(rows) == {"win": 3, "state_cap": 2, "board_full": 1}
+
+
+def test_reason_histogram_empty_when_no_rows():
+    assert reason_histogram([]) == {}
+
+
+def test_reason_histogram_on_faithful_reservoir_matches_jsonl_reasons():
+    """Cross-checked against the SAME `_faithful_summary_binding_reservoir`
+    fixture the checks above use -- `_conformant_reservoir` gives every game
+    `reason: "win"` (design Sec 4.1), so all `games` rows land in one
+    bucket."""
+    protocol, measurements = _faithful_summary_binding_reservoir(games=6)
+    histogram = reason_histogram(measurements.jsonl_rows)
+    assert histogram == {"win": 6}
+
+
+# ---------------------------------------------------------------------------
 # Exit-code vocabulary (design Sec 3) -- shared module-wide constants.
 # ---------------------------------------------------------------------------
 
@@ -1677,6 +1868,28 @@ def test_module_import_pulls_no_gpu_or_mlx():
          "import sys; "
          "import scripts.GPU.alphazero.fpu_dev_reservoir_protocol as m; "
          "print(sorted(k for k in sys.modules if 'mlx' in k or 'torch' in k))"],
+        capture_output=True, text=True, check=True)
+    assert out.stdout.strip() == "[]"
+
+
+def test_module_import_does_not_pull_eval_runner_or_eval_summary():
+    """B5's `eval_runner.EvalGameResult` / `eval_summary.summarize_match`
+    import is LAZY -- function-local, inside `check_summary_binding` itself
+    -- so merely IMPORTING this module (never calling that function) must
+    leave `eval_runner`/`eval_summary`, and (transitively, via `eval_runner`)
+    `mcts`/`evaluator`, out of `sys.modules`. This is what keeps this
+    module's own declared "No evaluator / MCTS ... import" contract true at
+    MODULE scope, even though that whole chain is independently confirmed
+    mlx/torch-free (the stronger claim `test_module_import_pulls_no_gpu_or_
+    mlx` above already proves)."""
+    out = subprocess.run(
+        [sys.executable, "-c",
+         "import sys; "
+         "import scripts.GPU.alphazero.fpu_dev_reservoir_protocol as m; "
+         "watched = ['scripts.GPU.alphazero.eval_runner', "
+         "'scripts.GPU.alphazero.eval_summary', "
+         "'scripts.GPU.alphazero.mcts', 'scripts.GPU.alphazero.evaluator']; "
+         "print(sorted(n for n in watched if n in sys.modules))"],
         capture_output=True, text=True, check=True)
     assert out.stdout.strip() == "[]"
 

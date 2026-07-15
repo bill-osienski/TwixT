@@ -6,11 +6,13 @@ Frozen design ref: docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-q
   Sec 2.1 (the `reservoir_protocol.json` schema -- the single source of ALL
   declared pre-generation decisions), Sec 3 (CLI stages / exit codes /
   atomicity+immutability contract), Sec 4 (qualification: the measurement
-  boundary), Sec 4.1 (protocol conformance -- every check except
-  summary-binding and preflight), Sec 6 (module boundary / circular-import
-  resolution), Sec 8 (canonical JSON, determinism, reviewability).
+  boundary), Sec 4.1 (protocol conformance, now IN FULL: every check
+  including summary-binding-by-reconstruction, amendments 3 + 5 -- only the
+  geometric preflight, Sec 4.2, remains a later task), Sec 6 (module
+  boundary / circular-import resolution), Sec 8 (canonical JSON,
+  determinism, reviewability).
 Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-hardening-plan.md
-  Tasks B1-B4 -- the first four tasks of the new Group-2 subsystem
+  Tasks B1-B5 -- the first five tasks of the new Group-2 subsystem
   (B1-B11), which will qualify a generated reservoir zero-GPU (B3-B7) and
   emit an immutable `fpu_dev_corpus_v2_config.json` (B7-B10). B1 laid the
   foundation: the protocol's field set (`PROTOCOL_SCHEMA_KEYS`), the
@@ -22,15 +24,20 @@ Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-harden
   ONE filesystem-I/O boundary of qualification (Sec 4): it loads and hashes
   a GENERATED reservoir into a frozen, pure-data structure, so every later
   qualification stage reads only THAT structure and performs no I/O of its
-  own. B4 adds `check_protocol_conformance` -- the FIRST such stage: every
-  Sec 4.1 protocol-vs-reservoir check EXCEPT summary-binding (B5, which
-  calls the real `eval_summary.summarize_match`) and the geometric
-  preflight (B6), returning the FIRST failing check's reason (design's "any
-  failure is MISMATCH exit 3" -- one outcome, not an accumulated list).
-  Summary-binding (B5), the geometric preflight (B6), config derivation
-  (B7), the `V2Config` extension (B8), the `run_screen` precheck (B9), the
-  final 11-identity chain (B10) and the CLI `main` (B11) are ALL later
-  tasks -- none of that exists here.
+  own. B4 added `check_protocol_conformance` -- the FIRST such stage: every
+  Sec 4.1 protocol-vs-reservoir check EXCEPT summary-binding (B5) and the
+  geometric preflight (B6), returning the FIRST failing check's reason
+  (design's "any failure is MISMATCH exit 3" -- one outcome, not an
+  accumulated list). B5 adds `check_summary_binding` -- the SECOND stage,
+  completing Sec 4.1: reconstructs `eval_runner.EvalGameResult` rows from
+  `measurements.jsonl_rows` and calls the REAL, pure `eval_summary.
+  summarize_match` to prove the supplied `measurements.summary` really IS
+  that reconstruction's output (catching a summary swapped in from a
+  DIFFERENT run), plus the separate `git_commit`-vs-protocol check; also
+  adds `reason_histogram` for the qualification report. The geometric
+  preflight (B6), config derivation (B7), the `V2Config` extension (B8),
+  the `run_screen` precheck (B9), the final 11-identity chain (B10) and the
+  CLI `main` (B11) are ALL later tasks -- none of that exists here.
 
 =============================================================================
 TOOLING ONLY. No evaluator / MCTS / GPU / MLX / checkpoint-WEIGHTS import,
@@ -57,7 +64,24 @@ arguments (`protocol`, a `ReservoirMeasurements`) -- `measure_reservoir`
 remains the ONE AND ONLY I/O function in the whole qualification pipeline,
 and every B4 test fabricates a `ReservoirMeasurements` directly (never via
 `measure_reservoir`), exactly as this paragraph's B3 sentence anticipated
-("every later B4-B6 test will").
+("every later B4-B6 test will"). B5 likewise introduces NO new filesystem
+toucher, but it DOES introduce this module's first import of production
+game/search code: `check_summary_binding` needs the REAL `eval_runner.
+EvalGameResult` and `eval_summary.summarize_match` (not reimplementations of
+either), so it imports both -- LAZILY, INSIDE the function itself, never at
+module scope. This is deliberate, not a style preference: `eval_summary`
+imports `eval_runner`, and `eval_runner` imports `.mcts` (which in turn
+imports `.evaluator` and `.opening_diagnostics`) -- so a MODULE-level import
+would violate this docstring's own opening line ("No evaluator / MCTS ...
+import"), even though that whole chain is independently confirmed
+mlx/torch-free (grepped `^import mlx`/`^import torch`/`^from mlx`/`^from
+torch` across `eval_runner.py`, `eval_summary.py`, `mcts.py`,
+`evaluator.py`, `opening_diagnostics.py`, `eval_replay.py`,
+`game/twixt_state.py`, `game/__init__.py`: none). Verified at test time
+(test_module_import_does_not_pull_eval_runner_or_eval_summary, the same
+subprocess idiom as the mlx/torch check): merely IMPORTING this module --
+never calling `check_summary_binding` -- leaves `eval_runner`/
+`eval_summary`/`mcts`/`evaluator` out of `sys.modules`.
 
 Module-level imports are stdlib ONLY, PLUS one intra-package import: `from
 .fpu_dev_corpus_v2 import _V2_CORPUS_SOURCES` (design Sec 6's "import only
@@ -75,7 +99,10 @@ plumbing (verified: tests/test_fpu_dev_reservoir_protocol.py::
 test_module_imports_only_v2_corpus_sources_from_fpu_dev_corpus_v2). B4 adds
 no new import beyond two more names from the already-imported `typing`
 module (`Callable`, `Optional`) -- the import surface is otherwise
-identical to B3's.
+identical to B3's. B5 adds NO new MODULE-level import at all: its two new
+production dependencies (`eval_runner.EvalGameResult`, `eval_summary.
+summarize_match`) are function-local (see above) -- the module-level import
+surface is byte-identical to B4's.
 =============================================================================
 
 What this section does
@@ -204,8 +231,9 @@ stage (design Sec 4.1) -- PURE over an already-built `ReservoirMeasurements`
 (B3) and the frozen `protocol` dict: no filesystem I/O, no evaluator/MCTS/
 GPU. Runs, in the spec's own presentation order, every Sec 4.1
 protocol-vs-reservoir check EXCEPT summary-binding-by-reconstruction (a
-LATER task, B5, since it calls the real `eval_summary.summarize_match`) and
-the geometric preflight (B6): game count (JSONL rows AND replay sidecars
+SEPARATE stage below, B5's `check_summary_binding`, since it calls the real
+`eval_summary.summarize_match`) and the geometric preflight (B6): game count
+(JSONL rows AND replay sidecars
 each == `protocol["games"]`), `game_idx` contiguity (`0..games-1`, no
 gaps/dupes), each game's sidecar `seed == base_seed + game_idx` (the ONLY
 place a per-game seed is recorded -- `EvalGameResult` itself carries none),
@@ -235,6 +263,53 @@ sub-keys) and that `anchor` is one of the two literal role names, raising
 than letting a bare KeyError/TypeError surface from deep inside a check --
 deliberately minimal, covering only the nested shapes this module's OWN
 checks dereference, not a full re-validation of `build_protocol`'s job.
+
+`check_summary_binding`: the SECOND qualification stage (design Sec 4.1
+amendments 3 + 5) -- PURE over `measurements` (+ `protocol`, for the
+separate `generation_git_commit` check): no filesystem I/O, no
+evaluator/MCTS/GPU (`eval_runner`/`eval_summary` are imported LAZILY,
+inside this function -- see the TOOLING ONLY section above for why).
+Reconstructs `eval_runner.EvalGameResult` rows from EVERY `measurements.
+jsonl_rows` entry (`EvalGameResult(**row)` -- the row already carries every
+one of that dataclass's fields; `EvalGameResult` itself has no `seed`
+field, so the row's absent `seed` key is simply never read), ORDERED BY
+`game_idx`, then calls the REAL `eval_summary.summarize_match(results,
+a_ckpt, b_ckpt, pairing_id, config)` with `a_ckpt`/`b_ckpt`/`pairing_id`/
+`config` read from `measurements.summary` ITSELF (`checkpoint_a`,
+`checkpoint_b`, `pairing_id`, `config` -- exactly the values
+`eval_checkpoint_match.run_match` originally passed, since `summarize_match`
+writes each straight through into its own output verbatim) -- so a
+faithful summary's own recorded pass-through fields reconstruct EXACTLY,
+and only the fields that DEPEND on `results` (games/state_caps/board_full/
+color_bias/avg_plies/a_wins/b_wins/a_score/rates/CI/elo/verdict/color
+stats) are genuinely RECOMPUTED from the JSONL. Requires the reconstructed
+summary's COMPLETE output to equal `measurements.summary`, via
+`_strip_cli_stamped_keys` on BOTH sides -- EXCLUDING ONLY `generated_at`/
+`git_commit` (`summarize_match` is "no time, no git"; `eval_checkpoint_
+match.run_match` stamps both AFTER calling it) -- the whole dict, minus
+those two keys, never a hand-picked partial aggregate list (design Sec 4.1:
+"with no second partial aggregate list to drift"). SEPARATELY requires
+`measurements.summary["git_commit"] == protocol["generation_git_commit"]`
+-- independent of the body compare, which excludes `git_commit` entirely,
+so a body-faithful summary stamped with the WRONG commit is still caught.
+Returns `ConformanceResult(ok=True)` when both checks pass, else
+`ConformanceResult(ok=False, reason=...)` naming which of the two failed
+(body compare runs first). Assumes `measurements.jsonl_rows` entries are
+already `EvalGameResult`-shaped -- a malformed row raises `TypeError` from
+the dataclass constructor itself, exactly like `gen_command`/
+`measure_reservoir`'s own "assumes already-valid input" contract; this is
+not a NEW validation layer.
+
+`reason_histogram`: the full termination-reason histogram over
+`jsonl_rows` (design Sec 4.1 / Sec 3's report state machine: "the computed
+reason histogram") -- counts of every `reason` value (`"win"`,
+`"state_cap"`, `"board_full"`, ...) `EvalGameResult.reason` may carry.
+Pure (a plain dict-counting loop, no I/O) and, unlike every `_check_*`/
+`check_summary_binding` function above, produces data for the
+qualification REPORT (a LATER task's, B7's, `report_out`) rather than a
+pass/fail conformance compare -- `measurements.summary` has no such field
+to check it against (design Sec 4.1: "the summary has no such field to
+compare against").
 """
 from __future__ import annotations
 
@@ -1155,8 +1230,9 @@ def check_protocol_conformance(
     remains the ONE I/O function in the whole qualification pipeline).
 
     Runs every Sec 4.1 protocol-vs-reservoir check EXCEPT summary-binding-
-    by-reconstruction (a LATER task, B5 -- it calls the real `eval_summary.
-    summarize_match`) and the geometric preflight (B6): game count,
+    by-reconstruction (a SEPARATE stage, `check_summary_binding` below (B5)
+    -- it calls the real `eval_summary.summarize_match`) and the geometric
+    preflight (B6): game count,
     `game_idx` contiguity, per-game seed, the matchup (identities + every
     row's checkpoints), between-games model-color parity, replay linkage,
     the ten match knobs + `workers`, output-path derivation, within-game
@@ -1180,3 +1256,142 @@ def check_protocol_conformance(
         if reason is not None:
             return ConformanceResult(ok=False, reason=reason)
     return ConformanceResult(ok=True, reason=None)
+
+
+# ---------------------------------------------------------------------------
+# Summary <-> JSONL binding by reconstruction -- Task B5 (design Sec 4.1
+# amendments 3, 5). PURE over `protocol` + `measurements`: no filesystem
+# I/O, no evaluator/MCTS/GPU -- `eval_summary`/`eval_runner` are imported
+# LAZILY, inside `check_summary_binding` itself (see the module docstring's
+# TOOLING ONLY section for why: importing them at MODULE level would
+# transitively pull `mcts`/`evaluator`/`opening_diagnostics` -- this
+# module's own declared "No evaluator / MCTS ... import" contract -- even
+# though that chain is independently confirmed mlx/torch-free).
+# ---------------------------------------------------------------------------
+
+# The two keys `eval_checkpoint_match.run_match` stamps onto `summarize_
+# match`'s otherwise-pure output AFTER calling it (`summary["git_commit"] =
+# _git_commit()`; `summary["generated_at"] = datetime.now(...).isoformat()`,
+# lines 69-70) -- `summarize_match` itself never produces either (this
+# module's own "no time, no git"). Excluded from the summary<->JSONL body
+# compare (spec Sec 4.1 amendment 5); `git_commit` is separately compared
+# against `protocol["generation_git_commit"]` by `check_summary_binding`.
+_SUMMARY_CLI_STAMPED_KEYS: Tuple[str, str] = ("generated_at", "git_commit")
+
+
+def _strip_cli_stamped_keys(summary: Mapping[str, Any]) -> Dict[str, Any]:
+    """`summary` minus `_SUMMARY_CLI_STAMPED_KEYS` -- the two CLI-stamped
+    keys `eval_summary.summarize_match` never produces. Applied to BOTH the
+    reconstructed and the supplied summary before comparing them, so the
+    comparison is symmetric (never assumes which side may or may not carry
+    the two keys)."""
+    return {k: v for k, v in summary.items()
+            if k not in _SUMMARY_CLI_STAMPED_KEYS}
+
+
+def check_summary_binding(
+        protocol: Mapping[str, Any],
+        measurements: ReservoirMeasurements) -> ConformanceResult:
+    """Summary <-> JSONL binding by reconstruction (design Sec 4.1
+    amendments 3, 5) -- Task B5, the SECOND qualification stage. PURE over
+    `measurements` (+ `protocol`, for the separate `generation_git_commit`
+    check): no filesystem I/O, no evaluator/MCTS/GPU.
+
+    Reconstructs `eval_runner.EvalGameResult` rows from EVERY `measurements.
+    jsonl_rows` entry (`EvalGameResult(**row)` -- the row already carries
+    every one of that dataclass's fields, task_id through replay_path, per
+    `ReservoirMeasurements.jsonl_rows`'s own docstring; `EvalGameResult` has
+    no `seed` field, so the row's absent `seed` key is simply never read),
+    ORDERED BY `game_idx`, then calls the REAL, pure `eval_summary.
+    summarize_match(results, a_ckpt, b_ckpt, pairing_id, config)` --
+    `a_ckpt`/`b_ckpt`/`pairing_id`/`config` read from `measurements.summary`
+    ITSELF (`checkpoint_a`, `checkpoint_b`, `pairing_id`, `config` -- exactly
+    the values `eval_checkpoint_match.run_match` originally passed, since
+    `summarize_match` writes each straight through into its own output
+    verbatim; see that function's `base` dict) -- so a faithful summary's
+    own recorded pass-through fields reconstruct EXACTLY, and only the
+    fields that DEPEND on `results` (games/state_caps/board_full/
+    color_bias/avg_plies/a_wins/b_wins/a_score/rates/CI/elo/verdict/color
+    stats) are genuinely RECOMPUTED from the JSONL -- exactly what makes
+    this a check that "a summary from a DIFFERENT run with the same
+    settings" paired with THIS reservoir cannot pass (its recomputed numbers
+    would not match the pass-through fields it was itself filed with).
+
+    Requires the reconstructed summary's COMPLETE output to equal
+    `measurements.summary`, comparing both through `_strip_cli_stamped_keys`
+    -- EXCLUDING ONLY `generated_at`/`git_commit` -- never a hand-picked
+    partial aggregate list (design Sec 4.1: "with no second partial
+    aggregate list to drift"). SEPARATELY requires `measurements.
+    summary["git_commit"] == protocol["generation_git_commit"]` --
+    independent of the body compare, which excludes `git_commit` entirely,
+    so a body-faithful summary stamped with the WRONG commit is still
+    caught. The two checks run in that order (body, then git_commit); each
+    returns immediately on its own failure.
+
+    Returns `ConformanceResult(ok=True)` when both checks pass, else
+    `ConformanceResult(ok=False, reason=...)` -- mirrors `check_protocol_
+    conformance`'s single-reason contract.
+
+    Assumes `measurements.jsonl_rows` entries are already `EvalGameResult`-
+    shaped (every field present, no unexpected extras) -- a malformed row
+    raises `TypeError` from the dataclass constructor itself, exactly like
+    `gen_command`/`measure_reservoir`'s own "assumes already-valid input"
+    contract; this is not a new validation layer over `measurements` itself
+    (that remains `measure_reservoir`'s and B4's job).
+    """
+    from .eval_runner import EvalGameResult
+    from .eval_summary import summarize_match
+
+    summary = measurements.summary
+    results = [
+        EvalGameResult(**row)
+        for row in sorted(measurements.jsonl_rows, key=lambda r: int(r["game_idx"]))
+    ]
+    reconstructed = summarize_match(
+        results,
+        summary.get("checkpoint_a"),
+        summary.get("checkpoint_b"),
+        summary.get("pairing_id"),
+        summary.get("config"),
+    )
+
+    actual_body = _strip_cli_stamped_keys(summary)
+    reconstructed_body = _strip_cli_stamped_keys(reconstructed)
+    if reconstructed_body != actual_body:
+        return ConformanceResult(
+            ok=False,
+            reason=(f"summary_binding: reconstructed summary body "
+                    f"{reconstructed_body!r} != supplied summary body "
+                    f"{actual_body!r} (excluding generated_at/git_commit)"))
+
+    expected_commit = protocol["generation_git_commit"]
+    actual_commit = summary.get("git_commit")
+    if actual_commit != expected_commit:
+        return ConformanceResult(
+            ok=False,
+            reason=(f"summary_binding: measurements.summary['git_commit']="
+                    f"{actual_commit!r} != protocol['generation_git_commit']="
+                    f"{expected_commit!r}"))
+
+    return ConformanceResult(ok=True, reason=None)
+
+
+def reason_histogram(jsonl_rows: List[dict]) -> Dict[str, int]:
+    """The full termination-reason histogram over `jsonl_rows` (design Sec
+    4.1 / Sec 3's report state machine: "the computed reason histogram") --
+    counts of every `reason` value (`"win"`, `"state_cap"`, `"board_full"`,
+    `"unknown_error"`, ... -- whatever `EvalGameResult.reason` actually
+    carries) across every row. Pure: a plain dict-counting loop, no I/O, no
+    dependency on `check_summary_binding` or any `_check_*` helper.
+
+    For the qualification REPORT (a LATER task's, B7's, `report_out`), NOT
+    a conformance compare -- `measurements.summary` has no such field to
+    check it against (design Sec 4.1: "the summary has no such field to
+    compare against"), so unlike every function above this returns a plain
+    `dict`, never a `ConformanceResult`.
+    """
+    histogram: Dict[str, int] = {}
+    for row in jsonl_rows:
+        reason = row["reason"]
+        histogram[reason] = histogram.get(reason, 0) + 1
+    return histogram
