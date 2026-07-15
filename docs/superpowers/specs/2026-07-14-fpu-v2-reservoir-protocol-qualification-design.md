@@ -70,7 +70,9 @@ adds only the *measured* identities (reservoir/code/checkpoint hashes). This is 
   `eval_runner.build_pairing_tasks`, single pairing, offset 0); the ten result-determining match knobs
   (amendment 4): `board_size`, `mcts_sims`, `mcts_eval_batch_size`, `mcts_stall_flush_sims`,
   `selection_mode`, `opening_temp_plies`, `temp_high`, `temp_low`, `max_moves`, `base_seed`; `save_eval_replays:
-  true` (capture is mandatory). `workers` is **not** a frozen decision (non-determining).
+  true` (capture is mandatory); `workers` (amendment 2 — **operational, recorded**, not scientifically
+  result-determining, but required so `emit-gen-command` can print an exact `--workers N` and so the summary's
+  recorded workers can be checked to agree).
 - **Output relationships (amendment 3):** `match_summary_path` (= the generator's `--output`);
   `source_index_path` — declared **and** required to equal `<match_summary stem>_games.jsonl` (the exact rule
   in `eval_checkpoint_match._write_outputs`); `replay_dir` — `--replay-dir` or `<stem>_replays`
@@ -81,11 +83,13 @@ adds only the *measured* identities (reservoir/code/checkpoint hashes). This is 
   `late_floors`, `enumerator_params`, `new_collapse_stratum: "ply_bucket"`, `forbidden_manifests`, `screen_out`,
   `select_out`.
 - **Generation provenance (amendment 8):** `generation_git_commit` + `generation_source_sha1s` over the
-  **enumerated** result-determining generation modules (pinned here, not deferred): `eval_checkpoint_match.py`,
-  `eval_runner.py`, `mcts.py`, `game/twixt_state.py`, `eval_replay.py`, `probe_eval.py`
-  (`load_network_for_scoring`), `network.py`, `local_evaluator.py`. Rationale: these are the modules whose
-  bytes, given the checkpoint bytes, determine the generated games (task/seed/color assembly, the search, the
-  board rules, the replay serialization, and network load/forward). Trust boundary in §10.
+  **enumerated** result-determining generation modules (pinned here, not deferred) — **thirteen** modules:
+  `eval_checkpoint_match.py`, `eval_runner.py`, `mcts.py`, `opening_diagnostics.py` (imported by `mcts`, affects
+  search), `evaluator.py` (the MCTS evaluator interface), `game/twixt_state.py`, `game/__init__.py` (game
+  constants / import behavior), `eval_replay.py` (replay serialization), `probe_eval.py`
+  (`load_network_for_scoring`), `network.py`, `local_evaluator.py`, `eval_summary.py` (constructs the summary
+  being qualified), `eval_elo.py` (deterministic summary fields). Rationale: these are the modules whose bytes,
+  given the checkpoint bytes, determine the generated games and the summary. Trust boundary in §10.
 
 ### 2.2 `fpu_dev_corpus_v2_config.json` (emitted by `qualify`, immutable; amendments 1, 2)
 **This EXTENDS the current `_V2_CONFIG_REQUIRED_KEYS`** (`source_index_path`, `seed_range`, `selection_seed`,
@@ -96,15 +100,19 @@ default). It does **not** replace them. Complete final schema — every field **
 
 - **Carried from the protocol (the derivable decisions):** `source_index_path`, `seed_range`, `selection_seed`,
   `phase_allocation`, `late_floors`, `enumerator_params`, `new_collapse_stratum` (= `"ply_bucket"`),
-  `checkpoint` (= the **anchor** path, singular), `forbidden_manifests`, `screen_out`, `select_out`.
-- **New top-level (paths — amendment 2):** `config_schema_version`, `protocol_path`, `match_summary_path`,
-  `replay_dir`.
+  `checkpoint` (= the **anchor** path, singular), `forbidden_manifests`, `screen_out`, `select_out`, and — the
+  screen-anchor MCTS throughput knobs the existing schema carries — `eval_batch_size` (= protocol
+  `mcts_eval_batch_size`) and `stall_flush_sims` (= protocol `mcts_stall_flush_sims`) (amendment 1).
+- **New top-level (paths — amendments 1, 2):** `config_schema_version`, `protocol_path`, `match_summary_path`,
+  `replay_dir`, `report_out` (the config points back to its qualification-evidence report, §3).
 - **`expected_fingerprints` (extended)** — the measured identities: `protocol_sha1`, `source_index_sha1`,
   `replay_data_sha1` (hash of sidecar *contents*), `match_summary_sha1`, `source_file_sha1s` (the corpus
-  result-determining code), `forbidden_manifest_sha1s`, and **three distinct checkpoint identities**
-  (amendment 1) — `reservoir_checkpoint_a_identity`, `reservoir_checkpoint_b_identity`,
-  `anchor_checkpoint_identity` (= A). The prior single `checkpoint_identity` could not name all three; it is
-  replaced by these three keys.
+  result-determining code — the v2 source-identity set, which **also includes the new
+  `fpu_dev_reservoir_protocol.py` qualification module**, amendment 4, since qualification is result-determining
+  for the corpus it produces; added to the v2 set only, leaving v1's `_CORPUS_SOURCES` byte-identical),
+  `forbidden_manifest_sha1s`, and **three distinct checkpoint identities** (amendment 1) —
+  `reservoir_checkpoint_a_identity`, `reservoir_checkpoint_b_identity`, `anchor_checkpoint_identity` (= A). The
+  prior single `checkpoint_identity` could not name all three; it is replaced by these three keys.
 
 **Paths *and* hashes (amendment 2):** hashes alone can't be recomputed pre-screen/select — the path is needed
 to re-read the file. Every pinned identity carries both.
@@ -124,13 +132,19 @@ New module CLI (`fpu_dev_reservoir_protocol.py`):
 *different* artifact**; treat an existing **byte-identical** artifact as success (idempotent); emit the config
 **only after all conformance + preflight checks pass**. `--check` recomputes and diffs but **never writes**.
 
-**Report lifecycle (amendment 3).** `qualify` always writes a **deterministic report** to the protocol's
-`report_out`, on pass *and* on fail, recording every check's outcome plus the computed reason histogram
-(§4.1). The report distinguishes the two failure classes: a **GATE-FAIL** report records the protocol version
-as **RETIRED** (a durable retirement marker); `qualify` refuses to re-qualify a protocol whose `report_out`
-already carries a retirement record. A **MISMATCH** report records the mismatch but **must not** retire the
-protocol — regeneration under the same protocol stays allowed (so an operator/generation mistake never burns
-a version). A pass report is the qualification evidence the config's `report_out` points back to.
+**Report state machine (amendment 3).** `qualify` always writes a **deterministic report** to the protocol's
+`report_out`, recording every check's outcome plus the computed reason histogram (§4.1). Three terminal states,
+reconciling retryable mismatch with artifact immutability:
+- **MISMATCH** — **replaceable**: the report may be overwritten by the next `qualify` attempt after complete
+  regeneration under the *same* protocol (an operator/generation mistake never burns a version). It does not
+  retire the protocol and does not emit a config.
+- **PASS** — **terminal and immutable**: the report + the emitted config are frozen (refuse-overwrite-different,
+  idempotent-on-byte-identical). A passed protocol is thereafter **reviewed with `--check`, never re-qualified**.
+- **GATE-FAIL** — **terminal and immutable**: records the protocol version as **RETIRED** and **permanently
+  prevents config emission for that protocol**; `qualify` refuses to run again against a protocol whose
+  `report_out` carries a retirement record.
+
+The config's `report_out` points back to the PASS report as its qualification evidence.
 
 ## 4. Qualification (zero-GPU)
 
@@ -151,15 +165,20 @@ a version). A pass report is the qualification evidence the config's `report_out
   colors, and `board_size` match the JSONL row (this existence+linkage check is what *requires* replay
   capture — there is no separate capture flag to gate).
 - **Result-determining match config (amendment 4):** all ten knobs recorded in the summary's `config` equal
-  the protocol. `workers` recorded-only.
-- **Summary ↔ JSONL binding (amendments 3, 5) — only against fields the summary *actually* records:**
-  recompute from the JSONL and require equality with the summary's real aggregates — `games`, `state_caps`,
-  `board_full`, `a_wins`, `b_wins`, `color_bias.red_win_rate_decisive`, `avg_plies`, `checkpoint_a`/`_b`,
-  `selection_mode` (verified against `eval_summary.summarize_match`'s return). Do **not** assert against a
-  nonexistent field. The summary has **no** complete termination-reason histogram, so `qualify` **computes the
-  full reason histogram from the JSONL and records it in the report** (§3) rather than comparing it to a
-  summary field. (Binding the summary to the JSONL prevents pairing a summary from a *different* run with the
-  same settings.)
+  the protocol; the summary's recorded `config.workers` equals `protocol.workers` (operational agreement, not
+  science).
+- **Summary ↔ JSONL binding by reconstruction (amendments 3, 5):** reconstruct the `EvalGameResult` rows from
+  the JSONL (every field — `game_idx`, `red`/`black_checkpoint`, `winner`, `winner_checkpoint`, `reason`,
+  `n_moves`, `red`/`black_score` — is present in the JSONL row), call the **real, pure**
+  `eval_summary.summarize_match(results, a_ckpt, b_ckpt, pairing_id, config)`, and require its **complete
+  output** to equal the supplied summary, **excluding only** the CLI-stamped `generated_at` and `git_commit`
+  (which `summarize_match` does not produce — verified: eval_summary is "no time, no git", stamped later in
+  `eval_checkpoint_match`). This binds every real field (`a_as_red`/`a_as_black`, scores, rates, CI, elo,
+  verdict, color stats, `state_caps`/`board_full`, …) with no second partial aggregate list to drift.
+  Separately require `summary.git_commit == protocol.generation_git_commit`. Additionally, `qualify` computes
+  the full termination-reason histogram from the JSONL into the **report** (§3) — the summary has no such field
+  to compare against. (Binding the summary to the JSONL prevents pairing a summary from a *different* run with
+  the same settings onto this reservoir.)
 - **Generation provenance (amendment 8):** recompute `generation_source_sha1s` (over the §2.1 enumerated
   module list) + `generation_git_commit` and match the protocol (subject to the §10 trust boundary).
 - **Within-game move-player parity** is validated **separately** (players alternate by ply within each
