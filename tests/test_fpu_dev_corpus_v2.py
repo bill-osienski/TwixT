@@ -3379,11 +3379,17 @@ def _v2_screen_artifact(tmp_path, screen_rows, *,
     return config, meta, files
 
 
-def _v2_faithful_screen_artifact(tmp_path, screen_rows):
+def _v2_faithful_screen_artifact(tmp_path, screen_rows, *, anchor="checkpoint_a"):
     """A screen artifact whose config is the GENUINE `derive_config` output over a
     FULL protocol + a truly-measurable on-disk reservoir -- so `select`'s design Sec
     5 re-derive+byte-compare (`measure_reservoir` -> `derive_config` ->
     `canonical_json_bytes` byte-compare) runs FOR REAL, not stubbed.
+
+    `anchor` (`"checkpoint_a"` default, mirroring the real frozen protocol; or
+    `"checkpoint_b"`, a B7-supported path) selects WHICH reservoir player is the
+    single screen anchor -- so a test can make the anchor file DISTINCT from
+    `checkpoint_a` and prove `reservoir_checkpoint_a_identity` /
+    `anchor_checkpoint_identity` are genuinely independent, not aliased.
 
     Distinct from `_v2_screen_artifact` (which writes a MINIMAL protocol -- checkpoint
     paths only -- and pre-registers the config's fingerprints directly from
@@ -3429,7 +3435,7 @@ def _v2_faithful_screen_artifact(tmp_path, screen_rows):
     # `v2_screen_provenance` computes for `protocol_sha1`) equals
     # `sha1(canonical_json_bytes(protocol))` (what `derive_config` computes).
     protocol = {
-        "anchor": "checkpoint_a",
+        "anchor": anchor,
         "base_seed": 20270000,
         "games": 3,
         "source_index_path": str(index),
@@ -3478,7 +3484,8 @@ def _v2_faithful_screen_artifact(tmp_path, screen_rows):
     meta = json.loads(Path(config.screen_out + ".meta.json").read_text())
     files = dict(config_path=str(config_path), protocol_path=str(protocol_path),
                  match_summary_path=str(match_summary), screen_csv=config.screen_out,
-                 checkpoint=str(checkpoint_a), checkpoint_b=str(checkpoint_b),
+                 checkpoint=str(checkpoint_a), checkpoint_a=str(checkpoint_a),
+                 checkpoint_b=str(checkpoint_b),
                  source_index_path=str(index), replays=replays)
     return config, meta, files
 
@@ -3695,6 +3702,47 @@ def test_v2_three_checkpoint_identities_are_distinct_and_independently_checked(
         _validate(meta, config)
     assert "reservoir_checkpoint_a_identity" not in str(excinfo.value)
     assert "anchor_checkpoint_identity" not in str(excinfo.value)
+
+
+def test_v2_reservoir_a_and_anchor_checkpoint_identities_are_independent_at_select(
+        tmp_path):
+    """B10 review gap: `reservoir_checkpoint_a_identity` vs `anchor_checkpoint_
+    identity` -- the checkpoint-split pairing that matters -- proven GENUINELY
+    INDEPENDENT, not aliased. EVERY other fixture sets the anchor to the SAME file
+    as `checkpoint_a` (the real `anchor: "checkpoint_a"`), so `a` and `anchor` share
+    a value and no tamper can tell them apart. Here the faithful fixture uses
+    `anchor="checkpoint_b"` (a B7-supported path -- `derive_config` computes the
+    anchor identity from `protocol[anchor]["path"]`, NOT aliased to reservoir_a), so
+    the anchor file is checkpoint_b, DISTINCT from checkpoint_a.
+
+    Tampering ONLY checkpoint_a's file -> `select` refuses (at the eleven-identity
+    hard-match, before any selection) naming `reservoir_checkpoint_a_identity` and
+    NOT `anchor_checkpoint_identity` (= checkpoint_b, untouched) NOR
+    `reservoir_checkpoint_b_identity` (also checkpoint_b, untouched). Run through the
+    REAL `select_final_manifest` (no injected verifier) -- the operator-facing path.
+    """
+    screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, files = _v2_faithful_screen_artifact(
+        tmp_path, screen, anchor="checkpoint_b")
+
+    # HAPPY-PATH: the anchor identity EQUALS reservoir_b (same file, anchor=b) but
+    # DIFFERS from reservoir_a -- the exact split the tamper below distinguishes.
+    fp = config.expected_fingerprints
+    assert fp["anchor_checkpoint_identity"] == fp["reservoir_checkpoint_b_identity"]
+    assert fp["anchor_checkpoint_identity"] != fp["reservoir_checkpoint_a_identity"]
+    assert fp["reservoir_checkpoint_a_identity"] != fp["reservoir_checkpoint_b_identity"]
+
+    ckpt_a_path = Path(files["checkpoint_a"])
+    ckpt_a_path.write_bytes(ckpt_a_path.read_bytes() + b"-tampered")
+
+    with pytest.raises(ValueError, match="reservoir_checkpoint_a_identity") as excinfo:
+        select_final_manifest(
+            meta, config,
+            forbidden=load_forbidden_hashes(config.forbidden_manifests),
+            screen_csv_path=config.screen_out)
+    msg = str(excinfo.value)
+    assert "anchor_checkpoint_identity" not in msg      # the anchor (=b) is untouched
+    assert "reservoir_checkpoint_b_identity" not in msg  # reservoir_b (=b) is untouched
 
 
 def test_v2_identity_catches_a_protocol_mutated_after_screening(tmp_path):

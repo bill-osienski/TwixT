@@ -2424,8 +2424,18 @@ def assert_config_byte_equals_rederivation(
     supplied_config["eval_batch_size"] = config.eval_batch_size
     supplied_config["stall_flush_sims"] = config.stall_flush_sims
     if canonical_json_bytes(supplied_config) != canonical_json_bytes(recomputed_config):
-        differing = sorted(k for k in recomputed_config
-                           if supplied_config.get(k) != recomputed_config[k])
+        # Diff PER KEY on canonical JSON -- the SAME type-insensitive normalization
+        # the pass/fail decision above uses -- NOT raw `!=`. `V2Config` stores
+        # `seed_range`/`forbidden_manifests` as TUPLES while `derive_config` emits
+        # them as JSON LISTS, so `tuple != list` is always True even when the
+        # CONTENTS match; a raw-`!=` diff would name those two keys in EVERY raise
+        # regardless of the real tamper (a false positive on the operator-facing
+        # forgery-investigation path). Canonicalizing each side first makes
+        # `differing` name only the genuinely-changed key(s).
+        differing = sorted(
+            k for k in recomputed_config
+            if canonical_json_bytes(supplied_config.get(k))
+            != canonical_json_bytes(recomputed_config[k]))
         raise ValueError(
             "the supplied config does not byte-equal a fresh re-derivation from "
             f"(protocol, reservoir) -- differing top-level key(s): {differing}. "

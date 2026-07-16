@@ -3581,6 +3581,32 @@ def test_assert_config_byte_equals_rederivation_passes_and_raises(tmp_path):
         assert field in str(excinfo.value)
 
 
+def test_assert_config_byte_equals_rederivation_diff_names_only_the_changed_key(tmp_path):
+    """B10 review MINOR: the `differing top-level key(s)` diagnostic must name ONLY
+    the genuinely-changed key(s), not false-positive on the tuple-vs-list keys.
+    `V2Config.seed_range`/`forbidden_manifests` are TUPLES; `derive_config` emits
+    them as JSON LISTS, so a raw-`!=` diff named `['forbidden_manifests',
+    'seed_range', 'selection_seed']` for a `selection_seed`-only tamper -- misleading
+    an operator investigating a forgery. The canonical-JSON per-key diff (the SAME
+    type-insensitive normalization the pass/fail decision uses) fixes it."""
+    config, protocol, protocol_path, _info = _write_precheckable_config(tmp_path)
+    recomputed = derive_config(
+        protocol, measure_reservoir(protocol), protocol_path=str(protocol_path))
+
+    # sanity: the faithful config DOES carry the tuple-valued fields (so the
+    # false-positive was genuinely possible, not vacuously absent).
+    assert isinstance(config.seed_range, tuple)
+    assert isinstance(config.forbidden_manifests, tuple)
+
+    tampered = dataclasses.replace(config, selection_seed=config.selection_seed + 1)
+    with pytest.raises(ValueError) as excinfo:
+        assert_config_byte_equals_rederivation(tampered, recomputed)
+    msg = str(excinfo.value)
+    assert "differing top-level key(s): ['selection_seed']" in msg
+    assert "forbidden_manifests" not in msg      # the tuple-vs-list false positive...
+    assert "seed_range" not in msg               # ...on BOTH tuple keys, now gone
+
+
 def test_rederive_and_assert_config_unchanged_is_the_combined_check(tmp_path):
     """The combined convenience `select` uses: passes on a faithful config,
     raises on a tampered non-hashed field. This is the exact entry point
