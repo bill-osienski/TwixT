@@ -94,13 +94,17 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
     SPLITS,
     UNPREREGISTERABLE_IDENTITIES,
     V2Config,
+    V2ConfigRederivationFailed,
+    V2PrecheckFailed,
     V2PreflightInfeasible,
     V2PreflightReport,
     _V2_CONFIG_REQUIRED_KEYS,
     _V2_CORPUS_SOURCES,
     _build_v2_anchor_search_fn,
     _parse_v2_args,
+    _select_verify_config_rederivation,
     _v2_anchor_seed,
+    _v2_cli_hard_stop,
     assign_split_v2,
     classify_exclusion,
     enumerate_v2_proposals,
@@ -2645,6 +2649,28 @@ def test_load_v2_config_raises_naming_every_missing_new_schema_key(tmp_path):
         assert key in str(excinfo.value)
 
 
+def test_load_v2_config_raises_oserror_on_a_missing_file(tmp_path):
+    """final-review minor #1's exact justification for including `OSError` in
+    `main`'s catch tuple: a nonexistent `--config` path makes `Path(path).
+    read_text()` raise `FileNotFoundError`, an `OSError` subclass -- never a
+    `ValueError`."""
+    missing = tmp_path / "does_not_exist.json"
+    with pytest.raises(OSError):
+        load_v2_config(str(missing))
+
+
+def test_load_v2_config_raises_json_decode_error_on_malformed_json(tmp_path):
+    """final-review minor #1's exact justification for including `json.
+    JSONDecodeError` in `main`'s catch tuple: a syntactically-invalid config
+    file makes `json.loads` raise `json.JSONDecodeError` (itself a
+    `ValueError` subclass, but named explicitly in the design so the tuple's
+    intent reads clearly)."""
+    p = tmp_path / "config.json"
+    p.write_text("{not valid json")
+    with pytest.raises(json.JSONDecodeError):
+        load_v2_config(str(p))
+
+
 # ---------------------------------------------------------------------------
 # Task B8 -- `_V2_CORPUS_SOURCES` gains the qualification module (v1's own
 # `_CORPUS_SOURCES` stays untouched), and the producer/consumer round-trip: a
@@ -3864,9 +3890,10 @@ def test_v2_identity_hard_matches_the_forbidden_manifests_actually_used(tmp_path
 
 
 def test_v2_source_file_mismatch_names_the_module_and_says_what_to_do(tmp_path):
-    """The identity likeliest to fire in practice (any edit to the seven frozen
-    modules) must not just dump two seven-entry dicts: it names the DIFFERING
-    basename(s) and tells the operator what to do."""
+    """The identity likeliest to fire in practice (any edit to the
+    `_V2_CORPUS_SOURCES` frozen modules) must not just dump the two full
+    dicts: it names the DIFFERING basename(s) and tells the operator what to
+    do."""
     config, meta, _files = _v2_screen_artifact(
         tmp_path, _screen_from_pool(_abundant_pool_v2()))
     tampered = copy.deepcopy(meta)
@@ -4577,6 +4604,117 @@ def test_v2_preflight_infeasible_is_a_dedicated_exception():
     assert "except V2PreflightInfeasible" in main_src
     assert "except ValueError" not in main_src
     assert "except Exception" not in main_src
+
+
+# --- final-review minors #1/#2: CLI hard-stops for a bad --config, a screen
+# precheck tamper, and a select re-derive tamper (`main` itself is never
+# invoked -- plan Global Constraints -- so these are STATIC wiring checks,
+# mirroring `test_v2_preflight_infeasible_is_a_dedicated_exception`'s own
+# style, plus direct, real (non-`main`) exercises of the small pieces that
+# ARE safely callable outside the operator/GPU shell. ---------------------
+
+def test_v2_cli_hard_stop_prints_and_returns_2(capsys):
+    assert _v2_cli_hard_stop("some message") == 2
+    assert capsys.readouterr().out == "some message\n"
+
+
+def test_v2_main_wraps_config_load_for_a_clean_usage_exit():
+    """final-review minor #1: a missing/unreadable/malformed `--config` maps
+    to a clean exit 2 (via the shared `_v2_cli_hard_stop`) instead of a raw
+    traceback. Catches narrowly -- `(OSError, json.JSONDecodeError,
+    ValueError)`, not a bare `except` -- BEFORE the `--mode` dispatch, so
+    both `screen` and `select` share the one guard. The exact exception
+    TYPES `load_v2_config` can raise are proven directly (not through
+    `main`) by `test_load_v2_config_raises_oserror_on_a_missing_file` /
+    `..._json_decode_error_on_malformed_json` / `..._on_missing_required_key`
+    above."""
+    src = inspect.getsource(main)
+    assert "config = load_v2_config(args.config)" in src
+    assert "except (OSError, json.JSONDecodeError, ValueError) as exc:" in src
+    assert "except Exception" not in src
+
+    load_idx = src.index("config = load_v2_config(args.config)")
+    catch_idx = src.index("except (OSError, json.JSONDecodeError, ValueError)")
+    mode_screen_idx = src.index('args.mode == "screen"')
+    assert load_idx < catch_idx < mode_screen_idx, src
+
+
+def test_v2_precheck_failed_is_a_dedicated_exception():
+    """final-review minor #2 (screen half), mirroring `test_v2_preflight_
+    infeasible_is_a_dedicated_exception`'s own proof style exactly:
+    `run_screen` re-raises `precheck_before_screen`'s `ValueError` as the
+    dedicated `V2PrecheckFailed`, at its OWN try/except (narrowly scoped to
+    that one call -- see the class's own docstring for why nothing else in
+    `run_screen` can trip it), and `main` catches ONLY that additional type
+    -- the pre-existing `except V2PreflightInfeasible` clause is untouched,
+    and there is still no bare `except ValueError`/`except Exception`
+    anywhere in `main`."""
+    assert issubclass(V2PrecheckFailed, ValueError)
+
+    screen_src = inspect.getsource(run_screen)
+    assert "try:\n        precheck_before_screen(config)" in screen_src
+    assert "raise V2PrecheckFailed(str(exc)) from exc" in screen_src
+
+    main_src = inspect.getsource(main)
+    assert "except V2PreflightInfeasible" in main_src
+    assert "except V2PrecheckFailed" in main_src
+    assert "except ValueError" not in main_src
+    assert "except Exception" not in main_src
+
+
+def test_v2_config_rederivation_failed_is_a_dedicated_exception():
+    """final-review minor #2 (select half): `main` passes `_select_verify_
+    config_rederivation` -- a thin wrapper around the SAME real `fpu_dev_
+    reservoir_protocol.rederive_and_assert_config_unchanged` -- as `select_
+    final_manifest`'s pre-existing `verify_config_rederivation=` injection
+    seam, and catches ONLY the dedicated `V2ConfigRederivationFailed` it
+    re-raises. `validate_screen_identities`'s eleven-identity mismatch and
+    every other `select_final_manifest` failure mode remain untouched (no
+    bare `except ValueError` was added)."""
+    assert issubclass(V2ConfigRederivationFailed, ValueError)
+
+    wrapper_src = inspect.getsource(_select_verify_config_rederivation)
+    assert "rederive_and_assert_config_unchanged(config)" in wrapper_src
+    assert "raise V2ConfigRederivationFailed(str(exc)) from exc" in wrapper_src
+
+    main_src = inspect.getsource(main)
+    assert "verify_config_rederivation=_select_verify_config_rederivation" in main_src
+    assert "except V2ConfigRederivationFailed" in main_src
+    assert "except ValueError" not in main_src
+    assert "except Exception" not in main_src
+
+    select_call_idx = main_src.index("rows, stats = select_final_manifest(")
+    catch_idx = main_src.index("except V2ConfigRederivationFailed")
+    assert select_call_idx < catch_idx, main_src
+
+
+def test_select_verify_config_rederivation_passes_on_a_faithful_config(tmp_path):
+    """POSITIVE control (real reservoir, no injected stub): `main`'s exact
+    wrapper, run for real over `_v2_faithful_screen_artifact`'s genuinely
+    measurable reservoir, returns `None` -- proving the wrapper is not
+    ACCIDENTALLY always-raising."""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    config, _meta, _files = _v2_faithful_screen_artifact(tmp_path, screen)
+
+    assert _select_verify_config_rederivation(config) is None
+
+
+def test_select_verify_config_rederivation_reraises_a_tamper_as_the_dedicated_exception(
+        tmp_path):
+    """THE load-bearing case: the SAME `selection_seed` tamper `test_v2_
+    select_re_derives_and_refuses_a_tampered_non_hashed_config_field` proves
+    raises a plain `ValueError` from the real `rederive_and_assert_config_
+    unchanged` -- run through `main`'s OWN wrapper here, it must raise the
+    DEDICATED `V2ConfigRederivationFailed` (still an instance of `ValueError`
+    -- see that class's own docstring), not merely re-surface the plain
+    type, so `main`'s `except V2ConfigRederivationFailed` clause actually
+    catches it end to end."""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    config, _meta, _files = _v2_faithful_screen_artifact(tmp_path, screen)
+    tampered = dataclasses.replace(config, selection_seed=config.selection_seed + 1)
+
+    with pytest.raises(V2ConfigRederivationFailed, match="re-derivation"):
+        _select_verify_config_rederivation(tampered)
 
 
 # --- `main --mode select` (argparse only -- main() itself is never invoked) ---

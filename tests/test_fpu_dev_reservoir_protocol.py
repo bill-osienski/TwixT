@@ -389,6 +389,63 @@ def test_build_protocol_rejects_each_individually_missing_key(key):
 
 
 # ---------------------------------------------------------------------------
+# build_protocol numeric-type normalization (final-review minor #5):
+# `fpu_dev_corpus_v2.load_v2_config` coerces `selection_seed`/`config_schema_
+# version`/`eval_batch_size`/`stall_flush_sims` via `int()` and `seed_range`/
+# `forbidden_manifests` via `tuple()`, while `derive_config` carries the
+# protocol's values verbatim -- so a protocol authoring one of these numeric
+# fields as a non-int JSON type (e.g. a string) would make the design Sec 5
+# re-derive byte-compare a FALSE-POSITIVE mismatch, blocking a faithful
+# screen/select (see the round-trip test in the precheck_before_screen
+# section below, once `_write_precheckable_config` exists). Fixed at the
+# source: `build_protocol` now coerces the genuinely-numeric fields to their
+# proper Python type at freeze time, so the frozen protocol is always
+# well-typed regardless of how `params` authored them.
+# ---------------------------------------------------------------------------
+
+_BUILD_PROTOCOL_INT_FIELDS = (
+    "games", "base_seed", "mcts_sims", "mcts_eval_batch_size",
+    "mcts_stall_flush_sims", "opening_temp_plies", "max_moves", "workers",
+    "selection_seed", "config_schema_version",
+)
+_BUILD_PROTOCOL_FLOAT_FIELDS = ("temp_high", "temp_low")
+
+
+@pytest.mark.parametrize("field", _BUILD_PROTOCOL_INT_FIELDS)
+def test_build_protocol_coerces_a_string_authored_int_field_to_int(field):
+    base = _protocol_params()
+    params = _protocol_params(**{field: str(base[field])})
+    protocol = build_protocol(params)
+    assert protocol[field] == base[field]
+    assert isinstance(protocol[field], int)
+
+
+@pytest.mark.parametrize("field", _BUILD_PROTOCOL_FLOAT_FIELDS)
+def test_build_protocol_coerces_a_string_authored_float_field_to_float(field):
+    base = _protocol_params()
+    params = _protocol_params(**{field: str(base[field])})
+    protocol = build_protocol(params)
+    assert protocol[field] == base[field]
+    assert isinstance(protocol[field], float)
+
+
+def test_build_protocol_does_not_coerce_fields_outside_the_numeric_set():
+    """`board_size` IS numeric but is NOT part of the load/derive asymmetry's
+    field set (`V2Config` has no `board_size` field at all -- it never flows
+    through `load_v2_config`), so it must be left exactly as authored --
+    proof `build_protocol` coerces the DECLARED set only, never "anything
+    that looks numeric". `no_top_up` (a bool) guards the same boundary from
+    the other side: `int(True)` would silently become `1`, corrupting a JSON
+    boolean into a JSON number -- `no_top_up` must stay a real bool."""
+    params = _protocol_params(board_size="24", no_top_up=True)
+    protocol = build_protocol(params)
+    assert protocol["board_size"] == "24"
+    assert isinstance(protocol["board_size"], str)
+    assert protocol["no_top_up"] is True
+    assert isinstance(protocol["no_top_up"], bool)
+
+
+# ---------------------------------------------------------------------------
 # emit_protocol
 # ---------------------------------------------------------------------------
 
@@ -1818,6 +1875,59 @@ def test_check_protocol_conformance_wrong_replay_dir():
     rows = [dict(r) for r in measurements.jsonl_rows]
     rows[4]["replay_path"] = "some/other/dir/game_000004.json"
     bad = dataclasses.replace(measurements, jsonl_rows=rows)
+    result = check_protocol_conformance(protocol, bad)
+    assert result.ok is False
+    assert "output_path" in result.reason
+
+
+def test_check_protocol_conformance_absolute_replay_dir_matches_cwd_relative_replay_paths(
+        tmp_path, monkeypatch):
+    """final-review minor #4: `_check_output_path_derivation` used to compare
+    `Path(row["replay_path"]).parent` against `Path(protocol["replay_dir"])`
+    as bare `PurePath`s -- a STRING-shaped compare that never resolves
+    relative-vs-absolute forms of the SAME directory. A protocol whose
+    `replay_dir` was authored ABSOLUTE, generated against rows whose
+    `replay_path`s are the CWD-relative form of that identical directory
+    (a perfectly legitimate, correctly-generated reservoir -- `write_replay`
+    only ever joins `os.path.join(replay_dir, filename)`), must NOT be
+    reported as a replay_dir mismatch.
+
+    Before the fix this failed (`Path("replays") != Path(str(tmp_path /
+    "replays"))` is True even though they name the same directory once CWD
+    is accounted for) -- the false-MISMATCH this test guards against."""
+    monkeypatch.chdir(tmp_path)
+    replay_dir_abs = str(tmp_path / "replays")
+    protocol, measurements = _conformant_reservoir(replay_dir=replay_dir_abs)
+
+    # The fixture derives replay_path from replay_dir directly, so with an
+    # absolute replay_dir the fabricated rows are already absolute too --
+    # rewrite them to the CWD-relative form a real generator invoked with a
+    # relative `--replay-dir` would equally have produced for this exact
+    # physical directory (monkeypatch.chdir above makes CWD == tmp_path).
+    rows = []
+    for r in measurements.jsonl_rows:
+        relative = os.path.relpath(r["replay_path"], start=str(tmp_path))
+        rows.append({**r, "replay_path": relative})
+    same_dir_relative = dataclasses.replace(measurements, jsonl_rows=rows)
+
+    result = check_protocol_conformance(protocol, same_dir_relative)
+    assert result.ok is True, result.reason
+
+
+def test_check_protocol_conformance_absolute_replay_dir_still_catches_a_genuinely_different_dir(
+        tmp_path, monkeypatch):
+    """The complement of the test above: normalizing relative-vs-absolute
+    forms of the SAME directory must not mask a GENUINELY different one --
+    the replay_dir mismatch this whole check exists to catch stays caught
+    after the fix."""
+    monkeypatch.chdir(tmp_path)
+    replay_dir_abs = str(tmp_path / "replays")
+    protocol, measurements = _conformant_reservoir(replay_dir=replay_dir_abs)
+
+    rows = [dict(r) for r in measurements.jsonl_rows]
+    rows[0]["replay_path"] = "totally/different/dir/game_000000.json"
+    bad = dataclasses.replace(measurements, jsonl_rows=rows)
+
     result = check_protocol_conformance(protocol, bad)
     assert result.ok is False
     assert "output_path" in result.reason
@@ -3533,6 +3643,31 @@ def test_precheck_before_screen_performs_no_gpu_or_mlx_work(tmp_path):
     out = subprocess.run(
         [sys.executable, "-c", script], capture_output=True, text=True, check=True)
     assert out.stdout.strip().splitlines()[-1] == "[]"
+
+
+def test_precheck_before_screen_round_trips_cleanly_when_a_numeric_field_was_string_authored(
+        tmp_path):
+    """final-review minor #5, the full pipeline proof: a protocol that
+    authored `selection_seed` as a JSON STRING (`build_protocol` now coerces
+    it to `int` at freeze time -- see the `build_protocol` numeric-
+    normalization tests above) loads through `load_v2_config` (which ALSO
+    coerces `selection_seed` via `int()`) and passes the design Sec 5
+    re-derive+byte-compare with NO false-positive tamper report -- the exact
+    load/derive asymmetry this fix closes.
+
+    Before the fix, `build_protocol` carried the string verbatim into the
+    frozen protocol; `precheck_before_screen`'s fresh re-derivation would
+    then re-read that SAME string from the protocol file, while the
+    `config` passed in here already held `load_v2_config`'s coerced INT --
+    `canonical_json_bytes(20260714) != canonical_json_bytes("20260714")`
+    spuriously raising a re-derivation MISMATCH for a perfectly faithful,
+    untampered reservoir."""
+    config, _protocol, _protocol_path, _info = _write_precheckable_config(
+        tmp_path, protocol_overrides={"selection_seed": "20260714"})
+    assert config.selection_seed == 20260714
+    assert isinstance(config.selection_seed, int)
+
+    assert precheck_before_screen(config, preflight=_fake_preflight(True)) is None
 
 
 # ---------------------------------------------------------------------------

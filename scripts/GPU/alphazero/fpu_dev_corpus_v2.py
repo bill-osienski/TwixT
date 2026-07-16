@@ -2047,6 +2047,28 @@ class V2PreflightInfeasible(ValueError):
     """
 
 
+class V2PrecheckFailed(ValueError):
+    """`run_screen`'s pre-evaluator hardening precheck (`fpu_dev_reservoir_
+    protocol.precheck_before_screen`) refused -- a config/reservoir/protocol
+    tamper or drift check, always a HARD STOP before any evaluator loads
+    (final-review minor #2). Distinct from `V2PreflightInfeasible` (a
+    DIFFERENT hard-stop reason -- geometric infeasibility, not a tamper
+    check) for the exact same motive that class's own docstring gives: `main`
+    must be able to tell failures apart, so a "screen STOPPED (precheck)"
+    message is never printed for a geometric refusal, or vice versa.
+
+    `precheck_before_screen` itself raises plain `ValueError`; `run_screen`
+    re-raises it as THIS dedicated subtype (see `run_screen`'s own body,
+    immediately around the precheck call) so `main` has something narrower
+    than bare `ValueError` to catch -- catching `ValueError` directly in
+    `main` would be indistinguishable, by an `inspect.getsource` structural
+    check, from the broad "any failure -> exit 2" catch `test_v2_preflight_
+    infeasible_is_a_dedicated_exception` proves `main` does NOT do. Subclasses
+    ValueError so a caller written against the pre-fix shape (`except
+    ValueError`) still behaves as before.
+    """
+
+
 def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
     """Operator `screen` stage: the evaluator/MCTS phase. For EVERY proposal
     `enumerate_v2_proposals` yields, over EVERY game in the reservoir
@@ -2115,7 +2137,19 @@ def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
     v1's `write_manifest` / `write_meta`).
     """
     from .fpu_dev_reservoir_protocol import precheck_before_screen
-    precheck_before_screen(config)
+    try:
+        precheck_before_screen(config)
+    except ValueError as exc:
+        # Narrow (final-review minor #2): ONLY precheck_before_screen's own
+        # ValueError is re-raised as the dedicated V2PrecheckFailed -- see
+        # that class's own docstring for why `main` needs a distinct type
+        # here rather than a bare `except ValueError`. Nothing else in this
+        # function's body raises plain ValueError (V2PreflightInfeasible
+        # below is its own subclass, caught separately by `main`; every
+        # other failure is a genuine fault of a different type entirely --
+        # see this function's own docstring), so this catch can never mask
+        # an unrelated error.
+        raise V2PrecheckFailed(str(exc)) from exc
 
     records = load_game_index(config.source_index_path)
     report = v2_preflight_source(records)
@@ -2604,8 +2638,10 @@ assert set(_IDENTITY_REMEDIATION) == set(SCREEN_IDENTITY_KEYS), _IDENTITY_REMEDI
 def _dict_identity_diff(*blocks: Any) -> List[str]:
     """The `{basename: sha1}` keys on which two or more identity blocks disagree --
     so a `source_file_sha1s` mismatch says WHICH module changed rather than dumping
-    two seven-entry dicts side by side. A non-Mapping block (a corrupt meta) simply
-    contributes no keys and disagrees on all of them."""
+    the two full dicts side by side (one entry per `_V2_CORPUS_SOURCES` module --
+    deliberately not a hardcoded count here, since that tuple grows over time; see
+    its own banner). A non-Mapping block (a corrupt meta) simply contributes no keys
+    and disagrees on all of them."""
     names = sorted({n for b in blocks if isinstance(b, Mapping) for n in b})
     return [n for n in names
             if len({(b.get(n) if isinstance(b, Mapping) else None)
@@ -2620,9 +2656,10 @@ def _identity_mismatch(key: str, *, sources: List[Tuple[str, Any]]) -> ValueErro
     claim a comparison that was not made.
 
     For a `{basename: sha1}` identity it reports ONLY the differing BASENAMES and
-    their three values. Dumping the whole seven-entry block three times over (which
-    is what `source_file_sha1s` -- the identity likeliest to fire in practice -- would
-    otherwise do) buries the one fact the operator needs: WHICH file changed.
+    their three values. Dumping the whole block (one entry per `_V2_CORPUS_SOURCES`
+    module) three times over (which is what `source_file_sha1s` -- the identity
+    likeliest to fire in practice -- would otherwise do) buries the one fact the
+    operator needs: WHICH file changed.
     """
     values = [v for _label, v in sources]
     disagreed = [f"{la} != {lb}"
@@ -2970,8 +3007,13 @@ def select_final_manifest(screen_meta: Mapping[str, Any], config: V2Config, *,
     check points reuse, so the tamper check can never drift between screen and
     select. Injectable so a unit test can drive select's ORDER without a full
     on-disk reservoir; the real check (over a genuinely measurable reservoir) is
-    exercised end to end by the faithful-fixture tests. `main --mode select` never
-    passes it -> production always runs the real re-derivation.
+    exercised end to end by the faithful-fixture tests. `main --mode select` passes
+    `_select_verify_config_rederivation` (final-review minor #2) -- a thin wrapper
+    that calls this SAME real function, with the SAME argument, at the SAME step,
+    and only re-raises its `ValueError` as the dedicated `V2ConfigRederivationFailed`
+    so `main` can map exactly this hard stop to a clean exit code (see that
+    wrapper's own docstring); every OTHER caller that leaves this parameter `None`
+    still gets the real check directly.
 
     THERE IS NO `screen_rows` PARAMETER, deliberately. The rows are READ HERE, from
     `screen_csv_path` -- the artifact whose bytes step 1 just hard-matched -- and can
@@ -3192,9 +3234,84 @@ def _parse_v2_args(argv):
     return args
 
 
+def _v2_cli_hard_stop(message: str) -> int:
+    """Print `message` and return the CLI's shared hard-stop exit code (2) --
+    the tail shared by every final-review-minor CLI guard `main` adds: a
+    malformed/missing `--config` (minor #1), a screen precheck tamper (minor
+    #2a, `V2PrecheckFailed`), a select re-derive tamper (minor #2b,
+    `V2ConfigRederivationFailed`). Each site still catches its OWN narrow
+    exception type/tuple at its OWN call site (see each site's own comment
+    for why a shared CATCH would be wrong) -- only this print-and-return
+    tail is shared, to avoid three near-identical bodies. `V2PreflightInfeasible`
+    (pre-existing, untouched) intentionally does NOT route through this: its
+    own message/behavior predates this helper and is out of scope here."""
+    print(message)
+    return 2
+
+
+class V2ConfigRederivationFailed(ValueError):
+    """The design Sec 5 re-derive-and-byte-compare tamper check
+    (`fpu_dev_reservoir_protocol.rederive_and_assert_config_unchanged`)
+    failed at `select` (final-review minor #2) -- ALWAYS a hard stop BEFORE
+    any row is selected (`select_final_manifest`'s own step 2, ahead of the
+    row read / qualification / sampler).
+
+    `select_final_manifest` can ALSO raise plain `ValueError` for an
+    UNRELATED reason -- `validate_screen_identities`'s eleven-identity
+    hard-match (step 1), a `forbidden`-set wiring invariant, a failed
+    post-screen qualification, or `sample_v2_rows`'s exact-or-raise
+    selection -- and `main` deliberately leaves every one of those
+    propagating raw, unchanged from the pre-fix shape (an evidence-chain
+    failure at select is still a real fault an operator needs the traceback
+    for). Only the re-derive tamper check itself becomes a clean exit code:
+    `_select_verify_config_rederivation` (below) re-raises ONLY its own
+    `ValueError` as this dedicated subtype, so `main` can catch exactly this
+    one failure mode -- the same "give main something to tell apart from
+    every OTHER failure" move `V2PreflightInfeasible`/`V2PrecheckFailed`
+    already make. Subclasses ValueError so a caller written against the
+    pre-fix shape (`except ValueError`) still behaves as before.
+    """
+
+
+def _select_verify_config_rederivation(config: V2Config) -> None:
+    """`main --mode select`'s OWN `verify_config_rederivation` override
+    (final-review minor #2). Calls the REAL `fpu_dev_reservoir_protocol.
+    rederive_and_assert_config_unchanged` -- lazily imported, the SAME
+    cross-module discipline every other call site in this file uses (design
+    Sec 6) -- with the SAME argument, at the SAME step inside
+    `select_final_manifest` (passed as that function's PRE-EXISTING
+    `verify_config_rederivation=` injection seam -- not a new call site, and
+    not a reordering of any kind), and re-raises its `ValueError` as the
+    dedicated `V2ConfigRederivationFailed` so `main` can map exactly this
+    hard stop -- and nothing else `select_final_manifest` can raise -- to a
+    clean exit code. A test that wants the untranslated real check (e.g. to
+    assert on `rederive_and_assert_config_unchanged`'s own message) still
+    calls that function directly; this wrapper exists solely for `main`'s
+    own exception dispatch, never as a second implementation of the check.
+    """
+    from .fpu_dev_reservoir_protocol import rederive_and_assert_config_unchanged
+    try:
+        rederive_and_assert_config_unchanged(config)
+    except ValueError as exc:
+        raise V2ConfigRederivationFailed(str(exc)) from exc
+
+
 def main(argv=None) -> int:
     args = _parse_v2_args(argv)
-    config = load_v2_config(args.config)
+    try:
+        config = load_v2_config(args.config)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        # Narrow (final-review minor #1): a missing/unreadable file (OSError),
+        # invalid JSON (json.JSONDecodeError, itself a ValueError subclass), or
+        # a well-formed-but-incomplete config (load_v2_config's own ValueError
+        # naming the missing key(s)) all map to a clean exit 2 naming the file
+        # + problem -- never a raw traceback for what is, in every case, a bad
+        # CLI INPUT rather than a genuine bug. NOT a bare `except`: anything
+        # else (e.g. a TypeError from a JSON scalar where a mapping was
+        # expected) still surfaces raw.
+        return _v2_cli_hard_stop(
+            f"[fpu-dev-corpus-v2] cannot load --config {args.config!r}: "
+            f"{type(exc).__name__}: {exc}")
 
     if args.mode == "screen":
         try:
@@ -3206,6 +3323,15 @@ def main(argv=None) -> int:
             # died and a screen that was never attempted are not the same event.
             print(f"[fpu-dev-corpus-v2] screen STOPPED (preflight): {exc}")
             return 2
+        except V2PrecheckFailed as exc:
+            # Final-review minor #2: the pre-operator hardening precheck (design
+            # Sec 5/Sec 6) is ALSO a zero-cost, pre-evaluator hard stop -- a
+            # config/reservoir/protocol tamper check, distinct from the geometric
+            # preflight above -- so it gets its OWN clean exit 2 rather than a raw
+            # traceback, without widening what the `except V2PreflightInfeasible`
+            # clause above catches.
+            return _v2_cli_hard_stop(
+                f"[fpu-dev-corpus-v2] screen STOPPED (precheck): {exc}")
         print(f"[fpu-dev-corpus-v2] screen: wrote {len(rows)} proposal "
               f"row(s) -> {config.screen_out} (+ .meta.json); "
               f"status_counts={meta['status_counts']}")
@@ -3214,19 +3340,29 @@ def main(argv=None) -> int:
     if args.mode == "select":
         # PURE: no evaluator, no MCTS, no checkpoint load -- only the persisted
         # screen, the config, the file bytes the ten identities hash, and the
-        # (protocol, reservoir) bytes the design Sec 5 re-derive re-measures. Any
-        # identity mismatch, config re-derivation mismatch, or failed qualification
-        # raises out of `select_final_manifest` BEFORE a single row is selected;
-        # those are evidence-chain failures, so they propagate raw rather than
-        # becoming a terse exit code.
+        # (protocol, reservoir) bytes the design Sec 5 re-derive re-measures. An
+        # identity mismatch or a failed qualification raises out of
+        # `select_final_manifest` BEFORE a single row is selected; those remain
+        # evidence-chain failures that propagate raw rather than becoming a terse
+        # exit code. The design Sec 5 re-derive/byte-compare (step 2) is the ONE
+        # exception (final-review minor #2): `_select_verify_config_rederivation`
+        # (a thin wrapper around the SAME real check) re-raises it as the
+        # dedicated `V2ConfigRederivationFailed`, so THAT one hard stop -- also
+        # always BEFORE any row is selected -- gets a clean exit 2 + message
+        # instead of a raw traceback.
         # `main` does NOT read the screen's rows: `select_final_manifest` reads them
         # itself, from the artifact whose bytes it hard-matches, so no caller -- not
         # even this one -- can hand it a row-set that is not in that file.
         screen_meta = json.loads(Path(str(args.screen) + ".meta.json").read_text())
         forbidden = load_forbidden_hashes(config.forbidden_manifests)
 
-        rows, stats = select_final_manifest(
-            screen_meta, config, forbidden=forbidden, screen_csv_path=args.screen)
+        try:
+            rows, stats = select_final_manifest(
+                screen_meta, config, forbidden=forbidden, screen_csv_path=args.screen,
+                verify_config_rederivation=_select_verify_config_rederivation)
+        except V2ConfigRederivationFailed as exc:
+            return _v2_cli_hard_stop(
+                f"[fpu-dev-corpus-v2] select STOPPED (re-derive): {exc}")
 
         # The VERIFIED recompute, threaded into the manifest's own provenance rather
         # than re-derived: the artifact then records exactly the identities that were

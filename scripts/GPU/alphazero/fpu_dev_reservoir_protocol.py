@@ -773,6 +773,43 @@ def write_atomic(path: Union[str, Path], data_bytes: bytes) -> WriteStatus:
 # ---------------------------------------------------------------------------
 # Protocol schema builder + emitter -- Task B1.
 # ---------------------------------------------------------------------------
+# The genuinely-numeric `PROTOCOL_SCHEMA_KEYS` fields `build_protocol` coerces
+# to a well-typed Python `int`/`float` at freeze time (final-review minor #5):
+# `fpu_dev_corpus_v2.load_v2_config` coerces `selection_seed`/`config_schema_
+# version`/`eval_batch_size`/`stall_flush_sims` via `int()` (and `seed_range`/
+# `forbidden_manifests` via `tuple()`), while `derive_config` carries every
+# protocol value through VERBATIM -- so a protocol that authored one of these
+# fields as a non-int JSON type (e.g. a string) would make the design Sec 5
+# re-derive byte-compare a FALSE-POSITIVE mismatch (a real, byte-identical
+# value on both sides, but `canonical_json_bytes(20260714) !=
+# canonical_json_bytes("20260714")`), refusing a perfectly faithful
+# screen/select. Byte-neutral for already-well-typed (production) params:
+# `int(x)`/`float(x)` on an already-`int`/`float` `x` returns an equal value
+# of the SAME type, so `canonical_json_bytes` of the coerced protocol is
+# unchanged.
+#
+# Deliberately an EXPLICIT, closed list -- not "coerce anything `int()`/
+# `float()` happens to accept" -- so a genuinely non-numeric field can never
+# be silently mangled: `board_size` IS numeric but is NOT here (it never
+# flows through `load_v2_config` -- `V2Config` has no `board_size` field at
+# all, so there is no load/derive asymmetry for it to close), and a bool
+# field (`no_top_up`) is excluded on purpose (`int(True) == 1` would corrupt
+# a JSON boolean into a JSON number). `_BUILD_PROTOCOL_INT_FIELDS`/`_FLOAT_
+# FIELDS` are checked, not merely asserted, against `PROTOCOL_SCHEMA_KEYS` and
+# each other below, so a typo'd field name fails at IMPORT time, not silently
+# at some later call.
+_BUILD_PROTOCOL_INT_FIELDS: Tuple[str, ...] = (
+    "games", "base_seed", "mcts_sims", "mcts_eval_batch_size",
+    "mcts_stall_flush_sims", "opening_temp_plies", "max_moves", "workers",
+    "selection_seed", "config_schema_version",
+)
+_BUILD_PROTOCOL_FLOAT_FIELDS: Tuple[str, ...] = ("temp_high", "temp_low")
+
+assert set(_BUILD_PROTOCOL_INT_FIELDS) <= set(PROTOCOL_SCHEMA_KEYS)
+assert set(_BUILD_PROTOCOL_FLOAT_FIELDS) <= set(PROTOCOL_SCHEMA_KEYS)
+assert not (set(_BUILD_PROTOCOL_INT_FIELDS) & set(_BUILD_PROTOCOL_FLOAT_FIELDS))
+
+
 def build_protocol(params: Mapping[str, Any]) -> Dict[str, Any]:
     """Validate + assemble a canonical protocol dict from `params`.
 
@@ -790,14 +827,26 @@ def build_protocol(params: Mapping[str, Any]) -> Dict[str, Any]:
     carries every DECLARED decision (Sec 2). A later `measure_reservoir`
     stage is what independently MEASURES a real generated reservoir and
     checkpoints against this declaration; this function only assembles what
-    the caller already declared.
+    the caller already declared -- with ONE exception (final-review minor
+    #5): the `_BUILD_PROTOCOL_INT_FIELDS`/`_BUILD_PROTOCOL_FLOAT_FIELDS`
+    genuinely-numeric fields are coerced to `int`/`float` here, so the
+    FROZEN protocol is always well-typed regardless of how `params` authored
+    them (a JSON string, e.g.) -- see that constant's own banner for why.
+    Every other field (paths, strings, `selection_mode`, `anchor`, the
+    `checkpoint_a`/`checkpoint_b`/`phase_allocation`/etc. dicts, ...) is
+    still taken verbatim, unchanged.
     """
     missing = sorted(k for k in PROTOCOL_SCHEMA_KEYS if k not in params)
     if missing:
         raise ValueError(
             f"build_protocol: params is missing required key(s): "
             f"{', '.join(missing)}")
-    return {k: params[k] for k in PROTOCOL_SCHEMA_KEYS}
+    protocol = {k: params[k] for k in PROTOCOL_SCHEMA_KEYS}
+    for key in _BUILD_PROTOCOL_INT_FIELDS:
+        protocol[key] = int(protocol[key])
+    for key in _BUILD_PROTOCOL_FLOAT_FIELDS:
+        protocol[key] = float(protocol[key])
+    return protocol
 
 
 def emit_protocol(
@@ -1545,10 +1594,24 @@ def _check_output_path_derivation(
                 f"{protocol['source_index_path']!r} != derived "
                 f"{expected_index!r} (<match_summary_path stem>_games.jsonl)")
 
-    replay_dir = Path(protocol["replay_dir"])
+    # Normalized (absolute + `os.path.normpath`-collapsed) before comparing --
+    # NOT a bare `Path.__eq__` (final-review minor #4). `os.path.abspath`
+    # already applies `normpath(join(os.getcwd(), path))`, so an ALREADY
+    # absolute path is left alone (`os.path.abspath` is idempotent) while a
+    # relative one is anchored at the current working directory -- the same
+    # anchor `write_replay`'s own `os.path.join(replay_dir, filename)` used
+    # when a relative `--replay-dir` was passed at generation time. A bare
+    # string/`PurePath` compare would FALSE-MISMATCH an absolute
+    # `protocol["replay_dir"]` against the CWD-relative `replay_path`s a
+    # correctly-generated reservoir can legitimately carry (both name the
+    # SAME directory; only their surface FORM differs) -- this fails safe
+    # (a refused MISMATCH, never a silently-accepted forgery) but is brittle
+    # against a legitimate reservoir. Genuinely different directories still
+    # normalize to different strings, so a real mismatch is still caught.
+    expected_dir = os.path.abspath(str(protocol["replay_dir"]))
     for row in measurements.jsonl_rows:
-        actual_dir = Path(row["replay_path"]).parent
-        if actual_dir != replay_dir:
+        actual_dir = os.path.abspath(str(Path(row["replay_path"]).parent))
+        if actual_dir != expected_dir:
             return (f"output_path: game_idx={row['game_idx']} replay_path="
                     f"{row['replay_path']!r} is not directly under protocol "
                     f"replay_dir={protocol['replay_dir']!r}")
