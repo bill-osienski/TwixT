@@ -32,6 +32,7 @@ import dataclasses
 import hashlib
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -63,6 +64,7 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     ReservoirMeasurements,
     TEN_MATCH_KNOBS,
     WriteStatus,
+    _parse_args,
     assert_config_byte_equals_rederivation,
     build_protocol,
     canonical_json_bytes,
@@ -74,6 +76,7 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     gen_command,
     is_passed,
     is_retired,
+    main,
     measure_and_rederive_config,
     measure_reservoir,
     precheck_before_screen,
@@ -3715,3 +3718,344 @@ def test_module_imports_only_pure_names_from_fpu_dev_corpus_v2():
         "_V2_CONFIG_REQUIRED_KEYS", "_V2_CORPUS_SOURCES",
         "enumerate_v2_proposals", "v2_geometry_feasibility",
     }, from_imports
+
+
+# ---------------------------------------------------------------------------
+# CLI -- Task B11 (design Sec 3). `main`/`_parse_args` are pure glue over the
+# already-tested functions above -- these tests drive `main` directly
+# (unlike `fpu_dev_corpus_v2.main`, which mixes a real-evaluator branch and
+# is therefore never invoked in ITS OWN test suite): every subcommand here
+# is zero-GPU by design (`qualify` NEVER launches generation), so invoking
+# `main` end to end is both safe and the strongest available proof of the
+# wiring. Argparse usage errors are `SystemExit`, the standard idiom this
+# repo's OWN CLI tests already use (see
+# tests/test_fpu_dev_corpus_v2.py::test_v2_mode_argument_accepts_screen_and_select).
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Required-argument rejection (pure argparse; exit 2 == EXIT_USAGE).
+# ---------------------------------------------------------------------------
+
+def test_main_rejects_no_subcommand_at_all():
+    with pytest.raises(SystemExit) as exc_info:
+        main([])
+    assert exc_info.value.code == EXIT_USAGE
+
+
+def test_main_rejects_an_unrecognized_subcommand():
+    with pytest.raises(SystemExit) as exc_info:
+        main(["bogus-command"])
+    assert exc_info.value.code == EXIT_USAGE
+
+
+@pytest.mark.parametrize("argv", [
+    ["emit-protocol"],
+    ["emit-protocol", "--params-json", "params.json"],   # missing --out
+    ["emit-protocol", "--out", "protocol.json"],          # missing --params-json
+    ["emit-gen-command"],                                  # missing --protocol
+    ["qualify"],                                           # missing --protocol
+], ids=[
+    "emit-protocol-both-missing", "emit-protocol-missing-out",
+    "emit-protocol-missing-params-json", "emit-gen-command-missing-protocol",
+    "qualify-missing-protocol",
+])
+def test_main_rejects_missing_required_args_per_subcommand(argv):
+    with pytest.raises(SystemExit) as exc_info:
+        main(argv)
+    assert exc_info.value.code == EXIT_USAGE
+
+
+def test_parse_args_accepts_every_subcommand_with_its_required_args():
+    """The positive control for the rejection tests above -- proves each
+    subcommand's required flags really are exactly what the rejection tests
+    claim (not, say, an unrelated crash that happens to raise SystemExit)."""
+    ns = _parse_args(["emit-protocol", "--params-json", "p.json",
+                      "--out", "o.json"])
+    assert (ns.command, ns.params_json, ns.out, ns.check) == (
+        "emit-protocol", "p.json", "o.json", False)
+
+    ns = _parse_args(["emit-protocol", "--params-json", "p.json",
+                      "--out", "o.json", "--check"])
+    assert ns.check is True
+
+    ns = _parse_args(["emit-gen-command", "--protocol", "proto.json"])
+    assert (ns.command, ns.protocol) == ("emit-gen-command", "proto.json")
+
+    ns = _parse_args(["qualify", "--protocol", "proto.json"])
+    assert (ns.command, ns.protocol, ns.check) == ("qualify", "proto.json", False)
+
+    ns = _parse_args(["qualify", "--protocol", "proto.json", "--check"])
+    assert ns.check is True
+
+
+def test_main_has_no_mode_select_screen_subcommand():
+    """`--mode select`/`screen` stay in `fpu_dev_corpus_v2.main` -- this
+    module's CLI never grows a `--mode` flag nor a `select`/`screen`
+    subcommand (design Sec 3's CLI boundary). BEHAVIORAL, not source-text: a
+    raw substring scan would false-positive on this module's OWN, legitimate
+    argparse `description=` prose ("... No --mode select/screen here ...",
+    written to inform an operator reading `--help`) -- exactly the trap
+    `test_module_imports_only_pure_names_from_fpu_dev_corpus_v2`'s own
+    docstring warns an AST-free check falls into. Each of these is simply an
+    argument this CLI does not recognize, so every shape below is rejected
+    identically to any other typo (`SystemExit(2)` == `EXIT_USAGE`)."""
+    for argv in (["select"], ["screen"], ["--mode", "select"],
+                ["--mode", "screen"], ["qualify", "--mode", "select"]):
+        with pytest.raises(SystemExit) as exc_info:
+            main(argv)
+        assert exc_info.value.code == EXIT_USAGE
+
+
+def test_module_foot_has_the_standard_cli_guard():
+    """Confirms `if __name__ == "__main__": raise SystemExit(main())` at the
+    module foot -- mirrors `fpu_dev_corpus_v2.py`'s own CLI convention
+    exactly (see that module's own tail)."""
+    import inspect
+    module_path = Path(inspect.getfile(main))
+    tail = [line for line in module_path.read_text().splitlines() if line.strip()][-2:]
+    assert tail == ['if __name__ == "__main__":', "    raise SystemExit(main())"]
+
+
+# ---------------------------------------------------------------------------
+# `emit-protocol` -- freezes a reservoir_protocol.json from --params-json.
+# ---------------------------------------------------------------------------
+
+def test_main_emit_protocol_writes_the_canonical_protocol(tmp_path):
+    params_path = tmp_path / "params.json"
+    params_path.write_text(json.dumps(_protocol_params()))
+    out_path = tmp_path / "reservoir_protocol.json"
+
+    exit_code = main(["emit-protocol", "--params-json", str(params_path),
+                      "--out", str(out_path)])
+
+    assert exit_code == EXIT_OK
+    assert out_path.read_bytes() == canonical_json_bytes(
+        build_protocol(_protocol_params()))
+
+
+def test_main_emit_protocol_is_idempotent_on_reemit(tmp_path):
+    params_path = tmp_path / "params.json"
+    params_path.write_text(json.dumps(_protocol_params()))
+    out_path = tmp_path / "reservoir_protocol.json"
+    argv = ["emit-protocol", "--params-json", str(params_path),
+            "--out", str(out_path)]
+
+    assert main(argv) == EXIT_OK
+    assert main(argv) == EXIT_OK   # re-emit: byte-identical, no raise
+
+
+def test_main_emit_protocol_raises_on_conflicting_reemit(tmp_path):
+    params_path = tmp_path / "params.json"
+    params_path.write_text(json.dumps(_protocol_params()))
+    out_path = tmp_path / "reservoir_protocol.json"
+    main(["emit-protocol", "--params-json", str(params_path),
+         "--out", str(out_path)])
+
+    params_path.write_text(json.dumps(_protocol_params(games=999)))
+    with pytest.raises(ValueError, match="refusing to overwrite"):
+        main(["emit-protocol", "--params-json", str(params_path),
+             "--out", str(out_path)])
+
+
+def test_main_emit_protocol_check_never_writes_when_absent(tmp_path):
+    params_path = tmp_path / "params.json"
+    params_path.write_text(json.dumps(_protocol_params()))
+    out_path = tmp_path / "reservoir_protocol.json"
+
+    exit_code = main(["emit-protocol", "--params-json", str(params_path),
+                      "--out", str(out_path), "--check"])
+
+    assert exit_code == EXIT_MISMATCH
+    assert not out_path.exists()
+
+
+def test_main_emit_protocol_check_reports_match_without_writing(tmp_path):
+    params_path = tmp_path / "params.json"
+    params_path.write_text(json.dumps(_protocol_params()))
+    out_path = tmp_path / "reservoir_protocol.json"
+    main(["emit-protocol", "--params-json", str(params_path),
+         "--out", str(out_path)])
+    written_bytes = out_path.read_bytes()
+    written_mtime = out_path.stat().st_mtime_ns
+
+    exit_code = main(["emit-protocol", "--params-json", str(params_path),
+                      "--out", str(out_path), "--check"])
+
+    assert exit_code == EXIT_OK
+    assert out_path.read_bytes() == written_bytes
+    assert out_path.stat().st_mtime_ns == written_mtime   # untouched, not merely equal
+
+
+def test_main_emit_protocol_check_reports_mismatch_without_writing(tmp_path):
+    params_path = tmp_path / "params.json"
+    params_path.write_text(json.dumps(_protocol_params()))
+    out_path = tmp_path / "reservoir_protocol.json"
+    main(["emit-protocol", "--params-json", str(params_path),
+         "--out", str(out_path)])
+    written_bytes = out_path.read_bytes()
+
+    params_path.write_text(json.dumps(_protocol_params(games=999)))
+    exit_code = main(["emit-protocol", "--params-json", str(params_path),
+                      "--out", str(out_path), "--check"])
+
+    assert exit_code == EXIT_MISMATCH
+    assert out_path.read_bytes() == written_bytes   # untouched
+
+
+# ---------------------------------------------------------------------------
+# `emit-gen-command` -- prints the exact, shell-joined eval_checkpoint_match
+# argv for an already-frozen protocol. Zero-GPU, zero-write.
+# ---------------------------------------------------------------------------
+
+def test_main_emit_gen_command_prints_the_exact_shell_joined_argv(tmp_path, capsys):
+    protocol = build_protocol(_protocol_params())
+    protocol_path = tmp_path / "reservoir_protocol.json"
+    protocol_path.write_text(json.dumps(protocol))
+
+    exit_code = main(["emit-gen-command", "--protocol", str(protocol_path)])
+
+    assert exit_code == EXIT_OK
+    printed = capsys.readouterr().out.strip("\n")
+    assert printed == shlex.join(gen_command(protocol))
+    # Round-trips back to the exact same argv list via shlex.split -- proves
+    # this is a genuinely pasteable shell command, not merely a str(list).
+    assert shlex.split(printed) == gen_command(protocol)
+
+
+def test_main_emit_gen_command_writes_nothing(tmp_path):
+    protocol = build_protocol(_protocol_params())
+    protocol_path = tmp_path / "reservoir_protocol.json"
+    protocol_path.write_text(json.dumps(protocol))
+    before = sorted(p.name for p in tmp_path.iterdir())
+
+    main(["emit-gen-command", "--protocol", str(protocol_path)])
+
+    after = sorted(p.name for p in tmp_path.iterdir())
+    assert after == before
+
+
+# ---------------------------------------------------------------------------
+# `qualify` -- zero-GPU; NEVER launches generation. Driven with a genuinely
+# on-disk, fabricated (tmp_path) protocol+reservoir, reusing B7's own
+# `_write_qualifiable_reservoir` fixture -- real `measure_reservoir` I/O,
+# real `check_protocol_conformance`/`check_summary_binding`. The CLI never
+# exposes a `--preflight` override (it always wires the REAL
+# `default_preflight`, design Sec 11: "The CLI always wires the real
+# preflight") -- so the OK case, which needs the geometric preflight to
+# classify as FEASIBLE, monkeypatches `v2_geometry_feasibility` (the one
+# name `default_preflight`'s body actually looks up fresh from this
+# module's globals at call time -- unlike a bound default parameter, this
+# takes effect even though `run_qualify`'s own `preflight` default was bound
+# at import time) rather than fabricating a genuinely-feasible ~120-game
+# reservoir on disk. The MISMATCH case needs no such injection: a
+# conformance defect short-circuits BEFORE the preflight is ever reached
+# (design Sec 4.2), so it exercises the real chain unmodified.
+# ---------------------------------------------------------------------------
+
+def _break_one_sidecar_seed(info: dict) -> None:
+    """Tamper exactly one game's replay sidecar so `check_protocol_
+    conformance`'s `_check_seed` trips -- a conformance defect, MISMATCH,
+    never reaching the preflight."""
+    sidecar_path = Path(info["rows"][0]["replay_path"])
+    sidecar = json.loads(sidecar_path.read_text())
+    sidecar["seed"] = sidecar["seed"] + 1
+    sidecar_path.write_text(json.dumps(sidecar))
+
+
+def test_main_qualify_mismatch_returns_exit_3_and_writes_a_replaceable_report(tmp_path):
+    protocol, protocol_path, info = _write_qualifiable_reservoir(tmp_path)
+    _break_one_sidecar_seed(info)
+
+    exit_code = main(["qualify", "--protocol", str(protocol_path)])
+
+    assert exit_code == EXIT_MISMATCH
+    assert not Path(protocol["config_out"]).exists()
+    report_path = Path(protocol["report_out"])
+    assert report_path.exists()
+    assert is_passed(report_path) is False
+    assert is_retired(report_path) is False
+    assert json.loads(report_path.read_text())["status"] == "MISMATCH"
+
+
+def test_main_qualify_ok_returns_exit_0_and_emits_config_plus_pass_report(
+        tmp_path, monkeypatch):
+    from scripts.GPU.alphazero import fpu_dev_reservoir_protocol as mod
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    monkeypatch.setattr(
+        mod, "v2_geometry_feasibility",
+        lambda proposals_by_game: _FakePreflightResult(True))
+
+    exit_code = main(["qualify", "--protocol", str(protocol_path)])
+
+    assert exit_code == EXIT_OK
+    config_path = Path(protocol["config_out"])
+    report_path = Path(protocol["report_out"])
+    assert config_path.exists()
+    assert is_passed(report_path) is True
+    config = json.loads(config_path.read_text())
+    assert config["protocol_path"] == str(protocol_path)
+
+
+def test_main_qualify_check_never_writes_on_mismatch(tmp_path):
+    protocol, protocol_path, info = _write_qualifiable_reservoir(tmp_path)
+    _break_one_sidecar_seed(info)
+
+    exit_code = main(["qualify", "--protocol", str(protocol_path), "--check"])
+
+    assert exit_code == EXIT_MISMATCH
+    assert not Path(protocol["config_out"]).exists()
+    assert not Path(protocol["report_out"]).exists()
+
+
+def test_main_qualify_check_never_writes_on_ok(tmp_path, monkeypatch):
+    from scripts.GPU.alphazero import fpu_dev_reservoir_protocol as mod
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    monkeypatch.setattr(
+        mod, "v2_geometry_feasibility",
+        lambda proposals_by_game: _FakePreflightResult(True))
+
+    exit_code = main(["qualify", "--protocol", str(protocol_path), "--check"])
+
+    assert exit_code == EXIT_OK
+    assert not Path(protocol["config_out"]).exists()
+    assert not Path(protocol["report_out"]).exists()
+
+
+def test_main_qualify_returns_run_qualify_status_for_an_already_retired_protocol(
+        tmp_path, monkeypatch):
+    """A fourth, cheap-to-reach status case: an already-GATE_FAIL-retired
+    protocol refuses outright (no re-measurement) -- `run_qualify`'s own
+    documented behavior, surfaced verbatim through `main`."""
+    from scripts.GPU.alphazero import fpu_dev_reservoir_protocol as mod
+    protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    monkeypatch.setattr(
+        mod, "v2_geometry_feasibility",
+        lambda proposals_by_game: _FakePreflightResult(
+            False, "fake-binding-constraint"))
+    first = main(["qualify", "--protocol", str(protocol_path)])
+    assert first == EXIT_GATE_FAIL
+    assert is_retired(protocol["report_out"]) is True
+
+    second = main(["qualify", "--protocol", str(protocol_path)])
+    assert second == EXIT_GATE_FAIL
+
+
+def test_main_qualify_execution_pulls_no_gpu_or_mlx(tmp_path):
+    """Mirrors `test_run_qualify_execution_pulls_no_gpu_or_mlx` (B7) one
+    layer up, through the CLI: actually calling `main(["qualify", ...])`
+    end-to-end (real `measure_reservoir` -> `qualify_core` ->
+    `check_summary_binding`, which DOES import `eval_runner`/`eval_summary`
+    for real -- expected, not a purity violation) must still never load
+    mlx/torch. A fresh subprocess (same idiom as
+    `test_module_import_pulls_no_gpu_or_mlx`) so another test module's prior
+    import in this SAME pytest session cannot mask a genuine violation."""
+    _protocol, protocol_path, _info = _write_qualifiable_reservoir(tmp_path)
+    script = (
+        "import sys\n"
+        "from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import main\n"
+        f"main(['qualify', '--protocol', {str(protocol_path)!r}])\n"
+        "print(sorted(k for k in sys.modules if 'mlx' in k or 'torch' in k))\n"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=True)
+    assert out.stdout.strip().splitlines()[-1] == "[]"

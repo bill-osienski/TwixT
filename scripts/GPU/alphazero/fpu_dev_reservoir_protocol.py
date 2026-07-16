@@ -16,9 +16,10 @@ Frozen design ref: docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-q
   MISMATCH regenerates under the same protocol, GATE-FAIL retires it), Sec 8
   (canonical JSON, determinism, reviewability).
 Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-hardening-plan.md
-  Tasks B1-B7 -- the first seven tasks of the new Group-2 subsystem
-  (B1-B11), which will qualify a generated reservoir zero-GPU (B3-B7) and
-  emit an immutable `fpu_dev_corpus_v2_config.json` (B7-B10). B1 laid the
+  Tasks B1-B11 -- the eleven tasks of the new Group-2 subsystem, which
+  qualify a generated reservoir zero-GPU (B3-B7), emit an immutable
+  `fpu_dev_corpus_v2_config.json` (B7-B10), and surface the whole pipeline
+  through the CLI `main` (B11). B1 laid the
   foundation: the protocol's field set (`PROTOCOL_SCHEMA_KEYS`), the
   canonical-JSON encoder, the atomic-write primitive, and the schema
   builder + emitter. B2 added `gen_command` -- the exact
@@ -86,8 +87,21 @@ Pre-op hardening plan ref: docs/superpowers/plans/2026-07-14-fpu-v2-preop-harden
   LAZY, function-body-local import (never at that module's top level -- Sec
   6's circular-import resolution: this module already top-level-imports FROM
   `fpu_dev_corpus_v2`, so a top-level import back would cycle). The final
-  11-identity chain (B10) and the CLI `main` (B11) are still later tasks --
-  neither exists here.
+  11-identity chain (B10) lives entirely in `fpu_dev_corpus_v2.py` (this
+  module is only cross-referenced from its remediation prose, e.g.
+  `_fingerprint_mismatch`'s own docstring below) -- no B10 code touches this
+  file. B11 adds `main(argv=None) -> int` (Sec 3): three argparse
+  subcommands -- `emit-protocol` (freeze a `reservoir_protocol.json` from a
+  `--params-json` params mapping, via `emit_protocol`), `emit-gen-command`
+  (print `gen_command`'s exact, shell-joined argv for an already-frozen
+  `--protocol`), and `qualify` (`--protocol`, `--check`) -- dispatching to
+  the functions above and returning `run_qualify`'s own status as the
+  process exit code. Pure CLI glue, not a fourth qualification stage: see
+  the `_parse_args`/`main` paragraph near the end of this docstring for the
+  full per-subcommand contract. No `--mode select`/`screen` subcommand
+  exists here (design Sec 3 draws this module's CLI boundary at
+  protocol/qualify only) -- those two stages stay in
+  `fpu_dev_corpus_v2.main`.
 
 =============================================================================
 TOOLING ONLY. No evaluator / MCTS / GPU / MLX / checkpoint-WEIGHTS import,
@@ -178,7 +192,14 @@ no new lazy import: `derive_config`/`write_report`/`is_passed`/`is_retired`/
 `run_qualify` read/write only via B1's `canonical_json_bytes`/
 `write_atomic`, stdlib `json`/`pathlib`, and the already-imported B3/B6
 production functions (`measure_reservoir`, `qualify_core`,
-`default_preflight`).
+`default_preflight`). B11 adds TWO new stdlib imports, `argparse` (the
+three `main` subcommands) and `shlex` (`emit-gen-command`'s shell-joined
+argv) -- no new import from `fpu_dev_corpus_v2` (still exactly the same
+three names B6 established) and no new lazy import: `main` only calls
+`emit_protocol` (B1), `gen_command` (B2), and `run_qualify` (B7) -- three
+functions already defined/imported in this same module -- and reads at
+most one caller-supplied JSON document per invocation (`--params-json` or
+`--protocol`) via the already-imported `json`/`pathlib`.
 =============================================================================
 
 What this section does
@@ -482,14 +503,75 @@ try/except does NOT cover -- so for that specific field the CONFORMANCE check
 (layer 1) is the ONLY thing standing between a tampered sidecar and a raw
 exit-1 crash. A follow-up review extended layer 1 from `"n_legal"`-only to
 the full `_REQUIRED_MOVE_FIELDS` set to close exactly that gap.
+
+`_parse_args` / `main` -- Task B11 (design Sec 3), the CLI. Three argparse
+subcommands over the pure functions + `run_qualify` above -- pure glue,
+performing no qualification/derivation logic of its own:
+
+`emit-protocol` freezes a `reservoir_protocol.json` from a caller-supplied
+params mapping, loaded from a required `--params-json <path>` (a JSON file
+holding every `PROTOCOL_SCHEMA_KEYS` field) rather than one flag per schema
+field: several fields are themselves nested dicts/lists
+(`checkpoint_a`/`checkpoint_b`, `phase_allocation`, `late_floors`,
+`enumerator_params`, `forbidden_manifests`, ...) that argparse has no
+natural per-flag encoding for, so a single reviewable JSON document an
+operator edits directly is "the simplest thing that lets an operator freeze
+a protocol deterministically" (task B11 brief) -- mirroring how
+`fpu_dev_corpus_v2.main`'s own `--config` already works. Calls
+`emit_protocol(params, out_path=--out, check=--check)` and returns its
+status (`EXIT_OK`/`EXIT_MISMATCH`) verbatim; `--check` never writes
+(`emit_protocol`'s own contract). A malformed `--params-json` (unreadable,
+unparseable, or missing a required schema key) propagates raw from
+`json.loads`/`build_protocol` -- this module's established "assumes
+already-valid input" convention (`gen_command`, `measure_reservoir`,
+`run_qualify` all do the same), not a new friendlier-message layer.
+
+`emit-gen-command` loads an already-frozen protocol from a required
+`--protocol <path>` and prints `gen_command(protocol)` -- and ONLY that --
+shell-joined via stdlib `shlex.join`, so the printed line is directly
+copy-pasteable (or pipeable) as a real shell command; zero-GPU, zero-write.
+Always returns `EXIT_OK` (a malformed/missing `--protocol` propagates raw,
+same convention as above).
+
+`qualify` loads a frozen protocol from a required `--protocol <path>` and
+calls `run_qualify(protocol_path, check=--check)` UNCHANGED -- no
+`preflight=` override -- so the CLI always wires the REAL
+`default_preflight` (design Sec 11's test-matrix note: "The CLI always
+wires the real preflight"; only this module's own tests inject a fake one,
+directly against `run_qualify`/`qualify_core`, never through `main`).
+Returns `run_qualify`'s own exit code verbatim
+(`EXIT_OK`/`EXIT_MISMATCH`/`EXIT_GATE_FAIL`, or `EXIT_USAGE` for an
+already-PASSED protocol re-qualified without `--check`) -- `main` performs
+NO status-to-exit-code mapping of its own; `run_qualify` (B7) already IS
+that mapping. `qualify` NEVER launches generation (design's TOOLING ONLY
+constraint, restated at the CLI boundary): its whole call chain --
+`run_qualify` -> `measure_reservoir` (the ONE filesystem-I/O function in
+the qualification pipeline) -> `qualify_core` -> `default_preflight` --
+only ever reads/hashes an ALREADY-GENERATED reservoir, never runs the
+evaluator/MCTS or loads checkpoint weights.
+
+None of the three subcommands takes `--mode`/`select`/`screen` (design Sec
+3 draws this module's CLI boundary at protocol/qualify only): those two
+stages stay in `fpu_dev_corpus_v2.main`, a deliberately separate CLI over a
+deliberately separate module.
+
+Argparse's OWN usage errors -- a missing required flag, an unrecognized
+subcommand, or no subcommand at all (`add_subparsers(..., required=True)`)
+-- raise `SystemExit(2)` from inside `_parse_args`, before `main`'s own
+body ever runs; `2` is already `EXIT_USAGE`'s value (design Sec 3), so no
+separate mapping is needed. `if __name__ == "__main__": raise
+SystemExit(main())` at the module foot mirrors `fpu_dev_corpus_v2.py`'s own
+CLI convention exactly.
 """
 from __future__ import annotations
 
+import argparse
 import dataclasses
 import enum
 import hashlib
 import json
 import os
+import shlex
 import tempfile
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
@@ -2573,3 +2655,141 @@ def precheck_before_screen(
             f"{getattr(preflight_result, 'binding_constraint', None)}. "
             f"Stopping BEFORE the evaluator loads (an hours-long screen "
             f"must never start on an infeasible reservoir).")
+
+
+# ---------------------------------------------------------------------------
+# CLI -- Task B11 (design Sec 3). Three argparse subcommands over the pure
+# functions + `run_qualify` above: `emit-protocol`, `emit-gen-command`,
+# `qualify`. Pure glue -- see this module's own docstring (the
+# `_parse_args`/`main` paragraph, near the end) for the full per-subcommand
+# contract. No `--mode select`/`screen` here: those stay in
+# `fpu_dev_corpus_v2.main`.
+# ---------------------------------------------------------------------------
+
+def _parse_args(argv: Optional[List[str]]) -> argparse.Namespace:
+    """Build the CLI's argparse parser and parse `argv` (design Sec 3).
+    Mirrors `fpu_dev_corpus_v2._parse_v2_args`'s own "build + parse in one
+    function" shape. A missing required flag, an unrecognized subcommand, or
+    no subcommand at all each raise `SystemExit(2)` -- argparse's OWN usage
+    errors, already `EXIT_USAGE`'s value (design Sec 3), so `main` needs no
+    separate mapping for them.
+    """
+    ap = argparse.ArgumentParser(
+        description="FPU v2 reservoir-protocol CLI (design Sec 3): freeze a "
+                    "reservoir_protocol.json from declared params, print its "
+                    "exact eval_checkpoint_match generation command, and "
+                    "qualify a GENERATED reservoir against it -- zero-GPU; "
+                    "qualify never launches generation. No --mode "
+                    "select/screen here -- those stay in "
+                    "fpu_dev_corpus_v2.main.")
+    sub = ap.add_subparsers(dest="command", required=True)
+
+    p_emit_protocol = sub.add_parser(
+        "emit-protocol",
+        help="freeze a reservoir_protocol.json from a --params-json params "
+             "mapping; --check never writes.")
+    p_emit_protocol.add_argument(
+        "--params-json", required=True,
+        help="path to a JSON file holding the params mapping -- every "
+             "PROTOCOL_SCHEMA_KEYS field (build_protocol's required set).")
+    p_emit_protocol.add_argument(
+        "--out", required=True,
+        help="path to write (or, with --check, verify) the "
+             "reservoir_protocol.json.")
+    p_emit_protocol.add_argument(
+        "--check", action="store_true",
+        help="never writes: recompute the canonical protocol bytes and "
+             "report whether --out already holds them (exit 0) or not "
+             "(exit 3).")
+
+    p_emit_gen_command = sub.add_parser(
+        "emit-gen-command",
+        help="print the exact, shell-joined eval_checkpoint_match argv "
+             "derived from an already-frozen --protocol (zero-GPU).")
+    p_emit_gen_command.add_argument(
+        "--protocol", required=True,
+        help="path to the frozen reservoir_protocol.json.")
+
+    p_qualify = sub.add_parser(
+        "qualify",
+        help="qualify a GENERATED reservoir against its frozen --protocol "
+             "(zero-GPU: reads + validates only, never launches "
+             "generation); --check never writes.")
+    p_qualify.add_argument(
+        "--protocol", required=True,
+        help="path to the frozen reservoir_protocol.json.")
+    p_qualify.add_argument(
+        "--check", action="store_true",
+        help="never writes: report the qualification outcome only "
+             "(reviews an already-PASSED protocol without re-qualifying).")
+
+    return ap.parse_args(argv)
+
+
+# `qualify`'s one status print's exit-code -> label lookup -- purely
+# cosmetic (no test asserts on this wording, only on the returned exit code
+# and on-disk state): `.get(status, status)` at the call site keeps this
+# total even for a status somehow outside this table.
+_EXIT_STATUS_LABELS: Dict[int, str] = {
+    EXIT_OK: "OK",
+    EXIT_MISMATCH: "MISMATCH",
+    EXIT_GATE_FAIL: "GATE_FAIL",
+    EXIT_USAGE: "USAGE (already PASSED -- re-run with --check to review)",
+}
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """The module's CLI entry point (design Sec 3, Task B11) -- dispatches
+    to `emit_protocol`/`gen_command`/`run_qualify`, the pure/I/O-owning
+    functions this whole module built, and returns the Sec 3 exit-code
+    vocabulary (`EXIT_OK`/`EXIT_USAGE`/`EXIT_MISMATCH`/`EXIT_GATE_FAIL`) as
+    the process exit code. See this module's own docstring (the
+    `_parse_args`/`main` paragraph) for the full per-subcommand contract
+    (the `--params-json` rationale, "the CLI always wires the real
+    preflight", the exit-code mapping already living in `run_qualify`).
+
+    Pure CLI glue: reads at most ONE caller-supplied JSON document per
+    subcommand (`--params-json`, or `--protocol`) and makes exactly ONE call
+    into `emit_protocol`/`gen_command`/`run_qualify` -- no qualification or
+    derivation logic of its own. A malformed document propagates raw
+    (`json.loads`/`build_protocol`'s own exceptions), exactly like every
+    other "assumes already-valid input" function in this module.
+
+    `qualify` NEVER launches generation: it forwards `--protocol`/`--check`
+    straight into `run_qualify` UNCHANGED (no `preflight=` override), so the
+    real `default_preflight` -- and only `measure_reservoir`'s read/hash of
+    an ALREADY-GENERATED reservoir -- ever runs; no evaluator/MCTS/GPU/
+    checkpoint-weights load anywhere in this call chain.
+    """
+    args = _parse_args(argv)
+
+    if args.command == "emit-protocol":
+        params = json.loads(Path(args.params_json).read_text())
+        status = emit_protocol(params, args.out, check=args.check)
+        if args.check:
+            verdict = "MATCH" if status == EXIT_OK else "MISMATCH"
+            print(f"[fpu-dev-reservoir-protocol] emit-protocol --check "
+                  f"{args.out}: {verdict}")
+        elif status == EXIT_OK:
+            print(f"[fpu-dev-reservoir-protocol] emit-protocol: wrote "
+                  f"{args.out}")
+        return status
+
+    if args.command == "emit-gen-command":
+        protocol = json.loads(Path(args.protocol).read_text())
+        print(shlex.join(gen_command(protocol)))
+        return EXIT_OK
+
+    if args.command == "qualify":
+        status = run_qualify(args.protocol, check=args.check)
+        print(f"[fpu-dev-reservoir-protocol] qualify "
+              f"{'--check ' if args.check else ''}{args.protocol}: "
+              f"{_EXIT_STATUS_LABELS.get(status, status)} (exit {status})")
+        return status
+
+    raise AssertionError(   # unreachable: argparse's own subparsers guard this
+        f"main: unreachable command {args.command!r}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
