@@ -63,6 +63,7 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     ReservoirMeasurements,
     TEN_MATCH_KNOBS,
     WriteStatus,
+    assert_config_byte_equals_rederivation,
     build_protocol,
     canonical_json_bytes,
     check_protocol_conformance,
@@ -73,8 +74,10 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     gen_command,
     is_passed,
     is_retired,
+    measure_and_rederive_config,
     measure_reservoir,
     precheck_before_screen,
+    rederive_and_assert_config_unchanged,
     qualify_core,
     reason_histogram,
     run_qualify,
@@ -3527,6 +3530,68 @@ def test_precheck_before_screen_performs_no_gpu_or_mlx_work(tmp_path):
     out = subprocess.run(
         [sys.executable, "-c", script], capture_output=True, text=True, check=True)
     assert out.stdout.strip().splitlines()[-1] == "[]"
+
+
+# ---------------------------------------------------------------------------
+# The shared design-Sec-5 re-derive helpers (Task B10 correction) -- the ONE
+# implementation reused by BOTH `precheck_before_screen` (pre-GPU) and
+# `fpu_dev_corpus_v2.select_final_manifest` (at select, via a lazy import),
+# so the config-tamper check can never drift between the two stages. Exercised
+# here DIRECTLY (precheck's own tests above cover them transitively too).
+# ---------------------------------------------------------------------------
+
+def test_measure_and_rederive_config_returns_measurements_and_recomputed(tmp_path):
+    """The FRONT half: loads the protocol, `measure`s the reservoir, re-derives
+    the canonical config. The returned `recomputed_config` byte-equals a direct
+    `derive_config`, and `measurements` is the real `measure_reservoir` output."""
+    config, protocol, protocol_path, _info = _write_precheckable_config(tmp_path)
+    measurements, recomputed = measure_and_rederive_config(config)
+
+    direct = derive_config(
+        protocol, measure_reservoir(protocol), protocol_path=str(protocol_path))
+    assert canonical_json_bytes(recomputed) == canonical_json_bytes(direct)
+    assert isinstance(measurements, ReservoirMeasurements)
+    # honors an injected `measure` (the same seam `precheck_before_screen` uses).
+    sentinel = measure_reservoir(protocol)
+    seen = {}
+    def _spy(proto):
+        seen["called"] = True
+        return sentinel
+    m2, _r2 = measure_and_rederive_config(config, measure=_spy)
+    assert seen.get("called") and m2 is sentinel
+
+
+def test_assert_config_byte_equals_rederivation_passes_and_raises(tmp_path):
+    """The BACK half (pure, no I/O): equal on a faithful `(config, recomputed)`,
+    raises 're-derivation' naming the differing key on a tampered NON-hashed
+    field. Proven for BOTH `selection_seed` and `select_out` (design Sec 5's two
+    named fields)."""
+    config, protocol, protocol_path, _info = _write_precheckable_config(tmp_path)
+    recomputed = derive_config(
+        protocol, measure_reservoir(protocol), protocol_path=str(protocol_path))
+
+    assert assert_config_byte_equals_rederivation(config, recomputed) is None
+
+    for field in ("selection_seed", "select_out"):
+        bad = (config.selection_seed + 1 if field == "selection_seed"
+               else config.select_out + ".tampered")
+        tampered = dataclasses.replace(config, **{field: bad})
+        with pytest.raises(ValueError, match="re-derivation") as excinfo:
+            assert_config_byte_equals_rederivation(tampered, recomputed)
+        assert field in str(excinfo.value)
+
+
+def test_rederive_and_assert_config_unchanged_is_the_combined_check(tmp_path):
+    """The combined convenience `select` uses: passes on a faithful config,
+    raises on a tampered non-hashed field. This is the exact entry point
+    `fpu_dev_corpus_v2.select_final_manifest` lazily imports (design Sec 5's
+    'checked twice')."""
+    config, _protocol, _protocol_path, _info = _write_precheckable_config(tmp_path)
+    assert rederive_and_assert_config_unchanged(config) is None
+
+    tampered = dataclasses.replace(config, selection_seed=config.selection_seed + 1)
+    with pytest.raises(ValueError, match="re-derivation"):
+        rederive_and_assert_config_unchanged(tampered)
 
 
 # ---------------------------------------------------------------------------

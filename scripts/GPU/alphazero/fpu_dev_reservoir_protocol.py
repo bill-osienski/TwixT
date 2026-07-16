@@ -2368,6 +2368,93 @@ def _fingerprint_mismatch(key: str, supplied: Any, fresh: Any, *,
         f"before screening.")
 
 
+# ---------------------------------------------------------------------------
+# The shared design-Sec-5 "re-derive + byte-compare" (Task B10 correction).
+# Spec Sec 5 requires the config to be re-derived-and-byte-compared at BOTH
+# check points -- the pre-GPU `precheck_before_screen` (below) AND, at select,
+# `fpu_dev_corpus_v2.select_final_manifest` ("reservoir/config identities are
+# checked TWICE, pre-GPU and at select"). These helpers are the ONE
+# implementation both call sites reuse (select via a lazy import -- Sec 6:
+# fpu_dev_corpus_v2 must not top-level-import this module), so the tamper check
+# can never drift between the two stages.
+#
+# Split into a FRONT half (`measure_and_rederive_config`) and a BACK half
+# (`assert_config_byte_equals_rederivation`) because `precheck_before_screen`
+# interleaves its per-identity `expected_fingerprints` hash recheck BETWEEN
+# them (so a byte-changed reservoir/checkpoint/summary fails with a SHARP
+# per-identity message -- "replay_data_sha1", not the whole-document diff);
+# `select` needs no such interleave, so it uses the `rederive_and_assert_
+# config_unchanged` convenience that runs both halves back to back.
+# ---------------------------------------------------------------------------
+
+def measure_and_rederive_config(
+        config: Any,
+        *,
+        measure: Callable[[Mapping[str, Any]], ReservoirMeasurements] = measure_reservoir,
+) -> Tuple[ReservoirMeasurements, Dict[str, Any]]:
+    """Load `config.protocol_path`, `measure` the reservoir, and re-derive the
+    canonical config from `(protocol, measurements)` via `derive_config`.
+    Returns `(measurements, recomputed_config)` -- the FRONT half of the Sec 5
+    re-derive-and-byte-compare, factored out so a caller that ALSO wants the
+    per-identity hash recheck / geometric preflight (`precheck_before_screen`)
+    can reuse the SAME `measurements`/`recomputed_config` without a second real
+    `measure`. `measure` is injectable (default the real `measure_reservoir`,
+    the ONE filesystem-I/O function) exactly as `precheck_before_screen`'s is,
+    so a test can drive the check over a fabricated reservoir. Pure apart from
+    `measure`'s one real read; no evaluator/MCTS/GPU."""
+    protocol = json.loads(Path(config.protocol_path).read_text())
+    measurements = measure(protocol)
+    recomputed_config = derive_config(
+        protocol, measurements, protocol_path=config.protocol_path)
+    return measurements, recomputed_config
+
+
+def assert_config_byte_equals_rederivation(
+        config: Any, recomputed_config: Mapping[str, Any]) -> None:
+    """THE Sec 5 config-tamper check (the BACK half): byte-compare the supplied
+    `config` against an already-computed fresh `recomputed_config`
+    (`canonical_json_bytes` both), raising `ValueError` -- naming the differing
+    top-level key(s) -- on any diff. This is what catches an edited config field
+    that carries NO hash of its own (`selection_seed`, `select_out`, a floor,
+    ...), which a per-identity `expected_fingerprints` hash recheck structurally
+    cannot see. Pure: no I/O (the caller supplies `recomputed_config`, e.g. from
+    `measure_and_rederive_config`). `config` is duck-typed (reads only the
+    `_V2_CONFIG_REQUIRED_KEYS` attrs + `eval_batch_size`/`stall_flush_sims`)."""
+    supplied_config = {key: getattr(config, key) for key in _V2_CONFIG_REQUIRED_KEYS}
+    supplied_config["eval_batch_size"] = config.eval_batch_size
+    supplied_config["stall_flush_sims"] = config.stall_flush_sims
+    if canonical_json_bytes(supplied_config) != canonical_json_bytes(recomputed_config):
+        differing = sorted(k for k in recomputed_config
+                           if supplied_config.get(k) != recomputed_config[k])
+        raise ValueError(
+            "the supplied config does not byte-equal a fresh re-derivation from "
+            f"(protocol, reservoir) -- differing top-level key(s): {differing}. "
+            "Some config field was edited after qualification (design Sec 5's "
+            "re-derive + byte-compare tamper check -- it catches ANY edited "
+            "field, hashed or not, e.g. selection_seed, select_out, that a "
+            "per-identity expected_fingerprints hash recheck cannot see).")
+
+
+def rederive_and_assert_config_unchanged(
+        config: Any,
+        *,
+        measure: Callable[[Mapping[str, Any]], ReservoirMeasurements] = measure_reservoir,
+) -> None:
+    """The WHOLE Sec 5 re-derive-and-byte-compare as ONE call: `measure_and_
+    rederive_config` then `assert_config_byte_equals_rederivation`. This is the
+    entry point `fpu_dev_corpus_v2.select_final_manifest` lazily imports and
+    runs at select time -- it needs exactly this and nothing more (its identity
+    hard-match already covers what `precheck_before_screen`'s step-2 recheck
+    does, and Sec 5 does not require the geometric preflight at select).
+    `precheck_before_screen` does NOT use this convenience -- it must interleave
+    its per-identity recheck between the two halves (see this section's banner),
+    so it calls the two underlying helpers directly. Raises `ValueError` on any
+    config tamper; returns `None` on success."""
+    _measurements, recomputed_config = measure_and_rederive_config(
+        config, measure=measure)
+    assert_config_byte_equals_rederivation(config, recomputed_config)
+
+
 def precheck_before_screen(
         config: Any,
         *,
@@ -2425,15 +2512,23 @@ def precheck_before_screen(
     the one thing `qualify_core` never checked, since it takes no `config`
     parameter at all.
     """
-    protocol = json.loads(Path(config.protocol_path).read_text())
-    measurements = measure(protocol)
-    recomputed_config = derive_config(
-        protocol, measurements, protocol_path=config.protocol_path)
+    # (1) Load the protocol, measure the reservoir, re-derive the canonical
+    # config (the SHARED front half -- `select_final_manifest` runs the exact
+    # same re-derivation at select time via `rederive_and_assert_config_
+    # unchanged`, design Sec 5's "checked twice").
+    measurements, recomputed_config = measure_and_rederive_config(
+        config, measure=measure)
     recomputed_fingerprints = recomputed_config["expected_fingerprints"]
     expected_fingerprints = config.expected_fingerprints or {}
 
     # (2) Hash recheck: every pinned identity, hard-matched individually so
-    # a failure names exactly which one drifted.
+    # a failure names exactly which one drifted. Deliberately BEFORE the
+    # whole-config byte-compare (3) so a byte-changed reservoir/checkpoint/
+    # summary fails with the SHARP per-identity message ("replay_data_sha1"),
+    # not the coarser whole-document "expected_fingerprints differs" diff (3)
+    # would report -- this ordering is why precheck calls the two shared
+    # halves directly rather than the `rederive_and_assert_config_unchanged`
+    # convenience.
     for key in sorted(recomputed_fingerprints):
         supplied_value = expected_fingerprints.get(key)
         fresh_value = recomputed_fingerprints[key]
@@ -2442,25 +2537,10 @@ def precheck_before_screen(
                 key, supplied_value, fresh_value,
                 protocol_path=config.protocol_path)
 
-    # (3) The real config-tamper check: re-derive the WHOLE canonical config
-    # and byte-compare -- catches an edited field that carries no hash of
+    # (3) The real config-tamper check (the SHARED back half): byte-compare the
+    # WHOLE canonical config -- catches an edited field that carries no hash of
     # its own (selection_seed, select_out, ...).
-    supplied_config = {key: getattr(config, key) for key in _V2_CONFIG_REQUIRED_KEYS}
-    supplied_config["eval_batch_size"] = config.eval_batch_size
-    supplied_config["stall_flush_sims"] = config.stall_flush_sims
-    supplied_bytes = canonical_json_bytes(supplied_config)
-    recomputed_bytes = canonical_json_bytes(recomputed_config)
-    if supplied_bytes != recomputed_bytes:
-        differing = sorted(k for k in recomputed_config
-                           if supplied_config.get(k) != recomputed_config[k])
-        raise ValueError(
-            "precheck_before_screen: the supplied config does not "
-            "byte-equal a fresh re-derivation from (protocol, reservoir) "
-            f"-- differing top-level key(s): {differing}. Some config field "
-            "was edited after qualification (design Sec 5's re-derive + "
-            "byte-compare tamper check -- it catches ANY edited field, "
-            "hashed or not, e.g. selection_seed, select_out, that the hash "
-            "recheck above cannot see).")
+    assert_config_byte_equals_rederivation(config, recomputed_config)
 
     # (4) The config must bind THIS protocol -- already implied by (2)/(3),
     # re-checked explicitly for a message that names the failure directly.

@@ -126,7 +126,9 @@ from scripts.GPU.alphazero.fpu_dev_corpus_v2 import (
 )
 from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     ReservoirMeasurements,
+    canonical_json_bytes,
     derive_config,
+    measure_reservoir,
 )
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
 from scripts.GPU.alphazero import fpu_provenance
@@ -3377,18 +3379,135 @@ def _v2_screen_artifact(tmp_path, screen_rows, *,
     return config, meta, files
 
 
-def _select(meta, config, *, forbidden=None, screen_csv_path=None):
+def _v2_faithful_screen_artifact(tmp_path, screen_rows):
+    """A screen artifact whose config is the GENUINE `derive_config` output over a
+    FULL protocol + a truly-measurable on-disk reservoir -- so `select`'s design Sec
+    5 re-derive+byte-compare (`measure_reservoir` -> `derive_config` ->
+    `canonical_json_bytes` byte-compare) runs FOR REAL, not stubbed.
+
+    Distinct from `_v2_screen_artifact` (which writes a MINIMAL protocol -- checkpoint
+    paths only -- and pre-registers the config's fingerprints directly from
+    `v2_screen_provenance`, so `measure_reservoir` cannot read it and the identity
+    tests stub the re-derive). Here the protocol carries EVERY field `measure_
+    reservoir`/`derive_config` read, is written CANONICALLY (so `protocol_sha1` as a
+    whole-file hash equals `derive_config`'s canonical-bytes hash), and the config IS
+    `derive_config(protocol, measure_reservoir(protocol))` -- so both (a) the eleven
+    identities still hard-match [A (`derive_config`) == B (`write_screen_meta`) == C
+    (`validate_screen_identities`'s recompute); `_V2_CORPUS_SOURCES` IS
+    `fpu_dev_reservoir_protocol.QUALIFICATION_SOURCE_FILES` so `source_file_sha1s`
+    agrees, and `load_game_index`/`_load_jsonl_rows` yield the same replay set so
+    `replay_data_sha1` agrees] AND (b) select's re-derive byte-compare PASSES on the
+    faithful config and FAILS the instant any config field is tampered.
+
+    Heavier than `_v2_screen_artifact` (measure_reservoir reads the 13 generation
+    modules + the qualification sources + runs `git`), so used only by the few tests
+    that must drive the REAL re-derive. Returns `(config, meta, files)`."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    replays = []
+    for gi in range(3):
+        p = tmp_path / f"replay_{gi}.json"
+        p.write_text(json.dumps(_honest_replay(gi, 330)))
+        replays.append(p)
+    index = tmp_path / "reservoir_index.jsonl"
+    index.write_text("".join(
+        json.dumps({"game_idx": gi, "n_moves": 330, "winner": "red",
+                    "replay_path": str(p)}) + "\n"
+        for gi, p in enumerate(replays)))
+    checkpoint_a = tmp_path / "checkpoint.npz"
+    checkpoint_a.write_bytes(b"fake-checkpoint-a-bytes-never-loaded-by-select")
+    checkpoint_b = tmp_path / "checkpoint_b.npz"
+    checkpoint_b.write_bytes(b"fake-checkpoint-b-bytes-different-never-loaded")
+    match_summary = tmp_path / "match_summary.json"
+    match_summary.write_text(json.dumps({"a_win_rate": 0.5, "b_win_rate": 0.5}))
+    forbidden = tmp_path / "forbidden_a.csv"
+    forbidden.write_text("canonical_position_sha1\nnot-a-real-dev-corpus-hash\n")
+    protocol_path = tmp_path / "reservoir_protocol.json"
+
+    # A FULL protocol -- every field `measure_reservoir`/`derive_config` read (the
+    # same shape as `_minimal_protocol_and_measurements`'s protocol, pointed at the
+    # real files above). Written CANONICALLY so `file_sha1(protocol)` (what
+    # `v2_screen_provenance` computes for `protocol_sha1`) equals
+    # `sha1(canonical_json_bytes(protocol))` (what `derive_config` computes).
+    protocol = {
+        "anchor": "checkpoint_a",
+        "base_seed": 20270000,
+        "games": 3,
+        "source_index_path": str(index),
+        "selection_seed": 20260712,
+        "phase_allocation": {f"{role}|{phase}": alloc
+                             for (role, phase), alloc in SPLIT_ALLOC_V2.items()},
+        "late_floors": dict(LATE_TARGET_FLOORS),
+        "enumerator_params": {"min_ply_gap": MIN_PLY_GAP,
+                              "max_per_cell_per_game": MAX_PER_CELL_PER_GAME},
+        "new_collapse_stratum": "ply_bucket",
+        "checkpoint_a": {"path": str(checkpoint_a), "identity": "ckpt_a"},
+        "checkpoint_b": {"path": str(checkpoint_b), "identity": "ckpt_b"},
+        "forbidden_manifests": [str(forbidden)],
+        "screen_out": str(tmp_path / "fpu_dev_source_screen.csv"),
+        "select_out": str(tmp_path / "fpu_dev_corpus_v2_manifest.csv"),
+        "mcts_eval_batch_size": 14,
+        "mcts_stall_flush_sims": 48,
+        "config_schema_version": 1,
+        "match_summary_path": str(match_summary),
+        "replay_dir": str(tmp_path / "replays"),
+        "report_out": str(tmp_path / "qualify_report.json"),
+    }
+    protocol_path.write_bytes(canonical_json_bytes(protocol))
+
+    measurements = measure_reservoir(protocol)
+    derived = derive_config(
+        protocol, measurements, protocol_path=str(protocol_path))
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(derived))
+    config = load_v2_config(str(config_path))
+
+    write_screen_csv(screen_rows, config.screen_out)
+    write_screen_meta(config.screen_out, {
+        "config_path": str(config_path),
+        "source_index_path": str(index),
+        "protocol_path": str(protocol_path),
+        "match_summary_path": str(match_summary),
+        "checkpoint": config.checkpoint,
+        "forbidden_manifests": list(config.forbidden_manifests),
+        "screen_csv": config.screen_out,
+        "n_proposals": len(screen_rows),
+        "status_counts": dict(Counter(r["exclusion_status"] for r in screen_rows)),
+        "row_counts": screen_row_counts(screen_rows),
+        "base_mcts_config": {"n_simulations": ANCHOR_SIMS_V2},
+    })
+    meta = json.loads(Path(config.screen_out + ".meta.json").read_text())
+    files = dict(config_path=str(config_path), protocol_path=str(protocol_path),
+                 match_summary_path=str(match_summary), screen_csv=config.screen_out,
+                 checkpoint=str(checkpoint_a), checkpoint_b=str(checkpoint_b),
+                 source_index_path=str(index), replays=replays)
+    return config, meta, files
+
+
+def _select(meta, config, *, forbidden=None, screen_csv_path=None,
+            verify_config_rederivation=(lambda _config: None)):
     """`select_final_manifest`, wired the ONE way it accepts: `forbidden` loaded from
     the very manifests whose bytes the identity check hard-matches, and the screen
     artifact's own path (whose bytes are the eleventh identity, and from which `select`
     READS its own rows -- there is no row argument to pass). A test that means to BREAK
-    one of those wirings passes it explicitly."""
+    one of those wirings passes it explicitly.
+
+    The design Sec 5 re-derive+byte-compare (`verify_config_rederivation`) is STUBBED
+    to a no-op here: `_v2_screen_artifact` (the fixture the identity/forgery/
+    composition tests below use) writes a MINIMAL protocol -- checkpoint paths only --
+    which the REAL re-derive's `measure_reservoir` cannot read (it needs a full
+    protocol). Those tests are about the identity chain / forgeries / composition, NOT
+    the re-derive, so they stub it. The REAL re-derive is exercised END TO END, over a
+    genuinely measurable reservoir + a truly-derived config, by the
+    `_v2_faithful_screen_artifact` tests further down (positive pass + tampered-field
+    refusal), and its call ORDER by `test_v2_select_call_order...` +
+    `test_v2_select_runs_the_config_rederivation_before_reading_rows`."""
     return select_final_manifest(
         meta, config,
         forbidden=(load_forbidden_hashes(config.forbidden_manifests)
                    if forbidden is None else forbidden),
         screen_csv_path=(config.screen_out if screen_csv_path is None
-                         else screen_csv_path))
+                         else screen_csv_path),
+        verify_config_rederivation=verify_config_rederivation)
 
 
 def _forge_screen_csv(csv_path, predicate, replacements, *, n):
@@ -3984,13 +4103,18 @@ def test_v2_select_reads_its_rows_from_the_hashed_artifact_not_from_an_argument(
     """
     params = list(inspect.signature(select_final_manifest).parameters)
     assert "screen_rows" not in params
-    assert params == ["screen_meta", "config", "forbidden", "screen_csv_path"]
+    # The design Sec 5 re-derive is an INJECTED dependency (`verify_config_
+    # rederivation`, keyword-only, default None -> the real lazy import) -- the
+    # anti-decoy property (`"screen_rows" not in params`) is preserved.
+    assert params == ["screen_meta", "config", "forbidden", "screen_csv_path",
+                      "verify_config_rederivation"]
 
     body = _function_body(select_final_manifest)
     assert "read_screen_csv(screen_csv_path)" in body
-    # ...and the read happens AFTER the hard-match: never parse an artifact you have
-    # not first proven is the right one.
+    # ...and the read happens AFTER the hard-match AND after the config re-derive:
+    # never parse an artifact you have not first proven is the right one.
     assert body.index("validate_screen_identities(") < body.index("read_screen_csv(")
+    assert body.index("verify_config_rederivation(config)") < body.index("read_screen_csv(")
     assert body.index("read_screen_csv(") < body.index("validate_screen_rows_against_meta(")
 
     # `main` must not read the rows either -- it hands over the PATH, nothing else.
@@ -4289,18 +4413,102 @@ def test_v2_select_stage_never_touches_the_evaluator():
 def test_v2_select_call_order_puts_every_refusal_before_any_selection():
     """The refusal ORDER is structural, not incidental: in `select_final_manifest`'s
     executable BODY (docstring stripped -- prose must not be able to satisfy this),
-    the identity hard-match, the row READ from the artifact it just matched, the
-    row/meta cross-check, the forbidden-set binding and the qualification ALL precede
-    the sampler, which precedes `assert_disjoint`. So every refusal ALWAYS fires before
-    a single row is selected."""
+    the identity hard-match, the design Sec 5 config re-derive, the row READ from the
+    artifact it just matched, the row/meta cross-check, the forbidden-set binding and
+    the qualification ALL precede the sampler, which precedes `assert_disjoint`. So
+    every refusal ALWAYS fires before a single row is selected."""
     body = _function_body(select_final_manifest)
-    calls = ("validate_screen_identities(", "read_screen_csv(",
-             "validate_screen_rows_against_meta(", "load_forbidden_hashes(",
-             "post_screen_qualification(", "sample_v2_rows(", "assert_disjoint(")
+    calls = ("validate_screen_identities(", "verify_config_rederivation(config)",
+             "read_screen_csv(", "validate_screen_rows_against_meta(",
+             "load_forbidden_hashes(", "post_screen_qualification(",
+             "sample_v2_rows(", "assert_disjoint(")
     for needle in calls:
         assert needle in body, needle
     order = [body.index(needle) for needle in calls]
     assert order == sorted(order), order
+
+
+# ---------------------------------------------------------------------------
+# Task B10 correction (design Sec 5): `select` ALSO re-derives + byte-compares
+# the config -- the "checked twice" guarantee -- so a NON-hashed config field
+# (selection_seed, select_out, a floor) tampered BETWEEN screen and select is
+# caught at select, not only by B9's pre-GPU `precheck_before_screen`. These
+# drive the REAL re-derive (default `verify_config_rederivation`, NOT stubbed)
+# over `_v2_faithful_screen_artifact`'s genuinely-measurable reservoir.
+# ---------------------------------------------------------------------------
+
+def test_v2_faithful_screen_artifact_selects_cleanly_with_the_real_rederivation(tmp_path):
+    """POSITIVE control + the shared-fixture proof: a screen whose config is the
+    GENUINE `derive_config` output over a measurable reservoir passes BOTH the
+    eleven-identity hard-match AND the design Sec 5 re-derive+byte-compare (run FOR
+    REAL -- no `verify_config_rederivation` injected), and selects the exact 240-row
+    v2 composition. (If (A) `derive_config` and (C) `v2_screen_provenance` disagreed
+    on any identity, or the re-derive byte-compare were wrong, this would fail.)"""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, _files = _v2_faithful_screen_artifact(tmp_path, screen)
+
+    # NO `verify_config_rederivation` -> select lazily imports and runs the REAL
+    # `fpu_dev_reservoir_protocol.rederive_and_assert_config_unchanged`.
+    rows, stats = select_final_manifest(
+        meta, config,
+        forbidden=load_forbidden_hashes(config.forbidden_manifests),
+        screen_csv_path=config.screen_out)
+
+    assert len(rows) == CORPUS_SIZE_V2 == 240
+    assert sorted(stats["identities_verified"]) == sorted(SCREEN_IDENTITY_KEYS)
+
+
+@pytest.mark.parametrize("field, tamper", [
+    ("selection_seed", lambda v: v + 1),
+    ("select_out", lambda v: v + ".tampered"),
+])
+def test_v2_select_re_derives_and_refuses_a_tampered_non_hashed_config_field(
+        tmp_path, field, tamper):
+    """THE load-bearing case (design Sec 5, the B10 correction). `selection_seed`
+    and `select_out` carry NO hash of their own -- they are not in `expected_
+    fingerprints` -- so the eleven-identity hard-match (which passes: `config_sha1`
+    is the hash of the UNCHANGED config FILE, and the tampered field lives only in
+    the in-memory `V2Config`) cannot see an edit to them. ONLY select's re-derive +
+    byte-compare catches it, and it must RAISE naming a re-derivation mismatch,
+    BEFORE any selection.
+
+    The tamper is an in-memory `dataclasses.replace` (a field edited after the config
+    was loaded -- exactly the between-screen-and-select tamper Sec 5's second check
+    exists for); `config.config_path`/`protocol_path` still point at the faithful
+    on-disk files, so the fresh re-derivation is honest and the byte-compare diff is
+    solely the tampered field."""
+    screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, _files = _v2_faithful_screen_artifact(tmp_path, screen)
+    tampered = dataclasses.replace(config, **{field: tamper(getattr(config, field))})
+
+    with pytest.raises(ValueError, match="re-derivation"):
+        select_final_manifest(
+            meta, tampered,
+            forbidden=load_forbidden_hashes(tampered.forbidden_manifests),
+            screen_csv_path=tampered.screen_out)
+
+
+def test_v2_select_runs_the_config_rederivation_before_reading_rows(tmp_path, monkeypatch):
+    """The re-derive is wired BEFORE the row read / qualification / selection (a
+    runtime complement to the source-order `test_v2_select_call_order...`): an
+    injected verifier that RAISES surfaces its error while `read_screen_csv`,
+    `post_screen_qualification` and `sample_v2_rows` are all landmines -- proving
+    none of them ran first."""
+    from scripts.GPU.alphazero import fpu_dev_corpus_v2 as mod
+    screen = _screen_from_pool(_abundant_pool_v2())
+    config, meta, _files = _v2_screen_artifact(tmp_path, screen)   # minimal is fine -- we INJECT
+
+    def _landmine(*args, **kwargs):
+        raise AssertionError("select reached row-read/selection before the re-derive")
+    monkeypatch.setattr(mod, "read_screen_csv", _landmine)
+    monkeypatch.setattr(mod, "post_screen_qualification", _landmine)
+    monkeypatch.setattr(mod, "sample_v2_rows", _landmine)
+
+    def _raising_verifier(_config):
+        raise ValueError("config re-derivation mismatch (injected)")
+
+    with pytest.raises(ValueError, match="re-derivation mismatch"):
+        _select(meta, config, verify_config_rederivation=_raising_verifier)
 
 
 # --- the dedicated preflight-refusal exception (Task-5 review Minor) ----------

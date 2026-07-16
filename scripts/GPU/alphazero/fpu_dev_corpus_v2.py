@@ -2934,22 +2934,44 @@ def _manifest_row_v2(r: Mapping[str, Any]) -> dict:
 
 def select_final_manifest(screen_meta: Mapping[str, Any], config: V2Config, *,
                           forbidden: Set[str],
-                          screen_csv_path: str) -> Tuple[List[dict], dict]:
+                          screen_csv_path: str,
+                          verify_config_rederivation: Optional[Any] = None
+                          ) -> Tuple[List[dict], dict]:
     """The PURE `select` stage (design Sec 1.6/1.7), in its one frozen order:
 
       1. `validate_screen_identities` -- hard-match all eleven identities across the
          config (A), the screen meta (B) and a fresh recompute (C), INCLUDING the
          screen artifact's own bytes (`screen_csv_path`);
-      2. READ the rows -- from that same artifact, and only after its bytes matched;
-      3. `validate_screen_rows_against_meta` -- those rows must agree with the
+      2. `verify_config_rederivation` -- the design Sec 5 re-derive + byte-compare:
+         re-derive the canonical config from the config's own pinned `(protocol,
+         reservoir)` and byte-compare it against the supplied `config`, catching an
+         edited NON-hashed field (`selection_seed`, `select_out`, a floor) that
+         step 1's identity hashes cannot see. Sec 5 requires the config to be
+         checked TWICE -- once pre-GPU (`run_screen`'s `precheck_before_screen`,
+         Task B9) and once HERE at select -- so a field tampered BETWEEN screen and
+         select is still caught;
+      3. READ the rows -- from that same artifact, and only after its bytes matched;
+      4. `validate_screen_rows_against_meta` -- those rows must agree with the
          screen's own recorded `n_proposals` / `row_counts`;
-      4. bind `forbidden` to the manifests step 1 matched (below);
-      5. filter to the screen's `kept` rows (`kept_rows_from_screen`);
-      6. `post_screen_qualification` -- STAGE 2: prove the exact role counts AND the
+      5. bind `forbidden` to the manifests step 1 matched (below);
+      6. filter to the screen's `kept` rows (`kept_rows_from_screen`);
+      7. `post_screen_qualification` -- STAGE 2: prove the exact role counts AND the
          late-TARGET floors are satisfiable;
-      7. `sample_v2_rows(kept, seed=config.selection_seed)` -- the deterministic,
+      8. `sample_v2_rows(kept, seed=config.selection_seed)` -- the deterministic,
          exact-or-raise selection;
-      8. `assert_disjoint` -- v1's completed-manifest backstop, against `forbidden`.
+      9. `assert_disjoint` -- v1's completed-manifest backstop, against `forbidden`.
+
+    `verify_config_rederivation` (step 2) is an INJECTED dependency, defaulting to
+    `None` -> the real `fpu_dev_reservoir_protocol.rederive_and_assert_config_
+    unchanged`, LAZILY imported inside the body (design Sec 6: `fpu_dev_corpus_v2`
+    must not top-level-import `fpu_dev_reservoir_protocol`, which already imports
+    FROM this module -- the SAME lazy-import discipline `run_screen`'s own
+    `precheck_before_screen` call uses). It is the ONE shared implementation both
+    check points reuse, so the tamper check can never drift between screen and
+    select. Injectable so a unit test can drive select's ORDER without a full
+    on-disk reservoir; the real check (over a genuinely measurable reservoir) is
+    exercised end to end by the faithful-fixture tests. `main --mode select` never
+    passes it -> production always runs the real re-derivation.
 
     THERE IS NO `screen_rows` PARAMETER, deliberately. The rows are READ HERE, from
     `screen_csv_path` -- the artifact whose bytes step 1 just hard-matched -- and can
@@ -2957,15 +2979,15 @@ def select_final_manifest(screen_meta: Mapping[str, Any], config: V2Config, *,
     from another: an honest CSV and an honest meta on disk, both matching, while the
     ROWS handed in were a decoy (rows are never hashed). That is not merely a hazard
     to detect, it is a hazard to make UNREPRESENTABLE, so the parameter is gone rather
-    than guarded. Steps 1 and 2 are in this order for the same reason: never parse an
+    than guarded. Steps 1 and 3 are in this order for the same reason: never parse an
     artifact you have not first proven is the right one.
 
-    THE ORDER IS THE POINT. Steps 1, 3, 4 and 6 ALL refuse BEFORE any selection is
-    attempted, so a screen whose identities do not check out -- whose rows do not
-    match its own meta, whose forbidden set is not the one the screen excluded
-    against, or whose kept rows provably cannot meet the roles/floors -- never
-    produces a manifest at all, not even a partial one. (All raise; none returns a
-    verdict for a caller to ignore.)
+    THE ORDER IS THE POINT. Steps 1, 2, 4, 5 and 7 ALL refuse BEFORE any selection is
+    attempted, so a screen whose identities do not check out -- whose config was
+    tampered in a non-hashed field, whose rows do not match its own meta, whose
+    forbidden set is not the one the screen excluded against, or whose kept rows
+    provably cannot meet the roles/floors -- never produces a manifest at all, not
+    even a partial one. (All raise; none returns a verdict for a caller to ignore.)
 
     `forbidden` is the HASH SET, and it must be EXACTLY
     `load_forbidden_hashes(config.forbidden_manifests)` -- the manifests whose bytes
@@ -2989,6 +3011,20 @@ def select_final_manifest(screen_meta: Mapping[str, Any], config: V2Config, *,
     verified = validate_screen_identities(
         screen_meta, config, forbidden_paths=config.forbidden_manifests,
         screen_csv_path=screen_csv_path)
+
+    # Design Sec 5 (Task B10 correction): re-derive the canonical config from the
+    # config's own pinned (protocol, reservoir) and byte-compare -- the config is
+    # "checked TWICE" (pre-GPU precheck AND here), so a NON-hashed field
+    # (selection_seed/select_out/a floor) tampered BETWEEN screen and select is
+    # still caught (step 1's identity hashes cannot see it). Lazily imported (Sec 6:
+    # no top-level import of fpu_dev_reservoir_protocol -- it imports FROM here),
+    # exactly as run_screen's own precheck is; injectable so a unit test can drive
+    # order without an on-disk reservoir (the real check is covered end to end by
+    # the faithful-fixture tests).
+    if verify_config_rederivation is None:
+        from .fpu_dev_reservoir_protocol import rederive_and_assert_config_unchanged
+        verify_config_rederivation = rederive_and_assert_config_unchanged
+    verify_config_rederivation(config)
 
     # ONLY now -- the bytes are proven -- parse them. This is the sole source of the
     # rows: see the "THERE IS NO `screen_rows` PARAMETER" note above.
@@ -3177,11 +3213,12 @@ def main(argv=None) -> int:
 
     if args.mode == "select":
         # PURE: no evaluator, no MCTS, no checkpoint load -- only the persisted
-        # screen, the config, and the file bytes the ten identities hash. Any
-        # identity mismatch or failed qualification raises out of
-        # `select_final_manifest` BEFORE a single row is selected; those are
-        # evidence-chain failures, so they propagate raw rather than becoming a
-        # terse exit code.
+        # screen, the config, the file bytes the ten identities hash, and the
+        # (protocol, reservoir) bytes the design Sec 5 re-derive re-measures. Any
+        # identity mismatch, config re-derivation mismatch, or failed qualification
+        # raises out of `select_final_manifest` BEFORE a single row is selected;
+        # those are evidence-chain failures, so they propagate raw rather than
+        # becoming a terse exit code.
         # `main` does NOT read the screen's rows: `select_final_manifest` reads them
         # itself, from the artifact whose bytes it hard-matches, so no caller -- not
         # even this one -- can hand it a row-set that is not in that file.
