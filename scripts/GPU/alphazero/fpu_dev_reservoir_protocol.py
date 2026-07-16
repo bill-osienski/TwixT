@@ -2336,10 +2336,23 @@ def _fingerprint_mismatch(key: str, supplied: Any, fresh: Any, *,
     the report to just the differing basename(s) -- dumping the whole block
     twice over would bury the one fact an operator needs (WHICH file
     changed), mirroring `fpu_dev_corpus_v2._identity_mismatch`'s own
-    narrowing for the same reason (a distinct helper, not a shared import:
-    that one's remediation table is keyed to the legacy 7-identity
-    `SCREEN_IDENTITY_KEYS` set, not this module's 9-identity
-    `expected_fingerprints`)."""
+    narrowing for the same reason.
+
+    Deliberately a DISTINCT helper, not a shared import, even though (Task
+    B10) `SCREEN_IDENTITY_KEYS` (eleven identities) is now a strict superset
+    of this module's `expected_fingerprints` (nine): the two call sites need
+    DIFFERENT remediation advice, not just different formatting. This
+    function fires BEFORE a screen exists at all (`precheck_before_screen`,
+    a 2-source config-vs-fresh-recompute check), where the one correct fix is
+    always "re-qualify"; `fpu_dev_corpus_v2._identity_mismatch` fires AFTER
+    an (hours-long, expensive) screen exists (a 2-or-3-source A/B/C
+    hard-match), where "re-qualify" is not even meaningful (qualify never
+    reads a screen) and the honest per-identity advice varies ("restore the
+    file", "re-screen", "point --config at the right file", ...). Reusing
+    `fpu_dev_corpus_v2._IDENTITY_REMEDIATION`'s text here would therefore
+    give WRONG advice at this call site, not merely duplicate it -- so B10
+    leaves this generic message as is (considered per the B10 brief's
+    unify-or-explain-why note) rather than importing that table."""
     if isinstance(supplied, Mapping) and isinstance(fresh, Mapping):
         names = sorted(set(supplied) | set(fresh))
         differing = [n for n in names if supplied.get(n) != fresh.get(n)]

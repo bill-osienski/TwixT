@@ -129,6 +129,7 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     derive_config,
 )
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import fpu_provenance
 
 
 def test_empty_board_legal_moves_is_528_both_sides():
@@ -2929,30 +2930,139 @@ def test_write_screen_csv_round_trips_null_and_tuple_fields(tmp_path):
 def test_v2_screen_provenance_has_the_sec_1_8_fingerprint_keys(tmp_path):
     """v2_screen_provenance -- pure/stdlib-only via fpu_provenance -- carries
     every fingerprint the brief names (config hash + source_file_sha1s,
-    replay_data_sha1, source_index_sha1, checkpoint identity,
-    forbidden-manifest hashes, runtime_provenance) PLUS `screen_csv_sha1`, the
-    screen ARTIFACT's own hash (Task 6: the one link the six INPUT identities
-    leave unfingerprinted). None inputs resolve to fpu_provenance's own "none"
-    sentinel rather than raising."""
+    replay_data_sha1, source_index_sha1, protocol hash, match-summary hash,
+    THREE checkpoint identities, forbidden-manifest hashes, runtime_
+    provenance) PLUS `screen_csv_sha1`, the screen ARTIFACT's own hash (Task
+    B10: the one link the ten INPUT identities leave unfingerprinted). None
+    inputs resolve to fpu_provenance's own "none" sentinel rather than
+    raising -- including the two reservoir-checkpoint identities, which
+    degrade to "none" when there is no `protocol_path` to read them from."""
     config_path = tmp_path / "config.json"
     config_path.write_text("{}")
 
     prov = v2_screen_provenance(
-        config_path=str(config_path), source_index_path=None, checkpoint=None,
+        config_path=str(config_path), source_index_path=None,
+        protocol_path=None, match_summary_path=None, checkpoint=None,
         forbidden_manifests=[], base_mcts_config={"n_simulations": 400})
 
     assert set(prov) == {
-        "config_sha1", "source_file_sha1s", "source_index_sha1",
-        "replay_data_sha1", "checkpoint_identity", "forbidden_manifest_sha1s",
+        "config_sha1", "protocol_sha1", "match_summary_sha1",
+        "source_file_sha1s", "source_index_sha1", "replay_data_sha1",
+        "reservoir_checkpoint_a_identity", "reservoir_checkpoint_b_identity",
+        "anchor_checkpoint_identity", "forbidden_manifest_sha1s",
         "screen_csv_sha1", "base_mcts_config", "add_noise", "runtime_provenance"}
     assert prov["config_sha1"] != "none"            # config_path IS a real file
+    assert prov["protocol_sha1"] == "none"           # protocol_path was None
+    assert prov["match_summary_sha1"] == "none"      # match_summary_path was None
     assert prov["source_index_sha1"] == "none"       # source_index_path was None
-    assert prov["checkpoint_identity"] == "none"
+    assert prov["reservoir_checkpoint_a_identity"] == "none"
+    assert prov["reservoir_checkpoint_b_identity"] == "none"
+    assert prov["anchor_checkpoint_identity"] == "none"
     assert prov["screen_csv_sha1"] == "none"         # screen_csv defaulted to None
     assert prov["add_noise"] is False
     assert prov["base_mcts_config"] == {"n_simulations": 400}
     assert "fpu_dev_corpus_v2.py" in prov["source_file_sha1s"]
     assert "python_version" in prov["runtime_provenance"]
+
+
+def test_v2_screen_provenance_reservoir_checkpoint_identities_come_from_the_protocol(
+        tmp_path):
+    """`reservoir_checkpoint_a_identity` / `reservoir_checkpoint_b_identity` are
+    NOT read from any direct path parameter (there isn't one) -- they come from
+    the PROTOCOL JSON at `protocol_path`'s own `checkpoint_a`/`checkpoint_b`
+    `"path"` fields (design Sec 2.1: the two reservoir players' paths live only
+    in the protocol; `config`/`v2_screen_provenance`'s `checkpoint` parameter is
+    just the single anchor). Two DISTINCT checkpoint files -> two DISTINCT
+    identities, and `anchor_checkpoint_identity` (from the SEPARATE `checkpoint`
+    parameter) is independent of both."""
+    ckpt_a = tmp_path / "ckpt_a.npz"
+    ckpt_a.write_bytes(b"checkpoint-a-bytes")
+    ckpt_b = tmp_path / "ckpt_b.npz"
+    ckpt_b.write_bytes(b"checkpoint-b-bytes-different")
+    protocol_path = tmp_path / "reservoir_protocol.json"
+    protocol_path.write_text(json.dumps({
+        "checkpoint_a": {"path": str(ckpt_a)},
+        "checkpoint_b": {"path": str(ckpt_b)},
+    }))
+
+    prov = v2_screen_provenance(
+        config_path=None, source_index_path=None, protocol_path=str(protocol_path),
+        match_summary_path=None, checkpoint=str(ckpt_a), forbidden_manifests=[],
+        base_mcts_config=None)
+
+    assert prov["reservoir_checkpoint_a_identity"] == (
+        f"ckpt_a.npz:{fpu_provenance.file_sha1(str(ckpt_a))}")
+    assert prov["reservoir_checkpoint_b_identity"] == (
+        f"ckpt_b.npz:{fpu_provenance.file_sha1(str(ckpt_b))}")
+    assert prov["anchor_checkpoint_identity"] == (
+        f"ckpt_a.npz:{fpu_provenance.file_sha1(str(ckpt_a))}")
+    assert (prov["reservoir_checkpoint_a_identity"]
+            != prov["reservoir_checkpoint_b_identity"])
+    # the anchor happens to equal reservoir_a here (same file) but is computed
+    # from a DIFFERENT parameter (`checkpoint`, not the protocol) -- pinned by
+    # test_v2_three_checkpoint_identities_are_distinct_and_independently_checked
+    # below, which proves that independence under tampering, not just equality.
+    assert prov["anchor_checkpoint_identity"] == prov["reservoir_checkpoint_a_identity"]
+
+
+def test_v2_screen_provenance_reservoir_checkpoint_identities_degrade_gracefully(
+        tmp_path):
+    """A missing/unreadable/malformed protocol -- or one missing a checkpoint
+    role -- degrades the two reservoir-checkpoint identities to `"none"` rather
+    than raising FROM PROVENANCE COMPUTATION itself (the same best-effort
+    philosophy as every other identity here); `validate_screen_identities` is
+    what turns the resulting mismatch into a raised refusal, not this
+    function."""
+    kw = dict(config_path=None, source_index_path=None, match_summary_path=None,
+              checkpoint=None, forbidden_manifests=[], base_mcts_config=None)
+
+    missing = v2_screen_provenance(
+        protocol_path=str(tmp_path / "does-not-exist.json"), **kw)
+    assert missing["reservoir_checkpoint_a_identity"] == "none"
+    assert missing["reservoir_checkpoint_b_identity"] == "none"
+
+    malformed_path = tmp_path / "malformed.json"
+    malformed_path.write_text("not valid json {{{")
+    malformed = v2_screen_provenance(protocol_path=str(malformed_path), **kw)
+    assert malformed["reservoir_checkpoint_a_identity"] == "none"
+    assert malformed["reservoir_checkpoint_b_identity"] == "none"
+
+    incomplete_path = tmp_path / "incomplete.json"
+    incomplete_path.write_text(json.dumps({"checkpoint_a": {"path": "x"}}))
+    incomplete = v2_screen_provenance(protocol_path=str(incomplete_path), **kw)
+    # role "a" resolves to a (nonexistent) path -> a "name:missing" identity string,
+    # NOT the "none" sentinel (that is reserved for a genuinely ABSENT path).
+    assert incomplete["reservoir_checkpoint_a_identity"] == "x:missing"
+    assert incomplete["reservoir_checkpoint_b_identity"] == "none"   # role "b" absent entirely
+
+
+def test_v2_checkpoint_identity_format_matches_fpu_dev_reservoir_protocol(tmp_path):
+    """Task B10 brief: "Cross-check the exact key names + format against B7's
+    `derive_config` output and B3's `measure_reservoir` so (A)/(B)/(C) agree."
+
+    `measure_reservoir` (B3) pins `checkpoint_identities["reservoir_a"/"reservoir_b"
+    /"anchor"]` via `fpu_dev_reservoir_protocol._checkpoint_identity`, and
+    `derive_config` (B7) copies those verbatim into the config's pre-registered (A)
+    `expected_fingerprints["reservoir_checkpoint_a_identity"]` etc. -- so for (A) to
+    ever agree with THIS module's (B)/(C) recompute, `v2_screen_provenance`'s own
+    checkpoint-hashing rule must produce the IDENTICAL string, over the SAME file, as
+    `fpu_dev_reservoir_protocol._checkpoint_identity`. Proven directly here (not just
+    by code-reading) -- the two functions are independent (Sec 6: no shared import
+    for this idiom), so only a byte-for-byte comparison over a REAL file can show
+    they compute the same thing."""
+    from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
+        _checkpoint_identity as reservoir_protocol_checkpoint_identity)
+    ckpt = tmp_path / "some_checkpoint.npz"
+    ckpt.write_bytes(b"identity-format-cross-check-bytes")
+
+    other_module_identity = reservoir_protocol_checkpoint_identity(str(ckpt))
+    this_module_identity = v2_screen_provenance(
+        config_path=None, source_index_path=None, protocol_path=None,
+        match_summary_path=None, checkpoint=str(ckpt), forbidden_manifests=[],
+        base_mcts_config=None)["anchor_checkpoint_identity"]
+
+    assert other_module_identity == this_module_identity
+    assert other_module_identity.startswith("some_checkpoint.npz:")
 
 
 def test_v2_screen_provenance_fingerprints_the_screen_artifact_itself(tmp_path):
@@ -2961,7 +3071,8 @@ def test_v2_screen_provenance_fingerprints_the_screen_artifact_itself(tmp_path):
     re-derives the manifest from -- is the one unfingerprinted link in the chain."""
     screen_csv = tmp_path / "fpu_dev_source_screen.csv"
     screen_csv.write_text("game_idx,ply\n1,2\n")
-    kw = dict(config_path=None, source_index_path=None, checkpoint=None,
+    kw = dict(config_path=None, source_index_path=None, protocol_path=None,
+              match_summary_path=None, checkpoint=None,
               forbidden_manifests=[], base_mcts_config=None)
 
     before = v2_screen_provenance(screen_csv=str(screen_csv), **kw)["screen_csv_sha1"]
@@ -2974,7 +3085,10 @@ def test_v2_screen_provenance_fingerprints_the_screen_artifact_itself(tmp_path):
 
 def test_write_screen_meta_enriches_with_provenance_without_clobbering(tmp_path):
     """write_screen_meta adds a DERIVED "provenance" block without disturbing
-    the caller's own meta keys (mirrors v1's write_meta contract)."""
+    the caller's own meta keys (mirrors v1's write_meta contract), and that
+    block carries all ELEVEN Task B10 identities (a meta built without
+    `protocol_path`/`match_summary_path` keys degrades those two identities'
+    inputs to "none" via `.get()` -- never a crash)."""
     config_path = tmp_path / "config.json"
     config_path.write_text("{}")
     out_csv = tmp_path / "fpu_dev_source_screen.csv"
@@ -2991,6 +3105,9 @@ def test_write_screen_meta_enriches_with_provenance_without_clobbering(tmp_path)
     assert meta["source_index_path"] is None
     assert "provenance" in meta
     assert meta["provenance"]["config_sha1"] != "none"
+    assert set(SCREEN_IDENTITY_KEYS) <= set(meta["provenance"])
+    assert meta["provenance"]["protocol_sha1"] == "none"
+    assert meta["provenance"]["match_summary_sha1"] == "none"
 
 
 # --- import purity -----------------------------------------------------------
@@ -3173,15 +3290,17 @@ def _v2_screen_artifact(tmp_path, screen_rows, *,
     """A COMPLETE, self-consistent screen artifact -- exactly what `run_screen`
     writes -- over REAL files on disk, plus the loaded `V2Config`.
 
-    Writes the reservoir replays + index, a checkpoint, a forbidden manifest, the
-    config (PRE-REGISTERING the five fingerprints it can know), and the screen CSV
-    ITSELF; then derives the `.meta.json` through the REAL `write_screen_meta` and
-    reads it back. So the fixture's provenance -- including `screen_csv_sha1` -- and
-    its `n_proposals` / `status_counts` are the genuine values for these very rows,
-    never hand-typed, and a test that tampers with anything is tampering with a real
-    artifact.
+    Writes the reservoir replays + index, TWO DISTINCT reservoir checkpoints (`a`
+    doubling as the anchor, exactly like the real frozen protocol: "anchor:
+    checkpoint_a"), a protocol JSON naming them, a match-summary file, a forbidden
+    manifest, the config (PRE-REGISTERING the nine fingerprints it can know), and
+    the screen CSV ITSELF; then derives the `.meta.json` through the REAL
+    `write_screen_meta` and reads it back. So the fixture's provenance -- including
+    `screen_csv_sha1` -- and its `n_proposals` / `status_counts` are the genuine
+    values for these very rows, never hand-typed, and a test that tampers with
+    anything is tampering with a real artifact.
 
-    Ordering is load-bearing and NOT circular: the five pre-registered fingerprints
+    Ordering is load-bearing and NOT circular: the nine pre-registered fingerprints
     are independent of BOTH the config (a file cannot contain its own hash) and the
     screen (which does not exist when the config is authored), so they are computed
     FIRST, written INTO the config, and only THEN are the config's and the screen's
@@ -3204,15 +3323,31 @@ def _v2_screen_artifact(tmp_path, screen_rows, *,
         json.dumps({"game_idx": gi, "n_moves": 330, "winner": "red",
                     "replay_path": str(p)}) + "\n"
         for gi, p in enumerate(replays)))
+    # TWO DISTINCT checkpoint files (Task B10): `checkpoint` doubles as BOTH the
+    # protocol's `checkpoint_a` AND the screen anchor (`config.checkpoint`) --
+    # the real pinned protocol's own shape ("anchor: checkpoint_a") -- while
+    # `checkpoint_b` is a genuinely DIFFERENT file, so `reservoir_checkpoint_a_
+    # identity` / `reservoir_checkpoint_b_identity` / `anchor_checkpoint_identity`
+    # are never accidentally aliased to the same value by construction.
     checkpoint = tmp_path / "checkpoint.npz"
-    checkpoint.write_bytes(b"fake-checkpoint-bytes-never-loaded-by-select")
+    checkpoint.write_bytes(b"fake-checkpoint-a-bytes-never-loaded-by-select")
+    checkpoint_b = tmp_path / "checkpoint_b.npz"
+    checkpoint_b.write_bytes(b"fake-checkpoint-b-bytes-different-never-loaded")
+    protocol_path = tmp_path / "reservoir_protocol.json"
+    protocol_path.write_text(json.dumps({
+        "checkpoint_a": {"path": str(checkpoint)},
+        "checkpoint_b": {"path": str(checkpoint_b)},
+    }))
+    match_summary_path = tmp_path / "match_summary.json"
+    match_summary_path.write_text(json.dumps({"a_win_rate": 0.5, "b_win_rate": 0.5}))
     forbidden = tmp_path / "forbidden_a.csv"
     forbidden.write_text("canonical_position_sha1\n"
                          + "".join(f"{h}\n" for h in forbidden_hashes))
-    paths = dict(source_index_path=str(index), checkpoint=str(checkpoint),
+    paths = dict(source_index_path=str(index), protocol_path=str(protocol_path),
+                 match_summary_path=str(match_summary_path), checkpoint=str(checkpoint),
                  forbidden_manifests=[str(forbidden)])
 
-    # (A) the five PRE-REGISTERED fingerprints, from the SAME provenance helper the
+    # (A) the nine PRE-REGISTERED fingerprints, from the SAME provenance helper the
     # screen stage itself uses -- so a config can never pre-register a value the
     # screen would compute differently.
     prov = v2_screen_provenance(config_path=None, screen_csv=None,
@@ -3238,14 +3373,14 @@ def _v2_screen_artifact(tmp_path, screen_rows, *,
     })
     meta = json.loads(Path(config.screen_out + ".meta.json").read_text())
     files = dict(paths, config_path=str(config_path), replays=replays,
-                 screen_csv=config.screen_out)
+                 screen_csv=config.screen_out, checkpoint_b=str(checkpoint_b))
     return config, meta, files
 
 
 def _select(meta, config, *, forbidden=None, screen_csv_path=None):
     """`select_final_manifest`, wired the ONE way it accepts: `forbidden` loaded from
     the very manifests whose bytes the identity check hard-matches, and the screen
-    artifact's own path (whose bytes are the seventh identity, and from which `select`
+    artifact's own path (whose bytes are the eleventh identity, and from which `select`
     READS its own rows -- there is no row argument to pass). A test that means to BREAK
     one of those wirings passes it explicitly."""
     return select_final_manifest(
@@ -3279,7 +3414,8 @@ def _restamp_screen_csv_hash(meta, csv_path):
     Isolates the SECOND lock (`row_counts`) so it can be proven independently of the
     first (`screen_csv_sha1`)."""
     meta["provenance"]["screen_csv_sha1"] = v2_screen_provenance(
-        config_path=None, source_index_path=None, checkpoint=None,
+        config_path=None, source_index_path=None, protocol_path=None,
+        match_summary_path=None, checkpoint=None,
         forbidden_manifests=[], base_mcts_config=None,
         screen_csv=str(csv_path))["screen_csv_sha1"]
 
@@ -3300,7 +3436,8 @@ def _restamp_config_hash(meta, config_path):
     without this the self-referential check would fire and the test would pass for the
     wrong reason."""
     meta["provenance"]["config_sha1"] = v2_screen_provenance(
-        config_path=config_path, source_index_path=None, checkpoint=None,
+        config_path=config_path, source_index_path=None, protocol_path=None,
+        match_summary_path=None, checkpoint=None,
         forbidden_manifests=[], base_mcts_config=None)["config_sha1"]
 
 
@@ -3337,28 +3474,43 @@ def test_v2_load_config_raises_on_each_missing_required_key(tmp_path, key):
         load_v2_config(str(p))
 
 
-# --- validate_screen_identities: the SIX identities, hard-matched -------------
+# --- validate_screen_identities: the ELEVEN identities, hard-matched ----------
 
-def test_v2_the_seven_identities_are_frozen():
-    """The frozen identity list (design Sec 1.8, + Task 6's review fix): the six
-    that fingerprint the screen's INPUTS -- config, source index, replay data,
-    checkpoint, source files, forbidden manifests -- plus `screen_csv_sha1`, which
-    fingerprints the screen's OUTPUT (the artifact `select` re-derives the manifest
-    FROM; without it the screen's own rows are the one unfingerprinted link).
+def test_v2_the_eleven_identities_are_frozen():
+    """The frozen identity list (design Sec 1.8; extended Task B10, spec Sec
+    2.2/Sec 5): TEN that fingerprint the screen's INPUTS -- config, protocol,
+    match summary, source index, replay data, THREE checkpoint identities
+    (reservoir A, reservoir B, anchor), source files, forbidden manifests --
+    plus `screen_csv_sha1`, which fingerprints the screen's OUTPUT (the
+    artifact `select` re-derives the manifest FROM; without it the screen's
+    own rows are the one unfingerprinted link). Pinned as the EXACT declared
+    ORDER too (not just membership), since that order is what determines
+    which identity a caller sees named first when more than one disagrees.
 
     TWO of them cannot be pre-registered by a config and are matched
     screen-recorded(B) vs fresh-recompute(C): `config_sha1` (a file cannot contain
     its own hash) and `screen_csv_sha1` (the screen does not exist when the config
     is authored)."""
-    assert set(SCREEN_IDENTITY_KEYS) == {
-        "config_sha1", "source_index_sha1", "replay_data_sha1",
-        "checkpoint_identity", "source_file_sha1s", "forbidden_manifest_sha1s",
-        "screen_csv_sha1"}
+    assert SCREEN_IDENTITY_KEYS == (
+        "config_sha1", "protocol_sha1", "match_summary_sha1", "source_index_sha1",
+        "replay_data_sha1", "reservoir_checkpoint_a_identity",
+        "reservoir_checkpoint_b_identity", "anchor_checkpoint_identity",
+        "source_file_sha1s", "forbidden_manifest_sha1s", "screen_csv_sha1")
+    assert len(SCREEN_IDENTITY_KEYS) == 11
     assert SELF_REFERENTIAL_IDENTITY == "config_sha1"
     assert SCREEN_ARTIFACT_IDENTITY == "screen_csv_sha1"
     assert set(UNPREREGISTERABLE_IDENTITIES) == {"config_sha1", "screen_csv_sha1"}
     assert set(PREREGISTERED_IDENTITY_KEYS) == (
         set(SCREEN_IDENTITY_KEYS) - set(UNPREREGISTERABLE_IDENTITIES))
+    assert len(PREREGISTERED_IDENTITY_KEYS) == 9
+    # Every REMEDIATION-bearing identity has a non-empty message (Task B10
+    # brief: "each of the 11 has a REMEDIATION message") -- the module-level
+    # `assert set(_IDENTITY_REMEDIATION) == set(SCREEN_IDENTITY_KEYS)` already
+    # guards this at IMPORT time; re-asserted here so a failure is reported as
+    # an ordinary test rather than a collection-time error.
+    from scripts.GPU.alphazero.fpu_dev_corpus_v2 import _IDENTITY_REMEDIATION
+    assert set(_IDENTITY_REMEDIATION) == set(SCREEN_IDENTITY_KEYS)
+    assert all(isinstance(msg, str) and msg for msg in _IDENTITY_REMEDIATION.values())
 
 
 def test_v2_identities_pass_when_all_three_sources_agree(tmp_path):
@@ -3377,10 +3529,11 @@ def test_v2_identities_pass_when_all_three_sources_agree(tmp_path):
 
 
 @pytest.mark.parametrize("key", sorted(SCREEN_IDENTITY_KEYS))
-def test_v2_any_of_the_seven_identities_differing_raises_naming_it(tmp_path, key):
-    """ANY of the seven recorded identities differing from the recompute is a HARD
-    STOP naming that identity -- proven INDEPENDENTLY, one identity at a time -- and
-    the message says what to DO about it."""
+def test_v2_any_of_the_eleven_identities_differing_raises_naming_it(tmp_path, key):
+    """ANY of the eleven recorded identities differing from the recompute is a HARD
+    STOP naming that identity -- proven INDEPENDENTLY, one identity at a time, for
+    EVERY one of the eleven (Task B10 brief: "a per-identity raise test for every
+    one of the eleven at select time") -- and the message says what to DO about it."""
     config, meta, _files = _v2_screen_artifact(
         tmp_path, _screen_from_pool(_abundant_pool_v2()))
     tampered = copy.deepcopy(meta)
@@ -3389,6 +3542,78 @@ def test_v2_any_of_the_seven_identities_differing_raises_naming_it(tmp_path, key
     with pytest.raises(ValueError, match=key) as excinfo:
         _validate(tampered, config)
     assert "->" in str(excinfo.value)                     # the remediation guidance
+
+
+def test_v2_three_checkpoint_identities_are_distinct_and_independently_checked(
+        tmp_path):
+    """Task B10: "the three checkpoint identities are distinct and each
+    independently checked (tamper reservoir_a but not b -> refuses naming a)".
+
+    The fixture's `checkpoint_a`/anchor and `checkpoint_b` are genuinely
+    DIFFERENT files, so first prove the HAPPY-PATH values really are distinct
+    (not merely differently-named copies of the same string) -- then tamper
+    EACH reservoir checkpoint file INDEPENDENTLY and show each refusal names
+    only the checkpoint that actually changed."""
+    config, meta, files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
+    fp = config.expected_fingerprints
+    assert fp["reservoir_checkpoint_a_identity"] != fp["reservoir_checkpoint_b_identity"]
+    # the fixture's anchor IS checkpoint_a (mirrors the real frozen protocol:
+    # "anchor: checkpoint_a") -- so these two are EQUAL, by construction, not
+    # independently wrong.
+    assert fp["anchor_checkpoint_identity"] == fp["reservoir_checkpoint_a_identity"]
+    _validate(meta, config)                                  # clean: passes
+
+    # Tamper ONLY reservoir B's file on disk -- A and the anchor (the SAME file
+    # as A here) are untouched, so ONLY `reservoir_checkpoint_b_identity` may
+    # legitimately be named (SCREEN_IDENTITY_KEYS checks `reservoir_checkpoint_a_
+    # identity` BEFORE `..._b_identity`, so if `a` were somehow also affected,
+    # the raise would name `a` instead -- this assertion would then fail loudly
+    # rather than silently passing for the wrong reason).
+    ckpt_b_path = Path(files["checkpoint_b"])
+    ckpt_b_path.write_bytes(ckpt_b_path.read_bytes() + b"-tampered")
+    with pytest.raises(ValueError, match="reservoir_checkpoint_b_identity") as excinfo:
+        _validate(meta, config)
+    assert "reservoir_checkpoint_a_identity" not in str(excinfo.value)
+    assert "anchor_checkpoint_identity" not in str(excinfo.value)
+
+
+def test_v2_identity_catches_a_protocol_mutated_after_screening(tmp_path):
+    """`protocol_sha1` covers the frozen `reservoir_protocol.json` ITSELF: the
+    config (A) and the screen meta (B) agree perfectly -- so an (A)-vs-(B)-only
+    check passes -- yet the protocol file was MUTATED ON DISK (a harmless-looking
+    added key that does not touch `checkpoint_a`/`checkpoint_b`, so the checkpoint
+    identities stay correct and only `protocol_sha1` can catch it). Only the fresh
+    recompute (C), re-reading the protocol file, can see it."""
+    config, meta, files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
+    assert (config.expected_fingerprints["protocol_sha1"]
+            == meta["provenance"]["protocol_sha1"])            # (A) == (B): agreed
+
+    protocol = json.loads(Path(files["protocol_path"]).read_text())
+    protocol["an_added_field_never_read_by_anyone"] = True      # mutated!
+    Path(files["protocol_path"]).write_text(json.dumps(protocol))
+
+    with pytest.raises(ValueError, match="protocol_sha1"):
+        _validate(meta, config)
+
+
+def test_v2_identity_catches_a_match_summary_mutated_after_screening(tmp_path):
+    """`match_summary_sha1` covers the generated reservoir's match-summary file:
+    (A) and (B) agree, yet the summary was MUTATED ON DISK after screening. Only
+    the fresh recompute (C) can see it, and it must hard-stop on
+    `match_summary_sha1`."""
+    config, meta, files = _v2_screen_artifact(
+        tmp_path, _screen_from_pool(_abundant_pool_v2()))
+    assert (config.expected_fingerprints["match_summary_sha1"]
+            == meta["provenance"]["match_summary_sha1"])        # (A) == (B): agreed
+
+    summary = json.loads(Path(files["match_summary_path"]).read_text())
+    summary["a_win_rate"] = 0.999                                # mutated!
+    Path(files["match_summary_path"]).write_text(json.dumps(summary))
+
+    with pytest.raises(ValueError, match="match_summary_sha1"):
+        _validate(meta, config)
 
 
 @pytest.mark.parametrize("key", sorted(PREREGISTERED_IDENTITY_KEYS))
@@ -3443,8 +3668,8 @@ def test_v2_identity_catches_a_config_rewritten_after_screening(tmp_path):
 
 
 def test_v2_identity_catches_a_screen_csv_edited_after_screening(tmp_path):
-    """The SCREEN-ARTIFACT identity, (B) vs (C) -- the hole the six INPUT identities
-    left open. Every input is untouched, so all six still match; only the screen's
+    """The SCREEN-ARTIFACT identity, (B) vs (C) -- the hole the ten INPUT identities
+    left open. Every input is untouched, so all ten still match; only the screen's
     OWN bytes changed. `select` must refuse, naming `screen_csv_sha1`."""
     config, meta, files = _v2_screen_artifact(
         tmp_path, _screen_from_pool(_abundant_pool_v2()))
@@ -3493,7 +3718,7 @@ def test_v2_source_file_mismatch_names_the_module_and_says_what_to_do(tmp_path):
 @pytest.mark.parametrize("key", sorted(PREREGISTERED_IDENTITY_KEYS))
 def test_v2_a_missing_pre_registration_raises(tmp_path, key):
     """A config that pre-registers only SOME identities cannot silently skip the
-    rest: every one of the five is REQUIRED in `expected_fingerprints`."""
+    rest: every one of the nine is REQUIRED in `expected_fingerprints`."""
     config, meta, files = _v2_screen_artifact(
         tmp_path, _screen_from_pool(_abundant_pool_v2()))
     raw = json.loads(Path(files["config_path"]).read_text())
@@ -3517,8 +3742,8 @@ def test_v2_a_screen_meta_without_provenance_raises(tmp_path):
         _validate(no_block, config)
 
     missing_key = copy.deepcopy(meta)
-    del missing_key["provenance"]["checkpoint_identity"]
-    with pytest.raises(ValueError, match="checkpoint_identity"):
+    del missing_key["provenance"]["anchor_checkpoint_identity"]
+    with pytest.raises(ValueError, match="anchor_checkpoint_identity"):
         _validate(missing_key, config)
 
 
@@ -3837,7 +4062,7 @@ def test_v2_select_refuses_a_screen_csv_edited_after_screening(tmp_path, monkeyp
 def test_v2_select_refuses_the_status_flip_forgery(tmp_path, monkeypatch):
     """*** FORGERY 1 ***: flip EIGHT `ineligible_role` late/b200_299 rows to
     `kept`/`target` in the persisted CSV. No evaluator, no MCTS -- just typing. The row
-    count is unchanged and every INPUT file is untouched, so all six input identities
+    count is unchanged and every INPUT file is untouched, so all ten input identities
     still match; an unmeetable >=12 late-TARGET floor becomes satisfiable.
 
     REFUSED twice over, each layer proven independently:
@@ -3957,7 +4182,7 @@ def test_v2_select_enforces_disjointness_against_forbidden(tmp_path):
     shipped.
 
     Honest by construction: the colliding hash is put in the config's REAL forbidden
-    manifest BEFORE its fingerprints are taken, so all seven identities still match
+    manifest BEFORE its fingerprints are taken, so all eleven identities still match
     and only `assert_disjoint` can fire."""
     screen = _screen_from_pool(_abundant_pool_v2())
     config, meta, _files = _v2_screen_artifact(tmp_path / "clean", screen)
