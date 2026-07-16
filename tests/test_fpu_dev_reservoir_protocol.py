@@ -4059,3 +4059,154 @@ def test_main_qualify_execution_pulls_no_gpu_or_mlx(tmp_path):
     out = subprocess.run(
         [sys.executable, "-c", script], capture_output=True, text=True, check=True)
     assert out.stdout.strip().splitlines()[-1] == "[]"
+
+
+# ---------------------------------------------------------------------------
+# B11 review-fix (design Sec 3's "2 = usage/IO"): a malformed/missing CLI
+# INPUT file must exit `EXIT_USAGE` (2) with a clear, file-naming message --
+# not a raw traceback (process exit 1, outside the 0/2/3/4 vocabulary). This
+# is the operator's entry point before the 4,800-game run, so a clean exit-2
+# beats a stack trace. Distinct from argparse's OWN `SystemExit(2)` (a
+# MISSING flag): here the flag is SUPPLIED but points at a file that does
+# not exist / does not parse / (emit-protocol only) fails schema validation.
+# The catch is NARROW ((OSError, JSONDecodeError, ValueError)) and scoped to
+# the read+parse(+build_protocol) ONLY -- a genuine bug deeper in a
+# valid-but-unexpected document (e.g. gen_command's KeyError on a
+# schema-incomplete-but-parseable protocol) still surfaces raw, proven by
+# the last two tests below.
+# ---------------------------------------------------------------------------
+
+# (argv_builder(bad_input_path, tmp_path), the subcommand name) -- one row
+# per subcommand, each pointing its single required INPUT-file flag at
+# `bad_input_path`. `emit-protocol` also gets a fresh `--out` under tmp_path
+# (never written, since the --params-json load fails first).
+_BAD_INPUT_SUBCOMMANDS = [
+    (lambda p, t: ["emit-protocol", "--params-json", str(p),
+                   "--out", str(t / "unwritten_protocol.json")], "emit-protocol"),
+    (lambda p, t: ["emit-gen-command", "--protocol", str(p)], "emit-gen-command"),
+    (lambda p, t: ["qualify", "--protocol", str(p)], "qualify"),
+]
+
+
+@pytest.mark.parametrize("argv_builder, subcommand", _BAD_INPUT_SUBCOMMANDS,
+                         ids=[s for _b, s in _BAD_INPUT_SUBCOMMANDS])
+def test_main_missing_input_file_maps_to_exit_usage(argv_builder, subcommand,
+                                                    tmp_path, capsys):
+    """A SUPPLIED-but-nonexistent input file -> EXIT_USAGE (2), a clear
+    message naming the file, and nothing written (the raw FileNotFoundError
+    / exit-1 traceback the review flagged is gone)."""
+    missing = tmp_path / "does_not_exist.json"
+    before = sorted(p.name for p in tmp_path.iterdir())
+
+    exit_code = main(argv_builder(missing, tmp_path))
+
+    assert exit_code == EXIT_USAGE
+    printed = capsys.readouterr().out
+    assert "does_not_exist.json" in printed
+    assert sorted(p.name for p in tmp_path.iterdir()) == before   # wrote nothing
+
+
+@pytest.mark.parametrize("argv_builder, subcommand", _BAD_INPUT_SUBCOMMANDS,
+                         ids=[s for _b, s in _BAD_INPUT_SUBCOMMANDS])
+def test_main_invalid_json_input_file_maps_to_exit_usage(argv_builder, subcommand,
+                                                         tmp_path, capsys):
+    """A SUPPLIED input file that exists but is NOT valid JSON -> EXIT_USAGE
+    (2), a message naming the file, nothing else written (the raw
+    JSONDecodeError / exit-1 traceback is gone)."""
+    bad = tmp_path / "not_valid.json"
+    bad.write_text("{ this is not valid json ")
+    before = sorted(p.name for p in tmp_path.iterdir())   # includes not_valid.json
+
+    exit_code = main(argv_builder(bad, tmp_path))
+
+    assert exit_code == EXIT_USAGE
+    printed = capsys.readouterr().out
+    assert "not_valid.json" in printed
+    assert sorted(p.name for p in tmp_path.iterdir()) == before   # no NEW files
+
+
+def test_main_emit_protocol_incomplete_params_maps_to_exit_usage(tmp_path, capsys):
+    """emit-protocol only: a params doc that parses fine but is MISSING a
+    required PROTOCOL_SCHEMA_KEYS field -> EXIT_USAGE (2), a message naming
+    the file AND the missing key (from build_protocol's own ValueError),
+    nothing written. This is the 'build_protocol ValueError from an
+    incomplete params doc' case the review called out by name."""
+    incomplete = _protocol_params()
+    del incomplete["games"]                       # drop one required key
+    params_path = tmp_path / "incomplete_params.json"
+    params_path.write_text(json.dumps(incomplete))
+    out_path = tmp_path / "reservoir_protocol.json"
+
+    exit_code = main(["emit-protocol", "--params-json", str(params_path),
+                      "--out", str(out_path)])
+
+    assert exit_code == EXIT_USAGE
+    printed = capsys.readouterr().out
+    assert "incomplete_params.json" in printed
+    assert "games" in printed                     # names the missing key
+    assert not out_path.exists()                  # wrote nothing
+
+
+def test_main_qualify_bad_protocol_file_never_reaches_run_qualify(tmp_path, monkeypatch):
+    """The qualify pre-check is CLI-local and fires BEFORE `run_qualify`: a
+    landmine over `run_qualify` still yields EXIT_USAGE on an unparseable
+    --protocol, proving the bad-file case is caught at the CLI boundary and
+    `run_qualify`'s own 0/3/4 contract is never even consulted for it."""
+    from scripts.GPU.alphazero import fpu_dev_reservoir_protocol as mod
+
+    def _landmine(*args, **kwargs):
+        raise AssertionError("run_qualify must not be reached for a bad "
+                             "--protocol file")
+    monkeypatch.setattr(mod, "run_qualify", _landmine)
+
+    bad = tmp_path / "not_valid.json"
+    bad.write_text("{ nope ")
+    assert main(["qualify", "--protocol", str(bad)]) == EXIT_USAGE
+
+
+def test_main_qualify_valid_protocol_still_honors_run_qualify_contract(tmp_path):
+    """The pre-check must NOT change the outcome for a VALID protocol file --
+    a faithful reservoir that (conformance-)MISMATCHes still returns
+    `run_qualify`'s own EXIT_MISMATCH (3), NOT EXIT_USAGE. Proves the CLI
+    pre-check is a pure gate on file readability/parseability, never a
+    second-guess of `run_qualify`'s qualification verdict."""
+    protocol, protocol_path, info = _write_qualifiable_reservoir(tmp_path)
+    _break_one_sidecar_seed(info)                 # a conformance defect -> MISMATCH
+
+    exit_code = main(["qualify", "--protocol", str(protocol_path)])
+
+    assert exit_code == EXIT_MISMATCH             # run_qualify's contract, unchanged
+    assert json.loads(Path(protocol["report_out"]).read_text())["status"] == "MISMATCH"
+
+
+def test_main_emit_gen_command_incomplete_protocol_still_raises_not_masked(tmp_path):
+    """The NARROW-scope guard: a valid-JSON but schema-INCOMPLETE protocol is
+    NOT an input-file usage error -- `gen_command`'s own KeyError must still
+    surface RAW (never masked as EXIT_USAGE), proving main's try/except wraps
+    only the read+parse, not the whole subcommand body. This is the
+    review's 'a genuine bug should still surface, not be masked' contract."""
+    protocol = build_protocol(_protocol_params())
+    del protocol["games"]                         # gen_command dereferences this
+    protocol_path = tmp_path / "incomplete_protocol.json"
+    protocol_path.write_text(json.dumps(protocol))
+
+    with pytest.raises(KeyError):
+        main(["emit-gen-command", "--protocol", str(protocol_path)])
+
+
+def test_main_emit_protocol_conflicting_reemit_still_raises_not_masked(tmp_path):
+    """The other NARROW-scope guard: a write REFUSAL (write_atomic's
+    refuse-overwrite-different ValueError) is NOT an input-file usage error
+    -- it must still propagate RAW, never be swallowed into EXIT_USAGE by the
+    input-loading try/except. (Companion to the existing
+    `test_main_emit_protocol_raises_on_conflicting_reemit`, asserted here
+    explicitly against the review-fix so a future widening of the catch
+    cannot silently regress it.)"""
+    params_path = tmp_path / "params.json"
+    params_path.write_text(json.dumps(_protocol_params()))
+    out_path = tmp_path / "reservoir_protocol.json"
+    main(["emit-protocol", "--params-json", str(params_path), "--out", str(out_path)])
+
+    params_path.write_text(json.dumps(_protocol_params(games=999)))
+    with pytest.raises(ValueError, match="refusing to overwrite"):
+        main(["emit-protocol", "--params-json", str(params_path), "--out", str(out_path)])

@@ -521,17 +521,26 @@ a protocol deterministically" (task B11 brief) -- mirroring how
 `emit_protocol(params, out_path=--out, check=--check)` and returns its
 status (`EXIT_OK`/`EXIT_MISMATCH`) verbatim; `--check` never writes
 (`emit_protocol`'s own contract). A malformed `--params-json` (unreadable,
-unparseable, or missing a required schema key) propagates raw from
-`json.loads`/`build_protocol` -- this module's established "assumes
-already-valid input" convention (`gen_command`, `measure_reservoir`,
-`run_qualify` all do the same), not a new friendlier-message layer.
+unparseable, or missing a required schema key) is mapped to `EXIT_USAGE`
+(2) with a clear, file-naming message (design Sec 3's "2 = usage/IO", B11
+review-fix) -- this is the operator's entry point before the 4,800-game
+run, so a clean exit-2 beats a raw traceback (process exit 1, outside the
+Sec 3 `0/2/3/4` vocabulary). The mapping is NARROW -- `_load_cli_input`'s
+`(OSError, JSONDecodeError, ValueError)` catch, scoped to the read + parse
++ `build_protocol` validation only -- so `emit_protocol`'s OWN
+`write_atomic` refuse-overwrite `ValueError` (a conflicting re-emit) still
+propagates raw, exactly as before.
 
 `emit-gen-command` loads an already-frozen protocol from a required
 `--protocol <path>` and prints `gen_command(protocol)` -- and ONLY that --
 shell-joined via stdlib `shlex.join`, so the printed line is directly
 copy-pasteable (or pipeable) as a real shell command; zero-GPU, zero-write.
-Always returns `EXIT_OK` (a malformed/missing `--protocol` propagates raw,
-same convention as above).
+Returns `EXIT_OK` on success, or `EXIT_USAGE` (2) for a missing/unparseable
+`--protocol` file (the same `_load_cli_input` usage-mapping as
+`emit-protocol`, minus the `build_protocol` schema step); a protocol that
+DOES parse but is schema-incomplete still surfaces `gen_command`'s own
+`KeyError` raw -- a genuine bug in a valid-JSON document, deliberately NOT
+masked as a usage error.
 
 `qualify` loads a frozen protocol from a required `--protocol <path>` and
 calls `run_qualify(protocol_path, check=--check)` UNCHANGED -- no
@@ -543,7 +552,13 @@ Returns `run_qualify`'s own exit code verbatim
 (`EXIT_OK`/`EXIT_MISMATCH`/`EXIT_GATE_FAIL`, or `EXIT_USAGE` for an
 already-PASSED protocol re-qualified without `--check`) -- `main` performs
 NO status-to-exit-code mapping of its own; `run_qualify` (B7) already IS
-that mapping. `qualify` NEVER launches generation (design's TOOLING ONLY
+that mapping. A CLI-local pre-check (`_load_cli_input`, no `build_protocol`
+step) first maps a missing/unparseable `--protocol` FILE to `EXIT_USAGE`
+(2) BEFORE `run_qualify` is ever called (B11 review-fix); it does NOT
+change `run_qualify`'s 0/3/4 contract for a VALID protocol -- it is a cheap
+duplicate parse (`run_qualify` re-reads the file itself), a pure gate on
+readability/parseability, never a second-guess of the qualification
+verdict. `qualify` NEVER launches generation (design's TOOLING ONLY
 constraint, restated at the CLI boundary): its whole call chain --
 `run_qualify` -> `measure_reservoir` (the ONE filesystem-I/O function in
 the qualification pipeline) -> `qualify_core` -> `default_preflight` --
@@ -559,9 +574,13 @@ Argparse's OWN usage errors -- a missing required flag, an unrecognized
 subcommand, or no subcommand at all (`add_subparsers(..., required=True)`)
 -- raise `SystemExit(2)` from inside `_parse_args`, before `main`'s own
 body ever runs; `2` is already `EXIT_USAGE`'s value (design Sec 3), so no
-separate mapping is needed. `if __name__ == "__main__": raise
-SystemExit(main())` at the module foot mirrors `fpu_dev_corpus_v2.py`'s own
-CLI convention exactly.
+separate mapping is needed. A SECOND exit-2 path (B11 review-fix) -- a flag
+SUPPLIED but pointing at a missing/unparseable/schema-invalid input FILE --
+is mapped to `EXIT_USAGE` by `main`'s own narrow `except _CliUsageError`
+guard: both land on `2` (design Sec 3's "usage/IO"), but argparse's is a
+bad COMMAND LINE while `_CliUsageError` is a bad input FILE (and a message
+naming it). `if __name__ == "__main__": raise SystemExit(main())` at the
+module foot mirrors `fpu_dev_corpus_v2.py`'s own CLI convention exactly.
 """
 from __future__ import annotations
 
@@ -2738,6 +2757,63 @@ _EXIT_STATUS_LABELS: Dict[int, str] = {
 }
 
 
+class _CliUsageError(Exception):
+    """A malformed/missing CLI INPUT file -- design Sec 3's "2 = usage/IO"
+    (B11 review-fix). Carries the operator-facing one-line message `main`
+    prints before returning `EXIT_USAGE`. DISTINCT from argparse's own
+    `SystemExit(2)` (a MISSING flag, raised inside `_parse_args`): here a
+    flag was SUPPLIED but points at a file that does not exist, does not
+    parse as JSON, or -- for `emit-protocol` -- fails `build_protocol`'s
+    schema validation. Deliberately a module-private exception raised ONLY
+    by `_load_cli_input`, so `main`'s single `except _CliUsageError` guard
+    catches exactly the input-loading failures and NOTHING else -- a
+    `write_atomic` refuse-overwrite `ValueError`, a `gen_command` `KeyError`
+    on a valid-but-incomplete protocol, or any genuine bug deeper in a
+    subcommand still propagates raw (a usage error and a logic bug must not
+    be indistinguishable)."""
+
+
+def _load_cli_input(
+        path: Union[str, Path], *, flag: str, subcommand: str,
+        validate: Optional[Callable[[Any], Any]] = None) -> Any:
+    """Read + JSON-parse a required CLI INPUT file, mapping a
+    missing/unreadable/unparseable file -- or, when `validate` is given, a
+    schema-invalid document -- to `_CliUsageError` (design Sec 3's "2 =
+    usage/IO", B11 review-fix). Returns the parsed document on success.
+
+    The catch is DELIBERATELY NARROW -- `(OSError, json.JSONDecodeError,
+    ValueError)` -- covering exactly the three input-file failure modes the
+    review enumerated: a missing/unreadable file (`OSError`), invalid JSON
+    (`json.JSONDecodeError`, itself a `ValueError` subclass), and (via
+    `validate=build_protocol`, `emit-protocol` only) an incomplete params
+    doc (`build_protocol`'s own `ValueError` naming every missing key). It is
+    NOT a bare `except`: a `TypeError` (e.g. a JSON scalar where a mapping
+    was expected) or any other exception is left to surface raw, the same
+    "a genuine bug should still surface, not be masked" stance the module's
+    other functions take.
+
+    `validate` runs INSIDE this function (so its `ValueError` is caught here)
+    but is otherwise a no-op pass-through: `emit-protocol` passes
+    `build_protocol` so an incomplete params doc is rejected as usage BEFORE
+    `emit_protocol` is called at all -- which is also what keeps
+    `emit_protocol`'s OWN `write_atomic` refuse-overwrite `ValueError`
+    OUTSIDE this catch (that call happens later, in `main`, never here), so a
+    conflicting re-emit still raises rather than masquerading as a usage
+    error. `qualify` passes no `validate`: its pre-check is only "exists +
+    parses as JSON" (the review's explicit scoping -- a valid-JSON but
+    schema-incomplete protocol is `run_qualify`'s / a raw error's concern,
+    not a CLI usage error)."""
+    try:
+        document = json.loads(Path(path).read_text())
+        if validate is not None:
+            validate(document)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        raise _CliUsageError(
+            f"[fpu-dev-reservoir-protocol] {subcommand}: cannot load "
+            f"{flag} {str(path)!r}: {type(exc).__name__}: {exc}") from exc
+    return document
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """The module's CLI entry point (design Sec 3, Task B11) -- dispatches
     to `emit_protocol`/`gen_command`/`run_qualify`, the pure/I/O-owning
@@ -2751,9 +2827,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     Pure CLI glue: reads at most ONE caller-supplied JSON document per
     subcommand (`--params-json`, or `--protocol`) and makes exactly ONE call
     into `emit_protocol`/`gen_command`/`run_qualify` -- no qualification or
-    derivation logic of its own. A malformed document propagates raw
-    (`json.loads`/`build_protocol`'s own exceptions), exactly like every
-    other "assumes already-valid input" function in this module.
+    derivation logic of its own. A missing/unreadable/unparseable input file
+    -- or, for `emit-protocol`, a schema-incomplete params doc -- is mapped
+    to `EXIT_USAGE` (2) with a clear, file-naming message via the narrow
+    `except _CliUsageError` guard (design Sec 3's "2 = usage/IO", B11
+    review-fix), never a raw exit-1 traceback. A genuine bug DEEPER in a
+    valid document (a `write_atomic` refuse-overwrite conflict, a
+    `gen_command` `KeyError` on a parseable-but-incomplete protocol) still
+    propagates raw -- the catch is scoped to input LOADING (`_load_cli_input`
+    is its sole raiser), not the whole subcommand body, so a usage error and
+    a logic bug stay distinguishable.
 
     `qualify` NEVER launches generation: it forwards `--protocol`/`--check`
     straight into `run_qualify` UNCHANGED (no `preflight=` override), so the
@@ -2763,29 +2846,54 @@ def main(argv: Optional[List[str]] = None) -> int:
     """
     args = _parse_args(argv)
 
-    if args.command == "emit-protocol":
-        params = json.loads(Path(args.params_json).read_text())
-        status = emit_protocol(params, args.out, check=args.check)
-        if args.check:
-            verdict = "MATCH" if status == EXIT_OK else "MISMATCH"
-            print(f"[fpu-dev-reservoir-protocol] emit-protocol --check "
-                  f"{args.out}: {verdict}")
-        elif status == EXIT_OK:
-            print(f"[fpu-dev-reservoir-protocol] emit-protocol: wrote "
-                  f"{args.out}")
-        return status
+    # A single `except _CliUsageError` guard maps a missing/unreadable/
+    # unparseable (or, for emit-protocol, schema-invalid) INPUT file to
+    # `EXIT_USAGE` (design Sec 3's "2 = usage/IO", B11 review-fix). It wraps
+    # only the input-loading `_load_cli_input` calls (the ONLY raiser of
+    # `_CliUsageError`) -- `emit_protocol`'s `write_atomic` refuse-overwrite
+    # `ValueError`, `gen_command`'s `KeyError`, and any genuine bug deeper in
+    # a subcommand are NOT `_CliUsageError`, so they still propagate raw.
+    try:
+        if args.command == "emit-protocol":
+            params = _load_cli_input(
+                args.params_json, flag="--params-json",
+                subcommand="emit-protocol", validate=build_protocol)
+            status = emit_protocol(params, args.out, check=args.check)
+            if args.check:
+                verdict = "MATCH" if status == EXIT_OK else "MISMATCH"
+                print(f"[fpu-dev-reservoir-protocol] emit-protocol --check "
+                      f"{args.out}: {verdict}")
+            else:
+                # `emit_protocol(check=False)` only ever returns EXIT_OK or
+                # raises (a write refusal propagates raw, above) -- so
+                # reaching here at all means the write succeeded.
+                print(f"[fpu-dev-reservoir-protocol] emit-protocol: wrote "
+                      f"{args.out}")
+            return status
 
-    if args.command == "emit-gen-command":
-        protocol = json.loads(Path(args.protocol).read_text())
-        print(shlex.join(gen_command(protocol)))
-        return EXIT_OK
+        if args.command == "emit-gen-command":
+            protocol = _load_cli_input(
+                args.protocol, flag="--protocol", subcommand="emit-gen-command")
+            print(shlex.join(gen_command(protocol)))
+            return EXIT_OK
 
-    if args.command == "qualify":
-        status = run_qualify(args.protocol, check=args.check)
-        print(f"[fpu-dev-reservoir-protocol] qualify "
-              f"{'--check ' if args.check else ''}{args.protocol}: "
-              f"{_EXIT_STATUS_LABELS.get(status, status)} (exit {status})")
-        return status
+        if args.command == "qualify":
+            # CLI-local pre-check: exists + parses as JSON (the review's
+            # explicit scoping). `run_qualify` re-reads the file itself (a
+            # cheap duplicate parse) and OWNS the 0/3/4 contract for a VALID
+            # protocol -- this pre-check never second-guesses that verdict,
+            # it only turns an unreadable/unparseable file into a clean
+            # EXIT_USAGE before `run_qualify` is ever called.
+            _load_cli_input(
+                args.protocol, flag="--protocol", subcommand="qualify")
+            status = run_qualify(args.protocol, check=args.check)
+            print(f"[fpu-dev-reservoir-protocol] qualify "
+                  f"{'--check ' if args.check else ''}{args.protocol}: "
+                  f"{_EXIT_STATUS_LABELS.get(status, status)} (exit {status})")
+            return status
+    except _CliUsageError as exc:
+        print(str(exc))
+        return EXIT_USAGE
 
     raise AssertionError(   # unreachable: argparse's own subparsers guard this
         f"main: unreachable command {args.command!r}")
