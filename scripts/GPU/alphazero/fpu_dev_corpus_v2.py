@@ -322,6 +322,14 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
         raise ValueError(f"{source}: unsupported run_kind {run_kind!r} "
                          f"(must be one of {PROFILE_RUN_KINDS})")
 
+    required_keys = ("phase_allocation", "late_floors",
+                     "late_target_band_minima", "max_per_game",
+                     "min_ply_gap", "side_tol", "corpus_size")
+    missing = sorted(k for k in required_keys if k not in raw)
+    if missing:
+        raise ValueError(f"{source}: missing required profile key(s): "
+                         f"{', '.join(missing)}")
+
     allocation: Dict[Tuple[str, str], Dict[str, int]] = {}
     for key, counts in raw["phase_allocation"].items():
         parts = str(key).split("|")

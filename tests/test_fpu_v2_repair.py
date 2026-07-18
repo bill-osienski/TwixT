@@ -178,6 +178,17 @@ def test_parse_rejects_malformed_profiles(mutate, needle):
         v2.parse_allocation_profile(raw, source="test")
 
 
+@pytest.mark.parametrize("key", [
+    "phase_allocation", "late_floors", "late_target_band_minima",
+    "max_per_game", "min_ply_gap", "side_tol", "corpus_size",
+])
+def test_parse_rejects_missing_profile_keys(key):
+    raw = copy.deepcopy(PRODUCTION_PROFILE_RAW)
+    del raw[key]
+    with pytest.raises(ValueError, match="missing required"):
+        v2.parse_allocation_profile(raw, source="test")
+
+
 def test_per_split_minima_must_cover_totals():
     raw = copy.deepcopy(PRODUCTION_PROFILE_RAW)
     raw["late_target_band_minima"]["tuning"]["b300_399"] = 3   # 3+5=8 < total 12
