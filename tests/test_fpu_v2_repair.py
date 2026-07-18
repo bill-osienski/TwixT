@@ -24,8 +24,11 @@ copy the `_safe_target()` / `_safe_control()` row shapes
 target block and a control block so `verdict.metrics` populates BOTH the
 target-side and control-side keys (not just an all-clean/empty subset).
 """
+import copy
 import json
 from pathlib import Path
+
+import pytest
 
 from scripts.GPU.alphazero import diagnose_fpu_policy_mass as diag
 from scripts.GPU.alphazero import fpu_dev_corpus_v2 as v2
@@ -96,3 +99,98 @@ def test_schema1_verdict_metrics_match_pre_repair_golden():
     verdict = diag.dev_safety_verdict(_golden_verdict_rows(), _golden_ref(),
                                        _golden_cand(), _golden_cand())
     assert json.loads(json.dumps(verdict.metrics, sort_keys=True)) == golden
+
+
+# ---------------------------------------------------------------------------
+# Task 1: AllocationProfile -- the one validated, schema-2 config-authoritative
+# allocation object.
+# ---------------------------------------------------------------------------
+
+# The spec's production profile, as the schema-2 JSON fields carry it.
+PRODUCTION_PROFILE_RAW = {
+    "config_schema_version": 2,
+    "run_kind": "production",
+    "phase_allocation": {
+        "target|late":       {"tuning": 40, "frozen_check": 20},
+        "control|opening":   {"tuning": 10, "frozen_check": 5},
+        "control|early_mid": {"tuning": 10, "frozen_check": 5},
+        "control|midgame":   {"tuning": 10, "frozen_check": 5},
+        "control|late":      {"tuning": 10, "frozen_check": 5},
+    },
+    "late_floors": {"b400_plus": 8, "b300_399": 12, "b200_299": 12},
+    "late_target_band_minima": {
+        "tuning":       {"b400_plus": 4, "b300_399": 8, "b200_299": 8},
+        "frozen_check": {"b400_plus": 4, "b300_399": 5, "b200_299": 5},
+    },
+    "max_per_game": 2,
+    "min_ply_gap": 12,
+    "side_tol": 2,
+    "corpus_size": 120,
+}
+
+
+def test_parse_production_profile_totals():
+    p = v2.parse_allocation_profile(PRODUCTION_PROFILE_RAW, source="test")
+    assert p.corpus_size == 120
+    assert p.split_totals == {"tuning": 80, "frozen_check": 40}
+    assert p.quota_by_phase == {
+        "opening": 15, "early_mid": 15, "midgame": 15, "late": 75}
+    assert p.allocation[("target", "late")] == {"tuning": 40, "frozen_check": 20}
+    assert p.run_kind == "production"
+
+
+def test_legacy_profile_mirrors_module_constants():
+    p = v2.AllocationProfile.legacy()
+    assert p.schema_version == 1
+    assert p.allocation == {c: dict(a) for c, a in v2.SPLIT_ALLOC_V2.items()}
+    assert p.corpus_size == v2.CORPUS_SIZE == 240
+    assert p.band_minima_total == dict(v2.LATE_TARGET_FLOORS)
+    assert p.band_minima_per_split == {}
+    assert (p.max_per_game, p.min_ply_gap, p.side_tol) == (
+        v2.MAX_PER_GAME, v2.MIN_PLY_GAP, v2.SIDE_TOL)
+
+
+@pytest.mark.parametrize("mutate, needle", [
+    (lambda r: r.__setitem__("config_schema_version", 3), "config_schema_version"),
+    (lambda r: r.__setitem__("run_kind", "experiment"), "run_kind"),
+    (lambda r: r["phase_allocation"].__setitem__(
+        "targetlate", {"tuning": 1, "frozen_check": 1}), "role|phase"),
+    (lambda r: r["phase_allocation"].__setitem__(
+        "hero|late", {"tuning": 1, "frozen_check": 1}), "role"),
+    (lambda r: r["phase_allocation"].__setitem__(
+        "target|endgame", {"tuning": 1, "frozen_check": 1}), "phase"),
+    (lambda r: r["phase_allocation"]["target|late"].__setitem__("tuning", -1),
+     "negative"),
+    (lambda r: r["phase_allocation"]["target|late"].__setitem__("tuning", 40.5),
+     "integer"),
+    (lambda r: r.__setitem__("corpus_size", 121), "corpus_size"),
+    (lambda r: r["late_target_band_minima"]["tuning"].__setitem__(
+        "b400_plus", 99), "minima"),
+    (lambda r: r["late_floors"].__setitem__("b100", 1), "band"),
+    # Review correction 5: an incomplete per-split map (e.g. frozen_check
+    # silently omitted) must be rejected, not silently accepted.
+    (lambda r: r["late_target_band_minima"].pop("frozen_check"), "every split"),
+])
+def test_parse_rejects_malformed_profiles(mutate, needle):
+    raw = copy.deepcopy(PRODUCTION_PROFILE_RAW)
+    mutate(raw)
+    with pytest.raises(ValueError, match="(?i)" + needle):
+        v2.parse_allocation_profile(raw, source="test")
+
+
+def test_per_split_minima_must_cover_totals():
+    raw = copy.deepcopy(PRODUCTION_PROFILE_RAW)
+    raw["late_target_band_minima"]["tuning"]["b300_399"] = 3   # 3+5=8 < total 12
+    with pytest.raises(ValueError, match="b300_399"):
+        v2.parse_allocation_profile(raw, source="test")
+
+
+def test_fingerprint_covers_the_complete_effective_profile():
+    p = v2.parse_allocation_profile(PRODUCTION_PROFILE_RAW, source="test")
+    fp = p.fingerprint()
+    assert fp["run_kind"] == "production"
+    assert fp["allocation"]["target|late"] == {"tuning": 40, "frozen_check": 20}
+    assert fp["band_minima_per_split"]["frozen_check"]["b300_399"] == 5
+    assert fp["corpus_size"] == 120
+    assert fp["max_per_game"] == 2 and fp["min_ply_gap"] == 12 and fp["side_tol"] == 2
+    json.dumps(fp, sort_keys=True)   # must be JSON-serializable as-is

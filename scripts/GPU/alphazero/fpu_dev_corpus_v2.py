@@ -230,6 +230,183 @@ PROPOSAL_CELLS: List[Tuple[str, Optional[str]]] = [
 
 
 # ---------------------------------------------------------------------------
+# AllocationProfile -- the ONE validated, schema-2 config-authoritative
+# allocation object (repair plan Sec 6). Every result-determining function
+# accepts `alloc: AllocationProfile`; `None` means the schema-1 LEGACY profile
+# built from the frozen module constants above (v1-era behavior, byte-identical).
+# ---------------------------------------------------------------------------
+
+_ROLES: Tuple[str, ...] = ("target", "control")
+PROFILE_RUN_KINDS: Tuple[str, ...] = ("production", "tooling_smoke")
+
+
+@dataclasses.dataclass(frozen=True)
+class AllocationProfile:
+    schema_version: int
+    run_kind: str
+    allocation: Dict[Tuple[str, str], Dict[str, int]]
+    band_minima_total: Dict[str, int]
+    band_minima_per_split: Dict[str, Dict[str, int]]
+    max_per_game: int
+    min_ply_gap: int
+    side_tol: int
+
+    @property
+    def corpus_size(self) -> int:
+        return sum(a["tuning"] + a["frozen_check"] for a in self.allocation.values())
+
+    @property
+    def cell_order(self) -> Tuple[Tuple[str, str], ...]:
+        return tuple(self.allocation.keys())
+
+    @property
+    def split_totals(self) -> Dict[str, int]:
+        return {s: sum(a[s] for a in self.allocation.values()) for s in SPLITS}
+
+    @property
+    def quota_by_phase(self) -> Dict[str, int]:
+        q: Dict[str, int] = {}
+        for (_role, phase), a in self.allocation.items():
+            q[phase] = q.get(phase, 0) + a["tuning"] + a["frozen_check"]
+        return q
+
+    def fingerprint(self) -> Dict[str, Any]:
+        """The COMPLETE effective profile, JSON-shaped -- what reports, manifest
+        meta and diagnostic fingerprints record (never merely a file hash)."""
+        return {
+            "schema_version": self.schema_version,
+            "run_kind": self.run_kind,
+            "allocation": {f"{r}|{p}": dict(a)
+                           for (r, p), a in self.allocation.items()},
+            "band_minima_total": dict(self.band_minima_total),
+            "band_minima_per_split": {s: dict(m) for s, m
+                                      in self.band_minima_per_split.items()},
+            "max_per_game": self.max_per_game,
+            "min_ply_gap": self.min_ply_gap,
+            "side_tol": self.side_tol,
+            "corpus_size": self.corpus_size,
+        }
+
+    @classmethod
+    def legacy(cls) -> "AllocationProfile":
+        """Schema-1 profile = the frozen module constants, verbatim. The ONLY
+        place the legacy constants are consumed on behalf of selection."""
+        return cls(
+            schema_version=1, run_kind="production",
+            allocation={c: dict(a) for c, a in SPLIT_ALLOC_V2.items()},
+            band_minima_total=dict(LATE_TARGET_FLOORS),
+            band_minima_per_split={},
+            max_per_game=MAX_PER_GAME, min_ply_gap=MIN_PLY_GAP,
+            side_tol=SIDE_TOL)
+
+
+def _profile_int(raw: Any, name: str, source: str, *, minimum: int = 0) -> int:
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        raise ValueError(f"{source}: {name} must be an integer, got {raw!r}")
+    if raw < minimum:
+        raise ValueError(
+            f"{source}: {name} must be >= {minimum} (never negative), got {raw}")
+    return raw
+
+
+def parse_allocation_profile(raw: Mapping[str, Any], *,
+                             source: str) -> AllocationProfile:
+    """Validate + build the schema-2 profile (repair plan Sec 6's rejection
+    list). `source` names the config/profile file in every error."""
+    schema = raw.get("config_schema_version")
+    if schema != 2:
+        raise ValueError(f"{source}: unsupported config_schema_version "
+                         f"{schema!r} for an allocation profile (only 2)")
+    run_kind = raw.get("run_kind")
+    if run_kind not in PROFILE_RUN_KINDS:
+        raise ValueError(f"{source}: unsupported run_kind {run_kind!r} "
+                         f"(must be one of {PROFILE_RUN_KINDS})")
+
+    allocation: Dict[Tuple[str, str], Dict[str, int]] = {}
+    for key, counts in raw["phase_allocation"].items():
+        parts = str(key).split("|")
+        if len(parts) != 2:
+            raise ValueError(f"{source}: malformed role|phase key {key!r}")
+        role, phase = parts
+        if role not in _ROLES:
+            raise ValueError(f"{source}: unknown role {role!r} in {key!r}")
+        if phase not in PHASES:
+            raise ValueError(f"{source}: unknown phase {phase!r} in {key!r}")
+        if set(counts) != set(SPLITS):
+            raise ValueError(f"{source}: {key!r} must have exactly the splits "
+                             f"{sorted(SPLITS)}, got {sorted(counts)}")
+        allocation[(role, phase)] = {
+            s: _profile_int(counts[s], f"{key}.{s}", source) for s in SPLITS}
+    if not allocation:
+        raise ValueError(f"{source}: phase_allocation is empty")
+
+    declared = _profile_int(raw["corpus_size"], "corpus_size", source, minimum=1)
+    total = sum(a["tuning"] + a["frozen_check"] for a in allocation.values())
+    if declared != total:
+        raise ValueError(f"{source}: corpus_size {declared} inconsistent with "
+                         f"the allocation total {total}")
+
+    late_alloc = allocation.get(LATE_TARGET_CELL)
+
+    def _band_map(m: Mapping[str, Any], name: str) -> Dict[str, int]:
+        out = {}
+        for band, n in m.items():
+            if band not in LATE_CELL_BANDS:
+                raise ValueError(f"{source}: unknown band {band!r} in {name}")
+            out[str(band)] = _profile_int(n, f"{name}[{band}]", source)
+        return out
+
+    band_minima_total = _band_map(raw["late_floors"], "late_floors")
+    band_minima_per_split: Dict[str, Dict[str, int]] = {}
+    for split, m in raw["late_target_band_minima"].items():
+        if split not in SPLITS:
+            raise ValueError(f"{source}: unknown split {split!r} in "
+                             f"late_target_band_minima")
+        band_minima_per_split[split] = _band_map(
+            m, f"late_target_band_minima[{split}]")
+    if band_minima_per_split and set(band_minima_per_split) != set(SPLITS):
+        raise ValueError(
+            f"{source}: late_target_band_minima must name every split "
+            f"({sorted(SPLITS)}) or be empty -- a silently omitted split "
+            f"would carry no minima at all; got "
+            f"{sorted(band_minima_per_split)}")
+
+    if band_minima_total or band_minima_per_split:
+        if late_alloc is None:
+            raise ValueError(f"{source}: band minima require a "
+                             f"{LATE_TARGET_CELL} allocation cell")
+        if sum(band_minima_total.values()) > sum(late_alloc.values()):
+            raise ValueError(
+                f"{source}: late_floors total {sum(band_minima_total.values())} "
+                f"exceeds the late-target allocation {sum(late_alloc.values())} "
+                f"(minima larger than the associated target allocation)")
+        for split, m in band_minima_per_split.items():
+            if sum(m.values()) > late_alloc[split]:
+                raise ValueError(
+                    f"{source}: late_target_band_minima[{split}] total "
+                    f"{sum(m.values())} exceeds that split's late-target "
+                    f"allocation {late_alloc[split]} (minima larger than the "
+                    f"associated target allocation)")
+        if band_minima_per_split:
+            for band, floor in band_minima_total.items():
+                covered = sum(m.get(band, 0)
+                              for m in band_minima_per_split.values())
+                if covered < floor:
+                    raise ValueError(
+                        f"{source}: per-split minima for band {band} sum to "
+                        f"{covered} < the required total {floor}")
+
+    return AllocationProfile(
+        schema_version=2, run_kind=run_kind, allocation=allocation,
+        band_minima_total=band_minima_total,
+        band_minima_per_split=band_minima_per_split,
+        max_per_game=_profile_int(raw["max_per_game"], "max_per_game", source,
+                                  minimum=1),
+        min_ply_gap=_profile_int(raw["min_ply_gap"], "min_ply_gap", source),
+        side_tol=_profile_int(raw["side_tol"], "side_tol", source))
+
+
+# ---------------------------------------------------------------------------
 # Proposal-cell classifier (pure)
 # ---------------------------------------------------------------------------
 
