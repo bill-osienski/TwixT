@@ -1,0 +1,13 @@
+{
+  "band_new_collapse_rates": {
+    "solo": 0.05
+  },
+  "control_flip_rate": 0.1,
+  "control_p95_mover_delta": 0.27549999999999997,
+  "lockin_baseline": 5,
+  "mean_eff_children_reduction": 0.2,
+  "mean_top_share_increase": 0.05,
+  "target_lockin_count": 2,
+  "target_new_collapse_rate": 0.05,
+  "target_p95_mover_delta": 0.9405
+}

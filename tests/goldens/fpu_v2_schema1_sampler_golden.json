@@ -1,0 +1,2447 @@
+{
+  "rows": [
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00000-0002-red",
+      "game_idx": 0,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00000-0015-black",
+      "game_idx": 0,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00001-0002-red",
+      "game_idx": 1,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00001-0015-black",
+      "game_idx": 1,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00002-0002-red",
+      "game_idx": 2,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00002-0015-black",
+      "game_idx": 2,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00003-0002-red",
+      "game_idx": 3,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00003-0015-black",
+      "game_idx": 3,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00004-0002-red",
+      "game_idx": 4,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00004-0015-black",
+      "game_idx": 4,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00005-0002-red",
+      "game_idx": 5,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00005-0015-black",
+      "game_idx": 5,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00006-0002-red",
+      "game_idx": 6,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00006-0015-black",
+      "game_idx": 6,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00008-0002-red",
+      "game_idx": 8,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00008-0015-black",
+      "game_idx": 8,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00010-0002-red",
+      "game_idx": 10,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00010-0015-black",
+      "game_idx": 10,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00017-0002-red",
+      "game_idx": 17,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00017-0015-black",
+      "game_idx": 17,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00018-0002-red",
+      "game_idx": 18,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00018-0015-black",
+      "game_idx": 18,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00019-0002-red",
+      "game_idx": 19,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00019-0015-black",
+      "game_idx": 19,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00020-0002-red",
+      "game_idx": 20,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00020-0015-black",
+      "game_idx": 20,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00021-0002-red",
+      "game_idx": 21,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00021-0015-black",
+      "game_idx": 21,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00022-0002-red",
+      "game_idx": 22,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00022-0015-black",
+      "game_idx": 22,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00051-0002-red",
+      "game_idx": 51,
+      "phase": "opening",
+      "ply": 2,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00051-0015-black",
+      "game_idx": 51,
+      "phase": "opening",
+      "ply": 15,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00052-0002-red",
+      "game_idx": 52,
+      "phase": "opening",
+      "ply": 2,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00052-0015-black",
+      "game_idx": 52,
+      "phase": "opening",
+      "ply": 15,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00055-0002-red",
+      "game_idx": 55,
+      "phase": "opening",
+      "ply": 2,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00055-0015-black",
+      "game_idx": 55,
+      "phase": "opening",
+      "ply": 15,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00056-0002-red",
+      "game_idx": 56,
+      "phase": "opening",
+      "ply": 2,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00056-0015-black",
+      "game_idx": 56,
+      "phase": "opening",
+      "ply": 15,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00057-0002-red",
+      "game_idx": 57,
+      "phase": "opening",
+      "ply": 2,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00057-0015-black",
+      "game_idx": 57,
+      "phase": "opening",
+      "ply": 15,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00081-0016-red",
+      "game_idx": 81,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00081-0029-black",
+      "game_idx": 81,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00084-0016-red",
+      "game_idx": 84,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00084-0029-black",
+      "game_idx": 84,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00087-0016-red",
+      "game_idx": 87,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00087-0029-black",
+      "game_idx": 87,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00088-0016-red",
+      "game_idx": 88,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00088-0029-black",
+      "game_idx": 88,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00089-0016-red",
+      "game_idx": 89,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00089-0029-black",
+      "game_idx": 89,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00091-0016-red",
+      "game_idx": 91,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00091-0029-black",
+      "game_idx": 91,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00092-0016-red",
+      "game_idx": 92,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00092-0029-black",
+      "game_idx": 92,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00093-0016-red",
+      "game_idx": 93,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00093-0029-black",
+      "game_idx": 93,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00095-0016-red",
+      "game_idx": 95,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00095-0029-black",
+      "game_idx": 95,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00096-0016-red",
+      "game_idx": 96,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00096-0029-black",
+      "game_idx": 96,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00098-0016-red",
+      "game_idx": 98,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00098-0029-black",
+      "game_idx": 98,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00101-0016-red",
+      "game_idx": 101,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00101-0029-black",
+      "game_idx": 101,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00105-0016-red",
+      "game_idx": 105,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00105-0029-black",
+      "game_idx": 105,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00106-0016-red",
+      "game_idx": 106,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00106-0029-black",
+      "game_idx": 106,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00107-0016-red",
+      "game_idx": 107,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00107-0029-black",
+      "game_idx": 107,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00130-0016-red",
+      "game_idx": 130,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00130-0029-black",
+      "game_idx": 130,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00131-0016-red",
+      "game_idx": 131,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00131-0029-black",
+      "game_idx": 131,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00132-0016-red",
+      "game_idx": 132,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00132-0029-black",
+      "game_idx": 132,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00133-0016-red",
+      "game_idx": 133,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00133-0029-black",
+      "game_idx": 133,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00134-0016-red",
+      "game_idx": 134,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00134-0029-black",
+      "game_idx": 134,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00160-0042-red",
+      "game_idx": 160,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00160-0055-black",
+      "game_idx": 160,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00161-0042-red",
+      "game_idx": 161,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00161-0055-black",
+      "game_idx": 161,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00164-0042-red",
+      "game_idx": 164,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00164-0055-black",
+      "game_idx": 164,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00165-0042-red",
+      "game_idx": 165,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00165-0055-black",
+      "game_idx": 165,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00166-0042-red",
+      "game_idx": 166,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00166-0055-black",
+      "game_idx": 166,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00167-0042-red",
+      "game_idx": 167,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00167-0055-black",
+      "game_idx": 167,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00168-0042-red",
+      "game_idx": 168,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00168-0055-black",
+      "game_idx": 168,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00170-0042-red",
+      "game_idx": 170,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00170-0055-black",
+      "game_idx": 170,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00171-0042-red",
+      "game_idx": 171,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00171-0055-black",
+      "game_idx": 171,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00172-0042-red",
+      "game_idx": 172,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00172-0055-black",
+      "game_idx": 172,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00173-0042-red",
+      "game_idx": 173,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00173-0055-black",
+      "game_idx": 173,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00175-0042-red",
+      "game_idx": 175,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00175-0055-black",
+      "game_idx": 175,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00176-0042-red",
+      "game_idx": 176,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00176-0055-black",
+      "game_idx": 176,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00177-0042-red",
+      "game_idx": 177,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00177-0055-black",
+      "game_idx": 177,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00178-0042-red",
+      "game_idx": 178,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00178-0055-black",
+      "game_idx": 178,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00210-0042-red",
+      "game_idx": 210,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00210-0055-black",
+      "game_idx": 210,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00211-0042-red",
+      "game_idx": 211,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00211-0055-black",
+      "game_idx": 211,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00214-0042-red",
+      "game_idx": 214,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00214-0055-black",
+      "game_idx": 214,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00215-0042-red",
+      "game_idx": 215,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00215-0055-black",
+      "game_idx": 215,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00216-0042-red",
+      "game_idx": 216,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00216-0055-black",
+      "game_idx": 216,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00280-0130-red",
+      "game_idx": 280,
+      "phase": "late",
+      "ply": 130,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00280-0143-black",
+      "game_idx": 280,
+      "phase": "late",
+      "ply": 143,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00282-0130-red",
+      "game_idx": 282,
+      "phase": "late",
+      "ply": 130,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00282-0143-black",
+      "game_idx": 282,
+      "phase": "late",
+      "ply": 143,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00283-0130-red",
+      "game_idx": 283,
+      "phase": "late",
+      "ply": 130,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00283-0143-black",
+      "game_idx": 283,
+      "phase": "late",
+      "ply": 143,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00285-0130-red",
+      "game_idx": 285,
+      "phase": "late",
+      "ply": 130,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00285-0143-black",
+      "game_idx": 285,
+      "phase": "late",
+      "ply": 143,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00288-0130-red",
+      "game_idx": 288,
+      "phase": "late",
+      "ply": 130,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00288-0143-black",
+      "game_idx": 288,
+      "phase": "late",
+      "ply": 143,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00289-0130-red",
+      "game_idx": 289,
+      "phase": "late",
+      "ply": 130,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00289-0143-black",
+      "game_idx": 289,
+      "phase": "late",
+      "ply": 143,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00301-0230-red",
+      "game_idx": 301,
+      "phase": "late",
+      "ply": 230,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00301-0243-black",
+      "game_idx": 301,
+      "phase": "late",
+      "ply": 243,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00302-0230-red",
+      "game_idx": 302,
+      "phase": "late",
+      "ply": 230,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00302-0243-black",
+      "game_idx": 302,
+      "phase": "late",
+      "ply": 243,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00303-0230-red",
+      "game_idx": 303,
+      "phase": "late",
+      "ply": 230,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00303-0243-black",
+      "game_idx": 303,
+      "phase": "late",
+      "ply": 243,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00304-0230-red",
+      "game_idx": 304,
+      "phase": "late",
+      "ply": 230,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00304-0243-black",
+      "game_idx": 304,
+      "phase": "late",
+      "ply": 243,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00305-0230-red",
+      "game_idx": 305,
+      "phase": "late",
+      "ply": 230,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00305-0243-black",
+      "game_idx": 305,
+      "phase": "late",
+      "ply": 243,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00306-0230-red",
+      "game_idx": 306,
+      "phase": "late",
+      "ply": 230,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00306-0243-black",
+      "game_idx": 306,
+      "phase": "late",
+      "ply": 243,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00240-0092-red",
+      "game_idx": 240,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00240-0105-black",
+      "game_idx": 240,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00244-0092-red",
+      "game_idx": 244,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00244-0105-black",
+      "game_idx": 244,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00245-0092-red",
+      "game_idx": 245,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00245-0105-black",
+      "game_idx": 245,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00321-0130-red",
+      "game_idx": 321,
+      "phase": "late",
+      "ply": 130,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00321-0143-black",
+      "game_idx": 321,
+      "phase": "late",
+      "ply": 143,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00322-0130-red",
+      "game_idx": 322,
+      "phase": "late",
+      "ply": 130,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00322-0143-black",
+      "game_idx": 322,
+      "phase": "late",
+      "ply": 143,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00323-0130-red",
+      "game_idx": 323,
+      "phase": "late",
+      "ply": 130,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00323-0143-black",
+      "game_idx": 323,
+      "phase": "late",
+      "ply": 143,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00324-0130-red",
+      "game_idx": 324,
+      "phase": "late",
+      "ply": 130,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00324-0143-black",
+      "game_idx": 324,
+      "phase": "late",
+      "ply": 143,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00325-0130-red",
+      "game_idx": 325,
+      "phase": "late",
+      "ply": 130,
+      "role": "control",
+      "side": "red",
+      "split": "tuning"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00325-0143-black",
+      "game_idx": 325,
+      "phase": "late",
+      "ply": 143,
+      "role": "control",
+      "side": "black",
+      "split": "tuning"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00007-0002-red",
+      "game_idx": 7,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00007-0015-black",
+      "game_idx": 7,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00009-0002-red",
+      "game_idx": 9,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00009-0015-black",
+      "game_idx": 9,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00011-0002-red",
+      "game_idx": 11,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00011-0015-black",
+      "game_idx": 11,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00012-0002-red",
+      "game_idx": 12,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00012-0015-black",
+      "game_idx": 12,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00013-0002-red",
+      "game_idx": 13,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00013-0015-black",
+      "game_idx": 13,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00014-0002-red",
+      "game_idx": 14,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00014-0015-black",
+      "game_idx": 14,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00015-0002-red",
+      "game_idx": 15,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00015-0015-black",
+      "game_idx": 15,
+      "phase": "opening",
+      "ply": 15,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00016-0002-red",
+      "game_idx": 16,
+      "phase": "opening",
+      "ply": 2,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00050-0015-black",
+      "game_idx": 50,
+      "phase": "opening",
+      "ply": 15,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00053-0002-red",
+      "game_idx": 53,
+      "phase": "opening",
+      "ply": 2,
+      "role": "control",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00053-0015-black",
+      "game_idx": 53,
+      "phase": "opening",
+      "ply": 15,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00054-0002-red",
+      "game_idx": 54,
+      "phase": "opening",
+      "ply": 2,
+      "role": "control",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00054-0015-black",
+      "game_idx": 54,
+      "phase": "opening",
+      "ply": 15,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00080-0016-red",
+      "game_idx": 80,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00080-0029-black",
+      "game_idx": 80,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00082-0016-red",
+      "game_idx": 82,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00082-0029-black",
+      "game_idx": 82,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00083-0016-red",
+      "game_idx": 83,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00083-0029-black",
+      "game_idx": 83,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00085-0016-red",
+      "game_idx": 85,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00085-0029-black",
+      "game_idx": 85,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00086-0016-red",
+      "game_idx": 86,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00086-0029-black",
+      "game_idx": 86,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00090-0016-red",
+      "game_idx": 90,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00090-0029-black",
+      "game_idx": 90,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00094-0016-red",
+      "game_idx": 94,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00094-0029-black",
+      "game_idx": 94,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00097-0016-red",
+      "game_idx": 97,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00136-0029-black",
+      "game_idx": 136,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00137-0016-red",
+      "game_idx": 137,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "control",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00137-0029-black",
+      "game_idx": 137,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00146-0016-red",
+      "game_idx": 146,
+      "phase": "early_mid",
+      "ply": 16,
+      "role": "control",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00146-0029-black",
+      "game_idx": 146,
+      "phase": "early_mid",
+      "ply": 29,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00162-0042-red",
+      "game_idx": 162,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00162-0055-black",
+      "game_idx": 162,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00163-0042-red",
+      "game_idx": 163,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00163-0055-black",
+      "game_idx": 163,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00169-0042-red",
+      "game_idx": 169,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00169-0055-black",
+      "game_idx": 169,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00174-0042-red",
+      "game_idx": 174,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00174-0055-black",
+      "game_idx": 174,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00179-0042-red",
+      "game_idx": 179,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00179-0055-black",
+      "game_idx": 179,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00180-0042-red",
+      "game_idx": 180,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00180-0055-black",
+      "game_idx": 180,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00181-0042-red",
+      "game_idx": 181,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00181-0055-black",
+      "game_idx": 181,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00182-0042-red",
+      "game_idx": 182,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00212-0055-black",
+      "game_idx": 212,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00213-0042-red",
+      "game_idx": 213,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "control",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00213-0055-black",
+      "game_idx": 213,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00217-0042-red",
+      "game_idx": 217,
+      "phase": "midgame",
+      "ply": 42,
+      "role": "control",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00217-0055-black",
+      "game_idx": 217,
+      "phase": "midgame",
+      "ply": 55,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00241-0092-red",
+      "game_idx": 241,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00241-0105-black",
+      "game_idx": 241,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00242-0092-red",
+      "game_idx": 242,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00242-0105-black",
+      "game_idx": 242,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00243-0092-red",
+      "game_idx": 243,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00243-0105-black",
+      "game_idx": 243,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00248-0092-red",
+      "game_idx": 248,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00248-0105-black",
+      "game_idx": 248,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00250-0092-red",
+      "game_idx": 250,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00250-0105-black",
+      "game_idx": 250,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00251-0092-red",
+      "game_idx": 251,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00251-0105-black",
+      "game_idx": 251,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00252-0092-red",
+      "game_idx": 252,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00252-0105-black",
+      "game_idx": 252,
+      "phase": "late",
+      "ply": 105,
+      "role": "target",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b400_plus",
+      "canonical_sha1": "v2-00253-0092-red",
+      "game_idx": 253,
+      "phase": "late",
+      "ply": 92,
+      "role": "target",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b300_399",
+      "canonical_sha1": "v2-00320-0143-black",
+      "game_idx": 320,
+      "phase": "late",
+      "ply": 143,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00335-0230-red",
+      "game_idx": 335,
+      "phase": "late",
+      "ply": 230,
+      "role": "control",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00335-0243-black",
+      "game_idx": 335,
+      "phase": "late",
+      "ply": 243,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00337-0230-red",
+      "game_idx": 337,
+      "phase": "late",
+      "ply": 230,
+      "role": "control",
+      "side": "red",
+      "split": "frozen_check"
+    },
+    {
+      "band": "b200_299",
+      "canonical_sha1": "v2-00337-0243-black",
+      "game_idx": 337,
+      "phase": "late",
+      "ply": 243,
+      "role": "control",
+      "side": "black",
+      "split": "frozen_check"
+    }
+  ],
+  "stats": {
+    "assignment_attempt": 0,
+    "cell_counts": {
+      "control|early_mid|frozen_check": 5,
+      "control|early_mid|tuning": 10,
+      "control|late|frozen_check": 5,
+      "control|late|tuning": 10,
+      "control|midgame|frozen_check": 5,
+      "control|midgame|tuning": 10,
+      "control|opening|frozen_check": 5,
+      "control|opening|tuning": 10,
+      "target|early_mid|frozen_check": 15,
+      "target|early_mid|tuning": 30,
+      "target|late|frozen_check": 15,
+      "target|late|tuning": 30,
+      "target|midgame|frozen_check": 15,
+      "target|midgame|tuning": 30,
+      "target|opening|frozen_check": 15,
+      "target|opening|tuning": 30
+    },
+    "late_target_band_count": {
+      "b200_299": 12,
+      "b300_399": 12,
+      "b400_plus": 21
+    },
+    "n_games_per_split": {
+      "frozen_check": 117,
+      "tuning": 233
+    },
+    "n_games_total": 350,
+    "n_rows": 240,
+    "seed": 3,
+    "side_count": {
+      "frozen_check": {
+        "black": 40,
+        "red": 40
+      },
+      "tuning": {
+        "black": 80,
+        "red": 80
+      }
+    }
+  }
+}
