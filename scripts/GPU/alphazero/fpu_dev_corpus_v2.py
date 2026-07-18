@@ -707,9 +707,52 @@ def _greedy_assign_v2(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
     return None
 
 
+def _capacity_shortfalls(
+        games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
+        alloc: "AllocationProfile") -> List[str]:
+    """The two GENUINE-infeasibility upper bounds, as failure strings (empty list =
+    both hold). Single-sourced: `_capacity_precheck` raises on the first one found,
+    `post_screen_qualification_report` records them all. Pure -- never raises.
+
+    (1) Per-cell upper bound (v1's `assign_split` check): a game can never give
+    a cell more than min(its rows there, alloc.max_per_game). Over-states capacity
+    for a multi-cell game (whose budget is counted once per cell), hence upper
+    bound / necessary only.
+
+    (2) GLOBAL upper bound -- the v2-specific one, and the check a per-cell-only
+    accounting cannot express: because <=max_per_game is global across ALL cells
+    in v2, the whole corpus can never exceed sum_g min(rows(g), max_per_game)
+    rows, however those rows are distributed. (Under v1's PER-cell cap a game's
+    global contribution was unbounded, so v1 had no such bound to check.)
+    """
+    failures: List[str] = []
+    capacity: Counter = Counter()
+    for prof in games_profile.values():
+        for cell, n in prof.items():
+            if cell in alloc.allocation:
+                capacity[cell] += min(n, alloc.max_per_game)
+    for cell, a in alloc.allocation.items():
+        demand = a["tuning"] + a["frozen_check"]
+        have = capacity.get(cell, 0)
+        if have < demand:
+            failures.append(f"cell {cell} capacity {have} < demand {demand}")
+
+    global_capacity = sum(
+        min(sum(n for cell, n in prof.items() if cell in alloc.allocation),
+            alloc.max_per_game)
+        for prof in games_profile.values())
+    if global_capacity < alloc.corpus_size:
+        failures.append(
+            f"global capacity {global_capacity} < corpus size "
+            f"{alloc.corpus_size} under the global <=MAX_PER_GAME "
+            f"({alloc.max_per_game}) per-game rule ({len(games_profile)} games)")
+    return failures
+
+
 def _capacity_precheck(
         games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
-        *, where: str = "assign_split_v2") -> None:
+        *, where: str = "assign_split_v2",
+        alloc: Optional["AllocationProfile"] = None) -> None:
     """The two GENUINE-infeasibility checks. Both are NECESSARY conditions only --
     each is a true UPPER BOUND on what the selection can realize, so falling short
     of demand PROVES infeasibility and names it cheaply, while passing them proves
@@ -727,37 +770,13 @@ def _capacity_precheck(
     not make. Sharing the checks (rather than restating them) is what guarantees
     qualification bounds EXACTLY what the sampler will later spend; only the label
     differs, so an operator can tell which stage stopped.
-    """
-    # (1) Per-cell upper bound (v1's `assign_split` check): a game can never give
-    # a cell more than min(its rows there, MAX_PER_GAME). Over-states capacity for
-    # a multi-cell game (whose <=2-row budget is counted once per cell), hence
-    # upper bound / necessary only.
-    capacity: Counter = Counter()
-    for prof in games_profile.values():
-        for cell, n in prof.items():
-            if cell in SPLIT_ALLOC_V2:
-                capacity[cell] += min(n, MAX_PER_GAME)
-    for cell, alloc in SPLIT_ALLOC_V2.items():
-        demand = alloc["tuning"] + alloc["frozen_check"]
-        have = capacity.get(cell, 0)
-        if have < demand:
-            raise ValueError(
-                f"{where}: cell {cell} capacity {have} < demand {demand}")
 
-    # (2) GLOBAL upper bound -- the v2-specific one, and the check a per-cell-only
-    # accounting cannot express: because <=MAX_PER_GAME is global across ALL cells
-    # in v2, the whole corpus can never exceed sum_g min(rows(g), MAX_PER_GAME)
-    # rows, however those rows are distributed. (Under v1's PER-cell cap a game's
-    # global contribution was unbounded, so v1 had no such bound to check.)
-    global_capacity = sum(
-        min(sum(n for cell, n in prof.items() if cell in SPLIT_ALLOC_V2),
-            MAX_PER_GAME)
-        for prof in games_profile.values())
-    if global_capacity < CORPUS_SIZE:
-        raise ValueError(
-            f"{where}: global capacity {global_capacity} < corpus size "
-            f"{CORPUS_SIZE} under the global <=MAX_PER_GAME ({MAX_PER_GAME}) "
-            f"per-game rule ({len(games_profile)} games)")
+    `alloc` None = the schema-1 legacy profile.
+    """
+    alloc = alloc if alloc is not None else AllocationProfile.legacy()
+    failures = _capacity_shortfalls(games_profile, alloc)
+    if failures:
+        raise ValueError(f"{where}: {failures[0]}")
 
 
 def assign_split_v2(games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
@@ -3133,6 +3152,76 @@ def post_screen_qualification(kept_rows: List[dict]) -> None:
                 f"role-AGNOSTIC geometric preflight cannot see this: the source may "
                 f"hold ample {LATE_PHASE}/{band} CANDIDATES while too few of them "
                 f"classify as `target` (design Sec 1.7, STAGE 2).")
+
+
+def post_screen_qualification_report(
+        kept_rows: List[dict], alloc: AllocationProfile) -> Dict[str, Any]:
+    """The CONTROLLED post-screen qualification verdict (repair plan Sec 7):
+    every configured (role, phase) cell's capacity vs demand, the global
+    <=max_per_game bound, and the late-target band capacities vs the TOTAL
+    minima -- as a JSON-shaped report, never a raise. Pure. NECESSARY bounds
+    only: per-SPLIT band minima are provable only by the exact selector."""
+    _games, gprofile = _games_and_profile(kept_rows)
+    mpg = alloc.max_per_game
+    failures = _capacity_shortfalls(gprofile, alloc)
+    # Re-key the shortfalls for the report's cells table (same numbers).
+    cells: Dict[str, Any] = {}
+    for (role, phase), a in alloc.allocation.items():
+        contributing = {gi: prof[(role, phase)] for gi, prof in
+                        gprofile.items() if prof.get((role, phase))}
+        rows = [r for r in kept_rows if (r["role"], r["phase"]) == (role, phase)]
+        sides = Counter(r["side"] for r in rows)
+        cells[f"{role}|{phase}"] = {
+            "demand": a["tuning"] + a["frozen_check"],
+            "capacity": sum(min(n, mpg) for n in contributing.values()),
+            "n_rows": len(rows), "n_games": len(contributing),
+            "red": sides.get("red", 0), "black": sides.get("black", 0)}
+    global_capacity = sum(
+        min(sum(n for cell, n in prof.items() if cell in alloc.allocation), mpg)
+        for prof in gprofile.values())
+
+    late_rows = [r for r in kept_rows
+                 if (r["role"], r["phase"]) == LATE_TARGET_CELL]
+    by_game_band: Dict[Any, Counter] = defaultdict(Counter)
+    for r in late_rows:
+        by_game_band[r["game_idx"]][r["band"]] += 1
+    bands: Dict[str, Any] = {}
+    for band, minimum in alloc.band_minima_total.items():
+        band_capacity = sum(min(c[band], mpg) for c in by_game_band.values())
+        sides = Counter(r["side"] for r in late_rows if r["band"] == band)
+        bands[band] = {
+            "minimum_total": minimum,
+            "minimum_per_split": {
+                s: alloc.band_minima_per_split.get(s, {}).get(band, 0)
+                for s in SPLITS},
+            "capacity": band_capacity,
+            "n_games": sum(1 for c in by_game_band.values() if c[band]),
+            "red": sides.get("red", 0), "black": sides.get("black", 0)}
+        if band_capacity < minimum:
+            failures.append(
+                f"late-target band {band} capacity {band_capacity} < "
+                f"total minimum {minimum}")
+
+    # The report's binding constraint uses the cells-table naming for the
+    # first per-cell failure ("role|phase: ..." reads better in a report than
+    # the raise's tuple), but keeps the raise-compatible substrings.
+    binding = None
+    if failures:
+        binding = failures[0].replace(
+            "cell ('", "").replace("', '", "|").replace("')", "") \
+            if failures[0].startswith("cell (") else failures[0]
+    return {
+        "status": "PASS" if not failures else "GATE_FAIL",
+        "binding_constraint": binding,
+        "failures": failures,
+        "cells": cells,
+        "global_realizable_capacity": global_capacity,
+        "late_target_bands": bands,
+        "per_split_minima_note": (
+            "per-split band minima are proven only by the exact selector "
+            "witness, not by this capacity bound"),
+        "profile": alloc.fingerprint(),
+    }
 
 
 # ---------------------------------------------------------------------------

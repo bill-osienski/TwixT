@@ -26,6 +26,7 @@ target-side and control-side keys (not just an all-clean/empty subset).
 """
 import copy
 import json
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -252,3 +253,107 @@ def test_schema2_config_round_trips_into_a_profile(tmp_path):
     p = v2.profile_for(cfg)
     assert p.schema_version == 2 and p.corpus_size == 120
     assert cfg.post_screen_report_out == "psq.json"
+
+
+# ---------------------------------------------------------------------------
+# Task 3: pure qualification report + the real-failure regression fixture.
+# ---------------------------------------------------------------------------
+
+def _kept_row(game_idx, ply, side, phase, band, role, tag=""):
+    return {
+        "game_idx": game_idx, "ply": ply, "side": side, "phase": phase,
+        "band": band, "role": role, "n_legal": 528 - ply,
+        "canonical_sha1": f"sha-{game_idx}-{ply}-{side}{tag}",
+        "root_value_stm": 0.0, "normalized_entropy": 0.5, "top1_prior": 0.1,
+        "top4_mass": 0.4, "top8_mass": 0.6,
+    }
+
+
+def make_gate_fail_fixture():
+    """COUNT- AND GEOMETRY-FAITHFUL analogue of the OBSERVED reservoir_v1
+    kept pool (review correction 5): 155 late-target rows in 86 games
+    (36x1-row + 31x2-row + 19x3-row), realizable exactly 136 under <=2/game;
+    bands 12 b400_plus (12 games, ONE row each, 7 black / 5 red) /
+    52 b300_399 / 91 b200_299; every ply lies in its band's geometric range
+    on a 24 board (n_legal = 528 - ply: b400_plus needs ply <= 128, b300_399
+    ply 129-228, b200_299 ply 229-328; late phase needs ply >= 91). Targets
+    0/0/0 outside late; controls ample in all four phases."""
+    rows, gi = [], 0
+    # The real b400 scarcity: 12 single-row games, sides 7 black / 5 red.
+    for i in range(12):
+        rows.append(_kept_row(gi, 91 + i, "black" if i < 7 else "red",
+                              "late", "b400_plus", "target"))
+        gi += 1
+    # Deal the remaining 143 rows (52 b300 + 91 b200) into 24 one-row +
+    # 31 two-row + 19 three-row games (per-game overlap represented).
+    bands = ["b300_399"] * 52 + ["b200_299"] * 91
+    BAND_BASE_PLY = {"b300_399": 150, "b200_299": 240}
+    it = iter(bands)
+    for size in [1] * 24 + [2] * 31 + [3] * 19:
+        for k in range(size):
+            band = next(it)
+            rows.append(_kept_row(
+                gi, BAND_BASE_PLY[band] + 13 * k,      # >=12-ply spacing
+                "red" if (gi + k) % 2 == 0 else "black",
+                "late", band, "target"))
+        gi += 1
+    # Ample controls: 40 games per phase, one red+one black control each
+    # (ply in the opening/early_mid/midgame/late ranges; n_legal consistent).
+    for phase, base_ply in (("opening", 2), ("early_mid", 20),
+                            ("midgame", 50), ("late", 95)):
+        for _ in range(40):
+            rows.append(_kept_row(gi, base_ply, "red", phase, "b400_plus",
+                                  "control"))
+            rows.append(_kept_row(gi, base_ply + 12, "black", phase,
+                                  "b400_plus", "control"))
+            gi += 1
+    return rows
+
+
+def test_gate_fail_fixture_is_faithful_to_the_measured_screen():
+    late_targets = [r for r in make_gate_fail_fixture()
+                    if (r["role"], r["phase"]) == ("target", "late")]
+    assert len(late_targets) == 155
+    assert len({r["game_idx"] for r in late_targets}) == 86
+    per_game = Counter(r["game_idx"] for r in late_targets)
+    assert sum(min(2, n) for n in per_game.values()) == 136
+    b400 = [r for r in late_targets if r["band"] == "b400_plus"]
+    assert len(b400) == 12 == len({r["game_idx"] for r in b400})
+    assert Counter(r["side"] for r in b400) == {"black": 7, "red": 5}
+    assert Counter(r["band"] for r in late_targets) == {
+        "b400_plus": 12, "b300_399": 52, "b200_299": 91}
+    for r in late_targets:                     # geometry: band matches n_legal
+        n = 528 - r["ply"]
+        assert r["band"] == ("b400_plus" if n >= 400
+                             else "b300_399" if n >= 300 else "b200_299")
+
+
+def test_old_allocation_gate_fails_naming_target_opening():
+    report = v2.post_screen_qualification_report(
+        make_gate_fail_fixture(), v2.AllocationProfile.legacy())
+    assert report["status"] == "GATE_FAIL"
+    assert "target|opening" in report["binding_constraint"]
+    assert "capacity 0" in report["binding_constraint"]
+    assert "demand 45" in report["binding_constraint"]
+    assert report["cells"]["target|opening"]["capacity"] == 0
+    assert report["cells"]["target|late"]["capacity"] == 136
+
+
+def test_new_production_profile_passes_capacity_on_the_fixture():
+    alloc = v2.parse_allocation_profile(PRODUCTION_PROFILE_RAW, source="test")
+    report = v2.post_screen_qualification_report(
+        make_gate_fail_fixture(), alloc)
+    assert report["status"] == "PASS"
+    assert report["binding_constraint"] is None
+    assert report["late_target_bands"]["b400_plus"]["capacity"] == 12
+    assert report["late_target_bands"]["b400_plus"]["n_games"] == 12
+    assert report["profile"]["run_kind"] == "production"
+
+
+def test_band_capacity_below_total_minimum_gate_fails():
+    rows = [r for r in make_gate_fail_fixture()
+            if not (r["role"] == "target" and r["band"] == "b400_plus")]
+    alloc = v2.parse_allocation_profile(PRODUCTION_PROFILE_RAW, source="test")
+    report = v2.post_screen_qualification_report(rows, alloc)
+    assert report["status"] == "GATE_FAIL"
+    assert any("b400_plus" in f for f in report["failures"])
