@@ -2107,6 +2107,24 @@ class V2Config:
     report_out: str
     eval_batch_size: int = DEFAULT_EVAL_BATCH_SIZE
     stall_flush_sims: int = DEFAULT_STALL_FLUSH_SIMS
+    # Schema-2 (repair plan) fields -- None on a schema-1 config. `profile_for`
+    # is the ONLY consumer; the loader enforces presence when
+    # config_schema_version >= 2.
+    run_kind: Optional[str] = None
+    late_target_band_minima: Optional[Dict[str, Any]] = None
+    max_per_game: Optional[int] = None
+    min_ply_gap: Optional[int] = None
+    side_tol: Optional[int] = None
+    corpus_size: Optional[int] = None
+    post_screen_report_out: Optional[str] = None
+
+
+# The ADDITIONAL top-level keys a schema-2 (repair plan Sec 6) config must
+# carry. Enforced by load_v2_config only when config_schema_version >= 2, so
+# schema-1 configs (reservoir_v1's generation) keep loading exactly as before.
+_V2_CONFIG_REQUIRED_KEYS_SCHEMA2: Tuple[str, ...] = (
+    "run_kind", "late_target_band_minima", "max_per_game",
+    "min_ply_gap", "side_tol", "corpus_size", "post_screen_report_out")
 
 
 def load_v2_config(path: str) -> V2Config:
@@ -2131,6 +2149,14 @@ def load_v2_config(path: str) -> V2Config:
         raise ValueError(
             f"load_v2_config: {path} is missing required key(s): "
             f"{', '.join(missing)}")
+    if int(raw.get("config_schema_version", 0)) >= 2:
+        missing2 = sorted(k for k in _V2_CONFIG_REQUIRED_KEYS_SCHEMA2
+                          if k not in raw)
+        if missing2:
+            raise ValueError(
+                f"load_v2_config: {path} declares config_schema_version "
+                f"{raw['config_schema_version']} but is missing required "
+                f"schema-2 key(s): {', '.join(missing2)}")
     return V2Config(
         config_path=str(path),
         source_index_path=raw["source_index_path"],
@@ -2152,7 +2178,35 @@ def load_v2_config(path: str) -> V2Config:
         report_out=raw["report_out"],
         eval_batch_size=int(raw.get("eval_batch_size", DEFAULT_EVAL_BATCH_SIZE)),
         stall_flush_sims=int(raw.get("stall_flush_sims", DEFAULT_STALL_FLUSH_SIMS)),
+        run_kind=raw.get("run_kind"),
+        late_target_band_minima=raw.get("late_target_band_minima"),
+        max_per_game=raw.get("max_per_game"),
+        min_ply_gap=raw.get("min_ply_gap"),
+        side_tol=raw.get("side_tol"),
+        corpus_size=raw.get("corpus_size"),
+        post_screen_report_out=raw.get("post_screen_report_out"),
     )
+
+
+def profile_for(config: V2Config) -> AllocationProfile:
+    """The config's effective AllocationProfile. Schema 1 -> the frozen legacy
+    constants (byte-identical v1-era behavior); schema 2 -> parsed + validated
+    from the config's own fields. THE one bridge from config to allocation --
+    no production decision reads SPLIT_ALLOC_V2/CORPUS_SIZE/LATE_TARGET_FLOORS/
+    MAX_PER_GAME/MIN_PLY_GAP/SIDE_TOL behind this function's back."""
+    if config.config_schema_version < 2:
+        return AllocationProfile.legacy()
+    return parse_allocation_profile({
+        "config_schema_version": config.config_schema_version,
+        "run_kind": config.run_kind,
+        "phase_allocation": config.phase_allocation,
+        "late_floors": config.late_floors,
+        "late_target_band_minima": config.late_target_band_minima,
+        "max_per_game": config.max_per_game,
+        "min_ply_gap": config.min_ply_gap,
+        "side_tol": config.side_tol,
+        "corpus_size": config.corpus_size,
+    }, source=config.config_path)
 
 
 # ---------------------------------------------------------------------------

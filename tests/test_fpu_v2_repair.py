@@ -205,3 +205,50 @@ def test_fingerprint_covers_the_complete_effective_profile():
     assert fp["corpus_size"] == 120
     assert fp["max_per_game"] == 2 and fp["min_ply_gap"] == 12 and fp["side_tol"] == 2
     json.dumps(fp, sort_keys=True)   # must be JSON-serializable as-is
+
+
+# ---------------------------------------------------------------------------
+# Task 2: schema-2 config loading + profile_for(config).
+# ---------------------------------------------------------------------------
+
+SCHEMA1_CONFIG_KEYS = {
+    "source_index_path": "idx.jsonl", "seed_range": [0, 4800],
+    "selection_seed": 7, "phase_allocation": {}, "late_floors": {},
+    "enumerator_params": {}, "new_collapse_stratum": "ply_bucket",
+    "checkpoint": "ck.safetensors", "forbidden_manifests": [],
+    "screen_out": "s.csv", "select_out": "m.csv",
+    "expected_fingerprints": {}, "config_schema_version": 1,
+    "protocol_path": "p.json", "match_summary_path": "ms.json",
+    "replay_dir": "replays", "report_out": "r.json",
+}
+
+
+def _write_config(tmp_path, extra):
+    cfg = dict(SCHEMA1_CONFIG_KEYS)
+    cfg.update(extra)
+    path = tmp_path / "cfg.json"
+    path.write_text(json.dumps(cfg))
+    return str(path)
+
+
+def test_schema1_config_loads_and_yields_legacy_profile(tmp_path):
+    cfg = v2.load_v2_config(_write_config(tmp_path, {}))
+    assert cfg.run_kind is None            # schema-1 carries none of the new keys
+    p = v2.profile_for(cfg)
+    assert p.schema_version == 1
+    assert p.corpus_size == 240
+
+
+def test_schema2_config_missing_new_keys_is_rejected(tmp_path):
+    path = _write_config(tmp_path, {"config_schema_version": 2})
+    with pytest.raises(ValueError, match="run_kind"):
+        v2.load_v2_config(path)
+
+
+def test_schema2_config_round_trips_into_a_profile(tmp_path):
+    extra = dict(PRODUCTION_PROFILE_RAW)
+    extra["post_screen_report_out"] = "psq.json"
+    cfg = v2.load_v2_config(_write_config(tmp_path, extra))
+    p = v2.profile_for(cfg)
+    assert p.schema_version == 2 and p.corpus_size == 120
+    assert cfg.post_screen_report_out == "psq.json"
