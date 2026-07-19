@@ -3032,9 +3032,49 @@ def _identity_mismatch(key: str, *, sources: List[Tuple[str, Any]]) -> ValueErro
     return ValueError("\n".join(lines))
 
 
+# ---------------------------------------------------------------------------
+# Discovery-only historical-screen identity policy (Task 14a, USER-APPROVED).
+# ---------------------------------------------------------------------------
+# The immutable pre-repair v1 screen was PRODUCED by an earlier revision of the
+# two v2 tooling modules; today's REPAIRED analyzer code differs from that
+# producer. That is a provenance SPLIT (what produced the screen vs what
+# analyzes it now), not drift IN the screen -- config-expected(A) still equals
+# screen-recorded(B), which is what proves which code produced it. So the
+# READ-ONLY discovery stages (`analyze-screen-feasibility` / `sizing-analysis`)
+# RECORD both provenances rather than forcing producer==analyzer, while
+# `screen` / `post-screen-qualify` / `select` stay fully strict. The allowlist
+# names the ONLY source files whose fresh-recompute(C) may diverge from the
+# recorded A/B block; an unexpected third file is rejected by construction.
+HISTORICAL_SCREEN_DISCOVERY_V1_POLICY_LABEL = "historical_screen_discovery_v1"
+HISTORICAL_SCREEN_DISCOVERY_V1_EXPECTED_SOURCE_DRIFT: Tuple[str, ...] = (
+    "fpu_dev_corpus_v2.py",
+    "fpu_dev_reservoir_protocol.py",
+)
+
+
+def _assert_discovery_source_drift(sources: List[Tuple[str, Any]], *,
+                                   allowlist: Iterable[str]) -> None:
+    """The discovery-only `source_file_sha1s` check (Task 14a, point 4): the
+    config-expected(A) block MUST still equal screen-recorded(B) -- A==B is
+    what proves which code PRODUCED the historical screen -- but fresh-
+    recompute(C) may differ from A/B for basenames in `allowlist` ONLY (today's
+    analyzer code vs the producer's). Any A!=B disagreement, or ANY C-drift on a
+    file outside the allowlist, still raises the strict `_identity_mismatch` (so
+    the message, exit code, and per-basename narrowing are identical to strict).
+    `sources` is the three-source `(A, B, C)` list `validate_screen_identities`
+    built for this preregistered identity."""
+    (_la, a), (_lb, b), (_lc, _c) = sources
+    allowed = set(allowlist)
+    drifted = _dict_identity_diff(*(v for _label, v in sources))
+    if a != b or any(name not in allowed for name in drifted):
+        raise _identity_mismatch("source_file_sha1s", sources=sources)
+
+
 def validate_screen_identities(screen_meta: Mapping[str, Any], config: V2Config, *,
                                forbidden_paths: Iterable[str],
-                               screen_csv_path: str) -> dict:
+                               screen_csv_path: str,
+                               source_file_drift_allowlist: Optional[Iterable[str]] = None
+                               ) -> dict:
     """HARD-MATCH all eleven `SCREEN_IDENTITY_KEYS` across the three sources of truth
     (A) config-expected / (B) screen-recorded / (C) fresh recompute -- see this
     section's header for why all three are needed, and why the eleventh
@@ -3068,6 +3108,13 @@ def validate_screen_identities(screen_meta: Mapping[str, Any], config: V2Config,
     All three sources are JSON-native (`str`, or `{basename: sha1}` dicts -- from a
     JSON file, or from `fpu_provenance`), so plain `==` is an exact, order-
     insensitive comparison; no canonicalization step is needed or performed.
+
+    `source_file_drift_allowlist` (Task 14a) is the ONLY relaxation, and it is
+    DEFAULT-OFF: when `None` (screen/post-screen-qualify/select) every identity
+    is strict, byte-for-byte as before. The READ-ONLY discovery stages pass it
+    to let `source_file_sha1s` -- and no other identity -- tolerate a
+    producer-vs-analyzer split for the named basenames (A==B still required; see
+    `_assert_discovery_source_drift`).
     """
     recorded = screen_meta.get("provenance")
     if not isinstance(recorded, Mapping):
@@ -3111,6 +3158,16 @@ def validate_screen_identities(screen_meta: Mapping[str, Any], config: V2Config,
         # are dicts (unhashable, and `repr` is key-ORDER-sensitive), so a config that
         # pre-registered the same hashes in a different key order must still MATCH.
         values = [v for _label, v in sources]
+        # Discovery-only relaxation (Task 14a): the READ-ONLY callers pass
+        # `source_file_drift_allowlist` so `source_file_sha1s` alone tolerates a
+        # producer-vs-analyzer split (A==B still required; C may diverge for the
+        # allowlisted files only). Every OTHER identity -- and every stage that
+        # passes no allowlist (screen/post-screen-qualify/select) -- stays exactly
+        # strict, so this branch is provably byte-neutral for them.
+        if source_file_drift_allowlist is not None and key == "source_file_sha1s":
+            _assert_discovery_source_drift(
+                sources, allowlist=source_file_drift_allowlist)
+            continue
         if any(v != values[0] for v in values[1:]):
             raise _identity_mismatch(key, sources=sources)
 
@@ -3507,25 +3564,98 @@ def _load_analysis_profile(profile_json: str) -> Tuple[AllocationProfile, int]:
     return alloc, int(raw["selection_seed"])
 
 
+def _rederive_config_unchanged_discovery(config: V2Config) -> None:
+    """Discovery-only variant of the strict `rederive_and_assert_config_
+    unchanged` (Task 14a, point 5): re-derive the config from (protocol,
+    reservoir), then NORMALIZE the freshly rederived nested
+    `expected_fingerprints.source_file_sha1s` back to the config's HISTORICAL
+    A/B block before the byte-compare -- so the producer-vs-analyzer source
+    split the identity check already vetted against the allowlist does not
+    spuriously trip the config-tamper check. EVERY other field (`selection_
+    seed`, paths, allocations, floors, and the other eight `expected_
+    fingerprints` identities) stays byte-strict, because it reuses the strict
+    protocol halves verbatim -- only the one nested sub-block is pinned, so the
+    two paths cannot drift. (Safe because `validate_screen_identities` with the
+    allowlist runs FIRST in every discovery wrapper: a C-drift outside the
+    allowlist already exited MISMATCH before this is ever reached.)"""
+    from .fpu_dev_reservoir_protocol import (
+        measure_and_rederive_config, assert_config_byte_equals_rederivation)
+    _measurements, recomputed = measure_and_rederive_config(config)
+    recomputed = dict(recomputed)
+    recomputed["expected_fingerprints"] = {
+        **recomputed["expected_fingerprints"],
+        "source_file_sha1s": dict(
+            config.expected_fingerprints["source_file_sha1s"]),
+    }
+    assert_config_byte_equals_rederivation(config, recomputed)
+
+
+def _discovery_source_files_clean() -> bool:
+    """True iff `git status --porcelain` reports NO working-tree change for the
+    two allowlisted analyzer modules -- so the recorded `git_commit` fully pins
+    the analyzer bytes the divergence was measured against. Any git failure ->
+    False (conservative, mirrors `fpu_provenance.worktree_clean`)."""
+    import subprocess
+    paths = [str(_V2_MODULE_DIR / name)
+             for name in HISTORICAL_SCREEN_DISCOVERY_V1_EXPECTED_SOURCE_DRIFT]
+    try:
+        out = subprocess.check_output(
+            ["git", "status", "--porcelain", "--", *paths],
+            stderr=subprocess.DEVNULL, cwd=str(_V2_MODULE_DIR)).decode()
+        return out.strip() == ""
+    except Exception:
+        return False
+
+
+def _historical_screen_discovery_provenance(
+        config: V2Config, verified: Mapping[str, Any]) -> Dict[str, Any]:
+    """The six provenance facts every discovery report records (Task 14a, point
+    6) so the producer-vs-analyzer source split is auditable: the historical
+    A/B block, the current-analysis (C) block, the exact basename-level
+    divergence, the current git commit, whether the two analyzer modules are
+    working-tree-clean, and the policy label. `verified` is the recompute (C)
+    that `validate_screen_identities` returned."""
+    historical = dict(config.expected_fingerprints.get("source_file_sha1s") or {})
+    current = dict(verified.get("source_file_sha1s") or {})
+    return {
+        "policy": HISTORICAL_SCREEN_DISCOVERY_V1_POLICY_LABEL,
+        "expected_source_drift":
+            list(HISTORICAL_SCREEN_DISCOVERY_V1_EXPECTED_SOURCE_DRIFT),
+        "historical_ab_source_file_sha1s": historical,
+        "current_analysis_source_file_sha1s": current,
+        "source_file_divergence": _dict_identity_diff(historical, current),
+        "git_commit": fpu_provenance.git_commit(),
+        "analysis_source_files_clean": _discovery_source_files_clean(),
+    }
+
+
 def analyze_screen_feasibility(config: V2Config, screen_csv_path: str,
                                profile_json: str) -> Dict[str, Any]:
     """Authenticated wrapper (review correction 2): prove the screen IS the
     qualified artifact its config describes -- identities (incl. the CSV's
     own bytes), config rederivation (re-measures the reservoir), rows-vs-meta
     -- BEFORE analyzing. Authentication authenticates the INPUT; the output
-    stays discovery_only. Zero-GPU. Writes no manifest, rebinds no protocol."""
-    from .fpu_dev_reservoir_protocol import rederive_and_assert_config_unchanged
+    stays discovery_only. Zero-GPU. Writes no manifest, rebinds no protocol.
+
+    Task 14a: this READ-ONLY discovery stage uses the historical-screen
+    identity policy -- `source_file_sha1s` tolerates a producer-vs-analyzer
+    split for the two allowlisted modules (A==B still required), and the
+    rederive normalizes that same block; every other identity/field stays
+    strict, and the split is RECORDED in `historical_screen_discovery`."""
     screen_meta = json.loads(Path(screen_csv_path + ".meta.json").read_text())
     verified = validate_screen_identities(
         screen_meta, config, forbidden_paths=config.forbidden_manifests,
-        screen_csv_path=screen_csv_path)
-    rederive_and_assert_config_unchanged(config)
+        screen_csv_path=screen_csv_path,
+        source_file_drift_allowlist=HISTORICAL_SCREEN_DISCOVERY_V1_EXPECTED_SOURCE_DRIFT)
+    _rederive_config_unchanged_discovery(config)
     screen_rows = read_screen_csv(screen_csv_path)
     validate_screen_rows_against_meta(screen_rows, screen_meta)
     alloc, selection_seed = _load_analysis_profile(profile_json)
     doc = _analyze_screen_kept(kept_rows_from_screen(screen_rows), alloc,
                                selection_seed)
     doc.update({
+        "historical_screen_discovery":
+            _historical_screen_discovery_provenance(config, verified),
         "screen_csv": screen_csv_path,
         "screen_csv_sha1": fpu_provenance.file_sha1(screen_csv_path),
         "analyzed_config_path": config.config_path,
@@ -3640,13 +3770,18 @@ def sizing_analysis(config: V2Config, screen_csv_path: str, profile_json: str,
     built from the SAME qualified source index the identity chain just hard-
     matched (repair plan Sec 11 + review correction 3), not just the kept
     rows, so zero-yield games are correctly counted. Zero-GPU. Writes no
-    manifest, rebinds no protocol."""
-    from .fpu_dev_reservoir_protocol import rederive_and_assert_config_unchanged
+    manifest, rebinds no protocol.
+
+    Task 14a: uses the SAME historical-screen discovery policy as
+    `analyze_screen_feasibility` (allowlisted `source_file_sha1s` split +
+    normalized rederive; everything else strict; split RECORDED in
+    `historical_screen_discovery`)."""
     screen_meta = json.loads(Path(screen_csv_path + ".meta.json").read_text())
     verified = validate_screen_identities(
         screen_meta, config, forbidden_paths=config.forbidden_manifests,
-        screen_csv_path=screen_csv_path)
-    rederive_and_assert_config_unchanged(config)
+        screen_csv_path=screen_csv_path,
+        source_file_drift_allowlist=HISTORICAL_SCREEN_DISCOVERY_V1_EXPECTED_SOURCE_DRIFT)
+    _rederive_config_unchanged_discovery(config)
     screen_rows = read_screen_csv(screen_csv_path)
     validate_screen_rows_against_meta(screen_rows, screen_meta)
     alloc, selection_seed = _load_analysis_profile(profile_json)
@@ -3656,6 +3791,8 @@ def sizing_analysis(config: V2Config, screen_csv_path: str, profile_json: str,
         kept_rows_from_screen(screen_rows), all_game_ids, alloc,
         selection_seed, game_counts=game_counts, trials=trials, seed=seed)
     doc.update({
+        "historical_screen_discovery":
+            _historical_screen_discovery_provenance(config, verified),
         "screen_csv": screen_csv_path,
         "screen_csv_sha1": fpu_provenance.file_sha1(screen_csv_path),
         "analyzed_config_path": config.config_path,
@@ -4237,6 +4374,30 @@ def _sizing_analysis_cli(config: V2Config, screen_csv_path: str,
         raise V2SizingAnalysisMismatch(str(exc)) from exc
 
 
+class V2DiscoveryReportConflict(ValueError):
+    """A discovery report (`analyze-screen-feasibility` / `sizing-analysis`)
+    already exists at `--out` with DIFFERENT bytes than this run would write
+    (Task 14a, point 7): `write_atomic` refuses to clobber it. Usually the
+    recorded `git_commit` stamp moved since the prior run -- correct
+    immutability, NOT a screen mismatch. A dedicated subtype so `main` maps it
+    to a clean hard stop WITHOUT a bare `except ValueError` (same discipline as
+    `V2AnalyzeScreenMismatch` / `V2ConfigRederivationFailed`)."""
+
+
+def _write_discovery_report(out_path: str, doc: Mapping[str, Any]) -> None:
+    """Point 7: write a discovery report IMMUTABLY. A byte-identical re-run is
+    idempotently accepted (`write_atomic` UNCHANGED); a byte-DIFFERENT existing
+    report is re-raised as the dedicated `V2DiscoveryReportConflict` (-> hard
+    stop). An `OSError` propagates untranslated (a genuine I/O failure, not an
+    immutability conflict). Kept out of `main` so it needs no bare
+    `except ValueError`."""
+    from .fpu_dev_reservoir_protocol import canonical_json_bytes, write_atomic
+    try:
+        write_atomic(out_path, canonical_json_bytes(doc))
+    except ValueError as exc:
+        raise V2DiscoveryReportConflict(str(exc)) from exc
+
+
 def _select_require_pass_report(config: V2Config, screen_csv_path: str,
                                 alloc: AllocationProfile, *,
                                 screen_csv_sha1: str,
@@ -4418,8 +4579,17 @@ def main(argv=None) -> int:
             print(f"[fpu-dev-corpus-v2] analyze-screen-feasibility MISMATCH: "
                   f"{exc}")
             return EXIT_MISMATCH
-        from .fpu_dev_reservoir_protocol import canonical_json_bytes
-        Path(args.out).write_bytes(canonical_json_bytes(doc))
+        # Point 7: write immutably. A byte-identical re-run is idempotently
+        # accepted (UNCHANGED); a DIFFERENT existing report is refused rather
+        # than clobbered -- correct immutability (e.g. the git_commit stamp
+        # changed since the prior run). That refusal is a hard stop, not a
+        # MISMATCH of the screen.
+        try:
+            _write_discovery_report(args.out, doc)
+        except V2DiscoveryReportConflict as exc:
+            return _v2_cli_hard_stop(
+                f"[fpu-dev-corpus-v2] analyze-screen-feasibility STOPPED "
+                f"(immutable report): {exc}")
         print(f"[fpu-dev-corpus-v2] analyze-screen-feasibility: "
               f"{doc['status']} -> {args.out}")
         return EXIT_OK if doc["status"] == "PASS" else EXIT_GATE_FAIL
@@ -4441,8 +4611,13 @@ def main(argv=None) -> int:
         except V2SizingAnalysisMismatch as exc:
             print(f"[fpu-dev-corpus-v2] sizing-analysis MISMATCH: {exc}")
             return EXIT_MISMATCH
-        from .fpu_dev_reservoir_protocol import canonical_json_bytes
-        Path(args.out).write_bytes(canonical_json_bytes(doc))
+        # Point 7: immutable write (see the analyze-screen-feasibility clause).
+        try:
+            _write_discovery_report(args.out, doc)
+        except V2DiscoveryReportConflict as exc:
+            return _v2_cli_hard_stop(
+                f"[fpu-dev-corpus-v2] sizing-analysis STOPPED "
+                f"(immutable report): {exc}")
         print(f"[fpu-dev-corpus-v2] sizing-analysis: "
               f"{len(doc['by_game_count'])} game count(s) analyzed "
               f"(of {doc['n_games_available']} games available) -> "

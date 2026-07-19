@@ -1150,3 +1150,189 @@ def test_schema2_cli_end_to_end_on_fabricated_artifacts(tmp_path, monkeypatch):
     # (6) Smoke isolation: the production diagnostic rejects this config.
     with pytest.raises(SystemExit, match="tooling_smoke"):
         diag.require_production_run_kind(cfg)
+
+
+# ---------------------------------------------------------------------------
+# Task 14a: discovery-only historical-screen identity policy
+# (`historical_screen_discovery_v1`). The immutable pre-repair v1 screen was
+# PRODUCED by an earlier revision of the two v2 tooling modules; today's
+# repaired analyzer differs. The READ-ONLY discovery stages
+# (analyze-screen-feasibility / sizing-analysis) RECORD that producer-vs-
+# analyzer split for the two allowlisted files (A==B still required, C may
+# diverge) while every strict stage (screen/post-screen-qualify/select) and
+# every other identity/field stays byte-strict.
+#
+# Faithful simulation of "the analyzer .py changed since this screen was
+# produced": leave every recorded artifact (config, screen, meta) UNTOUCHED --
+# so config_sha1 / screen_csv_sha1 / A==B all stay honest -- and drift only the
+# FRESH source-hash recompute (C), which both the identity check and the
+# rederive take through `fpu_provenance.source_file_sha1s`.
+# ---------------------------------------------------------------------------
+
+def _screened_historical_reservoir(tmp_path, monkeypatch):
+    """Fabricate + qualify a real reservoir, fake the two evaluator seams, and
+    run the REAL `screen` -- yielding an immutable historical screen whose
+    recorded provenance (A==B) was taken with TODAY's source bytes. Returns
+    (cfg_path, cfg, profile_path)."""
+    cfg_path = _fabricate_qualified_v2_reservoir(tmp_path)
+    monkeypatch.setattr(v2, "_build_v2_anchor_search_fn",
+                        _fake_build_v2_anchor_search_fn)
+    monkeypatch.setattr(btcm, "_teacher_infer", _fake_teacher_infer)
+    assert v2.main(["--mode", "screen", "--config", cfg_path]) == 0
+    cfg = v2.load_v2_config(cfg_path)
+    profile_path = tmp_path / "profile.json"
+    profile_path.write_text(json.dumps(
+        dict(_SMOKE_PROFILE, selection_seed=cfg.selection_seed)))
+    return cfg_path, cfg, str(profile_path)
+
+
+def _drift_recompute(monkeypatch, *basenames):
+    """Make the FRESH source-hash recompute (C) diverge from the on-disk
+    recorded A/B for `basenames` -- without touching any recorded artifact."""
+    real = v2.fpu_provenance.source_file_sha1s
+
+    def drifted(paths):
+        d = real(paths)
+        for name in basenames:
+            if name in d:
+                d[name] = "drift" + "0" * 36
+        return d
+
+    monkeypatch.setattr(v2.fpu_provenance, "source_file_sha1s", drifted)
+
+
+_ALLOWLIST = v2.HISTORICAL_SCREEN_DISCOVERY_V1_EXPECTED_SOURCE_DRIFT
+
+
+# Group 1: the known two-file historical divergence PASSES discovery. -----
+
+def test_discovery_accepts_the_two_file_historical_source_drift(tmp_path, monkeypatch):
+    cfg_path, cfg, profile = _screened_historical_reservoir(tmp_path, monkeypatch)
+    _drift_recompute(monkeypatch, *_ALLOWLIST)
+    out = tmp_path / "analyze.json"
+    rc = v2.main(["--mode", "analyze-screen-feasibility", "--config", cfg_path,
+                  "--screen", cfg.screen_out, "--profile-json", profile,
+                  "--out", str(out)])
+    assert rc == v2.EXIT_OK
+    doc = json.loads(out.read_bytes())
+    prov = doc["historical_screen_discovery"]
+    assert set(prov) == {
+        "policy", "expected_source_drift",
+        "historical_ab_source_file_sha1s", "current_analysis_source_file_sha1s",
+        "source_file_divergence", "git_commit", "analysis_source_files_clean"}
+    assert prov["policy"] == "historical_screen_discovery_v1"
+    assert sorted(prov["source_file_divergence"]) == sorted(_ALLOWLIST)
+    assert prov["historical_ab_source_file_sha1s"] != prov[
+        "current_analysis_source_file_sha1s"]
+
+
+def test_sizing_analysis_accepts_the_two_file_historical_source_drift(
+        tmp_path, monkeypatch):
+    cfg_path, cfg, profile = _screened_historical_reservoir(tmp_path, monkeypatch)
+    _drift_recompute(monkeypatch, *_ALLOWLIST)
+    out = tmp_path / "sizing.json"
+    rc = v2.main(["--mode", "sizing-analysis", "--config", cfg_path,
+                  "--screen", cfg.screen_out, "--profile-json", profile,
+                  "--out", str(out), "--game-counts", "9", "--trials", "2",
+                  "--seed", "20260719"])
+    assert rc == v2.EXIT_OK
+    prov = json.loads(out.read_bytes())["historical_screen_discovery"]
+    assert prov["policy"] == "historical_screen_discovery_v1"
+    assert sorted(prov["source_file_divergence"]) == sorted(_ALLOWLIST)
+
+
+# Group 2: any NON-source identity mismatch still exits 3 under discovery. -
+
+def test_discovery_still_rejects_a_non_source_identity_mismatch(
+        tmp_path, monkeypatch):
+    cfg_path, cfg, profile = _screened_historical_reservoir(tmp_path, monkeypatch)
+    _drift_recompute(monkeypatch, *_ALLOWLIST)
+    # Corrupt the screen ARTIFACT's bytes -> screen_csv_sha1 (a NON-source
+    # identity) mismatches; discovery must still exit MISMATCH (3).
+    with open(cfg.screen_out, "ab") as f:
+        f.write(b"\n# tamper\n")
+    out = tmp_path / "analyze.json"
+    rc = v2.main(["--mode", "analyze-screen-feasibility", "--config", cfg_path,
+                  "--screen", cfg.screen_out, "--profile-json", profile,
+                  "--out", str(out)])
+    assert rc == v2.EXIT_MISMATCH
+    assert not out.exists()
+
+
+# Group 3: an UNEXPECTED third source-file divergence is rejected. --------
+
+def test_discovery_rejects_an_unexpected_third_source_file_divergence(
+        tmp_path, monkeypatch, capsys):
+    cfg_path, cfg, profile = _screened_historical_reservoir(tmp_path, monkeypatch)
+    # `fpu_state_hash.py` is a v2 corpus source but NOT on the allowlist.
+    _drift_recompute(monkeypatch, *_ALLOWLIST, "fpu_state_hash.py")
+    out = tmp_path / "analyze.json"
+    rc = v2.main(["--mode", "analyze-screen-feasibility", "--config", cfg_path,
+                  "--screen", cfg.screen_out, "--profile-json", profile,
+                  "--out", str(out)])
+    assert rc == v2.EXIT_MISMATCH
+    assert "fpu_state_hash.py" in capsys.readouterr().out
+    assert not out.exists()
+
+
+# Group 4: strict select / post-screen-qualify still reject the SAME drift. -
+
+def test_strict_stages_still_reject_historical_source_drift(tmp_path, monkeypatch):
+    cfg_path, cfg, _profile = _screened_historical_reservoir(tmp_path, monkeypatch)
+    # A clean post-screen report first, so `select` reaches its identity check.
+    assert v2.main(["--mode", "post-screen-qualify", "--config", cfg_path,
+                    "--screen", cfg.screen_out]) == 0
+    _drift_recompute(monkeypatch, *_ALLOWLIST)
+    # (a) strict post-screen-qualify MISMATCHes on the SAME drift discovery accepts.
+    assert v2.main(["--mode", "post-screen-qualify", "--config", cfg_path,
+                    "--screen", cfg.screen_out]) == v2.EXIT_MISMATCH
+    # (b) strict select's identity hard-match raises RAW (evidence-chain failure,
+    #     never a terse exit code -- see select's own main clause).
+    with pytest.raises(ValueError, match="source_file_sha1s"):
+        v2.main(["--mode", "select", "--config", cfg_path,
+                 "--screen", cfg.screen_out])
+
+
+# Group 5: a NON-source config-field tamper still fails discovery rederive. -
+
+def test_discovery_rederive_still_catches_a_non_source_config_tamper(
+        tmp_path, monkeypatch):
+    import dataclasses
+    _cfg_path, cfg, _profile = _screened_historical_reservoir(tmp_path, monkeypatch)
+    _drift_recompute(monkeypatch, *_ALLOWLIST)
+    # The honest config (only the allowlisted source drift) PASSES the
+    # discovery rederive -- the normalization pins the historical A/B block.
+    v2._rederive_config_unchanged_discovery(cfg)   # no raise
+    # A tampered NON-source field still fails, naming it -- the normalization
+    # does not weaken strictness for any other field.
+    tampered = dataclasses.replace(cfg, selection_seed=cfg.selection_seed + 1)
+    with pytest.raises(ValueError, match="selection_seed"):
+        v2._rederive_config_unchanged_discovery(tampered)
+
+
+# Group 6: repeated discovery runs are byte-identical (write_atomic UNCHANGED).
+
+def test_repeated_discovery_runs_are_byte_identical(tmp_path, monkeypatch):
+    cfg_path, cfg, profile = _screened_historical_reservoir(tmp_path, monkeypatch)
+    _drift_recompute(monkeypatch, *_ALLOWLIST)
+    out = tmp_path / "analyze.json"
+    args = ["--mode", "analyze-screen-feasibility", "--config", cfg_path,
+            "--screen", cfg.screen_out, "--profile-json", profile, "--out", str(out)]
+    assert v2.main(args) == v2.EXIT_OK
+    first = out.read_bytes()
+    # Re-run on the SAME tree: write_atomic sees identical bytes -> UNCHANGED,
+    # idempotently accepted; the report is byte-for-byte the same.
+    assert v2.main(args) == v2.EXIT_OK
+    assert out.read_bytes() == first
+
+
+def test_discovery_refuses_to_clobber_a_byte_different_report(tmp_path, monkeypatch):
+    cfg_path, cfg, profile = _screened_historical_reservoir(tmp_path, monkeypatch)
+    _drift_recompute(monkeypatch, *_ALLOWLIST)
+    out = tmp_path / "analyze.json"
+    out.write_bytes(b'{"stale":"report"}')   # a DIFFERENT existing report
+    rc = v2.main(["--mode", "analyze-screen-feasibility", "--config", cfg_path,
+                  "--screen", cfg.screen_out, "--profile-json", profile,
+                  "--out", str(out)])
+    assert rc == v2.EXIT_USAGE                # immutable: refused, not clobbered
+    assert out.read_bytes() == b'{"stale":"report"}'
