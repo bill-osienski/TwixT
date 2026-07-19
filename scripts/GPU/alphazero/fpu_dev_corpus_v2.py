@@ -340,7 +340,13 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
                          f"{', '.join(missing)}")
 
     allocation: Dict[Tuple[str, str], Dict[str, int]] = {}
-    for key, counts in raw["phase_allocation"].items():
+    # Build in SORTED role|phase-key order so `cell_order` (and thus the
+    # selector's iteration, the failures list and report cells) is a
+    # deterministic function of the profile CONTENT, never of JSON author
+    # insertion order -- the canonical fingerprint already sorts keys, so this
+    # makes the ordering it implies also the one selection actually follows.
+    # `legacy()` builds from SPLIT_ALLOC_V2 directly and keeps schema-1 order.
+    for key, counts in sorted(raw["phase_allocation"].items()):
         parts = str(key).split("|")
         if len(parts) != 2:
             raise ValueError(f"{source}: malformed role|phase key {key!r}")

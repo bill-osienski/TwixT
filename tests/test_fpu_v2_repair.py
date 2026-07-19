@@ -452,6 +452,32 @@ def test_sampler_is_deterministic_for_a_profile():
     assert a == b
 
 
+def test_schema2_cell_order_is_content_deterministic_not_json_order():
+    """Two schema-2 profiles with the SAME cells but reversed JSON key
+    insertion order must produce identical fingerprints, identical cell_order,
+    and identical selection -- the selector's iteration is a function of
+    profile CONTENT, never of author key order (repair Task 14b)."""
+    a_raw = copy.deepcopy(PRODUCTION_PROFILE_RAW)
+    b_raw = copy.deepcopy(PRODUCTION_PROFILE_RAW)
+    b_raw["phase_allocation"] = dict(
+        reversed(list(PRODUCTION_PROFILE_RAW["phase_allocation"].items())))
+    assert (list(a_raw["phase_allocation"])
+            != list(b_raw["phase_allocation"]))   # genuinely reversed input
+    A = v2.parse_allocation_profile(a_raw, source="a")
+    B = v2.parse_allocation_profile(b_raw, source="b")
+    assert A.fingerprint() == B.fingerprint()
+    assert A.cell_order == B.cell_order
+    assert (v2.sample_v2_rows(make_feasible_120_pool(), seed=11, alloc=A)
+            == v2.sample_v2_rows(make_feasible_120_pool(), seed=11, alloc=B))
+
+
+def test_legacy_cell_order_preserves_schema1_insertion_order():
+    """Schema-1 order is byte-compat: legacy() keeps SPLIT_ALLOC_V2's exact
+    insertion order (the sorted-order change is schema-2 only)."""
+    assert (v2.AllocationProfile.legacy().cell_order
+            == tuple(v2.SPLIT_ALLOC_V2.keys()))
+
+
 def test_mutating_module_constants_cannot_change_a_schema2_result(monkeypatch):
     alloc = _production_alloc()
     before = v2.sample_v2_rows(make_feasible_120_pool(), seed=11, alloc=alloc)
@@ -842,7 +868,10 @@ def test_analyze_core_old_allocation_fails():
     alloc = v2.parse_allocation_profile(legacy_raw, source="test")
     doc = v2._analyze_screen_kept(make_gate_fail_fixture(), alloc, 20260718)
     assert doc["status"] == "GATE_FAIL"
-    assert "target|opening" in doc["qualification"]["binding_constraint"]
+    # Sorted schema-2 cell order (Task 14b): the first-reported binding
+    # constraint is now the sorted-first failing target cell, target|early_mid,
+    # not the insertion-first target|opening -- an order-pin, same behavior.
+    assert "target|early_mid" in doc["qualification"]["binding_constraint"]
 
 
 def test_analyze_core_is_deterministic():
