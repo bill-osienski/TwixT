@@ -815,3 +815,35 @@ def test_run_fingerprint_records_run_kind_only_when_given(tmp_path):
 
     legacy = diag.build_run_fingerprint(**common)
     assert "run_kind" not in legacy      # review correction 4: v1 bytes intact
+
+
+def test_analyze_core_pass_with_witness():
+    doc = v2._analyze_screen_kept(make_feasible_120_pool(),
+                                  _production_alloc(), 20260718)
+    assert doc["status"] == "PASS" and doc["discovery_only"] is True
+    assert doc["selector_witness"]["n_rows"] == 120
+    assert doc["qualification"]["status"] == "PASS"
+
+
+def test_analyze_core_old_allocation_fails():
+    legacy_raw = {
+        "config_schema_version": 2, "run_kind": "production",
+        "phase_allocation": {f"{r}|{p}": dict(a) for (r, p), a
+                             in v2.SPLIT_ALLOC_V2.items()},
+        "late_floors": dict(v2.LATE_TARGET_FLOORS),
+        "late_target_band_minima": {},
+        "max_per_game": 2, "min_ply_gap": 12, "side_tol": 2,
+        "corpus_size": 240,
+    }
+    alloc = v2.parse_allocation_profile(legacy_raw, source="test")
+    doc = v2._analyze_screen_kept(make_gate_fail_fixture(), alloc, 20260718)
+    assert doc["status"] == "GATE_FAIL"
+    assert "target|opening" in doc["qualification"]["binding_constraint"]
+
+
+def test_analyze_core_is_deterministic():
+    a = v2._analyze_screen_kept(make_feasible_120_pool(),
+                                _production_alloc(), 20260718)
+    b = v2._analyze_screen_kept(make_feasible_120_pool(),
+                                _production_alloc(), 20260718)
+    assert a == b

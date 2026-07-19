@@ -3452,6 +3452,63 @@ def run_post_screen_qualify(config: V2Config,
     return (EXIT_OK if doc["status"] == "PASS" else EXIT_GATE_FAIL), doc
 
 
+def _analyze_screen_kept(kept: List[dict], alloc: AllocationProfile,
+                         selection_seed: int) -> Dict[str, Any]:
+    """Pure analysis core (repair plan Sec 9): the exact schema-2 qualifier +
+    selector over an ALREADY-AUTHENTICATED kept pool. Discovery evidence only."""
+    qualification = post_screen_qualification_report(kept, alloc)
+    witness, selector_error = None, None
+    if qualification["status"] == "PASS":
+        try:
+            rows, stats = sample_v2_rows(kept, seed=selection_seed, alloc=alloc)
+        except ValueError as exc:
+            selector_error = str(exc)
+        else:
+            witness = {
+                "n_rows": len(rows), "stats": stats,
+                "rows": [{k: r[k] for k in
+                          ("game_idx", "ply", "side", "phase", "band",
+                           "role", "split", "canonical_sha1")}
+                         for r in rows]}
+    return {
+        "discovery_only": True,
+        "profile": alloc.fingerprint(),
+        "selection_seed": selection_seed,
+        "qualification": qualification,
+        "selector_witness": witness,
+        "selector_error": selector_error,
+        "status": "PASS" if witness is not None else "GATE_FAIL",
+    }
+
+
+def analyze_screen_feasibility(config: V2Config, screen_csv_path: str,
+                               profile_json: str) -> Dict[str, Any]:
+    """Authenticated wrapper (review correction 2): prove the screen IS the
+    qualified artifact its config describes -- identities (incl. the CSV's
+    own bytes), config rederivation (re-measures the reservoir), rows-vs-meta
+    -- BEFORE analyzing. Authentication authenticates the INPUT; the output
+    stays discovery_only. Zero-GPU. Writes no manifest, rebinds no protocol."""
+    from .fpu_dev_reservoir_protocol import rederive_and_assert_config_unchanged
+    screen_meta = json.loads(Path(screen_csv_path + ".meta.json").read_text())
+    verified = validate_screen_identities(
+        screen_meta, config, forbidden_paths=config.forbidden_manifests,
+        screen_csv_path=screen_csv_path)
+    rederive_and_assert_config_unchanged(config)
+    screen_rows = read_screen_csv(screen_csv_path)
+    validate_screen_rows_against_meta(screen_rows, screen_meta)
+    raw = json.loads(Path(profile_json).read_text())
+    alloc = parse_allocation_profile(raw, source=profile_json)
+    doc = _analyze_screen_kept(kept_rows_from_screen(screen_rows), alloc,
+                               int(raw["selection_seed"]))
+    doc.update({
+        "screen_csv": screen_csv_path,
+        "screen_csv_sha1": fpu_provenance.file_sha1(screen_csv_path),
+        "analyzed_config_path": config.config_path,
+        "verified_screen_provenance": verified,
+    })
+    return doc
+
+
 # ---------------------------------------------------------------------------
 # The final manifest: schema + the `select` composition itself
 # ---------------------------------------------------------------------------
@@ -3769,7 +3826,8 @@ def _parse_v2_args(argv):
                     "and deterministically selects the final manifest. "
                     "screen and select are NEVER the same invocation.")
     ap.add_argument("--mode", required=True,
-                    choices=("screen", "select", "post-screen-qualify"),
+                    choices=("screen", "select", "post-screen-qualify",
+                             "analyze-screen-feasibility"),
                     help="pipeline stage to run.")
     ap.add_argument("--config", required=True,
                     help="path to the required fpu_dev_corpus_v2_config.json "
@@ -3781,19 +3839,37 @@ def _parse_v2_args(argv):
                          "`.meta.json` is read from alongside it). REQUIRED "
                          "by --mode select; REJECTED by --mode screen, which "
                          "WRITES its artifact to the config's `screen_out`.")
+    ap.add_argument("--profile-json", default=None,
+                    help="path to an allocation-profile JSON (repair plan "
+                         "Sec 9): the PRODUCTION_PROFILE_RAW shape plus a "
+                         "'selection_seed' int. REQUIRED by --mode "
+                         "analyze-screen-feasibility, a PURE discovery-only "
+                         "run against an already-qualified screen.")
+    ap.add_argument("--out", default=None,
+                    help="path to write the discovery-only analysis document "
+                         "(canonical JSON). REQUIRED by --mode "
+                         "analyze-screen-feasibility.")
     args = ap.parse_args(argv)
 
     # `screen` and `select` are never the same invocation (design Sec 1.6), so the
     # screen artifact is an INPUT to exactly one of them. Enforced here rather than
     # silently ignored, so `--mode screen --screen out.csv` cannot be mistaken for
     # naming the screen's output path.
-    if args.mode in ("select", "post-screen-qualify") and not args.screen:
+    if args.mode in ("select", "post-screen-qualify",
+                     "analyze-screen-feasibility") and not args.screen:
         ap.error(f"--mode {args.mode} requires --screen (the persisted screen "
-                 f"artifact to select/qualify from; it never re-screens)")
+                 f"artifact to select/qualify/analyze from; it never re-screens)")
     if args.mode == "screen" and args.screen:
         ap.error("--mode screen does not take --screen: it WRITES its artifact to "
                  "the config's `screen_out`. `screen` and `select` are never the "
                  "same invocation.")
+    if args.mode == "analyze-screen-feasibility" and not args.profile_json:
+        ap.error("--mode analyze-screen-feasibility requires --profile-json "
+                 "(repair plan Sec 9: the PRODUCTION_PROFILE_RAW shape plus a "
+                 "'selection_seed' int)")
+    if args.mode == "analyze-screen-feasibility" and not args.out:
+        ap.error("--mode analyze-screen-feasibility requires --out (where to "
+                 "write the discovery-only analysis document)")
     return args
 
 
@@ -3889,6 +3965,40 @@ def _run_post_screen_qualify_cli(config: V2Config,
         raise
     except ValueError as exc:
         raise V2PostScreenReportMismatch(str(exc)) from exc
+
+
+class V2AnalyzeScreenMismatch(ValueError):
+    """`analyze-screen-feasibility`'s authenticated wrapper (repair plan Sec 9)
+    failed to prove the screen IS the qualified artifact its config and profile
+    describe -- an identity/re-derive/rows-vs-meta mismatch (the SAME evidence
+    chain `run_post_screen_qualify` runs), or a malformed profile JSON (a
+    `parse_allocation_profile` `ValueError`, or a non-numeric `selection_seed`).
+    The SAME dedicated-subtype move `V2PostScreenReportMismatch`/
+    `V2ConfigRederivationFailed` already make: `_analyze_screen_feasibility_cli`
+    re-raises ONLY `analyze_screen_feasibility`'s plain `ValueError` as this
+    subtype, so `main` maps exactly this artifact/input-mismatch class to a
+    clean EXIT_MISMATCH (3) -- WITHOUT a bare `except ValueError` in `main`.
+    Subclasses ValueError so a caller written against the plain shape still
+    behaves as before. (A missing screen/profile file is an OSError, NOT this
+    -- it maps to EXIT_USAGE at its own clause; `json.JSONDecodeError` from a
+    malformed screen meta or profile JSON is re-raised untranslated so it,
+    too, stays EXIT_USAGE.)"""
+
+
+def _analyze_screen_feasibility_cli(config: V2Config, screen_csv_path: str,
+                                    profile_json: str) -> Dict[str, Any]:
+    """`main --mode analyze-screen-feasibility`'s dispatcher: runs the
+    authenticated wrapper and re-raises a genuine identity/artifact/profile
+    `ValueError` as the dedicated `V2AnalyzeScreenMismatch` (-> EXIT_MISMATCH),
+    while leaving `OSError`/`json.JSONDecodeError` (bad screen/profile I/O ->
+    EXIT_USAGE) untranslated. Kept out of `main` so `main` never needs a bare
+    `except ValueError`."""
+    try:
+        return analyze_screen_feasibility(config, screen_csv_path, profile_json)
+    except json.JSONDecodeError:
+        raise
+    except ValueError as exc:
+        raise V2AnalyzeScreenMismatch(str(exc)) from exc
 
 
 def _select_require_pass_report(config: V2Config, screen_csv_path: str,
@@ -4053,6 +4163,30 @@ def main(argv=None) -> int:
               f"against the screen's meta; cell_counts={stats['cell_counts']}; "
               f"late_target_band_count={stats['late_target_band_count']}")
         return 0
+
+    if args.mode == "analyze-screen-feasibility":
+        # PURE discovery only (repair plan Sec 9): runs the SAME identity/
+        # re-derive/rows-vs-meta chain `post-screen-qualify` runs, over a
+        # candidate allocation profile that need not match the config's own
+        # schema-2 `phase_allocation` -- the point is to answer "would THIS
+        # profile qualify against the already-authenticated screen" without
+        # ever writing a manifest or rebinding the protocol.
+        try:
+            doc = _analyze_screen_feasibility_cli(
+                config, args.screen, args.profile_json)
+        except (OSError, json.JSONDecodeError) as exc:
+            return _v2_cli_hard_stop(
+                f"[fpu-dev-corpus-v2] analyze-screen-feasibility STOPPED "
+                f"(I/O): {exc}")
+        except V2AnalyzeScreenMismatch as exc:
+            print(f"[fpu-dev-corpus-v2] analyze-screen-feasibility MISMATCH: "
+                  f"{exc}")
+            return EXIT_MISMATCH
+        from .fpu_dev_reservoir_protocol import canonical_json_bytes
+        Path(args.out).write_bytes(canonical_json_bytes(doc))
+        print(f"[fpu-dev-corpus-v2] analyze-screen-feasibility: "
+              f"{doc['status']} -> {args.out}")
+        return EXIT_OK if doc["status"] == "PASS" else EXIT_GATE_FAIL
 
     raise AssertionError(   # unreachable: argparse's own `choices` guards this
         f"main: unreachable --mode {args.mode!r}")
