@@ -1090,7 +1090,7 @@ def test_sample_v2_rows_has_no_bucket_cap_parameter():
     """v2 DROPS v1's <=50% ply-bucket cap (design Sec 1.2: subsumed -- each phase
     is exactly 60/240 = 25%). It must not survive as a vestigial knob."""
     sig = inspect.signature(sample_v2_rows)
-    assert list(sig.parameters) == ["kept", "seed"]
+    assert list(sig.parameters) == ["kept", "seed", "alloc"]
     assert sig.parameters["seed"].kind is inspect.Parameter.KEYWORD_ONLY
     assert not any("bucket" in name for name in sig.parameters)
 

@@ -592,7 +592,7 @@ SPLIT_TOTALS: Dict[str, int] = {
     s: sum(alloc[s] for alloc in SPLIT_ALLOC_V2.values()) for s in SPLITS}
 
 
-def _greedy_assign_v2(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
+def _greedy_assign_v2(games_profile, seed, attempt, alloc) -> Optional[Dict[Any, str]]:
     """One deterministic greedy pass (v1 `_greedy_assign`'s shape). Returns
     {game_idx: split} if it satisfies every per-(role, phase, split) quota, else
     None.
@@ -644,17 +644,17 @@ def _greedy_assign_v2(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
     if attempt == 1:
         order = order[::-1]
 
-    need = {cell: dict(alloc) for cell, alloc in SPLIT_ALLOC_V2.items()}
+    need = {cell: dict(a) for cell, a in alloc.allocation.items()}
     placed: Counter = Counter()
     assign: Dict[Any, str] = {}
     for gi in order:
         prof = games_profile[gi]
-        cells = [c for c in CELL_ORDER_V2 if c in prof]
+        cells = [c for c in alloc.cell_order if c in prof]
 
         def realizable(split, _cells=cells, _prof=prof):
             """Rows this WHOLE game could actually add to `split`: the greedy
-            cell-by-cell spend of ONE shared MAX_PER_GAME budget."""
-            budget = MAX_PER_GAME
+            cell-by-cell spend of ONE shared max_per_game budget."""
+            budget = alloc.max_per_game
             total = 0
             for c in _cells:
                 if budget <= 0:
@@ -665,15 +665,15 @@ def _greedy_assign_v2(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
             return total
 
         u_t, u_f = realizable("tuning"), realizable("frozen_check")
-        rem_t = sum(need[c]["tuning"] for c in CELL_ORDER_V2)
-        rem_f = sum(need[c]["frozen_check"] for c in CELL_ORDER_V2)
+        rem_t = sum(need[c]["tuning"] for c in alloc.cell_order)
+        rem_f = sum(need[c]["frozen_check"] for c in alloc.cell_order)
 
         if u_t == 0 and u_f == 0:
             # Useless to both splits right now -- spread it, keeping the two
             # candidate pools in the splits' own 160:80 ratio.
             split = ("tuning"
-                     if placed["tuning"] * SPLIT_TOTALS["frozen_check"]
-                     <= placed["frozen_check"] * SPLIT_TOTALS["tuning"]
+                     if placed["tuning"] * alloc.split_totals["frozen_check"]
+                     <= placed["frozen_check"] * alloc.split_totals["tuning"]
                      else "frozen_check")
         elif rem_t == 0:
             split = "frozen_check"
@@ -688,13 +688,13 @@ def _greedy_assign_v2(games_profile, seed, attempt) -> Optional[Dict[Any, str]]:
                 split = "frozen_check"
             else:
                 split = ("tuning"
-                         if placed["tuning"] * SPLIT_TOTALS["frozen_check"]
-                         <= placed["frozen_check"] * SPLIT_TOTALS["tuning"]
+                         if placed["tuning"] * alloc.split_totals["frozen_check"]
+                         <= placed["frozen_check"] * alloc.split_totals["tuning"]
                          else "frozen_check")
 
         assign[gi] = split
         placed[split] += 1
-        budget = MAX_PER_GAME
+        budget = alloc.max_per_game
         for c in cells:
             if budget <= 0:
                 break
@@ -781,7 +781,8 @@ def _capacity_precheck(
 
 
 def assign_split_v2(games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
-                    seed: int, *, attempt: int = 0) -> Dict[Any, str]:
+                    seed: int, *, attempt: int = 0,
+                    alloc: Optional["AllocationProfile"] = None) -> Dict[Any, str]:
     """Assign each WHOLE game to "tuning" or "frozen_check" so every
     per-(role, phase, split) SPLIT_ALLOC_V2 quota is satisfiable.
 
@@ -798,8 +799,9 @@ def assign_split_v2(games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
     Raises ValueError if a capacity precheck proves the pool infeasible outright, or
     if this ordering's greedy cannot satisfy the split quotas.
     """
-    _capacity_precheck(games_profile)
-    result = _greedy_assign_v2(games_profile, seed, attempt)
+    alloc = alloc if alloc is not None else AllocationProfile.legacy()
+    _capacity_precheck(games_profile, alloc=alloc)
+    result = _greedy_assign_v2(games_profile, seed, attempt, alloc)
     if result is None:
         raise ValueError(
             f"assign_split_v2: ordering {attempt} did not satisfy the split quotas")
@@ -808,11 +810,11 @@ def assign_split_v2(games_profile: Mapping[Any, Mapping[Tuple[str, str], int]],
 
 def _pickable(rows_of_game: List[dict], cell: Tuple[str, str],
               band: Optional[str], used_sha1: Set[str],
-              chosen_plies: List[int]) -> List[dict]:
+              chosen_plies: List[int], min_gap: int) -> List[dict]:
     """One game's still-pickable rows for `cell` (band-restricted when `band` is
     not None), ascending by ply -- the input `_choose_positions` expects.
 
-    Excludes an already-claimed `canonical_sha1`, and any row within MIN_PLY_GAP
+    Excludes an already-claimed `canonical_sha1`, and any row within `min_gap`
     of a row ALREADY SELECTED from that game -- globally, i.e. including rows
     taken in another cell or during the floor pass (v2's per-game rules span
     cells; `_choose_positions` then enforces the gap WITHIN the rows it returns).
@@ -821,7 +823,7 @@ def _pickable(rows_of_game: List[dict], cell: Tuple[str, str],
            if (r["role"], r["phase"]) == cell
            and (band is None or r["band"] == band)
            and r["canonical_sha1"] not in used_sha1
-           and all(abs(r["ply"] - p) >= MIN_PLY_GAP for p in chosen_plies)]
+           and all(abs(r["ply"] - p) >= min_gap for p in chosen_plies)]
     out.sort(key=lambda r: r["ply"])
     return out
 
@@ -886,7 +888,8 @@ def _side_delta(rows: List[dict]) -> int:
 
 def _select_manifest(games: Mapping[Any, List[dict]],
                      profile: Mapping[Any, Mapping[Tuple[str, str], int]],
-                     split_of: Mapping[Any, str]) -> Tuple[List[dict], dict]:
+                     split_of: Mapping[Any, str],
+                     alloc: "AllocationProfile") -> Tuple[List[dict], dict]:
     """ONE selection attempt, for ONE candidate whole-game split assignment.
 
     Fills every SPLIT_ALLOC_V2 cell EXACTLY via the side-aware round-robin, subject
@@ -942,10 +945,11 @@ def _select_manifest(games: Mapping[Any, List[dict]],
         PREVIEW a game (and its `_side_delta`) to decide the draw order before
         committing to it, and `take` can then commit exactly what was previewed.
         """
-        positions = _pickable(games[gi], cell, band, used_sha1, game_plies[gi])
-        take_n = min(MAX_PER_GAME - game_used[gi], limit, len(positions))
+        positions = _pickable(games[gi], cell, band, used_sha1, game_plies[gi],
+                              alloc.min_ply_gap)
+        take_n = min(alloc.max_per_game - game_used[gi], limit, len(positions))
         return _choose_positions_v2(positions, take_n, side_count[split],
-                                    MIN_PLY_GAP)
+                                    alloc.min_ply_gap)
 
     def take(gi, cell, split, band, limit) -> int:
         """COMMIT up to `limit` of game `gi`'s rows for `cell` (band-restricted when
@@ -1071,8 +1075,8 @@ def _select_manifest(games: Mapping[Any, List[dict]],
             take(best_gi, cell, split, band, best_limit)
 
     for split in SPLITS:
-        for cell in CELL_ORDER_V2:
-            quota = SPLIT_ALLOC_V2[cell][split]
+        for cell in alloc.cell_order:
+            quota = alloc.allocation[cell][split]
             cand_games = sorted(
                 gi for gi in games
                 if split_of.get(gi) == split and cell in profile[gi])
@@ -1089,7 +1093,7 @@ def _select_manifest(games: Mapping[Any, List[dict]],
             # too: a floor band is exactly where same-side-only games cluster (a
             # game's b300_399 red can be `target` while its black is `control`).
             if cell == LATE_TARGET_CELL:
-                for band, floor in LATE_TARGET_FLOORS.items():
+                for band, floor in alloc.band_minima_total.items():
                     def floor_budget(_band=band, _floor=floor, _ord=ordinary_budget):
                         return min(_floor - floor_count[_band], _ord())
                     fill(cand_games, cell, split, band, floor_budget)
@@ -1110,7 +1114,7 @@ def _select_manifest(games: Mapping[Any, List[dict]],
     late_band_counts: Counter = Counter(
         r["band"] for r in selected
         if (r["role"], r["phase"]) == LATE_TARGET_CELL)
-    for band, floor in LATE_TARGET_FLOORS.items():
+    for band, floor in alloc.band_minima_total.items():
         if late_band_counts[band] < floor:
             raise ValueError(
                 f"late-target coverage floor unmet: band {band} has "
@@ -1134,11 +1138,11 @@ def _select_manifest(games: Mapping[Any, List[dict]],
         side_actual[r["split"]][r["side"]] += 1
     for split in SPLITS:
         red, black = side_actual[split]["red"], side_actual[split]["black"]
-        if abs(red - black) > SIDE_TOL:
+        if abs(red - black) > alloc.side_tol:
             raise ValueError(
                 f"per-split side balance violated: split {split} has red {red} / "
-                f"black {black} (|red - black| = {abs(red - black)} > SIDE_TOL "
-                f"{SIDE_TOL}); the pool can only fill a cell with same-side rows")
+                f"black {black} (|red - black| = {abs(red - black)} > side_tol "
+                f"{alloc.side_tol}); the pool can only fill a cell with same-side rows")
 
     # Counted per (role, phase, split) FROM THE SELECTED ROWS so cell_counts is an
     # INDEPENDENT composition witness, not a re-emission of the SPLIT_ALLOC_V2
@@ -1152,7 +1156,7 @@ def _select_manifest(games: Mapping[Any, List[dict]],
         "n_rows": len(selected),
         "cell_counts": {
             f"{role}|{phase}|{split}": cell_counts_actual[(role, phase, split)]
-            for (role, phase) in SPLIT_ALLOC_V2 for split in SPLITS},
+            for (role, phase) in alloc.allocation for split in SPLITS},
         # The side WITNESS: recomputed from the selected rows and already VERIFIED
         # against SIDE_TOL above -- a real witness, not a report of the running
         # steering counter.
@@ -1186,7 +1190,9 @@ def _games_and_profile(kept: List[dict]) -> Tuple[Dict[Any, List[dict]],
     return games, profile
 
 
-def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
+def sample_v2_rows(kept: List[dict], *, seed: int,
+                   alloc: Optional["AllocationProfile"] = None
+                   ) -> Tuple[List[dict], dict]:
     """Sample the frozen 240-row v2 dev corpus from the screen's KEPT rows.
 
     (1) Build each game's (role, phase) contribution profile. (2) Run the two
@@ -1217,21 +1223,22 @@ def sample_v2_rows(kept: List[dict], *, seed: int) -> Tuple[List[dict], dict]:
     Returns (rows, stats); each returned row is a COPY of its input row stamped with
     `split`. `stats["assignment_attempt"]` records which ordering won.
     """
+    alloc = alloc if alloc is not None else AllocationProfile.legacy()
     games, profile = _games_and_profile(kept)
 
     # GENUINE infeasibility -- assignment-independent, so raise now and never retry.
-    _capacity_precheck(profile)
+    _capacity_precheck(profile, alloc=alloc)
 
     last_error: Optional[ValueError] = None
     for attempt in range(ASSIGN_ATTEMPTS):
-        split_of = _greedy_assign_v2(profile, seed, attempt)
+        split_of = _greedy_assign_v2(profile, seed, attempt, alloc)
         if split_of is None:
             last_error = ValueError(
                 f"assign_split_v2: ordering {attempt} did not satisfy the split "
                 f"quotas")
             continue
         try:
-            rows, stats = _select_manifest(games, profile, split_of)
+            rows, stats = _select_manifest(games, profile, split_of, alloc)
         except ValueError as exc:
             last_error = exc          # this ORDERING failed -- try the next one
             continue
@@ -3091,7 +3098,8 @@ def validate_screen_rows_against_meta(screen_rows: List[dict],
 # STAGE 2 of the two-stage feasibility split: the post-screen qualification
 # ---------------------------------------------------------------------------
 
-def post_screen_qualification(kept_rows: List[dict]) -> None:
+def post_screen_qualification(kept_rows: List[dict],
+                              alloc: Optional["AllocationProfile"] = None) -> None:
     """Prove -- raise on failure -- that the screen's KEPT rows can satisfy BOTH the
     exact `SPLIT_ALLOC_V2` ROLE counts (45 target / 15 control per phase) and the
     hard `LATE_TARGET_FLOORS` (>=12 late-TARGET b300_399, >=12 late-TARGET
@@ -3127,29 +3135,30 @@ def post_screen_qualification(kept_rows: List[dict]) -> None:
     any of its other cells. Both merely make this bound looser than the truth --
     which is precisely why the sampler re-verifies the floors on the SELECTED rows.
     """
+    alloc = alloc if alloc is not None else AllocationProfile.legacy()
     _games, profile = _games_and_profile(kept_rows)
 
-    # (1) ROLE feasibility -- the exact SPLIT_ALLOC_V2 (role, phase) counts. These
+    # (1) ROLE feasibility -- the exact allocation (role, phase) counts. These
     # are the SAME two true upper bounds the sampler prechecks (per-cell capacity +
-    # the GLOBAL <=MAX_PER_GAME corpus bound), run here under this stage's own name.
-    _capacity_precheck(profile, where="post_screen_qualification")
+    # the GLOBAL <=max_per_game corpus bound), run here under this stage's own name.
+    _capacity_precheck(profile, where="post_screen_qualification", alloc=alloc)
 
     # (2) LATE-TARGET FLOOR feasibility -- the role-DEPENDENT half, which no
     # role-agnostic accounting (and hence no geometric preflight) can express.
     floor_rows: Dict[Any, Counter] = defaultdict(Counter)
     for r in kept_rows:
-        if (r["role"], r["phase"]) == LATE_TARGET_CELL and r["band"] in LATE_TARGET_FLOORS:
+        if (r["role"], r["phase"]) == LATE_TARGET_CELL and r["band"] in alloc.band_minima_total:
             floor_rows[r["game_idx"]][r["band"]] += 1
 
-    for band, floor in LATE_TARGET_FLOORS.items():
-        realizable = sum(min(cnt[band], MAX_PER_GAME) for cnt in floor_rows.values())
+    for band, floor in alloc.band_minima_total.items():
+        realizable = sum(min(cnt[band], alloc.max_per_game) for cnt in floor_rows.values())
         if realizable < floor:
             n_games = sum(1 for cnt in floor_rows.values() if cnt[band])
             raise ValueError(
                 f"post_screen_qualification: late-TARGET coverage floor for band "
                 f"{band} is UNMEETABLE -- the screen's kept rows realize at most "
                 f"{realizable} such row(s) (from {n_games} game(s), at "
-                f"<={MAX_PER_GAME}/game) against the required {floor}. The "
+                f"<={alloc.max_per_game}/game) against the required {floor}. The "
                 f"role-AGNOSTIC geometric preflight cannot see this: the source may "
                 f"hold ample {LATE_PHASE}/{band} CANDIDATES while too few of them "
                 f"classify as `target` (design Sec 1.7, STAGE 2).")
@@ -3414,10 +3423,12 @@ def select_final_manifest(screen_meta: Mapping[str, Any], config: V2Config, *,
             f"the wrong set (or, when empty, against nothing at all) while the "
             f"manifest's meta still recorded it as evidence.")
 
-    kept = kept_rows_from_screen(screen_rows)
-    post_screen_qualification(kept)
+    alloc = profile_for(config)
 
-    selected, stats = sample_v2_rows(kept, seed=config.selection_seed)
+    kept = kept_rows_from_screen(screen_rows)
+    post_screen_qualification(kept, alloc=alloc)
+
+    selected, stats = sample_v2_rows(kept, seed=config.selection_seed, alloc=alloc)
 
     rows = [_manifest_row_v2(r) for r in selected]
     assert_disjoint([r["canonical_position_sha1"] for r in rows], forbidden)
@@ -3434,6 +3445,10 @@ def select_final_manifest(screen_meta: Mapping[str, Any], config: V2Config, *,
     stats["screen_rows_cross_checked"] = True
     stats["n_forbidden_hashes"] = len(forbidden)
     stats["verified_screen_provenance"] = verified
+    # Schema 2 ONLY -- schema-1 artifact bytes must not change (Task 0 goldens).
+    if config.config_schema_version >= 2:
+        stats["allocation_profile"] = alloc.fingerprint()
+        stats["run_kind"] = alloc.run_kind
     return rows, stats
 
 

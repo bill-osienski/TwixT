@@ -374,3 +374,92 @@ def test_global_capacity_message_names_the_profile_field_for_schema2():
     legacy_failures = v2._capacity_shortfalls(games_profile, v2.AllocationProfile.legacy())
     legacy_message = " ".join(legacy_failures)
     assert "<=MAX_PER_GAME (" in legacy_message
+
+
+# ---------------------------------------------------------------------------
+# Task 4: alloc threaded through greedy/sampler/qualification/select.
+# ---------------------------------------------------------------------------
+
+def make_feasible_120_pool():
+    """A pool the PRODUCTION profile can exactly fill: 70 late-target pair
+    games (bands 14/28/28) + 40 control pair-games per phase. Pairs are
+    side-opposed, >=12 plies apart, and BAND-CONSISTENT with their own plies
+    (n_legal = 528 - ply stays inside the pair's band). Deliberately more
+    generous than the real screen (2 b400 rows/game) -- real-scarcity
+    tightness is exercised by the faithful gate-fail fixture and the Task 14
+    run against the actual screen."""
+    BAND_PAIR_PLIES = {"b400_plus": (100, 114), "b300_399": (150, 164),
+                       "b200_299": (240, 254)}
+    rows = []
+    gi = 0
+    for band in (["b400_plus"] * 14 + ["b300_399"] * 28 + ["b200_299"] * 28):
+        p0, p1 = BAND_PAIR_PLIES[band]
+        rows.append(_kept_row(gi, p0, "red", "late", band, "target"))
+        rows.append(_kept_row(gi, p1, "black", "late", band, "target"))
+        gi += 1
+    for phase, base_ply in (("opening", 2), ("early_mid", 20),
+                            ("midgame", 50), ("late", 95)):
+        for _ in range(40):
+            rows.append(_kept_row(gi, base_ply, "red", phase, "b400_plus",
+                                  "control"))
+            rows.append(_kept_row(gi, base_ply + 12, "black", phase,
+                                  "b400_plus", "control"))
+            gi += 1
+    return rows
+
+
+def _production_alloc():
+    return v2.parse_allocation_profile(PRODUCTION_PROFILE_RAW, source="test")
+
+
+def test_sampler_fills_the_production_profile_exactly():
+    rows, stats = v2.sample_v2_rows(make_feasible_120_pool(), seed=11,
+                                    alloc=_production_alloc())
+    assert stats["n_rows"] == 120
+    assert stats["cell_counts"]["target|late|tuning"] == 40
+    assert stats["cell_counts"]["target|late|frozen_check"] == 20
+    assert stats["cell_counts"]["control|opening|tuning"] == 10
+    splits = Counter(r["split"] for r in rows)
+    assert splits == {"tuning": 80, "frozen_check": 40}
+    roles = Counter(r["role"] for r in rows)
+    assert roles == {"target": 60, "control": 60}
+    # Whole-game split isolation, global <=2/game, >=12-ply gap, no dup hashes.
+    split_by_game, plies_by_game = {}, {}
+    for r in rows:
+        assert split_by_game.setdefault(r["game_idx"], r["split"]) == r["split"]
+        plies_by_game.setdefault(r["game_idx"], []).append(r["ply"])
+    for plies in plies_by_game.values():
+        assert len(plies) <= 2
+        if len(plies) == 2:
+            assert abs(plies[0] - plies[1]) >= 12
+    hashes = [r["canonical_sha1"] for r in rows]
+    assert len(hashes) == len(set(hashes))
+
+
+def test_sampler_is_deterministic_for_a_profile():
+    a = v2.sample_v2_rows(make_feasible_120_pool(), seed=11,
+                          alloc=_production_alloc())
+    b = v2.sample_v2_rows(make_feasible_120_pool(), seed=11,
+                          alloc=_production_alloc())
+    assert a == b
+
+
+def test_mutating_module_constants_cannot_change_a_schema2_result(monkeypatch):
+    alloc = _production_alloc()
+    before = v2.sample_v2_rows(make_feasible_120_pool(), seed=11, alloc=alloc)
+    monkeypatch.setattr(v2, "CORPUS_SIZE", 999)
+    monkeypatch.setattr(v2, "MAX_PER_GAME", 1)
+    monkeypatch.setattr(v2, "MIN_PLY_GAP", 100)
+    monkeypatch.setattr(v2, "SIDE_TOL", 0)
+    monkeypatch.setattr(v2, "SPLIT_ALLOC_V2",
+                        {("target", "opening"): {"tuning": 1,
+                                                 "frozen_check": 1}})
+    after = v2.sample_v2_rows(make_feasible_120_pool(), seed=11, alloc=alloc)
+    assert after == before
+
+
+def test_qualification_raise_matches_report_verdict():
+    fixture = make_gate_fail_fixture()
+    with pytest.raises(ValueError, match="target.*opening"):
+        v2.post_screen_qualification(fixture)          # legacy default
+    v2.post_screen_qualification(fixture, alloc=_production_alloc())  # no raise
