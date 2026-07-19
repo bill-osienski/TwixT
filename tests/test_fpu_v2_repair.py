@@ -933,3 +933,40 @@ def test_sizing_core_universe_includes_zero_yield_games():
         small["success_rate"] == 0.0)
     assert a["cannot_certify_beyond"] == 250
     assert a["method"] == "finite-reservoir whole-game subsampling"
+
+
+# ---------------------------------------------------------------------------
+# Task 12 fix: the Sec 5 re-derive + byte-compare tamper check
+# (`assert_config_byte_equals_rederivation`) must reconstruct the SAME key set
+# `derive_config` emits, including the seven schema-2-only fields -- otherwise
+# EVERY schema-2 config fails precheck and the whole v2 screen/select path is
+# unreachable. Fixture pattern from Task 8's own tests (`_v2_protocol_params` +
+# `_conformant_reservoir` -> real `derive_config`).
+# ---------------------------------------------------------------------------
+
+def test_bytecompare_passes_on_honest_schema2_config():
+    """An honest schema-2 config (real `derive_config` on a v2 protocol)
+    byte-equals its own re-derivation -- the 7 schema-2 fields are compared,
+    not dropped. RED before the fix (they were absent from the reconstruction
+    and flagged as differing)."""
+    from types import SimpleNamespace
+    _, measurements = _conformant_reservoir()
+    protocol = proto.build_protocol(_v2_protocol_params())
+    recomputed = proto.derive_config(protocol, measurements, protocol_path="p.json")
+    config = SimpleNamespace(**recomputed)   # duck-typed supplied config
+    proto.assert_config_byte_equals_rederivation(config, recomputed)   # no raise
+
+
+def test_bytecompare_flags_tampered_schema2_only_field():
+    """Mutating a schema-2-ONLY field (`corpus_size`) on the supplied side is
+    caught, naming the key -- proves the fix did not open a hole for the very
+    fields it started comparing."""
+    from types import SimpleNamespace
+    _, measurements = _conformant_reservoir()
+    protocol = proto.build_protocol(_v2_protocol_params())
+    recomputed = proto.derive_config(protocol, measurements, protocol_path="p.json")
+    tampered = dict(recomputed)
+    tampered["corpus_size"] = recomputed["corpus_size"] + 1
+    config = SimpleNamespace(**tampered)
+    with pytest.raises(ValueError, match="corpus_size"):
+        proto.assert_config_byte_equals_rederivation(config, recomputed)

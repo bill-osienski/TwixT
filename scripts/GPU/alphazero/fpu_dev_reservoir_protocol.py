@@ -598,7 +598,11 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 from . import fpu_provenance
 from .fpu_dev_corpus_v2 import (
     PROFILE_RUN_KINDS,
-    _V2_CONFIG_REQUIRED_KEYS,
+    # Retained in the import surface (pinned by tests/test_fpu_dev_reservoir_
+    # protocol.py::test_module_imports_only_pure_names_from_fpu_dev_corpus_v2
+    # and referenced throughout this module's prose); the byte-compare
+    # reconstruction now drives its key set from the re-derivation itself.
+    _V2_CONFIG_REQUIRED_KEYS,  # noqa: F401
     _V2_CORPUS_SOURCES,
     enumerate_v2_proposals,
     parse_allocation_profile,
@@ -2672,11 +2676,20 @@ def assert_config_byte_equals_rederivation(
     that carries NO hash of its own (`selection_seed`, `select_out`, a floor,
     ...), which a per-identity `expected_fingerprints` hash recheck structurally
     cannot see. Pure: no I/O (the caller supplies `recomputed_config`, e.g. from
-    `measure_and_rederive_config`). `config` is duck-typed (reads only the
-    `_V2_CONFIG_REQUIRED_KEYS` attrs + `eval_batch_size`/`stall_flush_sims`)."""
-    supplied_config = {key: getattr(config, key) for key in _V2_CONFIG_REQUIRED_KEYS}
-    supplied_config["eval_batch_size"] = config.eval_batch_size
-    supplied_config["stall_flush_sims"] = config.stall_flush_sims
+    `measure_and_rederive_config`). `config` is duck-typed: it reads exactly
+    the keys the AUTHORITATIVE re-derivation emits (`getattr(config, key) for
+    key in recomputed_config`), so the reconstruction is schema-aware for free
+    -- a schema-1 `recomputed_config` reads the same 17+2 attrs the old fixed
+    list did (byte-identical), while a schema-2 one ALSO reads the seven
+    schema-2 fields `derive_config` adds (`run_kind`, `corpus_size`, ...);
+    without that, every schema-2 config spuriously "differs" on those seven and
+    the whole v2 screen/select precheck is unreachable. Driving the key set from
+    the re-derivation (not from the supplied config's self-declared version)
+    also keeps tamper detection complete: `config_schema_version` is itself one
+    of the compared keys, so a config that lies about its schema is caught, and
+    `V2Config` (a frozen dataclass) can carry no field outside this set. A
+    supplied config missing a re-derived attr fails loud (`AttributeError`)."""
+    supplied_config = {key: getattr(config, key) for key in recomputed_config}
     if canonical_json_bytes(supplied_config) != canonical_json_bytes(recomputed_config):
         # Diff PER KEY on canonical JSON -- the SAME type-insensitive normalization
         # the pass/fail decision above uses -- NOT raw `!=`. `V2Config` stores
