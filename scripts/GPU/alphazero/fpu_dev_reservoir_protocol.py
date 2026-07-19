@@ -2935,9 +2935,14 @@ def _parse_args(argv: Optional[List[str]]) -> argparse.Namespace:
 # `qualify`'s one status print's exit-code -> label lookup -- purely
 # cosmetic (no test asserts on this wording, only on the returned exit code
 # and on-disk state): `.get(status, status)` at the call site keeps this
-# total even for a status somehow outside this table.
+# total even for a status somehow outside this table. EXIT_OK's label is
+# deliberately NOT "OK"/"PASS" alone (spec Sec 2 correction): reservoir
+# qualification and the geometric preflight are role-agnostic -- only the
+# screen later learns roles -- so the operator-facing line must not read as
+# if the whole pipeline is qualified.
 _EXIT_STATUS_LABELS: Dict[int, str] = {
-    EXIT_OK: "OK",
+    EXIT_OK: ("reservoir geometry qualified; raw-policy role and anchor "
+              "qualification remain pending"),
     EXIT_MISMATCH: "MISMATCH",
     EXIT_GATE_FAIL: "GATE_FAIL",
     EXIT_USAGE: "USAGE (already PASSED -- re-run with --check to review)",

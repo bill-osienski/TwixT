@@ -34,6 +34,14 @@ Below this section, in order:
     else), so it lives in the operator shell only because it is an operator
     ENTRY POINT, never because it is impure. `screen` and `select` are NEVER
     the same invocation.
+  Role-feasibility repair plan (2026-07-18): a PURE `post-screen-qualify`
+    stage (`main --mode post-screen-qualify`) writes the immutable
+    PASS/GATE_FAIL `post_screen_qualification_report` that `select` then
+    requires -- an exact-selector witness, not capacity bounds alone. Two
+    further pure, authenticated discovery modes -- `analyze-screen-feasibility`
+    and `sizing-analysis` -- run the same qualifier/selector against an
+    already-qualified screen as `discovery_only` evidence; see
+    `docs/fpu-v2-repair-operator-guide.md` for the full five-mode pipeline.
 Keep this section cleanly separated and importable without ever triggering a
 GPU/MLX import -- any future heavy import goes lazily inside the Task-5
 operator functions, exactly as build_fpu_dev_corpus.py's own `main` /
@@ -3954,8 +3962,10 @@ def write_select_csv(rows: List[dict], out_csv: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# CLI (design Sec 1.8: `--config` is required, no default). `--mode` is
-# `("screen", "select")`, and `screen` and `select` are NEVER the same
+# CLI (design Sec 1.8: `--config` is required, no default). `--mode` is one of
+# FIVE: `"screen"`, `"select"`, `"post-screen-qualify"` (role-feasibility
+# repair plan), `"analyze-screen-feasibility"` and `"sizing-analysis"` (repair
+# plan discovery modes). `screen` and `select` are NEVER the same
 # invocation -- `--screen` (the PERSISTED screen artifact `select` re-reads) is
 # REQUIRED by `select` and REJECTED by `screen`, which also stops an operator
 # mistaking it for naming the screen's OUTPUT (that is `config.screen_out`).
@@ -3979,7 +3989,12 @@ def _parse_v2_args(argv):
                     "early. `select` (PURE; no evaluator) hard-matches the "
                     "persisted screen's identities, qualifies its kept rows "
                     "and deterministically selects the final manifest. "
-                    "screen and select are NEVER the same invocation.")
+                    "screen and select are NEVER the same invocation. "
+                    "post-screen-qualify (PURE) writes the immutable "
+                    "PASS/GATE_FAIL report select requires. "
+                    "analyze-screen-feasibility and sizing-analysis (PURE, "
+                    "discovery_only) run the same qualifier/selector against "
+                    "an already-qualified screen for a fresh --profile-json.")
     ap.add_argument("--mode", required=True,
                     choices=("screen", "select", "post-screen-qualify",
                              "analyze-screen-feasibility", "sizing-analysis"),
