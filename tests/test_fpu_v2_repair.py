@@ -514,3 +514,63 @@ def test_legacy_profile_selection_is_unchanged_by_the_split_minima_code():
     assert (v2.sample_v2_rows(pool, seed=3) ==
             v2.sample_v2_rows(pool, seed=3,
                               alloc=v2.AllocationProfile.legacy()))
+
+
+# ---------------------------------------------------------------------------
+# Task 6: per-phase geometric preflight quotas (non-uniform, odd-safe).
+# ---------------------------------------------------------------------------
+
+def _pair_proposals(gi, phase, ply, band):
+    cell = (phase, None) if phase != "late" else ("late", band)
+    return [
+        {"game_idx": gi, "ply": ply, "side": "red", "phase": phase,
+         "n_legal": 528 - ply, "band": band, "proposal_cell": cell},
+        {"game_idx": gi, "ply": ply + 12, "side": "black", "phase": phase,
+         "n_legal": 528 - ply - 12, "band": band, "proposal_cell": cell},
+    ]
+
+
+def make_production_geometry():
+    """Whole-pair candidate geometry ample for quotas 15/15/15/75 + the
+    candidate floors 8/12/12."""
+    by_game, gi = {}, 0
+    for phase, ply in (("opening", 2), ("early_mid", 20), ("midgame", 50)):
+        for _ in range(12):                       # 12 pairs = 24 >= 15
+            by_game[gi] = _pair_proposals(gi, phase, ply, "b400_plus"); gi += 1
+    for band, n in (("b400_plus", 10), ("b300_399", 20), ("b200_299", 20)):
+        for _ in range(n):                        # 50 pairs = 100 >= 75
+            by_game[gi] = _pair_proposals(gi, "late", 100, band); gi += 1
+    return by_game
+
+
+def test_preflight_accepts_per_phase_quota_mapping():
+    alloc = _production_alloc()
+    report = v2.v2_geometry_feasibility(
+        make_production_geometry(),
+        quota_per_phase=alloc.quota_by_phase,
+        late_candidate_floors=alloc.band_minima_total,
+        max_per_game=alloc.max_per_game, min_gap=alloc.min_ply_gap,
+        side_tol=alloc.side_tol,
+        split_totals=alloc.split_totals)
+    assert report.feasible, report.binding_constraint
+    assert report.quota_per_phase == alloc.quota_by_phase
+
+
+def test_preflight_names_the_starved_phase_under_a_mapping():
+    geometry = {gi: rows for gi, rows in make_production_geometry().items()
+                if rows[0]["phase"] != "opening"}
+    alloc = _production_alloc()
+    report = v2.v2_geometry_feasibility(
+        geometry, quota_per_phase=alloc.quota_by_phase,
+        late_candidate_floors=alloc.band_minima_total,
+        split_totals=alloc.split_totals)
+    assert not report.feasible
+    assert "opening" in report.binding_constraint
+
+
+def test_scalar_quota_legacy_path_unchanged():
+    # The existing suite's own preflight fixtures keep passing untouched --
+    # this is just the direct scalar-call sanity check on the new signature.
+    geometry = make_production_geometry()
+    report = v2.v2_geometry_feasibility(geometry, quota_per_phase=24)
+    assert report.quota_per_phase == {p: 24 for p in v2.PHASES}

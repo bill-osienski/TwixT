@@ -78,7 +78,7 @@ import json
 import random
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple, Union
 
 # Deliberately-shared v1 frozen constants (identical semantics in v2):
 # MIN_PLY_GAP = the >=12-ply side-opposed-pair gap; MAX_PER_GAME = the <=2
@@ -1441,7 +1441,7 @@ class V2PreflightReport:
     """
     feasible: bool
     binding_constraint: Optional[str]
-    quota_per_phase: int
+    quota_per_phase: Dict[str, int]              # per-phase CANDIDATE demand
     late_candidate_floors: Dict[str, int]        # role-AGNOSTIC candidate floors
     n_games: int
     n_proposals: int
@@ -1495,11 +1495,12 @@ def _opposed_pair(rows: List[dict], gap: int):
     return _first_gap_pair(reds, blacks, gap)
 
 
-def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
-                      late_candidate_floors, max_per_game, min_gap, side_tol):
+def _build_v2_witness(proposals_by_game, phases, quota_by_phase,
+                      late_candidate_floors, max_per_game, min_gap, side_tol,
+                      split_totals):
     """Constructive witness (v1's `_build_witness`, re-cut for phase cells).
 
-    Greedily select `quota_per_phase` positions per phase as whole-game red+black
+    Greedily select `quota_by_phase[phase]` positions per phase as whole-game red+black
     PAIRS, honouring the JOINT constraints a per-phase accounting cannot see:
 
       * GLOBAL <=max_per_game/game -- a game consumed for a pair in ANY phase is
@@ -1526,7 +1527,7 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
     infeasibility. It is still exactly the brief's witness: the floor pairs are taken
     BEFORE the remainder is filled from any late cell.
 
-    PASS 2 fills each phase to its `quota_per_phase // PAIR_POSITIONS` pair-games, in
+    PASS 2 fills each phase to its `ceil(quota_by_phase[phase] / PAIR_POSITIONS)` pair-games, in
     `phases` order, from the games PASS 1 left. The late phase's pass counts the floor
     pairs PASS 1 already claimed for it, and draws its remainder from the phase's whole
     candidate set (any late cell) -- which is exactly what the real sampler's
@@ -1567,7 +1568,10 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
     selected: List[dict] = []
     selected_games_in_order: List[Any] = []
     got_pairs: Counter = Counter()                 # pair-games claimed FOR each phase
-    pairs_per_phase = quota_per_phase // PAIR_POSITIONS
+    # CEIL pairs per phase: an odd quota (e.g. late=75) needs a whole final pair, so
+    # over-reserve by <=1 row (strictly conservative). Even quotas: ceil == floor, so
+    # this is byte-identical to the legacy `quota // PAIR_POSITIONS`.
+    pairs_per_phase = {p: -(-quota_by_phase[p] // PAIR_POSITIONS) for p in phases}
 
     def claim(gi, pair, phase) -> None:
         used_games.add(gi)                         # spent GLOBALLY, across all phases
@@ -1611,12 +1615,12 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
 
     # --- PASS 2: fill each phase to its pair quota from the games PASS 1 left.
     for phase in phases:
-        want = pairs_per_phase - got_pairs[phase]
+        want = pairs_per_phase[phase] - got_pairs[phase]
         draw(per_game_phase, phase, phase, want)
-        if got_pairs[phase] < pairs_per_phase:
+        if got_pairs[phase] < pairs_per_phase[phase]:
             return None, (
                 f"joint-phase-quota:{phase} (witness realized "
-                f"{got_pairs[phase] * PAIR_POSITIONS} < {quota_per_phase} positions "
+                f"{got_pairs[phase] * PAIR_POSITIONS} < {quota_by_phase[phase]} positions "
                 f"under the JOINT per-game cap (<={max_per_game}/game) + "
                 f">={min_gap}-gap constraints; "
                 f"{len(proposals_by_game) - len(used_games)} of "
@@ -1642,13 +1646,18 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
         n = len(rows_by_game[gi])
         placed = False
         for split in SPLITS:
-            if filled[split] + n <= SPLIT_TOTALS[split]:
+            if filled[split] + n <= split_totals[split]:
                 split_of[gi] = split
                 filled[split] += n
                 placed = True
                 break
-        if not placed:                             # no split has room (over-selection)
-            return None, "split-budget:overflow (no split had room for a game)"
+        if not placed:
+            # Ceil pair-counts can legitimately over-select by <=1 row/phase, so no
+            # split having exact room is NOT infeasibility -- place the game in the
+            # split with the LARGEST remaining need (coverage is verified below).
+            best = max(SPLITS, key=lambda s: split_totals[s] - filled[s])
+            split_of[gi] = best
+            filled[best] += n
     for row in selected:
         row["split"] = split_of[row["game_idx"]]
 
@@ -1661,9 +1670,12 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
         side[row["split"]][row["side"]] += 1
         per_split_pos[row["split"]] += 1
     for split in SPLITS:
-        if per_split_pos[split] != SPLIT_TOTALS[split]:
+        # COVERAGE, not equality: ceil over-selection can push a split ABOVE its exact
+        # total, so a realized count must merely MEET the budget. For even/tiling legacy
+        # quotas over-selection never occurs, so `>=` passes exactly where `==` did.
+        if per_split_pos[split] < split_totals[split]:
             return None, (f"split-budget:{split} (realized {per_split_pos[split]} "
-                          f"!= {SPLIT_TOTALS[split]})")
+                          f"< {split_totals[split]})")
         imbalance = abs(side[split]["red"] - side[split]["black"])
         if imbalance > side_tol:
             return None, (f"side-balance:{split} (|red-black|={imbalance} "
@@ -1673,11 +1685,12 @@ def _build_v2_witness(proposals_by_game, phases, quota_per_phase,
 
 def v2_geometry_feasibility(
         proposals_by_game: Mapping[Any, List[Mapping[str, Any]]], *,
-        quota_per_phase: int = QUOTA_PER_PHASE,
+        quota_per_phase: Union[int, Mapping[str, int]] = QUOTA_PER_PHASE,
         late_candidate_floors: Mapping[str, int] = LATE_TARGET_FLOORS,
         max_per_game: int = MAX_PER_GAME,
         min_gap: int = MIN_PLY_GAP,
         side_tol: int = SIDE_TOL,
+        split_totals: Optional[Mapping[str, int]] = None,
         phases: Tuple[str, ...] = PHASES) -> V2PreflightReport:
     """Pure JOINT geometric feasibility core -- STAGE 1 of the two-stage split
     (design Sec 1.7). ROLE-AGNOSTIC; see this section's header for the full scope and
@@ -1692,6 +1705,17 @@ def v2_geometry_feasibility(
     constructive `_build_v2_witness` that GOVERNS feasible=True. Deterministic (sorted
     iteration throughout).
     """
+    # Normalize the quota to a per-phase mapping (a scalar means the SAME quota for
+    # every phase -- the uniform legacy shape) and resolve the split budgets to a
+    # concrete map (default = the frozen SPLIT_TOTALS). Both are the ONLY places below
+    # that read a phase quota or a split budget, so every downstream use is per-phase.
+    quota_by_phase: Dict[str, int] = (
+        {p: int(quota_per_phase.get(p, 0)) for p in phases}
+        if isinstance(quota_per_phase, Mapping)
+        else {p: int(quota_per_phase) for p in phases})
+    split_totals = dict(split_totals) if split_totals is not None \
+        else dict(SPLIT_TOTALS)
+
     # The late floors only mean anything while the late PHASE is in scope. Resolve the
     # EFFECTIVE floors ONCE, here, so the pre-screen checks below and the witness's own
     # PASS-1 reservation can never disagree about whether they apply. (`phases` is a
@@ -1744,7 +1768,7 @@ def v2_geometry_feasibility(
     def _report(feasible, binding, witness):
         return V2PreflightReport(
             feasible=feasible, binding_constraint=binding,
-            quota_per_phase=quota_per_phase,
+            quota_per_phase=dict(quota_by_phase),
             late_candidate_floors=dict(late_floors),
             n_games=len(proposals_by_game), n_proposals=n_proposals,
             realizable_by_phase=dict(realizable),
@@ -1761,9 +1785,9 @@ def v2_geometry_feasibility(
     # (1) CAPACITY -- TRUE UPPER BOUNDS on what any selection could realize, so
     # falling short of one genuinely PROVES infeasibility.
     for phase in phases:
-        if realizable[phase] < quota_per_phase:
+        if realizable[phase] < quota_by_phase[phase]:
             return _report(False, f"phase-capacity:{phase} (realizable "
-                           f"{realizable[phase]} < quota {quota_per_phase})", None)
+                           f"{realizable[phase]} < quota {quota_by_phase[phase]})", None)
     for band, floor in late_floors.items():
         if late_realizable.get(band, 0) < floor:
             return _report(False, f"late-candidate:{LATE_PHASE}/{band} (realizable "
@@ -1779,10 +1803,11 @@ def v2_geometry_feasibility(
     # same-side rows drawn from different phases), in which case refusing it is a
     # FALSE-INFEASIBLE: conservative, never a false pass. See the header.
     for phase in phases:
-        if pair_games[phase] * PAIR_POSITIONS < quota_per_phase:
+        want_pairs = -(-quota_by_phase[phase] // PAIR_POSITIONS)   # ceil
+        if pair_games[phase] < want_pairs:
             return _report(False, f"side-aliasing:{phase} (both-side pair-games "
                            f"{pair_games[phase]} < "
-                           f"{quota_per_phase // PAIR_POSITIONS} the pair-based "
+                           f"{want_pairs} the pair-based "
                            f"witness needs; conservative -- bounds the WITNESS "
                            f"STRATEGY, not feasibility)", None)
     for band, floor in late_floors.items():
@@ -1796,14 +1821,16 @@ def v2_geometry_feasibility(
 
     # --- The constructive WITNESS GOVERNS feasible=True (pre-screen != sufficient).
     witness, binding = _build_v2_witness(
-        proposals_by_game, phases, quota_per_phase, late_floors,
-        max_per_game, min_gap, side_tol)
+        proposals_by_game, phases, quota_by_phase, late_floors,
+        max_per_game, min_gap, side_tol, split_totals)
     if witness is None:
         return _report(False, binding, None)
     return _report(True, None, tuple(witness))
 
 
-def v2_preflight_source(records: List[Mapping[str, Any]]) -> V2PreflightReport:
+def v2_preflight_source(records: List[Mapping[str, Any]],
+                        alloc: Optional["AllocationProfile"] = None,
+                        ) -> V2PreflightReport:
     """I/O wrapper (the ONLY impure part of this module -- kept thin, mirroring v1's
     `preflight_source`, build_fpu_dev_corpus.py:785). Read each `rec["replay_path"]`,
     run the REAL `enumerate_v2_proposals` on it -- so the preflight can never drift
@@ -1820,7 +1847,14 @@ def v2_preflight_source(records: List[Mapping[str, Any]]) -> V2PreflightReport:
         replay = json.loads(Path(rec["replay_path"]).read_text())
         replay = {**replay, "game_idx": rec["game_idx"]}
         proposals_by_game[rec["game_idx"]] = enumerate_v2_proposals(replay)
-    return v2_geometry_feasibility(proposals_by_game)
+    if alloc is None:
+        return v2_geometry_feasibility(proposals_by_game)
+    return v2_geometry_feasibility(
+        proposals_by_game,
+        quota_per_phase=alloc.quota_by_phase,
+        late_candidate_floors=alloc.band_minima_total,
+        max_per_game=alloc.max_per_game, min_gap=alloc.min_ply_gap,
+        side_tol=alloc.side_tol, split_totals=alloc.split_totals)
 
 
 # =============================================================================
@@ -2458,7 +2492,7 @@ def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
         raise V2PrecheckFailed(str(exc)) from exc
 
     records = load_game_index(config.source_index_path)
-    report = v2_preflight_source(records)
+    report = v2_preflight_source(records, alloc=profile_for(config))
     if not report.feasible:
         raise V2PreflightInfeasible(
             f"run_screen: v2 geometric preflight INFEASIBLE -- binding "

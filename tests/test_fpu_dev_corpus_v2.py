@@ -1856,7 +1856,8 @@ def test_v2_feasible_geometry_returns_true_with_a_witness():
     assert report.feasible is True
     assert report.binding_constraint is None
     assert report.n_games == 120
-    assert report.quota_per_phase == QUOTA_PER_PHASE == 60
+    assert report.quota_per_phase == {p: QUOTA_PER_PHASE for p in PHASES} == {
+        p: 60 for p in PHASES}
 
     w = report.witness
     assert w is not None
