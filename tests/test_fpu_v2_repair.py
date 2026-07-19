@@ -847,3 +847,25 @@ def test_analyze_core_is_deterministic():
     b = v2._analyze_screen_kept(make_feasible_120_pool(),
                                 _production_alloc(), 20260718)
     assert a == b
+
+
+def test_load_analysis_profile_seed_happy_path_and_missing_key(tmp_path):
+    """Review fix: `_load_analysis_profile` is the guard-reachable seam
+    `analyze_screen_feasibility` extracted its profile-load+parse+seed-read
+    into. Happy path returns (alloc, seed); a profile JSON missing
+    `selection_seed` (NOT a `parse_allocation_profile` schema key -- the
+    protocol/qualify path legitimately parses profiles without one) must
+    raise a plain `ValueError`, not the `KeyError` that used to escape
+    `analyze_screen_feasibility` uncaught."""
+    with_seed = dict(PRODUCTION_PROFILE_RAW, selection_seed=20260718)
+    ok_path = tmp_path / "profile.json"
+    ok_path.write_text(json.dumps(with_seed))
+    alloc, seed = v2._load_analysis_profile(str(ok_path))
+    assert seed == 20260718
+    assert isinstance(alloc, v2.AllocationProfile)
+
+    no_seed = copy.deepcopy(PRODUCTION_PROFILE_RAW)   # never had one
+    bad_path = tmp_path / "no_seed_profile.json"
+    bad_path.write_text(json.dumps(no_seed))
+    with pytest.raises(ValueError, match="selection_seed"):
+        v2._load_analysis_profile(str(bad_path))

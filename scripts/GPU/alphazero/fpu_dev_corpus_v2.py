@@ -3481,6 +3481,23 @@ def _analyze_screen_kept(kept: List[dict], alloc: AllocationProfile,
     }
 
 
+def _load_analysis_profile(profile_json: str) -> Tuple[AllocationProfile, int]:
+    """Loads + parses the profile JSON and reads its `selection_seed`. Split
+    out of `analyze_screen_feasibility` (review fix) so a hand-authored
+    profile missing `selection_seed` -- NOT a `parse_allocation_profile`
+    schema key, since the protocol/qualify path legitimately parses profiles
+    without one -- raises a plain `ValueError` here instead of an uncaught
+    `KeyError` (a `LookupError`, not a `ValueError`, so it would otherwise
+    skip both the CLI wrapper's `except ValueError` and `main`'s handlers)."""
+    raw = json.loads(Path(profile_json).read_text())
+    alloc = parse_allocation_profile(raw, source=profile_json)
+    if "selection_seed" not in raw:
+        raise ValueError(
+            f"{profile_json}: profile JSON must carry an integer "
+            "selection_seed (the discovery selector's seed)")
+    return alloc, int(raw["selection_seed"])
+
+
 def analyze_screen_feasibility(config: V2Config, screen_csv_path: str,
                                profile_json: str) -> Dict[str, Any]:
     """Authenticated wrapper (review correction 2): prove the screen IS the
@@ -3496,10 +3513,9 @@ def analyze_screen_feasibility(config: V2Config, screen_csv_path: str,
     rederive_and_assert_config_unchanged(config)
     screen_rows = read_screen_csv(screen_csv_path)
     validate_screen_rows_against_meta(screen_rows, screen_meta)
-    raw = json.loads(Path(profile_json).read_text())
-    alloc = parse_allocation_profile(raw, source=profile_json)
+    alloc, selection_seed = _load_analysis_profile(profile_json)
     doc = _analyze_screen_kept(kept_rows_from_screen(screen_rows), alloc,
-                               int(raw["selection_seed"]))
+                               selection_seed)
     doc.update({
         "screen_csv": screen_csv_path,
         "screen_csv_sha1": fpu_provenance.file_sha1(screen_csv_path),
@@ -3972,7 +3988,9 @@ class V2AnalyzeScreenMismatch(ValueError):
     failed to prove the screen IS the qualified artifact its config and profile
     describe -- an identity/re-derive/rows-vs-meta mismatch (the SAME evidence
     chain `run_post_screen_qualify` runs), or a malformed profile JSON (a
-    `parse_allocation_profile` `ValueError`, or a non-numeric `selection_seed`).
+    `parse_allocation_profile` `ValueError`, a non-numeric `selection_seed`, or
+    `_load_analysis_profile`'s `ValueError` for a profile with no
+    `selection_seed` key at all).
     The SAME dedicated-subtype move `V2PostScreenReportMismatch`/
     `V2ConfigRederivationFailed` already make: `_analyze_screen_feasibility_cli`
     re-raises ONLY `analyze_screen_feasibility`'s plain `ValueError` as this
