@@ -29,15 +29,19 @@ import json
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from scripts.GPU.alphazero import build_teacher_calibration_manifest as btcm
 from scripts.GPU.alphazero import diagnose_fpu_policy_mass as diag
 from scripts.GPU.alphazero import fpu_dev_corpus_v2 as v2
 from scripts.GPU.alphazero import fpu_dev_reservoir_protocol as proto
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
 from tests.test_fpu_dev_corpus_v2 import _abundant_pool_v2
 from tests.test_fpu_dev_reservoir_protocol import (
-    _conformant_reservoir, _protocol_params, _write_precheckable_config)
+    _conformant_reservoir, _fake_preflight, _protocol_params,
+    _write_precheckable_config, _write_qualifiable_reservoir)
 
 GOLDEN_DIR = Path(__file__).parent / "goldens"
 
@@ -970,3 +974,179 @@ def test_bytecompare_flags_tampered_schema2_only_field():
     config = SimpleNamespace(**tampered)
     with pytest.raises(ValueError, match="corpus_size"):
         proto.assert_config_byte_equals_rederivation(config, recomputed)
+
+
+# ---------------------------------------------------------------------------
+# Task 12: zero-GPU schema-2 CLI integration on FABRICATED artifacts. The first
+# full traversal of the real screen -> post-screen-qualify -> select evidence
+# path; ONLY the two evaluator seams (`_build_v2_anchor_search_fn`,
+# `build_teacher_calibration_manifest._teacher_infer`) are faked. Every
+# artifact reader/writer/hash, config re-derivation, CLI route, precheck, the
+# geometric preflight, and the real sampler/selector all execute for real.
+#
+# Allocation = the Task-15 tooling_smoke SHAPE (corpus 18): target|late 4+2 and
+# control|{4 phases} 2+1 each, empty band minima. Chosen because it is
+# comfortably fillable by a small fabricated pool: 12 games x the 6 v2 proposal
+# cells is geometry-feasible (>=9 games suffice) AND the role-aware select gate
+# is satisfiable with sides balanced within every split (see `_fake_role_*`).
+# ---------------------------------------------------------------------------
+
+_SMOKE_PROFILE = {
+    "config_schema_version": 2,
+    "run_kind": "tooling_smoke",
+    "phase_allocation": {
+        "target|late":       {"tuning": 4, "frozen_check": 2},
+        "control|opening":   {"tuning": 2, "frozen_check": 1},
+        "control|early_mid": {"tuning": 2, "frozen_check": 1},
+        "control|midgame":   {"tuning": 2, "frozen_check": 1},
+        "control|late":      {"tuning": 2, "frozen_check": 1},
+    },
+    "late_floors": {},
+    "late_target_band_minima": {},
+    "max_per_game": 2, "min_ply_gap": 12, "side_tol": 2, "corpus_size": 18,
+}
+
+_SMOKE_GAMES = 12   # >=9 for feasibility; 12 gives slack after opening collisions
+
+
+def _legal_game_moves(n_plies, game_idx, *, board_size=24):
+    """A reconstruction-valid legal TwixtState game prefix (like
+    tests/goal_line_probe_fixtures.legal_replay, which position_state needs),
+    but DIVERGENT per game_idx (pick `legal[game_idx % len(legal)]` each ply)
+    so canonical_state_sha1 differs across games -- an identical game every
+    time would collide on every shared position and get screened out. Yields
+    exactly `n_plies` well-formed ply records (row/col legal + honest
+    n_legal), red first, alternating -- the schema B4 move-parity + the
+    enumerator both require."""
+    st = TwixtState(active_size=board_size, to_move="red",
+                    max_plies_limit=board_size * board_size)
+    moves = []
+    for ply in range(n_plies):
+        legal = st.legal_moves()
+        assert st.winner() is None and legal, (game_idx, ply)   # must reach n_plies
+        r, c = legal[game_idx % len(legal)]
+        moves.append({
+            "ply": ply, "player": st.to_move, "row": r, "col": c,
+            "root_value": 0.0, "root_top1_share": 0.5,
+            "selected_visit_rank": 1, "selected_visit_count": 100,
+            "root_total_visits": 100, "n_legal": len(legal),
+        })
+        st = st.apply_move((r, c))
+    return moves
+
+
+def _fabricate_qualified_v2_reservoir(tmp_path):
+    """Fabricate an on-disk reservoir + a v2 (tooling_smoke) protocol, run the
+    REAL run_qualify, and return the derived schema-2 config path.
+
+    Reuses the suite's `_write_qualifiable_reservoir` for the checkpoints /
+    index / match-summary / protocol-freeze / B4+B5 conformance, then
+    OVERWRITES each replay's `moves` (its (1,1) fillers cannot replay through
+    position_state, and a 330-ply game is needed to reach all six proposal
+    cells) with a divergent legal game -- BEFORE qualify, so measure_reservoir
+    hashes the final legal bytes into replay_data_sha1."""
+    overrides = dict(_SMOKE_PROFILE)
+    overrides.update({
+        "protocol_version": 2,
+        "screen_out": str(tmp_path / "screen.csv"),
+        "select_out": str(tmp_path / "manifest_v2.csv"),
+        "post_screen_report_out": str(tmp_path / "post_screen_report.json"),
+    })
+    protocol, protocol_path, info = _write_qualifiable_reservoir(
+        tmp_path, games=_SMOKE_GAMES, n_moves=330, protocol_overrides=overrides)
+
+    for row in info["rows"]:
+        replay_path = Path(row["replay_path"])
+        sidecar = json.loads(replay_path.read_text())
+        sidecar["moves"] = _legal_game_moves(sidecar["n_moves"], row["game_idx"])
+        replay_path.write_text(json.dumps(sidecar))
+
+    # The fixture's forbidden manifest uses a `state_sha1` header run_screen's
+    # `load_forbidden_hashes` does not accept; replace it (BEFORE qualify, so
+    # its hash is captured) with an empty, correctly-headed manifest -- an
+    # empty forbidden set is what we want (no proposal is pre-excluded).
+    Path(info["manifest_path"]).write_text("canonical_position_sha1\n")
+
+    assert proto.run_qualify(
+        str(protocol_path), preflight=_fake_preflight(True)) == proto.EXIT_OK
+    return protocol["config_out"]
+
+
+# --- the two evaluator seams, faked deterministically ----------------------
+
+def _fake_teacher_infer(state, evaluator):
+    """`_teacher_infer(state, evaluator) -> (legal, priors, raw_value)`; only
+    `priors` is read (-> `_policy_features_from_priors` -> `raw_policy_role`).
+    Role is derived FROM the state so it agrees with the proposal's own cell:
+    late b400_plus/b300_399 -> target (flat priors: entropy 1.0, top1 0.005);
+    everything else -> control (peaked: top1 0.9). This keeps BOTH roles on
+    BOTH sides within every cell, so each split stays side-balanced
+    (|red-black| <= side_tol) -- a role-by-side scheme cannot."""
+    phase = v2.ply_bucket_of(state.ply)
+    band = v2.band_of(len(state.legal_moves()))
+    is_target = phase == "late" and band in ("b400_plus", "b300_399")
+    priors = [1.0 / 200] * 200 if is_target else [0.9] + [0.1 / 199] * 199
+    return [], priors, 0.0
+
+
+@dataclass(frozen=True)
+class _FakeAnchorCfg:
+    """Whatever run_screen records via `dataclasses.asdict(anchor_cfg)` into
+    the screen meta -- only needs to BE a dataclass."""
+    fpu_policy_mass_reduction: object = None
+    n_simulations: int = v2.ANCHOR_SIMS_V2
+
+
+def _fake_build_v2_anchor_search_fn(checkpoint, eval_batch_size, stall_flush_sims):
+    """Replaces the whole seam (its real body loads a checkpoint + MLX MCTS).
+    `search_fn(state, seed) -> (counts, root_value_stm, root)`: root_value_stm
+    0.0 is anchor-eligible (|v|<=0.25) so survivors are kept; root.visit_count
+    must equal ANCHOR_SIMS_V2 or run_screen raises."""
+    def search_fn(state, seed):
+        return {}, 0.0, SimpleNamespace(visit_count=v2.ANCHOR_SIMS_V2)
+    return object(), search_fn, _FakeAnchorCfg()
+
+
+def test_schema2_cli_end_to_end_on_fabricated_artifacts(tmp_path, monkeypatch):
+    # (1) Fabricate + qualify -> derived schema-2 config on disk.
+    cfg_path = _fabricate_qualified_v2_reservoir(tmp_path)
+
+    # (2) Fake ONLY the two evaluator seams (both resolved at call time).
+    monkeypatch.setattr(v2, "_build_v2_anchor_search_fn",
+                        _fake_build_v2_anchor_search_fn)
+    monkeypatch.setattr(btcm, "_teacher_infer", _fake_teacher_infer)
+
+    # (3) Drive the REAL CLI through the whole evidence path.
+    assert v2.main(["--mode", "screen", "--config", cfg_path]) == 0
+    cfg = v2.load_v2_config(cfg_path)
+    assert v2.main(["--mode", "post-screen-qualify", "--config", cfg_path,
+                    "--screen", cfg.screen_out]) == 0
+    report_bytes = Path(cfg.post_screen_report_out).read_bytes()
+    assert json.loads(report_bytes)["status"] == "PASS"
+    assert v2.main(["--mode", "select", "--config", cfg_path,
+                    "--screen", cfg.screen_out]) == 0
+    manifest_bytes = Path(cfg.select_out).read_bytes()
+
+    # (4) Idempotency: re-running is a clean accept, byte-identical artifacts.
+    assert v2.main(["--mode", "post-screen-qualify", "--config", cfg_path,
+                    "--screen", cfg.screen_out]) == 0
+    assert Path(cfg.post_screen_report_out).read_bytes() == report_bytes
+    assert v2.main(["--mode", "select", "--config", cfg_path,
+                    "--screen", cfg.screen_out]) == 0
+    assert Path(cfg.select_out).read_bytes() == manifest_bytes
+
+    # (5) Report tampering: missing -> 2, edited (status flipped) -> 3.
+    saved = Path(cfg.post_screen_report_out)
+    saved.unlink()
+    assert v2.main(["--mode", "select", "--config", cfg_path,
+                    "--screen", cfg.screen_out]) == 2
+    doc = json.loads(report_bytes)
+    doc["status"] = "GATE_FAIL"
+    saved.write_text(json.dumps(doc))
+    assert v2.main(["--mode", "select", "--config", cfg_path,
+                    "--screen", cfg.screen_out]) == 3
+    saved.write_bytes(report_bytes)
+
+    # (6) Smoke isolation: the production diagnostic rejects this config.
+    with pytest.raises(SystemExit, match="tooling_smoke"):
+        diag.require_production_run_kind(cfg)
