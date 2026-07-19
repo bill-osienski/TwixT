@@ -574,3 +574,87 @@ def test_scalar_quota_legacy_path_unchanged():
     geometry = make_production_geometry()
     report = v2.v2_geometry_feasibility(geometry, quota_per_phase=24)
     assert report.quota_per_phase == {p: 24 for p in v2.PHASES}
+
+
+# ---------------------------------------------------------------------------
+# Task 7: post-screen-qualify stage + select requires a PASS report.
+# ---------------------------------------------------------------------------
+
+def test_post_screen_report_document_binds_screen_and_profile(tmp_path):
+    alloc = v2.AllocationProfile.legacy()
+    kept = make_gate_fail_fixture()
+    report = v2.post_screen_qualification_report(kept, alloc)
+    doc = v2.build_post_screen_report_document(
+        report, selector_witness=None, selector_error=None,
+        screen_csv_sha1="abc123", config=None, alloc=alloc)
+    assert doc["status"] == "GATE_FAIL"
+    assert doc["screen_csv_sha1"] == "abc123"
+    assert doc["no_manifest_written"] is True
+    assert doc["profile"] == alloc.fingerprint()
+
+
+def test_pass_requires_a_complete_selector_witness():
+    # Review correction 1: capacity PASS + no witness must NOT yield PASS.
+    alloc = _production_alloc()
+    kept = make_feasible_120_pool()
+    report = v2.post_screen_qualification_report(kept, alloc)
+    assert report["status"] == "PASS"                  # necessary bounds hold
+    no_witness = v2.build_post_screen_report_document(
+        report, selector_witness=None,
+        selector_error="synthetic: selector refused", screen_csv_sha1="s",
+        config=None, alloc=alloc)
+    assert no_witness["status"] == "GATE_FAIL"
+    assert "selector" in no_witness["binding_constraint"]
+    rows, stats = v2.sample_v2_rows(kept, seed=20260718, alloc=alloc)
+    witness = v2.build_selector_witness(rows, stats)
+    with_witness = v2.build_post_screen_report_document(
+        report, selector_witness=witness, selector_error=None,
+        screen_csv_sha1="s", config=None, alloc=alloc)
+    assert with_witness["status"] == "PASS"
+    assert with_witness["selector_witness"]["n_rows"] == 120
+    assert with_witness["selector_witness"]["cell_counts"][
+        "target|late|frozen_check"] == 20
+
+
+def test_require_pass_report_rejects_missing_failed_stale_mismatched(tmp_path):
+    alloc = _production_alloc()
+    report_path = tmp_path / "psq.json"
+
+    class Cfg:   # duck-typed: only the fields the gatekeeper reads
+        post_screen_report_out = str(report_path)
+        config_path = "cfg.json"
+        selection_seed = 20260718
+        expected_fingerprints = {"protocol_sha1": "proto1"}
+
+    kw = dict(screen_csv_sha1="s1", config_sha1="cfg1")
+    with pytest.raises(FileNotFoundError):
+        v2.require_pass_report(Cfg(), "screen.csv", alloc, **kw)
+    # Final review edit 1: the PASS report binds the COMPLETE config --
+    # protocol_sha1, config_sha1, selection_seed (the witness depends on it),
+    # and run_kind, alongside screen bytes + profile.
+    ok = {"status": "PASS", "screen_csv_sha1": "s1",
+          "profile": alloc.fingerprint(), "protocol_sha1": "proto1",
+          "config_sha1": "cfg1", "selection_seed": 20260718,
+          "run_kind": "production"}
+    for bad, needle in [
+            (dict(ok, status="GATE_FAIL"), "GATE_FAIL"),
+            (dict(ok, screen_csv_sha1="other"), "stale"),
+            (dict(ok, profile=v2.AllocationProfile.legacy().fingerprint()),
+             "profile"),
+            (dict(ok, protocol_sha1="other"), "protocol_sha1"),
+            (dict(ok, config_sha1="other"), "config_sha1"),
+            (dict(ok, selection_seed=1), "selection_seed"),
+            (dict(ok, run_kind="tooling_smoke"), "run_kind"),
+    ]:
+        report_path.write_text(json.dumps(bad))
+        with pytest.raises(ValueError, match=needle):
+            v2.require_pass_report(Cfg(), "screen.csv", alloc, **kw)
+    report_path.write_text(json.dumps(ok))
+    assert v2.require_pass_report(
+        Cfg(), "screen.csv", alloc, **kw)["status"] == "PASS"
+
+
+def test_cli_post_screen_qualify_requires_screen_and_schema2(tmp_path):
+    cfg_path = _write_config(tmp_path, {})       # schema 1
+    assert v2.main(["--mode", "post-screen-qualify", "--config", cfg_path,
+                    "--screen", str(tmp_path / "nope.csv")]) == 2

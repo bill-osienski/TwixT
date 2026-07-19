@@ -3308,6 +3308,150 @@ def post_screen_qualification_report(
     }
 
 
+# Shared exit-code vocabulary (repair plan Sec 7) -- the SAME values as
+# fpu_dev_reservoir_protocol.EXIT_* (design Sec 3). Mirrored, not imported:
+# Sec 6 forbids the top-level import (that module imports FROM here).
+EXIT_OK = 0
+EXIT_USAGE = 2
+EXIT_MISMATCH = 3
+EXIT_GATE_FAIL = 4
+
+
+def build_selector_witness(rows: List[dict],
+                           stats: Dict[str, Any]) -> Dict[str, Any]:
+    """The dry-run selector's COMPLETE witness (review correction 1):
+    selected counts by cell, split, band, side, and game -- what a PASS
+    report certifies actually exists."""
+    return {
+        "n_rows": len(rows),
+        "cell_counts": stats["cell_counts"],
+        "late_target_band_count": stats["late_target_band_count"],
+        "late_target_band_count_by_split":
+            stats["late_target_band_count_by_split"],
+        "side_count": stats["side_count"],
+        "rows_per_game": {str(gi): n for gi, n in sorted(
+            Counter(r["game_idx"] for r in rows).items())},
+        "assignment_attempt": stats["assignment_attempt"],
+    }
+
+
+def build_post_screen_report_document(
+        report: Dict[str, Any], *, selector_witness: Optional[Dict[str, Any]],
+        selector_error: Optional[str], screen_csv_sha1: str,
+        config: Optional[V2Config], alloc: AllocationProfile,
+        config_sha1: Optional[str] = None) -> Dict[str, Any]:
+    """The persisted post_screen_qualification_report.json body. PASS iff the
+    capacity report passed AND a complete selector witness exists (review
+    correction 1) -- necessary bounds alone never certify; per-split floors,
+    spacing, side balance and whole-game assignment are proved by the witness.
+    `no_manifest_written` is a recorded FACT: this stage never writes a
+    manifest, in either outcome."""
+    if report["status"] == "PASS" and selector_witness is not None:
+        status, binding = "PASS", None
+    elif report["status"] != "PASS":
+        status, binding = "GATE_FAIL", report["binding_constraint"]
+    else:
+        status = "GATE_FAIL"
+        binding = f"selector dry-run failed: {selector_error}"
+    return {
+        "status": status,
+        "binding_constraint": binding,
+        "report": report,
+        "selector_witness": selector_witness,
+        "selector_error": selector_error,
+        "profile": alloc.fingerprint(),
+        "screen_csv_sha1": screen_csv_sha1,
+        "protocol_sha1": (config.expected_fingerprints.get("protocol_sha1")
+                          if config is not None else None),
+        "config_path": (config.config_path if config is not None else None),
+        "config_sha1": config_sha1,
+        "selection_seed": (config.selection_seed
+                           if config is not None else None),
+        "run_kind": alloc.run_kind,
+        "no_manifest_written": True,
+    }
+
+
+def require_pass_report(config, screen_csv_path: str,
+                        alloc: AllocationProfile, *,
+                        screen_csv_sha1: str,
+                        config_sha1: str) -> Dict[str, Any]:
+    """select's gatekeeper (repair plan Sec 7): a matching PASS report must
+    exist BEFORE sampling, bound to the COMPLETE config (final review edit 1):
+    screen bytes, allocation profile, protocol_sha1, config_sha1,
+    selection_seed (the exact witness depends on it), and run_kind. Missing
+    file propagates FileNotFoundError (CLI -> EXIT_USAGE); every mismatch
+    raises ValueError naming the reason (CLI -> EXIT_MISMATCH)."""
+    doc = json.loads(Path(config.post_screen_report_out).read_text())
+    if doc.get("status") != "PASS":
+        raise ValueError(
+            f"post-screen report {config.post_screen_report_out} has status "
+            f"{doc.get('status')!r} (GATE_FAIL or unknown) -- select refuses")
+    if doc.get("screen_csv_sha1") != screen_csv_sha1:
+        raise ValueError(
+            f"post-screen report is stale: it binds screen sha1 "
+            f"{doc.get('screen_csv_sha1')!r}, but {screen_csv_path} hashes to "
+            f"{screen_csv_sha1!r}")
+    if doc.get("profile") != alloc.fingerprint():
+        raise ValueError(
+            "post-screen report was produced for a DIFFERENT allocation "
+            "profile than this config's -- profile fingerprint mismatch")
+    expected = {
+        "protocol_sha1": config.expected_fingerprints.get("protocol_sha1"),
+        "config_sha1": config_sha1,
+        "selection_seed": config.selection_seed,
+        "run_kind": alloc.run_kind,
+    }
+    for key, want in expected.items():
+        if doc.get(key) != want:
+            raise ValueError(
+                f"post-screen report {key} mismatch: report has "
+                f"{doc.get(key)!r}, this config requires {want!r}")
+    return doc
+
+
+def run_post_screen_qualify(config: V2Config,
+                            screen_csv_path: str) -> Tuple[int, Dict[str, Any]]:
+    """The CONTROLLED post-screen qualification stage (repair plan Sec 7).
+    PURE (no evaluator). Returns (exit_code, report_document); writes
+    config.post_screen_report_out (immutable canonical JSON; byte-identical
+    re-runs are idempotently accepted). Mirrors select_final_manifest's
+    identity/re-derive/read/cross-check steps 1-4, then reports instead of
+    raising on the qualification verdict."""
+    from .fpu_dev_reservoir_protocol import (
+        canonical_json_bytes, rederive_and_assert_config_unchanged,
+        write_atomic)
+    screen_meta = json.loads(Path(screen_csv_path + ".meta.json").read_text())
+    validate_screen_identities(
+        screen_meta, config, forbidden_paths=config.forbidden_manifests,
+        screen_csv_path=screen_csv_path)
+    rederive_and_assert_config_unchanged(config)
+    screen_rows = read_screen_csv(screen_csv_path)
+    validate_screen_rows_against_meta(screen_rows, screen_meta)
+    alloc = profile_for(config)
+    kept = kept_rows_from_screen(screen_rows)
+    report = post_screen_qualification_report(kept, alloc)
+    # Review correction 1: PASS requires the EXACT deterministic selector to
+    # succeed on the same (kept, seed, alloc) select will later use.
+    selector_witness, selector_error = None, None
+    if report["status"] == "PASS":
+        try:
+            sel_rows, sel_stats = sample_v2_rows(
+                kept, seed=config.selection_seed, alloc=alloc)
+        except ValueError as exc:
+            selector_error = str(exc)
+        else:
+            selector_witness = build_selector_witness(sel_rows, sel_stats)
+    doc = build_post_screen_report_document(
+        report, selector_witness=selector_witness,
+        selector_error=selector_error,
+        screen_csv_sha1=fpu_provenance.file_sha1(screen_csv_path),
+        config=config, alloc=alloc,
+        config_sha1=fpu_provenance.file_sha1(config.config_path))
+    write_atomic(config.post_screen_report_out, canonical_json_bytes(doc))
+    return (EXIT_OK if doc["status"] == "PASS" else EXIT_GATE_FAIL), doc
+
+
 # ---------------------------------------------------------------------------
 # The final manifest: schema + the `select` composition itself
 # ---------------------------------------------------------------------------
@@ -3624,7 +3768,8 @@ def _parse_v2_args(argv):
                     "persisted screen's identities, qualifies its kept rows "
                     "and deterministically selects the final manifest. "
                     "screen and select are NEVER the same invocation.")
-    ap.add_argument("--mode", required=True, choices=("screen", "select"),
+    ap.add_argument("--mode", required=True,
+                    choices=("screen", "select", "post-screen-qualify"),
                     help="pipeline stage to run.")
     ap.add_argument("--config", required=True,
                     help="path to the required fpu_dev_corpus_v2_config.json "
@@ -3642,9 +3787,9 @@ def _parse_v2_args(argv):
     # screen artifact is an INPUT to exactly one of them. Enforced here rather than
     # silently ignored, so `--mode screen --screen out.csv` cannot be mistaken for
     # naming the screen's output path.
-    if args.mode == "select" and not args.screen:
-        ap.error("--mode select requires --screen (the persisted screen artifact "
-                 "to select from; `select` never re-screens)")
+    if args.mode in ("select", "post-screen-qualify") and not args.screen:
+        ap.error(f"--mode {args.mode} requires --screen (the persisted screen "
+                 f"artifact to select/qualify from; it never re-screens)")
     if args.mode == "screen" and args.screen:
         ap.error("--mode screen does not take --screen: it WRITES its artifact to "
                  "the config's `screen_out`. `screen` and `select` are never the "
@@ -3714,6 +3859,58 @@ def _select_verify_config_rederivation(config: V2Config) -> None:
         raise V2ConfigRederivationFailed(str(exc)) from exc
 
 
+class V2PostScreenReportMismatch(ValueError):
+    """A post-screen qualification report (repair plan Sec 7) failed to match
+    THIS config -- an identity/re-derive/rows-vs-meta mismatch or an immutable-
+    report conflict at `--mode post-screen-qualify`, or a stale/failed/mismatched
+    PASS report at `--mode select`'s gatekeeper. The SAME dedicated-subtype move
+    `V2ConfigRederivationFailed`/`V2PrecheckFailed` already make: the underlying
+    checks raise plain `ValueError`, and these two thin wrappers re-raise ONLY
+    that as this subtype so `main` maps exactly this artifact-mismatch class to a
+    clean EXIT_MISMATCH (3) -- WITHOUT a bare `except ValueError` in `main` that
+    could mask an unrelated defect. Subclasses ValueError so any caller written
+    against the plain shape still behaves as before. (A missing report file is an
+    OSError/`FileNotFoundError`, NOT this -- it maps to EXIT_USAGE at its own
+    clause; `json.JSONDecodeError` from a malformed screen meta at post-screen-
+    qualify is re-raised untranslated so it, too, stays EXIT_USAGE.)"""
+
+
+def _run_post_screen_qualify_cli(config: V2Config,
+                                 screen_csv_path: str
+                                 ) -> Tuple[int, Dict[str, Any]]:
+    """`main --mode post-screen-qualify`'s dispatcher: runs the pure stage and
+    re-raises a genuine identity/artifact/immutable-conflict `ValueError` as the
+    dedicated `V2PostScreenReportMismatch` (-> EXIT_MISMATCH), while leaving
+    `OSError`/`json.JSONDecodeError` (bad screen I/O -> EXIT_USAGE) untranslated.
+    Kept out of `main` so `main` never needs a bare `except ValueError`."""
+    try:
+        return run_post_screen_qualify(config, screen_csv_path)
+    except json.JSONDecodeError:
+        raise
+    except ValueError as exc:
+        raise V2PostScreenReportMismatch(str(exc)) from exc
+
+
+def _select_require_pass_report(config: V2Config, screen_csv_path: str,
+                                alloc: AllocationProfile, *,
+                                screen_csv_sha1: str,
+                                config_sha1: str) -> Dict[str, Any]:
+    """`main --mode select`'s gatekeeper wrapper (schema 2 only): a MISSING
+    report propagates `FileNotFoundError` (-> EXIT_USAGE at `main`'s own clause);
+    a status/stale/profile/identity mismatch `ValueError` becomes the dedicated
+    `V2PostScreenReportMismatch` (-> EXIT_MISMATCH). Same discipline as
+    `_select_verify_config_rederivation`, so `main` needs no bare
+    `except ValueError`."""
+    try:
+        return require_pass_report(
+            config, screen_csv_path, alloc,
+            screen_csv_sha1=screen_csv_sha1, config_sha1=config_sha1)
+    except V2PostScreenReportMismatch:
+        raise
+    except ValueError as exc:
+        raise V2PostScreenReportMismatch(str(exc)) from exc
+
+
 def main(argv=None) -> int:
     args = _parse_v2_args(argv)
     try:
@@ -3755,6 +3952,26 @@ def main(argv=None) -> int:
               f"status_counts={meta['status_counts']}")
         return 0
 
+    if args.mode == "post-screen-qualify":
+        if config.config_schema_version < 2:
+            return _v2_cli_hard_stop(
+                "[fpu-dev-corpus-v2] post-screen-qualify requires a schema-2 "
+                "config (the controlled report is a repair-plan feature)")
+        try:
+            code, doc = _run_post_screen_qualify_cli(config, args.screen)
+        except (OSError, json.JSONDecodeError) as exc:
+            return _v2_cli_hard_stop(
+                f"[fpu-dev-corpus-v2] post-screen-qualify STOPPED (I/O): {exc}")
+        except V2PostScreenReportMismatch as exc:
+            # Identity/rederive/meta mismatch, or an immutable-report
+            # conflict: artifact mismatch -> 3 (repair plan Sec 7).
+            print(f"[fpu-dev-corpus-v2] post-screen-qualify MISMATCH: {exc}")
+            return EXIT_MISMATCH
+        print(f"[fpu-dev-corpus-v2] post-screen-qualify: {doc['status']} "
+              f"(binding: {doc['binding_constraint']}) -> "
+              f"{config.post_screen_report_out}")
+        return code
+
     if args.mode == "select":
         # PURE: no evaluator, no MCTS, no checkpoint load -- only the persisted
         # screen, the config, the file bytes the ten identities hash, and the
@@ -3774,6 +3991,27 @@ def main(argv=None) -> int:
         screen_meta = json.loads(Path(str(args.screen) + ".meta.json").read_text())
         forbidden = load_forbidden_hashes(config.forbidden_manifests)
 
+        # Repair plan Sec 7: a schema-2 select refuses to run without a
+        # matching PASS post-screen report (bound to the COMPLETE config).
+        # select_final_manifest still re-checks everything itself; this is the
+        # gate that proves the controlled qualification stage was actually run.
+        if config.config_schema_version >= 2:
+            alloc = profile_for(config)
+            try:
+                _select_require_pass_report(
+                    config, args.screen, alloc,
+                    screen_csv_sha1=fpu_provenance.file_sha1(args.screen),
+                    config_sha1=fpu_provenance.file_sha1(config.config_path))
+            except FileNotFoundError as exc:
+                return _v2_cli_hard_stop(
+                    f"[fpu-dev-corpus-v2] select STOPPED: no post-screen "
+                    f"qualification report -- run --mode post-screen-qualify "
+                    f"first ({exc})")
+            except V2PostScreenReportMismatch as exc:
+                print(f"[fpu-dev-corpus-v2] select MISMATCH (post-screen "
+                      f"report): {exc}")
+                return EXIT_MISMATCH
+
         try:
             rows, stats = select_final_manifest(
                 screen_meta, config, forbidden=forbidden, screen_csv_path=args.screen,
@@ -3790,7 +4028,7 @@ def main(argv=None) -> int:
         verified = stats.pop("verified_screen_provenance")
 
         write_select_csv(rows, config.select_out)
-        write_screen_meta(config.select_out, {          # the generic artifact-meta
+        select_meta = {                                  # the generic artifact-meta
             "config_path": config.config_path,           # writer -- see its own note
             "source_index_path": config.source_index_path,
             "checkpoint": config.checkpoint,
@@ -3802,7 +4040,12 @@ def main(argv=None) -> int:
             "n_rows": len(rows),
             "fieldnames": MANIFEST_FIELDNAMES_V2,
             "stats": stats,
-        }, provenance=verified)
+        }
+        # Schema 2 ONLY (smoke isolation): name the run_kind in the manifest's
+        # own meta -- schema-1 meta bytes stay byte-identical (Task 0 goldens).
+        if config.config_schema_version >= 2:
+            select_meta["run_kind"] = config.run_kind
+        write_screen_meta(config.select_out, select_meta, provenance=verified)
         print(f"[fpu-dev-corpus-v2] select: {len(rows)} row(s) -> "
               f"{config.select_out} (+ .meta.json); all "
               f"{len(SCREEN_IDENTITY_KEYS)} screen identities hard-matched "
