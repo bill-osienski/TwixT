@@ -931,6 +931,9 @@ def _select_manifest(games: Mapping[Any, List[dict]],
     floor_count: Counter = Counter()      # selected late-TARGET rows by band --
                                           # GLOBAL across both splits (the floors
                                           # are a COMBINED requirement)
+    floor_count_by_split: Dict[str, Counter] = {s: Counter() for s in SPLITS}
+                                          # the same, split-local -- feeds the
+                                          # per-split band minima (empty for v1)
     picked_in: Counter = Counter()        # rows SELECTED per (cell, split): the
                                           # fill's authoritative budget counter,
                                           # maintained by `take` alone
@@ -977,6 +980,7 @@ def _select_manifest(games: Mapping[Any, List[dict]],
             picked_in[(cell, split)] += 1
             if cell == LATE_TARGET_CELL:
                 floor_count[r["band"]] += 1
+                floor_count_by_split[split][r["band"]] += 1
             n_taken += 1
         return n_taken
 
@@ -1093,9 +1097,22 @@ def _select_manifest(games: Mapping[Any, List[dict]],
             # too: a floor band is exactly where same-side-only games cluster (a
             # game's b300_399 red can be `target` while its black is `control`).
             if cell == LATE_TARGET_CELL:
-                for band, floor in alloc.band_minima_total.items():
-                    def floor_budget(_band=band, _floor=floor, _ord=ordinary_budget):
-                        return min(_floor - floor_count[_band], _ord())
+                # Draw a floor band while EITHER the global total OR this split's
+                # own minimum is still short. `band_minima_per_split == {}` (v1)
+                # makes `need_split <= 0` always, reducing this to the historical
+                # total-only pass (byte-identical -- guarded by the legacy golden).
+                floor_bands = dict(alloc.band_minima_total)
+                for m in alloc.band_minima_per_split.values():
+                    for b in m:
+                        floor_bands.setdefault(b, 0)
+                for band, floor in floor_bands.items():
+                    def floor_budget(_band=band, _floor=floor, _split=split,
+                                     _ord=ordinary_budget):
+                        need_total = _floor - floor_count[_band]
+                        need_split = (alloc.band_minima_per_split
+                                      .get(_split, {}).get(_band, 0)
+                                      - floor_count_by_split[_split][_band])
+                        return min(_ord(), max(need_total, need_split, 0))
                     fill(cand_games, cell, split, band, floor_budget)
 
             # Ordinary fill: any band.
@@ -1120,6 +1137,21 @@ def _select_manifest(games: Mapping[Any, List[dict]],
                 f"late-target coverage floor unmet: band {band} has "
                 f"{late_band_counts[band]} of the required {floor} among the "
                 f"{sum(late_band_counts.values())} selected late-target rows")
+
+    # Per-split late-target band minima -- likewise counted FROM THE SELECTED
+    # ROWS (not the running `floor_count_by_split`). Empty for v1, so this loop
+    # never fires on the legacy path.
+    late_by_split: Dict[str, Counter] = {s: Counter() for s in SPLITS}
+    for r in selected:
+        if (r["role"], r["phase"]) == LATE_TARGET_CELL:
+            late_by_split[r["split"]][r["band"]] += 1
+    for split, minima in alloc.band_minima_per_split.items():
+        for band, m in minima.items():
+            if late_by_split[split][band] < m:
+                raise ValueError(
+                    f"per-split late-target band minimum unmet: split {split} "
+                    f"band {band} has {late_by_split[split][band]} of the "
+                    f"required {m}")
 
     # Hard per-split side-balance verification -- likewise counted FROM THE
     # SELECTED ROWS, independently of the running `side_count` the take-time
@@ -1168,6 +1200,11 @@ def _select_manifest(games: Mapping[Any, List[dict]],
             s: sum(1 for gi in split_of if split_of[gi] == s) for s in SPLITS},
         "n_games_total": len(split_of),
     }
+    # The per-split floor witness -- schema-2 only, so schema-1 stats stay
+    # byte-identical to the pre-repair Task 0 golden (which predates this key).
+    if alloc.band_minima_per_split:
+        stats["late_target_band_count_by_split"] = {
+            s: dict(sorted(late_by_split[s].items())) for s in SPLITS}
     return selected, stats
 
 

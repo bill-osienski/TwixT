@@ -463,3 +463,40 @@ def test_qualification_raise_matches_report_verdict():
     with pytest.raises(ValueError, match="target.*opening"):
         v2.post_screen_qualification(fixture)          # legacy default
     v2.post_screen_qualification(fixture, alloc=_production_alloc())  # no raise
+
+
+# ---------------------------------------------------------------------------
+# Task 5: per-split late-target band minima in the sampler.
+# ---------------------------------------------------------------------------
+
+def test_per_split_band_minima_hold_on_selected_rows():
+    rows, stats = v2.sample_v2_rows(make_feasible_120_pool(), seed=11,
+                                    alloc=_production_alloc())
+    by_split = {s: Counter() for s in ("tuning", "frozen_check")}
+    for r in rows:
+        if (r["role"], r["phase"]) == ("target", "late"):
+            by_split[r["split"]][r["band"]] += 1
+    assert by_split["tuning"]["b400_plus"] >= 4
+    assert by_split["tuning"]["b300_399"] >= 8
+    assert by_split["tuning"]["b200_299"] >= 8
+    assert by_split["frozen_check"]["b400_plus"] >= 4
+    assert by_split["frozen_check"]["b300_399"] >= 5
+    assert by_split["frozen_check"]["b200_299"] >= 5
+    assert stats["late_target_band_count_by_split"]["tuning"]["b400_plus"] >= 4
+
+
+@pytest.mark.parametrize("starve_band", ["b400_plus", "b300_399", "b200_299"])
+def test_insufficient_band_capacity_fails_by_name(starve_band):
+    pool = [r for r in make_feasible_120_pool()
+            if not (r["role"] == "target" and r["band"] == starve_band)]
+    with pytest.raises(ValueError, match=starve_band):
+        v2.sample_v2_rows(pool, seed=11, alloc=_production_alloc())
+
+
+def test_legacy_profile_selection_is_unchanged_by_the_split_minima_code():
+    # Golden guard: the legacy path must not change. `_golden_pool()` wraps the
+    # existing sampler suite's feasible-pool builder (_abundant_pool_v2).
+    pool = _golden_pool()
+    assert (v2.sample_v2_rows(pool, seed=3) ==
+            v2.sample_v2_rows(pool, seed=3,
+                              alloc=v2.AllocationProfile.legacy()))
