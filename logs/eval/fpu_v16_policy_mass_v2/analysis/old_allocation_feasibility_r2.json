@@ -1,0 +1,271 @@
+{
+  "analyzed_config_path": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_config.json",
+  "discovery_only": true,
+  "historical_screen_discovery": {
+    "analysis_source_files_clean": true,
+    "current_analysis_source_file_sha1s": {
+      "build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+      "build_teacher_calibration_manifest.py": "973c8b81d24f6c70c8c3168398d5e3dae77f97dc",
+      "fpu_dev_corpus_v2.py": "c4ae8eb204ac58f6eb00e3ddb4a3f03189fb8408",
+      "fpu_dev_reservoir_protocol.py": "5a0c8675e0a04e858a0c3be4d45db5caaec8c6f2",
+      "fpu_state_hash.py": "5b7aee014c37b5c3cb569dee9ab26c0b79412682",
+      "goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+      "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+      "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+    },
+    "expected_source_drift": [
+      "fpu_dev_corpus_v2.py",
+      "fpu_dev_reservoir_protocol.py"
+    ],
+    "git_commit": "da4dc0003b6c7ba907856128f40fc67c73ae2eba",
+    "historical_ab_source_file_sha1s": {
+      "build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+      "build_teacher_calibration_manifest.py": "973c8b81d24f6c70c8c3168398d5e3dae77f97dc",
+      "fpu_dev_corpus_v2.py": "c7b2e77f71b1b3e49ed64649915a99408777ffe7",
+      "fpu_dev_reservoir_protocol.py": "4ccab2923c537206082762b16489b7eb2cfd23e4",
+      "fpu_state_hash.py": "5b7aee014c37b5c3cb569dee9ab26c0b79412682",
+      "goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+      "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+      "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+    },
+    "policy": "historical_screen_discovery_v1",
+    "source_file_divergence": [
+      "fpu_dev_corpus_v2.py",
+      "fpu_dev_reservoir_protocol.py"
+    ]
+  },
+  "profile": {
+    "allocation": {
+      "control|early_mid": {
+        "frozen_check": 5,
+        "tuning": 10
+      },
+      "control|late": {
+        "frozen_check": 5,
+        "tuning": 10
+      },
+      "control|midgame": {
+        "frozen_check": 5,
+        "tuning": 10
+      },
+      "control|opening": {
+        "frozen_check": 5,
+        "tuning": 10
+      },
+      "target|early_mid": {
+        "frozen_check": 15,
+        "tuning": 30
+      },
+      "target|late": {
+        "frozen_check": 15,
+        "tuning": 30
+      },
+      "target|midgame": {
+        "frozen_check": 15,
+        "tuning": 30
+      },
+      "target|opening": {
+        "frozen_check": 15,
+        "tuning": 30
+      }
+    },
+    "band_minima_per_split": {},
+    "band_minima_total": {
+      "b200_299": 12,
+      "b300_399": 12
+    },
+    "corpus_size": 240,
+    "max_per_game": 2,
+    "min_ply_gap": 12,
+    "run_kind": "production",
+    "schema_version": 2,
+    "side_tol": 2
+  },
+  "qualification": {
+    "binding_constraint": "target|early_mid capacity 0 < demand 45",
+    "cells": {
+      "control|early_mid": {
+        "black": 1036,
+        "capacity": 2563,
+        "demand": 15,
+        "n_games": 2094,
+        "n_rows": 2563,
+        "red": 1527
+      },
+      "control|late": {
+        "black": 70,
+        "capacity": 126,
+        "demand": 15,
+        "n_games": 92,
+        "n_rows": 131,
+        "red": 61
+      },
+      "control|midgame": {
+        "black": 462,
+        "capacity": 1082,
+        "demand": 15,
+        "n_games": 871,
+        "n_rows": 1082,
+        "red": 620
+      },
+      "control|opening": {
+        "black": 1928,
+        "capacity": 2051,
+        "demand": 15,
+        "n_games": 2000,
+        "n_rows": 2051,
+        "red": 123
+      },
+      "target|early_mid": {
+        "black": 0,
+        "capacity": 0,
+        "demand": 45,
+        "n_games": 0,
+        "n_rows": 0,
+        "red": 0
+      },
+      "target|late": {
+        "black": 78,
+        "capacity": 136,
+        "demand": 45,
+        "n_games": 86,
+        "n_rows": 155,
+        "red": 77
+      },
+      "target|midgame": {
+        "black": 0,
+        "capacity": 0,
+        "demand": 45,
+        "n_games": 0,
+        "n_rows": 0,
+        "red": 0
+      },
+      "target|opening": {
+        "black": 0,
+        "capacity": 0,
+        "demand": 45,
+        "n_games": 0,
+        "n_rows": 0,
+        "red": 0
+      }
+    },
+    "failures": [
+      "cell ('target', 'early_mid') capacity 0 < demand 45",
+      "cell ('target', 'midgame') capacity 0 < demand 45",
+      "cell ('target', 'opening') capacity 0 < demand 45"
+    ],
+    "global_realizable_capacity": 4904,
+    "late_target_bands": {
+      "b200_299": {
+        "black": 41,
+        "capacity": 91,
+        "minimum_per_split": {
+          "frozen_check": 0,
+          "tuning": 0
+        },
+        "minimum_total": 12,
+        "n_games": 66,
+        "red": 50
+      },
+      "b300_399": {
+        "black": 30,
+        "capacity": 52,
+        "minimum_per_split": {
+          "frozen_check": 0,
+          "tuning": 0
+        },
+        "minimum_total": 12,
+        "n_games": 46,
+        "red": 22
+      }
+    },
+    "per_split_minima_note": "per-split band minima are proven only by the exact selector witness, not by this capacity bound",
+    "profile": {
+      "allocation": {
+        "control|early_mid": {
+          "frozen_check": 5,
+          "tuning": 10
+        },
+        "control|late": {
+          "frozen_check": 5,
+          "tuning": 10
+        },
+        "control|midgame": {
+          "frozen_check": 5,
+          "tuning": 10
+        },
+        "control|opening": {
+          "frozen_check": 5,
+          "tuning": 10
+        },
+        "target|early_mid": {
+          "frozen_check": 15,
+          "tuning": 30
+        },
+        "target|late": {
+          "frozen_check": 15,
+          "tuning": 30
+        },
+        "target|midgame": {
+          "frozen_check": 15,
+          "tuning": 30
+        },
+        "target|opening": {
+          "frozen_check": 15,
+          "tuning": 30
+        }
+      },
+      "band_minima_per_split": {},
+      "band_minima_total": {
+        "b200_299": 12,
+        "b300_399": 12
+      },
+      "corpus_size": 240,
+      "max_per_game": 2,
+      "min_ply_gap": 12,
+      "run_kind": "production",
+      "schema_version": 2,
+      "side_tol": 2
+    },
+    "status": "GATE_FAIL"
+  },
+  "screen_csv": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_source_screen.csv",
+  "screen_csv_sha1": "235ae91088611ace56e45ff88ec312736f4f5835",
+  "selection_seed": 20260718,
+  "selector_error": null,
+  "selector_witness": null,
+  "status": "GATE_FAIL",
+  "verified_screen_provenance": {
+    "add_noise": false,
+    "anchor_checkpoint_identity": "model_iter_0001.safetensors:209cf2d4fd24a48553d259dd71b4954867b9473e",
+    "base_mcts_config": null,
+    "config_sha1": "3b1bd127ed103b43561ce6806993724fed9ae600",
+    "forbidden_manifest_sha1s": {
+      "0001_black_post_opening_top30_predrop_probe_manifest.csv": "19e368ce452c429bb5f5d7cc99eb5c7a491d7d5b",
+      "neutral_position_manifest.csv": "bf7a00ad7ca524ef3aa778b9e0decc11218a2f7d"
+    },
+    "match_summary_sha1": "f7850055031a20811aecaae017739bd98f172427",
+    "protocol_sha1": "5cdf8dae6253499b9a3215b4b9a11af6d3aafbcf",
+    "replay_data_sha1": "2d998d1791943ccff0a806c7af9372d847dc984a",
+    "reservoir_checkpoint_a_identity": "model_iter_0001.safetensors:209cf2d4fd24a48553d259dd71b4954867b9473e",
+    "reservoir_checkpoint_b_identity": "model_iter_0379.safetensors:8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+    "runtime_provenance": {
+      "machine": "arm64",
+      "mlx_version": "0.30.3",
+      "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+      "python_version": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]"
+    },
+    "screen_csv_sha1": "235ae91088611ace56e45ff88ec312736f4f5835",
+    "source_file_sha1s": {
+      "build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+      "build_teacher_calibration_manifest.py": "973c8b81d24f6c70c8c3168398d5e3dae77f97dc",
+      "fpu_dev_corpus_v2.py": "c4ae8eb204ac58f6eb00e3ddb4a3f03189fb8408",
+      "fpu_dev_reservoir_protocol.py": "5a0c8675e0a04e858a0c3be4d45db5caaec8c6f2",
+      "fpu_state_hash.py": "5b7aee014c37b5c3cb569dee9ab26c0b79412682",
+      "goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+      "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+      "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+    },
+    "source_index_sha1": "ea46420d16c9ec4b82de5d3bd0f9660f222b617a"
+  }
+}

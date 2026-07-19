@@ -1,0 +1,48 @@
+{
+  "config_schema_version": 2,
+  "corpus_size": 240,
+  "late_floors": {
+    "b200_299": 12,
+    "b300_399": 12
+  },
+  "late_target_band_minima": {},
+  "max_per_game": 2,
+  "min_ply_gap": 12,
+  "phase_allocation": {
+    "control|early_mid": {
+      "frozen_check": 5,
+      "tuning": 10
+    },
+    "control|late": {
+      "frozen_check": 5,
+      "tuning": 10
+    },
+    "control|midgame": {
+      "frozen_check": 5,
+      "tuning": 10
+    },
+    "control|opening": {
+      "frozen_check": 5,
+      "tuning": 10
+    },
+    "target|early_mid": {
+      "frozen_check": 15,
+      "tuning": 30
+    },
+    "target|late": {
+      "frozen_check": 15,
+      "tuning": 30
+    },
+    "target|midgame": {
+      "frozen_check": 15,
+      "tuning": 30
+    },
+    "target|opening": {
+      "frozen_check": 15,
+      "tuning": 30
+    }
+  },
+  "run_kind": "production",
+  "selection_seed": 20260718,
+  "side_tol": 2
+}
