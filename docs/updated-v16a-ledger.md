@@ -86,7 +86,73 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **v16a held-out FPU validation** — frozen `0.0` vs `−0.20` collateral screen | Search-code diagnostic only on a deterministic stratified, game-held-out, non-selected manifest: 324 positions from 252 games, buckets 40 opening / 100 early-mid / 100 midgame / 84 late, exactly 162 red / 162 black, and zero games shared with A discovery. The 19 winner-null 280-ply state-cap marathons were retained as stressed valid samples. No checkpoint or training changes. | **Not an A gate. Neutral result:** mean mover delta +0.0028, median absolute 0.0180, p95 absolute 0.2822; top-move flips 27.16%; effective children 107.58→70.92 (−36.66, about −34.1%); top-share +0.0716; 15 new collapses / 2 resolved. | n/a | n/a | **Late collateral failure:** 13/84 = 15.48% new collapse; late-red 6/42 = 14.29%, late-black 7/42 = 16.67%; late collapsed roots 17/84→28/84. | no match | **REJECT absolute `fpu_value=−0.20` as a general 400-sim setting.** The preregistered reject rule (any n≥20 stratum with new-collapse rate ≥10%) fired independently for late overall and both late-side strata. Do not proceed to B/C/D or strength evaluation with this candidate. Selected-A success remains mechanistic evidence only. Next: read-only postmortem of the 15 new-collapse cases, then design a new adaptive/parent-relative candidate on discovery data only. The v16a held-out manifest is consumed and must not be used for tuning. |
 
 
+| **v16 policy-mass successor — reservoir protocol v1** | Search-code successor on unchanged BASE `calib020_0001`: `FPU=Q_parent-r*sqrt(P_explored)`, with completed-visit policy mass. New phase-primary dev-corpus pipeline, immutable 4,800-game reservoir protocol, tuning/frozen whole-game split, matched controls, late-band floors, and end-to-end fingerprints. Frozen generation commit `fca9c0d`; reservoir seed range `[20270000,20274800)`. | **pending.** Selected-A is tuning-only and later must pass the reply-reduction/progress mechanism gate. | **pending guardrail.** | **pending guardrail.** | **pending guardrail.** | pending | **RUNNING (2026-07-16).** Protocol emitted successfully; exact 4,800-game `calib020_0001` vs `0379` replay reservoir is generating with board 24, 400 sims, workers 4, replay capture, and no top-up. No qualification, candidate, frozen-check, A/B/C/D, or strength result has been observed. Do not interpret or promote. |
+
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
+
+## v16 policy-mass successor — reservoir protocol v1 (RUNNING 2026-07-16)
+
+This is the first context-relative successor to rejected v16a. It is a search experiment on unchanged `calib020_0001`, not a new trained checkpoint. The rule under test is:
+
+```text
+P_explored = sum(prior(a)) over children with completed backed-up visits
+FPU        = Q_parent - r * sqrt(P_explored)
+```
+
+Purpose: retain absolute `-0.20`'s ability to suppress selected-A first-touch opponent-reply scanning without reproducing its held-out low-prior collapse failure at near-even, high-branching, flat-policy roots.
+
+Frozen production decisions:
+
+- Generation commit: `fca9c0dc563e47274b71059749ab451fb74e47f1`.
+- Checkpoint A / screen anchor: `checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors`, SHA1 `209cf2d4fd24a48553d259dd71b4954867b9473e`.
+- Checkpoint B / reservoir opponent: `checkpoints/alphazero-v2-staged/model_iter_0379.safetensors`, SHA1 `8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1`.
+- Exactly 4,800 games; base seed `20270000`; half-open seed range `[20270000,20274800)`; no top-up.
+- Board 24; 400 simulations; MCTS eval batch 14; stall flush 48; opening-temperature selection for 20 plies (`1.0 -> 0.1`); max moves 280; workers 4; replay capture required.
+- Selection seed `20260712`.
+- Phase-primary final corpus: target/control `180/60`; tuning/frozen `160/80`; each phase gets target `30/15` and control `10/5`.
+- Late-target floors: `b300_399 >= 12`, `b200_299 >= 12`.
+- Proposal enumerator: side-opposed pair per cell, minimum 12-ply gap, maximum 2 proposals per cell/game; final selection remains globally at most 2 rows/game with whole-game split and side balance.
+- New-collapse sub-gate stratum: `ply_bucket`; branching band remains recorded.
+- Forbidden/consumed: selected-A manifest and frozen v16a neutral manifest.
+
+Artifact root:
+
+```text
+logs/eval/fpu_v16_policy_mass_v2/
+```
+
+Machine-authoritative protocol:
+
+```text
+logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/reservoir_protocol.json
+```
+
+Current observed status:
+
+- Clean `main == origin/main` at `fca9c0d` was confirmed.
+- `emit-protocol` succeeded.
+- `emit-gen-command` reproduced the reviewed command exactly.
+- Reservoir generation started 2026-07-16 and is expected to take approximately 39 hours at historical four-worker throughput.
+- The match CLI is silent until completion and writes replay sidecars incrementally.
+- **No scientific result exists yet.** Qualification, geometry, screen eligibility, coefficient safety, selected-A progress, frozen performance, B/C/D guardrails, and playing strength are all pending.
+
+Frozen progression/stopping rule:
+
+```text
+reservoir qualification
+  -> full persisted proposal screen
+  -> deterministic 240-row select
+  -> absolute_off/r0 tuning controls (r0 must qualify)
+  -> frozen five-value grid; choose smallest safe passing r
+  -> one isolated 80-position frozen check
+  -> cross-matchup + fresh held-out collateral validation
+  -> selected-A mechanism + B/C/D guardrails
+  -> decisive same-checkpoint 400-sim strength match
+```
+
+If the reservoir faithfully matches the protocol but fails geometry, protocol v1 is retired; never append/top-up. If `r0` or every candidate fails, reject the formula family. No self-play adoption before the final strength match passes.
+
+Full reproducible commands and artifact descriptions belong in `docs/post-game-analysis.md` section `v16 Context-Relative Policy-Mass FPU — Operator Runbook`.
 
 ## What got better vs worse
 
@@ -1076,7 +1142,26 @@ Lesson: v14b is the best adapter result so far. Projection helped A relative to 
 - **v14 adapter line:** value-adapter surface (`value_head.*` + `value_adapter.*`) with scalar gate/bottleneck 32; v14b best near-pass checkpoint `checkpoints/alphazero-v14b-value-adapter-projection-from-calib020-0001/model_iter_0001.safetensors`; v14c/v14d rejected and close cleanup.
 - **v15 raw/MCTS + continuation diagnostics:** raw A/D drift CSV `logs/eval/v15prep_raw_AD_drift_base_v14b_v14d.csv`; Phase 0 concentration script `scripts/GPU/alphazero/diagnose_v15_a_continuation_concentration.py` output `logs/eval/v15prep_a_continuation_concentration.csv`; Phase 0.5 subtree script `scripts/GPU/alphazero/diagnose_v15_a_selected_branch_subtrees.py` outputs `logs/eval/v15prep_a_selected_branch_subtrees.csv` and `logs/eval/v15prep_a_selected_branch_subtrees_by_depth_summary.csv`; closure summary files `logs/eval/v15prep_a_phase05_*.csv` / `.txt`; decision: no v15 Phase 1.
 - **v16/v16a search-reliability diagnostics:** FPU hook and sweep `scripts/GPU/alphazero/diagnose_fpu_sweep.py`; neutral-manifest builder `scripts/GPU/alphazero/build_v16a_neutral_position_manifest.py`; manifest/meta `logs/eval/v16a_fpu_unbiased/neutral_position_manifest.csv` and `.meta.json`; held-out outputs `neutral_fpu_sweep_cases.csv`, `neutral_fpu_sweep_summary.csv`, `neutral_fpu_sweep_by_stratum.csv`, and `operator_sweep.log` in the same directory; design `docs/superpowers/specs/2026-07-10-v16a-unbiased-fpu-validation-design.md`; result: fixed absolute `−0.20` rejected by the late-stratum collapse gate.
+- **v16 context-relative policy-mass successor:** rule/observer/diagnostic `scripts/GPU/alphazero/mcts.py` + `scripts/GPU/alphazero/diagnose_fpu_policy_mass.py`; phase-primary corpus `scripts/GPU/alphazero/fpu_dev_corpus_v2.py`; immutable reservoir protocol/qualification `scripts/GPU/alphazero/fpu_dev_reservoir_protocol.py`; production protocol root `logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/`; design `docs/superpowers/specs/2026-07-10-context-relative-fpu-policy-mass-design.md`; corpus design `docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md`; qualification design `docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-qualification-design.md`; operator guide `docs/post-game-analysis.md` §11; status: reservoir protocol v1 RUNNING, no result yet.
+
 - **Plans:** `docs/superpowers/plans/2026-06-24-targeted-value-calibration-v2.md`, `docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md`, `docs/superpowers/plans/2026-06-29-targeted-value-calibration-v4-teacher-retention.md`.
+
+## v16 policy-mass successor — reservoir v1 POST-SCREEN GATE-FAIL + role-feasibility repair (2026-07-18/19)
+
+**Outcome of reservoir protocol v1 (updates the RUNNING status above): the 4,800-game reservoir generated and passed `qualify` + `screen`, but `select` GATE-FAILED post-screen.** Kept target capacity by phase: **opening 0 / early_mid 0 / midgame 0 / late 136** (155 kept late-target rows across 86 games under the ≤2/game rule) vs the 45-per-phase demand of the original 240-row allocation. Target geometry is late-only on this net. **No FPU coefficient was tested; no A/B/C/D or strength result exists.** reservoir_v1 artifacts are preserved untouched as immutable discovery evidence.
+
+**Role-feasibility repair (branch `fpu-v2-role-feasibility-repair`, 22 commits fca9c0d→da4dc00; plan `docs/superpowers/plans/2026-07-18-fpu-v2-role-feasibility-repair.md`):** schema-2 config-authoritative `AllocationProfile` (late-only targets), controlled `post-screen-qualify` stage (PASS = exact-selector witness, never capacity bounds), protocol v2 + `run_kind` production/smoke isolation, per-split late-target band minima, authenticated discovery commands, `historical_screen_discovery_v1` identity policy (producer vs analyzer provenance; strict stages unchanged). Suite 2262/0; schema-1 byte-identity pinned by pre-repair goldens. Whole-branch review: ready to merge (0 Critical / 0 Important).
+
+**Task 14 zero-GPU proof on the immutable v1 screen (final rerun r2 under source bytes @ `da4dc00`, clean tree):**
+
+- **Production profile (120 rows) exact-selector PASS, exit 0, deterministic** (r1 pre-cell-order-fix run byte-identical on witness/qualification/profile; superseded r1 reports preserved on disk).
+- Final frozen allocation: `target|late` 40 tuning + 20 frozen_check; `control|{opening,early_mid,midgame,late}` 10 tuning + 5 frozen_check each; totals 80/40 tuning/frozen_check, 60/60 target/control.
+- Frozen late-target band minima: totals b400_plus ≥ 8 / b300_399 ≥ 12 / b200_299 ≥ 12; per-split tuning {b400 4, b300 8, b200 8} / frozen_check {b400 4, b300 5, b200 5} — **now backed by a constructive witness** (bands realized 11/23/26; per-split tuning 7/15/18, frozen_check 4/8/8).
+- **The frozen_check b400_plus minimum is satisfied with ZERO witness slack (4 of 4)** — 11 of the 12 candidate b400 rows (12 games, 7 black/5 red on screen) were selected. This makes Task 16 sizing decisive for fresh-reservoir reliability.
+- Old 240-row allocation on the same screen: **GATE_FAIL, exit 4** — all three non-late target cells capacity 0 < demand 45 (confirms 0/0/0/136).
+- Committed evidence (`logs/eval/fpu_v16_policy_mass_v2/analysis/`, SHA-1): `production_profile.json` 378d3cdb61c9b113af6cb8d1cf5c8fb41e3f39e2 · `old_allocation_profile.json` d0287df2eb128e5c8fe595897dd203ec0d8a9012 · `production_feasibility_r2.json` 2bef7133939faa9c778dd576155ced3a68a6bf61 · `old_allocation_feasibility_r2.json` 6295e1af467dcfef8019b271947f85334ba5ad66.
+
+**Pending (gated):** Task 15 400-game 24×24 `tooling_smoke` (plumbing proof only — smoke omits production band floors; a smoke sampling GATE_FAIL is a controlled result, never permission to top up or weaken production minima); Task 16 finite-reservoir sizing (299-trial preregistered 95% lower bound ≥ 0.99, next-tier-up rule) + production protocol emission. Smoke/sizing results will be appended here.
 
 ---
 
