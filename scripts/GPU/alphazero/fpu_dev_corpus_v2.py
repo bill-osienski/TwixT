@@ -75,6 +75,7 @@ import argparse
 import csv
 import dataclasses
 import json
+import math
 import random
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -3525,6 +3526,136 @@ def analyze_screen_feasibility(config: V2Config, screen_csv_path: str,
     return doc
 
 
+def _binomial_lower_bound(k: int, n: int, alpha: float) -> float:
+    """Exact one-sided (Clopper-Pearson) lower confidence bound for a
+    binomial proportion: the largest p with P(X >= k | n, p) <= alpha.
+    Stdlib-only bisection; 0.0 when k == 0. All-success closed form:
+    alpha ** (1/n) -- e.g. 299 all-success trials give a 95% lower bound of
+    0.99003 >= 0.99, while 298 give 0.98999 (the preregistered 299 rule)."""
+    if k == 0:
+        return 0.0
+    def tail_ge_k(p: float) -> float:
+        return sum(math.comb(n, i) * p ** i * (1 - p) ** (n - i)
+                   for i in range(k, n + 1))
+    lo, hi = 0.0, 1.0
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        if tail_ge_k(mid) < alpha:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
+def sizing_analysis_core(kept: List[dict], all_game_ids: List[Any],
+                         alloc: AllocationProfile, selection_seed: int, *,
+                         game_counts: List[int], trials: int,
+                         seed: int) -> Dict[str, Any]:
+    """Repair plan Sec 11 + review correction 3: FINITE-RESERVOIR
+    SUBSAMPLING. Estimates how reliably smaller whole-game subsets of THIS
+    discovery reservoir support the profile; it does NOT independently
+    certify a fresh reservoir of any size.
+
+    `all_game_ids` is the COMPLETE reservoir universe (from the qualified
+    source index), including games that yielded ZERO kept rows -- excluding
+    them would bias success upward. Whole games are the sampling unit."""
+    by_game: Dict[Any, List[dict]] = {gi: [] for gi in all_game_ids}
+    for r in kept:
+        by_game[r["game_idx"]].append(r)     # KeyError = row outside universe
+    games = sorted(by_game)
+    by_count: Dict[str, Any] = {}
+    for count in sorted(set(int(c) for c in game_counts)):
+        if count > len(games):
+            by_count[str(count)] = {"skipped": f"only {len(games)} games "
+                                               f"in the reservoir"}
+            continue
+        # At the full count every draw is the SAME set -- one trial, flagged.
+        n_trials = 1 if count == len(games) else trials
+        successes, reasons = 0, Counter()
+        capacity_samples: Dict[str, List[int]] = defaultdict(list)
+        for t in range(n_trials):
+            rng = random.Random(f"sizing:{seed}:{count}:{t}")
+            subset = set(rng.sample(games, count))
+            sub_kept = [r for gi in subset for r in by_game[gi]]
+            rep = post_screen_qualification_report(sub_kept, alloc)
+            for cell, info in rep["cells"].items():
+                capacity_samples[cell].append(info["capacity"])
+            for band, info in rep["late_target_bands"].items():
+                capacity_samples[f"band:{band}"].append(info["capacity"])
+            if rep["status"] != "PASS":
+                reasons[f"qualify: {rep['binding_constraint']}"] += 1
+                continue
+            try:
+                sample_v2_rows(sub_kept, seed=selection_seed, alloc=alloc)
+            except ValueError as exc:
+                reasons[f"select: {str(exc).splitlines()[0][:120]}"] += 1
+            else:
+                successes += 1
+        lower = _binomial_lower_bound(successes, n_trials, 0.05)
+        by_count[str(count)] = {
+            "n_trials": n_trials, "n_successes": successes,
+            "success_rate": successes / n_trials,
+            "lower_bound_95": lower,
+            "meets_criterion": lower >= 0.99,
+            "degenerate_full_reservoir": count == len(games),
+            "failure_reasons": dict(sorted(reasons.items())),
+            # Repair plan Sec 11: role/phase + band capacity DISTRIBUTIONS.
+            "capacity_min_median_max": {
+                cell: [min(vals), sorted(vals)[len(vals) // 2], max(vals)]
+                for cell, vals in sorted(capacity_samples.items())}}
+    return {
+        "discovery_only": True,
+        "method": "finite-reservoir whole-game subsampling",
+        "confidence_criterion": {
+            "method": "exact one-sided (Clopper-Pearson) lower bound",
+            "alpha": 0.05, "target_reliability": 0.99,
+            "all_success_trials_required": 299,
+            "note": ("estimates smaller subsets of THIS discovery reservoir; "
+                     "does not independently certify a fresh reservoir"),
+        },
+        "profile": alloc.fingerprint(), "selection_seed": selection_seed,
+        "analysis_seed": seed, "n_trials_per_count": trials,
+        "n_games_available": len(games),
+        "n_zero_yield_games": sum(1 for gi in games if not by_game[gi]),
+        "cannot_certify_beyond": len(games),
+        "by_game_count": by_count,
+    }
+
+
+def sizing_analysis(config: V2Config, screen_csv_path: str, profile_json: str,
+                    *, game_counts: List[int], trials: int,
+                    seed: int) -> Dict[str, Any]:
+    """Authenticated wrapper (mirrors `analyze_screen_feasibility` exactly):
+    proves the screen IS the qualified artifact its config describes --
+    identities (incl. the CSV's own bytes), config rederivation (re-measures
+    the reservoir), rows-vs-meta -- BEFORE analyzing. The sampling universe is
+    built from the SAME qualified source index the identity chain just hard-
+    matched (repair plan Sec 11 + review correction 3), not just the kept
+    rows, so zero-yield games are correctly counted. Zero-GPU. Writes no
+    manifest, rebinds no protocol."""
+    from .fpu_dev_reservoir_protocol import rederive_and_assert_config_unchanged
+    screen_meta = json.loads(Path(screen_csv_path + ".meta.json").read_text())
+    verified = validate_screen_identities(
+        screen_meta, config, forbidden_paths=config.forbidden_manifests,
+        screen_csv_path=screen_csv_path)
+    rederive_and_assert_config_unchanged(config)
+    screen_rows = read_screen_csv(screen_csv_path)
+    validate_screen_rows_against_meta(screen_rows, screen_meta)
+    alloc, selection_seed = _load_analysis_profile(profile_json)
+    all_game_ids = [rec["game_idx"] for rec in
+                    load_game_index(config.source_index_path)]
+    doc = sizing_analysis_core(
+        kept_rows_from_screen(screen_rows), all_game_ids, alloc,
+        selection_seed, game_counts=game_counts, trials=trials, seed=seed)
+    doc.update({
+        "screen_csv": screen_csv_path,
+        "screen_csv_sha1": fpu_provenance.file_sha1(screen_csv_path),
+        "analyzed_config_path": config.config_path,
+        "verified_screen_provenance": verified,
+    })
+    return doc
+
+
 # ---------------------------------------------------------------------------
 # The final manifest: schema + the `select` composition itself
 # ---------------------------------------------------------------------------
@@ -3830,6 +3961,14 @@ def write_select_csv(rows: List[dict], out_csv: str) -> None:
 # mistaking it for naming the screen's OUTPUT (that is `config.screen_out`).
 # ---------------------------------------------------------------------------
 
+def _parse_game_counts(raw: str) -> List[int]:
+    """argparse `type=` for `--sizing-analysis`'s `--game-counts`: a
+    comma-split list of ints. A malformed value (non-numeric, empty) raises
+    `ValueError`, which argparse itself turns into a clean usage error
+    (exit 2) -- no separate hand-rolled validation needed."""
+    return [int(c) for c in raw.split(",")]
+
+
 def _parse_v2_args(argv):
     ap = argparse.ArgumentParser(
         description="v2 phase-primary FPU dev-corpus pipeline (design Sec "
@@ -3843,7 +3982,7 @@ def _parse_v2_args(argv):
                     "screen and select are NEVER the same invocation.")
     ap.add_argument("--mode", required=True,
                     choices=("screen", "select", "post-screen-qualify",
-                             "analyze-screen-feasibility"),
+                             "analyze-screen-feasibility", "sizing-analysis"),
                     help="pipeline stage to run.")
     ap.add_argument("--config", required=True,
                     help="path to the required fpu_dev_corpus_v2_config.json "
@@ -3864,7 +4003,20 @@ def _parse_v2_args(argv):
     ap.add_argument("--out", default=None,
                     help="path to write the discovery-only analysis document "
                          "(canonical JSON). REQUIRED by --mode "
-                         "analyze-screen-feasibility.")
+                         "analyze-screen-feasibility and --mode "
+                         "sizing-analysis.")
+    ap.add_argument("--game-counts", default=None, type=_parse_game_counts,
+                    help="comma-separated whole-game reservoir sizes to "
+                         "resample at (repair plan Sec 11), e.g. "
+                         "'1200,2400,3600'. REQUIRED by --mode "
+                         "sizing-analysis.")
+    ap.add_argument("--trials", type=int, default=None,
+                    help="number of resampling trials per game count "
+                         "(299 for the preregistered all-success 95%% "
+                         "criterion). REQUIRED by --mode sizing-analysis.")
+    ap.add_argument("--seed", type=int, default=None,
+                    help="analysis seed (string-seeds each trial's RNG). "
+                         "REQUIRED by --mode sizing-analysis.")
     args = ap.parse_args(argv)
 
     # `screen` and `select` are never the same invocation (design Sec 1.6), so the
@@ -3872,7 +4024,8 @@ def _parse_v2_args(argv):
     # silently ignored, so `--mode screen --screen out.csv` cannot be mistaken for
     # naming the screen's output path.
     if args.mode in ("select", "post-screen-qualify",
-                     "analyze-screen-feasibility") and not args.screen:
+                     "analyze-screen-feasibility", "sizing-analysis") \
+            and not args.screen:
         ap.error(f"--mode {args.mode} requires --screen (the persisted screen "
                  f"artifact to select/qualify/analyze from; it never re-screens)")
     if args.mode == "screen" and args.screen:
@@ -3886,6 +4039,22 @@ def _parse_v2_args(argv):
     if args.mode == "analyze-screen-feasibility" and not args.out:
         ap.error("--mode analyze-screen-feasibility requires --out (where to "
                  "write the discovery-only analysis document)")
+    if args.mode == "sizing-analysis":
+        if not args.profile_json:
+            ap.error("--mode sizing-analysis requires --profile-json (repair "
+                     "plan Sec 9: the PRODUCTION_PROFILE_RAW shape plus a "
+                     "'selection_seed' int)")
+        if not args.out:
+            ap.error("--mode sizing-analysis requires --out (where to write "
+                     "the discovery-only sizing analysis document)")
+        if not args.game_counts:
+            ap.error("--mode sizing-analysis requires --game-counts "
+                     "(comma-separated whole-game reservoir sizes)")
+        if args.trials is None:
+            ap.error("--mode sizing-analysis requires --trials (resampling "
+                     "trials per game count)")
+        if args.seed is None:
+            ap.error("--mode sizing-analysis requires --seed (analysis seed)")
     return args
 
 
@@ -4017,6 +4186,40 @@ def _analyze_screen_feasibility_cli(config: V2Config, screen_csv_path: str,
         raise
     except ValueError as exc:
         raise V2AnalyzeScreenMismatch(str(exc)) from exc
+
+
+class V2SizingAnalysisMismatch(ValueError):
+    """`sizing-analysis`'s authenticated wrapper (repair plan Sec 11) failed
+    to prove the screen IS the qualified artifact its config and profile
+    describe -- the SAME evidence chain `analyze_screen_feasibility` runs
+    (identities, re-derive, rows-vs-meta, profile/seed load). Sibling of
+    `V2AnalyzeScreenMismatch`, same dedicated-subtype move: `_sizing_analysis_
+    cli` re-raises ONLY the wrapper's plain `ValueError` as this subtype, so
+    `main` maps exactly this artifact/input-mismatch class to a clean
+    EXIT_MISMATCH (3) -- WITHOUT a bare `except ValueError` in `main`.
+    Subclasses ValueError so a caller written against the plain shape still
+    behaves as before. (A missing screen/profile file is an OSError, NOT this
+    -- it maps to EXIT_USAGE at its own clause; `json.JSONDecodeError` from a
+    malformed screen meta or profile JSON is re-raised untranslated so it,
+    too, stays EXIT_USAGE.)"""
+
+
+def _sizing_analysis_cli(config: V2Config, screen_csv_path: str,
+                         profile_json: str, *, game_counts: List[int],
+                         trials: int, seed: int) -> Dict[str, Any]:
+    """`main --mode sizing-analysis`'s dispatcher: runs the authenticated
+    wrapper and re-raises a genuine identity/artifact/profile `ValueError` as
+    the dedicated `V2SizingAnalysisMismatch` (-> EXIT_MISMATCH), while leaving
+    `OSError`/`json.JSONDecodeError` (bad screen/profile I/O -> EXIT_USAGE)
+    untranslated. Kept out of `main` so `main` never needs a bare
+    `except ValueError`."""
+    try:
+        return sizing_analysis(config, screen_csv_path, profile_json,
+                               game_counts=game_counts, trials=trials, seed=seed)
+    except json.JSONDecodeError:
+        raise
+    except ValueError as exc:
+        raise V2SizingAnalysisMismatch(str(exc)) from exc
 
 
 def _select_require_pass_report(config: V2Config, screen_csv_path: str,
@@ -4205,6 +4408,31 @@ def main(argv=None) -> int:
         print(f"[fpu-dev-corpus-v2] analyze-screen-feasibility: "
               f"{doc['status']} -> {args.out}")
         return EXIT_OK if doc["status"] == "PASS" else EXIT_GATE_FAIL
+
+    if args.mode == "sizing-analysis":
+        # PURE discovery only (repair plan Sec 11): the SAME identity/re-
+        # derive/rows-vs-meta chain `analyze-screen-feasibility` runs, then
+        # deterministic finite-reservoir whole-game resampling. A measurement,
+        # not a gate -- exit 0 whenever the analysis completes, regardless of
+        # whether any game count meets the 95% criterion.
+        try:
+            doc = _sizing_analysis_cli(
+                config, args.screen, args.profile_json,
+                game_counts=args.game_counts, trials=args.trials,
+                seed=args.seed)
+        except (OSError, json.JSONDecodeError) as exc:
+            return _v2_cli_hard_stop(
+                f"[fpu-dev-corpus-v2] sizing-analysis STOPPED (I/O): {exc}")
+        except V2SizingAnalysisMismatch as exc:
+            print(f"[fpu-dev-corpus-v2] sizing-analysis MISMATCH: {exc}")
+            return EXIT_MISMATCH
+        from .fpu_dev_reservoir_protocol import canonical_json_bytes
+        Path(args.out).write_bytes(canonical_json_bytes(doc))
+        print(f"[fpu-dev-corpus-v2] sizing-analysis: "
+              f"{len(doc['by_game_count'])} game count(s) analyzed "
+              f"(of {doc['n_games_available']} games available) -> "
+              f"{args.out}")
+        return EXIT_OK
 
     raise AssertionError(   # unreachable: argparse's own `choices` guards this
         f"main: unreachable --mode {args.mode!r}")

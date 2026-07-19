@@ -869,3 +869,34 @@ def test_load_analysis_profile_seed_happy_path_and_missing_key(tmp_path):
     bad_path.write_text(json.dumps(no_seed))
     with pytest.raises(ValueError, match="selection_seed"):
         v2._load_analysis_profile(str(bad_path))
+
+
+def test_binomial_lower_bound_pins_the_299_rule():
+    assert v2._binomial_lower_bound(299, 299, 0.05) >= 0.99
+    assert v2._binomial_lower_bound(298, 298, 0.05) < 0.99
+    assert v2._binomial_lower_bound(0, 100, 0.05) == 0.0
+    # One failure in 299 must drop the bound below the criterion.
+    assert v2._binomial_lower_bound(298, 299, 0.05) < 0.99
+
+
+def test_sizing_core_universe_includes_zero_yield_games():
+    kept = make_feasible_120_pool()                    # games 0..229
+    universe = list(range(250))                        # + 20 zero-yield games
+    alloc = _production_alloc()
+    kw = dict(game_counts=[100, 250], trials=8, seed=5)
+    a = v2.sizing_analysis_core(kept, universe, alloc, 20260718, **kw)
+    b = v2.sizing_analysis_core(kept, universe, alloc, 20260718, **kw)
+    assert a == b                                      # deterministic
+    assert a["n_games_available"] == 250
+    assert a["n_zero_yield_games"] == 20
+    full = a["by_game_count"]["250"]
+    assert full["degenerate_full_reservoir"] is True
+    assert full["n_trials"] == 1                       # not 8 identical draws
+    small = a["by_game_count"]["100"]
+    assert small["n_trials"] == 8
+    assert small["n_successes"] + sum(
+        small["failure_reasons"].values()) == 8
+    assert 0.0 <= small["lower_bound_95"] <= small["success_rate"] or (
+        small["success_rate"] == 0.0)
+    assert a["cannot_certify_beyond"] == 250
+    assert a["method"] == "finite-reservoir whole-game subsampling"
