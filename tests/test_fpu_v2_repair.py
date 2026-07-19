@@ -485,6 +485,20 @@ def test_per_split_band_minima_hold_on_selected_rows():
     assert stats["late_target_band_count_by_split"]["tuning"]["b400_plus"] >= 4
 
 
+def test_schema2_profile_with_empty_per_split_minima_still_gets_the_key():
+    # build_selector_witness reads stats["late_target_band_count_by_split"]
+    # unconditionally for every schema-2 run; the key must be present even
+    # when a legal schema-2 profile carries NO per-split minima (only totals).
+    raw = copy.deepcopy(PRODUCTION_PROFILE_RAW)
+    raw["late_target_band_minima"] = {}
+    alloc = v2.parse_allocation_profile(raw, source="test")
+    assert alloc.schema_version == 2
+    assert alloc.band_minima_per_split == {}
+    rows, stats = v2.sample_v2_rows(make_feasible_120_pool(), seed=11, alloc=alloc)
+    assert "late_target_band_count_by_split" in stats
+    assert sum(stats["late_target_band_count_by_split"]["tuning"].values()) > 0
+
+
 @pytest.mark.parametrize("starve_band", ["b400_plus", "b300_399", "b200_299"])
 def test_insufficient_band_capacity_fails_by_name(starve_band):
     pool = [r for r in make_feasible_120_pool()

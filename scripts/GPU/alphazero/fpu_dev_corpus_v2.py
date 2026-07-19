@@ -1202,7 +1202,10 @@ def _select_manifest(games: Mapping[Any, List[dict]],
     }
     # The per-split floor witness -- schema-2 only, so schema-1 stats stay
     # byte-identical to the pre-repair Task 0 golden (which predates this key).
-    if alloc.band_minima_per_split:
+    # Gated on schema_version (not band_minima_per_split emptiness): a legal
+    # schema-2 profile can have EMPTY per-split minima, and build_selector_witness
+    # reads this key unconditionally for every schema-2 run.
+    if alloc.schema_version >= 2:
         stats["late_target_band_count_by_split"] = {
             s: dict(sorted(late_by_split[s].items())) for s in SPLITS}
     return selected, stats
