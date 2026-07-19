@@ -37,7 +37,7 @@ from scripts.GPU.alphazero import fpu_dev_corpus_v2 as v2
 from scripts.GPU.alphazero import fpu_dev_reservoir_protocol as proto
 from tests.test_fpu_dev_corpus_v2 import _abundant_pool_v2
 from tests.test_fpu_dev_reservoir_protocol import (
-    _conformant_reservoir, _protocol_params)
+    _conformant_reservoir, _protocol_params, _write_precheckable_config)
 
 GOLDEN_DIR = Path(__file__).parent / "goldens"
 
@@ -877,6 +877,39 @@ def test_binomial_lower_bound_pins_the_299_rule():
     assert v2._binomial_lower_bound(0, 100, 0.05) == 0.0
     # One failure in 299 must drop the bound below the criterion.
     assert v2._binomial_lower_bound(298, 299, 0.05) < 0.99
+
+
+def test_precheck_step5_uses_the_configs_own_profile_not_legacy(monkeypatch, tmp_path):
+    """Task 12 fix: `precheck_before_screen`'s defensive step-5 preflight must
+    use the config's OWN allocation (via `_precheck_preflight_alloc` ->
+    `profile_for`), not the legacy 240-row module quotas that `alloc=None`
+    imposes -- so a reservoir `run_qualify` accepts under the config's profile
+    is not then REJECTED at screen precheck under a stricter, wrong bar.
+
+    Value: schema-2 -> the config's own profile (NOT legacy/None); schema-1 ->
+    None (byte-identical to the prior single-arg call). Wiring: step 5 actually
+    consults the seam (spied to raise, proving precheck reaches it before the
+    evaluator loads)."""
+    cfg2 = v2.load_v2_config(_write_config(
+        tmp_path, dict(PRODUCTION_PROFILE_RAW, post_screen_report_out="psq.json")))
+    alloc = proto._precheck_preflight_alloc(cfg2)
+    assert alloc is not None
+    assert alloc.fingerprint() == v2.profile_for(cfg2).fingerprint()
+    assert alloc.fingerprint() != v2.AllocationProfile.legacy().fingerprint()
+
+    cfg1 = v2.load_v2_config(_write_config(tmp_path, {}))
+    assert proto._precheck_preflight_alloc(cfg1) is None
+
+    # Wiring: precheck's step 5 consults the seam (default preflight, gate True).
+    config, *_ = _write_precheckable_config(tmp_path)
+    marker = RuntimeError("step-5 seam reached")
+
+    def _spy(_config):
+        raise marker
+
+    monkeypatch.setattr(proto, "_precheck_preflight_alloc", _spy)
+    with pytest.raises(RuntimeError, match="step-5 seam reached"):
+        proto.precheck_before_screen(config)
 
 
 def test_sizing_core_universe_includes_zero_yield_games():

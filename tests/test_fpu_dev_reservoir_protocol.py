@@ -3856,6 +3856,11 @@ def test_module_imports_only_pure_names_from_fpu_dev_corpus_v2():
         # validate + build the allocation profile via `parse_allocation_profile`
         # (against `PROFILE_RUN_KINDS`), both from that module's PURE section.
         "PROFILE_RUN_KINDS", "parse_allocation_profile",
+        # Task 12 fix: `precheck_before_screen`'s step-5 defensive preflight
+        # threads the config's OWN schema-2 profile via `profile_for` (the
+        # shared bridge), not the legacy module quotas -- another PURE-section
+        # name, same legal import direction.
+        "profile_for",
     }, from_imports
 
 

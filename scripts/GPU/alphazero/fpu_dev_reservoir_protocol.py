@@ -602,6 +602,7 @@ from .fpu_dev_corpus_v2 import (
     _V2_CORPUS_SOURCES,
     enumerate_v2_proposals,
     parse_allocation_profile,
+    profile_for,
     v2_geometry_feasibility,
 )
 
@@ -2718,6 +2719,18 @@ def rederive_and_assert_config_unchanged(
     assert_config_byte_equals_rederivation(config, recomputed_config)
 
 
+def _precheck_preflight_alloc(config: Any) -> Optional[Any]:
+    """The `AllocationProfile` precheck's step-5 defensive preflight must use:
+    for a schema-2 config, the config's OWN profile (via the shared
+    `profile_for` bridge -- never the legacy module quotas); for schema-1,
+    `None` (byte-identical to the prior single-arg `default_preflight` call --
+    schema-1 behaviour is provably unchanged, since this branch is never
+    taken). Mirrors `run_qualify`'s own schema-2 preflight binding."""
+    if getattr(config, "config_schema_version", 1) >= 2:
+        return profile_for(config)
+    return None
+
+
 def precheck_before_screen(
         config: Any,
         *,
@@ -2817,7 +2830,16 @@ def precheck_before_screen(
             f"hashes to {measured_protocol_sha1!r}. The config was derived "
             f"from a DIFFERENT protocol (or the protocol changed since).")
 
-    # (5) Repeat the geometric preflight, defensively.
+    # (5) Repeat the geometric preflight, defensively. For a schema-2 config the
+    # feasibility gate must use the config's OWN allocation profile (per-phase
+    # quotas / late floors), NOT the legacy 240-row module quotas -- mirroring
+    # `run_qualify`'s own schema-2 binding, so precheck re-runs the SAME gate
+    # `qualify_core` ran when the config was emitted. Only when the caller did
+    # NOT inject its own `preflight` (the test-injection seam stays intact);
+    # schema-1 -> `alloc=None`, byte-identical to the prior single-arg call.
+    if preflight is default_preflight:
+        alloc = _precheck_preflight_alloc(config)
+        preflight = lambda m: default_preflight(m, alloc=alloc)  # noqa: E731
     preflight_result = preflight(measurements)
     if not preflight_result.feasible:
         raise ValueError(
