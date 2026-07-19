@@ -27,6 +27,7 @@ target-side and control-side keys (not just an all-clean/empty subset).
 import copy
 import json
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -727,3 +728,90 @@ def test_derive_config_v1_carries_no_v2_fields():
     cfg = proto.derive_config(protocol, measurements, protocol_path="p.json")
     assert "run_kind" not in cfg
     assert "post_screen_report_out" not in cfg
+
+
+# ---------------------------------------------------------------------------
+# Task 9: diagnostic honesty -- smoke rejection, run_kind fingerprint, honest
+# inactive gates. `_safe_target`/`_golden_ref`/`_golden_cand` are this file's
+# own Task 0 golden fixtures (same row shape `dev_safety_verdict` tests use
+# throughout the suite); `PRODUCTION_PROFILE_RAW`/`_write_config` are Task 1/2's
+# schema-2 config fixtures already defined above.
+# ---------------------------------------------------------------------------
+
+def test_dev_safety_verdict_names_inactive_strata():
+    # 25 band-A target rows (active, n>=DEV_BAND_MIN_N) + 5 band-B rows
+    # (inactive, n<DEV_BAND_MIN_N): the gate for B must be reported as NOT
+    # having run, with its sample size -- both keyed under the DEFAULT
+    # stratum_key ("band"), since no --dev-corpus-config is in play here.
+    rows = ([_safe_target(band="b300_399") for _ in range(25)]
+            + [_safe_target(band="b200_299") for _ in range(5)])
+    verdict = diag.dev_safety_verdict(rows, _golden_ref(), _golden_cand(),
+                                      _golden_cand(), include_stratum_census=True)
+    assert verdict.metrics["band_stratum_sizes"] == {
+        "b300_399": 25, "b200_299": 5}
+    assert verdict.metrics["band_inactive_strata"] == ["b200_299"]
+    # Default OFF: v1 gate-JSON metrics unchanged (Task 0 golden also pins this).
+    plain = diag.dev_safety_verdict(rows, _golden_ref(), _golden_cand(),
+                                    _golden_cand())
+    assert "band_stratum_sizes" not in plain.metrics
+    assert "band_inactive_strata" not in plain.metrics
+
+
+def test_dev_safety_verdict_census_covers_gated_and_band_summary():
+    # stratum_key="ply_bucket" (v2): census must appear under BOTH the gated
+    # ply_bucket_ prefix AND the always-reported band_ summary branch.
+    rows = [_safe_target(band="b300_399", ply_bucket="late") for _ in range(25)] + [
+        _safe_target(band="b200_299", ply_bucket="mid") for _ in range(3)]
+    verdict = diag.dev_safety_verdict(rows, _golden_ref(), _golden_cand(),
+                                      _golden_cand(), stratum_key="ply_bucket",
+                                      include_stratum_census=True)
+    assert verdict.metrics["ply_bucket_stratum_sizes"] == {"late": 25, "mid": 3}
+    assert verdict.metrics["ply_bucket_inactive_strata"] == ["mid"]
+    assert verdict.metrics["band_stratum_sizes"] == {"b300_399": 25, "b200_299": 3}
+    assert verdict.metrics["band_inactive_strata"] == ["b200_299"]
+
+
+def test_production_diagnostic_rejects_tooling_smoke(tmp_path):
+    extra = dict(PRODUCTION_PROFILE_RAW)
+    extra["run_kind"] = "tooling_smoke"
+    extra["post_screen_report_out"] = "psq.json"
+    cfg = v2.load_v2_config(_write_config(tmp_path, extra))
+    with pytest.raises(SystemExit, match="tooling_smoke"):
+        diag.require_production_run_kind(cfg)
+
+
+def test_production_diagnostic_accepts_production_run_kind(tmp_path):
+    extra = dict(PRODUCTION_PROFILE_RAW)
+    extra["post_screen_report_out"] = "psq.json"
+    cfg = v2.load_v2_config(_write_config(tmp_path, extra))
+    diag.require_production_run_kind(cfg)   # must not raise
+
+
+@dataclass
+class _FpBaseCfg:
+    """Adapted from tests/test_fpu_evidence_chain.py's `_FakeCfg` -- the
+    minimal `base_cfg` shape `build_run_fingerprint` feeds to
+    `dataclasses.asdict`."""
+    c_puct: float = 1.5
+    fpu_policy_mass_reduction: object = None
+    eval_batch_size: int = 14
+    stall_flush_sims: int = 48
+    n_simulations: int = 400
+
+
+def test_run_fingerprint_records_run_kind_only_when_given(tmp_path):
+    ckpt = tmp_path / "ck.npz"; ckpt.write_bytes(b"CKPT-BYTES")
+    manifest = tmp_path / "m.csv"; manifest.write_text("split\ntuning\n")
+    src = tmp_path / "src.jsonl"; src.write_text('{"game_idx": 0}\n')
+    rp = tmp_path / "r0.json"; rp.write_text('{"moves": []}')
+    common = dict(
+        dev_manifest=str(manifest), checkpoint=str(ckpt), base_cfg=_FpBaseCfg(),
+        source_jsonl=str(src), replay_paths=[str(rp)],
+        seeds={"seed_base": 1, "eval_batch_size": 14, "stall_flush_sims": 48},
+        selected_a_manifest=None, mode="tuning", stage="controls")
+
+    fp = diag.build_run_fingerprint(**common, run_kind="production")
+    assert fp["run_kind"] == "production"
+
+    legacy = diag.build_run_fingerprint(**common)
+    assert "run_kind" not in legacy      # review correction 4: v1 bytes intact

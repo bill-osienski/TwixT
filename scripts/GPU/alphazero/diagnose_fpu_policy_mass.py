@@ -222,7 +222,8 @@ class AVerdict:
 
 def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
                        r0_lockin: int, absoff_lockin: int, *,
-                       stratum_key: str = "band") -> SafetyVerdict:
+                       stratum_key: str = "band",
+                       include_stratum_census: bool = False) -> SafetyVerdict:
     """§6.2 development-safety verdict vs a single reference `X` (`ref`). REJECT
     (rejected=True) if ANY frozen gate trips. Target and control rows are split
     by `role`; each subset is evaluated only when non-empty (so a test can
@@ -240,7 +241,17 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
     n>=DEV_BAND_MIN_N rule) so band coverage stays visible when phase is the
     gated stratum. `DEV_NEW_COLLAPSE_BAND` (10%) and `DEV_BAND_MIN_N` (20) are
     unchanged either way. A `target` row missing a key needed for grouping
-    raises `ValueError` (never a silent skip)."""
+    raises `ValueError` (never a silent skip).
+
+    `include_stratum_census` (Task 9, default False -- v1/Task 0 golden
+    byte-identical) additionally reports, for BOTH the gated `stratum_key`
+    metrics (`f"{stratum_key}_stratum_sizes"` / `f"{stratum_key}_
+    inactive_strata"`) and -- when `stratum_key != "band"` -- the report-only
+    `band_stratum_sizes` / `band_inactive_strata` summary: every stratum
+    value's target-row count, and the sorted list of values whose count is
+    `< DEV_BAND_MIN_N` (i.e. whose rate sub-gate above did NOT run). This is
+    the only way a consumer can tell "the gate passed" apart from "the gate
+    never had enough rows to evaluate"."""
     target = [r for r in rows if r.get("role") == "target"]
     control = [r for r in rows if r.get("role") == "control"]
     reasons: List[str] = []
@@ -249,10 +260,13 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
     # AND-OR and NO reason string, so `rejected`/`reasons` stay byte-identical.
     metrics: Dict[str, Any] = {}
 
-    def _new_collapse_rates_by(key: str) -> Dict[Any, float]:
+    def _new_collapse_rates_by(key: str) -> Tuple[Dict[Any, float], Dict[Any, int]]:
         """n>=DEV_BAND_MIN_N new-collapse rate per distinct `target` row[key]
         value, insertion-ordered by first occurrence -- for key=="band" this is
-        byte-identical to the pre-stratum-parameterization band-only loop."""
+        byte-identical to the pre-stratum-parameterization band-only loop.
+        Also returns the per-value target-row COUNT (every value, not just the
+        ones that clear DEV_BAND_MIN_N) -- Task 9's census, always computed
+        (cheap) but only surfaced into `metrics` when the caller asks."""
         grouped: Dict[Any, List] = defaultdict(list)
         for r in target:
             if key not in r:
@@ -261,10 +275,17 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
                     f"stratum key {key!r} (row keys: {sorted(r.keys())})")
             grouped[r[key]].append(r)
         rates: Dict[Any, float] = {}
+        sizes: Dict[Any, int] = {}
         for value, srows in grouped.items():
+            sizes[value] = len(srows)
             if len(srows) >= DEV_BAND_MIN_N:
                 rates[value] = sum(1 for r in srows if r["new_collapse"]) / len(srows)
-        return rates
+        return rates, sizes
+
+    def _add_stratum_census(prefix: str, sizes: Dict[Any, int]) -> None:
+        metrics[f"{prefix}_stratum_sizes"] = dict(sorted(sizes.items()))
+        metrics[f"{prefix}_inactive_strata"] = sorted(
+            value for value, size in sizes.items() if size < DEV_BAND_MIN_N)
 
     if target:
         n = len(target)
@@ -273,15 +294,20 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
         if nc_rate >= DEV_NEW_COLLAPSE_TARGET:
             reasons.append(f"target_new_collapse_rate={nc_rate:.4f}>={DEV_NEW_COLLAPSE_TARGET}")
 
-        stratum_rates = _new_collapse_rates_by(stratum_key)
+        stratum_rates, stratum_sizes = _new_collapse_rates_by(stratum_key)
         for value, srate in stratum_rates.items():
             if srate >= DEV_NEW_COLLAPSE_BAND:
                 reasons.append(f"{stratum_key}[{value}]_new_collapse={srate:.4f}>={DEV_NEW_COLLAPSE_BAND}")
         metrics[f"{stratum_key}_new_collapse_rates"] = stratum_rates
+        if include_stratum_census:
+            _add_stratum_census(stratum_key, stratum_sizes)
         if stratum_key != "band":
             # Report-only, ungated -- keeps band coverage visible when phase
             # (ply_bucket) is the gated stratum. Never feeds `reasons`.
-            metrics["band_new_collapse_rates"] = _new_collapse_rates_by("band")
+            band_rates, band_sizes = _new_collapse_rates_by("band")
+            metrics["band_new_collapse_rates"] = band_rates
+            if include_stratum_census:
+                _add_stratum_census("band", band_sizes)
 
         baseline = r0_lockin if getattr(ref, "reduction", None) == 0.0 else absoff_lockin
         lockins = sum(1 for r in target if r["lock_in"])
@@ -643,7 +669,8 @@ def build_run_fingerprint(*, dev_manifest: str, checkpoint: str, base_cfg: Any,
                           seeds: Mapping[str, Any], selected_a_manifest: Optional[str],
                           mode: str, stage: str,
                           new_collapse_stratum: Optional[str] = None,
-                          dev_corpus_config_sha1: Optional[str] = None) -> dict:
+                          dev_corpus_config_sha1: Optional[str] = None,
+                          run_kind: Optional[str] = None) -> dict:
     """Split run-identity fingerprint (design §12.2/§12.5), computed identically
     from the same args in every stage. TWO blocks:
 
@@ -667,7 +694,16 @@ def build_run_fingerprint(*, dev_manifest: str, checkpoint: str, base_cfg: Any,
     `run_context` -- RECORDED but NOT cross-matched (it legitimately differs):
     selected-A present (tuning) vs absent (frozen); explicit `add_noise=False`;
     git commit + clean-worktree flag; runtime provenance; mode; stage; observer
-    schema version."""
+    schema version.
+
+    (Task 9, review correction 4) `run_kind` -- the schema-2 dev-corpus
+    config's `run_kind` (e.g. `"production"`), recorded as a TOP-LEVEL
+    `"run_kind"` key on the returned dict (sibling of `selection_context`/
+    `run_context`, not nested inside either) ONLY when the caller passes a
+    non-None value. The default `None` omits the key entirely rather than
+    writing `null`, so v1 (and any v2 caller that legitimately has no
+    run_kind) produces the exact same top-level dict shape as before this
+    task."""
     selection_context = {
         "source_file_sha1s": fpu_provenance.source_file_sha1s(RESULT_DETERMINING_SOURCES),
         "checkpoint_identity": _checkpoint_identity(checkpoint),
@@ -697,7 +733,10 @@ def build_run_fingerprint(*, dev_manifest: str, checkpoint: str, base_cfg: Any,
         "stage": stage,
         "observer_schema_version": OBSERVER_SCHEMA_VERSION,
     }
-    return {"selection_context": selection_context, "run_context": run_context}
+    result = {"selection_context": selection_context, "run_context": run_context}
+    if run_kind is not None:
+        result["run_kind"] = run_kind
+    return result
 
 
 def _n_visited_children(node: Any) -> int:
@@ -887,15 +926,30 @@ def _load_dev_rows(dev_manifest: str, mode: str) -> List[dict]:
     return rows
 
 
+def require_production_run_kind(config) -> None:
+    """Repair plan Sec 3: smoke artifacts prove plumbing only. The PRODUCTION
+    diagnostic refuses them outright -- they can never select a coefficient,
+    pass a safety gate, justify a strength match, or enter self-play."""
+    if getattr(config, "run_kind", None) == "tooling_smoke":
+        raise SystemExit(
+            "[fpu-policy-mass] --dev-corpus-config has run_kind=tooling_smoke: "
+            "smoke artifacts are REJECTED by the production diagnostic "
+            "(repair plan Sec 3)")
+
+
 def _resolve_v2_stratum(args) -> str:
     """Resolve this run's dev-safety stratification key (Task A2, spec §0/§9).
 
     No `--dev-corpus-config` -> `"band"` (v1): reads NO config at all, so the
     legacy path can never be perturbed by this option's mere existence. With
-    `--dev-corpus-config`, FIVE identity checks run -- lazily importing
-    `load_v2_config` (keeps this module's own import GPU/MLX-free) -- and
-    raise ValueError, naming the failing check, BEFORE any evaluator/MCTS
-    work (both stage runners call this before loading a checkpoint):
+    `--dev-corpus-config`, the config is loaded and IMMEDIATELY passed to
+    `require_production_run_kind` (Task 9, repair plan Sec 3 -- a
+    `run_kind=="tooling_smoke"` config is hard-rejected here, before any of
+    the checks below or any evaluator/MCTS work), then FIVE identity checks
+    run -- lazily importing `load_v2_config` (keeps this module's own import
+    GPU/MLX-free) -- and raise ValueError, naming the failing check, BEFORE
+    any evaluator/MCTS work (both stage runners call this before loading a
+    checkpoint):
 
       (a) the config's OWN `select_out` must equal `--dev-manifest` (the
           config claims to have PRODUCED this exact manifest);
@@ -922,6 +976,7 @@ def _resolve_v2_stratum(args) -> str:
         return "band"
     from .fpu_dev_corpus_v2 import load_v2_config
     config = load_v2_config(args.dev_corpus_config)
+    require_production_run_kind(config)
     if config.select_out != args.dev_manifest:
         raise ValueError(
             f"_resolve_v2_stratum: config.select_out {config.select_out!r} != "
@@ -960,17 +1015,32 @@ def _resolve_v2_stratum(args) -> str:
 
 
 def _fingerprint_v2_kwargs(args, stratum: str) -> Dict[str, Optional[str]]:
-    """The two `build_run_fingerprint` v2 kwargs (Task A3, spec §5/§9), derived
-    from A2's already-RESOLVED `stratum` -- never re-running the 5 identity
-    checks `_resolve_v2_stratum` already performed. `stratum` is that
-    resolver's return: `"band"` (v1) or `"ply_bucket"` (v2). Both call sites
-    (controls in `run_controls_stage`, candidates in `run_candidates_stage`)
-    call this with their own freshly-resolved `stratum` over the SAME `args`,
-    so one protocol run's controls and candidates fingerprints always agree."""
+    """The `build_run_fingerprint` v2 kwargs (Task A3, spec §5/§9; Task 9's
+    `run_kind`), derived from A2's already-RESOLVED `stratum` -- never
+    re-running the 5 identity checks `_resolve_v2_stratum` already performed
+    (`require_production_run_kind` among them -- a tooling_smoke config never
+    reaches this point). `stratum` is that resolver's return: `"band"` (v1)
+    or `"ply_bucket"` (v2). Both call sites (controls in `run_controls_stage`,
+    candidates in `run_candidates_stage`) call this with their own
+    freshly-resolved `stratum` over the SAME `args`, so one protocol run's
+    controls and candidates fingerprints always agree.
+
+    `run_kind` (Task 9, review correction 4) is the loaded config's own
+    `run_kind` field -- re-loading `--dev-corpus-config` here (a second,
+    cheap JSON parse; `_resolve_v2_stratum` does not expose the `V2Config` it
+    already loaded). A schema-1 config's `run_kind` is always None (the
+    loader never sets it), so this naturally omits the key for v1 callers AND
+    for a v2 caller whose config happens to be schema-1 -- `build_run_
+    fingerprint` only writes the key when it is not None."""
+    run_kind = None
+    if args.dev_corpus_config:
+        from .fpu_dev_corpus_v2 import load_v2_config
+        run_kind = load_v2_config(args.dev_corpus_config).run_kind
     return {
         "new_collapse_stratum": stratum if stratum != "band" else None,
         "dev_corpus_config_sha1": (fpu_provenance.file_sha1(args.dev_corpus_config)
                                    if args.dev_corpus_config else None),
+        "run_kind": run_kind,
     }
 
 
@@ -1159,6 +1229,12 @@ def run_controls_stage(args, dev_rows, run_configs) -> int:
     # feeding it carry ply_bucket -- the two must never disagree (spec §0).
     stratum = _resolve_v2_stratum(args)
     carry_ply_bucket = stratum != "band"
+    # Task 9: derive the v2 fingerprint kwargs ONCE here (rather than at the
+    # build_run_fingerprint call below) so `run_kind` is available up front --
+    # its presence (schema-2 config loaded) is also this stage's signal to
+    # turn on dev_safety_verdict's honest-inactive-gate census.
+    v2_fp_kwargs = _fingerprint_v2_kwargs(args, stratum)
+    include_stratum_census = v2_fp_kwargs["run_kind"] is not None
     from .build_fpu_dev_corpus import load_game_index
     replay_by_game = {r["game_idx"]: r["replay_path"]
                       for r in load_game_index(args.source_jsonl)}
@@ -1185,7 +1261,8 @@ def run_controls_stage(args, dev_rows, run_configs) -> int:
     r0_lockin = _lockin_count(dev_rows, r0_by_sha)
     verdict = dev_safety_verdict(r0_dev_rows, ref=ABSOLUTE_OFF,
                                  r0_lockin=r0_lockin, absoff_lockin=absoff_lockin,
-                                 stratum_key=stratum)
+                                 stratum_key=stratum,
+                                 include_stratum_census=include_stratum_census)
     r0_qualified = not verdict.rejected
 
     fingerprint = build_run_fingerprint(
@@ -1194,7 +1271,7 @@ def run_controls_stage(args, dev_rows, run_configs) -> int:
         seeds={"seed_base": args.seed_base, "eval_batch_size": args.eval_batch_size,
                "stall_flush_sims": args.stall_flush_sims},
         selected_a_manifest=args.selected_a_manifest, mode=args.mode, stage="controls",
-        **_fingerprint_v2_kwargs(args, stratum))
+        **v2_fp_kwargs)
 
     _write_csv(str(out_dir / "controls_summary.csv"),
                ["config", "n_positions", "target_lockin_count", "mean_top_share"],
@@ -1281,6 +1358,10 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
     # applies at both candidates-stage dev_safety_verdict call sites below.
     stratum = _resolve_v2_stratum(args)
     carry_ply_bucket = stratum != "band"
+    # Task 9: same derive-once-and-reuse as run_controls_stage -- run_kind's
+    # presence (schema-2 config) is this stage's dev_safety_verdict census switch.
+    v2_fp_kwargs = _fingerprint_v2_kwargs(args, stratum)
+    include_stratum_census = v2_fp_kwargs["run_kind"] is not None
     gate = _load_controls_gate(args.out_dir)
 
     # Load the replay index up-front (a pure jsonl read -- no evaluator): the
@@ -1304,7 +1385,7 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
         seeds={"seed_base": args.seed_base, "eval_batch_size": args.eval_batch_size,
                "stall_flush_sims": args.stall_flush_sims},
         selected_a_manifest=args.selected_a_manifest, mode=args.mode, stage="candidates",
-        **_fingerprint_v2_kwargs(args, stratum))
+        **v2_fp_kwargs)
     validate_controls_fingerprint(gate, expected_fp)
     require_r0_qualified(gate)
     require_matching_mode(gate, args.mode)
@@ -1365,11 +1446,13 @@ def run_candidates_stage(args, dev_rows, run_configs) -> int:
         v_off = dev_safety_verdict(
             _dev_rows_vs(dev_rows, cand_by_sha, off_by_sha,
                         carry_ply_bucket=carry_ply_bucket), ref=ABSOLUTE_OFF,
-            r0_lockin=r0_lockin, absoff_lockin=absoff_lockin, stratum_key=stratum)
+            r0_lockin=r0_lockin, absoff_lockin=absoff_lockin, stratum_key=stratum,
+            include_stratum_census=include_stratum_census)
         v_r0 = dev_safety_verdict(
             _dev_rows_vs(dev_rows, cand_by_sha, r0_by_sha,
                         carry_ply_bucket=carry_ply_bucket), ref=R0,
-            r0_lockin=r0_lockin, absoff_lockin=absoff_lockin, stratum_key=stratum)
+            r0_lockin=r0_lockin, absoff_lockin=absoff_lockin, stratum_key=stratum,
+            include_stratum_census=include_stratum_census)
         a_rows = a_rows_source.get(c.label, [])
         a_verdict = selected_a_verdict(a_rows) if a_rows else None
         dev_safe = not v_off.rejected and not v_r0.rejected
