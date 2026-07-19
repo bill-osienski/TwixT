@@ -33,7 +33,10 @@ import pytest
 
 from scripts.GPU.alphazero import diagnose_fpu_policy_mass as diag
 from scripts.GPU.alphazero import fpu_dev_corpus_v2 as v2
+from scripts.GPU.alphazero import fpu_dev_reservoir_protocol as proto
 from tests.test_fpu_dev_corpus_v2 import _abundant_pool_v2
+from tests.test_fpu_dev_reservoir_protocol import (
+    _conformant_reservoir, _protocol_params)
 
 GOLDEN_DIR = Path(__file__).parent / "goldens"
 
@@ -658,3 +661,69 @@ def test_cli_post_screen_qualify_requires_screen_and_schema2(tmp_path):
     cfg_path = _write_config(tmp_path, {})       # schema 1
     assert v2.main(["--mode", "post-screen-qualify", "--config", cfg_path,
                     "--screen", str(tmp_path / "nope.csv")]) == 2
+
+
+# ---------------------------------------------------------------------------
+# Task 8: protocol v2 (run_kind + allocation authority) carried and
+# fingerprinted through build_protocol / derive_config / qualify preflight.
+# Real fixtures: `_protocol_params()` (v1 params builder) and
+# `_conformant_reservoir()` (returns a (protocol, measurements) pair) from
+# tests/test_fpu_dev_reservoir_protocol.py.
+# ---------------------------------------------------------------------------
+
+def _v2_protocol_params():
+    params = _protocol_params()
+    params.update({
+        "protocol_version": 2, "config_schema_version": 2,
+        "run_kind": "production",
+        "phase_allocation": PRODUCTION_PROFILE_RAW["phase_allocation"],
+        "late_floors": PRODUCTION_PROFILE_RAW["late_floors"],
+        "late_target_band_minima":
+            PRODUCTION_PROFILE_RAW["late_target_band_minima"],
+        "max_per_game": 2, "min_ply_gap": 12, "side_tol": 2,
+        "corpus_size": 120, "post_screen_report_out": "psq.json",
+    })
+    return params
+
+
+def test_build_protocol_v2_requires_and_validates_run_kind():
+    params = _v2_protocol_params()
+    p = proto.build_protocol(params)
+    assert p["run_kind"] == "production"
+    params["run_kind"] = "experiment"
+    with pytest.raises(ValueError, match="run_kind"):
+        proto.build_protocol(params)
+    del params["run_kind"]
+    with pytest.raises(ValueError, match="run_kind"):
+        proto.build_protocol(params)
+
+
+def test_v1_protocol_schema_is_untouched():
+    p = proto.build_protocol(_protocol_params())
+    assert "run_kind" not in p
+
+
+def test_build_protocol_v2_validates_allocation_via_parser():
+    params = _v2_protocol_params()
+    params["corpus_size"] = 121   # inconsistent with the allocation total
+    with pytest.raises(ValueError, match="corpus_size"):
+        proto.build_protocol(params)
+
+
+def test_derive_config_v2_carries_run_kind_and_profile_fields():
+    _, measurements = _conformant_reservoir()
+    protocol = proto.build_protocol(_v2_protocol_params())
+    cfg = proto.derive_config(protocol, measurements, protocol_path="p.json")
+    for key in ("run_kind", "late_target_band_minima", "max_per_game",
+                "min_ply_gap", "side_tol", "corpus_size",
+                "post_screen_report_out"):
+        assert key in cfg, key
+    assert cfg["run_kind"] == "production"
+    assert cfg["config_schema_version"] == 2
+
+
+def test_derive_config_v1_carries_no_v2_fields():
+    protocol, measurements = _conformant_reservoir()   # v1
+    cfg = proto.derive_config(protocol, measurements, protocol_path="p.json")
+    assert "run_kind" not in cfg
+    assert "post_screen_report_out" not in cfg

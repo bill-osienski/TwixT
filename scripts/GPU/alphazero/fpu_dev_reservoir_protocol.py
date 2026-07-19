@@ -597,9 +597,11 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 from . import fpu_provenance
 from .fpu_dev_corpus_v2 import (
+    PROFILE_RUN_KINDS,
     _V2_CONFIG_REQUIRED_KEYS,
     _V2_CORPUS_SOURCES,
     enumerate_v2_proposals,
+    parse_allocation_profile,
     v2_geometry_feasibility,
 )
 
@@ -673,6 +675,36 @@ PROTOCOL_SCHEMA_KEYS: Tuple[str, ...] = (
 
 assert len(PROTOCOL_SCHEMA_KEYS) == len(set(PROTOCOL_SCHEMA_KEYS)), (
     "PROTOCOL_SCHEMA_KEYS has a duplicate key")
+
+
+# ---------------------------------------------------------------------------
+# Schema-2 protocol field set (repair plan Task 8) -- the legacy keys PLUS the
+# seven that carry the schema-2 config-authoritative allocation profile
+# (`run_kind` + the six allocation knobs `parse_allocation_profile` reads) and
+# the post-screen-qualify report path. A schema-2 protocol therefore carries
+# EVERY decision the schema-2 selection/screen needs, exactly as schema-1 does
+# for the legacy path -- and `run_kind` lands inside `protocol_sha1`'s hash for
+# free (it is just another field of the hashed protocol dict).
+# ---------------------------------------------------------------------------
+PROTOCOL_SCHEMA_KEYS_V2: Tuple[str, ...] = PROTOCOL_SCHEMA_KEYS + (
+    "run_kind", "late_target_band_minima", "max_per_game", "min_ply_gap",
+    "side_tol", "corpus_size", "post_screen_report_out")
+
+assert len(PROTOCOL_SCHEMA_KEYS_V2) == len(set(PROTOCOL_SCHEMA_KEYS_V2)), (
+    "PROTOCOL_SCHEMA_KEYS_V2 has a duplicate key")
+
+
+def protocol_schema_keys_for(doc: Mapping[str, Any]) -> Tuple[str, ...]:
+    """The field set a protocol/params doc must carry, selected by its
+    `protocol_version` (default 1): version 1 -> the legacy keys, version 2 ->
+    the schema-2 keys. Any other version is a hard `ValueError` -- there is no
+    silent fall-through to a wrong schema."""
+    version = int(doc.get("protocol_version", 1))
+    if version == 1:
+        return PROTOCOL_SCHEMA_KEYS
+    if version == 2:
+        return PROTOCOL_SCHEMA_KEYS_V2
+    raise ValueError(f"unsupported protocol_version {version}")
 
 
 # ---------------------------------------------------------------------------
@@ -836,16 +868,35 @@ def build_protocol(params: Mapping[str, Any]) -> Dict[str, Any]:
     `checkpoint_a`/`checkpoint_b`/`phase_allocation`/etc. dicts, ...) is
     still taken verbatim, unchanged.
     """
-    missing = sorted(k for k in PROTOCOL_SCHEMA_KEYS if k not in params)
+    keys = protocol_schema_keys_for(params)
+    missing = sorted(k for k in keys if k not in params)
     if missing:
         raise ValueError(
             f"build_protocol: params is missing required key(s): "
             f"{', '.join(missing)}")
-    protocol = {k: params[k] for k in PROTOCOL_SCHEMA_KEYS}
+    protocol = {k: params[k] for k in keys}
     for key in _BUILD_PROTOCOL_INT_FIELDS:
         protocol[key] = int(protocol[key])
     for key in _BUILD_PROTOCOL_FLOAT_FIELDS:
         protocol[key] = float(protocol[key])
+    if int(protocol.get("protocol_version", 1)) >= 2:
+        # Schema-2: the allocation profile is config-authoritative, so validate
+        # it HERE (at freeze time) by REUSING the one profile parser rather than
+        # restating any of its rules. A `run_kind` outside the allowed set, a
+        # `config_schema_version` != 2, or any malformed allocation field is a
+        # hard `ValueError` -- the frozen protocol can never carry an invalid
+        # profile. `parse_allocation_profile` reads exactly the keys a schema-2
+        # protocol already carries (`config_schema_version`, `run_kind`,
+        # `phase_allocation`, `late_floors`, `late_target_band_minima`,
+        # `max_per_game`, `min_ply_gap`, `side_tol`, `corpus_size`) -- no adapter.
+        if protocol["run_kind"] not in PROFILE_RUN_KINDS:
+            raise ValueError(
+                f"build_protocol: unsupported run_kind "
+                f"{protocol['run_kind']!r} (must be one of {PROFILE_RUN_KINDS})")
+        if int(protocol["config_schema_version"]) != 2:
+            raise ValueError("build_protocol: protocol_version 2 requires "
+                             "config_schema_version 2")
+        parse_allocation_profile(protocol, source="protocol")
     return protocol
 
 
@@ -1932,7 +1983,8 @@ class QualifyResult:
     report: Dict[str, Any]
 
 
-def default_preflight(measurements: ReservoirMeasurements) -> Any:
+def default_preflight(measurements: ReservoirMeasurements,
+                      alloc: Optional[Any] = None) -> Any:
     """`qualify_core`'s DEFAULT `preflight` (design Sec 4.2/Sec 6) -- a thin,
     PURE wrapper that builds v2 proposals from the ALREADY-LOADED
     `measurements.sidecars_by_idx` and hands them to the pure
@@ -1967,7 +2019,18 @@ def default_preflight(measurements: ReservoirMeasurements) -> Any:
     for game_idx, sidecar in measurements.sidecars_by_idx.items():
         replay = {**sidecar, "game_idx": game_idx}
         proposals_by_game[game_idx] = enumerate_v2_proposals(replay)
-    return v2_geometry_feasibility(proposals_by_game)
+    # `alloc` (a schema-2 `AllocationProfile`, threaded from `run_qualify`)
+    # supplies the per-phase quotas, late floors and gap/side knobs -- mirroring
+    # `v2_preflight_source`'s own forwarding. `alloc=None` (schema-1 / the
+    # legacy default) is byte-identical to the prior single-arg call.
+    if alloc is None:
+        return v2_geometry_feasibility(proposals_by_game)
+    return v2_geometry_feasibility(
+        proposals_by_game,
+        quota_per_phase=alloc.quota_by_phase,
+        late_candidate_floors=alloc.band_minima_total,
+        max_per_game=alloc.max_per_game, min_gap=alloc.min_ply_gap,
+        side_tol=alloc.side_tol, split_totals=alloc.split_totals)
 
 
 def qualify_core(
@@ -2183,7 +2246,7 @@ def derive_config(
     protocol_sha1 = hashlib.sha1(canonical_json_bytes(protocol)).hexdigest()
     checkpoint_identities = measurements.checkpoint_identities
 
-    return {
+    config = {
         # Carried from the protocol, verbatim (Sec 2.2 "Carried from the
         # protocol").
         "source_index_path": protocol["source_index_path"],
@@ -2220,6 +2283,23 @@ def derive_config(
             "anchor_checkpoint_identity": checkpoint_identities["anchor"],
         },
     }
+    # Schema-2 (repair plan Task 8): carry the seven config-authoritative
+    # profile fields verbatim, so a schema-2 config records the full allocation
+    # authority (`run_kind` + the six allocation knobs) and the post-screen
+    # report path. `run_kind` thereby also lands inside the config bytes. A
+    # schema-1 protocol never has `protocol_version >= 2`, so its config is
+    # byte-unchanged (the nineteen-key set the golden tests pin).
+    if int(protocol.get("protocol_version", 1)) >= 2:
+        config.update({
+            "run_kind": protocol["run_kind"],
+            "late_target_band_minima": protocol["late_target_band_minima"],
+            "max_per_game": protocol["max_per_game"],
+            "min_ply_gap": protocol["min_ply_gap"],
+            "side_tol": protocol["side_tol"],
+            "corpus_size": protocol["corpus_size"],
+            "post_screen_report_out": protocol["post_screen_report_out"],
+        })
+    return config
 
 
 # ---------------------------------------------------------------------------
@@ -2460,6 +2540,15 @@ def run_qualify(
         return EXIT_GATE_FAIL
     if is_passed(report_out) and not check:
         return EXIT_USAGE
+
+    # Schema-2: the geometric preflight must use the protocol's OWN allocation
+    # (per-phase quotas / late floors), not the legacy defaults. Build the
+    # profile and bind it into the default preflight -- but only when the caller
+    # did NOT inject its own `preflight` (the test-injection seam stays intact).
+    if (int(protocol.get("protocol_version", 1)) >= 2
+            and preflight is default_preflight):
+        alloc = parse_allocation_profile(protocol, source="protocol")
+        preflight = lambda m: default_preflight(m, alloc=alloc)  # noqa: E731
 
     measurements = measure_reservoir(protocol)
     result = qualify_core(protocol, measurements, preflight=preflight)

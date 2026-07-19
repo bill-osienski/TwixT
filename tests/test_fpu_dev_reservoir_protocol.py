@@ -3852,6 +3852,10 @@ def test_module_imports_only_pure_names_from_fpu_dev_corpus_v2():
     assert from_imports == {
         "_V2_CONFIG_REQUIRED_KEYS", "_V2_CORPUS_SOURCES",
         "enumerate_v2_proposals", "v2_geometry_feasibility",
+        # Task 8: schema-2 protocol authority -- `build_protocol`/`run_qualify`
+        # validate + build the allocation profile via `parse_allocation_profile`
+        # (against `PROFILE_RUN_KINDS`), both from that module's PURE section.
+        "PROFILE_RUN_KINDS", "parse_allocation_profile",
     }, from_imports
 
 
