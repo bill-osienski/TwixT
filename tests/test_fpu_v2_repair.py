@@ -357,3 +357,20 @@ def test_band_capacity_below_total_minimum_gate_fails():
     report = v2.post_screen_qualification_report(rows, alloc)
     assert report["status"] == "GATE_FAIL"
     assert any("b400_plus" in f for f in report["failures"])
+
+
+def test_global_capacity_message_names_the_profile_field_for_schema2():
+    """Review fix: the global-capacity failure string must name whichever
+    field actually holds the bound. For a schema-2 profile that's the
+    `max_per_game` instance attribute (can legally differ from the module
+    constant), not the module constant's own name `MAX_PER_GAME`."""
+    alloc = v2.parse_allocation_profile(PRODUCTION_PROFILE_RAW, source="test")
+    games_profile = {0: {("target", "late"): 1}}  # 1 game -> far under corpus_size=120
+    failures = v2._capacity_shortfalls(games_profile, alloc)
+    message = " ".join(failures)
+    assert "<=max_per_game (" in message
+    assert "MAX_PER_GAME" not in message
+
+    legacy_failures = v2._capacity_shortfalls(games_profile, v2.AllocationProfile.legacy())
+    legacy_message = " ".join(legacy_failures)
+    assert "<=MAX_PER_GAME (" in legacy_message

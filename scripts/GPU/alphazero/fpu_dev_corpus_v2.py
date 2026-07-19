@@ -742,9 +742,10 @@ def _capacity_shortfalls(
             alloc.max_per_game)
         for prof in games_profile.values())
     if global_capacity < alloc.corpus_size:
+        token = "MAX_PER_GAME" if alloc.schema_version == 1 else "max_per_game"
         failures.append(
             f"global capacity {global_capacity} < corpus size "
-            f"{alloc.corpus_size} under the global <=MAX_PER_GAME "
+            f"{alloc.corpus_size} under the global <={token} "
             f"({alloc.max_per_game}) per-game rule ({len(games_profile)} games)")
     return failures
 
