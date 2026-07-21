@@ -556,6 +556,373 @@ root retention — 2026-07-01, see the experiment ledger.)
 
 ---
 
+## 11. v16 Context-Relative Policy-Mass FPU — Operator Runbook
+
+**Status (updated 2026-07-21):** reservoir protocol v1 is **COMPLETE — POST-SCREEN GATE_FAIL.** The 4,800-game reservoir generated and passed `qualify` + `screen`, but `select` gate-failed: kept target capacity `0/0/0/136` (opening/early_mid/midgame/late) vs the 45-per-phase demand — target geometry is late-only on this net. **No FPU coefficient was tested.** The v1 artifacts under `reservoir_v1/` are preserved untouched as immutable discovery evidence.
+
+**The current procedure is the repaired v2 pipeline — see `docs/fpu-v2-repair-operator-guide.md`** (late-only 120-row production profile, controlled `post-screen-qualify` stage, `run_kind` production/smoke isolation, selector v2, amendment `b400-coverage-floor-v1`, and the two discovery commands). The full decision history is in `docs/updated-v16a-ledger.md`. **A production reservoir is authorized at 4,000 games** (see the guide §13 authorization record); everything below this point describes the v1 run as a historical record.
+
+**Frozen v1 generation commit:** `fca9c0dc563e47274b71059749ab451fb74e47f1`
+
+
+### Purpose
+
+This is a **search-reliability experiment**, not another network-training experiment. It keeps the current best checkpoint unchanged:
+
+```text
+checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+```
+
+The goal is to make `calib020_0001` play stronger at the same 400-simulation budget by replacing the shipped absolute FPU behavior with a context-relative explored-policy-mass rule:
+
+```text
+P_explored = sum(prior(a)) over children with completed backed-up visits
+FPU        = Q_parent - r * sqrt(P_explored)
+```
+
+The decisive endpoint is a same-checkpoint match:
+
+```text
+calib020_0001 @ 400 sims with shipped FPU
+vs
+calib020_0001 @ 400 sims with the frozen policy-mass coefficient
+```
+
+Colors must be balanced and the confidence interval must exclude no improvement. No self-play adoption is allowed before that match passes.
+
+`0379` is the reservoir opponent only. Beating `0379` is not the scientific endpoint.
+
+### Why this successor exists
+
+- v1-v14 network-calibration branches could move selected-A, but repeatedly damaged B/C/D guardrails; v14b came closest, passing B/C/D and missing A at mean `+0.026` versus the `<=0.0` requirement.
+- v15 showed selected-A is largely a 400-simulation search artifact: A mean moved `+0.2570 -> +0.0626 -> -0.0451` at 400/1600/6400 simulations.
+- Lowering `c_puct` worsened the artifact.
+- Absolute `fpu_value=-0.20` reached the mechanism on selected-A (`134.7 -> 24.5` opponent replies; mean `+0.2570 -> -0.0344`) but v16a rejected it on held-out collateral safety: late new-collapse `13/84 = 15.48%`.
+- The absolute floor locked near-even, high-branching, flat-prior roots onto low-prior moves selected by exploration order. Policy-mass FPU keeps the initial penalty small until meaningful policy mass has actually been explored.
+
+### Acceptance ladder
+
+*(Historical v1 numbers: the 4,800-game reservoir and 240-position corpus below are the v1 design that GATE-FAILED at select; the repaired v2 pipeline uses the late-only 120-row profile and adds a `post-screen-qualify` stop gate before select — see `docs/fpu-v2-repair-operator-guide.md`. The scientific ladder from tuning controls onward is unchanged.)*
+
+Every arrow is a stop gate. Do not skip, combine, retune across, or inspect a later split early.
+
+```text
+frozen reservoir protocol
+  -> generate exactly one 4,800-game reservoir (no top-up)
+  -> zero-GPU protocol qualification + geometric preflight
+  -> GPU screen of every proposal
+  -> pure deterministic select of 240 positions
+  -> tuning controls: absolute_off vs r0; r0 must qualify
+  -> tuning candidates: r in {0.10, 0.20, 0.35, 0.50, 0.75}
+  -> choose the smallest candidate passing both references + selected-A
+  -> run that coefficient once on the isolated frozen_check split
+  -> pooled cross-matchup robustness
+  -> fresh game-held-out collateral safety corpus
+  -> selected-A mechanism check + B/C/D guardrails
+  -> same-checkpoint, same-400-sim balanced-color strength match
+  -> only then consider controlled self-play
+```
+
+The A/B/C/D probes remain necessary but are not sufficient:
+
+- A is now a search-mechanism check against the 6400-sim reference and reply-scanning reduction.
+- B goal-line, C old post-opening, and D red pre-drop remain collateral guardrails.
+- A/B/C/D passing does not replace the final strength match.
+
+### Frozen production protocol v1 (HISTORICAL RECORD — superseded)
+
+*(This section and `docs/2026-07-16-fpu-v16-policy-mass-reservoir-v1-params.json` are the historical v1/4,800-game parameter record — NOT the current production protocol. The authorized production parameters (4,000 games, amended b400 2+2 profile) live in the operator guide §13.)*
+
+The reviewable input is `docs/2026-07-16-fpu-v16-policy-mass-reservoir-v1-params.json`. The emitted machine-authoritative artifact is:
+
+```text
+logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/reservoir_protocol.json
+```
+
+Frozen parameters:
+
+| Item | Value |
+|---|---|
+| Protocol version | `1` |
+| No top-up | `true` |
+| Checkpoint A / screen anchor | `calib020_0001`, SHA1 `209cf2d4fd24a48553d259dd71b4954867b9473e` |
+| Checkpoint B / source opponent | `0379`, SHA1 `8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1` |
+| Games | `4800`, even and color-balanced by game-index parity |
+| Reservoir base seed | `20270000`; half-open range `[20270000, 20274800)` |
+| Selection seed | `20260712` |
+| Board / search | board `24`, `400` sims, eval batch `14`, stall flush `48` |
+| Game selection | `opening_temperature`, opening plies `20`, high `1.0`, low `0.1` |
+| Maximum moves | `280` |
+| Workers | `4` |
+| Replay capture | required / enabled |
+| Final corpus | `240 = 180 target + 60 control`; tuning `160`, frozen `80` |
+| Per phase | target `30/15` tuning/frozen; control `10/5` tuning/frozen |
+| Late target floors | at least `12` in `b300_399` and `12` in `b200_299` |
+| Proposal enumerator | side-opposed pairs, minimum gap `12`, maximum `2` per cell/game |
+| Final sampler | whole-game split, global maximum `2` selected positions/game, side-balanced |
+| New-collapse stratum | `ply_bucket` (phase); branching band retained as a covariate |
+
+Forbidden/consumed manifests:
+
+```text
+logs/eval/loss_analysis_v2_calib020_0001_vs_0379_black/0001_black_post_opening_top30_predrop_probe_manifest.csv
+logs/eval/v16a_fpu_unbiased/neutral_position_manifest.csv
+```
+
+### Artifact root
+
+```text
+logs/eval/fpu_v16_policy_mass_v2/
+```
+
+Reservoir artifacts live under `reservoir_v1/`:
+
+```text
+reservoir_protocol.json
+calib020_0001_vs_0379_4800g_w4_seed20270000.json
+calib020_0001_vs_0379_4800g_w4_seed20270000_games.jsonl
+calib020_0001_vs_0379_4800g_w4_seed20270000_replays/
+qualification_report.json
+fpu_dev_corpus_v2_config.json
+fpu_dev_source_screen.csv
+fpu_dev_source_screen.csv.meta.json
+fpu_dev_corpus_v2_manifest.csv
+fpu_dev_corpus_v2_manifest.csv.meta.json
+```
+
+Diagnostic artifacts live under:
+
+```text
+logs/eval/fpu_v16_policy_mass_v2/diagnostic/tuning/
+logs/eval/fpu_v16_policy_mass_v2/diagnostic/frozen_check/
+```
+
+### Stage 0 — freeze source state
+
+```bash
+cd /Users/bill/projects/TwixT_Game
+
+git status --short --branch
+git rev-parse HEAD
+```
+
+For protocol v1 the expected output is a clean `main...origin/main` and:
+
+```text
+fca9c0dc563e47274b71059749ab451fb74e47f1
+```
+
+Do not change HEAD or any result-determining source during generation, qualification, screen, or select.
+
+### Stage 1 — emit the immutable protocol
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.fpu_dev_reservoir_protocol emit-protocol \
+  --params-json docs/2026-07-16-fpu-v16-policy-mass-reservoir-v1-params.json \
+  --out logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/reservoir_protocol.json
+```
+
+An existing byte-identical protocol is an idempotent success. An existing byte-different protocol is never overwritten; create a new protocol version instead.
+
+Print/review the exact generation command:
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.fpu_dev_reservoir_protocol emit-gen-command \
+  --protocol logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/reservoir_protocol.json
+```
+
+### Stage 2 — generate the one fixed 4,800-game reservoir (GPU)
+
+Run exactly the command emitted above:
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.eval_checkpoint_match \
+  --checkpoint-a checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --checkpoint-b checkpoints/alphazero-v2-staged/model_iter_0379.safetensors \
+  --games 4800 \
+  --board-size 24 \
+  --mcts-sims 400 \
+  --mcts-eval-batch-size 14 \
+  --mcts-stall-flush-sims 48 \
+  --selection-mode opening_temperature \
+  --opening-temp-plies 20 \
+  --temp-high 1.0 \
+  --temp-low 0.1 \
+  --max-moves 280 \
+  --workers 4 \
+  --base-seed 20270000 \
+  --save-eval-replays \
+  --replay-dir logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000_replays \
+  --output logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000.json
+```
+
+The CLI is intentionally silent until all games finish. It writes replay sidecars incrementally and prints one match-summary line at the end. Historical throughput for the same settings was approximately 124 games/hour, so 4,800 games is approximately 39 hours (allow 36-48 hours).
+
+Monitor from a second terminal:
+
+```bash
+find logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000_replays \
+  -type f -name '*.json' 2>/dev/null | wc -l
+```
+
+Prevent macOS sleep from a second terminal if necessary:
+
+```bash
+caffeinate -dimsu
+```
+
+Do not append/top-up the reservoir. A faithful but geometrically inadequate reservoir retires protocol v1 and requires a separately versioned fresh reservoir.
+
+### Stage 3 — qualify reservoir + geometry (zero GPU)
+
+Run only after all 4,800 games and the summary/JSONL are complete:
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.fpu_dev_reservoir_protocol qualify \
+  --protocol logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/reservoir_protocol.json
+```
+
+Exit codes and actions:
+
+| Exit | State | Action |
+|---:|---|---|
+| `0` | PASS | Immutable report/config emitted; proceed to screen. |
+| `3` | MISMATCH | Generation/artifact did not conform; regenerate the complete reservoir under the same protocol. |
+| `4` | GATE-FAIL | Geometry is insufficient; protocol version is permanently retired. Never top up. |
+| `2` | usage/I/O | Correct invocation or missing-file problem; no scientific decision. |
+
+`PASS` and `GATE-FAIL` reports are terminal/immutable. A passed protocol is subsequently reviewed with `--check`, not re-qualified.
+
+### Stage 4 — screen every proposal (GPU)
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.fpu_dev_corpus_v2 \
+  --mode screen \
+  --config logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_config.json
+```
+
+Startup re-measures and hard-matches the protocol, reservoir, checkpoints, forbidden manifests, and result-determining source files **before loading the evaluator**. The screen then persists every proposal outcome; it does not stop when quotas fill.
+
+### Stage 5 — select the final corpus (pure / no GPU)
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.fpu_dev_corpus_v2 \
+  --mode select \
+  --config logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_config.json \
+  --screen logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_source_screen.csv
+```
+
+Select re-derives the immutable config, rechecks the final eleven-identity chain and screen rows, proves role-aware phase quotas/late floors, selects deterministically, and asserts disjointness. It never loads an evaluator.
+
+### Stage 6 — tuning controls (GPU)
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.diagnose_fpu_policy_mass \
+  --mode tuning \
+  --stage controls \
+  --dev-manifest logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_manifest.csv \
+  --source-jsonl logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000_games.jsonl \
+  --dev-corpus-config logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_config.json \
+  --checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --out-dir logs/eval/fpu_v16_policy_mass_v2/diagnostic/tuning \
+  --seed-base 20260711 \
+  --eval-batch-size 14 \
+  --stall-flush-sims 48
+```
+
+This runs `absolute_off` (the shipped production baseline) and `r0` (`FPU=Q_parent`) on tuning rows only. `r0_qualified` must be true relative to `absolute_off`; otherwise reject the entire parent-relative formula family and do not run candidates.
+
+### Stage 7 — tuning candidate grid + selected-A mechanism gate (GPU)
+
+Only if Stage 6 reports `r0_qualified=true`:
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.diagnose_fpu_policy_mass \
+  --mode tuning \
+  --stage candidates \
+  --dev-manifest logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_manifest.csv \
+  --source-jsonl logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000_games.jsonl \
+  --dev-corpus-config logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_config.json \
+  --selected-a-manifest logs/eval/loss_analysis_v2_calib020_0001_vs_0379_black/0001_black_post_opening_top30_predrop_probe_manifest.csv \
+  --checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --out-dir logs/eval/fpu_v16_policy_mass_v2/diagnostic/tuning \
+  --seed-base 20260711 \
+  --eval-batch-size 14 \
+  --stall-flush-sims 48
+```
+
+Candidates are exactly `r={0.10,0.20,0.35,0.50,0.75}`. Each must pass development safety against both `absolute_off` and `r0`; selected-A is tuning-only and supplies the mechanism gate. Choose the smallest passing coefficient. If none pass, reject the formula—do not interpolate or extend the grid.
+
+Important outputs:
+
+```text
+controls_cases.csv
+controls_summary.csv
+controls_gate.json
+candidate_dev_rows.csv
+selected_a_cases.csv
+candidates_result.json
+```
+
+### Stage 8 — isolated frozen check (GPU, exactly once)
+
+The exact numeric command is data-dependent because `--frozen-r` must equal `smallest_safe_r` in tuning's `candidates_result.json`. Do not choose it manually.
+
+First run frozen controls:
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.diagnose_fpu_policy_mass \
+  --mode frozen_check \
+  --stage controls \
+  --dev-manifest logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_manifest.csv \
+  --source-jsonl logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000_games.jsonl \
+  --dev-corpus-config logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_config.json \
+  --checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --out-dir logs/eval/fpu_v16_policy_mass_v2/diagnostic/frozen_check \
+  --seed-base 20260711 \
+  --eval-batch-size 14 \
+  --stall-flush-sims 48
+```
+
+Then run exactly one frozen candidate, substituting the already-selected value:
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.diagnose_fpu_policy_mass \
+  --mode frozen_check \
+  --stage candidates \
+  --dev-manifest logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_manifest.csv \
+  --source-jsonl logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000_games.jsonl \
+  --dev-corpus-config logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_config.json \
+  --checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --out-dir logs/eval/fpu_v16_policy_mass_v2/diagnostic/frozen_check \
+  --frozen-r <smallest_safe_r> \
+  --tuning-result logs/eval/fpu_v16_policy_mass_v2/diagnostic/tuning/candidates_result.json \
+  --seed-base 20260711 \
+  --eval-batch-size 14 \
+  --stall-flush-sims 48
+```
+
+Selected-A is forbidden in frozen mode. The CLI hard-rejects a coefficient that does not equal the tuning-selected `smallest_safe_r` under a matching fingerprint.
+
+### Stopping and integrity rules
+
+- Never use candidate-FPU results to decide corpus membership.
+- Never top up protocol v1.
+- Never tune on `frozen_check`, v16a, or any future held-out safety corpus.
+- Never add selected-A to frozen mode.
+- Never change the candidate grid after controls/candidate results are observed.
+- Never proceed after `r0` failure, candidate-grid exhaustion, frozen-check failure, fresh collateral failure, or B/C/D failure.
+- Never adopt the rule merely because A improves. Adoption requires the final statistically significant equal-budget strength gain.
+- Record every operator phase and outcome chronologically in the append-only experiment ledger.
+
+### Design references
+
+- `docs/superpowers/specs/2026-07-10-context-relative-fpu-policy-mass-design.md`
+- `docs/superpowers/specs/2026-07-10-v16a-fpu-reject-postmortem.md`
+- `docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md`
+- `docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-qualification-design.md`
+- `docs/superpowers/plans/2026-07-14-fpu-v2-preop-hardening-plan.md`
+
 ## Internal libraries (not run directly)
 
 - `eval_runner` — the game-playing task queue / worker pool used by the match and

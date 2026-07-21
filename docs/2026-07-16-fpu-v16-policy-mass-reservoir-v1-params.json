@@ -1,0 +1,68 @@
+{
+  "protocol_version": 1,
+  "no_top_up": true,
+  "config_schema_version": 1,
+  "checkpoint_a": {
+    "path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "identity": "model_iter_0001.safetensors:209cf2d4fd24a48553d259dd71b4954867b9473e"
+  },
+  "checkpoint_b": {
+    "path": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+    "identity": "model_iter_0379.safetensors:8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1"
+  },
+  "anchor": "checkpoint_a",
+  "games": 4800,
+  "base_seed": 20270000,
+  "board_size": 24,
+  "mcts_sims": 400,
+  "mcts_eval_batch_size": 14,
+  "mcts_stall_flush_sims": 48,
+  "selection_mode": "opening_temperature",
+  "opening_temp_plies": 20,
+  "temp_high": 1.0,
+  "temp_low": 0.1,
+  "max_moves": 280,
+  "save_eval_replays": true,
+  "workers": 4,
+  "match_summary_path": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000.json",
+  "source_index_path": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000_games.jsonl",
+  "replay_dir": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/calib020_0001_vs_0379_4800g_w4_seed20270000_replays",
+  "config_out": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_config.json",
+  "report_out": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/qualification_report.json",
+  "selection_seed": 20260712,
+  "phase_allocation": {
+    "target|opening": {"tuning": 30, "frozen_check": 15},
+    "control|opening": {"tuning": 10, "frozen_check": 5},
+    "target|early_mid": {"tuning": 30, "frozen_check": 15},
+    "control|early_mid": {"tuning": 10, "frozen_check": 5},
+    "target|midgame": {"tuning": 30, "frozen_check": 15},
+    "control|midgame": {"tuning": 10, "frozen_check": 5},
+    "target|late": {"tuning": 30, "frozen_check": 15},
+    "control|late": {"tuning": 10, "frozen_check": 5}
+  },
+  "late_floors": {"b300_399": 12, "b200_299": 12},
+  "enumerator_params": {"min_ply_gap": 12, "max_per_cell_per_game": 2},
+  "new_collapse_stratum": "ply_bucket",
+  "forbidden_manifests": [
+    "logs/eval/loss_analysis_v2_calib020_0001_vs_0379_black/0001_black_post_opening_top30_predrop_probe_manifest.csv",
+    "logs/eval/v16a_fpu_unbiased/neutral_position_manifest.csv"
+  ],
+  "screen_out": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_source_screen.csv",
+  "select_out": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_manifest.csv",
+  "generation_git_commit": "fca9c0dc563e47274b71059749ab451fb74e47f1",
+  "generation_source_sha1s": {
+    "__init__.py": "5e474cc033dc6f75671f6f63e4c94092bde97cbd",
+    "eval_checkpoint_match.py": "623fb036468d5a1529ed433529e3e12ae831e87b",
+    "eval_elo.py": "5744fce20cdeacc5a7d302ac9489e646e3b1af57",
+    "eval_replay.py": "3b55b5f7f31ca20152596ecc956d614d4b781a9c",
+    "eval_runner.py": "590c1100549d0429087df53a2f879f51dfdd79e0",
+    "eval_summary.py": "5bed62e42a6afd0115f70dcb7d94060ac92a4d1f",
+    "evaluator.py": "2a271589446b9c733d5a63d3bb18b69bc5221ab3",
+    "local_evaluator.py": "510b8cc49dc42456835ad489cc73204c20ce2c30",
+    "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+    "network.py": "dc951e870ea6eda80fb6721a77bb674942604135",
+    "opening_diagnostics.py": "88e79da5e3749049f4a8bf9f77e17193bb5aec60",
+    "probe_eval.py": "e8dd5146347fef66e7194fce33da67f443f5bf69",
+    "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+  }
+}

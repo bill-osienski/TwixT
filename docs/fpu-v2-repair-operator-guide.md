@@ -274,3 +274,9 @@ The 400-game 24×24 `tooling_smoke` chain ran end-to-end from the frozen protoco
 
 **Frozen profile:** `logs/eval/fpu_v16_policy_mass_v2/analysis/production_profile_v2_b400amend.json`.
 **Preregistered BEFORE the decision sizing run:** ladder `3000,3200,3400,3600,3800,4000`, 299 trials, seed 20260718, criterion unchanged, production count = next larger tested tier above the smallest qualifying tier. Generation launches only on explicit user authorization after the sizing evidence exists.
+
+## 13. Production authorization record (2026-07-21)
+
+> Production reservoir authorized at 4,000 games, board 24, four workers, seed range `[20300000,20304000)`, `run_kind=production`, and no top-up. This intentionally deviates from the preregistered 3,800 margin result because 4,000 independently met the unchanged criterion at 299/299, while 3,800 produced 298/299. All allocation, target, b300/b200, side, spacing, isolation, and amended b400 2+2 requirements remain unchanged.
+
+Decision basis: `sizing_report_b400amend.json` (SHA-1 `7ff76fcb8a5a9d58f1ca2227767142a3c2f307dd`) under amendment `b400-coverage-floor-v1` (§12) with the frozen profile `production_profile_v2_b400amend.json` (SHA-1 `eb1dd21648e49388bff92de8c7831eb0a1a3f6e8`).
