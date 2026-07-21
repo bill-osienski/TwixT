@@ -607,7 +607,101 @@ SPLIT_TOTALS: Dict[str, int] = {
     s: sum(alloc[s] for alloc in SPLIT_ALLOC_V2.values()) for s in SPLITS}
 
 
-def _greedy_assign_v2(games_profile, seed, attempt, alloc) -> Optional[Dict[Any, str]]:
+def _scarce_band_pins(games: Mapping[Any, List[dict]],
+                      alloc: "AllocationProfile") -> Dict[Any, str]:
+    """Constraint-aware PRE-ASSIGNMENT of the scarce-band-carrying games
+    (split_assignment_version 2). Returns {game_idx: split} pinning enough
+    LATE_TARGET_CELL games that carry a per-split-minima band to each split for
+    that split's realizable band capacity to meet its minima -- computed BEFORE
+    (and independently of) the general greedy, so an unlucky whole-game split
+    assignment can no longer starve a split's per-split band minima.
+
+    WHY the greedy alone starves them: `_greedy_assign_v2` scores a game only by
+    the (role, phase) allocation fill-fraction; it is BLIND to
+    `band_minima_per_split` (a sub-classification of the single LATE_TARGET_CELL
+    by band). The b400_plus band is scarce -- ~12 candidate games, one row each,
+    and every split needs >=4 -- so a random-restart ordering routinely hands one
+    split >4 of them and leaves the other below its minimum. The fill then fails,
+    the ordering is retried, and only luck (measured: 8 attempts 85%, 64 attempts
+    96%) stumbles onto a balanced distribution. This makes the balance a design
+    output rather than a coin flip.
+
+    Realizable per-band capacity of a game assigned to split s is modelled as
+    min(rows_in_band, max_per_game) -- the same UPPER BOUND `_capacity_shortfalls`
+    and the qualification report use. It ignores that a multi-band game's bands
+    share one <=max_per_game budget, so it can OVER-state a rare multi-scarce-band
+    game's joint capacity; that only ever risks NOT raising an early
+    genuine-infeasibility here, never a bad manifest -- `_select_manifest` remains
+    the exact authority and re-verifies every per-split minimum from the selected
+    rows. Empty for schema-1 (`band_minima_per_split == {}`) -> no pins -> the
+    legacy path is byte-identical.
+
+    Deterministic: bands and games are visited in sorted order, no RNG. Same pool
+    + alloc -> same pins, so `sample_v2_rows` stays reproducible under its seed
+    (the seed drives only the greedy for the NON-pinned remainder). Raises
+    ValueError (band + split + have + required) if the scarce pre-assignment is
+    itself infeasible -- a GENUINE capacity failure, pool-intrinsic and thus
+    correct to raise once, before the attempt loop.
+
+    ponytail: greedy largest-shortfall-first assignment. Optimal for a single
+    scarce band (balanced distribution) and for abundant bands; a pathological
+    profile with many mutually-overlapping TIGHT scarce bands could in principle
+    leave a feasible instance unpinned. That is not the production geometry (one
+    tight band, b400_plus), and the outer attempt loop + exact `_select_manifest`
+    stay the authority -- never a false PASS. Upgrade to an exact matching/ILP
+    only if a future profile actually exhibits overlapping tight scarce bands.
+    """
+    if not alloc.band_minima_per_split:
+        return {}
+    scarce_bands = {b for m in alloc.band_minima_per_split.values() for b in m}
+    cap: Dict[Any, Dict[str, int]] = {}
+    for gi in sorted(games):
+        bc: Counter = Counter(
+            r["band"] for r in games[gi]
+            if (r["role"], r["phase"]) == LATE_TARGET_CELL
+            and r["band"] in scarce_bands)
+        if bc:
+            cap[gi] = {b: min(n, alloc.max_per_game) for b, n in bc.items()}
+
+    need = {s: dict(alloc.band_minima_per_split.get(s, {})) for s in SPLITS}
+    realized = {s: Counter() for s in SPLITS}
+    pins: Dict[Any, str] = {}
+    unpinned = list(cap)                       # already ascending game_idx
+    while True:
+        shortfalls = [(need[s][b] - realized[s][b], s, b)
+                      for s in SPLITS for b in need[s]
+                      if realized[s][b] < need[s][b]]
+        if not shortfalls:
+            return pins
+        shortfalls.sort(key=lambda x: (-x[0], x[1], x[2]))
+        _, split, band = shortfalls[0]
+        # Best unpinned game carrying `band`: the one that closes the most of
+        # THIS split's remaining band shortfalls (a multi-band game helps every
+        # band it carries for its split); tie-break lowest game_idx.
+        best_gi = None
+        best_key = None
+        for gi in unpinned:
+            if band not in cap[gi]:
+                continue
+            score = sum(min(cap[gi][b], max(need[split][b] - realized[split][b], 0))
+                        for b in cap[gi] if b in need[split])
+            key = (-score, gi)
+            if best_key is None or key < best_key:
+                best_key, best_gi = key, gi
+        if best_gi is None:
+            raise ValueError(
+                f"sample_v2_rows: scarce per-split late-target band minimum "
+                f"infeasible: band {band} split {split} have "
+                f"{realized[split][band]} < required {need[split][band]} "
+                f"(no remaining candidate game carries this band)")
+        pins[best_gi] = split
+        unpinned.remove(best_gi)
+        for b, c in cap[best_gi].items():
+            realized[split][b] += c
+
+
+def _greedy_assign_v2(games_profile, seed, attempt, alloc,
+                      pinned=None) -> Optional[Dict[Any, str]]:
     """One deterministic greedy pass (v1 `_greedy_assign`'s shape). Returns
     {game_idx: split} if it satisfies every per-(role, phase, split) quota, else
     None.
@@ -683,7 +777,15 @@ def _greedy_assign_v2(games_profile, seed, attempt, alloc) -> Optional[Dict[Any,
         rem_t = sum(need[c]["tuning"] for c in alloc.cell_order)
         rem_f = sum(need[c]["frozen_check"] for c in alloc.cell_order)
 
-        if u_t == 0 and u_f == 0:
+        if pinned is not None and gi in pinned:
+            # Constraint-aware PRE-ASSIGNMENT (`_scarce_band_pins`): this game
+            # carries a scarce per-split-minima band and was pinned to a split
+            # so the split's band minima are realizable. Honour the pin; its
+            # rows still spend the shared per-game budget into `need` below,
+            # exactly as a greedy-chosen split would. Never taken for schema-1
+            # (`pinned` empty) -- the legacy path stays byte-identical.
+            split = pinned[gi]
+        elif u_t == 0 and u_f == 0:
             # Useless to both splits right now -- spread it, keeping the two
             # candidate pools in the splits' own 160:80 ratio.
             split = ("tuning"
@@ -1284,9 +1386,16 @@ def sample_v2_rows(kept: List[dict], *, seed: int,
     # GENUINE infeasibility -- assignment-independent, so raise now and never retry.
     _capacity_precheck(profile, alloc=alloc)
 
+    # Constraint-aware scarce-band split assignment (split_assignment_version 2):
+    # pin the scarce per-split-minima-band games to splits ONCE, before the loop,
+    # so no ordering can starve a split's band minima. Also assignment-independent
+    # (pool-intrinsic), so it too raises now and is never retried. Empty for
+    # schema-1 -> no pins -> byte-identical legacy behaviour.
+    pins = _scarce_band_pins(games, alloc)
+
     last_error: Optional[ValueError] = None
     for attempt in range(ASSIGN_ATTEMPTS):
-        split_of = _greedy_assign_v2(profile, seed, attempt, alloc)
+        split_of = _greedy_assign_v2(profile, seed, attempt, alloc, pins)
         if split_of is None:
             last_error = ValueError(
                 f"assign_split_v2: ordering {attempt} did not satisfy the split "
@@ -1299,6 +1408,11 @@ def sample_v2_rows(kept: List[dict], *, seed: int,
             continue
         stats["seed"] = seed
         stats["assignment_attempt"] = attempt
+        # Version-surface the assignment strategy -- schema-2 only, so schema-1
+        # stats stay byte-identical to the pre-repair golden (which predates
+        # this key). Flows into the selector witness + post-screen reports.
+        if alloc.schema_version >= 2:
+            stats["split_assignment_version"] = 2
         return rows, stats
 
     raise ValueError(
@@ -3404,6 +3518,7 @@ def build_selector_witness(rows: List[dict],
         "rows_per_game": {str(gi): n for gi, n in sorted(
             Counter(r["game_idx"] for r in rows).items())},
         "assignment_attempt": stats["assignment_attempt"],
+        "split_assignment_version": stats["split_assignment_version"],
     }
 
 

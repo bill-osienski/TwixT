@@ -1365,3 +1365,145 @@ def test_discovery_refuses_to_clobber_a_byte_different_report(tmp_path, monkeypa
                   "--out", str(out)])
     assert rc == v2.EXIT_USAGE                # immutable: refused, not clobbered
     assert out.read_bytes() == b'{"stale":"report"}'
+
+
+# ---------------------------------------------------------------------------
+# Task 17: constraint-aware scarce-band split assignment
+# (split_assignment_version 2). The schema-2 selector fails FEASIBLE instances
+# when a random-restart whole-game greedy assigns the scarce b400_plus games
+# lopsidedly across splits, starving a split's per-split band minima. The
+# constraint-aware pre-assignment pins scarce-band games to splits so every
+# split's realizable band capacity meets its minima BEFORE the general greedy.
+# ---------------------------------------------------------------------------
+
+def make_scarce_b400_pool():
+    """`make_feasible_120_pool`, but b400_plus is EXACTLY 8 single-row target
+    games (4 red / 4 black). Capacity 8 == the summed per-split minima (4+4),
+    zero slack: any lopsided whole-game split assignment (>4 b400 games to one
+    split) starves the other below its minimum, so the OLD 8-attempt random
+    greedy fails on some seeds while the constraint-aware pins never do. The
+    b300/b200 late-target and all controls stay abundant (as in the feasible
+    pool), isolating the b400 scarcity as the sole binding constraint."""
+    rows, gi = [], 0
+    for i in range(8):
+        rows.append(_kept_row(gi, 100 + 2 * i, "red" if i < 4 else "black",
+                              "late", "b400_plus", "target"))
+        gi += 1
+    for band in (["b300_399"] * 28 + ["b200_299"] * 28):
+        p0, p1 = {"b300_399": (150, 164), "b200_299": (240, 254)}[band]
+        rows.append(_kept_row(gi, p0, "red", "late", band, "target"))
+        rows.append(_kept_row(gi, p1, "black", "late", band, "target"))
+        gi += 1
+    for phase, base_ply in (("opening", 2), ("early_mid", 20),
+                            ("midgame", 50), ("late", 95)):
+        for _ in range(40):
+            rows.append(_kept_row(gi, base_ply, "red", phase, "b400_plus",
+                                  "control"))
+            rows.append(_kept_row(gi, base_ply + 12, "black", phase,
+                                  "b400_plus", "control"))
+            gi += 1
+    return rows
+
+
+def test_scarce_b400_fixture_is_zero_slack():
+    b400 = [r for r in make_scarce_b400_pool()
+            if (r["role"], r["phase"]) == ("target", "late")
+            and r["band"] == "b400_plus"]
+    assert len(b400) == 8 == len({r["game_idx"] for r in b400})   # 8 single-row
+    assert Counter(r["side"] for r in b400) == {"red": 4, "black": 4}
+    # Realizable capacity 8 == summed per-split minima (4 + 4): zero slack.
+    assert sum(min(2, 1) for _ in b400) == 8
+
+
+# (a) The core RED->GREEN: the constraint-aware assignment succeeds on EVERY
+# seed of a sweep the random greedy fails on some of. (Pre-implementation, the
+# zero-slack pool raises on seeds 6/10/12/16/18/24/27/28/29 within 0..29.)
+def test_constraint_aware_assignment_succeeds_on_every_seed():
+    pool = make_scarce_b400_pool()
+    alloc = _production_alloc()
+    for seed in range(30):
+        rows, stats = v2.sample_v2_rows(pool, seed=seed, alloc=alloc)
+        by = Counter((r["split"], r["band"]) for r in rows
+                     if (r["role"], r["phase"]) == ("target", "late"))
+        assert by[("tuning", "b400_plus")] == 4
+        assert by[("frozen_check", "b400_plus")] == 4
+        assert stats["n_rows"] == 120
+
+
+# The mechanism is load-bearing: WITHOUT the scarce pre-assignment (pins
+# stubbed empty), the same zero-slack pool still fails on some of those seeds,
+# proving the pins -- not luck -- are what fixed it.
+def test_pins_are_load_bearing_random_greedy_still_fails(monkeypatch):
+    monkeypatch.setattr(v2, "_scarce_band_pins", lambda *a, **k: {})
+    pool = make_scarce_b400_pool()
+    alloc = _production_alloc()
+    failed = []
+    for seed in range(30):
+        try:
+            v2.sample_v2_rows(pool, seed=seed, alloc=alloc)
+        except ValueError:
+            failed.append(seed)
+    assert failed, "expected the un-pinned random greedy to fail on some seed"
+
+
+# (c) Determinism: same input + seed -> identical manifest, two runs.
+def test_constraint_aware_assignment_is_deterministic():
+    pool = make_scarce_b400_pool()
+    alloc = _production_alloc()
+    a = v2.sample_v2_rows(pool, seed=7, alloc=alloc)
+    b = v2.sample_v2_rows(pool, seed=7, alloc=alloc)
+    assert a == b
+
+
+# (d) Genuine infeasibility still raises BY NAME: strip the scarce band below
+# its summed per-split minima (6 b400 games < 4 + 4).
+def test_genuine_scarce_infeasibility_raises_by_name():
+    pool = [r for r in make_scarce_b400_pool()
+            if not ((r["role"], r["phase"], r["band"])
+                    == ("target", "late", "b400_plus") and r["game_idx"] >= 6)]
+    with pytest.raises(ValueError, match="b400_plus"):
+        v2.sample_v2_rows(pool, seed=7, alloc=_production_alloc())
+
+
+# (e) Stats carry split_assignment_version 2 for schema-2, and NOT for schema-1.
+def test_split_assignment_version_stamped_schema2_only():
+    _, s2 = v2.sample_v2_rows(make_feasible_120_pool(), seed=11,
+                              alloc=_production_alloc())
+    assert s2["split_assignment_version"] == 2
+    _, s1 = v2.sample_v2_rows(_golden_pool(), seed=3)   # schema-1 legacy
+    assert "split_assignment_version" not in s1
+
+
+# The version flows into the selector witness the post-screen report certifies.
+def test_selector_witness_carries_split_assignment_version():
+    rows, stats = v2.sample_v2_rows(make_feasible_120_pool(), seed=11,
+                                    alloc=_production_alloc())
+    witness = v2.build_selector_witness(rows, stats)
+    assert witness["split_assignment_version"] == 2
+
+
+# (f) The production witness composition stays a VALID manifest (all invariants)
+# on the feasible pool -- rows may legitimately differ from selector v1, so we
+# assert invariants, not bytes.
+def test_witness_composition_on_feasible_pool_is_valid():
+    rows, stats = v2.sample_v2_rows(make_feasible_120_pool(), seed=11,
+                                    alloc=_production_alloc())
+    assert stats["n_rows"] == 120
+    assert Counter(r["split"] for r in rows) == {"tuning": 80, "frozen_check": 40}
+    by = {s: Counter() for s in ("tuning", "frozen_check")}
+    for r in rows:
+        if (r["role"], r["phase"]) == ("target", "late"):
+            by[r["split"]][r["band"]] += 1
+    assert by["tuning"]["b400_plus"] >= 4 and by["frozen_check"]["b400_plus"] >= 4
+    assert by["tuning"]["b300_399"] >= 8 and by["frozen_check"]["b300_399"] >= 5
+    # whole-game split isolation + <=2/game + >=12-ply gap + no dup hash.
+    split_by_game, plies_by_game = {}, {}
+    for r in rows:
+        assert split_by_game.setdefault(r["game_idx"], r["split"]) == r["split"]
+        plies_by_game.setdefault(r["game_idx"], []).append(r["ply"])
+    for plies in plies_by_game.values():
+        assert len(plies) <= 2
+        if len(plies) == 2:
+            assert abs(plies[0] - plies[1]) >= 12
+    hashes = [r["canonical_sha1"] for r in rows]
+    assert len(hashes) == len(set(hashes))
