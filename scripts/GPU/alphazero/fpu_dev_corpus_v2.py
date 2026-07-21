@@ -643,13 +643,23 @@ def _scarce_band_pins(games: Mapping[Any, List[dict]],
     itself infeasible -- a GENUINE capacity failure, pool-intrinsic and thus
     correct to raise once, before the attempt loop.
 
-    ponytail: greedy largest-shortfall-first assignment. Optimal for a single
-    scarce band (balanced distribution) and for abundant bands; a pathological
-    profile with many mutually-overlapping TIGHT scarce bands could in principle
-    leave a feasible instance unpinned. That is not the production geometry (one
-    tight band, b400_plus), and the outer attempt loop + exact `_select_manifest`
-    stay the authority -- never a false PASS. Upgrade to an exact matching/ILP
-    only if a future profile actually exhibits overlapping tight scarce bands.
+    These pins are side-BLIND and split-total-BLIND: they cover a band's minima
+    by capacity alone, so a side-skewed tight band (b400_plus 7 black / 5 red on
+    the reservoir_v1 geometry) can be pinned into a cover the fill cannot
+    side-balance (|red-black| > side_tol), or the pins can over-constrain the
+    split totals so the greedy satisfies no quota -- i.e. the pins can FAIL an
+    assignment the old pin-free greedy would have solved. That is why
+    `sample_v2_rows` runs the pinned AND the pin-free orderings (the UNION), never
+    the pins alone; the pins strictly ADD to the candidate set, they don't replace
+    it. Here we only compute the pin candidate.
+
+    ponytail: greedy largest-shortfall-first cover. Optimal for a single scarce
+    band (balanced distribution) and for abundant bands; a pathological profile
+    with many mutually-overlapping TIGHT scarce bands could leave a feasible
+    instance uncovered by pins -- but the pin-free fallback in `sample_v2_rows`
+    still tries it, and `_select_manifest` stays the exact authority, so this can
+    never be a false PASS nor do worse than the old assigner. Upgrade to an exact
+    matching/ILP only if pins alone must succeed on such a profile.
     """
     if not alloc.band_minima_per_split:
         return {}
@@ -1387,33 +1397,45 @@ def sample_v2_rows(kept: List[dict], *, seed: int,
     _capacity_precheck(profile, alloc=alloc)
 
     # Constraint-aware scarce-band split assignment (split_assignment_version 2):
-    # pin the scarce per-split-minima-band games to splits ONCE, before the loop,
-    # so no ordering can starve a split's band minima. Also assignment-independent
-    # (pool-intrinsic), so it too raises now and is never retried. Empty for
-    # schema-1 -> no pins -> byte-identical legacy behaviour.
+    # pin the scarce per-split-minima-band games to splits so no ordering can
+    # starve a split's band minima. Computed ONCE (pool-intrinsic, deterministic).
+    # Empty for schema-1 -> no pins -> byte-identical legacy behaviour.
+    #
+    # The pins are NOT a strict improvement on their own: they are side- and
+    # split-total-BLIND, so a side-skewed tight band (e.g. b400_plus 7 black /
+    # 5 red) can force a cover the fill cannot side-balance, or over-constrain the
+    # split totals -- failing an assignment the OLD pin-free greedy would have
+    # solved. So the candidate set is the UNION of the pinned orderings and the
+    # pin-free (== historical) orderings: try pins first, then fall back to no
+    # pins. NEW >= OLD by construction (the pin-free pass reproduces the old
+    # search exactly), while pins fix the scarce-starvation the free search
+    # missed. Schema-1 has empty pins, so only the (single) pin-free pass runs and
+    # the fallback is never taken -- output stays byte-identical.
     pins = _scarce_band_pins(games, alloc)
+    pin_variants: List[Dict[Any, str]] = [pins] if not pins else [pins, {}]
 
     last_error: Optional[ValueError] = None
-    for attempt in range(ASSIGN_ATTEMPTS):
-        split_of = _greedy_assign_v2(profile, seed, attempt, alloc, pins)
-        if split_of is None:
-            last_error = ValueError(
-                f"assign_split_v2: ordering {attempt} did not satisfy the split "
-                f"quotas")
-            continue
-        try:
-            rows, stats = _select_manifest(games, profile, split_of, alloc)
-        except ValueError as exc:
-            last_error = exc          # this ORDERING failed -- try the next one
-            continue
-        stats["seed"] = seed
-        stats["assignment_attempt"] = attempt
-        # Version-surface the assignment strategy -- schema-2 only, so schema-1
-        # stats stay byte-identical to the pre-repair golden (which predates
-        # this key). Flows into the selector witness + post-screen reports.
-        if alloc.schema_version >= 2:
-            stats["split_assignment_version"] = 2
-        return rows, stats
+    for variant in pin_variants:
+        for attempt in range(ASSIGN_ATTEMPTS):
+            split_of = _greedy_assign_v2(profile, seed, attempt, alloc, variant)
+            if split_of is None:
+                last_error = ValueError(
+                    f"assign_split_v2: ordering {attempt} did not satisfy the "
+                    f"split quotas")
+                continue
+            try:
+                rows, stats = _select_manifest(games, profile, split_of, alloc)
+            except ValueError as exc:
+                last_error = exc      # this ORDERING failed -- try the next one
+                continue
+            stats["seed"] = seed
+            stats["assignment_attempt"] = attempt
+            # Version-surface the assignment strategy -- schema-2 only, so
+            # schema-1 stats stay byte-identical to the pre-repair golden (which
+            # predates this key). Flows into the selector witness + reports.
+            if alloc.schema_version >= 2:
+                stats["split_assignment_version"] = 2
+            return rows, stats
 
     raise ValueError(
         f"sample_v2_rows: no valid manifest after {ASSIGN_ATTEMPTS} deterministic "

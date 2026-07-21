@@ -1507,3 +1507,60 @@ def test_witness_composition_on_feasible_pool_is_valid():
             assert abs(plies[0] - plies[1]) >= 12
     hashes = [r["canonical_sha1"] for r in rows]
     assert len(hashes) == len(set(hashes))
+
+
+def make_side_skewed_b400_pool():
+    """Production-faithful reservoir_v1 b400 geometry: 12 single-row scarce
+    target games, 7 black / 5 red, with abundant-but-tight side-opposed
+    b300/b200 (14 pairs each). The side- and split-total-blind pins force a
+    b400 cover the fill cannot side-balance within side_tol, failing an
+    assignment the OLD pin-free greedy solves -- so the sampler must run the
+    UNION (pinned + pin-free) orderings, not the pins alone. (Reviewer's
+    differentially-verified regression: pins-only failed some seeds, old and
+    the union succeed on all.)"""
+    rows, gi = [], 0
+    for i in range(12):
+        rows.append(_kept_row(gi, 100 + 2 * i, "black" if i < 7 else "red",
+                              "late", "b400_plus", "target"))
+        gi += 1
+    for band, base in (("b300_399", 150), ("b200_299", 240)):
+        for _ in range(14):
+            rows.append(_kept_row(gi, base, "red", "late", band, "target"))
+            rows.append(_kept_row(gi, base + 13, "black", "late", band, "target"))
+            gi += 1
+    for phase, base_ply in (("opening", 2), ("early_mid", 20),
+                            ("midgame", 50), ("late", 95)):
+        for _ in range(40):
+            rows.append(_kept_row(gi, base_ply, "red", phase, "b400_plus",
+                                  "control"))
+            rows.append(_kept_row(gi, base_ply + 12, "black", phase,
+                                  "b400_plus", "control"))
+            gi += 1
+    return rows
+
+
+# Regression: the UNION (pinned + pin-free) must succeed on EVERY seed the old
+# pin-free greedy did -- the pins alone regress this side-skewed tight band.
+def test_side_skewed_tight_band_pool_succeeds_on_every_seed():
+    pool = make_side_skewed_b400_pool()
+    alloc = _production_alloc()
+    for seed in range(20):
+        rows, stats = v2.sample_v2_rows(pool, seed=seed, alloc=alloc)
+        assert stats["n_rows"] == 120
+        by = {s: Counter() for s in ("tuning", "frozen_check")}
+        for r in rows:
+            if (r["role"], r["phase"]) == ("target", "late"):
+                by[r["split"]][r["band"]] += 1
+        assert by["tuning"]["b400_plus"] >= 4
+        assert by["frozen_check"]["b400_plus"] >= 4
+
+
+# The old pin-free greedy DID solve this pool (proving the pins regressed it,
+# and the fallback is what recovers): stub pins empty -> still all succeed.
+def test_side_skewed_pool_old_pin_free_path_succeeds(monkeypatch):
+    monkeypatch.setattr(v2, "_scarce_band_pins", lambda *a, **k: {})
+    pool = make_side_skewed_b400_pool()
+    alloc = _production_alloc()
+    for seed in range(20):
+        rows, _ = v2.sample_v2_rows(pool, seed=seed, alloc=alloc)
+        assert len(rows) == 120
