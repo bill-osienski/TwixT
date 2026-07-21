@@ -1,0 +1,411 @@
+{
+  "analyzed_config_path": "logs/eval/fpu_v16_policy_mass_v2/smoke_v2/fpu_dev_corpus_v2_config.json",
+  "discovery_only": true,
+  "historical_screen_discovery": {
+    "analysis_source_files_clean": true,
+    "current_analysis_source_file_sha1s": {
+      "build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+      "build_teacher_calibration_manifest.py": "973c8b81d24f6c70c8c3168398d5e3dae77f97dc",
+      "fpu_dev_corpus_v2.py": "f648adf87698f30594e547bcb6a902c078076513",
+      "fpu_dev_reservoir_protocol.py": "5a0c8675e0a04e858a0c3be4d45db5caaec8c6f2",
+      "fpu_state_hash.py": "5b7aee014c37b5c3cb569dee9ab26c0b79412682",
+      "goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+      "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+      "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+    },
+    "expected_source_drift": [
+      "fpu_dev_corpus_v2.py",
+      "fpu_dev_reservoir_protocol.py"
+    ],
+    "git_commit": "f5ff1815dc09e5a8988b4206c3045132c5f17fae",
+    "historical_ab_source_file_sha1s": {
+      "build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+      "build_teacher_calibration_manifest.py": "973c8b81d24f6c70c8c3168398d5e3dae77f97dc",
+      "fpu_dev_corpus_v2.py": "f648adf87698f30594e547bcb6a902c078076513",
+      "fpu_dev_reservoir_protocol.py": "5a0c8675e0a04e858a0c3be4d45db5caaec8c6f2",
+      "fpu_state_hash.py": "5b7aee014c37b5c3cb569dee9ab26c0b79412682",
+      "goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+      "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+      "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+    },
+    "policy": "historical_screen_discovery_v1",
+    "source_file_divergence": []
+  },
+  "profile": {
+    "allocation": {
+      "control|early_mid": {
+        "frozen_check": 1,
+        "tuning": 2
+      },
+      "control|late": {
+        "frozen_check": 1,
+        "tuning": 2
+      },
+      "control|midgame": {
+        "frozen_check": 1,
+        "tuning": 2
+      },
+      "control|opening": {
+        "frozen_check": 1,
+        "tuning": 2
+      },
+      "target|late": {
+        "frozen_check": 2,
+        "tuning": 2
+      }
+    },
+    "band_minima_per_split": {
+      "frozen_check": {
+        "b200_299": 1
+      },
+      "tuning": {
+        "b200_299": 1
+      }
+    },
+    "band_minima_total": {},
+    "corpus_size": 16,
+    "max_per_game": 2,
+    "min_ply_gap": 12,
+    "run_kind": "tooling_smoke",
+    "schema_version": 2,
+    "side_tol": 2
+  },
+  "qualification": {
+    "binding_constraint": null,
+    "cells": {
+      "control|early_mid": {
+        "black": 98,
+        "capacity": 222,
+        "demand": 3,
+        "n_games": 183,
+        "n_rows": 222,
+        "red": 124
+      },
+      "control|late": {
+        "black": 6,
+        "capacity": 9,
+        "demand": 3,
+        "n_games": 8,
+        "n_rows": 10,
+        "red": 4
+      },
+      "control|midgame": {
+        "black": 33,
+        "capacity": 83,
+        "demand": 3,
+        "n_games": 67,
+        "n_rows": 83,
+        "red": 50
+      },
+      "control|opening": {
+        "black": 158,
+        "capacity": 235,
+        "demand": 3,
+        "n_games": 205,
+        "n_rows": 235,
+        "red": 77
+      },
+      "target|late": {
+        "black": 3,
+        "capacity": 5,
+        "demand": 4,
+        "n_games": 3,
+        "n_rows": 6,
+        "red": 3
+      }
+    },
+    "failures": [],
+    "global_realizable_capacity": 456,
+    "late_target_bands": {},
+    "per_split_minima_note": "per-split band minima are proven only by the exact selector witness, not by this capacity bound",
+    "profile": {
+      "allocation": {
+        "control|early_mid": {
+          "frozen_check": 1,
+          "tuning": 2
+        },
+        "control|late": {
+          "frozen_check": 1,
+          "tuning": 2
+        },
+        "control|midgame": {
+          "frozen_check": 1,
+          "tuning": 2
+        },
+        "control|opening": {
+          "frozen_check": 1,
+          "tuning": 2
+        },
+        "target|late": {
+          "frozen_check": 2,
+          "tuning": 2
+        }
+      },
+      "band_minima_per_split": {
+        "frozen_check": {
+          "b200_299": 1
+        },
+        "tuning": {
+          "b200_299": 1
+        }
+      },
+      "band_minima_total": {},
+      "corpus_size": 16,
+      "max_per_game": 2,
+      "min_ply_gap": 12,
+      "run_kind": "tooling_smoke",
+      "schema_version": 2,
+      "side_tol": 2
+    },
+    "status": "PASS"
+  },
+  "screen_csv": "logs/eval/fpu_v16_policy_mass_v2/smoke_v2/fpu_dev_source_screen.csv",
+  "screen_csv_sha1": "709504f6e5088514bc4a43ba8e7780822df1be23",
+  "selection_seed": 20260718,
+  "selector_error": null,
+  "selector_witness": {
+    "n_rows": 16,
+    "rows": [
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "de6808fca69d45ea69a67371ec9c2f66a9aee7e1",
+        "game_idx": 6,
+        "phase": "early_mid",
+        "ply": 16,
+        "role": "control",
+        "side": "red",
+        "split": "tuning"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "b29822344898a2bfb9c0e60feab975c95f7d0326",
+        "game_idx": 6,
+        "phase": "early_mid",
+        "ply": 29,
+        "role": "control",
+        "side": "black",
+        "split": "tuning"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "1433c25ca9669c401fb144d53e13d9e01525637c",
+        "game_idx": 260,
+        "phase": "late",
+        "ply": 92,
+        "role": "control",
+        "side": "red",
+        "split": "tuning"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "6c50715e6bbb9c75ab848d3d4e4bf4b527827644",
+        "game_idx": 260,
+        "phase": "late",
+        "ply": 105,
+        "role": "control",
+        "side": "black",
+        "split": "tuning"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "a03cdf4a56a475841e988d021a476f757c8f076c",
+        "game_idx": 10,
+        "phase": "midgame",
+        "ply": 42,
+        "role": "control",
+        "side": "red",
+        "split": "tuning"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "e443101822f381133a9b0d1e92dfb5e972bc44e5",
+        "game_idx": 10,
+        "phase": "midgame",
+        "ply": 55,
+        "role": "control",
+        "side": "black",
+        "split": "tuning"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "165b65b0831235548cc166764a7357ea10d3bb66",
+        "game_idx": 5,
+        "phase": "opening",
+        "ply": 0,
+        "role": "control",
+        "side": "red",
+        "split": "tuning"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "e3a55050f6fbe5357fd79afff6f8596c297f7814",
+        "game_idx": 5,
+        "phase": "opening",
+        "ply": 13,
+        "role": "control",
+        "side": "black",
+        "split": "tuning"
+      },
+      {
+        "band": "b200_299",
+        "canonical_sha1": "34d760a88c1809a155d78b1495734c42c53bdae7",
+        "game_idx": 192,
+        "phase": "late",
+        "ply": 240,
+        "role": "target",
+        "side": "red",
+        "split": "tuning"
+      },
+      {
+        "band": "b200_299",
+        "canonical_sha1": "5b3cdba8c6162dbba22fd64285edb5e845937037",
+        "game_idx": 192,
+        "phase": "late",
+        "ply": 253,
+        "role": "target",
+        "side": "black",
+        "split": "tuning"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "4e643549f10cdda2067f345a2a4483898d029d8a",
+        "game_idx": 2,
+        "phase": "early_mid",
+        "ply": 16,
+        "role": "control",
+        "side": "red",
+        "split": "frozen_check"
+      },
+      {
+        "band": "b300_399",
+        "canonical_sha1": "2401aede81703d67623dacd3f28baa5380d4550e",
+        "game_idx": 76,
+        "phase": "late",
+        "ply": 147,
+        "role": "control",
+        "side": "black",
+        "split": "frozen_check"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "a07058101d173ded188e0136449595329f4cdba6",
+        "game_idx": 41,
+        "phase": "midgame",
+        "ply": 55,
+        "role": "control",
+        "side": "black",
+        "split": "frozen_check"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "131821c8c52079350a1b5d1a03ef3924fe3ae8c2",
+        "game_idx": 0,
+        "phase": "opening",
+        "ply": 0,
+        "role": "control",
+        "side": "red",
+        "split": "frozen_check"
+      },
+      {
+        "band": "b200_299",
+        "canonical_sha1": "f029b74339f4d9b5e363335eeed8795922fb30f8",
+        "game_idx": 76,
+        "phase": "late",
+        "ply": 236,
+        "role": "target",
+        "side": "red",
+        "split": "frozen_check"
+      },
+      {
+        "band": "b400_plus",
+        "canonical_sha1": "03f0acd68e4ed186f542e5c27fd8d96bc833b547",
+        "game_idx": 152,
+        "phase": "late",
+        "ply": 105,
+        "role": "target",
+        "side": "black",
+        "split": "frozen_check"
+      }
+    ],
+    "stats": {
+      "assignment_attempt": 0,
+      "cell_counts": {
+        "control|early_mid|frozen_check": 1,
+        "control|early_mid|tuning": 2,
+        "control|late|frozen_check": 1,
+        "control|late|tuning": 2,
+        "control|midgame|frozen_check": 1,
+        "control|midgame|tuning": 2,
+        "control|opening|frozen_check": 1,
+        "control|opening|tuning": 2,
+        "target|late|frozen_check": 2,
+        "target|late|tuning": 2
+      },
+      "late_target_band_count": {
+        "b200_299": 3,
+        "b400_plus": 1
+      },
+      "late_target_band_count_by_split": {
+        "frozen_check": {
+          "b200_299": 1,
+          "b400_plus": 1
+        },
+        "tuning": {
+          "b200_299": 2
+        }
+      },
+      "n_games_per_split": {
+        "frozen_check": 111,
+        "tuning": 186
+      },
+      "n_games_total": 297,
+      "n_rows": 16,
+      "seed": 20260718,
+      "side_count": {
+        "frozen_check": {
+          "black": 3,
+          "red": 3
+        },
+        "tuning": {
+          "black": 5,
+          "red": 5
+        }
+      },
+      "split_assignment_version": 2
+    }
+  },
+  "status": "PASS",
+  "verified_screen_provenance": {
+    "add_noise": false,
+    "anchor_checkpoint_identity": "model_iter_0001.safetensors:209cf2d4fd24a48553d259dd71b4954867b9473e",
+    "base_mcts_config": null,
+    "config_sha1": "786b556bfd93dbf6e41de4464982afea408ee1ef",
+    "forbidden_manifest_sha1s": {
+      "0001_black_post_opening_top30_predrop_probe_manifest.csv": "19e368ce452c429bb5f5d7cc99eb5c7a491d7d5b",
+      "neutral_position_manifest.csv": "bf7a00ad7ca524ef3aa778b9e0decc11218a2f7d"
+    },
+    "match_summary_sha1": "f2c7b6a071db016490a3962846692ffe76243071",
+    "protocol_sha1": "08933121b39e3f51ec3bd2cb05999fe0d198d1e6",
+    "replay_data_sha1": "acf0dd3b28ad2ecb6af3cc29a87569a27167e12a",
+    "reservoir_checkpoint_a_identity": "model_iter_0001.safetensors:209cf2d4fd24a48553d259dd71b4954867b9473e",
+    "reservoir_checkpoint_b_identity": "model_iter_0379.safetensors:8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+    "runtime_provenance": {
+      "machine": "arm64",
+      "mlx_version": "0.30.3",
+      "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+      "python_version": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]"
+    },
+    "screen_csv_sha1": "709504f6e5088514bc4a43ba8e7780822df1be23",
+    "source_file_sha1s": {
+      "build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+      "build_teacher_calibration_manifest.py": "973c8b81d24f6c70c8c3168398d5e3dae77f97dc",
+      "fpu_dev_corpus_v2.py": "f648adf87698f30594e547bcb6a902c078076513",
+      "fpu_dev_reservoir_protocol.py": "5a0c8675e0a04e858a0c3be4d45db5caaec8c6f2",
+      "fpu_state_hash.py": "5b7aee014c37b5c3cb569dee9ab26c0b79412682",
+      "goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+      "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+      "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+    },
+    "source_index_sha1": "8fdec4b4fa2296b099672a87f22fc6d140793c6f"
+  }
+}
