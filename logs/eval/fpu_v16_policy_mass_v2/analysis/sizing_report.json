@@ -1,0 +1,608 @@
+{
+  "analysis_seed": 20260718,
+  "analyzed_config_path": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_corpus_v2_config.json",
+  "by_game_count": {
+    "1200": {
+      "capacity_min_median_max": {
+        "band:b200_299": [
+          10,
+          22,
+          36
+        ],
+        "band:b300_399": [
+          4,
+          12,
+          24
+        ],
+        "band:b400_plus": [
+          0,
+          3,
+          7
+        ],
+        "control|early_mid": [
+          580,
+          641,
+          701
+        ],
+        "control|late": [
+          19,
+          31,
+          46
+        ],
+        "control|midgame": [
+          231,
+          270,
+          311
+        ],
+        "control|opening": [
+          471,
+          514,
+          557
+        ],
+        "target|late": [
+          17,
+          33,
+          52
+        ]
+      },
+      "degenerate_full_reservoir": false,
+      "failure_reasons": {
+        "qualify: target|late capacity 17 < demand 60": 1,
+        "qualify: target|late capacity 19 < demand 60": 1,
+        "qualify: target|late capacity 20 < demand 60": 1,
+        "qualify: target|late capacity 21 < demand 60": 1,
+        "qualify: target|late capacity 22 < demand 60": 3,
+        "qualify: target|late capacity 23 < demand 60": 5,
+        "qualify: target|late capacity 24 < demand 60": 6,
+        "qualify: target|late capacity 25 < demand 60": 10,
+        "qualify: target|late capacity 26 < demand 60": 11,
+        "qualify: target|late capacity 27 < demand 60": 13,
+        "qualify: target|late capacity 28 < demand 60": 15,
+        "qualify: target|late capacity 29 < demand 60": 15,
+        "qualify: target|late capacity 30 < demand 60": 12,
+        "qualify: target|late capacity 31 < demand 60": 22,
+        "qualify: target|late capacity 32 < demand 60": 21,
+        "qualify: target|late capacity 33 < demand 60": 25,
+        "qualify: target|late capacity 34 < demand 60": 19,
+        "qualify: target|late capacity 35 < demand 60": 19,
+        "qualify: target|late capacity 36 < demand 60": 22,
+        "qualify: target|late capacity 37 < demand 60": 13,
+        "qualify: target|late capacity 38 < demand 60": 13,
+        "qualify: target|late capacity 39 < demand 60": 10,
+        "qualify: target|late capacity 40 < demand 60": 11,
+        "qualify: target|late capacity 41 < demand 60": 6,
+        "qualify: target|late capacity 42 < demand 60": 2,
+        "qualify: target|late capacity 43 < demand 60": 5,
+        "qualify: target|late capacity 44 < demand 60": 5,
+        "qualify: target|late capacity 45 < demand 60": 3,
+        "qualify: target|late capacity 46 < demand 60": 4,
+        "qualify: target|late capacity 47 < demand 60": 2,
+        "qualify: target|late capacity 48 < demand 60": 1,
+        "qualify: target|late capacity 49 < demand 60": 1,
+        "qualify: target|late capacity 52 < demand 60": 1
+      },
+      "lower_bound_95": 0.0,
+      "meets_criterion": false,
+      "n_successes": 0,
+      "n_trials": 299,
+      "success_rate": 0.0
+    },
+    "1800": {
+      "capacity_min_median_max": {
+        "band:b200_299": [
+          16,
+          34,
+          49
+        ],
+        "band:b300_399": [
+          7,
+          19,
+          32
+        ],
+        "band:b400_plus": [
+          0,
+          4,
+          9
+        ],
+        "control|early_mid": [
+          896,
+          961,
+          1015
+        ],
+        "control|late": [
+          25,
+          48,
+          65
+        ],
+        "control|midgame": [
+          363,
+          407,
+          455
+        ],
+        "control|opening": [
+          714,
+          769,
+          807
+        ],
+        "target|late": [
+          31,
+          51,
+          71
+        ]
+      },
+      "degenerate_full_reservoir": false,
+      "failure_reasons": {
+        "qualify: late-target band b400_plus capacity 2 < total minimum 8": 1,
+        "qualify: late-target band b400_plus capacity 3 < total minimum 8": 1,
+        "qualify: late-target band b400_plus capacity 4 < total minimum 8": 3,
+        "qualify: late-target band b400_plus capacity 5 < total minimum 8": 12,
+        "qualify: late-target band b400_plus capacity 6 < total minimum 8": 12,
+        "qualify: late-target band b400_plus capacity 7 < total minimum 8": 2,
+        "qualify: target|late capacity 31 < demand 60": 1,
+        "qualify: target|late capacity 32 < demand 60": 1,
+        "qualify: target|late capacity 33 < demand 60": 1,
+        "qualify: target|late capacity 34 < demand 60": 2,
+        "qualify: target|late capacity 35 < demand 60": 1,
+        "qualify: target|late capacity 37 < demand 60": 3,
+        "qualify: target|late capacity 38 < demand 60": 5,
+        "qualify: target|late capacity 39 < demand 60": 4,
+        "qualify: target|late capacity 40 < demand 60": 5,
+        "qualify: target|late capacity 41 < demand 60": 9,
+        "qualify: target|late capacity 42 < demand 60": 5,
+        "qualify: target|late capacity 43 < demand 60": 13,
+        "qualify: target|late capacity 44 < demand 60": 10,
+        "qualify: target|late capacity 45 < demand 60": 11,
+        "qualify: target|late capacity 46 < demand 60": 21,
+        "qualify: target|late capacity 47 < demand 60": 14,
+        "qualify: target|late capacity 48 < demand 60": 9,
+        "qualify: target|late capacity 49 < demand 60": 13,
+        "qualify: target|late capacity 50 < demand 60": 9,
+        "qualify: target|late capacity 51 < demand 60": 19,
+        "qualify: target|late capacity 52 < demand 60": 16,
+        "qualify: target|late capacity 53 < demand 60": 19,
+        "qualify: target|late capacity 54 < demand 60": 8,
+        "qualify: target|late capacity 55 < demand 60": 13,
+        "qualify: target|late capacity 56 < demand 60": 17,
+        "qualify: target|late capacity 57 < demand 60": 16,
+        "qualify: target|late capacity 58 < demand 60": 9,
+        "qualify: target|late capacity 59 < demand 60": 12,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- as": 2
+      },
+      "lower_bound_95": 0.0,
+      "meets_criterion": false,
+      "n_successes": 0,
+      "n_trials": 299,
+      "success_rate": 0.0
+    },
+    "2400": {
+      "capacity_min_median_max": {
+        "band:b200_299": [
+          27,
+          45,
+          66
+        ],
+        "band:b300_399": [
+          14,
+          26,
+          36
+        ],
+        "band:b400_plus": [
+          1,
+          6,
+          10
+        ],
+        "control|early_mid": [
+          1205,
+          1281,
+          1349
+        ],
+        "control|late": [
+          44,
+          63,
+          81
+        ],
+        "control|midgame": [
+          486,
+          543,
+          592
+        ],
+        "control|opening": [
+          973,
+          1025,
+          1070
+        ],
+        "target|late": [
+          42,
+          67,
+          89
+        ]
+      },
+      "degenerate_full_reservoir": false,
+      "failure_reasons": {
+        "qualify: late-target band b400_plus capacity 2 < total minimum 8": 2,
+        "qualify: late-target band b400_plus capacity 3 < total minimum 8": 13,
+        "qualify: late-target band b400_plus capacity 4 < total minimum 8": 26,
+        "qualify: late-target band b400_plus capacity 5 < total minimum 8": 43,
+        "qualify: late-target band b400_plus capacity 6 < total minimum 8": 65,
+        "qualify: late-target band b400_plus capacity 7 < total minimum 8": 53,
+        "qualify: target|late capacity 42 < demand 60": 1,
+        "qualify: target|late capacity 48 < demand 60": 3,
+        "qualify: target|late capacity 49 < demand 60": 1,
+        "qualify: target|late capacity 50 < demand 60": 2,
+        "qualify: target|late capacity 51 < demand 60": 2,
+        "qualify: target|late capacity 52 < demand 60": 1,
+        "qualify: target|late capacity 53 < demand 60": 6,
+        "qualify: target|late capacity 54 < demand 60": 2,
+        "qualify: target|late capacity 55 < demand 60": 4,
+        "qualify: target|late capacity 56 < demand 60": 5,
+        "qualify: target|late capacity 57 < demand 60": 3,
+        "qualify: target|late capacity 58 < demand 60": 7,
+        "qualify: target|late capacity 59 < demand 60": 13,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- as": 4,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- fi": 16,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- la": 15,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- pe": 3
+      },
+      "lower_bound_95": 0.015790916755238815,
+      "meets_criterion": false,
+      "n_successes": 9,
+      "n_trials": 299,
+      "success_rate": 0.030100334448160536
+    },
+    "3000": {
+      "capacity_min_median_max": {
+        "band:b200_299": [
+          43,
+          57,
+          70
+        ],
+        "band:b300_399": [
+          22,
+          32,
+          41
+        ],
+        "band:b400_plus": [
+          2,
+          8,
+          11
+        ],
+        "control|early_mid": [
+          1542,
+          1600,
+          1671
+        ],
+        "control|late": [
+          62,
+          79,
+          95
+        ],
+        "control|midgame": [
+          638,
+          676,
+          724
+        ],
+        "control|opening": [
+          1237,
+          1282,
+          1333
+        ],
+        "target|late": [
+          66,
+          85,
+          102
+        ]
+      },
+      "degenerate_full_reservoir": false,
+      "failure_reasons": {
+        "qualify: late-target band b400_plus capacity 2 < total minimum 8": 1,
+        "qualify: late-target band b400_plus capacity 3 < total minimum 8": 2,
+        "qualify: late-target band b400_plus capacity 4 < total minimum 8": 10,
+        "qualify: late-target band b400_plus capacity 5 < total minimum 8": 21,
+        "qualify: late-target band b400_plus capacity 6 < total minimum 8": 45,
+        "qualify: late-target band b400_plus capacity 7 < total minimum 8": 63,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- fi": 2,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- la": 65,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- pe": 23
+      },
+      "lower_bound_95": 0.18491613128522122,
+      "meets_criterion": false,
+      "n_successes": 67,
+      "n_trials": 299,
+      "success_rate": 0.22408026755852842
+    },
+    "3600": {
+      "capacity_min_median_max": {
+        "band:b200_299": [
+          54,
+          68,
+          82
+        ],
+        "band:b300_399": [
+          27,
+          39,
+          46
+        ],
+        "band:b400_plus": [
+          4,
+          9,
+          12
+        ],
+        "control|early_mid": [
+          1872,
+          1922,
+          1982
+        ],
+        "control|late": [
+          78,
+          95,
+          111
+        ],
+        "control|midgame": [
+          772,
+          811,
+          858
+        ],
+        "control|opening": [
+          1498,
+          1537,
+          1587
+        ],
+        "target|late": [
+          85,
+          102,
+          120
+        ]
+      },
+      "degenerate_full_reservoir": false,
+      "failure_reasons": {
+        "qualify: late-target band b400_plus capacity 4 < total minimum 8": 1,
+        "qualify: late-target band b400_plus capacity 5 < total minimum 8": 4,
+        "qualify: late-target band b400_plus capacity 6 < total minimum 8": 16,
+        "qualify: late-target band b400_plus capacity 7 < total minimum 8": 26,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- la": 56,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- pe": 21
+      },
+      "lower_bound_95": 0.5362669689933004,
+      "meets_criterion": false,
+      "n_successes": 175,
+      "n_trials": 299,
+      "success_rate": 0.5852842809364549
+    },
+    "4200": {
+      "capacity_min_median_max": {
+        "band:b200_299": [
+          65,
+          80,
+          88
+        ],
+        "band:b300_399": [
+          35,
+          45,
+          51
+        ],
+        "band:b400_plus": [
+          6,
+          11,
+          12
+        ],
+        "control|early_mid": [
+          2200,
+          2241,
+          2298
+        ],
+        "control|late": [
+          97,
+          110,
+          121
+        ],
+        "control|midgame": [
+          914,
+          946,
+          978
+        ],
+        "control|opening": [
+          1760,
+          1794,
+          1826
+        ],
+        "target|late": [
+          103,
+          119,
+          131
+        ]
+      },
+      "degenerate_full_reservoir": false,
+      "failure_reasons": {
+        "qualify: late-target band b400_plus capacity 6 < total minimum 8": 2,
+        "qualify: late-target band b400_plus capacity 7 < total minimum 8": 3,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- la": 15,
+        "select: sample_v2_rows: no valid manifest after 8 deterministic whole-game split assignments (seed 20260718); last failure -- pe": 24
+      },
+      "lower_bound_95": 0.8148623881682048,
+      "meets_criterion": false,
+      "n_successes": 255,
+      "n_trials": 299,
+      "success_rate": 0.8528428093645485
+    },
+    "4800": {
+      "capacity_min_median_max": {
+        "band:b200_299": [
+          91,
+          91,
+          91
+        ],
+        "band:b300_399": [
+          52,
+          52,
+          52
+        ],
+        "band:b400_plus": [
+          12,
+          12,
+          12
+        ],
+        "control|early_mid": [
+          2563,
+          2563,
+          2563
+        ],
+        "control|late": [
+          126,
+          126,
+          126
+        ],
+        "control|midgame": [
+          1082,
+          1082,
+          1082
+        ],
+        "control|opening": [
+          2051,
+          2051,
+          2051
+        ],
+        "target|late": [
+          136,
+          136,
+          136
+        ]
+      },
+      "degenerate_full_reservoir": true,
+      "failure_reasons": {},
+      "lower_bound_95": 0.049999999999999996,
+      "meets_criterion": false,
+      "n_successes": 1,
+      "n_trials": 1,
+      "success_rate": 1.0
+    }
+  },
+  "cannot_certify_beyond": 4800,
+  "confidence_criterion": {
+    "all_success_trials_required": 299,
+    "alpha": 0.05,
+    "method": "exact one-sided (Clopper-Pearson) lower bound",
+    "note": "estimates smaller subsets of THIS discovery reservoir; does not independently certify a fresh reservoir",
+    "target_reliability": 0.99
+  },
+  "discovery_only": true,
+  "historical_screen_discovery": {
+    "analysis_source_files_clean": true,
+    "current_analysis_source_file_sha1s": {
+      "build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+      "build_teacher_calibration_manifest.py": "973c8b81d24f6c70c8c3168398d5e3dae77f97dc",
+      "fpu_dev_corpus_v2.py": "c4ae8eb204ac58f6eb00e3ddb4a3f03189fb8408",
+      "fpu_dev_reservoir_protocol.py": "5a0c8675e0a04e858a0c3be4d45db5caaec8c6f2",
+      "fpu_state_hash.py": "5b7aee014c37b5c3cb569dee9ab26c0b79412682",
+      "goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+      "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+      "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+    },
+    "expected_source_drift": [
+      "fpu_dev_corpus_v2.py",
+      "fpu_dev_reservoir_protocol.py"
+    ],
+    "git_commit": "e03e2caed01bc12a413bc44cbfffbea9c1216435",
+    "historical_ab_source_file_sha1s": {
+      "build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+      "build_teacher_calibration_manifest.py": "973c8b81d24f6c70c8c3168398d5e3dae77f97dc",
+      "fpu_dev_corpus_v2.py": "c7b2e77f71b1b3e49ed64649915a99408777ffe7",
+      "fpu_dev_reservoir_protocol.py": "4ccab2923c537206082762b16489b7eb2cfd23e4",
+      "fpu_state_hash.py": "5b7aee014c37b5c3cb569dee9ab26c0b79412682",
+      "goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+      "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+      "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+    },
+    "policy": "historical_screen_discovery_v1",
+    "source_file_divergence": [
+      "fpu_dev_corpus_v2.py",
+      "fpu_dev_reservoir_protocol.py"
+    ]
+  },
+  "method": "finite-reservoir whole-game subsampling",
+  "n_games_available": 4800,
+  "n_trials_per_count": 299,
+  "n_zero_yield_games": 1681,
+  "profile": {
+    "allocation": {
+      "control|early_mid": {
+        "frozen_check": 5,
+        "tuning": 10
+      },
+      "control|late": {
+        "frozen_check": 5,
+        "tuning": 10
+      },
+      "control|midgame": {
+        "frozen_check": 5,
+        "tuning": 10
+      },
+      "control|opening": {
+        "frozen_check": 5,
+        "tuning": 10
+      },
+      "target|late": {
+        "frozen_check": 20,
+        "tuning": 40
+      }
+    },
+    "band_minima_per_split": {
+      "frozen_check": {
+        "b200_299": 5,
+        "b300_399": 5,
+        "b400_plus": 4
+      },
+      "tuning": {
+        "b200_299": 8,
+        "b300_399": 8,
+        "b400_plus": 4
+      }
+    },
+    "band_minima_total": {
+      "b200_299": 12,
+      "b300_399": 12,
+      "b400_plus": 8
+    },
+    "corpus_size": 120,
+    "max_per_game": 2,
+    "min_ply_gap": 12,
+    "run_kind": "production",
+    "schema_version": 2,
+    "side_tol": 2
+  },
+  "screen_csv": "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/fpu_dev_source_screen.csv",
+  "screen_csv_sha1": "235ae91088611ace56e45ff88ec312736f4f5835",
+  "selection_seed": 20260718,
+  "verified_screen_provenance": {
+    "add_noise": false,
+    "anchor_checkpoint_identity": "model_iter_0001.safetensors:209cf2d4fd24a48553d259dd71b4954867b9473e",
+    "base_mcts_config": null,
+    "config_sha1": "3b1bd127ed103b43561ce6806993724fed9ae600",
+    "forbidden_manifest_sha1s": {
+      "0001_black_post_opening_top30_predrop_probe_manifest.csv": "19e368ce452c429bb5f5d7cc99eb5c7a491d7d5b",
+      "neutral_position_manifest.csv": "bf7a00ad7ca524ef3aa778b9e0decc11218a2f7d"
+    },
+    "match_summary_sha1": "f7850055031a20811aecaae017739bd98f172427",
+    "protocol_sha1": "5cdf8dae6253499b9a3215b4b9a11af6d3aafbcf",
+    "replay_data_sha1": "2d998d1791943ccff0a806c7af9372d847dc984a",
+    "reservoir_checkpoint_a_identity": "model_iter_0001.safetensors:209cf2d4fd24a48553d259dd71b4954867b9473e",
+    "reservoir_checkpoint_b_identity": "model_iter_0379.safetensors:8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+    "runtime_provenance": {
+      "machine": "arm64",
+      "mlx_version": "0.30.3",
+      "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+      "python_version": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]"
+    },
+    "screen_csv_sha1": "235ae91088611ace56e45ff88ec312736f4f5835",
+    "source_file_sha1s": {
+      "build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+      "build_teacher_calibration_manifest.py": "973c8b81d24f6c70c8c3168398d5e3dae77f97dc",
+      "fpu_dev_corpus_v2.py": "c4ae8eb204ac58f6eb00e3ddb4a3f03189fb8408",
+      "fpu_dev_reservoir_protocol.py": "5a0c8675e0a04e858a0c3be4d45db5caaec8c6f2",
+      "fpu_state_hash.py": "5b7aee014c37b5c3cb569dee9ab26c0b79412682",
+      "goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+      "mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+      "twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e"
+    },
+    "source_index_sha1": "ea46420d16c9ec4b82de5d3bd0f9660f222b617a"
+  }
+}
