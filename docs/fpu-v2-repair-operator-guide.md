@@ -246,3 +246,15 @@ against real opening-phase rows on this project's checkpoints/board, and
 must not be cited as an established result in any qualification report,
 gate decision, or operator summary. Treat it as a note to test for, not a
 premise to build on.
+
+## 10. Smoke run record (2026-07-19) — technical PASS, not a scientific result
+
+The 400-game 24×24 `tooling_smoke` chain ran end-to-end from the frozen protocol with no manual artifact edits:
+
+- `emit-protocol` → `emit-gen-command` → generate (400 games, base_seed 20280000, seed range disjoint from v1) → `qualify` exit 0 → `screen` (2,032 proposals, 581 kept) → `post-screen-qualify` **PASS** exit 0 → `select` exit 0.
+- Manifest: 18 rows — 12 tuning / 6 frozen_check, 6 target / 12 control, sides 10 black / 8 red (within `side_tol 2`); `run_kind=tooling_smoke` in the protocol, config, report, and manifest meta.
+- Idempotency: re-running `post-screen-qualify` and `select` was a clean accept with byte-identical artifacts.
+- Isolation: the production diagnostic (`require_production_run_kind`) rejects the smoke config with the §5 SystemExit.
+- Artifact SHA-1s: protocol `ee43e847…5065`, post-screen report `040ccce…b2c`, manifest `fbc87b1…d01`.
+
+**This proves plumbing only.** The smoke deliberately omits production band floors; its outputs must never select a coefficient, pass a safety gate, justify a strength match, or enter self-play.
