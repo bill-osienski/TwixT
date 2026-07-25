@@ -624,14 +624,35 @@ def test_scientific_artifact_records_the_complete_effective_config(clean_tree,
                                                                    tmp_path):
     """A bare coefficient label would not let anyone reproduce the search."""
     art = _artifact("held_out", tmp_path,
-                    effective_mcts_config={str(c): v17._effective_config(c)
-                                           for c in (None, 0.25)})
+                    effective_mcts_config=v17.effective_configs((None, 0.25)))
     cfg = art["effective_mcts_config"]["0.25"]
     assert cfg["n_simulations"] == 400 and cfg["add_noise"] is False
     assert cfg["fpu_value"] == 0.0
     assert cfg[prov.CONFIG_FIELD] == 0.25
     assert cfg["eval_batch_size"] == 14 and cfg["stall_flush_sims"] == 48
+    # the COMPLETE dataclass, not a hand-built subset
+    import dataclasses
+    from scripts.GPU.alphazero.mcts import MCTSConfig
+    assert set(dataclasses.asdict(MCTSConfig())) <= set(cfg)
+    for extra in ("c_puct", "temp_high", "temp_low", "root_edge_band_penalty",
+                  "closeout_td1_visit_forcing_enabled", "dirichlet_alpha"):
+        assert extra in cfg, extra
     assert art["protocol_sha1"]
+
+
+def _manifest_rows(mode, **over):
+    """Manifest rows in the mode's complete frozen geometry."""
+    geometry = v17.CORPUS_GEOMETRY[mode]
+    rows, i = [], 0
+    for role, count in geometry.items():
+        for _ in range(count):
+            rows.append({"role": role, "side": "red" if i % 2 == 0 else "black",
+                         "canonical_sha1": f"p{i:03d}", "game_idx": i,
+                         "position_ply": 50})
+            i += 1
+    for k, v in over.items():
+        rows[0][k] = v
+    return rows
 
 
 @pytest.mark.parametrize("mode,geometry", [
@@ -640,15 +661,48 @@ def test_scientific_artifact_records_the_complete_effective_config(clean_tree,
 ])
 def test_corpus_geometry_is_frozen_per_mode(mode, geometry):
     assert v17.CORPUS_GEOMETRY[mode] == geometry
-    v17.require_corpus_geometry(mode, geometry)
-    for role in geometry:
-        wrong = {**geometry, role: geometry[role] - 1}
-        with pytest.raises(prov.ProtocolViolation, match="corpus geometry"):
-            v17.require_corpus_geometry(mode, wrong)
+    v17.require_corpus_geometry(mode, _manifest_rows(mode))
+    with pytest.raises(prov.ProtocolViolation, match="corpus roles"):
+        v17.require_corpus_geometry(mode, _manifest_rows(mode)[:-1])
+
+
+@pytest.mark.parametrize("mode,per_side", [("development", 16), ("held_out", 28)])
+def test_corpus_side_balance_is_enforced(mode, per_side):
+    """An all-red corpus satisfies the role counts but violates §6.2/§8.1."""
+    assert v17.SIDE_BALANCE[mode] == per_side
+    all_red = [{**r, "side": "red"} for r in _manifest_rows(mode)]
+    with pytest.raises(prov.ProtocolViolation, match="side balance"):
+        v17.require_corpus_geometry(mode, all_red)
+
+
+def test_corpus_rejects_duplicate_canonical_positions():
+    rows = _manifest_rows("development")
+    rows[1]["canonical_sha1"] = rows[0]["canonical_sha1"]
+    with pytest.raises(prov.ProtocolViolation, match="repeats canonical"):
+        v17.require_corpus_geometry("development", rows)
+
+
+def test_corpus_rejects_more_than_two_positions_per_game():
+    rows = _manifest_rows("development")
+    for i in range(3):
+        rows[i]["game_idx"] = 999
+        rows[i]["position_ply"] = 50 + i * 20
+    with pytest.raises(prov.ProtocolViolation, match="frozen cap"):
+        v17.require_corpus_geometry("development", rows)
+
+
+def test_corpus_rejects_positions_closer_than_twelve_plies():
+    rows = _manifest_rows("development")
+    rows[0]["game_idx"] = rows[1]["game_idx"] = 777
+    rows[0]["position_ply"], rows[1]["position_ply"] = 50, 61
+    with pytest.raises(prov.ProtocolViolation, match="ply spacing"):
+        v17.require_corpus_geometry("development", rows)
+    rows[1]["position_ply"] = 62
+    v17.require_corpus_geometry("development", rows)
 
 
 def test_artifact_refuses_wrong_corpus_geometry(clean_tree, tmp_path):
-    with pytest.raises(prov.ProtocolViolation, match="corpus geometry"):
+    with pytest.raises(prov.ProtocolViolation, match="corpus roles"):
         _artifact("development", tmp_path, coefficient=None,
                   rows=corpus(n_targets=15, n_controls=16,
                               configs=(None, 0.0) + tuple(prov.GRID)))
@@ -846,7 +900,7 @@ def test_run_diagnostic_refuses_wrong_manifest_geometry(clean_tree, tmp_path,
     bad = tmp_path / "bad.csv"
     bad.write_text("canonical_sha1,game_idx,position_ply,side,role,replay_path\n"
                    f"p0,0,50,red,target,{replay}\n")
-    with pytest.raises(prov.ProtocolViolation, match="corpus geometry"):
+    with pytest.raises(prov.ProtocolViolation, match="corpus roles"):
         v17.run_diagnostic(mode="development", manifest_path=str(bad),
                            checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
                            seed_base=1, source_index=cpath, protocol_path=ppath,
@@ -1173,3 +1227,134 @@ def test_abcd_canonical_cases_match_the_frozen_cardinalities():
     assert {g: len(v) for g, v in cases.items()} == v17.ABCD_CARDINALITY
     for gate, rows in cases.items():
         assert all(r["seed"] and r["case_id"] for r in rows), gate
+
+
+# ---------------------------------------------------------------------------
+# Adversarial round 3. Each was ACCEPTED while 174 focused tests passed.
+# ---------------------------------------------------------------------------
+
+def test_verified_protocol_constrains_the_runtime_coefficient(clean_tree, tmp_path,
+                                                              monkeypatch):
+    """A valid r=0.25 protocol previously accompanied a runtime r=0.45."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    ppath, cpath = _pair(tmp_path, "held_out", 0.25)
+    with pytest.raises(prov.ProtocolViolation, match="does not match the verified"):
+        v17.run_diagnostic(
+            mode="held_out", manifest_path=str(_manifest(tmp_path, "held_out")),
+            checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
+            seed_base=SEEDS["held_out"][0], frozen_coefficient=0.45,
+            source_index=cpath, protocol_path=ppath, config_path=cpath,
+            searcher=_fake_searcher())
+
+
+def test_verified_protocol_constrains_the_runtime_checkpoint(clean_tree, tmp_path,
+                                                             monkeypatch):
+    """Any readable checkpoint previously passed."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    ppath, cpath = _pair(tmp_path, "development")
+    other = tmp_path / "other.safetensors"
+    other.write_bytes(b"not the anchor checkpoint")
+    with pytest.raises(prov.ProtocolViolation, match="not one of the protocol"):
+        v17.run_diagnostic(
+            mode="development", manifest_path=str(_manifest(tmp_path)),
+            checkpoint=str(other), out_path=str(tmp_path / "o.json"),
+            seed_base=1, source_index=cpath, protocol_path=ppath,
+            config_path=cpath, searcher=_fake_searcher())
+
+
+@pytest.mark.parametrize("gate", ["A", "B", "C", "D"])
+def test_nan_cannot_authenticate_as_a_frozen_shipped_value(gate):
+    """abs(NaN - x) is NaN and every comparison against NaN is false, so a
+    corrupted below-threshold case previously authenticated cleanly."""
+    with pytest.raises(prov.ProtocolViolation, match="not a finite number"):
+        v17.verify_abcd_baseline(gate, _shipped_cases(gate, black_value=float("nan")))
+    for bad in (float("inf"), float("-inf")):
+        with pytest.raises(prov.ProtocolViolation, match="not a finite number"):
+            v17.verify_abcd_baseline(gate, _shipped_cases(gate, black_value=bad))
+
+
+def test_task1_freeze_is_authenticated_by_sha1(tmp_path):
+    """Stage 4 may not be pointed at a rewritten baseline and rebase itself."""
+    forged = tmp_path / "forged.json"
+    with open(v17.ABCD_BASELINE_PATH) as f:
+        doc = json.load(f)
+    doc["abcd_frozen_baseline"]["A"]["over"] = 0
+    forged.write_text(json.dumps(doc))
+    with pytest.raises(prov.ProtocolViolation, match="may not be rewritten"):
+        v17._authenticate_task1_freeze(str(forged), v17.ABCD_MOVES_PATH)
+    with pytest.raises(prov.ProtocolViolation, match="may not be rewritten"):
+        v17._authenticate_task1_freeze(v17.ABCD_BASELINE_PATH, str(forged))
+    v17._authenticate_task1_freeze(v17.ABCD_BASELINE_PATH, v17.ABCD_MOVES_PATH)
+
+
+def test_abcd_persists_every_paired_case(clean_tree, tmp_path, monkeypatch):
+    """216 searches previously vanished behind four aggregate verdicts."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    doc = protocol.build_protocol(run_kind="abcd", coefficient=0.25,
+                                  checkpoints={"anchor": CKPT})
+    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
+    protocol.emit(ppath, doc)
+    protocol.emit(cpath, protocol.derive_config(doc))
+    art = v17.run_diagnostic(
+        mode="abcd", manifest_path="", checkpoint=CKPT,
+        out_path=str(tmp_path / "abcd.json"), seed_base=0,
+        frozen_coefficient=0.25, protocol_path=str(ppath),
+        config_path=str(cpath), searcher=_abcd_searcher())
+    assert art["n_cases"] == len(art["cases"]) == 108
+    for case in art["cases"]:
+        assert set(case) == set(v17.ABCD_CASE_FIELDS)
+        assert case["abs_delta_vs_frozen"] == 0.0
+        assert case["replay_path"].endswith(".json")
+    assert {c["gate"] for c in art["cases"]} == set(v17.ABCD_GATES)
+    json.dumps(art, allow_nan=False)
+
+
+def test_abcd_replay_identity_hashes_replays_not_probe_csvs(clean_tree, tmp_path,
+                                                            monkeypatch):
+    """replay_data_sha1 previously fingerprinted the four canonical CSVs while
+    the replay bytes actually read stayed unbound."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    doc = protocol.build_protocol(run_kind="abcd", coefficient=0.25,
+                                  checkpoints={"anchor": CKPT})
+    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
+    protocol.emit(ppath, doc)
+    protocol.emit(cpath, protocol.derive_config(doc))
+    art = v17.run_diagnostic(
+        mode="abcd", manifest_path="", checkpoint=CKPT,
+        out_path=str(tmp_path / "abcd.json"), seed_base=0,
+        frozen_coefficient=0.25, protocol_path=str(ppath),
+        config_path=str(cpath), searcher=_abcd_searcher())
+    replays = sorted({c["replay_path"] for c in art["cases"]})
+    assert all(p.endswith(".json") and "probe_cases" not in p for p in replays)
+    assert art["provenance"]["identities"]["replay_data_sha1"] == \
+        fpu_provenance.replay_data_sha1(replays)
+    ids = art["identities"]
+    assert ids["task1_baseline_sha1"] == v17.ABCD_BASELINE_SHA1
+    assert ids["task1_moves_sha1"] == v17.ABCD_MOVES_SHA1
+    assert ids["config_sha1"] and ids["canonical_probe_sources"]
+
+
+def test_stage4_source_identities_cover_the_probe_chain():
+    for name in ("capture_v17_abcd_selected_moves.py", "probe_eval.py",
+                 "opening_diagnostics.py", "game/twixt_state.py"):
+        assert name in v17.RESULT_DETERMINING_MODULES
+
+
+def test_paired_rows_must_share_a_seed():
+    """§7 runs every coefficient 'using identical per-position seeds'."""
+    rows = corpus(configs=(None, 0.35))
+    for r in rows:
+        if r["coefficient"] == 0.35 and r["canonical_sha1"] == "pos000":
+            r["seed"] = 999
+    with pytest.raises(prov.ProtocolViolation, match="seed drift"):
+        v17.require_complete_pairing(rehash(rows), (None, 0.35))
+
+
+def test_reply_metric_uses_the_leader_reply_node_definition():
+    """The A mechanism gate must measure visited children of the final root
+    LEADER, which is what the imported v16 `_position_features` computes."""
+    import inspect
+    src = inspect.getsource(v17._real_abcd_searcher)
+    assert "_position_features" in src and "_search_position" in src
+    # the frozen definition itself, so this cannot silently drift
+    assert "_n_visited_children(top)" in inspect.getsource(v16._position_features)

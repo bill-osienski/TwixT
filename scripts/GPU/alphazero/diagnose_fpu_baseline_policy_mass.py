@@ -37,6 +37,7 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+from . import fpu_provenance
 from . import fpu_v17_protocol as protocol
 from . import fpu_v17_provenance as prov
 from .fpu_dev_reservoir_protocol import canonical_json_bytes
@@ -119,11 +120,26 @@ C_SEVERE_MAX, C_OVER_MAX, C_MEAN_MAX = 4, 10, 0.099
 D_SEVERE_MAX = 0
 ABCD_CARDINALITY = {"A": 30, "B": 18, "C": 30, "D": 30}
 ABCD_GATES = ("A", "B", "C", "D")
+# §9's black-perspective over/severe convention, as frozen at Task 1.
+OVER_THRESHOLD, SEVERE_THRESHOLD = 0.25, 0.50
+# What Stage 4 persists per case so the 216 searches remain auditable.
+ABCD_CASE_FIELDS = ("gate", "case_id", "seed", "replay_path", "shipped_value",
+                    "candidate_value", "shipped_move", "candidate_move",
+                    "shipped_replies", "candidate_replies", "shipped_top_share",
+                    "candidate_top_share", "shipped_collapse",
+                    "candidate_collapse", "value_delta", "move_changed",
+                    "frozen_value", "abs_delta_vs_frozen")
 ABCD_TOLERANCE = 1e-6
 ABCD_BASELINE_PATH = ("logs/eval/fpu_v17_baseline_policy_mass/"
                       "prechange_baseline.json")
 ABCD_MOVES_PATH = ("logs/eval/fpu_v17_baseline_policy_mass/"
                    "prechange_abcd_selected_moves.json")
+# The Task 1 freeze. Verified at runtime so Stage 4 cannot rebase itself by
+# being pointed at a rewritten file.
+ABCD_BASELINE_SHA1 = "88cca942334ea7e9335086b0a3d3473f69a4f01e"
+# B's cases CSV has no replay_path; the goal-line manifest supplies it.
+B_MANIFEST_PATH = "logs/eval/loss_analysis_v2_1/goal_line_trigger_probe_manifest.json"
+ABCD_MOVES_SHA1 = "162c9a5a1aac4d4012447d717943e35b405594d9"
 
 # §6.2 / §8.1 corpus geometry, and §5.2's smoke selector profile.
 CORPUS_GEOMETRY: Dict[str, Dict[str, int]] = {
@@ -131,6 +147,11 @@ CORPUS_GEOMETRY: Dict[str, Dict[str, int]] = {
     "held_out": {"target": 24, "control": 32},
     "tooling_smoke": {"control": 2},
 }
+# §6.2/§8.1: exact overall side balance, at most two positions per game, and at
+# least twelve plies between two positions taken from the same game.
+SIDE_BALANCE: Dict[str, int] = {"development": 16, "held_out": 28}
+MAX_POSITIONS_PER_GAME = 2
+MIN_PLY_GAP = 12
 
 # Every module whose bytes can change a result. §12 requires source identities
 # to cover all of them, not just the module being run.
@@ -140,6 +161,8 @@ RESULT_DETERMINING_MODULES = (
     "fpu_dev_reservoir_protocol.py", "mcts.py", "eval_runner.py",
     "evaluator.py", "local_evaluator.py", "network.py",
     "position_probe_cases.py", "goal_line_trigger_probe_cases.py",
+    "capture_v17_abcd_selected_moves.py", "probe_eval.py",
+    "opening_diagnostics.py", "game/twixt_state.py",
 )
 
 # The complete persisted scientific-result payload for one (position, config).
@@ -319,6 +342,16 @@ def validate_row_set(rows: Sequence[Mapping[str, Any]],
             raise prov.ProtocolViolation(
                 f"{label} drift: position(s) {drifted[:3]} report more than one "
                 f"{label}")
+    # §7 runs every coefficient "using identical per-position seeds": a paired
+    # positive row searched under a different seed is not comparable.
+    seeds: Dict[Any, set] = {}
+    for row in rows:
+        seeds.setdefault(row["canonical_sha1"], set()).add(row["seed"])
+    mixed = sorted(sha for sha, vs in seeds.items() if len(vs) > 1)
+    if mixed:
+        raise prov.ProtocolViolation(
+            f"per-position seed drift: position(s) {mixed[:3]} were searched "
+            f"under more than one seed, so their configs are not comparable")
     expected = set(configs)
     by_position: Dict[Any, set] = {}
     for row in rows:
@@ -335,15 +368,51 @@ def require_complete_pairing(rows, configs) -> None:
     validate_row_set(rows, configs)
 
 
-def require_corpus_geometry(mode: str, roles: Mapping[str, int]) -> None:
-    """§6.2/§8.1: the corpus shape is frozen per mode."""
+def require_corpus_geometry(mode: str, manifest_rows: Sequence[Mapping[str, Any]]
+                            ) -> None:
+    """§6.2/§8.1: the COMPLETE frozen corpus shape.
+
+    Role counts alone are not the geometry -- an all-red 24/32 held-out corpus
+    satisfies them while violating the frozen 28/28 side balance. This checks
+    roles, overall side balance, canonical-position uniqueness, the
+    at-most-two-per-game cap, and the twelve-ply spacing.
+    """
     expected = CORPUS_GEOMETRY.get(mode)
     if expected is None:
         return
-    actual = {r: roles.get(r, 0) for r in set(expected) | set(roles)}
-    if actual != dict(expected):
+    roles: Dict[str, int] = {}
+    sides: Dict[str, int] = {}
+    per_game: Dict[Any, List[int]] = {}
+    seen_sha: Dict[Any, int] = {}
+    for r in manifest_rows:
+        roles[r["role"]] = roles.get(r["role"], 0) + 1
+        sides[r["side"]] = sides.get(r["side"], 0) + 1
+        per_game.setdefault(r["game_idx"], []).append(int(float(r["position_ply"])))
+        seen_sha[r["canonical_sha1"]] = seen_sha.get(r["canonical_sha1"], 0) + 1
+    actual_roles = {k: roles.get(k, 0) for k in set(expected) | set(roles)}
+    if actual_roles != dict(expected):
         raise prov.ProtocolViolation(
-            f"{mode} corpus geometry {actual} != the frozen {dict(expected)}")
+            f"{mode} corpus roles {actual_roles} != the frozen {dict(expected)}")
+    want_side = SIDE_BALANCE.get(mode)
+    if want_side is not None and sides != {"red": want_side, "black": want_side}:
+        raise prov.ProtocolViolation(
+            f"{mode} corpus side balance {sides} != the frozen "
+            f"{{'red': {want_side}, 'black': {want_side}}}")
+    dupes = sorted(s for s, n in seen_sha.items() if n > 1)
+    if dupes:
+        raise prov.ProtocolViolation(
+            f"{mode} corpus repeats canonical position(s) {dupes[:3]}")
+    for game, plies in per_game.items():
+        if len(plies) > MAX_POSITIONS_PER_GAME:
+            raise prov.ProtocolViolation(
+                f"{mode} corpus takes {len(plies)} positions from game {game!r}; "
+                f"the frozen cap is {MAX_POSITIONS_PER_GAME}")
+        ordered = sorted(plies)
+        for a, b in zip(ordered, ordered[1:]):
+            if b - a < MIN_PLY_GAP:
+                raise prov.ProtocolViolation(
+                    f"{mode} corpus game {game!r} has positions {a} and {b}, "
+                    f"closer than the frozen {MIN_PLY_GAP}-ply spacing")
 
 
 def require_zero_identity(rows: Sequence[Mapping[str, Any]]) -> None:
@@ -615,8 +684,18 @@ def verify_abcd_baseline(gate: str, shipped_cases: Sequence[Mapping[str, Any]],
         raise prov.ProtocolViolation(f"gate {gate}: case ids differ from the frozen set")
     worst = 0.0
     for case in shipped_cases:
+        value = case["black_value"]
+        # NaN must be rejected BEFORE any comparison: abs(NaN - x) is NaN, and
+        # every comparison against NaN is false, so a corrupted value would
+        # otherwise pass both the delta check and the over/severe counts.
+        if isinstance(value, bool) or not isinstance(value, (int, float)) \
+                or not math.isfinite(value):
+            raise prov.ProtocolViolation(
+                f"gate {gate} case {case['case_id']}: shipped value {value!r} is "
+                f"not a finite number; it cannot authenticate against the "
+                f"frozen baseline")
         want = float(by_id[case["case_id"]]["probe_black_root_value_repr"])
-        delta = abs(float(case["black_value"]) - want)
+        delta = abs(float(value) - want)
         worst = max(worst, delta)
         if delta >= tolerance:
             raise prov.ProtocolViolation(
@@ -627,8 +706,8 @@ def verify_abcd_baseline(gate: str, shipped_cases: Sequence[Mapping[str, Any]],
             raise prov.ProtocolViolation(
                 f"gate {gate} case {case['case_id']}: shipped selected move "
                 f"{case['selected_move']} != frozen {want_move}")
-    over = sum(1 for c in shipped_cases if float(c["black_value"]) >= 0.25)
-    severe = sum(1 for c in shipped_cases if float(c["black_value"]) >= 0.50)
+    over = sum(1 for c in shipped_cases if float(c["black_value"]) >= OVER_THRESHOLD)
+    severe = sum(1 for c in shipped_cases if float(c["black_value"]) >= SEVERE_THRESHOLD)
     if (over, severe) != (frozen["over"], frozen["severe"]):
         raise prov.ProtocolViolation(
             f"gate {gate}: shipped over/severe ({over}, {severe}) != frozen "
@@ -694,7 +773,10 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
         if not (protocol_path and config_path):
             raise prov.ProtocolViolation(
                 "a protocol must be accompanied by its config")
-        protocol.load_verified(protocol_path, config_path, consumer_run_kind=mode)
+        verified = protocol.load_verified(protocol_path, config_path,
+                                          consumer_run_kind=mode)
+        bind_protocol_to_runtime(verified, coefficient=frozen_coefficient,
+                                 checkpoint=checkpoint)
     elif prov.is_scientific(mode):
         raise prov.ProtocolViolation(
             f"scientific mode {mode!r} must run against a verified "
@@ -720,10 +802,7 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
     source_files = [str(module_dir / name) for name in RESULT_DETERMINING_MODULES]
     _readable("replay", replay_paths)
     _readable("source", source_files)
-    roles: Dict[str, int] = {}
-    for m in manifest_rows:
-        roles[m["role"]] = roles.get(m["role"], 0) + 1
-    require_corpus_geometry(mode, roles)
+    require_corpus_geometry(mode, manifest_rows)
     return {"configs": configs, "manifest_rows": manifest_rows,
             "replay_paths": replay_paths, "source_files": source_files}
 
@@ -733,6 +812,8 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
 def build_artifact(*, mode: str, coefficient: Optional[float],
                    rows: Sequence[Mapping[str, Any]], gates: Mapping[str, Any],
                    checkpoints: Mapping[str, str],
+                   case_rows: Optional[Sequence[Mapping[str, Any]]] = None,
+                   extra_identities: Optional[Mapping[str, Any]] = None,
                    effective_mcts_config: Optional[Mapping[str, Any]] = None,
                    manifest: Optional[str] = None,
                    source_index: Optional[str] = None,
@@ -757,13 +838,29 @@ def build_artifact(*, mode: str, coefficient: Optional[float],
         validate_row_set(rows, expected_configs)
         if ZERO in expected_configs:
             require_zero_identity(rows)
-        roles: Dict[str, int] = {}
-        for sha in {r["canonical_sha1"] for r in rows}:
-            role = next(r["role"] for r in rows if r["canonical_sha1"] == sha)
-            roles[role] = roles.get(role, 0) + 1
-        require_corpus_geometry(mode, roles)
+        by_sha = {}
+        for r in rows:
+            by_sha.setdefault(r["canonical_sha1"], r)
+        require_corpus_geometry(mode, [
+            {"role": r["role"], "side": r["side"], "canonical_sha1": sha,
+             "game_idx": sha, "position_ply": 0}
+            for sha, r in by_sha.items()])
     if prov.is_scientific(mode):
-        if not rows and mode != "abcd":
+        if mode == "abcd":
+            if not case_rows:
+                raise prov.ProtocolViolation(
+                    "abcd must persist its paired per-case evidence")
+            expected_cases = sum(ABCD_CARDINALITY.values())
+            if len(case_rows) != expected_cases:
+                raise prov.ProtocolViolation(
+                    f"abcd persisted {len(case_rows)} cases != the frozen "
+                    f"{expected_cases}")
+            for case in case_rows:
+                missing = [f for f in ABCD_CASE_FIELDS if f not in case]
+                if missing:
+                    raise prov.ProtocolViolation(
+                        f"abcd case {case.get('case_id')!r} missing {missing}")
+        elif not rows:
             raise prov.ProtocolViolation(
                 f"scientific mode {mode!r} must persist its paired rows")
         if not protocol_sha1:
@@ -791,6 +888,9 @@ def build_artifact(*, mode: str, coefficient: Optional[float],
         "protocol_sha1": protocol_sha1,
         "n_rows": len(rows),
         "rows": [{k: row[k] for k in REQUIRED_ROW_FIELDS} for row in rows],
+        "n_cases": len(case_rows or ()),
+        "cases": [{k: c[k] for k in ABCD_CASE_FIELDS} for c in (case_rows or ())],
+        "identities": dict(extra_identities or {}),
         "gates": dict(gates),
         "provenance": prov.build_provenance(
             run_kind=mode, coefficient=coefficient, checkpoints=checkpoints,
@@ -869,12 +969,73 @@ def load_manifest(path: str) -> List[dict]:
     return rows
 
 
-def _effective_config(coefficient: Optional[float]) -> Dict[str, Any]:
-    """The COMPLETE effective MCTS configuration for one coefficient."""
-    return {"n_simulations": prov.MCTS_SIMS, "add_noise": False,
-            "fpu_value": 0.0, prov.CONFIG_FIELD: coefficient,
-            "fpu_policy_mass_reduction": None,
-            **dict(zip(prov.BATCHING_FIELDS, prov.BATCHING))}
+def base_mcts_config():
+    """The v17 base `MCTSConfig`, built the same way every stage builds it.
+
+    Imported lazily so this module stays MLX-free at import.
+    """
+    from .eval_runner import EvalConfig, cfg_from
+    cfg = cfg_from(EvalConfig(mcts_sims=prov.MCTS_SIMS,
+                              mcts_eval_batch_size=prov.BATCHING[0],
+                              mcts_stall_flush_sims=prov.BATCHING[1]))
+    prov.validate_batching(cfg)
+    return cfg
+
+
+def effective_configs(configs: Sequence[Optional[float]]) -> Dict[str, Any]:
+    """The COMPLETE effective `MCTSConfig` per coefficient -- every field of the
+    dataclass, from the exact object handed to MCTS.
+
+    A hand-built subset cannot reveal drift in `c_puct`, the temperatures, the
+    root penalties, the opening settings, or the closeout controls, so the full
+    `dataclasses.asdict` is persisted instead.
+    """
+    import dataclasses
+    base = base_mcts_config()
+    out: Dict[str, Any] = {}
+    for c in configs:
+        cfg = dataclasses.replace(base, fpu_shipped_policy_mass_reduction=c)
+        prov.validate_batching(cfg)
+        out[str(c)] = {"add_noise": False, **dataclasses.asdict(cfg)}
+    return out
+
+
+def bind_protocol_to_runtime(config: Mapping[str, Any], *,
+                             coefficient: Optional[float],
+                             checkpoint: str) -> None:
+    """The verified config must CONSTRAIN the run, not merely accompany it.
+
+    Without this, a valid `r=0.25` protocol happily accompanied a runtime
+    `r=0.45`, and any readable checkpoint passed.
+    """
+    want = config.get("coefficient")
+    if (want is None) != (coefficient is None) or (
+            want is not None and float(want) != float(coefficient)):
+        raise prov.ProtocolViolation(
+            f"runtime coefficient {coefficient!r} does not match the verified "
+            f"protocol's {want!r}")
+    protocol_ckpts = config.get("checkpoints") or {}
+    if not protocol_ckpts:
+        raise prov.ProtocolViolation(
+            "the verified protocol records no checkpoint to bind against")
+    actual = fpu_provenance.file_sha1(checkpoint)
+    allowed = {fpu_provenance.file_sha1(p) for p in protocol_ckpts.values()}
+    if actual not in allowed:
+        raise prov.ProtocolViolation(
+            f"runtime checkpoint {checkpoint} (sha1 {actual}) is not one of the "
+            f"protocol's checkpoints {sorted(protocol_ckpts.values())}")
+
+
+def _authenticate_task1_freeze(baseline_path: str, moves_path: str) -> None:
+    """§9's frozen baseline is immutable evidence; verify its bytes so Stage 4
+    cannot be pointed at a rewritten file and rebase itself."""
+    for label, path, want in (("baseline", baseline_path, ABCD_BASELINE_SHA1),
+                              ("selected-moves", moves_path, ABCD_MOVES_SHA1)):
+        actual = fpu_provenance.file_sha1(path)
+        if actual != want:
+            raise prov.ProtocolViolation(
+                f"Task 1 {label} artifact {path} has SHA-1 {actual}, expected "
+                f"{want}; the frozen baseline may not be rewritten")
 
 
 def load_abcd_cases(*, baseline_path: str = ABCD_BASELINE_PATH,
@@ -888,12 +1049,30 @@ def load_abcd_cases(*, baseline_path: str = ABCD_BASELINE_PATH,
     out: Dict[str, List[dict]] = {}
     for gate in ABCD_GATES:
         by_id = {c["case_id"]: c for c in moves[gate]["cases"]}
+        # The replay JSON is what each search actually reads, so it -- not the
+        # canonical probe CSV -- is what `replay_data_sha1` must fingerprint.
+        source = base[gate]["canonical_source"]
+        with open(source, newline="") as f:
+            rows = [r for r in csv.DictReader(f) if r.get("checkpoint") == "0001"]
+        if rows and "replay_path" in rows[0]:
+            replay_by_case = {r["case_id"]: r["replay_path"] for r in rows}
+        else:
+            # B's cases CSV carries no replay_path; the goal-line manifest does,
+            # joined on (game_idx, position_ply) exactly as Task 1's capture did.
+            with open(B_MANIFEST_PATH) as f:
+                manifest = json.load(f)["cases"]
+            by_key = {(int(c["game_idx"]), int(c["position_ply"])): c["replay_path"]
+                      for c in manifest}
+            replay_by_case = {
+                r["case_id"]: by_key[(int(r["game_idx"]), int(r["position_ply"]))]
+                for r in rows}
         out[gate] = [{"gate": gate, "case_id": c["case_id"],
                       "seed": by_id[c["case_id"]]["seed"],
                       "game_idx": by_id[c["case_id"]]["game_idx"],
                       "position_ply": by_id[c["case_id"]]["position_ply"],
                       "side_to_move": by_id[c["case_id"]]["side_to_move"],
-                      "cases_source": base[gate]["canonical_source"]}
+                      "cases_source": source,
+                      "replay_path": replay_by_case[c["case_id"]]}
                      for c in base[gate]["cases"]]
         if len(out[gate]) != ABCD_CARDINALITY[gate]:
             raise prov.ProtocolViolation(
@@ -932,18 +1111,25 @@ def run_abcd_stage(*, coefficient: float, checkpoint: str, out_path: str,
     prov.verify_frozen_design()
     prov.require_clean_worktree("abcd")
     prov.validate_output_path(out_path)
-    protocol.load_verified(protocol_path, config_path, consumer_run_kind="abcd")
+    verified = protocol.load_verified(protocol_path, config_path,
+                                      consumer_run_kind="abcd")
+    bind_protocol_to_runtime(verified, coefficient=coefficient,
+                             checkpoint=checkpoint)
     for label, path in (("checkpoint", checkpoint), ("baseline", baseline_path),
                         ("moves", moves_path)):
         if not Path(path).is_file():
             raise prov.ProtocolViolation(
                 f"{label} input is not readable at protocol time: {path}")
+    _authenticate_task1_freeze(baseline_path, moves_path)
     cases = load_abcd_cases(baseline_path=baseline_path, moves_path=moves_path)
-    for gate, rows in cases.items():
-        for path in {r["cases_source"] for r in rows}:
+    probe_sources = sorted({r["cases_source"] for g in ABCD_GATES for r in cases[g]})
+    replay_paths = sorted({r["replay_path"] for g in ABCD_GATES for r in cases[g]})
+    for label, paths in (("canonical probe source", probe_sources),
+                         ("replay", replay_paths)):
+        for path in paths:
             if not Path(path).is_file():
                 raise prov.ProtocolViolation(
-                    f"gate {gate} canonical source is not readable: {path}")
+                    f"{label} is not readable at protocol time: {path}")
     if searcher is None:                                    # pragma: no cover
         searcher = _real_abcd_searcher(checkpoint)
     shipped = {g: [searcher(c, SHIPPED) for c in cases[g]] for g in ABCD_GATES}
@@ -955,54 +1141,96 @@ def run_abcd_stage(*, coefficient: float, checkpoint: str, out_path: str,
     module_dir = Path(__file__).resolve().parent
     artifact = build_artifact(
         mode="abcd", coefficient=coefficient, rows=[], gates=gates,
+        case_rows=_abcd_case_rows(cases, shipped, candidate,
+                                  baseline_path=baseline_path),
         checkpoints={"anchor": checkpoint},
-        effective_mcts_config={str(c): _effective_config(c)
-                               for c in (SHIPPED, coefficient)},
+        effective_mcts_config=effective_configs((SHIPPED, coefficient)),
         manifest=baseline_path, source_index=moves_path,
-        replay_paths=sorted({r["cases_source"] for g in ABCD_GATES
-                             for r in cases[g]}),
+        replay_paths=replay_paths,
         source_files=[str(module_dir / n) for n in RESULT_DETERMINING_MODULES],
+        extra_identities={"canonical_probe_sources":
+                          {p: fpu_provenance.file_sha1(p) for p in probe_sources},
+                          "task1_baseline_sha1": ABCD_BASELINE_SHA1,
+                          "task1_moves_sha1": ABCD_MOVES_SHA1,
+                          "config_sha1": fpu_provenance.file_sha1(config_path)},
         protocol_sha1=protocol.protocol_sha1(protocol.load_json(protocol_path)))
     protocol.emit(out_path, artifact)
     return artifact
+
+
+def _abcd_case_rows(cases: Mapping[str, Sequence[Mapping]],
+                    shipped: Mapping[str, Sequence[Mapping]],
+                    candidate: Mapping[str, Sequence[Mapping]], *,
+                    baseline_path: str) -> List[dict]:
+    """The paired per-case evidence Task 13 requires. Without it the 216
+    searches vanish behind four aggregate verdicts."""
+    with open(baseline_path) as f:
+        frozen = json.load(f)["abcd_frozen_baseline"]
+    out: List[dict] = []
+    for gate in ABCD_GATES:
+        want = {c["case_id"]: float(c["probe_black_root_value_repr"])
+                for c in frozen[gate]["cases"]}
+        s_by = {c["case_id"]: c for c in shipped[gate]}
+        c_by = {c["case_id"]: c for c in candidate[gate]}
+        if set(s_by) != set(want) or set(c_by) != set(want):
+            raise prov.ProtocolViolation(
+                f"gate {gate}: shipped/candidate case ids differ from the frozen set")
+        for case in cases[gate]:
+            cid = case["case_id"]
+            s, c = s_by[cid], c_by[cid]
+            out.append({
+                "gate": gate, "case_id": cid, "seed": case["seed"],
+                "replay_path": case["replay_path"],
+                "shipped_value": float(s["black_value"]),
+                "candidate_value": float(c["black_value"]),
+                "shipped_move": list(s["selected_move"]),
+                "candidate_move": list(c["selected_move"]),
+                "shipped_replies": int(s["replies"]),
+                "candidate_replies": int(c["replies"]),
+                "shipped_top_share": float(s["top_share"]),
+                "candidate_top_share": float(c["top_share"]),
+                "shipped_collapse": bool(s["collapse"]),
+                "candidate_collapse": bool(c["collapse"]),
+                "value_delta": float(c["black_value"]) - float(s["black_value"]),
+                "move_changed": list(s["selected_move"]) != list(c["selected_move"]),
+                "frozen_value": want[cid],
+                "abs_delta_vs_frozen": abs(float(s["black_value"]) - want[cid]),
+            })
+    return out
 
 
 def _real_abcd_searcher(checkpoint: str):                   # pragma: no cover
     """Real 400-sim MCTS over the canonical probe cases, reusing the same
     harness path the Task 1 capture used."""
     import dataclasses
-    import random
-    from .capture_v17_abcd_selected_moves import load_gate_cases, mcts_config
+    from .diagnose_fpu_policy_mass import _position_features, _search_position
     from .eval_runner import _default_evaluator_factory
-    from .mcts import MCTS
     from .position_probe_cases import position_state
     evaluator = _default_evaluator_factory(checkpoint)
-    base_cfg = mcts_config()
+    base_cfg = base_mcts_config()
     prov.validate_batching(base_cfg)
-    rows_by_gate = {g: {r["case_id"]: r for r in load_gate_cases(g)}
-                    for g in ABCD_GATES}
 
     def search(case, coefficient):
         cfg = dataclasses.replace(
             base_cfg, fpu_shipped_policy_mass_reduction=coefficient)
         prov.validate_batching(cfg)
-        src = rows_by_gate[case["gate"]][case["case_id"]]
-        replay = json.loads(Path(src["replay_path"]).read_text())
-        state = position_state(replay, int(src["position_ply"]),
-                               src["side_to_move"])
-        counts, root_value = MCTS(evaluator, cfg,
-                                  random.Random(case["seed"])).search(
-                                      state, add_noise=False)
-        total = sum(counts.values())
-        ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
-        top_move, top_visits = ranked[0]
+        replay = json.loads(Path(case["replay_path"]).read_text())
+        state = position_state(replay, int(case["position_ply"]),
+                               case["side_to_move"])
+        # `_position_features` is the FROZEN §7.0 definition set: `replies` is
+        # the visited-child count at the final root LEADER's reply node, not a
+        # count of visited root alternatives. Reusing it is what keeps the A
+        # mechanism gate measuring the quantity §9 names.
+        search_out, obs = _search_position(evaluator, cfg, state, case["seed"])
+        feats = _position_features(search_out, obs)
+        top = feats["top_move"]
         return {"case_id": case["case_id"],
-                "black_value": (root_value if state.to_move == "black"
-                                else -root_value),
-                "selected_move": [int(top_move[0]), int(top_move[1])],
-                "replies": sum(1 for _m, v in ranked if v > 0) - 1,
-                "top_share": top_visits / total,
-                "collapse": (top_visits / total) >= COLLAPSE_TOP_SHARE}
+                "black_value": (feats["root_value_stm"] if state.to_move == "black"
+                                else -feats["root_value_stm"]),
+                "selected_move": [int(top[0]), int(top[1])],
+                "replies": int(feats["replies"]),
+                "top_share": float(feats["top_share"]),
+                "collapse": bool(feats["collapsed"])}
     return search
 
 
@@ -1052,7 +1280,7 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
     artifact = build_artifact(
         mode=mode, coefficient=selected, rows=rows, gates=gates,
         checkpoints={"anchor": checkpoint},
-        effective_mcts_config={str(c): _effective_config(c) for c in configs},
+        effective_mcts_config=effective_configs(configs),
         manifest=manifest_path, source_index=source_index,
         replay_paths=pre["replay_paths"], source_files=pre["source_files"],
         protocol_sha1=(protocol.protocol_sha1(protocol.load_json(protocol_path))
