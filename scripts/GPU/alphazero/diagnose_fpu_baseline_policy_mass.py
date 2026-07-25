@@ -164,9 +164,24 @@ CONTROL_PHASE_QUOTA: Dict[str, Dict[str, int]] = {
 # The scientific diagnostic always searches the ANCHOR checkpoint; a protocol
 # also names the generation opponent, which must never be searched here.
 ANCHOR_ROLE = "anchor"
-QUALIFICATION_REQUIRED_KEYS = ("qualified", "mode", "manifest_sha1",
-                               "role_predicates", "phase_quotas", "disjointness")
-DISJOINTNESS_REQUIRED_KEYS = ("forbidden_corpora", "overlaps", "checked_positions")
+# The ESTABLISHED selector manifest schema (build_fpu_dev_corpus). Replay paths
+# are NOT inline: they are joined from the authenticated source-index JSONL.
+MANIFEST_REQUIRED_COLUMNS = ("canonical_position_sha1", "game_idx",
+                             "position_ply", "side", "role")
+# §6.2: zero overlap with all v16 production, v16a neutral, and A/B/C/D
+# positions. Disjointness is COMPUTED against these, never self-attested.
+FORBIDDEN_CORPORA = (
+    "logs/eval/fpu_v16_policy_mass_v2/production_v2_b400amend_4000g_seed20300000/"
+    "fpu_dev_corpus_v2_manifest.csv",
+    "logs/eval/v16a_fpu_unbiased/neutral_position_manifest.csv",
+    "logs/eval/calib020_0001_black_loss_post_opening_predrop_probe/"
+    "position_probe_cases.csv",
+    "logs/eval/black_predrop_calib010_goal_line/goal_line_trigger_probe_cases.csv",
+    "logs/eval/calib020_post_opening_sweep/position_probe_cases.csv",
+    "logs/eval/calib020_0001_red_loss_post_opening_predrop_probe/"
+    "position_probe_cases.csv",
+)
+EXPECTED_CHECKED_POSITIONS = {"development": 32, "held_out": 56}
 
 # Every module whose bytes can change a result. §12 requires source identities
 # to cover all of them, not just the module being run.
@@ -812,7 +827,11 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
     _readable("checkpoint", [checkpoint])
     _readable("manifest", [manifest_path])
     _readable("source_index", [source_index] if source_index else [])
-    manifest_rows = load_manifest(manifest_path)
+    if prov.is_scientific(mode) and not source_index:
+        raise prov.ProtocolViolation(
+            f"scientific mode {mode!r} needs the source-index JSONL to resolve "
+            f"replay paths")
+    manifest_rows = load_manifest(manifest_path, source_index=source_index)
     replay_paths = sorted({m["replay_path"] for m in manifest_rows})
     module_dir = Path(__file__).resolve().parent
     source_files = [str(module_dir / name) for name in RESULT_DETERMINING_MODULES]
@@ -823,12 +842,26 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
     # LABELLED target/control. The selector's report is what certifies the
     # predicates, the phase quotas, and the disjointness §12 requires.
     qualification = None
+    disjointness = None
     if prov.is_scientific(mode):
         qualification = authenticate_qualification(
-            qualification_report, mode=mode, manifest_path=manifest_path)
+            manifest_path, mode=mode, source_index=source_index,
+            config_path=config_path, checkpoint=checkpoint,
+            post_screen_report=qualification_report)
+        disjointness = compute_disjointness(manifest_rows,
+                                            forbidden=FORBIDDEN_CORPORA)
+        if disjointness["overlaps"]:
+            raise prov.ProtocolViolation(
+                f"corpus overlaps forbidden evidence: "
+                f"{disjointness['overlaps'][:2]}")
+        want = EXPECTED_CHECKED_POSITIONS.get(mode)
+        if want is not None and disjointness["checked_positions"] != want:
+            raise prov.ProtocolViolation(
+                f"{mode} disjointness checked "
+                f"{disjointness['checked_positions']} positions, expected {want}")
     return {"configs": configs, "manifest_rows": manifest_rows,
             "replay_paths": replay_paths, "source_files": source_files,
-            "qualification": qualification}
+            "qualification": qualification, "disjointness": disjointness}
 
 
 # --- artifacts -------------------------------------------------------------
@@ -980,17 +1013,38 @@ def build_row(*, canonical_sha1: str, role: str, side: str,
     return row
 
 
-def load_manifest(path: str) -> List[dict]:
+def load_manifest(path: str, *, source_index: str) -> List[dict]:
+    """Read the ESTABLISHED selector manifest and resolve replay paths.
+
+    The real selector emits `canonical_position_sha1` and no `replay_path`; the
+    replay for a row is found by joining `game_idx` against the authenticated
+    source-index JSONL, exactly as the v16 diagnostic does. An earlier draft
+    required an inline `replay_path` and a `canonical_sha1` column, so a real
+    Task-10 manifest could not reach Stage 2 at all.
+    """
     with open(path, newline="") as f:
         rows = list(csv.DictReader(f))
     if not rows:
         raise prov.ProtocolViolation(f"empty manifest {path}")
-    needed = {"canonical_sha1", "game_idx", "position_ply", "side", "role",
-              "replay_path"}
-    missing = sorted(needed - set(rows[0]))
+    missing = sorted(set(MANIFEST_REQUIRED_COLUMNS) - set(rows[0]))
     if missing:
         raise prov.ProtocolViolation(f"manifest {path} missing columns {missing}")
-    return rows
+    from .build_fpu_dev_corpus import load_game_index
+    replay_by_game = {int(r["game_idx"]): r["replay_path"]
+                      for r in load_game_index(source_index)}
+    out: List[dict] = []
+    for r in rows:
+        game_idx = int(r["game_idx"])
+        if game_idx not in replay_by_game:
+            raise prov.ProtocolViolation(
+                f"manifest row for game {game_idx} has no record in the source "
+                f"index {source_index}")
+        out.append({**r,
+                    "canonical_sha1": r["canonical_position_sha1"],
+                    "game_idx": game_idx,
+                    "position_ply": int(float(r["position_ply"])),
+                    "replay_path": replay_by_game[game_idx]})
+    return out
 
 
 def base_mcts_config():
@@ -1054,61 +1108,137 @@ def bind_protocol_to_runtime(config: Mapping[str, Any], *,
             f"(sha1 {expected})")
 
 
-def authenticate_qualification(path: str, *, mode: str, manifest_path: str
-                               ) -> Dict[str, Any]:
-    """Consume the selector's qualification report for THIS manifest.
+def _position_keys(path: str) -> Tuple[set, set]:
+    """(canonical SHA-1s, (game_idx, position_ply) pairs) in a corpus CSV.
 
-    A readable manifest is not evidence that its rows qualify. Task 10/12 emit
-    a report certifying the role predicates, the control phase quotas, and the
-    disjointness result; §12 requires that disjointness in every scientific
-    artifact, so it is authenticated here and persisted downstream.
+    Two keys because the forbidden corpora do not share one schema: the v16/v16a
+    manifests carry a canonical position hash, the A/B/C/D probe cases do not.
     """
-    if not path or not Path(path).is_file():
+    shas, pairs = set(), set()
+    try:
+        with open(path, newline="") as f:
+            for r in csv.DictReader(f):
+                for key in ("canonical_position_sha1", "canonical_sha1"):
+                    if r.get(key):
+                        shas.add(r[key])
+                if r.get("game_idx") and r.get("position_ply"):
+                    try:
+                        pairs.add((int(r["game_idx"]), int(float(r["position_ply"]))))
+                    except ValueError:
+                        pass
+    except OSError as exc:
         raise prov.ProtocolViolation(
-            f"scientific mode {mode!r} requires a selector qualification report; "
-            f"got {path!r}")
-    with open(path) as f:
-        report = json.load(f)
-    missing = [k for k in QUALIFICATION_REQUIRED_KEYS if k not in report]
+            f"forbidden corpus {path} is not readable, so disjointness cannot "
+            f"be established: {exc}") from exc
+    return shas, pairs
+
+
+def compute_disjointness(manifest_rows: Sequence[Mapping[str, Any]], *,
+                         forbidden: Sequence[str]) -> Dict[str, Any]:
+    """The §12 disjointness result, COMPUTED from the corpora rather than
+    asserted by a report."""
+    if not forbidden:
+        raise prov.ProtocolViolation(
+            "disjointness requires a non-empty forbidden corpus set")
+    mine_sha = {r["canonical_sha1"] for r in manifest_rows}
+    mine_pairs = {(int(r["game_idx"]), int(r["position_ply"]))
+                  for r in manifest_rows}
+    overlaps: List[Dict[str, Any]] = []
+    for path in forbidden:
+        shas, pairs = _position_keys(path)
+        hit_sha = sorted(mine_sha & shas)
+        hit_pair = sorted(mine_pairs & pairs)
+        if hit_sha or hit_pair:
+            overlaps.append({"corpus": path,
+                             "canonical_sha1": hit_sha[:5],
+                             "game_position": [list(p) for p in hit_pair[:5]]})
+    return {"forbidden_corpora": list(forbidden), "overlaps": overlaps,
+            "checked_positions": len(manifest_rows)}
+
+
+def authenticate_qualification(manifest_path: str, *, mode: str,
+                               source_index: str, config_path: Optional[str],
+                               checkpoint: str,
+                               forbidden: Sequence[str] = FORBIDDEN_CORPORA,
+                               post_screen_report: Optional[str] = None
+                               ) -> Dict[str, Any]:
+    """Authenticate the corpus against the REAL selector artifacts.
+
+    The selector already emits a `<manifest>.meta.json` sidecar binding the
+    config, source index, replay data, checkpoint identity and forbidden
+    manifests, plus a post-screen qualification report. Those are consumed and
+    checked here. Disjointness is COMPUTED from the corpora, not read from a
+    self-attestation -- an earlier draft accepted a hand-written JSON claiming
+    `checked_positions=0` against an unrelated corpus.
+    """
+    # The argument must be a selection MANIFEST. Other selector outputs (the
+    # screen CSV, for one) carry their own `.meta.json`, so sidecar existence
+    # alone does not establish that this file is the qualified corpus.
+    try:
+        with open(manifest_path, newline="") as f:
+            header = next(csv.reader(f), [])
+    except OSError as exc:
+        raise prov.ProtocolViolation(
+            f"manifest {manifest_path} is not readable: {exc}") from exc
+    missing = sorted(set(MANIFEST_REQUIRED_COLUMNS) - set(header))
     if missing:
         raise prov.ProtocolViolation(
-            f"qualification report {path} missing {missing}")
-    if report["qualified"] is not True:
+            f"{manifest_path} is not a selection manifest (missing {missing}); "
+            f"a screen or report cannot stand in for the qualified corpus")
+    sidecar_path = manifest_path + ".meta.json"
+    if not Path(sidecar_path).is_file():
         raise prov.ProtocolViolation(
-            f"qualification report {path} does not certify the corpus "
-            f"(qualified={report['qualified']!r})")
-    if report["mode"] != mode:
-        raise prov.ProtocolViolation(
-            f"qualification report is for mode {report['mode']!r}, not {mode!r}")
-    actual = fpu_provenance.file_sha1(manifest_path)
-    if report.get("manifest_sha1") != actual:
-        raise prov.ProtocolViolation(
-            f"qualification report certifies manifest "
-            f"{report.get('manifest_sha1')!r}, but the run uses {actual}")
-    predicates = report.get("role_predicates") or {}
-    for role_name in ("target", "control"):
-        if role_name not in predicates:
+            f"selector sidecar {sidecar_path} is missing; a bare manifest is "
+            f"not evidence that its rows were qualified")
+    with open(sidecar_path) as f:
+        sidecar = json.load(f)
+    prov_block = sidecar.get("screen_meta_provenance") or {}
+    for key in ("source_index_path", "checkpoint", "forbidden_manifests"):
+        if key not in sidecar:
             raise prov.ProtocolViolation(
-                f"qualification report does not certify the {role_name} predicate")
-    want_quota = CONTROL_PHASE_QUOTA.get(mode)
-    if want_quota is not None:
-        quotas = report.get("phase_quotas") or {}
-        if quotas != want_quota:
+                f"selector sidecar {sidecar_path} is missing {key!r}")
+    # the sidecar must describe the inputs this run is actually using
+    if Path(sidecar["source_index_path"]).name != Path(source_index).name:
+        raise prov.ProtocolViolation(
+            f"selector sidecar was built against source index "
+            f"{sidecar['source_index_path']}, but the run uses {source_index}")
+    want_index_sha1 = prov_block.get("source_index_sha1")
+    actual_index_sha1 = fpu_provenance.file_sha1(source_index)
+    if want_index_sha1 and want_index_sha1 != actual_index_sha1:
+        raise prov.ProtocolViolation(
+            f"source index {source_index} has SHA-1 {actual_index_sha1}, but the "
+            f"selector qualified {want_index_sha1}")
+    ckpt_sha1 = fpu_provenance.file_sha1(checkpoint)
+    if fpu_provenance.file_sha1(sidecar["checkpoint"]) != ckpt_sha1:
+        raise prov.ProtocolViolation(
+            f"selector sidecar qualified checkpoint {sidecar['checkpoint']}, but "
+            f"the run searches {checkpoint}")
+    if config_path:
+        want_cfg = prov_block.get("config_sha1")
+        # The selector's own config, not the v17 protocol config; only compared
+        # when the sidecar records one.
+        if want_cfg and not Path(sidecar.get("config_path", "")).is_file():
             raise prov.ProtocolViolation(
-                f"{mode} control phase quotas {quotas} != the frozen {want_quota}")
-    dis = report.get("disjointness") or {}
-    missing = [k for k in DISJOINTNESS_REQUIRED_KEYS if k not in dis]
-    if missing:
-        raise prov.ProtocolViolation(
-            f"qualification report's disjointness block is missing {missing}")
-    if dis["overlaps"]:
-        raise prov.ProtocolViolation(
-            f"corpus overlaps forbidden evidence: {dis['overlaps'][:3]}")
-    if not dis["forbidden_corpora"]:
-        raise prov.ProtocolViolation(
-            "disjointness was checked against no forbidden corpora, so it "
-            "certifies nothing")
-    return report
+                f"selector sidecar names config {sidecar.get('config_path')!r}, "
+                f"which is not readable")
+    if post_screen_report:
+        with open(post_screen_report) as f:
+            report = json.load(f)
+        if report.get("status") != "PASS" or report.get("selector_error"):
+            raise prov.ProtocolViolation(
+                f"post-screen qualification did not PASS: status="
+                f"{report.get('status')!r} error={report.get('selector_error')!r}")
+        if prov_block.get("config_sha1") and report.get("config_sha1") \
+                and report["config_sha1"] != prov_block["config_sha1"]:
+            raise prov.ProtocolViolation(
+                "post-screen report and manifest sidecar disagree on config_sha1")
+    return {"sidecar_path": sidecar_path,
+            "sidecar_sha1": fpu_provenance.file_sha1(sidecar_path),
+            "source_index_sha1": actual_index_sha1,
+            "checkpoint_sha1": ckpt_sha1,
+            "selector_forbidden_manifests": sidecar["forbidden_manifests"],
+            "post_screen_report": post_screen_report,
+            "screen_meta_provenance": prov_block}
 
 
 def _authenticate_task1_freeze(baseline_path: str, moves_path: str) -> None:
@@ -1402,7 +1532,8 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
             "qualification_report_sha1": (
                 fpu_provenance.file_sha1(qualification_report)
                 if qualification_report else None),
-            "disjointness": (pre["qualification"] or {}).get("disjointness"),
+            "selector_qualification": pre["qualification"],
+            "disjointness": pre["disjointness"],
         },
         effective_mcts_config=effective_configs(configs),
         manifest=manifest_path, source_index=source_index,

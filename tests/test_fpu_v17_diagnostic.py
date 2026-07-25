@@ -8,6 +8,7 @@ Every fixture is fabricated, so each threshold is pinned on BOTH sides of its
 boundary -- the value that must pass and the neighbouring value that must fail.
 No GPU, no evaluator, no checkpoint weights.
 """
+import csv
 import json
 
 import pytest
@@ -799,20 +800,54 @@ SEEDS = {"development": (20310000, 1600), "held_out": (20312000, 2200),
 
 
 def _manifest(tmp_path, mode="development"):
-    """A manifest in the mode's FROZEN geometry."""
+    """A manifest in the ESTABLISHED selector schema and the mode's frozen
+    geometry: `canonical_position_sha1`, no inline replay_path. Game indices
+    are far outside the real corpora so disjointness is genuinely clean."""
     geometry = v17.CORPUS_GEOMETRY[mode]
     path = tmp_path / f"manifest_{mode}.csv"
-    lines = ["canonical_sha1,game_idx,position_ply,side,role,replay_path"]
+    index = tmp_path / f"source_index_{mode}.jsonl"
+    lines = ["canonical_position_sha1,game_idx,position_ply,side,role,split"]
+    index_lines = []
     i = 0
     for role, count in geometry.items():
         for _ in range(count):
+            game = 900000 + i
             replay = tmp_path / f"replay{i}.json"
-            replay.write_text('{"moves": []}')
+            replay.write_text(json.dumps(
+                {"board_size": 24, "n_moves": 60,
+                 "moves": [{"row": 1, "col": 1}] * 60}))
             side = "red" if i % 2 == 0 else "black"
-            lines.append(f"pos{i:03d},{i},50,{side},{role},{replay}")
+            lines.append(f"v17pos{i:03d},{game},50,{side},{role},{mode}")
+            index_lines.append(json.dumps(
+                {"game_idx": game, "n_moves": 60, "winner": "red",
+                 "replay_path": str(replay)}))
             i += 1
     path.write_text("\n".join(lines) + "\n")
+    index.write_text("\n".join(index_lines) + "\n")
+    _sidecar(path, index, mode)
     return path
+
+
+def _source_index(tmp_path, mode="development"):
+    return tmp_path / f"source_index_{mode}.jsonl"
+
+
+def _sidecar(manifest_path, index_path, mode):
+    """The selector's real `<manifest>.meta.json` sidecar."""
+    doc = {"config_path": str(manifest_path) + ".config.json",
+           "source_index_path": str(index_path),
+           "checkpoint": CKPT,
+           "forbidden_manifests": list(v17.FORBIDDEN_CORPORA),
+           "screen_csv": str(manifest_path) + ".screen.csv",
+           "screen_meta_provenance": {
+               "config_sha1": "c" * 40,
+               "source_index_sha1": fpu_provenance.file_sha1(str(index_path)),
+               "anchor_checkpoint_identity":
+                   f"model_iter_0001.safetensors:{fpu_provenance.file_sha1(CKPT)}"}}
+    pathlib_path = manifest_path.parent / (manifest_path.name + ".meta.json")
+    pathlib_path.write_text(json.dumps(doc, sort_keys=True))
+    (manifest_path.parent / (manifest_path.name + ".config.json")).write_text("{}")
+    return pathlib_path
 
 
 def _pair(tmp_path, mode, coefficient=None):
@@ -835,17 +870,13 @@ def _fake_searcher(**cand):
 
 
 def _qualification(tmp_path, mode, manifest_path, **over):
-    """A selector qualification report certifying THIS manifest."""
-    doc = {"qualified": True, "mode": mode,
-           "manifest_sha1": fpu_provenance.file_sha1(str(manifest_path)),
-           "role_predicates": {"target": "raw_policy_role==target",
-                               "control": "raw_policy_role==control"},
-           "phase_quotas": v17.CONTROL_PHASE_QUOTA[mode],
-           "disjointness": {"forbidden_corpora": ["v16_production", "v16a_neutral",
-                                                  "abcd"],
-                            "overlaps": [], "checked_positions": 32}}
+    """The selector's real post-screen qualification report."""
+    doc = {"status": "PASS", "selector_error": None, "run_kind": mode,
+           "config_sha1": "c" * 40, "protocol_sha1": "p" * 40,
+           "screen_csv_sha1": "s" * 40, "selection_seed": 20260725,
+           "binding_constraint": None, "no_manifest_written": False}
     doc.update(over)
-    path = tmp_path / f"qualification_{mode}.json"
+    path = tmp_path / f"post_screen_{mode}.json"
     path.write_text(json.dumps(doc, sort_keys=True))
     return str(path)
 
@@ -858,7 +889,8 @@ def _run(tmp_path, monkeypatch, mode, **over):
     kwargs = dict(mode=mode, manifest_path=str(mpath),
                   checkpoint=CKPT, out_path=str(tmp_path / f"{mode}.json"),
                   seed_base=SEEDS[mode][0], frozen_coefficient=coefficient,
-                  source_index=cpath, protocol_path=ppath, config_path=cpath,
+                  source_index=str(_source_index(tmp_path, mode)),
+                  protocol_path=ppath, config_path=cpath,
                   qualification_report=_qualification(tmp_path, mode, mpath),
                   searcher=_fake_searcher())
     kwargs.update(over)
@@ -913,16 +945,19 @@ def test_run_diagnostic_refuses_wrong_manifest_geometry(clean_tree, tmp_path,
                                                         monkeypatch):
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
     ppath, cpath = _pair(tmp_path, "development")
-    replay = tmp_path / "solo.json"
-    replay.write_text('{"moves": []}')
     bad = tmp_path / "bad.csv"
-    bad.write_text("canonical_sha1,game_idx,position_ply,side,role,replay_path\n"
-                   f"p0,0,50,red,target,{replay}\n")
+    bad.write_text("canonical_position_sha1,game_idx,position_ply,side,role,split\n"
+                   "p0,900000,50,red,target,development\n")
+    good = _manifest(tmp_path)
+    _sidecar(bad, _source_index(tmp_path), "development")
     with pytest.raises(prov.ProtocolViolation, match="corpus roles"):
-        v17.run_diagnostic(mode="development", manifest_path=str(bad),
-                           checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
-                           seed_base=1, source_index=cpath, protocol_path=ppath,
-                           config_path=cpath, searcher=_fake_searcher())
+        v17.run_diagnostic(
+            mode="development", manifest_path=str(bad), checkpoint=CKPT,
+            out_path=str(tmp_path / "o.json"), seed_base=1,
+            source_index=str(_source_index(tmp_path)), protocol_path=ppath,
+            config_path=cpath,
+            qualification_report=_qualification(tmp_path, "development", good),
+            searcher=_fake_searcher())
 
 
 def test_missing_identity_is_caught_before_any_search(clean_tree, tmp_path,
@@ -1063,10 +1098,12 @@ def test_run_abcd_requires_a_frozen_positive_coefficient(bad):
 
 
 def test_manifest_missing_columns_refused(tmp_path):
+    _manifest(tmp_path)
     bad = tmp_path / "bad.csv"
-    bad.write_text("canonical_sha1\np0\n")
+    bad.write_text("canonical_position_sha1\np0\n")
     with pytest.raises(prov.ProtocolViolation, match="missing columns"):
-        v17.load_manifest(str(bad))
+        v17.load_manifest(str(bad),
+                          source_index=str(_source_index(tmp_path)))
 
 
 # ---------------------------------------------------------------------------
@@ -1430,36 +1467,114 @@ def test_checkpoint_binds_to_its_role_not_set_membership(tmp_path):
                                      coefficient=None, checkpoint=str(other))
 
 
-def test_qualification_report_is_authenticated(tmp_path):
+def test_qualification_authenticates_the_real_selector_sidecar(tmp_path):
     m = _manifest(tmp_path)
-    good = _qualification(tmp_path, "development", m)
-    assert v17.authenticate_qualification(good, mode="development",
-                                          manifest_path=str(m))["qualified"]
-    for over, pattern in (
-            ({"qualified": False}, "does not certify"),
-            ({"mode": "held_out"}, "is for mode"),
-            ({"manifest_sha1": "0" * 40}, "certifies manifest"),
-            ({"role_predicates": {"target": "x"}}, "control predicate"),
-            ({"phase_quotas": {"opening": 1}}, "phase quotas"),
-            ({"disjointness": {"forbidden_corpora": ["v16"], "overlaps": ["p1"],
-                               "checked_positions": 32}}, "overlaps forbidden"),
-            ({"disjointness": {"forbidden_corpora": [], "overlaps": [],
-                               "checked_positions": 32}}, "no forbidden corpora"),
-    ):
-        with open(good) as f:
-            doc = json.load(f)
-        doc.update(over)
-        bad = tmp_path / "bad_qualification.json"
-        bad.write_text(json.dumps(doc, sort_keys=True))
-        with pytest.raises(prov.ProtocolViolation, match=pattern):
-            v17.authenticate_qualification(str(bad), mode="development",
-                                           manifest_path=str(m))
+    idx = str(_source_index(tmp_path))
+    out = v17.authenticate_qualification(
+        str(m), mode="development", source_index=idx, config_path=None,
+        checkpoint=CKPT, post_screen_report=_qualification(tmp_path,
+                                                           "development", m))
+    assert out["sidecar_sha1"] and out["source_index_sha1"]
+    assert out["selector_forbidden_manifests"] == list(v17.FORBIDDEN_CORPORA)
 
 
-def test_missing_qualification_report_is_refused(tmp_path):
-    with pytest.raises(prov.ProtocolViolation, match="qualification report"):
-        v17.authenticate_qualification(None, mode="development",
-                                       manifest_path=str(_manifest(tmp_path)))
+def test_missing_selector_sidecar_is_refused(tmp_path):
+    """A bare manifest is not evidence that its rows were qualified."""
+    m = _manifest(tmp_path)
+    (tmp_path / (m.name + ".meta.json")).unlink()
+    with pytest.raises(prov.ProtocolViolation, match="sidecar"):
+        v17.authenticate_qualification(
+            str(m), mode="development", source_index=str(_source_index(tmp_path)),
+            config_path=None, checkpoint=CKPT)
+
+
+def test_sidecar_must_describe_the_inputs_actually_used(tmp_path):
+    m = _manifest(tmp_path)
+    idx = _source_index(tmp_path)
+    side = tmp_path / (m.name + ".meta.json")
+    doc = json.loads(side.read_text())
+
+    # a different source index
+    other = tmp_path / "other_index.jsonl"
+    other.write_text(idx.read_text())
+    with pytest.raises(prov.ProtocolViolation, match="source index"):
+        v17.authenticate_qualification(
+            str(m), mode="development", source_index=str(other),
+            config_path=None, checkpoint=CKPT)
+
+    # a drifted source index (same name, different bytes)
+    doc["screen_meta_provenance"]["source_index_sha1"] = "0" * 40
+    side.write_text(json.dumps(doc, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="selector qualified"):
+        v17.authenticate_qualification(
+            str(m), mode="development", source_index=str(idx),
+            config_path=None, checkpoint=CKPT)
+
+
+def test_sidecar_checkpoint_must_match_the_searched_checkpoint(tmp_path):
+    m = _manifest(tmp_path)
+    side = tmp_path / (m.name + ".meta.json")
+    doc = json.loads(side.read_text())
+    other = tmp_path / "other.safetensors"
+    other.write_bytes(b"not the anchor")
+    doc["checkpoint"] = str(other)
+    side.write_text(json.dumps(doc, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="qualified checkpoint"):
+        v17.authenticate_qualification(
+            str(m), mode="development", source_index=str(_source_index(tmp_path)),
+            config_path=None, checkpoint=CKPT)
+
+
+@pytest.mark.parametrize("over,pattern", [
+    ({"status": "GATE_FAIL"}, "did not PASS"),
+    ({"selector_error": "capacity 0 < demand 45"}, "did not PASS"),
+])
+def test_failed_post_screen_report_is_refused(tmp_path, over, pattern):
+    m = _manifest(tmp_path)
+    with pytest.raises(prov.ProtocolViolation, match=pattern):
+        v17.authenticate_qualification(
+            str(m), mode="development", source_index=str(_source_index(tmp_path)),
+            config_path=None, checkpoint=CKPT,
+            post_screen_report=_qualification(tmp_path, "development", m, **over))
+
+
+def test_disjointness_is_computed_not_asserted(tmp_path):
+    """An earlier draft accepted a hand-written JSON claiming zero overlaps
+    against an unrelated corpus with checked_positions=0."""
+    m = _manifest(tmp_path)
+    rows = v17.load_manifest(str(m), source_index=str(_source_index(tmp_path)))
+    clean = v17.compute_disjointness(rows, forbidden=v17.FORBIDDEN_CORPORA)
+    assert clean["overlaps"] == [] and clean["checked_positions"] == 32
+    assert clean["forbidden_corpora"] == list(v17.FORBIDDEN_CORPORA)
+    # a row genuinely taken from a forbidden corpus is detected
+    with open(v17.FORBIDDEN_CORPORA[0], newline="") as f:
+        stolen = next(r for r in csv.DictReader(f) if r.get("canonical_position_sha1"))
+    tainted = [{**rows[0], "canonical_sha1": stolen["canonical_position_sha1"]}] + rows[1:]
+    hit = v17.compute_disjointness(tainted, forbidden=v17.FORBIDDEN_CORPORA)
+    assert hit["overlaps"] and hit["overlaps"][0]["corpus"] == v17.FORBIDDEN_CORPORA[0]
+
+
+def test_disjointness_requires_a_forbidden_set(tmp_path):
+    rows = v17.load_manifest(str(_manifest(tmp_path)),
+                             source_index=str(_source_index(tmp_path)))
+    with pytest.raises(prov.ProtocolViolation, match="non-empty forbidden"):
+        v17.compute_disjointness(rows, forbidden=[])
+
+
+def test_real_production_manifest_loads(tmp_path):
+    """The concrete integration check: the actual v16 production selector
+    output must be consumable, since it is the schema Task 10 emits."""
+    d = ("logs/eval/fpu_v16_policy_mass_v2/"
+         "production_v2_b400amend_4000g_seed20300000")
+    rows = v17.load_manifest(
+        f"{d}/fpu_dev_corpus_v2_manifest.csv",
+        source_index=f"{d}/calib020_0001_vs_0379_4000g_w4_seed20300000_games.jsonl")
+    assert len(rows) == 120
+    for r in rows:
+        assert r["canonical_sha1"] == r["canonical_position_sha1"]
+        assert r["replay_path"].endswith(".json")
+        assert r["role"] in ("target", "control")
+        assert isinstance(r["game_idx"], int)
 
 
 def test_scientific_artifact_records_config_and_disjointness(clean_tree, tmp_path,
