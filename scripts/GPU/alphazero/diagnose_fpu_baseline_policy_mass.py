@@ -206,6 +206,18 @@ FORBIDDEN_CORPORA = (
     "position_probe_cases.csv",
 )
 EXPECTED_CHECKED_POSITIONS = {"development": 32, "held_out": 56}
+# Frozen SHA-1 for each forbidden corpus that is NOT covered by the Task 1
+# freeze. Pinned HERE, in tracked source, rather than read from the selector
+# sidecar: the artifacts are untracked, so taking their expected hash from a
+# sidecar that travels with them is circular -- editing both would pass. The
+# v16 production manifest hash is also recorded in the committed experiment
+# ledger, and the v16a manifest is itself git-tracked.
+FORBIDDEN_CORPUS_SHA1S = {
+    "logs/eval/fpu_v16_policy_mass_v2/production_v2_b400amend_4000g_seed20300000/"
+    "fpu_dev_corpus_v2_manifest.csv": "84cdd4b45e089a2ebb292491c146ba00bff17ea9",
+    "logs/eval/v16a_fpu_unbiased/neutral_position_manifest.csv":
+        "bf7a00ad7ca524ef3aa778b9e0decc11218a2f7d",
+}
 
 # Every module whose bytes can change a result. §12 requires source identities
 # to cover all of them, not just the module being run.
@@ -835,7 +847,8 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
               qualification_report: Optional[str] = None,
               stage1_manifest: Optional[str] = None,
               stage1_source_index: Optional[str] = None,
-              stage1_post_screen_report: Optional[str] = None) -> Dict[str, Any]:
+              stage1_post_screen_report: Optional[str] = None,
+              selector=None) -> Dict[str, Any]:
     """Validate every scientific precondition. Costs zero searches.
 
     Returns the resolved {configs, manifest_rows, replay_paths, source_files}.
@@ -892,7 +905,7 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
         qualification = authenticate_qualification(
             manifest_path, mode=mode, source_index=source_index,
             config_path=config_path, checkpoint=checkpoint,
-            post_screen_report=qualification_report)
+            post_screen_report=qualification_report, selector=selector)
         sidecar = json.loads(Path(manifest_path + ".meta.json").read_text())
         forbidden = list(FORBIDDEN_CORPORA)
         expected_sha1s = dict(expected_forbidden_sha1s(sidecar))
@@ -906,11 +919,12 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
                     "disjointness (§8.1)")
             # Stage 1 is EVIDENCE here, so it is authenticated exactly as this
             # run's own corpus is -- a readable CSV is not proof.
-            authenticate_qualification(
+            stage1_qualification = authenticate_qualification(
                 stage1_manifest, mode="development",
                 source_index=stage1_source_index, config_path=None,
                 checkpoint=checkpoint,
-                post_screen_report=stage1_post_screen_report)
+                post_screen_report=stage1_post_screen_report,
+                selector=selector)
             stage1_rows = load_manifest(stage1_manifest,
                                         source_index=stage1_source_index)
             forbidden.append(stage1_manifest)
@@ -918,6 +932,14 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
                 stage1_manifest)
             forbidden_game_identities["stage1_development"] = game_identities(
                 stage1_rows)
+            # Stage 1 is evidence for this artifact, so its identities are
+            # PERSISTED, not discarded once checked.
+            qualification = {**(qualification or {}),
+                             "stage1": {**stage1_qualification,
+                                        "manifest": stage1_manifest,
+                                        "manifest_sha1": fpu_provenance.file_sha1(
+                                            stage1_manifest),
+                                        "rows": len(stage1_rows)}}
         disjointness = compute_disjointness(
             manifest_rows, forbidden=forbidden, expected_sha1s=expected_sha1s,
             forbidden_game_identities=forbidden_game_identities)
@@ -1203,11 +1225,18 @@ def expected_forbidden_sha1s(sidecar: Optional[Mapping[str, Any]] = None
     for path in FORBIDDEN_CORPORA:
         if path in expected:
             continue
-        want = by_name.get(Path(path).name)
+        want = FORBIDDEN_CORPUS_SHA1S.get(path)
         if not want:
             raise prov.ProtocolViolation(
                 f"no authenticated SHA-1 is available for forbidden corpus "
                 f"{path}; disjointness against unverified bytes proves nothing")
+        # The sidecar is a CROSS-CHECK, never the root: if it disagrees with the
+        # tracked pin, one of them has been edited.
+        sidecar_says = by_name.get(Path(path).name)
+        if sidecar_says and sidecar_says != want:
+            raise prov.ProtocolViolation(
+                f"selector sidecar records {path} as {sidecar_says}, but the "
+                f"tracked frozen pin is {want}; one of them has been edited")
         expected[path] = want
     return expected
 
@@ -1341,10 +1370,71 @@ def compute_disjointness(manifest_rows: Sequence[Mapping[str, Any]], *,
             "checked_games": len(mine_games)}
 
 
+def rederive_selection(manifest_rows: Sequence[Mapping[str, Any]], *,
+                       selector_config: str, screen_csv: str,
+                       selector=None) -> Dict[str, Any]:
+    """Re-run the ESTABLISHED deterministic selector and compare the COMPLETE
+    manifest against its output.
+
+    Eligibility checks alone accept any alternative eligible subset that
+    satisfies the geometry -- swapping one genuine row for another kept row
+    from the same cell passed them. `select_final_manifest` is the one frozen
+    select stage: it hard-matches all eleven screen identities, re-derives the
+    config from its pinned (protocol, reservoir) and byte-compares it (catching
+    an edited `selection_seed` or floor that no identity hash can see), then
+    performs the exact-or-raise `sample_v2_rows` selection at that seed.
+
+    NOTE: the selector binds the source-file identities recorded at screen
+    time, INCLUDING `mcts.py`. A corpus selected before the v17 source edits
+    therefore cannot be re-derived under the v17 tree -- by design, not by
+    defect. Stage 1's corpus is selected after Tasks 2-3, under this source.
+    """
+    from .fpu_dev_corpus_v2 import load_v2_config, select_final_manifest
+    if selector is None:                                    # pragma: no cover
+        selector = select_final_manifest
+    cfg = load_v2_config(selector_config)
+    screen_meta_path = screen_csv + ".meta.json"
+    if not Path(screen_meta_path).is_file():
+        raise prov.ProtocolViolation(
+            f"screen sidecar {screen_meta_path} is missing; the selector cannot "
+            f"be re-derived without the screen's recorded identities")
+    with open(screen_meta_path) as f:
+        screen_meta = json.load(f)
+    try:
+        # `forbidden_position_hashes`, not the raw loader: gate B's cases carry
+        # no `replay_path`, so its authenticated manifest must be joined first.
+        forbidden: set = set()
+        for corpus in cfg.forbidden_manifests:
+            forbidden |= forbidden_position_hashes(corpus)
+        rows, info = selector(screen_meta, cfg, forbidden=forbidden,
+                              screen_csv_path=screen_csv)
+    except Exception as exc:
+        raise prov.ProtocolViolation(
+            f"the deterministic selector refused to reproduce this selection: "
+            f"{type(exc).__name__}: {exc}") from exc
+
+    def key(row, sha_key, ply_key):
+        return (row[sha_key], int(row["game_idx"]), int(float(row[ply_key])))
+
+    derived = {key(r, "canonical_sha1" if "canonical_sha1" in r
+                   else "canonical_position_sha1",
+                   "ply" if "ply" in r else "position_ply") for r in rows}
+    claimed = {key(r, "canonical_position_sha1", "position_ply")
+               for r in manifest_rows}
+    if derived != claimed:
+        raise prov.ProtocolViolation(
+            f"manifest does not match the deterministic selection: "
+            f"{len(claimed - derived)} row(s) were never selected, "
+            f"{len(derived - claimed)} selected row(s) are absent; an eligible "
+            f"subset is not the selector's output")
+    return {"rederived_rows": len(derived), "selector_info_keys": sorted(info)}
+
+
 def authenticate_qualification(manifest_path: str, *, mode: str,
                                source_index: str, config_path: Optional[str],
                                checkpoint: str,
-                               post_screen_report: Optional[str] = None
+                               post_screen_report: Optional[str] = None,
+                               rederive: bool = True, selector=None
                                ) -> Dict[str, Any]:
     """Authenticate the corpus against the REAL selector artifact chain.
 
@@ -1419,11 +1509,15 @@ def authenticate_qualification(manifest_path: str, *, mode: str,
     # names every required key -- a plausible-looking JSON is not a config
     from .fpu_dev_corpus_v2 import load_v2_config
     try:
-        load_v2_config(selector_config)
+        loaded_cfg = load_v2_config(selector_config)
     except ValueError as exc:
         raise prov.ProtocolViolation(
             f"selector config {selector_config} is not a valid v2 config: "
             f"{exc}") from exc
+    cfg_run_kind = getattr(loaded_cfg, "run_kind", None)
+    if cfg_run_kind is not None and cfg_run_kind != mode:
+        raise prov.ProtocolViolation(
+            f"selector config run_kind is {cfg_run_kind!r}, not {mode!r}")
 
     # the SCREEN must still be the bytes the selector selected from, and every
     # selected row must be a KEPT, ANCHOR-ELIGIBLE screen row of the SAME role,
@@ -1480,6 +1574,14 @@ def authenticate_qualification(manifest_path: str, *, mode: str,
             f"selector sidecar records {sidecar['n_rows']} rows, manifest has "
             f"{len(manifest_rows)}")
 
+    # the artifact chain must be for THIS mode: a complete held-out chain
+    # otherwise authenticated as development
+    for label, doc in (("sidecar", sidecar),):
+        recorded = doc.get("run_kind")
+        if recorded is not None and recorded != mode:
+            raise prov.ProtocolViolation(
+                f"selector {label} run_kind is {recorded!r}, not {mode!r}")
+
     # the post-screen qualification report is REQUIRED, not optional
     if not post_screen_report or not Path(post_screen_report).is_file():
         raise prov.ProtocolViolation(
@@ -1492,6 +1594,9 @@ def authenticate_qualification(manifest_path: str, *, mode: str,
             raise prov.ProtocolViolation(
                 f"post-screen report {post_screen_report} is missing {key!r}; a "
                 f"hand-written PASS document is not the selector's report")
+    if report.get("run_kind") is not None and report["run_kind"] != mode:
+        raise prov.ProtocolViolation(
+            f"post-screen report run_kind is {report['run_kind']!r}, not {mode!r}")
     if report["status"] != "PASS" or report.get("selector_error"):
         raise prov.ProtocolViolation(
             f"post-screen qualification did not PASS: status="
@@ -1501,8 +1606,18 @@ def authenticate_qualification(manifest_path: str, *, mode: str,
             raise prov.ProtocolViolation(
                 f"post-screen report and manifest sidecar disagree on {key}: "
                 f"{report[key]!r} vs {prov_block[key]!r}")
+    # the rows must satisfy THIS mode's frozen geometry, not merely be eligible
+    require_corpus_geometry(mode, [
+        {**r, "canonical_sha1": r["canonical_position_sha1"]}
+        for r in manifest_rows])
+    rederivation = None
+    if rederive:
+        rederivation = rederive_selection(
+            manifest_rows, selector_config=selector_config,
+            screen_csv=screen_csv, selector=selector)
     return {"sidecar_path": sidecar_path,
             "sidecar_sha1": fpu_provenance.file_sha1(sidecar_path),
+            "rederived_selection": rederivation,
             "selector_config": selector_config,
             "selector_config_sha1": actual_cfg_sha1,
             "screen_csv": screen_csv, "screen_csv_sha1": actual_screen_sha1,
@@ -1765,7 +1880,7 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                    stage1_manifest: Optional[str] = None,
                    stage1_source_index: Optional[str] = None,
                    stage1_post_screen_report: Optional[str] = None,
-                   searcher=None) -> Dict[str, Any]:
+                   selector=None, searcher=None) -> Dict[str, Any]:
     """Search, gate and emit. Every precondition is checked in `preflight`
     before an evaluator is loaded."""
     if mode == "abcd":
@@ -1786,7 +1901,8 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                     qualification_report=qualification_report,
                     stage1_manifest=stage1_manifest,
                     stage1_source_index=stage1_source_index,
-                    stage1_post_screen_report=stage1_post_screen_report)
+                    stage1_post_screen_report=stage1_post_screen_report,
+                    selector=selector)
     configs, manifest_rows = pre["configs"], pre["manifest_rows"]
     if searcher is None:                                    # pragma: no cover
         searcher = _real_searcher(checkpoint, seed_base)

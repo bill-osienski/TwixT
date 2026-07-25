@@ -935,6 +935,11 @@ def _selector_chain(tmp_path, mode="development"):
             pathlib.Path(f).name: fpu_provenance.file_sha1(f)
             for f in v17.FORBIDDEN_CORPORA},
     }
+    # the screen carries its own sidecar too, as the real one does
+    (tmp_path / (screen.name + ".meta.json")).write_text(json.dumps(
+        {"n_proposals": len(screened), "screen_csv_sha1": prov_block["screen_csv_sha1"],
+         "run_kind": mode, "provenance": prov_block}, sort_keys=True))
+
     sidecar = tmp_path / (manifest.name + ".meta.json")
     sidecar.write_text(json.dumps(
         {"config_path": str(config), "source_index_path": str(index),
@@ -989,6 +994,24 @@ def _pair(tmp_path, mode, coefficient=None):
     return str(ppath), str(cpath)
 
 
+def _chain_selector(_unused=None):
+    """Stands in for the real deterministic selector on the synthetic chains,
+    which have no full screen-identity sidecar. It resolves the manifest from
+    the screen path it is handed, so one selector serves every chain in a run
+    (held-out authenticates its own corpus AND Stage 1). The REAL selector is
+    exercised against the actual production artifacts elsewhere.
+    """
+    def select(screen_meta, cfg, *, forbidden, screen_csv_path):
+        manifest = pathlib.Path(str(screen_csv_path).replace("screen_",
+                                                             "manifest_"))
+        with open(manifest, newline="") as f:
+            rows = list(csv.DictReader(f))
+        return [{"canonical_sha1": r["canonical_position_sha1"],
+                 "game_idx": r["game_idx"], "ply": r["position_ply"]}
+                for r in rows], {"fixture": True}
+    return select
+
+
 def _fake_searcher(**cand):
     def search(manifest_row, coefficient):
         over = dict(cand) if (coefficient is not None and coefficient != 0.0) else {}
@@ -1009,7 +1032,7 @@ def _run(tmp_path, monkeypatch, mode, **over):
                   source_index=str(_source_index(tmp_path, mode)),
                   protocol_path=ppath, config_path=cpath,
                   qualification_report=_qualification(tmp_path, mode, mpath),
-                  searcher=_fake_searcher())
+                  selector=_chain_selector(mpath), searcher=_fake_searcher())
     kwargs.update(over)
     return v17.run_diagnostic(**kwargs)
 
@@ -1593,8 +1616,8 @@ def test_qualification_authenticates_the_real_selector_sidecar(tmp_path):
     idx = str(_source_index(tmp_path))
     out = v17.authenticate_qualification(
         str(m), mode="development", source_index=idx, config_path=None,
-        checkpoint=CKPT, post_screen_report=_qualification(tmp_path,
-                                                           "development", m))
+        checkpoint=CKPT, selector=_chain_selector(m),
+        post_screen_report=_qualification(tmp_path, "development", m))
     assert out["sidecar_sha1"] and out["source_index_sha1"]
     assert out["selector_forbidden_manifests"] == list(v17.FORBIDDEN_CORPORA)
 
@@ -2059,19 +2082,98 @@ def test_selector_config_must_load_through_the_established_loader(tmp_path):
             post_screen_report=str(chain["report"]))
 
 
-def test_the_real_production_chain_authenticates(tmp_path):
-    """The strongest integration check available: the actual v16 production
-    selector output must pass every authentication step."""
-    d = ("logs/eval/fpu_v16_policy_mass_v2/"
-         "production_v2_b400amend_4000g_seed20300000")
-    out = v17.authenticate_qualification(
-        f"{d}/fpu_dev_corpus_v2_manifest.csv", mode="production",
-        source_index=f"{d}/calib020_0001_vs_0379_4000g_w4_seed20300000_games.jsonl",
-        config_path=None,
-        checkpoint="checkpoints/alphazero-v2-calib020-from0409/"
-                   "model_iter_0001.safetensors",
-        post_screen_report=f"{d}/post_screen_qualification_report.json")
+PRODUCTION = ("logs/eval/fpu_v16_policy_mass_v2/"
+              "production_v2_b400amend_4000g_seed20300000")
+PRODUCTION_CKPT = ("checkpoints/alphazero-v2-calib020-from0409/"
+                   "model_iter_0001.safetensors")
+
+
+def _authenticate_production(**over):
+    kwargs = dict(mode="production",
+                  source_index=f"{PRODUCTION}/calib020_0001_vs_0379_4000g_w4_"
+                               f"seed20300000_games.jsonl",
+                  config_path=None, checkpoint=PRODUCTION_CKPT,
+                  post_screen_report=f"{PRODUCTION}/"
+                                     f"post_screen_qualification_report.json")
+    kwargs.update(over)
+    return v17.authenticate_qualification(
+        f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", **kwargs)
+
+
+def test_the_real_production_chain_authenticates_field_by_field():
+    """Every non-rederivation step passes on the actual v16 production output:
+    sidecar, config, screen bytes, per-row eligibility, role/side/phase, and
+    the post-screen report."""
+    out = _authenticate_production(rederive=False)
     assert out["screen_csv_sha1"] and out["selector_config_sha1"]
+    assert out["rederived_selection"] is None
+
+
+def test_a_pre_v17_corpus_cannot_be_rederived_under_the_v17_source_tree():
+    """A structural property, not a defect: the selector hard-matches the
+    source-file identities recorded at screen time, and v17's authorized
+    Tasks 2-3 edited mcts.py. Stage 1's corpus is selected AFTER those edits,
+    under this tree, so it re-derives; a v16-era manifest cannot."""
+    with pytest.raises(prov.ProtocolViolation,
+                       match="deterministic selector refused"):
+        _authenticate_production(rederive=True)
+
+
+def test_rederivation_compares_the_complete_manifest():
+    """The comparison itself, driven with an injected selector so it is
+    exercised without a full v17-era screen."""
+    rows = list(csv.DictReader(
+        open(f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", newline="")))
+
+    def exact(screen_meta, cfg, *, forbidden, screen_csv_path):
+        return [{"canonical_sha1": r["canonical_position_sha1"],
+                 "game_idx": r["game_idx"], "ply": r["position_ply"]}
+                for r in rows], {"ok": True}
+    out = v17.rederive_selection(
+        rows, selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
+        screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv", selector=exact)
+    assert out["rederived_rows"] == len(rows)
+
+    def swapped(screen_meta, cfg, *, forbidden, screen_csv_path):
+        derived, info = exact(screen_meta, cfg, forbidden=forbidden,
+                              screen_csv_path=screen_csv_path)
+        derived[0] = {**derived[0], "canonical_sha1": "a_different_kept_row"}
+        return derived, info
+    with pytest.raises(prov.ProtocolViolation, match="never selected"):
+        v17.rederive_selection(
+            rows, selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
+            screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv",
+            selector=swapped)
+
+
+def test_swapping_a_row_for_another_eligible_row_is_refused():
+    """The exact attack: replace one genuine row with a DIFFERENT kept,
+    anchor-eligible screen row from the same role/phase/side cell. Eligibility
+    checks accept it; only re-derivation rejects it."""
+    rows = list(csv.DictReader(
+        open(f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", newline="")))
+    screen = list(csv.DictReader(
+        open(f"{PRODUCTION}/fpu_dev_source_screen.csv", newline="")))
+    chosen = {r["canonical_position_sha1"] for r in rows}
+    victim = rows[0]
+    alt = next(s for s in screen
+               if s["exclusion_status"] == "kept" and s["anchor_eligible"] == "True"
+               and s["raw_policy_role"] == victim["role"]
+               and s["ply_bucket"] == victim["ply_bucket"]
+               and s["side"] == victim["side"]
+               and s["canonical_sha1"] not in chosen)
+    altered = [{**victim, "canonical_position_sha1": alt["canonical_sha1"],
+                "game_idx": alt["game_idx"], "position_ply": alt["ply"]}] + rows[1:]
+
+    def genuine(screen_meta, cfg, *, forbidden, screen_csv_path):
+        return [{"canonical_sha1": r["canonical_position_sha1"],
+                 "game_idx": r["game_idx"], "ply": r["position_ply"]}
+                for r in rows], {}
+    with pytest.raises(prov.ProtocolViolation, match="never selected"):
+        v17.rederive_selection(
+            altered, selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
+            screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv",
+            selector=genuine)
 
 
 def test_game_identity_is_replay_content_not_index(tmp_path):
@@ -2149,3 +2251,73 @@ def test_held_out_authenticates_the_stage1_corpus(clean_tree, tmp_path,
              stage1_source_index=str(stage1["index"]),
              stage1_post_screen_report=str(stage1["report"]),
              searcher=_fake_searcher(replies=70))
+
+
+def test_stage1_chain_is_mode_bound(tmp_path):
+    """A complete HELD-OUT chain previously authenticated as development."""
+    held = _selector_chain(tmp_path, "held_out")
+    with pytest.raises(prov.ProtocolViolation, match="run_kind"):
+        v17.authenticate_qualification(
+            str(held["manifest"]), mode="development",
+            source_index=str(held["index"]), config_path=None, checkpoint=CKPT,
+            post_screen_report=str(held["report"]),
+            selector=_chain_selector())
+
+
+def test_stage1_geometry_is_applied(tmp_path):
+    """Held-out rows must not pass development's 16/16 geometry."""
+    held = _selector_chain(tmp_path, "held_out")
+    for doc_path in (held["sidecar"], held["report"]):
+        doc = json.loads(doc_path.read_text())
+        doc["run_kind"] = "development"
+        doc_path.write_text(json.dumps(doc, sort_keys=True))
+    cfg = json.loads(held["config"].read_text())
+    cfg["run_kind"] = "development"
+    held["config"].write_text(json.dumps(cfg, sort_keys=True))
+    side = json.loads(held["sidecar"].read_text())
+    side["screen_meta_provenance"]["config_sha1"] = \
+        fpu_provenance.file_sha1(str(held["config"]))
+    held["sidecar"].write_text(json.dumps(side, sort_keys=True))
+    rep = json.loads(held["report"].read_text())
+    rep["config_sha1"] = side["screen_meta_provenance"]["config_sha1"]
+    held["report"].write_text(json.dumps(rep, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="corpus roles"):
+        v17.authenticate_qualification(
+            str(held["manifest"]), mode="development",
+            source_index=str(held["index"]), config_path=None, checkpoint=CKPT,
+            post_screen_report=str(held["report"]), selector=_chain_selector())
+
+
+def test_held_out_artifact_persists_stage1_identities(clean_tree, tmp_path,
+                                                      monkeypatch):
+    """The Stage-1 authentication result was checked and then discarded."""
+    stage1 = _selector_chain(tmp_path, "development")
+    art = _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.25,
+               stage1_manifest=str(stage1["manifest"]),
+               stage1_source_index=str(stage1["index"]),
+               stage1_post_screen_report=str(stage1["report"]),
+               searcher=_fake_searcher(replies=70))
+    s1 = art["identities"]["selector_qualification"]["stage1"]
+    assert s1["manifest_sha1"] and s1["rows"] == 32
+    assert s1["source_index_sha1"] and s1["sidecar_sha1"]
+    assert s1["post_screen_report_sha1"] and s1["screen_csv_sha1"]
+
+
+def test_forbidden_hashes_are_rooted_in_tracked_source_not_the_sidecar(tmp_path):
+    """Editing an ignored artifact AND its sidecar expectation together must
+    not pass: the expectation lives in tracked source."""
+    assert set(v17.FORBIDDEN_CORPUS_SHA1S) == (
+        set(v17.FORBIDDEN_CORPORA) - {g["canonical_source"] for g in
+                                      json.load(open(v17.ABCD_BASELINE_PATH))
+                                      ["abcd_frozen_baseline"].values()})
+    chain = _selector_chain(tmp_path)
+    side = json.loads(chain["sidecar"].read_text())
+    v16_name = pathlib.Path(list(v17.FORBIDDEN_CORPUS_SHA1S)[0]).name
+    side["screen_meta_provenance"]["forbidden_manifest_sha1s"][v16_name] = "0" * 40
+    with pytest.raises(prov.ProtocolViolation, match="tracked frozen pin"):
+        v17.expected_forbidden_sha1s(side)
+
+
+def test_frozen_forbidden_pins_match_the_artifacts_on_disk():
+    for path, want in v17.FORBIDDEN_CORPUS_SHA1S.items():
+        assert fpu_provenance.file_sha1(path) == want, path
