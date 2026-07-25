@@ -17,10 +17,12 @@ import statistics
 
 import pytest
 
+from scripts.GPU.alphazero.fpu_v17_provenance import (
+    FROZEN_DESIGN_PATH as DESIGN,
+    FROZEN_DESIGN_SHA1,
+)
+
 RECORD_PATH = "logs/eval/fpu_v17_baseline_policy_mass/prechange_baseline.json"
-FROZEN_DESIGN_SHA1 = "944f358c0e3ef66503d2cbb56e31dabd145bafc2"
-DESIGN = ("docs/superpowers/specs/"
-          "2026-07-24-v17-baseline-preserving-policy-mass-fpu-design.md")
 
 # Aggregates as written in the frozen design §9. Compared at the design's own
 # 1e-6 reproduction tolerance, which absorbs the documented C/D one-ULP gap.
