@@ -830,9 +830,12 @@ def _selector_chain(tmp_path, mode="development"):
         nonlocal i
         game = game_base + i
         replay = tmp_path / f"replay_{mode}_{i}.json"
+        # distinct CONTENT per game: identity is the replay hash, so two games
+        # with identical bytes are correctly the same game.
         replay.write_text(json.dumps(
-            {"board_size": 24, "n_moves": 60,
-             "moves": [{"row": 1, "col": 1}] * 60}))
+            {"board_size": 24, "n_moves": 60, "game_idx": game,
+             "moves": [{"row": (game + k) % 24, "col": k % 24}
+                       for k in range(60)]}))
         rows.append({"canonical_position_sha1": f"v17{mode}{i:04d}",
                      "game_idx": game, "position_ply": 50,
                      "side": "red" if i % 2 == 0 else "black",
@@ -853,31 +856,71 @@ def _selector_chain(tmp_path, mode="development"):
 
     cols = ["canonical_position_sha1", "game_idx", "position_ply", "side",
             "role", "ply_bucket", "split"]
-
-    def write_csv(path, records):
-        with open(path, "w", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=cols)
-            w.writeheader()
-            for r in records:
-                w.writerow(r)
-
-    # the screen is a SUPERSET of the manifest, as the real selector's is
-    screen = tmp_path / f"screen_{mode}.csv"
-    extra = [{**rows[0], "canonical_position_sha1": f"v17{mode}extra{k}",
-              "game_idx": game_base + 5000 + k} for k in range(5)]
-    write_csv(screen, rows + extra)
-
     manifest = tmp_path / f"manifest_{mode}.csv"
-    write_csv(manifest, rows)
+    with open(manifest, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
 
+    # The screen uses the REAL screen schema and is a SUPERSET holding every
+    # proposal with its eligibility verdict -- kept rows plus ineligible and
+    # collision rows, exactly as the production screen does.
+    screen = tmp_path / f"screen_{mode}.csv"
+    screen_cols = ["game_idx", "ply", "side", "phase", "n_legal", "band",
+                   "ply_bucket", "proposal_cell", "normalized_entropy",
+                   "top1_prior", "top4_mass", "top8_mass", "raw_policy_role",
+                   "anchor_run", "root_value_stm", "anchor_eligible",
+                   "canonical_sha1", "exclusion_status"]
+
+    def screen_row(r, *, status="kept", eligible="True", role=None):
+        return {"game_idx": r["game_idx"], "ply": r["position_ply"],
+                "side": r["side"], "phase": r["ply_bucket"], "n_legal": 500,
+                "band": "b400_plus", "ply_bucket": r["ply_bucket"],
+                "proposal_cell": f"{role or r['role']}|{r['ply_bucket']}",
+                "normalized_entropy": 0.95, "top1_prior": 0.02,
+                "top4_mass": 0.1, "top8_mass": 0.2,
+                "raw_policy_role": role or r["role"], "anchor_run": "a",
+                "root_value_stm": 0.0, "anchor_eligible": eligible,
+                "canonical_sha1": r["canonical_position_sha1"],
+                "exclusion_status": status}
+
+    screened = [screen_row(r) for r in rows]
+    for k in range(3):     # rows the selector could NOT have chosen
+        base_row = {**rows[0], "canonical_position_sha1": f"v17{mode}excl{k}",
+                    "game_idx": game_base + 5000 + k}
+        screened.append(screen_row(base_row,
+                                   status=["ineligible_anchor", "collision",
+                                           "ineligible_role"][k],
+                                   eligible="False"))
+    with open(screen, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=screen_cols)
+        w.writeheader()
+        w.writerows(screened)
+
+    # A config carrying EVERY key the established `load_v2_config` requires --
+    # a plausible-looking JSON is not a config.
     config = tmp_path / f"selector_config_{mode}.json"
+    seed_lo, seed_hi = SEEDS[mode][0], SEEDS[mode][0] + SEEDS[mode][1]
     config.write_text(json.dumps(
-        {"config_schema_version": 2, "run_kind": mode,
-         "select_out": str(manifest), "screen_out": str(screen),
-         "source_index_path": str(index), "checkpoint": CKPT,
-         "max_per_game": 2, "min_ply_gap": 12, "side_tol": 0,
-         "corpus_size": len(rows),
+        {"config_schema_version": 2, "run_kind": mode, "checkpoint": CKPT,
+         "corpus_size": len(rows), "eval_batch_size": 14,
+         "stall_flush_sims": 48, "max_per_game": 2, "min_ply_gap": 12,
+         "side_tol": 0, "selection_seed": 20260725,
+         "new_collapse_stratum": "ply_bucket",
+         "enumerator_params": {"max_per_cell_per_game": 2, "min_ply_gap": 12},
+         "late_floors": {"b200_299": 12, "b300_399": 12, "b400_plus": 4},
+         "late_target_band_minima": {mode: {"b200_299": 5}},
          "phase_allocation": v17.CONTROL_PHASE_QUOTA.get(mode, {}),
+         "seed_range": [seed_lo, seed_hi],
+         "expected_fingerprints": {
+             "anchor_checkpoint_identity":
+                 f"model_iter_0001.safetensors:{fpu_provenance.file_sha1(CKPT)}"},
+         "source_index_path": str(index), "match_summary_path": str(index),
+         "replay_dir": str(tmp_path), "protocol_path": str(tmp_path / "p.json"),
+         "screen_out": str(screen), "select_out": str(manifest),
+         "report_out": str(tmp_path / f"report_{mode}.json"),
+         "post_screen_report_out": str(tmp_path / f"post_screen_{mode}.json"),
          "forbidden_manifests": list(v17.FORBIDDEN_CORPORA)}, sort_keys=True))
 
     prov_block = {
@@ -908,7 +951,10 @@ def _selector_chain(tmp_path, mode="development"):
          "screen_csv_sha1": prov_block["screen_csv_sha1"],
          "protocol_sha1": prov_block["protocol_sha1"],
          "selection_seed": 20260725, "binding_constraint": None,
-         "no_manifest_written": False}, sort_keys=True))
+         "profile": {"corpus_size": len(rows)},
+         "report": {"status": "PASS"},
+         "selector_witness": {"assignment_attempt": 0, "rows": len(rows)},
+         "no_manifest_written": True}, sort_keys=True))
     return {"manifest": manifest, "index": index, "screen": screen,
             "config": config, "sidecar": sidecar, "report": report}
 
@@ -995,9 +1041,11 @@ def test_run_diagnostic_refuses_a_broken_zero_identity(clean_tree, tmp_path,
 
 def test_run_diagnostic_held_out_runs_one_coefficient(clean_tree, tmp_path,
                                                       monkeypatch):
-    stage1 = _manifest(tmp_path, "development")
+    stage1 = _selector_chain(tmp_path, "development")
     art = _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.25,
-               stage1_manifest=str(stage1),
+               stage1_manifest=str(stage1["manifest"]),
+               stage1_source_index=str(stage1["index"]),
+               stage1_post_screen_report=str(stage1["report"]),
                searcher=_fake_searcher(replies=70))
     assert art["configs"] == [None, 0.25]
     assert art["gates"]["held_out"]["passed"] is True
@@ -1616,14 +1664,18 @@ def test_disjointness_is_computed_not_asserted(tmp_path):
     against an unrelated corpus with checked_positions=0."""
     m = _manifest(tmp_path)
     rows = v17.load_manifest(str(m), source_index=str(_source_index(tmp_path)))
-    clean = v17.compute_disjointness(rows, forbidden=v17.FORBIDDEN_CORPORA)
+    expected = v17.expected_forbidden_sha1s(
+        json.loads((tmp_path / (m.name + ".meta.json")).read_text()))
+    clean = v17.compute_disjointness(rows, forbidden=v17.FORBIDDEN_CORPORA,
+                                     expected_sha1s=expected)
     assert clean["overlaps"] == [] and clean["checked_positions"] == 32
     assert clean["forbidden_corpora"] == list(v17.FORBIDDEN_CORPORA)
     # a row genuinely taken from a forbidden corpus is detected
     with open(v17.FORBIDDEN_CORPORA[0], newline="") as f:
         stolen = next(r for r in csv.DictReader(f) if r.get("canonical_position_sha1"))
     tainted = [{**rows[0], "canonical_sha1": stolen["canonical_position_sha1"]}] + rows[1:]
-    hit = v17.compute_disjointness(tainted, forbidden=v17.FORBIDDEN_CORPORA)
+    hit = v17.compute_disjointness(tainted, forbidden=v17.FORBIDDEN_CORPORA,
+                                   expected_sha1s=expected)
     assert hit["overlaps"] and hit["overlaps"][0]["corpus"] == v17.FORBIDDEN_CORPORA[0]
 
 
@@ -1631,7 +1683,7 @@ def test_disjointness_requires_a_forbidden_set(tmp_path):
     rows = v17.load_manifest(str(_manifest(tmp_path)),
                              source_index=str(_source_index(tmp_path)))
     with pytest.raises(prov.ProtocolViolation, match="non-empty forbidden"):
-        v17.compute_disjointness(rows, forbidden=[])
+        v17.compute_disjointness(rows, forbidden=[], expected_sha1s={})
 
 
 def test_real_production_manifest_loads(tmp_path):
@@ -1745,7 +1797,7 @@ def test_manifest_is_bound_by_screen_membership(tmp_path):
             post_screen_report=str(chain["report"]))
 
 
-def test_disjointness_uses_canonical_state_identity_not_game_index():
+def test_disjointness_uses_canonical_state_identity_not_game_index(tmp_path):
     """Game indices are reservoir-local. An exact A-probe position reached from
     a different reservoir must still collide."""
     from scripts.GPU.alphazero.fpu_state_hash import canonical_state_sha1
@@ -1757,9 +1809,13 @@ def test_disjointness_uses_canonical_state_identity_not_game_index():
     state = position_state(replay, int(case["position_ply"]), case["side_to_move"])
     exact = canonical_state_sha1(state)
     # same position, DIFFERENT game index -- the old pair-identity missed this
+    chain = _selector_chain(tmp_path)
+    row0 = v17.load_manifest(str(chain["manifest"]),
+                             source_index=str(chain["index"]))[0]
     out = v17.compute_disjointness(
-        [{"canonical_sha1": exact, "game_idx": 12345678, "position_ply": 999}],
-        forbidden=[a_csv])
+        [{**row0, "canonical_sha1": exact}], forbidden=[a_csv],
+        expected_sha1s=v17.expected_forbidden_sha1s(
+            json.loads(chain["sidecar"].read_text())))
     assert out["overlaps"], "an exact canonical collision was missed"
     assert out["overlaps"][0]["canonical_sha1"] == [exact]
 
@@ -1781,21 +1837,22 @@ def test_held_out_requires_stage1_disjointness(clean_tree, tmp_path, monkeypatch
 
 def test_held_out_sharing_a_stage1_game_is_refused(clean_tree, tmp_path,
                                                    monkeypatch):
-    stage1 = _manifest(tmp_path, "development")
-    rows = list(csv.DictReader(open(stage1, newline="")))
+    stage1 = _selector_chain(tmp_path, "development")
     held = _selector_chain(tmp_path, "held_out")
-    held_rows = list(csv.DictReader(open(held["manifest"], newline="")))
-    held_rows[0]["game_idx"] = rows[0]["game_idx"]        # a shared game
-    with open(held["manifest"], "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(held_rows[0]))
-        w.writeheader()
-        w.writerows(held_rows)
+    stage1_rows = v17.load_manifest(str(stage1["manifest"]),
+                                    source_index=str(stage1["index"]))
+    held_loaded = v17.load_manifest(str(held["manifest"]),
+                                    source_index=str(held["index"]))
+    # the SAME replay content under a different index is the same game
+    shared = dict(held_loaded[0])
+    shared["replay_path"] = stage1_rows[0]["replay_path"]
     out = v17.compute_disjointness(
-        [{"canonical_sha1": r["canonical_position_sha1"],
-          "game_idx": int(r["game_idx"]), "position_ply": 50} for r in held_rows],
-        forbidden=[v17.FORBIDDEN_CORPORA[0]],
-        forbidden_games={"stage1": [int(r["game_idx"]) for r in rows]})
+        [shared] + held_loaded[1:], forbidden=[v17.FORBIDDEN_CORPORA[0]],
+        expected_sha1s=v17.expected_forbidden_sha1s(
+            json.loads(held["sidecar"].read_text())),
+        forbidden_game_identities={"stage1": v17.game_identities(stage1_rows)})
     assert out["game_overlaps"]
+    assert out["game_identity"] == "replay_content_sha1"
 
 
 @pytest.mark.parametrize("mode,per_phase", [("development", 4), ("held_out", 8)])
@@ -1899,3 +1956,196 @@ def test_capture_tool_triple_matches_the_frozen_constants():
             cap.PENDING_VIRTUAL_VISITS) == prov.BATCHING
     assert cap.MCTS_SIMS == prov.MCTS_SIMS
     assert cap.CHECKPOINT_ROW_FILTER == "0001"
+
+
+# ---------------------------------------------------------------------------
+# Adversarial round 7: membership is not selection, game_idx is not identity,
+# and unverified forbidden bytes prove nothing.
+# ---------------------------------------------------------------------------
+
+def _relabel(chain, a_role="target", b_role="control"):
+    """Swap the role labels of one a_role row and one b_role row, preserving
+    every count and phase quota -- the exact attack that passed before."""
+    rows = list(csv.DictReader(open(chain["manifest"], newline="")))
+    i = next(k for k, r in enumerate(rows) if r["role"] == a_role)
+    j = next(k for k, r in enumerate(rows)
+             if r["role"] == b_role and r["ply_bucket"] == rows[i]["ply_bucket"])
+    rows[i]["role"], rows[j]["role"] = b_role, a_role
+    with open(chain["manifest"], "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    return rows
+
+
+def test_relabelled_roles_are_refused_by_screen_authentication(tmp_path):
+    """Counts and phase quotas are preserved, so geometry cannot see it. The
+    screen records each position's raw_policy_role, which can."""
+    chain = _selector_chain(tmp_path)
+    _relabel(chain)
+    with pytest.raises(prov.ProtocolViolation, match="authenticated screen "
+                                                     "records"):
+        v17.authenticate_qualification(
+            str(chain["manifest"]), mode="development",
+            source_index=str(chain["index"]), config_path=None, checkpoint=CKPT,
+            post_screen_report=str(chain["report"]))
+
+
+@pytest.mark.parametrize("field,value", [
+    ("side", "black"), ("ply_bucket", "opening"), ("position_ply", "51"),
+    ("game_idx", "123456"),
+])
+def test_altered_manifest_fields_are_refused(tmp_path, field, value):
+    chain = _selector_chain(tmp_path)
+    rows = list(csv.DictReader(open(chain["manifest"], newline="")))
+    rows[0][field] = value
+    with open(chain["manifest"], "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    with pytest.raises(prov.ProtocolViolation):
+        v17.authenticate_qualification(
+            str(chain["manifest"]), mode="development",
+            source_index=str(chain["index"]), config_path=None, checkpoint=CKPT,
+            post_screen_report=str(chain["report"]))
+
+
+@pytest.mark.parametrize("status", ["ineligible_anchor", "ineligible_role",
+                                    "collision"])
+def test_non_kept_screen_rows_cannot_be_selected(tmp_path, status):
+    """The screen holds every proposal; only 'kept' rows were selectable."""
+    chain = _selector_chain(tmp_path)
+    rows = list(csv.DictReader(open(chain["screen"], newline="")))
+    rows[0]["exclusion_status"] = status
+    with open(chain["screen"], "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    # re-point the sidecar at the edited screen so only the status is under test
+    side = json.loads(chain["sidecar"].read_text())
+    side["screen_meta_provenance"]["screen_csv_sha1"] = \
+        fpu_provenance.file_sha1(str(chain["screen"]))
+    chain["sidecar"].write_text(json.dumps(side, sort_keys=True))
+    rep = json.loads(chain["report"].read_text())
+    rep["screen_csv_sha1"] = side["screen_meta_provenance"]["screen_csv_sha1"]
+    chain["report"].write_text(json.dumps(rep, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="not 'kept'|not anchor"):
+        v17.authenticate_qualification(
+            str(chain["manifest"]), mode="development",
+            source_index=str(chain["index"]), config_path=None, checkpoint=CKPT,
+            post_screen_report=str(chain["report"]))
+
+
+def test_selector_config_must_load_through_the_established_loader(tmp_path):
+    """A plausible-looking JSON is not a config: load_v2_config names every
+    required key."""
+    chain = _selector_chain(tmp_path)
+    thin = json.loads(chain["config"].read_text())
+    for key in ("enumerator_params", "expected_fingerprints", "late_floors",
+                "seed_range", "selection_seed"):
+        thin.pop(key, None)
+    chain["config"].write_text(json.dumps(thin, sort_keys=True))
+    side = json.loads(chain["sidecar"].read_text())
+    side["screen_meta_provenance"]["config_sha1"] = \
+        fpu_provenance.file_sha1(str(chain["config"]))
+    chain["sidecar"].write_text(json.dumps(side, sort_keys=True))
+    rep = json.loads(chain["report"].read_text())
+    rep["config_sha1"] = side["screen_meta_provenance"]["config_sha1"]
+    chain["report"].write_text(json.dumps(rep, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="not a valid v2 config"):
+        v17.authenticate_qualification(
+            str(chain["manifest"]), mode="development",
+            source_index=str(chain["index"]), config_path=None, checkpoint=CKPT,
+            post_screen_report=str(chain["report"]))
+
+
+def test_the_real_production_chain_authenticates(tmp_path):
+    """The strongest integration check available: the actual v16 production
+    selector output must pass every authentication step."""
+    d = ("logs/eval/fpu_v16_policy_mass_v2/"
+         "production_v2_b400amend_4000g_seed20300000")
+    out = v17.authenticate_qualification(
+        f"{d}/fpu_dev_corpus_v2_manifest.csv", mode="production",
+        source_index=f"{d}/calib020_0001_vs_0379_4000g_w4_seed20300000_games.jsonl",
+        config_path=None,
+        checkpoint="checkpoints/alphazero-v2-calib020-from0409/"
+                   "model_iter_0001.safetensors",
+        post_screen_report=f"{d}/post_screen_qualification_report.json")
+    assert out["screen_csv_sha1"] and out["selector_config_sha1"]
+
+
+def test_game_identity_is_replay_content_not_index(tmp_path):
+    """Fresh reservoirs both number games from zero, so raw indices invent
+    overlaps and miss renumbered copies."""
+    chain = _selector_chain(tmp_path)
+    rows = v17.load_manifest(str(chain["manifest"]),
+                             source_index=str(chain["index"]))
+    ids = v17.game_identities(rows)
+    assert len(ids) == len(rows)
+    assert all(len(h) == 40 for h in ids)
+    # same content, different index -> SAME game
+    renumbered = [{**rows[0], "game_idx": 999999}]
+    assert set(v17.game_identities(renumbered)) <= set(ids)
+    # different content, same index -> DIFFERENT game
+    other = tmp_path / "other_replay.json"
+    other.write_text(json.dumps({"board_size": 24, "n_moves": 2,
+                                 "moves": [{"row": 9, "col": 9}] * 2}))
+    distinct = [{**rows[0], "replay_path": str(other)}]
+    assert not (set(v17.game_identities(distinct)) & set(ids))
+
+
+def test_unreadable_replay_has_no_game_identity(tmp_path):
+    with pytest.raises(prov.ProtocolViolation, match="game identity"):
+        v17.game_identities([{"replay_path": str(tmp_path / "nope.json")}])
+
+
+def test_forbidden_corpora_bytes_are_authenticated(tmp_path):
+    """These are untracked historical artifacts, so a clean worktree does not
+    protect them; altered bytes could silently remove a collision."""
+    chain = _selector_chain(tmp_path)
+    expected = v17.expected_forbidden_sha1s(
+        json.loads(chain["sidecar"].read_text()))
+    assert set(expected) >= set(v17.FORBIDDEN_CORPORA)
+    v17.authenticate_forbidden_corpora(
+        {p: expected[p] for p in v17.FORBIDDEN_CORPORA})
+    tampered = {**expected, v17.FORBIDDEN_CORPORA[0]: "0" * 40}
+    with pytest.raises(prov.ProtocolViolation, match="altered bytes"):
+        v17.authenticate_forbidden_corpora(
+            {p: tampered[p] for p in v17.FORBIDDEN_CORPORA})
+
+
+def test_abcd_forbidden_hashes_come_from_the_task1_freeze(tmp_path):
+    """The A/B/C/D expectations are the frozen source_sha1s, not a re-read."""
+    with open(v17.ABCD_BASELINE_PATH) as f:
+        frozen = json.load(f)["abcd_frozen_baseline"]
+    chain = _selector_chain(tmp_path)
+    expected = v17.expected_forbidden_sha1s(
+        json.loads(chain["sidecar"].read_text()))
+    for gate in v17.ABCD_GATES:
+        src = frozen[gate]["canonical_source"]
+        assert expected[src] == frozen[gate]["source_sha1"]
+
+
+def test_disjointness_refuses_unauthenticated_forbidden_bytes(tmp_path):
+    chain = _selector_chain(tmp_path)
+    rows = v17.load_manifest(str(chain["manifest"]),
+                             source_index=str(chain["index"]))
+    with pytest.raises(prov.ProtocolViolation, match="authenticated SHA-1"):
+        v17.compute_disjointness(rows, forbidden=list(v17.FORBIDDEN_CORPORA),
+                                 expected_sha1s=None)
+
+
+def test_held_out_authenticates_the_stage1_corpus(clean_tree, tmp_path,
+                                                  monkeypatch):
+    """--stage1-manifest previously accepted any readable CSV."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    stage1 = _selector_chain(tmp_path, "development")
+    bogus = tmp_path / "bogus_stage1.csv"
+    bogus.write_text("canonical_position_sha1,game_idx,position_ply,side,role,"
+                     "ply_bucket,split\np0,1,50,red,target,late,development\n")
+    with pytest.raises(prov.ProtocolViolation):
+        _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.25,
+             stage1_manifest=str(bogus),
+             stage1_source_index=str(stage1["index"]),
+             stage1_post_screen_report=str(stage1["report"]),
+             searcher=_fake_searcher(replies=70))

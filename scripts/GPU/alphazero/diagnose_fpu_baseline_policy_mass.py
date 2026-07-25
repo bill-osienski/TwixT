@@ -186,6 +186,11 @@ ANCHOR_ROLE = "anchor"
 # are NOT inline: they are joined from the authenticated source-index JSONL.
 MANIFEST_REQUIRED_COLUMNS = ("canonical_position_sha1", "game_idx",
                              "position_ply", "side", "role", "ply_bucket")
+# The selector's screen holds EVERY proposal with its eligibility verdict, so
+# it can authenticate role/side/phase -- not merely membership.
+SCREEN_REQUIRED_COLUMNS = ("canonical_sha1", "game_idx", "ply", "side",
+                           "ply_bucket", "raw_policy_role", "anchor_eligible",
+                           "exclusion_status")
 PHASES = ("opening", "early_mid", "midgame", "late")
 # §6.2: zero overlap with all v16 production, v16a neutral, and A/B/C/D
 # positions. Disjointness is COMPUTED against these, never self-attested.
@@ -828,7 +833,9 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
               protocol_path: Optional[str] = None,
               config_path: Optional[str] = None,
               qualification_report: Optional[str] = None,
-              stage1_manifest: Optional[str] = None) -> Dict[str, Any]:
+              stage1_manifest: Optional[str] = None,
+              stage1_source_index: Optional[str] = None,
+              stage1_post_screen_report: Optional[str] = None) -> Dict[str, Any]:
     """Validate every scientific precondition. Costs zero searches.
 
     Returns the resolved {configs, manifest_rows, replay_paths, source_files}.
@@ -886,20 +893,34 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
             manifest_path, mode=mode, source_index=source_index,
             config_path=config_path, checkpoint=checkpoint,
             post_screen_report=qualification_report)
+        sidecar = json.loads(Path(manifest_path + ".meta.json").read_text())
         forbidden = list(FORBIDDEN_CORPORA)
-        forbidden_games: Dict[str, Sequence[int]] = {}
+        expected_sha1s = dict(expected_forbidden_sha1s(sidecar))
+        forbidden_game_identities: Dict[str, Mapping[str, str]] = {}
         if mode == "held_out":
             # §8.1: "Complete game and position disjointness from Stage 1".
-            if not stage1_manifest:
+            if not (stage1_manifest and stage1_source_index):
                 raise prov.ProtocolViolation(
-                    "held-out requires the Stage-1 development manifest to "
-                    "establish complete game and position disjointness (§8.1)")
+                    "held-out requires the Stage-1 development manifest AND its "
+                    "source index to establish complete game and position "
+                    "disjointness (§8.1)")
+            # Stage 1 is EVIDENCE here, so it is authenticated exactly as this
+            # run's own corpus is -- a readable CSV is not proof.
+            authenticate_qualification(
+                stage1_manifest, mode="development",
+                source_index=stage1_source_index, config_path=None,
+                checkpoint=checkpoint,
+                post_screen_report=stage1_post_screen_report)
+            stage1_rows = load_manifest(stage1_manifest,
+                                        source_index=stage1_source_index)
             forbidden.append(stage1_manifest)
-            with open(stage1_manifest, newline="") as f:
-                forbidden_games["stage1_development"] = [
-                    int(r["game_idx"]) for r in csv.DictReader(f)]
-        disjointness = compute_disjointness(manifest_rows, forbidden=forbidden,
-                                            forbidden_games=forbidden_games)
+            expected_sha1s[stage1_manifest] = fpu_provenance.file_sha1(
+                stage1_manifest)
+            forbidden_game_identities["stage1_development"] = game_identities(
+                stage1_rows)
+        disjointness = compute_disjointness(
+            manifest_rows, forbidden=forbidden, expected_sha1s=expected_sha1s,
+            forbidden_game_identities=forbidden_game_identities)
         if disjointness["game_overlaps"]:
             raise prov.ProtocolViolation(
                 f"held-out shares games with Stage 1: "
@@ -1163,6 +1184,48 @@ def bind_protocol_to_runtime(config: Mapping[str, Any], *,
             f"(sha1 {expected})")
 
 
+def expected_forbidden_sha1s(sidecar: Optional[Mapping[str, Any]] = None
+                             ) -> Dict[str, str]:
+    """Frozen SHA-1 per forbidden corpus, from AUTHENTICATED sources only:
+    the A/B/C/D `source_sha1`s inside the Task 1 freeze, and the selector
+    sidecar's `forbidden_manifest_sha1s` for the v16/v16a manifests.
+
+    These files are untracked historical artifacts, so clean-worktree
+    enforcement does not protect them; altered bytes would silently change the
+    collision set.
+    """
+    _authenticate_task1_freeze(ABCD_BASELINE_PATH, ABCD_MOVES_PATH)
+    with open(ABCD_BASELINE_PATH) as f:
+        base = json.load(f)["abcd_frozen_baseline"]
+    expected = {g["canonical_source"]: g["source_sha1"] for g in base.values()}
+    by_name = ((sidecar or {}).get("screen_meta_provenance") or {}).get(
+        "forbidden_manifest_sha1s") or {}
+    for path in FORBIDDEN_CORPORA:
+        if path in expected:
+            continue
+        want = by_name.get(Path(path).name)
+        if not want:
+            raise prov.ProtocolViolation(
+                f"no authenticated SHA-1 is available for forbidden corpus "
+                f"{path}; disjointness against unverified bytes proves nothing")
+        expected[path] = want
+    return expected
+
+
+def authenticate_forbidden_corpora(expected: Mapping[str, str]) -> Dict[str, str]:
+    """Verify every forbidden corpus still has its frozen bytes."""
+    verified: Dict[str, str] = {}
+    for path, want in sorted(expected.items()):
+        actual = fpu_provenance.file_sha1(path)
+        if actual != want:
+            raise prov.ProtocolViolation(
+                f"forbidden corpus {path} has SHA-1 {actual}, expected the "
+                f"frozen {want}; altered bytes could silently remove a "
+                f"collision")
+        verified[path] = actual
+    return verified
+
+
 def forbidden_position_hashes(path: str) -> set:
     """Canonical position hashes for one forbidden corpus.
 
@@ -1212,34 +1275,68 @@ def forbidden_position_hashes(path: str) -> set:
     return out
 
 
+def game_identities(manifest_rows: Sequence[Mapping[str, Any]]) -> Dict[str, str]:
+    """Cross-reservoir game identity: the SHA-1 of the replay's own bytes.
+
+    `game_idx` is reservoir-local -- every fresh match JSONL numbers games from
+    zero -- so comparing raw indices across two independent reservoirs both
+    invents overlaps and misses a copied game that was renumbered. Two games
+    are the same game iff their replay content is the same.
+    """
+    out: Dict[str, str] = {}
+    for r in manifest_rows:
+        path = r["replay_path"]
+        sha1 = fpu_provenance.file_sha1(path)
+        if sha1 in prov.SENTINEL_HASHES:
+            raise prov.ProtocolViolation(
+                f"replay {path} is unreadable, so its game identity cannot be "
+                f"established")
+        out[sha1] = path
+    return out
+
+
 def compute_disjointness(manifest_rows: Sequence[Mapping[str, Any]], *,
                          forbidden: Sequence[str],
-                         forbidden_games: Optional[Mapping[str, Sequence[int]]] = None
+                         expected_sha1s: Optional[Mapping[str, str]] = None,
+                         forbidden_game_identities:
+                             Optional[Mapping[str, Mapping[str, str]]] = None
                          ) -> Dict[str, Any]:
-    """The §12 disjointness result, COMPUTED from the corpora.
+    """The §12 disjointness result, COMPUTED from authenticated corpora.
 
-    Position identity is the canonical state hash. `forbidden_games` adds
-    §8.1's complete GAME disjointness: held-out may share no game with the
-    Stage-1 development corpus, not merely no position.
+    Position identity is the canonical state hash; GAME identity is the
+    replay-content hash. `expected_sha1s` pins the forbidden bytes so an
+    altered file cannot silently drop a collision.
     """
     if not forbidden:
         raise prov.ProtocolViolation(
             "disjointness requires a non-empty forbidden corpus set")
+    if expected_sha1s is None:
+        raise prov.ProtocolViolation(
+            "disjointness requires the authenticated SHA-1 of every forbidden "
+            "corpus; reading unverified bytes proves nothing")
+    missing = sorted(set(forbidden) - set(expected_sha1s))
+    if missing:
+        raise prov.ProtocolViolation(
+            f"no authenticated SHA-1 for forbidden corpora {missing}")
+    verified = authenticate_forbidden_corpora(
+        {p: expected_sha1s[p] for p in forbidden})
     mine_sha = {r["canonical_sha1"] for r in manifest_rows}
-    mine_games = {int(r["game_idx"]) for r in manifest_rows}
+    mine_games = game_identities(manifest_rows)
     overlaps: List[Dict[str, Any]] = []
     for path in forbidden:
         hit = sorted(mine_sha & forbidden_position_hashes(path))
         if hit:
             overlaps.append({"corpus": path, "canonical_sha1": hit[:5]})
     game_overlaps: List[Dict[str, Any]] = []
-    for label, games in (forbidden_games or {}).items():
-        shared = sorted(mine_games & {int(g) for g in games})
+    for label, identities in (forbidden_game_identities or {}).items():
+        shared = sorted(set(mine_games) & set(identities))
         if shared:
-            game_overlaps.append({"corpus": label, "games": shared[:5]})
-    return {"forbidden_corpora": list(forbidden), "overlaps": overlaps,
-            "forbidden_game_sources": sorted(forbidden_games or {}),
+            game_overlaps.append({"corpus": label, "replay_sha1": shared[:5]})
+    return {"forbidden_corpora": list(forbidden),
+            "forbidden_corpus_sha1s": verified, "overlaps": overlaps,
+            "forbidden_game_sources": sorted(forbidden_game_identities or {}),
             "game_overlaps": game_overlaps,
+            "game_identity": "replay_content_sha1",
             "checked_positions": len(manifest_rows),
             "checked_games": len(mine_games)}
 
@@ -1318,8 +1415,21 @@ def authenticate_qualification(manifest_path: str, *, mode: str,
             f"selector config {selector_config} has SHA-1 {actual_cfg_sha1}, but "
             f"the selector recorded {prov_block['config_sha1']}")
 
+    # the selector CONFIG must load through the ESTABLISHED loader, which
+    # names every required key -- a plausible-looking JSON is not a config
+    from .fpu_dev_corpus_v2 import load_v2_config
+    try:
+        load_v2_config(selector_config)
+    except ValueError as exc:
+        raise prov.ProtocolViolation(
+            f"selector config {selector_config} is not a valid v2 config: "
+            f"{exc}") from exc
+
     # the SCREEN must still be the bytes the selector selected from, and every
-    # selected position must appear in it
+    # selected row must be a KEPT, ANCHOR-ELIGIBLE screen row of the SAME role,
+    # side and phase. Membership alone proves nothing: the screen holds every
+    # proposal, including ineligible_anchor, ineligible_role and collision
+    # rows, so a relabelled target/control pair passed while preserving counts.
     screen_csv = sidecar["screen_csv"]
     actual_screen_sha1 = fpu_provenance.file_sha1(screen_csv)
     if actual_screen_sha1 != prov_block["screen_csv_sha1"]:
@@ -1328,18 +1438,43 @@ def authenticate_qualification(manifest_path: str, *, mode: str,
             f"selector recorded {prov_block['screen_csv_sha1']}")
     try:
         with open(screen_csv, newline="") as f:
-            screened = {r.get("canonical_position_sha1") or r.get("canonical_sha1")
-                        for r in csv.DictReader(f)}
+            screen_rows = list(csv.DictReader(f))
     except OSError as exc:
         raise prov.ProtocolViolation(
             f"screen {screen_csv} is not readable: {exc}") from exc
-    unscreened = sorted({r["canonical_position_sha1"] for r in manifest_rows}
-                        - screened)
-    if unscreened:
+    missing_cols = sorted(set(SCREEN_REQUIRED_COLUMNS) - set(screen_rows[0] if
+                                                             screen_rows else {}))
+    if missing_cols:
         raise prov.ProtocolViolation(
-            f"{len(unscreened)} manifest position(s) are absent from the "
-            f"authenticated screen, e.g. {unscreened[:3]}; the manifest was "
-            f"copied, edited, or built from a different screen")
+            f"screen {screen_csv} is missing columns {missing_cols}; it is not "
+            f"the selector's screen")
+    by_position = {(r["canonical_sha1"], int(r["game_idx"]),
+                    int(float(r["ply"]))): r for r in screen_rows}
+    for row in manifest_rows:
+        key = (row["canonical_position_sha1"], int(row["game_idx"]),
+               int(float(row["position_ply"])))
+        screened = by_position.get(key)
+        if screened is None:
+            raise prov.ProtocolViolation(
+                f"manifest position {key} is absent from the authenticated "
+                f"screen; the manifest was copied, edited, or built from a "
+                f"different screen")
+        if screened["exclusion_status"] != "kept":
+            raise prov.ProtocolViolation(
+                f"manifest position {key} has screen exclusion_status "
+                f"{screened['exclusion_status']!r}, not 'kept'; it was never "
+                f"selectable")
+        if screened["anchor_eligible"] != "True":
+            raise prov.ProtocolViolation(
+                f"manifest position {key} is not anchor-eligible in the screen")
+        for manifest_key, screen_key in (("role", "raw_policy_role"),
+                                         ("side", "side"),
+                                         ("ply_bucket", "ply_bucket")):
+            if row[manifest_key] != screened[screen_key]:
+                raise prov.ProtocolViolation(
+                    f"manifest position {key} claims {manifest_key}="
+                    f"{row[manifest_key]!r}, but the authenticated screen "
+                    f"records {screened[screen_key]!r}")
     if int(sidecar["n_rows"]) != len(manifest_rows):
         raise prov.ProtocolViolation(
             f"selector sidecar records {sidecar['n_rows']} rows, manifest has "
@@ -1628,6 +1763,8 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                    config_path: Optional[str] = None,
                    qualification_report: Optional[str] = None,
                    stage1_manifest: Optional[str] = None,
+                   stage1_source_index: Optional[str] = None,
+                   stage1_post_screen_report: Optional[str] = None,
                    searcher=None) -> Dict[str, Any]:
     """Search, gate and emit. Every precondition is checked in `preflight`
     before an evaluator is loaded."""
@@ -1647,7 +1784,9 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                     frozen_coefficient=frozen_coefficient,
                     protocol_path=protocol_path, config_path=config_path,
                     qualification_report=qualification_report,
-                    stage1_manifest=stage1_manifest)
+                    stage1_manifest=stage1_manifest,
+                    stage1_source_index=stage1_source_index,
+                    stage1_post_screen_report=stage1_post_screen_report)
     configs, manifest_rows = pre["configs"], pre["manifest_rows"]
     if searcher is None:                                    # pragma: no cover
         searcher = _real_searcher(checkpoint, seed_base)
@@ -1731,6 +1870,8 @@ def _parse_args(argv=None):
     ap.add_argument("--source-index", default=None)
     ap.add_argument("--qualification-report", default=None)
     ap.add_argument("--stage1-manifest", default=None)
+    ap.add_argument("--stage1-source-index", default=None)
+    ap.add_argument("--stage1-post-screen-report", default=None)
     ap.add_argument("--protocol", default=None)
     ap.add_argument("--config", default=None)
     ap.add_argument("--out", required=True)
@@ -1752,7 +1893,9 @@ def main(argv=None) -> int:
             seed_base=args.seed_base, source_index=args.source_index,
             protocol_path=args.protocol, config_path=args.config,
             qualification_report=args.qualification_report,
-            stage1_manifest=args.stage1_manifest)
+            stage1_manifest=args.stage1_manifest,
+            stage1_source_index=args.stage1_source_index,
+            stage1_post_screen_report=args.stage1_post_screen_report)
     except prov.ProtocolViolation as exc:
         print(f"PROTOCOL VIOLATION: {exc}")
         return protocol.EXIT_USAGE
