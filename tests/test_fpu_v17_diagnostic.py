@@ -374,20 +374,41 @@ def test_heldout_transfer_floor_boundary():
                v17.heldout_verdict(below, 0.25, shipped_lockin=0).reasons)
 
 
-def test_heldout_floor_at_exactly_twenty_percent_by_count_is_ulp_fragile():
-    """Documents real, faithful behaviour rather than papering over it.
+def test_exactly_twenty_percent_by_count_passes_the_floor():
+    """Mathematical conformance, not a threshold change.
 
-    §7.0 freezes the aggregate as `1 - sum(candidate)/sum(shipped)`. At an
-    exactly-20%-by-count reduction that evaluates to 0.19999999999999996 in
-    IEEE754, just below the §8.2 floor, so the gate REJECTS. The 50% gate is
-    unaffected because 0.5 is exactly representable. This is not changed here:
-    the formula is frozen, and silently widening it would be a deviation.
+    §7.0's frozen aggregate is still what every artifact REPORTS, but the gate
+    DECISION uses exact integer arithmetic: `1 - 80/100` is
+    0.19999999999999996 in IEEE754 and would reject a reduction that is exactly
+    20% by count. The reported float is unchanged.
     """
-    assert 1 - 80 / 100 < v17.HELDOUT_REPLY_REDUCTION
-    assert 1 - 50 / 100 >= v17.DEV_REPLY_REDUCTION
-    at_count_boundary = corpus(configs=(None, 0.25), replies=80)
-    assert not v17.heldout_verdict(at_count_boundary, 0.25,
-                                   shipped_lockin=0).passed
+    assert 1 - 80 / 100 < 0.20                       # the float really is below
+    at_boundary = corpus(configs=(None, 0.25), replies=80)
+    res = v17.heldout_verdict(at_boundary, 0.25, shipped_lockin=0)
+    assert res.passed
+    assert res.metrics["heldout_reply_reduction_exact"] == "1/5"
+    assert res.metrics["heldout_reply_reduction"] == 1 - 80 / 100   # still frozen
+
+
+def test_exact_arithmetic_also_governs_the_attenuation_classification():
+    """An exactly-50% reduction is NOT attenuated; a hair under it is."""
+    exact_half = corpus(configs=(None, 0.25), replies=50)
+    assert v17.heldout_verdict(exact_half, 0.25,
+                               shipped_lockin=0).metrics[
+                                   "attenuated_but_present"] is False
+    just_under = corpus(configs=(None, 0.25), replies=51)
+    assert v17.heldout_verdict(just_under, 0.25,
+                               shipped_lockin=0).metrics[
+                                   "attenuated_but_present"] is True
+
+
+def test_exact_arithmetic_governs_the_development_fifty_percent_gate():
+    at = corpus(configs=(None, 0.35), replies=50, eff_children=70.0)
+    below = corpus(configs=(None, 0.35), replies=51, eff_children=70.0)
+    assert v17.dev_mechanism_verdict(at, 0.35).passed
+    assert v17.dev_mechanism_verdict(at, 0.35).metrics[
+        "reply_reduction_exact"] == "1/2"
+    assert not v17.dev_mechanism_verdict(below, 0.35).passed
 
 
 def test_heldout_classifies_attenuated_but_present():
@@ -418,10 +439,12 @@ def _a_rows(reply_red=0.6, prog=0.6, collapse=0, tsi=0.0):
             for i in range(30)]
 
 
+R = 0.25   # a frozen grid point; A/B/C/D always runs one
+
+
 def test_a_gate_passes_only_when_every_criterion_holds():
-    ok = v17.abcd_verdict("A", n=30, mean=-0.1, over=3, severe=5,
-                          a_rows=_a_rows())
-    assert ok.passed
+    assert v17.abcd_verdict("A", coefficient=R, n=30, mean=-0.1, over=15,
+                            severe=5, a_rows=_a_rows()).passed
 
 
 @pytest.mark.parametrize("kwargs,expect", [
@@ -429,16 +452,17 @@ def test_a_gate_passes_only_when_every_criterion_holds():
     (dict(mean=-0.1, severe=6), "A_severe"),
 ])
 def test_a_gate_count_criteria(kwargs, expect):
-    res = v17.abcd_verdict("A", n=30, over=3, a_rows=_a_rows(), **kwargs)
+    res = v17.abcd_verdict("A", coefficient=R, n=30, over=15,
+                           a_rows=_a_rows(), **kwargs)
     assert any(expect in x for x in res.reasons)
 
 
 def test_a_severe_boundary_is_five_not_six():
     """§9 was corrected pre-freeze from <=6/30 to <=5/30 (v14b parity)."""
-    assert v17.abcd_verdict("A", n=30, mean=-0.1, over=3, severe=5,
-                            a_rows=_a_rows()).passed
-    assert not v17.abcd_verdict("A", n=30, mean=-0.1, over=3, severe=6,
-                                a_rows=_a_rows()).passed
+    assert v17.abcd_verdict("A", coefficient=R, n=30, mean=-0.1, over=15,
+                            severe=5, a_rows=_a_rows()).passed
+    assert not v17.abcd_verdict("A", coefficient=R, n=30, mean=-0.1, over=15,
+                                severe=6, a_rows=_a_rows()).passed
 
 
 @pytest.mark.parametrize("gate,ok,bad", [
@@ -456,18 +480,65 @@ def test_a_severe_boundary_is_five_not_six():
      dict(n=30, mean=0.0, over=4, severe=1)),
 ])
 def test_bcd_boundaries(gate, ok, bad):
-    assert v17.abcd_verdict(gate, **ok).passed
-    assert not v17.abcd_verdict(gate, **bad).passed
+    assert v17.abcd_verdict(gate, coefficient=R, **ok).passed
+    assert not v17.abcd_verdict(gate, coefficient=R, **bad).passed
 
 
 def test_a_gate_requires_case_rows():
     with pytest.raises(prov.ProtocolViolation, match="per-case rows"):
-        v17.abcd_verdict("A", n=30, mean=-0.1, over=3, severe=5)
+        v17.abcd_verdict("A", coefficient=R, n=30, mean=-0.1, over=15, severe=5)
 
 
 def test_unknown_abcd_gate_refused():
     with pytest.raises(prov.ProtocolViolation, match="unknown A/B/C/D gate"):
-        v17.abcd_verdict("E", n=1, mean=0.0, over=0, severe=0)
+        v17.abcd_verdict("E", coefficient=R, n=1, mean=0.0, over=0, severe=0)
+
+
+# --- frozen cardinalities and scalar sanity (adversarial round 2) ----------
+
+@pytest.mark.parametrize("gate,frozen_n", [("A", 30), ("B", 18), ("C", 30), ("D", 30)])
+def test_abcd_cardinality_is_frozen(gate, frozen_n):
+    """B previously passed with n=1: a truncated case set must be a refusal,
+    never a pass on fewer cases."""
+    assert v17.ABCD_CARDINALITY[gate] == frozen_n
+    for bad_n in (1, frozen_n - 1, frozen_n + 1):
+        with pytest.raises(prov.ProtocolViolation, match="frozen cardinality"):
+            v17.abcd_verdict(gate, coefficient=R, n=bad_n, mean=0.0, over=0,
+                             severe=0, a_rows=_a_rows())
+
+
+def test_a_case_rows_must_match_the_frozen_cardinality():
+    with pytest.raises(prov.ProtocolViolation, match="frozen cardinality"):
+        v17.abcd_verdict("A", coefficient=R, n=30, mean=-0.1, over=15, severe=5,
+                         a_rows=_a_rows()[:29])
+
+
+@pytest.mark.parametrize("bad", [
+    dict(over=-1, severe=0), dict(over=31, severe=0), dict(over=True, severe=0),
+    dict(over=5, severe=6),          # severe must be a subset of over
+])
+def test_abcd_counts_must_be_valid_integers(bad):
+    with pytest.raises(prov.ProtocolViolation):
+        v17.abcd_verdict("C", coefficient=R, n=30, mean=0.0, **bad)
+
+
+@pytest.mark.parametrize("mean", [float("nan"), float("inf"), "0.0", True])
+def test_abcd_mean_must_be_finite(mean):
+    with pytest.raises(prov.ProtocolViolation, match="must be finite"):
+        v17.abcd_verdict("C", coefficient=R, n=30, mean=mean, over=0, severe=0)
+
+
+@pytest.mark.parametrize("bad", [None, 0.0, 0.30])
+def test_abcd_requires_one_frozen_positive_coefficient(bad):
+    with pytest.raises(prov.ProtocolViolation):
+        v17.abcd_verdict("C", coefficient=bad, n=30, mean=0.0, over=0, severe=0)
+
+
+def test_abcd_gate_result_records_the_real_coefficient():
+    """A NaN coefficient cannot appear in canonical no-NaN JSON."""
+    res = v17.abcd_verdict("C", coefficient=R, n=30, mean=0.0, over=0, severe=0)
+    assert res.coefficient == R
+    json.dumps(res.coefficient, allow_nan=False)
 
 
 # ---------------------------------------------------------------------------
@@ -481,7 +552,12 @@ def _artifact(mode, tmp_path, **over):
     index.write_text("{}")
     replay = tmp_path / "r.json"
     replay.write_text('{"moves": []}')
-    kwargs = dict(mode=mode, coefficient=0.25, rows=[], gates={},
+    coefficient = over.pop("coefficient", 0.25)
+    configs = v17.configs_for_mode(
+        mode, frozen_coefficient=None if mode in ("development", "tooling_smoke")
+        else coefficient)
+    kwargs = dict(mode=mode, coefficient=coefficient,
+                  rows=corpus(configs=configs), gates={},
                   checkpoints={"a": CKPT}, manifest=str(manifest),
                   source_index=str(index), replay_paths=[str(replay)],
                   source_files=[SRC])
@@ -498,16 +574,47 @@ def test_scientific_artifact_populates_every_identity(clean_tree, tmp_path):
     assert art["provenance"]["source_file_sha1s"]["mcts.py"]
 
 
+def test_scientific_artifact_persists_the_complete_paired_rows(clean_tree, tmp_path):
+    """A count alone would make every gate number unauditable."""
+    art = _artifact("held_out", tmp_path)
+    assert art["n_rows"] == len(art["rows"]) == 64      # 32 positions x 2 configs
+    for row in art["rows"]:
+        assert set(row) == set(v17.REQUIRED_ROW_FIELDS)
+    json.dumps(art, allow_nan=False)                    # canonical-JSON safe
+
+
 @pytest.mark.parametrize("null", ["manifest", "source_index", "replay_paths",
-                                  "checkpoints", "source_files"])
+                                  "checkpoints", "source_files", "rows"])
 @pytest.mark.parametrize("mode", ["development", "held_out", "abcd"])
 def test_scientific_artifact_refuses_a_null_identity(clean_tree, tmp_path, mode, null):
-    with pytest.raises(prov.ProtocolViolation, match="must populate"):
-        _artifact(mode, tmp_path, **{null: None if null != "checkpoints" else {}})
+    empty = {"checkpoints": {}, "rows": [], "source_files": []}.get(null, None)
+    with pytest.raises(prov.ProtocolViolation, match="must p"):
+        _artifact(mode, tmp_path, **{null: empty})
+
+
+def test_artifact_enforces_mode_coefficient_legality(clean_tree, tmp_path):
+    for bad in (None, 0.0, 0.30):
+        with pytest.raises(prov.ProtocolViolation):
+            _artifact("held_out", tmp_path, coefficient=bad)
+
+
+def test_artifact_runs_pairing_and_zero_identity_itself(clean_tree, tmp_path):
+    configs = (None, 0.0) + tuple(prov.GRID)
+    rows = corpus(configs=configs)
+    rows = [r for r in rows if not (r["canonical_sha1"] == "pos000"
+                                    and r["coefficient"] == 0.45)]
+    with pytest.raises(prov.ProtocolViolation, match="incomplete pairing"):
+        _artifact("development", tmp_path, coefficient=None, rows=rows)
+    broken = corpus(configs=configs)
+    for r in broken:
+        if r["coefficient"] == 0.0 and r["canonical_sha1"] == "pos000":
+            r["selected_move"] = 99
+    with pytest.raises(prov.ProtocolViolation, match="r=0 identity FAILED"):
+        _artifact("development", tmp_path, coefficient=None, rows=broken)
 
 
 def test_tooling_smoke_artifact_may_omit_identities(clean_tree, tmp_path):
-    art = v17.build_artifact(mode="tooling_smoke", coefficient=0.35, rows=[],
+    art = v17.build_artifact(mode="tooling_smoke", coefficient=None, rows=[],
                              gates={}, checkpoints={})
     assert art["provenance"]["scientific_interpretation_forbidden"] is True
 
@@ -522,44 +629,129 @@ def test_artifact_is_timestamp_free(clean_tree, tmp_path):
 # CLI / config refusals
 # ---------------------------------------------------------------------------
 
-def _cli(monkeypatch, **over):
+def _cli(monkeypatch, tmp_path, **over):
     monkeypatch.setattr(fpu_provenance, "worktree_clean", lambda: True)
+    manifest = tmp_path / "m.csv"
+    manifest.write_text("canonical_sha1,game_idx,position_ply,side,role,"
+                        "replay_path\np0,1,50,red,target,r.json\n")
     args = ["--mode", "development", "--checkpoint", CKPT,
-            "--out-dir", prov.OUTPUT_ROOT + "/x"]
+            "--manifest", str(manifest), "--seed-base", "20260725",
+            "--out", prov.OUTPUT_ROOT + "/x.json"]
     for k, v in over.items():
         args += [f"--{k.replace('_', '-')}", str(v)]
     return v17.main(args)
 
 
-def test_cli_accepts_the_frozen_configuration(monkeypatch):
-    assert _cli(monkeypatch) == 0
-
-
 @pytest.mark.parametrize("override", [
     {"eval_batch_size": 16}, {"stall_flush_sims": 16}, {"stall_flush_sims": 0},
 ])
-def test_cli_refuses_free_batching_overrides(monkeypatch, override, capsys):
+def test_cli_refuses_free_batching_overrides(monkeypatch, tmp_path, override, capsys):
     """§2.4: free CLI overrides are rejected, not honoured."""
-    assert _cli(monkeypatch, **override) == 2
+    assert _cli(monkeypatch, tmp_path, **override) == 2
     assert "batching" in capsys.readouterr().out
 
 
-def test_cli_refuses_a_v16_output_root(monkeypatch, capsys):
-    assert _cli(monkeypatch, out_dir="logs/eval/fpu_v16_policy_mass_v2") == 2
+def test_cli_refuses_a_v16_output_root(monkeypatch, tmp_path, capsys):
+    assert _cli(monkeypatch, tmp_path,
+                out="logs/eval/fpu_v16_policy_mass_v2/x.json") == 2
     assert "v17 root" in capsys.readouterr().out
 
 
-def test_cli_refuses_a_dirty_tree_for_scientific_modes(monkeypatch, capsys):
+def test_cli_refuses_a_dirty_tree_for_scientific_modes(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(fpu_provenance, "worktree_clean", lambda: False)
-    args = ["--mode", "development", "--checkpoint", CKPT,
-            "--out-dir", prov.OUTPUT_ROOT + "/x"]
-    assert v17.main(args) == 2
+    manifest = tmp_path / "m.csv"
+    manifest.write_text("canonical_sha1,game_idx,position_ply,side,role,"
+                        "replay_path\np0,1,50,red,target,r.json\n")
+    assert v17.main(["--mode", "development", "--checkpoint", CKPT,
+                     "--manifest", str(manifest), "--seed-base", "1",
+                     "--out", prov.OUTPUT_ROOT + "/x.json"]) == 2
     assert "clean worktree" in capsys.readouterr().out
 
 
-def test_cli_refuses_a_coefficient_in_development(monkeypatch, capsys):
-    assert _cli(monkeypatch, frozen_coefficient=0.25) == 2
+def test_cli_refuses_a_coefficient_in_development(monkeypatch, tmp_path, capsys):
+    assert _cli(monkeypatch, tmp_path, frozen_coefficient=0.25) == 2
     assert "SELECTS" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# End-to-end through run_diagnostic with an injected searcher: the real
+# pipeline -- manifest -> rows -> validation -> gates -> artifact -- with no GPU
+# ---------------------------------------------------------------------------
+
+def _manifest(tmp_path, n=32):
+    path = tmp_path / "manifest.csv"
+    lines = ["canonical_sha1,game_idx,position_ply,side,role,replay_path"]
+    for i in range(n):
+        replay = tmp_path / f"replay{i}.json"
+        replay.write_text('{"moves": []}')
+        role = "target" if i < n // 2 else "control"
+        lines.append(f"pos{i},{i},50,red,{role},{replay}")
+    path.write_text("\n".join(lines) + "\n")
+    return path
+
+
+def _fake_searcher(**cand):
+    def search(manifest_row, coefficient):
+        over = dict(cand) if (coefficient is not None and coefficient != 0.0) else {}
+        return row(manifest_row["canonical_sha1"], coefficient,
+                   role=manifest_row["role"], **over)
+    return search
+
+
+def test_run_diagnostic_end_to_end_emits_a_complete_artifact(clean_tree, tmp_path,
+                                                             monkeypatch):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    out = tmp_path / "development.json"
+    art = v17.run_diagnostic(
+        mode="development", manifest_path=str(_manifest(tmp_path)),
+        checkpoint=CKPT, out_path=str(out), seed_base=20260725,
+        source_index=str(_manifest(tmp_path)),
+        searcher=_fake_searcher(replies=10, eff_children=70.0))
+    assert out.exists()
+    assert art["n_rows"] == len(art["rows"]) == 32 * 7    # 32 positions x 7 configs
+    assert sorted(art["gates"]) == [str(g) for g in sorted(prov.GRID)]
+    assert art["coefficient"] == 0.15                       # smallest passing
+    assert art["provenance"]["identities"]["replay_data_sha1"]
+    json.dumps(art, allow_nan=False)
+
+
+def test_run_diagnostic_refuses_a_broken_zero_identity(clean_tree, tmp_path,
+                                                       monkeypatch):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+
+    def bad(manifest_row, coefficient):
+        r = row(manifest_row["canonical_sha1"], coefficient,
+                role=manifest_row["role"])
+        if coefficient == 0.0:
+            r["selected_move"] = 99
+        return r
+    with pytest.raises(prov.ProtocolViolation, match="r=0 identity FAILED"):
+        v17.run_diagnostic(mode="development",
+                           manifest_path=str(_manifest(tmp_path)),
+                           checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
+                           seed_base=1, source_index=str(_manifest(tmp_path)),
+                           searcher=bad)
+
+
+def test_run_diagnostic_held_out_runs_one_coefficient(clean_tree, tmp_path,
+                                                      monkeypatch):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    art = v17.run_diagnostic(
+        mode="held_out", manifest_path=str(_manifest(tmp_path)),
+        checkpoint=CKPT, out_path=str(tmp_path / "h.json"),
+        frozen_coefficient=0.25, seed_base=1,
+        source_index=str(_manifest(tmp_path)),
+        searcher=_fake_searcher(replies=70))
+    assert art["configs"] == [None, 0.25]
+    assert art["gates"]["held_out"]["passed"] is True
+    assert art["gates"]["held_out"]["metrics"]["attenuated_but_present"] is True
+
+
+def test_manifest_missing_columns_refused(tmp_path):
+    bad = tmp_path / "bad.csv"
+    bad.write_text("canonical_sha1\np0\n")
+    with pytest.raises(prov.ProtocolViolation, match="missing columns"):
+        v17.load_manifest(str(bad))
 
 
 # ---------------------------------------------------------------------------
@@ -597,17 +789,15 @@ def test_v16_dev_safety_verdicts_unchanged_by_the_parameterization():
 # accepts rather than what it rejects.
 # ---------------------------------------------------------------------------
 
-def test_selection_grid_cannot_be_widened():
-    """§13 forbids extending the grid. The `grid` argument exists so a test can
-    exercise a subset, never so a caller can add a coefficient."""
-    rows = corpus(configs=(None, 0.0, 0.55))
-    with pytest.raises(prov.ProtocolViolation, match="outside the frozen grid"):
-        v17.select_smallest_passing(rows, shipped_lockin=0, grid=[0.55])
-    with pytest.raises(prov.ProtocolViolation, match="outside the frozen grid"):
-        v17.select_smallest_passing(rows, shipped_lockin=0, grid=[0.25, 0.30])
-    # a genuine subset is still fine
-    v17.select_smallest_passing(corpus(configs=(None, 0.25)), shipped_lockin=0,
-                                grid=[0.25])
+def test_selection_evaluates_exactly_the_frozen_grid():
+    """The grid is not a parameter at all. It can be neither widened (§13
+    forbids extending) nor narrowed -- evaluating fewer points would let a
+    caller hide a passing smaller coefficient and select a larger one."""
+    import inspect
+    assert "grid" not in inspect.signature(v17.select_smallest_passing).parameters
+    _chosen, table = v17.select_smallest_passing(
+        corpus(configs=(None, 0.0) + tuple(prov.GRID)), shipped_lockin=0)
+    assert sorted(table) == sorted(prov.GRID)
 
 
 def test_heldout_refuses_an_off_grid_coefficient():
@@ -631,7 +821,7 @@ def test_negative_counts_are_refused_by_the_gates_directly(field, value):
     """Defence in depth: require_complete_pairing is the front door, but a gate
     called directly must still refuse rather than aggregate corrupt rows."""
     rows = corpus(configs=(None, 0.35), **{field: value})
-    with pytest.raises(prov.ProtocolViolation, match="negative"):
+    with pytest.raises(prov.ProtocolViolation, match="must be"):
         v17.dev_mechanism_verdict(rows, 0.35)
     with pytest.raises(prov.ProtocolViolation):
         v17.require_complete_pairing(rows, (None, 0.35))
@@ -648,7 +838,8 @@ def test_zero_shipped_denominator_is_invalid_not_an_automatic_pass():
 def test_candidate_without_a_shipped_partner_is_refused_at_the_gate():
     rows = corpus(configs=(None, 0.35))
     rows.append(row("ghost", 0.35))
-    with pytest.raises(prov.ProtocolViolation, match="without a shipped partner"):
+    # the centralized validator catches it first, as incomplete pairing
+    with pytest.raises(prov.ProtocolViolation, match="incomplete pairing"):
         v17.dev_mechanism_verdict(rows, 0.35)
 
 
