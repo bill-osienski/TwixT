@@ -10,6 +10,7 @@ No GPU, no evaluator, no checkpoint weights.
 """
 import csv
 import json
+import pathlib
 
 import pytest
 
@@ -32,8 +33,9 @@ def clean_tree(monkeypatch):
 # Row fabrication
 # ---------------------------------------------------------------------------
 
-def row(sha, coefficient, role="target", side="red", **over):
-    base = dict(canonical_sha1=sha, role=role, side=side, coefficient=coefficient,
+def row(sha, coefficient, role="target", side="red", ply_bucket="late", **over):
+    base = dict(canonical_sha1=sha, role=role, side=side,
+                ply_bucket=ply_bucket, coefficient=coefficient,
                 seed=1234, add_noise=False,
                 selected_move=1, selected_prior=0.02, selected_prior_rank=1,
                 root_value_stm=0.0, parent_value=0.0, selected_child_q=0.0,
@@ -55,7 +57,9 @@ def corpus(n_targets=16, n_controls=16, configs=(None, 0.0), **cand):
         role = "target" if i < n_targets else "control"
         for c in configs:
             over = dict(cand) if (c is not None and c != 0.0) else {}
-            rows.append(row(sha, c, role=role,
+            bucket = "late" if i < n_targets else v17.PHASES[
+                (i - n_targets) % 4]
+            rows.append(row(sha, c, role=role, ply_bucket=bucket,
                             side="red" if i % 2 == 0 else "black", **over))
     return rows
 
@@ -649,7 +653,9 @@ def _manifest_rows(mode, **over):
         for _ in range(count):
             rows.append({"role": role, "side": "red" if i % 2 == 0 else "black",
                          "canonical_sha1": f"p{i:03d}", "game_idx": i,
-                         "position_ply": 50})
+                         "position_ply": 50,
+                         "ply_bucket": "late" if role == "target"
+                         else v17.PHASES[len(rows) % 4]})
             i += 1
     for k, v in over.items():
         rows[0][k] = v
@@ -799,55 +805,131 @@ SEEDS = {"development": (20310000, 1600), "held_out": (20312000, 2200),
          "tooling_smoke": (20309000, 32)}
 
 
-def _manifest(tmp_path, mode="development"):
-    """A manifest in the ESTABLISHED selector schema and the mode's frozen
-    geometry: `canonical_position_sha1`, no inline replay_path. Game indices
-    are far outside the real corpora so disjointness is genuinely clean."""
+def _selector_chain(tmp_path, mode="development"):
+    """A COMPLETE, self-consistent selector artifact chain in the real shapes:
+    replays -> source index JSONL -> screen CSV -> selector config -> manifest
+    (+ .meta.json sidecar) -> post-screen qualification report.
+
+    Every recorded SHA-1 is the real hash of the file it names, so the
+    diagnostic's authentication chain is exercised end to end rather than
+    against a fabricated stand-in.
+    """
     geometry = v17.CORPUS_GEOMETRY[mode]
-    path = tmp_path / f"manifest_{mode}.csv"
-    index = tmp_path / f"source_index_{mode}.jsonl"
-    lines = ["canonical_position_sha1,game_idx,position_ply,side,role,split"]
-    index_lines = []
+    n_targets = geometry.get("target", 0)
+    n_controls = geometry.get("control", 0)
+    per_phase = (v17.CONTROL_PHASE_QUOTA.get(mode) or {}).get("opening", 0)
+
+    rows, index_lines = [], []
     i = 0
-    for role, count in geometry.items():
-        for _ in range(count):
-            game = 900000 + i
-            replay = tmp_path / f"replay{i}.json"
-            replay.write_text(json.dumps(
-                {"board_size": 24, "n_moves": 60,
-                 "moves": [{"row": 1, "col": 1}] * 60}))
-            side = "red" if i % 2 == 0 else "black"
-            lines.append(f"v17pos{i:03d},{game},50,{side},{role},{mode}")
-            index_lines.append(json.dumps(
-                {"game_idx": game, "n_moves": 60, "winner": "red",
-                 "replay_path": str(replay)}))
-            i += 1
-    path.write_text("\n".join(lines) + "\n")
+    # distinct game ranges per mode: §8.1 forbids held-out sharing ANY game
+    # with Stage 1, and the fixture must not violate the rule it exercises.
+    game_base = {"development": 900000, "held_out": 950000,
+                 "tooling_smoke": 970000}[mode]
+
+    def add(role, bucket):
+        nonlocal i
+        game = game_base + i
+        replay = tmp_path / f"replay_{mode}_{i}.json"
+        replay.write_text(json.dumps(
+            {"board_size": 24, "n_moves": 60,
+             "moves": [{"row": 1, "col": 1}] * 60}))
+        rows.append({"canonical_position_sha1": f"v17{mode}{i:04d}",
+                     "game_idx": game, "position_ply": 50,
+                     "side": "red" if i % 2 == 0 else "black",
+                     "role": role, "ply_bucket": bucket, "split": mode})
+        index_lines.append(json.dumps({"game_idx": game, "n_moves": 60,
+                                       "winner": "red",
+                                       "replay_path": str(replay)}))
+        i += 1
+
+    for _ in range(n_targets):
+        add("target", "late")                      # targets are late-only
+    for phase in v17.PHASES:
+        for _ in range(per_phase if per_phase else n_controls // 4):
+            add("control", phase)
+
+    index = tmp_path / f"source_index_{mode}.jsonl"
     index.write_text("\n".join(index_lines) + "\n")
-    _sidecar(path, index, mode)
-    return path
+
+    cols = ["canonical_position_sha1", "game_idx", "position_ply", "side",
+            "role", "ply_bucket", "split"]
+
+    def write_csv(path, records):
+        with open(path, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=cols)
+            w.writeheader()
+            for r in records:
+                w.writerow(r)
+
+    # the screen is a SUPERSET of the manifest, as the real selector's is
+    screen = tmp_path / f"screen_{mode}.csv"
+    extra = [{**rows[0], "canonical_position_sha1": f"v17{mode}extra{k}",
+              "game_idx": game_base + 5000 + k} for k in range(5)]
+    write_csv(screen, rows + extra)
+
+    manifest = tmp_path / f"manifest_{mode}.csv"
+    write_csv(manifest, rows)
+
+    config = tmp_path / f"selector_config_{mode}.json"
+    config.write_text(json.dumps(
+        {"config_schema_version": 2, "run_kind": mode,
+         "select_out": str(manifest), "screen_out": str(screen),
+         "source_index_path": str(index), "checkpoint": CKPT,
+         "max_per_game": 2, "min_ply_gap": 12, "side_tol": 0,
+         "corpus_size": len(rows),
+         "phase_allocation": v17.CONTROL_PHASE_QUOTA.get(mode, {}),
+         "forbidden_manifests": list(v17.FORBIDDEN_CORPORA)}, sort_keys=True))
+
+    prov_block = {
+        "config_sha1": fpu_provenance.file_sha1(str(config)),
+        "screen_csv_sha1": fpu_provenance.file_sha1(str(screen)),
+        "source_index_sha1": fpu_provenance.file_sha1(str(index)),
+        "replay_data_sha1": "r" * 40,
+        "protocol_sha1": "p" * 40,
+        "anchor_checkpoint_identity":
+            f"model_iter_0001.safetensors:{fpu_provenance.file_sha1(CKPT)}",
+        "forbidden_manifest_sha1s": {
+            pathlib.Path(f).name: fpu_provenance.file_sha1(f)
+            for f in v17.FORBIDDEN_CORPORA},
+    }
+    sidecar = tmp_path / (manifest.name + ".meta.json")
+    sidecar.write_text(json.dumps(
+        {"config_path": str(config), "source_index_path": str(index),
+         "checkpoint": CKPT, "forbidden_manifests": list(v17.FORBIDDEN_CORPORA),
+         "screen_csv": str(screen), "n_rows": len(rows), "run_kind": mode,
+         "selection_seed": 20260725, "fieldnames": cols,
+         "screen_meta_provenance": prov_block}, sort_keys=True))
+
+    report = tmp_path / f"post_screen_{mode}.json"
+    report.write_text(json.dumps(
+        {"status": "PASS", "selector_error": None, "run_kind": mode,
+         "config_path": str(config),
+         "config_sha1": prov_block["config_sha1"],
+         "screen_csv_sha1": prov_block["screen_csv_sha1"],
+         "protocol_sha1": prov_block["protocol_sha1"],
+         "selection_seed": 20260725, "binding_constraint": None,
+         "no_manifest_written": False}, sort_keys=True))
+    return {"manifest": manifest, "index": index, "screen": screen,
+            "config": config, "sidecar": sidecar, "report": report}
+
+
+def _manifest(tmp_path, mode="development"):
+    return _selector_chain(tmp_path, mode)["manifest"]
 
 
 def _source_index(tmp_path, mode="development"):
     return tmp_path / f"source_index_{mode}.jsonl"
 
 
-def _sidecar(manifest_path, index_path, mode):
-    """The selector's real `<manifest>.meta.json` sidecar."""
-    doc = {"config_path": str(manifest_path) + ".config.json",
-           "source_index_path": str(index_path),
-           "checkpoint": CKPT,
-           "forbidden_manifests": list(v17.FORBIDDEN_CORPORA),
-           "screen_csv": str(manifest_path) + ".screen.csv",
-           "screen_meta_provenance": {
-               "config_sha1": "c" * 40,
-               "source_index_sha1": fpu_provenance.file_sha1(str(index_path)),
-               "anchor_checkpoint_identity":
-                   f"model_iter_0001.safetensors:{fpu_provenance.file_sha1(CKPT)}"}}
-    pathlib_path = manifest_path.parent / (manifest_path.name + ".meta.json")
-    pathlib_path.write_text(json.dumps(doc, sort_keys=True))
-    (manifest_path.parent / (manifest_path.name + ".config.json")).write_text("{}")
-    return pathlib_path
+def _qualification(tmp_path, mode, manifest_path, **over):
+    """The post-screen report, optionally corrupted for a refusal test."""
+    path = tmp_path / f"post_screen_{mode}.json"
+    if over:
+        doc = json.loads(path.read_text())
+        doc.update(over)
+        path = tmp_path / f"post_screen_{mode}_bad.json"
+        path.write_text(json.dumps(doc, sort_keys=True))
+    return str(path)
 
 
 def _pair(tmp_path, mode, coefficient=None):
@@ -865,20 +947,9 @@ def _fake_searcher(**cand):
     def search(manifest_row, coefficient):
         over = dict(cand) if (coefficient is not None and coefficient != 0.0) else {}
         return row(manifest_row["canonical_sha1"], coefficient,
-                   role=manifest_row["role"], side=manifest_row["side"], **over)
+                   role=manifest_row["role"], side=manifest_row["side"],
+                   ply_bucket=manifest_row["ply_bucket"], **over)
     return search
-
-
-def _qualification(tmp_path, mode, manifest_path, **over):
-    """The selector's real post-screen qualification report."""
-    doc = {"status": "PASS", "selector_error": None, "run_kind": mode,
-           "config_sha1": "c" * 40, "protocol_sha1": "p" * 40,
-           "screen_csv_sha1": "s" * 40, "selection_seed": 20260725,
-           "binding_constraint": None, "no_manifest_written": False}
-    doc.update(over)
-    path = tmp_path / f"post_screen_{mode}.json"
-    path.write_text(json.dumps(doc, sort_keys=True))
-    return str(path)
 
 
 def _run(tmp_path, monkeypatch, mode, **over):
@@ -924,7 +995,9 @@ def test_run_diagnostic_refuses_a_broken_zero_identity(clean_tree, tmp_path,
 
 def test_run_diagnostic_held_out_runs_one_coefficient(clean_tree, tmp_path,
                                                       monkeypatch):
+    stage1 = _manifest(tmp_path, "development")
     art = _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.25,
+               stage1_manifest=str(stage1),
                searcher=_fake_searcher(replies=70))
     assert art["configs"] == [None, 0.25]
     assert art["gates"]["held_out"]["passed"] is True
@@ -946,10 +1019,10 @@ def test_run_diagnostic_refuses_wrong_manifest_geometry(clean_tree, tmp_path,
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
     ppath, cpath = _pair(tmp_path, "development")
     bad = tmp_path / "bad.csv"
-    bad.write_text("canonical_position_sha1,game_idx,position_ply,side,role,split\n"
-                   "p0,900000,50,red,target,development\n")
+    bad.write_text("canonical_position_sha1,game_idx,position_ply,side,role,"
+                   "ply_bucket,split\n"
+                   "p0,900000,50,red,target,late,development\n")
     good = _manifest(tmp_path)
-    _sidecar(bad, _source_index(tmp_path), "development")
     with pytest.raises(prov.ProtocolViolation, match="corpus roles"):
         v17.run_diagnostic(
             mode="development", manifest_path=str(bad), checkpoint=CKPT,
@@ -1605,3 +1678,224 @@ def test_probe_sources_are_authenticated_against_the_frozen_hashes(tmp_path,
 
 def test_b_manifest_is_authenticated_and_recorded():
     assert fpu_provenance.file_sha1(v17.B_MANIFEST_PATH) == v17.B_MANIFEST_SHA1
+
+
+# ---------------------------------------------------------------------------
+# Adversarial round 6: the selector chain must be REQUIRED and REVALIDATED,
+# and cross-corpus identity must be canonical, not reservoir-local.
+# ---------------------------------------------------------------------------
+
+def test_post_screen_report_is_required(tmp_path):
+    """It was optional, so omitting it authenticated nothing."""
+    m = _manifest(tmp_path)
+    with pytest.raises(prov.ProtocolViolation, match="requires the selector"):
+        v17.authenticate_qualification(
+            str(m), mode="development", source_index=str(_source_index(tmp_path)),
+            config_path=None, checkpoint=CKPT, post_screen_report=None)
+
+
+def test_hand_written_pass_report_is_refused(tmp_path):
+    """A minimal {"status":"PASS"} document is not the selector's report."""
+    m = _manifest(tmp_path)
+    forged = tmp_path / "forged_report.json"
+    forged.write_text(json.dumps({"status": "PASS", "selector_error": None}))
+    with pytest.raises(prov.ProtocolViolation, match="hand-written PASS"):
+        v17.authenticate_qualification(
+            str(m), mode="development", source_index=str(_source_index(tmp_path)),
+            config_path=None, checkpoint=CKPT, post_screen_report=str(forged))
+
+
+def test_tampered_selector_config_is_refused(tmp_path):
+    """Readability is not authentication: the bytes must match config_sha1."""
+    chain = _selector_chain(tmp_path)
+    chain["config"].write_text(json.dumps({"tampered": True}))
+    with pytest.raises(prov.ProtocolViolation, match="selector config"):
+        v17.authenticate_qualification(
+            str(chain["manifest"]), mode="development",
+            source_index=str(chain["index"]), config_path=None, checkpoint=CKPT,
+            post_screen_report=str(chain["report"]))
+
+
+def test_tampered_screen_is_refused(tmp_path):
+    chain = _selector_chain(tmp_path)
+    with open(chain["screen"], "a") as f:
+        f.write("extra,1,1,red,control,late,development\n")
+    with pytest.raises(prov.ProtocolViolation, match="screen"):
+        v17.authenticate_qualification(
+            str(chain["manifest"]), mode="development",
+            source_index=str(chain["index"]), config_path=None, checkpoint=CKPT,
+            post_screen_report=str(chain["report"]))
+
+
+def test_manifest_is_bound_by_screen_membership(tmp_path):
+    """The selector records no manifest hash, so an edited manifest beside a
+    genuine sidecar was indistinguishable. Fabricated rows are not in the
+    hash-pinned screen."""
+    chain = _selector_chain(tmp_path)
+    rows = list(csv.DictReader(open(chain["manifest"], newline="")))
+    rows[0]["canonical_position_sha1"] = "fabricated_position"
+    with open(chain["manifest"], "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    with pytest.raises(prov.ProtocolViolation, match="absent from the"):
+        v17.authenticate_qualification(
+            str(chain["manifest"]), mode="development",
+            source_index=str(chain["index"]), config_path=None, checkpoint=CKPT,
+            post_screen_report=str(chain["report"]))
+
+
+def test_disjointness_uses_canonical_state_identity_not_game_index():
+    """Game indices are reservoir-local. An exact A-probe position reached from
+    a different reservoir must still collide."""
+    from scripts.GPU.alphazero.fpu_state_hash import canonical_state_sha1
+    from scripts.GPU.alphazero.goal_line_trigger_probe_cases import position_state
+    a_csv = v17.FORBIDDEN_CORPORA[2]
+    case = next(r for r in csv.DictReader(open(a_csv, newline=""))
+                if r["checkpoint"] == "0001")
+    replay = json.loads(open(case["replay_path"]).read())
+    state = position_state(replay, int(case["position_ply"]), case["side_to_move"])
+    exact = canonical_state_sha1(state)
+    # same position, DIFFERENT game index -- the old pair-identity missed this
+    out = v17.compute_disjointness(
+        [{"canonical_sha1": exact, "game_idx": 12345678, "position_ply": 999}],
+        forbidden=[a_csv])
+    assert out["overlaps"], "an exact canonical collision was missed"
+    assert out["overlaps"][0]["canonical_sha1"] == [exact]
+
+
+def test_gate_b_hashes_join_its_authenticated_replay_manifest():
+    """B's cases carry no replay_path; its manifest supplies the join."""
+    hashes = v17.forbidden_position_hashes(v17.FORBIDDEN_CORPORA[3])
+    assert len(hashes) == v17.ABCD_CARDINALITY["B"]
+    assert all(len(h) == 40 for h in hashes)
+
+
+def test_held_out_requires_stage1_disjointness(clean_tree, tmp_path, monkeypatch):
+    """§8.1: complete GAME and position disjointness from Stage 1."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    with pytest.raises(prov.ProtocolViolation, match="Stage-1 development"):
+        _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.25,
+             searcher=_fake_searcher(replies=70))
+
+
+def test_held_out_sharing_a_stage1_game_is_refused(clean_tree, tmp_path,
+                                                   monkeypatch):
+    stage1 = _manifest(tmp_path, "development")
+    rows = list(csv.DictReader(open(stage1, newline="")))
+    held = _selector_chain(tmp_path, "held_out")
+    held_rows = list(csv.DictReader(open(held["manifest"], newline="")))
+    held_rows[0]["game_idx"] = rows[0]["game_idx"]        # a shared game
+    with open(held["manifest"], "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(held_rows[0]))
+        w.writeheader()
+        w.writerows(held_rows)
+    out = v17.compute_disjointness(
+        [{"canonical_sha1": r["canonical_position_sha1"],
+          "game_idx": int(r["game_idx"]), "position_ply": 50} for r in held_rows],
+        forbidden=[v17.FORBIDDEN_CORPORA[0]],
+        forbidden_games={"stage1": [int(r["game_idx"]) for r in rows]})
+    assert out["game_overlaps"]
+
+
+@pytest.mark.parametrize("mode,per_phase", [("development", 4), ("held_out", 8)])
+def test_control_phase_quotas_are_enforced(mode, per_phase):
+    assert v17.CONTROL_PHASE_QUOTA[mode] == {p: per_phase for p in v17.PHASES}
+    rows = _manifest_rows(mode)
+    v17.require_corpus_geometry(mode, rows)
+    skewed = [dict(r) for r in rows]
+    for r in skewed:
+        if r["role"] == "control" and r["ply_bucket"] == "opening":
+            r["ply_bucket"] = "late"
+            break
+    with pytest.raises(prov.ProtocolViolation, match="phase quotas"):
+        v17.require_corpus_geometry(mode, skewed)
+
+
+def test_manifest_without_a_phase_column_is_refused(tmp_path):
+    assert "ply_bucket" in v17.MANIFEST_REQUIRED_COLUMNS
+    bad = tmp_path / "nophase.csv"
+    bad.write_text("canonical_position_sha1,game_idx,position_ply,side,role\n"
+                   "p0,1,50,red,target\n")
+    _selector_chain(tmp_path)
+    with pytest.raises(prov.ProtocolViolation, match="ply_bucket"):
+        v17.load_manifest(str(bad), source_index=str(_source_index(tmp_path)))
+
+
+def test_control_row_with_an_unknown_phase_is_refused():
+    rows = [dict(r) for r in _manifest_rows("development")]
+    for r in rows:
+        if r["role"] == "control":
+            r["ply_bucket"] = "endgame"
+            break
+    with pytest.raises(prov.ProtocolViolation, match="ply_bucket"):
+        v17.require_corpus_geometry("development", rows)
+
+
+@pytest.mark.parametrize("module", ["build_fpu_dev_corpus.py", "fpu_state_hash.py"])
+def test_imported_loaders_are_in_source_provenance(module):
+    """load_manifest imports load_game_index and disjointness imports
+    load_forbidden_hashes / canonical_state_sha1, so those modules determine
+    the result and must be hashed."""
+    assert module in v17.RESULT_DETERMINING_MODULES
+
+
+def test_no_shadowed_definitions_in_the_v17_modules():
+    """A duplicated top-level def silently shadows the earlier one, so the
+    module runs code that is not the code under review. This bit twice during
+    Task 5 -- once in the module, once in this test file -- and both times the
+    focused suite still passed against the stale implementation.
+    """
+    import ast
+    import pathlib
+    for path in ("scripts/GPU/alphazero/diagnose_fpu_baseline_policy_mass.py",
+                 "scripts/GPU/alphazero/fpu_v17_protocol.py",
+                 "scripts/GPU/alphazero/fpu_v17_provenance.py",
+                 __file__):
+        tree = ast.parse(pathlib.Path(path).read_text())
+        names = [n.name for n in tree.body
+                 if isinstance(n, (ast.FunctionDef, ast.ClassDef))]
+        dupes = sorted({n for n in names if names.count(n) > 1})
+        assert not dupes, f"{path} shadows {dupes}"
+
+
+def test_consumed_artifact_inventory_is_documented():
+    """Every artifact this stage consumes from another tool must be named in
+    the module docstring with its producer and its authenticator, so the
+    integration surface is reviewable without reading the whole module."""
+    doc = v17.__doc__
+    for artifact in ("selection manifest", "sidecar", "selector config",
+                     "post-screen", "source index", "replay", "probe CSV",
+                     "goal-line manifest", "Task 1 freeze"):
+        assert artifact in doc, artifact
+
+
+def test_no_frozen_value_is_defined_twice():
+    """Every frozen value must have exactly ONE definition, so a change is a
+    one-place change. Checks the module surface for a second literal copy."""
+    import pathlib
+    az = pathlib.Path("scripts/GPU/alphazero")
+    sources = {p.name: p.read_text() for p in az.glob("*.py")
+               if p.name.startswith(("fpu_v17_", "diagnose_fpu_baseline"))}
+    joined = "\n".join(sources.values())
+    # the frozen design hash: one definition, no literal repeats
+    assert joined.count(prov.FROZEN_DESIGN_SHA1) == 1
+    # over/severe thresholds are referenced, never re-typed
+    body = sources["diagnose_fpu_baseline_policy_mass.py"]
+    assert "v >= 0.25" not in body and "v >= 0.50" not in body
+    assert "OVER_THRESHOLD" in body and "SEVERE_THRESHOLD" in body
+
+
+def test_capture_tool_triple_matches_the_frozen_constants():
+    """`capture_v17_abcd_selected_moves.py` declares its own batching literals.
+
+    It is deliberately NOT edited to import them: its bytes are recorded as
+    `capture_tool_sha1` in the immutable Task 1 baseline, so changing the file
+    would invalidate authenticated evidence for no scientific gain. Guarding
+    instead means a future divergence is caught without touching frozen code.
+    """
+    from scripts.GPU.alphazero import capture_v17_abcd_selected_moves as cap
+    assert (cap.EVAL_BATCH_SIZE, cap.STALL_FLUSH_SIMS,
+            cap.PENDING_VIRTUAL_VISITS) == prov.BATCHING
+    assert cap.MCTS_SIMS == prov.MCTS_SIMS
+    assert cap.CHECKPOINT_ROW_FILTER == "0001"

@@ -6,7 +6,7 @@ whose configuration does not match them.
 
 Frozen design ref:
 `docs/superpowers/specs/2026-07-24-v17-baseline-preserving-policy-mass-fpu-design.md`
-(SHA-1 `944f358c0e3ef66503d2cbb56e31dabd145bafc2`) §2.4, §4, §6.1, §8.1, §10,
+(SHA-1 pinned below as `FROZEN_DESIGN_SHA1`) §2.4, §4, §6.1, §8.1, §10,
 §11, §12.
 
 Pure and import-light: hashing/git helpers are reused from `fpu_provenance`

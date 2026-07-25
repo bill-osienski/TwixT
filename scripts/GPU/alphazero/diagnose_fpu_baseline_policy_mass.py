@@ -9,7 +9,7 @@ against 66 pre-change fixtures.
 
 Frozen design ref:
 `docs/superpowers/specs/2026-07-24-v17-baseline-preserving-policy-mass-fpu-design.md`
-(SHA-1 `944f358c0e3ef66503d2cbb56e31dabd145bafc2`) §§7-9.
+(SHA-1 pinned once as `fpu_v17_provenance.FROZEN_DESIGN_SHA1`) §§7-9.
 
 Gate arithmetic: §7.0 freezes the aggregate reply reduction as
 `1 - sum(candidate)/sum(shipped)`, and that float is what every artifact
@@ -22,6 +22,24 @@ Ordering: every scientific precondition -- checkpoint, manifest, source index,
 replays, source files, configuration, protocol/config binding and corpus
 geometry -- is validated in `preflight()` BEFORE any evaluator is loaded, so a
 missing input costs zero searches.
+
+CONSUMED ARTIFACTS -- everything this stage takes from another tool, with its
+producer and the evidence that authenticates it. Nothing here may be accepted
+on a caller's word:
+
+  selection manifest CSV   build_fpu_dev_corpus select   bound by membership in
+                                                         the hash-pinned screen
+  <manifest>.meta.json     build_fpu_dev_corpus select   names every hash below
+  sidecar (same file)                                    config/screen/index SHA-1s
+  selector config JSON     build_fpu_dev_corpus          screen_meta_provenance.config_sha1
+  post-screen report       post-screen-qualify           status PASS + agreeing SHA-1s
+  source index JSONL       eval match                    screen_meta_provenance.source_index_sha1
+  replay JSON              eval match                    joined via load_game_index
+  probe CSV (A/B/C/D)      probe harness                 source_sha1 in the Task 1 freeze
+  goal-line manifest (B)   manifest generator            B_MANIFEST_SHA1
+  Task 1 freeze            v17 Task 1                    ABCD_BASELINE_SHA1 / ABCD_MOVES_SHA1
+  forbidden corpora        v16 / v16a / probes           canonical state hashes,
+                                                         via load_forbidden_hashes
 
 Import-pure: no MLX at module import. Heavy imports are lazy.
 """
@@ -167,7 +185,8 @@ ANCHOR_ROLE = "anchor"
 # The ESTABLISHED selector manifest schema (build_fpu_dev_corpus). Replay paths
 # are NOT inline: they are joined from the authenticated source-index JSONL.
 MANIFEST_REQUIRED_COLUMNS = ("canonical_position_sha1", "game_idx",
-                             "position_ply", "side", "role")
+                             "position_ply", "side", "role", "ply_bucket")
+PHASES = ("opening", "early_mid", "midgame", "late")
 # §6.2: zero overlap with all v16 production, v16a neutral, and A/B/C/D
 # positions. Disjointness is COMPUTED against these, never self-attested.
 FORBIDDEN_CORPORA = (
@@ -193,6 +212,9 @@ RESULT_DETERMINING_MODULES = (
     "position_probe_cases.py", "goal_line_trigger_probe_cases.py",
     "capture_v17_abcd_selected_moves.py", "probe_eval.py",
     "opening_diagnostics.py", "game/twixt_state.py",
+    # determines the replay mapping (load_game_index) and the canonical
+    # position identity used for disjointness (load_forbidden_hashes)
+    "build_fpu_dev_corpus.py", "fpu_state_hash.py",
 )
 
 # The complete persisted scientific-result payload for one (position, config).
@@ -205,7 +227,7 @@ SCIENTIFIC_FIELDS = (
     "explored_mass", "stabilization_sim", "complete", "tree_signature",
     "search_result_sha1",
 )
-IDENTITY_FIELDS = ("canonical_sha1", "role", "side")
+IDENTITY_FIELDS = ("canonical_sha1", "role", "side", "ply_bucket")
 REQUIRED_ROW_FIELDS = IDENTITY_FIELDS + ("coefficient",) + SCIENTIFIC_FIELDS
 FLOAT_FIELDS = ("selected_prior", "root_value_stm", "parent_value",
                 "selected_child_q", "top_share", "eff_children", "explored_mass")
@@ -428,6 +450,21 @@ def require_corpus_geometry(mode: str, manifest_rows: Sequence[Mapping[str, Any]
         raise prov.ProtocolViolation(
             f"{mode} corpus side balance {sides} != the frozen "
             f"{{'red': {want_side}, 'black': {want_side}}}")
+    want_quota = CONTROL_PHASE_QUOTA.get(mode)
+    if want_quota is not None:
+        phases: Dict[str, int] = {p: 0 for p in PHASES}
+        for r in manifest_rows:
+            if r["role"] != "control":
+                continue
+            bucket = r.get("ply_bucket")
+            if bucket not in phases:
+                raise prov.ProtocolViolation(
+                    f"{mode} control row has ply_bucket {bucket!r}, not one of "
+                    f"{PHASES}")
+            phases[bucket] += 1
+        if phases != want_quota:
+            raise prov.ProtocolViolation(
+                f"{mode} control phase quotas {phases} != the frozen {want_quota}")
     dupes = sorted(s for s, n in seen_sha.items() if n > 1)
     if dupes:
         raise prov.ProtocolViolation(
@@ -774,8 +811,8 @@ def run_abcd(*, coefficient: float, shipped_by_gate: Mapping[str, Sequence[Mappi
         values = [float(c["black_value"]) for c in cases]
         verdict = abcd_verdict(
             g, coefficient=coefficient, n=len(cases), mean=_mean(values),
-            over=sum(1 for v in values if v >= 0.25),
-            severe=sum(1 for v in values if v >= 0.50),
+            over=sum(1 for v in values if v >= OVER_THRESHOLD),
+            severe=sum(1 for v in values if v >= SEVERE_THRESHOLD),
             a_rows=a_rows if g == "A" else None)
         gates[g] = {"passed": verdict.passed, "reasons": list(verdict.reasons),
                     "metrics": verdict.metrics}
@@ -790,7 +827,8 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
               source_index: Optional[str], frozen_coefficient: Optional[float],
               protocol_path: Optional[str] = None,
               config_path: Optional[str] = None,
-              qualification_report: Optional[str] = None) -> Dict[str, Any]:
+              qualification_report: Optional[str] = None,
+              stage1_manifest: Optional[str] = None) -> Dict[str, Any]:
     """Validate every scientific precondition. Costs zero searches.
 
     Returns the resolved {configs, manifest_rows, replay_paths, source_files}.
@@ -848,8 +886,24 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
             manifest_path, mode=mode, source_index=source_index,
             config_path=config_path, checkpoint=checkpoint,
             post_screen_report=qualification_report)
-        disjointness = compute_disjointness(manifest_rows,
-                                            forbidden=FORBIDDEN_CORPORA)
+        forbidden = list(FORBIDDEN_CORPORA)
+        forbidden_games: Dict[str, Sequence[int]] = {}
+        if mode == "held_out":
+            # §8.1: "Complete game and position disjointness from Stage 1".
+            if not stage1_manifest:
+                raise prov.ProtocolViolation(
+                    "held-out requires the Stage-1 development manifest to "
+                    "establish complete game and position disjointness (§8.1)")
+            forbidden.append(stage1_manifest)
+            with open(stage1_manifest, newline="") as f:
+                forbidden_games["stage1_development"] = [
+                    int(r["game_idx"]) for r in csv.DictReader(f)]
+        disjointness = compute_disjointness(manifest_rows, forbidden=forbidden,
+                                            forbidden_games=forbidden_games)
+        if disjointness["game_overlaps"]:
+            raise prov.ProtocolViolation(
+                f"held-out shares games with Stage 1: "
+                f"{disjointness['game_overlaps'][:2]}")
         if disjointness["overlaps"]:
             raise prov.ProtocolViolation(
                 f"corpus overlaps forbidden evidence: "
@@ -900,7 +954,7 @@ def build_artifact(*, mode: str, coefficient: Optional[float],
             by_sha.setdefault(r["canonical_sha1"], r)
         require_corpus_geometry(mode, [
             {"role": r["role"], "side": r["side"], "canonical_sha1": sha,
-             "game_idx": sha, "position_ply": 0}
+             "ply_bucket": r["ply_bucket"], "game_idx": sha, "position_ply": 0}
             for sha, r in by_sha.items()])
     if prov.is_scientific(mode):
         if mode == "abcd":
@@ -968,7 +1022,7 @@ def _need(trace: Mapping[str, Any], key: str, sha: Any) -> Any:
     return value
 
 
-def build_row(*, canonical_sha1: str, role: str, side: str,
+def build_row(*, canonical_sha1: str, role: str, side: str, ply_bucket: str,
               coefficient: Optional[float], seed: int,
               features: Mapping[str, Any], root: Any) -> Dict[str, Any]:
     """One complete scientific-result row. Every metric definition is the
@@ -984,6 +1038,7 @@ def build_row(*, canonical_sha1: str, role: str, side: str,
         "canonical_sha1": canonical_sha1,
         "role": role,
         "side": side,
+        "ply_bucket": ply_bucket,
         "coefficient": coefficient,
         "seed": int(seed),
         "add_noise": False,
@@ -1108,75 +1163,110 @@ def bind_protocol_to_runtime(config: Mapping[str, Any], *,
             f"(sha1 {expected})")
 
 
-def _position_keys(path: str) -> Tuple[set, set]:
-    """(canonical SHA-1s, (game_idx, position_ply) pairs) in a corpus CSV.
+def forbidden_position_hashes(path: str) -> set:
+    """Canonical position hashes for one forbidden corpus.
 
-    Two keys because the forbidden corpora do not share one schema: the v16/v16a
-    manifests carry a canonical position hash, the A/B/C/D probe cases do not.
+    Uses the ESTABLISHED `build_fpu_dev_corpus.load_forbidden_hashes`: read the
+    `canonical_position_sha1` column when present, otherwise reconstruct the
+    state and hash it. `(game_idx, position_ply)` is NOT an identity -- game
+    indices are reservoir-local, so the same position reached from a different
+    reservoir carries a different index and an exact canonical collision was
+    missed.
+
+    B's goal-line cases carry no `replay_path`, so its authenticated manifest is
+    joined in first and the reconstruction runs over the joined rows.
     """
-    shas, pairs = set(), set()
+    from .build_fpu_dev_corpus import load_forbidden_hashes
+    from .fpu_state_hash import canonical_state_sha1
+    from .goal_line_trigger_probe_cases import position_state
     try:
         with open(path, newline="") as f:
-            for r in csv.DictReader(f):
-                for key in ("canonical_position_sha1", "canonical_sha1"):
-                    if r.get(key):
-                        shas.add(r[key])
-                if r.get("game_idx") and r.get("position_ply"):
-                    try:
-                        pairs.add((int(r["game_idx"]), int(float(r["position_ply"]))))
-                    except ValueError:
-                        pass
+            rows = list(csv.DictReader(f))
     except OSError as exc:
         raise prov.ProtocolViolation(
             f"forbidden corpus {path} is not readable, so disjointness cannot "
             f"be established: {exc}") from exc
-    return shas, pairs
+    if not rows:
+        return set()
+    if "canonical_position_sha1" in rows[0] or "replay_path" in rows[0]:
+        return load_forbidden_hashes([path])
+    # B: join replay paths from its authenticated manifest, then reconstruct.
+    b_actual = fpu_provenance.file_sha1(B_MANIFEST_PATH)
+    if b_actual != B_MANIFEST_SHA1:
+        raise prov.ProtocolViolation(
+            f"gate B manifest {B_MANIFEST_PATH} has SHA-1 {b_actual}, expected "
+            f"the frozen {B_MANIFEST_SHA1}; it determines the replay join")
+    with open(B_MANIFEST_PATH) as f:
+        by_key = {(int(c["game_idx"]), int(c["position_ply"])): c["replay_path"]
+                  for c in json.load(f)["cases"]}
+    out = set()
+    for r in rows:
+        key = (int(r["game_idx"]), int(float(r["position_ply"])))
+        if key not in by_key:
+            raise prov.ProtocolViolation(
+                f"{path} row {key} has no replay in {B_MANIFEST_PATH}")
+        replay = json.loads(Path(by_key[key]).read_text())
+        state = position_state(replay, int(float(r["position_ply"])),
+                               r["side_to_move"])
+        out.add(canonical_state_sha1(state))
+    return out
 
 
 def compute_disjointness(manifest_rows: Sequence[Mapping[str, Any]], *,
-                         forbidden: Sequence[str]) -> Dict[str, Any]:
-    """The §12 disjointness result, COMPUTED from the corpora rather than
-    asserted by a report."""
+                         forbidden: Sequence[str],
+                         forbidden_games: Optional[Mapping[str, Sequence[int]]] = None
+                         ) -> Dict[str, Any]:
+    """The §12 disjointness result, COMPUTED from the corpora.
+
+    Position identity is the canonical state hash. `forbidden_games` adds
+    §8.1's complete GAME disjointness: held-out may share no game with the
+    Stage-1 development corpus, not merely no position.
+    """
     if not forbidden:
         raise prov.ProtocolViolation(
             "disjointness requires a non-empty forbidden corpus set")
     mine_sha = {r["canonical_sha1"] for r in manifest_rows}
-    mine_pairs = {(int(r["game_idx"]), int(r["position_ply"]))
-                  for r in manifest_rows}
+    mine_games = {int(r["game_idx"]) for r in manifest_rows}
     overlaps: List[Dict[str, Any]] = []
     for path in forbidden:
-        shas, pairs = _position_keys(path)
-        hit_sha = sorted(mine_sha & shas)
-        hit_pair = sorted(mine_pairs & pairs)
-        if hit_sha or hit_pair:
-            overlaps.append({"corpus": path,
-                             "canonical_sha1": hit_sha[:5],
-                             "game_position": [list(p) for p in hit_pair[:5]]})
+        hit = sorted(mine_sha & forbidden_position_hashes(path))
+        if hit:
+            overlaps.append({"corpus": path, "canonical_sha1": hit[:5]})
+    game_overlaps: List[Dict[str, Any]] = []
+    for label, games in (forbidden_games or {}).items():
+        shared = sorted(mine_games & {int(g) for g in games})
+        if shared:
+            game_overlaps.append({"corpus": label, "games": shared[:5]})
     return {"forbidden_corpora": list(forbidden), "overlaps": overlaps,
-            "checked_positions": len(manifest_rows)}
+            "forbidden_game_sources": sorted(forbidden_games or {}),
+            "game_overlaps": game_overlaps,
+            "checked_positions": len(manifest_rows),
+            "checked_games": len(mine_games)}
 
 
 def authenticate_qualification(manifest_path: str, *, mode: str,
                                source_index: str, config_path: Optional[str],
                                checkpoint: str,
-                               forbidden: Sequence[str] = FORBIDDEN_CORPORA,
                                post_screen_report: Optional[str] = None
                                ) -> Dict[str, Any]:
-    """Authenticate the corpus against the REAL selector artifacts.
+    """Authenticate the corpus against the REAL selector artifact chain.
 
-    The selector already emits a `<manifest>.meta.json` sidecar binding the
-    config, source index, replay data, checkpoint identity and forbidden
-    manifests, plus a post-screen qualification report. Those are consumed and
-    checked here. Disjointness is COMPUTED from the corpora, not read from a
-    self-attestation -- an earlier draft accepted a hand-written JSON claiming
-    `checked_positions=0` against an unrelated corpus.
+    Every link is required and revalidated against recorded bytes:
+      sidecar -> selector config (config_sha1) -> screen CSV (screen_csv_sha1)
+      -> post-screen report (status PASS, agreeing config_sha1)
+      -> source index (source_index_sha1) -> anchor checkpoint.
+
+    The manifest itself is bound by SCREEN MEMBERSHIP: every selected canonical
+    position must appear in the hash-pinned screen. The selector records no
+    manifest hash, so a copied or edited manifest beside a genuine sidecar was
+    previously indistinguishable; fabricated or altered rows now fail because
+    they are not in the authenticated screen.
     """
-    # The argument must be a selection MANIFEST. Other selector outputs (the
-    # screen CSV, for one) carry their own `.meta.json`, so sidecar existence
-    # alone does not establish that this file is the qualified corpus.
     try:
         with open(manifest_path, newline="") as f:
-            header = next(csv.reader(f), [])
+            reader = csv.DictReader(f)
+            header = list(reader.fieldnames or [])
+            manifest_rows = list(reader)
     except OSError as exc:
         raise prov.ProtocolViolation(
             f"manifest {manifest_path} is not readable: {exc}") from exc
@@ -1185,6 +1275,7 @@ def authenticate_qualification(manifest_path: str, *, mode: str,
         raise prov.ProtocolViolation(
             f"{manifest_path} is not a selection manifest (missing {missing}); "
             f"a screen or report cannot stand in for the qualified corpus")
+
     sidecar_path = manifest_path + ".meta.json"
     if not Path(sidecar_path).is_file():
         raise prov.ProtocolViolation(
@@ -1193,52 +1284,105 @@ def authenticate_qualification(manifest_path: str, *, mode: str,
     with open(sidecar_path) as f:
         sidecar = json.load(f)
     prov_block = sidecar.get("screen_meta_provenance") or {}
-    for key in ("source_index_path", "checkpoint", "forbidden_manifests"):
+    for key in ("source_index_path", "checkpoint", "forbidden_manifests",
+                "config_path", "screen_csv", "n_rows"):
         if key not in sidecar:
             raise prov.ProtocolViolation(
                 f"selector sidecar {sidecar_path} is missing {key!r}")
+    for key in ("config_sha1", "source_index_sha1", "screen_csv_sha1"):
+        if not prov_block.get(key):
+            raise prov.ProtocolViolation(
+                f"selector sidecar {sidecar_path} records no {key}")
+
     # the sidecar must describe the inputs this run is actually using
     if Path(sidecar["source_index_path"]).name != Path(source_index).name:
         raise prov.ProtocolViolation(
             f"selector sidecar was built against source index "
             f"{sidecar['source_index_path']}, but the run uses {source_index}")
-    want_index_sha1 = prov_block.get("source_index_sha1")
     actual_index_sha1 = fpu_provenance.file_sha1(source_index)
-    if want_index_sha1 and want_index_sha1 != actual_index_sha1:
+    if prov_block["source_index_sha1"] != actual_index_sha1:
         raise prov.ProtocolViolation(
             f"source index {source_index} has SHA-1 {actual_index_sha1}, but the "
-            f"selector qualified {want_index_sha1}")
+            f"selector qualified {prov_block['source_index_sha1']}")
     ckpt_sha1 = fpu_provenance.file_sha1(checkpoint)
     if fpu_provenance.file_sha1(sidecar["checkpoint"]) != ckpt_sha1:
         raise prov.ProtocolViolation(
             f"selector sidecar qualified checkpoint {sidecar['checkpoint']}, but "
             f"the run searches {checkpoint}")
-    if config_path:
-        want_cfg = prov_block.get("config_sha1")
-        # The selector's own config, not the v17 protocol config; only compared
-        # when the sidecar records one.
-        if want_cfg and not Path(sidecar.get("config_path", "")).is_file():
+
+    # the selector CONFIG must still be the bytes the selector recorded
+    selector_config = sidecar["config_path"]
+    actual_cfg_sha1 = fpu_provenance.file_sha1(selector_config)
+    if actual_cfg_sha1 != prov_block["config_sha1"]:
+        raise prov.ProtocolViolation(
+            f"selector config {selector_config} has SHA-1 {actual_cfg_sha1}, but "
+            f"the selector recorded {prov_block['config_sha1']}")
+
+    # the SCREEN must still be the bytes the selector selected from, and every
+    # selected position must appear in it
+    screen_csv = sidecar["screen_csv"]
+    actual_screen_sha1 = fpu_provenance.file_sha1(screen_csv)
+    if actual_screen_sha1 != prov_block["screen_csv_sha1"]:
+        raise prov.ProtocolViolation(
+            f"screen {screen_csv} has SHA-1 {actual_screen_sha1}, but the "
+            f"selector recorded {prov_block['screen_csv_sha1']}")
+    try:
+        with open(screen_csv, newline="") as f:
+            screened = {r.get("canonical_position_sha1") or r.get("canonical_sha1")
+                        for r in csv.DictReader(f)}
+    except OSError as exc:
+        raise prov.ProtocolViolation(
+            f"screen {screen_csv} is not readable: {exc}") from exc
+    unscreened = sorted({r["canonical_position_sha1"] for r in manifest_rows}
+                        - screened)
+    if unscreened:
+        raise prov.ProtocolViolation(
+            f"{len(unscreened)} manifest position(s) are absent from the "
+            f"authenticated screen, e.g. {unscreened[:3]}; the manifest was "
+            f"copied, edited, or built from a different screen")
+    if int(sidecar["n_rows"]) != len(manifest_rows):
+        raise prov.ProtocolViolation(
+            f"selector sidecar records {sidecar['n_rows']} rows, manifest has "
+            f"{len(manifest_rows)}")
+
+    # the post-screen qualification report is REQUIRED, not optional
+    if not post_screen_report or not Path(post_screen_report).is_file():
+        raise prov.ProtocolViolation(
+            f"scientific mode {mode!r} requires the selector's post-screen "
+            f"qualification report; got {post_screen_report!r}")
+    with open(post_screen_report) as f:
+        report = json.load(f)
+    for key in ("status", "config_sha1", "screen_csv_sha1"):
+        if key not in report:
             raise prov.ProtocolViolation(
-                f"selector sidecar names config {sidecar.get('config_path')!r}, "
-                f"which is not readable")
-    if post_screen_report:
-        with open(post_screen_report) as f:
-            report = json.load(f)
-        if report.get("status") != "PASS" or report.get("selector_error"):
+                f"post-screen report {post_screen_report} is missing {key!r}; a "
+                f"hand-written PASS document is not the selector's report")
+    if report["status"] != "PASS" or report.get("selector_error"):
+        raise prov.ProtocolViolation(
+            f"post-screen qualification did not PASS: status="
+            f"{report['status']!r} error={report.get('selector_error')!r}")
+    for key in ("config_sha1", "screen_csv_sha1"):
+        if report[key] != prov_block[key]:
             raise prov.ProtocolViolation(
-                f"post-screen qualification did not PASS: status="
-                f"{report.get('status')!r} error={report.get('selector_error')!r}")
-        if prov_block.get("config_sha1") and report.get("config_sha1") \
-                and report["config_sha1"] != prov_block["config_sha1"]:
-            raise prov.ProtocolViolation(
-                "post-screen report and manifest sidecar disagree on config_sha1")
+                f"post-screen report and manifest sidecar disagree on {key}: "
+                f"{report[key]!r} vs {prov_block[key]!r}")
     return {"sidecar_path": sidecar_path,
             "sidecar_sha1": fpu_provenance.file_sha1(sidecar_path),
+            "selector_config": selector_config,
+            "selector_config_sha1": actual_cfg_sha1,
+            "screen_csv": screen_csv, "screen_csv_sha1": actual_screen_sha1,
             "source_index_sha1": actual_index_sha1,
             "checkpoint_sha1": ckpt_sha1,
-            "selector_forbidden_manifests": sidecar["forbidden_manifests"],
             "post_screen_report": post_screen_report,
+            "post_screen_report_sha1": fpu_provenance.file_sha1(post_screen_report),
+            "selector_forbidden_manifests": sidecar["forbidden_manifests"],
             "screen_meta_provenance": prov_block}
+
+
+# --- artifacts -------------------------------------------------------------
+
+
+
 
 
 def _authenticate_task1_freeze(baseline_path: str, moves_path: str) -> None:
@@ -1483,6 +1627,7 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                    protocol_path: Optional[str] = None,
                    config_path: Optional[str] = None,
                    qualification_report: Optional[str] = None,
+                   stage1_manifest: Optional[str] = None,
                    searcher=None) -> Dict[str, Any]:
     """Search, gate and emit. Every precondition is checked in `preflight`
     before an evaluator is loaded."""
@@ -1501,7 +1646,8 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                     out_path=out_path, source_index=source_index,
                     frozen_coefficient=frozen_coefficient,
                     protocol_path=protocol_path, config_path=config_path,
-                    qualification_report=qualification_report)
+                    qualification_report=qualification_report,
+                    stage1_manifest=stage1_manifest)
     configs, manifest_rows = pre["configs"], pre["manifest_rows"]
     if searcher is None:                                    # pragma: no cover
         searcher = _real_searcher(checkpoint, seed_base)
@@ -1567,6 +1713,7 @@ def _real_searcher(checkpoint: str, seed_base: int):        # pragma: no cover
         search_out, obs = _search_position(evaluator, cfg, state, seed)
         return build_row(canonical_sha1=manifest_row["canonical_sha1"],
                          role=manifest_row["role"], side=manifest_row["side"],
+                         ply_bucket=manifest_row["ply_bucket"],
                          coefficient=coefficient, seed=seed,
                          features=_position_features(search_out, obs),
                          root=search_out[2])
@@ -1583,6 +1730,7 @@ def _parse_args(argv=None):
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--source-index", default=None)
     ap.add_argument("--qualification-report", default=None)
+    ap.add_argument("--stage1-manifest", default=None)
     ap.add_argument("--protocol", default=None)
     ap.add_argument("--config", default=None)
     ap.add_argument("--out", required=True)
@@ -1603,7 +1751,8 @@ def main(argv=None) -> int:
             frozen_coefficient=args.frozen_coefficient,
             seed_base=args.seed_base, source_index=args.source_index,
             protocol_path=args.protocol, config_path=args.config,
-            qualification_report=args.qualification_report)
+            qualification_report=args.qualification_report,
+            stage1_manifest=args.stage1_manifest)
     except prov.ProtocolViolation as exc:
         print(f"PROTOCOL VIOLATION: {exc}")
         return protocol.EXIT_USAGE

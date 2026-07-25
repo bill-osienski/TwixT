@@ -7,7 +7,7 @@ before any evaluator is loaded.
 
 Frozen design ref:
 `docs/superpowers/specs/2026-07-24-v17-baseline-preserving-policy-mass-fpu-design.md`
-(SHA-1 `944f358c0e3ef66503d2cbb56e31dabd145bafc2`) §12.
+(SHA-1 pinned once as `fpu_v17_provenance.FROZEN_DESIGN_SHA1`) §12.
 
 Reuses, rather than reimplements, the v16 primitives that already have the
 required semantics: `canonical_json_bytes` (sorted keys, ASCII, no NaN, single
