@@ -854,14 +854,28 @@ def _selector_chain(tmp_path, mode="development"):
     index = tmp_path / f"source_index_{mode}.jsonl"
     index.write_text("\n".join(index_lines) + "\n")
 
-    cols = ["canonical_position_sha1", "game_idx", "position_ply", "side",
-            "role", "ply_bucket", "split"]
+    # the COMPLETE established 15-column v2 manifest schema
+    cols = ["game_idx", "position_ply", "side", "n_legal", "root_value_stm",
+            "normalized_entropy", "top1_prior", "top4_mass", "top8_mass",
+            "canonical_position_sha1", "ply_bucket", "band", "branching_band",
+            "split", "role"]
+
+    def manifest_row(r):
+        return {"game_idx": r["game_idx"], "position_ply": r["position_ply"],
+                "side": r["side"], "n_legal": 500, "root_value_stm": 0.0,
+                "normalized_entropy": 0.95, "top1_prior": 0.02,
+                "top4_mass": 0.1, "top8_mass": 0.2,
+                "canonical_position_sha1": r["canonical_position_sha1"],
+                "ply_bucket": r["ply_bucket"], "band": "b400_plus",
+                "branching_band": "b400_plus", "split": r["split"],
+                "role": r["role"]}
+
     manifest = tmp_path / f"manifest_{mode}.csv"
     with open(manifest, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
         for r in rows:
-            w.writerow(r)
+            w.writerow(manifest_row(r))
 
     # The screen uses the REAL screen schema and is a SUPERSET holding every
     # proposal with its eligibility verdict -- kept rows plus ineligible and
@@ -1006,9 +1020,16 @@ def _chain_selector(_unused=None):
                                                              "manifest_"))
         with open(manifest, newline="") as f:
             rows = list(csv.DictReader(f))
-        return [{"canonical_sha1": r["canonical_position_sha1"],
-                 "game_idx": r["game_idx"], "ply": r["position_ply"]}
-                for r in rows], {"fixture": True}
+        with open(screen_csv_path, newline="") as f:
+            screen = {(r["canonical_sha1"], r["game_idx"], r["ply"]): r
+                      for r in csv.DictReader(f)}
+        out = []
+        for r in rows:
+            src = screen[(r["canonical_position_sha1"], r["game_idx"],
+                          r["position_ply"])]
+            out.append({**src, "role": src["raw_policy_role"],
+                        "split": r["split"]})
+        return out, {"fixture": True}
     return select
 
 
@@ -1034,7 +1055,23 @@ def _run(tmp_path, monkeypatch, mode, **over):
                   qualification_report=_qualification(tmp_path, mode, mpath),
                   selector=_chain_selector(mpath), searcher=_fake_searcher())
     kwargs.update(over)
-    return v17.run_diagnostic(**kwargs)
+    if kwargs.get("mode") == "held_out" and "selected_coefficient" not in kwargs:
+        kwargs["selected_coefficient"] = _selected_coefficient(
+            tmp_path, kwargs.get("frozen_coefficient"))
+    return v17._build_diagnostic(**kwargs)
+
+
+def _selected_coefficient(tmp_path, coefficient, **over):
+    """Development's immutable Stage-2 artifact, in its real shape."""
+    table = {r: v17.GateResult(r, r == coefficient, (), {})
+             for r in prov.GRID}
+    doc = v17.build_selected_coefficient(
+        coefficient=coefficient, table=table,
+        selection_context={"manifest_sha1": "m" * 40, "n_rows": 32})
+    doc.update(over)
+    path = tmp_path / "selected_coefficient.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    return str(path)
 
 
 def test_run_diagnostic_end_to_end_emits_a_complete_artifact(clean_tree, tmp_path,
@@ -1079,7 +1116,7 @@ def test_run_diagnostic_requires_a_verified_protocol(clean_tree, tmp_path,
                                                      monkeypatch):
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
     with pytest.raises(prov.ProtocolViolation, match="verified protocol"):
-        v17.run_diagnostic(
+        v17._build_diagnostic(
             mode="development", manifest_path=str(_manifest(tmp_path)),
             checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
             seed_base=1, source_index="x", searcher=_fake_searcher())
@@ -1095,7 +1132,7 @@ def test_run_diagnostic_refuses_wrong_manifest_geometry(clean_tree, tmp_path,
                    "p0,900000,50,red,target,late,development\n")
     good = _manifest(tmp_path)
     with pytest.raises(prov.ProtocolViolation, match="corpus roles"):
-        v17.run_diagnostic(
+        v17._build_diagnostic(
             mode="development", manifest_path=str(bad), checkpoint=CKPT,
             out_path=str(tmp_path / "o.json"), seed_base=1,
             source_index=str(_source_index(tmp_path)), protocol_path=ppath,
@@ -1117,7 +1154,7 @@ def test_missing_identity_is_caught_before_any_search(clean_tree, tmp_path,
         return row(manifest_row["canonical_sha1"], coefficient,
                    role=manifest_row["role"], side=manifest_row["side"])
     with pytest.raises(prov.ProtocolViolation, match="source_index"):
-        v17.run_diagnostic(
+        v17._build_diagnostic(
             mode="development", manifest_path=str(_manifest(tmp_path)),
             checkpoint=CKPT, out_path=str(tmp_path / "o.json"), seed_base=1,
             source_index=None, protocol_path=ppath, config_path=cpath,
@@ -1136,7 +1173,7 @@ def test_unreadable_inputs_are_caught_in_preflight(clean_tree, tmp_path,
                   config_path=cpath, searcher=_fake_searcher())
     kwargs[field] = str(tmp_path / "nope")
     with pytest.raises(prov.ProtocolViolation):
-        v17.run_diagnostic(**kwargs)
+        v17._build_diagnostic(**kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -1386,12 +1423,12 @@ def test_abcd_stage_is_operational_end_to_end(clean_tree, tmp_path, monkeypatch)
     ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
     protocol.emit(ppath, doc)
     protocol.emit(cpath, protocol.derive_config(doc))
-    art = v17.run_diagnostic(
+    art = v17._build_diagnostic(
         mode="abcd", manifest_path="", checkpoint=CKPT,
+        selected_coefficient=_selected_coefficient(tmp_path, 0.25),
         out_path=str(tmp_path / "abcd.json"), seed_base=0,
         frozen_coefficient=0.25, protocol_path=str(ppath),
         config_path=str(cpath), searcher=_abcd_searcher())
-    assert (tmp_path / "abcd.json").exists()
     assert art["gates"]["all_passed"] is True
     for g in v17.ABCD_GATES:
         assert art["gates"][g]["passed"] is True
@@ -1415,10 +1452,11 @@ def test_abcd_stage_invalidates_on_shipped_drift(clean_tree, tmp_path, monkeypat
             out["black_value"] += 1.0
         return out
     with pytest.raises(prov.ProtocolViolation, match="frozen baseline"):
-        v17.run_diagnostic(mode="abcd", manifest_path="", checkpoint=CKPT,
-                           out_path=str(tmp_path / "o.json"), seed_base=0,
-                           frozen_coefficient=0.25, protocol_path=str(ppath),
-                           config_path=str(cpath), searcher=drifting)
+        v17._build_abcd_stage(
+            coefficient=0.25, checkpoint=CKPT,
+            selected_coefficient=_selected_coefficient(tmp_path, 0.25),
+            out_path=str(tmp_path / "o.json"), protocol_path=str(ppath),
+            config_path=str(cpath), searcher=drifting)
 
 
 def test_abcd_canonical_cases_match_the_frozen_cardinalities():
@@ -1438,7 +1476,7 @@ def test_verified_protocol_constrains_the_runtime_coefficient(clean_tree, tmp_pa
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
     ppath, cpath = _pair(tmp_path, "held_out", 0.25)
     with pytest.raises(prov.ProtocolViolation, match="does not match the verified"):
-        v17.run_diagnostic(
+        v17._build_diagnostic(
             mode="held_out", manifest_path=str(_manifest(tmp_path, "held_out")),
             checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
             seed_base=SEEDS["held_out"][0], frozen_coefficient=0.45,
@@ -1455,7 +1493,7 @@ def test_verified_protocol_constrains_the_runtime_checkpoint(clean_tree, tmp_pat
     other.write_bytes(b"not the anchor checkpoint")
     mpath = _manifest(tmp_path)
     with pytest.raises(prov.ProtocolViolation, match="is not the protocol"):
-        v17.run_diagnostic(
+        v17._build_diagnostic(
             mode="development", manifest_path=str(mpath),
             checkpoint=str(other), out_path=str(tmp_path / "o.json"),
             seed_base=1, source_index=cpath, protocol_path=ppath,
@@ -1497,8 +1535,9 @@ def test_abcd_persists_every_paired_case(clean_tree, tmp_path, monkeypatch):
     ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
     protocol.emit(ppath, doc)
     protocol.emit(cpath, protocol.derive_config(doc))
-    art = v17.run_diagnostic(
+    art = v17._build_diagnostic(
         mode="abcd", manifest_path="", checkpoint=CKPT,
+        selected_coefficient=_selected_coefficient(tmp_path, 0.25),
         out_path=str(tmp_path / "abcd.json"), seed_base=0,
         frozen_coefficient=0.25, protocol_path=str(ppath),
         config_path=str(cpath), searcher=_abcd_searcher())
@@ -1521,8 +1560,9 @@ def test_abcd_replay_identity_hashes_replays_not_probe_csvs(clean_tree, tmp_path
     ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
     protocol.emit(ppath, doc)
     protocol.emit(cpath, protocol.derive_config(doc))
-    art = v17.run_diagnostic(
+    art = v17._build_diagnostic(
         mode="abcd", manifest_path="", checkpoint=CKPT,
+        selected_coefficient=_selected_coefficient(tmp_path, 0.25),
         out_path=str(tmp_path / "abcd.json"), seed_base=0,
         frozen_coefficient=0.25, protocol_path=str(ppath),
         config_path=str(cpath), searcher=_abcd_searcher())
@@ -2126,9 +2166,7 @@ def test_rederivation_compares_the_complete_manifest():
         open(f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", newline="")))
 
     def exact(screen_meta, cfg, *, forbidden, screen_csv_path):
-        return [{"canonical_sha1": r["canonical_position_sha1"],
-                 "game_idx": r["game_idx"], "ply": r["position_ply"]}
-                for r in rows], {"ok": True}
+        return [dict(r) for r in rows], {"ok": True}
     out = v17.rederive_selection(
         rows, selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
         screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv", selector=exact)
@@ -2137,7 +2175,8 @@ def test_rederivation_compares_the_complete_manifest():
     def swapped(screen_meta, cfg, *, forbidden, screen_csv_path):
         derived, info = exact(screen_meta, cfg, forbidden=forbidden,
                               screen_csv_path=screen_csv_path)
-        derived[0] = {**derived[0], "canonical_sha1": "a_different_kept_row"}
+        derived[0] = {**derived[0],
+                      "canonical_position_sha1": "a_different_kept_row"}
         return derived, info
     with pytest.raises(prov.ProtocolViolation, match="never selected"):
         v17.rederive_selection(
@@ -2166,9 +2205,7 @@ def test_swapping_a_row_for_another_eligible_row_is_refused():
                 "game_idx": alt["game_idx"], "position_ply": alt["ply"]}] + rows[1:]
 
     def genuine(screen_meta, cfg, *, forbidden, screen_csv_path):
-        return [{"canonical_sha1": r["canonical_position_sha1"],
-                 "game_idx": r["game_idx"], "ply": r["position_ply"]}
-                for r in rows], {}
+        return [dict(r) for r in rows], {}
     with pytest.raises(prov.ProtocolViolation, match="never selected"):
         v17.rederive_selection(
             altered, selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
@@ -2321,3 +2358,139 @@ def test_forbidden_hashes_are_rooted_in_tracked_source_not_the_sidecar(tmp_path)
 def test_frozen_forbidden_pins_match_the_artifacts_on_disk():
     for path, want in v17.FORBIDDEN_CORPUS_SHA1S.items():
         assert fpu_provenance.file_sha1(path) == want, path
+
+
+# ---------------------------------------------------------------------------
+# Adversarial round 9: bind the Stage-2 result, compare EVERY field, and keep
+# injected implementations below the scientific emitter.
+# ---------------------------------------------------------------------------
+
+def test_held_out_requires_developments_selected_coefficient(clean_tree, tmp_path,
+                                                             monkeypatch):
+    """Any grid point could previously be protocol-bound and run."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    stage1 = _selector_chain(tmp_path, "development")
+    with pytest.raises(prov.ProtocolViolation, match="selected_coefficient"):
+        _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.25,
+             selected_coefficient=None,
+             stage1_manifest=str(stage1["manifest"]),
+             stage1_source_index=str(stage1["index"]),
+             stage1_post_screen_report=str(stage1["report"]),
+             searcher=_fake_searcher(replies=70))
+
+
+def test_held_out_coefficient_must_equal_the_selected_one(clean_tree, tmp_path,
+                                                          monkeypatch):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    stage1 = _selector_chain(tmp_path, "development")
+    with pytest.raises(prov.ProtocolViolation, match="!= development's selected"):
+        _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.45,
+             selected_coefficient=_selected_coefficient(tmp_path, 0.25),
+             stage1_manifest=str(stage1["manifest"]),
+             stage1_source_index=str(stage1["index"]),
+             stage1_post_screen_report=str(stage1["report"]),
+             searcher=_fake_searcher(replies=70))
+
+
+def test_selected_coefficient_rule_is_rechecked_not_trusted(tmp_path):
+    """The artifact records the whole grid table, so the smallest-passing rule
+    is re-applied rather than believed."""
+    table = {r: v17.GateResult(r, r in (0.25, 0.45), (), {}) for r in prov.GRID}
+    doc = v17.build_selected_coefficient(coefficient=0.25, table=table,
+                                         selection_context={})
+    path = tmp_path / "sel.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    assert v17.authenticate_selected_coefficient(
+        str(path), coefficient=0.25)["coefficient"] == 0.25
+    # claims 0.45 while 0.25 also passed -> not the smallest
+    doc["coefficient"] = 0.45
+    path.write_text(json.dumps(doc, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="selection rule was not"):
+        v17.authenticate_selected_coefficient(str(path), coefficient=0.45)
+
+
+def test_no_passing_coefficient_blocks_every_later_stage(tmp_path):
+    table = {r: v17.GateResult(r, False, ("x",), {}) for r in prov.GRID}
+    doc = v17.build_selected_coefficient(coefficient=None, table=table,
+                                         selection_context={})
+    path = tmp_path / "none.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="selected no coefficient"):
+        v17.authenticate_selected_coefficient(str(path), coefficient=0.25)
+
+
+def test_development_emits_the_immutable_selection_artifact(clean_tree, tmp_path,
+                                                            monkeypatch):
+    art = _run(tmp_path, monkeypatch, "development",
+               searcher=_fake_searcher(replies=10, eff_children=70.0))
+    emitted = tmp_path / "selected_coefficient.json"
+    assert emitted.exists()
+    doc = json.loads(emitted.read_text())
+    assert doc["coefficient"] == art["coefficient"] == 0.15
+    assert sorted(float(k) for k in doc["gates"]) == sorted(prov.GRID)
+    assert doc["selection_context"]["manifest_sha1"]
+
+
+@pytest.mark.parametrize("field", ["n_legal", "root_value_stm",
+                                   "normalized_entropy", "split", "band",
+                                   "top1_prior", "branching_band"])
+def test_edited_producer_fields_are_refused(field):
+    """A key-only comparison authenticated a manifest whose producer fields had
+    all been rewritten."""
+    rows = list(csv.DictReader(
+        open(f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", newline="")))
+    edited = [{**rows[0], field: "999"}] + rows[1:]
+
+    def genuine(screen_meta, cfg, *, forbidden, screen_csv_path):
+        return [dict(r) for r in rows], {}
+    with pytest.raises(prov.ProtocolViolation, match=f"field '{field}'"):
+        v17.rederive_selection(
+            edited, selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
+            screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv",
+            selector=genuine)
+
+
+def test_rederivation_compares_every_manifest_column():
+    rows = list(csv.DictReader(
+        open(f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", newline="")))
+
+    def genuine(screen_meta, cfg, *, forbidden, screen_csv_path):
+        return [dict(r) for r in rows], {}
+    out = v17.rederive_selection(
+        rows, selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
+        screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv", selector=genuine)
+    assert set(out["compared_fields"]) == set(rows[0])
+    assert len(out["compared_fields"]) == 15
+
+
+@pytest.mark.parametrize("mode", ["development", "held_out", "abcd"])
+@pytest.mark.parametrize("override", ["selector", "searcher"])
+def test_scientific_emission_refuses_injected_implementations(tmp_path, mode,
+                                                              override):
+    """A stub could otherwise fabricate rows or bypass exact selection and
+    still emit a protocol-valid scientific artifact."""
+    with pytest.raises(prov.ProtocolViolation, match="injected selector"):
+        v17.run_diagnostic(mode=mode, manifest_path="m", checkpoint=CKPT,
+                           out_path=str(tmp_path / "o.json"), seed_base=1,
+                           **{override: (lambda *a, **k: None)})
+
+
+def test_abcd_emission_refuses_an_injected_searcher(tmp_path):
+    with pytest.raises(prov.ProtocolViolation, match="injected searcher"):
+        v17.run_abcd_stage(coefficient=0.25, checkpoint=CKPT,
+                           out_path=str(tmp_path / "o.json"),
+                           protocol_path="p", config_path="c",
+                           searcher=lambda *a, **k: None)
+
+
+def test_tooling_smoke_may_still_inject(clean_tree, tmp_path, monkeypatch):
+    """Injection is a testing affordance, so it remains available exactly where
+    scientific interpretation is already forbidden."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    assert not prov.is_scientific("tooling_smoke")
+    # reaches past the injection guard and fails later, on inputs
+    with pytest.raises(prov.ProtocolViolation) as excinfo:
+        v17.run_diagnostic(mode="tooling_smoke", manifest_path="missing.csv",
+                           checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
+                           seed_base=20309000, searcher=_fake_searcher())
+    assert "injected" not in str(excinfo.value)
