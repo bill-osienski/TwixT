@@ -1,0 +1,29 @@
+{
+  "record_kind": "preregistration_freeze",
+  "schema_version": 1,
+  "experiment": "fpu_v17_baseline_policy_mass",
+  "approved_on": "2026-07-24",
+  "approval": "explicit user approval, recorded at plan Task 0",
+  "design": {
+    "path": "docs/superpowers/specs/2026-07-24-v17-baseline-preserving-policy-mass-fpu-design.md",
+    "sha1": "944f358c0e3ef66503d2cbb56e31dabd145bafc2",
+    "status": "APPROVED - FROZEN"
+  },
+  "execution_plan": {
+    "path": "docs/superpowers/plans/2026-07-24-v17-baseline-preserving-policy-mass-fpu-plan.md",
+    "sha1": "d6d47d926aba3e79b08f774c5e80316efc474f59",
+    "status": "DRAFT FOR REVIEW",
+    "note": "Execution document, not part of the frozen protocol. This SHA-1 pins the version reviewed at freeze."
+  },
+  "reviewed_design_bytes": {
+    "sha1": "abb0ba22dcaced47381a785d768c700804a971fb",
+    "note": "The exact bytes reviewed and approved. Differs from design.sha1 only by the Status block flip from 'DRAFT FOR REVIEW' to 'APPROVED - FROZEN'; no protocol content changed."
+  },
+  "git": {
+    "commit": "9e6a606ee6385d0dd34de3b09ba38bb1d5c721f1",
+    "worktree_clean": false,
+    "note": "Design section 12 permits a dirty tree for pre-change records. Scientific run kinds require worktree_clean=true and are refused until the tree is intentionally resolved."
+  },
+  "authorizes": [],
+  "note": "Freezing authorizes no implementation, generation, diagnostic, match, commit, or push. Every subsequent plan task requires separate explicit user authorization."
+}
