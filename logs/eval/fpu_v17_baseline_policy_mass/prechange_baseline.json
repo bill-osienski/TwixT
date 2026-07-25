@@ -1034,7 +1034,7 @@
   "docs/superpowers/specs/2026-07-24-v17-baseline-preserving-policy-mass-fpu-design.md": "944f358c0e3ef66503d2cbb56e31dabd145bafc2"
  },
  "git": {
-  "commit": "9e6a606ee6385d0dd34de3b09ba38bb1d5c721f1",
+  "commit": "97bb89beeb802222ceb9f95250ce97b9fa9e1ca7",
   "worktree_clean": false
  },
  "goldens": {
@@ -1050,12 +1050,17 @@
   "path": "tests/golden/fpu_v17_prechange_search.json",
   "sha1": "868da8fe1f0a0c609c857f6f8ac046155063d4d9"
  },
- "known_gap": {
-  "selected_moves": "NOT FROZEN - unavailable. Design section 9 requires the Stage-4 contemporaneous shipped run to reproduce the frozen baseline 'with exact selected moves', but none of the four canonical CSVs record a selected move. Their columns are checkpoint / game_idx / case_id / rank / position_ply / side_to_move / probe_black_root_value / probe_top1_share / black_overvalue / severe_black_overvalue (plus A and D's replay_path / drop_ply / collapse_type). The value, over/severe and cardinality parts of that gate ARE fully enforceable from this record; the selected-move part is not, and needs a user decision before Task 13."
- },
  "plan_task": "Task 1 - capture pre-change identity goldens",
  "record_kind": "v17_prechange_baseline",
  "schema_version": 1,
+ "selected_moves": {
+  "artifact": "logs/eval/fpu_v17_baseline_policy_mass/prechange_abcd_selected_moves.json",
+  "artifact_sha1": "162c9a5a1aac4d4012447d717943e35b405594d9",
+  "capture_tool": "scripts/GPU/alphazero/capture_v17_abcd_selected_moves.py",
+  "capture_tool_sha1": "2ce39bb56b479ae792e20fa6b493e157b3b89d05",
+  "note": "None of the four canonical CSVs record a selected move, so design section 9's 'with exact selected moves' clause had no baseline. The supplemental artifact supplies one for all 108 cases from the same harness, checkpoint, batching triple and per-case seeds, and reproduces every frozen probe_black_root_value bit-exactly (max |delta| = 0.0 on every gate). Two independent regenerations are byte-identical. Shipped baseline only: no v17 field exists, no candidate is evaluated, and no gate verdict is emitted.",
+  "status": "RESOLVED at Task 1 by supplemental shipped-baseline capture."
+ },
  "source_sha1s": {
   "identity_basis": {
    "tests/fpu_search_fixture.py": "1e1877f0ea7a6bbf3a4d0f9f6e30163be09547ee",
@@ -1080,8 +1085,13 @@
   },
   "v17_pure_dependencies": {
    "scripts/GPU/alphazero/build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+   "scripts/GPU/alphazero/capture_v17_abcd_selected_moves.py": "2ce39bb56b479ae792e20fa6b493e157b3b89d05",
    "scripts/GPU/alphazero/diagnose_fpu_policy_mass.py": "2b0ae14687bb503575f11aa0c96ae443b3509e6b",
-   "scripts/GPU/alphazero/fpu_provenance.py": "c5fd4b9d40a5742c49150a95da370c2af085ce53"
+   "scripts/GPU/alphazero/eval_goal_line_trigger_probe.py": "10c96b6424748915ffad2c2b34b9a4fc5653d25c",
+   "scripts/GPU/alphazero/eval_position_probe.py": "a3d750b8bb279bec05cd22d345c7588645ce5f4d",
+   "scripts/GPU/alphazero/fpu_provenance.py": "c5fd4b9d40a5742c49150a95da370c2af085ce53",
+   "scripts/GPU/alphazero/goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+   "scripts/GPU/alphazero/position_probe_cases.py": "2eb1db3a0a843904a915ca30561ad74b52ce121f"
   }
  },
  "suite_baseline": {
@@ -1089,8 +1099,8 @@
   "post_task1": {
    "deselected": 53,
    "failed": 0,
-   "note": "2,274 pre-change + 13 v17 Task 1 tests (6 golden, 7 provenance). Every pre-existing test still passes; no source module was edited.",
-   "passed": 2287,
+   "note": "2,274 pre-change + 18 v17 Task 1 tests (6 golden, 12 provenance incl. the selected-move supplement). Every pre-existing test still passes; no source module was edited (mcts.py still hashes 11fa989d...).",
+   "passed": 2292,
    "skipped": 4
   },
   "pre_task1": {

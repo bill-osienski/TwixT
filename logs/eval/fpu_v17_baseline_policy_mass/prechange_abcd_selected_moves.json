@@ -1,0 +1,1915 @@
+{
+ "authentication": {
+  "cases_checked": 108,
+  "mismatches": 0,
+  "rule": "every recomputed black value within 1e-06 of the frozen CSV value"
+ },
+ "checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+ "checkpoint_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+ "experiment": "fpu_v17_baseline_policy_mass",
+ "gates": {
+  "A": {
+   "base_seed": 20260616,
+   "cases": [
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000347_predrop_ply_73_drop_75",
+     "frozen_black_value_repr": "0.5083625118073541",
+     "game_idx": 347,
+     "position_ply": 73,
+     "recomputed_black_value_repr": "0.5083625118073541",
+     "seed": 20260378,
+     "selected_move": [
+      22,
+      12
+     ],
+     "selected_move_visits": 220,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.55"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000631_predrop_ply_19_drop_21",
+     "frozen_black_value_repr": "0.6126939518749714",
+     "game_idx": 631,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "0.6126939518749714",
+     "seed": 20260204,
+     "selected_move": [
+      8,
+      5
+     ],
+     "selected_move_visits": 388,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.97"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000611_predrop_ply_19_drop_21",
+     "frozen_black_value_repr": "0.8037021200545132",
+     "game_idx": 611,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "0.8037021200545132",
+     "seed": 20260216,
+     "selected_move": [
+      16,
+      14
+     ],
+     "selected_move_visits": 127,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.3175"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000217_predrop_ply_73_drop_75",
+     "frozen_black_value_repr": "0.038069862165284574",
+     "game_idx": 217,
+     "position_ply": 73,
+     "recomputed_black_value_repr": "0.038069862165284574",
+     "seed": 20260760,
+     "selected_move": [
+      11,
+      20
+     ],
+     "selected_move_visits": 160,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.4"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000127_predrop_ply_33_drop_35",
+     "frozen_black_value_repr": "0.6963953067541298",
+     "game_idx": 127,
+     "position_ply": 33,
+     "recomputed_black_value_repr": "0.6963953067541298",
+     "seed": 20260694,
+     "selected_move": [
+      11,
+      16
+     ],
+     "selected_move_visits": 383,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9575"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000539_predrop_ply_41_drop_43",
+     "frozen_black_value_repr": "0.057373359230696225",
+     "game_idx": 539,
+     "position_ply": 41,
+     "recomputed_black_value_repr": "0.057373359230696225",
+     "seed": 20260154,
+     "selected_move": [
+      15,
+      15
+     ],
+     "selected_move_visits": 138,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.345"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000629_predrop_ply_43_drop_45",
+     "frozen_black_value_repr": "-0.12558117588909226",
+     "game_idx": 629,
+     "position_ply": 43,
+     "recomputed_black_value_repr": "-0.12558117588909226",
+     "seed": 20260182,
+     "selected_move": [
+      20,
+      19
+     ],
+     "selected_move_visits": 10,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.025"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000093_predrop_ply_41_drop_43",
+     "frozen_black_value_repr": "0.3575418065302074",
+     "game_idx": 93,
+     "position_ply": 41,
+     "recomputed_black_value_repr": "0.3575418065302074",
+     "seed": 20260732,
+     "selected_move": [
+      7,
+      11
+     ],
+     "selected_move_visits": 351,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8775"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000259_predrop_ply_35_drop_37",
+     "frozen_black_value_repr": "0.7688730380544438",
+     "game_idx": 259,
+     "position_ply": 35,
+     "recomputed_black_value_repr": "0.7688730380544438",
+     "seed": 20260392,
+     "selected_move": [
+      20,
+      7
+     ],
+     "selected_move_visits": 387,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9675"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000281_predrop_ply_19_drop_21",
+     "frozen_black_value_repr": "0.8424882959155365",
+     "game_idx": 281,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "0.8424882959155365",
+     "seed": 20260354,
+     "selected_move": [
+      13,
+      11
+     ],
+     "selected_move_visits": 390,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.975"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000633_predrop_ply_37_drop_39",
+     "frozen_black_value_repr": "-0.0547178041015286",
+     "game_idx": 633,
+     "position_ply": 37,
+     "recomputed_black_value_repr": "-0.0547178041015286",
+     "seed": 20260180,
+     "selected_move": [
+      9,
+      8
+     ],
+     "selected_move_visits": 129,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.3225"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000735_predrop_ply_31_drop_33",
+     "frozen_black_value_repr": "0.43076847680844366",
+     "game_idx": 735,
+     "position_ply": 31,
+     "recomputed_black_value_repr": "0.43076847680844366",
+     "seed": 20260296,
+     "selected_move": [
+      1,
+      17
+     ],
+     "selected_move_visits": 210,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.525"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000337_predrop_ply_25_drop_27",
+     "frozen_black_value_repr": "0.6405549183487892",
+     "game_idx": 337,
+     "position_ply": 25,
+     "recomputed_black_value_repr": "0.6405549183487892",
+     "seed": 20260416,
+     "selected_move": [
+      22,
+      21
+     ],
+     "selected_move_visits": 284,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.71"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000291_predrop_ply_21_drop_23",
+     "frozen_black_value_repr": "0.7213116194074973",
+     "game_idx": 291,
+     "position_ply": 21,
+     "recomputed_black_value_repr": "0.7213116194074973",
+     "seed": 20260414,
+     "selected_move": [
+      16,
+      13
+     ],
+     "selected_move_visits": 369,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9225"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000503_predrop_ply_19_drop_21",
+     "frozen_black_value_repr": "0.7022408391581848",
+     "game_idx": 503,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "0.7022408391581848",
+     "seed": 20260588,
+     "selected_move": [
+      12,
+      13
+     ],
+     "selected_move_visits": 325,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8125"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000183_predrop_ply_19_drop_21",
+     "frozen_black_value_repr": "-0.13747523190919309",
+     "game_idx": 183,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "-0.13747523190919309",
+     "seed": 20260780,
+     "selected_move": [
+      16,
+      18
+     ],
+     "selected_move_visits": 19,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0475"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000455_predrop_ply_65_drop_67",
+     "frozen_black_value_repr": "-0.1448751433895086",
+     "game_idx": 455,
+     "position_ply": 65,
+     "recomputed_black_value_repr": "-0.1448751433895086",
+     "seed": 20260494,
+     "selected_move": [
+      18,
+      14
+     ],
+     "selected_move_visits": 18,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.045"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000757_predrop_ply_43_drop_45",
+     "frozen_black_value_repr": "-0.15718214463762706",
+     "game_idx": 757,
+     "position_ply": 43,
+     "recomputed_black_value_repr": "-0.15718214463762706",
+     "seed": 20260310,
+     "selected_move": [
+      21,
+      8
+     ],
+     "selected_move_visits": 12,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.03"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000249_predrop_ply_59_drop_61",
+     "frozen_black_value_repr": "-0.08294964547036215",
+     "game_idx": 249,
+     "position_ply": 59,
+     "recomputed_black_value_repr": "-0.08294964547036215",
+     "seed": 20260810,
+     "selected_move": [
+      3,
+      8
+     ],
+     "selected_move_visits": 9,
+     "side_to_move": "black",
+     "tied_with_top": 1,
+     "top_share_repr": "0.0225"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000449_predrop_ply_37_drop_39",
+     "frozen_black_value_repr": "-0.3058033668517601",
+     "game_idx": 449,
+     "position_ply": 37,
+     "recomputed_black_value_repr": "-0.3058033668517601",
+     "seed": 20260588,
+     "selected_move": [
+      10,
+      7
+     ],
+     "selected_move_visits": 23,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0575"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000753_predrop_ply_49_drop_51",
+     "frozen_black_value_repr": "-0.07141173734737094",
+     "game_idx": 753,
+     "position_ply": 49,
+     "recomputed_black_value_repr": "-0.07141173734737094",
+     "seed": 20260296,
+     "selected_move": [
+      2,
+      9
+     ],
+     "selected_move_visits": 56,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.14"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000467_predrop_ply_19_drop_21",
+     "frozen_black_value_repr": "-0.18512448345980373",
+     "game_idx": 467,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "-0.18512448345980373",
+     "seed": 20260552,
+     "selected_move": [
+      6,
+      9
+     ],
+     "selected_move_visits": 31,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0775"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000027_predrop_ply_45_drop_47",
+     "frozen_black_value_repr": "-0.1072995309869293",
+     "game_idx": 27,
+     "position_ply": 45,
+     "recomputed_black_value_repr": "-0.1072995309869293",
+     "seed": 20260670,
+     "selected_move": [
+      2,
+      18
+     ],
+     "selected_move_visits": 12,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.03"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000021_predrop_ply_25_drop_27",
+     "frozen_black_value_repr": "0.6948690858390182",
+     "game_idx": 21,
+     "position_ply": 25,
+     "recomputed_black_value_repr": "0.6948690858390182",
+     "seed": 20260612,
+     "selected_move": [
+      20,
+      15
+     ],
+     "selected_move_visits": 363,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9075"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000627_predrop_ply_29_drop_31",
+     "frozen_black_value_repr": "-0.23842764562316007",
+     "game_idx": 627,
+     "position_ply": 29,
+     "recomputed_black_value_repr": "-0.23842764562316007",
+     "seed": 20260198,
+     "selected_move": [
+      1,
+      13
+     ],
+     "selected_move_visits": 15,
+     "side_to_move": "black",
+     "tied_with_top": 1,
+     "top_share_repr": "0.0375"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000151_predrop_ply_49_drop_51",
+     "frozen_black_value_repr": "-0.035280000603524965",
+     "game_idx": 151,
+     "position_ply": 49,
+     "recomputed_black_value_repr": "-0.035280000603524965",
+     "seed": 20260782,
+     "selected_move": [
+      22,
+      4
+     ],
+     "selected_move_visits": 146,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.365"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000507_predrop_ply_37_drop_39",
+     "frozen_black_value_repr": "0.582884756354033",
+     "game_idx": 507,
+     "position_ply": 37,
+     "recomputed_black_value_repr": "0.582884756354033",
+     "seed": 20260566,
+     "selected_move": [
+      20,
+      8
+     ],
+     "selected_move_visits": 385,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9625"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000505_predrop_ply_41_drop_43",
+     "frozen_black_value_repr": "-0.22580349836498498",
+     "game_idx": 505,
+     "position_ply": 41,
+     "recomputed_black_value_repr": "-0.22580349836498498",
+     "seed": 20260568,
+     "selected_move": [
+      19,
+      16
+     ],
+     "selected_move_visits": 28,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.07"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000765_predrop_ply_25_drop_27",
+     "frozen_black_value_repr": "0.5173065516166389",
+     "game_idx": 765,
+     "position_ply": 25,
+     "recomputed_black_value_repr": "0.5173065516166389",
+     "seed": 20260332,
+     "selected_move": [
+      19,
+      5
+     ],
+     "selected_move_visits": 340,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.85"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "black_loss_game_000123_predrop_ply_37_drop_39",
+     "frozen_black_value_repr": "0.6072697151079773",
+     "game_idx": 123,
+     "position_ply": 37,
+     "recomputed_black_value_repr": "0.6072697151079773",
+     "seed": 20260694,
+     "selected_move": [
+      21,
+      17
+     ],
+     "selected_move_visits": 361,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9025"
+    }
+   ],
+   "cases_source": "logs/eval/calib020_0001_black_loss_post_opening_predrop_probe/position_probe_cases.csv",
+   "cases_source_sha1": "175c73ef2c761df83ccf5f5cd935152093f8dfb1",
+   "manifest": null,
+   "max_abs_delta_vs_frozen_repr": "0.0",
+   "n": 30,
+   "seed_rule": "base ^ game_idx ^ position_ply"
+  },
+  "B": {
+   "base_seed": 20260614,
+   "cases": [
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000769_ply_39",
+     "frozen_black_value_repr": "-0.35779510129475967",
+     "game_idx": 769,
+     "position_ply": 39,
+     "recomputed_black_value_repr": "-0.35779510129475967",
+     "seed": 20259847,
+     "selected_move": [
+      21,
+      21
+     ],
+     "selected_move_visits": 49,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.1225"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000405_ply_39",
+     "frozen_black_value_repr": "-0.7304150251054671",
+     "game_idx": 405,
+     "position_ply": 39,
+     "recomputed_black_value_repr": "-0.7304150251054671",
+     "seed": 20260499,
+     "selected_move": [
+      3,
+      21
+     ],
+     "selected_move_visits": 40,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.1"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000535_ply_63",
+     "frozen_black_value_repr": "-0.03978164988686331",
+     "game_idx": 535,
+     "position_ply": 63,
+     "recomputed_black_value_repr": "-0.03978164988686331",
+     "seed": 20260113,
+     "selected_move": [
+      5,
+      6
+     ],
+     "selected_move_visits": 297,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.7425"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000545_ply_67",
+     "frozen_black_value_repr": "-0.4411530543025583",
+     "game_idx": 545,
+     "position_ply": 67,
+     "recomputed_black_value_repr": "-0.4411530543025583",
+     "seed": 20260135,
+     "selected_move": [
+      1,
+      20
+     ],
+     "selected_move_visits": 31,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0775"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000015_ply_19",
+     "frozen_black_value_repr": "0.42167565776384436",
+     "game_idx": 15,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "0.42167565776384436",
+     "seed": 20260617,
+     "selected_move": [
+      8,
+      8
+     ],
+     "selected_move_visits": 278,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.695"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000327_ply_63",
+     "frozen_black_value_repr": "0.24178904474596494",
+     "game_idx": 327,
+     "position_ply": 63,
+     "recomputed_black_value_repr": "0.24178904474596494",
+     "seed": 20260417,
+     "selected_move": [
+      1,
+      13
+     ],
+     "selected_move_visits": 372,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.93"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000263_ply_43",
+     "frozen_black_value_repr": "-0.23552319768670713",
+     "game_idx": 263,
+     "position_ply": 43,
+     "recomputed_black_value_repr": "-0.23552319768670713",
+     "seed": 20260353,
+     "selected_move": [
+      2,
+      13
+     ],
+     "selected_move_visits": 177,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.4425"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000007_ply_37",
+     "frozen_black_value_repr": "-0.07526199734566034",
+     "game_idx": 7,
+     "position_ply": 37,
+     "recomputed_black_value_repr": "-0.07526199734566034",
+     "seed": 20260609,
+     "selected_move": [
+      13,
+      4
+     ],
+     "selected_move_visits": 47,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.1175"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000117_ply_39",
+     "frozen_black_value_repr": "-0.56135996600613",
+     "game_idx": 117,
+     "position_ply": 39,
+     "recomputed_black_value_repr": "-0.56135996600613",
+     "seed": 20260723,
+     "selected_move": [
+      17,
+      15
+     ],
+     "selected_move_visits": 27,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0675"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000321_ply_39",
+     "frozen_black_value_repr": "-0.4790851641469635",
+     "game_idx": 321,
+     "position_ply": 39,
+     "recomputed_black_value_repr": "-0.4790851641469635",
+     "seed": 20260423,
+     "selected_move": [
+      1,
+      16
+     ],
+     "selected_move_visits": 125,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.3125"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000489_ply_59",
+     "frozen_black_value_repr": "-0.09278863605053629",
+     "game_idx": 489,
+     "position_ply": 59,
+     "recomputed_black_value_repr": "-0.09278863605053629",
+     "seed": 20260591,
+     "selected_move": [
+      1,
+      3
+     ],
+     "selected_move_visits": 68,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.17"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000433_ply_57",
+     "frozen_black_value_repr": "-0.5654571297997609",
+     "game_idx": 433,
+     "position_ply": 57,
+     "recomputed_black_value_repr": "-0.5654571297997609",
+     "seed": 20260535,
+     "selected_move": [
+      20,
+      3
+     ],
+     "selected_move_visits": 40,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.1"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000299_ply_39",
+     "frozen_black_value_repr": "-0.642590628953185",
+     "game_idx": 299,
+     "position_ply": 39,
+     "recomputed_black_value_repr": "-0.642590628953185",
+     "seed": 20260397,
+     "selected_move": [
+      22,
+      3
+     ],
+     "selected_move_visits": 64,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.16"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000373_ply_47",
+     "frozen_black_value_repr": "0.15385247521364362",
+     "game_idx": 373,
+     "position_ply": 47,
+     "recomputed_black_value_repr": "0.15385247521364362",
+     "seed": 20260467,
+     "selected_move": [
+      4,
+      19
+     ],
+     "selected_move_visits": 124,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.31"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000537_ply_55",
+     "frozen_black_value_repr": "-0.005424292501993477",
+     "game_idx": 537,
+     "position_ply": 55,
+     "recomputed_black_value_repr": "-0.005424292501993477",
+     "seed": 20260127,
+     "selected_move": [
+      10,
+      2
+     ],
+     "selected_move_visits": 130,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.325"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000315_ply_31",
+     "frozen_black_value_repr": "-0.22179339471331333",
+     "game_idx": 315,
+     "position_ply": 31,
+     "recomputed_black_value_repr": "-0.22179339471331333",
+     "seed": 20260413,
+     "selected_move": [
+      16,
+      15
+     ],
+     "selected_move_visits": 72,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.18"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000333_ply_29",
+     "frozen_black_value_repr": "-0.1141271413071081",
+     "game_idx": 333,
+     "position_ply": 29,
+     "recomputed_black_value_repr": "-0.1141271413071081",
+     "seed": 20260427,
+     "selected_move": [
+      8,
+      14
+     ],
+     "selected_move_visits": 63,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.1575"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000495_ply_33",
+     "frozen_black_value_repr": "-0.6511957784486003",
+     "game_idx": 495,
+     "position_ply": 33,
+     "recomputed_black_value_repr": "-0.6511957784486003",
+     "seed": 20260585,
+     "selected_move": [
+      20,
+      16
+     ],
+     "selected_move_visits": 13,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0325"
+    }
+   ],
+   "cases_source": "logs/eval/black_predrop_calib010_goal_line/goal_line_trigger_probe_cases.csv",
+   "cases_source_sha1": "091e80ef3b5e2dbaaf9bb76ce77ef4b8597e90ed",
+   "manifest": "logs/eval/loss_analysis_v2_1/goal_line_trigger_probe_manifest.json",
+   "max_abs_delta_vs_frozen_repr": "0.0",
+   "n": 18,
+   "seed_rule": "base ^ game_idx"
+  },
+  "C": {
+   "base_seed": 20260616,
+   "cases": [
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000637_ply_039",
+     "frozen_black_value_repr": "0.10753619392518886",
+     "game_idx": 637,
+     "position_ply": 39,
+     "recomputed_black_value_repr": "0.10753619392518886",
+     "seed": 20260178,
+     "selected_move": [
+      16,
+      17
+     ],
+     "selected_move_visits": 203,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.5075"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000277_ply_037",
+     "frozen_black_value_repr": "-0.36465488679939884",
+     "game_idx": 277,
+     "position_ply": 37,
+     "recomputed_black_value_repr": "-0.36465488679939884",
+     "seed": 20260408,
+     "selected_move": [
+      3,
+      13
+     ],
+     "selected_move_visits": 43,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.1075"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000639_ply_043",
+     "frozen_black_value_repr": "0.0026408826737315395",
+     "game_idx": 639,
+     "position_ply": 43,
+     "recomputed_black_value_repr": "0.0026408826737315395",
+     "seed": 20260188,
+     "selected_move": [
+      3,
+      8
+     ],
+     "selected_move_visits": 199,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.4975"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000603_ply_027",
+     "frozen_black_value_repr": "0.08067016197441262",
+     "game_idx": 603,
+     "position_ply": 27,
+     "recomputed_black_value_repr": "0.08067016197441262",
+     "seed": 20260168,
+     "selected_move": [
+      11,
+      19
+     ],
+     "selected_move_visits": 160,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.4"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000505_ply_037",
+     "frozen_black_value_repr": "0.8560679676011205",
+     "game_idx": 505,
+     "position_ply": 37,
+     "recomputed_black_value_repr": "0.8560679676011205",
+     "seed": 20260564,
+     "selected_move": [
+      18,
+      10
+     ],
+     "selected_move_visits": 271,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.6775"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000619_ply_061",
+     "frozen_black_value_repr": "0.47587569619296116",
+     "game_idx": 619,
+     "position_ply": 61,
+     "recomputed_black_value_repr": "0.47587569619296116",
+     "seed": 20260190,
+     "selected_move": [
+      19,
+      23
+     ],
+     "selected_move_visits": 141,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.3525"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000499_ply_021",
+     "frozen_black_value_repr": "0.5692354433791479",
+     "game_idx": 499,
+     "position_ply": 21,
+     "recomputed_black_value_repr": "0.5692354433791479",
+     "seed": 20260590,
+     "selected_move": [
+      8,
+      7
+     ],
+     "selected_move_visits": 350,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.875"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000511_ply_019",
+     "frozen_black_value_repr": "-0.038585737019602676",
+     "game_idx": 511,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "-0.038585737019602676",
+     "seed": 20260580,
+     "selected_move": [
+      15,
+      14
+     ],
+     "selected_move_visits": 152,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.38"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000593_ply_027",
+     "frozen_black_value_repr": "0.11964972498302813",
+     "game_idx": 593,
+     "position_ply": 27,
+     "recomputed_black_value_repr": "0.11964972498302813",
+     "seed": 20260162,
+     "selected_move": [
+      9,
+      12
+     ],
+     "selected_move_visits": 244,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.61"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000349_ply_035",
+     "frozen_black_value_repr": "-0.15823740220541369",
+     "game_idx": 349,
+     "position_ply": 35,
+     "recomputed_black_value_repr": "-0.15823740220541369",
+     "seed": 20260470,
+     "selected_move": [
+      3,
+      13
+     ],
+     "selected_move_visits": 97,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.2425"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000735_ply_043",
+     "frozen_black_value_repr": "-0.02028631625842536",
+     "game_idx": 735,
+     "position_ply": 43,
+     "recomputed_black_value_repr": "-0.02028631625842536",
+     "seed": 20260348,
+     "selected_move": [
+      20,
+      3
+     ],
+     "selected_move_visits": 322,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.805"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000103_ply_039",
+     "frozen_black_value_repr": "-0.5592294725682586",
+     "game_idx": 103,
+     "position_ply": 39,
+     "recomputed_black_value_repr": "-0.5592294725682586",
+     "seed": 20260680,
+     "selected_move": [
+      2,
+      4
+     ],
+     "selected_move_visits": 44,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.11"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000191_ply_021",
+     "frozen_black_value_repr": "-0.5009958205022849",
+     "game_idx": 191,
+     "position_ply": 21,
+     "recomputed_black_value_repr": "-0.5009958205022849",
+     "seed": 20260770,
+     "selected_move": [
+      18,
+      15
+     ],
+     "selected_move_visits": 33,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0825"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000463_ply_021",
+     "frozen_black_value_repr": "0.04936448159947759",
+     "game_idx": 463,
+     "position_ply": 21,
+     "recomputed_black_value_repr": "0.04936448159947759",
+     "seed": 20260562,
+     "selected_move": [
+      13,
+      15
+     ],
+     "selected_move_visits": 271,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.6775"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000793_ply_035",
+     "frozen_black_value_repr": "-0.06825203943211818",
+     "game_idx": 793,
+     "position_ply": 35,
+     "recomputed_black_value_repr": "-0.06825203943211818",
+     "seed": 20259890,
+     "selected_move": [
+      19,
+      15
+     ],
+     "selected_move_visits": 172,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.43"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000319_ply_035",
+     "frozen_black_value_repr": "-0.3548848739033565",
+     "game_idx": 319,
+     "position_ply": 35,
+     "recomputed_black_value_repr": "-0.3548848739033565",
+     "seed": 20260372,
+     "selected_move": [
+      18,
+      15
+     ],
+     "selected_move_visits": 46,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.115"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000309_ply_019",
+     "frozen_black_value_repr": "0.44279647799063243",
+     "game_idx": 309,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "0.44279647799063243",
+     "seed": 20260398,
+     "selected_move": [
+      7,
+      9
+     ],
+     "selected_move_visits": 322,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.805"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000001_ply_029",
+     "frozen_black_value_repr": "0.3556713239522651",
+     "game_idx": 1,
+     "position_ply": 29,
+     "recomputed_black_value_repr": "0.3556713239522651",
+     "seed": 20260628,
+     "selected_move": [
+      20,
+      15
+     ],
+     "selected_move_visits": 351,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8775"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000681_ply_025",
+     "frozen_black_value_repr": "-0.005320106771541759",
+     "game_idx": 681,
+     "position_ply": 25,
+     "recomputed_black_value_repr": "-0.005320106771541759",
+     "seed": 20260280,
+     "selected_move": [
+      20,
+      3
+     ],
+     "selected_move_visits": 113,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.2825"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000403_ply_019",
+     "frozen_black_value_repr": "0.340154413562268",
+     "game_idx": 403,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "0.340154413562268",
+     "seed": 20260488,
+     "selected_move": [
+      11,
+      6
+     ],
+     "selected_move_visits": 351,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8775"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000433_ply_029",
+     "frozen_black_value_repr": "0.6066807152505498",
+     "game_idx": 433,
+     "position_ply": 29,
+     "recomputed_black_value_repr": "0.6066807152505498",
+     "seed": 20260516,
+     "selected_move": [
+      19,
+      9
+     ],
+     "selected_move_visits": 399,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9975"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000113_ply_021",
+     "frozen_black_value_repr": "-0.48304424894158726",
+     "game_idx": 113,
+     "position_ply": 21,
+     "recomputed_black_value_repr": "-0.48304424894158726",
+     "seed": 20260716,
+     "selected_move": [
+      6,
+      6
+     ],
+     "selected_move_visits": 84,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.21"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000369_ply_051",
+     "frozen_black_value_repr": "0.3343019643984735",
+     "game_idx": 369,
+     "position_ply": 51,
+     "recomputed_black_value_repr": "0.3343019643984735",
+     "seed": 20260426,
+     "selected_move": [
+      4,
+      10
+     ],
+     "selected_move_visits": 225,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.5625"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000073_ply_033",
+     "frozen_black_value_repr": "-0.14767138068622443",
+     "game_idx": 73,
+     "position_ply": 33,
+     "recomputed_black_value_repr": "-0.14767138068622443",
+     "seed": 20260704,
+     "selected_move": [
+      13,
+      17
+     ],
+     "selected_move_visits": 123,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.3075"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000065_ply_021",
+     "frozen_black_value_repr": "0.48013788419237247",
+     "game_idx": 65,
+     "position_ply": 21,
+     "recomputed_black_value_repr": "0.48013788419237247",
+     "seed": 20260700,
+     "selected_move": [
+      13,
+      18
+     ],
+     "selected_move_visits": 352,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.88"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000425_ply_023",
+     "frozen_black_value_repr": "0.011589231556863524",
+     "game_idx": 425,
+     "position_ply": 23,
+     "recomputed_black_value_repr": "0.011589231556863524",
+     "seed": 20260534,
+     "selected_move": [
+      16,
+      10
+     ],
+     "selected_move_visits": 72,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.18"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000695_ply_019",
+     "frozen_black_value_repr": "0.17557409877539612",
+     "game_idx": 695,
+     "position_ply": 19,
+     "recomputed_black_value_repr": "0.17557409877539612",
+     "seed": 20260268,
+     "selected_move": [
+      11,
+      11
+     ],
+     "selected_move_visits": 156,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.39"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000595_ply_037",
+     "frozen_black_value_repr": "-0.3334745374170598",
+     "game_idx": 595,
+     "position_ply": 37,
+     "recomputed_black_value_repr": "-0.3334745374170598",
+     "seed": 20260222,
+     "selected_move": [
+      5,
+      15
+     ],
+     "selected_move_visits": 49,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.1225"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000565_ply_033",
+     "frozen_black_value_repr": "0.8024437441863119",
+     "game_idx": 565,
+     "position_ply": 33,
+     "recomputed_black_value_repr": "0.8024437441863119",
+     "seed": 20260124,
+     "selected_move": [
+      21,
+      5
+     ],
+     "selected_move_visits": 400,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "1.0"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "game_000705_ply_021",
+     "frozen_black_value_repr": "0.18145949133788236",
+     "game_idx": 705,
+     "position_ply": 21,
+     "recomputed_black_value_repr": "0.18145949133788236",
+     "seed": 20260316,
+     "selected_move": [
+      20,
+      19
+     ],
+     "selected_move_visits": 353,
+     "side_to_move": "black",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8825"
+    }
+   ],
+   "cases_source": "logs/eval/calib020_post_opening_sweep/position_probe_cases.csv",
+   "cases_source_sha1": "592a624b088fd39565518bb9560d41401432b648",
+   "manifest": null,
+   "max_abs_delta_vs_frozen_repr": "0.0",
+   "n": 30,
+   "seed_rule": "base ^ game_idx ^ position_ply"
+  },
+  "D": {
+   "base_seed": 20260616,
+   "cases": [
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000432_predrop_ply_38_drop_40",
+     "frozen_black_value_repr": "-0.6464574715099297",
+     "game_idx": 432,
+     "position_ply": 38,
+     "recomputed_black_value_repr": "-0.6464574715099297",
+     "seed": 20260510,
+     "selected_move": [
+      17,
+      1
+     ],
+     "selected_move_visits": 395,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9875"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000756_predrop_ply_32_drop_34",
+     "frozen_black_value_repr": "-0.39941602108068763",
+     "game_idx": 756,
+     "position_ply": 32,
+     "recomputed_black_value_repr": "-0.39941602108068763",
+     "seed": 20260316,
+     "selected_move": [
+      8,
+      4
+     ],
+     "selected_move_visits": 353,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8825"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000170_predrop_ply_24_drop_26",
+     "frozen_black_value_repr": "-0.42741827945923433",
+     "game_idx": 170,
+     "position_ply": 24,
+     "recomputed_black_value_repr": "-0.42741827945923433",
+     "seed": 20260794,
+     "selected_move": [
+      18,
+      4
+     ],
+     "selected_move_visits": 328,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.82"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000678_predrop_ply_60_drop_62",
+     "frozen_black_value_repr": "-0.35410414200741797",
+     "game_idx": 678,
+     "position_ply": 60,
+     "recomputed_black_value_repr": "-0.35410414200741797",
+     "seed": 20260242,
+     "selected_move": [
+      16,
+      17
+     ],
+     "selected_move_visits": 320,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000324_predrop_ply_30_drop_32",
+     "frozen_black_value_repr": "-0.6557665045800968",
+     "game_idx": 324,
+     "position_ply": 30,
+     "recomputed_black_value_repr": "-0.6557665045800968",
+     "seed": 20260434,
+     "selected_move": [
+      9,
+      11
+     ],
+     "selected_move_visits": 242,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.605"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000278_predrop_ply_18_drop_20",
+     "frozen_black_value_repr": "-0.25672591879498213",
+     "game_idx": 278,
+     "position_ply": 18,
+     "recomputed_black_value_repr": "-0.25672591879498213",
+     "seed": 20260364,
+     "selected_move": [
+      18,
+      2
+     ],
+     "selected_move_visits": 323,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8075"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000398_predrop_ply_20_drop_22",
+     "frozen_black_value_repr": "-0.47994167924392966",
+     "game_idx": 398,
+     "position_ply": 20,
+     "recomputed_black_value_repr": "-0.47994167924392966",
+     "seed": 20260498,
+     "selected_move": [
+      10,
+      20
+     ],
+     "selected_move_visits": 275,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.6875"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000456_predrop_ply_40_drop_42",
+     "frozen_black_value_repr": "0.10747066460840869",
+     "game_idx": 456,
+     "position_ply": 40,
+     "recomputed_black_value_repr": "0.10747066460840869",
+     "seed": 20260584,
+     "selected_move": [
+      11,
+      13
+     ],
+     "selected_move_visits": 11,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0275"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000038_predrop_ply_24_drop_26",
+     "frozen_black_value_repr": "-0.3854239482036792",
+     "game_idx": 38,
+     "position_ply": 24,
+     "recomputed_black_value_repr": "-0.3854239482036792",
+     "seed": 20260662,
+     "selected_move": [
+      9,
+      12
+     ],
+     "selected_move_visits": 345,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8625"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000180_predrop_ply_42_drop_44",
+     "frozen_black_value_repr": "-0.709416654422821",
+     "game_idx": 180,
+     "position_ply": 42,
+     "recomputed_black_value_repr": "-0.709416654422821",
+     "seed": 20260758,
+     "selected_move": [
+      14,
+      17
+     ],
+     "selected_move_visits": 377,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9425"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000616_predrop_ply_56_drop_58",
+     "frozen_black_value_repr": "0.04003055786102777",
+     "game_idx": 616,
+     "position_ply": 56,
+     "recomputed_black_value_repr": "0.04003055786102777",
+     "seed": 20260184,
+     "selected_move": [
+      4,
+      1
+     ],
+     "selected_move_visits": 144,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.36"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000642_predrop_ply_40_drop_42",
+     "frozen_black_value_repr": "-0.7729732709759264",
+     "game_idx": 642,
+     "position_ply": 40,
+     "recomputed_black_value_repr": "-0.7729732709759264",
+     "seed": 20260258,
+     "selected_move": [
+      11,
+      20
+     ],
+     "selected_move_visits": 389,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.9725"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000664_predrop_ply_56_drop_58",
+     "frozen_black_value_repr": "-0.02742534470919054",
+     "game_idx": 664,
+     "position_ply": 56,
+     "recomputed_black_value_repr": "-0.02742534470919054",
+     "seed": 20260264,
+     "selected_move": [
+      5,
+      19
+     ],
+     "selected_move_visits": 132,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.33"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000300_predrop_ply_54_drop_56",
+     "frozen_black_value_repr": "-0.5597168496472296",
+     "game_idx": 300,
+     "position_ply": 54,
+     "recomputed_black_value_repr": "-0.5597168496472296",
+     "seed": 20260370,
+     "selected_move": [
+      6,
+      3
+     ],
+     "selected_move_visits": 376,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.94"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000578_predrop_ply_54_drop_56",
+     "frozen_black_value_repr": "0.091712135905982",
+     "game_idx": 578,
+     "position_ply": 54,
+     "recomputed_black_value_repr": "0.091712135905982",
+     "seed": 20260220,
+     "selected_move": [
+      17,
+      6
+     ],
+     "selected_move_visits": 137,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.3425"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000780_predrop_ply_56_drop_58",
+     "frozen_black_value_repr": "0.2588659113575704",
+     "game_idx": 780,
+     "position_ply": 56,
+     "recomputed_black_value_repr": "0.2588659113575704",
+     "seed": 20259900,
+     "selected_move": [
+      7,
+      3
+     ],
+     "selected_move_visits": 13,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0325"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000408_predrop_ply_50_drop_52",
+     "frozen_black_value_repr": "0.10979655096161878",
+     "game_idx": 408,
+     "position_ply": 50,
+     "recomputed_black_value_repr": "0.10979655096161878",
+     "seed": 20260514,
+     "selected_move": [
+      11,
+      22
+     ],
+     "selected_move_visits": 80,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.2"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000142_predrop_ply_32_drop_34",
+     "frozen_black_value_repr": "-0.5027268332999665",
+     "game_idx": 142,
+     "position_ply": 32,
+     "recomputed_black_value_repr": "-0.5027268332999665",
+     "seed": 20260774,
+     "selected_move": [
+      6,
+      16
+     ],
+     "selected_move_visits": 354,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.885"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000048_predrop_ply_20_drop_22",
+     "frozen_black_value_repr": "-0.19473759411543143",
+     "game_idx": 48,
+     "position_ply": 20,
+     "recomputed_black_value_repr": "-0.19473759411543143",
+     "seed": 20260652,
+     "selected_move": [
+      13,
+      16
+     ],
+     "selected_move_visits": 230,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.575"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000172_predrop_ply_18_drop_20",
+     "frozen_black_value_repr": "0.15066380571646731",
+     "game_idx": 172,
+     "position_ply": 18,
+     "recomputed_black_value_repr": "0.15066380571646731",
+     "seed": 20260790,
+     "selected_move": [
+      8,
+      14
+     ],
+     "selected_move_visits": 30,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.075"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000752_predrop_ply_70_drop_72",
+     "frozen_black_value_repr": "0.31671308498713185",
+     "game_idx": 752,
+     "position_ply": 70,
+     "recomputed_black_value_repr": "0.31671308498713185",
+     "seed": 20260286,
+     "selected_move": [
+      14,
+      21
+     ],
+     "selected_move_visits": 3,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0075"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000348_predrop_ply_62_drop_64",
+     "frozen_black_value_repr": "-0.5237323927693069",
+     "game_idx": 348,
+     "position_ply": 62,
+     "recomputed_black_value_repr": "-0.5237323927693069",
+     "seed": 20260458,
+     "selected_move": [
+      16,
+      22
+     ],
+     "selected_move_visits": 300,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.75"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000788_predrop_ply_36_drop_38",
+     "frozen_black_value_repr": "-0.6607116135174874",
+     "game_idx": 788,
+     "position_ply": 36,
+     "recomputed_black_value_repr": "-0.6607116135174874",
+     "seed": 20259896,
+     "selected_move": [
+      11,
+      16
+     ],
+     "selected_move_visits": 349,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.8725"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000216_predrop_ply_38_drop_40",
+     "frozen_black_value_repr": "0.29370030625956134",
+     "game_idx": 216,
+     "position_ply": 38,
+     "recomputed_black_value_repr": "0.29370030625956134",
+     "seed": 20260854,
+     "selected_move": [
+      6,
+      3
+     ],
+     "selected_move_visits": 11,
+     "side_to_move": "red",
+     "tied_with_top": 1,
+     "top_share_repr": "0.0275"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000728_predrop_ply_48_drop_50",
+     "frozen_black_value_repr": "0.06756345934001728",
+     "game_idx": 728,
+     "position_ply": 48,
+     "recomputed_black_value_repr": "0.06756345934001728",
+     "seed": 20260320,
+     "selected_move": [
+      13,
+      11
+     ],
+     "selected_move_visits": 74,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.185"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000438_predrop_ply_56_drop_58",
+     "frozen_black_value_repr": "0.06970574500213843",
+     "game_idx": 438,
+     "position_ply": 56,
+     "recomputed_black_value_repr": "0.06970574500213843",
+     "seed": 20260486,
+     "selected_move": [
+      9,
+      15
+     ],
+     "selected_move_visits": 35,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0875"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000634_predrop_ply_64_drop_66",
+     "frozen_black_value_repr": "0.08352541926316917",
+     "game_idx": 634,
+     "position_ply": 64,
+     "recomputed_black_value_repr": "0.08352541926316917",
+     "seed": 20260146,
+     "selected_move": [
+      13,
+      10
+     ],
+     "selected_move_visits": 54,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.135"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000682_predrop_ply_36_drop_38",
+     "frozen_black_value_repr": "-0.15537010481930338",
+     "game_idx": 682,
+     "position_ply": 36,
+     "recomputed_black_value_repr": "-0.15537010481930338",
+     "seed": 20260230,
+     "selected_move": [
+      11,
+      21
+     ],
+     "selected_move_visits": 260,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.65"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000362_predrop_ply_52_drop_54",
+     "frozen_black_value_repr": "0.19775474613474217",
+     "game_idx": 362,
+     "position_ply": 52,
+     "recomputed_black_value_repr": "0.19775474613474217",
+     "seed": 20260438,
+     "selected_move": [
+      15,
+      21
+     ],
+     "selected_move_visits": 11,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0275"
+    },
+    {
+     "abs_delta_vs_frozen_repr": "0.0",
+     "case_id": "red_loss_game_000176_predrop_ply_42_drop_44",
+     "frozen_black_value_repr": "0.2988884964108001",
+     "game_idx": 176,
+     "position_ply": 42,
+     "recomputed_black_value_repr": "0.2988884964108001",
+     "seed": 20260754,
+     "selected_move": [
+      16,
+      9
+     ],
+     "selected_move_visits": 7,
+     "side_to_move": "red",
+     "tied_with_top": 0,
+     "top_share_repr": "0.0175"
+    }
+   ],
+   "cases_source": "logs/eval/calib020_0001_red_loss_post_opening_predrop_probe/position_probe_cases.csv",
+   "cases_source_sha1": "5f26ec1aae22be62a8bfe272e4787294e8887f0e",
+   "manifest": null,
+   "max_abs_delta_vs_frozen_repr": "0.0",
+   "n": 30,
+   "seed_rule": "base ^ game_idx ^ position_ply"
+  }
+ },
+ "mcts": {
+  "add_noise": false,
+  "batching_triple": [
+   14,
+   48,
+   8
+  ],
+  "n_simulations": 400,
+  "positions_with_a_tie_at_the_top": 3,
+  "tie_break": "design section 7.0 -- greatest completed visit count, then canonical move order"
+ },
+ "record_kind": "v17_prechange_abcd_selected_moves",
+ "schema_version": 1,
+ "scientific_interpretation": "This artifact may be used ONLY as the selected-move half of the Stage-4 baseline reproduction check. It may not select or tune a coefficient.",
+ "scope": "SHIPPED BASELINE ONLY. No v17 field exists, no candidate is evaluated, and no gate verdict is emitted. Baseline authentication under design section 9; NOT an A/B/C/D acceptance run under section 1.2.",
+ "source_sha1s": {
+  "scripts/GPU/alphazero/eval_goal_line_trigger_probe.py": "10c96b6424748915ffad2c2b34b9a4fc5653d25c",
+  "scripts/GPU/alphazero/eval_position_probe.py": "a3d750b8bb279bec05cd22d345c7588645ce5f4d",
+  "scripts/GPU/alphazero/eval_runner.py": "590c1100549d0429087df53a2f879f51dfdd79e0",
+  "scripts/GPU/alphazero/goal_line_trigger_probe_cases.py": "ee8c616f317da0b6e47ad09f66cd1c1254f51335",
+  "scripts/GPU/alphazero/mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+  "scripts/GPU/alphazero/position_probe_cases.py": "2eb1db3a0a843904a915ca30561ad74b52ce121f"
+ }
+}

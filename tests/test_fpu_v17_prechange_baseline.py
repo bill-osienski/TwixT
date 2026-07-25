@@ -121,16 +121,95 @@ def test_golden_sha1_recorded_and_current():
 
 
 @requires_probe_csvs
-def test_selected_move_gap_is_recorded_not_silently_dropped():
-    """Design §9 asks Stage 4 to match 'exact selected moves', but no canonical
-    CSV carries one. The gap must stay visible in the record until resolved."""
-    rec = _record()
-    assert "selected_moves" in rec["known_gap"]
+def test_canonical_csvs_still_carry_no_selected_move():
+    """The reason the supplemental capture exists. If a canonical CSV ever grows
+    a selected-move column, this fails and the supplement should be revisited."""
     move_identity = ("selected_move", "chosen_move", "best_move", "top_move",
                      "top1_move", "move_id", "pv_move", "principal_variation")
-    for frozen in rec["abcd_frozen_baseline"].values():
+    for frozen in _record()["abcd_frozen_baseline"].values():
         cols = set(next(csv.DictReader(open(frozen["canonical_source"]))))
         assert not any(tok in c for c in cols for tok in move_identity), sorted(cols)
         # `side_to_move` is the only 'move'-named column and records whose turn
         # it is, not which move the search picked.
         assert "side_to_move" in cols
+
+
+# ---------------------------------------------------------------------------
+# Supplemental shipped-baseline selected moves (design §9 "with exact selected
+# moves"). Captured at Task 1 from the same harness, checkpoint, batching
+# triple and per-case seeds that produced the frozen CSVs.
+# ---------------------------------------------------------------------------
+
+def _selected_moves():
+    rec = _record()["selected_moves"]
+    with open(rec["artifact"]) as f:
+        return rec, json.load(f)
+
+
+def test_selected_move_artifact_is_authenticated_and_unmodified():
+    rec, art = _selected_moves()
+    assert rec["status"].startswith("RESOLVED")
+    assert _sha1(rec["artifact"]) == rec["artifact_sha1"]
+    assert _sha1(rec["capture_tool"]) == rec["capture_tool_sha1"]
+    assert art["authentication"]["mismatches"] == 0
+    assert art["authentication"]["cases_checked"] == 108
+    assert art["mcts"]["batching_triple"] == [14, 48, 8]
+    assert art["mcts"]["n_simulations"] == 400
+    assert art["mcts"]["add_noise"] is False
+    # the checkpoint the whole v17 experiment is pinned to
+    assert art["checkpoint_sha1"] == "209cf2d4fd24a48553d259dd71b4954867b9473e"
+
+
+def test_selected_moves_cover_every_frozen_case_exactly_once():
+    _rec, art = _selected_moves()
+    frozen = _record()["abcd_frozen_baseline"]
+    assert set(art["gates"]) == set(frozen)
+    for gate, g in art["gates"].items():
+        assert g["n"] == frozen[gate]["n"], gate
+        ids = [c["case_id"] for c in g["cases"]]
+        assert len(set(ids)) == len(ids), gate
+        assert set(ids) == {c["case_id"] for c in frozen[gate]["cases"]}, gate
+        for case in g["cases"]:
+            move = case["selected_move"]
+            assert len(move) == 2 and all(isinstance(x, int) for x in move), case
+            assert case["selected_move_visits"] > 0, case
+
+
+def test_selected_move_capture_reproduced_the_frozen_values_exactly():
+    """The authentication that makes these moves usable as a §9 baseline: the
+    re-run reproduced every frozen probe_black_root_value bit-for-bit, so the
+    moves come from the same search regime as the frozen values."""
+    _rec, art = _selected_moves()
+    frozen = _record()["abcd_frozen_baseline"]
+    for gate, g in art["gates"].items():
+        assert float(g["max_abs_delta_vs_frozen_repr"]) == 0.0, gate
+        by_id = {c["case_id"]: c for c in frozen[gate]["cases"]}
+        for case in g["cases"]:
+            assert (case["recomputed_black_value_repr"]
+                    == case["frozen_black_value_repr"]
+                    == by_id[case["case_id"]]["probe_black_root_value_repr"]), case
+
+
+@requires_probe_csvs
+def test_selected_move_top_share_agrees_with_the_canonical_csv():
+    """Independent cross-check on a column the capture did not authenticate
+    against: the re-run's top share must match the CSV's probe_top1_share."""
+    _rec, art = _selected_moves()
+    for gate, g in art["gates"].items():
+        rows = {r["case_id"]: r for r in
+                csv.DictReader(open(g["cases_source"]))
+                if r["checkpoint"] == "0001"}
+        for case in g["cases"]:
+            assert abs(float(case["top_share_repr"])
+                       - float(rows[case["case_id"]]["probe_top1_share"])) < TOL, case
+
+
+def test_top_visit_ties_are_reported_not_hidden():
+    """A tie makes the §7.0 canonical comparator load-bearing for that case, so
+    the count must stay visible rather than being silently resolved."""
+    _rec, art = _selected_moves()
+    reported = art["mcts"]["positions_with_a_tie_at_the_top"]
+    counted = sum(1 for g in art["gates"].values()
+                  for c in g["cases"] if c["tied_with_top"] > 0)
+    assert reported == counted
+    assert "canonical move order" in art["mcts"]["tie_break"]
