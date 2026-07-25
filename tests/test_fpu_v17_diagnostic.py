@@ -15,6 +15,7 @@ import pytest
 from scripts.GPU.alphazero import diagnose_fpu_baseline_policy_mass as v17
 from scripts.GPU.alphazero import diagnose_fpu_policy_mass as v16
 from scripts.GPU.alphazero import fpu_provenance
+from scripts.GPU.alphazero import fpu_v17_protocol as protocol
 from scripts.GPU.alphazero import fpu_v17_provenance as prov
 
 CKPT = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
@@ -30,27 +31,47 @@ def clean_tree(monkeypatch):
 # Row fabrication
 # ---------------------------------------------------------------------------
 
-def row(sha, coefficient, role="target", **over):
-    base = dict(canonical_sha1=sha, role=role, coefficient=coefficient,
+def row(sha, coefficient, role="target", side="red", **over):
+    base = dict(canonical_sha1=sha, role=role, side=side, coefficient=coefficient,
+                seed=1234, add_noise=False,
                 selected_move=1, selected_prior=0.02, selected_prior_rank=1,
-                root_value_stm=0.0, parent_value=0.0, top_share=0.5,
-                eff_children=100.0, replies=100, collapse=False, lock_in=False,
-                explored_mass=0.25, stabilization_sim=200, complete=True)
+                root_value_stm=0.0, parent_value=0.0, selected_child_q=0.0,
+                top_share=0.5, eff_children=100.0, replies=100, collapse=False,
+                lock_in=False, explored_mass=0.25, stabilization_sim=200,
+                complete=True, tree_signature=[[1, 100, "0x0.0p+0"]])
     base.update(over)
+    base["search_result_sha1"] = v17.search_result_sha1(
+        {**base, "search_result_sha1": ""})
     return base
 
 
 def corpus(n_targets=16, n_controls=16, configs=(None, 0.0), **cand):
-    """One shipped + one row per config per position. `cand` overrides are
-    applied only to NON-shipped, non-zero rows."""
+    """One row per config per position, in the frozen development geometry.
+    `cand` overrides are applied only to NON-shipped, non-zero rows."""
     rows = []
     for i in range(n_targets + n_controls):
         sha = f"pos{i:03d}"
         role = "target" if i < n_targets else "control"
         for c in configs:
             over = dict(cand) if (c is not None and c != 0.0) else {}
-            rows.append(row(sha, c, role=role, **over))
+            rows.append(row(sha, c, role=role,
+                            side="red" if i % 2 == 0 else "black", **over))
     return rows
+
+
+def rehash(rows):
+    """Re-seal rows after a test mutates them. `search_result_sha1` binds the
+    payload, so an in-place edit must be re-sealed exactly as a real producer
+    would -- that binding is itself under test elsewhere."""
+    for r in rows:
+        r["search_result_sha1"] = v17.search_result_sha1(
+            {**r, "search_result_sha1": ""})
+    return rows
+
+
+def heldout_corpus(configs, **cand):
+    """§8.1 geometry: 24 targets + 32 controls."""
+    return corpus(n_targets=24, n_controls=32, configs=configs, **cand)
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +240,7 @@ def test_zero_new_collapse_passes_and_one_rejects():
     for r in rows:
         if r["coefficient"] == 0.35 and r["canonical_sha1"] == "pos000":
             r["collapse"] = True
+    rehash(rows)
     assert "target_new_collapse_rate" in " ".join(_safety(rows).reasons)
 
 
@@ -231,7 +253,7 @@ def test_control_flip_permits_one_and_rejects_two():
             if (r["coefficient"] == 0.35 and r["role"] == "control" and n < k):
                 r["selected_move"], r["selected_prior"] = 99, 0.001
                 n += 1
-        return rows
+        return rehash(rows)
     assert not _safety(flipped(1)).rejected
     assert any("control_flip_rate" in x for x in _safety(flipped(2)).reasons)
 
@@ -243,6 +265,7 @@ def test_lockin_margin_is_one_for_development_and_two_for_heldout():
         if r["coefficient"] == 0.35 and r["role"] == "target" and n < 2:
             r["lock_in"] = True
             n += 1
+    rehash(rows)
     assert any("lockin_count" in x for x in _safety(rows, lockin=0).reasons)
     assert not _safety(rows, lockin=0,
                        margin=v17.HELDOUT_LOCKIN_MARGIN).rejected
@@ -295,7 +318,7 @@ def test_minimum_targets_with_fewer_replies():
             if r["coefficient"] == 0.35 and r["role"] == "target" and n < k:
                 r["replies"] = 1
                 n += 1
-        return rows
+        return rehash(rows)
     assert any("targets_with_fewer_replies" in x
                for x in v17.dev_mechanism_verdict(with_fewer(7), 0.35).reasons)
     assert not any("targets_with_fewer_replies" in x
@@ -321,7 +344,7 @@ def test_rank_worsening_permits_one_and_rejects_two():
             if r["coefficient"] == 0.35 and r["role"] == "target" and n < k:
                 r["selected_move"], r["selected_prior_rank"] = 42, 11
                 n += 1
-        return rows
+        return rehash(rows)
     assert v17.dev_mechanism_verdict(worsened(1), 0.35).passed
     assert any("rank_worsened" in x
                for x in v17.dev_mechanism_verdict(worsened(2), 0.35).reasons)
@@ -337,7 +360,7 @@ def _passing_rows_for(grid_points):
     for r in rows:
         if r["coefficient"] in grid_points:
             r["replies"], r["eff_children"] = 10, 70.0
-    return rows
+    return rehash(rows)
 
 
 def test_selects_the_smallest_passing_not_the_best():
@@ -556,9 +579,12 @@ def _artifact(mode, tmp_path, **over):
     configs = v17.configs_for_mode(
         mode, frozen_coefficient=None if mode in ("development", "tooling_smoke")
         else coefficient)
-    kwargs = dict(mode=mode, coefficient=coefficient,
-                  rows=corpus(configs=configs), gates={},
-                  checkpoints={"a": CKPT}, manifest=str(manifest),
+    rows = (corpus(configs=configs) if mode in ("development", "tooling_smoke")
+            else heldout_corpus(configs))
+    kwargs = dict(mode=mode, coefficient=coefficient, rows=rows, gates={},
+                  checkpoints={"a": CKPT},
+                  effective_mcts_config={"shipped": {"n_simulations": 400}},
+                  protocol_sha1="0" * 40, manifest=str(manifest),
                   source_index=str(index), replay_paths=[str(replay)],
                   source_files=[SRC])
     kwargs.update(over)
@@ -577,19 +603,55 @@ def test_scientific_artifact_populates_every_identity(clean_tree, tmp_path):
 def test_scientific_artifact_persists_the_complete_paired_rows(clean_tree, tmp_path):
     """A count alone would make every gate number unauditable."""
     art = _artifact("held_out", tmp_path)
-    assert art["n_rows"] == len(art["rows"]) == 64      # 32 positions x 2 configs
+    assert art["n_rows"] == len(art["rows"]) == 112     # 56 positions x 2 configs
     for row in art["rows"]:
         assert set(row) == set(v17.REQUIRED_ROW_FIELDS)
     json.dumps(art, allow_nan=False)                    # canonical-JSON safe
 
 
 @pytest.mark.parametrize("null", ["manifest", "source_index", "replay_paths",
-                                  "checkpoints", "source_files", "rows"])
-@pytest.mark.parametrize("mode", ["development", "held_out", "abcd"])
+                                  "checkpoints", "source_files",
+                                  "protocol_sha1", "effective_mcts_config"])
+@pytest.mark.parametrize("mode", ["development", "held_out"])
 def test_scientific_artifact_refuses_a_null_identity(clean_tree, tmp_path, mode, null):
-    empty = {"checkpoints": {}, "rows": [], "source_files": []}.get(null, None)
-    with pytest.raises(prov.ProtocolViolation, match="must p"):
+    empty = {"checkpoints": {}, "source_files": [],
+             "effective_mcts_config": {}}.get(null, None)
+    with pytest.raises(prov.ProtocolViolation, match="must "):
         _artifact(mode, tmp_path, **{null: empty})
+
+
+def test_scientific_artifact_records_the_complete_effective_config(clean_tree,
+                                                                   tmp_path):
+    """A bare coefficient label would not let anyone reproduce the search."""
+    art = _artifact("held_out", tmp_path,
+                    effective_mcts_config={str(c): v17._effective_config(c)
+                                           for c in (None, 0.25)})
+    cfg = art["effective_mcts_config"]["0.25"]
+    assert cfg["n_simulations"] == 400 and cfg["add_noise"] is False
+    assert cfg["fpu_value"] == 0.0
+    assert cfg[prov.CONFIG_FIELD] == 0.25
+    assert cfg["eval_batch_size"] == 14 and cfg["stall_flush_sims"] == 48
+    assert art["protocol_sha1"]
+
+
+@pytest.mark.parametrize("mode,geometry", [
+    ("development", {"target": 16, "control": 16}),
+    ("held_out", {"target": 24, "control": 32}),
+])
+def test_corpus_geometry_is_frozen_per_mode(mode, geometry):
+    assert v17.CORPUS_GEOMETRY[mode] == geometry
+    v17.require_corpus_geometry(mode, geometry)
+    for role in geometry:
+        wrong = {**geometry, role: geometry[role] - 1}
+        with pytest.raises(prov.ProtocolViolation, match="corpus geometry"):
+            v17.require_corpus_geometry(mode, wrong)
+
+
+def test_artifact_refuses_wrong_corpus_geometry(clean_tree, tmp_path):
+    with pytest.raises(prov.ProtocolViolation, match="corpus geometry"):
+        _artifact("development", tmp_path, coefficient=None,
+                  rows=corpus(n_targets=15, n_controls=16,
+                              configs=(None, 0.0) + tuple(prov.GRID)))
 
 
 def test_artifact_enforces_mode_coefficient_legality(clean_tree, tmp_path):
@@ -600,15 +662,15 @@ def test_artifact_enforces_mode_coefficient_legality(clean_tree, tmp_path):
 
 def test_artifact_runs_pairing_and_zero_identity_itself(clean_tree, tmp_path):
     configs = (None, 0.0) + tuple(prov.GRID)
-    rows = corpus(configs=configs)
-    rows = [r for r in rows if not (r["canonical_sha1"] == "pos000"
-                                    and r["coefficient"] == 0.45)]
+    rows = [r for r in corpus(configs=configs)
+            if not (r["canonical_sha1"] == "pos000" and r["coefficient"] == 0.45)]
     with pytest.raises(prov.ProtocolViolation, match="incomplete pairing"):
         _artifact("development", tmp_path, coefficient=None, rows=rows)
     broken = corpus(configs=configs)
     for r in broken:
         if r["coefficient"] == 0.0 and r["canonical_sha1"] == "pos000":
             r["selected_move"] = 99
+    rehash(broken)
     with pytest.raises(prov.ProtocolViolation, match="r=0 identity FAILED"):
         _artifact("development", tmp_path, coefficient=None, rows=broken)
 
@@ -678,73 +740,254 @@ def test_cli_refuses_a_coefficient_in_development(monkeypatch, tmp_path, capsys)
 # pipeline -- manifest -> rows -> validation -> gates -> artifact -- with no GPU
 # ---------------------------------------------------------------------------
 
-def _manifest(tmp_path, n=32):
-    path = tmp_path / "manifest.csv"
+SEEDS = {"development": (20310000, 1600), "held_out": (20312000, 2200),
+         "tooling_smoke": (20309000, 32)}
+
+
+def _manifest(tmp_path, mode="development"):
+    """A manifest in the mode's FROZEN geometry."""
+    geometry = v17.CORPUS_GEOMETRY[mode]
+    path = tmp_path / f"manifest_{mode}.csv"
     lines = ["canonical_sha1,game_idx,position_ply,side,role,replay_path"]
-    for i in range(n):
-        replay = tmp_path / f"replay{i}.json"
-        replay.write_text('{"moves": []}')
-        role = "target" if i < n // 2 else "control"
-        lines.append(f"pos{i},{i},50,red,{role},{replay}")
+    i = 0
+    for role, count in geometry.items():
+        for _ in range(count):
+            replay = tmp_path / f"replay{i}.json"
+            replay.write_text('{"moves": []}')
+            side = "red" if i % 2 == 0 else "black"
+            lines.append(f"pos{i:03d},{i},50,{side},{role},{replay}")
+            i += 1
     path.write_text("\n".join(lines) + "\n")
     return path
+
+
+def _pair(tmp_path, mode, coefficient=None):
+    base, games = SEEDS[mode]
+    doc = protocol.build_protocol(run_kind=mode, coefficient=coefficient,
+                                  base_seed=base, games=games,
+                                  checkpoints={"anchor": CKPT})
+    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
+    protocol.emit(ppath, doc)
+    protocol.emit(cpath, protocol.derive_config(doc))
+    return str(ppath), str(cpath)
 
 
 def _fake_searcher(**cand):
     def search(manifest_row, coefficient):
         over = dict(cand) if (coefficient is not None and coefficient != 0.0) else {}
         return row(manifest_row["canonical_sha1"], coefficient,
-                   role=manifest_row["role"], **over)
+                   role=manifest_row["role"], side=manifest_row["side"], **over)
     return search
+
+
+def _run(tmp_path, monkeypatch, mode, **over):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    coefficient = over.pop("frozen_coefficient", None)
+    ppath, cpath = _pair(tmp_path, mode, coefficient)
+    kwargs = dict(mode=mode, manifest_path=str(_manifest(tmp_path, mode)),
+                  checkpoint=CKPT, out_path=str(tmp_path / f"{mode}.json"),
+                  seed_base=SEEDS[mode][0], frozen_coefficient=coefficient,
+                  source_index=cpath, protocol_path=ppath, config_path=cpath,
+                  searcher=_fake_searcher())
+    kwargs.update(over)
+    return v17.run_diagnostic(**kwargs)
 
 
 def test_run_diagnostic_end_to_end_emits_a_complete_artifact(clean_tree, tmp_path,
                                                              monkeypatch):
-    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
-    out = tmp_path / "development.json"
-    art = v17.run_diagnostic(
-        mode="development", manifest_path=str(_manifest(tmp_path)),
-        checkpoint=CKPT, out_path=str(out), seed_base=20260725,
-        source_index=str(_manifest(tmp_path)),
-        searcher=_fake_searcher(replies=10, eff_children=70.0))
-    assert out.exists()
-    assert art["n_rows"] == len(art["rows"]) == 32 * 7    # 32 positions x 7 configs
+    art = _run(tmp_path, monkeypatch, "development",
+               searcher=_fake_searcher(replies=10, eff_children=70.0))
+    assert (tmp_path / "development.json").exists()
+    assert art["n_rows"] == len(art["rows"]) == 32 * 7
     assert sorted(art["gates"]) == [str(g) for g in sorted(prov.GRID)]
-    assert art["coefficient"] == 0.15                       # smallest passing
+    assert art["coefficient"] == 0.15
     assert art["provenance"]["identities"]["replay_data_sha1"]
+    assert art["protocol_sha1"] and art["effective_mcts_config"]
     json.dumps(art, allow_nan=False)
 
 
 def test_run_diagnostic_refuses_a_broken_zero_identity(clean_tree, tmp_path,
                                                        monkeypatch):
-    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
-
     def bad(manifest_row, coefficient):
         r = row(manifest_row["canonical_sha1"], coefficient,
-                role=manifest_row["role"])
+                role=manifest_row["role"], side=manifest_row["side"])
         if coefficient == 0.0:
             r["selected_move"] = 99
-        return r
+        return rehash([r])[0]
     with pytest.raises(prov.ProtocolViolation, match="r=0 identity FAILED"):
-        v17.run_diagnostic(mode="development",
-                           manifest_path=str(_manifest(tmp_path)),
-                           checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
-                           seed_base=1, source_index=str(_manifest(tmp_path)),
-                           searcher=bad)
+        _run(tmp_path, monkeypatch, "development", searcher=bad)
 
 
 def test_run_diagnostic_held_out_runs_one_coefficient(clean_tree, tmp_path,
                                                       monkeypatch):
-    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
-    art = v17.run_diagnostic(
-        mode="held_out", manifest_path=str(_manifest(tmp_path)),
-        checkpoint=CKPT, out_path=str(tmp_path / "h.json"),
-        frozen_coefficient=0.25, seed_base=1,
-        source_index=str(_manifest(tmp_path)),
-        searcher=_fake_searcher(replies=70))
+    art = _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.25,
+               searcher=_fake_searcher(replies=70))
     assert art["configs"] == [None, 0.25]
     assert art["gates"]["held_out"]["passed"] is True
     assert art["gates"]["held_out"]["metrics"]["attenuated_but_present"] is True
+
+
+def test_run_diagnostic_requires_a_verified_protocol(clean_tree, tmp_path,
+                                                     monkeypatch):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    with pytest.raises(prov.ProtocolViolation, match="verified protocol"):
+        v17.run_diagnostic(
+            mode="development", manifest_path=str(_manifest(tmp_path)),
+            checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
+            seed_base=1, source_index="x", searcher=_fake_searcher())
+
+
+def test_run_diagnostic_refuses_wrong_manifest_geometry(clean_tree, tmp_path,
+                                                        monkeypatch):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    ppath, cpath = _pair(tmp_path, "development")
+    replay = tmp_path / "solo.json"
+    replay.write_text('{"moves": []}')
+    bad = tmp_path / "bad.csv"
+    bad.write_text("canonical_sha1,game_idx,position_ply,side,role,replay_path\n"
+                   f"p0,0,50,red,target,{replay}\n")
+    with pytest.raises(prov.ProtocolViolation, match="corpus geometry"):
+        v17.run_diagnostic(mode="development", manifest_path=str(bad),
+                           checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
+                           seed_base=1, source_index=cpath, protocol_path=ppath,
+                           config_path=cpath, searcher=_fake_searcher())
+
+
+def test_missing_identity_is_caught_before_any_search(clean_tree, tmp_path,
+                                                      monkeypatch):
+    """A missing source_index previously surfaced only after all seven
+    development searches had run for a position."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    ppath, cpath = _pair(tmp_path, "development")
+    calls = []
+
+    def counting(manifest_row, coefficient):
+        calls.append((manifest_row["canonical_sha1"], coefficient))
+        return row(manifest_row["canonical_sha1"], coefficient,
+                   role=manifest_row["role"], side=manifest_row["side"])
+    with pytest.raises(prov.ProtocolViolation, match="source_index"):
+        v17.run_diagnostic(
+            mode="development", manifest_path=str(_manifest(tmp_path)),
+            checkpoint=CKPT, out_path=str(tmp_path / "o.json"), seed_base=1,
+            source_index=None, protocol_path=ppath, config_path=cpath,
+            searcher=counting)
+    assert calls == []
+
+
+@pytest.mark.parametrize("field", ["checkpoint", "manifest_path", "source_index"])
+def test_unreadable_inputs_are_caught_in_preflight(clean_tree, tmp_path,
+                                                   monkeypatch, field):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    ppath, cpath = _pair(tmp_path, "development")
+    kwargs = dict(mode="development", manifest_path=str(_manifest(tmp_path)),
+                  checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
+                  seed_base=1, source_index=cpath, protocol_path=ppath,
+                  config_path=cpath, searcher=_fake_searcher())
+    kwargs[field] = str(tmp_path / "nope")
+    with pytest.raises(prov.ProtocolViolation):
+        v17.run_diagnostic(**kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Stage 4: A/B/C/D against the Task 1 frozen baseline
+# ---------------------------------------------------------------------------
+
+def _frozen(gate):
+    with open(v17.ABCD_BASELINE_PATH) as f:
+        return json.load(f)["abcd_frozen_baseline"][gate]
+
+
+def _shipped_cases(gate, **mutate):
+    """A shipped run that exactly reproduces the Task 1 frozen baseline."""
+    with open(v17.ABCD_MOVES_PATH) as f:
+        moves = {c["case_id"]: c for c in json.load(f)["gates"][gate]["cases"]}
+    cases = [{"case_id": c["case_id"],
+              "black_value": float(c["probe_black_root_value_repr"]),
+              "selected_move": moves[c["case_id"]]["selected_move"]}
+             for c in _frozen(gate)["cases"]]
+    if mutate:
+        cases[0].update(mutate)
+    return cases
+
+
+@pytest.mark.parametrize("gate", ["A", "B", "C", "D"])
+def test_shipped_baseline_reproduces_the_task1_freeze(gate):
+    out = v17.verify_abcd_baseline(gate, _shipped_cases(gate))
+    assert out["n"] == v17.ABCD_CARDINALITY[gate]
+    assert out["max_abs_delta"] == 0.0
+    assert (out["over"], out["severe"]) == (_frozen(gate)["over"],
+                                            _frozen(gate)["severe"])
+
+
+@pytest.mark.parametrize("gate", ["A", "B", "C", "D"])
+def test_shipped_value_drift_invalidates_stage_4(gate):
+    with pytest.raises(prov.ProtocolViolation, match="frozen baseline"):
+        v17.verify_abcd_baseline(gate, _shipped_cases(gate, black_value=9.0))
+
+
+@pytest.mark.parametrize("gate", ["A", "B", "C", "D"])
+def test_shipped_selected_move_drift_invalidates_stage_4(gate):
+    with pytest.raises(prov.ProtocolViolation, match="selected move"):
+        v17.verify_abcd_baseline(gate, _shipped_cases(gate, selected_move=[0, 0]))
+
+
+def test_truncated_shipped_run_invalidates_stage_4():
+    with pytest.raises(prov.ProtocolViolation, match="cardinality"):
+        v17.verify_abcd_baseline("B", _shipped_cases("B")[:17])
+
+
+def _candidate_cases(gate, value):
+    return [{"case_id": c["case_id"], "black_value": value,
+             "selected_move": [0, 0]} for c in _frozen(gate)["cases"]]
+
+
+def _a_case_rows(n=30):
+    off = 0.25702582687976244
+    return [{"off_value": off, "r_value": off - 0.6 * (off - v16.V_REF),
+             "replies_ref": 100, "replies_x": 40, "new_collapse": False,
+             "top_share_inc": 0.0} for _ in range(n)]
+
+
+def test_run_abcd_applies_all_four_verdicts():
+    gates = v17.run_abcd(
+        coefficient=0.25,
+        shipped_by_gate={g: _shipped_cases(g) for g in v17.ABCD_GATES},
+        candidate_by_gate={g: _candidate_cases(g, -0.3) for g in v17.ABCD_GATES},
+        a_rows=_a_case_rows())
+    assert gates["all_passed"] is True
+    for g in v17.ABCD_GATES:
+        assert gates[g]["passed"] is True
+    assert gates["baseline_validation"]["A"]["max_abs_delta"] == 0.0
+
+
+def test_run_abcd_fails_when_any_single_gate_fails():
+    candidate = {g: _candidate_cases(g, -0.3) for g in v17.ABCD_GATES}
+    candidate["C"] = _candidate_cases("C", 0.6)
+    gates = v17.run_abcd(
+        coefficient=0.25,
+        shipped_by_gate={g: _shipped_cases(g) for g in v17.ABCD_GATES},
+        candidate_by_gate=candidate, a_rows=_a_case_rows())
+    assert gates["C"]["passed"] is False
+    assert gates["all_passed"] is False
+
+
+def test_run_abcd_requires_all_four_gates():
+    with pytest.raises(prov.ProtocolViolation, match="all four gates"):
+        v17.run_abcd(coefficient=0.25,
+                     shipped_by_gate={"A": _shipped_cases("A")},
+                     candidate_by_gate={"A": _candidate_cases("A", -0.3)},
+                     a_rows=_a_case_rows())
+
+
+@pytest.mark.parametrize("bad", [None, 0.0, 0.30])
+def test_run_abcd_requires_a_frozen_positive_coefficient(bad):
+    with pytest.raises(prov.ProtocolViolation):
+        v17.run_abcd(coefficient=bad,
+                     shipped_by_gate={g: _shipped_cases(g) for g in v17.ABCD_GATES},
+                     candidate_by_gate={g: _candidate_cases(g, -0.3)
+                                        for g in v17.ABCD_GATES},
+                     a_rows=_a_case_rows())
+
 
 
 def test_manifest_missing_columns_refused(tmp_path):
@@ -856,5 +1099,77 @@ def test_shares_outside_the_unit_interval_are_refused(field, value):
 def test_boolean_replies_are_refused():
     """`bool` subclasses `int`, the same trap the protocol module had."""
     rows = corpus(configs=(None, 0.35), replies=True)
-    with pytest.raises(prov.ProtocolViolation, match="non-negative int"):
+    with pytest.raises(prov.ProtocolViolation, match="must be an int"):
         v17.require_complete_pairing(rows, (None, 0.35))
+
+
+def _abcd_searcher(candidate_value=-0.3):
+    """Shipped reproduces the Task 1 freeze exactly; the candidate does not."""
+    frozen = {g: {c["case_id"]: c for c in _frozen(g)["cases"]}
+              for g in v17.ABCD_GATES}
+    with open(v17.ABCD_MOVES_PATH) as f:
+        moves_doc = json.load(f)["gates"]
+    moves = {g: {c["case_id"]: c for c in moves_doc[g]["cases"]}
+             for g in v17.ABCD_GATES}
+
+    def search(case, coefficient):
+        g, cid = case["gate"], case["case_id"]
+        if coefficient is None:
+            return {"case_id": cid,
+                    "black_value": float(frozen[g][cid]["probe_black_root_value_repr"]),
+                    "selected_move": moves[g][cid]["selected_move"],
+                    "replies": 100, "top_share": 0.5, "collapse": False}
+        return {"case_id": cid, "black_value": candidate_value,
+                "selected_move": [0, 0], "replies": 40, "top_share": 0.5,
+                "collapse": False}
+    return search
+
+
+def test_abcd_stage_is_operational_end_to_end(clean_tree, tmp_path, monkeypatch):
+    """Finding 1: abcd previously searched and then emitted gates={}."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    doc = protocol.build_protocol(run_kind="abcd", coefficient=0.25,
+                                  checkpoints={"anchor": CKPT})
+    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
+    protocol.emit(ppath, doc)
+    protocol.emit(cpath, protocol.derive_config(doc))
+    art = v17.run_diagnostic(
+        mode="abcd", manifest_path="", checkpoint=CKPT,
+        out_path=str(tmp_path / "abcd.json"), seed_base=0,
+        frozen_coefficient=0.25, protocol_path=str(ppath),
+        config_path=str(cpath), searcher=_abcd_searcher())
+    assert (tmp_path / "abcd.json").exists()
+    assert art["gates"]["all_passed"] is True
+    for g in v17.ABCD_GATES:
+        assert art["gates"][g]["passed"] is True
+        assert art["gates"]["baseline_validation"][g]["max_abs_delta"] == 0.0
+    assert art["protocol_sha1"] and art["effective_mcts_config"]
+    json.dumps(art, allow_nan=False)
+
+
+def test_abcd_stage_invalidates_on_shipped_drift(clean_tree, tmp_path, monkeypatch):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    doc = protocol.build_protocol(run_kind="abcd", coefficient=0.25,
+                                  checkpoints={"anchor": CKPT})
+    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
+    protocol.emit(ppath, doc)
+    protocol.emit(cpath, protocol.derive_config(doc))
+    base = _abcd_searcher()
+
+    def drifting(case, coefficient):
+        out = base(case, coefficient)
+        if coefficient is None and case["case_id"] == _frozen("A")["cases"][0]["case_id"]:
+            out["black_value"] += 1.0
+        return out
+    with pytest.raises(prov.ProtocolViolation, match="frozen baseline"):
+        v17.run_diagnostic(mode="abcd", manifest_path="", checkpoint=CKPT,
+                           out_path=str(tmp_path / "o.json"), seed_base=0,
+                           frozen_coefficient=0.25, protocol_path=str(ppath),
+                           config_path=str(cpath), searcher=drifting)
+
+
+def test_abcd_canonical_cases_match_the_frozen_cardinalities():
+    cases = v17.load_abcd_cases()
+    assert {g: len(v) for g, v in cases.items()} == v17.ABCD_CARDINALITY
+    for gate, rows in cases.items():
+        assert all(r["seed"] and r["case_id"] for r in rows), gate
