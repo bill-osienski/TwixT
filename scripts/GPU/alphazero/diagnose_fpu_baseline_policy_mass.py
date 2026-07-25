@@ -74,7 +74,7 @@ from .diagnose_fpu_policy_mass import (
 __all__ = [
     "MODES", "SHIPPED", "ZERO", "configs_for_mode", "GateResult",
     "validate_row_set", "require_complete_pairing", "require_zero_identity",
-    "require_corpus_geometry", "preflight",
+    "require_corpus_geometry", "preflight", "authenticate_qualification",
     "dev_safety_v17", "dev_mechanism_verdict", "heldout_verdict",
     "abcd_verdict", "verify_abcd_baseline", "run_abcd",
     "select_smallest_passing", "build_artifact", "build_row", "search_result_sha1",
@@ -139,6 +139,9 @@ ABCD_MOVES_PATH = ("logs/eval/fpu_v17_baseline_policy_mass/"
 ABCD_BASELINE_SHA1 = "88cca942334ea7e9335086b0a3d3473f69a4f01e"
 # B's cases CSV has no replay_path; the goal-line manifest supplies it.
 B_MANIFEST_PATH = "logs/eval/loss_analysis_v2_1/goal_line_trigger_probe_manifest.json"
+# B's manifest DETERMINES the case-to-replay mapping, so it is
+# authenticated and recorded like any other result-determining input.
+B_MANIFEST_SHA1 = "00a3a4220e593791eb4c9eec7973392e5906b0b9"
 ABCD_MOVES_SHA1 = "162c9a5a1aac4d4012447d717943e35b405594d9"
 
 # §6.2 / §8.1 corpus geometry, and §5.2's smoke selector profile.
@@ -152,6 +155,18 @@ CORPUS_GEOMETRY: Dict[str, Dict[str, int]] = {
 SIDE_BALANCE: Dict[str, int] = {"development": 16, "held_out": 28}
 MAX_POSITIONS_PER_GAME = 2
 MIN_PLY_GAP = 12
+# §6.2/§8.1 control composition: four per phase for development, eight for
+# held-out. The selector certifies these; the diagnostic authenticates them.
+CONTROL_PHASE_QUOTA: Dict[str, Dict[str, int]] = {
+    "development": {"opening": 4, "early_mid": 4, "midgame": 4, "late": 4},
+    "held_out": {"opening": 8, "early_mid": 8, "midgame": 8, "late": 8},
+}
+# The scientific diagnostic always searches the ANCHOR checkpoint; a protocol
+# also names the generation opponent, which must never be searched here.
+ANCHOR_ROLE = "anchor"
+QUALIFICATION_REQUIRED_KEYS = ("qualified", "mode", "manifest_sha1",
+                               "role_predicates", "phase_quotas", "disjointness")
+DISJOINTNESS_REQUIRED_KEYS = ("forbidden_corpora", "overlaps", "checked_positions")
 
 # Every module whose bytes can change a result. §12 requires source identities
 # to cover all of them, not just the module being run.
@@ -759,7 +774,8 @@ def run_abcd(*, coefficient: float, shipped_by_gate: Mapping[str, Sequence[Mappi
 def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
               source_index: Optional[str], frozen_coefficient: Optional[float],
               protocol_path: Optional[str] = None,
-              config_path: Optional[str] = None) -> Dict[str, Any]:
+              config_path: Optional[str] = None,
+              qualification_report: Optional[str] = None) -> Dict[str, Any]:
     """Validate every scientific precondition. Costs zero searches.
 
     Returns the resolved {configs, manifest_rows, replay_paths, source_files}.
@@ -803,8 +819,16 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
     _readable("replay", replay_paths)
     _readable("source", source_files)
     require_corpus_geometry(mode, manifest_rows)
+    # Geometry is necessary but not sufficient: it accepts arbitrary rows
+    # LABELLED target/control. The selector's report is what certifies the
+    # predicates, the phase quotas, and the disjointness §12 requires.
+    qualification = None
+    if prov.is_scientific(mode):
+        qualification = authenticate_qualification(
+            qualification_report, mode=mode, manifest_path=manifest_path)
     return {"configs": configs, "manifest_rows": manifest_rows,
-            "replay_paths": replay_paths, "source_files": source_files}
+            "replay_paths": replay_paths, "source_files": source_files,
+            "qualification": qualification}
 
 
 # --- artifacts -------------------------------------------------------------
@@ -1001,12 +1025,14 @@ def effective_configs(configs: Sequence[Optional[float]]) -> Dict[str, Any]:
 
 
 def bind_protocol_to_runtime(config: Mapping[str, Any], *,
-                             coefficient: Optional[float],
-                             checkpoint: str) -> None:
+                             coefficient: Optional[float], checkpoint: str,
+                             role: str = ANCHOR_ROLE) -> None:
     """The verified config must CONSTRAIN the run, not merely accompany it.
 
-    Without this, a valid `r=0.25` protocol happily accompanied a runtime
-    `r=0.45`, and any readable checkpoint passed.
+    The checkpoint is bound to its required ROLE, not to set membership: a
+    development protocol names both `calib020_0001` and `0379`, but the
+    diagnostic must search the anchor. Membership-testing the unordered set
+    accepted the generation opponent.
     """
     want = config.get("coefficient")
     if (want is None) != (coefficient is None) or (
@@ -1015,15 +1041,74 @@ def bind_protocol_to_runtime(config: Mapping[str, Any], *,
             f"runtime coefficient {coefficient!r} does not match the verified "
             f"protocol's {want!r}")
     protocol_ckpts = config.get("checkpoints") or {}
-    if not protocol_ckpts:
+    if role not in protocol_ckpts:
         raise prov.ProtocolViolation(
-            "the verified protocol records no checkpoint to bind against")
+            f"the verified protocol has no {role!r} checkpoint to bind against; "
+            f"it names {sorted(protocol_ckpts)}")
+    expected = fpu_provenance.file_sha1(protocol_ckpts[role])
     actual = fpu_provenance.file_sha1(checkpoint)
-    allowed = {fpu_provenance.file_sha1(p) for p in protocol_ckpts.values()}
-    if actual not in allowed:
+    if actual != expected or actual in prov.SENTINEL_HASHES:
         raise prov.ProtocolViolation(
-            f"runtime checkpoint {checkpoint} (sha1 {actual}) is not one of the "
-            f"protocol's checkpoints {sorted(protocol_ckpts.values())}")
+            f"runtime checkpoint {checkpoint} (sha1 {actual}) is not the "
+            f"protocol's {role!r} checkpoint {protocol_ckpts[role]} "
+            f"(sha1 {expected})")
+
+
+def authenticate_qualification(path: str, *, mode: str, manifest_path: str
+                               ) -> Dict[str, Any]:
+    """Consume the selector's qualification report for THIS manifest.
+
+    A readable manifest is not evidence that its rows qualify. Task 10/12 emit
+    a report certifying the role predicates, the control phase quotas, and the
+    disjointness result; §12 requires that disjointness in every scientific
+    artifact, so it is authenticated here and persisted downstream.
+    """
+    if not path or not Path(path).is_file():
+        raise prov.ProtocolViolation(
+            f"scientific mode {mode!r} requires a selector qualification report; "
+            f"got {path!r}")
+    with open(path) as f:
+        report = json.load(f)
+    missing = [k for k in QUALIFICATION_REQUIRED_KEYS if k not in report]
+    if missing:
+        raise prov.ProtocolViolation(
+            f"qualification report {path} missing {missing}")
+    if report["qualified"] is not True:
+        raise prov.ProtocolViolation(
+            f"qualification report {path} does not certify the corpus "
+            f"(qualified={report['qualified']!r})")
+    if report["mode"] != mode:
+        raise prov.ProtocolViolation(
+            f"qualification report is for mode {report['mode']!r}, not {mode!r}")
+    actual = fpu_provenance.file_sha1(manifest_path)
+    if report.get("manifest_sha1") != actual:
+        raise prov.ProtocolViolation(
+            f"qualification report certifies manifest "
+            f"{report.get('manifest_sha1')!r}, but the run uses {actual}")
+    predicates = report.get("role_predicates") or {}
+    for role_name in ("target", "control"):
+        if role_name not in predicates:
+            raise prov.ProtocolViolation(
+                f"qualification report does not certify the {role_name} predicate")
+    want_quota = CONTROL_PHASE_QUOTA.get(mode)
+    if want_quota is not None:
+        quotas = report.get("phase_quotas") or {}
+        if quotas != want_quota:
+            raise prov.ProtocolViolation(
+                f"{mode} control phase quotas {quotas} != the frozen {want_quota}")
+    dis = report.get("disjointness") or {}
+    missing = [k for k in DISJOINTNESS_REQUIRED_KEYS if k not in dis]
+    if missing:
+        raise prov.ProtocolViolation(
+            f"qualification report's disjointness block is missing {missing}")
+    if dis["overlaps"]:
+        raise prov.ProtocolViolation(
+            f"corpus overlaps forbidden evidence: {dis['overlaps'][:3]}")
+    if not dis["forbidden_corpora"]:
+        raise prov.ProtocolViolation(
+            "disjointness was checked against no forbidden corpora, so it "
+            "certifies nothing")
+    return report
 
 
 def _authenticate_task1_freeze(baseline_path: str, moves_path: str) -> None:
@@ -1052,6 +1137,14 @@ def load_abcd_cases(*, baseline_path: str = ABCD_BASELINE_PATH,
         # The replay JSON is what each search actually reads, so it -- not the
         # canonical probe CSV -- is what `replay_data_sha1` must fingerprint.
         source = base[gate]["canonical_source"]
+        # Authenticate BEFORE reading: the immutable Task 1 record carries the
+        # expected hash, so an altered probe input must never reach the
+        # expensive contemporaneous search.
+        actual = fpu_provenance.file_sha1(source)
+        if actual != base[gate]["source_sha1"]:
+            raise prov.ProtocolViolation(
+                f"gate {gate} canonical source {source} has SHA-1 {actual}, "
+                f"expected the frozen {base[gate]['source_sha1']}")
         with open(source, newline="") as f:
             rows = [r for r in csv.DictReader(f) if r.get("checkpoint") == "0001"]
         if rows and "replay_path" in rows[0]:
@@ -1059,6 +1152,12 @@ def load_abcd_cases(*, baseline_path: str = ABCD_BASELINE_PATH,
         else:
             # B's cases CSV carries no replay_path; the goal-line manifest does,
             # joined on (game_idx, position_ply) exactly as Task 1's capture did.
+            b_actual = fpu_provenance.file_sha1(B_MANIFEST_PATH)
+            if b_actual != B_MANIFEST_SHA1:
+                raise prov.ProtocolViolation(
+                    f"gate B manifest {B_MANIFEST_PATH} has SHA-1 {b_actual}, "
+                    f"expected the frozen {B_MANIFEST_SHA1}; it determines the "
+                    f"case-to-replay mapping")
             with open(B_MANIFEST_PATH) as f:
                 manifest = json.load(f)["cases"]
             by_key = {(int(c["game_idx"]), int(c["position_ply"])): c["replay_path"]
@@ -1150,6 +1249,7 @@ def run_abcd_stage(*, coefficient: float, checkpoint: str, out_path: str,
         source_files=[str(module_dir / n) for n in RESULT_DETERMINING_MODULES],
         extra_identities={"canonical_probe_sources":
                           {p: fpu_provenance.file_sha1(p) for p in probe_sources},
+                          "b_manifest": {B_MANIFEST_PATH: B_MANIFEST_SHA1},
                           "task1_baseline_sha1": ABCD_BASELINE_SHA1,
                           "task1_moves_sha1": ABCD_MOVES_SHA1,
                           "config_sha1": fpu_provenance.file_sha1(config_path)},
@@ -1199,14 +1299,20 @@ def _abcd_case_rows(cases: Mapping[str, Sequence[Mapping]],
     return out
 
 
-def _real_abcd_searcher(checkpoint: str):                   # pragma: no cover
+def _real_abcd_searcher(checkpoint: str, *, evaluator=None):
     """Real 400-sim MCTS over the canonical probe cases, reusing the same
-    harness path the Task 1 capture used."""
+    harness path the Task 1 capture used.
+
+    `evaluator` is injectable so this function is EXECUTABLE in a test with a
+    CPU stub. Inspecting its source text does not establish that it runs.
+    """
     import dataclasses
     from .diagnose_fpu_policy_mass import _position_features, _search_position
-    from .eval_runner import _default_evaluator_factory
+    from .mcts import decode_move
     from .position_probe_cases import position_state
-    evaluator = _default_evaluator_factory(checkpoint)
+    if evaluator is None:                                   # pragma: no cover
+        from .eval_runner import _default_evaluator_factory
+        evaluator = _default_evaluator_factory(checkpoint)
     base_cfg = base_mcts_config()
     prov.validate_batching(base_cfg)
 
@@ -1224,10 +1330,16 @@ def _real_abcd_searcher(checkpoint: str):                   # pragma: no cover
         search_out, obs = _search_position(evaluator, cfg, state, case["seed"])
         feats = _position_features(search_out, obs)
         top = feats["top_move"]
+        if top is None:
+            raise MissingTelemetry(
+                f"case {case['case_id']!r} produced no visit leader")
+        # `_position_features` returns `top.move`, an ENCODED int. The frozen
+        # Task 1 moves are [row, col], so decode with the canonical helper.
+        row_, col_ = decode_move(int(top))
         return {"case_id": case["case_id"],
                 "black_value": (feats["root_value_stm"] if state.to_move == "black"
                                 else -feats["root_value_stm"]),
-                "selected_move": [int(top[0]), int(top[1])],
+                "selected_move": [int(row_), int(col_)],
                 "replies": int(feats["replies"]),
                 "top_share": float(feats["top_share"]),
                 "collapse": bool(feats["collapsed"])}
@@ -1240,6 +1352,7 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                    source_index: Optional[str] = None,
                    protocol_path: Optional[str] = None,
                    config_path: Optional[str] = None,
+                   qualification_report: Optional[str] = None,
                    searcher=None) -> Dict[str, Any]:
     """Search, gate and emit. Every precondition is checked in `preflight`
     before an evaluator is loaded."""
@@ -1257,7 +1370,8 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
     pre = preflight(mode=mode, manifest_path=manifest_path, checkpoint=checkpoint,
                     out_path=out_path, source_index=source_index,
                     frozen_coefficient=frozen_coefficient,
-                    protocol_path=protocol_path, config_path=config_path)
+                    protocol_path=protocol_path, config_path=config_path,
+                    qualification_report=qualification_report)
     configs, manifest_rows = pre["configs"], pre["manifest_rows"]
     if searcher is None:                                    # pragma: no cover
         searcher = _real_searcher(checkpoint, seed_base)
@@ -1279,7 +1393,17 @@ def run_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                               "metrics": v.metrics}}
     artifact = build_artifact(
         mode=mode, coefficient=selected, rows=rows, gates=gates,
-        checkpoints={"anchor": checkpoint},
+        checkpoints={ANCHOR_ROLE: checkpoint},
+        extra_identities={
+            "config_sha1": (fpu_provenance.file_sha1(config_path)
+                            if config_path else None),
+            "source_index_sha1": (fpu_provenance.file_sha1(source_index)
+                                  if source_index else None),
+            "qualification_report_sha1": (
+                fpu_provenance.file_sha1(qualification_report)
+                if qualification_report else None),
+            "disjointness": (pre["qualification"] or {}).get("disjointness"),
+        },
         effective_mcts_config=effective_configs(configs),
         manifest=manifest_path, source_index=source_index,
         replay_paths=pre["replay_paths"], source_files=pre["source_files"],
@@ -1327,6 +1451,7 @@ def _parse_args(argv=None):
     ap.add_argument("--checkpoint", required=True)
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--source-index", default=None)
+    ap.add_argument("--qualification-report", default=None)
     ap.add_argument("--protocol", default=None)
     ap.add_argument("--config", default=None)
     ap.add_argument("--out", required=True)
@@ -1346,7 +1471,8 @@ def main(argv=None) -> int:
             checkpoint=args.checkpoint, out_path=args.out,
             frozen_coefficient=args.frozen_coefficient,
             seed_base=args.seed_base, source_index=args.source_index,
-            protocol_path=args.protocol, config_path=args.config)
+            protocol_path=args.protocol, config_path=args.config,
+            qualification_report=args.qualification_report)
     except prov.ProtocolViolation as exc:
         print(f"PROTOCOL VIOLATION: {exc}")
         return protocol.EXIT_USAGE

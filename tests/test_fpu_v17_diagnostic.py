@@ -819,7 +819,7 @@ def _pair(tmp_path, mode, coefficient=None):
     base, games = SEEDS[mode]
     doc = protocol.build_protocol(run_kind=mode, coefficient=coefficient,
                                   base_seed=base, games=games,
-                                  checkpoints={"anchor": CKPT})
+                                  checkpoints={v17.ANCHOR_ROLE: CKPT})
     ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
     protocol.emit(ppath, doc)
     protocol.emit(cpath, protocol.derive_config(doc))
@@ -834,14 +834,32 @@ def _fake_searcher(**cand):
     return search
 
 
+def _qualification(tmp_path, mode, manifest_path, **over):
+    """A selector qualification report certifying THIS manifest."""
+    doc = {"qualified": True, "mode": mode,
+           "manifest_sha1": fpu_provenance.file_sha1(str(manifest_path)),
+           "role_predicates": {"target": "raw_policy_role==target",
+                               "control": "raw_policy_role==control"},
+           "phase_quotas": v17.CONTROL_PHASE_QUOTA[mode],
+           "disjointness": {"forbidden_corpora": ["v16_production", "v16a_neutral",
+                                                  "abcd"],
+                            "overlaps": [], "checked_positions": 32}}
+    doc.update(over)
+    path = tmp_path / f"qualification_{mode}.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    return str(path)
+
+
 def _run(tmp_path, monkeypatch, mode, **over):
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
     coefficient = over.pop("frozen_coefficient", None)
     ppath, cpath = _pair(tmp_path, mode, coefficient)
-    kwargs = dict(mode=mode, manifest_path=str(_manifest(tmp_path, mode)),
+    mpath = _manifest(tmp_path, mode)
+    kwargs = dict(mode=mode, manifest_path=str(mpath),
                   checkpoint=CKPT, out_path=str(tmp_path / f"{mode}.json"),
                   seed_base=SEEDS[mode][0], frozen_coefficient=coefficient,
                   source_index=cpath, protocol_path=ppath, config_path=cpath,
+                  qualification_report=_qualification(tmp_path, mode, mpath),
                   searcher=_fake_searcher())
     kwargs.update(over)
     return v17.run_diagnostic(**kwargs)
@@ -1254,12 +1272,15 @@ def test_verified_protocol_constrains_the_runtime_checkpoint(clean_tree, tmp_pat
     ppath, cpath = _pair(tmp_path, "development")
     other = tmp_path / "other.safetensors"
     other.write_bytes(b"not the anchor checkpoint")
-    with pytest.raises(prov.ProtocolViolation, match="not one of the protocol"):
+    mpath = _manifest(tmp_path)
+    with pytest.raises(prov.ProtocolViolation, match="is not the protocol"):
         v17.run_diagnostic(
-            mode="development", manifest_path=str(_manifest(tmp_path)),
+            mode="development", manifest_path=str(mpath),
             checkpoint=str(other), out_path=str(tmp_path / "o.json"),
             seed_base=1, source_index=cpath, protocol_path=ppath,
-            config_path=cpath, searcher=_fake_searcher())
+            config_path=cpath,
+            qualification_report=_qualification(tmp_path, "development", mpath),
+            searcher=_fake_searcher())
 
 
 @pytest.mark.parametrize("gate", ["A", "B", "C", "D"])
@@ -1350,11 +1371,122 @@ def test_paired_rows_must_share_a_seed():
         v17.require_complete_pairing(rehash(rows), (None, 0.35))
 
 
+# ---------------------------------------------------------------------------
+# Adversarial round 4: the real Stage-4 searcher must RUN, not merely look
+# right. The previous source-text assertion missed a TypeError on every case.
+# ---------------------------------------------------------------------------
+
+def test_real_abcd_searcher_executes_and_decodes_the_move(tmp_path):
+    """Drives the ACTUAL searcher with a CPU stub evaluator. `top_move` is an
+    encoded int, so indexing it as a pair raised TypeError on the first case."""
+    from tests.fpu_search_fixture import FakeEvaluator
+    from scripts.GPU.alphazero.mcts import decode_move, encode_move
+
+    # A tiny real replay the canonical reconstruction path can read.
+    moves = [{"row": 2, "col": 2}, {"row": 3, "col": 3},
+             {"row": 2, "col": 4}, {"row": 4, "col": 3}]
+    replay = tmp_path / "replay.json"
+    replay.write_text(json.dumps({"board_size": 6, "n_moves": len(moves),
+                                  "moves": moves}))
+    searcher = v17._real_abcd_searcher(CKPT, evaluator=FakeEvaluator())
+    case = {"gate": "A", "case_id": "c0", "seed": 1234, "position_ply": 2,
+            "side_to_move": "red", "replay_path": str(replay),
+            "cases_source": "x", "game_idx": 0}
+    out = searcher(case, None)
+    assert isinstance(out["selected_move"], list) and len(out["selected_move"]) == 2
+    r, c = out["selected_move"]
+    assert isinstance(r, int) and isinstance(c, int)
+    assert decode_move(encode_move(r, c)) == (r, c)
+    assert isinstance(out["replies"], int) and out["replies"] >= 0
+    assert 0.0 <= out["top_share"] <= 1.0
+    assert isinstance(out["collapse"], bool)
+    assert -1.0 <= out["black_value"] <= 1.0
+    # and a positive coefficient runs the same path
+    assert searcher(case, 0.25)["selected_move"]
+
+
 def test_reply_metric_uses_the_leader_reply_node_definition():
     """The A mechanism gate must measure visited children of the final root
     LEADER, which is what the imported v16 `_position_features` computes."""
     import inspect
-    src = inspect.getsource(v17._real_abcd_searcher)
-    assert "_position_features" in src and "_search_position" in src
-    # the frozen definition itself, so this cannot silently drift
     assert "_n_visited_children(top)" in inspect.getsource(v16._position_features)
+
+
+# --- round-4 protocol/identity surface -------------------------------------
+
+def test_checkpoint_binds_to_its_role_not_set_membership(tmp_path):
+    """A development protocol names calib020_0001 AND 0379; searching the
+    generation opponent was previously accepted."""
+    other = tmp_path / "opponent.safetensors"
+    other.write_bytes(b"0379 stand-in")
+    cfg = {"coefficient": None,
+           "checkpoints": {v17.ANCHOR_ROLE: CKPT, "opponent": str(other)}}
+    v17.bind_protocol_to_runtime(cfg, coefficient=None, checkpoint=CKPT)
+    with pytest.raises(prov.ProtocolViolation, match="is not the protocol"):
+        v17.bind_protocol_to_runtime(cfg, coefficient=None, checkpoint=str(other))
+    with pytest.raises(prov.ProtocolViolation, match="no 'anchor' checkpoint"):
+        v17.bind_protocol_to_runtime({"coefficient": None,
+                                      "checkpoints": {"b": str(other)}},
+                                     coefficient=None, checkpoint=str(other))
+
+
+def test_qualification_report_is_authenticated(tmp_path):
+    m = _manifest(tmp_path)
+    good = _qualification(tmp_path, "development", m)
+    assert v17.authenticate_qualification(good, mode="development",
+                                          manifest_path=str(m))["qualified"]
+    for over, pattern in (
+            ({"qualified": False}, "does not certify"),
+            ({"mode": "held_out"}, "is for mode"),
+            ({"manifest_sha1": "0" * 40}, "certifies manifest"),
+            ({"role_predicates": {"target": "x"}}, "control predicate"),
+            ({"phase_quotas": {"opening": 1}}, "phase quotas"),
+            ({"disjointness": {"forbidden_corpora": ["v16"], "overlaps": ["p1"],
+                               "checked_positions": 32}}, "overlaps forbidden"),
+            ({"disjointness": {"forbidden_corpora": [], "overlaps": [],
+                               "checked_positions": 32}}, "no forbidden corpora"),
+    ):
+        with open(good) as f:
+            doc = json.load(f)
+        doc.update(over)
+        bad = tmp_path / "bad_qualification.json"
+        bad.write_text(json.dumps(doc, sort_keys=True))
+        with pytest.raises(prov.ProtocolViolation, match=pattern):
+            v17.authenticate_qualification(str(bad), mode="development",
+                                           manifest_path=str(m))
+
+
+def test_missing_qualification_report_is_refused(tmp_path):
+    with pytest.raises(prov.ProtocolViolation, match="qualification report"):
+        v17.authenticate_qualification(None, mode="development",
+                                       manifest_path=str(_manifest(tmp_path)))
+
+
+def test_scientific_artifact_records_config_and_disjointness(clean_tree, tmp_path,
+                                                             monkeypatch):
+    art = _run(tmp_path, monkeypatch, "development",
+               searcher=_fake_searcher(replies=10, eff_children=70.0))
+    ids = art["identities"]
+    assert ids["config_sha1"] and ids["source_index_sha1"]
+    assert ids["qualification_report_sha1"]
+    assert ids["disjointness"]["overlaps"] == []
+    assert ids["disjointness"]["forbidden_corpora"]
+
+
+def test_probe_sources_are_authenticated_against_the_frozen_hashes(tmp_path,
+                                                                   monkeypatch):
+    """An altered probe CSV must not reach the contemporaneous search."""
+    with open(v17.ABCD_BASELINE_PATH) as f:
+        doc = json.load(f)
+    doc["abcd_frozen_baseline"]["A"]["source_sha1"] = "0" * 40
+    forged = tmp_path / "b.json"
+    forged.write_text(json.dumps(doc))
+    monkeypatch.setattr(v17, "ABCD_BASELINE_SHA1",
+                        fpu_provenance.file_sha1(str(forged)))
+    with pytest.raises(prov.ProtocolViolation, match="expected the frozen"):
+        v17.load_abcd_cases(baseline_path=str(forged),
+                            moves_path=v17.ABCD_MOVES_PATH)
+
+
+def test_b_manifest_is_authenticated_and_recorded():
+    assert fpu_provenance.file_sha1(v17.B_MANIFEST_PATH) == v17.B_MANIFEST_SHA1
