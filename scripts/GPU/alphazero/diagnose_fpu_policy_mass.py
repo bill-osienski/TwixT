@@ -223,7 +223,9 @@ class AVerdict:
 def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
                        r0_lockin: int, absoff_lockin: int, *,
                        stratum_key: str = "band",
-                       include_stratum_census: bool = False) -> SafetyVerdict:
+                       include_stratum_census: bool = False,
+                       stratum_gate: bool = True,
+                       lockin_margin: int = DEV_LOCKIN_MARGIN) -> SafetyVerdict:
     """§6.2 development-safety verdict vs a single reference `X` (`ref`). REJECT
     (rejected=True) if ANY frozen gate trips. Target and control rows are split
     by `role`; each subset is evaluated only when non-empty (so a test can
@@ -251,7 +253,21 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
     value's target-row count, and the sorted list of values whose count is
     `< DEV_BAND_MIN_N` (i.e. whose rate sub-gate above did NOT run). This is
     the only way a consumer can tell "the gate passed" apart from "the gate
-    never had enough rows to evaluate"."""
+    never had enough rows to evaluate".
+
+    `stratum_gate` (v17 opt-out, default True -- v1/v2 byte-identical) turns the
+    per-stratum new-collapse sub-gate OFF entirely: no grouping key is read, no
+    `{stratum_key}_new_collapse_rates` metric is emitted, and no stratum reason
+    can fire. v17's development corpus is 16 late-only targets, far below
+    `DEV_BAND_MIN_N`, so the sub-gate could never activate; skipping it also
+    means v17 rows need carry no `band`/`ply_bucket` key at all (the grouping
+    helper raises on a missing key rather than skipping silently).
+
+    `lockin_margin` (v17 override, default `DEV_LOCKIN_MARGIN` == 2 --
+    byte-identical) is the allowance over the reference's lock-in count.
+    Design §7.2 tightens it to 1 for v17's development stage; §8.2 keeps 2 for
+    held-out. The reason string interpolates the margin, so the default renders
+    the pre-existing `baseline+2=...` text unchanged."""
     target = [r for r in rows if r.get("role") == "target"]
     control = [r for r in rows if r.get("role") == "control"]
     reasons: List[str] = []
@@ -294,14 +310,15 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
         if nc_rate >= DEV_NEW_COLLAPSE_TARGET:
             reasons.append(f"target_new_collapse_rate={nc_rate:.4f}>={DEV_NEW_COLLAPSE_TARGET}")
 
-        stratum_rates, stratum_sizes = _new_collapse_rates_by(stratum_key)
-        for value, srate in stratum_rates.items():
-            if srate >= DEV_NEW_COLLAPSE_BAND:
-                reasons.append(f"{stratum_key}[{value}]_new_collapse={srate:.4f}>={DEV_NEW_COLLAPSE_BAND}")
-        metrics[f"{stratum_key}_new_collapse_rates"] = stratum_rates
-        if include_stratum_census:
-            _add_stratum_census(stratum_key, stratum_sizes)
-        if stratum_key != "band":
+        if stratum_gate:
+            stratum_rates, stratum_sizes = _new_collapse_rates_by(stratum_key)
+            for value, srate in stratum_rates.items():
+                if srate >= DEV_NEW_COLLAPSE_BAND:
+                    reasons.append(f"{stratum_key}[{value}]_new_collapse={srate:.4f}>={DEV_NEW_COLLAPSE_BAND}")
+            metrics[f"{stratum_key}_new_collapse_rates"] = stratum_rates
+            if include_stratum_census:
+                _add_stratum_census(stratum_key, stratum_sizes)
+        if stratum_gate and stratum_key != "band":
             # Report-only, ungated -- keeps band coverage visible when phase
             # (ply_bucket) is the gated stratum. Never feeds `reasons`.
             band_rates, band_sizes = _new_collapse_rates_by("band")
@@ -313,8 +330,8 @@ def dev_safety_verdict(rows: Sequence[Mapping[str, Any]], ref: FpuRunConfig,
         lockins = sum(1 for r in target if r["lock_in"])
         metrics["target_lockin_count"] = lockins
         metrics["lockin_baseline"] = baseline
-        if lockins > baseline + DEV_LOCKIN_MARGIN:
-            reasons.append(f"lockin_count={lockins}>baseline+2={baseline + DEV_LOCKIN_MARGIN}")
+        if lockins > baseline + lockin_margin:
+            reasons.append(f"lockin_count={lockins}>baseline+{lockin_margin}={baseline + lockin_margin}")
 
         p95 = _percentile([abs(r["mover_delta"]) for r in target], PERCENTILE_Q)
         metrics["target_p95_mover_delta"] = p95
