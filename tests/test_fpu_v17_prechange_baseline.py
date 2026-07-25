@@ -67,12 +67,44 @@ def test_frozen_design_has_not_been_edited():
     assert _record()["frozen_documents"][DESIGN] == FROZEN_DESIGN_SHA1
 
 
-def test_recorded_source_sha1s_still_match_the_files():
+# Modules the FROZEN PLAN authorizes implementation to edit. Everything else in
+# the recorded snapshot must stay byte-identical, which is what turns this
+# record into a guard against out-of-scope source edits.
+AUTHORIZED_TO_CHANGE = {
+    "scripts/GPU/alphazero/mcts.py",                     # Tasks 2, 3
+    "scripts/GPU/alphazero/diagnose_fpu_policy_mass.py",  # Task 5 (parameterize only)
+    "scripts/GPU/alphazero/eval_runner.py",              # Task 6
+    "scripts/GPU/alphazero/eval_checkpoint_match.py",    # Task 6
+}
+
+
+def test_identity_basis_is_unchanged():
+    """The goldens and the fixture that produces them. A change here means the
+    identity basis moved and the golden must be re-derived deliberately."""
+    for path, expected in _record()["source_sha1s"]["identity_basis"].items():
+        assert _sha1(path) == expected, path
+
+
+def test_no_out_of_scope_source_module_was_edited():
+    """The record is a PRE-CHANGE snapshot, so modules the plan authorizes
+    (mcts.py at Tasks 2-3, etc.) legitimately drift from it. Every other
+    recorded module must still match exactly."""
     rec = _record()["source_sha1s"]
-    for group in ("production_result_determining_set", "v17_pure_dependencies",
-                  "identity_basis"):
+    drifted = set()
+    for group in ("production_result_determining_set", "v17_pure_dependencies"):
         for path, expected in rec[group].items():
-            assert _sha1(path) == expected, path
+            if _sha1(path) != expected:
+                drifted.add(path)
+    assert drifted <= AUTHORIZED_TO_CHANGE, sorted(drifted - AUTHORIZED_TO_CHANGE)
+
+
+def test_snapshot_was_genuinely_taken_before_any_mcts_edit():
+    """Independent of later edits: the recorded mcts.py hash must be the one the
+    authenticated v16 production run used, which is what proves Task 1's
+    'no MCTS source edit before goldens exist' gate held."""
+    rec = _record()["source_sha1s"]["production_result_determining_set"]
+    assert rec["scripts/GPU/alphazero/mcts.py"] == \
+        "11fa989d7cd521fab69c3801898ee7282e00fc10"
 
 
 @requires_probe_csvs

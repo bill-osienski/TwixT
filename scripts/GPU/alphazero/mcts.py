@@ -158,6 +158,16 @@ class MCTSConfig:
     # an ENABLED mode (FPU = Q_parent), NOT equivalent to None. Mutually
     # exclusive with a nonzero fpu_value (see __post_init__).
     fpu_policy_mass_reduction: Optional[float] = None
+    # Opt-in BASELINE-PRESERVING policy-mass FPU (v17): None (default) => the
+    # existing shipped fpu_value path. 0.0 => the SAME shipped path (unlike the
+    # retired field above, where 0.0 is an enabled mode); it differs only as a
+    # provenance label. > 0 =>
+    # FPU = fpu_value - r*sqrt(clamp(explored_policy_mass, 0, 1)), i.e. NO
+    # Q_parent. Requires fpu_value == 0.0, so the operative rule is
+    # -r*sqrt(P_explored). Mutually exclusive with fpu_policy_mass_reduction
+    # (see __post_init__). Frozen design ref:
+    # docs/superpowers/specs/2026-07-24-v17-baseline-preserving-policy-mass-fpu-design.md §2.1
+    fpu_shipped_policy_mass_reduction: Optional[float] = None
     n_simulations: int = 800  # Simulations per move
     dirichlet_alpha: float = 0.3  # Dirichlet noise parameter
     dirichlet_eps: float = 0.25  # Noise mixing weight (0 = no noise)
@@ -218,6 +228,26 @@ class MCTSConfig:
             or self.fpu_policy_mass_reduction < 0
         ):
             raise ValueError("fpu_policy_mass_reduction must be finite and >= 0")
+        # v17 baseline-preserving rule (design §2.1). Order matters: the
+        # cross-field conflict is reported before the value range, and the
+        # fpu_value requirement last, so each error names its own cause.
+        if self.fpu_shipped_policy_mass_reduction is not None:
+            if self.fpu_policy_mass_reduction is not None:
+                raise ValueError(
+                    "fpu_shipped_policy_mass_reduction is mutually exclusive with "
+                    "fpu_policy_mass_reduction (the retired parent-relative rule); "
+                    "v17 does not use Q_parent"
+                )
+            if (not math.isfinite(self.fpu_shipped_policy_mass_reduction)
+                    or self.fpu_shipped_policy_mass_reduction < 0):
+                raise ValueError(
+                    "fpu_shipped_policy_mass_reduction must be finite and >= 0")
+            if self.fpu_value != 0.0:
+                raise ValueError(
+                    "fpu_shipped_policy_mass_reduction requires fpu_value == 0.0 "
+                    "(the v17 rule reduces from the SHIPPED baseline, so a nonzero "
+                    "absolute floor would make the effective rule ambiguous)"
+                )
 
 
 @dataclass
