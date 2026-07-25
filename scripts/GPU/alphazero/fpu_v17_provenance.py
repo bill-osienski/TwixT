@@ -42,6 +42,9 @@ GRID: Tuple[float, ...] = (0.15, 0.20, 0.25, 0.35, 0.45)
 BATCHING: Tuple[int, int, int] = (14, 48, 8)
 BATCHING_FIELDS = ("eval_batch_size", "stall_flush_sims", "pending_virtual_visits")
 MCTS_SIMS = 400
+# design §5.2/§6.1/§8.1 -- board 24 throughout. It is also the only size these
+# checkpoints play, and the size the n_legal >= 528 - ply geometry assumes.
+BOARD_SIZE = 24
 
 # design §12
 OUTPUT_ROOT = "logs/eval/fpu_v17_baseline_policy_mass"
@@ -111,8 +114,19 @@ def validate_batching(config: Any) -> Tuple[int, int, int]:
 
 def validate_coefficient(r: Optional[float]) -> Optional[float]:
     """`None` (shipped) and `0.0` (exact zero) are always allowed; any positive
-    value must be a frozen grid point. §13 forbids interpolating or extending."""
-    if r is None or r == 0.0:
+    value must be a frozen grid point. §13 forbids interpolating or extending.
+
+    Type is checked before value: `bool` is a subclass of `int`, so `False`
+    would otherwise satisfy `r == 0.0` and silently configure the shipped
+    branch, and `True` would satisfy nothing but read as a number.
+    """
+    if r is None:
+        return r
+    if isinstance(r, bool) or not isinstance(r, (int, float)):
+        raise ProtocolViolation(
+            f"coefficient must be None or a real number, got {r!r} "
+            f"({type(r).__name__})")
+    if r == 0.0:
         return r
     if r not in GRID:
         raise ProtocolViolation(
@@ -122,24 +136,52 @@ def validate_coefficient(r: Optional[float]) -> Optional[float]:
     return r
 
 
+def _require_int(value: Any, *, name: str) -> int:
+    """Seeds and counts are exact integers. `bool` is excluded (it subclasses
+    `int`), and a float is refused even when integral: `20310000.0 == 20310000`
+    would otherwise pass every comparison below while serializing to JSON as a
+    different token."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ProtocolViolation(
+            f"{name} must be an int, got {value!r} ({type(value).__name__})")
+    return value
+
+
 def validate_seed_range(run_kind: str, base_seed: int, games: int) -> Tuple[int, int]:
     """Frozen per-stage seed range, plus disjointness from consumed evidence."""
     validate_run_kind(run_kind)
+    _require_int(base_seed, name="base_seed")
+    _require_int(games, name="games")
     expected = SEED_RANGES[run_kind]
     if expected is None:
         raise ProtocolViolation(
             f"run_kind {run_kind!r} has no generated seed range; it replays "
             f"fixed manifests")
-    if (base_seed, games) != expected and (base_seed, games) != MATCH_SMOKE_SEEDS:
+    # The §5.4 match-smoke block is a SECOND range inside the tooling_smoke
+    # stage only. It must never widen any other stage's frozen range.
+    allowed = {expected}
+    if run_kind == "tooling_smoke":
+        allowed.add(MATCH_SMOKE_SEEDS)
+    if (base_seed, games) not in allowed:
         raise ProtocolViolation(
             f"seed range [{base_seed}, {base_seed + games}) for {run_kind!r} != "
-            f"the frozen [{expected[0]}, {expected[0] + expected[1]})")
+            f"the frozen [{expected[0]}, {expected[0] + expected[1]})"
+            + (f" (or the match-smoke [{MATCH_SMOKE_SEEDS[0]}, "
+               f"{MATCH_SMOKE_SEEDS[0] + MATCH_SMOKE_SEEDS[1]}))"
+               if run_kind == "tooling_smoke" else ""))
     for c_base, c_games in CONSUMED_SEED_RANGES:
         if base_seed < c_base + c_games and c_base < base_seed + games:
             raise ProtocolViolation(
                 f"seed range [{base_seed}, {base_seed + games}) overlaps consumed "
                 f"evidence [{c_base}, {c_base + c_games}) (design §1.2)")
     return base_seed, games
+
+
+def validate_board_size(board_size: Any) -> int:
+    if _require_int(board_size, name="board_size") != BOARD_SIZE:
+        raise ProtocolViolation(
+            f"board_size {board_size!r} != the frozen {BOARD_SIZE}")
+    return BOARD_SIZE
 
 
 def validate_output_path(path: Any) -> Path:
@@ -177,32 +219,81 @@ def require_not_tooling_smoke(doc: Mapping[str, Any], *, consumer_run_kind: str)
 
 # --- provenance record ----------------------------------------------------
 
+SENTINEL_HASHES = ("none", "missing")
+
+# Keys `extra` may never set. Anything a caller adds must not be able to
+# restate the frozen protocol or flip a run's scientific status.
+RESERVED_PROVENANCE_KEYS = frozenset({
+    "schema_version", "formula_id", "formula", "config_field", "coefficient",
+    "grid", "run_kind", "scientific", "scientific_interpretation_forbidden",
+    "mcts", "frozen_design", "checkpoints", "source_file_sha1s",
+    "manifest_sha1", "source_index_sha1", "replay_data_sha1", "identities",
+    "git_commit", "worktree_clean", "runtime",
+})
+
+
+def _require_resolved(label: str, sha1: str) -> str:
+    """`fpu_provenance.file_sha1` returns "none"/"missing" instead of raising,
+    which is right for a fingerprint but must never be frozen into a v17
+    protocol in place of a real hash (the sentinel-leak class the v16
+    evidence-chain review caught)."""
+    if sha1 in SENTINEL_HASHES:
+        raise ProtocolViolation(
+            f"refusing to record placeholder hash {sha1!r} for {label}; every "
+            f"identity input must be readable at protocol time")
+    return sha1
+
+
+def _source_file_identities(source_files: Iterable[str]) -> Dict[str, str]:
+    """`fpu_provenance.source_file_sha1s` keys by BASENAME so a fingerprint is
+    checkout-location-independent. That is only sound while basenames are
+    unique -- two same-named files in different packages would silently
+    collapse to one entry, so assert it rather than assume it."""
+    paths = sorted(str(p) for p in source_files)
+    names = [Path(p).name for p in paths]
+    dupes = sorted({n for n in names if names.count(n) > 1})
+    if dupes:
+        raise ProtocolViolation(
+            f"source file basenames are not unique: {dupes}; basename-keyed "
+            f"hashes would silently collapse them into one identity")
+    hashes = fpu_provenance.source_file_sha1s(paths)
+    for path, name in zip(paths, names):
+        _require_resolved(f"source {path}", hashes[name])
+    return hashes
+
+
 def build_provenance(*, run_kind: str,
                      coefficient: Optional[float] = None,
                      checkpoints: Optional[Mapping[str, str]] = None,
                      source_files: Iterable[str] = (),
+                     manifest: Optional[str] = None,
+                     source_index: Optional[str] = None,
+                     replay_paths: Optional[Iterable[str]] = None,
                      extra: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
     """The §12 provenance block every v17 artifact carries.
 
-    Contains no timestamp, so a canonical artifact built from the same inputs is
-    byte-identical across reruns.
+    Records the full identity set §12 requires -- checkpoints, source files,
+    manifest, source index, and replay DATA -- and refuses any placeholder
+    hash. Contains no timestamp, so a canonical artifact built from the same
+    inputs is byte-identical across reruns.
     """
     validate_run_kind(run_kind)
     validate_coefficient(coefficient)
-    # `fpu_provenance.file_sha1` returns the sentinels "none"/"missing" instead
-    # of raising, so an absent input is RECORDED rather than fatal. That is the
-    # right behaviour for a fingerprint, but a v17 protocol must never freeze a
-    # sentinel in place of a real hash -- refuse instead (the sentinel-leak
-    # class the v16 evidence-chain review caught).
-    hashed = {**{f"checkpoint:{k}": fpu_provenance.file_sha1(v)
-                 for k, v in (checkpoints or {}).items()},
-              **{f"source:{p}": fpu_provenance.file_sha1(str(p))
-                 for p in source_files}}
-    unresolved = sorted(k for k, v in hashed.items() if v in ("none", "missing"))
-    if unresolved:
-        raise ProtocolViolation(
-            f"refusing to record placeholder hashes for {unresolved}; every "
-            f"checkpoint and source file must be readable at protocol time")
+    checkpoint_ids = {
+        k: _require_resolved(f"checkpoint {k}", fpu_provenance.file_sha1(v))
+        for k, v in sorted((checkpoints or {}).items())}
+    identities: Dict[str, Optional[str]] = {
+        "manifest_sha1": None if manifest is None else
+        _require_resolved(f"manifest {manifest}", fpu_provenance.file_sha1(manifest)),
+        "source_index_sha1": None if source_index is None else
+        _require_resolved(f"source_index {source_index}",
+                          fpu_provenance.file_sha1(source_index)),
+        # `replay_data_sha1` hashes the CONTENTS in sorted-path order, so it
+        # fingerprints the replay data rather than the paths. An unreadable
+        # replay would raise there rather than yield a sentinel.
+        "replay_data_sha1": None if replay_paths is None else
+        fpu_provenance.replay_data_sha1(sorted(str(p) for p in replay_paths)),
+    }
     record: Dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "formula_id": FORMULA_ID,
@@ -216,9 +307,9 @@ def build_provenance(*, run_kind: str,
                  "add_noise": False,
                  **dict(zip(BATCHING_FIELDS, BATCHING))},
         "frozen_design": {"path": FROZEN_DESIGN_PATH, "sha1": FROZEN_DESIGN_SHA1},
-        "checkpoints": {k: fpu_provenance.file_sha1(v)
-                        for k, v in sorted((checkpoints or {}).items())},
-        "source_file_sha1s": fpu_provenance.source_file_sha1s(sorted(source_files)),
+        "checkpoints": checkpoint_ids,
+        "source_file_sha1s": _source_file_identities(source_files),
+        "identities": identities,
         "git_commit": fpu_provenance.git_commit(),
         "worktree_clean": fpu_provenance.worktree_clean(),
         "runtime": fpu_provenance.runtime_provenance(),
@@ -226,6 +317,11 @@ def build_provenance(*, run_kind: str,
     if not record["scientific"]:
         record["scientific_interpretation_forbidden"] = True
     if extra:
+        collisions = sorted(set(extra) & (RESERVED_PROVENANCE_KEYS | set(record)))
+        if collisions:
+            raise ProtocolViolation(
+                f"extra may not overwrite protected provenance keys {collisions}; "
+                f"namespace caller metadata instead")
         record.update(extra)
     return record
 

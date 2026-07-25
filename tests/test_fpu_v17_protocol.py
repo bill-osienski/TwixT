@@ -217,7 +217,7 @@ def test_unreadable_inputs_are_refused_not_recorded_as_sentinels(clean_tree, kwa
     """`file_sha1` returns "none"/"missing" rather than raising, which is right
     for a fingerprint but must never be frozen into a v17 protocol in place of
     a real hash."""
-    with pytest.raises(prov.ProtocolViolation, match="placeholder hashes"):
+    with pytest.raises(prov.ProtocolViolation, match="placeholder hash"):
         prov.build_provenance(run_kind="development", **kwargs)
 
 
@@ -398,3 +398,206 @@ def test_module_import_pulls_no_gpu_or_mlx(module):
     out = subprocess.run([sys.executable, "-c", script],
                          capture_output=True, text=True, check=True)
     assert out.stdout.strip().splitlines()[-1] == "[]"
+
+
+# ===========================================================================
+# Adversarial review round 1. Each block closes a hole found by direct probing
+# after the first Task 4 implementation, where 61 focused tests passed while
+# the protocol was still permissive.
+# ===========================================================================
+
+# --- (1) the match-smoke range must not widen any other stage --------------
+
+@pytest.mark.parametrize("kind", ["development", "held_out", "strength",
+                                  "external_validation"])
+def test_match_smoke_seeds_are_refused_for_every_other_run_kind(kind):
+    """§5.4's [20309100, 20309108) block lives INSIDE the tooling_smoke stage.
+    It previously satisfied every generated run kind."""
+    with pytest.raises(prov.ProtocolViolation, match="seed range"):
+        prov.validate_seed_range(kind, *prov.MATCH_SMOKE_SEEDS)
+
+
+def test_match_smoke_seeds_remain_valid_for_tooling_smoke():
+    assert prov.validate_seed_range("tooling_smoke", *prov.MATCH_SMOKE_SEEDS)
+    assert prov.validate_seed_range("tooling_smoke", 20309000, 32)
+
+
+# --- (2) the config binds the COMPLETE protocol, provenance included -------
+
+def test_config_embeds_a_canonical_protocol_sha1(clean_tree):
+    doc = _dev_protocol()
+    cfg = proto.derive_config(doc)
+    assert cfg["protocol_sha1"] == proto.protocol_sha1(doc)
+    assert len(cfg["protocol_sha1"]) == 40
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda p: p["provenance"].__setitem__("formula_id", "overwritten"),
+    lambda p: p["provenance"].__setitem__("git_commit", "0" * 40),
+    lambda p: p["provenance"].__setitem__("worktree_clean", False),
+    lambda p: p["provenance"]["mcts"].__setitem__("stall_flush_sims", 16),
+    lambda p: p["provenance"].__setitem__("grid", [0.55]),
+    lambda p: p["provenance"]["frozen_design"].__setitem__("sha1", "0" * 40),
+])
+def test_provenance_only_tampering_is_detected(clean_tree, out_root, mutate):
+    """No derived field reads the provenance block, so before the
+    protocol_sha1 binding these edits left the config verifying."""
+    ppath, cpath = _pair(out_root)
+    doc = proto.load_json(ppath)
+    mutate(doc)
+    ppath.write_bytes(json.dumps(doc).encode())
+    with pytest.raises(prov.ProtocolViolation, match="byte-match"):
+        proto.load_verified(ppath, cpath, consumer_run_kind="development")
+
+
+def test_protocol_sha1_is_canonical_not_insertion_ordered(clean_tree):
+    doc = _dev_protocol()
+    reordered = dict(reversed(list(doc.items())))
+    assert proto.protocol_sha1(reordered) == proto.protocol_sha1(doc)
+
+
+# --- (3) schema versions and exact key sets --------------------------------
+
+@pytest.mark.parametrize("version", [0, 2, 999, None, "1"])
+def test_unsupported_protocol_schema_version_is_refused(clean_tree, version):
+    with pytest.raises(prov.ProtocolViolation, match="schema_version"):
+        proto.derive_config({**_dev_protocol(), "schema_version": version})
+
+
+def test_unsupported_config_schema_version_is_refused(clean_tree):
+    doc = _dev_protocol()
+    cfg = {**proto.derive_config(doc), "schema_version": 999}
+    with pytest.raises(prov.ProtocolViolation, match="schema_version"):
+        proto.verify_config_matches(doc, cfg)
+
+
+@pytest.mark.parametrize("key", sorted(proto.PROTOCOL_KEYS - {"schema_version",
+                                                              "artifact_kind"}))
+def test_missing_protocol_key_is_refused(clean_tree, key):
+    doc = {k: v for k, v in _dev_protocol().items() if k != key}
+    with pytest.raises(prov.ProtocolViolation, match="missing required keys"):
+        proto.derive_config(doc)
+
+
+def test_unknown_protocol_key_is_refused(clean_tree):
+    with pytest.raises(prov.ProtocolViolation, match="unknown keys"):
+        proto.derive_config({**_dev_protocol(), "smuggled": 1})
+
+
+def test_config_key_set_is_exact(clean_tree):
+    assert set(proto.derive_config(_dev_protocol())) == set(proto.CONFIG_KEYS)
+
+
+# --- (4) frozen scalar types and settings ----------------------------------
+
+@pytest.mark.parametrize("bad", [False, True, "0.35", complex(0.35)])
+def test_non_numeric_coefficients_are_refused(bad):
+    """`bool` subclasses `int`, so `False == 0.0` would have silently selected
+    the shipped branch."""
+    with pytest.raises(prov.ProtocolViolation, match="coefficient"):
+        prov.validate_coefficient(bad)
+
+
+@pytest.mark.parametrize("base,games", [
+    (20310000.0, 1600), (20310000, 1600.0), (20310000.0, 1600.0),
+    (True, 1600), ("20310000", 1600),
+])
+def test_non_integer_seeds_and_counts_are_refused(base, games):
+    with pytest.raises(prov.ProtocolViolation, match="must be an int"):
+        prov.validate_seed_range("development", base, games)
+
+
+@pytest.mark.parametrize("bad", [30, 19, 24.0, "24", True])
+def test_board_size_is_frozen_at_24(bad):
+    with pytest.raises(prov.ProtocolViolation):
+        prov.validate_board_size(bad)
+
+
+def test_frozen_board_size_is_accepted():
+    assert prov.validate_board_size(24) == prov.BOARD_SIZE == 24
+
+
+def test_build_protocol_refuses_a_non_frozen_board_size(clean_tree):
+    with pytest.raises(prov.ProtocolViolation, match="board_size"):
+        proto.build_protocol(run_kind="development", base_seed=20310000,
+                             games=1600, board_size=30)
+
+
+# --- (5) extra may not overwrite protected provenance ----------------------
+
+@pytest.mark.parametrize("extra", [
+    {"formula_id": "overwritten"},
+    {"scientific": True},
+    {"scientific_interpretation_forbidden": False},
+    {"grid": [0.55]},
+    {"run_kind": "development"},
+    {"frozen_design": {"sha1": "0" * 40}},
+    {"identities": {}},
+    {"worktree_clean": True},
+])
+def test_extra_cannot_overwrite_protected_provenance_keys(extra):
+    with pytest.raises(prov.ProtocolViolation, match="protected provenance keys"):
+        prov.build_provenance(run_kind="tooling_smoke", extra=extra)
+
+
+def test_namespaced_extra_is_still_allowed():
+    rec = prov.build_provenance(run_kind="tooling_smoke",
+                                extra={"operator_note": "smoke rerun"})
+    assert rec["operator_note"] == "smoke rerun"
+    assert rec["formula_id"] == prov.FORMULA_ID
+    assert rec["scientific"] is False
+
+
+# --- (6) complete identity set ---------------------------------------------
+
+def test_identity_fields_exist_and_default_to_null():
+    ids = prov.build_provenance(run_kind="tooling_smoke")["identities"]
+    assert set(ids) == {"manifest_sha1", "source_index_sha1", "replay_data_sha1"}
+    assert all(v is None for v in ids.values())
+
+
+def test_identity_fields_are_hashed_when_supplied(clean_tree, tmp_path):
+    manifest = tmp_path / "m.csv"
+    manifest.write_text("case_id\n1\n")
+    index = tmp_path / "i.json"
+    index.write_text("{}")
+    replay = tmp_path / "r.json"
+    replay.write_text('{"moves": []}')
+    ids = prov.build_provenance(run_kind="development", manifest=str(manifest),
+                                source_index=str(index),
+                                replay_paths=[str(replay)])["identities"]
+    assert ids["manifest_sha1"] == fpu_provenance.file_sha1(str(manifest))
+    assert ids["source_index_sha1"] == fpu_provenance.file_sha1(str(index))
+    assert ids["replay_data_sha1"] == fpu_provenance.replay_data_sha1([str(replay)])
+    assert not set(ids.values()) & set(prov.SENTINEL_HASHES)
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"manifest": "logs/eval/does_not_exist.csv"},
+    {"source_index": "logs/eval/does_not_exist.json"},
+])
+def test_unreadable_identity_inputs_are_refused(clean_tree, kwargs):
+    with pytest.raises(prov.ProtocolViolation, match="placeholder hash"):
+        prov.build_provenance(run_kind="development", **kwargs)
+
+
+def test_replay_data_hash_tracks_contents_not_paths(clean_tree, tmp_path):
+    replay = tmp_path / "a.json"
+    replay.write_text('{"x": 1}')
+    first = prov.build_provenance(
+        run_kind="development", replay_paths=[str(replay)])["identities"]
+    replay.write_text('{"x": 2}')
+    second = prov.build_provenance(
+        run_kind="development", replay_paths=[str(replay)])["identities"]
+    assert first["replay_data_sha1"] != second["replay_data_sha1"]
+
+
+def test_duplicate_source_basenames_are_refused(clean_tree, tmp_path):
+    """`source_file_sha1s` keys by basename, which would silently collapse two
+    same-named files in different packages into a single identity."""
+    for pkg in ("p1", "p2"):
+        (tmp_path / pkg).mkdir()
+        (tmp_path / pkg / "mcts.py").write_text(f"# {pkg}\n")
+    with pytest.raises(prov.ProtocolViolation, match="basenames are not unique"):
+        prov.build_provenance(run_kind="development", source_files=[
+            str(tmp_path / "p1" / "mcts.py"), str(tmp_path / "p2" / "mcts.py")])

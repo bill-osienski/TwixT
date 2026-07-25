@@ -19,8 +19,8 @@ Import-pure: no evaluator, MLX, or search import anywhere in this module.
 """
 from __future__ import annotations
 
+import hashlib
 import json
-from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
 from . import fpu_v17_provenance as prov
@@ -37,17 +37,54 @@ from .fpu_dev_reservoir_protocol import (
 __all__ = [
     "EXIT_OK", "EXIT_USAGE", "EXIT_MISMATCH", "EXIT_GATE_FAIL", "WriteStatus",
     "PROTOCOL_SCHEMA_VERSION", "CONFIG_SCHEMA_VERSION",
-    "build_protocol", "derive_config", "emit", "load_json",
+    "PROTOCOL_KEYS", "PROTOCOL_OPTIONAL_KEYS", "CONFIG_KEYS",
+    "build_protocol", "derive_config", "emit", "load_json", "protocol_sha1",
     "verify_config_matches", "load_verified",
 ]
 
 PROTOCOL_SCHEMA_VERSION = 1
 CONFIG_SCHEMA_VERSION = 1
 
-# Keys `derive_config` reads. Anything outside this set cannot influence the
-# derived config, which is what makes the byte-comparison meaningful.
-_CONFIG_SOURCE_KEYS = ("run_kind", "coefficient", "base_seed", "games",
-                       "checkpoints", "board_size")
+# Exact required key sets. A document missing or gaining a top-level key is
+# refused rather than partially interpreted.
+PROTOCOL_KEYS = frozenset({
+    "schema_version", "artifact_kind", "run_kind", "coefficient", "base_seed",
+    "games", "board_size", "checkpoints", "provenance"})
+PROTOCOL_OPTIONAL_KEYS = frozenset({"extra"})
+CONFIG_KEYS = frozenset({
+    "schema_version", "artifact_kind", "run_kind", "scientific", "formula_id",
+    "config_field", "coefficient", "shipped_branch", "mcts", "seed_range",
+    "board_size", "checkpoints", "frozen_design_sha1", "protocol_sha1"})
+
+
+def protocol_sha1(protocol: Mapping[str, Any]) -> str:
+    """SHA-1 of the protocol's CANONICAL bytes.
+
+    The config embeds this, so the config is bound to the COMPLETE protocol --
+    including the provenance block, which no other derived field reads. Without
+    it, editing e.g. `provenance.formula_id` would leave the config verifying.
+    """
+    return hashlib.sha1(canonical_json_bytes(protocol)).hexdigest()
+
+
+def _validate_shape(doc: Mapping[str, Any], *, artifact_kind: str,
+                    required: frozenset, optional: frozenset,
+                    schema_version: int) -> None:
+    if doc.get("artifact_kind") != artifact_kind:
+        raise prov.ProtocolViolation(
+            f"expected a {artifact_kind} document, got artifact_kind="
+            f"{doc.get('artifact_kind')!r}")
+    if doc.get("schema_version") != schema_version:
+        raise prov.ProtocolViolation(
+            f"{artifact_kind} schema_version {doc.get('schema_version')!r} != "
+            f"the supported {schema_version}")
+    keys = set(doc)
+    if missing := sorted(required - keys):
+        raise prov.ProtocolViolation(
+            f"{artifact_kind} is missing required keys {missing}")
+    if unknown := sorted(keys - required - optional):
+        raise prov.ProtocolViolation(
+            f"{artifact_kind} has unknown keys {unknown}")
 
 
 def build_protocol(*, run_kind: str,
@@ -65,6 +102,7 @@ def build_protocol(*, run_kind: str,
     """
     prov.validate_run_kind(run_kind)
     prov.validate_coefficient(coefficient)
+    board_size = prov.validate_board_size(board_size)
     prov.verify_frozen_design()
     prov.require_clean_worktree(run_kind)
     if prov.SEED_RANGES[run_kind] is not None:
@@ -100,15 +138,19 @@ def derive_config(protocol: Mapping[str, Any]) -> Dict[str, Any]:
     Deterministic and total: same protocol in, byte-identical config out. This
     is what `verify_config_matches` re-runs to detect tampering.
     """
-    if protocol.get("artifact_kind") != "protocol":
-        raise prov.ProtocolViolation(
-            f"expected a protocol document, got artifact_kind="
-            f"{protocol.get('artifact_kind')!r}")
+    _validate_shape(protocol, artifact_kind="protocol",
+                    required=PROTOCOL_KEYS, optional=PROTOCOL_OPTIONAL_KEYS,
+                    schema_version=PROTOCOL_SCHEMA_VERSION)
     run_kind = prov.validate_run_kind(protocol["run_kind"])
     coefficient = prov.validate_coefficient(protocol.get("coefficient"))
+    board_size = prov.validate_board_size(protocol.get("board_size"))
     base_seed, games = protocol.get("base_seed"), protocol.get("games")
     if prov.SEED_RANGES[run_kind] is not None:
         prov.validate_seed_range(run_kind, base_seed, games)
+    elif base_seed is not None or games is not None:
+        raise prov.ProtocolViolation(
+            f"run_kind {run_kind!r} generates no games; base_seed/games must be "
+            f"null")
     return {
         "schema_version": CONFIG_SCHEMA_VERSION,
         "artifact_kind": "config",
@@ -125,9 +167,11 @@ def derive_config(protocol: Mapping[str, Any]) -> Dict[str, Any]:
                  **dict(zip(prov.BATCHING_FIELDS, prov.BATCHING))},
         "seed_range": (None if base_seed is None
                        else [base_seed, base_seed + games]),
-        "board_size": protocol.get("board_size", 24),
+        "board_size": board_size,
         "checkpoints": dict(sorted((protocol.get("checkpoints") or {}).items())),
         "frozen_design_sha1": prov.FROZEN_DESIGN_SHA1,
+        # binds the config to the COMPLETE protocol, provenance included
+        "protocol_sha1": protocol_sha1(protocol),
     }
 
 
@@ -154,6 +198,8 @@ def verify_config_matches(protocol: Mapping[str, Any],
     well-formed. Raises `ProtocolViolation`; callers map that to
     `EXIT_MISMATCH`.
     """
+    _validate_shape(config, artifact_kind="config", required=CONFIG_KEYS,
+                    optional=frozenset(), schema_version=CONFIG_SCHEMA_VERSION)
     expected = canonical_json_bytes(derive_config(protocol))
     actual = canonical_json_bytes(config)
     if expected != actual:
