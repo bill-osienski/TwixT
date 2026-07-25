@@ -133,3 +133,125 @@ def test_field_survives_dataclasses_replace_and_asdict():
     assert cfg.fpu_shipped_policy_mass_reduction == 0.25
     assert dataclasses.asdict(cfg)["fpu_shipped_policy_mass_reduction"] == 0.25
     assert "fpu_shipped_policy_mass_reduction" in dataclasses.asdict(MCTSConfig())
+
+
+# ===========================================================================
+# Task 3 -- the selection branch. Design §2.2: the site must branch BEFORE
+# calculating explored mass, so at `None` and `0.0` v17 does not call the
+# formula helper, scan children for explored mass, alter RNG consumption,
+# change tie behaviour, or add observer mutations.
+#
+# The golden checks in tests/test_fpu_v17_prechange_golden.py cover the RNG,
+# tie and observer halves; the checks here cover the "no helper call, no mass
+# scan" half, which is only observable at the call site itself.
+# ===========================================================================
+import random
+
+from scripts.GPU.alphazero.mcts import MCTS, explored_policy_mass
+from tests.test_fpu_policy_mass_rule import (
+    _stub_value_fn, _synthetic_root_for_policy_mass,
+)
+
+
+def _select_with(**cfg_kwargs):
+    root, X, Y, Z = _synthetic_root_for_policy_mass()
+    cfg = MCTSConfig(n_simulations=1, c_puct=1.5, **cfg_kwargs)
+    chosen, _child = MCTS(_stub_value_fn(), cfg, random.Random(0))._select_child(root)
+    return chosen, X, Y, Z
+
+
+def test_positive_v17_coefficient_changes_the_unvisited_child_choice():
+    """Discriminator. On the pinned tree P_explored = 0.25, so a positive r
+    lowers the unvisited move Y's score by r*sqrt(0.25) = r/2. Y beats the
+    visited X by 0.04926, so r = 0.35 (a frozen grid point) must flip the
+    choice to X. If the branch were not wired, Y would still win."""
+    chosen, X, _Y, _Z = _select_with(fpu_shipped_policy_mass_reduction=0.35)
+    assert chosen == X
+
+
+def test_shipped_and_exact_zero_pick_the_unvisited_child_like_shipped():
+    """`None` and `0.0` must both reproduce the shipped choice (Y)."""
+    shipped_choice, _X, Y, _Z = _select_with()
+    assert shipped_choice == Y
+    assert _select_with(fpu_shipped_policy_mass_reduction=0.0)[0] == Y
+
+
+def test_small_positive_coefficient_still_picks_the_unvisited_child():
+    """Below the 0.0985 boundary the unvisited move still wins, so the flip
+    above is the coefficient acting through the formula, not an on/off step."""
+    chosen, _X, Y, _Z = _select_with(fpu_shipped_policy_mass_reduction=0.05)
+    assert chosen == Y
+
+
+class _Counter:
+    def __init__(self, fn):
+        self.fn, self.calls = fn, 0
+
+    def __call__(self, *a, **k):
+        self.calls += 1
+        return self.fn(*a, **k)
+
+
+def _call_counts(monkeypatch, **cfg_kwargs):
+    """Count real calls to the two helpers during one `_select_child`."""
+    formula = _Counter(mcts_mod.policy_mass_fpu)
+    scan = _Counter(mcts_mod.explored_policy_mass)
+    monkeypatch.setattr(mcts_mod, "policy_mass_fpu", formula)
+    monkeypatch.setattr(mcts_mod, "explored_policy_mass", scan)
+    _select_with(**cfg_kwargs)
+    return formula.calls, scan.calls
+
+
+def test_none_calls_neither_helper(monkeypatch):
+    assert _call_counts(monkeypatch) == (0, 0)
+
+
+def test_exact_zero_calls_neither_helper(monkeypatch):
+    """§2.2: stronger than numerical equivalence -- `0.0` must take the shipped
+    branch STRUCTURALLY, never computing explored mass and discarding it."""
+    assert _call_counts(monkeypatch, fpu_shipped_policy_mass_reduction=0.0) == (0, 0)
+
+
+def test_positive_coefficient_calls_both_helpers_once(monkeypatch):
+    """Keeps the two checks above non-vacuous: the counters do observe calls
+    when the positive branch runs, and mass is computed once per call, not
+    once per child."""
+    assert _call_counts(monkeypatch, fpu_shipped_policy_mass_reduction=0.35) == (1, 1)
+
+
+def test_retired_field_still_calls_the_helper_with_q_parent(monkeypatch):
+    """The v16 branch must be untouched: it still reduces from `node.q_value`,
+    not from `fpu_value`. v17 must not have re-pointed the shared helper."""
+    seen = {}
+
+    def spy(parent_q, explored_mass, r):
+        seen.update(parent_q=parent_q, explored_mass=explored_mass, r=r)
+        return parent_q - r * math.sqrt(explored_mass)
+
+    monkeypatch.setattr(mcts_mod, "policy_mass_fpu", spy)
+    _select_with(fpu_policy_mass_reduction=1.5)
+    assert seen["parent_q"] == 0.5           # node.q_value, the Q_parent rule
+    assert seen["explored_mass"] == pytest.approx(0.25)
+    assert seen["r"] == 1.5
+
+
+def test_v17_reduces_from_fpu_value_not_q_parent(monkeypatch):
+    """The whole point of v17: Q_parent does not participate. The helper must
+    receive `fpu_value` (0.0 by validation), never the root's 0.5."""
+    seen = {}
+
+    def spy(parent_q, explored_mass, r):
+        seen.update(parent_q=parent_q, explored_mass=explored_mass, r=r)
+        return parent_q - r * math.sqrt(explored_mass)
+
+    monkeypatch.setattr(mcts_mod, "policy_mass_fpu", spy)
+    _select_with(fpu_shipped_policy_mass_reduction=0.35)
+    assert seen["parent_q"] == 0.0           # fpu_value, NOT node.q_value (0.5)
+    assert seen["explored_mass"] == pytest.approx(0.25)
+    assert seen["r"] == 0.35
+
+
+def test_explored_mass_semantics_unchanged_by_v17():
+    """§2.3 reuses the existing completed-visit definition verbatim."""
+    root, _X, _Y, _Z = _synthetic_root_for_policy_mass()
+    assert explored_policy_mass(root) == pytest.approx(0.25)

@@ -78,11 +78,30 @@ AUTHORIZED_TO_CHANGE = {
 }
 
 
-def test_identity_basis_is_unchanged():
-    """The goldens and the fixture that produces them. A change here means the
-    identity basis moved and the golden must be re-derived deliberately."""
-    for path, expected in _record()["source_sha1s"]["identity_basis"].items():
-        assert _sha1(path) == expected, path
+# What actually determines the golden's CONTENT: the fixture that builds the
+# signatures, the search harness under it, and the golden file itself. The
+# recorded `identity_basis` also lists the golden's CONSUMER test module, which
+# is not a determinant -- later tasks legitimately append assertions to it
+# (Task 3 added the search-level exact-zero proofs) without moving the basis.
+#
+# Not listed, and covered behaviourally instead:
+# `tests/test_fpu_policy_mass_rule.py` supplies the pinned synthetic tree the
+# sweep walks. If that tree changes, `synthetic_selection_trace()` changes and
+# `test_fpu_v17_prechange_golden.py` fails on re-derivation, which is a
+# stronger check than a hash pin.
+GOLDEN_PRODUCERS = (
+    "tests/fpu_search_fixture.py",
+    "tests/fpu_v17_prechange_fixture.py",
+    "tests/golden/fpu_v17_prechange_search.json",
+)
+
+
+def test_golden_producers_are_unchanged():
+    """A change here means the identity basis moved and the golden must be
+    re-derived deliberately, not silently."""
+    basis = _record()["source_sha1s"]["identity_basis"]
+    for path in GOLDEN_PRODUCERS:
+        assert _sha1(path) == basis[path], path
 
 
 def test_no_out_of_scope_source_module_was_edited():

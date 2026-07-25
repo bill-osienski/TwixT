@@ -85,3 +85,45 @@ def test_synthetic_trace_actually_discriminates_fpu():
 def test_cpu_search_signature_alone_matches_golden_block():
     """Task 3 re-runs exactly this entry point on the `0.0` path."""
     assert cpu_search_signature() == _golden()["cpu_search"]
+
+
+# ===========================================================================
+# Task 3 -- exact-zero identity at SEARCH level. The synthetic sweep is not
+# re-runnable at `0.0` because design §2.1 rejects a non-`None` field with a
+# nonzero `fpu_value` and the sweep varies it, so the `0.0` half of the proof
+# is the CPU-search signature.
+# ===========================================================================
+
+def test_none_path_still_reproduces_the_whole_golden():
+    """The `None` half: the default config after wiring must be unchanged."""
+    assert prechange_goldens() == _golden()
+
+
+def test_exact_zero_reproduces_the_golden_cpu_search():
+    """The `0.0` half: visit counts, root value, tree signature and the full
+    callback sequence must all be identical to the pre-change capture."""
+    assert cpu_search_signature(fpu_shipped_policy_mass_reduction=0.0) \
+        == _golden()["cpu_search"]
+
+
+def test_none_and_zero_scan_no_explored_mass_across_a_full_search(monkeypatch):
+    """§2.2 is structural, not numerical: across a whole 200-simulation search
+    -- hundreds of `_select_child` calls -- neither the formula helper nor the
+    explored-mass scan may run on the shipped or exact-zero paths."""
+    from scripts.GPU.alphazero import mcts as mcts_mod
+
+    def forbidden(*_a, **_k):
+        raise AssertionError("v17 off-path called a policy-mass helper")
+
+    monkeypatch.setattr(mcts_mod, "policy_mass_fpu", forbidden)
+    monkeypatch.setattr(mcts_mod, "explored_policy_mass", forbidden)
+    assert cpu_search_signature() == _golden()["cpu_search"]
+    assert cpu_search_signature(fpu_shipped_policy_mass_reduction=0.0) \
+        == _golden()["cpu_search"]
+
+
+def test_positive_coefficient_actually_changes_the_search():
+    """Keeps the identity proofs non-vacuous: a frozen grid point must move the
+    search, so 'identical at 0.0' is a real constraint rather than a no-op."""
+    assert cpu_search_signature(fpu_shipped_policy_mass_reduction=0.35) \
+        != _golden()["cpu_search"]

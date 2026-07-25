@@ -1061,16 +1061,28 @@ class MCTS:
         c = self.config.c_puct
         sqrt_parent = math.sqrt(node.visit_count + 1)
 
-        # Context-relative FPU (policy-mass rule, opt-in): computed ONCE per
-        # call, before the child loop. When `fpu_policy_mass_reduction` is
-        # None (default), `_fpu_pm` is None and neither `explored_policy_mass`
-        # nor `policy_mass_fpu` is evaluated -- the off path below is
-        # byte-identical to the prior hardcoded `self.config.fpu_value`.
+        # FPU for unvisited children: resolved ONCE per call, before the child
+        # loop, and -- critically -- the branch is taken BEFORE any explored
+        # mass is computed. Three mutually exclusive modes (the config guards
+        # in MCTSConfig.__post_init__ make _pm and _v17 never both non-None):
+        #
+        #   _pm  is not None  -> retired v16 parent-relative rule, Q_parent base
+        #   _v17 positive     -> v17 baseline-preserving rule, fpu_value base
+        #   otherwise         -> the shipped absolute `fpu_value`
+        #
+        # `_v17` None AND 0.0 both fall to the shipped branch STRUCTURALLY:
+        # neither `explored_policy_mass` nor `policy_mass_fpu` is evaluated and
+        # no child is scanned, so the off path stays byte-identical to the prior
+        # hardcoded `self.config.fpu_value` (design §2.2).
         _pm = self.config.fpu_policy_mass_reduction
-        _fpu_pm = (
-            policy_mass_fpu(node.q_value, explored_policy_mass(node), _pm)
-            if _pm is not None else None
-        )
+        _v17 = self.config.fpu_shipped_policy_mass_reduction
+        if _pm is not None:
+            _fpu = policy_mass_fpu(node.q_value, explored_policy_mass(node), _pm)
+        elif _v17 is not None and _v17 != 0.0:
+            _fpu = policy_mass_fpu(self.config.fpu_value,
+                                   explored_policy_mass(node), _v17)
+        else:
+            _fpu = self.config.fpu_value
 
         best_score = float("-inf")
         best_moves = []  # List of (move_id, child) tuples
@@ -1084,7 +1096,7 @@ class MCTS:
                 q = -child.q_value
                 child_visits = child.visit_count
             else:
-                q = _fpu_pm if _pm is not None else self.config.fpu_value
+                q = _fpu
                 child_visits = 0
 
             # Virtual visit penalty for pending leaves
