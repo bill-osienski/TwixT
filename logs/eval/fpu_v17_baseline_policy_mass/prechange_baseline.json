@@ -1,0 +1,1104 @@
+{
+ "abcd_conventions": {
+  "checkpoint_filter": "Only rows with checkpoint == \"0001\" are frozen; other checkpoint rows in multi-checkpoint CSVs are excluded (plan Task 1 step 6).",
+  "over_severe": "All four gates use black-perspective thresholds on probe_black_root_value: over >= +0.25, severe >= +0.50. The CSV-recorded black_overvalue / severe_black_overvalue flags were verified to agree with that recompute for every gate.",
+  "ulp_note": "Recomputing a gate mean in a different summation order may differ by one or two ULPs (C: ...6037 vs the design's displayed ...6039; D: ...619 vs ...617). Both are far inside the frozen 1e-6 reproduction tolerance and are not drift (design section 9)."
+ },
+ "abcd_frozen_baseline": {
+  "A": {
+   "canonical_source": "logs/eval/calib020_0001_black_loss_post_opening_predrop_probe/position_probe_cases.csv",
+   "cases": [
+    {
+     "case_id": "black_loss_game_000347_predrop_ply_73_drop_75",
+     "over": true,
+     "position_ply": 73,
+     "probe_black_root_value_repr": "0.5083625118073541",
+     "rank": 1,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000631_predrop_ply_19_drop_21",
+     "over": true,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "0.6126939518749714",
+     "rank": 2,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000611_predrop_ply_19_drop_21",
+     "over": true,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "0.8037021200545132",
+     "rank": 3,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000217_predrop_ply_73_drop_75",
+     "over": false,
+     "position_ply": 73,
+     "probe_black_root_value_repr": "0.038069862165284574",
+     "rank": 4,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000127_predrop_ply_33_drop_35",
+     "over": true,
+     "position_ply": 33,
+     "probe_black_root_value_repr": "0.6963953067541298",
+     "rank": 5,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000539_predrop_ply_41_drop_43",
+     "over": false,
+     "position_ply": 41,
+     "probe_black_root_value_repr": "0.057373359230696225",
+     "rank": 6,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000629_predrop_ply_43_drop_45",
+     "over": false,
+     "position_ply": 43,
+     "probe_black_root_value_repr": "-0.12558117588909226",
+     "rank": 7,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000093_predrop_ply_41_drop_43",
+     "over": true,
+     "position_ply": 41,
+     "probe_black_root_value_repr": "0.3575418065302074",
+     "rank": 8,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000259_predrop_ply_35_drop_37",
+     "over": true,
+     "position_ply": 35,
+     "probe_black_root_value_repr": "0.7688730380544438",
+     "rank": 9,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000281_predrop_ply_19_drop_21",
+     "over": true,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "0.8424882959155365",
+     "rank": 10,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000633_predrop_ply_37_drop_39",
+     "over": false,
+     "position_ply": 37,
+     "probe_black_root_value_repr": "-0.0547178041015286",
+     "rank": 11,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000735_predrop_ply_31_drop_33",
+     "over": true,
+     "position_ply": 31,
+     "probe_black_root_value_repr": "0.43076847680844366",
+     "rank": 12,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000337_predrop_ply_25_drop_27",
+     "over": true,
+     "position_ply": 25,
+     "probe_black_root_value_repr": "0.6405549183487892",
+     "rank": 13,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000291_predrop_ply_21_drop_23",
+     "over": true,
+     "position_ply": 21,
+     "probe_black_root_value_repr": "0.7213116194074973",
+     "rank": 14,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000503_predrop_ply_19_drop_21",
+     "over": true,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "0.7022408391581848",
+     "rank": 15,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000183_predrop_ply_19_drop_21",
+     "over": false,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "-0.13747523190919309",
+     "rank": 16,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000455_predrop_ply_65_drop_67",
+     "over": false,
+     "position_ply": 65,
+     "probe_black_root_value_repr": "-0.1448751433895086",
+     "rank": 17,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000757_predrop_ply_43_drop_45",
+     "over": false,
+     "position_ply": 43,
+     "probe_black_root_value_repr": "-0.15718214463762706",
+     "rank": 18,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000249_predrop_ply_59_drop_61",
+     "over": false,
+     "position_ply": 59,
+     "probe_black_root_value_repr": "-0.08294964547036215",
+     "rank": 19,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000449_predrop_ply_37_drop_39",
+     "over": false,
+     "position_ply": 37,
+     "probe_black_root_value_repr": "-0.3058033668517601",
+     "rank": 20,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000753_predrop_ply_49_drop_51",
+     "over": false,
+     "position_ply": 49,
+     "probe_black_root_value_repr": "-0.07141173734737094",
+     "rank": 21,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000467_predrop_ply_19_drop_21",
+     "over": false,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "-0.18512448345980373",
+     "rank": 22,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000027_predrop_ply_45_drop_47",
+     "over": false,
+     "position_ply": 45,
+     "probe_black_root_value_repr": "-0.1072995309869293",
+     "rank": 23,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000021_predrop_ply_25_drop_27",
+     "over": true,
+     "position_ply": 25,
+     "probe_black_root_value_repr": "0.6948690858390182",
+     "rank": 24,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000627_predrop_ply_29_drop_31",
+     "over": false,
+     "position_ply": 29,
+     "probe_black_root_value_repr": "-0.23842764562316007",
+     "rank": 25,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000151_predrop_ply_49_drop_51",
+     "over": false,
+     "position_ply": 49,
+     "probe_black_root_value_repr": "-0.035280000603524965",
+     "rank": 26,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000507_predrop_ply_37_drop_39",
+     "over": true,
+     "position_ply": 37,
+     "probe_black_root_value_repr": "0.582884756354033",
+     "rank": 27,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000505_predrop_ply_41_drop_43",
+     "over": false,
+     "position_ply": 41,
+     "probe_black_root_value_repr": "-0.22580349836498498",
+     "rank": 28,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000765_predrop_ply_25_drop_27",
+     "over": true,
+     "position_ply": 25,
+     "probe_black_root_value_repr": "0.5173065516166389",
+     "rank": 29,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "black_loss_game_000123_predrop_ply_37_drop_39",
+     "over": true,
+     "position_ply": 37,
+     "probe_black_root_value_repr": "0.6072697151079773",
+     "rank": 30,
+     "severe": true,
+     "side_to_move": "black"
+    }
+   ],
+   "checkpoint_filter": "0001",
+   "label": "black pre-drop",
+   "mean_repr": "0.25702582687976244",
+   "n": 30,
+   "over": 15,
+   "severe": 13,
+   "source_sha1": "175c73ef2c761df83ccf5f5cd935152093f8dfb1"
+  },
+  "B": {
+   "canonical_source": "logs/eval/black_predrop_calib010_goal_line/goal_line_trigger_probe_cases.csv",
+   "cases": [
+    {
+     "case_id": "game_000769_ply_39",
+     "over": false,
+     "position_ply": 39,
+     "probe_black_root_value_repr": "-0.35779510129475967",
+     "rank": 4,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000405_ply_39",
+     "over": false,
+     "position_ply": 39,
+     "probe_black_root_value_repr": "-0.7304150251054671",
+     "rank": 6,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000535_ply_63",
+     "over": false,
+     "position_ply": 63,
+     "probe_black_root_value_repr": "-0.03978164988686331",
+     "rank": 7,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000545_ply_67",
+     "over": false,
+     "position_ply": 67,
+     "probe_black_root_value_repr": "-0.4411530543025583",
+     "rank": 10,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000015_ply_19",
+     "over": true,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "0.42167565776384436",
+     "rank": 11,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000327_ply_63",
+     "over": false,
+     "position_ply": 63,
+     "probe_black_root_value_repr": "0.24178904474596494",
+     "rank": 12,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000263_ply_43",
+     "over": false,
+     "position_ply": 43,
+     "probe_black_root_value_repr": "-0.23552319768670713",
+     "rank": 13,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000007_ply_37",
+     "over": false,
+     "position_ply": 37,
+     "probe_black_root_value_repr": "-0.07526199734566034",
+     "rank": 14,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000117_ply_39",
+     "over": false,
+     "position_ply": 39,
+     "probe_black_root_value_repr": "-0.56135996600613",
+     "rank": 21,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000321_ply_39",
+     "over": false,
+     "position_ply": 39,
+     "probe_black_root_value_repr": "-0.4790851641469635",
+     "rank": 22,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000489_ply_59",
+     "over": false,
+     "position_ply": 59,
+     "probe_black_root_value_repr": "-0.09278863605053629",
+     "rank": 24,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000433_ply_57",
+     "over": false,
+     "position_ply": 57,
+     "probe_black_root_value_repr": "-0.5654571297997609",
+     "rank": 26,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000299_ply_39",
+     "over": false,
+     "position_ply": 39,
+     "probe_black_root_value_repr": "-0.642590628953185",
+     "rank": 29,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000373_ply_47",
+     "over": false,
+     "position_ply": 47,
+     "probe_black_root_value_repr": "0.15385247521364362",
+     "rank": 31,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000537_ply_55",
+     "over": false,
+     "position_ply": 55,
+     "probe_black_root_value_repr": "-0.005424292501993477",
+     "rank": 34,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000315_ply_31",
+     "over": false,
+     "position_ply": 31,
+     "probe_black_root_value_repr": "-0.22179339471331333",
+     "rank": 35,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000333_ply_29",
+     "over": false,
+     "position_ply": 29,
+     "probe_black_root_value_repr": "-0.1141271413071081",
+     "rank": 38,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000495_ply_33",
+     "over": false,
+     "position_ply": 33,
+     "probe_black_root_value_repr": "-0.6511957784486003",
+     "rank": 39,
+     "severe": false,
+     "side_to_move": "black"
+    }
+   ],
+   "checkpoint_filter": "0001",
+   "label": "goal-line",
+   "mean_repr": "-0.24424638776811966",
+   "n": 18,
+   "over": 1,
+   "severe": 0,
+   "source_sha1": "091e80ef3b5e2dbaaf9bb76ce77ef4b8597e90ed"
+  },
+  "C": {
+   "canonical_source": "logs/eval/calib020_post_opening_sweep/position_probe_cases.csv",
+   "cases": [
+    {
+     "case_id": "game_000637_ply_039",
+     "over": false,
+     "position_ply": 39,
+     "probe_black_root_value_repr": "0.10753619392518886",
+     "rank": 1,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000277_ply_037",
+     "over": false,
+     "position_ply": 37,
+     "probe_black_root_value_repr": "-0.36465488679939884",
+     "rank": 2,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000639_ply_043",
+     "over": false,
+     "position_ply": 43,
+     "probe_black_root_value_repr": "0.0026408826737315395",
+     "rank": 3,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000603_ply_027",
+     "over": false,
+     "position_ply": 27,
+     "probe_black_root_value_repr": "0.08067016197441262",
+     "rank": 4,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000505_ply_037",
+     "over": true,
+     "position_ply": 37,
+     "probe_black_root_value_repr": "0.8560679676011205",
+     "rank": 5,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000619_ply_061",
+     "over": true,
+     "position_ply": 61,
+     "probe_black_root_value_repr": "0.47587569619296116",
+     "rank": 6,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000499_ply_021",
+     "over": true,
+     "position_ply": 21,
+     "probe_black_root_value_repr": "0.5692354433791479",
+     "rank": 7,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000511_ply_019",
+     "over": false,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "-0.038585737019602676",
+     "rank": 8,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000593_ply_027",
+     "over": false,
+     "position_ply": 27,
+     "probe_black_root_value_repr": "0.11964972498302813",
+     "rank": 9,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000349_ply_035",
+     "over": false,
+     "position_ply": 35,
+     "probe_black_root_value_repr": "-0.15823740220541369",
+     "rank": 10,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000735_ply_043",
+     "over": false,
+     "position_ply": 43,
+     "probe_black_root_value_repr": "-0.02028631625842536",
+     "rank": 11,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000103_ply_039",
+     "over": false,
+     "position_ply": 39,
+     "probe_black_root_value_repr": "-0.5592294725682586",
+     "rank": 12,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000191_ply_021",
+     "over": false,
+     "position_ply": 21,
+     "probe_black_root_value_repr": "-0.5009958205022849",
+     "rank": 14,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000463_ply_021",
+     "over": false,
+     "position_ply": 21,
+     "probe_black_root_value_repr": "0.04936448159947759",
+     "rank": 15,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000793_ply_035",
+     "over": false,
+     "position_ply": 35,
+     "probe_black_root_value_repr": "-0.06825203943211818",
+     "rank": 16,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000319_ply_035",
+     "over": false,
+     "position_ply": 35,
+     "probe_black_root_value_repr": "-0.3548848739033565",
+     "rank": 17,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000309_ply_019",
+     "over": true,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "0.44279647799063243",
+     "rank": 22,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000001_ply_029",
+     "over": true,
+     "position_ply": 29,
+     "probe_black_root_value_repr": "0.3556713239522651",
+     "rank": 23,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000681_ply_025",
+     "over": false,
+     "position_ply": 25,
+     "probe_black_root_value_repr": "-0.005320106771541759",
+     "rank": 25,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000403_ply_019",
+     "over": true,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "0.340154413562268",
+     "rank": 27,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000433_ply_029",
+     "over": true,
+     "position_ply": 29,
+     "probe_black_root_value_repr": "0.6066807152505498",
+     "rank": 28,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000113_ply_021",
+     "over": false,
+     "position_ply": 21,
+     "probe_black_root_value_repr": "-0.48304424894158726",
+     "rank": 29,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000369_ply_051",
+     "over": true,
+     "position_ply": 51,
+     "probe_black_root_value_repr": "0.3343019643984735",
+     "rank": 30,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000073_ply_033",
+     "over": false,
+     "position_ply": 33,
+     "probe_black_root_value_repr": "-0.14767138068622443",
+     "rank": 31,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000065_ply_021",
+     "over": true,
+     "position_ply": 21,
+     "probe_black_root_value_repr": "0.48013788419237247",
+     "rank": 32,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000425_ply_023",
+     "over": false,
+     "position_ply": 23,
+     "probe_black_root_value_repr": "0.011589231556863524",
+     "rank": 34,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000695_ply_019",
+     "over": false,
+     "position_ply": 19,
+     "probe_black_root_value_repr": "0.17557409877539612",
+     "rank": 35,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000595_ply_037",
+     "over": false,
+     "position_ply": 37,
+     "probe_black_root_value_repr": "-0.3334745374170598",
+     "rank": 36,
+     "severe": false,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000565_ply_033",
+     "over": true,
+     "position_ply": 33,
+     "probe_black_root_value_repr": "0.8024437441863119",
+     "rank": 37,
+     "severe": true,
+     "side_to_move": "black"
+    },
+    {
+     "case_id": "game_000705_ply_021",
+     "over": false,
+     "position_ply": 21,
+     "probe_black_root_value_repr": "0.18145949133788236",
+     "rank": 38,
+     "severe": false,
+     "side_to_move": "black"
+    }
+   ],
+   "checkpoint_filter": "0001",
+   "label": "old broad post-opening",
+   "mean_repr": "0.09857376916756037",
+   "n": 30,
+   "over": 10,
+   "severe": 4,
+   "source_sha1": "592a624b088fd39565518bb9560d41401432b648"
+  },
+  "D": {
+   "canonical_source": "logs/eval/calib020_0001_red_loss_post_opening_predrop_probe/position_probe_cases.csv",
+   "cases": [
+    {
+     "case_id": "red_loss_game_000432_predrop_ply_38_drop_40",
+     "over": false,
+     "position_ply": 38,
+     "probe_black_root_value_repr": "-0.6464574715099297",
+     "rank": 1,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000756_predrop_ply_32_drop_34",
+     "over": false,
+     "position_ply": 32,
+     "probe_black_root_value_repr": "-0.39941602108068763",
+     "rank": 2,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000170_predrop_ply_24_drop_26",
+     "over": false,
+     "position_ply": 24,
+     "probe_black_root_value_repr": "-0.42741827945923433",
+     "rank": 3,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000678_predrop_ply_60_drop_62",
+     "over": false,
+     "position_ply": 60,
+     "probe_black_root_value_repr": "-0.35410414200741797",
+     "rank": 4,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000324_predrop_ply_30_drop_32",
+     "over": false,
+     "position_ply": 30,
+     "probe_black_root_value_repr": "-0.6557665045800968",
+     "rank": 5,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000278_predrop_ply_18_drop_20",
+     "over": false,
+     "position_ply": 18,
+     "probe_black_root_value_repr": "-0.25672591879498213",
+     "rank": 6,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000398_predrop_ply_20_drop_22",
+     "over": false,
+     "position_ply": 20,
+     "probe_black_root_value_repr": "-0.47994167924392966",
+     "rank": 7,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000456_predrop_ply_40_drop_42",
+     "over": false,
+     "position_ply": 40,
+     "probe_black_root_value_repr": "0.10747066460840869",
+     "rank": 8,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000038_predrop_ply_24_drop_26",
+     "over": false,
+     "position_ply": 24,
+     "probe_black_root_value_repr": "-0.3854239482036792",
+     "rank": 9,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000180_predrop_ply_42_drop_44",
+     "over": false,
+     "position_ply": 42,
+     "probe_black_root_value_repr": "-0.709416654422821",
+     "rank": 10,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000616_predrop_ply_56_drop_58",
+     "over": false,
+     "position_ply": 56,
+     "probe_black_root_value_repr": "0.04003055786102777",
+     "rank": 11,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000642_predrop_ply_40_drop_42",
+     "over": false,
+     "position_ply": 40,
+     "probe_black_root_value_repr": "-0.7729732709759264",
+     "rank": 12,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000664_predrop_ply_56_drop_58",
+     "over": false,
+     "position_ply": 56,
+     "probe_black_root_value_repr": "-0.02742534470919054",
+     "rank": 13,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000300_predrop_ply_54_drop_56",
+     "over": false,
+     "position_ply": 54,
+     "probe_black_root_value_repr": "-0.5597168496472296",
+     "rank": 14,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000578_predrop_ply_54_drop_56",
+     "over": false,
+     "position_ply": 54,
+     "probe_black_root_value_repr": "0.091712135905982",
+     "rank": 15,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000780_predrop_ply_56_drop_58",
+     "over": true,
+     "position_ply": 56,
+     "probe_black_root_value_repr": "0.2588659113575704",
+     "rank": 16,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000408_predrop_ply_50_drop_52",
+     "over": false,
+     "position_ply": 50,
+     "probe_black_root_value_repr": "0.10979655096161878",
+     "rank": 17,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000142_predrop_ply_32_drop_34",
+     "over": false,
+     "position_ply": 32,
+     "probe_black_root_value_repr": "-0.5027268332999665",
+     "rank": 18,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000048_predrop_ply_20_drop_22",
+     "over": false,
+     "position_ply": 20,
+     "probe_black_root_value_repr": "-0.19473759411543143",
+     "rank": 19,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000172_predrop_ply_18_drop_20",
+     "over": false,
+     "position_ply": 18,
+     "probe_black_root_value_repr": "0.15066380571646731",
+     "rank": 20,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000752_predrop_ply_70_drop_72",
+     "over": true,
+     "position_ply": 70,
+     "probe_black_root_value_repr": "0.31671308498713185",
+     "rank": 21,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000348_predrop_ply_62_drop_64",
+     "over": false,
+     "position_ply": 62,
+     "probe_black_root_value_repr": "-0.5237323927693069",
+     "rank": 22,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000788_predrop_ply_36_drop_38",
+     "over": false,
+     "position_ply": 36,
+     "probe_black_root_value_repr": "-0.6607116135174874",
+     "rank": 23,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000216_predrop_ply_38_drop_40",
+     "over": true,
+     "position_ply": 38,
+     "probe_black_root_value_repr": "0.29370030625956134",
+     "rank": 24,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000728_predrop_ply_48_drop_50",
+     "over": false,
+     "position_ply": 48,
+     "probe_black_root_value_repr": "0.06756345934001728",
+     "rank": 25,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000438_predrop_ply_56_drop_58",
+     "over": false,
+     "position_ply": 56,
+     "probe_black_root_value_repr": "0.06970574500213843",
+     "rank": 26,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000634_predrop_ply_64_drop_66",
+     "over": false,
+     "position_ply": 64,
+     "probe_black_root_value_repr": "0.08352541926316917",
+     "rank": 27,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000682_predrop_ply_36_drop_38",
+     "over": false,
+     "position_ply": 36,
+     "probe_black_root_value_repr": "-0.15537010481930338",
+     "rank": 28,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000362_predrop_ply_52_drop_54",
+     "over": false,
+     "position_ply": 52,
+     "probe_black_root_value_repr": "0.19775474613474217",
+     "rank": 29,
+     "severe": false,
+     "side_to_move": "red"
+    },
+    {
+     "case_id": "red_loss_game_000176_predrop_ply_42_drop_44",
+     "over": true,
+     "position_ply": 42,
+     "probe_black_root_value_repr": "0.2988884964108001",
+     "rank": 30,
+     "severe": false,
+     "side_to_move": "red"
+    }
+   ],
+   "checkpoint_filter": "0001",
+   "label": "red pre-drop",
+   "mean_repr": "-0.1875224579782662",
+   "n": 30,
+   "over": 4,
+   "severe": 0,
+   "source_sha1": "5f26ec1aae22be62a8bfe272e4787294e8887f0e"
+  }
+ },
+ "authorizes": [],
+ "captured_before_any_mcts_source_edit": true,
+ "experiment": "fpu_v17_baseline_policy_mass",
+ "frozen_documents": {
+  "docs/superpowers/plans/2026-07-24-v17-baseline-preserving-policy-mass-fpu-plan.md": "d6d47d926aba3e79b08f774c5e80316efc474f59",
+  "docs/superpowers/specs/2026-07-24-v17-baseline-preserving-policy-mass-fpu-design.md": "944f358c0e3ef66503d2cbb56e31dabd145bafc2"
+ },
+ "git": {
+  "commit": "9e6a606ee6385d0dd34de3b09ba38bb1d5c721f1",
+  "worktree_clean": false
+ },
+ "goldens": {
+  "batching_triple": [
+   14,
+   48,
+   8
+  ],
+  "covers": [
+   "design 2.2 (i) synthetic-tree selected moves and selection traces",
+   "design 2.2 (ii) CPU-search visit counts, root value, tree signature, callback sequence"
+  ],
+  "path": "tests/golden/fpu_v17_prechange_search.json",
+  "sha1": "868da8fe1f0a0c609c857f6f8ac046155063d4d9"
+ },
+ "known_gap": {
+  "selected_moves": "NOT FROZEN - unavailable. Design section 9 requires the Stage-4 contemporaneous shipped run to reproduce the frozen baseline 'with exact selected moves', but none of the four canonical CSVs record a selected move. Their columns are checkpoint / game_idx / case_id / rank / position_ply / side_to_move / probe_black_root_value / probe_top1_share / black_overvalue / severe_black_overvalue (plus A and D's replay_path / drop_ply / collapse_type). The value, over/severe and cardinality parts of that gate ARE fully enforceable from this record; the selected-move part is not, and needs a user decision before Task 13."
+ },
+ "plan_task": "Task 1 - capture pre-change identity goldens",
+ "record_kind": "v17_prechange_baseline",
+ "schema_version": 1,
+ "source_sha1s": {
+  "identity_basis": {
+   "tests/fpu_search_fixture.py": "1e1877f0ea7a6bbf3a4d0f9f6e30163be09547ee",
+   "tests/fpu_v17_prechange_fixture.py": "4f02ceea83e0062d9be31db76fb9f9f4a50a2069",
+   "tests/golden/fpu_v17_prechange_search.json": "868da8fe1f0a0c609c857f6f8ac046155063d4d9",
+   "tests/test_fpu_v17_prechange_golden.py": "306ab3d7e9a1c089df35782a34570d45469f313b"
+  },
+  "production_result_determining_set": {
+   "scripts/GPU/alphazero/__init__.py": "eb6dd10ac2a60afd4e75b7d981c98b3bd2f5e369",
+   "scripts/GPU/alphazero/eval_checkpoint_match.py": "623fb036468d5a1529ed433529e3e12ae831e87b",
+   "scripts/GPU/alphazero/eval_elo.py": "5744fce20cdeacc5a7d302ac9489e646e3b1af57",
+   "scripts/GPU/alphazero/eval_replay.py": "3b55b5f7f31ca20152596ecc956d614d4b781a9c",
+   "scripts/GPU/alphazero/eval_runner.py": "590c1100549d0429087df53a2f879f51dfdd79e0",
+   "scripts/GPU/alphazero/eval_summary.py": "5bed62e42a6afd0115f70dcb7d94060ac92a4d1f",
+   "scripts/GPU/alphazero/evaluator.py": "2a271589446b9c733d5a63d3bb18b69bc5221ab3",
+   "scripts/GPU/alphazero/game/twixt_state.py": "f31f01651d24f790625b2c95370cbb07425fba8e",
+   "scripts/GPU/alphazero/local_evaluator.py": "510b8cc49dc42456835ad489cc73204c20ce2c30",
+   "scripts/GPU/alphazero/mcts.py": "11fa989d7cd521fab69c3801898ee7282e00fc10",
+   "scripts/GPU/alphazero/network.py": "dc951e870ea6eda80fb6721a77bb674942604135",
+   "scripts/GPU/alphazero/opening_diagnostics.py": "88e79da5e3749049f4a8bf9f77e17193bb5aec60",
+   "scripts/GPU/alphazero/probe_eval.py": "e8dd5146347fef66e7194fce33da67f443f5bf69"
+  },
+  "v17_pure_dependencies": {
+   "scripts/GPU/alphazero/build_fpu_dev_corpus.py": "c45d7d3b7981d2fd9edb1b65e8d5a614125ae65d",
+   "scripts/GPU/alphazero/diagnose_fpu_policy_mass.py": "2b0ae14687bb503575f11aa0c96ae443b3509e6b",
+   "scripts/GPU/alphazero/fpu_provenance.py": "c5fd4b9d40a5742c49150a95da370c2af085ce53"
+  }
+ },
+ "suite_baseline": {
+  "command": ".venv/bin/python -m pytest -p no:cacheprovider",
+  "post_task1": {
+   "deselected": 53,
+   "failed": 0,
+   "note": "2,274 pre-change + 13 v17 Task 1 tests (6 golden, 7 provenance). Every pre-existing test still passes; no source module was edited.",
+   "passed": 2287,
+   "skipped": 4
+  },
+  "pre_task1": {
+   "deselected": 53,
+   "failed": 0,
+   "note": "Required by plan Task 1 step 3 and matched exactly. 2,272 tracked tests + 2 in the untracked tests/test_fpu_policy_mass_postmortem.py, which was NOT stashed or excluded.",
+   "passed": 2274,
+   "skipped": 4
+  }
+ }
+}
