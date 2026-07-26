@@ -434,6 +434,31 @@ After separate authorization:
 4. Persist exact generation command.
 5. Authenticate source and checkpoint identities.
 
+**Amendment `task9-stage-identity-and-gate-b-v1` (2026-07-26).**
+Implementation-scope correction only; it changes no scientific decision, no
+frozen design section, no grid, no sizing, and no gate threshold.
+
+1. **Stage identity.** The reservoir/corpus profile run kinds were
+   `("production", "tooling_smoke")` only, so a scientific v17 reservoir could
+   not carry its own stage identity. Emitting `production` instead is not a
+   second legitimate axis: the Task 5 consumer refuses a selector config whose
+   `run_kind` is not the diagnostic mode, so such a corpus would be unreadable
+   AFTER the GPU cost was paid. Schema 3 therefore admits `development` and
+   `held_out` in addition (`profile_run_kinds_for`); schemas 1 and 2 keep the
+   original pair exactly, so no frozen v16 artifact can reach the widened set
+   and none of their bytes change. Pinned by a producer-to-consumer test: a
+   chain emitted for a stage authenticates under `authenticate_qualification`
+   for that same stage, and a `production` chain is refused by the development
+   consumer.
+2. **Gate B pre-selection exclusion.** `forbidden_manifests` omitted gate B
+   because its canonical cases CSV carries no `replay_path` column. Deferring B
+   to the diagnostic could let the deterministic selector choose a forbidden B
+   position and cause an avoidable Stage-1 gate failure. The loadable
+   equivalent `logs/eval/tvc_v2_gate_B_goal_line_manifest.csv` (SHA-1
+   `b678e4ed34816e2daeeb009e8deb274191248dc1`, 18 canonical hashes equal to the
+   frozen B set) is added to the forbidden set. The diagnostic's independent
+   canonical-B authentication is retained as the backstop.
+
 **Gate:** clean worktree and protocol qualification pass before generation.
 
 ## Task 10 — Generate and qualify the development reservoir

@@ -3035,3 +3035,41 @@ def test_metrics_are_actually_persisted_for_every_grid_point(tmp_path,
         assert set(record) == {"passed", "reasons", "metrics"}
         assert record["metrics"], "a gate persisted no metrics"
         assert "reply_reduction" in record["metrics"]
+
+
+# ---------------------------------------------------------------------------
+# Task 9 amendment: the reservoir PRODUCER must emit an artifact chain the
+# development CONSUMER accepts. Emitting run_kind="production" here would be
+# rejected at `authenticate_qualification`, after the GPU cost was already
+# paid -- which is exactly why the reservoir schema 3 widened its run kinds.
+# ---------------------------------------------------------------------------
+
+def test_reservoir_schema_3_admits_the_v17_scientific_stages():
+    from scripts.GPU.alphazero.fpu_dev_corpus_v2 import profile_run_kinds_for
+    assert profile_run_kinds_for(2) == ("production", "tooling_smoke")
+    for stage in ("development", "held_out"):
+        assert stage in profile_run_kinds_for(3)
+        assert stage not in profile_run_kinds_for(2)   # schema 1/2 untouched
+
+
+@pytest.mark.parametrize("mode", ["development", "held_out"])
+def test_producer_chain_survives_the_consumer_for_each_v17_stage(tmp_path, mode):
+    """Producer -> consumer, end to end: a chain whose artifacts carry the v17
+    stage identity authenticates under that same mode."""
+    m = _manifest(tmp_path, mode)
+    out = v17.authenticate_qualification(
+        str(m), mode=mode, source_index=str(_source_index(tmp_path, mode)),
+        config_path=None, checkpoint=CKPT, selector=_chain_selector(m),
+        post_screen_report=_qualification(tmp_path, mode, m))
+    assert out["sidecar_sha1"] and out["source_index_sha1"]
+
+
+def test_a_production_run_kind_is_refused_by_the_development_consumer(tmp_path):
+    """The concrete failure the amendment prevents: a corpus emitted as
+    `production` is unreadable by the development diagnostic."""
+    m = _manifest(tmp_path)
+    with pytest.raises(prov.ProtocolViolation, match="run_kind"):
+        v17.authenticate_qualification(
+            str(m), mode="development", source_index=str(_source_index(tmp_path)),
+            config_path=None, checkpoint=CKPT, selector=_chain_selector(m),
+            post_screen_report=_qualification(tmp_path, "production", m))

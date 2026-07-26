@@ -248,6 +248,22 @@ PROPOSAL_CELLS: List[Tuple[str, Optional[str]]] = [
 _ROLES: Tuple[str, ...] = ("target", "control")
 PROFILE_RUN_KINDS: Tuple[str, ...] = ("production", "tooling_smoke")
 
+# Schema 3 ONLY: the v17 scientific stages carry their own stage identity, so a
+# schema-3 profile may also name them. Schema 1/2 keep the original pair
+# EXACTLY -- every frozen v16 artifact is schema 1 or 2, so none of them can
+# reach this widened set and none of their bytes change.
+#
+# Why widen at all: the frozen v17 design requires the scientific reservoir to
+# be `development` (later `held_out`), and the Task 5 consumer rejects a
+# selector config whose run kind is not the diagnostic mode. Emitting
+# `production` here would produce a corpus the diagnostic refuses to read.
+PROFILE_RUN_KINDS_V3: Tuple[str, ...] = PROFILE_RUN_KINDS + (
+    "development", "held_out")
+
+
+def profile_run_kinds_for(schema: int) -> Tuple[str, ...]:
+    return PROFILE_RUN_KINDS_V3 if int(schema) >= 3 else PROFILE_RUN_KINDS
+
 
 @dataclasses.dataclass(frozen=True)
 class AllocationProfile:
@@ -327,9 +343,10 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
         raise ValueError(f"{source}: unsupported config_schema_version "
                          f"{schema!r} for an allocation profile (2 or 3)")
     run_kind = raw.get("run_kind")
-    if run_kind not in PROFILE_RUN_KINDS:
+    allowed_kinds = profile_run_kinds_for(schema)
+    if run_kind not in allowed_kinds:
         raise ValueError(f"{source}: unsupported run_kind {run_kind!r} "
-                         f"(must be one of {PROFILE_RUN_KINDS})")
+                         f"(must be one of {allowed_kinds})")
 
     required_keys = ("phase_allocation", "late_floors",
                      "late_target_band_minima", "max_per_game",

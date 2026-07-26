@@ -598,6 +598,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 from . import fpu_provenance
 from .fpu_dev_corpus_v2 import (
     PROFILE_RUN_KINDS,
+    profile_run_kinds_for,
     # Retained in the import surface (pinned by tests/test_fpu_dev_reservoir_
     # protocol.py::test_module_imports_only_pure_names_from_fpu_dev_corpus_v2
     # and referenced throughout this module's prose); the byte-compare
@@ -922,10 +923,11 @@ def build_protocol(params: Mapping[str, Any]) -> Dict[str, Any]:
         # protocol already carries (`config_schema_version`, `run_kind`,
         # `phase_allocation`, `late_floors`, `late_target_band_minima`,
         # `max_per_game`, `min_ply_gap`, `side_tol`, `corpus_size`) -- no adapter.
-        if protocol["run_kind"] not in PROFILE_RUN_KINDS:
+        allowed_kinds = profile_run_kinds_for(protocol["config_schema_version"])
+        if protocol["run_kind"] not in allowed_kinds:
             raise ValueError(
                 f"build_protocol: unsupported run_kind "
-                f"{protocol['run_kind']!r} (must be one of {PROFILE_RUN_KINDS})")
+                f"{protocol['run_kind']!r} (must be one of {allowed_kinds})")
         # Version-dispatched: each protocol version emits its OWN config
         # schema, so a config's version alone determines its shape (and hence
         # whether the interpretation field is required).
