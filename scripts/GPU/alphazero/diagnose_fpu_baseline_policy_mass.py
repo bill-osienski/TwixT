@@ -849,6 +849,7 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
               stage1_manifest: Optional[str] = None,
               stage1_source_index: Optional[str] = None,
               stage1_post_screen_report: Optional[str] = None,
+              qualification_selected_coefficient: Optional[str] = None,
               selector=None) -> Dict[str, Any]:
     """Validate every scientific precondition. Costs zero searches.
 
@@ -900,6 +901,13 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
     # Geometry is necessary but not sufficient: it accepts arbitrary rows
     # LABELLED target/control. The selector's report is what certifies the
     # predicates, the phase quotas, and the disjointness §12 requires.
+    # ZERO-GPU authorization first: a later stage bound to the wrong selection
+    # artifact must cost no searches at all.
+    selection_binding = None
+    if mode in ("held_out", "abcd"):
+        selection_binding = authenticate_selected_coefficient(
+            qualification_selected_coefficient, coefficient=frozen_coefficient,
+            expected_sha1=_precommitted_selection_sha1(protocol_path))
     qualification = None
     disjointness = None
     if prov.is_scientific(mode):
@@ -959,7 +967,8 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
                 f"{disjointness['checked_positions']} positions, expected {want}")
     return {"configs": configs, "manifest_rows": manifest_rows,
             "replay_paths": replay_paths, "source_files": source_files,
-            "qualification": qualification, "disjointness": disjointness}
+            "qualification": qualification, "disjointness": disjointness,
+            "selection_binding": selection_binding}
 
 
 # --- artifacts -------------------------------------------------------------
@@ -974,7 +983,7 @@ def build_selected_coefficient(*, coefficient: Optional[float],
                                table: Mapping[float, "GateResult"],
                                development_artifact: str,
                                development_artifact_sha1: str,
-                               selection_context: Mapping[str, Any]
+                               development: Mapping[str, Any]
                                ) -> Dict[str, Any]:
     """The immutable Stage-2 result held-out and A/B/C/D must be bound to.
 
@@ -991,8 +1000,20 @@ def build_selected_coefficient(*, coefficient: Optional[float],
                   for r, g in sorted(table.items())},
         "development_artifact": development_artifact,
         "development_artifact_sha1": development_artifact_sha1,
-        "selection_context": dict(selection_context),
+        # derived, never passed in, so producer and verifier cannot diverge
+        "selection_context": selection_context_from(development),
     }
+
+
+def selection_context_from(development: Mapping[str, Any]) -> Dict[str, Any]:
+    """The complete §7.3 selection-context fingerprint, DERIVED from the
+    development artifact rather than accepted from the selection document."""
+    identities = (development.get("provenance") or {}).get("identities") or {}
+    checkpoints = (development.get("provenance") or {}).get("checkpoints") or {}
+    return {"manifest_sha1": identities.get("manifest_sha1"),
+            "protocol_sha1": development.get("protocol_sha1"),
+            "checkpoint_sha1": checkpoints.get(ANCHOR_ROLE),
+            "n_rows": development.get("n_rows")}
 
 
 def authenticate_selected_coefficient(path: Optional[str], *,
@@ -1075,6 +1096,21 @@ def authenticate_selected_coefficient(path: Optional[str], *,
             raise prov.ProtocolViolation(
                 f"selected-coefficient gate table disagrees with the recomputed "
                 f"verdict at r={r}")
+        # the REASONS are evidence too, so they are compared rather than shown
+        if list(claimed.get("reasons", [])) != list(gate.reasons):
+            raise prov.ProtocolViolation(
+                f"selected-coefficient gate reasons at r={r} are "
+                f"{claimed.get('reasons')!r}, but recomputation produced "
+                f"{list(gate.reasons)!r}")
+    # The context is DERIVED from the authenticated development artifact and
+    # exact-matched. Returned directly, it accepted forged manifest/protocol/
+    # checkpoint hashes and n_rows=0 alongside a genuine artifact.
+    derived_context = selection_context_from(development)
+    if dict(doc["selection_context"]) != derived_context:
+        raise prov.ProtocolViolation(
+            f"selected-coefficient selection_context {doc['selection_context']!r} "
+            f"!= the context derived from the development artifact "
+            f"{derived_context!r}")
     if doc["coefficient"] is None:
         raise prov.ProtocolViolation(
             "development selected no coefficient, so no later stage may run")
@@ -1087,7 +1123,7 @@ def authenticate_selected_coefficient(path: Optional[str], *,
             "development_artifact": dev_path,
             "development_artifact_sha1": dev_actual,
             "recomputed_from_rows": len(dev_rows),
-            "selection_context": doc["selection_context"]}
+            "selection_context": derived_context}
 
 
 def build_artifact(*, mode: str, coefficient: Optional[float],
@@ -1590,6 +1626,11 @@ def rederive_selection(manifest_rows: Sequence[Mapping[str, Any]], *,
             f"{sorted(fields)}; missing "
             f"{sorted(set(fields) - set(actual_fields))}, unproduced extras "
             f"{sorted(set(actual_fields) - set(fields))}")
+    if actual_fields != fields:
+        raise prov.ProtocolViolation(
+            f"manifest header order {list(actual_fields)} != the established "
+            f"schema order {list(fields)}; the column order is part of the "
+            f"producer's output")
 
     def order(row):
         return (str(row["canonical_position_sha1"]), int(row["game_idx"]),
@@ -1940,6 +1981,7 @@ def _build_abcd_stage(*, coefficient: float, checkpoint: str, out_path: str,
     frozen candidate, validates the shipped run against the Task 1 freeze, and
     applies all four §9 verdicts."""
     _require_positive_grid_coefficient(coefficient, "A/B/C/D")
+    # zero-GPU authorization first
     abcd_selection = authenticate_selected_coefficient(
         selected_coefficient, coefficient=coefficient,
         expected_sha1=_precommitted_selection_sha1(protocol_path))
@@ -2112,7 +2154,7 @@ def run_diagnostic(*, mode: str, selector=None, searcher=None, **kwargs):
             coefficient=artifact["coefficient"], table=pending["table"],
             development_artifact=str(out_path),
             development_artifact_sha1=fpu_provenance.file_sha1(str(out_path)),
-            selection_context=pending["selection_context"])
+            development=artifact)
         protocol.emit(str(Path(out_path).with_name("selected_coefficient.json")),
                       selection)
     return artifact
@@ -2151,6 +2193,7 @@ def _build_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                     frozen_coefficient=frozen_coefficient,
                     protocol_path=protocol_path, config_path=config_path,
                     qualification_report=qualification_report,
+                    qualification_selected_coefficient=selected_coefficient,
                     stage1_manifest=stage1_manifest,
                     stage1_source_index=stage1_source_index,
                     stage1_post_screen_report=stage1_post_screen_report,
@@ -2166,22 +2209,14 @@ def _build_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
                          and r["role"] == "target" and r["lock_in"])
     gates: Dict[str, Any] = {}
     selected = frozen_coefficient
-    selection_binding = None
+    # already authorized in preflight, before any search
+    selection_binding = pre["selection_binding"]
     pending_selection: Optional[Dict[str, Any]] = None
-    if mode in ("held_out", "abcd"):
-        selection_binding = authenticate_selected_coefficient(
-            selected_coefficient, coefficient=frozen_coefficient,
-            expected_sha1=_precommitted_selection_sha1(protocol_path))
     if mode == "development":
         selected, table = select_smallest_passing(rows, shipped_lockin=shipped_lockin)
         gates = {str(k): {"passed": v.passed, "reasons": list(v.reasons),
                           "metrics": v.metrics} for k, v in table.items()}
-        pending_selection = {"table": table, "selection_context": {
-            "manifest_sha1": fpu_provenance.file_sha1(manifest_path),
-            "protocol_sha1": (protocol.protocol_sha1(
-                protocol.load_json(protocol_path)) if protocol_path else None),
-            "checkpoint_sha1": fpu_provenance.file_sha1(checkpoint),
-            "n_rows": len(rows)}}
+        pending_selection = {"table": table}
     elif mode == "held_out":
         v = heldout_verdict(rows, frozen_coefficient, shipped_lockin=shipped_lockin)
         gates = {"held_out": {"passed": v.passed, "reasons": list(v.reasons),

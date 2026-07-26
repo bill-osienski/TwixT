@@ -1096,7 +1096,7 @@ def _emit_development(tmp_path, monkeypatch, coefficient):
         coefficient=built["artifact"]["coefficient"], table=table,
         development_artifact=str(art_path),
         development_artifact_sha1=fpu_provenance.file_sha1(str(art_path)),
-        selection_context=built["pending_selection"]["selection_context"])
+        development=built["artifact"])
     return art_path, doc
 
 
@@ -2676,3 +2676,111 @@ def test_exact_schema_and_order_are_reported():
         screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv", selector=genuine)
     assert out["order_compared"] is True
     assert set(out["compared_fields"]) == set(rows[0]) and len(rows[0]) == 15
+
+
+# ---------------------------------------------------------------------------
+# Adversarial round 11: authorize before searching, derive the context, and
+# enforce header order.
+# ---------------------------------------------------------------------------
+
+def test_selection_mismatch_costs_zero_searches(clean_tree, tmp_path, monkeypatch):
+    """A SHA mismatch previously consumed all 112 held-out searches first."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    stage1 = _selector_chain(tmp_path, "development")
+    sel, sha1 = _selected_coefficient(tmp_path, monkeypatch, 0.25)
+    # a protocol committing to a DIFFERENT artifact
+    pp, cp = _protocol_with_selection(tmp_path, "held_out", 0.25, "0" * 40)
+    calls = []
+
+    def counting(manifest_row, coefficient):
+        calls.append(manifest_row["canonical_sha1"])
+        return row(manifest_row["canonical_sha1"], coefficient,
+                   role=manifest_row["role"], side=manifest_row["side"],
+                   ply_bucket=manifest_row["ply_bucket"])
+    with pytest.raises(prov.ProtocolViolation, match="protocol precommitted"):
+        _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.25,
+             selected_coefficient=sel, protocol_path=pp, config_path=cp,
+             stage1_manifest=str(stage1["manifest"]),
+             stage1_source_index=str(stage1["index"]),
+             stage1_post_screen_report=str(stage1["report"]),
+             searcher=counting)
+    assert calls == []
+
+
+def test_abcd_selection_mismatch_costs_zero_searches(clean_tree, tmp_path,
+                                                     monkeypatch):
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    sel, sha1 = _selected_coefficient(tmp_path, monkeypatch, 0.25)
+    pp, cp = _protocol_with_selection(tmp_path, "abcd", 0.25, "0" * 40)
+    calls = []
+
+    def counting(case, coefficient):
+        calls.append(case["case_id"])
+        return _abcd_searcher()(case, coefficient)
+    with pytest.raises(prov.ProtocolViolation, match="protocol precommitted"):
+        v17._build_abcd_stage(
+            coefficient=0.25, checkpoint=CKPT, selected_coefficient=sel,
+            out_path=str(tmp_path / "o.json"), protocol_path=pp,
+            config_path=cp, searcher=counting)
+    assert calls == []
+
+
+@pytest.mark.parametrize("field,value", [
+    ("manifest_sha1", "forged"), ("protocol_sha1", "forged"),
+    ("checkpoint_sha1", "forged"), ("n_rows", 0),
+])
+def test_forged_selection_context_is_refused(tmp_path, monkeypatch, field, value):
+    """A real bound development artifact with a forged context authenticated."""
+    art_path, doc = _emit_development(tmp_path, monkeypatch, 0.25)
+    doc["selection_context"] = {**doc["selection_context"], field: value}
+    path = tmp_path / "forged_context.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="selection_context"):
+        v17.authenticate_selected_coefficient(
+            str(path), coefficient=0.25,
+            expected_sha1=fpu_provenance.file_sha1(str(path)))
+
+
+def test_selection_context_is_derived_from_the_development_artifact(tmp_path,
+                                                                    monkeypatch):
+    art_path, doc = _emit_development(tmp_path, monkeypatch, 0.25)
+    development = json.loads(art_path.read_text())
+    derived = v17.selection_context_from(development)
+    assert doc["selection_context"] == derived
+    assert derived["n_rows"] == development["n_rows"]
+    assert derived["manifest_sha1"] and derived["checkpoint_sha1"]
+    path = tmp_path / "ok.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    out = v17.authenticate_selected_coefficient(
+        str(path), coefficient=0.25,
+        expected_sha1=fpu_provenance.file_sha1(str(path)))
+    assert out["selection_context"] == derived
+
+
+def test_forged_gate_reasons_are_refused(tmp_path, monkeypatch):
+    """Reasons are evidence too, so they are compared, not displayed."""
+    art_path, doc = _emit_development(tmp_path, monkeypatch, 0.25)
+    failing = next(r for r, g in doc["gates"].items() if not g["passed"])
+    doc["gates"][failing] = {"passed": False, "reasons": ["a plausible excuse"]}
+    path = tmp_path / "forged_reasons.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="gate reasons"):
+        v17.authenticate_selected_coefficient(
+            str(path), coefficient=0.25,
+            expected_sha1=fpu_provenance.file_sha1(str(path)))
+
+
+def test_reversed_header_order_is_refused():
+    """The established schema defines an exact column order."""
+    with open(f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", newline="") as f:
+        rows = list(csv.DictReader(f))
+    reordered = [{k: r[k] for k in reversed(list(r))} for r in rows]
+
+    def genuine(screen_meta, cfg, *, forbidden, screen_csv_path):
+        return [dict(r) for r in rows], {}
+    with pytest.raises(prov.ProtocolViolation, match="header order"):
+        v17.rederive_selection(
+            reordered,
+            selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
+            screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv",
+            selector=genuine)
