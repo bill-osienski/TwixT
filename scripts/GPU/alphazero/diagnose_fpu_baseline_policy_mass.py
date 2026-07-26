@@ -98,7 +98,8 @@ __all__ = [
     "select_smallest_passing", "build_artifact", "build_row", "search_result_sha1",
     "run_diagnostic", "build_selected_coefficient",
     "authenticate_selected_coefficient", "validate_selection_document",
-    "validate_development_artifact", "selection_context_from", "main",
+    "validate_development_artifact", "require_development_consistency",
+    "selection_context_from", "effective_configs", "main",
     # Deliberate RE-EXPORTS of the v16 definitions (plan Task 5: "import,
     # rather than copy"). Several are not referenced by name here -- the
     # imported aggregator applies them internally -- but re-exporting means a
@@ -1030,10 +1031,13 @@ def _strict_document(doc: Any, *, path: str, kind: str, keys: Sequence[str],
         raise prov.ProtocolViolation(
             f"{path} has artifact_kind {doc.get('artifact_kind')!r}, expected "
             f"{kind!r}")
-    if doc.get("schema_version") != schema_version:
+    # `True == 1` and `1.0 == 1` in Python, so the TYPE is checked before the
+    # value: equality alone is not exact schema typing.
+    version = doc.get("schema_version")
+    if type(version) is not int or version != schema_version:
         raise prov.ProtocolViolation(
-            f"{path} has schema_version {doc.get('schema_version')!r}, but only "
-            f"{schema_version} is supported")
+            f"{path} has schema_version {version!r} ({type(version).__name__}), "
+            f"but only int {schema_version} is supported")
     missing = sorted(set(keys) - set(doc))
     unknown = sorted(set(doc) - set(keys))
     if missing or unknown:
@@ -1087,6 +1091,45 @@ def validate_development_artifact(doc: Any, *, path: str) -> Dict[str, Any]:
             f"{path} records no effective MCTS config for {missing_cfg}")
     validate_row_set(doc["rows"], expected_configs)
     return doc
+
+
+def require_development_consistency(development: Mapping[str, Any], *,
+                                    recomputed: Optional[float],
+                                    table: Mapping[float, "GateResult"],
+                                    path: str) -> None:
+    """The development artifact's own result fields must equal recomputation.
+
+    Recomputing from its rows and comparing only against the SEPARATE selection
+    document left the artifact free to contradict itself: it could report
+    coefficient 0.45, a forged gate table, and empty MCTS configs while its own
+    rows select 0.25.
+    """
+    if development["coefficient"] != recomputed:
+        raise prov.ProtocolViolation(
+            f"{path} records coefficient {development['coefficient']!r}, but its "
+            f"own rows recompute to {recomputed!r}")
+    gates = development["gates"]
+    if sorted(gates) != sorted(str(r) for r in table):
+        raise prov.ProtocolViolation(
+            f"{path} gate table covers {sorted(gates)}, but recomputation "
+            f"produced {sorted(str(r) for r in table)}")
+    for r, gate in table.items():
+        claimed = gates[str(r)]
+        if claimed.get("passed") is not gate.passed:
+            raise prov.ProtocolViolation(
+                f"{path} records passed={claimed.get('passed')!r} at r={r}, but "
+                f"recomputation produced {gate.passed!r}")
+        if list(claimed.get("reasons", [])) != list(gate.reasons):
+            raise prov.ProtocolViolation(
+                f"{path} gate reasons at r={r} are {claimed.get('reasons')!r}, "
+                f"but recomputation produced {list(gate.reasons)!r}")
+    # the effective configs must EQUAL the frozen ones, not merely be keyed
+    expected = json.loads(json.dumps(
+        effective_configs(configs_for_mode("development"))))
+    if json.loads(json.dumps(development["effective_mcts_config"])) != expected:
+        raise prov.ProtocolViolation(
+            f"{path} effective MCTS configurations do not equal the frozen "
+            f"configurations for the development config set")
 
 
 def validate_selection_document(doc: Any, *, path: str) -> Dict[str, Any]:
@@ -1194,6 +1237,8 @@ def authenticate_selected_coefficient(path: Optional[str], *,
             f"selected-coefficient artifact records {doc['coefficient']!r}, but "
             f"recomputing §§7.2-7.3 from the development artifact's own rows "
             f"selects {recomputed!r}")
+    require_development_consistency(development, recomputed=recomputed,
+                                    table=table, path=dev_path)
     for r, gate in table.items():
         claimed = doc["gates"].get(str(r))
         if claimed is None or claimed["passed"] != gate.passed:

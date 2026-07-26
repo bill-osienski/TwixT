@@ -2894,3 +2894,86 @@ def test_a_genuine_bound_pair_still_authenticates(tmp_path, monkeypatch):
 def test_selection_rule_constant_is_the_one_emitted(tmp_path, monkeypatch):
     _art, doc = _emit_development(tmp_path, monkeypatch, 0.25)
     assert doc["selection_rule"] == v17.SELECTION_RULE
+
+
+# ---------------------------------------------------------------------------
+# Adversarial round 13: a bound artifact must not contradict its own rows.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("mutate,pattern", [
+    (lambda d: d.__setitem__("coefficient", 0.45), "own rows recompute"),
+    (lambda d: d.__setitem__("gates", {"forged": {"passed": True}}),
+     "gate table covers"),
+    (lambda d: d.__setitem__(
+        "effective_mcts_config", {k: {} for k in d["effective_mcts_config"]}),
+     "do not equal the frozen"),
+])
+def test_development_artifact_cannot_contradict_its_rows(tmp_path, monkeypatch,
+                                                         mutate, pattern):
+    """Recomputation was compared only with the separate selection document, so
+    the development artifact was free to disagree with itself."""
+    path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_development=mutate)
+    with pytest.raises(prov.ProtocolViolation, match=pattern):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_development_gate_verdicts_must_equal_recomputation(tmp_path, monkeypatch):
+    def flip(development):
+        key = next(iter(development["gates"]))
+        development["gates"][key] = {
+            **development["gates"][key],
+            "passed": not development["gates"][key]["passed"]}
+    path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_development=flip)
+    with pytest.raises(prov.ProtocolViolation, match="but recomputation produced"):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_development_gate_reasons_must_equal_recomputation(tmp_path, monkeypatch):
+    def excuse(development):
+        key = next(k for k, g in development["gates"].items() if not g["passed"])
+        development["gates"][key] = {**development["gates"][key],
+                                     "reasons": ["a plausible excuse"]}
+    path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_development=excuse)
+    with pytest.raises(prov.ProtocolViolation, match="gate reasons"):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_effective_configs_are_compared_by_value(tmp_path, monkeypatch):
+    """Key presence is not equality: a single altered field must be caught."""
+    def tweak(development):
+        cfg = development["effective_mcts_config"]
+        key = next(iter(cfg))
+        cfg[key] = {**cfg[key], "c_puct": 99.0}
+    path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_development=tweak)
+    with pytest.raises(prov.ProtocolViolation, match="do not equal the frozen"):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+@pytest.mark.parametrize("version", [True, False, 1.0, "1"])
+@pytest.mark.parametrize("target", ["selection", "development"])
+def test_schema_version_requires_an_exact_int(tmp_path, monkeypatch, version,
+                                              target):
+    """`True == 1` and `1.0 == 1` in Python, so equality alone is not typing."""
+    kwargs = ({"mutate_selection": lambda d: d.__setitem__("schema_version",
+                                                            version)}
+              if target == "selection"
+              else {"mutate_development": lambda d: d.__setitem__(
+                  "schema_version", version)})
+    path, sha1 = _bound_pair(tmp_path, monkeypatch, **kwargs)
+    with pytest.raises(prov.ProtocolViolation, match="schema_version"):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_a_genuine_pair_still_authenticates_after_the_strict_checks(tmp_path,
+                                                                    monkeypatch):
+    """Strictness that also rejected the real producer's output would be a
+    different failure; this is what keeps the rest honest."""
+    path, sha1 = _bound_pair(tmp_path, monkeypatch)
+    out = v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                                expected_sha1=sha1)
+    assert out["coefficient"] == 0.25 and out["recomputed_from_rows"] > 0
