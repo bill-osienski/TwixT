@@ -8,6 +8,7 @@ games regardless of worker count.
 """
 from __future__ import annotations
 
+import dataclasses
 import multiprocessing as mp
 import os
 import queue
@@ -34,6 +35,30 @@ class EvalGameTask:
     red_checkpoint: str
     black_checkpoint: str
     seed: int
+    # Optional per-agent search config. None (default) => both sides use
+    # cfg_from(config), i.e. the historical symmetric behaviour, byte-for-byte.
+    # Set when two agents share identical checkpoint bytes but must search
+    # differently (v17: same net, different FPU coefficient) -- a case the
+    # checkpoint-swap color balance alone cannot express, because swapping a
+    # path for itself is a no-op.
+    red_mcts: Optional[MCTSConfig] = None
+    black_mcts: Optional[MCTSConfig] = None
+    # Agent identity, independent of checkpoint. Two agents on ONE checkpoint
+    # are distinguishable only by this; without it every downstream score
+    # collapses to "self-match" and no strength statistic can be computed.
+    red_agent: Optional[str] = None
+    black_agent: Optional[str] = None
+
+
+def is_agent_task(task: EvalGameTask) -> bool:
+    """True once a task carries any agent-mode field.
+
+    Deliberately ANY, not all: a task that is half-configured is exactly the
+    silent-fallback case validation has to catch, so it must count as agent
+    mode rather than slipping back into the legacy path.
+    """
+    return any(v is not None for v in
+               (task.red_mcts, task.black_mcts, task.red_agent, task.black_agent))
 
 
 @dataclass
@@ -50,6 +75,12 @@ class EvalGameResult:
     red_score: float
     black_score: float
     replay_path: Optional[str] = None
+    # Agent identity carried through to scoring. None on the legacy path, and
+    # omitted entirely from the per-game JSONL there (see _write_outputs), so
+    # existing artifacts keep their exact bytes.
+    red_agent: Optional[str] = None
+    black_agent: Optional[str] = None
+    winner_agent: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -96,16 +127,25 @@ def cfg_from(config: EvalConfig) -> MCTSConfig:
 
 
 def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
-                   capture: bool = False):
+                   capture: bool = False,
+                   red_mcts: Optional[MCTSConfig] = None,
+                   black_mcts: Optional[MCTSConfig] = None):
     """Play one A-vs-B game. Returns (winner, reason, n_moves, records).
 
     `records` is None unless capture=True, in which case it is a list of
     ply_record dicts (one per ply). Capturing reads already-computed search
     outputs only — no extra search calls, no RNG draws — so game outcomes are
     identical with capture on or off.
+
+    `red_mcts`/`black_mcts` override that side's search config. Each defaults to
+    None => cfg_from(config), which is exactly what both sides used before this
+    parameter existed. Seeds are unchanged and stay side-derived, so overriding
+    one side does not disturb the other side's RNG stream.
     """
-    mcts_red = MCTS(red_eval, cfg_from(config), random.Random(seed ^ 0xA5A5A5))
-    mcts_black = MCTS(black_eval, cfg_from(config), random.Random(seed ^ 0x5A5A5A))
+    red_cfg = cfg_from(config) if red_mcts is None else red_mcts
+    black_cfg = cfg_from(config) if black_mcts is None else black_mcts
+    mcts_red = MCTS(red_eval, red_cfg, random.Random(seed ^ 0xA5A5A5))
+    mcts_black = MCTS(black_eval, black_cfg, random.Random(seed ^ 0x5A5A5A))
     state = TwixtState(active_size=config.board_size, to_move="red",
                        max_plies_limit=config.max_moves)
     ply = 0
@@ -135,22 +175,62 @@ def make_result(task: EvalGameTask, winner, reason, n_moves,
     """Build a result, mapping winner color -> checkpoint and 0/0.5/1 scores."""
     if winner == "red":
         red_score, black_score, winner_ckpt = 1.0, 0.0, task.red_checkpoint
+        winner_agent = task.red_agent
     elif winner == "black":
         red_score, black_score, winner_ckpt = 0.0, 1.0, task.black_checkpoint
+        winner_agent = task.black_agent
     else:
         red_score, black_score, winner_ckpt = 0.5, 0.5, None
+        winner_agent = None
     return EvalGameResult(
         task_id=task.task_id, pairing_id=task.pairing_id, game_idx=task.game_idx,
         red_checkpoint=task.red_checkpoint, black_checkpoint=task.black_checkpoint,
         winner=winner, winner_checkpoint=winner_ckpt, reason=reason,
         n_moves=n_moves, red_score=red_score, black_score=black_score,
         replay_path=replay_path,
+        red_agent=task.red_agent, black_agent=task.black_agent,
+        winner_agent=winner_agent,
     )
 
 
-def build_pairing_tasks(pairing_id, a_ckpt, b_ckpt, games, base_seed, pairing_index):
+def build_pairing_tasks(pairing_id, a_ckpt, b_ckpt, games, base_seed, pairing_index,
+                        a_mcts: Optional[MCTSConfig] = None,
+                        b_mcts: Optional[MCTSConfig] = None,
+                        a_agent: Optional[str] = None,
+                        b_agent: Optional[str] = None):
     """Balanced-color tasks for one pairing. Even game_idx -> red=A; odd -> red=B.
-    task_id and seed are task-derived (stable across worker counts)."""
+    task_id and seed are task-derived (stable across worker counts).
+
+    An agent is the TRIPLE (id, checkpoint, search config). The color swap below
+    moves all three together in one expression, so nothing can be left attached
+    to a color instead of to its agent. The id is what makes two agents on ONE
+    checkpoint distinguishable downstream.
+
+    Supplying any of `a_mcts`/`b_mcts`/`a_agent`/`b_agent` turns on agent mode,
+    which requires BOTH search configs explicitly: an omitted config would
+    silently mean "the base", indistinguishable from one that was dropped by
+    mistake. Ids default to "A"/"B". All four omitted => legacy tasks, identical
+    to before.
+    """
+    agent_mode = any(v is not None for v in (a_mcts, b_mcts, a_agent, b_agent))
+    if agent_mode:
+        if a_mcts is None or b_mcts is None:
+            raise ValueError(
+                "agent mode requires BOTH a_mcts and b_mcts; pass the base "
+                "config explicitly for an agent that is not varying, so that "
+                "'uses the base' is never confused with 'config was dropped'")
+        a_agent = "A" if a_agent is None else a_agent
+        b_agent = "B" if b_agent is None else b_agent
+        for agent_id in (a_agent, b_agent):
+            # Ids become JSON object keys in the match provenance. A non-string
+            # would be silently coerced there (1 -> "1") and no longer match the
+            # id on the task, so refuse it at construction.
+            if not isinstance(agent_id, str) or not agent_id:
+                raise ValueError(
+                    f"agent id must be a non-empty string, got {agent_id!r}")
+        if a_agent == b_agent:
+            raise ValueError(
+                f"agents must have distinct ids, got {a_agent!r} for both")
     if games < 2:
         raise ValueError("games must be >= 2")
     if games % 2 != 0:
@@ -160,12 +240,19 @@ def build_pairing_tasks(pairing_id, a_ckpt, b_ckpt, games, base_seed, pairing_in
     if games >= GAMES_PER_PAIRING_LIMIT:
         raise ValueError(f"games must be < {GAMES_PER_PAIRING_LIMIT}")
     offset = pairing_index * GAMES_PER_PAIRING_LIMIT
+    agent_a = (a_ckpt, a_mcts, a_agent)
+    agent_b = (b_ckpt, b_mcts, b_agent)
     tasks = []
     for g in range(games):
-        red, black = (a_ckpt, b_ckpt) if g % 2 == 0 else (b_ckpt, a_ckpt)
+        # One swap of whole agents -- never a separate swap of checkpoints, of
+        # configs and of ids, which could drift out of step.
+        (red, red_cfg, red_id), (black, black_cfg, black_id) = (
+            (agent_a, agent_b) if g % 2 == 0 else (agent_b, agent_a))
         tasks.append(EvalGameTask(
             task_id=offset + g, pairing_id=pairing_id, game_idx=g,
             red_checkpoint=red, black_checkpoint=black, seed=base_seed + offset + g,
+            red_mcts=red_cfg, black_mcts=black_cfg,
+            red_agent=red_id, black_agent=black_id,
         ))
     return tasks
 
@@ -226,11 +313,137 @@ def _make_cache(factory):
     return get_eval
 
 
+def require_agent_config_consistency(base: MCTSConfig,
+                                     a_mcts: Optional[MCTSConfig],
+                                     b_mcts: Optional[MCTSConfig],
+                                     allow_differ=(),
+                                     labels=("a", "b")) -> None:
+    """Refuse per-agent configs that differ from `base` outside `allow_differ`.
+
+    Two agents in one match must be comparable: everything about the search --
+    simulation count, batching, temperatures -- has to match the base config,
+    or a measured difference cannot be attributed to the field under study.
+    `allow_differ` names the fields the caller is deliberately varying.
+
+    Generic on purpose: the caller supplies the policy (which field is under
+    study), so this module needs no knowledge of any particular experiment.
+    Call it at task-construction time -- before any evaluator is loaded -- so a
+    misconfigured run costs nothing.
+    """
+    allowed = set(allow_differ)
+    if unknown := sorted(allowed - {f.name for f in dataclasses.fields(base)}):
+        raise ValueError(
+            f"allow_differ names fields that are not on MCTSConfig: {unknown}")
+    base_fields = dataclasses.asdict(base)
+    for label, cfg in zip(labels, (a_mcts, b_mcts)):
+        if cfg is None:
+            continue
+        if not isinstance(cfg, MCTSConfig):
+            raise TypeError(
+                f"agent {label} config must be an MCTSConfig, got "
+                f"{type(cfg).__name__}")
+        differing = sorted(
+            name for name, value in dataclasses.asdict(cfg).items()
+            if name not in allowed and base_fields.get(name) != value)
+        if differing:
+            raise ValueError(
+                f"agent {label} search config differs from the base config in "
+                f"{differing}, which is not in allow_differ={sorted(allowed)}; "
+                f"agents must be identical apart from the field under study")
+
+
+def require_consistent_agent_tasks(tasks, base: MCTSConfig, allow_differ=(),
+                                   config_validator=None) -> None:
+    """Validate a COMPLETE task list under agent mode, before any evaluator load.
+
+    Per-task checking is not enough. The failures that matter are properties of
+    the whole list: one task quietly left on the base config, an agent whose
+    checkpoint or config drifts between games, a color assignment that stops
+    alternating. Each of those keeps every individual task well-formed while
+    destroying the comparison, so the list is validated as a unit.
+
+    `config_validator` is called on the base config and on every agent's config
+    — the caller's chance to enforce constraints this module has no business
+    knowing (v17 passes the frozen batching triple validator). It runs even
+    with no agent tasks, because a wrong base is wrong either way.
+    """
+    if config_validator is not None:
+        config_validator(base)
+    configured = [t for t in tasks if is_agent_task(t)]
+    if not configured:
+        return
+    if len(configured) != len(tasks):
+        plain = sorted(t.task_id for t in tasks if not is_agent_task(t))
+        raise ValueError(
+            f"agent mode is active but tasks {plain} carry no agent fields; "
+            f"they would silently run base-vs-base and break the comparison")
+
+    by_pairing: dict = {}
+    for task in tasks:
+        by_pairing.setdefault(task.pairing_id, []).append(task)
+
+    for pairing_id, group in by_pairing.items():
+        agents: dict = {}
+        for task in group:
+            sides = ((task.red_agent, task.red_checkpoint, task.red_mcts),
+                     (task.black_agent, task.black_checkpoint, task.black_mcts))
+            for agent_id, ckpt, cfg in sides:
+                if agent_id is None or cfg is None:
+                    raise ValueError(
+                        f"task {task.task_id} is only half-configured "
+                        f"(agent={agent_id!r}, config set={cfg is not None}); "
+                        f"agent mode requires both on both sides")
+                if agents.setdefault(agent_id, (ckpt, cfg)) != (ckpt, cfg):
+                    raise ValueError(
+                        f"agent {agent_id!r} is not defined consistently across "
+                        f"pairing {pairing_id!r}: its checkpoint or search "
+                        f"config changes between games")
+            if task.red_agent == task.black_agent:
+                raise ValueError(
+                    f"task {task.task_id} has agent {task.red_agent!r} on both "
+                    f"sides")
+        if len(agents) != 2:
+            raise ValueError(
+                f"pairing {pairing_id!r} must have exactly 2 agents, found "
+                f"{sorted(agents)}")
+
+        # Exact color assignment: the agent that is red on even game_idx must be
+        # red on every even game_idx and black on every odd one.
+        ordered = sorted(group, key=lambda t: t.game_idx)
+        even = [t for t in ordered if t.game_idx % 2 == 0]
+        if not even:
+            raise ValueError(
+                f"pairing {pairing_id!r} has no even game_idx; color balance "
+                f"cannot be established")
+        first_red = even[0].red_agent
+        other = next(a for a in agents if a != first_red)
+        for task in ordered:
+            expected = first_red if task.game_idx % 2 == 0 else other
+            if task.red_agent != expected:
+                raise ValueError(
+                    f"task {task.task_id} (game_idx {task.game_idx}) has "
+                    f"{task.red_agent!r} as red; exact color balance requires "
+                    f"{expected!r}")
+        red_counts = [sum(1 for t in ordered if t.red_agent == a) for a in agents]
+        if len(set(red_counts)) != 1:
+            raise ValueError(
+                f"pairing {pairing_id!r} color balance is uneven: "
+                f"{dict(zip(agents, red_counts))}")
+
+        for agent_id, (_ckpt, cfg) in sorted(agents.items()):
+            require_agent_config_consistency(base, cfg, None,
+                                             allow_differ=allow_differ,
+                                             labels=(agent_id, None))
+            if config_validator is not None:
+                config_validator(cfg)
+
+
 def _play_and_build_result(task, red, black, config, capture, replay_dir):
     """Play one game and build its result, writing a replay sidecar when
     capturing. Shared by the sequential and worker loops (both single-process)."""
     winner, reason, nm, records = play_eval_game(
-        red, black, config, task.seed, capture=capture)
+        red, black, config, task.seed, capture=capture,
+        red_mcts=task.red_mcts, black_mcts=task.black_mcts)
     result = make_result(task, winner, reason, nm)
     if records is not None:
         result.replay_path = write_replay(
@@ -350,7 +563,8 @@ def _run_parallel(tasks, workers, config, factory, replay_dir=None):
 
 def run_game_tasks(tasks, workers: int, config: EvalConfig,
                    evaluator_factory: Optional[EvaluatorFactory] = None,
-                   replay_dir: Optional[str] = None):
+                   replay_dir: Optional[str] = None,
+                   allow_differ=(), config_validator=None):
     """Execute tasks; return results sorted by (pairing_id, game_idx).
 
     workers<=1 runs in-process. workers>1 uses a spawn worker pool with a
@@ -363,10 +577,20 @@ def run_game_tasks(tasks, workers: int, config: EvalConfig,
     NOTE: when workers>1, evaluator_factory must be a MODULE-LEVEL picklable
     callable (it is sent to spawned workers). Lambdas/closures will fail to
     pickle. The default real loader and the test fakes satisfy this.
+
+    The complete task list is validated here, before any evaluator loads. This
+    is the backstop for callers that build tasks themselves rather than going
+    through run_match; the default empty `allow_differ` refuses ANY divergence,
+    so a direct caller has to state which field it is varying instead of
+    getting silence. `config_validator` lets the caller additionally constrain
+    the base and every agent config (v17: the frozen batching triple).
     """
-    factory = evaluator_factory or _default_evaluator_factory
     if not tasks:
         return []
+    require_consistent_agent_tasks(tasks, cfg_from(config),
+                                   allow_differ=allow_differ,
+                                   config_validator=config_validator)
+    factory = evaluator_factory or _default_evaluator_factory
     workers = min(workers, len(tasks))
     if workers <= 1:
         return _run_sequential(tasks, config, factory, replay_dir)

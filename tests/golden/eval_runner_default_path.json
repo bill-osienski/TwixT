@@ -1,0 +1,1793 @@
+{
+  "_comment": "PRE-CHANGE default-path golden for v17 Task 6. Captured before per-agent MCTS config support was added. The default (no per-agent config) path must reproduce this exactly.",
+  "pairing_tasks": {
+    "0": [
+      {
+        "black_checkpoint": "B.safetensors",
+        "game_idx": 0,
+        "pairing_id": "pair",
+        "red_checkpoint": "A.safetensors",
+        "seed": 1000,
+        "task_id": 0
+      },
+      {
+        "black_checkpoint": "A.safetensors",
+        "game_idx": 1,
+        "pairing_id": "pair",
+        "red_checkpoint": "B.safetensors",
+        "seed": 1001,
+        "task_id": 1
+      },
+      {
+        "black_checkpoint": "B.safetensors",
+        "game_idx": 2,
+        "pairing_id": "pair",
+        "red_checkpoint": "A.safetensors",
+        "seed": 1002,
+        "task_id": 2
+      },
+      {
+        "black_checkpoint": "A.safetensors",
+        "game_idx": 3,
+        "pairing_id": "pair",
+        "red_checkpoint": "B.safetensors",
+        "seed": 1003,
+        "task_id": 3
+      },
+      {
+        "black_checkpoint": "B.safetensors",
+        "game_idx": 4,
+        "pairing_id": "pair",
+        "red_checkpoint": "A.safetensors",
+        "seed": 1004,
+        "task_id": 4
+      },
+      {
+        "black_checkpoint": "A.safetensors",
+        "game_idx": 5,
+        "pairing_id": "pair",
+        "red_checkpoint": "B.safetensors",
+        "seed": 1005,
+        "task_id": 5
+      }
+    ],
+    "2": [
+      {
+        "black_checkpoint": "B.safetensors",
+        "game_idx": 0,
+        "pairing_id": "pair",
+        "red_checkpoint": "A.safetensors",
+        "seed": 2001000,
+        "task_id": 2000000
+      },
+      {
+        "black_checkpoint": "A.safetensors",
+        "game_idx": 1,
+        "pairing_id": "pair",
+        "red_checkpoint": "B.safetensors",
+        "seed": 2001001,
+        "task_id": 2000001
+      },
+      {
+        "black_checkpoint": "B.safetensors",
+        "game_idx": 2,
+        "pairing_id": "pair",
+        "red_checkpoint": "A.safetensors",
+        "seed": 2001002,
+        "task_id": 2000002
+      },
+      {
+        "black_checkpoint": "A.safetensors",
+        "game_idx": 3,
+        "pairing_id": "pair",
+        "red_checkpoint": "B.safetensors",
+        "seed": 2001003,
+        "task_id": 2000003
+      },
+      {
+        "black_checkpoint": "B.safetensors",
+        "game_idx": 4,
+        "pairing_id": "pair",
+        "red_checkpoint": "A.safetensors",
+        "seed": 2001004,
+        "task_id": 2000004
+      },
+      {
+        "black_checkpoint": "A.safetensors",
+        "game_idx": 5,
+        "pairing_id": "pair",
+        "red_checkpoint": "B.safetensors",
+        "seed": 2001005,
+        "task_id": 2000005
+      }
+    ]
+  },
+  "play_eval_game": {
+    "argmax": [
+      {
+        "moves": [
+          [
+            0,
+            3
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            5,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            2,
+            7
+          ],
+          [
+            6,
+            6
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            1,
+            6
+          ],
+          [
+            3,
+            6
+          ]
+        ],
+        "n_moves": 12,
+        "reason": "state_cap",
+        "records": [
+          {
+            "col": 3,
+            "n_legal": 48,
+            "player": "red",
+            "ply": 0,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 0,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 0,
+            "n_legal": 48,
+            "player": "black",
+            "ply": 1,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 5,
+            "n_legal": 47,
+            "player": "red",
+            "ply": 2,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          },
+          {
+            "col": 5,
+            "n_legal": 46,
+            "player": "black",
+            "ply": 3,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 2,
+            "n_legal": 45,
+            "player": "red",
+            "ply": 4,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 4,
+            "n_legal": 44,
+            "player": "black",
+            "ply": 5,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 6
+          },
+          {
+            "col": 4,
+            "n_legal": 43,
+            "player": "red",
+            "ply": 6,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 7,
+            "n_legal": 42,
+            "player": "black",
+            "ply": 7,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 6,
+            "n_legal": 42,
+            "player": "red",
+            "ply": 8,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 7
+          },
+          {
+            "col": 5,
+            "n_legal": 40,
+            "player": "black",
+            "ply": 9,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 6,
+            "n_legal": 40,
+            "player": "red",
+            "ply": 10,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          },
+          {
+            "col": 6,
+            "n_legal": 38,
+            "player": "black",
+            "ply": 11,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          }
+        ],
+        "seed": 1,
+        "winner": null
+      },
+      {
+        "moves": [
+          [
+            4,
+            1
+          ],
+          [
+            6,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            6,
+            5
+          ],
+          [
+            5,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            6,
+            3
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            6,
+            6
+          ]
+        ],
+        "n_moves": 12,
+        "reason": "state_cap",
+        "records": [
+          {
+            "col": 1,
+            "n_legal": 48,
+            "player": "red",
+            "ply": 0,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 1,
+            "n_legal": 47,
+            "player": "black",
+            "ply": 1,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 7
+          },
+          {
+            "col": 2,
+            "n_legal": 46,
+            "player": "red",
+            "ply": 2,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 5,
+            "n_legal": 45,
+            "player": "black",
+            "ply": 3,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 3,
+            "n_legal": 44,
+            "player": "red",
+            "ply": 4,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 7
+          },
+          {
+            "col": 4,
+            "n_legal": 43,
+            "player": "black",
+            "ply": 5,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 1,
+            "n_legal": 42,
+            "player": "red",
+            "ply": 6,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 0,
+            "n_legal": 41,
+            "player": "black",
+            "ply": 7,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 6,
+            "n_legal": 41,
+            "player": "red",
+            "ply": 8,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 3,
+            "n_legal": 39,
+            "player": "black",
+            "ply": 9,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 5,
+            "n_legal": 39,
+            "player": "red",
+            "ply": 10,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 6,
+            "n_legal": 37,
+            "player": "black",
+            "ply": 11,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          }
+        ],
+        "seed": 2,
+        "winner": null
+      },
+      {
+        "moves": [
+          [
+            0,
+            4
+          ],
+          [
+            6,
+            1
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            6,
+            4
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            5,
+            1
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            4,
+            1
+          ],
+          [
+            4,
+            6
+          ]
+        ],
+        "n_moves": 12,
+        "reason": "state_cap",
+        "records": [
+          {
+            "col": 4,
+            "n_legal": 48,
+            "player": "red",
+            "ply": 0,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 0,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 1,
+            "n_legal": 48,
+            "player": "black",
+            "ply": 1,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 4,
+            "n_legal": 46,
+            "player": "red",
+            "ply": 2,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 5,
+            "n_legal": 46,
+            "player": "black",
+            "ply": 3,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          },
+          {
+            "col": 6,
+            "n_legal": 44,
+            "player": "red",
+            "ply": 4,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          },
+          {
+            "col": 2,
+            "n_legal": 44,
+            "player": "black",
+            "ply": 5,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 4,
+            "n_legal": 42,
+            "player": "red",
+            "ply": 6,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 5,
+            "n_legal": 42,
+            "player": "black",
+            "ply": 7,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 1,
+            "n_legal": 40,
+            "player": "red",
+            "ply": 8,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 7
+          },
+          {
+            "col": 6,
+            "n_legal": 40,
+            "player": "black",
+            "ply": 9,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 6
+          },
+          {
+            "col": 1,
+            "n_legal": 38,
+            "player": "red",
+            "ply": 10,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 6,
+            "n_legal": 38,
+            "player": "black",
+            "ply": 11,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 6
+          }
+        ],
+        "seed": 123,
+        "winner": null
+      },
+      {
+        "moves": [
+          [
+            1,
+            2
+          ],
+          [
+            6,
+            3
+          ],
+          [
+            4,
+            1
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            6,
+            2
+          ],
+          [
+            6,
+            7
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            5
+          ]
+        ],
+        "n_moves": 12,
+        "reason": "state_cap",
+        "records": [
+          {
+            "col": 2,
+            "n_legal": 48,
+            "player": "red",
+            "ply": 0,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          },
+          {
+            "col": 3,
+            "n_legal": 47,
+            "player": "black",
+            "ply": 1,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 1,
+            "n_legal": 46,
+            "player": "red",
+            "ply": 2,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 6,
+            "n_legal": 45,
+            "player": "black",
+            "ply": 3,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 7
+          },
+          {
+            "col": 4,
+            "n_legal": 44,
+            "player": "red",
+            "ply": 4,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 6
+          },
+          {
+            "col": 4,
+            "n_legal": 43,
+            "player": "black",
+            "ply": 5,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 2,
+            "n_legal": 42,
+            "player": "red",
+            "ply": 6,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 7
+          },
+          {
+            "col": 7,
+            "n_legal": 41,
+            "player": "black",
+            "ply": 7,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 5,
+            "n_legal": 41,
+            "player": "red",
+            "ply": 8,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 6
+          },
+          {
+            "col": 3,
+            "n_legal": 39,
+            "player": "black",
+            "ply": 9,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 4,
+            "n_legal": 39,
+            "player": "red",
+            "ply": 10,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          },
+          {
+            "col": 5,
+            "n_legal": 37,
+            "player": "black",
+            "ply": 11,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          }
+        ],
+        "seed": 9999,
+        "winner": null
+      }
+    ],
+    "opening_temperature": [
+      {
+        "moves": [
+          [
+            0,
+            3
+          ],
+          [
+            1,
+            6
+          ],
+          [
+            0,
+            6
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            6,
+            2
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            5,
+            2
+          ],
+          [
+            7,
+            4
+          ],
+          [
+            2,
+            7
+          ]
+        ],
+        "n_moves": 12,
+        "reason": "state_cap",
+        "records": [
+          {
+            "col": 3,
+            "n_legal": 48,
+            "player": "red",
+            "ply": 0,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 0,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 6,
+            "n_legal": 48,
+            "player": "black",
+            "ply": 1,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          },
+          {
+            "col": 6,
+            "n_legal": 46,
+            "player": "red",
+            "ply": 2,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 0,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 5,
+            "n_legal": 47,
+            "player": "black",
+            "ply": 3,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 2,
+            "n_legal": 44,
+            "player": "red",
+            "ply": 4,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 5,
+            "n_legal": 45,
+            "player": "black",
+            "ply": 5,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 6,
+            "n_legal": 42,
+            "player": "red",
+            "ply": 6,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 6
+          },
+          {
+            "col": 6,
+            "n_legal": 43,
+            "player": "black",
+            "ply": 7,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 5,
+            "n_legal": 40,
+            "player": "red",
+            "ply": 8,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 6
+          },
+          {
+            "col": 2,
+            "n_legal": 41,
+            "player": "black",
+            "ply": 9,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 4,
+            "n_legal": 38,
+            "player": "red",
+            "ply": 10,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 7,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 7,
+            "n_legal": 40,
+            "player": "black",
+            "ply": 11,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          }
+        ],
+        "seed": 1,
+        "winner": null
+      },
+      {
+        "moves": [
+          [
+            7,
+            1
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            1,
+            6
+          ],
+          [
+            5,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "n_moves": 12,
+        "reason": "state_cap",
+        "records": [
+          {
+            "col": 1,
+            "n_legal": 48,
+            "player": "red",
+            "ply": 0,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 7,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 6,
+            "n_legal": 48,
+            "player": "black",
+            "ply": 1,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 4,
+            "n_legal": 46,
+            "player": "red",
+            "ply": 2,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          },
+          {
+            "col": 5,
+            "n_legal": 46,
+            "player": "black",
+            "ply": 3,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 2,
+            "n_legal": 44,
+            "player": "red",
+            "ply": 4,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 6,
+            "n_legal": 44,
+            "player": "black",
+            "ply": 5,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 1,
+            "n_legal": 42,
+            "player": "red",
+            "ply": 6,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 6
+          },
+          {
+            "col": 1,
+            "n_legal": 42,
+            "player": "black",
+            "ply": 7,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 5,
+            "n_legal": 40,
+            "player": "red",
+            "ply": 8,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 3,
+            "n_legal": 40,
+            "player": "black",
+            "ply": 9,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 2,
+            "n_legal": 38,
+            "player": "red",
+            "ply": 10,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 2,
+            "n_legal": 38,
+            "player": "black",
+            "ply": 11,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          }
+        ],
+        "seed": 2,
+        "winner": null
+      },
+      {
+        "moves": [
+          [
+            0,
+            4
+          ],
+          [
+            6,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            6,
+            6
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "n_moves": 12,
+        "reason": "state_cap",
+        "records": [
+          {
+            "col": 4,
+            "n_legal": 48,
+            "player": "red",
+            "ply": 0,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 0,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 1,
+            "n_legal": 48,
+            "player": "black",
+            "ply": 1,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 1,
+            "n_legal": 46,
+            "player": "red",
+            "ply": 2,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 2
+          },
+          {
+            "col": 2,
+            "n_legal": 46,
+            "player": "black",
+            "ply": 3,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 4,
+            "n_legal": 44,
+            "player": "red",
+            "ply": 4,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 0,
+            "n_legal": 44,
+            "player": "black",
+            "ply": 5,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 6,
+            "n_legal": 43,
+            "player": "red",
+            "ply": 6,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 6,
+            "n_legal": 42,
+            "player": "black",
+            "ply": 7,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 6,
+            "n_legal": 41,
+            "player": "red",
+            "ply": 8,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 7
+          },
+          {
+            "col": 0,
+            "n_legal": 40,
+            "player": "black",
+            "ply": 9,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 5,
+            "n_legal": 40,
+            "player": "red",
+            "ply": 10,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 2,
+            "n_legal": 38,
+            "player": "black",
+            "ply": 11,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          }
+        ],
+        "seed": 123,
+        "winner": null
+      },
+      {
+        "moves": [
+          [
+            5,
+            5
+          ],
+          [
+            6,
+            3
+          ],
+          [
+            6,
+            5
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            3,
+            1
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            4,
+            6
+          ]
+        ],
+        "n_moves": 12,
+        "reason": "state_cap",
+        "records": [
+          {
+            "col": 5,
+            "n_legal": 48,
+            "player": "red",
+            "ply": 0,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 5,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 3,
+            "n_legal": 47,
+            "player": "black",
+            "ply": 1,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 8
+          },
+          {
+            "col": 5,
+            "n_legal": 46,
+            "player": "red",
+            "ply": 2,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 6,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 7
+          },
+          {
+            "col": 1,
+            "n_legal": 45,
+            "player": "black",
+            "ply": 3,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 2,
+            "n_legal": 44,
+            "player": "red",
+            "ply": 4,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 5,
+            "n_legal": 43,
+            "player": "black",
+            "ply": 5,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 1,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 1
+          },
+          {
+            "col": 6,
+            "n_legal": 42,
+            "player": "red",
+            "ply": 6,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 5,
+            "n_legal": 41,
+            "player": "black",
+            "ply": 7,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 5
+          },
+          {
+            "col": 1,
+            "n_legal": 40,
+            "player": "red",
+            "ply": 8,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 3,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 3
+          },
+          {
+            "col": 4,
+            "n_legal": 39,
+            "player": "black",
+            "ply": 9,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 2,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          },
+          {
+            "col": 4,
+            "n_legal": 38,
+            "player": "red",
+            "ply": 10,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 6
+          },
+          {
+            "col": 6,
+            "n_legal": 37,
+            "player": "black",
+            "ply": 11,
+            "root_top1_share": 0.125,
+            "root_total_visits": 8,
+            "root_value": 0.0,
+            "row": 4,
+            "selected_visit_count": 1,
+            "selected_visit_rank": 4
+          }
+        ],
+        "seed": 9999,
+        "winner": null
+      }
+    ]
+  },
+  "pre_change_source_sha1": {
+    "eval_checkpoint_match.py": "623fb036468d5a1529ed433529e3e12ae831e87b",
+    "eval_runner.py": "590c1100549d0429087df53a2f879f51dfdd79e0",
+    "mcts.py": "b60c983399dbc5ed292de9b15944b8850a1d8508"
+  },
+  "run_match": {
+    "games_jsonl": "{\"task_id\": 0, \"pairing_id\": \"A.safetensors_vs_B.safetensors\", \"game_idx\": 0, \"red_checkpoint\": \"A.safetensors\", \"black_checkpoint\": \"B.safetensors\", \"winner\": null, \"winner_checkpoint\": null, \"reason\": \"state_cap\", \"n_moves\": 12, \"red_score\": 0.5, \"black_score\": 0.5, \"replay_path\": null}\n{\"task_id\": 1, \"pairing_id\": \"A.safetensors_vs_B.safetensors\", \"game_idx\": 1, \"red_checkpoint\": \"B.safetensors\", \"black_checkpoint\": \"A.safetensors\", \"winner\": null, \"winner_checkpoint\": null, \"reason\": \"state_cap\", \"n_moves\": 12, \"red_score\": 0.5, \"black_score\": 0.5, \"replay_path\": null}\n{\"task_id\": 2, \"pairing_id\": \"A.safetensors_vs_B.safetensors\", \"game_idx\": 2, \"red_checkpoint\": \"A.safetensors\", \"black_checkpoint\": \"B.safetensors\", \"winner\": null, \"winner_checkpoint\": null, \"reason\": \"state_cap\", \"n_moves\": 12, \"red_score\": 0.5, \"black_score\": 0.5, \"replay_path\": null}\n{\"task_id\": 3, \"pairing_id\": \"A.safetensors_vs_B.safetensors\", \"game_idx\": 3, \"red_checkpoint\": \"B.safetensors\", \"black_checkpoint\": \"A.safetensors\", \"winner\": null, \"winner_checkpoint\": null, \"reason\": \"state_cap\", \"n_moves\": 12, \"red_score\": 0.5, \"black_score\": 0.5, \"replay_path\": null}\n",
+    "games_jsonl_sha1": "08b21b0e8f71e669b04ef8718e528b71241321bc",
+    "summary": {
+      "a_as_black": {
+        "caps": 2,
+        "games": 2,
+        "losses": 0,
+        "score_rate": 0.5,
+        "wins": 0
+      },
+      "a_as_red": {
+        "caps": 2,
+        "games": 2,
+        "losses": 0,
+        "score_rate": 0.5,
+        "wins": 0
+      },
+      "a_score": 2.0,
+      "a_score_rate": 0.5,
+      "a_wins": 0,
+      "avg_plies": 12,
+      "b_wins": 0,
+      "board_full": 0,
+      "checkpoint_a": "A.safetensors",
+      "checkpoint_b": "B.safetensors",
+      "color_bias": {
+        "red_win_rate_decisive": null
+      },
+      "config": {
+        "base_seed": 777,
+        "board_size": 8,
+        "max_moves": 12,
+        "mcts_eval_batch_size": 4,
+        "mcts_sims": 8,
+        "mcts_stall_flush_sims": 4,
+        "opening_temp_plies": 4,
+        "selection_mode": "opening_temperature",
+        "temp_high": 1.0,
+        "temp_low": 0.1,
+        "workers": 1
+      },
+      "draw_score_policy": "state_cap_and_board_full_score_0.5",
+      "elo_ci95": [
+        0.0,
+        0.0
+      ],
+      "elo_estimate": 0.0,
+      "games": 4,
+      "pairing_id": "A.safetensors_vs_B.safetensors",
+      "score_rate_ci95": [
+        0.5,
+        0.5
+      ],
+      "selection_mode": "opening_temperature",
+      "self_match": false,
+      "state_caps": 4,
+      "verdict": "tied"
+    },
+    "summary_stripped_sha1": "40b19399de4f76655b7daff26342c24a9a8dfe67"
+  }
+}

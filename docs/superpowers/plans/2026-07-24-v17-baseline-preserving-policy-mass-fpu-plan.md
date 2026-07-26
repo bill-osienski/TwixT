@@ -231,7 +231,30 @@ wrong-mode failure.
 
 - `scripts/GPU/alphazero/eval_runner.py`
 - `scripts/GPU/alphazero/eval_checkpoint_match.py`
+- `scripts/GPU/alphazero/eval_summary.py` (added by amendment
+  `task6-agent-identity-scope-v1`, 2026-07-25 — see below)
 - `tests/test_eval_search_config_match.py`
+
+**Amendment `task6-agent-identity-scope-v1` (2026-07-25).**
+Implementation-scope correction only; it changes no scientific decision, no
+frozen design section, no grid, no sizing, and no gate threshold.
+
+Adds `scripts/GPU/alphazero/eval_summary.py` to this task's permitted file
+scope. Reason: scoring two agents that share one checkpoint requires
+aggregation by agent identity, and `summarize_match` is where the
+`a_ckpt == b_ckpt` self-match classification is made — the branch that nulls
+`a_score`, `a_score_rate`, `elo_estimate`, `elo_ci95`, `score_rate_ci95` and
+`verdict`. Left unamended, the v17 strength endpoint would be unobtainable
+because every same-checkpoint match reports `None` for each of those fields.
+The change is additive and gated on explicit agent identity, so the
+checkpoint-based path and its artifact bytes are unchanged.
+
+Authorized by the operator during Task 6 review, 2026-07-25. The as-of-freeze
+plan SHA-1 recorded in
+`logs/eval/fpu_v17_baseline_policy_mass/frozen_preregistration.json` is a
+historical record of the version reviewed at freeze and is deliberately left
+unmodified; that record already documents this plan as an execution document
+outside the frozen protocol.
 
 Requirements:
 

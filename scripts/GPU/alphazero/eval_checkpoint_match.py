@@ -13,14 +13,18 @@ import subprocess
 from dataclasses import asdict
 from datetime import datetime, timezone
 
-from .eval_runner import EvalConfig, build_pairing_tasks, run_game_tasks, short_id
+from .eval_runner import (
+    EvalConfig, build_pairing_tasks, run_game_tasks, short_id,
+)
 from .eval_summary import summarize_match
 
 
-def build_match_tasks(a_ckpt, b_ckpt, games, base_seed, pairing_id):
+def build_match_tasks(a_ckpt, b_ckpt, games, base_seed, pairing_id,
+                      a_mcts=None, b_mcts=None, a_agent=None, b_agent=None):
     """Tasks for a single pairing (pairing_index fixed at 0)."""
     return build_pairing_tasks(pairing_id, a_ckpt, b_ckpt, games, base_seed,
-                               pairing_index=0)
+                               pairing_index=0, a_mcts=a_mcts, b_mcts=b_mcts,
+                               a_agent=a_agent, b_agent=b_agent)
 
 
 def _git_commit():
@@ -32,6 +36,19 @@ def _git_commit():
         return None
 
 
+# Result fields introduced with agent mode. Emitted only when the run actually
+# used agent identity, so legacy per-game JSONL keeps its exact bytes.
+_AGENT_RESULT_FIELDS = ("red_agent", "black_agent", "winner_agent")
+
+
+def _result_row(result):
+    row = asdict(result)
+    if result.red_agent is None and result.black_agent is None:
+        for name in _AGENT_RESULT_FIELDS:
+            row.pop(name)
+    return row
+
+
 def _write_outputs(output, summary, results):
     out_dir = os.path.dirname(os.path.abspath(output))
     os.makedirs(out_dir, exist_ok=True)
@@ -39,7 +56,7 @@ def _write_outputs(output, summary, results):
     games_path = f"{stem}_games.jsonl"
     with open(games_path, "w") as fh:
         for r in results:  # already sorted by (pairing_id, game_idx)
-            fh.write(json.dumps(asdict(r)) + "\n")
+            fh.write(json.dumps(_result_row(r)) + "\n")
     with open(output, "w") as fh:
         json.dump(summary, fh, indent=2)
 
@@ -56,16 +73,61 @@ def replay_dir_for(output, replay_dir_arg, save_enabled):
 
 
 def run_match(a_ckpt, b_ckpt, games, base_seed, config, workers, output,
-              pairing_id=None, evaluator_factory=None, replay_dir=None):
-    """Run a full match and write outputs. Returns the summary dict."""
+              pairing_id=None, evaluator_factory=None, replay_dir=None,
+              a_mcts=None, b_mcts=None, a_agent=None, b_agent=None,
+              allow_differ=(), config_validator=None):
+    """Run a full match and write outputs. Returns the summary dict.
+
+    `a_mcts`/`b_mcts` give A and B their own search configs — for two agents on
+    the same checkpoint that must search differently. `a_agent`/`b_agent` name
+    them (default "A"/"B"); that identity is what lets the summary score two
+    agents sharing one checkpoint instead of nulling every statistic as a
+    self-match.
+
+    `allow_differ` names the fields under study and `config_validator`
+    constrains the base and both agent configs (v17 passes the frozen batching
+    triple validator). run_game_tasks applies both to the complete task list
+    before it loads any evaluator, so a misconfigured match fails without
+    touching the GPU. Those checks are deliberately left in the shared runner
+    rather than repeated here: it is the one point every caller routes through,
+    including those that build tasks themselves.
+
+    All agent arguments default to None, which reproduces the symmetric path
+    exactly, summary and per-game bytes included.
+    """
     if pairing_id is None:
         pairing_id = f"{short_id(a_ckpt)}_vs_{short_id(b_ckpt)}"
-    tasks = build_match_tasks(a_ckpt, b_ckpt, games, base_seed, pairing_id)
+    tasks = build_match_tasks(a_ckpt, b_ckpt, games, base_seed, pairing_id,
+                              a_mcts=a_mcts, b_mcts=b_mcts,
+                              a_agent=a_agent, b_agent=b_agent)
     results = run_game_tasks(tasks, workers=workers, config=config,
                              evaluator_factory=evaluator_factory,
-                             replay_dir=replay_dir)
+                             replay_dir=replay_dir, allow_differ=allow_differ,
+                             config_validator=config_validator)
     config_dict = {**asdict(config), "base_seed": base_seed, "workers": workers}
-    summary = summarize_match(results, a_ckpt, b_ckpt, pairing_id, config_dict)
+    # Agent mode is decided by the tasks, not by which argument was passed, so
+    # the recorded provenance always describes what actually ran.
+    first = tasks[0]
+    agent_mode = first.red_agent is not None
+    if agent_mode:
+        # Complete effective search config per agent. Recorded only when the
+        # feature is used, so the symmetric path's bytes are untouched.
+        #
+        # Agent ids are caller-controlled, so they get their own nested
+        # namespace: sharing a dict with metadata would let an agent named
+        # "allow_differ" overwrite its own config and silently break complete
+        # provenance. Nesting makes that collision structurally impossible
+        # rather than relying on a reserved-name list.
+        by_id = {t.red_agent: t.red_mcts for t in tasks}
+        by_id.update({t.black_agent: t.black_mcts for t in tasks})
+        config_dict["agent_mcts"] = {
+            "agents": {aid: asdict(cfg) for aid, cfg in sorted(by_id.items())},
+            "allow_differ": sorted(allow_differ),
+        }
+    summary = summarize_match(
+        results, a_ckpt, b_ckpt, pairing_id, config_dict,
+        a_agent=first.red_agent if agent_mode else None,
+        b_agent=first.black_agent if agent_mode else None)
     summary["git_commit"] = _git_commit()
     summary["generated_at"] = datetime.now(timezone.utc).isoformat()
     if output:

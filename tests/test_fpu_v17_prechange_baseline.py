@@ -77,6 +77,12 @@ AUTHORIZED_TO_CHANGE = {
     "scripts/GPU/alphazero/diagnose_fpu_policy_mass.py",  # Task 5 (parameterize only)
     "scripts/GPU/alphazero/eval_runner.py",              # Task 6
     "scripts/GPU/alphazero/eval_checkpoint_match.py",    # Task 6
+    # Added to Task 6 scope by plan amendment `task6-agent-identity-scope-v1`
+    # (2026-07-25): scoring two agents that share a checkpoint requires
+    # agent-identity aggregation, and `summarize_match` is where the
+    # `a_ckpt == b_ckpt` self-match classification nulls every strength
+    # statistic. Implementation scope only; no scientific decision changed.
+    "scripts/GPU/alphazero/eval_summary.py",             # Task 6 (amended)
 }
 
 
