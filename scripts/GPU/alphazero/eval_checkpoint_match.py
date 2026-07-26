@@ -10,11 +10,12 @@ import argparse
 import json
 import os
 import subprocess
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from datetime import datetime, timezone
 
 from .eval_runner import (
-    EvalConfig, build_pairing_tasks, run_game_tasks, short_id,
+    EvalConfig, EvalGameResult, build_pairing_tasks, interpretation_forbidden,
+    run_game_tasks, short_id, validate_labels,
 )
 from .eval_summary import summarize_match
 
@@ -41,22 +42,24 @@ def _git_commit():
 _AGENT_RESULT_FIELDS = ("red_agent", "black_agent", "winner_agent")
 
 
-def _result_row(result):
+def _result_row(result, labels=None):
     row = asdict(result)
     if result.red_agent is None and result.black_agent is None:
         for name in _AGENT_RESULT_FIELDS:
             row.pop(name)
+    if labels:
+        row.update(labels)
     return row
 
 
-def _write_outputs(output, summary, results):
+def _write_outputs(output, summary, results, labels=None):
     out_dir = os.path.dirname(os.path.abspath(output))
     os.makedirs(out_dir, exist_ok=True)
     stem, _ext = os.path.splitext(output)
     games_path = f"{stem}_games.jsonl"
     with open(games_path, "w") as fh:
         for r in results:  # already sorted by (pairing_id, game_idx)
-            fh.write(json.dumps(_result_row(r)) + "\n")
+            fh.write(json.dumps(_result_row(r, labels)) + "\n")
     with open(output, "w") as fh:
         json.dump(summary, fh, indent=2)
 
@@ -75,7 +78,7 @@ def replay_dir_for(output, replay_dir_arg, save_enabled):
 def run_match(a_ckpt, b_ckpt, games, base_seed, config, workers, output,
               pairing_id=None, evaluator_factory=None, replay_dir=None,
               a_mcts=None, b_mcts=None, a_agent=None, b_agent=None,
-              allow_differ=(), config_validator=None):
+              allow_differ=(), config_validator=None, labels=None):
     """Run a full match and write outputs. Returns the summary dict.
 
     `a_mcts`/`b_mcts` give A and B their own search configs — for two agents on
@@ -95,6 +98,10 @@ def run_match(a_ckpt, b_ckpt, games, base_seed, config, workers, output,
     All agent arguments default to None, which reproduces the symmetric path
     exactly, summary and per-game bytes included.
     """
+    # Validated ONCE, here at the public boundary, against the fields labels
+    # are stamped over -- so no downstream writer has to re-check them.
+    labels = validate_labels(
+        labels, native_fields=[f.name for f in fields(EvalGameResult)])
     if pairing_id is None:
         pairing_id = f"{short_id(a_ckpt)}_vs_{short_id(b_ckpt)}"
     tasks = build_match_tasks(a_ckpt, b_ckpt, games, base_seed, pairing_id,
@@ -103,7 +110,7 @@ def run_match(a_ckpt, b_ckpt, games, base_seed, config, workers, output,
     results = run_game_tasks(tasks, workers=workers, config=config,
                              evaluator_factory=evaluator_factory,
                              replay_dir=replay_dir, allow_differ=allow_differ,
-                             config_validator=config_validator)
+                             config_validator=config_validator, labels=labels)
     config_dict = {**asdict(config), "base_seed": base_seed, "workers": workers}
     # Agent mode is decided by the tasks, not by which argument was passed, so
     # the recorded provenance always describes what actually ran.
@@ -128,10 +135,14 @@ def run_match(a_ckpt, b_ckpt, games, base_seed, config, workers, output,
         results, a_ckpt, b_ckpt, pairing_id, config_dict,
         a_agent=first.red_agent if agent_mode else None,
         b_agent=first.black_agent if agent_mode else None)
+    if labels:
+        # Stamped BEFORE the summary is written and hashed, so downstream
+        # qualification and every recorded identity cover the labelled bytes.
+        summary.update(labels)
     summary["git_commit"] = _git_commit()
     summary["generated_at"] = datetime.now(timezone.utc).isoformat()
     if output:
-        _write_outputs(output, summary, results)
+        _write_outputs(output, summary, results, labels)
     return summary
 
 
@@ -161,6 +172,15 @@ def _build_arg_parser():
     ap.add_argument("--replay-dir", default=None,
                     help="replay output dir (default <output-stem>_replays); "
                          "only used with --save-eval-replays.")
+    ap.add_argument("--run-kind", default=None,
+                    help="stamp run_kind onto the summary, every per-game JSONL "
+                         "row and every replay sidecar. Omitted by default, "
+                         "which leaves artifact bytes exactly as before.")
+    ap.add_argument("--scientific-interpretation",
+                    choices=["forbidden", "allowed"], default=None,
+                    help="REQUIRED with --run-kind. There is no default: a "
+                         "silent 'allowed' would mislabel a tooling/smoke "
+                         "artifact as interpretable.")
     ap.add_argument("--output", required=True)
     return ap
 
@@ -179,6 +199,31 @@ def _config_from_args(args) -> EvalConfig:
 
 def main(argv=None):
     args = _build_arg_parser().parse_args(argv)
+    if args.scientific_interpretation and not args.run_kind:
+        raise SystemExit("--scientific-interpretation requires --run-kind "
+                         "(a label without a run kind is not a complete stamp)")
+    if args.run_kind and not args.scientific_interpretation:
+        raise SystemExit(
+            "--run-kind requires --scientific-interpretation "
+            "{forbidden,allowed}: defaulting it would let a tooling_smoke run "
+            "emit scientific_interpretation_forbidden=false")
+    labels = None
+    if args.run_kind:
+        # DERIVED from the run kind, never taken from the flag: the flag only
+        # states the operator's intent, and a mismatch is refused below.
+        declared = args.scientific_interpretation == "forbidden"
+        try:
+            derived = interpretation_forbidden(args.run_kind)
+        except ValueError as exc:
+            raise SystemExit(f"--run-kind: {exc}")
+        if declared != derived:
+            raise SystemExit(
+                f"--scientific-interpretation "
+                f"{args.scientific_interpretation!r} contradicts --run-kind "
+                f"{args.run_kind!r}, which requires "
+                f"{'forbidden' if derived else 'allowed'}")
+        labels = {"run_kind": args.run_kind,
+                  "scientific_interpretation_forbidden": derived}
     for path in (args.checkpoint_a, args.checkpoint_b):
         if not os.path.exists(path):
             raise SystemExit(f"checkpoint not found: {path}")
@@ -187,6 +232,7 @@ def main(argv=None):
         a_ckpt=args.checkpoint_a, b_ckpt=args.checkpoint_b, games=args.games,
         base_seed=args.base_seed, config=_config_from_args(args),
         workers=args.workers, output=args.output, replay_dir=replay_dir,
+        labels=labels,
     )
     if summary.get("self_match"):
         cb = summary["color_bias"]["red_win_rate_decisive"]

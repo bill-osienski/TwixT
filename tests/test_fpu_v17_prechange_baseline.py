@@ -83,6 +83,12 @@ AUTHORIZED_TO_CHANGE = {
     # `a_ckpt == b_ckpt` self-match classification nulls every strength
     # statistic. Implementation scope only; no scientific decision changed.
     "scripts/GPU/alphazero/eval_summary.py",             # Task 6 (amended)
+    # Added to Task 8 scope by plan amendment
+    # `task8-artifact-labelling-scope-v1` (2026-07-26): emitted artifacts were
+    # missing `run_kind`/`scientific_interpretation_forbidden`, and the replay
+    # sidecar dict is built here -- the only place a per-replay label can be
+    # applied. Labelling is opt-in, so unlabelled bytes are unchanged.
+    "scripts/GPU/alphazero/eval_replay.py",              # Task 8 (amended)
 }
 
 

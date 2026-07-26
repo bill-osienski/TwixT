@@ -323,9 +323,9 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
     """Validate + build the schema-2 profile (repair plan Sec 6's rejection
     list). `source` names the config/profile file in every error."""
     schema = raw.get("config_schema_version")
-    if schema != 2:
+    if schema not in (2, 3):
         raise ValueError(f"{source}: unsupported config_schema_version "
-                         f"{schema!r} for an allocation profile (only 2)")
+                         f"{schema!r} for an allocation profile (2 or 3)")
     run_kind = raw.get("run_kind")
     if run_kind not in PROFILE_RUN_KINDS:
         raise ValueError(f"{source}: unsupported run_kind {run_kind!r} "
@@ -334,6 +334,21 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
     required_keys = ("phase_allocation", "late_floors",
                      "late_target_band_minima", "max_per_game",
                      "min_ply_gap", "side_tol", "corpus_size")
+    if schema >= 3:
+        # Schema 3 makes the label REQUIRED and exact -- that is the whole
+        # point of giving it its own version rather than widening schema 2.
+        from .eval_runner import interpretation_forbidden
+        key = "scientific_interpretation_forbidden"
+        if key not in raw:
+            raise ValueError(f"{source}: schema-3 config must carry {key!r}")
+        declared = raw[key]
+        if not isinstance(declared, bool):
+            raise ValueError(f"{source}: {key} must be a bool, got "
+                             f"{type(declared).__name__}")
+        if declared != interpretation_forbidden(run_kind):
+            raise ValueError(
+                f"{source}: {key}={declared} contradicts run_kind "
+                f"{run_kind!r}")
     missing = sorted(k for k in required_keys if k not in raw)
     if missing:
         raise ValueError(f"{source}: missing required profile key(s): "
@@ -2369,6 +2384,10 @@ class V2Config:
     side_tol: Optional[int] = None
     corpus_size: Optional[int] = None
     post_screen_report_out: Optional[str] = None
+    # Schema-3 only (Task 8 artifact-labelling audit). Optional with a None
+    # default so schema-1/2 configs -- which do not carry it -- load exactly as
+    # before and keep their exact bytes.
+    scientific_interpretation_forbidden: Optional[bool] = None
 
 
 # The ADDITIONAL top-level keys a schema-2 (repair plan Sec 6) config must
@@ -2437,6 +2456,8 @@ def load_v2_config(path: str) -> V2Config:
         side_tol=raw.get("side_tol"),
         corpus_size=raw.get("corpus_size"),
         post_screen_report_out=raw.get("post_screen_report_out"),
+        scientific_interpretation_forbidden=raw.get(
+            "scientific_interpretation_forbidden"),
     )
 
 
@@ -2458,6 +2479,9 @@ def profile_for(config: V2Config) -> AllocationProfile:
         "min_ply_gap": config.min_ply_gap,
         "side_tol": config.side_tol,
         "corpus_size": config.corpus_size,
+        # Schema-3 only; None for 1/2, where the parser never reads it.
+        "scientific_interpretation_forbidden":
+            config.scientific_interpretation_forbidden,
     }, source=config.config_path)
 
 
@@ -2723,7 +2747,8 @@ def run_screen(config: V2Config) -> Tuple[List[dict], dict]:
         "fieldnames": SCREEN_FIELDNAMES,
         "base_mcts_config": dataclasses.asdict(anchor_cfg),
     }
-    write_screen_meta(config.screen_out, meta)
+    write_screen_meta(config.screen_out, meta,
+                      run_kind=getattr(config, 'run_kind', None))
     return rows, meta
 
 
@@ -2903,7 +2928,8 @@ def v2_screen_provenance(*, config_path: Optional[str], source_index_path: Optio
 
 
 def write_screen_meta(out_csv: str, meta: dict, *,
-                      provenance: Optional[dict] = None) -> None:
+                      provenance: Optional[dict] = None,
+                      run_kind: Optional[str] = None) -> None:
     """Write `<out_csv>.meta.json`, ENRICHED with the evidence-grade
     `provenance` block (design Sec 1.8) computed from the meta's own
     `config_path` / `source_index_path` / `protocol_path` / `match_summary_
@@ -2935,6 +2961,14 @@ def write_screen_meta(out_csv: str, meta: dict, *,
             forbidden_manifests=meta.get("forbidden_manifests") or [],
             screen_csv=meta.get("screen_csv"),
             base_mcts_config=meta.get("base_mcts_config")))
+    if run_kind:
+        # These sidecars are protocol-CONSUMED evidence, not incidental logs:
+        # `select` hard-matches the screen sidecar's own bytes. Stamped here,
+        # before the file is written and therefore before it is hashed.
+        from .eval_runner import interpretation_forbidden
+        enriched["run_kind"] = run_kind
+        enriched["scientific_interpretation_forbidden"] = (
+            interpretation_forbidden(run_kind))
     Path(str(out_csv) + ".meta.json").write_text(json.dumps(enriched, indent=2))
 
 
@@ -3544,6 +3578,13 @@ def build_selector_witness(rows: List[dict],
     }
 
 
+def _interpretation_forbidden(run_kind: str) -> bool:
+    """The ONE policy (eval_runner), imported lazily to keep this module's
+    import graph unchanged."""
+    from .eval_runner import interpretation_forbidden
+    return interpretation_forbidden(run_kind)
+
+
 def build_post_screen_report_document(
         report: Dict[str, Any], *, selector_witness: Optional[Dict[str, Any]],
         selector_error: Optional[str], screen_csv_sha1: str,
@@ -3577,6 +3618,10 @@ def build_post_screen_report_document(
         "selection_seed": (config.selection_seed
                            if config is not None else None),
         "run_kind": alloc.run_kind,
+        # Task 8 artifact-labelling audit: derived from the run kind, so the
+        # report can never disagree with what it is a report ABOUT.
+        "scientific_interpretation_forbidden": _interpretation_forbidden(
+            alloc.run_kind),
         "no_manifest_written": True,
     }
 
@@ -4638,7 +4683,17 @@ def main(argv=None) -> int:
         # `main` does NOT read the screen's rows: `select_final_manifest` reads them
         # itself, from the artifact whose bytes it hard-matches, so no caller -- not
         # even this one -- can hand it a row-set that is not in that file.
-        screen_meta = json.loads(Path(str(args.screen) + ".meta.json").read_text())
+        # A missing/corrupt screen sidecar is a bad CLI INPUT, not an evidence
+        # mismatch: design Sec 3's "2 = usage/IO", the same contract
+        # `post-screen-qualify` already honours for the identical read. Without
+        # this guard the operator gets a raw FileNotFoundError traceback and
+        # exit 1, which is not in the exit-code contract at all.
+        try:
+            screen_meta = json.loads(
+                Path(str(args.screen) + ".meta.json").read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            return _v2_cli_hard_stop(
+                f"[fpu-dev-corpus-v2] select STOPPED (I/O): {exc}")
         forbidden = load_forbidden_hashes(config.forbidden_manifests)
 
         # Repair plan Sec 7: a schema-2 select refuses to run without a
@@ -4691,11 +4746,8 @@ def main(argv=None) -> int:
             "fieldnames": MANIFEST_FIELDNAMES_V2,
             "stats": stats,
         }
-        # Schema 2 ONLY (smoke isolation): name the run_kind in the manifest's
-        # own meta -- schema-1 meta bytes stay byte-identical (Task 0 goldens).
-        if config.config_schema_version >= 2:
-            select_meta["run_kind"] = config.run_kind
-        write_screen_meta(config.select_out, select_meta, provenance=verified)
+        write_screen_meta(config.select_out, select_meta, provenance=verified,
+                          run_kind=getattr(config, 'run_kind', None))
         print(f"[fpu-dev-corpus-v2] select: {len(rows)} row(s) -> "
               f"{config.select_out} (+ .meta.json); all "
               f"{len(SCREEN_IDENTITY_KEYS)} screen identities hard-matched "

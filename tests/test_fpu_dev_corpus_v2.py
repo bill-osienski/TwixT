@@ -4828,3 +4828,34 @@ def test_fpu_dev_corpus_v2_and_fpu_dev_reservoir_protocol_import_fresh_without_c
          "print(any('fpu_dev_reservoir_protocol' in k for k in sys.modules))"],
         capture_output=True, text=True, check=True)
     assert out.stdout.strip() == "False"
+
+
+@pytest.mark.parametrize("sidecar,label", [
+    (None, "missing"),
+    ('{"broken"', "corrupt"),
+])
+def test_select_missing_or_corrupt_screen_sidecar_is_a_clean_usage_exit(
+        tmp_path, capsys, sidecar, label):
+    """v17 Task 8 finding: `--mode select` read the screen's `.meta.json`
+    unguarded, so a missing/corrupt sidecar surfaced as a raw
+    FileNotFoundError traceback and exit 1 -- a code outside design Sec 3's
+    contract entirely. `--mode post-screen-qualify` already returned a clean
+    exit 2 for the identical read; both now agree.
+
+    Executable rather than source-inspecting: it calls `main` and asserts the
+    returned code, so it fails if the guard is removed no matter how the
+    source is worded."""
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(json.dumps(_v2_config_fixture(tmp_path)))
+    screen = tmp_path / "screen.csv"
+    screen.write_text("game_idx,position_ply\n")
+    if sidecar is not None:
+        (tmp_path / "screen.csv.meta.json").write_text(sidecar)
+
+    code = main(["--mode", "select", "--config", str(cfg_path),
+                 "--screen", str(screen)])
+
+    assert code == 2, f"{label} sidecar should be a usage/IO exit"
+    out = capsys.readouterr().out
+    assert "select STOPPED (I/O)" in out
+    assert "Traceback" not in out

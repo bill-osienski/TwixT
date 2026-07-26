@@ -42,19 +42,21 @@ __all__ = [
     "verify_config_matches", "load_verified",
 ]
 
-PROTOCOL_SCHEMA_VERSION = 1
-CONFIG_SCHEMA_VERSION = 1
+PROTOCOL_SCHEMA_VERSION = 2
+CONFIG_SCHEMA_VERSION = 2
 
 # Exact required key sets. A document missing or gaining a top-level key is
 # refused rather than partially interpreted.
 PROTOCOL_KEYS = frozenset({
     "schema_version", "artifact_kind", "run_kind", "coefficient", "base_seed",
-    "games", "board_size", "checkpoints", "provenance"})
+    "games", "board_size", "checkpoints", "provenance",
+    "scientific_interpretation_forbidden"})
 PROTOCOL_OPTIONAL_KEYS = frozenset({"extra"})
 CONFIG_KEYS = frozenset({
     "schema_version", "artifact_kind", "run_kind", "scientific", "formula_id",
     "config_field", "coefficient", "shipped_branch", "mcts", "seed_range",
-    "board_size", "checkpoints", "frozen_design_sha1", "protocol_sha1"})
+    "board_size", "checkpoints", "frozen_design_sha1", "protocol_sha1",
+    "scientific_interpretation_forbidden"})
 
 
 def protocol_sha1(protocol: Mapping[str, Any]) -> str:
@@ -123,6 +125,8 @@ def build_protocol(*, run_kind: str,
         "games": games,
         "board_size": board_size,
         "checkpoints": dict(sorted((checkpoints or {}).items())),
+        # Every artifact states its own interpretation status (Task 8 audit).
+        "scientific_interpretation_forbidden": not prov.is_scientific(run_kind),
         "provenance": prov.build_provenance(
             run_kind=run_kind, coefficient=coefficient,
             checkpoints=checkpoints, source_files=source_files),
@@ -156,6 +160,10 @@ def derive_config(protocol: Mapping[str, Any]) -> Dict[str, Any]:
         "artifact_kind": "config",
         "run_kind": run_kind,
         "scientific": prov.is_scientific(run_kind),
+        # Explicit rather than implied by `scientific`: an artifact must state
+        # its own interpretation status without the reader having to know the
+        # run-kind taxonomy. Schema 2 (was implicit in schema 1).
+        "scientific_interpretation_forbidden": not prov.is_scientific(run_kind),
         "formula_id": prov.FORMULA_ID,
         "config_field": prov.CONFIG_FIELD,
         # None and 0.0 both mean the shipped branch (§2.2); the field still

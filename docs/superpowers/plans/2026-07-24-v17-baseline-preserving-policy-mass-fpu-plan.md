@@ -361,6 +361,62 @@ Run the exact design §5.4 blocks:
 5. Stamp every output `run_kind=tooling_smoke` and
    `scientific_interpretation_forbidden=true`.
 
+**Amendment `task8-artifact-labelling-scope-v1` (2026-07-26).**
+Implementation-scope correction only; it changes no scientific decision, no
+frozen design section, no grid, no sizing, and no gate threshold.
+
+The Task 8 artifact audit found emitted outputs missing `run_kind` and/or
+`scientific_interpretation_forbidden`: the match summary, every per-game JSONL
+row, all 32 replay sidecars, and the qualification report. Labelling them at
+the point of emission — required so the stamp precedes qualification and
+hashing — adds these files to Task 8's permitted scope:
+
+- `scripts/GPU/alphazero/eval_replay.py` — builds the replay sidecar dict;
+  the only place a per-replay label can be applied.
+- `scripts/GPU/alphazero/eval_checkpoint_match.py` — summary + per-game rows,
+  and the `--run-kind` / `--scientific-interpretation-forbidden` CLI flags.
+- `scripts/GPU/alphazero/eval_runner.py` — threads labels to the replay writer
+  and defines `ARTIFACT_LABEL_KEYS` once.
+- `scripts/GPU/alphazero/fpu_dev_reservoir_protocol.py` — stamps the
+  qualification report, derives the stamping flags in `emit-gen-command`, and
+  tolerates the label keys in row reconstruction and summary binding.
+- `scripts/GPU/alphazero/fpu_dev_corpus_v2.py` — `--mode select` returns the
+  defined usage/IO exit code 2 for a missing or corrupt screen sidecar instead
+  of an uncaught `FileNotFoundError` (exit 1, outside the exit-code contract);
+  `V2Config` gains an OPTIONAL `scientific_interpretation_forbidden`
+  (default `None`) so a schema-3 config round-trips through the re-derivation
+  byte-compare, and the post-screen qualification report states the flag,
+  derived from its run kind.
+- `scripts/GPU/alphazero/fpu_v17_match_smoke.py` (new) — the §5.4 driver,
+  promoted from a scratch script because it is result-determining; its SHA-1 is
+  recorded in the protocol's `source_files`.
+- `scripts/GPU/alphazero/fpu_v17_protocol.py` — config schema 1 → 2, adding an
+  explicit `scientific_interpretation_forbidden` rather than leaving it implied
+  by `scientific`. (Listed for completeness: this module postdates the Task 1
+  snapshot, so the out-of-scope guard does not track it.)
+
+All label stamping is opt-in and omitted by default, so unlabelled artifact
+bytes are unchanged. Authorized by the operator during Task 8 review,
+2026-07-26.
+
+**Follow-up `task8-reservoir-schema-3-v1` (2026-07-26), authorized separately.**
+Reservoir protocol schema 3, strictly additive:
+`PROTOCOL_SCHEMA_KEYS` and `PROTOCOL_SCHEMA_KEYS_V2` are NOT modified;
+`PROTOCOL_SCHEMA_KEYS_V3 = V2 + ("scientific_interpretation_forbidden",)`.
+Schema 1/2 parsing, validation, derivation and artifact bytes are preserved
+exactly, pinned against the real frozen v16 protocols (`smoke_v1`, `smoke_v2`,
+`reservoir_v1`, and the 4,000-game production reservoir), each of which must
+re-derive to its own bytes and must not gain the new key. Schema 3 requires an
+exact boolean derived from `run_kind`; a contradictory value is refused. Also
+in this follow-up: label validation at the `run_match` boundary, a required
+`--scientific-interpretation {forbidden,allowed}` alongside `--run-kind`, and a
+complete no-output assertion in the negative call-site proof.
+
+Operator note: the config is bound to the source hashes recorded at
+qualification, so ALL source edits must land BEFORE `qualify`. Editing a
+recorded module afterwards makes `screen` refuse with a `source_file_sha1s`
+mismatch, and the chain must be re-qualified from the protocol down.
+
 **Gate:** tooling integrity only. Present results; do not discuss candidate
 quality or select `r`. The 1,600-game protocol is blocked until 8A–8C all
 pass.

@@ -58,6 +58,11 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     EXIT_USAGE,
     GENERATION_SOURCE_MODULES,
     PROTOCOL_SCHEMA_KEYS,
+    PROTOCOL_SCHEMA_KEYS_V2,
+    protocol_schema_keys_for,
+    PROTOCOL_SCHEMA_KEYS_V3,
+    SCIENTIFIC_INTERPRETATION_KEY,
+    interpretation_forbidden_for,
     QUALIFICATION_SOURCE_FILES,
     QualifyResult,
     QualifyStatus,
@@ -4354,3 +4359,106 @@ def test_main_emit_protocol_conflicting_reemit_still_raises_not_masked(tmp_path)
     params_path.write_text(json.dumps(_protocol_params(games=999)))
     with pytest.raises(ValueError, match="refusing to overwrite"):
         main(["emit-protocol", "--params-json", str(params_path), "--out", str(out_path)])
+
+
+# ---------------------------------------------------------------------------
+# Schema 3 -- Task 8 artifact-labelling audit (additive; 1/2 must be untouched)
+# ---------------------------------------------------------------------------
+
+_REAL_V16_PROTOCOLS = [
+    "logs/eval/fpu_v16_policy_mass_v2/smoke_v1/reservoir_protocol.json",
+    "logs/eval/fpu_v16_policy_mass_v2/smoke_v2/reservoir_protocol.json",
+    "logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/reservoir_protocol.json",
+    "logs/eval/fpu_v16_policy_mass_v2/"
+    "production_v2_b400amend_4000g_seed20300000/reservoir_protocol.json",
+]
+
+
+@pytest.mark.parametrize("path", _REAL_V16_PROTOCOLS)
+def test_real_frozen_v16_protocols_still_round_trip_byte_identically(path):
+    """Compatibility pinned against REAL frozen artifacts, not fixtures.
+
+    Schema 3 is additive, so every already-frozen v16 protocol must re-derive
+    to exactly its own bytes -- key set, parsing and canonical encoding all
+    unchanged.
+    """
+    if not os.path.exists(path):
+        pytest.skip(f"{path} not present")
+    with open(path, "rb") as fh:
+        frozen = fh.read()
+    doc = json.loads(frozen)
+    version = int(doc.get("protocol_version", 1))
+    assert version in (1, 2), f"{path} is not a legacy-schema artifact"
+    assert set(protocol_schema_keys_for(doc)) == set(doc)
+    assert canonical_json_bytes(build_protocol(doc)) == frozen
+    # The new field must not have leaked into a legacy artifact.
+    assert SCIENTIFIC_INTERPRETATION_KEY not in doc
+
+
+def test_legacy_key_sets_are_unchanged_by_schema_3():
+    assert PROTOCOL_SCHEMA_KEYS_V3 == (
+        PROTOCOL_SCHEMA_KEYS_V2 + (SCIENTIFIC_INTERPRETATION_KEY,))
+    assert SCIENTIFIC_INTERPRETATION_KEY not in PROTOCOL_SCHEMA_KEYS
+    assert SCIENTIFIC_INTERPRETATION_KEY not in PROTOCOL_SCHEMA_KEYS_V2
+    assert protocol_schema_keys_for({"protocol_version": 1}) is PROTOCOL_SCHEMA_KEYS
+    assert protocol_schema_keys_for({"protocol_version": 2}) is PROTOCOL_SCHEMA_KEYS_V2
+    assert protocol_schema_keys_for({"protocol_version": 3}) is PROTOCOL_SCHEMA_KEYS_V3
+    with pytest.raises(ValueError, match="unsupported protocol_version"):
+        protocol_schema_keys_for({"protocol_version": 4})
+
+
+@pytest.mark.parametrize("run_kind,expected", [
+    ("production", False), ("tooling_smoke", True),
+])
+def test_interpretation_flag_is_derived_from_the_run_kind(run_kind, expected):
+    assert interpretation_forbidden_for(run_kind) is expected
+
+
+def _schema3_params(**over):
+    """A schema-3 params mapping built from the schema-2 shape."""
+    from copy import deepcopy
+    path = ("logs/eval/fpu_v16_policy_mass_v2/smoke_v2/"
+            "smoke_protocol_params.json")
+    if not os.path.exists(path):
+        pytest.skip("no schema-2 params available to extend")
+    p = deepcopy(json.loads(open(path).read()))
+    p["protocol_version"] = 3
+    p["config_schema_version"] = 3          # version-dispatched: 3 -> 3
+    p[SCIENTIFIC_INTERPRETATION_KEY] = interpretation_forbidden_for(p["run_kind"])
+    p.update(over)
+    return p
+
+
+def test_schema_3_requires_the_interpretation_flag():
+    p = _schema3_params()
+    del p[SCIENTIFIC_INTERPRETATION_KEY]
+    with pytest.raises(ValueError, match=SCIENTIFIC_INTERPRETATION_KEY):
+        build_protocol(p)
+
+
+def test_protocol_version_dispatches_the_config_schema():
+    """Each protocol version emits its OWN config schema, so a config's version
+    alone determines its shape."""
+    with pytest.raises(ValueError, match="requires config_schema_version 3"):
+        build_protocol(_schema3_params(config_schema_version=2))
+    assert build_protocol(_schema3_params())["config_schema_version"] == 3
+
+
+def test_schema_3_accepts_the_agreeing_flag():
+    doc = build_protocol(_schema3_params())
+    assert doc[SCIENTIFIC_INTERPRETATION_KEY] is True
+    assert doc["run_kind"] == "tooling_smoke"
+
+
+def test_schema_3_refuses_a_contradictory_flag():
+    """A smoke protocol claiming interpretation is allowed is the exact failure
+    this field exists to prevent."""
+    with pytest.raises(ValueError, match="contradicts run_kind"):
+        build_protocol(_schema3_params(**{SCIENTIFIC_INTERPRETATION_KEY: False}))
+
+
+@pytest.mark.parametrize("bad", [1, 0, "true", None, "false"])
+def test_schema_3_requires_an_exact_boolean(bad):
+    """`1`/`0` would satisfy a truthiness check and persist as a number."""
+    with pytest.raises(ValueError, match="must be a bool"):
+        build_protocol(_schema3_params(**{SCIENTIFIC_INTERPRETATION_KEY: bad}))

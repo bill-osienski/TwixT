@@ -44,11 +44,15 @@ def ply_record(ply, player, move, counts, root_value):
     }
 
 
-def build_replay_dict(result, seed, board_size, records):
+def build_replay_dict(result, seed, board_size, records, labels=None):
     """Assemble the replay sidecar dict from a finished EvalGameResult plus the
     per-ply records. Reads identity/outcome from `result`; `seed` and
-    `board_size` complete the contract."""
-    return {
+    `board_size` complete the contract.
+
+    `labels` (default None) stamps run-labelling keys onto the sidecar. Omitted
+    entirely when None, so existing replay bytes are unchanged.
+    """
+    doc = {
         "schema_version": REPLAY_SCHEMA_VERSION,
         "pairing_id": result.pairing_id,
         "game_idx": result.game_idx,
@@ -63,6 +67,9 @@ def build_replay_dict(result, seed, board_size, records):
         "n_moves": result.n_moves,
         "moves": records,
     }
+    if labels:
+        doc.update(labels)
+    return doc
 
 
 def replay_filename(game_idx):

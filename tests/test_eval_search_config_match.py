@@ -1032,3 +1032,61 @@ def test_mcts_py_is_unchanged_since_the_golden_was_captured(golden):
     with open(path, "rb") as fh:
         current = hashlib.sha1(fh.read()).hexdigest()
     assert current == golden["pre_change_source_sha1"]["mcts.py"]
+
+
+# --------------------------------------------------------------------------
+# 12. The interpretation policy must cover BOTH run-kind taxonomies
+# --------------------------------------------------------------------------
+#
+# `eval_runner` restates the policy table rather than importing the v17
+# package, so these tests are what stop the two drifting apart.
+
+from scripts.GPU.alphazero.eval_runner import (            # noqa: E402
+    KNOWN_RUN_KINDS, interpretation_forbidden, validate_labels,
+)
+
+
+@pytest.mark.parametrize("run_kind", sorted(prov.RUN_KINDS))
+def test_policy_agrees_with_the_frozen_v17_taxonomy(run_kind):
+    """Every v17 run kind must be known, and its interpretation status must be
+    exactly the negation of `is_scientific`."""
+    assert run_kind in KNOWN_RUN_KINDS
+    assert interpretation_forbidden(run_kind) is (not prov.is_scientific(run_kind))
+
+
+@pytest.mark.parametrize("run_kind", sorted(prov.RUN_KINDS))
+def test_v17_labels_survive_the_label_validator(run_kind):
+    """Produce labels the way v17 does, then push them through the validator
+    the match boundary uses. A taxonomy mismatch shows up here as a
+    contradiction refusal -- which is exactly how the Task 8 defect presented:
+    `development` labels were rejected at `run_match`."""
+    labels = {"run_kind": run_kind,
+              "scientific_interpretation_forbidden":
+                  not prov.is_scientific(run_kind)}
+    assert validate_labels(labels) == labels
+
+
+def test_the_reservoir_taxonomy_is_covered_too():
+    """`production`/`tooling_smoke` come from the reservoir profile, not v17."""
+    assert interpretation_forbidden("production") is False
+    assert interpretation_forbidden("tooling_smoke") is True
+
+
+@pytest.mark.parametrize("bad", ["typo", "", "Production", "smoke", "acceptance"])
+def test_unknown_run_kinds_are_refused_not_defaulted(bad):
+    """A silent default is what would let a typo be stamped as a valid label."""
+    with pytest.raises(ValueError, match="unknown run_kind"):
+        interpretation_forbidden(bad)
+    with pytest.raises(ValueError):
+        validate_labels({"run_kind": bad,
+                         "scientific_interpretation_forbidden": True})
+
+
+def test_every_known_kind_is_classified_exactly_once():
+    from scripts.GPU.alphazero.eval_runner import (
+        INTERPRETABLE_RUN_KINDS, NON_INTERPRETABLE_RUN_KINDS,
+    )
+    assert not (INTERPRETABLE_RUN_KINDS & NON_INTERPRETABLE_RUN_KINDS)
+    assert INTERPRETABLE_RUN_KINDS | NON_INTERPRETABLE_RUN_KINDS == KNOWN_RUN_KINDS
+    # No v17 run kind may be missing from the table.
+    assert set(prov.RUN_KINDS) <= KNOWN_RUN_KINDS

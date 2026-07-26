@@ -698,6 +698,32 @@ PROTOCOL_SCHEMA_KEYS_V2: Tuple[str, ...] = PROTOCOL_SCHEMA_KEYS + (
 assert len(PROTOCOL_SCHEMA_KEYS_V2) == len(set(PROTOCOL_SCHEMA_KEYS_V2)), (
     "PROTOCOL_SCHEMA_KEYS_V2 has a duplicate key")
 
+# Schema 3 -- Task 8 artifact-labelling audit. PURELY ADDITIVE: schema 1 and 2
+# key sets, parsing, validation, derivation and artifact bytes are untouched,
+# so every frozen v16 artifact still round-trips exactly as before. The one new
+# field states the artifact's interpretation status explicitly instead of
+# leaving a reader to infer it from `run_kind`.
+SCIENTIFIC_INTERPRETATION_KEY = "scientific_interpretation_forbidden"
+PROTOCOL_SCHEMA_KEYS_V3: Tuple[str, ...] = PROTOCOL_SCHEMA_KEYS_V2 + (
+    SCIENTIFIC_INTERPRETATION_KEY,)
+
+assert len(PROTOCOL_SCHEMA_KEYS_V3) == len(set(PROTOCOL_SCHEMA_KEYS_V3)), (
+    "PROTOCOL_SCHEMA_KEYS_V3 has a duplicate key")
+
+# The ONE production run kind; everything else is tooling and must forbid
+# scientific interpretation.
+SCIENTIFIC_PROFILE_RUN_KIND = "production"
+
+
+def interpretation_forbidden_for(run_kind: str) -> bool:
+    """The derived truth: only a production run may be interpreted.
+
+    Delegates to `eval_runner.interpretation_forbidden` -- the ONE policy --
+    imported lazily to keep this module free of an `eval_runner` import at
+    module scope."""
+    from .eval_runner import interpretation_forbidden
+    return interpretation_forbidden(run_kind)
+
 
 def protocol_schema_keys_for(doc: Mapping[str, Any]) -> Tuple[str, ...]:
     """The field set a protocol/params doc must carry, selected by its
@@ -709,6 +735,8 @@ def protocol_schema_keys_for(doc: Mapping[str, Any]) -> Tuple[str, ...]:
         return PROTOCOL_SCHEMA_KEYS
     if version == 2:
         return PROTOCOL_SCHEMA_KEYS_V2
+    if version == 3:
+        return PROTOCOL_SCHEMA_KEYS_V3
     raise ValueError(f"unsupported protocol_version {version}")
 
 
@@ -898,10 +926,33 @@ def build_protocol(params: Mapping[str, Any]) -> Dict[str, Any]:
             raise ValueError(
                 f"build_protocol: unsupported run_kind "
                 f"{protocol['run_kind']!r} (must be one of {PROFILE_RUN_KINDS})")
-        if int(protocol["config_schema_version"]) != 2:
-            raise ValueError("build_protocol: protocol_version 2 requires "
-                             "config_schema_version 2")
+        # Version-dispatched: each protocol version emits its OWN config
+        # schema, so a config's version alone determines its shape (and hence
+        # whether the interpretation field is required).
+        required_config_schema = int(protocol["protocol_version"])
+        if int(protocol["config_schema_version"]) != required_config_schema:
+            raise ValueError(
+                f"build_protocol: protocol_version "
+                f"{protocol['protocol_version']} requires "
+                f"config_schema_version {required_config_schema}, got "
+                f"{protocol['config_schema_version']}")
         parse_allocation_profile(protocol, source="protocol")
+    if int(protocol.get("protocol_version", 1)) >= 3:
+        # Exact boolean, and it must AGREE with the run kind. A contradictory
+        # value (a smoke protocol claiming interpretation is allowed) is the
+        # whole failure mode this field exists to prevent, so it is refused
+        # rather than silently corrected.
+        declared = protocol[SCIENTIFIC_INTERPRETATION_KEY]
+        if not isinstance(declared, bool):
+            raise ValueError(
+                f"build_protocol: {SCIENTIFIC_INTERPRETATION_KEY} must be a "
+                f"bool, got {type(declared).__name__}")
+        expected = interpretation_forbidden_for(protocol["run_kind"])
+        if declared != expected:
+            raise ValueError(
+                f"build_protocol: {SCIENTIFIC_INTERPRETATION_KEY}={declared} "
+                f"contradicts run_kind {protocol['run_kind']!r}, which "
+                f"requires {expected}")
     return protocol
 
 
@@ -1019,6 +1070,13 @@ def gen_command(protocol: Mapping[str, Any]) -> List[str]:
     argv += ["--max-moves", str(protocol["max_moves"])]
     argv += ["--workers", str(protocol["workers"])]
     argv += ["--base-seed", str(protocol["base_seed"])]
+    # The stamp is part of the frozen decisions, so it is derived here rather
+    # than left to the operator to remember on the command line.
+    if protocol.get("run_kind"):
+        argv += ["--run-kind", str(protocol["run_kind"])]
+        argv += ["--scientific-interpretation",
+                 "allowed" if protocol["run_kind"] == "production"
+                 else "forbidden"]
     if protocol["save_eval_replays"]:
         argv.append("--save-eval-replays")
     argv += ["--replay-dir", str(protocol["replay_dir"])]
@@ -1802,14 +1860,27 @@ def check_protocol_conformance(
 _SUMMARY_CLI_STAMPED_KEYS: Tuple[str, str] = ("generated_at", "git_commit")
 
 
+def _post_summarize_stamped_keys() -> frozenset:
+    """Keys stamped onto a summary AFTER `summarize_match` returns.
+
+    The two CLI stamps plus the run-labelling keys: both are added by
+    `eval_checkpoint_match`, so a faithful summary carries them and the
+    reconstruction never will. `ARTIFACT_LABEL_KEYS` is imported LAZILY, and
+    named from `eval_runner` rather than restated here, to keep this module's
+    import graph free of `eval_runner` (see the TOOLING ONLY section).
+    """
+    from .eval_runner import ARTIFACT_LABEL_KEYS
+    return frozenset(_SUMMARY_CLI_STAMPED_KEYS) | frozenset(ARTIFACT_LABEL_KEYS)
+
+
 def _strip_cli_stamped_keys(summary: Mapping[str, Any]) -> Dict[str, Any]:
     """`summary` minus `_SUMMARY_CLI_STAMPED_KEYS` -- the two CLI-stamped
     keys `eval_summary.summarize_match` never produces. Applied to BOTH the
     reconstructed and the supplied summary before comparing them, so the
     comparison is symmetric (never assumes which side may or may not carry
     the two keys)."""
-    return {k: v for k, v in summary.items()
-            if k not in _SUMMARY_CLI_STAMPED_KEYS}
+    drop = _post_summarize_stamped_keys()
+    return {k: v for k, v in summary.items() if k not in drop}
 
 
 def check_summary_binding(
@@ -1862,12 +1933,17 @@ def check_summary_binding(
     contract; this is not a new validation layer over `measurements` itself
     (that remains `measure_reservoir`'s and B4's job).
     """
-    from .eval_runner import EvalGameResult
+    from .eval_runner import ARTIFACT_LABEL_KEYS, EvalGameResult
     from .eval_summary import summarize_match
+    _label_keys = frozenset(ARTIFACT_LABEL_KEYS)
 
     summary = measurements.summary
     results = [
-        EvalGameResult(**row)
+        # Drop ONLY the known run-labelling keys: the dataclass has no such
+        # fields, and every other unexpected key must still raise so a
+        # malformed row is caught rather than silently accepted.
+        EvalGameResult(**{k: v for k, v in row.items()
+                          if k not in _label_keys})
         for row in sorted(measurements.jsonl_rows, key=lambda r: int(r["game_idx"]))
     ]
     reconstructed = summarize_match(
@@ -2271,6 +2347,12 @@ def derive_config(
         "stall_flush_sims": protocol["mcts_stall_flush_sims"],
         # New top-level paths (amendments 1, 2).
         "config_schema_version": protocol["config_schema_version"],
+        # Schema-3 only: the derived config states the SAME interpretation
+        # status as its protocol. Absent for schema 1/2, so those config bytes
+        # are unchanged.
+        **({SCIENTIFIC_INTERPRETATION_KEY:
+            protocol[SCIENTIFIC_INTERPRETATION_KEY]}
+           if int(protocol.get("protocol_version", 1)) >= 3 else {}),
         "protocol_path": str(protocol_path),
         "match_summary_path": protocol["match_summary_path"],
         "replay_dir": protocol["replay_dir"],
@@ -2370,21 +2452,31 @@ def is_retired(report_path: Union[str, Path]) -> bool:
     return _read_report_status(report_path) == QualifyStatus.GATE_FAIL.value
 
 
-def _qualify_result_document(qualify_result: QualifyResult) -> Dict[str, Any]:
+def _qualify_result_document(qualify_result: QualifyResult,
+                             run_kind: Optional[str] = None) -> Dict[str, Any]:
     """`qualify_result` as a plain, JSON-shaped dict -- the exact document
     `write_report` persists. `status` is the Enum's own `.value` string
     (`"OK"`/`"MISMATCH"`/`"GATE_FAIL"`) -- the explicit marker `is_passed`/
     `is_retired` classify a report by; `reason`/`report` are carried through
     verbatim (already plain JSON-shaped values -- see `QualifyResult`/
     `qualify_core`'s own docstrings, B6)."""
-    return {
+    doc = {
         "status": qualify_result.status.value,
         "reason": qualify_result.reason,
         "report": qualify_result.report,
     }
+    if run_kind:
+        # Task 8 artifact-labelling audit: the report must state its own run
+        # kind and interpretation status, like every other emitted artifact.
+        # Stamped here, BEFORE the report is written and hashed.
+        doc["run_kind"] = run_kind
+        doc["scientific_interpretation_forbidden"] = (
+            interpretation_forbidden_for(run_kind))
+    return doc
 
 
-def write_report(path: Union[str, Path], qualify_result: QualifyResult) -> None:
+def write_report(path: Union[str, Path], qualify_result: QualifyResult,
+                 run_kind: Optional[str] = None) -> None:
     """Persist `qualify_result` as canonical JSON at `path` (design Sec 3),
     implementing the report state machine's write policy:
 
@@ -2436,7 +2528,8 @@ def write_report(path: Union[str, Path], qualify_result: QualifyResult) -> None:
         # this is not routed through write_atomic's refuse-overwrite-
         # different guard).
         target.unlink()
-    data = canonical_json_bytes(_qualify_result_document(qualify_result))
+    data = canonical_json_bytes(
+        _qualify_result_document(qualify_result, run_kind))
     write_atomic(target, data)
 
 
@@ -2565,10 +2658,10 @@ def run_qualify(
         config = derive_config(
             protocol, measurements, protocol_path=str(protocol_path))
         write_atomic(protocol["config_out"], canonical_json_bytes(config))
-        write_report(report_out, result)
+        write_report(report_out, result, protocol.get("run_kind"))
         return EXIT_OK
 
-    write_report(report_out, result)
+    write_report(report_out, result, protocol.get("run_kind"))
     return _EXIT_CODE_FOR_STATUS[result.status]
 
 

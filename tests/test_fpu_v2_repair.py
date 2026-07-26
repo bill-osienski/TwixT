@@ -160,7 +160,20 @@ def test_legacy_profile_mirrors_module_constants():
 
 
 @pytest.mark.parametrize("mutate, needle", [
-    (lambda r: r.__setitem__("config_schema_version", 3), "config_schema_version"),
+    # 3 is now a SUPPORTED schema (Task 8 labelling follow-up); 4 is not.
+    (lambda r: r.__setitem__("config_schema_version", 4), "config_schema_version"),
+    # ...and a schema-3 profile must carry the interpretation label, exact and
+    # agreeing with its run kind.
+    (lambda r: r.__setitem__("config_schema_version", 3),
+     "must carry 'scientific_interpretation_forbidden'"),
+    # The fixture's run_kind is "production", for which the correct value is
+    # False -- so True is the contradictory one here.
+    (lambda r: r.update({"config_schema_version": 3,
+                         "scientific_interpretation_forbidden": True}),
+     "contradicts run_kind"),
+    (lambda r: r.update({"config_schema_version": 3,
+                         "scientific_interpretation_forbidden": 1}),
+     "must be a bool"),
     (lambda r: r.__setitem__("run_kind", "experiment"), "run_kind"),
     (lambda r: r["phase_allocation"].__setitem__(
         "targetlate", {"tuning": 1, "frozen_check": 1}), "role|phase"),

@@ -24,6 +24,87 @@ from .eval_replay import ply_record, build_replay_dict, write_replay
 # stay below it so task_ids/seeds never collide across pairings.
 GAMES_PER_PAIRING_LIMIT = 1_000_000
 
+# Run-labelling keys stamped onto emitted artifacts when a caller supplies
+# them. Defined here -- the low-level shared module, same rationale as
+# `short_id` -- so the producers (this module, eval_checkpoint_match) and the
+# consumers that must tolerate them (fpu_dev_reservoir_protocol's row
+# reconstruction and summary binding) all name them from ONE place. The VALUES
+# are policy and live with whoever owns the run kind, not here.
+ARTIFACT_LABEL_KEYS = ("run_kind", "scientific_interpretation_forbidden")
+
+# The ONE interpretation policy, spanning BOTH run-kind taxonomies that reach
+# this module: the reservoir/corpus one (`production` / `tooling_smoke`) and
+# the frozen v17 one. Defined here beside the label keys so the CLI, the label
+# validator, the sidecar writer and the reservoir protocol all derive the flag
+# from the same rule instead of each deciding for itself.
+#
+# CLOSED: an unrecognised run kind raises rather than defaulting. A silent
+# default is what let a typo be stamped as a valid label.
+#
+# `tests/test_eval_search_config_match.py` cross-checks this table against
+# `fpu_v17_provenance.RUN_KINDS`/`is_scientific` for EVERY v17 run kind, so the
+# two cannot drift; the table is restated here rather than imported to keep
+# this low-level module free of a dependency on an experiment package.
+INTERPRETABLE_RUN_KINDS = frozenset({
+    "production",                    # reservoir/corpus taxonomy
+    "development", "held_out", "abcd", "strength", "external_validation",
+})
+NON_INTERPRETABLE_RUN_KINDS = frozenset({"tooling_smoke"})
+KNOWN_RUN_KINDS = INTERPRETABLE_RUN_KINDS | NON_INTERPRETABLE_RUN_KINDS
+
+
+def interpretation_forbidden(run_kind: str) -> bool:
+    """True when artifacts of `run_kind` must forbid scientific interpretation.
+
+    Raises `ValueError` for an unknown run kind: the label boundary must not
+    invent a status for a name it does not recognise.
+    """
+    if run_kind not in KNOWN_RUN_KINDS:
+        raise ValueError(
+            f"unknown run_kind {run_kind!r}; known kinds are "
+            f"{sorted(KNOWN_RUN_KINDS)}")
+    return run_kind in NON_INTERPRETABLE_RUN_KINDS
+
+
+def validate_labels(labels, native_fields=()):
+    """Validate a label mapping at the public boundary, or return None.
+
+    Labels are applied on top of native artifact fields, so an unrestricted
+    mapping could overwrite `winner`, `task_id`, `game_idx` -- the evidence
+    itself. Exactly the two label keys are permitted, with exact types, and
+    never a key that collides with a native field.
+    """
+    if labels is None:
+        return None
+    if set(labels) != set(ARTIFACT_LABEL_KEYS):
+        raise ValueError(
+            f"labels must be exactly {sorted(ARTIFACT_LABEL_KEYS)}, got "
+            f"{sorted(labels)}; labels are stamped over artifact fields and "
+            f"must not be able to carry anything else")
+    run_kind = labels["run_kind"]
+    if not isinstance(run_kind, str) or not run_kind:
+        raise ValueError(f"labels['run_kind'] must be a non-empty string, "
+                         f"got {run_kind!r}")
+    forbidden = labels["scientific_interpretation_forbidden"]
+    if not isinstance(forbidden, bool):
+        # bool first: `1`/`0` would otherwise pass an `int` check and persist
+        # as a number that no reader would treat as a flag.
+        raise ValueError(
+            f"labels['scientific_interpretation_forbidden'] must be a bool, "
+            f"got {type(forbidden).__name__}")
+    expected = interpretation_forbidden(run_kind)
+    if forbidden != expected:
+        # Shape and types are not enough: the two fields have a SEMANTIC
+        # relationship, and a tooling run stamped "interpretable" is exactly
+        # the mislabelling these labels exist to prevent.
+        raise ValueError(
+            f"labels are contradictory: run_kind {run_kind!r} requires "
+            f"scientific_interpretation_forbidden={expected}, got {forbidden}")
+    if clash := sorted(set(labels) & set(native_fields)):
+        raise ValueError(
+            f"labels would overwrite native artifact field(s) {clash}")
+    return dict(labels)
+
 EvaluatorFactory = Callable[[str], object]
 
 
@@ -438,7 +519,8 @@ def require_consistent_agent_tasks(tasks, base: MCTSConfig, allow_differ=(),
                 config_validator(cfg)
 
 
-def _play_and_build_result(task, red, black, config, capture, replay_dir):
+def _play_and_build_result(task, red, black, config, capture, replay_dir,
+                           labels=None):
     """Play one game and build its result, writing a replay sidecar when
     capturing. Shared by the sequential and worker loops (both single-process)."""
     winner, reason, nm, records = play_eval_game(
@@ -448,11 +530,12 @@ def _play_and_build_result(task, red, black, config, capture, replay_dir):
     if records is not None:
         result.replay_path = write_replay(
             replay_dir,
-            build_replay_dict(result, task.seed, config.board_size, records))
+            build_replay_dict(result, task.seed, config.board_size, records,
+                              labels=labels))
     return result
 
 
-def _run_sequential(tasks, config, factory, replay_dir=None):
+def _run_sequential(tasks, config, factory, replay_dir=None, labels=None):
     import gc
 
     import mlx.core as mx
@@ -464,7 +547,8 @@ def _run_sequential(tasks, config, factory, replay_dir=None):
         red = get_eval(task.red_checkpoint)
         black = get_eval(task.black_checkpoint)
         results.append(
-            _play_and_build_result(task, red, black, config, capture, replay_dir))
+            _play_and_build_result(task, red, black, config, capture,
+                                   replay_dir, labels))
         # Flush pending MLX lazy ops and release cached Metal buffers between
         # games to stay within Metal's resource limit (trainer.py:3169-3173).
         mx.eval()
@@ -474,7 +558,7 @@ def _run_sequential(tasks, config, factory, replay_dir=None):
 
 
 def _worker_main(worker_id, tasks, config, factory, next_idx, result_q,
-                 replay_dir=None):
+                 replay_dir=None, labels=None):
     """Pull tasks via the shared atomic counter; per-process checkpoint cache.
 
     On any exception, send a _WorkerFailed sentinel so the parent fails
@@ -495,14 +579,16 @@ def _worker_main(worker_id, tasks, config, factory, next_idx, result_q,
             red = get_eval(task.red_checkpoint)
             black = get_eval(task.black_checkpoint)
             result_q.put(
-                _play_and_build_result(task, red, black, config, capture, replay_dir))
+                _play_and_build_result(task, red, black, config, capture,
+                                       replay_dir, labels))
     except Exception as e:
         result_q.put(_WorkerFailed(worker_id, f"{e!r}\n{traceback.format_exc()}"))
         return
     result_q.put(_WorkerDone(worker_id))
 
 
-def _run_parallel(tasks, workers, config, factory, replay_dir=None):
+def _run_parallel(tasks, workers, config, factory, replay_dir=None,
+                  labels=None):
     """Spawn pool (macOS-mandatory). Shared next-task counter, results via
     queue, explicit WorkerDone, parent joins with timeout (no silent hang).
     A _WorkerFailed sentinel surfaces a crashed worker promptly."""
@@ -512,7 +598,7 @@ def _run_parallel(tasks, workers, config, factory, replay_dir=None):
     procs = [
         ctx.Process(target=_worker_main,
                     args=(wid, tasks, config, factory, next_idx, result_q,
-                          replay_dir))
+                          replay_dir, labels))
         for wid in range(workers)
     ]
     for p in procs:
@@ -564,7 +650,7 @@ def _run_parallel(tasks, workers, config, factory, replay_dir=None):
 def run_game_tasks(tasks, workers: int, config: EvalConfig,
                    evaluator_factory: Optional[EvaluatorFactory] = None,
                    replay_dir: Optional[str] = None,
-                   allow_differ=(), config_validator=None):
+                   allow_differ=(), config_validator=None, labels=None):
     """Execute tasks; return results sorted by (pairing_id, game_idx).
 
     workers<=1 runs in-process. workers>1 uses a spawn worker pool with a
@@ -593,5 +679,5 @@ def run_game_tasks(tasks, workers: int, config: EvalConfig,
     factory = evaluator_factory or _default_evaluator_factory
     workers = min(workers, len(tasks))
     if workers <= 1:
-        return _run_sequential(tasks, config, factory, replay_dir)
-    return _run_parallel(tasks, workers, config, factory, replay_dir)
+        return _run_sequential(tasks, config, factory, replay_dir, labels)
+    return _run_parallel(tasks, workers, config, factory, replay_dir, labels)

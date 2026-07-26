@@ -40,8 +40,26 @@ def out_root(tmp_path, monkeypatch):
 
 def test_schemas_are_versioned():
     assert prov.SCHEMA_VERSION == 1
-    assert proto.PROTOCOL_SCHEMA_VERSION == 1
-    assert proto.CONFIG_SCHEMA_VERSION == 1
+    assert proto.PROTOCOL_SCHEMA_VERSION == 2
+    # 2 since the Task 8 artifact-labelling audit: the config now states
+    # `scientific_interpretation_forbidden` explicitly instead of leaving it
+    # implied by `scientific`.
+    assert proto.CONFIG_SCHEMA_VERSION == 2
+
+
+def test_config_states_its_interpretation_status_explicitly(clean_tree):
+    """Every emitted config must say so itself, without the reader having to
+    know which run kinds are scientific. Task 8 audit finding."""
+    for run_kind, seed, games, forbidden in (
+            ("tooling_smoke", 20309000, 32, True),
+            ("development", 20310000, 1600, False)):
+        protocol = proto.build_protocol(
+            run_kind=run_kind, coefficient=None, base_seed=seed, games=games,
+            checkpoints={"a": CKPT})
+        config = proto.derive_config(protocol)
+        assert protocol["scientific_interpretation_forbidden"] is forbidden
+        assert config["scientific_interpretation_forbidden"] is forbidden
+        assert config["scientific"] is (not forbidden)
 
 
 def test_frozen_grid_batching_and_formula():
@@ -248,7 +266,7 @@ def _dev_protocol():
 
 def test_build_protocol_enforces_the_frozen_rules(clean_tree):
     doc = _dev_protocol()
-    assert doc["schema_version"] == 1 and doc["artifact_kind"] == "protocol"
+    assert doc["schema_version"] == 2 and doc["artifact_kind"] == "protocol"
     with pytest.raises(prov.ProtocolViolation, match="frozen grid"):
         proto.build_protocol(run_kind="development", coefficient=0.55,
                              base_seed=20310000, games=1600)
@@ -458,7 +476,7 @@ def test_protocol_sha1_is_canonical_not_insertion_ordered(clean_tree):
 
 # --- (3) schema versions and exact key sets --------------------------------
 
-@pytest.mark.parametrize("version", [0, 2, 999, None, "1"])
+@pytest.mark.parametrize("version", [0, 1, 999, None, "2"])
 def test_unsupported_protocol_schema_version_is_refused(clean_tree, version):
     with pytest.raises(prov.ProtocolViolation, match="schema_version"):
         proto.derive_config({**_dev_protocol(), "schema_version": version})
