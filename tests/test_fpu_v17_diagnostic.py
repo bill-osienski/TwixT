@@ -1002,7 +1002,7 @@ def _pair(tmp_path, mode, coefficient=None):
     doc = protocol.build_protocol(run_kind=mode, coefficient=coefficient,
                                   base_seed=base, games=games,
                                   checkpoints={v17.ANCHOR_ROLE: CKPT})
-    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
+    ppath, cpath = tmp_path / f"p_{mode}.json", tmp_path / f"c_{mode}.json"
     protocol.emit(ppath, doc)
     protocol.emit(cpath, protocol.derive_config(doc))
     return str(ppath), str(cpath)
@@ -1033,9 +1033,16 @@ def _chain_selector(_unused=None):
     return select
 
 
-def _fake_searcher(**cand):
+def _fake_searcher(pass_only=None, **cand):
+    """`pass_only` shapes rows so exactly that coefficient clears §§7.2-7.3,
+    which is what makes it the genuine smallest-passing selection."""
     def search(manifest_row, coefficient):
-        over = dict(cand) if (coefficient is not None and coefficient != 0.0) else {}
+        positive = coefficient is not None and coefficient != 0.0
+        if pass_only is not None:
+            over = ({"replies": 10, "eff_children": 70.0}
+                    if coefficient == pass_only else {})
+        else:
+            over = dict(cand) if positive else {}
         return row(manifest_row["canonical_sha1"], coefficient,
                    role=manifest_row["role"], side=manifest_row["side"],
                    ply_bucket=manifest_row["ply_bucket"], **over)
@@ -1055,30 +1062,88 @@ def _run(tmp_path, monkeypatch, mode, **over):
                   qualification_report=_qualification(tmp_path, mode, mpath),
                   selector=_chain_selector(mpath), searcher=_fake_searcher())
     kwargs.update(over)
-    if kwargs.get("mode") == "held_out" and "selected_coefficient" not in kwargs:
-        kwargs["selected_coefficient"] = _selected_coefficient(
-            tmp_path, kwargs.get("frozen_coefficient"))
+    if kwargs.get("mode") in ("held_out", "abcd") and \
+            "selected_coefficient" not in kwargs:
+        sel, sha1 = _selected_coefficient(tmp_path, monkeypatch,
+                                          kwargs.get("frozen_coefficient"))
+        kwargs["selected_coefficient"] = sel
+        pp, cp = _protocol_with_selection(
+            tmp_path, kwargs["mode"], kwargs.get("frozen_coefficient"), sha1)
+        kwargs["protocol_path"], kwargs["config_path"] = pp, cp
+    built = v17._build_diagnostic(**kwargs)
+    return built["artifact"] if isinstance(built, dict) and "artifact" in built \
+        else built
+
+
+def _emit_development(tmp_path, monkeypatch, coefficient):
+    """A REAL development artifact + its bound selection document.
+
+    The production emitter refuses injected implementations, so a test that
+    needs a development artifact must assemble one the same way
+    `run_diagnostic` does -- which is exactly why a stub cannot produce one on
+    the scientific path.
+    """
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    monkeypatch.setattr(fpu_provenance, "worktree_clean", lambda: True)
+    built = _run_builder(tmp_path, monkeypatch, "development",
+                         searcher=_fake_searcher(pass_only=coefficient)
+                         if coefficient is not None
+                         else _fake_searcher(replies=100))
+    art_path = tmp_path / "development_artifact.json"
+    protocol.emit(art_path, built["artifact"])
+    table = built["pending_selection"]["table"]
+    doc = v17.build_selected_coefficient(
+        coefficient=built["artifact"]["coefficient"], table=table,
+        development_artifact=str(art_path),
+        development_artifact_sha1=fpu_provenance.file_sha1(str(art_path)),
+        selection_context=built["pending_selection"]["selection_context"])
+    return art_path, doc
+
+
+def _run_builder(tmp_path, monkeypatch, mode, **over):
+    """The raw builder result, including `pending_selection`."""
+    coefficient = over.pop("frozen_coefficient", None)
+    ppath, cpath = _pair(tmp_path, mode, coefficient)
+    mpath = _manifest(tmp_path, mode)
+    kwargs = dict(mode=mode, manifest_path=str(mpath), checkpoint=CKPT,
+                  out_path=str(tmp_path / f"{mode}.json"),
+                  seed_base=SEEDS[mode][0], frozen_coefficient=coefficient,
+                  source_index=str(_source_index(tmp_path, mode)),
+                  protocol_path=ppath, config_path=cpath,
+                  qualification_report=_qualification(tmp_path, mode, mpath),
+                  selector=_chain_selector(), searcher=_fake_searcher())
+    kwargs.update(over)
     return v17._build_diagnostic(**kwargs)
 
 
-def _selected_coefficient(tmp_path, coefficient, **over):
-    """Development's immutable Stage-2 artifact, in its real shape."""
-    table = {r: v17.GateResult(r, r == coefficient, (), {})
-             for r in prov.GRID}
-    doc = v17.build_selected_coefficient(
-        coefficient=coefficient, table=table,
-        selection_context={"manifest_sha1": "m" * 40, "n_rows": 32})
+def _selected_coefficient(tmp_path, monkeypatch, coefficient, **over):
+    """Returns (path, sha1) of a selection document bound to a real
+    development artifact."""
+    _art, doc = _emit_development(tmp_path, monkeypatch, coefficient)
     doc.update(over)
     path = tmp_path / "selected_coefficient.json"
     path.write_text(json.dumps(doc, sort_keys=True))
-    return str(path)
+    return str(path), fpu_provenance.file_sha1(str(path))
+
+
+def _protocol_with_selection(tmp_path, mode, coefficient, selection_sha1):
+    """A later-stage protocol that PRECOMMITS the selection artifact."""
+    base, games = SEEDS[mode] if mode in SEEDS else (None, None)
+    doc = protocol.build_protocol(
+        run_kind=mode, coefficient=coefficient, base_seed=base, games=games,
+        checkpoints={v17.ANCHOR_ROLE: CKPT},
+        extra={"selected_coefficient_sha1": selection_sha1})
+    path = tmp_path / f"protocol_{mode}.json"
+    cfg = tmp_path / f"config_{mode}.json"
+    protocol.emit(path, doc)
+    protocol.emit(cfg, protocol.derive_config(doc))
+    return str(path), str(cfg)
 
 
 def test_run_diagnostic_end_to_end_emits_a_complete_artifact(clean_tree, tmp_path,
                                                              monkeypatch):
     art = _run(tmp_path, monkeypatch, "development",
                searcher=_fake_searcher(replies=10, eff_children=70.0))
-    assert (tmp_path / "development.json").exists()
     assert art["n_rows"] == len(art["rows"]) == 32 * 7
     assert sorted(art["gates"]) == [str(g) for g in sorted(prov.GRID)]
     assert art["coefficient"] == 0.15
@@ -1418,17 +1483,13 @@ def _abcd_searcher(candidate_value=-0.3):
 def test_abcd_stage_is_operational_end_to_end(clean_tree, tmp_path, monkeypatch):
     """Finding 1: abcd previously searched and then emitted gates={}."""
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
-    doc = protocol.build_protocol(run_kind="abcd", coefficient=0.25,
-                                  checkpoints={"anchor": CKPT})
-    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
-    protocol.emit(ppath, doc)
-    protocol.emit(cpath, protocol.derive_config(doc))
+    sel, sel_sha1 = _selected_coefficient(tmp_path, monkeypatch, 0.25)
+    ppath, cpath = _protocol_with_selection(tmp_path, "abcd", 0.25, sel_sha1)
     art = v17._build_diagnostic(
         mode="abcd", manifest_path="", checkpoint=CKPT,
-        selected_coefficient=_selected_coefficient(tmp_path, 0.25),
+        selected_coefficient=sel,
         out_path=str(tmp_path / "abcd.json"), seed_base=0,
-        frozen_coefficient=0.25, protocol_path=str(ppath),
-        config_path=str(cpath), searcher=_abcd_searcher())
+        frozen_coefficient=0.25, protocol_path=ppath, config_path=cpath, searcher=_abcd_searcher())["artifact"]
     assert art["gates"]["all_passed"] is True
     for g in v17.ABCD_GATES:
         assert art["gates"][g]["passed"] is True
@@ -1439,11 +1500,8 @@ def test_abcd_stage_is_operational_end_to_end(clean_tree, tmp_path, monkeypatch)
 
 def test_abcd_stage_invalidates_on_shipped_drift(clean_tree, tmp_path, monkeypatch):
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
-    doc = protocol.build_protocol(run_kind="abcd", coefficient=0.25,
-                                  checkpoints={"anchor": CKPT})
-    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
-    protocol.emit(ppath, doc)
-    protocol.emit(cpath, protocol.derive_config(doc))
+    sel, sel_sha1 = _selected_coefficient(tmp_path, monkeypatch, 0.25)
+    ppath, cpath = _protocol_with_selection(tmp_path, "abcd", 0.25, sel_sha1)
     base = _abcd_searcher()
 
     def drifting(case, coefficient):
@@ -1454,9 +1512,9 @@ def test_abcd_stage_invalidates_on_shipped_drift(clean_tree, tmp_path, monkeypat
     with pytest.raises(prov.ProtocolViolation, match="frozen baseline"):
         v17._build_abcd_stage(
             coefficient=0.25, checkpoint=CKPT,
-            selected_coefficient=_selected_coefficient(tmp_path, 0.25),
-            out_path=str(tmp_path / "o.json"), protocol_path=str(ppath),
-            config_path=str(cpath), searcher=drifting)
+            selected_coefficient=sel,
+            out_path=str(tmp_path / "o.json"), protocol_path=ppath,
+            config_path=cpath, searcher=drifting)
 
 
 def test_abcd_canonical_cases_match_the_frozen_cardinalities():
@@ -1530,17 +1588,13 @@ def test_task1_freeze_is_authenticated_by_sha1(tmp_path):
 def test_abcd_persists_every_paired_case(clean_tree, tmp_path, monkeypatch):
     """216 searches previously vanished behind four aggregate verdicts."""
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
-    doc = protocol.build_protocol(run_kind="abcd", coefficient=0.25,
-                                  checkpoints={"anchor": CKPT})
-    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
-    protocol.emit(ppath, doc)
-    protocol.emit(cpath, protocol.derive_config(doc))
+    sel, sel_sha1 = _selected_coefficient(tmp_path, monkeypatch, 0.25)
+    ppath, cpath = _protocol_with_selection(tmp_path, "abcd", 0.25, sel_sha1)
     art = v17._build_diagnostic(
         mode="abcd", manifest_path="", checkpoint=CKPT,
-        selected_coefficient=_selected_coefficient(tmp_path, 0.25),
+        selected_coefficient=sel,
         out_path=str(tmp_path / "abcd.json"), seed_base=0,
-        frozen_coefficient=0.25, protocol_path=str(ppath),
-        config_path=str(cpath), searcher=_abcd_searcher())
+        frozen_coefficient=0.25, protocol_path=ppath, config_path=cpath, searcher=_abcd_searcher())["artifact"]
     assert art["n_cases"] == len(art["cases"]) == 108
     for case in art["cases"]:
         assert set(case) == set(v17.ABCD_CASE_FIELDS)
@@ -1555,17 +1609,13 @@ def test_abcd_replay_identity_hashes_replays_not_probe_csvs(clean_tree, tmp_path
     """replay_data_sha1 previously fingerprinted the four canonical CSVs while
     the replay bytes actually read stayed unbound."""
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
-    doc = protocol.build_protocol(run_kind="abcd", coefficient=0.25,
-                                  checkpoints={"anchor": CKPT})
-    ppath, cpath = tmp_path / "p.json", tmp_path / "c.json"
-    protocol.emit(ppath, doc)
-    protocol.emit(cpath, protocol.derive_config(doc))
+    sel, sel_sha1 = _selected_coefficient(tmp_path, monkeypatch, 0.25)
+    ppath, cpath = _protocol_with_selection(tmp_path, "abcd", 0.25, sel_sha1)
     art = v17._build_diagnostic(
         mode="abcd", manifest_path="", checkpoint=CKPT,
-        selected_coefficient=_selected_coefficient(tmp_path, 0.25),
+        selected_coefficient=sel,
         out_path=str(tmp_path / "abcd.json"), seed_base=0,
-        frozen_coefficient=0.25, protocol_path=str(ppath),
-        config_path=str(cpath), searcher=_abcd_searcher())
+        frozen_coefficient=0.25, protocol_path=ppath, config_path=cpath, searcher=_abcd_searcher())["artifact"]
     replays = sorted({c["replay_path"] for c in art["cases"]})
     assert all(p.endswith(".json") and "probe_cases" not in p for p in replays)
     assert art["provenance"]["identities"]["replay_data_sha1"] == \
@@ -2383,52 +2433,54 @@ def test_held_out_coefficient_must_equal_the_selected_one(clean_tree, tmp_path,
                                                           monkeypatch):
     monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
     stage1 = _selector_chain(tmp_path, "development")
+    sel, sha1 = _selected_coefficient(tmp_path, monkeypatch, 0.25)
+    pp, cp = _protocol_with_selection(tmp_path, "held_out", 0.45, sha1)
     with pytest.raises(prov.ProtocolViolation, match="!= development's selected"):
         _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.45,
-             selected_coefficient=_selected_coefficient(tmp_path, 0.25),
+             selected_coefficient=sel, protocol_path=pp, config_path=cp,
              stage1_manifest=str(stage1["manifest"]),
              stage1_source_index=str(stage1["index"]),
              stage1_post_screen_report=str(stage1["report"]),
              searcher=_fake_searcher(replies=70))
 
 
-def test_selected_coefficient_rule_is_rechecked_not_trusted(tmp_path):
+def test_selected_coefficient_rule_is_rechecked_not_trusted(tmp_path, monkeypatch):
     """The artifact records the whole grid table, so the smallest-passing rule
     is re-applied rather than believed."""
-    table = {r: v17.GateResult(r, r in (0.25, 0.45), (), {}) for r in prov.GRID}
-    doc = v17.build_selected_coefficient(coefficient=0.25, table=table,
-                                         selection_context={})
+    art, doc = _emit_development(tmp_path, monkeypatch, 0.25)
     path = tmp_path / "sel.json"
     path.write_text(json.dumps(doc, sort_keys=True))
+    good = fpu_provenance.file_sha1(str(path))
     assert v17.authenticate_selected_coefficient(
-        str(path), coefficient=0.25)["coefficient"] == 0.25
-    # claims 0.45 while 0.25 also passed -> not the smallest
+        str(path), coefficient=0.25, expected_sha1=good)["coefficient"] == 0.25
+    # a claim that disagrees with the recomputed selection
     doc["coefficient"] = 0.45
     path.write_text(json.dumps(doc, sort_keys=True))
-    with pytest.raises(prov.ProtocolViolation, match="selection rule was not"):
-        v17.authenticate_selected_coefficient(str(path), coefficient=0.45)
+    with pytest.raises(prov.ProtocolViolation, match="recomputing"):
+        v17.authenticate_selected_coefficient(
+            str(path), coefficient=0.45,
+            expected_sha1=fpu_provenance.file_sha1(str(path)))
 
 
-def test_no_passing_coefficient_blocks_every_later_stage(tmp_path):
-    table = {r: v17.GateResult(r, False, ("x",), {}) for r in prov.GRID}
-    doc = v17.build_selected_coefficient(coefficient=None, table=table,
-                                         selection_context={})
+def test_no_passing_coefficient_blocks_every_later_stage(tmp_path, monkeypatch):
+    art, doc = _emit_development(tmp_path, monkeypatch, None)
+    assert doc["coefficient"] is None
     path = tmp_path / "none.json"
     path.write_text(json.dumps(doc, sort_keys=True))
     with pytest.raises(prov.ProtocolViolation, match="selected no coefficient"):
-        v17.authenticate_selected_coefficient(str(path), coefficient=0.25)
+        v17.authenticate_selected_coefficient(
+            str(path), coefficient=0.25,
+            expected_sha1=fpu_provenance.file_sha1(str(path)))
 
 
-def test_development_emits_the_immutable_selection_artifact(clean_tree, tmp_path,
-                                                            monkeypatch):
-    art = _run(tmp_path, monkeypatch, "development",
-               searcher=_fake_searcher(replies=10, eff_children=70.0))
-    emitted = tmp_path / "selected_coefficient.json"
-    assert emitted.exists()
-    doc = json.loads(emitted.read_text())
-    assert doc["coefficient"] == art["coefficient"] == 0.15
+def test_selection_artifact_binds_the_development_artifact(clean_tree, tmp_path,
+                                                           monkeypatch):
+    art_path, doc = _emit_development(tmp_path, monkeypatch, 0.25)
+    assert doc["coefficient"] == 0.25
     assert sorted(float(k) for k in doc["gates"]) == sorted(prov.GRID)
     assert doc["selection_context"]["manifest_sha1"]
+    assert doc["development_artifact_sha1"] == \
+        fpu_provenance.file_sha1(str(art_path))
 
 
 @pytest.mark.parametrize("field", ["n_legal", "root_value_stm",
@@ -2494,3 +2546,133 @@ def test_tooling_smoke_may_still_inject(clean_tree, tmp_path, monkeypatch):
                            checkpoint=CKPT, out_path=str(tmp_path / "o.json"),
                            seed_base=20309000, searcher=_fake_searcher())
     assert "injected" not in str(excinfo.value)
+
+
+# ---------------------------------------------------------------------------
+# Adversarial round 10: stub evidence, self-attested selection, exact schema.
+# ---------------------------------------------------------------------------
+
+def test_builder_writes_nothing_at_all(clean_tree, tmp_path, monkeypatch):
+    """`_build_diagnostic` previously emitted selected_coefficient.json during
+    development, so a stub-driven run produced evidence that could authorize
+    held-out or A/B/C/D."""
+    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
+    before = {p.name for p in tmp_path.iterdir()}
+    built = _run_builder(tmp_path, monkeypatch, "development",
+                         searcher=_fake_searcher(pass_only=0.25))
+    after = {p.name for p in tmp_path.iterdir()}
+    assert "selected_coefficient.json" not in after
+    assert "development.json" not in after
+    # only fixture inputs appeared, never an emitted artifact
+    assert not {n for n in after - before if n.endswith(".json")} & {
+        "selected_coefficient.json", "development.json"}
+    assert built["pending_selection"] is not None
+
+
+def test_a_fabricated_selection_document_is_refused(tmp_path, monkeypatch):
+    """Your attack: a from-scratch file claiming one 0.45 pass, a forged
+    manifest_sha1 and n_rows=0."""
+    forged = tmp_path / "forged.json"
+    doc = {"schema_version": 1, "artifact_kind": "selected_coefficient",
+           "coefficient": 0.45, "grid": list(prov.GRID),
+           "selection_rule": "smallest coefficient passing §§7.2-7.3",
+           "gates": {str(r): {"passed": r == 0.45, "reasons": []}
+                     for r in prov.GRID},
+           "development_artifact": str(tmp_path / "nope.json"),
+           "development_artifact_sha1": "0" * 40,
+           "selection_context": {"manifest_sha1": "forged", "n_rows": 0}}
+    forged.write_text(json.dumps(doc, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="not readable"):
+        v17.authenticate_selected_coefficient(
+            str(forged), coefficient=0.45,
+            expected_sha1=fpu_provenance.file_sha1(str(forged)))
+
+
+def test_selection_must_be_recomputed_from_persisted_rows(tmp_path, monkeypatch):
+    """Pointing at a real development artifact but claiming a different winner
+    is caught by recomputation, not by the document's own assertion."""
+    art_path, doc = _emit_development(tmp_path, monkeypatch, 0.25)
+    doc["gates"] = {str(r): {"passed": r == 0.45, "reasons": []}
+                    for r in prov.GRID}
+    doc["coefficient"] = 0.45
+    path = tmp_path / "claimed.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="recomputing"):
+        v17.authenticate_selected_coefficient(
+            str(path), coefficient=0.45,
+            expected_sha1=fpu_provenance.file_sha1(str(path)))
+
+
+def test_development_artifact_bytes_are_bound(tmp_path, monkeypatch):
+    art_path, doc = _emit_development(tmp_path, monkeypatch, 0.25)
+    doc["development_artifact_sha1"] = "0" * 40
+    path = tmp_path / "rebound.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    with pytest.raises(prov.ProtocolViolation, match="selection artifact records"):
+        v17.authenticate_selected_coefficient(
+            str(path), coefficient=0.25,
+            expected_sha1=fpu_provenance.file_sha1(str(path)))
+
+
+def test_protocol_must_precommit_the_selection_sha1(tmp_path, monkeypatch):
+    """A later stage may not choose its own authorization at run time."""
+    sel, sha1 = _selected_coefficient(tmp_path, monkeypatch, 0.25)
+    doc = protocol.build_protocol(run_kind="abcd", coefficient=0.25,
+                                  checkpoints={v17.ANCHOR_ROLE: CKPT})
+    bare = tmp_path / "bare_protocol.json"
+    protocol.emit(bare, doc)
+    with pytest.raises(prov.ProtocolViolation, match="does not precommit"):
+        v17._precommitted_selection_sha1(str(bare))
+    pp, _cp = _protocol_with_selection(tmp_path, "abcd", 0.25, sha1)
+    assert v17._precommitted_selection_sha1(pp) == sha1
+
+
+def test_substituted_selection_artifact_is_refused(tmp_path, monkeypatch):
+    sel, sha1 = _selected_coefficient(tmp_path, monkeypatch, 0.25)
+    other = tmp_path / "other_selection.json"
+    other.write_text(pathlib.Path(sel).read_text() + "\n")
+    with pytest.raises(prov.ProtocolViolation, match="protocol precommitted"):
+        v17.authenticate_selected_coefficient(str(other), coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_reversed_manifest_order_is_refused():
+    """Row order is part of the producer's output."""
+    rows = list(csv.DictReader(
+        open(f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", newline="")))
+
+    def genuine(screen_meta, cfg, *, forbidden, screen_csv_path):
+        return [dict(r) for r in rows], {}
+    with pytest.raises(prov.ProtocolViolation, match="row order"):
+        v17.rederive_selection(
+            list(reversed(rows)),
+            selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
+            screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv",
+            selector=genuine)
+
+
+def test_unproduced_extra_column_is_refused():
+    rows = list(csv.DictReader(
+        open(f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", newline="")))
+    widened = [{**r, "forged_column": "x"} for r in rows]
+
+    def genuine(screen_meta, cfg, *, forbidden, screen_csv_path):
+        return [dict(r) for r in rows], {}
+    with pytest.raises(prov.ProtocolViolation, match="unproduced extras"):
+        v17.rederive_selection(
+            widened, selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
+            screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv",
+            selector=genuine)
+
+
+def test_exact_schema_and_order_are_reported():
+    rows = list(csv.DictReader(
+        open(f"{PRODUCTION}/fpu_dev_corpus_v2_manifest.csv", newline="")))
+
+    def genuine(screen_meta, cfg, *, forbidden, screen_csv_path):
+        return [dict(r) for r in rows], {}
+    out = v17.rederive_selection(
+        rows, selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
+        screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv", selector=genuine)
+    assert out["order_compared"] is True
+    assert set(out["compared_fields"]) == set(rows[0]) and len(rows[0]) == 15

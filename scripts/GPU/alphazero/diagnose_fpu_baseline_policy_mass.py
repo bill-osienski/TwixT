@@ -966,11 +966,14 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
 
 SELECTED_COEFFICIENT_KEYS = ("schema_version", "artifact_kind", "coefficient",
                              "grid", "gates", "selection_rule",
-                             "selection_context")
+                             "development_artifact",
+                             "development_artifact_sha1", "selection_context")
 
 
 def build_selected_coefficient(*, coefficient: Optional[float],
                                table: Mapping[float, "GateResult"],
+                               development_artifact: str,
+                               development_artifact_sha1: str,
                                selection_context: Mapping[str, Any]
                                ) -> Dict[str, Any]:
     """The immutable Stage-2 result held-out and A/B/C/D must be bound to.
@@ -986,12 +989,15 @@ def build_selected_coefficient(*, coefficient: Optional[float],
         "selection_rule": "smallest coefficient passing §§7.2-7.3",
         "gates": {str(r): {"passed": g.passed, "reasons": list(g.reasons)}
                   for r, g in sorted(table.items())},
+        "development_artifact": development_artifact,
+        "development_artifact_sha1": development_artifact_sha1,
         "selection_context": dict(selection_context),
     }
 
 
 def authenticate_selected_coefficient(path: Optional[str], *,
-                                      coefficient: Optional[float]
+                                      coefficient: Optional[float],
+                                      expected_sha1: Optional[str] = None
                                       ) -> Dict[str, Any]:
     """§7.3/§8: held-out and A/B/C/D run the coefficient development SELECTED.
 
@@ -1003,6 +1009,17 @@ def authenticate_selected_coefficient(path: Optional[str], *,
         raise prov.ProtocolViolation(
             "a later stage must be bound to development's immutable "
             f"selected_coefficient artifact; got {path!r}")
+    # The later stage's PROTOCOL precommits this artifact's SHA-1, so a
+    # fabricated file cannot be substituted at run time.
+    actual = fpu_provenance.file_sha1(path)
+    if not expected_sha1:
+        raise prov.ProtocolViolation(
+            "the later-stage protocol must precommit the selected-coefficient "
+            "artifact's SHA-1")
+    if actual != expected_sha1:
+        raise prov.ProtocolViolation(
+            f"selected-coefficient artifact {path} has SHA-1 {actual}, but its "
+            f"protocol precommitted {expected_sha1}")
     with open(path) as f:
         doc = json.load(f)
     missing = [k for k in SELECTED_COEFFICIENT_KEYS if k not in doc]
@@ -1016,13 +1033,48 @@ def authenticate_selected_coefficient(path: Optional[str], *,
         raise prov.ProtocolViolation(
             f"selected-coefficient artifact records grid {doc['grid']}, not the "
             f"frozen {list(prov.GRID)}")
-    passed = sorted(float(r) for r, g in doc["gates"].items() if g["passed"])
-    expected = passed[0] if passed else None
-    if doc["coefficient"] != expected:
+    if sorted(float(r) for r in doc["gates"]) != sorted(prov.GRID):
+        raise prov.ProtocolViolation(
+            f"selected-coefficient gate table covers "
+            f"{sorted(doc['gates'])}, not the whole frozen grid")
+    # RECOMPUTE the table and the selection from the development artifact's own
+    # persisted rows. Its internal claims are not evidence: a fabricated file
+    # with one asserted pass authenticated before this.
+    dev_path = doc["development_artifact"]
+    if not Path(dev_path).is_file():
+        raise prov.ProtocolViolation(
+            f"development artifact {dev_path} is not readable, so the selection "
+            f"cannot be recomputed")
+    dev_actual = fpu_provenance.file_sha1(dev_path)
+    if dev_actual != doc["development_artifact_sha1"]:
+        raise prov.ProtocolViolation(
+            f"development artifact {dev_path} has SHA-1 {dev_actual}, but the "
+            f"selection artifact records {doc['development_artifact_sha1']}")
+    with open(dev_path) as f:
+        development = json.load(f)
+    if development.get("mode") != "development":
+        raise prov.ProtocolViolation(
+            f"{dev_path} is a {development.get('mode')!r} artifact, not development")
+    dev_rows = development.get("rows") or []
+    if not dev_rows:
+        raise prov.ProtocolViolation(
+            f"development artifact {dev_path} persists no rows, so the selection "
+            f"cannot be recomputed")
+    shipped_lockin = sum(1 for r in dev_rows if r["coefficient"] is None
+                         and r["role"] == "target" and r["lock_in"])
+    recomputed, table = select_smallest_passing(dev_rows,
+                                                shipped_lockin=shipped_lockin)
+    if recomputed != doc["coefficient"]:
         raise prov.ProtocolViolation(
             f"selected-coefficient artifact records {doc['coefficient']!r}, but "
-            f"the smallest passing coefficient in its own table is "
-            f"{expected!r}; the selection rule was not applied")
+            f"recomputing §§7.2-7.3 from the development artifact's own rows "
+            f"selects {recomputed!r}")
+    for r, gate in table.items():
+        claimed = doc["gates"].get(str(r))
+        if claimed is None or claimed["passed"] != gate.passed:
+            raise prov.ProtocolViolation(
+                f"selected-coefficient gate table disagrees with the recomputed "
+                f"verdict at r={r}")
     if doc["coefficient"] is None:
         raise prov.ProtocolViolation(
             "development selected no coefficient, so no later stage may run")
@@ -1030,8 +1082,11 @@ def authenticate_selected_coefficient(path: Optional[str], *,
         raise prov.ProtocolViolation(
             f"runtime coefficient {coefficient!r} != development's selected "
             f"{doc['coefficient']!r}")
-    return {"path": path, "sha1": fpu_provenance.file_sha1(path),
+    return {"path": path, "sha1": actual,
             "coefficient": doc["coefficient"],
+            "development_artifact": dev_path,
+            "development_artifact_sha1": dev_actual,
+            "recomputed_from_rows": len(dev_rows),
             "selection_context": doc["selection_context"]}
 
 
@@ -1442,6 +1497,23 @@ def compute_disjointness(manifest_rows: Sequence[Mapping[str, Any]], *,
             "checked_games": len(mine_games)}
 
 
+def _precommitted_selection_sha1(protocol_path: Optional[str]) -> Optional[str]:
+    """§8/§9: a later stage's protocol must name the selected-coefficient
+    artifact it is bound to, so the binding is fixed before the run rather
+    than chosen at run time."""
+    if not protocol_path:
+        raise prov.ProtocolViolation(
+            "a later stage needs its protocol to precommit the "
+            "selected-coefficient SHA-1")
+    doc = protocol.load_json(protocol_path)
+    want = (doc.get("extra") or {}).get("selected_coefficient_sha1")
+    if not want:
+        raise prov.ProtocolViolation(
+            "the protocol does not precommit a selected_coefficient_sha1; a "
+            "later stage may not choose its own authorization at run time")
+    return want
+
+
 def _canonical_cell(value: Any) -> str:
     """CSV round-trips every value as text, so compare canonical string forms.
     Numeric cells are compared by value, not by formatting."""
@@ -1510,10 +1582,14 @@ def rederive_selection(manifest_rows: Sequence[Mapping[str, Any]], *,
             f"manifest has {len(manifest_rows)} rows, the deterministic "
             f"selection produced {len(derived)}")
     fields = tuple(derived[0]) if derived else ()
-    missing = sorted(set(fields) - set(manifest_rows[0] if manifest_rows else {}))
-    if missing:
+    # EXACT schema: no missing columns and no unproduced extras.
+    actual_fields = tuple(manifest_rows[0]) if manifest_rows else ()
+    if set(actual_fields) != set(fields):
         raise prov.ProtocolViolation(
-            f"manifest is missing selector-produced columns {missing}")
+            f"manifest schema {sorted(actual_fields)} != the selector-produced "
+            f"{sorted(fields)}; missing "
+            f"{sorted(set(fields) - set(actual_fields))}, unproduced extras "
+            f"{sorted(set(actual_fields) - set(fields))}")
 
     def order(row):
         return (str(row["canonical_position_sha1"]), int(row["game_idx"]),
@@ -1531,18 +1607,25 @@ def rederive_selection(manifest_rows: Sequence[Mapping[str, Any]], *,
             f"{len(never_selected)} row(s) were never selected "
             f"(e.g. {never_selected[:2]}), {len(absent)} selected row(s) are "
             f"absent; an eligible subset is not the selector's output")
-    for key_, want in want_by_key.items():
-        got = got_by_key[key_]
+    # EXACT ORDER: the producer writes rows in the order the deterministic
+    # selector emits them, so a reordered manifest is not that producer's
+    # output even when every row is present.
+    for index, (want, got) in enumerate(zip(derived, manifest_rows)):
+        if order(want) != order(got):
+            raise prov.ProtocolViolation(
+                f"manifest row {index} is {order(got)}, but the deterministic "
+                f"selection produced {order(want)} at that position; the row "
+                f"order is part of the producer's output")
         for field in fields:
             # the manifest is CSV, so compare canonical string forms
             if _canonical_cell(want[field]) != _canonical_cell(got[field]):
                 raise prov.ProtocolViolation(
-                    f"manifest row {key_} field {field!r} is {got[field]!r}, "
-                    f"but the deterministic selection produced {want[field]!r}; "
-                    f"an eligible subset with edited producer fields is not the "
-                    f"selector's output")
+                    f"manifest row {order(got)} field {field!r} is "
+                    f"{got[field]!r}, but the deterministic selection produced "
+                    f"{want[field]!r}; an eligible subset with edited producer "
+                    f"fields is not the selector's output")
     return {"rederived_rows": len(derived), "compared_fields": sorted(fields),
-            "selector_info_keys": sorted(info)}
+            "order_compared": True, "selector_info_keys": sorted(info)}
 
 
 def authenticate_qualification(manifest_path: str, *, mode: str,
@@ -1858,7 +1941,8 @@ def _build_abcd_stage(*, coefficient: float, checkpoint: str, out_path: str,
     applies all four §9 verdicts."""
     _require_positive_grid_coefficient(coefficient, "A/B/C/D")
     abcd_selection = authenticate_selected_coefficient(
-        selected_coefficient, coefficient=coefficient)
+        selected_coefficient, coefficient=coefficient,
+        expected_sha1=_precommitted_selection_sha1(protocol_path))
     prov.validate_batching(prov.BATCHING)
     prov.verify_frozen_design()
     prov.require_clean_worktree("abcd")
@@ -2013,9 +2097,24 @@ def run_diagnostic(*, mode: str, selector=None, searcher=None, **kwargs):
             f"run_kind {mode!r} is scientific; injected selector/searcher "
             f"implementations are refused because an emitted artifact must come "
             f"from the real ones. Use _build_diagnostic for non-emitting runs.")
-    artifact = _build_diagnostic(mode=mode, selector=selector,
-                                 searcher=searcher, **kwargs)
-    protocol.emit(kwargs["out_path"], artifact)
+    built = _build_diagnostic(mode=mode, selector=selector,
+                              searcher=searcher, **kwargs)
+    artifact = built["artifact"] if isinstance(built, dict) and \
+        "artifact" in built else built
+    out_path = kwargs["out_path"]
+    protocol.emit(out_path, artifact)
+    pending = (built or {}).get("pending_selection") if isinstance(built, dict) \
+        else None
+    if pending is not None:
+        # Emitted only here, and only AFTER the development artifact it binds,
+        # so its recorded SHA-1 is the artifact actually on disk.
+        selection = build_selected_coefficient(
+            coefficient=artifact["coefficient"], table=pending["table"],
+            development_artifact=str(out_path),
+            development_artifact_sha1=fpu_provenance.file_sha1(str(out_path)),
+            selection_context=pending["selection_context"])
+        protocol.emit(str(Path(out_path).with_name("selected_coefficient.json")),
+                      selection)
     return artifact
 
 
@@ -2040,11 +2139,13 @@ def _build_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
         if not (protocol_path and config_path):
             raise prov.ProtocolViolation(
                 "abcd must run against a verified protocol/config pair")
-        return _build_abcd_stage(
+        # same shape as the other modes, so no caller special-cases abcd
+        return {"artifact": _build_abcd_stage(
             coefficient=frozen_coefficient, checkpoint=checkpoint,
             out_path=out_path, protocol_path=protocol_path,
             config_path=config_path, searcher=searcher,
-            selected_coefficient=selected_coefficient)
+            selected_coefficient=selected_coefficient),
+            "pending_selection": None}
     pre = preflight(mode=mode, manifest_path=manifest_path, checkpoint=checkpoint,
                     out_path=out_path, source_index=source_index,
                     frozen_coefficient=frozen_coefficient,
@@ -2066,27 +2167,21 @@ def _build_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
     gates: Dict[str, Any] = {}
     selected = frozen_coefficient
     selection_binding = None
+    pending_selection: Optional[Dict[str, Any]] = None
     if mode in ("held_out", "abcd"):
         selection_binding = authenticate_selected_coefficient(
-            selected_coefficient, coefficient=frozen_coefficient)
+            selected_coefficient, coefficient=frozen_coefficient,
+            expected_sha1=_precommitted_selection_sha1(protocol_path))
     if mode == "development":
         selected, table = select_smallest_passing(rows, shipped_lockin=shipped_lockin)
         gates = {str(k): {"passed": v.passed, "reasons": list(v.reasons),
                           "metrics": v.metrics} for k, v in table.items()}
-        # the immutable Stage-2 result every later stage must be bound to
-        selection_artifact = build_selected_coefficient(
-            coefficient=selected, table=table,
-            selection_context={"manifest_sha1": fpu_provenance.file_sha1(
-                                   manifest_path),
-                               "protocol_sha1": (
-                                   protocol.protocol_sha1(
-                                       protocol.load_json(protocol_path))
-                                   if protocol_path else None),
-                               "checkpoint_sha1": fpu_provenance.file_sha1(
-                                   checkpoint),
-                               "n_rows": len(rows)})
-        protocol.emit(str(Path(out_path).with_name("selected_coefficient.json")),
-                      selection_artifact)
+        pending_selection = {"table": table, "selection_context": {
+            "manifest_sha1": fpu_provenance.file_sha1(manifest_path),
+            "protocol_sha1": (protocol.protocol_sha1(
+                protocol.load_json(protocol_path)) if protocol_path else None),
+            "checkpoint_sha1": fpu_provenance.file_sha1(checkpoint),
+            "n_rows": len(rows)}}
     elif mode == "held_out":
         v = heldout_verdict(rows, frozen_coefficient, shipped_lockin=shipped_lockin)
         gates = {"held_out": {"passed": v.passed, "reasons": list(v.reasons),
@@ -2111,8 +2206,10 @@ def _build_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
         replay_paths=pre["replay_paths"], source_files=pre["source_files"],
         protocol_sha1=(protocol.protocol_sha1(protocol.load_json(protocol_path))
                        if protocol_path else None))
-    protocol.emit(out_path, artifact)
-    return artifact
+    # The builder EMITS NOTHING. `run_diagnostic` is the only writer, and it
+    # refuses injected implementations -- so no stub can produce an artifact
+    # that authorizes a later stage.
+    return {"artifact": artifact, "pending_selection": pending_selection}
 
 
 def _real_searcher(checkpoint: str, seed_base: int):        # pragma: no cover
