@@ -4464,3 +4464,23 @@ def test_schema_3_requires_an_exact_boolean(bad):
     """`1`/`0` would satisfy a truthiness check and persist as a number."""
     with pytest.raises(ValueError, match="must be a bool"):
         build_protocol(_schema3_params(**{SCIENTIFIC_INTERPRETATION_KEY: bad}))
+
+
+@pytest.mark.parametrize("run_kind,expected", [
+    ("tooling_smoke", "forbidden"),
+    ("production", "allowed"),
+    ("development", "allowed"),
+    ("held_out", "allowed"),
+])
+def test_gen_command_interpretation_flag_agrees_with_the_run_kind(run_kind,
+                                                                 expected):
+    """The emitted command must be EXECUTABLE: eval_checkpoint_match refuses a
+    --scientific-interpretation that contradicts its --run-kind, so a hardcoded
+    flag here yields a command that cannot run. Caught in Task 9 when a
+    development protocol emitted `forbidden`."""
+    params = _schema3_params(run_kind=run_kind, **{
+        SCIENTIFIC_INTERPRETATION_KEY: interpretation_forbidden_for(run_kind)})
+    argv = gen_command(build_protocol(params))
+    i = argv.index("--scientific-interpretation")
+    assert argv[i + 1] == expected
+    assert argv[argv.index("--run-kind") + 1] == run_kind

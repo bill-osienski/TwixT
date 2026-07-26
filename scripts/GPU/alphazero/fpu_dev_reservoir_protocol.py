@@ -1076,9 +1076,12 @@ def gen_command(protocol: Mapping[str, Any]) -> List[str]:
     # than left to the operator to remember on the command line.
     if protocol.get("run_kind"):
         argv += ["--run-kind", str(protocol["run_kind"])]
+        # Derived from the ONE policy, never a literal run-kind comparison:
+        # the CLI refuses a flag that contradicts its run kind, so a hardcoded
+        # value here produces a command that cannot execute.
         argv += ["--scientific-interpretation",
-                 "allowed" if protocol["run_kind"] == "production"
-                 else "forbidden"]
+                 "forbidden" if interpretation_forbidden_for(protocol["run_kind"])
+                 else "allowed"]
     if protocol["save_eval_replays"]:
         argv.append("--save-eval-replays")
     argv += ["--replay-dir", str(protocol["replay_dir"])]
