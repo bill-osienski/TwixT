@@ -2582,7 +2582,8 @@ def test_a_fabricated_selection_document_is_refused(tmp_path, monkeypatch):
            "development_artifact_sha1": "0" * 40,
            "selection_context": {"manifest_sha1": "forged", "n_rows": 0}}
     forged.write_text(json.dumps(doc, sort_keys=True))
-    with pytest.raises(prov.ProtocolViolation, match="not readable"):
+    # refused at schema validation, before the referenced artifact is even read
+    with pytest.raises(prov.ProtocolViolation, match="selection_context keys"):
         v17.authenticate_selected_coefficient(
             str(forged), coefficient=0.45,
             expected_sha1=fpu_provenance.file_sha1(str(forged)))
@@ -2784,3 +2785,112 @@ def test_reversed_header_order_is_refused():
             selector_config=f"{PRODUCTION}/fpu_dev_corpus_v2_config.json",
             screen_csv=f"{PRODUCTION}/fpu_dev_source_screen.csv",
             selector=genuine)
+
+
+# ---------------------------------------------------------------------------
+# Adversarial round 12: precommitting BYTES is not establishing a SCHEMA.
+# ---------------------------------------------------------------------------
+
+def _bound_pair(tmp_path, monkeypatch, mutate_selection=None,
+                mutate_development=None):
+    """A genuine selection/development pair, optionally mutated, with the
+    selection's CURRENT SHA-1 precommitted -- so only schema validation stands
+    between the mutation and acceptance."""
+    art_path, doc = _emit_development(tmp_path, monkeypatch, 0.25)
+    if mutate_development:
+        development = json.loads(art_path.read_text())
+        mutate_development(development)
+        art_path.write_text(json.dumps(development, sort_keys=True))
+        doc["development_artifact_sha1"] = fpu_provenance.file_sha1(str(art_path))
+    if mutate_selection:
+        mutate_selection(doc)
+    path = tmp_path / "bound_selection.json"
+    path.write_text(json.dumps(doc, sort_keys=True))
+    return str(path), fpu_provenance.file_sha1(str(path))
+
+
+def test_unsupported_selection_schema_version_is_refused(tmp_path, monkeypatch):
+    path, sha1 = _bound_pair(tmp_path, monkeypatch,
+                             mutate_selection=lambda d:
+                             d.__setitem__("schema_version", 999))
+    with pytest.raises(prov.ProtocolViolation, match="schema_version"):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_relabelled_selection_rule_is_refused(tmp_path, monkeypatch):
+    """The document may not claim to have applied a different rule."""
+    path, sha1 = _bound_pair(tmp_path, monkeypatch,
+                             mutate_selection=lambda d:
+                             d.__setitem__("selection_rule",
+                                           "largest passing coefficient"))
+    with pytest.raises(prov.ProtocolViolation, match="selection_rule"):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_unknown_selection_key_is_refused(tmp_path, monkeypatch):
+    path, sha1 = _bound_pair(tmp_path, monkeypatch,
+                             mutate_selection=lambda d:
+                             d.__setitem__("smuggled", 1))
+    with pytest.raises(prov.ProtocolViolation, match="unknown"):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+@pytest.mark.parametrize("mutate,pattern", [
+    (lambda d: d.__setitem__("schema_version", 999), "schema_version"),
+    (lambda d: d.__setitem__("artifact_kind", "not_a_diagnostic"),
+     "artifact_kind"),
+    (lambda d: d.__setitem__("mode", "held_out"), "not development"),
+    (lambda d: d.__setitem__("n_rows", 0), "n_rows"),
+    (lambda d: d.__setitem__("configs", [None]), "frozen development set"),
+    (lambda d: d.__setitem__("effective_mcts_config", {}),
+     "no effective MCTS config"),
+    (lambda d: d.__setitem__("smuggled", 1), "unknown"),
+])
+def test_malformed_development_artifact_is_refused(tmp_path, monkeypatch,
+                                                   mutate, pattern):
+    """The referenced development file must itself be a supported artifact."""
+    path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_development=mutate)
+    with pytest.raises(prov.ProtocolViolation, match=pattern):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_development_rows_must_still_validate(tmp_path, monkeypatch):
+    """The persisted rows are re-validated, not merely counted."""
+    def corrupt(development):
+        development["rows"][0]["top_share"] = 9.0
+    path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_development=corrupt)
+    with pytest.raises(prov.ProtocolViolation):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+@pytest.mark.parametrize("mutate,pattern", [
+    (lambda d: d.__setitem__("grid", "0.25"), "field 'grid'"),
+    (lambda d: d.__setitem__("gates", []), "field 'gates'"),
+    (lambda d: d.__setitem__("development_artifact", 7),
+     "field 'development_artifact'"),
+    (lambda d: d.__setitem__("coefficient", "0.25"), "field 'coefficient'"),
+])
+def test_selection_field_types_are_exact(tmp_path, monkeypatch, mutate, pattern):
+    path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_selection=mutate)
+    with pytest.raises(prov.ProtocolViolation, match=pattern):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_a_genuine_bound_pair_still_authenticates(tmp_path, monkeypatch):
+    """The strict validators must not reject the real producer's output."""
+    path, sha1 = _bound_pair(tmp_path, monkeypatch)
+    out = v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                                expected_sha1=sha1)
+    assert out["coefficient"] == 0.25
+    assert set(out["selection_context"]) == set(v17.SELECTION_CONTEXT_KEYS)
+
+
+def test_selection_rule_constant_is_the_one_emitted(tmp_path, monkeypatch):
+    _art, doc = _emit_development(tmp_path, monkeypatch, 0.25)
+    assert doc["selection_rule"] == v17.SELECTION_RULE

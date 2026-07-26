@@ -97,7 +97,8 @@ __all__ = [
     "abcd_verdict", "verify_abcd_baseline", "run_abcd",
     "select_smallest_passing", "build_artifact", "build_row", "search_result_sha1",
     "run_diagnostic", "build_selected_coefficient",
-    "authenticate_selected_coefficient", "main",
+    "authenticate_selected_coefficient", "validate_selection_document",
+    "validate_development_artifact", "selection_context_from", "main",
     # Deliberate RE-EXPORTS of the v16 definitions (plan Task 5: "import,
     # rather than copy"). Several are not referenced by name here -- the
     # imported aggregator applies them internally -- but re-exporting means a
@@ -977,6 +978,15 @@ SELECTED_COEFFICIENT_KEYS = ("schema_version", "artifact_kind", "coefficient",
                              "grid", "gates", "selection_rule",
                              "development_artifact",
                              "development_artifact_sha1", "selection_context")
+# The EXACT selection-rule identifier. A document is not free to relabel the
+# rule it claims to have applied.
+SELECTION_RULE = "smallest coefficient passing §§7.2-7.3"
+DIAGNOSTIC_ARTIFACT_KEYS = ("schema_version", "artifact_kind", "mode",
+                            "coefficient", "configs", "effective_mcts_config",
+                            "protocol_sha1", "n_rows", "rows", "n_cases",
+                            "cases", "identities", "gates", "provenance")
+SELECTION_CONTEXT_KEYS = ("manifest_sha1", "protocol_sha1", "checkpoint_sha1",
+                          "n_rows")
 
 
 def build_selected_coefficient(*, coefficient: Optional[float],
@@ -995,7 +1005,7 @@ def build_selected_coefficient(*, coefficient: Optional[float],
         "artifact_kind": "selected_coefficient",
         "coefficient": coefficient,
         "grid": list(prov.GRID),
-        "selection_rule": "smallest coefficient passing §§7.2-7.3",
+        "selection_rule": SELECTION_RULE,
         "gates": {str(r): {"passed": g.passed, "reasons": list(g.reasons)}
                   for r, g in sorted(table.items())},
         "development_artifact": development_artifact,
@@ -1003,6 +1013,114 @@ def build_selected_coefficient(*, coefficient: Optional[float],
         # derived, never passed in, so producer and verifier cannot diverge
         "selection_context": selection_context_from(development),
     }
+
+
+def _strict_document(doc: Any, *, path: str, kind: str, keys: Sequence[str],
+                     schema_version: int) -> Dict[str, Any]:
+    """Exact schema-version, artifact-kind and key-set validation.
+
+    Precommitting a document's BYTES fixes which document is used; it does not
+    establish that the document is a supported artifact. A selection document
+    with schema_version 999, and a development document declaring
+    artifact_kind "not_a_diagnostic", both authenticated on their SHA-1 alone.
+    """
+    if not isinstance(doc, dict):
+        raise prov.ProtocolViolation(f"{path} is not a JSON object")
+    if doc.get("artifact_kind") != kind:
+        raise prov.ProtocolViolation(
+            f"{path} has artifact_kind {doc.get('artifact_kind')!r}, expected "
+            f"{kind!r}")
+    if doc.get("schema_version") != schema_version:
+        raise prov.ProtocolViolation(
+            f"{path} has schema_version {doc.get('schema_version')!r}, but only "
+            f"{schema_version} is supported")
+    missing = sorted(set(keys) - set(doc))
+    unknown = sorted(set(doc) - set(keys))
+    if missing or unknown:
+        raise prov.ProtocolViolation(
+            f"{path} key set is wrong: missing {missing}, unknown {unknown}")
+    return doc
+
+
+def _require_type(value: Any, types: tuple, *, path: str, field: str) -> Any:
+    if isinstance(value, bool) and bool not in types:
+        raise prov.ProtocolViolation(
+            f"{path} field {field!r} is a bool, expected "
+            f"{'/'.join(t.__name__ for t in types)}")
+    if not isinstance(value, types):
+        raise prov.ProtocolViolation(
+            f"{path} field {field!r} is {type(value).__name__}, expected "
+            f"{'/'.join(t.__name__ for t in types)}")
+    return value
+
+
+def validate_development_artifact(doc: Any, *, path: str) -> Dict[str, Any]:
+    """Strict shape + internal consistency for a development diagnostic."""
+    _strict_document(doc, path=path, kind="diagnostic",
+                     keys=DIAGNOSTIC_ARTIFACT_KEYS,
+                     schema_version=prov.SCHEMA_VERSION)
+    if doc["mode"] != "development":
+        raise prov.ProtocolViolation(
+            f"{path} is a {doc['mode']!r} artifact, not development")
+    _require_type(doc["rows"], (list,), path=path, field="rows")
+    _require_type(doc["n_rows"], (int,), path=path, field="n_rows")
+    _require_type(doc["gates"], (dict,), path=path, field="gates")
+    _require_type(doc["configs"], (list,), path=path, field="configs")
+    _require_type(doc["effective_mcts_config"], (dict,), path=path,
+                  field="effective_mcts_config")
+    if not doc["rows"]:
+        raise prov.ProtocolViolation(
+            f"{path} persists no rows, so the selection cannot be recomputed")
+    if doc["n_rows"] != len(doc["rows"]):
+        raise prov.ProtocolViolation(
+            f"{path} records n_rows={doc['n_rows']} but persists "
+            f"{len(doc['rows'])} rows")
+    expected_configs = list(configs_for_mode("development"))
+    if doc["configs"] != expected_configs:
+        raise prov.ProtocolViolation(
+            f"{path} configs {doc['configs']} != the frozen development set "
+            f"{expected_configs}")
+    missing_cfg = sorted({str(c) for c in expected_configs}
+                         - set(doc["effective_mcts_config"]))
+    if missing_cfg:
+        raise prov.ProtocolViolation(
+            f"{path} records no effective MCTS config for {missing_cfg}")
+    validate_row_set(doc["rows"], expected_configs)
+    return doc
+
+
+def validate_selection_document(doc: Any, *, path: str) -> Dict[str, Any]:
+    """Strict shape for a selected-coefficient artifact."""
+    _strict_document(doc, path=path, kind="selected_coefficient",
+                     keys=SELECTED_COEFFICIENT_KEYS,
+                     schema_version=prov.SCHEMA_VERSION)
+    if doc["selection_rule"] != SELECTION_RULE:
+        raise prov.ProtocolViolation(
+            f"{path} claims selection_rule {doc['selection_rule']!r}, not the "
+            f"frozen {SELECTION_RULE!r}")
+    _require_type(doc["grid"], (list,), path=path, field="grid")
+    _require_type(doc["gates"], (dict,), path=path, field="gates")
+    _require_type(doc["development_artifact"], (str,), path=path,
+                  field="development_artifact")
+    _require_type(doc["development_artifact_sha1"], (str,), path=path,
+                  field="development_artifact_sha1")
+    context = _require_type(doc["selection_context"], (dict,), path=path,
+                            field="selection_context")
+    if doc["coefficient"] is not None:
+        _require_type(doc["coefficient"], (int, float), path=path,
+                      field="coefficient")
+    if set(context) != set(SELECTION_CONTEXT_KEYS):
+        raise prov.ProtocolViolation(
+            f"{path} selection_context keys {sorted(context)} != "
+            f"{sorted(SELECTION_CONTEXT_KEYS)}")
+    for gate in doc["gates"].values():
+        if set(gate) != {"passed", "reasons"}:
+            raise prov.ProtocolViolation(
+                f"{path} gate entries must have exactly passed/reasons, got "
+                f"{sorted(gate)}")
+        _require_type(gate["passed"], (bool,), path=path, field="gate.passed")
+        _require_type(gate["reasons"], (list,), path=path, field="gate.reasons")
+    return doc
 
 
 def selection_context_from(development: Mapping[str, Any]) -> Dict[str, Any]:
@@ -1042,14 +1160,7 @@ def authenticate_selected_coefficient(path: Optional[str], *,
             f"selected-coefficient artifact {path} has SHA-1 {actual}, but its "
             f"protocol precommitted {expected_sha1}")
     with open(path) as f:
-        doc = json.load(f)
-    missing = [k for k in SELECTED_COEFFICIENT_KEYS if k not in doc]
-    if missing:
-        raise prov.ProtocolViolation(
-            f"selected-coefficient artifact {path} is missing {missing}")
-    if doc["artifact_kind"] != "selected_coefficient":
-        raise prov.ProtocolViolation(
-            f"{path} is not a selected_coefficient artifact")
+        doc = validate_selection_document(json.load(f), path=path)
     if list(doc["grid"]) != list(prov.GRID):
         raise prov.ProtocolViolation(
             f"selected-coefficient artifact records grid {doc['grid']}, not the "
@@ -1072,15 +1183,8 @@ def authenticate_selected_coefficient(path: Optional[str], *,
             f"development artifact {dev_path} has SHA-1 {dev_actual}, but the "
             f"selection artifact records {doc['development_artifact_sha1']}")
     with open(dev_path) as f:
-        development = json.load(f)
-    if development.get("mode") != "development":
-        raise prov.ProtocolViolation(
-            f"{dev_path} is a {development.get('mode')!r} artifact, not development")
-    dev_rows = development.get("rows") or []
-    if not dev_rows:
-        raise prov.ProtocolViolation(
-            f"development artifact {dev_path} persists no rows, so the selection "
-            f"cannot be recomputed")
+        development = validate_development_artifact(json.load(f), path=dev_path)
+    dev_rows = development["rows"]
     shipped_lockin = sum(1 for r in dev_rows if r["coefficient"] is None
                          and r["role"] == "target" and r["lock_in"])
     recomputed, table = select_smallest_passing(dev_rows,
