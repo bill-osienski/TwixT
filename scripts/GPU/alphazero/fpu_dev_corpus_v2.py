@@ -339,9 +339,9 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
     """Validate + build the schema-2 profile (repair plan Sec 6's rejection
     list). `source` names the config/profile file in every error."""
     schema = raw.get("config_schema_version")
-    if schema not in (2, 3):
+    if schema not in (2, 3, 4):
         raise ValueError(f"{source}: unsupported config_schema_version "
-                         f"{schema!r} for an allocation profile (2 or 3)")
+                         f"{schema!r} for an allocation profile (2, 3 or 4)")
     run_kind = raw.get("run_kind")
     allowed_kinds = profile_run_kinds_for(schema)
     if run_kind not in allowed_kinds:
@@ -2405,6 +2405,9 @@ class V2Config:
     # default so schema-1/2 configs -- which do not carry it -- load exactly as
     # before and keep their exact bytes.
     scientific_interpretation_forbidden: Optional[bool] = None
+    # Schema-4 only: the explicitly derived third batching element. None for
+    # schemas 1-3, whose configs do not carry it and whose bytes are unchanged.
+    mcts_pending_virtual_visits: Optional[int] = None
 
 
 # The ADDITIONAL top-level keys a schema-2 (repair plan Sec 6) config must
@@ -2475,6 +2478,7 @@ def load_v2_config(path: str) -> V2Config:
         post_screen_report_out=raw.get("post_screen_report_out"),
         scientific_interpretation_forbidden=raw.get(
             "scientific_interpretation_forbidden"),
+        mcts_pending_virtual_visits=raw.get("mcts_pending_virtual_visits"),
     )
 
 

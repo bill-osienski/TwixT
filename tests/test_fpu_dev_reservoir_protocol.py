@@ -61,6 +61,8 @@ from scripts.GPU.alphazero.fpu_dev_reservoir_protocol import (
     PROTOCOL_SCHEMA_KEYS_V2,
     protocol_schema_keys_for,
     PROTOCOL_SCHEMA_KEYS_V3,
+    PROTOCOL_SCHEMA_KEYS_V4,
+    PENDING_VIRTUAL_VISITS_KEY,
     SCIENTIFIC_INTERPRETATION_KEY,
     interpretation_forbidden_for,
     QUALIFICATION_SOURCE_FILES,
@@ -4405,8 +4407,56 @@ def test_legacy_key_sets_are_unchanged_by_schema_3():
     assert protocol_schema_keys_for({"protocol_version": 1}) is PROTOCOL_SCHEMA_KEYS
     assert protocol_schema_keys_for({"protocol_version": 2}) is PROTOCOL_SCHEMA_KEYS_V2
     assert protocol_schema_keys_for({"protocol_version": 3}) is PROTOCOL_SCHEMA_KEYS_V3
+    assert protocol_schema_keys_for({"protocol_version": 4}) is PROTOCOL_SCHEMA_KEYS_V4
     with pytest.raises(ValueError, match="unsupported protocol_version"):
-        protocol_schema_keys_for({"protocol_version": 4})
+        protocol_schema_keys_for({"protocol_version": 5})
+
+
+def test_schema_4_is_additive_over_schema_3():
+    """Schema 4 adds ONLY the pending-visits key; schemas 1-3 -- including the
+    accepted Task 8 artifacts -- keep their exact key sets."""
+    assert PROTOCOL_SCHEMA_KEYS_V4 == (
+        PROTOCOL_SCHEMA_KEYS_V3 + (PENDING_VIRTUAL_VISITS_KEY,))
+    for keys in (PROTOCOL_SCHEMA_KEYS, PROTOCOL_SCHEMA_KEYS_V2,
+                 PROTOCOL_SCHEMA_KEYS_V3):
+        assert PENDING_VIRTUAL_VISITS_KEY not in keys
+
+
+def _schema4_params(**over):
+    p = _schema3_params()
+    p["protocol_version"] = 4
+    p["config_schema_version"] = 4        # version-dispatched: 4 -> 4
+    p[PENDING_VIRTUAL_VISITS_KEY] = 8
+    p.update(over)
+    return p
+
+
+def test_schema_4_requires_the_pending_visits_key():
+    p = _schema4_params()
+    del p[PENDING_VIRTUAL_VISITS_KEY]
+    with pytest.raises(ValueError, match=PENDING_VIRTUAL_VISITS_KEY):
+        build_protocol(p)
+
+
+@pytest.mark.parametrize("bad", [True, "8", 8.0, -1, None])
+def test_schema_4_pending_visits_must_be_a_non_negative_int(bad):
+    with pytest.raises(ValueError, match="non-negative int"):
+        build_protocol(_schema4_params(**{PENDING_VIRTUAL_VISITS_KEY: bad}))
+
+
+def test_schema_4_command_carries_the_complete_triple():
+    """The generation path -- not just the protocol -- must state and assert
+    all three values."""
+    argv = gen_command(build_protocol(_schema4_params()))
+    assert argv[argv.index("--mcts-pending-virtual-visits") + 1] == "8"
+    assert argv[argv.index("--require-batching-triple") + 1] == "14,48,8"
+
+
+def test_schema_3_command_is_unchanged_by_schema_4():
+    """A schema-3 protocol emits exactly what it did before."""
+    argv = gen_command(build_protocol(_schema3_params()))
+    assert "--mcts-pending-virtual-visits" not in argv
+    assert "--require-batching-triple" not in argv
 
 
 @pytest.mark.parametrize("run_kind,expected", [

@@ -175,6 +175,13 @@ class EvalConfig:
     temp_high: float = 1.0
     temp_low: float = 0.1
     max_moves: int = 280             # MAX_MOVES_TABLE[24]
+    # Explicit pending virtual visits. None (default) => leave MCTSConfig's own
+    # default, which is what every pre-existing caller got, so their artifact
+    # bytes are unchanged (the key is omitted from recorded config entirely --
+    # see eval_checkpoint_match.run_match). Set it to state the value rather
+    # than inherit it: design 2.4 requires the COMPLETE triple to be derived,
+    # recorded and validated, not satisfied by a default that could move.
+    mcts_pending_virtual_visits: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -197,6 +204,8 @@ def cfg_from(config: EvalConfig) -> MCTSConfig:
         th, tl = config.temp_high, config.temp_low
     else:
         raise ValueError(f"unknown selection_mode {config.selection_mode!r}")
+    extra = ({} if config.mcts_pending_virtual_visits is None
+             else {"pending_virtual_visits": config.mcts_pending_virtual_visits})
     return MCTSConfig(
         n_simulations=config.mcts_sims,
         eval_batch_size=config.mcts_eval_batch_size,
@@ -204,6 +213,7 @@ def cfg_from(config: EvalConfig) -> MCTSConfig:
         temp_threshold_ply=config.opening_temp_plies,
         temp_high=th,
         temp_low=tl,
+        **extra,
     )
 
 

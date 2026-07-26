@@ -112,6 +112,11 @@ def run_match(a_ckpt, b_ckpt, games, base_seed, config, workers, output,
                              replay_dir=replay_dir, allow_differ=allow_differ,
                              config_validator=config_validator, labels=labels)
     config_dict = {**asdict(config), "base_seed": base_seed, "workers": workers}
+    if config.mcts_pending_virtual_visits is None:
+        # Omitted entirely when unset, so a caller that never asked for it gets
+        # byte-identical recorded config. When set, the EFFECTIVE value is
+        # recorded rather than left to be inferred from an MCTSConfig default.
+        config_dict.pop("mcts_pending_virtual_visits")
     # Agent mode is decided by the tasks, not by which argument was passed, so
     # the recorded provenance always describes what actually ran.
     first = tasks[0]
@@ -172,6 +177,15 @@ def _build_arg_parser():
     ap.add_argument("--replay-dir", default=None,
                     help="replay output dir (default <output-stem>_replays); "
                          "only used with --save-eval-replays.")
+    ap.add_argument("--mcts-pending-virtual-visits", type=int, default=None,
+                    help="state the value explicitly instead of inheriting "
+                         "MCTSConfig's default. Omitted by default, which "
+                         "leaves artifact bytes unchanged.")
+    ap.add_argument("--require-batching-triple", default=None,
+                    help="assert the EFFECTIVE (eval_batch_size, "
+                         "stall_flush_sims, pending_virtual_visits) equals "
+                         "this comma-separated triple, BEFORE any evaluator "
+                         "loads. A mismatch in any element refuses.")
     ap.add_argument("--run-kind", default=None,
                     help="stamp run_kind onto the summary, every per-game JSONL "
                          "row and every replay sidecar. Omitted by default, "
@@ -187,6 +201,7 @@ def _build_arg_parser():
 
 def _config_from_args(args) -> EvalConfig:
     return EvalConfig(
+        mcts_pending_virtual_visits=args.mcts_pending_virtual_visits,
         board_size=args.board_size, mcts_sims=args.mcts_sims,
         mcts_eval_batch_size=args.mcts_eval_batch_size,
         mcts_stall_flush_sims=args.mcts_stall_flush_sims,
@@ -207,6 +222,29 @@ def main(argv=None):
             "--run-kind requires --scientific-interpretation "
             "{forbidden,allowed}: defaulting it would let a tooling_smoke run "
             "emit scientific_interpretation_forbidden=false")
+    if args.require_batching_triple:
+        # BEFORE checkpoint resolution and before any evaluator load.
+        from .eval_runner import cfg_from as _cfg_from
+        want = tuple(int(x) for x in args.require_batching_triple.split(","))
+        if len(want) != 3:
+            raise SystemExit("--require-batching-triple needs three values")
+        if args.mcts_pending_virtual_visits is None:
+            # Comparing the EFFECTIVE triple alone cannot tell "stated 8" from
+            # "inherited 8" -- both land on 8 today. Design 2.4 requires
+            # explicit derivation, so a run asserting the triple must also
+            # state the value it is asserting.
+            raise SystemExit(
+                "--require-batching-triple requires "
+                "--mcts-pending-virtual-visits: without it the value is "
+                "inherited from MCTSConfig's default, which is not the "
+                "explicit derivation the frozen design requires")
+        eff = _cfg_from(_config_from_args(args))
+        got = (eff.eval_batch_size, eff.stall_flush_sims,
+               eff.pending_virtual_visits)
+        if got != want:
+            raise SystemExit(
+                f"effective batching triple {got} != required {want}; results "
+                f"at a different triple are incomparable, not merely slower")
     labels = None
     if args.run_kind:
         # DERIVED from the run kind, never taken from the flag: the flag only

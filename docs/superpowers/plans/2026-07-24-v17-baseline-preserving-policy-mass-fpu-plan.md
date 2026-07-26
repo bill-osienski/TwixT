@@ -459,6 +459,33 @@ frozen design section, no grid, no sizing, and no gate threshold.
    frozen B set) is added to the forbidden set. The diagnostic's independent
    canonical-B authentication is retained as the backstop.
 
+**Amendment `task9-batching-completeness-v1` (2026-07-26).**
+Implementation-scope correction only; no scientific decision, frozen design
+section, grid, sizing or gate threshold changes.
+
+Design §2.4 requires the COMPLETE batching triple to be explicitly derived,
+recorded in every artifact and validated before evaluator loading. Through
+schema 3 only two elements were explicit: `pending_virtual_visits` appeared in
+no protocol, no command and no recorded config, and its value of 8 came solely
+from `MCTSConfig`'s default. A change to that default would have silently
+altered every v17 result.
+
+Reservoir protocol/config schema 4, additive over schema 3 (schemas 1-3,
+including the accepted Task 8 artifacts, keep their exact key sets and bytes):
+
+- the protocol records `mcts_pending_virtual_visits`, validated as a
+  non-negative int (`bool` refused);
+- `gen_command` emits `--mcts-pending-virtual-visits` AND
+  `--require-batching-triple`, so the command asserts its own complete triple;
+- `EvalConfig` gains an optional `mcts_pending_virtual_visits`, passed
+  explicitly into `MCTSConfig` by `cfg_from`; when unset the key is omitted
+  from recorded config entirely, so legacy artifact bytes are unchanged;
+- `eval_checkpoint_match` refuses, BEFORE checkpoint resolution and any
+  evaluator load, if the effective triple differs in any element, and refuses
+  `--require-batching-triple` without an explicit
+  `--mcts-pending-virtual-visits` -- comparing the effective triple alone
+  cannot distinguish a stated 8 from an inherited one.
+
 **Gate:** clean worktree and protocol qualification pass before generation.
 
 ## Task 10 — Generate and qualify the development reservoir

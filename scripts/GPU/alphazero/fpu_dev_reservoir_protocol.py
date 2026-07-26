@@ -715,6 +715,19 @@ assert len(PROTOCOL_SCHEMA_KEYS_V3) == len(set(PROTOCOL_SCHEMA_KEYS_V3)), (
 # scientific interpretation.
 SCIENTIFIC_PROFILE_RUN_KIND = "production"
 
+# Schema 4 -- Task 9 batching-completeness repair. Additive over schema 3:
+# schemas 1-3 (including the accepted Task 8 artifacts) keep their exact key
+# sets and bytes. Design 2.4 requires the COMPLETE triple to be explicitly
+# derived, recorded in every artifact and validated before evaluator loading;
+# through schema 3 the third element was only ever inherited from
+# MCTSConfig's default and appeared in no artifact or command.
+PENDING_VIRTUAL_VISITS_KEY = "mcts_pending_virtual_visits"
+PROTOCOL_SCHEMA_KEYS_V4: Tuple[str, ...] = PROTOCOL_SCHEMA_KEYS_V3 + (
+    PENDING_VIRTUAL_VISITS_KEY,)
+
+assert len(PROTOCOL_SCHEMA_KEYS_V4) == len(set(PROTOCOL_SCHEMA_KEYS_V4)), (
+    "PROTOCOL_SCHEMA_KEYS_V4 has a duplicate key")
+
 
 def interpretation_forbidden_for(run_kind: str) -> bool:
     """The derived truth: only a production run may be interpreted.
@@ -738,6 +751,8 @@ def protocol_schema_keys_for(doc: Mapping[str, Any]) -> Tuple[str, ...]:
         return PROTOCOL_SCHEMA_KEYS_V2
     if version == 3:
         return PROTOCOL_SCHEMA_KEYS_V3
+    if version == 4:
+        return PROTOCOL_SCHEMA_KEYS_V4
     raise ValueError(f"unsupported protocol_version {version}")
 
 
@@ -939,6 +954,12 @@ def build_protocol(params: Mapping[str, Any]) -> Dict[str, Any]:
                 f"config_schema_version {required_config_schema}, got "
                 f"{protocol['config_schema_version']}")
         parse_allocation_profile(protocol, source="protocol")
+    if int(protocol.get("protocol_version", 1)) >= 4:
+        pv = protocol[PENDING_VIRTUAL_VISITS_KEY]
+        if isinstance(pv, bool) or not isinstance(pv, int) or pv < 0:
+            raise ValueError(
+                f"build_protocol: {PENDING_VIRTUAL_VISITS_KEY} must be a "
+                f"non-negative int, got {pv!r}")
     if int(protocol.get("protocol_version", 1)) >= 3:
         # Exact boolean, and it must AGREE with the run kind. A contradictory
         # value (a smoke protocol claiming interpretation is allowed) is the
@@ -1072,6 +1093,14 @@ def gen_command(protocol: Mapping[str, Any]) -> List[str]:
     argv += ["--max-moves", str(protocol["max_moves"])]
     argv += ["--workers", str(protocol["workers"])]
     argv += ["--base-seed", str(protocol["base_seed"])]
+    if int(protocol.get("protocol_version", 1)) >= 4:
+        pv = protocol[PENDING_VIRTUAL_VISITS_KEY]
+        argv += ["--mcts-pending-virtual-visits", str(pv)]
+        # The command asserts its OWN complete triple before any evaluator
+        # loads, so the declaration cannot silently diverge from what runs.
+        argv += ["--require-batching-triple",
+                 f"{protocol['mcts_eval_batch_size']},"
+                 f"{protocol['mcts_stall_flush_sims']},{pv}"]
     # The stamp is part of the frozen decisions, so it is derived here rather
     # than left to the operator to remember on the command line.
     if protocol.get("run_kind"):
@@ -2352,6 +2381,8 @@ def derive_config(
         "stall_flush_sims": protocol["mcts_stall_flush_sims"],
         # New top-level paths (amendments 1, 2).
         "config_schema_version": protocol["config_schema_version"],
+        **({PENDING_VIRTUAL_VISITS_KEY: protocol[PENDING_VIRTUAL_VISITS_KEY]}
+           if int(protocol.get("protocol_version", 1)) >= 4 else {}),
         # Schema-3 only: the derived config states the SAME interpretation
         # status as its protocol. Absent for schema 1/2, so those config bytes
         # are unchanged.
