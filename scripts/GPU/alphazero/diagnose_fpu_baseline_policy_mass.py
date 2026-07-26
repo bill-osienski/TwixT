@@ -99,7 +99,7 @@ __all__ = [
     "run_diagnostic", "build_selected_coefficient",
     "authenticate_selected_coefficient", "validate_selection_document",
     "validate_development_artifact", "require_development_consistency",
-    "selection_context_from", "effective_configs", "main",
+    "selection_context_from", "effective_configs", "gate_record", "main",
     # Deliberate RE-EXPORTS of the v16 definitions (plan Task 5: "import,
     # rather than copy"). Several are not referenced by name here -- the
     # imported aggregator applies them internally -- but re-exporting means a
@@ -834,8 +834,7 @@ def run_abcd(*, coefficient: float, shipped_by_gate: Mapping[str, Sequence[Mappi
             over=sum(1 for v in values if v >= OVER_THRESHOLD),
             severe=sum(1 for v in values if v >= SEVERE_THRESHOLD),
             a_rows=a_rows if g == "A" else None)
-        gates[g] = {"passed": verdict.passed, "reasons": list(verdict.reasons),
-                    "metrics": verdict.metrics}
+        gates[g] = gate_record(verdict)
     gates["baseline_validation"] = validation
     gates["all_passed"] = all(gates[g]["passed"] for g in ABCD_GATES)
     return gates
@@ -1093,6 +1092,13 @@ def validate_development_artifact(doc: Any, *, path: str) -> Dict[str, Any]:
     return doc
 
 
+def gate_record(gate: "GateResult") -> Dict[str, Any]:
+    """The persisted form of one gate verdict. Used by BOTH the producer and
+    the verifier, so the two cannot drift apart in shape or content."""
+    return {"passed": gate.passed, "reasons": list(gate.reasons),
+            "metrics": dict(gate.metrics)}
+
+
 def require_development_consistency(development: Mapping[str, Any], *,
                                     recomputed: Optional[float],
                                     table: Mapping[float, "GateResult"],
@@ -1114,15 +1120,17 @@ def require_development_consistency(development: Mapping[str, Any], *,
             f"{path} gate table covers {sorted(gates)}, but recomputation "
             f"produced {sorted(str(r) for r in table)}")
     for r, gate in table.items():
-        claimed = gates[str(r)]
-        if claimed.get("passed") is not gate.passed:
+        # EXACT canonical comparison of the COMPLETE gate record. Comparing
+        # only the verdict and reasons left `metrics` -- a required part of the
+        # persisted scientific result -- free to be fabricated. Whole-record
+        # equality also refuses missing or unknown gate fields.
+        expected = canonical_json_bytes(gate_record(gate))
+        claimed = canonical_json_bytes(gates[str(r)])
+        if claimed != expected:
             raise prov.ProtocolViolation(
-                f"{path} records passed={claimed.get('passed')!r} at r={r}, but "
-                f"recomputation produced {gate.passed!r}")
-        if list(claimed.get("reasons", [])) != list(gate.reasons):
-            raise prov.ProtocolViolation(
-                f"{path} gate reasons at r={r} are {claimed.get('reasons')!r}, "
-                f"but recomputation produced {list(gate.reasons)!r}")
+                f"{path} gate record at r={r} does not match recomputation; "
+                f"recorded {json.dumps(gates[str(r)], sort_keys=True)[:200]}, "
+                f"recomputed {json.dumps(gate_record(gate), sort_keys=True)[:200]}")
     # the effective configs must EQUAL the frozen ones, not merely be keyed
     expected = json.loads(json.dumps(
         effective_configs(configs_for_mode("development"))))
@@ -2363,13 +2371,11 @@ def _build_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
     pending_selection: Optional[Dict[str, Any]] = None
     if mode == "development":
         selected, table = select_smallest_passing(rows, shipped_lockin=shipped_lockin)
-        gates = {str(k): {"passed": v.passed, "reasons": list(v.reasons),
-                          "metrics": v.metrics} for k, v in table.items()}
+        gates = {str(k): gate_record(v) for k, v in table.items()}
         pending_selection = {"table": table}
     elif mode == "held_out":
         v = heldout_verdict(rows, frozen_coefficient, shipped_lockin=shipped_lockin)
-        gates = {"held_out": {"passed": v.passed, "reasons": list(v.reasons),
-                              "metrics": v.metrics}}
+        gates = {"held_out": gate_record(v)}
     artifact = build_artifact(
         mode=mode, coefficient=selected, rows=rows, gates=gates,
         checkpoints={ANCHOR_ROLE: checkpoint},

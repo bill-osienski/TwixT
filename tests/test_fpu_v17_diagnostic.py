@@ -2925,7 +2925,7 @@ def test_development_gate_verdicts_must_equal_recomputation(tmp_path, monkeypatc
             **development["gates"][key],
             "passed": not development["gates"][key]["passed"]}
     path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_development=flip)
-    with pytest.raises(prov.ProtocolViolation, match="but recomputation produced"):
+    with pytest.raises(prov.ProtocolViolation, match="gate record"):
         v17.authenticate_selected_coefficient(path, coefficient=0.25,
                                               expected_sha1=sha1)
 
@@ -2936,7 +2936,7 @@ def test_development_gate_reasons_must_equal_recomputation(tmp_path, monkeypatch
         development["gates"][key] = {**development["gates"][key],
                                      "reasons": ["a plausible excuse"]}
     path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_development=excuse)
-    with pytest.raises(prov.ProtocolViolation, match="gate reasons"):
+    with pytest.raises(prov.ProtocolViolation, match="gate record"):
         v17.authenticate_selected_coefficient(path, coefficient=0.25,
                                               expected_sha1=sha1)
 
@@ -2977,3 +2977,61 @@ def test_a_genuine_pair_still_authenticates_after_the_strict_checks(tmp_path,
     out = v17.authenticate_selected_coefficient(path, coefficient=0.25,
                                                 expected_sha1=sha1)
     assert out["coefficient"] == 0.25 and out["recomputed_from_rows"] > 0
+
+
+# ---------------------------------------------------------------------------
+# Adversarial round 14: the COMPLETE gate record, metrics included.
+# ---------------------------------------------------------------------------
+
+def _first_gate(development):
+    return next(iter(development["gates"]))
+
+
+@pytest.mark.parametrize("mutate,label", [
+    (lambda d: d["gates"][_first_gate(d)].__setitem__(
+        "metrics", {"forged_metric": 999999}), "wholesale replacement"),
+    (lambda d: d["gates"][_first_gate(d)]["metrics"].__setitem__(
+        next(iter(d["gates"][_first_gate(d)]["metrics"])), 12345.0),
+     "one altered value"),
+    (lambda d: d["gates"][_first_gate(d)].pop("metrics"), "metrics removed"),
+    (lambda d: d["gates"][_first_gate(d)].__setitem__("smuggled", 1),
+     "unknown gate field"),
+    (lambda d: d["gates"][_first_gate(d)].pop("reasons"), "reasons removed"),
+])
+def test_gate_records_are_compared_whole(tmp_path, monkeypatch, mutate, label):
+    """Verdict and reasons were compared while `metrics` -- a required part of
+    the persisted scientific result -- was free to be fabricated. Whole-record
+    equality also refuses missing and unknown gate fields."""
+    path, sha1 = _bound_pair(tmp_path, monkeypatch, mutate_development=mutate)
+    with pytest.raises(prov.ProtocolViolation, match="gate record"):
+        v17.authenticate_selected_coefficient(path, coefficient=0.25,
+                                              expected_sha1=sha1)
+
+
+def test_every_persisted_gate_uses_the_shared_record_shape():
+    """One producer for the gate record, so producer and verifier cannot drift
+    apart in shape -- development, held-out and A/B/C/D all use it."""
+    src = pathlib.Path(
+        "scripts/GPU/alphazero/diagnose_fpu_baseline_policy_mass.py").read_text()
+    assert '"metrics": v.metrics' not in src
+    assert '"metrics": verdict.metrics' not in src
+    assert src.count("gate_record(") >= 4
+
+
+def test_gate_record_round_trips_through_canonical_json():
+    gate = v17.GateResult(0.25, True, ("a reason",), {"x": 1.5, "n": 3})
+    record = v17.gate_record(gate)
+    assert set(record) == {"passed", "reasons", "metrics"}
+    assert json.loads(json.dumps(record, allow_nan=False)) == record
+
+
+def test_metrics_are_actually_persisted_for_every_grid_point(tmp_path,
+                                                             monkeypatch):
+    """The check above is only meaningful if metrics are non-empty."""
+    art_path, _doc = _emit_development(tmp_path, monkeypatch, 0.25)
+    development = json.loads(art_path.read_text())
+    assert sorted(development["gates"]) == sorted(str(r) for r in prov.GRID)
+    for record in development["gates"].values():
+        assert set(record) == {"passed", "reasons", "metrics"}
+        assert record["metrics"], "a gate persisted no metrics"
+        assert "reply_reduction" in record["metrics"]
