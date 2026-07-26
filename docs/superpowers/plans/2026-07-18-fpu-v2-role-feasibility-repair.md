@@ -2130,7 +2130,7 @@ git add docs/fpu-v2-repair-operator-guide.md scripts/GPU/alphazero/fpu_dev_reser
 git commit -m "docs(fpu-v2): operator guide + corrected qualify message + five-mode CLI descriptors"
 ```
 
-**User-owned (not this plan's edits):** ledger updates per spec §12 — mark reservoir protocol v1 `POST-SCREEN GATE-FAIL` in `docs/updated-v16a-ledger.md` (or its successor), record 0/0/0/136 + threshold ranges, record that no FPU coefficient ran. Flag these to the user at review.
+**User-owned (not this plan's edits):** ledger updates per spec §12 — mark reservoir protocol v1 `POST-SCREEN GATE-FAIL` in `docs/updated-v16a-ledger.md`, record 0/0/0/136 + threshold ranges, record that no FPU coefficient ran. Flag these to the user at review.
 
 ---
 

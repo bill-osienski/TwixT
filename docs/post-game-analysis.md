@@ -558,9 +558,11 @@ root retention — 2026-07-01, see the experiment ledger.)
 
 ## 11. v16 Context-Relative Policy-Mass FPU — Operator Runbook
 
-**Status (updated 2026-07-21):** reservoir protocol v1 is **COMPLETE — POST-SCREEN GATE_FAIL.** The 4,800-game reservoir generated and passed `qualify` + `screen`, but `select` gate-failed: kept target capacity `0/0/0/136` (opening/early_mid/midgame/late) vs the 45-per-phase demand — target geometry is late-only on this net. **No FPU coefficient was tested.** The v1 artifacts under `reservoir_v1/` are preserved untouched as immutable discovery evidence.
+**Final status (updated 2026-07-24): REJECTED at the production-v2 tuning-control prerequisite.** The repaired pipeline completed one immutable 4,000-game production reservoir, qualified and screened it, and selected the exact fingerprinted 120-row corpus. The first scientific gate then rejected `r0` (`FPU=Q_parent`): it changed the selected move to a lower-prior move on **11/40 controls = 27.5%**, versus the frozen `<10%` limit. Per protocol, the entire parent-relative policy-mass family is closed: no nonzero coefficient, frozen check, selected-A candidate gate, A/B/C/D, collateral, strength match, or self-play change was run or authorized.
 
-**The current procedure is the repaired v2 pipeline — see `docs/fpu-v2-repair-operator-guide.md`** (late-only 120-row production profile, controlled `post-screen-qualify` stage, `run_kind` production/smoke isolation, selector v2, amendment `b400-coverage-floor-v1`, and the two discovery commands). The full decision history is in `docs/updated-v16a-ledger.md`. **A production reservoir is authorized at 4,000 games** (see the guide §13 authorization record); everything below this point describes the v1 run as a historical record.
+**Historical v1 outcome:** reservoir protocol v1 is **COMPLETE — POST-SCREEN GATE_FAIL.** The 4,800-game reservoir generated and passed `qualify` + `screen`, but `select` gate-failed: kept target capacity `0/0/0/136` (opening/early_mid/midgame/late) versus the 45-per-phase demand — target geometry is late-only on this net. No FPU coefficient was tested under v1. Its artifacts under `reservoir_v1/` remain immutable discovery evidence.
+
+The completed repaired-v2 procedure and production result are recorded in `docs/fpu-v2-repair-operator-guide.md` §§13–14. The full decision history is in `docs/updated-v16a-ledger.md`. Everything below this point is the historical operator runbook; do not execute its candidate or frozen stages after the recorded `r0` rejection.
 
 **Frozen v1 generation commit:** `fca9c0dc563e47274b71059749ab451fb74e47f1`
 
@@ -629,9 +631,11 @@ The A/B/C/D probes remain necessary but are not sufficient:
 - B goal-line, C old post-opening, and D red pre-drop remain collateral guardrails.
 - A/B/C/D passing does not replace the final strength match.
 
+**Final execution note:** production v2 stopped at tuning controls because `r0_qualified=false`. Stages 7 and 8 and every downstream gate below them remain intentionally unrun.
+
 ### Frozen production protocol v1 (HISTORICAL RECORD — superseded)
 
-*(This section and `docs/2026-07-16-fpu-v16-policy-mass-reservoir-v1-params.json` are the historical v1/4,800-game parameter record — NOT the current production protocol. The authorized production parameters (4,000 games, amended b400 2+2 profile) live in the operator guide §13.)*
+*(This section and `docs/2026-07-16-fpu-v16-policy-mass-reservoir-v1-params.json` are the historical v1/4,800-game parameter record — NOT the completed production protocol. The 4,000-game amended-b400 production authorization and final result live in the operator guide §§13–14.)*
 
 The reviewable input is `docs/2026-07-16-fpu-v16-policy-mass-reservoir-v1-params.json`. The emitted machine-authoritative artifact is:
 
