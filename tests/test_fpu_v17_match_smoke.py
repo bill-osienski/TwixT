@@ -223,3 +223,49 @@ def test_protocol_records_the_driver_among_its_source_files():
     assert protocol["extra"]["driver_sha1"] == smoke.driver_sha1()
     assert protocol["run_kind"] == "tooling_smoke"
     assert (protocol["base_seed"], protocol["games"]) == prov.MATCH_SMOKE_SEEDS
+
+
+@pytest.mark.parametrize("flags,label", [
+    (["--mcts-eval-batch-size", "16", "--mcts-stall-flush-sims", "48",
+      "--mcts-pending-virtual-visits", "8"], "(16,48,8)"),
+    (["--mcts-eval-batch-size", "14", "--mcts-stall-flush-sims", "16",
+      "--mcts-pending-virtual-visits", "8"], "(14,16,8)"),
+    (["--mcts-eval-batch-size", "14", "--mcts-stall-flush-sims", "48",
+      "--mcts-pending-virtual-visits", "4"], "(14,48,4)"),
+    (["--mcts-eval-batch-size", "14", "--mcts-stall-flush-sims", "48"],
+     "pending visits omitted"),
+])
+def test_real_cli_refuses_wrong_batching_before_checkpoint_resolution(flags, label):
+    """Exercises the REAL generation CLI. Both the effective value and (under
+    the old design) the bar move together; the bar now comes from the frozen
+    authority, so these cannot pass. A deliberately absent checkpoint proves
+    the refusal precedes checkpoint resolution: a passing case reaches
+    'checkpoint not found', a refused one never does."""
+    import subprocess
+    r = subprocess.run(
+        [".venv/bin/python", "-m", "scripts.GPU.alphazero.eval_checkpoint_match",
+         "--checkpoint-a", "no_such_ckpt", "--checkpoint-b", "no_such_ckpt",
+         "--output", "/tmp/v17_must_not_exist.json", "--require-v17-batching",
+         *flags],
+        capture_output=True, text=True,
+        cwd="/Users/bill/projects/TwixT_Game")
+    out = r.stdout + r.stderr
+    assert r.returncode != 0, label
+    assert "checkpoint not found" not in out, f"{label}: reached checkpoint resolution"
+    assert ("FROZEN v17 triple" in out
+            or "requires --mcts-pending-virtual-visits" in out), out[-200:]
+
+
+def test_real_cli_accepts_the_frozen_triple():
+    """Counterpart: the valid triple passes the bar and goes on to resolve
+    checkpoints — so the refusals above are not vacuous."""
+    import subprocess
+    r = subprocess.run(
+        [".venv/bin/python", "-m", "scripts.GPU.alphazero.eval_checkpoint_match",
+         "--checkpoint-a", "no_such_ckpt", "--checkpoint-b", "no_such_ckpt",
+         "--output", "/tmp/v17_must_not_exist.json", "--require-v17-batching",
+         "--mcts-eval-batch-size", "14", "--mcts-stall-flush-sims", "48",
+         "--mcts-pending-virtual-visits", "8"],
+        capture_output=True, text=True,
+        cwd="/Users/bill/projects/TwixT_Game")
+    assert "checkpoint not found" in (r.stdout + r.stderr)

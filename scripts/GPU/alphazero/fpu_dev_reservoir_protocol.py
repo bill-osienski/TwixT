@@ -960,6 +960,17 @@ def build_protocol(params: Mapping[str, Any]) -> Dict[str, Any]:
             raise ValueError(
                 f"build_protocol: {PENDING_VIRTUAL_VISITS_KEY} must be a "
                 f"non-negative int, got {pv!r}")
+        # The COMPLETE triple against the single frozen authority. Type
+        # validation alone would accept a self-consistent but scientifically
+        # invalid triple like (16,48,8), which `gen_command` would then emit as
+        # its own acceptance bar -- the protocol setting the standard it is
+        # judged by. Imported lazily to keep this module's import graph clean.
+        from . import fpu_v17_provenance as _prov
+        try:
+            _prov.validate_batching((protocol["mcts_eval_batch_size"],
+                                     protocol["mcts_stall_flush_sims"], pv))
+        except _prov.ProtocolViolation as exc:
+            raise ValueError(f"build_protocol: {exc}") from exc
     if int(protocol.get("protocol_version", 1)) >= 3:
         # Exact boolean, and it must AGREE with the run kind. A contradictory
         # value (a smoke protocol claiming interpretation is allowed) is the
@@ -1096,11 +1107,10 @@ def gen_command(protocol: Mapping[str, Any]) -> List[str]:
     if int(protocol.get("protocol_version", 1)) >= 4:
         pv = protocol[PENDING_VIRTUAL_VISITS_KEY]
         argv += ["--mcts-pending-virtual-visits", str(pv)]
-        # The command asserts its OWN complete triple before any evaluator
-        # loads, so the declaration cannot silently diverge from what runs.
-        argv += ["--require-batching-triple",
-                 f"{protocol['mcts_eval_batch_size']},"
-                 f"{protocol['mcts_stall_flush_sims']},{pv}"]
+        # A BOOLEAN contract flag, not a tuple: the CLI takes its bar from the
+        # frozen authority, so the emitted command cannot nominate the standard
+        # it is judged against.
+        argv.append("--require-v17-batching")
     # The stamp is part of the frozen decisions, so it is derived here rather
     # than left to the operator to remember on the command line.
     if protocol.get("run_kind"):

@@ -482,9 +482,19 @@ including the accepted Task 8 artifacts, keep their exact key sets and bytes):
   from recorded config entirely, so legacy artifact bytes are unchanged;
 - `eval_checkpoint_match` refuses, BEFORE checkpoint resolution and any
   evaluator load, if the effective triple differs in any element, and refuses
-  `--require-batching-triple` without an explicit
-  `--mcts-pending-virtual-visits` -- comparing the effective triple alone
-  cannot distinguish a stated 8 from an inherited one.
+  `--require-v17-batching` without an explicit `--mcts-pending-virtual-visits`
+  -- comparing the effective triple alone cannot distinguish a stated 8 from an
+  inherited one.
+
+The acceptance bar comes from the FROZEN authority (`fpu_v17_provenance.
+BATCHING`), never from the artifact under test. A first version let the caller
+supply the required tuple, so mutating the declared value and the bar TOGETHER
+passed: a protocol could declare `(16,48,8)`, `gen_command` would emit that as
+its own acceptance bar, and the CLI would accept it. `build_protocol` now
+validates all three schema-4 fields against `validate_batching`, and the CLI
+flag is a BOOLEAN contract flag with no tuple to nominate. Pinned by protocol
+and real-CLI tests that mutate each effective value and its declared value
+together, each refusing before checkpoint resolution.
 
 **Gate:** clean worktree and protocol qualification pass before generation.
 

@@ -4444,12 +4444,34 @@ def test_schema_4_pending_visits_must_be_a_non_negative_int(bad):
         build_protocol(_schema4_params(**{PENDING_VIRTUAL_VISITS_KEY: bad}))
 
 
+@pytest.mark.parametrize("mut", [
+    {"mcts_eval_batch_size": 16},
+    {"mcts_stall_flush_sims": 16},
+    {PENDING_VIRTUAL_VISITS_KEY: 4},
+])
+def test_schema_4_refuses_a_self_consistent_but_wrong_triple(mut):
+    """The attack the first control missed: mutate the declared value AND the
+    bar together. Type validation alone accepted (16,48,8) etc., and
+    `gen_command` then emitted the wrong tuple as its own acceptance bar. The
+    bar now comes from the frozen authority, so the protocol cannot nominate
+    the standard it is judged by."""
+    with pytest.raises(ValueError, match="batching triple"):
+        build_protocol(_schema4_params(**mut))
+
+
+def test_schema_4_command_uses_a_boolean_contract_flag_not_a_tuple():
+    """A caller-supplied tuple is what let both sides move together."""
+    argv = gen_command(build_protocol(_schema4_params()))
+    assert "--require-v17-batching" in argv
+    assert "--require-batching-triple" not in argv
+
+
 def test_schema_4_command_carries_the_complete_triple():
     """The generation path -- not just the protocol -- must state and assert
     all three values."""
     argv = gen_command(build_protocol(_schema4_params()))
     assert argv[argv.index("--mcts-pending-virtual-visits") + 1] == "8"
-    assert argv[argv.index("--require-batching-triple") + 1] == "14,48,8"
+    assert "--require-v17-batching" in argv
 
 
 def test_schema_3_command_is_unchanged_by_schema_4():
