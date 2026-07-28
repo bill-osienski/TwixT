@@ -3073,3 +3073,66 @@ def test_a_production_run_kind_is_refused_by_the_development_consumer(tmp_path):
             str(m), mode="development", source_index=str(_source_index(tmp_path)),
             config_path=None, checkpoint=CKPT, selector=_chain_selector(m),
             post_screen_report=_qualification(tmp_path, "production", m))
+
+
+# ---------------------------------------------------------------------------
+# Task 11 tooling amendment: `explored_mass` boundary tolerance.
+#
+# A real development sweep aborted after ~60 min on an observed
+# explored_mass=1.0000000229338184 -- every child explored, so the exact sum is
+# 1.0 and float32 accumulation landed 2.3e-8 over. The frozen formula clamps
+# (`policy_mass_fpu`), so the value is expected; the validator was wrong, not
+# the data.
+# ---------------------------------------------------------------------------
+
+OBSERVED_OVERSHOOT = 1.0000000229338184
+
+
+def _check(**over):
+    v17.require_complete_pairing(corpus(configs=(None, 0.35), **over),
+                                 (None, 0.35))
+
+
+@pytest.mark.parametrize("value", [OBSERVED_OVERSHOOT, 1.0, 0.0,
+                                   1.0 + 1e-9, 1.0 + 1e-6, -1e-9])
+def test_explored_mass_within_tolerance_is_accepted(value):
+    """Including the EXACT value that aborted the real sweep."""
+    _check(explored_mass=value)
+
+
+@pytest.mark.parametrize("value", [1.5, -0.1, 1.1, 1.0 + 1e-3, -1e-3])
+def test_explored_mass_meaningfully_out_of_range_is_still_refused(value):
+    """The tolerance must not become an open door: validating the CLAMPED
+    value would have accepted 1.5 and made the range check useless."""
+    with pytest.raises(prov.ProtocolViolation, match="outside"):
+        _check(explored_mass=value)
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_nonfinite_explored_mass_is_still_refused(value):
+    with pytest.raises(prov.ProtocolViolation):
+        _check(explored_mass=value)
+
+
+@pytest.mark.parametrize("field", ["top_share", "selected_prior"])
+def test_the_other_unit_fields_remain_strict(field):
+    """Neither is an accumulated sum, so neither has this failure mode and
+    neither gets the tolerance."""
+    assert field not in v17.UNIT_INTERVAL_TOLERANCE
+    with pytest.raises(prov.ProtocolViolation, match="outside"):
+        _check(**{field: OBSERVED_OVERSHOOT})
+
+
+def test_only_explored_mass_has_a_tolerance():
+    assert set(v17.UNIT_INTERVAL_TOLERANCE) == {"explored_mass"}
+    assert v17.UNIT_INTERVAL_TOLERANCE["explored_mass"] == 1e-6
+
+
+def test_the_raw_value_is_preserved_not_normalised():
+    """The artifact must record what was MEASURED; a clamped or rounded value
+    would make the row hash cover something that never happened."""
+    rows = corpus(configs=(None, 0.35), explored_mass=OBSERVED_OVERSHOOT)
+    v17.require_complete_pairing(rows, (None, 0.35))
+    # `corpus` applies overrides to the CANDIDATE rows only.
+    cand = [r for r in rows if r["coefficient"] == 0.35]
+    assert cand and all(r["explored_mass"] == OBSERVED_OVERSHOOT for r in cand)

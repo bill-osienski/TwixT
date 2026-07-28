@@ -252,6 +252,20 @@ REQUIRED_ROW_FIELDS = IDENTITY_FIELDS + ("coefficient",) + SCIENTIFIC_FIELDS
 FLOAT_FIELDS = ("selected_prior", "root_value_stm", "parent_value",
                 "selected_child_q", "top_share", "eff_children", "explored_mass")
 UNIT_INTERVAL_FIELDS = ("top_share", "explored_mass", "selected_prior")
+
+# `explored_mass` alone gets a boundary tolerance. It is a SUM of hundreds of
+# float32 priors; when every child is explored the exact total is 1.0, but
+# accumulation lands a few ULPs above -- an observed 1.0000000229338184
+# (2.3e-8) aborted a full development sweep. The frozen formula already clamps
+# (`policy_mass_fpu`: "no clamp here -- policy_mass_fpu clamps"), so such a
+# value is expected, not corrupt.
+#
+# A TOLERANCE, not validation-after-clamping: clamping first would also accept
+# 1.5 and make the range check useless. `top_share` and `selected_prior` stay
+# STRICT -- neither is an accumulated sum, so neither has this failure mode.
+# The artifact keeps the RAW observed value; nothing is normalised or clamped
+# on the way to disk, so the hash covers what was actually measured.
+UNIT_INTERVAL_TOLERANCE = {"explored_mass": 1e-6}
 INT_FIELDS = ("seed", "selected_prior_rank", "replies", "stabilization_sim")
 BOOL_FIELDS = ("add_noise", "collapse", "lock_in", "complete")
 ROLES = ("target", "control")
@@ -381,9 +395,12 @@ def validate_row_set(rows: Sequence[Mapping[str, Any]],
                 raise prov.ProtocolViolation(
                     f"nonfinite or non-numeric {name}={value!r} for position {sha!r}")
         for name in UNIT_INTERVAL_FIELDS:
-            if not 0.0 <= row[name] <= 1.0:
+            tol = UNIT_INTERVAL_TOLERANCE.get(name, 0.0)
+            if not -tol <= row[name] <= 1.0 + tol:
                 raise prov.ProtocolViolation(
-                    f"{name}={row[name]!r} outside [0, 1] for position {sha!r}")
+                    f"{name}={row[name]!r} outside [0, 1]"
+                    + (f" (tolerance {tol:g})" if tol else "")
+                    + f" for position {sha!r}")
         if row["eff_children"] < 0:
             raise prov.ProtocolViolation(
                 f"eff_children must be >= 0, got {row['eff_children']!r}")

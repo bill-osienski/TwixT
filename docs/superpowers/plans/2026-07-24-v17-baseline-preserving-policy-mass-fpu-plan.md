@@ -528,6 +528,32 @@ Operator task:
 5. Persist all paired rows and gate metrics.
 6. Select the smallest coefficient passing design §§7.2–7.3.
 
+**Amendment `task11-explored-mass-tolerance-v1` (2026-07-28).**
+Tooling-only correction; no scientific decision, gate, grid, corpus, screen,
+manifest, formula or `mcts.py` change.
+
+A development sweep aborted after ~60 minutes on an observed
+`explored_mass=1.0000000229338184`. `explored_policy_mass` is a SUM of hundreds
+of float32 priors; when every child is explored the exact total is 1.0 and
+accumulation lands a few ULPs above. The frozen rule already clamps
+(`policy_mass_fpu`: "no clamp here -- policy_mass_fpu clamps"), so such a value
+is expected rather than corrupt -- the diagnostic's range check was wrong, not
+the data.
+
+`explored_mass` alone now carries a `1e-6` boundary tolerance
+(`UNIT_INTERVAL_TOLERANCE`). Deliberately a TOLERANCE, not validation after
+clamping: clamping first would also accept `1.5` and make the range check
+useless. `top_share` and `selected_prior` stay strict -- neither is an
+accumulated sum. The artifact records the RAW observed value; nothing is
+normalised or clamped on the way to disk, so the row hash covers what was
+actually measured. Nonfinite values and meaningful violations (`1.5`, `-0.1`,
+`1e-3` beyond the bound) are still refused.
+
+The aborted in-memory run produced no artifact, was not resumed, and is not
+interpreted. Task 10's reservoir, screen and manifest are unaffected: this
+module is not among the 13 `GENERATION_SOURCE_MODULES` nor in the screen
+sidecar's `source_file_sha1s`, so no regeneration or re-screen is required.
+
 **Stop:** if none pass, reject v17. Do not generate held-out evidence.
 
 **Gate:** immutable `selected_coefficient.json` bound to the complete
