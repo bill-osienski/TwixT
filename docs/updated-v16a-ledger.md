@@ -91,6 +91,7 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **v16 policy-mass successor — production v2 control qualification** | Search-code successor on unchanged BASE `calib020_0001`: `FPU=Q_parent-r*sqrt(P_explored)`, with completed-visit policy mass. After v1 corpus infeasibility and the role-feasibility/selector-v2 repair, generated one immutable 4,000-game production reservoir (board 24, 400 sims, workers 4, seed `[20300000,20304000)`, no top-up), screened 20,464 proposals, and selected a fingerprinted 120-row whole-game-isolated corpus. | **not run.** Selected-A is downstream of the failed `r0` prerequisite. | **not run.** | **not run.** | **not run.** | no match | **REJECT parent-relative policy-mass family at the prerequisite (2026-07-24).** `r0` ran successfully on the untouched 80-row tuning split but failed development safety: lower-prior control flips `11/40 = 27.5%` vs required `<10%`. Target lock-ins improved `1→0` and mean top share fell `0.390125→0.295344`, but those descriptive improvements do not override the collateral gate. No nonzero `r`, frozen check, selected-A candidate gate, A/B/C/D, collateral, or strength result was run. |
 
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
+| **v17** — baseline-preserving policy-mass FPU | `FPU = −r·sqrt(P_explored)`, NO Q_parent; grid {0.15,0.20,0.25,0.35,0.45}; fresh 1,600-game reservoir + 32-position corpus | not reached | not reached | not reached | not reached | no match | **Reject (null).** All five coefficients fail §7.2 safety at development. No held-out, no Task 12, no grid extension. |
 
 ## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
 
@@ -155,6 +156,77 @@ reservoir qualification
 If the reservoir faithfully matches the protocol but fails geometry, protocol v1 is retired; never append/top-up. If `r0` or every candidate fails, reject the formula family. No self-play adoption before the final strength match passes.
 
 Full reproducible commands and artifact descriptions belong in `docs/post-game-analysis.md` section `v16 Context-Relative Policy-Mass FPU — Operator Runbook`.
+
+## v17 baseline-preserving policy-mass FPU — REJECTED (null), 2026-07-29
+
+**Rule.** `FPU = fpu_value − r·sqrt(clamp(P_explored, 0, 1))`, with validation forcing
+`fpu_value == 0.0`, so the operative rule is `−r·sqrt(P_explored)`. **No `Q_parent`** —
+this is what distinguishes v17 from the retired v16 parent-relative rule.
+
+**Preregistration.** Design frozen 2026-07-24, SHA-1
+`944f358c0e3ef66503d2cbb56e31dabd145bafc2`. Grid `{0.15, 0.20, 0.25, 0.35, 0.45}`,
+fixed in advance; §13 forbids interpolating or extending it.
+
+### Evidence
+
+| Artifact | SHA-1 |
+|---|---|
+| `development_diagnostic.json` | `af7778c84e1ea04f463febfc615e5363400d6aad` |
+| `selected_coefficient.json` (rejection witness) | `fad6ccb6fe678e86fc474c6d99234dc8841d0f2a` |
+| reservoir protocol | `386d14f48a05380b94d252cf815e84121f06b0b7` |
+| diagnostic protocol / config | `41f1612f4706c52c9393946b4319a67998cb955f` / `6d4fe3fbd7fc1fa54d6ed3f0ecd88962a6223378` |
+| corpus manifest / source index / selected replays | `15b0228e…` / `960408f0…` / `0b8609cf…` |
+| `mcts.py` at run time | `b60c983399dbc5ed292de9b15944b8850a1d8508` |
+
+Fresh evidence throughout: 1,600 games at seeds `[20310000, 20311600)`, board 24,
+400 sims, batching `(14, 48, 8)`, `add_noise=false`, no top-up; deterministic
+32-position corpus (16 late flat-policy targets, 16 concentrated controls, four per
+phase, 16 red / 16 black, ≤2 per game, ≥12-ply spacing), disjoint from all v16
+production, v16a neutral and A/B/C/D positions.
+
+**Identity prerequisite passed.** Shipped vs `r=0` byte-identical on **32/32** rows
+including `search_result_sha1`. Each positive coefficient differs from shipped on
+**32/32** positions, so the identity result is not vacuous.
+
+### Gate table — all five coefficients fail
+
+| r | target new-collapse (`<0.05`) | control flip to lower prior (`<0.10`) | reply reduction (`≥0.50`) | verdict |
+|---|---|---|---|---|
+| 0.15 | **0.0625** | **0.4375** | **0.2336** | FAIL |
+| 0.20 | **0.0625** | **0.3125** | **0.3712** | FAIL |
+| 0.25 | **0.1250** | **0.5000** | 0.5038 | FAIL |
+| 0.35 | **0.1250** | **0.4375** | 0.6827 | FAIL |
+| 0.45 | **0.0625** | **0.4375** | 0.7863 | FAIL |
+
+Every coefficient fails **both** §7.2 safety gates. On 16 targets the `>=5%`
+new-collapse rule passes only at zero collapses; each coefficient produced 1–2. The
+16-control flip gate permits at most one flip and rejects at two; observed rates of
+0.31–0.50 are **5–8 flips**.
+
+**Selected coefficient: `null`.** The §7.3 reply-reduction mechanism gate is met at
+`r ≥ 0.25`, but never becomes decisive because safety fails at every grid point.
+
+### Interpretation
+
+The mechanism works as designed — reply reduction rises monotonically with `r`
+(0.23 → 0.79) — but it carries an unacceptable control cost at **every** strength
+tested, and the cost does not fall as `r` shrinks. The control flip rate is roughly
+flat across the grid while reply reduction varies more than threefold, so there is no
+region where the intended effect is obtained cheaply.
+
+`selected_coefficient.json` is a **rejection witness**, not an authorization: it
+records `coefficient: null` bound to the development artifact, gate table and
+selection context. It does not permit advancing.
+
+### Frozen-plan consequences
+
+- **No held-out generation.** Task 11's stop condition is met.
+- **No Task 12.** Held-out collateral is not authorized and must not be built.
+- **No grid extension.** §13 pre-registers a null as closing v17. Reply reduction is
+  still climbing at `r = 0.45`, which invites a larger coefficient — but control flips
+  are already 7/16 there, and the preregistration forbids it. Trying `r > 0.45`
+  would be exactly the post-hoc grid extension the freeze exists to prevent.
+- **No strength match.** Nothing reached the strength stage.
 
 ## What got better vs worse
 
@@ -226,6 +298,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
+45. **Any policy-mass FPU coefficient, in either formulation.** v16's parent-relative `Q_parent − r·sqrt(P_explored)` died at its own `r=0` prerequisite (27.5% control flips vs a <10% gate). v17's baseline-preserving `−r·sqrt(P_explored)` ran the full preregistered grid on fresh evidence and failed §7.2 safety at **all five** coefficients, with control flip rates of 0.31–0.50 that do **not** improve as `r` shrinks. Two independent formulations, two independent corpora, same failure mode: the policy-mass FPU line is closed. Do not propose `r > 0.45`, a finer grid, a relaxed control gate, or a third formulation of the same idea.
+
 
 ## v14 adapter-projection cleanup status (2026-07-09)
 
