@@ -2425,10 +2425,27 @@ def _build_diagnostic(*, mode: str, manifest_path: str, checkpoint: str,
     configs, manifest_rows = pre["configs"], pre["manifest_rows"]
     if searcher is None:                                    # pragma: no cover
         searcher = _real_searcher(checkpoint, seed_base)
-    rows = [searcher(m, c) for m in manifest_rows for c in configs]
-    validate_row_set(rows, configs)
+    # Design 2.2 / Task 11 steps 1-2: the shipped vs r=0 identity is a
+    # PREREQUISITE, not one check among many. Running every config up front
+    # meant the five positive coefficients were already evaluated by the time
+    # identity was tested -- so a failure could not "stop before positive
+    # coefficients", it could only report after the fact.
+    #
+    # Two phases: the baseline pair first, validated and identity-checked on
+    # its own; only then the positives. Modes without ZERO (held_out, and any
+    # future single-coefficient stage) keep the single-phase path unchanged.
     if ZERO in configs:
-        require_zero_identity(rows)
+        baseline = [c for c in configs if c is SHIPPED or c == ZERO]
+        positive = [c for c in configs if c not in baseline]
+        rows = [searcher(m, c) for m in manifest_rows for c in baseline]
+        validate_row_set(rows, baseline)
+        require_zero_identity(rows)          # raises BEFORE any positive search
+        if positive:
+            rows += [searcher(m, c) for m in manifest_rows for c in positive]
+            validate_row_set(rows, configs)
+    else:
+        rows = [searcher(m, c) for m in manifest_rows for c in configs]
+        validate_row_set(rows, configs)
     shipped_lockin = sum(1 for r in rows if r["coefficient"] is SHIPPED
                          and r["role"] == "target" and r["lock_in"])
     gates: Dict[str, Any] = {}

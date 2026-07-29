@@ -3308,3 +3308,82 @@ def test_a_substituted_authenticated_chain_is_refused(tmp_path, clean_tree):
             doc, manifest_path=other["manifest_path"],
             source_index=other["source_index"],
             replay_paths=other["replay_paths"])
+
+
+# ---------------------------------------------------------------------------
+# Task 11 steps 1-2 / design 2.2: shipped vs r=0 identity is a PREREQUISITE.
+# A failure must stop BEFORE any positive coefficient is searched, not merely
+# be reported after all seven configs have already run.
+# ---------------------------------------------------------------------------
+
+def _counting_searcher(break_identity=False):
+    """Records every (position, coefficient) searched.
+
+    `break_identity` perturbs ONLY the r=0 rows, so shipped and r=0 diverge
+    while every row stays individually well-formed -- the identity check is
+    then the only thing that can refuse.
+    """
+    calls = []
+
+    def search(manifest_row, coefficient):
+        calls.append(coefficient)
+        over = {}
+        if break_identity and coefficient == 0.0:
+            over = {"root_value_stm": 0.125}
+        return row(manifest_row["canonical_sha1"], coefficient,
+                   role=manifest_row["role"], side=manifest_row["side"],
+                   ply_bucket=manifest_row["ply_bucket"], **over)
+
+    search.calls = calls
+    return search
+
+
+def _positives(calls):
+    return [c for c in calls if c is not None and c != 0.0]
+
+
+def test_identity_failure_runs_zero_positive_searches(clean_tree, tmp_path,
+                                                      monkeypatch):
+    """The load-bearing property: on identity failure, not one positive
+    coefficient is evaluated."""
+    searcher = _counting_searcher(break_identity=True)
+    with pytest.raises(prov.ProtocolViolation):
+        _run(tmp_path, monkeypatch, "development", searcher=searcher)
+    assert _positives(searcher.calls) == [], "a positive coefficient was searched"
+    assert set(searcher.calls) == {None, 0.0}
+    assert len(searcher.calls) == 32 * 2, "only the baseline pair should run"
+
+
+def test_positives_do_run_once_identity_holds(clean_tree, tmp_path, monkeypatch):
+    """Non-vacuity: the assertion above must not pass merely because positives
+    never run at all."""
+    searcher = _counting_searcher(break_identity=False)
+    _run(tmp_path, monkeypatch, "development", searcher=searcher)
+    assert sorted(set(_positives(searcher.calls))) == sorted(prov.GRID)
+    assert len(searcher.calls) == 32 * 7
+
+
+def test_baseline_is_searched_before_any_positive(clean_tree, tmp_path,
+                                                  monkeypatch):
+    """Ordering, not just counts: every shipped/r=0 search precedes the first
+    positive one."""
+    searcher = _counting_searcher()
+    _run(tmp_path, monkeypatch, "development", searcher=searcher)
+    first_positive = next(i for i, c in enumerate(searcher.calls)
+                          if c is not None and c != 0.0)
+    assert first_positive == 32 * 2, "the 64 baseline rows must come first"
+    assert all(c is None or c == 0.0 for c in searcher.calls[:first_positive])
+
+
+def test_held_out_is_unchanged_by_the_two_phase_split(clean_tree, tmp_path,
+                                                      monkeypatch):
+    """held_out carries no r=0 row, so it keeps the single-phase path."""
+    stage1 = _selector_chain(tmp_path, "development")
+    searcher = _counting_searcher()
+    _run(tmp_path, monkeypatch, "held_out", frozen_coefficient=0.25,
+         stage1_manifest=str(stage1["manifest"]),
+         stage1_source_index=str(stage1["index"]),
+         stage1_post_screen_report=str(stage1["report"]),
+         searcher=searcher)
+    assert 0.0 not in searcher.calls
+    assert set(searcher.calls) == {None, 0.25}
