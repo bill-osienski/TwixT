@@ -221,6 +221,21 @@ def require_not_tooling_smoke(doc: Mapping[str, Any], *, consumer_run_kind: str)
 
 SENTINEL_HASHES = ("none", "missing")
 
+# Stages whose evidence IS a selector corpus: a manifest, its source index and
+# the replay set behind it. Only these bind that triple.
+#
+# `abcd` is NOT exempt from authentication -- it consumes FIXED probe artifacts
+# (the canonical A/B/C/D CSVs + the Task 1 freeze) and authenticates those,
+# plus checkpoint and source identities. `strength` and `external_validation`
+# likewise carry their own evidence-specific bindings. Requiring a selector
+# corpus of them would mean inventing placeholders, which is weaker provenance,
+# not stronger.
+CORPUS_BOUND_RUN_KINDS = ("development", "held_out")
+
+
+def binds_selector_corpus(run_kind: str) -> bool:
+    return validate_run_kind(run_kind) in CORPUS_BOUND_RUN_KINDS
+
 # Keys `extra` may never set. Anything a caller adds must not be able to
 # restate the frozen protocol or flip a run's scientific status.
 RESERVED_PROVENANCE_KEYS = frozenset({

@@ -9,6 +9,7 @@ point of the module under test is that a violation is refused BEFORE any of
 those are touched.
 """
 import json
+import pathlib
 import subprocess
 import sys
 
@@ -55,7 +56,7 @@ def test_config_states_its_interpretation_status_explicitly(clean_tree):
             ("development", 20310000, 1600, False)):
         protocol = proto.build_protocol(
             run_kind=run_kind, coefficient=None, base_seed=seed, games=games,
-            checkpoints={"a": CKPT})
+            checkpoints={"a": CKPT}, **_corpus_for(run_kind))
         config = proto.derive_config(protocol)
         assert protocol["scientific_interpretation_forbidden"] is forbidden
         assert config["scientific_interpretation_forbidden"] is forbidden
@@ -258,10 +259,37 @@ def test_provenance_has_no_timestamp(clean_tree):
 # Protocol / config lifecycle
 # ---------------------------------------------------------------------------
 
+# A selector-corpus stage must bind a corpus, so this module needs REAL files
+# to hash. Written once into a temp dir -- real content, real SHA-1s. They are
+# not a stand-in for the Task 10 corpus: nothing here asserts corpus SEMANTICS,
+# only protocol schema mechanics. Corpus identity has its own tests in
+# tests/test_fpu_v17_diagnostic.py, bound to a real selector chain.
+def _corpus_files():
+    import tempfile
+    d = pathlib.Path(tempfile.mkdtemp(prefix="v17_proto_corpus_"))
+    man = d / "manifest.csv"
+    man.write_text("canonical_position_sha1,game_idx,position_ply\n"
+                   "aaa,1,40\n")
+    idx = d / "source_index.jsonl"
+    idx.write_text(json.dumps({"game_idx": 1, "replay_path": str(d / "g.json")})
+                   + "\n")
+    rep = d / "g.json"
+    rep.write_text(json.dumps({"game_idx": 1, "moves": []}))
+    return {"manifest": str(man), "source_index": str(idx),
+            "replay_paths": [str(rep)]}
+
+
+_CORPUS = _corpus_files()
+
+
+def _corpus_for(run_kind):
+    return _CORPUS if prov.binds_selector_corpus(run_kind) else {}
+
+
 def _dev_protocol():
     return proto.build_protocol(run_kind="development", coefficient=None,
                                 base_seed=20310000, games=1600,
-                                checkpoints={"a": CKPT})
+                                checkpoints={"a": CKPT}, **_CORPUS)
 
 
 def test_build_protocol_enforces_the_frozen_rules(clean_tree):
@@ -269,9 +297,10 @@ def test_build_protocol_enforces_the_frozen_rules(clean_tree):
     assert doc["schema_version"] == 2 and doc["artifact_kind"] == "protocol"
     with pytest.raises(prov.ProtocolViolation, match="frozen grid"):
         proto.build_protocol(run_kind="development", coefficient=0.55,
-                             base_seed=20310000, games=1600)
+                             base_seed=20310000, games=1600, **_CORPUS)
     with pytest.raises(prov.ProtocolViolation, match="seed range"):
-        proto.build_protocol(run_kind="development", base_seed=20310000, games=99)
+        proto.build_protocol(run_kind="development", base_seed=20310000,
+                             games=99, **_CORPUS)
     with pytest.raises(prov.ProtocolViolation, match="generates no games"):
         proto.build_protocol(run_kind="abcd", base_seed=1, games=1)
 
@@ -279,7 +308,8 @@ def test_build_protocol_enforces_the_frozen_rules(clean_tree):
 def test_build_protocol_refuses_a_dirty_tree_for_scientific_runs(monkeypatch):
     monkeypatch.setattr(fpu_provenance, "worktree_clean", lambda: False)
     with pytest.raises(prov.ProtocolViolation, match="clean worktree"):
-        proto.build_protocol(run_kind="development", base_seed=20310000, games=1600)
+        proto.build_protocol(run_kind="development", base_seed=20310000,
+                             games=1600, **_CORPUS)
     proto.build_protocol(run_kind="tooling_smoke", base_seed=20309000, games=32)
 
 
@@ -321,12 +351,12 @@ def test_config_is_a_pure_function_of_the_protocol(clean_tree):
 
 def test_zero_coefficient_takes_the_shipped_branch_in_the_config(clean_tree):
     doc = proto.build_protocol(run_kind="development", coefficient=0.0,
-                               base_seed=20310000, games=1600)
+                               base_seed=20310000, games=1600, **_CORPUS)
     cfg = proto.derive_config(doc)
     assert cfg["coefficient"] == 0.0 and cfg["shipped_branch"] is True
     pos = proto.derive_config(proto.build_protocol(
         run_kind="development", coefficient=0.35,
-        base_seed=20310000, games=1600))
+        base_seed=20310000, games=1600, **_CORPUS))
     assert pos["shipped_branch"] is False
 
 
@@ -538,7 +568,7 @@ def test_frozen_board_size_is_accepted():
 def test_build_protocol_refuses_a_non_frozen_board_size(clean_tree):
     with pytest.raises(prov.ProtocolViolation, match="board_size"):
         proto.build_protocol(run_kind="development", base_seed=20310000,
-                             games=1600, board_size=30)
+                             games=1600, board_size=30, **_CORPUS)
 
 
 # --- (5) extra may not overwrite protected provenance ----------------------

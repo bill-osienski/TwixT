@@ -96,6 +96,9 @@ def build_protocol(*, run_kind: str,
                    board_size: int = 24,
                    checkpoints: Optional[Mapping[str, str]] = None,
                    source_files: Any = (),
+                   manifest: Optional[str] = None,
+                   source_index: Optional[str] = None,
+                   replay_paths: Optional[Any] = None,
                    extra: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
     """Validate every frozen rule, then build the immutable protocol document.
 
@@ -107,6 +110,30 @@ def build_protocol(*, run_kind: str,
     board_size = prov.validate_board_size(board_size)
     prov.verify_frozen_design()
     prov.require_clean_worktree(run_kind)
+    supplied = [n for n, v in (("manifest", manifest),
+                               ("source_index", source_index),
+                               ("replay_paths", replay_paths)) if v is not None]
+    if not prov.binds_selector_corpus(run_kind):
+        # Symmetric refusal: a protocol must not record a promise the runtime
+        # will never check. `abcd` replays fixed probe artifacts, and
+        # strength/external_validation carry their own evidence bindings, so a
+        # selector corpus here would be an unverified claim.
+        if supplied:
+            raise prov.ProtocolViolation(
+                f"run_kind {run_kind!r} consumes no selector corpus; refusing "
+                f"to record {supplied}")
+    if prov.binds_selector_corpus(run_kind):
+        # A selector-corpus stage must COMMIT to the corpus it runs against.
+        # Without these, preflight binds only the coefficient and checkpoint,
+        # and any independently valid selector chain could be substituted after
+        # emission.
+        missing = [n for n, v in (("manifest", manifest),
+                                  ("source_index", source_index),
+                                  ("replay_paths", replay_paths)) if v is None]
+        if missing:
+            raise prov.ProtocolViolation(
+                f"run_kind {run_kind!r} consumes a selector corpus and must "
+                f"bind it; missing {missing}")
     if prov.SEED_RANGES[run_kind] is not None:
         if base_seed is None or games is None:
             raise prov.ProtocolViolation(
@@ -129,7 +156,9 @@ def build_protocol(*, run_kind: str,
         "scientific_interpretation_forbidden": not prov.is_scientific(run_kind),
         "provenance": prov.build_provenance(
             run_kind=run_kind, coefficient=coefficient,
-            checkpoints=checkpoints, source_files=source_files),
+            checkpoints=checkpoints, source_files=source_files,
+            manifest=manifest, source_index=source_index,
+            replay_paths=replay_paths),
     }
     if extra:
         doc["extra"] = dict(extra)

@@ -997,11 +997,57 @@ def _qualification(tmp_path, mode, manifest_path, **over):
     return str(path)
 
 
+def _bound_chain(tmp_path, mode="development"):
+    """THE chain for (tmp_path, mode) -- manifest, source index, the SELECTED
+    replay paths, and the qualification report, as one object.
+
+    `_selector_chain` is idempotent for a given (tmp_path, mode), so every
+    caller sharing a tmp_path shares this chain. That is the whole point: the
+    protocol and the runtime corpus must describe the SAME evidence, and the
+    previous fixtures built them independently.
+
+    Replay paths come from `load_manifest`, exactly as preflight derives them.
+    Hashing the source index instead would fingerprint the whole reservoir.
+    """
+    pathlib.Path(tmp_path).mkdir(parents=True, exist_ok=True)
+    ch = _selector_chain(tmp_path, mode)
+    rows = v17.load_manifest(str(ch["manifest"]), source_index=str(ch["index"]))
+    return {
+        **ch,
+        "mode": mode,
+        "manifest_path": str(ch["manifest"]),
+        "source_index": str(ch["index"]),
+        "replay_paths": sorted({m["replay_path"] for m in rows}),
+    }
+
+
+def _corpus_binding(chain):
+    """The three selector-corpus arguments, or {} for a mode that consumes no
+    selector corpus (abcd/strength/external_validation/tooling_smoke)."""
+    if not prov.binds_selector_corpus(chain["mode"]):
+        return {}
+    return {"manifest": chain["manifest_path"],
+            "source_index": chain["source_index"],
+            "replay_paths": chain["replay_paths"]}
+
+
+def _chain_parts(tmp_path, mode="development"):
+    """Back-compat tuple view of `_bound_chain`."""
+    ch = _bound_chain(tmp_path, mode)
+    return ch["manifest_path"], ch["source_index"], ch["replay_paths"]
+
+
 def _pair(tmp_path, mode, coefficient=None):
     base, games = SEEDS[mode]
+    # A selector-corpus stage must bind its corpus. Bound to the REAL chain
+    # this fixture builds -- real files, real hashes, no placeholders.
+    # SAME tmp_path as every other helper, so the protocol binds the chain the
+    # runtime will actually use. A subdirectory here silently created a second
+    # valid chain and the production refusal correctly caught it.
+    bind = _corpus_binding(_bound_chain(tmp_path, mode))
     doc = protocol.build_protocol(run_kind=mode, coefficient=coefficient,
                                   base_seed=base, games=games,
-                                  checkpoints={v17.ANCHOR_ROLE: CKPT})
+                                  checkpoints={v17.ANCHOR_ROLE: CKPT}, **bind)
     ppath, cpath = tmp_path / f"p_{mode}.json", tmp_path / f"c_{mode}.json"
     protocol.emit(ppath, doc)
     protocol.emit(cpath, protocol.derive_config(doc))
@@ -1129,7 +1175,9 @@ def _selected_coefficient(tmp_path, monkeypatch, coefficient, **over):
 def _protocol_with_selection(tmp_path, mode, coefficient, selection_sha1):
     """A later-stage protocol that PRECOMMITS the selection artifact."""
     base, games = SEEDS[mode] if mode in SEEDS else (None, None)
-    doc = protocol.build_protocol(
+    bind = ({} if mode not in SEEDS
+            else _corpus_binding(_bound_chain(tmp_path, mode)))
+    doc = protocol.build_protocol(**bind,
         run_kind=mode, coefficient=coefficient, base_seed=base, games=games,
         checkpoints={v17.ANCHOR_ROLE: CKPT},
         extra={"selected_coefficient_sha1": selection_sha1})
@@ -1187,23 +1235,27 @@ def test_run_diagnostic_requires_a_verified_protocol(clean_tree, tmp_path,
             seed_base=1, source_index="x", searcher=_fake_searcher())
 
 
-def test_run_diagnostic_refuses_wrong_manifest_geometry(clean_tree, tmp_path,
-                                                        monkeypatch):
-    monkeypatch.setattr(prov, "OUTPUT_ROOT", str(tmp_path))
-    ppath, cpath = _pair(tmp_path, "development")
-    bad = tmp_path / "bad.csv"
-    bad.write_text("canonical_position_sha1,game_idx,position_ply,side,role,"
-                   "ply_bucket,split\n"
-                   "p0,900000,50,red,target,late,development\n")
-    good = _manifest(tmp_path)
+def test_run_diagnostic_refuses_wrong_manifest_geometry():
+    """Geometry is validated in its own right.
+
+    This used to drive a wrong manifest through `_build_diagnostic`, but corpus
+    binding now (correctly) refuses a substituted manifest first -- a STRICTER
+    refusal, reached earlier. Asserting the geometry rule directly keeps the
+    check precise instead of depending on which guard happens to fire first;
+    the substitution path has its own test.
+    """
+    rows = [{"canonical_sha1": "p0", "game_idx": 900000, "position_ply": 50,
+             "side": "red", "role": "target", "ply_bucket": "late",
+             "split": "development"}]
     with pytest.raises(prov.ProtocolViolation, match="corpus roles"):
-        v17._build_diagnostic(
-            mode="development", manifest_path=str(bad), checkpoint=CKPT,
-            out_path=str(tmp_path / "o.json"), seed_base=1,
-            source_index=str(_source_index(tmp_path)), protocol_path=ppath,
-            config_path=cpath,
-            qualification_report=_qualification(tmp_path, "development", good),
-            searcher=_fake_searcher())
+        v17.require_corpus_geometry("development", rows)
+
+
+def test_the_frozen_development_geometry_is_accepted(tmp_path):
+    """Non-vacuity: the real 32-row geometry passes the same validator."""
+    rows = v17.load_manifest(str(_bound_chain(tmp_path)["manifest_path"]),
+                             source_index=str(_bound_chain(tmp_path)["source_index"]))
+    v17.require_corpus_geometry("development", rows)
 
 
 def test_missing_identity_is_caught_before_any_search(clean_tree, tmp_path,
@@ -3136,3 +3188,123 @@ def test_the_raw_value_is_preserved_not_normalised():
     # `corpus` applies overrides to the CANDIDATE rows only.
     cand = [r for r in rows if r["coefficient"] == 0.35]
     assert cand and all(r["explored_mass"] == OBSERVED_OVERSHOOT for r in cand)
+
+
+# ---------------------------------------------------------------------------
+# Task 11: a scientific protocol must bind the CORPUS, not just the coefficient
+# and checkpoint. Otherwise any independently valid selector chain could be
+# substituted after protocol emission.
+# ---------------------------------------------------------------------------
+# Task 11: `development`/`held_out` bind their selector corpus. Every protocol
+# below is REAL `build_protocol` output -- a hand-shaped provenance dict hid the
+# fact that identities are nested under `provenance.identities`.
+# ---------------------------------------------------------------------------
+
+CORPUS_ARGS = ("manifest", "source_index", "replay_paths")
+
+
+@pytest.mark.parametrize("mode", ["development", "held_out"])
+@pytest.mark.parametrize("missing", CORPUS_ARGS)
+def test_corpus_consuming_modes_refuse_an_unbound_corpus(tmp_path, clean_tree,
+                                                        mode, missing):
+    """Clean-worktree gate satisfied, so the corpus refusal is what is reached."""
+    chain = _bound_chain(tmp_path, mode)
+    base, games = SEEDS[mode]
+    kw = dict(run_kind=mode, coefficient=None, base_seed=base, games=games,
+              checkpoints={v17.ANCHOR_ROLE: CKPT}, **_corpus_binding(chain))
+    kw[missing] = None
+    with pytest.raises(prov.ProtocolViolation, match="must bind it"):
+        protocol.build_protocol(**kw)
+
+
+@pytest.mark.parametrize("mode", ["abcd", "strength", "external_validation",
+                                  "tooling_smoke"])
+def test_non_consuming_modes_need_no_selector_corpus(tmp_path, clean_tree, mode):
+    """A/B/C/D consumes FIXED probe artifacts, not a selector corpus; strength
+    and external validation carry their own evidence-specific bindings.
+    Demanding this triple of them would mean inventing placeholders."""
+    assert not prov.binds_selector_corpus(mode)
+    rng = prov.SEED_RANGES[mode]                 # frozen ranges, not the test map
+    base, games = (None, None) if rng is None else rng
+    doc = protocol.build_protocol(
+        run_kind=mode, coefficient=(0.25 if mode != "tooling_smoke" else 0.35),
+        base_seed=base, games=games, checkpoints={v17.ANCHOR_ROLE: CKPT})
+    assert doc["run_kind"] == mode
+    ids = doc["provenance"]["identities"]
+    assert all(ids[k] is None for k in
+               ("manifest_sha1", "source_index_sha1", "replay_data_sha1"))
+
+
+@pytest.mark.parametrize("mode", ["abcd", "strength", "external_validation",
+                                  "tooling_smoke"])
+@pytest.mark.parametrize("arg", CORPUS_ARGS)
+def test_non_consuming_modes_reject_selector_corpus_arguments(
+        tmp_path, clean_tree, mode, arg):
+    """No protocol may record a promise the runtime will never check."""
+    chain = _bound_chain(tmp_path, "development")
+    rng = prov.SEED_RANGES[mode]
+    base, games = (None, None) if rng is None else rng
+    kw = dict(run_kind=mode,
+              coefficient=(0.25 if mode != "tooling_smoke" else 0.35),
+              base_seed=base, games=games,
+              checkpoints={v17.ANCHOR_ROLE: CKPT})
+    kw[arg] = (chain["replay_paths"] if arg == "replay_paths"
+               else chain["manifest_path"])
+    with pytest.raises(prov.ProtocolViolation, match="consumes no selector corpus"):
+        protocol.build_protocol(**kw)
+
+
+def _real_protocol(tmp_path, mode="development"):
+    chain = _bound_chain(tmp_path, mode)
+    base, games = SEEDS[mode]
+    doc = protocol.build_protocol(
+        run_kind=mode, coefficient=None, base_seed=base, games=games,
+        checkpoints={v17.ANCHOR_ROLE: CKPT}, **_corpus_binding(chain))
+    return doc, chain
+
+
+def test_a_real_bound_protocol_authenticates_its_own_chain(tmp_path, clean_tree):
+    doc, chain = _real_protocol(tmp_path)
+    out = v17.bind_corpus_to_runtime(
+        doc, manifest_path=chain["manifest_path"],
+        source_index=chain["source_index"], replay_paths=chain["replay_paths"])
+    assert out["manifest_sha1"] == doc["provenance"]["identities"]["manifest_sha1"]
+
+
+@pytest.mark.parametrize("key", ["manifest_sha1", "source_index_sha1",
+                                 "replay_data_sha1"])
+@pytest.mark.parametrize("bad", [None, "none", "missing"])
+def test_null_or_sentinel_identity_is_refused(tmp_path, clean_tree, key, bad):
+    """Mutate a REAL protocol's nested identities, not a hand-shaped dict."""
+    doc, chain = _real_protocol(tmp_path)
+    doc = json.loads(json.dumps(doc))
+    doc["provenance"]["identities"][key] = bad
+    with pytest.raises(prov.ProtocolViolation, match="must commit to the corpus"):
+        v17.bind_corpus_to_runtime(
+            doc, manifest_path=chain["manifest_path"],
+            source_index=chain["source_index"],
+            replay_paths=chain["replay_paths"])
+
+
+def test_a_protocol_without_an_identities_block_is_refused(tmp_path, clean_tree):
+    doc, chain = _real_protocol(tmp_path)
+    doc = json.loads(json.dumps(doc))
+    del doc["provenance"]["identities"]
+    with pytest.raises(prov.ProtocolViolation, match="no `identities` block"):
+        v17.bind_corpus_to_runtime(
+            doc, manifest_path=chain["manifest_path"],
+            source_index=chain["source_index"],
+            replay_paths=chain["replay_paths"])
+
+
+def test_a_substituted_authenticated_chain_is_refused(tmp_path, clean_tree):
+    """The core property: a DIFFERENT but independently valid development chain
+    refuses, with zero searches."""
+    doc, chain = _real_protocol(tmp_path / "a")
+    other = _bound_chain(tmp_path / "b", "development")
+    assert other["source_index"] != chain["source_index"]
+    with pytest.raises(prov.ProtocolViolation, match="substituted"):
+        v17.bind_corpus_to_runtime(
+            doc, manifest_path=other["manifest_path"],
+            source_index=other["source_index"],
+            replay_paths=other["replay_paths"])

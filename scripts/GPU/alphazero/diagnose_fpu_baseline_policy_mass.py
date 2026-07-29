@@ -914,6 +914,13 @@ def preflight(*, mode: str, manifest_path: str, checkpoint: str, out_path: str,
     module_dir = Path(__file__).resolve().parent
     source_files = [str(module_dir / name) for name in RESULT_DETERMINING_MODULES]
     _readable("replay", replay_paths)
+    if protocol_path and prov.binds_selector_corpus(mode):
+        # After replay resolution (so the hash covers the REAL replay set) and
+        # still before any evaluator is constructed.
+        bind_corpus_to_runtime(protocol.load_json(protocol_path),
+                               manifest_path=manifest_path,
+                               source_index=source_index,
+                               replay_paths=replay_paths)
     _readable("source", source_files)
     require_corpus_geometry(mode, manifest_rows)
     # Geometry is necessary but not sufficient: it accepts arbitrary rows
@@ -1511,6 +1518,49 @@ def effective_configs(configs: Sequence[Optional[float]]) -> Dict[str, Any]:
         prov.validate_batching(cfg)
         out[str(c)] = {"add_noise": False, **dataclasses.asdict(cfg)}
     return out
+
+
+def bind_corpus_to_runtime(protocol_doc: Mapping[str, Any], *,
+                           manifest_path: str, source_index: Optional[str],
+                           replay_paths: Sequence[str]) -> Dict[str, str]:
+    """The scientific protocol must bind the CORPUS, not just the coefficient
+    and checkpoint.
+
+    Without this, a protocol commits to `r` and a checkpoint while any other
+    independently valid selector chain could be substituted after emission.
+    Every identity is RECOMPUTED here from the runtime inputs and compared with
+    the protocol's recorded commitment -- costs zero searches and runs before
+    any evaluator is constructed. A null or sentinel commitment is refused
+    rather than treated as "no constraint".
+    """
+    # `build_provenance` nests these under `identities`; reading the
+    # provenance block directly made a CORRECTLY bound protocol report None.
+    provenance = protocol_doc.get("provenance") or {}
+    if "identities" not in provenance:
+        raise prov.ProtocolViolation(
+            "protocol provenance has no `identities` block to bind against")
+    recorded = provenance["identities"]
+    runtime = {
+        "manifest_sha1": fpu_provenance.file_sha1(manifest_path),
+        "source_index_sha1": (None if source_index is None
+                              else fpu_provenance.file_sha1(source_index)),
+        "replay_data_sha1": fpu_provenance.replay_data_sha1(
+            sorted(str(x) for x in replay_paths)),
+    }
+    for key, actual in runtime.items():
+        want = recorded.get(key)
+        if want is None or want in prov.SENTINEL_HASHES:
+            raise prov.ProtocolViolation(
+                f"scientific protocol records {key}={want!r}; it must commit "
+                f"to the corpus it runs against")
+        if actual is None:
+            raise prov.ProtocolViolation(
+                f"runtime supplies no {key} to compare against the protocol")
+        if actual != want:
+            raise prov.ProtocolViolation(
+                f"{key} mismatch: protocol committed to {want}, runtime corpus "
+                f"is {actual}; a different selector chain was substituted")
+    return runtime
 
 
 def bind_protocol_to_runtime(config: Mapping[str, Any], *,
