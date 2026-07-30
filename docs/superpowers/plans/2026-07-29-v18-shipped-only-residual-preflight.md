@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 17)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 18)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -1114,7 +1114,7 @@ git commit -m "feat(v18): read-only tree walker deriving all v18 metrics post ho
 
 **Interfaces:**
 - Consumes: `v18_provisional_backup.provisional_depth2_backup_value`; `v18_tree_walk`; `mcts.MCTSNode`.
-- Produces: `assert_synchronous_tree(root, expected_sims) -> None`; `counterfactual_child_q(parent, child, cap) -> float`; `crossover_at_node(parent, cap, c_puct) -> dict`; `crossover_for_tree(root, cap, c_puct) -> dict` returning `{"predicted_shipped_replies": int, "predicted_capped_replies": int, "predicted_reply_delta": int, "predicted_reply_reduction": float, "per_node": [...]}`.
+- Produces: `assert_synchronous_tree(root, expected_sims, *, search_execution_mode) -> None`; `counterfactual_child_q(parent, child, cap) -> float`; `crossover_at_node(parent, cap, c_puct) -> dict`; `crossover_for_tree(root, cap, c_puct) -> dict` returning `{"predicted_shipped_replies": int, "predicted_capped_replies": int, "predicted_reply_delta": int, "predicted_reply_reduction": float, "per_node": [...]}`.
 
 **The delta is signed.** The clip is symmetric, so a large *negative* residual lowers a visited child's counterfactual score and can *increase* reply scanning. Therefore:
 
@@ -1158,9 +1158,37 @@ def test_counterfactual_equals_actual_q_when_the_cap_does_not_bind():
 
 def test_synchronous_assertion_rejects_a_tree_with_the_wrong_visit_count():
     root, *_ = build_tree()          # root.visit_count == 10
-    X.assert_synchronous_tree(root, 10)
+    X.assert_synchronous_tree(root, 10, search_execution_mode="synchronous")
     with pytest.raises(ValueError):
-        X.assert_synchronous_tree(root, 400)
+        X.assert_synchronous_tree(root, 400, search_execution_mode="synchronous")
+
+
+def test_synchronous_assertion_refuses_a_batched_tree_with_a_MATCHING_count():
+    """The load-bearing case: identical visit count, wrong provenance.
+
+    `search_from_root` backs up EVERY waiter on a pending leaf with the same
+    expansion value (mcts.py:595-606), so a leaf's `value_sum` can hold
+    k*nn_value while `counterfactual_child_q` substitutes exactly one -- the
+    substitution is then wrong by (k-1)*(backup_value - nn_value). But the
+    batched path still backs up one path per simulation, so
+    `root.visit_count == expected_sims` holds on BOTH paths. The count proves
+    the simulation BUDGET and never the provenance; only the mode does.
+    """
+    root, *_ = build_tree()
+    with pytest.raises(ValueError):
+        X.assert_synchronous_tree(root, 10, search_execution_mode="batched_waiter")
+
+
+def test_synchronous_assertion_has_no_default_mode_and_rejects_unknown_modes():
+    # A default of "synchronous" would reinstate exactly the hole this closes:
+    # every caller that forgot the argument would silently assert the safe
+    # value. The argument is required and keyword-only.
+    root, *_ = build_tree()
+    with pytest.raises(TypeError):
+        X.assert_synchronous_tree(root, 10)
+    for bad in ("Synchronous", "sync", "", None, True):
+        with pytest.raises(ValueError):
+            X.assert_synchronous_tree(root, 10, search_execution_mode=bad)
 
 
 def test_identity_cap_predicts_no_change():
@@ -1246,7 +1274,16 @@ unvisited_score(m)   = 0.0 + c_puct * prior[m] * sqrt_parent
 
 It returns, for shipped and for the cap, the best visited score and the count of unvisited priors whose `unvisited_score` exceeds it — these are `predicted_shipped_replies` / `predicted_capped_replies` at that node — plus `excluded_terminal` and `excluded_synthetic`. `crossover_for_tree` sums over eligible depth-1 nodes and computes the signed ratio above; it raises `ValueError` on a zero shipped denominator rather than returning zero.
 
-`assert_synchronous_tree(root, expected_sims)` raises `ValueError` unless `root.visit_count == expected_sims`, with the prerequisite documented verbatim from spec §2.2.1. **The preflight asserts this rather than assuming it.**
+`assert_synchronous_tree(root, expected_sims, *, search_execution_mode)` raises `ValueError` unless **both** hold:
+
+1. `root.visit_count == expected_sims`, and
+2. `search_execution_mode == "synchronous"` exactly.
+
+`search_execution_mode` is **required and keyword-only, with no default**. A default of `"synchronous"` would reinstate the hole this closes — every caller that omitted the argument would silently assert the safe value — so omitting it must raise `TypeError`, and any other value (`"batched_waiter"`, `None`, `True`, `"sync"`, a case variant) must raise `ValueError`.
+
+**Why the count alone is not evidence.** Both search entry points back up exactly one path per simulation, so `root.visit_count == expected_sims` holds identically on either — the count proves the simulation *budget*, never the provenance. The distinction that matters is elsewhere: `search_from_root` "backs up ALL waiters with the returned value" when a pending leaf is expanded (`mcts.py:595-606`), so a leaf with `k` waiters accumulates `k * nn_value` into `value_sum`, while `counterfactual_child_q` subtracts exactly one `nn_value`. The substitution is then wrong by `(k-1) * (backup_value - nn_value)` and the whole crossover analysis silently loses exactness. `search_with_root` is documented as "the same synchronous per-sim path as `search()`; NOT `search_from_root`'s batched waiter path" (`mcts.py:528-535`), which is the only path on which the substitution is exact.
+
+The mode is therefore an **input to be proven by the caller's route** (Task 7), not a property this function can read off the tree. Nothing in this module may infer it, default it, or derive it from node state. The prerequisite is documented verbatim from spec §2.2.1. **The preflight asserts this rather than assuming it.**
 
 The module docstring must state in bold what the analysis **cannot** do (spec §2.2.1): it does not reproduce sequential selection once the candidate tree diverges, so it cannot empirically derive conversion efficiency.
 
@@ -2638,6 +2675,10 @@ Create `tests/test_v18_residual_preflight.py` using `tests/fpu_search_fixture.py
 ```python
 def test_build_row_tags_population(): ...
 def test_build_row_asserts_synchronous_provenance(): ...
+def test_measurement_routes_through_search_with_root_and_never_search_from_root(): ...
+def test_search_execution_mode_is_not_accepted_from_caller_metadata(): ...
+def test_valid_run_passes_the_constant_and_labels_the_artifact_with_it(): ...
+def test_a_mutated_mode_constant_refuses_and_writes_no_artifact(): ...
 def test_row_carries_per_cap_exposure_for_every_grid_cap(): ...
 def test_row_carries_the_primary_and_both_descriptive_formulas(): ...
 def test_artifact_is_byte_reproducible_across_two_runs(): ...
@@ -2654,6 +2695,13 @@ def test_cli_emits_no_verdict_key(): ...
 
 The five refusal tests are the non-vacuity evidence: each must fail if its guard is removed. `test_cli_emits_no_verdict_key` asserts no key matching `verdict|pass|fail|selected_formula|r_min|r_max` appears in the artifact — the measurement/judgement separation, enforced rather than described.
 
+**The three routing tests are the evidence boundary for synchronous provenance.** `assert_synchronous_tree` can only check the mode it is handed; what makes that mode true is the route this module takes, so the route is what must be tested:
+
+- `test_measurement_routes_through_search_with_root_and_never_search_from_root` — monkeypatch **both** `MCTS.search_with_root` and `MCTS.search_from_root` with recording wrappers, run the measurement over a small case set on the fake evaluator, then assert `search_from_root` recorded **exactly zero** calls and `search_with_root` recorded one per measured position. Zero calls is the load-bearing half: a test that only confirms `search_with_root` was used would still pass a module that called both. **This dynamic observation is the provenance evidence.** A static assertion that the module source never mentions `search_from_root` may be added as a supplemental tripwire against a future second route, but it is not evidence — source text does not establish which path executed, and it must never be offered in place of the zero-call assertion.
+- `test_search_execution_mode_is_not_accepted_from_caller_metadata` — `build_row` must **raise** when `meta` carries a `search_execution_mode` key, rather than honouring or ignoring it. A caller-supplied mode is an unaudited claim about someone else's route; accepting one would let a batched measurement label itself synchronous.
+- `test_valid_run_passes_the_constant_and_labels_the_artifact_with_it` — spy on `assert_synchronous_tree` and assert **every** call received `M.SEARCH_EXECUTION_MODE` (the constant object, compared against the module attribute, not against a `"synchronous"` literal restated in the test), then assert the emitted artifact's `search_execution_mode` field equals that same constant. This is what ties the asserted mode and the published label to one source on the path that actually produces an artifact.
+- `test_a_mutated_mode_constant_refuses_and_writes_no_artifact` — set `SEARCH_EXECUTION_MODE` to `"batched_waiter"` and assert the **full measurement raises `ValueError` and writes no artifact file**, preferably refusing before any search runs. **It must not emit a relabelled artifact.** An earlier draft of this test asserted the artifact label "moves with" the mutated constant; that is self-defeating — `assert_synchronous_tree` rejects any mode but `"synchronous"`, so a successful emission under a mutated constant could only mean the assertion was bypassed, and the control would be certifying the very failure it exists to catch. An invalid route label must produce **no artifact**, never a valid artifact carrying an invalid label. Assert the output path does not exist afterwards, so a partially written file cannot pass. There is no CLI flag that can set the mode; a test asserts the argument parser exposes no such option.
+
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `.venv/bin/python -m pytest -p no:cacheprovider tests/test_v18_residual_preflight.py -v`
@@ -2664,7 +2712,9 @@ Expected: FAIL — module not found.
 Requirements:
 
 - Load the frozen criteria artifact and the **frozen universe record**; refuse unless each SHA-1 matches the value **re-derived from the committed module**, not merely a value stored beside the file.
-- Per row: reconstruct the state, run **shipped** `search_with_root`, `assert_synchronous_tree(root, 400)`, then `walk(root, CAP_GRID)` and `crossover_for_tree(root, cap, c_puct)` per cap.
+- **One search route, one mode constant.** The module defines `SEARCH_EXECUTION_MODE = "synchronous"` immediately beside its **single** `MCTS.search_with_root` call site, with a comment binding the two: the constant is true *because* of that call, and any edit to the route must move the constant. `search_from_root` is never imported, referenced or called. The constant is the sole source of the mode everywhere downstream — the `assert_synchronous_tree` argument and the artifact label both read it, so they cannot disagree.
+- **The mode is never accepted from outside.** No CLI flag sets it, and `build_row` raises `ValueError` if `meta` contains a `search_execution_mode` key. A mode supplied by a caller is an unaudited claim about a route this module did not take.
+- Per row: reconstruct the state, run **shipped** `search_with_root`, `assert_synchronous_tree(root, 400, search_execution_mode=SEARCH_EXECUTION_MODE)`, then `walk(root, CAP_GRID)` and `crossover_for_tree(root, cap, c_puct)` per cap.
 - `census_positions.csv`: **one row per measured position** — the artifact the matcher and the sizing join both need, absent from revision 3. Exact schema:
 
 ```text
@@ -2695,7 +2745,7 @@ seed                       the per-position seed actually used
 
 - `residual_rows.csv`: one row per eligible depth-2 leaf — `population`, `case_id`, `game_idx`, `position_ply`, `side_to_move`, `canonical_state_sha1`, `raw_parent`, `raw_leaf`, `residual`, `leaf_visit_count`, `leaf_terminating_backups`, `leaf_has_depth3_child`, plus `would_clip_<cap>` and `clipped_amount_<cap>` per grid cap.
 - `crossover_tables.csv`: one row per (case, cap) with `predicted_shipped_replies`, `predicted_capped_replies`, `predicted_reply_delta`, `predicted_reply_reduction` (**signed, never clamped**), and the exclusion counts.
-- `preflight_artifact.json`: per-case `walk` records, the primary and both descriptive exposure values, sign dominance, the pooled reach numerator/denominator, terminal counts, all source SHA-1s, git commit, worktree state, `search_execution_mode: "synchronous"`, `run_kind: "shipped_only_preflight"`, `scientific_interpretation_forbidden: true`, the criteria SHA-1, the universe-record SHA-1, and `SCOPE_BOUNDARY` verbatim.
+- `preflight_artifact.json`: per-case `walk` records, the primary and both descriptive exposure values, sign dominance, the pooled reach numerator/denominator, terminal counts, all source SHA-1s, git commit, worktree state, `search_execution_mode` (emitted from `SEARCH_EXECUTION_MODE`, never a literal at the emission site and never caller-supplied), `run_kind: "shipped_only_preflight"`, `scientific_interpretation_forbidden: true`, the criteria SHA-1, the universe-record SHA-1, and `SCOPE_BOUNDARY` verbatim.
 - **No verdict, no PASS/FAIL, no derived threshold.**
 
 - [ ] **Step 4: Run the test to verify it passes, then the full suite**
@@ -3579,3 +3629,52 @@ recorded here rather than folded in silently.
     (`would_clip_count == 0`, `revisit_to_depth3_rate is None`), so a later
     refactor to `0.0` fails rather than silently reading as "clipped leaves were
     never revisited".
+
+## Revision 18 change log
+
+Revision 17 was reviewed before Task 3 began: one load-bearing evidence-boundary
+defect, incorporated. Task 3 was **not** implemented against revision 17.
+
+81. **`assert_synchronous_tree` proved the simulation budget, not synchronous
+    provenance.** It checked only `root.visit_count == expected_sims`. Both
+    search entry points back up exactly one path per simulation, so a
+    batched-waiter tree satisfies that equality identically — the assertion
+    named in the module docstring as the prerequisite for exactness could never
+    detect the one condition that breaks it. The failure is silent and total:
+    `search_from_root` "backs up ALL waiters with the returned value"
+    (`mcts.py:595-606`), so a leaf with `k` waiters holds `k * nn_value` in
+    `value_sum` while `counterfactual_child_q` substitutes one, leaving the
+    crossover wrong by `(k-1) * (backup_value - nn_value)` with nothing to
+    signal it. This is evidence-boundary work, not scaffolding: the substitution
+    is exact **only** on the synchronous path (`mcts.py:528-535`), and the whole
+    Task 3 → Task 5 → Task 9 chain inherits whatever exactness this assertion
+    fails to establish. Four changes:
+    - `assert_synchronous_tree(root, expected_sims, *, search_execution_mode)`
+      now checks the exact count **and** `search_execution_mode ==
+      "synchronous"`. The argument is required and keyword-only with **no
+      default** — a default of the safe value would reinstate the hole for every
+      caller that forgot it.
+    - A negative test supplies a **matching-count** tree tagged
+      `"batched_waiter"` and requires refusal, so the test can only pass on an
+      implementation that reads the mode. A companion test pins the missing
+      argument to `TypeError` and unknown modes to `ValueError`.
+    - Task 7 gains a routing test asserting the measurement calls
+      `search_with_root` once per position and `search_from_root` **exactly
+      zero** times. That dynamic observation is the provenance evidence; a
+      source-text check for `search_from_root` is a supplemental tripwire only,
+      since source text cannot establish which path executed. The mode is an
+      input `v18_crossover` cannot verify; the route is what makes it true, so
+      the route is what is tested.
+    - The artifact's `search_execution_mode` label is derived from a single
+      `SEARCH_EXECUTION_MODE` constant bound to that fixed call site — never a
+      CLI flag, never a caller-supplied `meta` key (`build_row` raises on one),
+      never an independent literal at the emission site. A label that can be
+      asserted by its caller is not evidence. On the valid path this is proven
+      by spying on `assert_synchronous_tree`: every call must receive the module
+      constant, and the artifact field must equal that same constant. Under a
+      **mutated** constant the measurement must raise `ValueError` and write no
+      artifact — asserting instead that the label "moves with" the mutation
+      would be self-defeating, because a successful emission under a
+      non-synchronous mode could only mean the assertion was bypassed. An
+      invalid route label yields no artifact, never a valid artifact carrying an
+      invalid label.
