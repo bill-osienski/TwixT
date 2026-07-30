@@ -211,9 +211,22 @@ def test_matching_tolerances_are_frozen_for_every_variable():
     assert m["greedy_nearest_neighbour_forbidden"] is True
     assert m["on_short_cohort"] == "PREFLIGHT_FAIL"
     assert m["inadmissible_pair_cost"] == "infinite"
-    assert m["tie_breaking"] == (
-        "cost", "control_canonical_state_sha1",
-        "control_game_content_sha1", "control_position_ply")
+    # The determinism contract is SCOPED: a single tie-break tuple could not
+    # distinguish within-game selection from equal-cost assignment resolution,
+    # so an artifact carrying it over-claimed.
+    assert "tie_breaking" not in m, "the ambiguous single tuple must be gone"
+    d = m["determinism"]
+    assert d["a_row_order"] == ("canonical_state_sha1", "game_content_sha1",
+                                "position_ply")
+    assert d["game_column_order"] == ("game_content_sha1",)
+    assert d["within_game_position_order"] == (
+        "cost", "canonical_state_sha1", "game_content_sha1", "position_ply")
+    assert d["equal_cost_assignment_resolution"]
+    assert d["global_lexicographic_minimum"] is False
+    # The emitted preregistration carries the scoped block, not the old tuple.
+    emitted = C.as_dict()["matching"]
+    assert emitted["determinism"] is d
+    assert "tie_breaking" not in emitted
 
 
 def test_per_game_caps_differ_for_controls_and_corpus():

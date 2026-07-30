@@ -307,8 +307,28 @@ MATCHING = {
         "n_legal": 50,
         "eligible_depth2_leaves": 40,
     },
-    "tie_breaking": ("cost", "control_canonical_state_sha1",
-                     "control_game_content_sha1", "control_position_ply"),
+    # The determinism contract, SCOPED. The earlier single `tie_breaking` tuple
+    # read as a global ordering and could not distinguish within-game selection
+    # from equal-cost assignment resolution, so an emitted artifact carrying it
+    # claimed more than the matcher can deliver.
+    "determinism": {
+        "a_row_order": ("canonical_state_sha1", "game_content_sha1",
+                        "position_ply"),
+        "game_column_order": ("game_content_sha1",),
+        "within_game_position_order": ("cost", "canonical_state_sha1",
+                                       "game_content_sha1", "position_ply"),
+        "equal_cost_assignment_resolution": (
+            "deterministic Hungarian traversal under the frozen a_row_order and "
+            "game_column_order"),
+        "global_lexicographic_minimum": False,
+        "rationale": (
+            "the scientific requirement is a deterministic, order-independent, "
+            "residual-blind minimum-cost matching. Across game columns an "
+            "equal-cost tie resolves by game_column_order, NOT by "
+            "within_game_position_order, and no global lexicographic minimum is "
+            "claimed -- ties are between equally admissible controls, so only "
+            "the reproducibility of the choice carries content"),
+    },
     "basis": "policy",
 }
 
