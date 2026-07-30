@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 16)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 17)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -961,8 +961,14 @@ def test_leader_and_replies_include_terminals():
 
 
 def test_explored_replies_exclude_terminal_and_ineligible():
+    # `MCTSNode` is a plain @dataclass, so eq=True sets __hash__ = None and the
+    # type is UNHASHABLE: a set of nodes raises TypeError while building the
+    # expected value, before the walker's return value is ever examined.
+    # Compare identities instead -- that imposes neither hashability nor
+    # ordering on the declared `list[MCTSNode]` return type.
     _root, d1a, _d1b, leaf_hi, leaf_lo, _t = build_tree()
-    assert set(W.explored_replies(d1a)) == {leaf_hi, leaf_lo}
+    got = W.explored_replies(d1a)
+    assert {id(n) for n in got} == {id(leaf_hi), id(leaf_lo)}
 
 
 def test_follow_up_visits_counts_visits_after_first_touch():
@@ -1034,6 +1040,12 @@ def test_walk_emits_every_documented_key_per_cap():
                     "exposed_positive_mass_numerator",
                     "exposed_positive_mass_denominator"):
             assert key in cap_rec, key
+    # Cap 1.25 reaches no leaf on this tree, so its revisit rate has an empty
+    # denominator. `walk` records null rather than fabricating 0.0 or aborting
+    # the whole multi-cap record -- 0.0 would read as "clipped leaves were never
+    # revisited", the opposite of "nothing was clipped".
+    assert rec["per_cap"]["1.25"]["would_clip_count"] == 0
+    assert rec["per_cap"]["1.25"]["revisit_to_depth3_rate"] is None
 
 
 def test_walk_is_deterministic_and_json_safe():
@@ -1067,6 +1079,7 @@ Create `scripts/GPU/alphazero/v18_tree_walk.py` implementing exactly the interfa
 - `exposed_positive_backup_mass(root, cap)` returns `(numerator, denominator)` where the denominator sums `terminating_backups(leaf) * max(0, leaf.nn_value)` over **all** eligible leaves and the numerator restricts to leaves with `residual > cap`. Returning both, rather than the ratio, lets the caller pool across rows instead of averaging ratios.
 - `terminal_depth2_counts(root)` returns `(terminal_visited, all_visited)` over depth-2 children of every depth-1 node.
 - `walk(root, caps)` returns a JSON-serialisable, deterministic dict with the keys the test enumerates; `per_cap` keyed by `str(cap)`.
+- **Undefined statistics are recorded as `None` (JSON `null`), never as a fabricated `0.0`.** The standalone functions keep raising `ValueError` on an empty denominator — that contract is unchanged, and callers computing a single statistic still get the loud failure. `walk` is the one caller that must not abort, because a weak cap reaching no leaf is an expected outcome of a multi-cap walk and must not destroy the records of the caps beside it. Concretely: `revisit_to_depth3_rate` is `null` whenever `would_clip_count == 0`, and `follow_up_visits_per_reply` is `null` when the leader has no explored replies (or there is no leader). The distinction is load-bearing for the ladder — `0.0` would read as "the clipped leaves were never revisited", the opposite of "no leaf was clipped".
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -3536,3 +3549,33 @@ Revision 15 was reviewed: three issues, all incorporated.
     deterministically sorted list of `{"game_idx": int, "split": str}` records,
     with a round-trip test asserting `game_idx` survives as an `int` -- a map
     would have reloaded as `{"1": "all"}`.
+
+## Revision 17 change log
+
+Revision 16 was found defective during Task 2 execution: one unsatisfiable test
+and one unspecified representation. Both incorporated. This is the first
+revision written after the plan was committed (`a324e55`), so the amendment is
+recorded here rather than folded in silently.
+
+79. **A Task 2 test could not pass under any implementation.**
+    `test_explored_replies_exclude_terminal_and_ineligible` asserted
+    `set(W.explored_replies(d1a)) == {leaf_hi, leaf_lo}`. `MCTSNode` is a plain
+    `@dataclass` (`mcts.py:253`), so `eq=True` sets `__hash__ = None` and the
+    type is unhashable — the set **literal** on the right-hand side raises
+    `TypeError` before the walker is consulted, and no return value can rescue
+    it. Repairing it in `mcts.py` is forbidden by the Global Constraints and
+    would be a real behaviour change, so the repair is in the test: compare
+    `{id(n) for n in got}` against `{id(leaf_hi), id(leaf_lo)}`, which imposes
+    neither hashability nor ordering on the declared `list[MCTSNode]` return
+    type. Verified: the walker was already correct, returning exactly those two
+    nodes by identity.
+80. **`walk`'s undefined-statistic representation was unspecified.** The
+    standalone functions raise `ValueError` on an empty denominator, but
+    `test_walk_emits_every_documented_key_per_cap` passes `caps=(1.25, 0.50)`
+    and cap 1.25 clips nothing on the fixture tree — so the plan demanded a
+    record whose contents it never defined. Now pinned: `walk` records `null`,
+    never a fabricated `0.0`, and never aborts a multi-cap walk; the standalone
+    contracts are unchanged. Two assertions at cap 1.25 pin it
+    (`would_clip_count == 0`, `revisit_to_depth3_rate is None`), so a later
+    refactor to `0.0` fails rather than silently reading as "clipped leaves were
+    never revisited".
