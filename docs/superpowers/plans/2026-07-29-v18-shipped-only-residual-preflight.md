@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 18)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 19)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -1201,14 +1201,35 @@ def test_identity_cap_predicts_no_change():
 def test_reduction_may_be_negative_for_a_negative_residual_population():
     """A large NEGATIVE residual lowers the counterfactual visited score, which
     makes unvisited replies relatively MORE attractive -- more scanning, not
-    less. The plan must not clamp this away."""
+    less. The plan must not clamp this away.
+
+    The unvisited priors are load-bearing and must not be "tidied". The count
+    can only move for an unvisited move whose score falls between the capped and
+    the shipped best visited score:
+
+        band            = (1.004309, 1.076532]
+        unvisited score = c_puct * prior * sqrt(19 + 1) = 6.708204 * prior
+        => only prior in (0.149714, 0.160480] can move the count
+
+    So 13's prior is 0.155, and 12 absorbs the remainder to keep the priors
+    summing to 1.0. With the obvious-looking {12: 0.3, 13: 0.2} BOTH unvisited
+    moves already outscore the shipped best (2.012461 and 1.341641), the counts
+    are 2 and 2, and the assertion `0.0 < 0.0` is unreachable by construction --
+    the mechanism is real but the fixture cannot express it.
+    """
     root = node(nn_value=0.0, visits=20, value_sum=0.0)
     d1 = attach(root, node(nn_value=-0.9, visits=19, value_sum=1.0,
-                           priors={11: 0.5, 12: 0.3, 13: 0.2}), 1)
+                           priors={11: 0.5, 12: 0.345, 13: 0.155}), 1)
     # leaf raw -0.9 against baseline +0.9 -> residual -1.8, binds hard at 0.50.
     attach(d1, node(nn_value=-0.9, visits=18, value_sum=-16.2), 11)
     out = X.crossover_for_tree(root, cap=0.50, c_puct=1.5)
     assert out["predicted_reply_reduction"] < 0.0
+    # Pin the exact outcome: a sign flip or any clamp fails HERE, rather than
+    # silently degrading to the vacuous 0.0 == 0.0 the original fixture gave.
+    assert out["predicted_shipped_replies"] == 1
+    assert out["predicted_capped_replies"] == 2
+    assert out["predicted_reply_delta"] == -1
+    assert out["predicted_reply_reduction"] == -1.0
 
 
 def test_reduction_is_the_documented_ratio():
@@ -3678,3 +3699,29 @@ defect, incorporated. Task 3 was **not** implemented against revision 17.
       non-synchronous mode could only mean the assertion was bypassed. An
       invalid route label yields no artifact, never a valid artifact carrying an
       invalid label.
+
+## Revision 19 change log
+
+Revision 18 was implemented in Task 3: ten of eleven tests passed against a
+faithful implementation, and the eleventh was found unsatisfiable. Fixture-only;
+no interface, requirement or threshold moved.
+
+82. **The signed-reduction test could not express the effect it guarded.**
+    `test_reduction_may_be_negative_for_a_negative_residual_population` asserted
+    `predicted_reply_reduction < 0.0` on a fixture whose unvisited priors were
+    `{12: 0.3, 13: 0.2}`. The clip behaves exactly as documented — the negative
+    residual raises the leaf's counterfactual value and lowers its parent-side
+    score from `1.076532` to `1.004309` — but both unvisited moves already
+    outscored the shipped best (`2.012461`, `1.341641`), so both counted in both
+    arms and the reduction was `0.0`. The count can only move for an unvisited
+    move scoring inside the band, which for `c_puct * prior * sqrt(20)` means
+    `prior in (0.149714, 0.160480]`; neither `0.3` nor `0.2` is close. No
+    implementation faithful to `_select_child` (`mcts.py:1062`, `1091-1114`)
+    could pass it, and the assertion `0.0 < 0.0` was unreachable by
+    construction. Repaired to `{11: 0.5, 12: 0.345, 13: 0.155}` — priors still
+    sum to 1.0, `13` now scores `1.039772` inside the band — giving shipped `1`,
+    capped `2`, delta `-1`, reduction `-1.0`. Four exact assertions now pin that
+    outcome rather than only its sign, so a clamp or a sign flip fails on the
+    number instead of degrading back to a vacuous `0.0 == 0.0`. The derivation
+    of `0.155` is recorded in the test docstring: the priors are load-bearing and
+    must not be tidied into round numbers.
