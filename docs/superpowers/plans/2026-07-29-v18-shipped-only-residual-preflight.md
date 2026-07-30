@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 21)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 24)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -1378,6 +1378,57 @@ binds the match summary, the 800-row JSONL, every replay sidecar, both
 checkpoint identities, and the replay-content hashes, cross-checked against each
 other.
 
+**The selected source has NO fixed colour assignment.** `seed20116` is
+colour-balanced: each checkpoint plays black in 400 games and red in the other
+400. A `black_checkpoint_sha1` / `red_checkpoint_sha1` pair would therefore be a
+false claim, and checking only the first filename-sorted replay would conclude a
+fixed assignment and be wrong about 400 games. The record binds instead:
+
+```text
+checkpoint_sha1s     {path: sha1} for the unordered PAIR
+anchor_checkpoint    calib020_0001, the anchor both colours are measured under
+games_by_colour      black: {anchor: 400, opponent: 400}
+                     red:   {anchor: 400, opponent: 400}
+```
+
+Both colours are counted for both roles, and BOTH `a_as_black.games` and
+`a_as_red.games` from the summary are cross-checked -- a one-sided count leaves
+the other colour unverified, which is where an imbalance would hide.
+
+**AUTHENTICATED BYTES MUST BE THE BYTES PARSED.** Hashing a path and then
+reopening it is not authentication: a file that changes between the two reads
+supplies census rows derived from bytes the record does not describe, and the
+artifact then carries a hash for content it never measured. Every pinned
+artifact is read ONCE into a buffer, hashed from that buffer, and parsed from
+that same buffer; the exclusion sets and the census consume those buffers and
+never reopen a path. Where an established helper must read from disk -- the
+length-delimited `fpu_provenance.replay_data_sha1` over 800 sidecars -- the
+contract is completed by a CLOSING re-authentication after the census has
+consumed the snapshot and BEFORE any bytes are written, so drift is refused with
+no partial artifact left behind.
+
+**The forbidden REPLAY RESERVOIRS are bound too.** Authenticating the probe CSVs
+and manifests is not sufficient: the canonical exclusion hashes are
+*reconstructed from* the sidecars those files point at, so a replay that drifts
+changes the exclusion SET while every evidence-file hash in the record stays
+unchanged. Three reservoirs are referenced, each pinned by game count and by the
+established length-delimited aggregate:
+
+```text
+seed20115   gate_A, gate_D, v16a_neutral, and the A game identities
+            427d4ab669a81fe409de7da6d7c458056aff306e   800 games
+seed35791   gate_B
+            d36b01c0993095e07785666316028f0c875eed7b   800 games
+seed40937   gate_C
+            80aa2068319cdbe0429100b736d293f5b8bc437e   800 games
+```
+
+Every canonical exclusion and every A game identity is derived INSIDE an
+opening/closing window over all three, and a referenced replay lying outside
+every pinned reservoir is a hard refusal -- a gate source that starts pointing
+somewhere new fails loudly rather than contributing silently unauthenticated
+exclusions.
+
 Forbidden sources — every consumed or acceptance population:
 
 | source | why |
@@ -1517,8 +1568,43 @@ def test_universe_binds_summary_jsonl_sidecars_and_checkpoints(tmp_path):
     """Binding the directory is insufficient -- bind the artifacts."""
     rec = P.freeze_source_universe(str(tmp_path / "a.json"), "__fixture__", 20260729)
     for key in ("summary_sha1", "jsonl_sha1", "replay_data_sha1",
-                "black_checkpoint_sha1", "red_checkpoint_sha1"):
+                "checkpoint_sha1s", "anchor_checkpoint", "games_by_colour"):
         assert key in rec, key
+    # The source alternates colours 400/400, so a fixed black/red identity is a
+    # false claim and must be ABSENT, not merely unused.
+    assert "black_checkpoint_sha1" not in rec
+    assert "red_checkpoint_sha1" not in rec
+
+
+# Authentication boundary -- each must fail if its guard is removed.
+def test_jsonl_and_sidecar_disagreement_is_refused(): ...
+def test_checkpoint_pair_mutation_is_refused(): ...
+def test_colour_schedule_imbalance_is_refused(): ...
+def test_mutation_between_authentication_and_census_is_detected(): ...
+    # end to end on the real universe: opening auth passes, the census consumes
+    # the snapshot, the sidecars drift, the CLOSING re-authentication refuses,
+    # and no artifact is written
+def test_no_partial_artifact_when_the_freeze_refuses(): ...
+def test_exclusions_refuse_unauthenticated_payloads(): ...
+def test_authenticated_bytes_are_the_bytes_parsed(): ...
+    # one read: the buffer that was hashed is the buffer that gets parsed
+def test_forbidden_replay_reservoirs_are_bound(): ...
+def test_every_referenced_replay_lies_in_a_pinned_reservoir(): ...
+def test_gate_b_replay_drift_leaves_no_artifact(): ...
+def test_gate_c_replay_drift_leaves_no_artifact(): ...
+def test_a_game_identity_source_drift_leaves_no_artifact(): ...
+def test_closing_check_covers_every_replay_source(): ...
+def test_jsonl_hash_gate_still_refuses_an_unpinned_mutation(): ...
+def test_report_refuses_any_real_universe_other_than_the_selected_one(): ...
+def test_report_authenticates_and_uses_the_snapshot(): ...
+    # spies assert forbidden payloads authenticated once, reservoirs bracketed
+    # ["opening", "closing"], and the 800-replay snapshot reaching enumeration
+def test_report_refuses_on_selected_universe_drift(): ...
+def test_report_refuses_on_forbidden_reservoir_drift(): ...
+    # `test_jsonl_and_sidecar_disagreement_is_refused` REPINS the expected JSONL
+    # hash to the mutated bytes, so authentication passes and the cross-field
+    # comparison is what refuses. Without the repin the hash gate fires first
+    # and the test would stay green even with the comparison deleted.
 
 
 def test_freeze_emits_a_census_but_selects_no_cohort(tmp_path):
@@ -1561,6 +1647,18 @@ Run: `.venv/bin/python -m pytest -p no:cacheprovider tests/test_v18_control_pool
 Expected: PASS.
 
 - [ ] **Step 5: STOP — the user chooses the universe source and configuration**
+
+**The report is read-only, not unauthenticated.** It runs the SAME
+opening/closing authentication as the freeze — forbidden payloads, all three
+forbidden reservoirs, and the selected universe's snapshot handed to
+`enumerate_census` rather than letting it reread the sidecars — and writes
+nothing. Figures derived from unverified bytes are a guess, not a report.
+
+**Once the source is chosen, real reports accept only that source.** Before the
+decision the report enumerates candidate 1, then 2, then 3 as needed; after
+`SELECTED_UNIVERSE` is bound in tracked code, enumerating an alternative real
+source is a post-selection inspection route and is refused. Fixtures stay
+available to the unit tests.
 
 Run the enumeration and exclusion **report only** against candidate universe 1 (no search, no GPU — replay parsing and hashing):
 
@@ -3866,3 +3964,90 @@ untouched.
     matching variable is either a census column or a member of
     `derived_variables`, with `side` absent from both maps. Only
     `abs_root_value_stm` remains derived.
+
+## Revision 22 change log
+
+Revision 21's Task 4 was implemented and `seed20116` selected. Four
+authentication defects were repaired at review; two survived into a second
+review and are fixed here. No threshold, census policy or source choice moved.
+
+88. **`black_checkpoint_sha1` / `red_checkpoint_sha1` made false claims.** The
+    selected source is COLOUR-BALANCED -- each checkpoint plays black in 400
+    games and red in 400 -- so there is no fixed colour assignment to record.
+    The keys were retained for compatibility with a Task 4 binding contract that
+    was itself factually wrong; compatibility with a false contract is not a
+    reason to keep emitting a false field. They are REMOVED, and the record now
+    carries `checkpoint_sha1s`, `anchor_checkpoint`, and `games_by_colour` with
+    both colours counted for both roles. `colour_split` is renamed
+    `games_by_colour` because it counted only black assignments, leaving the red
+    side unverified -- exactly where an imbalance would hide. Both
+    `a_as_black.games` and `a_as_red.games` are now cross-checked against the
+    summary. Discovered by the per-replay check itself: the first
+    implementation asserted a fixed pair and failed on game 1, which is what
+    proved the alternation.
+89. **Authentication did not bind the bytes that were consumed.** Files were
+    hashed and then REOPENED to derive the exclusion sets and the census, so a
+    file changing between the two reads would supply rows the recorded hash does
+    not describe -- the artifact would carry a hash for content it never
+    measured. Every pinned artifact is now read once into a buffer, hashed from
+    that buffer and parsed from that same buffer; `forbidden_canonical_hashes`
+    takes the authenticated payloads and REFUSES if none are supplied, and the
+    census consumes the authenticated replay snapshot rather than reopening
+    sidecars. Where the established length-delimited
+    `fpu_provenance.replay_data_sha1` must read from disk, a CLOSING
+    re-authentication runs after consumption and before any write, so drift is
+    refused with no partial artifact. Also removed an eagerly-evaluated
+    `dict.get` default that hashed the whole replay directory a second time and
+    discarded the result.
+
+## Revision 23 change log
+
+Revision 22 closed the two prior authentication P1s. A third survived: the
+snapshot contract covered the SELECTED universe but not the replay reservoirs
+the forbidden evidence points into. Naming and authentication only; no
+threshold, census policy or source choice moved. `seed20116` unchanged.
+
+90. **Forbidden replay bytes were authenticated inconsistently.** The probe CSVs
+    and manifests were byte-pinned, but `forbidden_canonical_hashes` then
+    REOPENED each `replay_path` they reference without binding those bytes, and
+    `forbidden_game_content_sha1s` reopened the A reservoir after its aggregate
+    had been checked, with no closing verification. The canonical exclusion
+    hashes are RECONSTRUCTED from those sidecars, so a replay change alters the
+    exclusion set while every evidence-file hash in the record stays unchanged --
+    the record would then describe an exclusion set that was never derived from
+    the bytes it names. Three reservoirs are now pinned by count and by the
+    established aggregate (`seed20115` 427d4ab6…, `seed35791` d36b01c0…,
+    `seed40937` 80aa2068…), authenticated before any exclusion is derived and
+    re-authenticated before anything is written, and a referenced replay outside
+    every pinned reservoir is a hard refusal. Drift in a gate B, gate C or A
+    replay is mutation-tested end to end and must leave no artifact.
+91. **The JSONL/sidecar test never reached the validator it named.** Mutating
+    the JSONL tripped the pinned-hash gate first, so the test would have stayed
+    green with the cross-field comparison deleted -- it proved the hash check
+    twice and the comparison never. It now repins the expected JSONL hash to the
+    mutated bytes so authentication passes and the winner disagreement is what
+    refuses; a separate test keeps the hash gate covered. Verified by deleting
+    the comparison: the test now fails.
+
+## Revision 24 change log
+
+Revisions 22-23 hardened `freeze_source_universe`. The REPORT path predates the
+snapshot contract and was never brought up to it. Narrow correction; no source
+choice, threshold, geometry or scientific rule moved.
+
+92. **The report bypassed every protection the freeze had gained.** It derived
+    forbidden identities and census rows with no opening or closing
+    authentication of the three forbidden reservoirs, no authentication of the
+    selected universe, and called `enumerate_census` WITHOUT the snapshot, so it
+    reread the sidecars it had never verified. Read-only is not the same as
+    unauthenticated: figures handed to a human and used to choose a source are
+    evidence, and evidence derived from unverified bytes is a guess. The report
+    now runs the identical authenticated path -- payloads, reservoirs, selected
+    snapshot into `enumerate_census`, `reverify_all_replay_sources` before
+    returning -- and still writes nothing.
+93. **The report left a post-selection inspection route open.** After
+    `seed20116` was bound in tracked code, `--universe v16_production` would
+    still have enumerated an alternative source. Preregistration exists to close
+    exactly that door, so real reports now accept only
+    `SELECTED_UNIVERSE["name"]`; fixtures remain available to the unit tests.
+    Candidates 2 and 3 were never inspected.
