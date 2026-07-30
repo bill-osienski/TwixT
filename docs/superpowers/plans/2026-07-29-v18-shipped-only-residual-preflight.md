@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 24)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 26)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -1695,11 +1695,30 @@ before any search runs, so this module contains logic but no thresholds.
 
 **Exact cardinality, frozen before measurement:** 1:1, `n_A = n_C = 30`. This is what makes Task 5's AUC operating-characteristic table computable and approvable *now*, before any GPU run. A complete matching of all 30 or a `PREFLIGHT_FAIL` — never a cohort of 29.
 
-**Deterministic minimum-cost bipartite matching**, not greedy. Greedy nearest-neighbour can fail on A-row ordering when a complete valid matching exists, converting a solvable problem into a spurious failure. Inadmissible pairs (outside any tolerance) carry infinite cost and can never be matched; cost is the sum of per-variable absolute differences each divided by its own tolerance; ties break lexicographically on `(cost, control canonical_state_sha1, control game_content_sha1, control position_ply)`.
+**Deterministic minimum-cost bipartite matching**, not greedy. Greedy nearest-neighbour can fail on A-row ordering when a complete valid matching exists, converting a solvable problem into a spurious failure. Inadmissible pairs (outside any tolerance) carry infinite cost and can never be matched; cost is the sum of per-variable absolute differences each divided by its own tolerance.
+
+**Determinism contract — scoped, and deliberately NOT a global lexicographic minimum.** It lives in `MATCHING["determinism"]`, a structured block in the frozen criteria — not prose, and not the earlier single `tie_breaking` tuple, which read as a global ordering and could not distinguish within-game selection from equal-cost assignment resolution:
+
+```text
+a_row_order                       (canonical_state_sha1, game_content_sha1,
+                                   position_ply)
+game_column_order                 (game_content_sha1,)
+within_game_position_order        (cost, canonical_state_sha1,
+                                   game_content_sha1, position_ply)
+equal_cost_assignment_resolution  deterministic Hungarian traversal under the
+                                   frozen a_row_order and game_column_order
+global_lexicographic_minimum      false
+```
+
+The matcher reads each field from the imported block rather than restating it, and the emitted cohort artifact records that same object — so the published artifact carries the scoped contract, not the ambiguous one.
+
+The scientific requirement is a deterministic, order-independent, residual-blind minimum-cost matching — **not** a globally lexicographically minimal optimum. When two equal-cost *assignments* differ, the winner follows the column order, not the within-game tuple, and no stronger claim is made. Ties are between equally admissible controls, so the choice carries no scientific content; only its reproducibility does. Promising a global lexicographic minimum would be promising more than any Hungarian variant naturally delivers.
 
 **Task 4b emits an authenticated artifact.** Revision 3 returned rows in memory, which Tasks 8 and 9 could not bind. `emit_matched_cohort` canonically writes the exact matched rows, the complete matching report (per-variable balance, per-pair cost, unmatched A rows), and the SHA-1s of the universe record, `census_positions.csv`, the frozen criteria and the A source, plus the matching algorithm name and version, the cardinality, `run_kind` and `scientific_interpretation_forbidden: true`. Tasks 8 and 9 authenticate this artifact by SHA-1 before reading it.
 
-Permitted matching variables: `phase`, `side`, `|root_value_stm|`, `n_legal`, `eligible_depth2_leaves`. **Forbidden:** residual magnitude, exposure, `would_clip` counts, clipped amount — anything the cohort will later calibrate.
+Permitted matching variables: `phase`, `side_to_move`, `abs_root_value_stm` (the one declared transform, `abs(root_value_stm)`), `n_legal`, `eligible_depth2_leaves`. **Forbidden:** residual magnitude, exposure, `would_clip` counts, clipped amount — anything the cohort will later calibrate.
+
+**The cardinality has no caller override.** `match_cohort` and `match_report_on_failure` derive 30/30 from `MATCHING` alone. A `cardinality=` parameter would let a caller accept a cohort of 2 or 29 while the report still stamped 30/30, silently invalidating the approved AUC operating characteristics, which were computed at exactly `n_A = n_C = 30`. `emit_matched_cohort` re-checks the whole chain before writing a byte — 30 cohort rows, 30 distinct control games, 30 report pairs, `matched == 30`, the frozen cardinality, and no unmatched rows — and a refusal leaves no file. **Counts are not enough:** a 30-row cohort can be handed a different 30-entry report and satisfy every count while the pairs describe other rows, so each cohort row's `(canonical_state_sha1, game_content_sha1, position_ply)` is compared positionally against its report pair, and a swapped, reordered or fabricated pair refuses. Unit fixtures are padded to a real 30-row problem with filler pairs spread outside every tolerance; genuinely small matrices stay in the low-level Hungarian tests.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1716,7 +1735,13 @@ def test_matcher_refuses_unless_all_30_are_matched(): ...
 def test_matcher_reports_unmatched_a_rows_rather_than_dropping_them(): ...
 def test_matching_report_records_per_variable_balance_and_per_pair_cost(): ...
 def test_two_a_rows_preferring_different_positions_from_one_game(): ...
-def test_global_tie_break_is_pinned_under_multiple_optima(): ...
+def test_within_game_tie_break_follows_the_frozen_tuple(): ...
+def test_assignment_is_deterministic_under_multiple_optima(): ...
+    # order-independence only -- the across-game tie resolves by column order,
+    # not by the tuple, and the test says so rather than passing by coincidence
+def test_cardinality_cannot_be_overridden_by_a_caller(): ...
+def test_emitter_refuses_a_short_cohort_and_writes_nothing(): ...
+def test_filler_pairs_cannot_perturb_the_rows_under_test(): ...
 def test_vendored_hungarian_agrees_with_brute_force_on_small_matrices(): ...
 def test_hungarian_rectangular_matches_a_known_optimum(): ...
 def test_infinite_cost_pairs_can_never_be_matched(): ...
@@ -4051,3 +4076,61 @@ choice, threshold, geometry or scientific rule moved.
     exactly that door, so real reports now accept only
     `SELECTED_UNIVERSE["name"]`; fixtures remain available to the unit tests.
     Candidates 2 and 3 were never inspected.
+
+## Revision 25 change log
+
+Task 4b was implemented. One over-claimed contract and one bypassable invariant.
+No threshold, geometry or scientific rule moved.
+
+94. **The tie-break tuple promised more than any Hungarian variant delivers.**
+    `MATCHING["tie_breaking"]` reads as a global ordering, but it can only be
+    honoured WITHIN a game column, where it selects which position of a game to
+    offer. ACROSS columns an equal-cost tie resolves by column order
+    (`game_content_sha1`), and the tuple ranks `canonical_state_sha1` first, so
+    the two disagree whenever those orderings do. The contract is now scoped
+    explicitly -- A-row order, game-column order, within-game choice, and
+    "deterministic Hungarian traversal" for equal-cost assignments -- with no
+    global lexicographic-minimum claim. The scientific requirement is a
+    deterministic, order-independent, residual-blind matching, and that holds.
+    The first version of the test passed only because its fixture had the two
+    orderings agreeing; it is split into one test of the real within-game rule
+    and one asserting order-independence and documenting the limitation.
+95. **Exact cardinality was bypassable.** `match_cohort` and
+    `match_report_on_failure` took a `cardinality=` override, added for
+    unit-test convenience, which let a caller accept a cohort of 2 or 29 while
+    the report still stamped 30/30 -- and `emit_matched_cohort` would then
+    publish it, because it stamped `MATCHING`'s cardinality unconditionally
+    without checking the rows it was handed. Convenience in a test helper had
+    become a production hole in the preregistered count the approved AUC
+    operating characteristics depend on. The override is removed; the count
+    comes from `MATCHING` alone; the emitter reconciles cohort rows, distinct
+    games, report pairs, `matched`, the frozen cardinality and the unmatched
+    list before writing a byte, and a refusal leaves no file. Fixtures are
+    padded to a real 30-row problem with filler pairs spread outside every
+    tolerance.
+96. Corrected the stale `side` prose to `side_to_move`, renamed in revision 21.
+
+## Revision 26 change log
+
+Revision 25 narrowed the tie-break contract in the PLAN and the matcher
+docstring, but not in the authoritative object. Two corrections; no threshold,
+geometry or scientific rule moved.
+
+97. **The frozen contract still carried the ambiguous tuple.** `MATCHING`
+    exposed only `tie_breaking`, so the emitted criteria and cohort artifacts
+    could not distinguish within-game ordering from equal-cost assignment
+    resolution -- revision 25's narrowing existed only in prose, which is
+    exactly the failure mode the preregistration is meant to prevent. Replaced
+    with a structured `determinism` block carrying `a_row_order`,
+    `game_column_order`, `within_game_position_order`,
+    `equal_cost_assignment_resolution` and an explicit
+    `global_lexicographic_minimum: false`. The matcher reads each field from the
+    imported block instead of restating it, and both the report and the emitted
+    artifact record that same object -- asserted by identity, so a copy fails.
+98. **Emitter reconciliation checked counts but not identities.** Thirty rows
+    and thirty pairs proves nothing about whether those pairs DESCRIBE those
+    rows: a cohort could be published beside a report for a different matching
+    with every count intact. Each cohort row's
+    `(canonical_state_sha1, game_content_sha1, position_ply)` is now compared
+    positionally against its report pair before any write, and a swapped,
+    reordered or fabricated pair refuses with no file left behind.
