@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 19)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 21)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -1704,7 +1704,9 @@ separation AUC:
                     rows (negative class). n_A = n_C = 30 is frozen before
                     measurement, so the operating-characteristic table below is
                     computable and approvable NOW rather than after the census.
-      statistic   = exposure(row, 0.50)
+      statistic   = PRIMARY_EXPOSURE_COLUMN, i.e. the census column
+                    `exposure_primary_0.50` -- named by the shared constant, not
+                    by a restated literal
       estimator   = Mann-Whitney U / (n_A * n_C), ties contributing exactly 0.5
       uncertainty = 10,000-replicate stratified bootstrap under frozen seed
                     20260729
@@ -1719,6 +1721,14 @@ separation AUC:
       PASS        = point estimate >= SEPARATION.min_auc
                     AND one-sided 95% lower bound >= 0.5
       weighting   = none; every row counts once
+      FAILURE MEANS, frozen now so it cannot be renegotiated after the number is
+                    known: "required A-vs-matched-control selectivity was not
+                    established". It does NOT mean "no effect exists". The
+                    approved operating characteristics show 51.7% power when the
+                    true AUC equals the 0.70 threshold, so a miss at the
+                    boundary is close to a coin flip and carries no evidential
+                    weight against the mechanism. Any downstream verdict text
+                    that reads a separation failure as refutation is wrong.
 
 ROLE ASSIGNMENT -- the four roles are an EXCLUSIVE CLASSIFICATION, not four
 independent eligibility sets. The predicates overlap: a row can satisfy both the
@@ -1820,6 +1830,12 @@ revisit-form density:
                     i.e. census rows with exposure(row, 0.50) >= EXPOSURE_CUTOFF
                     -- the same population as R_min, and for the same reason:
                     the 30-row matched cohort's decile is about three rows
+      floor       = the PROSPECTIVE-TARGET SUBSET FLOOR binds here too: a
+                    subset of fewer than 16 rows is PREFLIGHT_FAIL with reason
+                    prospective_target_subset_below_floor. Refusing only an
+                    EMPTY subset would let a 3-row population decide the form of
+                    the whole criterion on 2 dense rows, which is exactly the
+                    vacuity the floor exists to prevent.
       paired form iff at least 75% of that subset has >= 5 shipped would_clip
                     leaves at the WEAKEST cap 1.25
       otherwise   = candidate_only_floor
@@ -1858,14 +1874,48 @@ BRANCHING
     "branching bands recorded, not post-hoc gated"). There is no separate
     high-branching predicate.
 
+CANONICAL FIELD CONTRACT -- every predicate names a column of Task 7's frozen
+`census_positions.csv` schema and nothing else. The criteria module and the
+measurement CLI must not hold two vocabularies for one quantity:
+
+    exposure_primary_0.50    the primary statistic
+    sign_dominance
+    root_value_stm           SIGNED; near-even applies abs() as a transform
+    eligible_depth2_leaves
+    would_clip_1.25          count of leaves the weakest cap would clip
+    clipped_amount_1.25      total clipped mass at the weakest cap
+    would_clip_0.5           count of leaves the strongest cap would clip
+
+Note the deliberate spelling difference: `exposure_primary_0.50` carries two
+decimals because that is the frozen column name, while the per-cap triples render
+their cap with `str(cap)`, giving `0.5`, `0.75`, `1.0`, `1.25`. Do not "tidy"
+either one into the other -- both are load-bearing joins.
+
+**Each name is written ONCE.** `PRIMARY_EXPOSURE_COLUMN = "exposure_primary_0.50"`
+is defined a single time and referenced by `CENSUS_SCHEMA`,
+`REQUIRED_CENSUS_FIELDS`, the target role predicate, `SEPARATION`,
+`EXPOSURE_CUTOFF_RULE` and `classify_role`. A second spelling of a column name is
+exactly how a gate comes to reference a column the census never emits, and a
+contract stated in six places is six chances to diverge.
+
+The only admissible non-column in any predicate is a **declared transform**:
+`MATCHING.derived_variables` holds `abs_root_value_stm = abs(root_value_stm)`,
+because the matcher pairs on magnitude while matching `side_to_move` exactly.
+Anything else must be a census column under its real name -- `side` is not a
+column, `side_to_move` is.
+
 FLIP_CONTROL_EXPOSURE  -- operator is AND, both constants binding
-    count(eligible depth-2 leaves with abs(residual) > 1.25) >= 3
-    AND counterfactual clipped amount at cap 1.25 >= 0.50
+    would_clip_1.25 >= 3
+    AND clipped_amount_1.25 >= 0.50
     Exposure at the weakest cap implies exposure at every stronger cap.
 
 IDENTITY_WITNESS
-    max(abs(eligible depth-2 residual)) <= 0.50
-    Strict comparison in the clip rule makes 0.50 exactly non-binding.
+    would_clip_0.5 == 0
+    EXACTLY equivalent to max(abs(eligible depth-2 residual)) <= 0.50, because
+    the clip rule is STRICT: a leaf clips at 0.50 iff abs(residual) > 0.50, so a
+    zero count is precisely the statement that no residual exceeds it. Stated as
+    a count because the census emits counts, not a residual maximum -- the
+    maximum is not a column and must not be invented as one.
 
 MATCHING (Task 4b)
     cardinality              1:1, EXACTLY n_A = n_C = 30
@@ -1885,10 +1935,12 @@ MATCHING (Task 4b)
     tie-breaking             lexicographic on
                              (cost, control canonical_state_sha1,
                               control game_content_sha1, control position_ply)
-    tolerances
+    tolerances               keyed by the CENSUS COLUMN name, never an alias
         phase                exact
-        side                 exact
-        abs(root_value_stm)  within 0.10
+        side_to_move         exact
+        abs_root_value_stm   within 0.10  -- the one DECLARED transform,
+                             abs(root_value_stm); the matcher pairs on
+                             magnitude and side_to_move carries the direction
         n_legal              within 50
         eligible_depth2_leaves within 40
 
@@ -2055,6 +2107,27 @@ def test_outer_and_bootstrap_streams_are_separate_and_deterministic(): ...
 def test_oc_table_is_reproducible_across_two_generations(): ...
 def test_oc_generator_reads_no_measurement_artifact(): ...
     # it must be pure simulation: no census, no cohort, no preflight artifact
+
+# Integration with the producer of the rows these criteria classify.
+def test_role_assignment_is_total_and_exclusive(): ...
+    # named in "Exact formulas" as the rename of
+    # test_role_predicates_are_mutually_exclusive_on_every_row; asserts the
+    # ORDER produces a partition, which the formulas alone do not establish
+def test_classifier_consumes_the_frozen_census_schema(): ...
+    # build a row with the EXACT census_positions.csv column names and pass it
+    # through classify_role; assert every field the classifier reads is a member
+    # of CENSUS_SCHEMA, so the criteria module and Task 7 cannot drift apart
+def test_identity_is_would_clip_0_5_equals_zero(): ...
+    # equivalent to max|residual| <= 0.50 under the STRICT clip rule
+def test_revisit_form_refuses_a_subset_below_the_floor(): ...
+    # 15 rows -> ValueError naming prospective_target_subset_below_floor;
+    # 12/16 dense -> paired; 11/16 dense -> candidate_only_floor
+def test_separation_failure_interpretation_is_frozen(): ...
+    # "selectivity not established", never "no effect exists"
+def test_primary_exposure_column_is_defined_once_and_used_everywhere(): ...
+    # SEPARATION.statistic == EXPOSURE_CUTOFF_RULE.statistic ==
+    # PRIMARY_EXPOSURE_COLUMN, which is in CENSUS_SCHEMA; and the retired
+    # spelling "exposure_at_cap_0.50" appears nowhere in as_dict()
 ```
 
 `test_min_lost_replies_has_separate_development_and_heldout_values` must assert `MIN_LOST_REPLIES == {"development": 20, "held_out": 30}`. `test_r_min_rule_fails_rather_than_floors_a_nonpositive_prediction` must assert that the rule dict records `on_nonpositive: "PREFLIGHT_FAIL"` and a reason string, not a floor.
@@ -3725,3 +3798,71 @@ no interface, requirement or threshold moved.
     number instead of degrading back to a vacuous `0.0 == 0.0`. The derivation
     of `0.155` is recorded in the test docstring: the priors are load-bearing and
     must not be tidied into round numbers.
+
+## Revision 20 change log
+
+Revision 19's Task 5 was implemented and its numeric block semantically
+approved: `SEPARATION.min_auc = 0.70` and `min_lower_bound = 0.50` stand
+unchanged. Two integration defects found at that review, plus one
+interpretation frozen before its number is known.
+
+83. **The role classifier could not consume its own producer's schema.** Task 5
+    named predicate variables that do not exist in Task 7's frozen
+    `census_positions.csv` — `exposure` for `exposure_primary_0.50`,
+    `abs_root_value_stm` for `root_value_stm`, `count_abs_residual_over_1.25`
+    for `would_clip_1.25`, `clipped_amount_at_1.25` for `clipped_amount_1.25` —
+    and `max_abs_eligible_residual`, which the census **does not emit at all**.
+    Two vocabularies for one quantity is how a selector silently reads a
+    missing column at execution time, and the fifth name could never have been
+    satisfied. A single CANONICAL FIELD CONTRACT now binds every predicate to a
+    census column. Identity is expressed as `would_clip_0.5 == 0`, exactly
+    equivalent to `max|residual| <= 0.50` because the clip rule is strict, and
+    stated as a count because a residual maximum is not a column and must not be
+    invented as one. A new test passes a row in the exact census schema through
+    `classify_role` and asserts every field it reads is a member of
+    `CENSUS_SCHEMA`.
+84. **The prospective-target subset floor was not enforced where it binds.**
+    `revisit_form` refused only an EMPTY subset, so a 3-row population could
+    decide the form of the whole criterion on 2 dense rows — the exact vacuity
+    the frozen 16-row floor exists to prevent, and the tests compounded it by
+    exercising 4-row populations. The floor now binds inside the helper, and the
+    boundary cases are tested at the real size: 12/16 dense -> `paired`, 11/16
+    dense -> `candidate_only_floor`, 15 rows -> refusal naming
+    `prospective_target_subset_below_floor`.
+85. **The separation failure interpretation is frozen before the number is
+    known.** A failure means "required A-vs-matched-control selectivity was not
+    established", never "no effect exists". At the approved threshold the
+    operating characteristics give 51.7% power when the true AUC equals 0.70, so
+    a boundary miss is near a coin flip and carries no evidential weight against
+    the mechanism. Freezing the wording now removes the opportunity to
+    renegotiate it once the measured value is in hand.
+
+## Revision 21 change log
+
+Revision 20 fixed the role classifier but left two stale aliases in the
+DOWNSTREAM consumers of the same contract. Naming-only; the approved numbers,
+the AUC operating characteristics and the frozen failure interpretation are
+untouched.
+
+86. **Two gates still named a column the census does not emit.**
+    `SEPARATION["statistic"]` and `EXPOSURE_CUTOFF_RULE["statistic"]` both read
+    `exposure_at_cap_0.50`, which is absent from `CENSUS_SCHEMA`. Revision 20
+    repaired the classifier and stopped there, so the defect simply moved
+    downstream — any consumer indexing rows by the separation or cutoff
+    contract would have missed the authenticated census entirely, and the
+    cutoff is what defines the prospective target subset that R_min and the
+    revisit-form criterion both stand on. The root cause was the contract being
+    restated as a literal in six places. `PRIMARY_EXPOSURE_COLUMN` is now
+    defined **once** and referenced by `CENSUS_SCHEMA`,
+    `REQUIRED_CENSUS_FIELDS`, the target role predicate, `SEPARATION`,
+    `EXPOSURE_CUTOFF_RULE` and `classify_role`; a test asserts all of them
+    agree and that the retired spelling survives nowhere in `as_dict()`.
+87. **`MATCHING` retained an undeclared `side` alias.** The census emits
+    `side_to_move`; `variables` and `tolerances` said `side`. Unlike
+    `abs_root_value_stm`, which is a legitimately DECLARED transform (the
+    matcher pairs on magnitude, and `side_to_move` carries the direction), this
+    one was an alias with no declaration — precisely the pattern the no-alias
+    contract forbids. Both now use `side_to_move`, and a test asserts every
+    matching variable is either a census column or a member of
+    `derived_variables`, with `side` absent from both maps. Only
+    `abs_root_value_stm` remains derived.
