@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 30)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 34)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -4689,3 +4689,182 @@ moved.
     at exactly `opening -> closing`, since nothing reads it before the evaluator
     is constructed, and the document still provably reuses the opening values
     with no emission-time read.
+
+## Revision 31 change log
+
+Task 7's measurement math was right, but its EVIDENCE CHAIN was not: the rows it
+measured were not bound to the universe it recorded. No threshold or scientific
+gate moved; this is evidence-chain, execution and seed-policy repair.
+
+110. **Caller-supplied cases were never reconciled with the universe record.**
+    `load_verified_universe` checked labels and `SELECTED_UNIVERSE` but neither
+    re-derived the Task 4 record nor proved the measured rows were its census --
+    so a caller could measure arbitrary replays while the artifact recorded a
+    legitimate universe SHA-1. The production path now derives BOTH populations
+    itself: the census exactly from the verified record (converting
+    `canonical_sha1` to `canonical_state_sha1` and deriving
+    `source_universe_ordinal` mechanically from `all_game_ids`), and selected-A
+    from the pinned A source over the authenticated seed20115 reservoir.
+    `run_preflight` has no `cases` parameter. The record is additionally
+    re-derived with the committed Task 4 implementation --
+    `_assert_record_reconciles`, `selection_inputs` and the forbidden-source
+    list -- so a substituted census cannot pass on labels alone.
+111. **The runtime was not authenticated.** Criteria and universe records must
+    now carry `git_commit == HEAD` and `worktree_clean: true` -- a record from
+    another commit describes different code, and one from a dirty tree
+    describes code that was never committed. The checkpoint and BOTH replay
+    reservoirs are authenticated before evaluator construction and again after
+    the last search, with the authenticated identities recorded. The frozen
+    `MEASUREMENT_SOURCE_MODULES` list includes the Task 7 producer itself: a
+    change there changes the measurement.
+112. **The artifact set was not one transaction.** `census_positions.csv` was
+    written before later computations and before the atomic JSON, so a failure
+    left partial scientific outputs that a reader could not distinguish from a
+    complete set. All four payloads are now serialized in memory, the three CSV
+    SHA-1s are recorded IN `preflight_artifact.json` so the files are mutually
+    bound, and the set is published by renaming a staging directory into an
+    output path that must not already exist.
+113. **The execution path was not self-constrained.** `c_puct` was
+    caller-controlled and `main()` always exited, so there was no runnable
+    frozen command. `c_puct` now comes from the authenticated shipped config and
+    the COMPLETE configuration is asserted -- `(c_puct, simulations, batching
+    triple, FPU fields, add_noise)`. `main()` is one fixed production command
+    taking only `--criteria`, `--universe`, `--out`; it derives both populations
+    itself, selected-A first and the census second, into one bound artifact set,
+    so 30 cheap rows expose a failure before the long census and Task 9 still
+    sees a single artifact interface.
+114. **XOR is unusable as a census seed rule.** Verified on the real data:
+    `game_idx` and `position_ply` are both < 1024, so `base ^ g ^ p` admits at
+    most 1024 distinct values, and the 1,974-row census collapses to **841 --
+    1,133 forced duplicates**. Recording that would not be protection. The seed
+    policy is now ASYMMETRIC and lives in the EMITTED criteria rather than only
+    in the measurement module:
+
+    * selected-A keeps the historical `20260616 ^ game_idx ^ position_ply`
+      unchanged, because the frozen A artifacts were produced under it. Its
+      three duplicate groups (30 rows, 27 unique seeds) are recorded as accepted
+      historical provenance, NOT a failure.
+    * the census uses a deterministic SHA-1 digest over
+      `(domain_tag, base, game_content_sha1, position_ply)`. Keying on the
+      replay CONTENT hash rather than the reservoir-local `game_idx` also makes
+      the seed survive renumbering.
+    * census uniqueness and cross-population disjointness are both required
+      BEFORE evaluator construction.
+
+## Revision 32 change log
+
+Revision 31 bound the rows to the universe, but the production API could still
+be talked out of the whole chain. Evidence-chain and provenance repair only; no
+threshold or scientific gate moved.
+
+115. **The production API remained bypassable.** `_cases`, `evaluator_factory`
+    and `require_clean_runtime=False` let a caller supply arbitrary rows, a
+    substitute evaluator and skipped authentication -- while still emitting a
+    normally shaped artifact. A parameter that can do that is not a test seam,
+    it is a hole. `run_preflight` now takes EXACTLY `out_dir`, `criteria_path`
+    and `universe_path`, all keyword-only and all required; the tests reach the
+    same places by monkeypatching the module's own internal seams
+    (`_derive_cases`, `_make_evaluator`, `_authenticate_search_inputs`).
+116. **The universe was reconciled, not reproduced.** `_assert_record_reconciles`
+    proves only that a record agrees with ITSELF, so a coherently substituted
+    census -- counts, phase totals and geometry all recomputed to match --
+    passes untouched; a test now constructs exactly that record and shows it
+    reconciling. Production additionally re-emits the record from the
+    authenticated source with the committed Task 4 implementation and
+    BYTE-COMPARES, and rejects a `"fixture"` universe outright, since a fixture
+    has no reservoir behind it and nothing it claims can be reproduced.
+117. **The selected-A source was parsed unauthenticated.** It carries an
+    existing pin, `FORBIDDEN_SOURCE_SHA1S["gate_A"] == 175c73ef…`, which was
+    never checked. The exact bytes parsed are now hashed against it, the
+    seed20115 reservoir is bound at `pre_derivation` BEFORE the canonical
+    identities are reconstructed from replay bytes, and the A-source SHA-1 is
+    recorded in the artifact.
+118. **`add_noise` could be mislabelled.** The search call and the artifact
+    stated `False` independently, so a change at the call site would run noisy
+    search while publishing `add_noise: false`. One `ADD_NOISE = False`
+    constant now feeds both, and it is validated before evaluator construction:
+    mutation to `True` produces zero searches and no output.
+119. **The result-determining source set was incomplete.** Searched values
+    depend on `evaluator.py`, `local_evaluator.py`, `network.py`,
+    `game/twixt_state.py`, `fpu_provenance.py` and the frozen v17 capture
+    dependency, none of which were hashed. The frozen list is now 18 modules,
+    tested for completeness and for the existence of every path.
+120. **An occupied output directory was discovered only at publication**, after
+    every search had run. The freshness check moved to the top of
+    `run_preflight`; the publish-time check stays as TOCTOU protection, and a
+    test asserts zero evaluators and zero searches on refusal.
+121. **`seed_audit["rule"]` reported only the selected-A XOR**, which the census
+    does not use -- a false label on the very record that documents the
+    asymmetry. It now carries the complete policy, and the observed A shape is
+    checked against the criteria's frozen 30 rows / 27 unique / 3 duplicates
+    rather than restating them.
+122. A stray `replace` had pasted the whole constant block into `search_one`'s
+    docstring; removed.
+
+## Revision 33 change log
+
+Two provenance blockers. Revision 32's claim that 18 modules were complete was
+FALSE, and the runtime identity was captured only at the end of the run.
+Provenance repair and cleanup only; no threshold or scientific gate moved.
+
+123. **The result-determining source set omitted directly executed modules.**
+    Six were missing, each on the real path: `fpu_dev_reservoir_protocol.py`
+    (the canonical serializer that produces the artifact bytes),
+    `game/__init__.py` (exports `TwixtState` and the board constants MCTS and
+    the network import), `opening_diagnostics.py` (called from `_select_child`
+    via `effective_near_corner_penalty`), `probe_eval.py` (loads the checkpoint
+    through `_default_evaluator_factory`),
+    `diagnose_fpu_baseline_policy_mass.py` (Task 4's `game_identities`) and
+    `fpu_v17_provenance.py` (which that identity implementation uses). The
+    frozen set is now 24 modules, and the test compares against an INDEPENDENT
+    required list written out in the test file -- comparing against the
+    module's own tuple would let an omission pass by simply not being listed.
+124. **The runtime provenance window was unbracketed.** The worktree was checked
+    clean at the start, but HEAD and the source files were read only at
+    emission, after every search. A multi-hour run gives them ample time to
+    move, and the artifact would then record the ENDING bytes while the trees
+    were produced by code imported at the opening state. `runtime_identity()`
+    now captures HEAD, the worktree state and every result-determining SHA-1
+    BEFORE evaluator construction, is recomputed after the last search, and must
+    match exactly; the OPENING identity is what gets published. Mutation tests
+    prove a mid-run source change, a mid-run HEAD change and a dirty opening
+    worktree each write nothing, and that removing the closing check fails.
+
+    A read-COUNT assertion pins the structure at exactly two passes over the
+    module list, because on the passing path a third read returns identical
+    bytes and only the call structure distinguishes republishing the
+    authenticated identity from taking an unauthenticated one at emission.
+125. Cleanup: removed the stale `_cases exists for unit tests` sentence,
+    corrected "emits three artifacts" to four, deleted the unused `SEED_RULE`,
+    `_atomic_write` and `Iterable` import, and resolved the census reservoir by
+    `SELECTED_UNIVERSE["name"]` rather than `CANDIDATE_UNIVERSES[0]`.
+
+## Revision 34 change log
+
+One sequencing blocker. Revision 33 bracketed the runtime identity, but opened
+the bracket too late. Ordering only; no threshold, gate or scientific rule
+moved.
+
+126. **The opening identity started AFTER the evidence was authenticated.**
+    `runtime_identity()` was captured after criteria verification, universe
+    re-emission and byte comparison, selected-A authentication and both case
+    derivations -- all of which read the source tree and take real time. A clean
+    HEAD move DURING those steps would therefore become the "opening" identity;
+    the closing check would agree with it, and the artifact would bind the NEW
+    HEAD to records that were verified against the old one. The bracket is a
+    guarantee about which code produced the evidence, so it has to open before
+    any evidence exists.
+
+    The capture now happens immediately after the fresh-output check, its
+    worktree-clean requirement with it, and everything that verifies or derives
+    evidence runs inside it. `assert_runtime_matches_records` takes
+    `expected_commit` from that capture and no longer reads HEAD itself --
+    rereading would compare the records against whatever the tree is at that
+    instant rather than the state the run is bracketed by. The closing
+    comparison after the last search is unchanged.
+
+    Non-vacuity: a test moves the simulated HEAD inside `_derive_cases`. Under
+    the old ordering opening and closing both observe the moved value and the
+    run passes; under the corrected ordering the closing identity differs from
+    the true opening one and nothing is written. Reverting the ordering fails
+    that test, and reverting `expected_commit` to a fresh read fails two more.
