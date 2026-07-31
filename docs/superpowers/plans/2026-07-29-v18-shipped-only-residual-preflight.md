@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 34)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 35)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -3403,6 +3403,34 @@ Spec §2.2 places selector feasibility and reservoir sizing **inside** the permi
 
 Per design §5.1 this needs a **narrow version-dispatched hook**, not a fork. Revision 6 left "callbacks **or** schema dispatch" open, which permits two materially different implementations. **One route is now frozen — schema-dispatched role vocabulary and allocation, reusing the existing qualification and exact selector:**
 
+**Declared vs EFFECTIVE schema version — frozen before Step 1.**
+`parse_allocation_profile` accepts declared `config_schema_version` 2, 3 or 4
+but constructs **every** `AllocationProfile` with `schema_version=2`, hardcoded
+at `fpu_dev_corpus_v2.py:455`. The three real configs therefore normalize:
+
+```text
+declared 2 (production)     -> effective 2
+declared 3 (tooling_smoke)  -> effective 2
+declared 4 (development)    -> effective 2
+```
+
+That effective value is carried in `AllocationProfile.fingerprint()`, so it is
+part of the byte-level legacy behaviour this task promises to preserve. Making
+schemas 3 and 4 report 3 and 4 would look like a tidy-up and would change their
+fingerprints and potentially their serialized outputs. The frozen rule:
+
+```text
+raw schema 2-4   keep effective schema 2, byte-identical -- do NOT "fix"
+raw schema 5     constructs an EFFECTIVE schema-5 profile and activates the
+                 new resolver behaviour
+tests            must pin declared 3/4 -> effective 2, so the normalization
+                 cannot be removed by someone who reads it as a bug
+```
+
+`sources.json` records `declared_config_schema_version`,
+`effective_allocation_profile_schema_version` and the effective
+`fingerprint()` for all three fixtures.
+
 **The schema contract, frozen.** Revision 7 said "roles and allocation become schema-dispatched" without settling what the schema *is*. The selector also hardcodes more than roles: `AllocationProfile.corpus_size`, `split_totals` and `quota_by_phase` all embed the `"tuning"` / `"frozen_check"` literals (`fpu_dev_corpus_v2.py:265-296`), `SPLIT_ALLOC_V2` is v17's 240-row profile (`:195`), `SPLITS = ("tuning", "frozen_check")` is imported from `build_fpu_dev_corpus.py:96`, and `late_target_bands` is consumed unconditionally (`:3927`). Frozen:
 
 ```text
@@ -4868,3 +4896,28 @@ moved.
     run passes; under the corrected ordering the closing identity differs from
     the true opening one and nothing is written. Reverting the ordering fails
     that test, and reverting `expected_commit` to a fresh read fails two more.
+
+## Revision 35 change log
+
+Found while capturing the Task 8 Step 0 fixture basis, before any selector edit.
+Provenance recording and one frozen implementation rule; no code changed.
+
+127. **Declared schema version is not the effective one.**
+    `parse_allocation_profile` accepts declared `config_schema_version` 2, 3 or
+    4 but hardcodes `schema_version=2` into every constructed
+    `AllocationProfile` (`fpu_dev_corpus_v2.py:455`), so all three real configs
+    normalize to effective 2. That value is carried in `fingerprint()`, which
+    makes it part of the byte-level legacy behaviour Task 8 must preserve --
+    and it reads like a bug, so it is exactly the kind of thing a later editor
+    "fixes". Frozen: raw 2-4 keep effective schema 2 and stay byte-identical;
+    raw schema 5 constructs an effective schema-5 profile and activates the new
+    resolver; tests must PIN declared 3/4 -> effective 2. `sources.json` now
+    records declared and effective versions plus the effective fingerprint for
+    each fixture.
+128. Two corrections to Step 0's own procedure, both of which would otherwise
+    have produced a worthless fixture: each profile must be paired with **its
+    own reservoir's** screen (the schema-2 production profile against the
+    development screen fails on `('target','late')` capacity), and rows must go
+    through `read_screen_csv` + `kept_rows_from_screen` -- raw `csv.DictReader`
+    strings raise `TypeError` in the selector, and `sample_v2_rows` needs the
+    `role` key that projection derives from `raw_policy_role`.
