@@ -1,0 +1,302 @@
+[
+ {
+  "canonical_state_sha1": "62aa777f51d4f1d61c55e62e7364510cb96bcd3c",
+  "case_id": "black_loss_game_000021_predrop_ply_25_drop_27",
+  "game_idx": 21,
+  "position_ply": 25,
+  "probe_black_root_value": "0.13586370268556494",
+  "probe_top1_share": "0.6190625",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000021.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "02605189375a888398c650da406767bd72db5cb6",
+  "case_id": "black_loss_game_000027_predrop_ply_45_drop_47",
+  "game_idx": 27,
+  "position_ply": 45,
+  "probe_black_root_value": "-0.06357840878137722",
+  "probe_top1_share": "0.744375",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000027.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "9f542707fdaeec407bb78cea7955fd69971b7d0a",
+  "case_id": "black_loss_game_000093_predrop_ply_41_drop_43",
+  "game_idx": 93,
+  "position_ply": 41,
+  "probe_black_root_value": "0.16081537994867176",
+  "probe_top1_share": "0.5878125",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000093.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "2face1b317f10d3c0da45093200e9374fb40ed8d",
+  "case_id": "black_loss_game_000123_predrop_ply_37_drop_39",
+  "game_idx": 123,
+  "position_ply": 37,
+  "probe_black_root_value": "0.19513474237677655",
+  "probe_top1_share": "0.5215625",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000123.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "9f65d0b458a742f08b5320b7a306f74288f3a272",
+  "case_id": "black_loss_game_000127_predrop_ply_33_drop_35",
+  "game_idx": 127,
+  "position_ply": 33,
+  "probe_black_root_value": "-0.0010830460266970476",
+  "probe_top1_share": "0.32640625",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000127.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "68a56d9e575820d2900eece635faa449e20f37d7",
+  "case_id": "black_loss_game_000151_predrop_ply_49_drop_51",
+  "game_idx": 151,
+  "position_ply": 49,
+  "probe_black_root_value": "0.02211391868541796",
+  "probe_top1_share": "0.77609375",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000151.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "bc75a33b0bf9f8dc45295ecb46710f474ff612aa",
+  "case_id": "black_loss_game_000183_predrop_ply_19_drop_21",
+  "game_idx": 183,
+  "position_ply": 19,
+  "probe_black_root_value": "-0.20631043055514056",
+  "probe_top1_share": "0.2884375",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000183.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "3e9a0a69b61881000ca2ff91d0a48025cc57ed62",
+  "case_id": "black_loss_game_000217_predrop_ply_73_drop_75",
+  "game_idx": 217,
+  "position_ply": 73,
+  "probe_black_root_value": "0.027360682650878515",
+  "probe_top1_share": "0.79171875",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000217.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "87e20411c90be0d2b69ee9235a2ff3b088c0bda3",
+  "case_id": "black_loss_game_000249_predrop_ply_59_drop_61",
+  "game_idx": 249,
+  "position_ply": 59,
+  "probe_black_root_value": "-0.39892848053397756",
+  "probe_top1_share": "0.4971875",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000249.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "45e2f32cd8a5831867957462cc6e6a806b60817e",
+  "case_id": "black_loss_game_000259_predrop_ply_35_drop_37",
+  "game_idx": 259,
+  "position_ply": 35,
+  "probe_black_root_value": "0.04464116277272297",
+  "probe_top1_share": "0.6971875",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000259.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "3c04c7cacc04f7fbdc4c4718b067786b94acad89",
+  "case_id": "black_loss_game_000281_predrop_ply_19_drop_21",
+  "game_idx": 281,
+  "position_ply": 19,
+  "probe_black_root_value": "0.10240323474179604",
+  "probe_top1_share": "0.95890625",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000281.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "a82e3fb0af948cc8c079a6967fd9d2b022acfe46",
+  "case_id": "black_loss_game_000291_predrop_ply_21_drop_23",
+  "game_idx": 291,
+  "position_ply": 21,
+  "probe_black_root_value": "0.05114413001991124",
+  "probe_top1_share": "0.8646875",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000291.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "9cdd31b21483d34f3b113b3a63aabe66ff375e37",
+  "case_id": "black_loss_game_000337_predrop_ply_25_drop_27",
+  "game_idx": 337,
+  "position_ply": 25,
+  "probe_black_root_value": "0.05450940877283756",
+  "probe_top1_share": "0.4628125",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000337.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "2555f653254f1b4d4c75bbd72d1f60e62adc7c38",
+  "case_id": "black_loss_game_000347_predrop_ply_73_drop_75",
+  "game_idx": 347,
+  "position_ply": 73,
+  "probe_black_root_value": "0.08669212620079633",
+  "probe_top1_share": "0.12671875",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000347.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "c0eed1b4620e360da02413f40e89e75085c2afb7",
+  "case_id": "black_loss_game_000449_predrop_ply_37_drop_39",
+  "game_idx": 449,
+  "position_ply": 37,
+  "probe_black_root_value": "-0.2541372658866385",
+  "probe_top1_share": "0.7515625",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000449.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "56e27ec351b22e524bdeaf8622ed43d25a6e4db5",
+  "case_id": "black_loss_game_000455_predrop_ply_65_drop_67",
+  "game_idx": 455,
+  "position_ply": 65,
+  "probe_black_root_value": "-0.5853655245770643",
+  "probe_top1_share": "0.099375",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000455.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "091c5163996499fe518084d74cbac10c0f3bdb36",
+  "case_id": "black_loss_game_000467_predrop_ply_19_drop_21",
+  "game_idx": 467,
+  "position_ply": 19,
+  "probe_black_root_value": "-0.23268242851618198",
+  "probe_top1_share": "0.29109375",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000467.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "7e1c4db0e78ed1bfbec3148edbd6686f1e26c1b7",
+  "case_id": "black_loss_game_000503_predrop_ply_19_drop_21",
+  "game_idx": 503,
+  "position_ply": 19,
+  "probe_black_root_value": "0.33679926557888396",
+  "probe_top1_share": "0.55625",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000503.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "607932d47e7b937fd8ce045ddd1de29995197aa3",
+  "case_id": "black_loss_game_000505_predrop_ply_41_drop_43",
+  "game_idx": 505,
+  "position_ply": 41,
+  "probe_black_root_value": "-0.41105502241529396",
+  "probe_top1_share": "0.16921875",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000505.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "55f74842bbb09f08215a689bbea2d75a78058e9b",
+  "case_id": "black_loss_game_000507_predrop_ply_37_drop_39",
+  "game_idx": 507,
+  "position_ply": 37,
+  "probe_black_root_value": "0.02663334626034157",
+  "probe_top1_share": "0.785",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000507.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "9a6468ff15db39e217a40afa29c96013d07d76ad",
+  "case_id": "black_loss_game_000539_predrop_ply_41_drop_43",
+  "game_idx": 539,
+  "position_ply": 41,
+  "probe_black_root_value": "-0.18957454663091994",
+  "probe_top1_share": "0.12453125",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000539.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "119f4503f036a536f2a0da1a661b59f632eee548",
+  "case_id": "black_loss_game_000611_predrop_ply_19_drop_21",
+  "game_idx": 611,
+  "position_ply": 19,
+  "probe_black_root_value": "0.5231205646566014",
+  "probe_top1_share": "0.41984375",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000611.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "75d5e2c56f61aaec59fa9f8fe26037270476f010",
+  "case_id": "black_loss_game_000627_predrop_ply_29_drop_31",
+  "game_idx": 627,
+  "position_ply": 29,
+  "probe_black_root_value": "-0.5121966379106107",
+  "probe_top1_share": "0.10984375",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000627.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "f34a22674326d241769657126e6e2d6e1d306bc9",
+  "case_id": "black_loss_game_000629_predrop_ply_43_drop_45",
+  "game_idx": 629,
+  "position_ply": 43,
+  "probe_black_root_value": "-0.32562518372805244",
+  "probe_top1_share": "0.0178125",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000629.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "22b01d3099d59cb61b13e54076a3c9df7012e697",
+  "case_id": "black_loss_game_000631_predrop_ply_19_drop_21",
+  "game_idx": 631,
+  "position_ply": 19,
+  "probe_black_root_value": "0.49309611643225254",
+  "probe_top1_share": "0.9846875",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000631.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "f0470f84a81a672f14a4e9ca828fd94150392659",
+  "case_id": "black_loss_game_000633_predrop_ply_37_drop_39",
+  "game_idx": 633,
+  "position_ply": 37,
+  "probe_black_root_value": "-0.005968692843662211",
+  "probe_top1_share": "0.054375",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000633.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "dd6f79557584be8024ad12c707e11b58871743df",
+  "case_id": "black_loss_game_000735_predrop_ply_31_drop_33",
+  "game_idx": 735,
+  "position_ply": 31,
+  "probe_black_root_value": "-0.14951749936486522",
+  "probe_top1_share": "0.36234375",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000735.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "a41805ddf300b32ad5795bea592ef34cf6c7f72d",
+  "case_id": "black_loss_game_000753_predrop_ply_49_drop_51",
+  "game_idx": 753,
+  "position_ply": 49,
+  "probe_black_root_value": "-0.014992245118946812",
+  "probe_top1_share": "0.04046875",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000753.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "6731209224f17fe529c2f678f4b4c946caa91050",
+  "case_id": "black_loss_game_000757_predrop_ply_43_drop_45",
+  "game_idx": 757,
+  "position_ply": 43,
+  "probe_black_root_value": "-0.3650439319501311",
+  "probe_top1_share": "0.4921875",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000757.json",
+  "side_to_move": "black"
+ },
+ {
+  "canonical_state_sha1": "569cfd444e63e5da6c8be1f550d88f6c4506d43d",
+  "case_id": "black_loss_game_000765_predrop_ply_25_drop_27",
+  "game_idx": 765,
+  "position_ply": 25,
+  "probe_black_root_value": "0.10135877487406106",
+  "probe_top1_share": "0.400625",
+  "replay_path": "logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/game_000765.json",
+  "side_to_move": "black"
+ }
+]
