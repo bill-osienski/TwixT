@@ -1,0 +1,34 @@
+{
+ "all_reproduce": true,
+ "kind": "operator_only_full_chain_reproduction",
+ "module_path": "scripts/GPU/alphazero/fpu_dev_corpus_v2.py",
+ "module_sha1": "9efd554b542f4c13aa505468a1d2d94c9367165c",
+ "note": "Re-ran the real selector chain at the UNEDITED module over each run's gitignored artifacts and byte-compared the manifest via the module's own write_select_csv. The suite cannot depend on these files; this is recorded, not tested.",
+ "part_of_test_suite": false,
+ "schemas": {
+  "schema2": {
+   "byte_identical": true,
+   "manifest_meta_path": "logs/eval/fpu_v16_policy_mass_v2/production_v2_b400amend_4000g_seed20300000/fpu_dev_corpus_v2_manifest.csv.meta.json",
+   "manifest_meta_sha1": "5501e8b7aa220975d597c0245bf9d74c66d13035",
+   "manifest_path": "logs/eval/fpu_v16_policy_mass_v2/production_v2_b400amend_4000g_seed20300000/fpu_dev_corpus_v2_manifest.csv",
+   "manifest_sha1_on_disk": "84cdd4b45e089a2ebb292491c146ba00bff17ea9",
+   "manifest_sha1_regenerated": "84cdd4b45e089a2ebb292491c146ba00bff17ea9"
+  },
+  "schema3": {
+   "byte_identical": true,
+   "manifest_meta_path": "logs/eval/fpu_v17_baseline_policy_mass/smoke_8a/fpu_dev_corpus_v2_manifest.csv.meta.json",
+   "manifest_meta_sha1": "5a8d63214c8bde45035b0b3f9fbc2ce67fd515b7",
+   "manifest_path": "logs/eval/fpu_v17_baseline_policy_mass/smoke_8a/fpu_dev_corpus_v2_manifest.csv",
+   "manifest_sha1_on_disk": "aaee1319a1797e39d387749bdb1f3bee7753cfbf",
+   "manifest_sha1_regenerated": "aaee1319a1797e39d387749bdb1f3bee7753cfbf"
+  },
+  "schema4": {
+   "byte_identical": true,
+   "manifest_meta_path": "logs/eval/fpu_v17_baseline_policy_mass/development/fpu_dev_corpus_v2_manifest.csv.meta.json",
+   "manifest_meta_sha1": "c95336a46921cb7a456797e41a42a4af2740992e",
+   "manifest_path": "logs/eval/fpu_v17_baseline_policy_mass/development/fpu_dev_corpus_v2_manifest.csv",
+   "manifest_sha1_on_disk": "15b0228edc1ed605fea799694d4ca0eda3e3468b",
+   "manifest_sha1_regenerated": "15b0228edc1ed605fea799694d4ca0eda3e3468b"
+  }
+ }
+}

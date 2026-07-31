@@ -1,0 +1,128 @@
+{
+ "post_screen_qualification_report": {
+  "binding_constraint": null,
+  "cells": {
+   "control|early_mid": {
+    "black": 2,
+    "capacity": 10,
+    "demand": 1,
+    "n_games": 10,
+    "n_rows": 10,
+    "red": 8
+   },
+   "control|opening": {
+    "black": 0,
+    "capacity": 10,
+    "demand": 1,
+    "n_games": 10,
+    "n_rows": 10,
+    "red": 10
+   }
+  },
+  "failures": [],
+  "global_realizable_capacity": 20,
+  "late_target_bands": {},
+  "per_split_minima_note": "per-split band minima are proven only by the exact selector witness, not by this capacity bound",
+  "profile": {
+   "allocation": {
+    "control|early_mid": {
+     "frozen_check": 0,
+     "tuning": 1
+    },
+    "control|opening": {
+     "frozen_check": 0,
+     "tuning": 1
+    }
+   },
+   "band_minima_per_split": {},
+   "band_minima_total": {},
+   "corpus_size": 2,
+   "max_per_game": 2,
+   "min_ply_gap": 12,
+   "run_kind": "tooling_smoke",
+   "schema_version": 2,
+   "side_tol": 2
+  },
+  "status": "PASS"
+ },
+ "sample_v2_rows": {
+  "rows": [
+   {
+    "anchor_eligible": true,
+    "anchor_run": true,
+    "band": "b400_plus",
+    "canonical_sha1": "1bcf7dc30ce789057a1373233ac215e036e70b23",
+    "exclusion_status": "kept",
+    "game_idx": 3,
+    "n_legal": 512,
+    "normalized_entropy": 0.38097869174071347,
+    "phase": "early_mid",
+    "ply": 16,
+    "ply_bucket": "early_mid",
+    "proposal_cell": "('early_mid', None)",
+    "raw_policy_role": "control",
+    "role": "control",
+    "root_value_stm": 0.20012496078270486,
+    "side": "red",
+    "split": "tuning",
+    "top1_prior": 0.22844558954238892,
+    "top4_mass": 0.6891282945871353,
+    "top8_mass": 0.9115758370608091
+   },
+   {
+    "anchor_eligible": true,
+    "anchor_run": true,
+    "band": "b400_plus",
+    "canonical_sha1": "1d59a4573fd7d8b9167ce57869a7b96d9361500d",
+    "exclusion_status": "kept",
+    "game_idx": 0,
+    "n_legal": 528,
+    "normalized_entropy": 0.42946285240425813,
+    "phase": "opening",
+    "ply": 0,
+    "ply_bucket": "opening",
+    "proposal_cell": "('opening', None)",
+    "raw_policy_role": "control",
+    "role": "control",
+    "root_value_stm": -0.017092503129970283,
+    "side": "red",
+    "split": "tuning",
+    "top1_prior": 0.13781291246414185,
+    "top4_mass": 0.5337032526731491,
+    "top8_mass": 0.8670066371560097
+   }
+  ],
+  "stats": {
+   "assignment_attempt": 0,
+   "cell_counts": {
+    "control|early_mid|frozen_check": 0,
+    "control|early_mid|tuning": 1,
+    "control|opening|frozen_check": 0,
+    "control|opening|tuning": 1
+   },
+   "late_target_band_count": {},
+   "late_target_band_count_by_split": {
+    "frozen_check": {},
+    "tuning": {}
+   },
+   "n_games_per_split": {
+    "frozen_check": 0,
+    "tuning": 19
+   },
+   "n_games_total": 19,
+   "n_rows": 2,
+   "seed": 20260726,
+   "side_count": {
+    "frozen_check": {
+     "black": 0,
+     "red": 0
+    },
+    "tuning": {
+     "black": 0,
+     "red": 2
+    }
+   },
+   "split_assignment_version": 2
+  }
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "config_schema_version": 3,
+ "corpus_size": 2,
+ "late_floors": {},
+ "late_target_band_minima": {},
+ "max_per_game": 2,
+ "min_ply_gap": 12,
+ "phase_allocation": {
+  "control|early_mid": {
+   "frozen_check": 0,
+   "tuning": 1
+  },
+  "control|opening": {
+   "frozen_check": 0,
+   "tuning": 1
+  }
+ },
+ "run_kind": "tooling_smoke",
+ "scientific_interpretation_forbidden": true,
+ "selection_seed": 20260726,
+ "side_tol": 2
+}

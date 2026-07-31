@@ -1,0 +1,162 @@
+{
+ "captured_before_any_edit": true,
+ "module_path": "scripts/GPU/alphazero/fpu_dev_corpus_v2.py",
+ "module_sha1": "9efd554b542f4c13aa505468a1d2d94c9367165c",
+ "note": "Profile inputs are the exact keys parse_allocation_profile reads, verified to parse identically to the full config. Rows are a deterministic per-cell reduction of that run's OWN screen.",
+ "schema_version_normalization": {
+  "declared_to_effective": {
+   "2": 2,
+   "3": 2,
+   "4": 2
+  },
+  "frozen_rule_for_schema_5": "Raw schemas 2-4 keep effective schema 2 and stay byte-identical. Raw schema 5 constructs an effective schema-5 profile and activates the new resolver. Tests must pin declared 3/4 -> effective 2.",
+  "rule": "parse_allocation_profile ACCEPTS declared config_schema_version 2, 3 or 4 but constructs every AllocationProfile with schema_version=2 -- hardcoded at fpu_dev_corpus_v2.py:455.",
+  "why_it_matters": "The effective value is carried in AllocationProfile.fingerprint(), so it is part of the byte-level legacy behaviour Task 8 promises to preserve. Making schemas 3 and 4 report 3 and 4 would change their fingerprints and can change serialized outputs -- it would look like a tidy-up and would silently break legacy artifacts."
+ },
+ "schemas": {
+  "schema2": {
+   "config_path": "logs/eval/fpu_v16_policy_mass_v2/production_v2_b400amend_4000g_seed20300000/fpu_dev_corpus_v2_config.json",
+   "config_sha1": "1a26c88573ba1ac2973eb93bfdda982959fbb366",
+   "declared_config_schema_version": 2,
+   "effective_allocation_profile_fingerprint": {
+    "allocation": {
+     "control|early_mid": {
+      "frozen_check": 5,
+      "tuning": 10
+     },
+     "control|late": {
+      "frozen_check": 5,
+      "tuning": 10
+     },
+     "control|midgame": {
+      "frozen_check": 5,
+      "tuning": 10
+     },
+     "control|opening": {
+      "frozen_check": 5,
+      "tuning": 10
+     },
+     "target|late": {
+      "frozen_check": 20,
+      "tuning": 40
+     }
+    },
+    "band_minima_per_split": {
+     "frozen_check": {
+      "b200_299": 5,
+      "b300_399": 5,
+      "b400_plus": 2
+     },
+     "tuning": {
+      "b200_299": 8,
+      "b300_399": 8,
+      "b400_plus": 2
+     }
+    },
+    "band_minima_total": {
+     "b200_299": 12,
+     "b300_399": 12,
+     "b400_plus": 4
+    },
+    "corpus_size": 120,
+    "max_per_game": 2,
+    "min_ply_gap": 12,
+    "run_kind": "production",
+    "schema_version": 2,
+    "side_tol": 2
+   },
+   "effective_allocation_profile_schema_version": 2,
+   "kept_rows": 5065,
+   "reduced_rows": 307,
+   "reduction_rule": "first 40 per (role, phase, band)",
+   "run_kind": "production",
+   "screen_path": "logs/eval/fpu_v16_policy_mass_v2/production_v2_b400amend_4000g_seed20300000/fpu_dev_source_screen.csv",
+   "screen_sha1": "05db59f8f0c96410d1e3dd4091c83ba39f09c44c",
+   "selected_rows": 120,
+   "selection_seed": 20260718
+  },
+  "schema3": {
+   "config_path": "logs/eval/fpu_v17_baseline_policy_mass/smoke_8a/fpu_dev_corpus_v2_config.json",
+   "config_sha1": "a6c6c51a69a6deffa7fa829de53de1d66bf015ea",
+   "declared_config_schema_version": 3,
+   "effective_allocation_profile_fingerprint": {
+    "allocation": {
+     "control|early_mid": {
+      "frozen_check": 0,
+      "tuning": 1
+     },
+     "control|opening": {
+      "frozen_check": 0,
+      "tuning": 1
+     }
+    },
+    "band_minima_per_split": {},
+    "band_minima_total": {},
+    "corpus_size": 2,
+    "max_per_game": 2,
+    "min_ply_gap": 12,
+    "run_kind": "tooling_smoke",
+    "schema_version": 2,
+    "side_tol": 2
+   },
+   "effective_allocation_profile_schema_version": 2,
+   "kept_rows": 56,
+   "reduced_rows": 26,
+   "reduction_rule": "first 10 per (role, phase, band)",
+   "run_kind": "tooling_smoke",
+   "screen_path": "logs/eval/fpu_v17_baseline_policy_mass/smoke_8a/fpu_dev_source_screen.csv",
+   "screen_sha1": "095a81393d9f2de59ea882e9d70489cb6f59e99a",
+   "selected_rows": 2,
+   "selection_seed": 20260726
+  },
+  "schema4": {
+   "config_path": "logs/eval/fpu_v17_baseline_policy_mass/development/fpu_dev_corpus_v2_config.json",
+   "config_sha1": "9d3ef92172770afa4e1421a5643b05f2a1735c67",
+   "declared_config_schema_version": 4,
+   "effective_allocation_profile_fingerprint": {
+    "allocation": {
+     "control|early_mid": {
+      "frozen_check": 0,
+      "tuning": 4
+     },
+     "control|late": {
+      "frozen_check": 0,
+      "tuning": 4
+     },
+     "control|midgame": {
+      "frozen_check": 0,
+      "tuning": 4
+     },
+     "control|opening": {
+      "frozen_check": 0,
+      "tuning": 4
+     },
+     "target|late": {
+      "frozen_check": 0,
+      "tuning": 16
+     }
+    },
+    "band_minima_per_split": {
+     "frozen_check": {},
+     "tuning": {}
+    },
+    "band_minima_total": {},
+    "corpus_size": 32,
+    "max_per_game": 2,
+    "min_ply_gap": 12,
+    "run_kind": "development",
+    "schema_version": 2,
+    "side_tol": 0
+   },
+   "effective_allocation_profile_schema_version": 2,
+   "kept_rows": 2019,
+   "reduced_rows": 84,
+   "reduction_rule": "first 10 per (role, phase, band)",
+   "run_kind": "development",
+   "screen_path": "logs/eval/fpu_v17_baseline_policy_mass/development/fpu_dev_source_screen.csv",
+   "screen_sha1": "a67f058b422277538516187cbd015d428e67fcd7",
+   "selected_rows": 32,
+   "selection_seed": 20260725
+  }
+ }
+}
