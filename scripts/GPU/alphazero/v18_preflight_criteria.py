@@ -613,6 +613,49 @@ EXPOSURE_CUTOFF_RULE = {
     "basis": "policy",
 }
 
+# ---------------------------------------------------------------------------
+# Per-population seed policy. ASYMMETRIC, deliberately.
+# ---------------------------------------------------------------------------
+
+SEED_POLICY = {
+    "selected_a": {
+        "rule": "historical_xor",
+        "expression": "20260616 ^ game_idx ^ position_ply",
+        "base": 20260616,
+        "basis": "measured",
+        "rationale": (
+            "the historical A rule, retained unchanged: the frozen A artifacts "
+            "were produced under it, so changing it would break exact "
+            "alignment with them"),
+        "n_rows": 30,
+        "unique_seeds": 27,
+        "duplicate_groups": 3,
+        "duplicates_are": "accepted historical provenance, NOT a failure",
+        "require_unique": False,
+    },
+    "census": {
+        "rule": "sha1_digest",
+        "domain_tag": "v18_preflight_census_seed_v1",
+        "base": 20260730,
+        "expression": (
+            "int.from_bytes(sha1(domain_tag|base|game_content_sha1|"
+            "position_ply)[:8]) -- a deterministic cryptographic digest"),
+        "basis": "policy",
+        "rationale": (
+            "XOR is UNUSABLE for the census. `game_idx < 1024` and "
+            "`position_ply < 1024` bound `base ^ game_idx ^ position_ply` to at "
+            "most 1024 distinct values; the measured 1,974-row census collapses "
+            "to 841, forcing 1,133 duplicate seeds. Recording that would not be "
+            "protection. A digest has no such ceiling, and keying it on the "
+            "replay CONTENT hash rather than the reservoir-local `game_idx` "
+            "also makes the seed independent of renumbering"),
+        "require_unique": True,
+    },
+    "cross_population_disjoint_required": True,
+    "checked_before": "evaluator_construction",
+    "on_violation": "STOP before any evaluator call; no artifact",
+}
+
 BASIS_INDEX = {
     "PRIMARY_EXPOSURE_FORMULA": "policy",
     "SIGN_DOMINANCE.min": "policy",
@@ -949,6 +992,7 @@ def as_dict() -> Dict:
         "historical_anchors": HISTORICAL_ANCHORS,
         "revisit_form_criterion": REVISIT_FORM_CRITERION,
         "conversion_efficiency_min": CONVERSION_EFFICIENCY_MIN,
+        "seed_policy": SEED_POLICY,
         "min_lost_replies": MIN_LOST_REPLIES,
         "stable_leader_min_fraction": STABLE_LEADER_MIN_FRACTION,
         "prospective_target_subset_floor": R_MIN_RULE["subset_floor"],

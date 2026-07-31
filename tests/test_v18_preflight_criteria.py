@@ -492,6 +492,28 @@ def test_frozen_criteria_stamps_scope_boundary_and_forbids_interpretation():
 
 # --- AUC tail and the operating-characteristic generator --------------------
 
+def test_seed_policy_is_asymmetric_and_frozen_in_the_criteria():
+    """The census cannot use the historical XOR rule: game_idx and position_ply
+    are both < 1024, so it admits at most 1024 distinct values and the measured
+    1,974-row census collapses to 841 -- 1,133 forced duplicates."""
+    s = C.SEED_POLICY
+    assert s["selected_a"]["rule"] == "historical_xor"
+    assert s["selected_a"]["base"] == 20260616
+    assert s["selected_a"]["require_unique"] is False
+    assert s["selected_a"]["unique_seeds"] == 27
+    assert s["selected_a"]["duplicate_groups"] == 3
+    assert "historical provenance" in s["selected_a"]["duplicates_are"]
+    assert s["census"]["rule"] == "sha1_digest"
+    assert s["census"]["base"] == 20260730
+    assert s["census"]["domain_tag"] == "v18_preflight_census_seed_v1"
+    assert s["census"]["require_unique"] is True
+    assert "game_content_sha1" in s["census"]["expression"]
+    assert s["cross_population_disjoint_required"] is True
+    assert s["checked_before"] == "evaluator_construction"
+    # The policy is EMITTED, not merely held in the measurement module.
+    assert C.as_dict()["seed_policy"] is s
+
+
 def test_lower_tail_quantile_is_q_0_05():
     assert C.SEPARATION["lower_bound_quantile"] == 0.05
     assert C.AUC_OC_MODEL["percentile_q"] == 0.05
