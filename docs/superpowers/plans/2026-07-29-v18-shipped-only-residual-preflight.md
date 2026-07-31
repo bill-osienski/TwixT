@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 26)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 30)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -2341,8 +2341,28 @@ mean_top1_share        0.46407291666666667
 ```
 
 **Files:**
-- Modify: `scripts/GPU/alphazero/capture_v17_abcd_selected_moves.py:37-73, 121-130, 196-200`
+- Create: `scripts/GPU/alphazero/capture_v18_a6400.py`
+- **DO NOT MODIFY** `scripts/GPU/alphazero/capture_v17_abcd_selected_moves.py` — see below
 - Test: `tests/test_capture_abcd_parameterization.py`
+- Create (tracked fixtures, **owned by this task**):
+  `tests/golden/a6400_bundle_fixture/source_rows.json`,
+  `tests/golden/a6400_bundle_fixture/capture.json`,
+  `tests/golden/a6400_bundle_fixture/provenance.json`
+
+**`capture_v17_abcd_selected_moves.py` is FROZEN v17 EVIDENCE and may not be edited.** The tracked record `logs/eval/fpu_v17_baseline_policy_mass/prechange_baseline.json` pins it twice:
+
+```text
+selected_move_capture.capture_tool_sha1   2ce39bb56b479ae792e20fa6b493e157b3b89d05
+source_sha1s.v17_pure_dependencies[...]   2ce39bb56b479ae792e20fa6b493e157b3b89d05
+```
+
+The first states **which version of the tool produced the v17 selected-move artifact** `162c9a5a…`. Editing the tool in place makes that statement false, and "fixing" the record would assert that a completed, closed experiment was produced by a tool version that did not exist when it ran. `tests/test_fpu_v17_prechange_baseline.py` guards both facts, and the file is deliberately absent from that module's `AUTHORIZED_TO_CHANGE` set.
+
+The parameterization therefore lives in a **new module that imports the v17 one unchanged**. This satisfies §2.2.2's "parameterization, not a fork": the shared per-case machinery — `load_gate_cases`, `selected_move_for`, the gate table, seeds, batching triple — keeps exactly one implementation, in the v17 module; nothing is copied. The legacy mode **delegates to `v17.capture()` verbatim**, so the default document is byte-identical by construction rather than by inspection. The test module imports `capture_v18_a6400 as M`.
+
+**Fixture ownership belongs HERE, not to Task 8.** Task 6's builder tests consume `tests/golden/a6400_bundle_fixture/`, and Task 6 runs before Task 8 in the execution order — so a directory Task 8 created would not exist when Task 6 needs it. Task 8 Step 0b retains ownership of its own selector pre-edit basis only.
+
+The two fixtures are **generated from the authenticated historical A/6,400 source with no GPU and no search**: read `logs/eval/v15_budget_check/a_predrop_base_6400sims.csv/position_probe_cases.csv`, verify its SHA-1 is `a17d4737c747e2799253bebbc3d0261e0e697114`, and project its 30 rows into the two shapes the tests need. `capture.json` carries the *same* 30 identities with `recomputed_black_value_repr` / `top_share_repr` set from the source's own `probe_black_root_value` / `probe_top1_share`, so `authenticate_against` succeeds by construction on unmodified fixtures — it is a plumbing fixture, never a substitute for a real capture. `provenance.json` records the source path, its SHA-1, the generator, and the exact 30 `(case_id, game_idx, position_ply, side_to_move)` identities, so a clean checkout can prove what the fixture was derived from without the gitignored artifact.
 
 **Interfaces:**
 - Produces: `mcts_config(mcts_sims: int = MCTS_SIMS)`; `resolve_gates(s: str) -> tuple[str, ...]`; `build_parser()`; `capture(mode: str = "v17_prechange_abcd", out=OUT) -> dict`; `MODES: dict`; `authenticate_against(...)`; `record_envelope(mode)`; **`build_a6400_reference_bundle(run1_path: str, run2_path: str, out_path: str) -> str`** returning the emitted bundle's SHA-1.
@@ -2398,9 +2418,12 @@ Create `tests/test_capture_abcd_parameterization.py`:
 """Sec 2.2.2: parameterize for A/6400 WITHOUT changing v17 default behavior.
 No GPU: argument plumbing and authentication wiring only."""
 import inspect
+import json
+from pathlib import Path
+
 import pytest
 
-from scripts.GPU.alphazero import capture_v17_abcd_selected_moves as M
+from scripts.GPU.alphazero import capture_v18_a6400 as M
 
 SIX_K_REF = ("logs/eval/v15_budget_check/a_predrop_base_6400sims.csv/"
              "position_probe_cases.csv")
@@ -2774,6 +2797,390 @@ def test_record_kind_is_stamped_and_interpretation_forbidden():
     assert M.record_envelope("v18_preflight_a6400")["run_kind"] == "v18_preflight_a6400"
     assert M.record_envelope("v18_preflight_a6400")[
         "scientific_interpretation_forbidden"] is True
+
+
+def test_identity_normalizes_csv_strings_against_captured_integers():
+    """The historical CSV supplies "347"/"73"; a capture emits 347/73. Without
+    normalization every one of the 30 cases reads as BOTH missing and
+    unexpected -- a total failure that says nothing about the data."""
+    src = dict(_src(), game_idx="347", position_ply="73")
+    cap = dict(_cap(), game_idx=347, position_ply=73)
+    assert M._identity(src) == M._identity(cap)
+    M.authenticate_against([src], [cap])
+
+
+def test_identity_requires_every_field_including_the_canonical_hash():
+    """`.get()` leniency let a source and a capture that BOTH omit
+    canonical_state_sha1 compare as None == None, so an incomplete capture
+    authenticated against an incomplete source."""
+    for field in M.CASE_IDENTITY:
+        incomplete = {k: v for k, v in _src().items() if k != field}
+        with pytest.raises(ValueError, match="case set"):
+            M._identity(incomplete)
+    with pytest.raises(ValueError, match="case set"):
+        M.authenticate_against([{k: v for k, v in _src().items()
+                                 if k != "canonical_state_sha1"}], [_cap()])
+
+
+def test_duplicate_case_is_refused_even_when_the_identity_set_matches():
+    """A 31-row capture repeating one valid case has the SAME identity set, and
+    a by-case_id dict silently collapses the duplicate."""
+    src, cap = _src(), _cap()
+    with pytest.raises(ValueError, match="duplicate"):
+        M.authenticate_against([src], [cap, dict(cap)])
+    with pytest.raises(ValueError, match="duplicate"):
+        M.authenticate_against([src, dict(src)], [cap])
+
+
+def test_expected_case_count_is_enforced_when_requested():
+    with pytest.raises(ValueError, match="expected exactly 30"):
+        M.authenticate_against([_src()], [_cap()], expected_cases=30)
+    assert M.A6400_EXPECTED_CASES == 30
+
+
+def _synthetic_replay(tmp_path, moves=((5, 5), (7, 8), (9, 3), (11, 14), (13, 6))):
+    """A small, legal replay written under tmp_path -- no gitignored data."""
+    replay = {"board_size": 24, "n_moves": len(moves),
+              "moves": [{"ply": i, "player": "red" if i % 2 == 0 else "black",
+                         "row": r, "col": c} for i, (r, c) in enumerate(moves)]}
+    path = tmp_path / "game_000000.json"
+    path.write_text(json.dumps(replay))
+    return path
+
+
+def test_canonical_hash_derivation_is_portable_and_position_dependent(tmp_path):
+    """PORTABLE guard on the real derivation.
+
+    The live case-347 check below skips whenever the gitignored reservoir is
+    absent, so on a clean checkout or in CI it cannot catch a
+    `canonical_state_sha1_for` that hashes metadata. This one always runs.
+    """
+    from scripts.GPU.alphazero.fpu_state_hash import canonical_state_sha1
+    from scripts.GPU.alphazero.position_probe_cases import position_state
+
+    path = _synthetic_replay(tmp_path)
+    row = {"case_id": "synthetic", "game_idx": 0, "position_ply": 4,
+           "side_to_move": "red", "replay_path": str(path)}
+    replay = json.loads(path.read_text())
+    expected = canonical_state_sha1(position_state(replay, 4, "red"))
+    assert M.canonical_state_sha1_for(row) == expected
+    assert len(expected) == 40
+
+    # Position-dependent: a different ply is a different board, so a digest of
+    # metadata -- or of the replay file -- would collide here.
+    earlier = dict(row, position_ply=3, side_to_move="black")
+    assert M.canonical_state_sha1_for(earlier) != M.canonical_state_sha1_for(row)
+    # ... and independent of where the file happens to live.
+    moved = tmp_path / "renamed.json"
+    moved.write_text(path.read_text())
+    assert M.canonical_state_sha1_for(dict(row, replay_path=str(moved))) == expected
+
+
+_A347_REPLAY = Path("logs/eval/calib020_0001_vs_0379_800g_w4_seed20115_replays/"
+                    "game_000347.json")
+
+
+@pytest.mark.skipif(not _A347_REPLAY.exists(), reason="replay reservoir absent")
+def test_canonical_hash_is_derived_from_the_position_not_from_metadata():
+    """Exercises the REAL derivation, not the fixture file.
+
+    Without this a `canonical_state_sha1_for` that hashed metadata would pass
+    every other test, because the fixture already carries correct values and the
+    schema tests patch the function out.
+    """
+    row = {"case_id": "black_loss_game_000347_predrop_ply_73_drop_75",
+           "game_idx": 347, "position_ply": 73, "side_to_move": "black",
+           "replay_path": str(_A347_REPLAY)}
+    assert M.canonical_state_sha1_for(row) == (
+        "2555f653254f1b4d4c75bbd72d1f60e62adc7c38")
+    # A different ply is a different position, so a metadata-only digest that
+    # ignored the board would collide here.
+    other = dict(row, position_ply=72, side_to_move="red")
+    assert M.canonical_state_sha1_for(other) != M.canonical_state_sha1_for(row)
+
+
+def test_fixture_canonical_hashes_are_real_position_hashes(source_rows):
+    """The fixture must not label a metadata digest as a canonical state hash:
+    that would mask the missing production field and test nothing."""
+    prov = _fixture("provenance.json")
+    assert prov["canonical_state_sha1_is_real"] is True
+    by_game = {r["game_idx"]: r for r in source_rows}
+    # Spot-checked against the real derivation for case 347.
+    assert by_game[347]["canonical_state_sha1"] == (
+        "2555f653254f1b4d4c75bbd72d1f60e62adc7c38")
+    for row in source_rows:
+        assert len(row["canonical_state_sha1"]) == 40
+        int(row["canonical_state_sha1"], 16)
+    assert len({r["canonical_state_sha1"] for r in source_rows}) == 30
+
+
+def test_fixture_provenance_names_its_authenticated_source():
+    """The fixture is DERIVED from the frozen historical artifact, which lives
+    under gitignored logs/. Provenance is what lets a clean checkout know what
+    it was derived from."""
+    prov = _fixture("provenance.json")
+    assert prov["generated_from_path"] == SIX_K_REF
+    assert prov["generated_from_sha1"] == SIX_K_REF_SHA1
+    # The canonical hashes come from replay bytes, so that reservoir is part of
+    # the chain and its pinned aggregate is recorded too.
+    assert prov["replay_reservoir_sha1"] == (
+        "427d4ab669a81fe409de7da6d7c458056aff306e")
+    assert prov["replay_reservoir_sha1"] == (
+        M.A6400_REPLAY_RESERVOIR["replay_data_sha1"])
+    assert prov["replay_reservoir"] == M.A6400_REPLAY_RESERVOIR["dir"]
+    assert prov["replay_reservoir_n_games"] == 800
+    assert prov["n_cases"] == 30
+    assert prov["mcts_sims"] == 6400
+    assert prov["base_seed"] == 20260616
+    assert len(prov["case_identities"]) == 30
+    assert len({c["case_id"] for c in prov["case_identities"]}) == 30
+
+
+def test_capture_emits_the_frozen_v18_schema_with_a_no_search_fake(
+        monkeypatch, source_rows, capture_doc):
+    """Exercise the ACTUAL producer, not just `document_keys`. Revision 27
+    advertised legacy-plus-seven while `capture()` built a different shape, so
+    the advertised schema was never what a consumer received."""
+    by_case = {r["case_id"]: r for r in source_rows}
+    monkeypatch.setattr(M, "_load_frozen_a6400_source", lambda: source_rows)
+    monkeypatch.setattr(M, "load_gate_cases", lambda gate: [
+        {k: v for k, v in r.items() if k in M.CASE_IDENTITY} for r in source_rows])
+    monkeypatch.setattr(M, "canonical_state_sha1_for",
+                        lambda row: by_case[row["case_id"]]["canonical_state_sha1"])
+    monkeypatch.setattr(M, "_default_evaluator_factory", lambda ckpt: object())
+    monkeypatch.setattr(M, "sha1", lambda p: (
+        M.A6400_SOURCE_SHA1 if p == M.A6400_SOURCE else M.A6400_CHECKPOINT_SHA1))
+    monkeypatch.setattr(M, "authenticate_replay_reservoir",
+                        lambda phase="opening": M.A6400_REPLAY_RESERVOIR["replay_data_sha1"])
+    monkeypatch.setattr(M, "selected_move_for", lambda ev, row, cfg, seed, rule: {
+        "selected_move": [1, 2], "selected_move_visits": 10, "tied_with_top": 0,
+        "top_share_repr": by_case[row["case_id"]]["probe_top1_share"],
+        "recomputed_black_value_repr":
+            by_case[row["case_id"]]["probe_black_root_value"],
+        "seed": seed ^ int(row["game_idx"]) ^ int(row["position_ply"])})
+
+    doc = M.capture(mode="v18_preflight_a6400")
+    assert set(doc) == set(M.document_keys("v18_preflight_a6400"))
+    assert doc["run_kind"] == "v18_preflight_a6400"
+    assert doc["scientific_interpretation_forbidden"] is True
+    assert doc["mcts_sims"] == 6400
+    assert doc["gate_list"] == ["A"]
+    assert doc["auth_source_sha1"] == SIX_K_REF_SHA1
+    assert doc["replay_reservoir_sha1"] == M.A6400_REPLAY_RESERVOIR["replay_data_sha1"]
+    assert doc["checkpoint"] == M.CHECKPOINT
+    assert doc["checkpoint_sha1"] == M.A6400_CHECKPOINT_SHA1
+    assert doc["mcts"]["batching_triple"] == [14, 48, 8]
+    assert doc["mcts"]["add_noise"] is False
+    assert doc["mcts"]["base_seed"] == 20260616
+    assert doc["mcts"]["seed_rule"] == "base ^ game_idx ^ position_ply"
+    assert doc["source_case_count"] == 30
+    assert len(doc["cases"]) == 30
+    assert len(doc["authentication"]) == 30
+    for case in doc["cases"]:
+        assert len(case["canonical_state_sha1"]) == 40
+    assert len({c["canonical_state_sha1"] for c in doc["cases"]}) == 30
+
+
+def test_preflight_identity_check_precedes_evaluator_construction(
+        monkeypatch, source_rows):
+    """A 30 x 6,400-sim capture is expensive: every identity defect is
+    detectable from metadata, so it must be caught before any evaluator."""
+    built = []
+    monkeypatch.setattr(M, "_load_frozen_a6400_source", lambda: source_rows)
+    # Gate rows disagree with the source on one ply -> a case-set mismatch.
+    monkeypatch.setattr(M, "load_gate_cases", lambda gate: [
+        dict({k: v for k, v in r.items() if k in M.CASE_IDENTITY},
+             position_ply=r["position_ply"] + (1 if i == 0 else 0))
+        for i, r in enumerate(source_rows)])
+    monkeypatch.setattr(M, "canonical_state_sha1_for",
+                        lambda row: row["canonical_state_sha1"])
+    monkeypatch.setattr(M, "_default_evaluator_factory",
+                        lambda ckpt: built.append(ckpt))
+    monkeypatch.setattr(M, "sha1", lambda p: (
+        M.A6400_SOURCE_SHA1 if p == M.A6400_SOURCE else M.A6400_CHECKPOINT_SHA1))
+    monkeypatch.setattr(M, "authenticate_replay_reservoir",
+                        lambda phase="opening": M.A6400_REPLAY_RESERVOIR["replay_data_sha1"])
+
+    with pytest.raises(ValueError, match="BEFORE search"):
+        M.capture(mode="v18_preflight_a6400")
+    assert built == [], "an evaluator was constructed despite a bad case set"
+
+
+def _no_search_capture_env(monkeypatch, source_rows, built):
+    """Wire capture() for a zero-search run and record evaluator construction."""
+    by_case = {r["case_id"]: r for r in source_rows}
+    monkeypatch.setattr(M, "_load_frozen_a6400_source", lambda: source_rows)
+    monkeypatch.setattr(M, "load_gate_cases", lambda gate: [
+        {k: v for k, v in r.items() if k in M.CASE_IDENTITY} for r in source_rows])
+    monkeypatch.setattr(M, "canonical_state_sha1_for",
+                        lambda row: by_case[row["case_id"]]["canonical_state_sha1"])
+    monkeypatch.setattr(M, "_default_evaluator_factory",
+                        lambda ckpt: built.append(ckpt))
+    monkeypatch.setattr(M, "selected_move_for", lambda ev, row, cfg, seed, rule: {
+        "selected_move": [1, 2], "selected_move_visits": 10, "tied_with_top": 0,
+        "top_share_repr": by_case[row["case_id"]]["probe_top1_share"],
+        "recomputed_black_value_repr":
+            by_case[row["case_id"]]["probe_black_root_value"],
+        "seed": seed ^ int(row["game_idx"]) ^ int(row["position_ply"])})
+    return by_case
+
+
+def test_checkpoint_pin_is_imported_from_the_authenticated_definition():
+    from scripts.GPU.alphazero.v18_control_pool import SELECTED_UNIVERSE
+    assert M.CHECKPOINT == SELECTED_UNIVERSE["anchor_checkpoint"]
+    assert M.A6400_CHECKPOINT_SHA1 == SELECTED_UNIVERSE["checkpoint_sha1s"][M.CHECKPOINT]
+    assert M.A6400_CHECKPOINT_SHA1 == "209cf2d4fd24a48553d259dd71b4954867b9473e"
+
+
+def test_wrong_opening_checkpoint_identity_builds_no_evaluator(
+        monkeypatch, source_rows):
+    """The evaluator LOADS the checkpoint bytes, so they are bound first."""
+    built = []
+    _no_search_capture_env(monkeypatch, source_rows, built)
+    monkeypatch.setattr(M, "sha1", lambda p: (
+        M.A6400_SOURCE_SHA1 if p == M.A6400_SOURCE else "0" * 40))
+    monkeypatch.setattr(M, "authenticate_replay_reservoir",
+                        lambda phase="opening": M.A6400_REPLAY_RESERVOIR["replay_data_sha1"])
+    with pytest.raises(ValueError, match="checkpoint"):
+        M.capture(mode="v18_preflight_a6400")
+    assert built == []
+
+
+def test_wrong_opening_reservoir_identity_builds_no_evaluator(
+        monkeypatch, source_rows):
+    built = []
+    _no_search_capture_env(monkeypatch, source_rows, built)
+    monkeypatch.setattr(M, "sha1", lambda p: (
+        M.A6400_SOURCE_SHA1 if p == M.A6400_SOURCE else M.A6400_CHECKPOINT_SHA1))
+
+    def refuse(phase="opening"):
+        raise ValueError("seed20115: replay_data_sha1 drifted")
+
+    monkeypatch.setattr(M, "authenticate_replay_reservoir", refuse)
+    with pytest.raises(ValueError, match="replay_data_sha1"):
+        M.capture(mode="v18_preflight_a6400")
+    assert built == []
+
+
+def test_checkpoint_mutation_during_the_capture_yields_no_document(
+        monkeypatch, source_rows):
+    """`selected_move_for` runs for hours between the two checks."""
+    built, calls = [], {"n": 0}
+    _no_search_capture_env(monkeypatch, source_rows, built)
+    monkeypatch.setattr(M, "authenticate_replay_reservoir",
+                        lambda phase="opening": M.A6400_REPLAY_RESERVOIR["replay_data_sha1"])
+
+    def drifting(path):
+        if path == M.A6400_SOURCE:
+            return M.A6400_SOURCE_SHA1
+        calls["n"] += 1
+        return M.A6400_CHECKPOINT_SHA1 if calls["n"] == 1 else "0" * 40
+
+    monkeypatch.setattr(M, "sha1", drifting)
+    with pytest.raises(ValueError, match="checkpoint"):
+        M.capture(mode="v18_preflight_a6400")
+    assert built, "the opening check should have passed"
+    assert calls["n"] >= 2, "the closing checkpoint check never ran"
+
+
+def test_reservoir_mutation_during_the_capture_yields_no_document(
+        monkeypatch, source_rows):
+    built, calls = [], {"n": 0}
+    _no_search_capture_env(monkeypatch, source_rows, built)
+    monkeypatch.setattr(M, "sha1", lambda p: (
+        M.A6400_SOURCE_SHA1 if p == M.A6400_SOURCE else M.A6400_CHECKPOINT_SHA1))
+
+    def drifting(phase="opening"):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return M.A6400_REPLAY_RESERVOIR["replay_data_sha1"]
+        return "0" * 40
+
+    monkeypatch.setattr(M, "authenticate_replay_reservoir", drifting)
+    with pytest.raises(ValueError, match="changed during the capture"):
+        M.capture(mode="v18_preflight_a6400")
+    assert built, "the opening check should have passed"
+    assert calls["n"] >= 2, "the closing reservoir check never ran"
+
+
+def test_authentication_phases_are_exactly_the_production_sequence(
+        monkeypatch, source_rows):
+    """The artifact records what was AUTHENTICATED, not a fresh unpinned read.
+
+    This exercises the REAL `_load_frozen_a6400_source`, because replacing it
+    wholesale hides the `pre_derivation` check that guards the bytes the
+    canonical hashes are reconstructed from -- an earlier version of this test
+    saw only two calls and wrongly claimed that was the whole structure.
+
+    Counting is what makes reuse testable: on the passing path a third read
+    returns the same bytes, so only the CALL STRUCTURE distinguishes reusing an
+    authenticated value from taking an unauthenticated one at emission time.
+    """
+    built, phases, ckpt_reads = [], [], []
+    by_case = {r["case_id"]: r for r in source_rows}
+    # The frozen CSV shape: strings, and NO canonical hash column.
+    raw_rows = [{k: v for k, v in r.items() if k != "canonical_state_sha1"}
+                for r in source_rows]
+    for row in raw_rows:
+        row["game_idx"] = str(row["game_idx"])
+        row["position_ply"] = str(row["position_ply"])
+
+    monkeypatch.setattr(M, "_read_bytes", lambda p: b"csv-bytes")
+    monkeypatch.setattr(M, "sha1_bytes", lambda b: M.A6400_SOURCE_SHA1)
+    monkeypatch.setattr(M, "_parse_source_rows", lambda b: raw_rows)
+    monkeypatch.setattr(M, "canonical_state_sha1_for",
+                        lambda row: by_case[row["case_id"]]["canonical_state_sha1"])
+    monkeypatch.setattr(M, "load_gate_cases", lambda gate: [
+        {k: v for k, v in r.items() if k in M.CASE_IDENTITY} for r in source_rows])
+    monkeypatch.setattr(M, "_default_evaluator_factory",
+                        lambda ckpt: built.append(ckpt))
+    monkeypatch.setattr(M, "selected_move_for", lambda ev, row, cfg, seed, rule: {
+        "selected_move": [1, 2], "selected_move_visits": 10, "tied_with_top": 0,
+        "top_share_repr": by_case[row["case_id"]]["probe_top1_share"],
+        "recomputed_black_value_repr":
+            by_case[row["case_id"]]["probe_black_root_value"],
+        "seed": seed ^ int(row["game_idx"]) ^ int(row["position_ply"])})
+
+    def counting_sha1(path):
+        if path == M.A6400_SOURCE:
+            return M.A6400_SOURCE_SHA1
+        ckpt_reads.append(path)
+        return M.A6400_CHECKPOINT_SHA1
+
+    def counting_reservoir(phase="opening"):
+        phases.append(phase)
+        return M.A6400_REPLAY_RESERVOIR["replay_data_sha1"]
+
+    monkeypatch.setattr(M, "sha1", counting_sha1)
+    monkeypatch.setattr(M, "authenticate_replay_reservoir", counting_reservoir)
+
+    doc = M.capture(mode="v18_preflight_a6400")
+    assert doc["checkpoint_sha1"] == M.A6400_CHECKPOINT_SHA1
+    assert doc["replay_reservoir_sha1"] == M.A6400_REPLAY_RESERVOIR["replay_data_sha1"]
+    # The reservoir guards three distinct spans; the checkpoint only two.
+    assert phases == ["pre_derivation", "opening", "closing"], phases
+    assert len(ckpt_reads) == 2, (
+        f"{len(ckpt_reads)} checkpoint reads; expected exactly the opening and "
+        f"closing authentications, with the document reusing one of them")
+    assert list(M.RESERVOIR_PHASES) == ["pre_derivation", "opening", "closing"]
+
+
+def test_reservoir_phase_argument_is_validated():
+    with pytest.raises(ValueError, match="unknown phase"):
+        M.authenticate_replay_reservoir("whenever")
+
+
+def test_fixture_identities_agree_across_both_files():
+    ident = lambda r: (r["case_id"], r["game_idx"], r["position_ply"],
+                       r["side_to_move"], r["replay_path"],
+                       r["canonical_state_sha1"])
+    src = [ident(r) for r in _fixture("source_rows.json")]
+    cap = [ident(r) for r in _fixture("capture.json")["cases"]]
+    assert src == cap
+    assert len(set(src)) == 30
+    recorded = {(c["case_id"], c["game_idx"], c["position_ply"],
+                 c["side_to_move"]) for c in _fixture("provenance.json")["case_identities"]}
+    assert recorded == {(i[0], i[1], i[2], i[3]) for i in src}
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -2834,9 +3241,13 @@ Expected: PASS, zero failures.
 - [ ] **Step 5: Request authorization, then commit**
 
 ```bash
-git add scripts/GPU/alphazero/capture_v17_abcd_selected_moves.py tests/test_capture_abcd_parameterization.py
+git add scripts/GPU/alphazero/capture_v18_a6400.py \
+        tests/test_capture_abcd_parameterization.py \
+        tests/golden/a6400_bundle_fixture/
 git commit -m "feat(v18): parameterize A/B/C/D capture for sims, gate subset and authentication source"
 ```
+
+`capture_v17_abcd_selected_moves.py` must NOT appear in that `git add`. Verify it is byte-identical to `2ce39bb56b479ae792e20fa6b493e157b3b89d05` before committing.
 
 ---
 
@@ -3483,16 +3894,18 @@ tests/golden/v18_v2_selector_pre_edit_basis/
     schema4.profile.json  schema4.rows.json  schema4.selector_output.json
     sources.json                     original paths + SHA-1s for all three
     operator_full_chain_reproduction.json    the (b) result
-tests/golden/a6400_bundle_fixture/
-    source_rows.json  capture.json
 ```
+
+`tests/golden/a6400_bundle_fixture/` is **NOT produced here.** It is owned and committed by Task 6, which runs earlier and whose tests consume it. It appears below only as a tripwire.
 
 Present the user with: the three re-verified config SHA-1s, the (b) reproduction outcome, and `shasum -a 1 scripts/GPU/alphazero/fpu_dev_corpus_v2.py` proving the module is still unedited. **Stop for authorization.** Only then:
 
 ```bash
-git add tests/golden/v18_v2_selector_pre_edit_basis/ tests/golden/a6400_bundle_fixture/
-git commit -m "test(v18): pre-edit selector-core basis and A/6400 bundle fixtures"
+git add tests/golden/v18_v2_selector_pre_edit_basis/
+git commit -m "test(v18): pre-edit selector-core basis fixtures"
 ```
+
+`git add tests/golden/a6400_bundle_fixture/` must be a **no-op** here: Task 6 committed it. If it is not a no-op, the two tasks have diverged — stop and reconcile rather than committing a second copy.
 
 The commit must land while `fpu_dev_corpus_v2.py` still matches its pinned pre-edit hash. Verify that after committing, before Step 1.
 
@@ -4134,3 +4547,145 @@ geometry or scientific rule moved.
     `(canonical_state_sha1, game_content_sha1, position_ply)` is now compared
     positionally against its report pair before any write, and a swapped,
     reordered or fabricated pair refuses with no file left behind.
+
+## Revision 27 change log
+
+An ORDERING defect found before Task 6 began. Fixture ownership only; no
+threshold, geometry, authentication rule or scientific rule moved.
+
+99. **Task 6's tests required a fixture directory Task 8 created.**
+    `tests/golden/a6400_bundle_fixture/` did not exist, Task 6's builder tests
+    consume it, and Task 8 Step 0b claimed to produce it -- but the execution
+    order is `... 4b -> 6 -> 7 -> 8 -> 9`, so the directory would not exist when
+    Task 6 needed it. A plan cannot have a task depend on an artifact a LATER
+    task creates. Ownership moves to Task 6, which lists the files, generates
+    them from the authenticated historical A/6,400 source with no GPU and no
+    search, and records their provenance. Task 8 Step 0b now treats the
+    directory as an already-committed **tripwire**: `git add` on it must be a
+    no-op, and if it is not, the two tasks have diverged. Task 8 retains
+    ownership of its own selector pre-edit basis only.
+100. **Task 6 would have falsified a frozen v17 evidence record.** The file list
+    said to modify `capture_v17_abcd_selected_moves.py`, but the tracked record
+    `prechange_baseline.json` pins that file's SHA-1 twice -- once as
+    `selected_move_capture.capture_tool_sha1`, the stated provenance of the v17
+    selected-move artifact `162c9a5a…`, and once in the frozen source snapshot.
+    Editing it in place makes the provenance claim false, and amending the
+    record would assert a closed experiment was produced by a tool version that
+    did not exist when it ran. Both facts are guarded by
+    `tests/test_fpu_v17_prechange_baseline.py`, and the file is deliberately
+    absent from its `AUTHORIZED_TO_CHANGE` set -- the edit turned that suite red,
+    which is how it was found. The parameterization now lives in a new
+    `capture_v18_a6400.py` that imports the v17 module UNCHANGED and delegates
+    the legacy mode to `v17.capture()` verbatim, so the default document is
+    byte-identical by construction and §2.2.2's "parameterization, not a fork"
+    still holds -- the shared machinery keeps one implementation.
+101. The plan's embedded test block was missing `import json` and
+    `from pathlib import Path`, which the fixture helpers use; added.
+
+## Revision 28 change log
+
+Task 6's authentication was implemented and then tested against the LIVE
+source, which is where four defects surfaced. Authentication only; no
+threshold, seed, gate, tolerance or scientific rule moved, and the frozen v17
+producer is untouched at `2ce39bb5…`.
+
+102. **The real producer could not authenticate at all.** The historical CSV
+    supplies `game_idx`/`position_ply` as strings (`"347"`, `"73"`) while a
+    capture emits integers, so the identity comparison reported all 30 cases
+    missing AND all 30 unexpected -- a total failure carrying no information
+    about the data. Both numeric identity fields are now normalized to `int`
+    before comparison. The revision-27 fixture concealed this by coercing the
+    source side during generation.
+103. **A missing canonical hash authenticated as equal.** `canonical_state_sha1`
+    is absent from all 30 live source rows -- the historical CSV has no such
+    column -- and `_identity` used `.get()`, so both sides compared as
+    `None == None` and an incomplete capture authenticated against an
+    incomplete source. Worse, the revision-27 fixture supplied a digest of
+    METADATA under that name, which is not a canonical position hash and would
+    have masked the missing production field forever. `_identity` now requires
+    every field, and the hash is DERIVED through `position_state` +
+    `fpu_state_hash.canonical_state_sha1` from replay bytes on both the source
+    and the capture path. Case 347 derives to
+    `2555f653254f1b4d4c75bbd72d1f60e62adc7c38`; the fixture previously held
+    `04f6b1b1…`. Because the hashes come from replay bytes, the seed20115
+    reservoir is bound first, by the aggregate `427d4ab6…` IMPORTED from
+    `v18_control_pool` -- one definition, never restated.
+104. **Set comparison permitted duplicates.** A 31-row capture repeating one
+    valid case has the same identity SET, and `authentication_report` collapsed
+    the duplicate through its by-`case_id` dict. Both sides must now have the
+    expected count, unique case IDs, unique full identities and equal sets.
+105. **The advertised v18 schema was not the emitted one.** `document_keys`
+    promised the eleven legacy keys plus seven additions while `capture()`
+    constructed a different ten-field document, and no test exercised the
+    producer. One exact `V18_DOCUMENT_KEYS` is now frozen, `capture()` asserts
+    against it, and a no-search fake exercises the real path end to end --
+    checkpoint identity, batching triple, seed rule, `add_noise: False`, source
+    and reservoir identity, 30 cases and 30 real canonical hashes.
+106. **The complete identity comparison now runs BEFORE evaluator
+    construction.** Every one of the defects above is detectable from metadata
+    alone, so discovering them after a 30 x 6,400-simulation capture would waste
+    the run. `preflight_case_identities` compares the full sets first, and a
+    test asserts no evaluator is constructed when the sets disagree.
+
+## Revision 29 change log
+
+Revision 28's authentication was correct at each point it ran, but left a
+window OPEN across the run itself. Authentication and test portability only; no
+threshold, seed, gate, tolerance or scientific rule moved, and the frozen v17
+producer stays at `2ce39bb5…`.
+
+107. **The provenance window was open across the whole capture.** The reservoir
+    was bound before canonical derivation, but `selected_move_for` REOPENS
+    replay files throughout a multi-hour run and nothing re-authenticated them;
+    the checkpoint was loaded at evaluator construction and only hashed
+    afterwards, at document-build time. The emitted artifact could therefore
+    name identities taken at a different moment than the bytes actually
+    searched -- and a several-hour run is exactly where a file has time to
+    change. Now: `A6400_CHECKPOINT_SHA1` is IMPORTED from
+    `v18_control_pool.SELECTED_UNIVERSE["checkpoint_sha1s"]`, never restated;
+    both the checkpoint and the reservoir are authenticated BEFORE the evaluator
+    is constructed; both are re-authenticated after the last search and BEFORE
+    the document exists; the document records the OPENING authenticated values;
+    and either closing mismatch raises with no artifact. Tests prove a wrong
+    opening identity constructs zero evaluators, and that mid-run drift in
+    either input is caught by the closing check. A read-COUNT assertion pins the
+    structure, because on the passing path a third unauthenticated read returns
+    the same bytes and only the call structure can distinguish them. (Revision
+    30 corrects the counts this entry originally claimed.)
+108. **The only test of the real canonical derivation was not portable.** It
+    skipped whenever the gitignored seed20115 reservoir was absent, so on a
+    clean checkout or in CI a `canonical_state_sha1_for` that hashed metadata
+    would have survived -- verified: that mutation passed the entire suite. A
+    portable test now writes a small legal replay under `tmp_path`, compares
+    `canonical_state_sha1_for` against an independently reconstructed
+    `position_state` -> `canonical_state_sha1`, and asserts the hash is
+    position-dependent (a different ply differs) and path-independent (the same
+    bytes at another path agree). The live case-347 check is retained as
+    supplemental operator integration evidence, no longer the sole guard.
+
+## Revision 30 change log
+
+A test/plan mismatch of the kind this review has been eliminating: the
+implementation was correct and STRONGER than what the test asserted, and the
+change log repeated the test's inaccurate claim. No production behaviour
+changed beyond labelling; no threshold, seed, gate, tolerance or scientific rule
+moved.
+
+109. **The reservoir is authenticated THREE times, not two.** The real path
+    checks it at `pre_derivation` (inside `_enrich_source_rows`, before the
+    canonical hashes are reconstructed from replay bytes), at `opening` (before
+    the evaluator exists) and at `closing` (after the last search). Revision
+    29's count test replaced `_load_frozen_a6400_source` wholesale, so it never
+    observed the first call, then asserted "exactly two" as though that were the
+    production structure -- and the change log repeated it. The extra check is
+    not redundant: it guards the span in which the canonical identities are
+    derived, which the opening check does not cover.
+
+    `authenticate_replay_reservoir(phase)` now names each call, `RESERVOIR_PHASES`
+    freezes the vocabulary, and an unknown phase raises. The test exercises the
+    REAL loader -- stubbing the `_read_bytes` / `sha1_bytes` / `_parse_source_rows`
+    seams against CSV-shaped rows with no canonical hash column -- and pins the
+    exact sequence `pre_derivation -> opening -> closing`. The checkpoint stays
+    at exactly `opening -> closing`, since nothing reads it before the evaluator
+    is constructed, and the document still provably reuses the opening values
+    with no emission-time read.
