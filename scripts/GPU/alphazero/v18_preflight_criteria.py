@@ -402,6 +402,11 @@ SIZING = {
         "an EXACT-SELECTOR witness filling the complete four-role geometry -- "
         "never a capacity bound"),
     "tier_passes_iff": "_binomial_lower_bound(k, 299, alpha=0.05) >= 0.99",
+    # The same rule as NUMBERS. The line above states it; these are what a
+    # consumer reads, so `0.05` and `0.99` are not restated at every call site
+    # that applies the bound (revision 36).
+    "alpha": 0.05,
+    "minimum_lower_bound": 0.99,
     "binomial_lower_bound_source": "fpu_dev_corpus_v2 (:3876)",
     "binomial_lower_bound_note": (
         "the exact ONE-SIDED Clopper-Pearson lower bound at alpha 0.05; 299 "

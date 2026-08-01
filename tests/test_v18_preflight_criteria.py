@@ -683,3 +683,28 @@ def test_separation_failure_interpretation_is_frozen():
     assert s["on_failure_does_not_mean"] == "no effect exists"
     assert "no effect" not in s["on_failure_means"]
     assert s["on_failure_rationale"]
+
+
+def test_sizing_states_its_pass_rule_as_numbers_not_only_prose():
+    """Revision 36: `alpha` and the lower-bound floor are consumed by Task 8's
+    ladder, its record reconciliation and its count-gate arithmetic. Stating
+    them only inside `tier_passes_iff` forced all three to restate the numbers,
+    which is how a threshold silently acquires two values."""
+    s = C.SIZING
+    assert s["alpha"] == 0.05
+    assert s["minimum_lower_bound"] == 0.99
+    # The prose and the numbers must keep saying the same thing.
+    assert f"alpha={s['alpha']}" in s["tier_passes_iff"]
+    assert f">= {s['minimum_lower_bound']}" in s["tier_passes_iff"]
+    assert str(s["trials_per_probabilistic_tier"]) in s["tier_passes_iff"]
+
+
+def test_the_frozen_trial_count_is_the_smallest_that_can_pass():
+    """299 all-success clears the floor and 298 of 299 does not -- which is why
+    a passing tier implies every trial succeeded."""
+    from scripts.GPU.alphazero.fpu_dev_corpus_v2 import _binomial_lower_bound
+    n, alpha, floor = (C.SIZING["trials_per_probabilistic_tier"],
+                       C.SIZING["alpha"], C.SIZING["minimum_lower_bound"])
+    assert _binomial_lower_bound(n, n, alpha) >= floor
+    assert _binomial_lower_bound(n - 1, n, alpha) < floor
+    assert _binomial_lower_bound(n - 1, n - 1, alpha) < floor
