@@ -260,9 +260,126 @@ PROFILE_RUN_KINDS: Tuple[str, ...] = ("production", "tooling_smoke")
 PROFILE_RUN_KINDS_V3: Tuple[str, ...] = PROFILE_RUN_KINDS + (
     "development", "held_out")
 
+V18_SCHEMA: int = 5
+
+# Schema 5 ONLY, and EXACTLY one kind -- not a widening of the v17 set. A v18
+# profile therefore cannot claim `production`, `development` or any other
+# historical mode. The paired label is enforced by a SCHEMA-5-LOCAL rule in
+# `parse_allocation_profile`, never by delegating to
+# `eval_runner.interpretation_forbidden`: that policy RAISES on a name it does
+# not know (eval_runner.py:56-66) and "v18_preflight_sizing" is deliberately
+# absent from its KNOWN_RUN_KINDS -- registering it would widen the match
+# runner's accepted label surface for a kind that never runs a match.
+PROFILE_RUN_KINDS_V18: Tuple[str, ...] = ("v18_preflight_sizing",)
+
 
 def profile_run_kinds_for(schema: int) -> Tuple[str, ...]:
+    if int(schema) >= V18_SCHEMA:
+        return PROFILE_RUN_KINDS_V18
     return PROFILE_RUN_KINDS_V3 if int(schema) >= 3 else PROFILE_RUN_KINDS
+
+
+# ---------------------------------------------------------------------------
+# Schema 5 -- the v18 vocabulary. RESOLVERS, NOT MUTATED CONSTANTS: `_ROLES`,
+# `SPLITS` and `SPLIT_ALLOC_V2` keep their exact current values and types, so
+# every schema 1-4 artifact stays byte-identical.
+#
+# EFFECTIVE vs DECLARED schema. `parse_allocation_profile` accepts declared 2,
+# 3, 4 and 5 but builds an EFFECTIVE schema-2 profile for every one of 2/3/4 --
+# historical normalization that rides inside `fingerprint()`, so "fixing" it
+# would change frozen artifacts. Only declared 5 builds an effective 5.
+# ---------------------------------------------------------------------------
+
+# v18's development corpus has no tuning/frozen_check division: spec Sec 11
+# replaces the frozen split with a separate fresh held-out reservoir, so
+# "whole-game split isolation" means isolation BETWEEN corpora, not within one.
+SPLITS_V18: Tuple[str, ...] = ("all",)
+
+_ROLES_V18: Tuple[str, ...] = ("target", "identity_witness", "flip_control",
+                               "representative")
+
+# 40 rows. Targets, identity witnesses and flip controls are late-only (spec
+# Sec 9.2.1); only representatives are phase-balanced.
+SPLIT_ALLOC_V18: Dict[Tuple[str, str], Dict[str, int]] = {
+    ("target", "late"): {"all": 16},
+    ("identity_witness", "late"): {"all": 4},
+    ("flip_control", "late"): {"all": 4},
+    ("representative", "opening"): {"all": 4},
+    ("representative", "early_mid"): {"all": 4},
+    ("representative", "midgame"): {"all": 4},
+    ("representative", "late"): {"all": 4},
+}
+
+
+def roles_for_schema(schema: int) -> Tuple[str, ...]:
+    return _ROLES_V18 if int(schema) >= V18_SCHEMA else _ROLES
+
+
+def splits_for_schema(schema: int) -> Tuple[str, ...]:
+    return SPLITS_V18 if int(schema) >= V18_SCHEMA else SPLITS
+
+
+def allocation_for_schema(schema: int) -> Dict[Tuple[str, str], Dict[str, int]]:
+    return ({c: dict(a) for c, a in SPLIT_ALLOC_V18.items()}
+            if int(schema) >= V18_SCHEMA
+            else {c: dict(a) for c, a in SPLIT_ALLOC_V2.items()})
+
+
+def band_floor_cell_for(schema: int) -> Optional[Tuple[str, str]]:
+    """The ONE allocation cell the late-band floors constrain -- or None.
+
+    `band_minima_total` / `band_minima_per_split` hold only COUNTS; the cell
+    they constrain used to be supplied by the module-level `LATE_TARGET_CELL`,
+    which hardcoded v2 geometry into every floor site. Schema 5 has no band
+    geometry at all, so its cell is None and any non-empty minima map is a
+    parse error rather than an ignored field.
+
+    `LATE_TARGET_CELL` is defined further down (with its own assertions against
+    `SPLIT_ALLOC_V2`); it is read at call time and never rebound.
+    """
+    return None if int(schema) >= V18_SCHEMA else LATE_TARGET_CELL
+
+
+def _check_frozen_allocation(allocation: Mapping[Tuple[str, str], Mapping[str, int]],
+                             schema: int, source: str) -> None:
+    """Schema 5's allocation is an ACCEPTANCE RULE, not a producer default.
+
+    The parsed cells must EQUAL `allocation_for_schema(5)` PER CELL. A correct
+    grand total is not sufficient: counts shifted between two otherwise valid
+    cells keep the total at 40, and must still be refused.
+
+    Cell ORDER is normalized by the caller's `sorted(...)` build before this
+    runs, so a reordered config is accepted only if it is otherwise identical --
+    and the normalization is recorded in the profile's own `cell_order` (hence
+    the fingerprint), so reordering cannot silently change selection order.
+    """
+    expected = allocation_for_schema(schema)
+    for cell in expected:
+        if cell not in allocation:
+            raise ValueError(
+                f"{source}: schema-{schema} phase_allocation is missing cell "
+                f"{cell[0]}|{cell[1]} -- the frozen allocation is an acceptance "
+                f"rule, not a starting default")
+    for cell, counts in allocation.items():
+        if cell not in expected:
+            raise ValueError(
+                f"{source}: schema-{schema} phase_allocation has an extra cell "
+                f"{cell[0]}|{cell[1]} -- an out-of-table role/phase pair")
+        if dict(counts) != dict(expected[cell]):
+            raise ValueError(
+                f"{source}: schema-{schema} phase_allocation has an altered "
+                f"count for cell {cell[0]}|{cell[1]}: {dict(counts)} != the "
+                f"frozen {dict(expected[cell])}")
+
+
+def effective_schema_for(declared: int) -> int:
+    """Declared 2/3/4 -> EFFECTIVE 2; declared 5 -> 5.
+
+    The 3/4 -> 2 normalization is historical and load-bearing: it is carried in
+    `AllocationProfile.fingerprint()`, so every frozen v16/v17 artifact depends
+    on it. It reads like a bug and must not be "corrected".
+    """
+    return V18_SCHEMA if int(declared) >= V18_SCHEMA else 2
 
 
 @dataclasses.dataclass(frozen=True)
@@ -277,8 +394,31 @@ class AllocationProfile:
     side_tol: int
 
     @property
+    def splits(self) -> Tuple[str, ...]:
+        """The profile's split vocabulary -- SCHEMA-DERIVED, never a stored
+        field. A stored field could disagree with the schema it claims (an
+        effective schema-5 profile carrying the legacy pair, or a legacy profile
+        carrying ("all",)), and nothing downstream could tell which was true."""
+        return splits_for_schema(self.schema_version)
+
+    @property
+    def band_floor_cell(self) -> Optional[Tuple[str, str]]:
+        """The cell this profile's band minima constrain -- likewise derived,
+        `("target", "late")` below schema 5 and None at 5. Every floor
+        accounting and reporting site reads THIS, not `LATE_TARGET_CELL`."""
+        return band_floor_cell_for(self.schema_version)
+
+    @property
+    def assignment_strategy(self) -> str:
+        """Which whole-game split assigner `sample_v2_rows` actually runs. The
+        SAME predicate the dispatch branches on, so the fingerprint cannot
+        record a strategy the selection did not use."""
+        return "one_split" if self.schema_version >= V18_SCHEMA else "two_way"
+
+    @property
     def corpus_size(self) -> int:
-        return sum(a["tuning"] + a["frozen_check"] for a in self.allocation.values())
+        return sum(sum(a[s] for s in self.splits)
+                   for a in self.allocation.values())
 
     @property
     def cell_order(self) -> Tuple[Tuple[str, str], ...]:
@@ -286,19 +426,20 @@ class AllocationProfile:
 
     @property
     def split_totals(self) -> Dict[str, int]:
-        return {s: sum(a[s] for a in self.allocation.values()) for s in SPLITS}
+        return {s: sum(a[s] for a in self.allocation.values())
+                for s in self.splits}
 
     @property
     def quota_by_phase(self) -> Dict[str, int]:
         q: Dict[str, int] = {}
         for (_role, phase), a in self.allocation.items():
-            q[phase] = q.get(phase, 0) + a["tuning"] + a["frozen_check"]
+            q[phase] = q.get(phase, 0) + sum(a[s] for s in self.splits)
         return q
 
     def fingerprint(self) -> Dict[str, Any]:
         """The COMPLETE effective profile, JSON-shaped -- what reports, manifest
         meta and diagnostic fingerprints record (never merely a file hash)."""
-        return {
+        out = {
             "schema_version": self.schema_version,
             "run_kind": self.run_kind,
             "allocation": {f"{r}|{p}": dict(a)
@@ -311,6 +452,13 @@ class AllocationProfile:
             "side_tol": self.side_tol,
             "corpus_size": self.corpus_size,
         }
+        if self.schema_version >= V18_SCHEMA:
+            # ONLY schema 5. Adding these keys unconditionally would change
+            # every frozen schema 1-4 fingerprint. The strategy is recorded so a
+            # v18 artifact cannot be reinterpreted under the two-way path.
+            out["splits"] = list(self.splits)
+            out["assignment_strategy"] = self.assignment_strategy
+        return out
 
     @classmethod
     def legacy(cls) -> "AllocationProfile":
@@ -339,9 +487,13 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
     """Validate + build the schema-2 profile (repair plan Sec 6's rejection
     list). `source` names the config/profile file in every error."""
     schema = raw.get("config_schema_version")
-    if schema not in (2, 3, 4):
+    if schema not in (2, 3, 4, 5):
         raise ValueError(f"{source}: unsupported config_schema_version "
-                         f"{schema!r} for an allocation profile (2, 3 or 4)")
+                         f"{schema!r} for an allocation profile (2, 3, 4 or 5)")
+    # Vocabulary is DISPATCHED on the declared schema; the effective schema
+    # stamped into the profile normalizes 2/3/4 -> 2 and keeps 5 as 5.
+    roles = roles_for_schema(schema)
+    splits = splits_for_schema(schema)
     run_kind = raw.get("run_kind")
     allowed_kinds = profile_run_kinds_for(schema)
     if run_kind not in allowed_kinds:
@@ -351,7 +503,21 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
     required_keys = ("phase_allocation", "late_floors",
                      "late_target_band_minima", "max_per_game",
                      "min_ply_gap", "side_tol", "corpus_size")
-    if schema >= 3:
+    if schema >= V18_SCHEMA:
+        # SCHEMA-5-LOCAL rule, deliberately NOT delegated: `run_kind` is already
+        # pinned to the single v18 kind by `profile_run_kinds_for`, and
+        # `eval_runner.interpretation_forbidden` would RAISE on that unknown
+        # name rather than answer. Interpretation is forbidden unconditionally
+        # here, so the label is a constant `True`, not a derived value.
+        key = "scientific_interpretation_forbidden"
+        if key not in raw:
+            raise ValueError(f"{source}: schema-5 config must carry {key!r}")
+        label = raw[key]
+        if label is not True:
+            raise ValueError(
+                f"{source}: {key}={label!r} contradicts run_kind {run_kind!r} "
+                f"-- schema 5 forbids scientific interpretation unconditionally")
+    elif schema >= 3:
         # Schema 3 makes the label REQUIRED and exact -- that is the whole
         # point of giving it its own version rather than widening schema 2.
         from .eval_runner import interpretation_forbidden
@@ -383,25 +549,31 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
         if len(parts) != 2:
             raise ValueError(f"{source}: malformed role|phase key {key!r}")
         role, phase = parts
-        if role not in _ROLES:
+        if role not in roles:
             raise ValueError(f"{source}: unknown role {role!r} in {key!r}")
         if phase not in PHASES:
             raise ValueError(f"{source}: unknown phase {phase!r} in {key!r}")
-        if set(counts) != set(SPLITS):
-            raise ValueError(f"{source}: {key!r} must have exactly the splits "
-                             f"{sorted(SPLITS)}, got {sorted(counts)}")
+        if set(counts) != set(splits):
+            raise ValueError(f"{source}: {key!r} must have exactly the split "
+                             f"names {sorted(splits)}, got {sorted(counts)}")
         allocation[(role, phase)] = {
-            s: _profile_int(counts[s], f"{key}.{s}", source) for s in SPLITS}
+            s: _profile_int(counts[s], f"{key}.{s}", source) for s in splits}
     if not allocation:
         raise ValueError(f"{source}: phase_allocation is empty")
+    if schema >= V18_SCHEMA:
+        # BEFORE the corpus_size cross-check below: a shifted or dropped cell
+        # must be reported as the allocation violation it is, not as a total
+        # that happens to disagree.
+        _check_frozen_allocation(allocation, schema, source)
 
     declared = _profile_int(raw["corpus_size"], "corpus_size", source, minimum=1)
-    total = sum(a["tuning"] + a["frozen_check"] for a in allocation.values())
+    total = sum(sum(a[s] for s in splits) for a in allocation.values())
     if declared != total:
         raise ValueError(f"{source}: corpus_size {declared} inconsistent with "
                          f"the allocation total {total}")
 
-    late_alloc = allocation.get(LATE_TARGET_CELL)
+    floor_cell = band_floor_cell_for(schema)
+    late_alloc = allocation.get(floor_cell) if floor_cell is not None else None
 
     def _band_map(m: Mapping[str, Any], name: str) -> Dict[str, int]:
         out = {}
@@ -414,22 +586,28 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
     band_minima_total = _band_map(raw["late_floors"], "late_floors")
     band_minima_per_split: Dict[str, Dict[str, int]] = {}
     for split, m in raw["late_target_band_minima"].items():
-        if split not in SPLITS:
+        if split not in splits:
             raise ValueError(f"{source}: unknown split {split!r} in "
                              f"late_target_band_minima")
         band_minima_per_split[split] = _band_map(
             m, f"late_target_band_minima[{split}]")
-    if band_minima_per_split and set(band_minima_per_split) != set(SPLITS):
+    if band_minima_per_split and set(band_minima_per_split) != set(splits):
         raise ValueError(
             f"{source}: late_target_band_minima must name every split "
-            f"({sorted(SPLITS)}) or be empty -- a silently omitted split "
+            f"({sorted(splits)}) or be empty -- a silently omitted split "
             f"would carry no minima at all; got "
             f"{sorted(band_minima_per_split)}")
 
     if band_minima_total or band_minima_per_split:
+        if floor_cell is None:
+            raise ValueError(
+                f"{source}: schema-{schema} has no band floor cell, so its "
+                f"band minima (late_floors, late_target_band_minima) must be "
+                f"empty -- minima with no cell to constrain are a parse error, "
+                f"not an ignored field")
         if late_alloc is None:
             raise ValueError(f"{source}: band minima require a "
-                             f"{LATE_TARGET_CELL} allocation cell")
+                             f"{floor_cell} allocation cell")
         if sum(band_minima_total.values()) > sum(late_alloc.values()):
             raise ValueError(
                 f"{source}: late_floors total {sum(band_minima_total.values())} "
@@ -451,8 +629,12 @@ def parse_allocation_profile(raw: Mapping[str, Any], *,
                         f"{source}: per-split minima for band {band} sum to "
                         f"{covered} < the required total {floor}")
 
+    # `splits` is NOT passed: the profile derives it from its effective schema,
+    # which resolves to exactly the local `splits` used above (declared 2/3/4 ->
+    # effective 2 -> SPLITS; declared 5 -> 5 -> SPLITS_V18).
     return AllocationProfile(
-        schema_version=2, run_kind=run_kind, allocation=allocation,
+        schema_version=effective_schema_for(schema),
+        run_kind=run_kind, allocation=allocation,
         band_minima_total=band_minima_total,
         band_minima_per_split=band_minima_per_split,
         max_per_game=_profile_int(raw["max_per_game"], "max_per_game", source,
@@ -695,23 +877,24 @@ def _scarce_band_pins(games: Mapping[Any, List[dict]],
     """
     if not alloc.band_minima_per_split:
         return {}
+    floor_cell = alloc.band_floor_cell
     scarce_bands = {b for m in alloc.band_minima_per_split.values() for b in m}
     cap: Dict[Any, Dict[str, int]] = {}
     for gi in sorted(games):
         bc: Counter = Counter(
             r["band"] for r in games[gi]
-            if (r["role"], r["phase"]) == LATE_TARGET_CELL
+            if (r["role"], r["phase"]) == floor_cell
             and r["band"] in scarce_bands)
         if bc:
             cap[gi] = {b: min(n, alloc.max_per_game) for b, n in bc.items()}
 
-    need = {s: dict(alloc.band_minima_per_split.get(s, {})) for s in SPLITS}
-    realized = {s: Counter() for s in SPLITS}
+    need = {s: dict(alloc.band_minima_per_split.get(s, {})) for s in alloc.splits}
+    realized = {s: Counter() for s in alloc.splits}
     pins: Dict[Any, str] = {}
     unpinned = list(cap)                       # already ascending game_idx
     while True:
         shortfalls = [(need[s][b] - realized[s][b], s, b)
-                      for s in SPLITS for b in need[s]
+                      for s in alloc.splits for b in need[s]
                       if realized[s][b] < need[s][b]]
         if not shortfalls:
             return pins
@@ -891,7 +1074,7 @@ def _capacity_shortfalls(
             if cell in alloc.allocation:
                 capacity[cell] += min(n, alloc.max_per_game)
     for cell, a in alloc.allocation.items():
-        demand = a["tuning"] + a["frozen_check"]
+        demand = sum(a[s] for s in alloc.splits)
         have = capacity.get(cell, 0)
         if have < demand:
             failures.append(f"cell {cell} capacity {have} < demand {demand}")
@@ -1084,13 +1267,15 @@ def _select_manifest(games: Mapping[Any, List[dict]],
     whether an assignment actually works.
     """
     used_sha1: Set[str] = set()
+    floor_cell = alloc.band_floor_cell     # None under schema 5: no cell matches,
+                                           # so every floor pass below is inert
     game_used: Counter = Counter()                        # GLOBAL rows per game
     game_plies: Dict[Any, List[int]] = defaultdict(list)  # GLOBAL plies per game
-    side_count = {s: {"red": 0, "black": 0} for s in SPLITS}
+    side_count = {s: {"red": 0, "black": 0} for s in alloc.splits}
     floor_count: Counter = Counter()      # selected late-TARGET rows by band --
                                           # GLOBAL across both splits (the floors
                                           # are a COMBINED requirement)
-    floor_count_by_split: Dict[str, Counter] = {s: Counter() for s in SPLITS}
+    floor_count_by_split: Dict[str, Counter] = {s: Counter() for s in alloc.splits}
                                           # the same, split-local -- feeds the
                                           # per-split band minima (empty for v1)
     picked_in: Counter = Counter()        # rows SELECTED per (cell, split): the
@@ -1137,7 +1322,7 @@ def _select_manifest(games: Mapping[Any, List[dict]],
             game_plies[gi].append(r["ply"])
             side_count[split][r["side"]] += 1
             picked_in[(cell, split)] += 1
-            if cell == LATE_TARGET_CELL:
+            if cell == floor_cell:
                 floor_count[r["band"]] += 1
                 floor_count_by_split[split][r["band"]] += 1
             n_taken += 1
@@ -1237,7 +1422,7 @@ def _select_manifest(games: Mapping[Any, List[dict]],
             candidates = [gi for gi in candidates if gi != best_gi]
             take(best_gi, cell, split, band, best_limit)
 
-    for split in SPLITS:
+    for split in alloc.splits:
         for cell in alloc.cell_order:
             quota = alloc.allocation[cell][split]
             cand_games = sorted(
@@ -1255,7 +1440,7 @@ def _select_manifest(games: Mapping[Any, List[dict]],
             # already met -- e.g. in frozen_check when tuning met them. Side-aware
             # too: a floor band is exactly where same-side-only games cluster (a
             # game's b300_399 red can be `target` while its black is `control`).
-            if cell == LATE_TARGET_CELL:
+            if cell == floor_cell:
                 # Draw a floor band while EITHER the global total OR this split's
                 # own minimum is still short. `band_minima_per_split == {}` (v1)
                 # makes `need_split <= 0` always, reducing this to the historical
@@ -1289,7 +1474,7 @@ def _select_manifest(games: Mapping[Any, List[dict]],
     # 1.3: the floors are a requirement, not a best-effort).
     late_band_counts: Counter = Counter(
         r["band"] for r in selected
-        if (r["role"], r["phase"]) == LATE_TARGET_CELL)
+        if (r["role"], r["phase"]) == floor_cell)
     for band, floor in alloc.band_minima_total.items():
         if late_band_counts[band] < floor:
             raise ValueError(
@@ -1300,9 +1485,9 @@ def _select_manifest(games: Mapping[Any, List[dict]],
     # Per-split late-target band minima -- likewise counted FROM THE SELECTED
     # ROWS (not the running `floor_count_by_split`). Empty for v1, so this loop
     # never fires on the legacy path.
-    late_by_split: Dict[str, Counter] = {s: Counter() for s in SPLITS}
+    late_by_split: Dict[str, Counter] = {s: Counter() for s in alloc.splits}
     for r in selected:
-        if (r["role"], r["phase"]) == LATE_TARGET_CELL:
+        if (r["role"], r["phase"]) == floor_cell:
             late_by_split[r["split"]][r["band"]] += 1
     for split, minima in alloc.band_minima_per_split.items():
         for band, m in minima.items():
@@ -1324,10 +1509,10 @@ def _select_manifest(games: Mapping[Any, List[dict]],
     # split is an ERROR, exactly like an unmet floor or a cell shortfall. Never
     # emit a silently side-skewed manifest.
     side_actual: Dict[str, Dict[str, int]] = {
-        s: {"red": 0, "black": 0} for s in SPLITS}
+        s: {"red": 0, "black": 0} for s in alloc.splits}
     for r in selected:
         side_actual[r["split"]][r["side"]] += 1
-    for split in SPLITS:
+    for split in alloc.splits:
         red, black = side_actual[split]["red"], side_actual[split]["black"]
         if abs(red - black) > alloc.side_tol:
             raise ValueError(
@@ -1347,16 +1532,16 @@ def _select_manifest(games: Mapping[Any, List[dict]],
         "n_rows": len(selected),
         "cell_counts": {
             f"{role}|{phase}|{split}": cell_counts_actual[(role, phase, split)]
-            for (role, phase) in alloc.allocation for split in SPLITS},
+            for (role, phase) in alloc.allocation for split in alloc.splits},
         # The side WITNESS: recomputed from the selected rows and already VERIFIED
         # against SIDE_TOL above -- a real witness, not a report of the running
         # steering counter.
-        "side_count": {s: dict(side_actual[s]) for s in SPLITS},
+        "side_count": {s: dict(side_actual[s]) for s in alloc.splits},
         # The floor WITNESS (v2-specific; v1's `bucket_count` is gone with the
         # bucket cap): the selected late-TARGET rows' band histogram.
         "late_target_band_count": dict(sorted(late_band_counts.items())),
         "n_games_per_split": {
-            s: sum(1 for gi in split_of if split_of[gi] == s) for s in SPLITS},
+            s: sum(1 for gi in split_of if split_of[gi] == s) for s in alloc.splits},
         "n_games_total": len(split_of),
     }
     # The per-split floor witness -- schema-2 only, so schema-1 stats stay
@@ -1366,7 +1551,7 @@ def _select_manifest(games: Mapping[Any, List[dict]],
     # reads this key unconditionally for every schema-2 run.
     if alloc.schema_version >= 2:
         stats["late_target_band_count_by_split"] = {
-            s: dict(sorted(late_by_split[s].items())) for s in SPLITS}
+            s: dict(sorted(late_by_split[s].items())) for s in alloc.splits}
     return selected, stats
 
 
@@ -1443,6 +1628,26 @@ def sample_v2_rows(kept: List[dict], *, seed: int,
     # search exactly), while pins fix the scarce-starvation the free search
     # missed. Schema-1 has empty pins, so only the (single) pin-free pass runs and
     # the fallback is never taken -- output stays byte-identical.
+    # Schema 5 has ONE split, so there is nothing to assign: every retained
+    # game maps to it. The two-way greedy is skipped entirely rather than being
+    # generalized, which keeps schemas 1-4 on exactly the historical algorithm.
+    # Branch on the SAME property the fingerprint records, so an artifact
+    # claiming "one_split" cannot have been produced by the two-way greedy.
+    if alloc.assignment_strategy == "one_split":
+        only = alloc.splits[0]
+        split_of = {gi: only for gi in games}
+        rows, stats = _select_manifest(games, profile, split_of, alloc)
+        stats["seed"] = seed
+        stats["assignment_attempt"] = 0
+        stats["split_assignment_version"] = V18_SCHEMA
+        # The frozen observable: EVERY retained game, not only the games
+        # selection drew from. A sorted record list, never a {game_idx: split}
+        # map -- JSON object keys would serialize the int identity as a string
+        # and silently change its type on reload.
+        stats["split_assignment"] = [
+            {"game_idx": gi, "split": split_of[gi]} for gi in sorted(split_of)]
+        return rows, stats
+
     pins = _scarce_band_pins(games, alloc)
     pin_variants: List[Dict[Any, str]] = [pins] if not pins else [pins, {}]
 
@@ -3484,7 +3689,7 @@ def post_screen_qualification(kept_rows: List[dict],
     # role-agnostic accounting (and hence no geometric preflight) can express.
     floor_rows: Dict[Any, Counter] = defaultdict(Counter)
     for r in kept_rows:
-        if (r["role"], r["phase"]) == LATE_TARGET_CELL and r["band"] in alloc.band_minima_total:
+        if (r["role"], r["phase"]) == alloc.band_floor_cell and r["band"] in alloc.band_minima_total:
             floor_rows[r["game_idx"]][r["band"]] += 1
 
     for band, floor in alloc.band_minima_total.items():
@@ -3519,7 +3724,7 @@ def post_screen_qualification_report(
         rows = [r for r in kept_rows if (r["role"], r["phase"]) == (role, phase)]
         sides = Counter(r["side"] for r in rows)
         cells[f"{role}|{phase}"] = {
-            "demand": a["tuning"] + a["frozen_check"],
+            "demand": sum(a[s] for s in alloc.splits),
             "capacity": sum(min(n, mpg) for n in contributing.values()),
             "n_rows": len(rows), "n_games": len(contributing),
             "red": sides.get("red", 0), "black": sides.get("black", 0)}
@@ -3528,7 +3733,7 @@ def post_screen_qualification_report(
         for prof in gprofile.values())
 
     late_rows = [r for r in kept_rows
-                 if (r["role"], r["phase"]) == LATE_TARGET_CELL]
+                 if (r["role"], r["phase"]) == alloc.band_floor_cell]
     by_game_band: Dict[Any, Counter] = defaultdict(Counter)
     for r in late_rows:
         by_game_band[r["game_idx"]][r["band"]] += 1
@@ -3540,7 +3745,7 @@ def post_screen_qualification_report(
             "minimum_total": minimum,
             "minimum_per_split": {
                 s: alloc.band_minima_per_split.get(s, {}).get(band, 0)
-                for s in SPLITS},
+                for s in alloc.splits},
             "capacity": band_capacity,
             "n_games": sum(1 for c in by_game_band.values() if c[band]),
             "red": sides.get("red", 0), "black": sides.get("black", 0)}

@@ -160,9 +160,11 @@ def test_legacy_profile_mirrors_module_constants():
 
 
 @pytest.mark.parametrize("mutate, needle", [
-    # 3 and 4 are now SUPPORTED schemas (Task 8 labelling follow-up, Task 9
-    # batching completeness); 5 is not.
-    (lambda r: r.__setitem__("config_schema_version", 5), "config_schema_version"),
+    # 3 and 4 are supported (Task 8 labelling follow-up, Task 9 batching
+    # completeness), and 5 became supported with the v18 schema-5 dispatch
+    # (Task 8 Step 1) -- it is v18-only, never reachable by a v16/v17 config.
+    # 6 is the first unsupported version.
+    (lambda r: r.__setitem__("config_schema_version", 6), "config_schema_version"),
     # ...and a schema-3 profile must carry the interpretation label, exact and
     # agreeing with its run kind.
     (lambda r: r.__setitem__("config_schema_version", 3),
