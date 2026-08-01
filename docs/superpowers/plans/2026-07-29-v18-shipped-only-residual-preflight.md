@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 36)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 37)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -4003,7 +4003,7 @@ The fixture directory appears here only to catch anything Step 0b did not alread
 - Test: `tests/test_v18_preflight_verdict.py`
 
 **Interfaces:**
-- Consumes: `v18_preflight_criteria`, the Task 7 artifact **and `census_positions.csv`**, the **Task 4b matched-cohort artifact**, the **A-reference bundle** (below), and the Task 8 sizing record. Each is authenticated by SHA-1 before being read.
+- Consumes: `v18_preflight_criteria`, the Task 7 artifact **and `census_positions.csv`**, the **Task 4b matched-cohort artifact**, the **A-reference bundle** (below), and the Task 8 sizing record. Each is consumed as a **PATH**, and authenticated by reading its bytes once, hashing THOSE bytes and parsing THOSE bytes — never as an in-memory object beside a caller-supplied digest (revision 37).
 
 **A-reference bundle.** Revision 6 said the verdict records both A/6,400 capture SHA-1s but gave `evaluate(...)` no capture input, so the requirement had nowhere to live. Execution step 4 now writes `a6400_reference_bundle.json` carrying:
 
@@ -5008,3 +5008,80 @@ AFTER the selector    spec Sec 9.2.2's EXACT per-role side geometry
 134. **Published failure counts are reconciled.** `failure_reasons` must be
     nonnegative integer counts summing to `n_trials - n_successes`, so a tier
     cannot report `0/299` alongside an empty reason map.
+
+## Revision 37 change log
+
+Found reviewing Task 9 before its commit. The gate formulas and the A/6,400
+attacks were sound; the EVIDENCE BOUNDARY around them was not.
+
+135. **Caller-supplied SHA-1s are not authentication.** Revision 36's `evaluate`
+    took the artifact, cohort, census rows and A rows as in-memory OBJECTS plus
+    an `input_sha1s` mapping, checked only that the required keys were PRESENT,
+    and echoed them into the verdict. Nothing tied a digest to the bytes that
+    were actually evaluated. Concretely possible, and all four would have
+    produced an ordinary verdict:
+
+```text
+a different cohort evaluated under a retained matched_cohort_sha1
+sizing flipped SIZING_FAILS -> SIZING_PASSES, with no sizing digest required
+reach totals edited in the artifact, which carried no digest at all
+unrelated a_rows / census_rows, derived from nothing
+```
+
+    Frozen: Task 9 consumes **paths**. A production loader reads each artifact
+    ONCE, hashes those bytes, parses those same bytes, and CROSS-CHECKS the
+    bindings the documents already carry against each other:
+
+```text
+census file sha1   == artifact.census_positions_sha1 == cohort.census_sha1
+                      == sizing.census_sha1
+criteria file sha1 == artifact.criteria_sha1 == cohort.criteria_sha1
+                      == sizing.criteria_sha1
+universe file sha1 == artifact.universe_sha1  == cohort.universe_sha1
+                      == sizing.universe_sha1
+cohort file sha1   == sizing.matched_cohort_sha1
+```
+
+    `a_rows` and `census_rows` are DERIVED from the verified artifact's own
+    `cases` by population, never supplied. The criteria file is additionally
+    re-derived from the committed module by Task 7's `load_verified_criteria`
+    rather than trusted.
+
+136. **A production API may not carry gate-changing parameters.**
+    `separation_replicates`, `criteria_module` and `anchor` let a caller run one
+    bootstrap replicate, substitute the criteria, or replace the A-reference
+    trust anchor and still receive `PREFLIGHT_PASS`. Frozen: the public
+    `evaluate(...)` takes paths and nothing else — committed criteria, the
+    frozen 10,000 replicates, the frozen trust anchor. The overrides move to a
+    private `_evaluate_verified`, a test seam, and a test asserts the public
+    signature carries none of them.
+
+137. **The sizing record must be bound and RECONCILED, not read.** Revision 36's
+    `_sizing_state` believed `sizing_status`, so a one-field edit flipped the
+    final verdict. Frozen: the sizing document is hashed, its embedded
+    criteria/universe/census/cohort bindings are cross-checked like every other
+    input, Task 8's own ladder reconciliation is re-run over it, and the
+    smallest qualifying tier, recommended size and status are RE-DERIVED and
+    compared against what it claims. `sizing_sha1` is recorded when a record is
+    supplied; its absence is what "sizing has not run" means.
+
+138. **The verdict must report the efficiency floor.** Execution Step 6 requires
+    `R_min` / `R_max` / **efficiency floor** / exposure cutoff / revisit form,
+    and revision 36 omitted the third. `CONVERSION_EFFICIENCY_MIN`,
+    `MIN_LOST_REPLIES` (per stage) and `STABLE_LEADER_MIN_FRACTION` are now
+    reported in a `derived_guards` block. They are NORMATIVE requirements on the
+    future candidate runs, not gates on preflight data, and the block says so.
+
+139. **Three A-bundle gaps.** `TRUST_ANCHOR["historical_source_path"]` was never
+    compared with the resolved path, so an identical copy at a substituted path
+    passed while the code claimed path substitution was rejected; capture
+    identity was compared as canonical JSON, weaker than the builder's RAW byte
+    equality; and capture metadata was not revalidated, so a bundle could name
+    captures taken at the wrong simulation count. Frozen: the resolved
+    historical source path must equal the frozen one, the captures must be
+    RAW-byte identical, and each capture's `record_kind`, `run_kind`, `mode`,
+    `mcts_sims` and `gate_list` are checked against Task 6's constants.
+
+140. **New recorded digests.** The verdict records `preflight_artifact_sha1` and,
+    when sizing was supplied, `sizing_sha1` — alongside the existing criteria,
+    universe, census, cohort and A-bundle digests.
