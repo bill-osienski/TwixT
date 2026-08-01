@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 35)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 36)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -3826,7 +3826,7 @@ def test_v18_role_under_a_v17_schema_raises(): ...
 **`legacy_profile_for(schema)` is NOT added.** Revision 12 referenced it and revision 13 proposed adding it to production as a constructor over `SPLIT_ALLOC_V2` for schemas 1-4. That would manufacture history: the module constants canonically describe only the **schema-1** legacy path, while schemas 2-4 are config-authoritative — and the live v17 schema-4 config carries a five-cell `phase_allocation`, not the eight of `SPLIT_ALLOC_V2`. A synthetic schema-4 fingerprint could stay green while real v17 behaviour drifted, which is the opposite of what a regression test is for. Instead: keep the existing `AllocationProfile.legacy()` for schema 1, and test schemas 2-4 from **tracked real profiles** captured in Step 0. No new production test-support constructor.
 
 **Interfaces:**
-- Consumes: `v18_preflight_criteria.{EXPOSURE_CUTOFF_RULE, FLIP_CONTROL_EXPOSURE, SIGN_DOMINANCE, SIZING, ...}`, the Task 7 `census_positions.csv`, the frozen Task 4 universe record, **the Task 4b matched-cohort artifact** (`EXPOSURE_CUTOFF` is derived from those 30 rows, so Task 8 cannot compute role predicates without it), `fpu_dev_corpus_v2.{_binomial_lower_bound, sizing_analysis_core}` (import; do not fork), `canonical_json_bytes`. Every input is authenticated by SHA-1 before use.
+- Consumes: `v18_preflight_criteria.{EXPOSURE_CUTOFF_RULE, FLIP_CONTROL_EXPOSURE, SIGN_DOMINANCE, SIZING, ...}`, the Task 7 `census_positions.csv`, the frozen Task 4 universe record, **the Task 4b matched-cohort artifact** (`EXPOSURE_CUTOFF` is derived from those 30 rows, so Task 8 cannot compute role predicates without it), `fpu_dev_corpus_v2.{_binomial_lower_bound, post_screen_qualification_report, sample_v2_rows}` (import; do not fork), `canonical_json_bytes`. Every input is authenticated by SHA-1 before use. **`sizing_analysis_core` is NOT consumed** — revision 36; see the per-reservoir assignment loop below.
 
 **Data path, which revision 2 omitted.** Sizing needs a whole-universe census joined back to reservoir prefixes, not the final cohort:
 
@@ -4921,3 +4921,90 @@ Provenance recording and one frozen implementation rule; no code changed.
     through `read_screen_csv` + `kept_rows_from_screen` -- raw `csv.DictReader`
     strings raise `TypeError` in the selector, and `sample_v2_rows` needs the
     `role` key that projection derives from `raw_policy_role`.
+
+## Revision 36 change log
+
+Found during Task 8 Step 3 implementation review, before any Step 3 commit. The
+plan contradicted itself about `sizing_analysis_core`, and the contradiction was
+load-bearing once the frozen role assignment was implemented completely.
+
+129. **The Task 8 Interfaces list contradicted Task 8's own opening paragraph.**
+    The interfaces line said `sizing_analysis_core` is consumed "(import; do not
+    fork)", while the paragraph at the head of Task 8 already said it "cannot be
+    imported unchanged" and that what IS safe to import unchanged is
+    `_binomial_lower_bound`. Step 1's schema-5 dispatch then made it *run* over
+    v18 rows -- band handling reads the profile, `late_target_bands` is empty,
+    the split loops read `alloc.splits` -- which made the wrong branch of the
+    contradiction look correct. The interfaces line is now corrected: Task 8
+    consumes `_binomial_lower_bound`, `post_screen_qualification_report` and
+    `sample_v2_rows`, and **not** `sizing_analysis_core`.
+
+130. **Role assignment is PER RESERVOIR, so the trial loop belongs to Task 8.**
+    `sizing_analysis_core` takes rows that are ALREADY role-labelled, subsets
+    them by game, and decides success internally as "qualification PASS and
+    `sample_v2_rows` did not raise". Neither v18 success condition fits inside
+    that:
+
+```text
+BEFORE the selector   ROLE_ASSIGNMENT step 2 is a QUOTA -- exactly 16
+                      representatives, four per phase, drawn under a
+                      deterministic total ordering from a candidate set
+                      conditioned on target status and near-evenness ALONE.
+                      `criteria.classify_role`'s `representative_selected`
+                      parameter is that quota's OUTCOME, supplied by the caller.
+                      Everything the quota does not take falls through to step
+                      3, so a surplus near-even row can still become an identity
+                      witness or a flip control.
+
+                      The quota therefore cannot be computed once over the
+                      census and then subsetted: 16 representatives drawn from
+                      800 games leave ~4 in a 200-game subset and EVERY tier
+                      fails. It must be drawn per candidate reservoir, which is
+                      per trial.
+
+AFTER the selector    spec Sec 9.2.2's EXACT per-role side geometry
+                      (targets 8/8, identity 2/2, flip 2/2, representatives
+                      8/8). `AllocationProfile.side_tol` constrains only the
+                      SPLIT's aggregate, so a manifest that fills every cell and
+                      is 20/20 overall can still be 10/6 targets and 0/4
+                      identity witnesses -- and would have counted as a sizing
+                      success.
+```
+
+    Frozen: `v18_selector_sizing.sizing_ladder` owns the trial loop and applies
+    the v2 repair's discipline verbatim -- whole games as the sampling unit, the
+    same `f"sizing:{seed}:{count}:{trial}"` key construction, 299 trials per
+    probabilistic tier, ONE degenerate trial at the full universe, and the
+    imported exact one-sided Clopper-Pearson rule. **One selector still stands:**
+    `sample_v2_rows` is called once per trial and no second selection algorithm
+    is written. What Task 8 owns is the subset draw, the per-reservoir role
+    assignment, and the success DECISION -- not selection.
+
+131. **Corrupt census evidence must invalidate the measurement, not lower the
+    estimated success rate.** A missing required field or a non-monotone
+    `would_clip` series is bad evidence, not a reservoir that failed to yield a
+    corpus; counting it as a failed trial silently moves the sizing probability.
+    Frozen: the census is validated ONCE before any sampling, and the trial loop
+    converts only a dedicated representative/geometry shortfall into a trial
+    failure. Every other exception propagates and no record is written.
+
+132. **The representative draw carries the corpus geometry.** `drawn_by` says
+    "exact phase/side quotas, canonical_state_sha1 ascending", and the drawn 16
+    are the ONLY representative rows the selector will see -- zero slack. A draw
+    that ignores `MAX_PER_GAME` or `MIN_PLY_GAP` therefore hands the selector an
+    inadmissible set and guarantees a trial failure that says nothing about the
+    reservoir. Frozen: the draw enforces the per-game cap and the minimum ply
+    separation, and orders candidates by the total key
+    `(canonical_state_sha1, game_content_sha1, position_ply)` -- a bare hash sort
+    leaves ties to input order, which is not a deterministic rule.
+
+133. **`alpha` and the lower-bound floor become numeric criteria fields.**
+    `SIZING` stated the rule only in the prose of `tier_passes_iff`, so `0.05`
+    and `0.99` were restated at three sites in Task 8. `SIZING` now carries
+    `alpha: 0.05` and `minimum_lower_bound: 0.99` as numbers, and Task 8 reads
+    both from there. The prose stays as the rule's statement; the numbers are no
+    longer duplicated.
+
+134. **Published failure counts are reconciled.** `failure_reasons` must be
+    nonnegative integer counts summing to `n_trials - n_successes`, so a tier
+    cannot report `0/299` alongside an empty reason map.
