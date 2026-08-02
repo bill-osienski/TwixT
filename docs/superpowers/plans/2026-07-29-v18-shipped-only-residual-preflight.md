@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 38)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 39)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -5145,3 +5145,58 @@ Task 9 repeats the 299-trial × 7-tier selector work at Execution Step 5. That i
 minutes of CPU on the real 800-game census, and it is the price of the sizing
 record being evidence rather than a claim. It also means a Task 9 fixture can
 only produce `PREFLIGHT_PASS` if its census genuinely supports a passing ladder.
+
+## Revision 39 change log
+
+Revision 38 reproduced the census, the crossover tables, the cohort and the
+sizing ladder. One gate-driving field escaped all four, and the execution
+envelope was unchecked.
+
+146. **Reach was still self-consistent rather than reproduced.**
+    `exposed_positive_mass_numerator` and `exposed_positive_mass_denominator`
+    appear in NEITHER `CENSUS_SCHEMA` nor the crossover tables, so
+    `_recompute_aggregates` summed them out of the artifact's own cases and
+    compared them with the artifact's own totals. Raising every selected-A
+    numerator and the pooled total together passes census reproduction,
+    crossover reproduction and the aggregate check, and changes the reach
+    verdict. Frozen: `residual_rows_path` joins the boundary, is bound to
+    `artifact.residual_rows_sha1`, and the per-case masses are RECOMPUTED from
+    those leaves — `terminating_backups * max(0, raw_leaf)` over every eligible
+    leaf, the numerator restricted to leaves the STRONGEST cap pulls DOWN
+    (`clip_direction == +1`, i.e. clipped with a positive residual).
+
+147. **Task 7's execution envelope was unverified.** Only `run_kind` was
+    checked, so evidence measured at another simulation budget, with noise on,
+    through the batched route, at another `c_puct`, over another cap grid,
+    against another A source, or from a dirty tree would pass as long as its
+    CSVs agreed with it. Frozen: the artifact is checked against Task 7's
+    committed constants —
+
+```text
+run_kind, scientific_interpretation_forbidden, search_execution_mode,
+simulations, add_noise, c_puct, batching_triple, cap_grid, a_source_path,
+population_order, runtime_identity_bracketed, worktree_clean
+```
+
+    — plus canonical `a_source_sha1` and `git_commit`, non-empty `source_sha1s`,
+    `authenticated_search_inputs` and `seed_audit`, and complete coverage of
+    `MEASUREMENT_SOURCE_MODULES`. A change to any of those modules changes a
+    measured number, so an artifact omitting one cannot describe the code that
+    produced it.
+
+**The evidence boundary, complete.** Every input to the verdict is now either
+authenticated against a frozen pin, re-emitted from committed code, or
+recomputed from the published evidence that determines it:
+
+```text
+criteria         re-derived from the committed module (Task 7's loader)
+universe         re-emitted from the authenticated source (Task 7's loader)
+census CSV       rebuilt from artifact cases (Task 7's serializer)
+crossover CSV    rebuilt from artifact cases, in CAP_GRID order
+residual rows    bound, and the reach masses recomputed from them
+aggregates       recomputed from the cases
+matched cohort   re-run through Task 4b's matcher
+sizing ladder    re-run through Task 8, status and tiers re-derived
+A/6,400 bundle   every claim recomputed from the files it names
+envelope         checked against Task 7's committed constants
+```
