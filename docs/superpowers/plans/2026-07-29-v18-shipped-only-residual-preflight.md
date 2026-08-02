@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 37)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 38)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -5085,3 +5085,63 @@ cohort file sha1   == sizing.matched_cohort_sha1
 140. **New recorded digests.** The verdict records `preflight_artifact_sha1` and,
     when sizing was supplied, `sizing_sha1` — alongside the existing criteria,
     universe, census, cohort and A-bundle digests.
+
+## Revision 38 change log
+
+Revision 37 closed STALE-digest substitution: a document could no longer be
+swapped while its neighbours kept the old digest. It did not close COHERENT
+tampering — the "self-consistent and wrong" class v17 already taught us, and the
+same class `reproduce_universe` was written for in Task 7. Every check was of
+the form "these documents agree with one another", and an attacker who edits
+one document and updates every digest that references it satisfies all of them.
+
+141. **The universe was hashed, not authenticated.** Task 7's
+    `load_verified_universe` exists precisely because internal arithmetic proves
+    only SELF-consistency — a coherently substituted census reconciles
+    perfectly. Task 9 hashed the file and never called it. Frozen: Task 9 uses
+    `load_verified_universe` and takes its digest from that loader.
+
+142. **`artifact["cases"]` were never proven to be the census rows.** Matching
+    `artifact.census_positions_sha1` against the CSV proves the artifact
+    contains the CSV's digest; it says nothing about the `cases` the verdict
+    actually evaluates. Exposure and crossover fields inside `cases` could be
+    edited with the stored census hash preserved. Frozen: the census bytes are
+    RECONSTRUCTED from `cases` using Task 7's own `_csv_bytes` and
+    `CENSUS_SCHEMA`, and byte-compared with the supplied file.
+
+143. **Crossover evidence was not authenticated at all.** `R_min` reads the
+    nested `case["crossover"]` tables, and the production boundary accepted no
+    `crossover_tables.csv`. That is the most direct verdict-changing hole in the
+    chain. Frozen: `crossover_tables_path` joins the boundary, is authenticated
+    against `artifact.crossover_tables_sha1`, and the nested per-case tables are
+    reconstructed with Task 7's own column order and byte-compared with it.
+
+144. **Aggregates were trusted rather than recomputed.** Pooled reach and the
+    terminal-fraction totals were read from the artifact although its bound
+    cases determine them. Frozen: both are recomputed from the verified cases
+    and compared with what the artifact records.
+
+145. **Cohort and sizing were cross-bound but not REPRODUCED.** A coherent
+    attack picks a friendlier cohort, regenerates its report, updates
+    `sizing.matched_cohort_sha1` and fabricates an internally consistent
+    all-success ladder; every revision-37 cross-check and Task 8's arithmetic
+    reconciliation pass. Frozen: Task 4b's matcher is re-run from the verified
+    census and A rows and the cohort and report are compared; Task 8's ladder is
+    re-run from the verified census, the cohort-derived cutoff and the verified
+    universe's game ids, and the ladder plus every derived record field is
+    compared.
+
+**The boundary the plan now requires:**
+
+```text
+BEFORE (rev 37)   the documents agree with one another
+AFTER  (rev 38)   the documents REPRODUCE from committed code and authenticated
+                  source evidence -- census and crossover bytes, artifact
+                  aggregates, the matched cohort, and the sizing ladder
+```
+
+**Cost, stated rather than discovered later.** Re-running Task 8's ladder inside
+Task 9 repeats the 299-trial × 7-tier selector work at Execution Step 5. That is
+minutes of CPU on the real 800-game census, and it is the price of the sizing
+record being evidence rather than a claim. It also means a Task 9 fixture can
+only produce `PREFLIGHT_PASS` if its census genuinely supports a passing ladder.
