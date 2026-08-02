@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 39)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 40)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -5200,3 +5200,46 @@ sizing ladder    re-run through Task 8, status and tiers re-derived
 A/6,400 bundle   every claim recomputed from the files it names
 envelope         checked against Task 7's committed constants
 ```
+
+## Revision 40 change log
+
+Revision 39 added the Task 7 envelope but checked the PROVENANCE identities for
+shape only — canonical-looking, non-empty — never against their authorities. A
+demonstration accepted a wholly fabricated artifact:
+
+```text
+git_commit    "1"*40          a commit that does not exist
+a_source_sha1 "e"*40          not the frozen gate-A source
+source_sha1s  every value "0"*40
+checkpoint    a fake hash
+seed_audit    {"intersection": 999}   a self-declared collision count
+```
+
+148. **Every provenance value is compared with its authority.** Frozen:
+
+```text
+a_source_sha1     == control_pool.FORBIDDEN_SOURCE_SHA1S["gate_A"]
+git_commit        == the CURRENT HEAD, and the criteria and universe records
+                     must record the same commit -- checked through Task 7's own
+                     `assert_runtime_matches_records`, which also requires each
+                     record to have been emitted from a clean worktree
+source_sha1s      == {path: fpu_provenance.file_sha1(path)} over EVERY
+                     MEASUREMENT_SOURCE_MODULES entry -- exact keys and exact
+                     values, so a stale or invented module hash is refused
+authenticated_search_inputs
+                  == `_authenticate_search_inputs("opening")` recomputed, which
+                     re-hashes the checkpoint, the A reservoir and the census
+                     reservoir against their frozen pins
+seed_audit        == `assert_seed_sets_disjoint(cases)` recomputed from the
+                     VERIFIED cases, compared canonically
+```
+
+    Tests and mutations must use WRONG-BUT-CANONICAL values — a well-formed
+    SHA-1 that is not the right SHA-1 — because absent and malformed values were
+    already refused and testing only those is what let this through.
+
+**Why this was reachable.** The revision-39 fixture stamped placeholders
+(`"1"*40`, `"e"*40`, `"0"*40`) into exactly the fields the check only
+shape-tested, so the suite could not distinguish a real artifact from a
+fabricated one. A fixture that cannot fail the check it exercises is not
+evidence that the check works.
