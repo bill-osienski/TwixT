@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 40)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 41)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -490,6 +490,7 @@ Every task's requirements implicitly include this section.
 - **A rows establish reach only.** Every numeric threshold derives from the non-A control cohort (spec §2.2.3). Task 9 has a test that must be able to fail on this.
 - **Game identity is the replay's content SHA-1**, via `diagnose_fpu_baseline_policy_mass.game_identities` (`:1694`). `game_idx` is reservoir-local: comparing raw indices both invents overlaps and misses a copied game that was renumbered. Never identify a game by `(replay_dir, game_idx)`.
 - **At most one control position per game.** This removes within-game correlation at the source, so no game-clustered bootstrap is required. With an 800-game universe the cohort is not supply-constrained.
+- **No capture may default to the frozen v17 evidence path.** `capture_v18_a6400` re-exports `OUT` from the v17 module for identity comparisons, and that path *is* the frozen selected-move artifact `162c9a5a…`. It is gitignored, so an overwrite destroys evidence git cannot restore — unlike the tracked `prechange_baseline.json` beside it. `--out` is therefore **required**, and `assert_writable_out` refuses the protected path before mode dispatch, evaluator construction, or delegation to `v17.capture()`.
 
 ## Implementation order
 
@@ -4167,19 +4168,38 @@ Run `freeze_source_universe` against the source the user chose at Task 4 Step 5,
 
 - [ ] **Step 4: Run the shipped-only measurements (single authorized GPU stage)**
 
-This stage contains **five** GPU runs. Revision 1 claimed one; revision 2 claimed four but still had no measurement for the sizing census:
+This stage contains **four** GPU invocations. Revision 1 claimed one; revision 2 claimed four but had no measurement for the sizing census; revisions 3–40 claimed five, counting the fused preflight twice (see the runs 4–5 topology below):
 
-1. v17 400-sim default regression capture (`--mode v17_prechange_abcd`), byte-compared against `logs/eval/fpu_v17_baseline_policy_mass/prechange_abcd_selected_moves.json`.
+1. v17 400-sim default regression capture (`--mode v17_prechange_abcd`), to an **explicit `--out`**, authenticated under the six-part rule below.
 2. A/6,400 capture (`--mode v18_preflight_a6400`), run #1, authenticated on exact case identity plus per-case value **and** top share against `a17d4737c747e2799253bebbc3d0261e0e697114`.
 3. A/6,400 capture, run #2, byte-compared against run #1. **Record both captures' SHA-1s in the final preflight bundle and in the Task 9 verdict**, so Stage 0 can bind the accepted 6,400 reference into the future protocol instead of rediscovering an orphan file on disk.
-4. Residual preflight over `selected_a` — 30 positions at 400 sims.
-5. Residual preflight over the **per-game census** of the frozen universe — the large run, and the one that feeds both the Task 4b matcher and Task 8 sizing.
+4. **One** residual-preflight production run: `selected_a` first (30 rows), the per-game census second (1,957 rows), publishing one atomic four-file artifact set.
 
-Run 5 dominates the cost and its size is set by the census-per-game factor, not by the cohort size. Measure throughput on a handful of census positions and extrapolate from the **measured rate**, then order the runs cheapest-first so a failure surfaces before the expensive one starts.
+**Run 1 authentication — a whole-file byte comparison is structurally impossible and must not be attempted.** The v17 artifact is named `prechange` because it was captured *before* v17 edited `mcts.py`; this branch inherits that edit, so a faithful re-capture necessarily stamps different source identities. This is the same inheritance already recorded in Global Constraints for `git diff main..HEAD -- mcts.py`. Revision 40 demanded the impossible comparison, and the run-1 capture at HEAD `dcd4acf7` duly "failed" it while reproducing every scientific value exactly. The frozen check is all six of:
 
-Task 4b's matcher runs after run 5, on CPU, before Tasks 8 and 9.
+1. the two documents are **byte-identical after removing `source_sha1s`**;
+2. `source_sha1s` has the **same exact key set** on both sides;
+3. the **only** differing values are `scripts/GPU/alphazero/mcts.py` and `scripts/GPU/alphazero/eval_runner.py`;
+4. the frozen side's two values equal those pinned in the tracked `logs/eval/fpu_v17_baseline_policy_mass/prechange_baseline.json` (`source_sha1s.production_result_determining_set`) — `11fa989d7cd521fab69c3801898ee7282e00fc10` and `590c1100549d0429087df53a2f879f51dfdd79e0`;
+5. the current side's two values equal the **live committed files** at the measurement HEAD; and
+6. all **108** cases (A 30, B 18, C 30, D 30) report `max |delta| vs frozen = 0.0`.
+
+Any other difference — an extra or missing `source_sha1s` key, a third changed path, a nonzero delta — fails the run. This is strictly stronger than hash equality: it enumerates what may differ and why, instead of accepting or rejecting an opaque digest.
+
+**Runs 4–5 topology — one binding run, not two.** Task 7's `run_preflight` derives both populations itself (`_derive_cases` returns `a_cases + census_cases`; there is deliberately no population parameter, because a caller that supplies rows can measure arbitrary replays while the artifact still records a legitimate universe SHA-1), refuses a pre-existing output directory, implements no resume, and publishes all four files in one `publish_atomically`. Selected-A runs first *inside* it, so a failure on the 30 cheap rows still surfaces before the census cost. Therefore:
+
+- The binding measurement is **one** production run containing A first and census second.
+- Any A-only run, or any census subsample, is a **non-binding throughput rehearsal**. It must be invoked through the module's own `measure()` on committed code, and it must write outside the binding output path.
+- **Rehearsal results cannot pass, fail, select, reclassify, or enter Task 9.** They size the run and nothing else. They are not recorded in the preflight bundle.
+- Run 4 dominates the cost, and its size is set by the census-per-game factor, not by the cohort size.
+
+Rehearse throughput on a handful of census positions and project from the **measured rate**, weighted by the frozen universe's true per-phase census counts — never by scaling a single global rate across a non-representative sample. Order the GPU invocations cheapest-first so a failure surfaces before the expensive one starts.
+
+Task 4b's matcher runs after run 4, on CPU, before Tasks 8 and 9.
 
 Present measured throughput on a handful of rows first, then a runtime estimate from **measured rate, never from scaling a smoke** — v17's estimates were wrong by 3× one way and 10× the other. Long runs use `nohup` plus `disown`; `setsid` does not exist on macOS. **No source edit and no commit anywhere inside this stage.**
+
+**A run rejected for a protocol defect is preserved as a rejected diagnostic and never enters the bundle.** It is neither deleted nor promoted: it is the evidence that the defect was real. Any repair — including one that only amends this plan — moves HEAD, which invalidates the Step 2 criteria record and the Step 3 universe record, because both stamp `git_commit` and Task 9 requires them to name the live HEAD. Those two artifacts are then **regenerated at the new HEAD, not re-verified**, and Step 4 restarts from run 1.
 
 - [ ] **Step 5: Run the already-committed evaluators without modifying them**
 
@@ -5243,3 +5263,54 @@ seed_audit        == `assert_seed_sets_disjoint(cases)` recomputed from the
 shape-tested, so the suite could not distinguish a real artifact from a
 fabricated one. A fixture that cannot fail the check it exercises is not
 evidence that the check works.
+
+## Revision 41 change log
+
+Revision 41 is the first amendment written **after** a Step 4 GPU run. It repairs
+three protocol/tooling defects that run 1 exposed at HEAD `dcd4acf7`. None of
+them is a scientific result about v18, and none of them touches `mcts.py`, the
+cap grid, a threshold, a role predicate, or any gate.
+
+1. **Run 1's acceptance criterion was unsatisfiable.** Revision 40 required the
+   re-capture to be byte-compared against the frozen
+   `prechange_abcd_selected_moves.json` (`162c9a5a…`). That artifact predates
+   v17's `mcts.py` edit, which this branch inherits, so its `source_sha1s` block
+   can never be reproduced here. The executed capture differed in exactly four
+   lines — `mcts.py` `11fa989d…` → `b60c9833…` and `eval_runner.py`
+   `590c1100…` → `bae5f40e…` — while the scientific payload was byte-identical
+   (`070ab156e437e709…` on both sides) and all 108 cases reported
+   `max |delta| = 0.0`. The six-part authentication in Execution step 4 replaces
+   the digest comparison and names precisely what may differ, what it must equal,
+   and where that expectation is pinned. This is the same class of error the plan
+   already warned about for `git diff main..HEAD -- mcts.py`; revision 40 simply
+   had not applied the warning to the artifact.
+
+2. **Runs 4 and 5 were never two runs.** Task 7's `run_preflight` is a single
+   self-constrained production run: it derives both populations, refuses a
+   pre-existing output directory, offers no resume, and publishes one atomic
+   four-file set. The five-run enumeration counted it twice and implied a
+   confirmation gate between A and the census that the tooling cannot honour.
+   Execution step 4 now states the real topology — one binding run, A first and
+   census second — and defines A-only or census-subsample work as **non-binding
+   throughput rehearsal** that cannot pass, fail, select, reclassify, or enter
+   Task 9. The failure-surfacing purpose of the old "run 4" is preserved by the
+   fused run's internal ordering.
+
+3. **`capture_v18_a6400`'s `--out` defaulted to the frozen v17 evidence path.**
+   `OUT` is re-exported from the v17 module for identity comparisons and is also
+   the path of the gitignored artifact `162c9a5a…`, so the documented command run
+   bare would have overwritten evidence git cannot restore. Run 1 avoided this
+   only because the operator passed an explicit `--out`. `--out` is now
+   **required**, and `assert_writable_out` refuses both an absent destination and
+   the protected path — resolved, so `./logs/…` and an absolute spelling are
+   caught — before mode dispatch, evaluator construction, or delegation to
+   `v17.capture()`. Four mutants (each guard removed, the comparison left
+   unresolved, `required=True` reverted to `default=OUT`) are each killed by
+   their own dedicated test.
+
+**Consequence for the existing artifacts.** This amendment moves HEAD, so the
+Step 2 criteria record (`4667093e…`) and the Step 3 universe record
+(`8a316ec9…`) no longer name the live commit and are invalid. They are
+regenerated at the new HEAD, not re-verified, before Step 4 restarts from run 1.
+The rejected run-1 output is retained as a diagnostic and is excluded from the
+bundle.
