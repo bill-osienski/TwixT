@@ -1,5 +1,6 @@
 """Sec 2.2.2: parameterize for A/6400 WITHOUT changing v17 default behavior.
 No GPU: argument plumbing and authentication wiring only."""
+import hashlib
 import inspect
 import json
 from pathlib import Path
@@ -11,6 +12,10 @@ from scripts.GPU.alphazero import capture_v18_a6400 as M
 SIX_K_REF = ("logs/eval/v15_budget_check/a_predrop_base_6400sims.csv/"
              "position_probe_cases.csv")
 SIX_K_REF_SHA1 = "a17d4737c747e2799253bebbc3d0261e0e697114"
+
+# `capture()` never writes -- `main()` does -- so these in-process tests only
+# need a destination that is not the protected v17 path.
+OUT_STUB = "logs/eval/v18_depth2_provisional_backup/_unit_test_never_written.json"
 
 
 def test_v17_defaults_are_unchanged():
@@ -36,13 +41,81 @@ def test_capture_signature_defaults_reproduce_v17_behavior():
     assert p["mode"].default == "v17_prechange_abcd"
 
 
-def test_cli_exposes_only_mode_and_out():
-    ns = M.build_parser().parse_args([])
-    assert ns.mode == "v17_prechange_abcd" and ns.out == M.OUT
+def test_cli_exposes_only_mode_and_out(tmp_path):
+    ns = M.build_parser().parse_args(["--out", str(tmp_path / "c.json")])
+    assert ns.mode == "v17_prechange_abcd"
+    assert ns.out == str(tmp_path / "c.json")
     # No caller-nominated reference: the mode fixes every scientific parameter.
     assert not hasattr(ns, "auth_source")
     assert not hasattr(ns, "mcts_sims")
     assert not hasattr(ns, "gates")
+
+
+# --- output safety ----------------------------------------------------------
+# `M.OUT` is re-exported from the v17 module and IS the frozen v17 selected-move
+# artifact `162c9a5a...`. It is gitignored, so an accidental overwrite destroys
+# evidence git cannot restore. Step 4 run 1 was executed with an explicit --out
+# only because the operator noticed; the guard makes that structural.
+
+
+@pytest.fixture
+def no_work(monkeypatch):
+    """Counters on every door to real work. The guard must precede all of them."""
+    calls = {"evaluator": 0, "v17_capture": 0}
+
+    def _evaluator(*a, **k):
+        calls["evaluator"] += 1
+        raise AssertionError("evaluator constructed despite a refused out path")
+
+    def _v17_capture(*a, **k):
+        calls["v17_capture"] += 1
+        raise AssertionError("delegated to v17.capture despite a refused out path")
+
+    monkeypatch.setattr(M, "_default_evaluator_factory", _evaluator)
+    monkeypatch.setattr(M.v17, "capture", _v17_capture)
+    return calls
+
+
+def test_out_is_required_so_the_v17_evidence_path_is_never_a_default(no_work):
+    with pytest.raises(SystemExit):
+        M.build_parser().parse_args([])
+    assert no_work == {"evaluator": 0, "v17_capture": 0}
+
+
+def test_capture_refuses_a_missing_out_before_any_work(no_work):
+    with pytest.raises(ValueError, match="explicit out path"):
+        M.capture(mode="v17_prechange_abcd")
+    assert no_work == {"evaluator": 0, "v17_capture": 0}
+
+
+def test_capture_refuses_the_protected_v17_evidence_path(no_work):
+    with pytest.raises(ValueError, match="protected"):
+        M.capture(mode="v17_prechange_abcd", out=M.OUT)
+    assert no_work == {"evaluator": 0, "v17_capture": 0}
+
+
+def test_protected_path_is_refused_by_any_spelling(no_work):
+    """`./logs/...` and an absolute path name the same file as the pinned OUT."""
+    for spelling in ("./" + M.OUT, str(Path(M.OUT).resolve())):
+        with pytest.raises(ValueError, match="protected"):
+            M.capture(mode="v18_preflight_a6400", out=spelling)
+    assert no_work == {"evaluator": 0, "v17_capture": 0}
+
+
+def test_main_leaves_the_protected_file_byte_identical(tmp_path, monkeypatch,
+                                                       no_work):
+    """Stand-in for the real artifact, so this does not need the gitignored file.
+    `main` must raise before its own `open(args.out, "w")` truncates anything."""
+    protected = tmp_path / "prechange_abcd_selected_moves.json"
+    protected.write_bytes(b'{"frozen": "evidence"}\n')
+    before = hashlib.sha1(protected.read_bytes()).hexdigest()
+    monkeypatch.setattr(M, "OUT", str(protected))
+
+    with pytest.raises(ValueError, match="protected"):
+        M.main(["--out", str(protected)])
+
+    assert hashlib.sha1(protected.read_bytes()).hexdigest() == before
+    assert no_work == {"evaluator": 0, "v17_capture": 0}
 
 
 def test_v18_mode_is_fully_self_constrained():
@@ -66,9 +139,10 @@ def test_default_mode_emits_the_existing_schema_with_no_new_keys():
     assert not (v17_keys - set(M.LEGACY_DOCUMENT_KEYS))   # ...but only in v18
 
 
-def test_unknown_mode_rejected():
-    with pytest.raises((SystemExit, ValueError, KeyError)):
-        M.capture(mode="whatever")
+def test_unknown_mode_rejected(tmp_path):
+    # A valid `out`, so this fails on the MODE and cannot pass on the out guard.
+    with pytest.raises((SystemExit, ValueError, KeyError), match="whatever"):
+        M.capture(mode="whatever", out=str(tmp_path / "c.json"))
 
 
 def test_case_identity_is_the_full_tuple_not_just_case_id():
@@ -542,7 +616,7 @@ def test_capture_emits_the_frozen_v18_schema_with_a_no_search_fake(
             by_case[row["case_id"]]["probe_black_root_value"],
         "seed": seed ^ int(row["game_idx"]) ^ int(row["position_ply"])})
 
-    doc = M.capture(mode="v18_preflight_a6400")
+    doc = M.capture(mode="v18_preflight_a6400", out=OUT_STUB)
     assert set(doc) == set(M.document_keys("v18_preflight_a6400"))
     assert doc["run_kind"] == "v18_preflight_a6400"
     assert doc["scientific_interpretation_forbidden"] is True
@@ -585,7 +659,7 @@ def test_preflight_identity_check_precedes_evaluator_construction(
                         lambda phase="opening": M.A6400_REPLAY_RESERVOIR["replay_data_sha1"])
 
     with pytest.raises(ValueError, match="BEFORE search"):
-        M.capture(mode="v18_preflight_a6400")
+        M.capture(mode="v18_preflight_a6400", out=OUT_STUB)
     assert built == [], "an evaluator was constructed despite a bad case set"
 
 
@@ -625,7 +699,7 @@ def test_wrong_opening_checkpoint_identity_builds_no_evaluator(
     monkeypatch.setattr(M, "authenticate_replay_reservoir",
                         lambda phase="opening": M.A6400_REPLAY_RESERVOIR["replay_data_sha1"])
     with pytest.raises(ValueError, match="checkpoint"):
-        M.capture(mode="v18_preflight_a6400")
+        M.capture(mode="v18_preflight_a6400", out=OUT_STUB)
     assert built == []
 
 
@@ -641,7 +715,7 @@ def test_wrong_opening_reservoir_identity_builds_no_evaluator(
 
     monkeypatch.setattr(M, "authenticate_replay_reservoir", refuse)
     with pytest.raises(ValueError, match="replay_data_sha1"):
-        M.capture(mode="v18_preflight_a6400")
+        M.capture(mode="v18_preflight_a6400", out=OUT_STUB)
     assert built == []
 
 
@@ -661,7 +735,7 @@ def test_checkpoint_mutation_during_the_capture_yields_no_document(
 
     monkeypatch.setattr(M, "sha1", drifting)
     with pytest.raises(ValueError, match="checkpoint"):
-        M.capture(mode="v18_preflight_a6400")
+        M.capture(mode="v18_preflight_a6400", out=OUT_STUB)
     assert built, "the opening check should have passed"
     assert calls["n"] >= 2, "the closing checkpoint check never ran"
 
@@ -681,7 +755,7 @@ def test_reservoir_mutation_during_the_capture_yields_no_document(
 
     monkeypatch.setattr(M, "authenticate_replay_reservoir", drifting)
     with pytest.raises(ValueError, match="changed during the capture"):
-        M.capture(mode="v18_preflight_a6400")
+        M.capture(mode="v18_preflight_a6400", out=OUT_STUB)
     assert built, "the opening check should have passed"
     assert calls["n"] >= 2, "the closing reservoir check never ran"
 
@@ -737,7 +811,7 @@ def test_authentication_phases_are_exactly_the_production_sequence(
     monkeypatch.setattr(M, "sha1", counting_sha1)
     monkeypatch.setattr(M, "authenticate_replay_reservoir", counting_reservoir)
 
-    doc = M.capture(mode="v18_preflight_a6400")
+    doc = M.capture(mode="v18_preflight_a6400", out=OUT_STUB)
     assert doc["checkpoint_sha1"] == M.A6400_CHECKPOINT_SHA1
     assert doc["replay_reservoir_sha1"] == M.A6400_REPLAY_RESERVOIR["replay_data_sha1"]
     # The reservoir guards three distinct spans; the checkpoint only two.

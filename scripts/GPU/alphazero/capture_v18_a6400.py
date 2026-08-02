@@ -404,12 +404,40 @@ def preflight_case_identities(source_rows, gate_rows):
     return src
 
 
-def capture(mode: str = "v17_prechange_abcd", out=OUT):
+def assert_writable_out(out) -> str:
+    """Refuse a missing destination, and refuse the frozen v17 evidence path.
+
+    `OUT` is re-exported from the v17 module for identity comparisons, and it is
+    ALSO the path of the frozen v17 selected-move artifact `162c9a5a...` that
+    `prechange_baseline.json` pins as the output of capture tool `2ce39bb5...`.
+    That file is gitignored, so an overwrite destroys evidence git cannot
+    restore -- unlike `prechange_baseline.json` beside it, which is tracked.
+
+    So there is no default destination, and the one path that looks like the
+    obvious default is precisely the one refused. The check runs BEFORE mode
+    dispatch, so neither rejection constructs an evaluator, reads a replay, nor
+    delegates to `v17.capture()`.
+    """
+    if not out:
+        raise ValueError(
+            "capture() requires an explicit out path: there is deliberately no "
+            "default, because the only obvious-looking default is the frozen "
+            "v17 evidence artifact")
+    if Path(out).resolve() == Path(OUT).resolve():
+        raise ValueError(
+            f"refusing to write {out}: that is the protected frozen v17 "
+            f"evidence artifact {OUT}. Capture to a fresh path and compare "
+            f"against it; never through it")
+    return str(out)
+
+
+def capture(mode: str = "v17_prechange_abcd", out=None):
     """Run a capture in the named mode.
 
     The legacy mode DELEGATES to `v17.capture()` unchanged, so the default
     document is byte-identical by construction.
     """
+    assert_writable_out(out)
     if mode not in MODES:
         raise KeyError(f"unknown mode {mode!r}; known: {sorted(MODES)}")
     spec_mode = MODES[mode]
@@ -583,7 +611,10 @@ def _atomic_write(out_path, payload):
 def build_parser():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--mode", default="v17_prechange_abcd", choices=sorted(MODES))
-    ap.add_argument("--out", default=OUT)
+    # REQUIRED, and no default: see `assert_writable_out`.
+    ap.add_argument("--out", required=True,
+                    help="destination path; must not be the frozen v17 "
+                         "evidence artifact")
     return ap
 
 
