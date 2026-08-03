@@ -249,14 +249,13 @@ not reproduce a tree carried across a full trajectory. The producer is:
 
 ### Four items to freeze before implementation
 
-**a. The ladder must keep a stability rung — proposed correction, needs sign-off.**
-The additive legs `+400, +1200, +4800` give cumulative `400 / 1600 / 6400` and **drop
-the 3,200 rung**. §5 requires 3,200 and 6,400 to agree before any position has a
-stable deep reference; without it, "6,400 is truth" stops being falsifiable and the
-whole labelling loses its guard. Legs `+400, +1200, +1600, +3200` give cumulative
-`400 / 1600 / 3200 / 6400` for the **same 6,400 total simulations** — the rung is free,
-costing one extra measurement point and no search. Recommend adopting; not applied
-unilaterally because it changes a proposed frozen parameter.
+**a. Ladder — RESOLVED and FROZEN 2026-08-03.** Legs are
+`+400 -> +1,200 -> +1,600 -> +3,200`, giving nominal target budgets
+`400 / 1,600 / 3,200 / 6,400`. This restores the 3,200 rung that §5's
+stable-reference check requires, at **no additional simulation cost** — the four legs
+sum to the same 6,400 as three would. The 320-prefix capture remains inside the first
+400-simulation leg. Budgets are recorded as `B` / `I` / `I + B` per §4. See §4 for the
+full frozen ladder.
 
 **b. Seeding and forced-move semantics.** The replay forces the recorded moves, so it
 does **not** reproduce the generating run's tree — and the amendment must say so
@@ -385,25 +384,59 @@ an improvement of about `0.004` for a 60% larger negative requirement.
 
 ## §4 Search ladder
 
+### Budget vocabulary — record all three distinctly
+
+Under the warm-start regime (§2, §2b) the root already carries inherited visits, so a
+single number no longer describes a search. Every row records:
+
+| symbol | meaning |
+|---|---|
+| `B` | **nominal target budget** — new simulations spent on the target search |
+| `I` | **inherited visits** — root visit count before the target search begins |
+| `I + B` | **effective root visits** — the actual search depth at that rung |
+
+`B` is constant across the corpus; `I` is not, and varies systematically by phase
+(Phase 0 measured ~61 opening vs ~110 early-mid). Labels, gates and detector features
+are defined at nominal `B`; `I` is a row-level covariate and must be reported
+alongside, or every phase-stratified comparison is confounded with effective budget.
+This is not a defect — `I + B` *is* the deployment condition, which is the whole
+reason for warm start.
+
+### The frozen additive ladder
+
 ```text
-400 (features snapshotted at the 320-completion prefix), 1600, 3200, 6400
+legs:        +400  ->  +1,200  ->  +1,600  ->  +3,200
+nominal B:    400       1,600      3,200       6,400
+effective:   I+400      I+1,600    I+3,200     I+6,400
 ```
 
-= **11,600 simulations per position.**
+= **6,400 new simulations per position** on the target root — cheaper than the
+fresh-root design's 11,600, because additive legs share accumulated work rather than
+re-searching from scratch at each rung.
 
-| budget | purpose |
+| nominal `B` | purpose |
 |---|---|
-| 320-completion prefix | deployable detector features |
+| 320-completion prefix, inside leg 1 | deployable detector features |
 | 400 | shipped comparison point |
 | 1,600 | intermediate convergence, old-gate calibration |
-| 3,200 and 6,400 | stable-reference test |
+| 3,200 and 6,400 | **stable-reference test** — these two must agree (§5) |
 
-**The 320 prefix is a snapshot, not a rung.** Features are captured at the **320th
-completed backup** inside the continuous batched 400-simulation run. It is described
-as the "320-completion prefix of the 400 run" and is **not** claimed equivalent to an
-independent `n_simulations=320` search — under batched evaluation, pending leaves mean
-the 320th completed backup is not the 320th loop iteration. Any later prototype must
-use the same continuous-run boundary semantics.
+The 3,200 rung is load-bearing and is not optional: §5 grants a position a stable deep
+reference only when 3,200 and 6,400 agree. Without it, every label would rest on an
+unchecked single deep reading and "6,400 is truth" would stop being falsifiable. It
+costs no additional simulation — the four legs sum to the same 6,400 as three would.
+
+**The 320 prefix is a snapshot, not a rung, and it stays inside leg 1.** Features are
+captured at the **320th completed backup of the target search** — that is, nominal
+`B = 320`, effective `I + 320` — inside the continuous batched 400-simulation first
+leg. It is described as the "320-completion prefix of the 400 leg" and is **not**
+claimed equivalent to an independent `n_simulations=320` search: under batched
+evaluation, pending leaves mean the 320th completed backup is not the 320th loop
+iteration. Any later prototype must use the same continuous-run boundary semantics.
+
+Note this is the same quantity Phase 0 measured as
+`inherited_fraction_320 = I / (I + 320)`, so the preflight's decision point and the
+detector's capture point coincide by construction.
 
 This choice removes a producer/consumer seam that a separate 320-simulation search
 would have created.
@@ -424,18 +457,37 @@ completion — and the diagnostic producer must be made to match the semantics t
 eventual prototype would use. Until then, no claim of controller realizability may be
 drawn from Read-out A.
 
-**Cost.** The deep ladder dominates the analysis; the read-outs are nearly free once
-the trees exist. Corpus generation dominates the ladder — approximately
-`N × mean_plies × 400` simulations, which at `N=240` and ~160 mean plies is roughly
-15M against the ladder's 2.8M. Estimate the full run from the **pilot's measured
-rate**. Do not scale a smoke, and do not rely on an unrelated historical throughput
-figure.
+**Cost.** Under warm start there are three terms, not two. The read-outs themselves
+are nearly free once the trees exist.
+
+| term | simulations |
+|---|---|
+| corpus generation | `N_games × mean_plies × 400` |
+| **prefix replay** | `Σ over positions ( target_ply × 400 )` |
+| additive ladder | `N × 6,400` |
+
+The ladder is the *smallest* term now — 6,400 per position rather than the fresh-root
+11,600, because additive legs share accumulated work. **Prefix replay is the new term
+and is dominated by late-phase rows**, since its cost scales with the target ply: a
+late row at ply 140 costs an order of magnitude more prefix than an opening row at
+ply 15.
+
+Because prefix cost is a function of the corpus's actual ply supply, **estimate it
+from the observed per-phase ply distribution of the generated games, not by
+extrapolating a smoke run.** The two are not interchangeable here: a smoke drawn from
+short games would understate the late term badly, and the late term is the one that
+sets the budget. The pilot supplies both the measured throughput rate and the ply
+supply needed to compute this.
 
 ---
 
 ## §5 Labelling
 
-All values are side-to-move perspective.
+All values are side-to-move perspective. `V400`, `V1600`, `V3200` and `V6400` denote
+the root value at **nominal target budget** `B` (§4) — effective root visits are
+`I + B`, with `I` recorded per row. The thresholds below are unchanged by the
+warm-start regime; only the meaning of "the search that produced this value" is, and
+that change is deliberate: `I + B` is the deployment condition.
 
 **Stable deep reference** when all hold:
 
