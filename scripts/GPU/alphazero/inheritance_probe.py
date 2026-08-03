@@ -11,7 +11,7 @@ CPU-safe: stdlib only, no MLX, no scipy.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 DECISION_POINT_SIMS: int = 320
@@ -78,3 +78,85 @@ class SearchRow:
             forced_count=forced_count,
             inherited_fraction_320=inherited_fraction_320(starting_visits),
         )
+
+
+@dataclass
+class InheritanceProbeConfig:
+    """Opt-in switch, mirroring the existing self-play tracker pattern."""
+
+    enabled: bool = True
+
+
+class InheritanceProbeTracker:
+    """Record one strictly ordered three-call lifecycle per search."""
+
+    def __init__(self, config: InheritanceProbeConfig) -> None:
+        self.config = config
+        self.rows: List[SearchRow] = []
+        self._open_row: Optional[SearchRow] = None
+        self._open_forced_before: Optional[int] = None
+        self._awaiting_search_end = False
+
+    def observe_search_start(
+        self, ply: int, root: Any, forced_sims_total: int
+    ) -> None:
+        if not self.config.enabled:
+            return
+        if self._open_row is not None:
+            raise RuntimeError(
+                f"observe_search_start at ply {ply} with an unclosed row from "
+                f"ply {self._open_row.ply}; observe_played_child was not called"
+            )
+        visited = sum(
+            1
+            for child in root.children.values()
+            if getattr(child, "visit_count", 0) > 0
+        )
+        row = SearchRow.build(
+            ply=ply,
+            starting_visits=root.visit_count,
+            starting_visited_children=visited,
+            forced_count=0,
+        )
+        self.rows.append(row)
+        self._open_row = row
+        self._open_forced_before = forced_sims_total
+        self._awaiting_search_end = True
+
+    def observe_search_end(self, forced_sims_total: int) -> None:
+        if not self.config.enabled:
+            return
+        if self._open_row is None or not self._awaiting_search_end:
+            raise RuntimeError("observe_search_end called with no open search row")
+        if self._open_forced_before is None:
+            raise RuntimeError("observe_search_end missing its start counter")
+        delta = forced_sims_total - self._open_forced_before
+        if delta < 0:
+            raise ValueError(
+                "td1 forced-sims counter went backwards during ply "
+                f"{self._open_row.ply} ({self._open_forced_before} -> "
+                f"{forced_sims_total}); the telemetry counter was reset mid-search"
+            )
+        self._open_row.forced_count = delta
+        self._awaiting_search_end = False
+
+    def observe_played_child(self, visits: Optional[int]) -> None:
+        if not self.config.enabled:
+            return
+        if self._open_row is None:
+            raise RuntimeError("observe_played_child called with no open search row")
+        if self._awaiting_search_end:
+            raise RuntimeError(
+                f"observe_played_child at ply {self._open_row.ply} before "
+                "observe_search_end; forced_count would be left provisional"
+            )
+        self._open_row.played_child_visits = visits
+        self._open_row = None
+        self._open_forced_before = None
+
+    def finalize_game(self) -> Dict[str, Any]:
+        if self._open_row is not None:
+            raise RuntimeError(
+                f"finalize_game with an unclosed row at ply {self._open_row.ply}"
+            )
+        return {"rows": [row.__dict__.copy() for row in self.rows]}
