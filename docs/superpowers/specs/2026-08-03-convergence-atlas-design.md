@@ -10,11 +10,15 @@
 | §2 Phase 0 inheritance preflight | **FROZEN.** Decision rule fixed before the run. |
 | §3–§12 atlas measurement | **NOT execution-frozen.** |
 
-The atlas measurement sections may not be declared execution-frozen until Phase 0
-resolves the root regime and, if a warm-start regime is required, the exact
-warm-root producer is specified and frozen. Replaying only the immediate parent
-does **not** reproduce a tree inherited across a full game trajectory; that gap is
-open and is recorded in §12.
+**Open items that must all be closed before §3–§12 are execution-frozen:**
+
+| # | Item | Where |
+|---|---|---|
+| 1 | Root regime resolved by Phase 0; if warm-start, the exact warm-root producer specified. Replaying only the immediate parent does **not** reproduce trajectory-compounded inheritance. | §2, §12 |
+| 2 | A batch-safe decision boundary defined, and the diagnostic producer matched to eventual prototype semantics. | §4 |
+| 3 | The frozen convergence predicate signed off. | §7 |
+| 4 | Read-out C's producer chosen — selection tracer or reduced scope. | §8 |
+| 5 | Deterministic game-to-cell assignment and phase-geometry no-go frozen. | §3 |
 
 Writing and committing this document authorizes no measurement, no GPU work and no
 `mcts.py` change.
@@ -34,8 +38,13 @@ Nothing in this document is a candidate, a prototype, or a step toward adoption.
 
 ### What is closed
 
-Recorded in `docs/alphazero-value-search-experiment-ledger.md`; the 46-entry
-do-not-repeat list governs. In summary:
+The governing record is the experiment ledger. **On this branch it is
+`docs/updated-v16a-ledger.md`, which ends at do-not-repeat entry 42 and contains no
+v17 or v18 record.** Entries 43–46 and the v17 and v18 closeouts exist only on the
+unmerged `v18-depth2-provisional-backup` branch, where the file is also renamed to
+`docs/alphazero-value-search-experiment-ledger.md`. The constraints they encode are
+reproduced below and are binding on this design regardless of which branch carries
+the file. In summary:
 
 - **Value calibration against the A signal (v2 → v14b).** The A "post-opening sharp
   value drop" is a 400-simulation search artifact: BASE A mean moves
@@ -213,9 +222,35 @@ If either pilot frequency is zero, or the projected requirement exceeds 400, **s
 with a projected capacity no-go** rather than spending the full run on a design
 expected to be underpowered.
 
-After the formula selects `N`, generate exactly the remaining games from the
-already-frozen seed range. There is no second resizing step and no top-up after
-validation labels are observed.
+After the formula selects `N`, generate the continuation block from the already-frozen
+seed range. There is no second resizing step and no top-up after validation labels are
+observed.
+
+### `N` counts positions, not games
+
+`N` is a required **position** count. With one position per game, `N` games are needed
+*that can serve their assigned cell* — and not every game can. A game must survive to
+ply 91+ to supply a late row, so the number of games generated necessarily exceeds `N`
+by a factor the pilot measures. Only the **400-game maximum seed range** is frozen
+before pilot generation; the exact continuation count is chosen afterwards by the
+frozen sizing formula and the measured phase geometry.
+
+This is the failure mode that has already bitten this project twice — v16's
+`assign_split: cell capacity 0 < demand 60` and v18's `target|late capacity 0 <
+demand 16`. Since top-up is forbidden, it must be prevented structurally:
+
+- **Deterministic game-to-cell assignment**, frozen before generation, using only game
+  identity, the frozen sampling seed, and game length. Game length is a game property,
+  not a search result, so this does not violate blind sampling — but it is the direct
+  mechanism behind the late-stratum bias recorded in §12, and the two must be read
+  together.
+- **Explicit phase-geometry no-go.** If a generated block cannot fill every phase×side
+  cell at the required count under one-position-per-game, the atlas stops with a
+  **geometry no-go**. It does not top up, does not rebalance cells, and does not
+  relax the one-position-per-game rule.
+- The pilot's 24 rows carry the same constraint: three late-black and three late-red
+  rows require six distinct games reaching ply 91+. If the pilot block cannot supply
+  them, that is a geometry no-go at the pilot, before the main generation is paid for.
 
 Worked check of the rounding (8 cells, 60/40):
 
@@ -262,8 +297,23 @@ the 320th completed backup is not the 320th loop iteration. Any later prototype 
 use the same continuous-run boundary semantics.
 
 This choice removes a producer/consumer seam that a separate 320-simulation search
-would have created, and makes the detector premise true by construction: the features
-are what a deployed detector would observe mid-search.
+would have created.
+
+**It does not yet make the boundary deployable, and this is an open item that must be
+closed before atlas freeze.** `_flush_pending_batch` expands every pending leaf in a
+batch and only then backs up all waiter paths, and `_observer_completed_count`
+increments per backup inside `_backup`. A callback firing at the 320th backup
+therefore sits *inside* a flush: it can already see expansions belonging to later
+members of that batch, and up to `eval_batch_size` (14) simulations are queued and
+cannot be redirected by any detector. The snapshot is a valid continuous-run
+**diagnostic** boundary; it is **not** established that a deployed 320+80 controller
+could observe and act at this exact point.
+
+Before §3–§12 are execution-frozen, a **batch-safe decision boundary** must be defined
+— for example the first backup completion at or after 320 that coincides with a flush
+completion — and the diagnostic producer must be made to match the semantics the
+eventual prototype would use. Until then, no claim of controller realizability may be
+drawn from Read-out A.
 
 **Cost.** The deep ladder dominates the analysis; the read-outs are nearly free once
 the trees exist. Corpus generation dominates the ladder — approximately
@@ -352,12 +402,29 @@ Compute the historical metrics at 400, 1,600 and 6,400:
 - Top-share increase.
 - The historical compound narrowing condition where applicable.
 
-For every 400→1,600 change, ask whether it moves toward the stable reference:
+### Frozen convergence predicate
 
-- Did the selected move change to the stable reference move?
-- Did the value get materially closer to the 6,400 value?
-- Did top share or effective children move toward its 6,400 level?
-- Did the 1,600 change persist at 3,200 and 6,400?
+The "needs review" rule below counts triggers that are *confirmed convergent*, so that
+Boolean must be defined exactly. It is evaluated only on positions that have a stable
+deep reference (§5). All four components are computed per position:
+
+```text
+move_convergent   := selected_400 != stable_deep_move AND selected_1600 == stable_deep_move
+value_convergent  := |V1600 - V6400| <= |V400 - V6400| - 0.10
+dist_convergent   := (top_share OR effective_children) closes >= 50% of its
+                     400 -> 6400 gap, AND selected_1600 == stable_deep_move
+persistent        := selected_1600 == selected_3200 == selected_6400
+
+convergent := persistent AND (move_convergent OR value_convergent OR dist_convergent)
+```
+
+Persistence is a **joint requirement**, not a fourth alternative — a 1,600 change that
+does not survive to 3,200 and 6,400 is not convergence. The `0.10` value threshold is
+the same tolerance §5 uses for stable-reference agreement; the `50%` gap-closure is
+carried unchanged from the original draft. No new numbers are introduced.
+
+**This predicate is newly authored and is not yet signed off.** It must be approved
+before Read-out B is implemented or interpreted.
 
 Report the same metrics for 400→6,400 to show the scale of natural deeper-search
 change. Those changes are the natural-convergence reference distribution; they are
@@ -410,11 +477,22 @@ They match at the root and diverge 2–3× at low-visit descendants, which is th
 design risk: whether widening becomes too aggressive below the root, where flat-policy
 nodes make a top-k-by-prior admission close to arbitrary.
 
-Theoretical admission visit for a move of prior rank `r`:
+Theoretical admission visit for a move of prior rank `r` — defined as a search, not a
+closed form:
 
 ```text
-n_admit(r) = ceil( (r/C)^(1/alpha) )
+n_admit(r) = min { n >= 0 integer : K(n) >= r }
 ```
+
+Compute it directly. The closed form `ceil((r/C)^(1/alpha))` is **wrong** because it
+inverts `C*n^alpha >= r` and discards the `ceil` inside `K`. Pinned counterexample:
+at `(C=4, alpha=0.5, r=9)` the closed form returns `6`, but
+`K(5) = ceil(4*sqrt(5)) = ceil(8.944) = 9 >= 9`, so the true answer is `5`.
+
+Note also that `n = 0` is admissible and rank 1 is always admitted there, because
+`K(0) = min(n_legal, max(1, 0)) = 1` via the `max(1, ...)` floor. Any equivalent
+closed form must be tested against a direct search over the full rank range for both
+frozen shapes before use.
 
 ### Early static check (on the pilot)
 
@@ -440,6 +518,23 @@ For actual shipped selection events through the 320-completion prefix and 400, r
 - Excluded prior mass.
 
 Aggregate online. Full event dumps are unnecessary.
+
+### Producer gap — the existing observer cannot supply this
+
+The existing `MCTSObserver` fires as `on_root_simulation(count, root, move,
+visit_leader_move(root))` from inside `_backup`: it receives **post-backup, root-level
+information only**. It cannot report individual `_select_child` events, their
+selection-time parent visit counts, depth, or first-touch exclusions — which is exactly
+what this read-out consumes.
+
+Read-out C therefore requires either a **diagnostic-only selection tracer** emitting
+per-`_select_child` events (depth, parent completed visits, selected move's prior rank,
+`K(n)` membership, forced flag), or a **reduced scope** limited to what the root
+observer can supply. That choice must be made before atlas freeze.
+
+Whichever producer is chosen must be included in the observer-on/off batched identity
+prerequisite of §9. Qualifying only the current root observer is insufficient: it would
+prove nothing about the component that actually produces this read-out's data.
 
 **Meaningful intervention** (frozen before the pilot): at least 10% of observed
 first-touch selections lying outside the admitted set.
@@ -509,7 +604,9 @@ The identity smoke must exercise the actual batched path:
 - Batching `(14, 48, 8)`.
 - `add_noise=false`.
 - Unchanged checkpoint and shipped configuration.
-- Diagnostic observer off versus on.
+- **Every** diagnostic producer off versus on — the existing root observer, the
+  320-completion snapshot hook, and the §8 selection tracer if one is built. Each is
+  qualified individually and all-on together.
 
 Require exact equality of selected move, root value, visit counts, tree summary and
 search-result hash. Synchronous CPU tests remain useful but cannot replace this batched
@@ -600,6 +697,15 @@ itself built on a tree inherited at ply `k`. Candidate producers, their cost and
 fidelity to real trajectory inheritance must be specified and frozen before §3–§12
 become execution-frozen.
 
+### Branch-level ledger gap
+
+This branch is cut from `main`, whose ledger `docs/updated-v16a-ledger.md` ends at
+do-not-repeat entry 42 and records neither v17 nor v18. The constraints from entries
+43–46 — the policy-mass FPU closure and the v18 selectivity null — are binding on this
+design and are reproduced in §0, so the spec is self-contained. But a reader on this
+branch cannot verify them against the repository. Resolving this is a provenance
+decision, not a design one, and it does not block Phase 0.
+
 ### Known biases and limits
 
 - **Late-stratum composition.** Filling the late cells requires games that survive to
@@ -634,7 +740,12 @@ become execution-frozen.
 
 ## Related
 
-- `docs/alphazero-value-search-experiment-ledger.md` — the governing record and the
-  46-entry do-not-repeat list.
+- `docs/updated-v16a-ledger.md` — the governing record **as it exists on this branch**:
+  do-not-repeat entries 1–42, no v17 or v18 record. Entries 43–46 and the v17/v18
+  closeouts live on the unmerged `v18-depth2-provisional-backup` branch, where the
+  file is renamed to `docs/alphazero-value-search-experiment-ledger.md`. §0 reproduces
+  the constraints this design depends on, so the spec is self-contained, but the
+  branch-level gap is real and is flagged in §12.
 - `logs/eval/v18_depth2_provisional_backup/V18_FINAL_NULL.md` — the v18 closeout whose
-  operational-no-go framing this design preserves.
+  operational-no-go framing this design preserves. Gitignored: a local artifact, not a
+  repository reference.
