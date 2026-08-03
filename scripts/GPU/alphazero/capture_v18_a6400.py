@@ -126,6 +126,43 @@ V18_DOCUMENT_KEYS = (
 CASE_IDENTITY = ("case_id", "game_idx", "position_ply", "side_to_move",
                  "replay_path", "canonical_state_sha1")
 
+# Every path a bundle stores is CANONICAL REPO-ROOT-RELATIVE POSIX TEXT --
+# exactly one spelling per file.
+#
+# Revision 41's bundle stored root-relative text while Task 9 resolved it
+# against the BUNDLE's own directory. The same string then meant different
+# files depending on where the bundle sat, and a bundle nested under the v18
+# artifact directory could never resolve `historical_source_path` at all --
+# which no caller could repair, because the builder hardcodes that field from
+# `A6400_SOURCE`. Deriving the root from THIS FILE's location makes producer
+# and consumer agree without depending on the working directory or on where
+# the bundle happens to live.
+REPO_ROOT = Path(__file__).resolve().parents[3]
+ARTIFACT_ROOT = "logs/eval"
+
+
+def canonical_artifact_path(path, *, label: str,
+                            artifact_root: str = None) -> str:
+    """Canonical repo-root-relative POSIX text for `path`, or refuse.
+
+    An absolute path, `./` noise and `..` segments all normalize to the SAME
+    string, so equality of the stored text is equality of the file. `..` is
+    resolved BEFORE the containment test, so traversal cannot escape the frozen
+    artifact root. Reads `REPO_ROOT` at call time so a suite fixture can stand
+    up a repo-shaped tree; production never rebinds it.
+    """
+    root_name = ARTIFACT_ROOT if artifact_root is None else artifact_root
+    root = (REPO_ROOT / root_name).resolve()
+    candidate = Path(path)
+    resolved = (candidate if candidate.is_absolute()
+                else REPO_ROOT / candidate).resolve()
+    if root != resolved and root not in resolved.parents:
+        raise ValueError(
+            f"{label} {str(path)!r} resolves to {resolved}, outside the frozen "
+            f"artifact root {root}")
+    return resolved.relative_to(REPO_ROOT.resolve()).as_posix()
+
+
 A6400_BUNDLE_KEYS = (
     "artifact_kind", "schema_version",
     "capture_run_1_path", "capture_run_1_sha1",
@@ -563,7 +600,20 @@ def build_a6400_reference_bundle(run1_path, run2_path, out_path):
     `authentication` block would be undefined as to which run it describes. The
     builder refuses rather than recording `byte_identical: false`.
     """
-    raw1, raw2 = _read_bytes(run1_path), _read_bytes(run2_path)
+    # NORMALIZE BEFORE EMISSION, and refuse anything outside the artifact root.
+    # The bundle must store the one canonical spelling, never whatever the
+    # caller happened to type, or Task 9 is verifying a different string than
+    # the one that names the file.
+    run1_path = canonical_artifact_path(run1_path, label="capture_run_1_path")
+    run2_path = canonical_artifact_path(run2_path, label="capture_run_2_path")
+    # The hardcoded source constant must itself be canonical, or the field the
+    # caller cannot influence would be the one that fails verification.
+    source_path = canonical_artifact_path(
+        MODES["v18_preflight_a6400"]["auth_source"],
+        label="historical_source_path")
+
+    raw1 = _read_bytes(REPO_ROOT / run1_path)
+    raw2 = _read_bytes(REPO_ROOT / run2_path)
     if raw1 != raw2:
         raise ValueError(
             f"captures are not byte-identical: {run1_path} and {run2_path}. A "
@@ -584,7 +634,7 @@ def build_a6400_reference_bundle(run1_path, run2_path, out_path):
         run1_path=run1_path, run1_sha1=sha1_bytes(raw1),
         run2_path=run2_path, run2_sha1=sha1_bytes(raw2),
         byte_identical=True,
-        source_path=MODES["v18_preflight_a6400"]["auth_source"],
+        source_path=source_path,
         source_sha1=MODES["v18_preflight_a6400"]["auth_sha1"],
         authentication=report1)
 

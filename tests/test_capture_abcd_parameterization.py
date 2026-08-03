@@ -200,16 +200,24 @@ def capture_doc():
 
 
 @pytest.fixture
-def captures(tmp_path, capture_doc):
-    """Two byte-identical captures plus a third that genuinely differs."""
+def captures(tmp_path, capture_doc, monkeypatch):
+    """Two byte-identical captures plus a third that genuinely differs.
+
+    A REPO-SHAPED tree: bundle paths are canonical repo-root-relative POSIX
+    text, and the builder refuses anything outside the frozen artifact root, so
+    the captures must live where real captures live.
+    """
     import json
+    monkeypatch.setattr(M, "REPO_ROOT", tmp_path.resolve())
+    d = tmp_path / M.ARTIFACT_ROOT / "v18_depth2_provisional_backup"
+    d.mkdir(parents=True)
     other = json.loads(json.dumps(capture_doc))
     other["cases"][0]["top_share_repr"] = "0.99"
-    run1, run2, run2d = (tmp_path / "r1.json", tmp_path / "r2.json",
-                         tmp_path / "r2d.json")
-    for p, d in ((run1, capture_doc), (run2, capture_doc), (run2d, other)):
-        p.write_text(json.dumps(d, sort_keys=True))
-    return str(run1), str(run2), str(run2d)
+    names = ("r1.json", "r2.json", "r2d.json")
+    for name, doc in zip(names, (capture_doc, capture_doc, other)):
+        (d / name).write_text(json.dumps(doc, sort_keys=True))
+    rel = f"{M.ARTIFACT_ROOT}/v18_depth2_provisional_backup"
+    return tuple(f"{rel}/{name}" for name in names)
 
 
 @pytest.fixture
@@ -284,6 +292,50 @@ def test_builder_returns_the_sha1_of_the_bytes_it_wrote(tmp_path, captures, froz
     p = tmp_path / "bundle.json"
     returned = M.build_a6400_reference_bundle(run1, run2, str(p))
     assert returned == hashlib.sha1(p.read_bytes()).hexdigest()
+
+
+def test_builder_normalizes_non_canonical_capture_paths_before_emission(
+        tmp_path, captures, frozen_source):
+    """The caller's spelling must never reach the bundle. An absolute path and
+    a `..` hop name the same files as the canonical text, and the emitted
+    document must be byte-identical to the canonically-invoked one."""
+    run1, run2, _ = captures
+    canonical = M.build_a6400_reference_bundle(run1, run2,
+                                               str(tmp_path / "canon.json"))
+
+    absolute = str((M.REPO_ROOT / run1).resolve())
+    hop = f"{M.ARTIFACT_ROOT}/v18_depth2_provisional_backup/../v18_depth2_provisional_backup/r2.json"
+    sloppy = M.build_a6400_reference_bundle(absolute, hop,
+                                            str(tmp_path / "sloppy.json"))
+
+    assert sloppy == canonical
+    document = json.loads((tmp_path / "sloppy.json").read_text())
+    assert document["capture_run_1_path"] == run1
+    assert document["capture_run_2_path"] == run2
+
+
+def test_builder_refuses_a_capture_outside_the_frozen_artifact_root(
+        tmp_path, captures, frozen_source):
+    outside = tmp_path / "elsewhere.json"
+    outside.write_bytes((M.REPO_ROOT / captures[0]).read_bytes())
+    with pytest.raises(ValueError, match="outside the frozen artifact root"):
+        M.build_a6400_reference_bundle(str(outside), captures[1],
+                                       str(tmp_path / "b.json"))
+    assert not (tmp_path / "b.json").exists()
+
+
+def test_builder_refuses_a_source_constant_outside_the_frozen_root(
+        tmp_path, captures, frozen_source, monkeypatch):
+    """The one field no caller controls is still checked. If `auth_source` ever
+    drifted outside the root, the builder must refuse rather than emit a
+    bundle whose source path can never verify -- which is exactly what
+    revision 41 shipped."""
+    run1, run2, _ = captures
+    monkeypatch.setitem(M.MODES["v18_preflight_a6400"], "auth_source",
+                        "../outside_the_repo.csv")
+    with pytest.raises(ValueError, match="outside the frozen artifact root"):
+        M.build_a6400_reference_bundle(run1, run2, str(tmp_path / "b.json"))
+    assert not (tmp_path / "b.json").exists()
 
 
 def test_bundle_never_contains_its_own_digest(tmp_path, captures, frozen_source):

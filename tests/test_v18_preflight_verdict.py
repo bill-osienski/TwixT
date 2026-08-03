@@ -250,7 +250,7 @@ _A_PLIES = _a_plies()
 # --- the A/6,400 bundle fixture tree -----------------------------------------
 
 @pytest.fixture
-def bundle_tree(tmp_path):
+def bundle_tree(tmp_path, monkeypatch):
     """A complete, VALID bundle plus its captures and historical source.
 
     The source CSV is written from the tracked 30-case fixture, so the whole
@@ -277,8 +277,14 @@ def bundle_tree(tmp_path):
         lines.append(",".join(str(row.get(column, "")) for column in columns))
     source_csv = ("\n".join(lines) + "\n").encode()
 
-    root = tmp_path / "eval"
-    root.mkdir()
+    # A REPO-SHAPED tree, not a flat one. Bundle paths are canonical
+    # repo-root-relative POSIX text, so the fixture must have a repo root to be
+    # relative to -- and the bundle is deliberately nested one level deeper than
+    # the captures' root, which is exactly the arrangement revision 41 could not
+    # verify.
+    monkeypatch.setattr(a6400, "REPO_ROOT", tmp_path.resolve())
+    root = tmp_path / "logs" / "eval"
+    (root / "v18_depth2_provisional_backup").mkdir(parents=True)
     source_path = root / "position_probe_cases.csv"
     source_path.write_bytes(source_csv)
 
@@ -286,8 +292,8 @@ def bundle_tree(tmp_path):
     (root / "run1.json").write_bytes(raw_capture)
     (root / "run2.json").write_bytes(raw_capture)
 
-    anchor = {"artifact_root": str(root),
-              "historical_source_path": str(source_path),
+    anchor = {"artifact_root": "logs/eval",
+              "historical_source_path": "logs/eval/position_probe_cases.csv",
               "historical_source_sha1": hashlib.sha1(source_csv).hexdigest(),
               "expected_cases": 30}
 
@@ -299,21 +305,21 @@ def bundle_tree(tmp_path):
     document = {
         "artifact_kind": "v18_a6400_reference_bundle",
         "schema_version": 1,
-        "capture_run_1_path": "run1.json",
+        "capture_run_1_path": "logs/eval/run1.json",
         "capture_run_1_sha1": hashlib.sha1(raw_capture).hexdigest(),
-        "capture_run_2_path": "run2.json",
+        "capture_run_2_path": "logs/eval/run2.json",
         "capture_run_2_sha1": hashlib.sha1(raw_capture).hexdigest(),
         "byte_identical": True,
-        "historical_source_path": "position_probe_cases.csv",
+        "historical_source_path": "logs/eval/position_probe_cases.csv",
         "historical_source_sha1": anchor["historical_source_sha1"],
         "authentication": report,
         "run_kind": "v18_a6400_reference_bundle",
         "scientific_interpretation_forbidden": True,
     }
-    path = root / "a6400_reference_bundle.json"
+    path = root / "v18_depth2_provisional_backup" / "a6400_reference_bundle.json"
     path.write_bytes(json.dumps(document, sort_keys=True).encode())
     return {"root": root, "path": str(path), "document": document,
-            "anchor": anchor, "capture": capture}
+            "anchor": anchor, "capture": capture, "source": source_path}
 
 
 def rewrite(tree, **changes):
@@ -372,13 +378,13 @@ def test_attack_fabricated_per_case_authentication_block(bundle_tree):
 
 def test_attack_substituted_historical_source_path(bundle_tree):
     """A look-alike whose hash is not the frozen pin."""
-    frozen = Path(bundle_tree["anchor"]["historical_source_path"])
+    frozen = bundle_tree["source"]
     original = frozen.read_bytes()
 
     # (a) a look-alike at ANOTHER path -- refused on the path, before content.
     lookalike = bundle_tree["root"] / "position_probe_cases_v2.csv"
     lookalike.write_bytes(original)
-    path = rewrite(bundle_tree, historical_source_path="position_probe_cases_v2.csv")
+    path = rewrite(bundle_tree, historical_source_path="logs/eval/position_probe_cases_v2.csv")
     with pytest.raises(ValueError, match="the frozen source is"):
         M.load_verified_a6400_bundle(path, anchor=bundle_tree["anchor"])
 
@@ -425,6 +431,124 @@ def test_path_traversal_out_of_the_root_is_refused(bundle_tree):
         M.load_verified_a6400_bundle(path, anchor=bundle_tree["anchor"])
 
 
+def test_end_to_end_real_builder_emits_what_the_real_verifier_accepts(
+        tmp_path, monkeypatch):
+    """THE SEAM. Revision 41's two tasks were each green in isolation: Task 6's
+    builder tests never called Task 9's verifier, and Task 9's fixture
+    hand-wrote its bundle instead of building one. Nothing exercised the
+    contract between them, so a bundle the real builder emitted could not be
+    verified at all -- `historical_source_path` never resolved, and no caller
+    could fix it because the builder hardcodes that field.
+
+    So: the REAL builder writes a bundle NESTED under the v18 artifact
+    directory -- one level below the captures' root, the arrangement that
+    failed -- and the REAL verifier must accept exactly those bytes.
+    """
+    monkeypatch.setattr(a6400, "REPO_ROOT", tmp_path.resolve())
+
+    rows = json.loads((FIXTURE_DIR / "source_rows.json").read_text())
+    capture = json.loads((FIXTURE_DIR / "capture.json").read_text())
+    # Task 6's tracked fixture is REDUCED; Task 9 revalidates metadata a real
+    # `capture()` document carries. Restored from Task 6's constants, as the
+    # bundle_tree fixture does, rather than invented.
+    mode = a6400.MODES["v18_preflight_a6400"]
+    capture.update({"run_kind": "v18_preflight_a6400",
+                    "mode": "v18_preflight_a6400",
+                    "mcts_sims": mode["mcts_sims"],
+                    "gate_list": list(mode["gates"])})
+    columns = sorted({key for row in rows for key in row})
+    source_csv = ("\n".join(
+        [",".join(columns)]
+        + [",".join(str(row.get(c, "")) for c in columns) for row in rows]
+    ) + "\n").encode()
+
+    # The frozen source at its OWN canonical path, distinct from the captures'
+    # directory -- the two must not be made to agree by living together.
+    source = tmp_path / a6400.A6400_SOURCE
+    source.parent.mkdir(parents=True)
+    source.write_bytes(source_csv)
+
+    nested = tmp_path / "logs/eval/v18_depth2_provisional_backup"
+    nested.mkdir(parents=True)
+    raw_capture = json.dumps(capture, sort_keys=True).encode()
+    for name in ("run1.json", "run2.json"):
+        (nested / name).write_bytes(raw_capture)
+    rel = "logs/eval/v18_depth2_provisional_backup"
+
+    monkeypatch.setattr(a6400, "_load_frozen_a6400_source",
+                        lambda: a6400._enrich_source_rows(rows))
+
+    # --- Task 6 emits ------------------------------------------------------
+    bundle_path = nested / "a6400_reference_bundle.json"
+    returned = a6400.build_a6400_reference_bundle(
+        f"{rel}/run1.json", f"{rel}/run2.json", str(bundle_path))
+    assert returned == hashlib.sha1(bundle_path.read_bytes()).hexdigest()
+
+    document = json.loads(bundle_path.read_text())
+    assert document["capture_run_1_path"] == f"{rel}/run1.json"
+    assert document["historical_source_path"] == a6400.A6400_SOURCE
+
+    # --- Task 9 accepts ----------------------------------------------------
+    anchor = {"artifact_root": a6400.ARTIFACT_ROOT,
+              "historical_source_path": a6400.A6400_SOURCE,
+              "historical_source_sha1": hashlib.sha1(source_csv).hexdigest(),
+              "expected_cases": 30}
+    verified = M.load_verified_a6400_bundle(str(bundle_path), anchor=anchor)
+    assert verified["n_cases_authenticated"] == 30
+    assert verified["byte_identical"] is True
+
+
+def test_builder_output_is_position_independent(tmp_path, monkeypatch):
+    """Two bundles written to DIFFERENT directories describe the same captures
+    with the same bytes. Under revision 41 the stored text meant whatever the
+    bundle's neighbours happened to be, so this could not hold."""
+    monkeypatch.setattr(a6400, "REPO_ROOT", tmp_path.resolve())
+    rows = json.loads((FIXTURE_DIR / "source_rows.json").read_text())
+    capture = json.loads((FIXTURE_DIR / "capture.json").read_text())
+    monkeypatch.setattr(a6400, "_load_frozen_a6400_source",
+                        lambda: a6400._enrich_source_rows(rows))
+
+    deep = tmp_path / "logs/eval/v18_depth2_provisional_backup"
+    deep.mkdir(parents=True)
+    raw = json.dumps(capture, sort_keys=True).encode()
+    for name in ("run1.json", "run2.json"):
+        (deep / name).write_bytes(raw)
+    rel = "logs/eval/v18_depth2_provisional_backup"
+
+    here = tmp_path / "logs/eval/here.json"
+    there = deep / "there.json"
+    a = a6400.build_a6400_reference_bundle(f"{rel}/run1.json",
+                                           f"{rel}/run2.json", str(here))
+    b = a6400.build_a6400_reference_bundle(f"{rel}/run1.json",
+                                           f"{rel}/run2.json", str(there))
+    assert a == b
+    assert here.read_bytes() == there.read_bytes()
+
+
+def test_an_absolute_capture_path_is_refused_as_non_canonical(bundle_tree):
+    """One spelling per file. An absolute path names the right file and is
+    still refused, because equality of stored text must be equality of file."""
+    absolute = str((bundle_tree["root"] / "run1.json").resolve())
+    path = rewrite(bundle_tree, capture_run_1_path=absolute)
+    with pytest.raises(ValueError, match="not canonical"):
+        M.load_verified_a6400_bundle(path, anchor=bundle_tree["anchor"])
+
+
+def test_a_dot_slash_capture_path_is_refused_as_non_canonical(bundle_tree):
+    path = rewrite(bundle_tree, capture_run_1_path="./logs/eval/run1.json")
+    with pytest.raises(ValueError, match="not canonical"):
+        M.load_verified_a6400_bundle(path, anchor=bundle_tree["anchor"])
+
+
+def test_a_dotdot_hop_inside_the_root_is_refused_as_non_canonical(bundle_tree):
+    """Resolves to the right file and stays inside the root -- refused anyway,
+    so an alias cannot masquerade as the canonical name."""
+    path = rewrite(bundle_tree,
+                   capture_run_1_path="logs/eval/v18_depth2_provisional_backup/../run1.json")
+    with pytest.raises(ValueError, match="not canonical"):
+        M.load_verified_a6400_bundle(path, anchor=bundle_tree["anchor"])
+
+
 def test_a_relabelled_bundle_is_refused(bundle_tree):
     path = rewrite(bundle_tree, scientific_interpretation_forbidden=False)
     with pytest.raises(ValueError, match="does not forbid"):
@@ -441,7 +565,7 @@ def test_an_honestly_recorded_FAILING_authentication_is_still_refused(bundle_tre
     for name in ("run1.json", "run2.json"):
         (bundle_tree["root"] / name).write_bytes(raw)
 
-    source_csv = Path(bundle_tree["anchor"]["historical_source_path"]).read_bytes()
+    source_csv = bundle_tree["source"].read_bytes()
     honest = a6400.authentication_report(
         a6400._enrich_source_rows(a6400._parse_source_rows(source_csv)),
         capture["cases"])

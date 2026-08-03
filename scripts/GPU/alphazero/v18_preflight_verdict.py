@@ -53,8 +53,10 @@ PROVISIONAL_PASS = "MECHANISM_PREFLIGHT_PROVISIONAL_PASS"
 PREFLIGHT_PASS = "PREFLIGHT_PASS"
 
 # Every v18 artifact lives under this root. A bundle that names a capture
-# outside it is naming something the frozen tree does not contain.
-ARTIFACT_ROOT = "logs/eval"
+# outside it is naming something the frozen tree does not contain. IMPORTED
+# from Task 6, never restated: producer and consumer must not be able to drift
+# on what the root is, which is the whole shape of the defect revision 42 fixes.
+ARTIFACT_ROOT = a6400.ARTIFACT_ROOT
 
 # The frozen expectations the bundle verifier checks AGAINST. Injectable only so
 # a suite test can stand up a fixture tree -- production never passes one, and a
@@ -72,25 +74,31 @@ TRUST_ANCHOR = {
 # The A/6,400 reference bundle. RECOMPUTED, never read.
 # ---------------------------------------------------------------------------
 
-def _resolve_within_root(raw_path: str, *, bundle_path: str, anchor: Dict,
-                         label: str) -> Path:
-    """Resolve a path the bundle names, and refuse anything outside the root.
+def _resolve_within_root(raw_path: str, *, anchor: Dict, label: str) -> Path:
+    """Resolve a CANONICAL bundle path against the repo root derived from the
+    module's own location, and refuse anything outside the artifact root.
 
-    Relative paths resolve against the BUNDLE's own directory -- the bundle is
-    written beside its captures -- so a bundle cannot be moved somewhere else
-    and keep pointing at the same files by accident. `..` segments are resolved
-    BEFORE the containment test, so traversal cannot escape.
+    NOT the bundle's directory. Revision 41 resolved there, on the reasoning
+    that "the bundle is written beside its captures" -- but Task 6 stores
+    repo-root-relative text, so the same string named a different file for
+    every directory a bundle could sit in, and a bundle under the v18 artifact
+    directory could never resolve the source path the builder hardcodes. NOT
+    the working directory either, which would make verification depend on where
+    the operator stood.
+
+    The stored text must ALREADY be canonical, so there is exactly one spelling
+    per file: an absolute path, a `./` prefix or a `..` hop is refused rather
+    than quietly accepted as an alias. `..` still resolves before the
+    containment test, so traversal cannot escape the root.
     """
-    root = Path(anchor["artifact_root"]).resolve()
-    candidate = Path(raw_path)
-    if not candidate.is_absolute():
-        candidate = Path(bundle_path).resolve().parent / candidate
-    resolved = candidate.resolve()
-    if root != resolved and root not in resolved.parents:
+    canonical = a6400.canonical_artifact_path(
+        raw_path, label=f"bundle {label}",
+        artifact_root=anchor["artifact_root"])
+    if raw_path != canonical:
         raise ValueError(
-            f"bundle {label} resolves to {resolved}, outside the frozen "
-            f"artifact root {root}")
-    return resolved
+            f"bundle {label} {raw_path!r} is not canonical repo-root-relative "
+            f"POSIX text; the canonical spelling of that file is {canonical!r}")
+    return (a6400.REPO_ROOT / canonical).resolve()
 
 
 def verify_a6400_bundle_bytes(raw: bytes, *, bundle_path: str,
@@ -131,22 +139,23 @@ def verify_a6400_bundle_bytes(raw: bytes, *, bundle_path: str,
         raise ValueError("bundle does not forbid scientific interpretation")
 
     run1 = _resolve_within_root(document["capture_run_1_path"],
-                                bundle_path=bundle_path, anchor=anchor,
-                                label="capture_run_1_path")
+                                anchor=anchor, label="capture_run_1_path")
     run2 = _resolve_within_root(document["capture_run_2_path"],
-                                bundle_path=bundle_path, anchor=anchor,
-                                label="capture_run_2_path")
-    source = _resolve_within_root(document["historical_source_path"],
-                                  bundle_path=bundle_path, anchor=anchor,
-                                  label="historical_source_path")
+                                anchor=anchor, label="capture_run_2_path")
     # The frozen PATH, not merely a file that hashes correctly. Without this an
     # identical copy parked anywhere inside the root would pass, and the claim
-    # that path substitution is rejected would be false.
-    frozen_source = Path(anchor["historical_source_path"]).resolve()
-    if source != frozen_source:
+    # that path substitution is rejected would be false. Compared as EXACT
+    # canonical TEXT first: two spellings of one file are one file, but they are
+    # not one string, and only the frozen string is the frozen source.
+    if document["historical_source_path"] != anchor["historical_source_path"]:
         raise ValueError(
-            f"bundle names historical source {source}, the frozen source is "
-            f"{frozen_source}")
+            f"bundle names historical source "
+            f"{document['historical_source_path']!r}, the frozen source is "
+            f"{anchor['historical_source_path']!r}")
+    # ...and only then resolved, so the frozen string must also name a real
+    # file inside the root. Its bytes are hashed against the pin below.
+    source = _resolve_within_root(document["historical_source_path"],
+                                  anchor=anchor, label="historical_source_path")
 
     # (1) LIVE digests of both captures, against what the bundle recorded.
     raw1, raw2 = _read(run1, "capture_run_1"), _read(run2, "capture_run_2")
