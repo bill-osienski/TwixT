@@ -16,7 +16,7 @@
 |---|---|---|
 | 1 | ~~Root regime + warm-root producer~~ — **CLOSED 2026-08-03.** Phase 0 returned `WARM_START_REQUIRED`; producer is full-prefix replay; ladder, budget vocabulary, seeding and forced-move semantics are all frozen. | §2, §2b, §4 |
 | 2 | A batch-safe decision boundary defined, and the diagnostic producer matched to eventual prototype semantics. | §4 |
-| 3 | The frozen convergence predicate signed off. | §7 |
+| 3 | ~~Convergence predicate signed off~~ — **CLOSED 2026-08-03.** Signed off with two exactness corrections: distribution convergence checks both deep rungs for the same metric, and the gate denominator is `eligible_triggers`. | §7 |
 | 4 | Read-out C's producer chosen — selection tracer or reduced scope. | §8 |
 | 5 | Deterministic game-to-cell assignment and phase-geometry no-go frozen. | §3 |
 
@@ -596,7 +596,9 @@ late" is informative for a different intervention point.
 
 ## §7 Read-out B — old-gate calibration
 
-Compute the historical metrics at 400, 1,600 and 6,400:
+Compute the historical metrics at **all four rungs** — nominal `B` = 400, 1,600,
+3,200 and 6,400. The 3,200 rung is required because distribution convergence below is
+checked against **both** deep rungs, not only 6,400:
 
 - New collapse: top share crosses from below `0.95` to ≥ `0.95`.
 - Flip to a lower-prior move.
@@ -613,8 +615,16 @@ deep reference (§5). All four components are computed per position:
 ```text
 move_convergent   := selected_400 != stable_deep_move AND selected_1600 == stable_deep_move
 value_convergent  := |V1600 - V6400| <= |V400 - V6400| - 0.10
-dist_convergent   := (top_share OR effective_children) closes >= 50% of its
-                     400 -> 6400 gap, AND selected_1600 == stable_deep_move
+closes_half(m, D) := abs(m400 - D) > 0
+                     AND abs(m1600 - D) <= 0.5 * abs(m400 - D)
+
+dist_convergent   := selected_1600 == stable_deep_move
+                     AND (
+                           (    closes_half(top_share, top_share_3200)
+                            AND closes_half(top_share, top_share_6400))
+                        OR (    closes_half(effective_children, effective_children_3200)
+                            AND closes_half(effective_children, effective_children_6400))
+                         )
 persistent        := selected_1600 == selected_3200 == selected_6400
 
 convergent := persistent AND (move_convergent OR value_convergent OR dist_convergent)
@@ -623,19 +633,42 @@ convergent := persistent AND (move_convergent OR value_convergent OR dist_conver
 Persistence is a **joint requirement**, not a fourth alternative — a 1,600 change that
 does not survive to 3,200 and 6,400 is not convergence. The `0.10` value threshold is
 the same tolerance §5 uses for stable-reference agreement; the `50%` gap-closure is
-carried unchanged from the original draft. No new numbers are introduced.
+carried unchanged from the original draft. **No new numbers are introduced.**
 
-**This predicate is newly authored and is not yet signed off.** It must be approved
-before Read-out B is implemented or interpreted.
+Three exactness properties of `closes_half`, each load-bearing:
+
+- **Both deep rungs, not only 6,400.** A metric must close half its gap toward 3,200
+  *and* toward 6,400. Checking 6,400 alone would let a distribution accidentally match
+  a single unstable deep reading and be scored as convergence.
+- **Same metric on both sides.** The disjunction is over *metrics*, not over rungs:
+  `top_share` must close toward both, or `effective_children` must close toward both.
+  Mixing one metric's 3,200 agreement with another's 6,400 agreement is not evidence.
+- **The `abs(m400 - D) > 0` guard.** With no gap to begin with, "closes half" is
+  vacuous, so it does not fire rather than firing trivially.
+
+**Signed off 2026-08-03** with these corrections; freeze-table item 3 is closed.
 
 Report the same metrics for 400→6,400 to show the scale of natural deeper-search
 change. Those changes are the natural-convergence reference distribution; they are
 **not** causal evidence that a same-budget intervention is safe.
 
+**The gate denominator is `eligible_triggers`.** A trigger can only be classified as
+convergent-or-not on a row that has a stable deep reference, since the predicate above
+is defined only there. So:
+
+```text
+eligible_triggers := gate triggers on stable-reference-eligible rows
+rate              := confirmed_convergent / eligible_triggers
+```
+
+Scoring against *total* triggers instead would silently count unclassifiable rows as
+non-convergent and depress the rate. **Report total triggers and the eligible-trigger
+fraction** for transparency, but add **no new coverage gate** on them.
+
 **Frozen "needs review" rule.** A gate is marked *needs review* when all three hold:
 
-1. At least 10 gate triggers.
-2. At least 75% of those triggers are independently confirmed convergent.
+1. At least 10 **eligible** triggers.
+2. At least 75% of those **eligible** triggers are independently confirmed convergent.
 3. The triggered convergence rate is at least **15 percentage points** above the base
    convergence rate among all stable-reference-eligible 400→1,600 rows.
 
