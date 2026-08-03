@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 42)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 43)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -490,6 +490,7 @@ Every task's requirements implicitly include this section.
 - **A rows establish reach only.** Every numeric threshold derives from the non-A control cohort (spec §2.2.3). Task 9 has a test that must be able to fail on this.
 - **Game identity is the replay's content SHA-1**, via `diagnose_fpu_baseline_policy_mass.game_identities` (`:1694`). `game_idx` is reservoir-local: comparing raw indices both invents overlaps and misses a copied game that was renumbered. Never identify a game by `(replay_dir, game_idx)`.
 - **At most one control position per game.** This removes within-game correlation at the source, so no game-clustered bootstrap is required. With an 800-game universe the cohort is not supply-constrained.
+- **A consumer's tests may not hand-write a surrogate for its producer's document.** Four contract defects have been found at task seams, three of them after GPU time was already spent, and every one had the same shape: both tasks green in isolation, disagreeing only where their artifacts met. Any task that consumes another task's emitted artifact must be exercised at least once against the **real emitter's output** — the emitted file, bound by the digest the emitter returned. `tests/test_v18_execution_chain_integration.py` is that test for the Execution Phase chain.
 - **Every path stored in an artifact is canonical repo-root-relative POSIX text.** One spelling per file, so equality of the stored string is equality of the file. Producers normalize before emission and refuse anything outside the frozen artifact root `logs/eval`; consumers resolve against a repo root derived from the **module's own location** — never the artifact's directory, never the working directory — and refuse any non-canonical spelling (absolute, `./`, or a `..` hop) even when it resolves to the right file. `canonical_artifact_path` in `capture_v18_a6400` is the single implementation; `v18_preflight_verdict` imports it and `ARTIFACT_ROOT` rather than restating either.
 - **No capture may default to the frozen v17 evidence path.** `capture_v18_a6400` re-exports `OUT` from the v17 module for identity comparisons, and that path *is* the frozen selected-move artifact `162c9a5a…`. It is gitignored, so an overwrite destroys evidence git cannot restore — unlike the tracked `prechange_baseline.json` beside it. `--out` is therefore **required**, and `assert_writable_out` refuses the protected path before mode dispatch, evaluator construction, or delegation to `v17.capture()`.
 
@@ -5382,3 +5383,68 @@ share, reproducing the frozen `V_REF` and mean top share exactly. They are retai
 as rejected diagnostics and may not enter the final bundle. HEAD moves, so the Step
 2 criteria record and the Step 3 universe record are regenerated again, and Step 4
 restarts from run 1.
+
+## Revision 43 change log
+
+Revision 43 adds no repair. It makes durable the protection that four seam
+defects have argued for, and it records honestly what that protection does and
+does not demonstrate.
+
+**The surrogate-producer gap.** `tests/test_v18_preflight_verdict.evidence_tree`
+carries the docstring "Nothing here is hand-written: … the cohort by Task 4b's
+matcher, and the sizing ladder by Task 8." That is true of the **algorithms** —
+it calls `match_cohort` and `sizing_ladder` — and false of the **documents**: it
+builds `cohort_doc` and the sizing `record` itself and writes them with
+`canonical_json_bytes`. `emit_matched_cohort` and `emit_sizing_record` are never
+called there. Task 9 had therefore only ever been shown documents written to
+match its expectations, which is precisely how the revision-42 bundle defect
+survived a green suite.
+
+**The requirement**, now a Global Constraint: a consumer's tests may not
+hand-write a surrogate for its producer's document. Every consumer of another
+task's emitted artifact is exercised at least once against the real emitter's
+output — the emitted file, bound by the digest the emitter returned.
+
+**`tests/test_v18_execution_chain_integration.py`** implements it for the
+Execution Phase chain. CPU only, ~1.5 s, tmp paths only, no repository artifact
+and no gitignored evidence:
+
+```text
+task7._csv_bytes                                            real
+CM.match_cohort   -> CM.emit_matched_cohort                 real
+S.exposure_cutoff / role_predicates / classify_rows
+                  -> sizing_ladder -> S.emit_sizing_record  real
+a6400.build_a6400_reference_bundle   real, bundle NESTED under the v18 directory
+V.load_verified_a6400_bundle         real
+V.load_verified_inputs               real, over the EMITTED cohort and sizing files
+V._evaluate_verified                 real  -> PREFLIGHT_PASS
+```
+
+The only hand-built document is the synthetic Task 7 preflight artifact, which
+is the fixture the chain exists to consume. Each emitter's returned digest is
+asserted against its own file's bytes and carried forward as the binding the
+next stage verifies. Six negative controls — cohort altered after its digest,
+cohort list truncated, sizing tier edited, `sizing_status` flipped, sizing's
+cohort binding repointed, census CSV byte appended — are each refused, and each
+`match=`es its own message, because a control refused for someone else's reason
+is not evidence that the guard it targets exists.
+
+**Seven patched seams**, each documented in the module and none of them a
+function whose interface is under test: `worktree_clean` (environment fact),
+`_authenticate_search_inputs` and `load_verified_universe` (both open gitignored
+reservoirs), `criteria.SIZING` (test scale), `a6400.REPO_ROOT` and
+`_load_frozen_a6400_source` (fixture root and gitignored CSV), and the fixture
+trust anchor plus fast bootstrap passed to the private `_evaluate_verified`.
+
+**What this does NOT demonstrate.** Three mutants were run against the old unit
+suites and the new integration test separately — `emit_sizing_record` dropping
+`sizing_status`, `emit_matched_cohort` changing its `run_kind`, and canonical
+paths resolved against the working directory instead of the module repo root.
+All three were killed by **both**: `declared=3 ran=3 stale=0
+killed_by_integration=3 gaps_closed=0`. No mutant was found that only the
+integration test catches. That is an accurate description of the current tree,
+partly because revision 42 also added unit-level pins on the producers' output
+forms. The integration test is therefore **defense in depth against future
+one-sided divergence**, justified by a failure class that has recurred four
+times, not by a presently demonstrable unique catch. It should not be described
+as closing a measured coverage gap.
