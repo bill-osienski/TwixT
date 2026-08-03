@@ -15,13 +15,17 @@
 | # | Item | Where |
 |---|---|---|
 | 1 | ~~Root regime + warm-root producer~~ — **CLOSED 2026-08-03.** Phase 0 returned `WARM_START_REQUIRED`; producer is full-prefix replay; ladder, budget vocabulary, seeding and forced-move semantics are all frozen. | §2, §2b, §4 |
-| 2 | A batch-safe decision boundary defined, and the diagnostic producer matched to eventual prototype semantics. | §4 |
+| 2 | ~~Batch-safe decision boundary~~ — **CLOSED 2026-08-03.** Boundary frozen (first flush completion at or after 320 target-search backups), per-row fields and the preregistered deployability failure defined, and a scoped `mcts.py` exception approved for diagnostic observer surfaces. | §4, §9 |
 | 3 | ~~Convergence predicate signed off~~ — **CLOSED 2026-08-03.** Signed off with two exactness corrections: distribution convergence checks both deep rungs for the same metric, and the gate denominator is `eligible_triggers`. | §7 |
 | 4 | Read-out C's producer chosen — selection tracer or reduced scope. | §8 |
 | 5 | Deterministic game-to-cell assignment and phase-geometry no-go frozen. | §3 |
 
-Writing and committing this document authorizes no measurement, no GPU work and no
-`mcts.py` change.
+Writing and committing this document authorizes no measurement and no GPU work.
+
+`mcts.py` is touchable **only** under the scoped diagnostic-observer exception
+approved in §9 — default-`None`, read-only, byte-identical off, each hook qualified
+independently and all-on together. Nothing outside that scope: no selection-rule,
+backup, config-default or budget change.
 
 ---
 
@@ -467,13 +471,10 @@ reference only when 3,200 and 6,400 agree. Without it, every label would rest on
 unchecked single deep reading and "6,400 is truth" would stop being falsifiable. It
 costs no additional simulation — the four legs sum to the same 6,400 as three would.
 
-**The 320 prefix is a snapshot, not a rung, and it stays inside leg 1.** Features are
-captured at the **320th completed backup of the target search** — that is, nominal
-`B = 320`, effective `I + 320` — inside the continuous batched 400-simulation first
-leg. It is described as the "320-completion prefix of the 400 leg" and is **not**
+**The 320 prefix is a snapshot, not a rung, and it stays inside leg 1.** It is **not**
 claimed equivalent to an independent `n_simulations=320` search: under batched
 evaluation, pending leaves mean the 320th completed backup is not the 320th loop
-iteration. Any later prototype must use the same continuous-run boundary semantics.
+iteration. Any later prototype must use the same boundary semantics defined below.
 
 Note this is the same quantity Phase 0 measured as
 `inherited_fraction_320 = I / (I + 320)`, so the preflight's decision point and the
@@ -482,21 +483,57 @@ detector's capture point coincide by construction.
 This choice removes a producer/consumer seam that a separate 320-simulation search
 would have created.
 
-**It does not yet make the boundary deployable, and this is an open item that must be
-closed before atlas freeze.** `_flush_pending_batch` expands every pending leaf in a
-batch and only then backs up all waiter paths, and `_observer_completed_count`
+### The batch-safe decision boundary — FROZEN 2026-08-03
+
+**Why a raw backup count will not do.** `_flush_pending_batch` expands every pending
+leaf in a batch and only then backs up all waiter paths, and the observer counter
 increments per backup inside `_backup`. A callback firing at the 320th backup
 therefore sits *inside* a flush: it can already see expansions belonging to later
-members of that batch, and up to `eval_batch_size` (14) simulations are queued and
-cannot be redirected by any detector. The snapshot is a valid continuous-run
-**diagnostic** boundary; it is **not** established that a deployed 320+80 controller
-could observe and act at this exact point.
+members of that batch, and up to `eval_batch_size` (14) simulations are queued as
+waiters and cannot be redirected by any controller.
 
-Before §3–§12 are execution-frozen, a **batch-safe decision boundary** must be defined
-— for example the first backup completion at or after 320 that coincides with a flush
-completion — and the diagnostic producer must be made to match the semantics the
-eventual prototype would use. Until then, no claim of controller realizability may be
-drawn from Read-out A.
+**The frozen boundary:**
+
+> The **first flush completion at or after 320 completed target-search backups.**
+
+At that instant `pending_nodes`, `pending_waiters` and `pending_node_ids` have all
+just been cleared (`mcts.py` lines 658–663 full, 672–677 stall, 681–685 tail), so the
+in-flight set is **provably empty**. It is the only genuinely quiescent point in the
+loop, and therefore the only point at which a controller could observe and act without
+work already committed beyond it.
+
+**Recorded per row** — the boundary is no longer a fixed number, so it must travel
+with the data:
+
+| field | meaning |
+|---|---|
+| `N_actual` | completed target-search backups at capture |
+| `overshoot` | `N_actual − 320` |
+| `remaining` | `400 − N_actual` — budget a controller would actually have left |
+| `flush_type` | `full` \| `stall` \| `tail` |
+
+`N_actual` counts **target-search backups only and excludes inherited visits `I`**.
+Assert `320 ≤ N_actual ≤ 400`; the upper bound is reachable, because the tail flush
+sits outside the simulation loop and fires once all 400 are dispatched.
+
+### Preregistered deployability failure
+
+`remaining` is the second-stage budget a bounded 320+80 controller would have. Frozen
+before measurement:
+
+- Every `remaining == 0` row is **non-actionable**.
+- **If the overall median `remaining` is zero, Read-out A fails its
+  controller-deployability claim.** Detector separation is still reported, but it
+  **cannot authorize the bounded two-stage prototype**.
+- Report the **zero-budget fraction** and **remaining-budget quartiles**, overall and
+  by the required strata. Add **no stratum-specific acceptance gate**.
+
+A median rule catches tail-only and majority-tail behaviour without inventing an
+unsupported minimum second-stage budget — which is the number we do not have and must
+not invent. Flush cadence suggests `N_actual` should land around 320–368 (a full flush
+at 14 distinct pending leaves, a stall flush after 48 simulations without a new leaf),
+but that is an inference from batch dynamics, not a measurement, and the atlas must
+report the observed distribution rather than assume it.
 
 **Cost.** Under warm start there are three terms, not two. The read-outs themselves
 are nearly free once the trees exist.
@@ -830,6 +867,39 @@ widening would improve search, because applying widening changes the later tree.
 ---
 
 ## §9 Mechanical safeguards
+
+### Scoped `mcts.py` exception — APPROVED 2026-08-03
+
+Phase 0 held `mcts.py` untouched. The atlas needs a narrow exception, because the
+existing observer fires only in `_backup` and cannot supply either the batch-safe
+boundary (§4) or Read-out C's selection events (§8).
+
+**The exception is limited to diagnostic observer surfaces**, under all of:
+
+- Every hook defaults to `None`; the off path is byte-identical.
+- **No mutation of tree, search state, or RNG.** Hooks are read-only.
+- The flush hook fires **only after the pending structures are cleared**, never
+  mid-flush — that is the entire point of the boundary.
+- Each hook is qualified **independently and all-on together** under the batched
+  identity prerequisite below.
+- **The spec is amended before implementation**, never after.
+
+Precedent: `MCTSConfig.fpu_value` and the observer itself both landed as opt-in,
+default-off, byte-identical-off additions. Nothing outside diagnostic observer
+surfaces is covered — no selection-rule, backup, config-default or budget change.
+
+**Planned surfaces — one protocol, three independently optional hooks:**
+
+| hook | status | fires |
+|---|---|---|
+| `on_root_simulation` | exists | per completed backup |
+| `on_flush_complete` | new, §4 | after each flush, after the clears |
+| `on_select_child` | new, §8 (item 4, not yet designed) | per selection event |
+
+`_select_child` runs once per node per descent — order 10³ calls per search — so
+`on_select_child` is on a hot path. §8's "aggregate online, full event dumps are
+unnecessary" is a performance requirement there, not a preference: the tracer must
+accumulate counters, not emit events.
 
 ### Observer identity prerequisite
 
