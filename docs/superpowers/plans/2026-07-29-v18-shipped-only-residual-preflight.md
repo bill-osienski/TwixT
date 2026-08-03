@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 43)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 44)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -490,6 +490,7 @@ Every task's requirements implicitly include this section.
 - **A rows establish reach only.** Every numeric threshold derives from the non-A control cohort (spec §2.2.3). Task 9 has a test that must be able to fail on this.
 - **Game identity is the replay's content SHA-1**, via `diagnose_fpu_baseline_policy_mass.game_identities` (`:1694`). `game_idx` is reservoir-local: comparing raw indices both invents overlaps and misses a copied game that was renumbered. Never identify a game by `(replay_dir, game_idx)`.
 - **At most one control position per game.** This removes within-game correlation at the source, so no game-clustered bootstrap is required. With an 800-game universe the cohort is not supply-constrained.
+- **A provenance test may not depend on the environment it asserts about.** Every negative case is a CONSTRUCTED record — `dict(clean, worktree_clean=False)` — never one borrowed from whatever state the working tree happens to be in. A test that manufactures its negative case from ambient dirtiness passes only while `git status --porcelain` is non-empty, and Execution Step 1 requires an empty one at the same time as a green suite.
 - **A consumer's tests may not hand-write a surrogate for its producer's document.** Four contract defects have been found at task seams, three of them after GPU time was already spent, and every one had the same shape: both tasks green in isolation, disagreeing only where their artifacts met. Any task that consumes another task's emitted artifact must be exercised at least once against the **real emitter's output** — the emitted file, bound by the digest the emitter returned. `tests/test_v18_execution_chain_integration.py` is that test for the Execution Phase chain.
 - **Every path stored in an artifact is canonical repo-root-relative POSIX text.** One spelling per file, so equality of the stored string is equality of the file. Producers normalize before emission and refuse anything outside the frozen artifact root `logs/eval`; consumers resolve against a repo root derived from the **module's own location** — never the artifact's directory, never the working directory — and refuse any non-canonical spelling (absolute, `./`, or a `..` hop) even when it resolves to the right file. `canonical_artifact_path` in `capture_v18_a6400` is the single implementation; `v18_preflight_verdict` imports it and `ARTIFACT_ROOT` rather than restating either.
 - **No capture may default to the frozen v17 evidence path.** `capture_v18_a6400` re-exports `OUT` from the v17 module for identity comparisons, and that path *is* the frozen selected-move artifact `162c9a5a…`. It is gitignored, so an overwrite destroys evidence git cannot restore — unlike the tracked `prechange_baseline.json` beside it. `--out` is therefore **required**, and `assert_writable_out` refuses the protected path before mode dispatch, evaluator construction, or delegation to `v17.capture()`.
@@ -5448,3 +5449,63 @@ forms. The integration test is therefore **defense in depth against future
 one-sided divergence**, justified by a failure class that has recurred four
 times, not by a presently demonstrable unique catch. It should not be described
 as closing a measured coverage gap.
+
+## Revision 44 change log
+
+Revision 44 repairs a test that made Execution Step 1's own gate unsatisfiable.
+
+**The contradiction.** Step 1 requires, simultaneously:
+
+```text
+git status --porcelain empty   AND   full suite green
+```
+
+`test_records_must_describe_this_commit_and_a_clean_tree` could not satisfy both.
+Its `criteria_path` fixture emits a REAL criteria record via
+`emit_frozen_criteria`, which stamps `git_commit = HEAD` and `worktree_clean =`
+the live value. The test's first assertion then required that record to be
+REJECTED:
+
+```python
+with pytest.raises(ValueError, match="git_commit|dirty worktree"):
+    M.assert_runtime_matches_records(("criteria", payload), expected_commit=head)
+```
+
+A freshly emitted record always names the current HEAD, so the only way to
+reject it is `worktree_clean=False` — i.e. a dirty tree. The test therefore
+passed **only** while the working tree was dirty and failed at a genuinely clean
+HEAD. It was manufacturing its negative case out of ambient dirtiness.
+
+**How it hid.** Every full-suite run during revisions 41-43 happened with a dirty
+tree — modified sources mid-repair, or the new integration test still untracked.
+The suite was green *because* the tree was dirty. The first run at a genuinely
+clean HEAD (`fcf733f1`) failed 1 of 3581, and it failed on the one gate that
+must hold before any GPU work.
+
+**The repair**, confined to `tests/test_v18_residual_preflight.py`; no production
+source changed. Every case is now constructed:
+
+```text
+clean = dict(payload, worktree_clean=True, git_commit=head)   must PASS
+dirty = dict(clean, worktree_clean=False)                     must FAIL, "dirty worktree"
+dict(clean, git_commit="0"*40)                                must FAIL, "git_commit"
+clean with expected_commit="9"*40                             must FAIL, "git_commit"
+```
+
+The last two are unchanged: they preserve both wrong-commit failures, including
+the property that `expected_commit` is SUPPLIED by the opening bracket and never
+reread.
+
+**Verification.** The focused test passes in both environments — a clean tree and
+a tree carrying a temporary untracked probe — which is the property the old test
+lacked. Three mutants against the production guards are each killed:
+cleanliness guard removed, `git_commit` guard removed, and `expected_commit`
+reread from HEAD instead of supplied (`declared=3 ran=3 stale=0 killed=3
+survivors=0`, target restored byte-identical).
+
+**Consequence.** HEAD moves, so the Step 2 criteria record (`07b47ae9…`) and the
+Step 3 universe record (`a2a25ab3…`) emitted at `fcf733f1` are invalidated. They
+are preserved and regenerated at the new HEAD, never re-verified.
+
+**The general rule**, now a Global Constraint: a provenance test may not depend on
+the environment it asserts about. Construct the negative case; do not observe it.
