@@ -169,9 +169,29 @@ This is a **technical preflight, not scientific evidence.**
 
 ### Frozen decision rule
 
-> If median `inherited_fraction_320 ≥ 0.10` in any post-opening phase, **or** overall
-> p75 `≥ 0.20`, the atlas must use a warm-start regime. Otherwise fresh-root probing
-> is acceptable, with the remaining mismatch stated.
+**Amendment 1, 2026-08-03 — validity condition added.** The rule below previously had
+two outcomes and would return fresh-root acceptability even when every post-opening
+phase was unobserved. A threshold crossing is valid evidence on partial coverage, but
+the *negative* conclusion is not: concluding fresh-root probing is safe requires
+having looked. This amendment adds an invalid-decision state. **It introduces no new
+statistical threshold** — the two numeric limits are unchanged — and is therefore a
+validity condition, not a re-freeze of the decision rule.
+
+**Coverage is complete** when every post-opening phase — early-mid, midgame, late —
+has at least one observed search, so that each has a defined median.
+
+> - Median `inherited_fraction_320 ≥ 0.10` in any post-opening phase, **or** overall
+>   p75 `≥ 0.20` → **`WARM_START_REQUIRED`.** This holds even under incomplete
+>   coverage: a phase that fired had enough evidence to fire.
+> - No threshold crossed **and** coverage complete → **`FRESH_ROOT_ACCEPTABLE`**, with
+>   the remaining mismatch stated.
+> - No threshold crossed **and** coverage incomplete → **`PREFLIGHT_INCOMPLETE`.**
+
+`PREFLIGHT_INCOMPLETE` is not a verdict and resolves nothing. It **must not**
+automatically trigger another game: adding games until coverage completes is the
+top-up pattern this protocol forbids everywhere else, and one game was chosen
+deliberately. Resolving it requires a **deliberate protocol revision** — a written
+amendment stating what will be run and why — not a re-run.
 
 If a warm-start regime is required, the exact warm-root producer must be specified
 and frozen before §3–§12 become execution-frozen. See §12.
