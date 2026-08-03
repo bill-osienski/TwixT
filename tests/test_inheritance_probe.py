@@ -4,9 +4,13 @@ from scripts.GPU.alphazero.inheritance_probe import (
     DECISION_POINT_SIMS,
     InheritanceProbeConfig,
     InheritanceProbeTracker,
+    OVERALL_P75_LIMIT,
+    POST_OPENING_MEDIAN_LIMIT,
     SearchRow,
+    evaluate_verdict,
     inherited_fraction_320,
     phase_for_ply,
+    summarize,
 )
 
 
@@ -117,3 +121,68 @@ def test_disabled_tracker_records_nothing():
     tracker = InheritanceProbeTracker(InheritanceProbeConfig(enabled=False))
     _ply(tracker, 0, _FakeRoot(0, []), 0, 5, 5)
     assert tracker.rows == []
+
+
+def _rows(*specs):
+    return [
+        SearchRow.build(
+            ply=ply,
+            starting_visits=visits,
+            starting_visited_children=0,
+            forced_count=0,
+        )
+        for ply, visits in specs
+    ]
+
+
+def test_frozen_thresholds_are_pinned():
+    assert POST_OPENING_MEDIAN_LIMIT == 0.10
+    assert OVERALL_P75_LIMIT == 0.20
+    assert DECISION_POINT_SIMS == 320
+
+
+def test_absent_phase_median_is_none_not_zero():
+    summary = summarize(_rows((0, 0), (5, 0)))
+    assert summary["by_phase"]["opening"]["median"] == 0.0
+    assert summary["by_phase"]["late"]["median"] is None
+    assert summary["by_phase"]["late"]["n"] == 0
+
+
+def test_p75_is_none_with_fewer_than_two_observations():
+    assert summarize(_rows((0, 100)))["overall"]["p75"] is None
+    assert summarize(_rows((0, 100), (1, 100)))["overall"]["p75"] is not None
+
+
+def test_warm_start_stands_on_partial_coverage():
+    verdict = evaluate_verdict(summarize(_rows((61, 40), (62, 40), (63, 40))))
+    assert verdict["verdict"] == "WARM_START_REQUIRED"
+    assert verdict["coverage_complete"] is False
+    assert any("midgame" in reason for reason in verdict["reasons"])
+
+
+def test_fresh_root_requires_complete_coverage():
+    verdict = evaluate_verdict(
+        summarize(_rows((0, 0), (31, 0), (61, 0), (91, 0)))
+    )
+    assert verdict["verdict"] == "FRESH_ROOT_ACCEPTABLE"
+    assert verdict["coverage_complete"] is True
+    assert verdict["unobserved_post_opening_phases"] == []
+
+
+def test_no_crossing_with_partial_coverage_is_incomplete():
+    verdict = evaluate_verdict(summarize(_rows((0, 40), (1, 40), (2, 40))))
+    assert verdict["verdict"] == "PREFLIGHT_INCOMPLETE"
+    assert verdict["coverage_complete"] is False
+    assert set(verdict["unobserved_post_opening_phases"]) == {
+        "early_mid",
+        "midgame",
+        "late",
+    }
+
+
+def test_overall_p75_branch_fires_independently():
+    verdict = evaluate_verdict(
+        summarize(_rows((0, 0), (1, 160), (2, 160), (3, 160)))
+    )
+    assert verdict["verdict"] == "WARM_START_REQUIRED"
+    assert any("p75" in reason for reason in verdict["reasons"])

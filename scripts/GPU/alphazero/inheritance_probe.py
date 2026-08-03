@@ -10,6 +10,7 @@ CPU-safe: stdlib only, no MLX, no scipy.
 """
 from __future__ import annotations
 
+import statistics
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -160,3 +161,72 @@ class InheritanceProbeTracker:
                 f"finalize_game with an unclosed row at ply {self._open_row.ply}"
             )
         return {"rows": [row.__dict__.copy() for row in self.rows]}
+
+
+def _median_or_none(values: List[float]) -> Optional[float]:
+    return statistics.median(values) if values else None
+
+
+def _p75_or_none(values: List[float]) -> Optional[float]:
+    if len(values) < 2:
+        return None
+    return statistics.quantiles(values, n=4, method="inclusive")[2]
+
+
+def summarize(rows: List[SearchRow]) -> Dict[str, Any]:
+    """Summarize inherited fractions by phase and overall."""
+    all_values = [row.inherited_fraction_320 for row in rows]
+    by_phase: Dict[str, Any] = {}
+    for name, _lower, _upper in PHASE_BOUNDS:
+        values = [
+            row.inherited_fraction_320 for row in rows if row.phase == name
+        ]
+        by_phase[name] = {
+            "n": len(values),
+            "median": _median_or_none(values),
+            "p75": _p75_or_none(values),
+        }
+    return {
+        "n_searches": len(rows),
+        "overall": {
+            "n": len(all_values),
+            "median": _median_or_none(all_values),
+            "p75": _p75_or_none(all_values),
+        },
+        "by_phase": by_phase,
+        "forced_sims_total": sum(row.forced_count for row in rows),
+    }
+
+
+def evaluate_verdict(summary: Dict[str, Any]) -> Dict[str, Any]:
+    """Apply the frozen three-outcome Phase 0 decision rule."""
+    reasons: List[str] = []
+    unobserved: List[str] = []
+
+    for phase in POST_OPENING_PHASES:
+        median = summary["by_phase"][phase]["median"]
+        if median is None:
+            unobserved.append(phase)
+        elif median >= POST_OPENING_MEDIAN_LIMIT:
+            reasons.append(
+                f"post-opening phase {phase} median {median:.6f} "
+                f">= {POST_OPENING_MEDIAN_LIMIT}"
+            )
+
+    overall_p75 = summary["overall"]["p75"]
+    if overall_p75 is not None and overall_p75 >= OVERALL_P75_LIMIT:
+        reasons.append(f"overall p75 {overall_p75:.6f} >= {OVERALL_P75_LIMIT}")
+
+    if reasons:
+        verdict = "WARM_START_REQUIRED"
+    elif unobserved:
+        verdict = "PREFLIGHT_INCOMPLETE"
+    else:
+        verdict = "FRESH_ROOT_ACCEPTABLE"
+
+    return {
+        "verdict": verdict,
+        "reasons": reasons,
+        "coverage_complete": not unobserved,
+        "unobserved_post_opening_phases": unobserved,
+    }
