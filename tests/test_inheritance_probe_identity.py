@@ -41,3 +41,52 @@ def test_probe_on_records_one_row_per_ply():
 
 def test_probe_off_leaves_the_record_untouched():
     assert _play(None).inheritance_probe_record is None
+
+
+def _identity_fields(record):
+    return {
+        "move_history": list(record.move_history),
+        "winner": record.winner,
+        "n_moves": record.n_moves,
+        "draw_reason": record.draw_reason,
+        "move_root_values": list(record.move_root_values),
+        "move_top1_shares": list(record.move_top1_shares),
+        "final_root_value": record.final_root_value,
+        "final_top1_share": record.final_top1_share,
+        "positions": [
+            (
+                position.ply,
+                position.to_move,
+                list(position.legal_moves),
+                list(position.visit_counts),
+            )
+            for position in record.positions
+        ],
+    }
+
+
+def test_probe_does_not_perturb_batched_search():
+    off = _play(None)
+    on = _play(InheritanceProbeConfig())
+    assert _identity_fields(on) == _identity_fields(off)
+
+
+def test_identity_check_is_not_vacuous():
+    assert _identity_fields(_play(None)) != _identity_fields(
+        _play(None, seed=999999)
+    )
+
+
+def test_batched_path_was_actually_exercised():
+    off = _play(None)
+    on = _play(InheritanceProbeConfig())
+    assert off.flush_full > 0, (
+        "no batch-full flush occurred; strengthen the fixture rather than "
+        "accepting an unexercised batching qualification"
+    )
+    assert on.flush_full > 0
+    assert (on.flush_full, on.flush_stall, on.flush_tail) == (
+        off.flush_full,
+        off.flush_stall,
+        off.flush_tail,
+    )
