@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 44)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 45)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -490,6 +490,7 @@ Every task's requirements implicitly include this section.
 - **A rows establish reach only.** Every numeric threshold derives from the non-A control cohort (spec §2.2.3). Task 9 has a test that must be able to fail on this.
 - **Game identity is the replay's content SHA-1**, via `diagnose_fpu_baseline_policy_mass.game_identities` (`:1694`). `game_idx` is reservoir-local: comparing raw indices both invents overlaps and misses a copied game that was renumbered. Never identify a game by `(replay_dir, game_idx)`.
 - **At most one control position per game.** This removes within-game correlation at the source, so no game-clustered bootstrap is required. With an 800-game universe the cohort is not supply-constrained.
+- **An undefined ROW-LEVEL statistic is `null`, never `0.0`, and never a reason to drop a row or abort a run.** The preregistered decision statistic is pooled — `(sum shipped - sum capped) / sum shipped` — so a row whose own denominator is zero still contributes both terms: `0 shipped, 0 capped` contributes nothing, `0 shipped, >0 capped` contributes a negative numerator against a zero denominator. Counts and the signed delta are always preserved. The AGGREGATE rule is unchanged: a subset whose total shipped replies are zero is `PREFLIGHT_FAIL`.
 - **A provenance test may not depend on the environment it asserts about.** Every negative case is a CONSTRUCTED record — `dict(clean, worktree_clean=False)` — never one borrowed from whatever state the working tree happens to be in. A test that manufactures its negative case from ambient dirtiness passes only while `git status --porcelain` is non-empty, and Execution Step 1 requires an empty one at the same time as a green suite.
 - **A consumer's tests may not hand-write a surrogate for its producer's document.** Four contract defects have been found at task seams, three of them after GPU time was already spent, and every one had the same shape: both tasks green in isolation, disagreeing only where their artifacts met. Any task that consumes another task's emitted artifact must be exercised at least once against the **real emitter's output** — the emitted file, bound by the digest the emitter returned. `tests/test_v18_execution_chain_integration.py` is that test for the Execution Phase chain.
 - **Every path stored in an artifact is canonical repo-root-relative POSIX text.** One spelling per file, so equality of the stored string is equality of the file. Producers normalize before emission and refuse anything outside the frozen artifact root `logs/eval`; consumers resolve against a repo root derived from the **module's own location** — never the artifact's directory, never the working directory — and refuse any non-canonical spelling (absolute, `./`, or a `..` hop) even when it resolves to the right file. `canonical_artifact_path` in `capture_v18_a6400` is the single implementation; `v18_preflight_verdict` imports it and `ARTIFACT_ROOT` rather than restating either.
@@ -5509,3 +5510,70 @@ are preserved and regenerated at the new HEAD, never re-verified.
 
 **The general rule**, now a Global Constraint: a provenance test may not depend on
 the environment it asserts about. Construct the negative case; do not observe it.
+
+## Revision 45 change log
+
+Revision 45 corrects a metric-DOMAIN defect. It changes no threshold, no cap, no
+role predicate, no gate, and nothing about the mechanism design; it fixes how one
+quantity is represented when its row-level denominator is zero.
+
+**What happened.** The restarted Step 4 completed runs 1-3 and the bundle, then
+aborted on the SECOND census position measured
+(`census_44319a73971f_38`, early_mid, ply 38):
+
+```text
+v18_crossover.py:182
+ValueError: predicted_shipped_replies is 0: the reply-reduction ratio is
+undefined, not 0.0 -- there is no scanning for a cap to reduce
+```
+
+The guard's reasoning was right and its consequence was wrong. The row-level
+ratio genuinely is undefined when nothing was scanned — but the preregistered
+decision statistic has never been the row-level ratio. It is pooled:
+
+```text
+pooled(c) = (sum predicted_shipped_replies - sum predicted_capped_replies)
+            / sum predicted_shipped_replies
+```
+
+which stays well defined while the subset's aggregate shipped denominator is
+positive. `_pooled_by_cap` already builds its pairs from the COUNTS and never
+reads the row ratio, so the pooled path was correct all along. Raising discarded
+1,987 rows of measurement for a quantity the decision does not use.
+
+**The representation, frozen.**
+
+| case | shipped | capped | delta | row ratio | pooled contribution |
+|---|---|---|---|---|---|
+| ordinary | `s>0` | `c` | `s-c` | `(s-c)/s` | `(s-c, s)` |
+| nothing scanned | `0` | `0` | `0` | **`null`** | `(0, 0)` — contributes nothing |
+| capped-only | `0` | `c>0` | `-c` | **`null`** | `(-c, 0)` — negative numerator, zero denominator |
+
+`0.0` is forbidden: it asserts "the cap changed nothing" about a row where
+nothing was scanned. Dropping the row is forbidden: it biases the pooled result.
+No row may be excluded, reclassified, or rescued.
+
+**Representation across the serializers.** JSON `null`, CSV blank. Task 7's
+`_csv_bytes` and Task 9's `_reproduce_crossover_bytes` share one writer, so both
+render `None` as an empty field and the reproduction check still holds.
+
+**Descriptive record.** The Task 7 artifact gains
+`undefined_reply_reduction_by_population` — counts per population per cap. It is
+descriptive only: never a gate, a selector, or an exclusion rule. It exists so a
+reader sees how often this occurs instead of inferring it from blanks.
+
+**Unchanged.** `criteria.pooled_ratio` still raises `PREFLIGHT_FAIL` on a zero
+AGGREGATE denominator. Relaxing the row-level rule does not relax that one.
+
+**Coverage.** The old raise test is replaced by an explicit
+`is None` / `!= 0.0` assertion; new tests cover zero/zero, zero/positive with a
+negative signed delta, JSON null, CSV blank at both serializers, pooled inclusion
+(dropping the zero-shipped-but-capped row would leave the answer at 0.4 instead
+of 0.2), and the surviving aggregate-zero failure. Four mutants — ratio as `0.0`,
+signed delta clamped, zero-denominator rows dropped from the pooled sum,
+aggregate-zero rule removed — are each killed by their own dedicated test.
+
+**Consequence.** HEAD moves, so the Step 2/3 bindings and every Step 4 output are
+invalidated and preserved as rejected diagnostics. Steps 2-3 are regenerated and
+Step 4 restarts from run 1. Runs 1-3 and the bundle had all passed on their own
+terms; they are rejected for provenance, not for their numbers.
