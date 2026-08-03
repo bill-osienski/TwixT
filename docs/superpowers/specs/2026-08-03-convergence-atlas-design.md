@@ -14,7 +14,7 @@
 
 | # | Item | Where |
 |---|---|---|
-| 1 | Root regime resolved by Phase 0; if warm-start, the exact warm-root producer specified. Replaying only the immediate parent does **not** reproduce trajectory-compounded inheritance. | §2, §12 |
+| 1 | ~~Root regime resolved by Phase 0~~ — **RESOLVED 2026-08-03: `WARM_START_REQUIRED`.** The remaining half is now the blocking item: **the warm-root producer's seeding and forced-move semantics must be frozen.** Producer selected (full-prefix replay); its parameters are not yet frozen. | §2, §12 |
 | 2 | A batch-safe decision boundary defined, and the diagnostic producer matched to eventual prototype semantics. | §4 |
 | 3 | The frozen convergence predicate signed off. | §7 |
 | 4 | Read-out C's producer chosen — selection tracer or reduced scope. | §8 |
@@ -193,8 +193,97 @@ top-up pattern this protocol forbids everywhere else, and one game was chosen
 deliberately. Resolving it requires a **deliberate protocol revision** — a written
 amendment stating what will be run and why — not a re-run.
 
-If a warm-start regime is required, the exact warm-root producer must be specified
-and frozen before §3–§12 become execution-frozen. See §12.
+### RESULT — `WARM_START_REQUIRED`, 2026-08-03
+
+Ran at binding HEAD `fc2da03fa126e28ace2b7bc566b865dfd77fffb3`, clean worktree, seed
+`20260803`, 400 sims, batching `(14,48,8)`, `add_noise=False`, one game.
+
+| Artifact | SHA-1 |
+|---|---|
+| `logs/eval/phase0_inheritance/preflight.json` | `3e4a3b36de11738e3c97f3482cf344b450df1cb5` |
+| `logs/eval/phase0_inheritance/run.log` | `e5a52d92acd0a83b9d8d6c74798baf4f8500832a` |
+
+```text
+n_searches 51 (game ended ply 51)      forced_sims_total 0
+opening    n=31  median 0.160105   (~61 inherited visits)
+early_mid  n=20  median 0.254947   (~110 inherited visits)   -> fires, 2.5x the 0.10 bar
+midgame    n=0   median None
+late       n=0   median None
+overall          median 0.173127   p75 0.300526              -> fires, over the 0.20 bar
+```
+
+Verdict `WARM_START_REQUIRED`, `coverage_complete=False`, unobserved
+`[midgame, late]`. **Valid under amendment 1** — a crossing stands on partial
+coverage. Both branches of the rule fired independently.
+
+*Inference, not measurement, and NOT used to strengthen the verdict:* the unobserved
+phases are later, where temperature has dropped to `0.1` so the played move is nearly
+always the visit leader, and inheritance there would if anything be higher.
+
+**Operational defects recorded, neither invalidating:** the numeric exit code was
+unrecoverable (detached with `nohup`+`disown` without a status sidecar; a separate
+shell cannot `wait` on a disowned PID) — completion was qualified from the complete
+log reaching its terminal output with no traceback, plus the artifact, which is
+written only after game, summary and verdict complete. Always write `$?` to a status
+sidecar when detaching. Separately, `add_noise=False` matches the atlas and
+diagnostic regime but **not** training self-play, where root Dirichlet noise spreads
+visits and would lower inheritance.
+
+## §2b Warm-root producer — full-prefix replay (SELECTED, parameters NOT frozen)
+
+Immediate-parent replay is rejected: inheritance compounds, so one parent search does
+not reproduce a tree carried across a full trajectory. The producer is:
+
+1. Reconstruct from game start using frozen 400-sim searches, batching `(14,48,8)`,
+   `add_noise=False`.
+2. Advance through the corpus game's recorded moves, asserting state/hash agreement
+   at every ply.
+3. Stop immediately before the sampled target's search.
+4. Run one **additive** ladder on that inherited root, capturing the 320-prefix
+   features during the first leg.
+5. Record any forced trajectory move absent from the searched children as an
+   **inheritance reset** — never hidden, never dropped. This maps exactly onto the
+   existing `played_child_visits = None` semantics; no new mechanism is needed, but
+   the **reset rate must be reported**, because a high rate means the warm start is
+   not actually warming.
+
+### Four items to freeze before implementation
+
+**a. The ladder must keep a stability rung — proposed correction, needs sign-off.**
+The additive legs `+400, +1200, +4800` give cumulative `400 / 1600 / 6400` and **drop
+the 3,200 rung**. §5 requires 3,200 and 6,400 to agree before any position has a
+stable deep reference; without it, "6,400 is truth" stops being falsifiable and the
+whole labelling loses its guard. Legs `+400, +1200, +1600, +3200` give cumulative
+`400 / 1600 / 3200 / 6400` for the **same 6,400 total simulations** — the rung is free,
+costing one extra measurement point and no search. Recommend adopting; not applied
+unilaterally because it changes a proposed frozen parameter.
+
+**b. Seeding and forced-move semantics.** The replay forces the recorded moves, so it
+does **not** reproduce the generating run's tree — and the amendment must say so
+plainly, so the step-2 assertion is never later read as a tree-reproduction claim. It
+is a provenance check that the forced moves are legal and the state trajectory
+matches. What the replay produces is *a* trajectory-compounded tree under frozen atlas
+conditions, applied consistently across every corpus position. Freeze: the replay RNG
+seed rule, and whether a forced move that is unexplored (reset) or explored-but-shallow
+is treated differently.
+
+**c. Inherited visits are a per-row covariate, not a constant.** The effective budget
+is now `I + 400`, and `I` varies systematically by phase (Phase 0 measured ~61 opening
+vs ~110 early-mid, higher later). Phase-stratified comparisons are therefore confounded
+with inherited-visit count unless `I` is recorded and reported per row. The tracker
+already captures it as `starting_visits`. This is a feature, not a defect: `I + 400`
+*is* the deployment condition, which is the entire reason for warm-start.
+
+**d. Cost, so it is not a surprise.** Prefix replay costs `ply x 400` simulations per
+position and is dominated by late-phase rows. The additive ladder is cheaper than the
+fresh-root one — `6,400` per position rather than `11,600`, because additive legs share
+accumulated work. Net effect is roughly a **30% increase** over the fresh-root design
+once generation is included. Derive the real figure from the pilot's measured
+per-phase rate; do not scale a smoke.
+
+Considered and rejected: snapshotting trees during generation to avoid replay
+entirely. Serializing a 400-simulation tree at every ply of every game is far past
+§9's "compact summaries and online counters are sufficient."
 
 ---
 
