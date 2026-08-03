@@ -14,7 +14,7 @@
 
 | # | Item | Where |
 |---|---|---|
-| 1 | ~~Root regime resolved by Phase 0~~ — **RESOLVED 2026-08-03: `WARM_START_REQUIRED`.** The remaining half is now the blocking item: **the warm-root producer's seeding and forced-move semantics must be frozen.** Producer selected (full-prefix replay); its parameters are not yet frozen. | §2, §12 |
+| 1 | ~~Root regime + warm-root producer~~ — **CLOSED 2026-08-03.** Phase 0 returned `WARM_START_REQUIRED`; producer is full-prefix replay; ladder, budget vocabulary, seeding and forced-move semantics are all frozen. | §2, §2b, §4 |
 | 2 | A batch-safe decision boundary defined, and the diagnostic producer matched to eventual prototype semantics. | §4 |
 | 3 | The frozen convergence predicate signed off. | §7 |
 | 4 | Read-out C's producer chosen — selection tracer or reduced scope. | §8 |
@@ -257,14 +257,55 @@ sum to the same 6,400 as three would. The 320-prefix capture remains inside the 
 400-simulation leg. Budgets are recorded as `B` / `I` / `I + B` per §4. See §4 for the
 full frozen ladder.
 
-**b. Seeding and forced-move semantics.** The replay forces the recorded moves, so it
-does **not** reproduce the generating run's tree — and the amendment must say so
-plainly, so the step-2 assertion is never later read as a tree-reproduction claim. It
-is a provenance check that the forced moves are legal and the state trajectory
-matches. What the replay produces is *a* trajectory-compounded tree under frozen atlas
-conditions, applied consistently across every corpus position. Freeze: the replay RNG
-seed rule, and whether a forced move that is unexplored (reset) or explored-but-shallow
-is treated differently.
+**b. Seeding and forced-move semantics — FROZEN 2026-08-03.**
+
+*Seeding:*
+
+- `replay_seed = source game's frozen seed = reservoir_base_seed + game_idx`,
+  **verified against its sidecar**.
+- Create **one** dedicated `random.Random(replay_seed)` stream for the row.
+- Continue that same stream through every prefix search **and all four ladder legs**.
+- **Never reseed per ply or per rung**, and consume no temperature or move-selection
+  draws — moves are forced, so only MCTS's internal tie-breaking
+  (`_select_child`'s `self.rng.choice(best_moves)`) draws from the stream.
+- This defines a **deterministic counterfactual tree. It does not claim to reproduce
+  generation**, and the step-2 state/hash assertion is a provenance check that the
+  forced moves are legal and the state trajectory matches — never a tree-reproduction
+  claim.
+
+Using the source game's seed gives each game one stable replay trajectory
+*independent of which target position was sampled from it*. Continuous RNG across the
+ladder preserves the intended nested `400 / 1,600 / 3,200 / 6,400` search: reseeding
+per leg would leave the legs additive on the tree but draw tie-breaks from a restarted
+stream, silently breaking nesting so that 6,400 is no longer a true superset of 3,200.
+
+*Forced moves:*
+
+- Always advance through the **recorded legal move**. Never top up, drop, substitute,
+  or resample a row.
+- **Child absent:** `forced_child_visits = None`; `advance_root` creates a fresh node;
+  record `inheritance_reset = True`.
+- **Child present:** retain it exactly and record its **integer** visits, including
+  zero; `inheritance_reset = False`.
+- **Do not invent a "shallow" threshold.** The exact visit count and the target `I`
+  already express depth of inheritance.
+- Also report `zero_effective_inheritance = (child absent) or (visits == 0)`,
+  **preserving the absent-versus-present-zero distinction** rather than collapsing it.
+  This is the v18 discipline applied exactly: `None` and `0` are different facts, and
+  a derived boolean may union them only if the underlying pair survives. A present
+  child with zero visits is reachable, not hypothetical — children are created lazily
+  during descent and their `visit_count` only increments on backup.
+- Record prefix **reset count, reset rate, and last reset ply**. **Keep every row in
+  the primary analysis.**
+
+*Implementation consequence — one evaluator, one MCTS per row.* The frozen stream is
+held by the `MCTS` instance (`MCTS(evaluator, mcts_config, rng)`), so each row needs
+its own `MCTS` carrying its own `random.Random(replay_seed)`, reused across that row's
+prefix and all four legs. The **evaluator must NOT** be rebuilt per row: construct it
+once for the whole run via `eval_runner._default_evaluator_factory` and share it across
+every row. Rebuilding a compiled evaluator per unit of work is the documented MLX trap
+(`diagnose_a_predrop_trajectory_budget.py:123`); `compile=True` with a single long-lived
+evaluator is the correct and verified configuration.
 
 **c. Inherited visits are a per-row covariate, not a constant.** The effective budget
 is now `I + 400`, and `I` varies systematically by phase (Phase 0 measured ~61 opening
