@@ -164,10 +164,27 @@ def crossover_for_tree(root: MCTSNode, cap: float, c_puct: float) -> Dict:
     `v18_tree_walk.eligible_depth2_pairs` -- the same eligibility the walker
     uses, never a second definition.
 
-    `predicted_reply_reduction` is SIGNED and never clamped. A zero shipped
-    denominator raises rather than returning 0.0: no reply scanning to reduce
-    makes the ratio undefined, and a fabricated zero would read as "the cap
-    changed nothing".
+    `predicted_reply_reduction` is SIGNED and never clamped.
+
+    A zero shipped denominator makes the ROW-LEVEL ratio undefined, so it is
+    reported as `None` (JSON `null`, blank in CSV) -- never `0.0`, which would
+    assert "the cap changed nothing" about a row where nothing was scanned.
+
+    It does NOT raise, and the row is not dropped. The preregistered decision
+    statistic is POOLED:
+
+        (sum shipped - sum capped) / sum shipped
+
+    which stays well defined while the subset's aggregate shipped denominator is
+    positive. Such a row still carries information into that sum -- `0 shipped,
+    0 capped` contributes nothing, and `0 shipped, >0 capped` contributes a
+    negative numerator against a zero denominator -- so the counts and the
+    signed delta are always preserved and only the ratio is null. Dropping the
+    row, or writing `0.0`, would bias the pooled result; aborting the whole
+    measurement would discard every other row for a metric-domain edge case.
+
+    The aggregate-zero rule is unchanged and lives in `criteria.pooled_ratio`:
+    a subset whose TOTAL shipped replies are zero is `PREFLIGHT_FAIL`.
     """
     seen: List[MCTSNode] = []
     for parent, _leaf in eligible_depth2_pairs(root):
@@ -178,15 +195,11 @@ def crossover_for_tree(root: MCTSNode, cap: float, c_puct: float) -> Dict:
     shipped = sum(n["predicted_shipped_replies"] for n in per_node)
     capped = sum(n["predicted_capped_replies"] for n in per_node)
 
-    if shipped == 0:
-        raise ValueError(
-            "predicted_shipped_replies is 0: the reply-reduction ratio is "
-            "undefined, not 0.0 -- there is no scanning for a cap to reduce")
-
     return {
         "predicted_shipped_replies": shipped,
         "predicted_capped_replies": capped,
         "predicted_reply_delta": shipped - capped,
-        "predicted_reply_reduction": (shipped - capped) / shipped,
+        "predicted_reply_reduction": None if shipped == 0
+                                     else (shipped - capped) / shipped,
         "per_node": per_node,
     }

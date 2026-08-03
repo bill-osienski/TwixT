@@ -305,7 +305,48 @@ def test_residual_rows_and_crossover_tables_are_emitted(run):
     assert len(crossover) == len(result["rows"]) * len(C.CAP_GRID)
     assert {r["cap"] for r in crossover} == {str(c) for c in C.CAP_GRID}
     for row in crossover:
-        float(row["predicted_reply_reduction"])       # signed, never clamped
+        # SIGNED and never clamped when defined; BLANK when the row-level ratio
+        # is undefined -- never "0.0", which would read as "the cap changed
+        # nothing" about a row where nothing was scanned.
+        if row["predicted_reply_reduction"] != "":
+            float(row["predicted_reply_reduction"])
+        # The counts and the signed delta survive in either case.
+        int(row["predicted_shipped_replies"])
+        int(row["predicted_capped_replies"])
+        int(row["predicted_reply_delta"])
+
+
+def test_an_undefined_row_ratio_is_json_null_and_csv_blank_never_zero():
+    """Representation, at both serializers that must agree on it."""
+    import json as _json
+    from scripts.GPU.alphazero import v18_preflight_verdict as V
+    table = {"predicted_shipped_replies": 0, "predicted_capped_replies": 2,
+             "predicted_reply_delta": -2, "predicted_reply_reduction": None,
+             "per_node": []}
+    case = {"population": "census", "case_id": "c1",
+            "crossover": {str(cap): dict(table) for cap in C.CAP_GRID}}
+
+    payload = canonical_json_bytes({"cases": [case]}).decode()
+    assert '"predicted_reply_reduction":null' in payload.replace(" ", "")
+    assert '"predicted_reply_reduction":0.0' not in payload.replace(" ", "")
+    assert _json.loads(payload)["cases"][0]["crossover"]["0.5"][
+        "predicted_reply_reduction"] is None
+
+    # Task 7's writer and Task 9's reproducer must render None identically, or
+    # the reproduction check fails on a legitimate artifact.
+    produced = M._csv_bytes(
+        [{"population": "census", "case_id": "c1", "cap": 0.5,
+          **{k: v for k, v in table.items() if k != "per_node"},
+          "excluded_terminal": 0, "excluded_synthetic": 0}],
+        V.CROSSOVER_COLUMNS)
+    reproduced = V._reproduce_crossover_bytes([case])
+    body = produced.decode().splitlines()[1]
+    assert ",," in body or body.endswith(",")      # the blank field is present
+    assert "0.0" not in body.split(",")[
+        list(V.CROSSOVER_COLUMNS).index("predicted_reply_reduction")]
+    first_reproduced = reproduced.decode().splitlines()[1]
+    assert (first_reproduced.split(",")[
+        list(V.CROSSOVER_COLUMNS).index("predicted_reply_reduction")] == "")
 
 
 # --- seeds ------------------------------------------------------------------

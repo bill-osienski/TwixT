@@ -108,10 +108,70 @@ def test_reduction_is_the_documented_ratio():
     assert out["predicted_reply_reduction"] == pytest.approx((s - c) / s)
 
 
-def test_zero_shipped_denominator_is_invalid_not_zero():
+def test_zero_shipped_denominator_yields_null_not_zero_and_does_not_raise():
+    """The ROW-LEVEL ratio is undefined; the row is not.
+
+    Revision 44 raised here, which aborted the entire 1,987-row measurement on
+    the second census position. The pooled decision statistic never needed the
+    row-level ratio, so the metric domain -- not the mechanism -- was the defect.
+    """
     lone = node(nn_value=0.0, visits=1)
-    with pytest.raises(ValueError):
-        X.crossover_for_tree(lone, cap=0.50, c_puct=1.5)
+    out = X.crossover_for_tree(lone, cap=0.50, c_puct=1.5)
+    assert out["predicted_shipped_replies"] == 0
+    assert out["predicted_capped_replies"] == 0
+    assert out["predicted_reply_delta"] == 0
+    # None, and provably NOT 0.0 -- `0.0 == 0` and `None == 0` differ, and a
+    # bare falsiness check would accept either.
+    assert out["predicted_reply_reduction"] is None
+    assert out["predicted_reply_reduction"] != 0.0
+
+
+def test_zero_shipped_with_positive_capped_keeps_a_negative_signed_delta():
+    """`0 shipped, >0 capped` must contribute a NEGATIVE numerator against a
+    zero denominator. Clamping the delta to 0 would erase a real capped-side
+    count from the pooled sum."""
+    parent = node(nn_value=0.0, visits=1)
+    table = {"predicted_shipped_replies": 0, "predicted_capped_replies": 2,
+             "excluded_terminal": 0, "excluded_synthetic": 0}
+    out = _tree_from_tables([table])
+    assert out["predicted_shipped_replies"] == 0
+    assert out["predicted_capped_replies"] == 2
+    assert out["predicted_reply_delta"] == -2
+    assert out["predicted_reply_reduction"] is None
+
+
+def _tree_from_tables(tables):
+    """Drive `crossover_for_tree`'s aggregation over controlled per-node values
+    without hand-building a tree that produces them, so the assertion is about
+    the aggregation rule rather than about tree construction."""
+    import unittest.mock as mock
+    root = node(nn_value=0.0, visits=1)
+    parents = [node(nn_value=0.0, visits=1) for _ in tables]
+    with mock.patch.object(X, "eligible_depth2_pairs",
+                           return_value=[(p, None) for p in parents]), \
+         mock.patch.object(X, "crossover_at_node", side_effect=list(tables)):
+        return X.crossover_for_tree(root, cap=0.50, c_puct=1.5)
+
+
+def test_pooled_ratio_includes_undefined_rows_rather_than_dropping_them():
+    """The pooled statistic is (sum shipped - sum capped) / sum shipped. A row
+    with zero shipped still contributes both terms."""
+    from scripts.GPU.alphazero import v18_preflight_criteria as C
+    defined = (10 - 6, 10)          # a normal row
+    zero_zero = (0 - 0, 0)          # contributes nothing
+    zero_capped = (0 - 2, 0)        # negative numerator, zero denominator
+    assert C.pooled_ratio([defined]) == pytest.approx(0.4)
+    assert C.pooled_ratio([defined, zero_zero]) == pytest.approx(0.4)
+    # Dropping the zero-shipped-but-capped row would leave 0.4; including it
+    # must move the answer.
+    assert C.pooled_ratio([defined, zero_capped]) == pytest.approx(0.2)
+
+
+def test_aggregate_zero_shipped_is_still_PREFLIGHT_FAIL():
+    """The row-level rule relaxed; the AGGREGATE rule did not."""
+    from scripts.GPU.alphazero import v18_preflight_criteria as C
+    with pytest.raises(ValueError, match="PREFLIGHT_FAIL"):
+        C.pooled_ratio([(0, 0), (-2, 0)])
 
 
 def test_crossover_excludes_terminal_and_synthetic_children():

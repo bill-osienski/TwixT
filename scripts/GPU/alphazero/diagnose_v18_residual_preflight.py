@@ -746,6 +746,18 @@ def run_preflight(*, out_dir: str, criteria_path: str,
                   for row in rows],
         "pooled_reach_numerator": reach_numerator,
         "pooled_reach_denominator": reach_denominator,
+        # DESCRIPTIVE ONLY -- never a gate, a selector, or an exclusion rule.
+        # A row whose shipped denominator is zero has an undefined ROW-LEVEL
+        # ratio; it stays in the corpus and in the pooled sum regardless. This
+        # records how often that happens so the reader can see it rather than
+        # infer it from blanks in the CSV.
+        "undefined_reply_reduction_by_population": {
+            name: {str(cap): sum(
+                1 for r in rows
+                if r["population"] == name
+                and r["crossover"][str(cap)]["predicted_reply_reduction"] is None)
+                for cap in CAP_GRID}
+            for name in POPULATIONS},
         "terminal_depth2_total": sum(r["terminal_depth2"] for r in rows),
         "total_depth2_total": sum(r["total_depth2"] for r in rows),
         # The CSVs are bound INTO the artifact, so a reader can prove the four
