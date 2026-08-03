@@ -2,9 +2,11 @@
 
 **Created:** 2026-06-26 · **Status:** active · **Scope:** the connected value-head calibration and search-reliability line of work centered on the black pre-drop artifact, its guardrail families, and same-budget playing strength.
 
-A durable, append-only record of every value-calibration and search-reliability experiment: what changed, how it scored on the applicable acceptance gates, what we learned, and what **not** to retry. **Read this before proposing any new calibration or search knob** — if the change is on the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of a knob we've already swept), the answer is probably "no, we already saw the tradeoff."
+The durable, append-only record of every value-calibration and search-reliability experiment: what changed, how it scored on the applicable acceptance gates, what we learned, and what **not** to retry. **Read this before proposing any new calibration or search knob** — if the change is on the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of a knob we've already swept), the answer is probably "no, we already saw the tradeoff."
 
 > **Key conclusion (updated 2026-07-29, post v17 null — the policy-mass FPU line is closed):** The A black-pre-drop calibration target is explained as a **400-sim search artifact**, not a stable value-head defect. v14 closed the adapter cleanup line; v15 showed the 400-sim backup came from broad depth-2 frontier optimism; and the budget/trajectory checks showed BASE A collapses with more search (**400/1600/6400 mean +0.2570 → +0.0626 → −0.0451**, gate-over **50.0% → 30.0% → 10.0%**, severe **43.3% → 6.7% → 3.3%**), with the apparent predrop “drop” mostly a selected shallow-search bump (**6400−400 = −0.573 at predrop, −0.001 at drop**). Therefore **value calibration against A remains unjustified**: no v15 Phase 1, no frontier hard-value correction, and no further adapter/projection/schedule cleanup. v16 then falsified c_puct and showed that negative FPU directly reaches the first-touch reply-scanning mechanism on the selected A set: `fpu_value=−0.20` moved mean **+0.2570 → −0.0344** and opponent replies **134.7 → 24.5**. However, the frozen v16a game-held-out test **rejected absolute `fpu_value=−0.20` as a general 400-sim setting**. Across 324 held-out positions it caused **15 new collapsed roots (4.63%)**, and the preregistered stratum reject gate fired in late play: **13/84 = 15.48%** new collapses, including **6/42 = 14.29% late-red** and **7/42 = 16.67% late-black**. Effective children fell **107.58 → 70.92** (−36.66; about −34.1%), top-move flips reached **27.16%**, and late collapsed roots rose **17/84 → 28/84**, despite small central value movement (mean mover delta **+0.0028**, median absolute **0.0180**, p95 absolute **0.2822**). The selected-A result remains valid **mechanistic evidence**, but the fixed absolute candidate does not generalize safely. The context-relative policy-mass successor was then implemented and taken through a fresh, fully fingerprinted production-v2 corpus, but it failed its prerequisite before any nonzero coefficient ran: `r=0` (`FPU=Q_parent`) changed the selected move to a lower-prior move on **11/40 tuning controls = 27.5%**, exceeding the frozen `<10%` collateral limit. Per the preregistered rule, this **rejects the entire parent-relative policy-mass family**; no candidate grid, frozen check, selected-A candidate gate, B/C/D, collateral, or strength match is authorized. The shipped-baseline successor **v17** (`FPU = −r·sqrt(P_explored)`, no `Q_parent`) was then implemented, preregistered and run end-to-end on entirely fresh evidence — a 1,600-game reservoir and a deterministic 32-position corpus disjoint from all prior sets — and returned a **null (2026-07-29)**: shipped vs `r=0` identity held exactly (32/32 rows byte-identical), every positive coefficient measurably changed search (32/32 positions), and **all five preregistered coefficients failed the §7.2 safety gates**. Target new-collapse was 1–2 of 16 where the rule permits zero, and control flips to lower-prior moves remained **31–50% across the tested grid** where two of sixteen already rejects. The intended reply-suppression mechanism is active (reply reduction 0.23 → 0.79 with `r`), but its control cost does not fall as `r` shrinks, so no coefficient is cheap. Per the preregistered §13 rule a null **closes v17**: no held-out generation, no A/B/C/D, no strength match, and **no grid extension**. **Both policy-mass FPU formulations — parent-relative and baseline-preserving — are now rejected on independent corpora with the same failure mode; the line is closed.** Keep `calib020_0001` and the shipped FPU. Any further search-reliability proposal requires a new written mechanism and fresh preregistered evidence; do not relax the observed control gate, extend the coefficient grid, or reuse the consumed tuning/frozen splits to rescue policy-mass FPU. The decisive success benchmark remains an equal-checkpoint, equal-400-sim, balanced-color, statistically significant head-to-head strength gain after collateral and guardrail checks pass.
+
+> **v18 closeout (updates the key conclusion above through 2026-08-03):** The new depth-2 provisional-backup hypothesis was tested by a shipped-only, read-only preflight before any `mcts.py` implementation or positive-cap search. The proposed observable has **reach** on selected A (**0.5639 ≥ 0.50**) and a derivable candidate band, so this is not a no-op result. It nevertheless fails the properties required to justify implementation: A-vs-matched-control exposure is essentially chance (**AUC 0.5089**, bootstrap lower bound **0.39**, below **0.70/0.50**), sign dominance is **0.78475 < 0.80**, and the frozen selector has **zero target rows** and fails at every sizing tier, including the full authenticated 800-game universe. Therefore **v18 is closed at preflight**: no `mcts.py` edit, no positive cap, no Stage 0, no grid extension, no held-out generation, and no strength match. This failure means the required selectivity was not established; it does **not** prove no depth-2 provisional-backup effect exists. The consumed v18 evidence may motivate a genuinely new observable, but may not be reused as fresh confirmation or rescued by relaxing the frozen predicates after seeing the result. Keep `calib020_0001` and shipped search.
 
 > **v16 postmortem closeout (2026-07-24):** The read-only tuning-control postmortem reproduced the exact **11/40** lower-prior flips with no frozen-check participation. Flips concentrated in opening (**5/10**) and red-to-move controls (**8/20**). On flipped rows, the mean selected-move prior rank moved **1.27→9.00**; effective children changed by **−20.10** versus **−7.35** on non-flips, while root-value movement stayed small (**+0.0080**) and mean top share fell slightly (**−0.0141**). Reply reduction was actually smaller on flipped rows (**−20.18** replies versus **−40.52** on non-flips), so the failures are not evidence that stronger reply suppression caused the move changes. The measured pattern implicates replacing shipped FPU with the `Q_parent` neutral baseline as the destabilizing step; it does **not** prove any shipped-baseline successor will work. Any successor must remove `Q_parent`, preserve shipped behavior exactly at coefficient zero, and use fresh preregistered evidence.
 
@@ -86,11 +88,9 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **v16 c_puct falsification diagnostic** — c_puct is not the fix | Read-only search-reliability diagnostic on BASE A probe rows; no checkpoint, no manifest, no training. Integrity check passed: c_puct=1.5 reproduced Phase 0 per-case root values within 1e-6, then only `MCTSConfig.c_puct` varied. | **c_puct worsens A:** c_puct 1.5→0.25 raised mean +0.2570→+0.3778, gate-over 50.0%→60.0%, severe 43.3%→50.0%. Top-child visit share rose 0.474→0.642; top-child visited children rose 134.7→232.9; corr(top_child_n_visited_children, root value)=+0.943. | n/a | n/a | n/a | no match | **Reject c_puct as a fix / continue v16 only via FPU diagnostic.** Lower c_puct funnels visits into the selected root child and increases one-visit opponent-reply frontier scanning. Raising c_puct must not be used to pass A because it would lower the metric by spreading visits onto inferior root moves, not by repairing the frontier. Next search-code lever is an opt-in FPU field with default 0.0 preserving current behavior exactly. |
 | **v16 FPU selected-A diagnostic** — first knob that reaches the measured mechanism | Search-code diagnostic on BASE A probe rows; no checkpoint, no manifest, no training. Added opt-in `MCTSConfig.fpu_value` with default 0.0, routing unvisited-child q through the field. Integrity check passed: fpu=0.0 reproduced Phase 0 within 1e-6 and the full suite passed, proving default behavior is byte-identical. | **FPU works on selected A:** fpu 0.0→−0.20 moved mean +0.2570→−0.0344, gate-over 50.0%→6.7%, severe 43.3%→6.7%, and opponent replies scanned 134.7→24.5. fpu −0.35/−0.50 reached severe 0.0% but with much narrower search. `−0.20` was frozen as the single held-out candidate because it was closest to the 6400 reference (mean −0.0451) while preserving more breadth than −0.35/−0.50. | n/a | n/a | n/a | no match | **Promising mechanism / not adoption.** FPU directly suppresses first-touch opponent-reply scanning, the mechanism c_puct could not reach. But the sample is biased by A selection, and FPU gets the value by narrowing search rather than searching deeper. The next rung was the frozen v16a comparison `0.0` vs `−0.20` on a game-held-out neutral sample; see the following row. |
 | **v16a held-out FPU validation** — frozen `0.0` vs `−0.20` collateral screen | Search-code diagnostic only on a deterministic stratified, game-held-out, non-selected manifest: 324 positions from 252 games, buckets 40 opening / 100 early-mid / 100 midgame / 84 late, exactly 162 red / 162 black, and zero games shared with A discovery. The 19 winner-null 280-ply state-cap marathons were retained as stressed valid samples. No checkpoint or training changes. | **Not an A gate. Neutral result:** mean mover delta +0.0028, median absolute 0.0180, p95 absolute 0.2822; top-move flips 27.16%; effective children 107.58→70.92 (−36.66, about −34.1%); top-share +0.0716; 15 new collapses / 2 resolved. | n/a | n/a | **Late collateral failure:** 13/84 = 15.48% new collapse; late-red 6/42 = 14.29%, late-black 7/42 = 16.67%; late collapsed roots 17/84→28/84. | no match | **REJECT absolute `fpu_value=−0.20` as a general 400-sim setting.** The preregistered reject rule (any n≥20 stratum with new-collapse rate ≥10%) fired independently for late overall and both late-side strata. Do not proceed to B/C/D or strength evaluation with this candidate. Selected-A success remains mechanistic evidence only. Next: read-only postmortem of the 15 new-collapse cases, then design a new adaptive/parent-relative candidate on discovery data only. The v16a held-out manifest is consumed and must not be used for tuning. |
-
-
 | **v16 policy-mass successor — production v2 control qualification** | Search-code successor on unchanged BASE `calib020_0001`: `FPU=Q_parent-r*sqrt(P_explored)`, with completed-visit policy mass. After v1 corpus infeasibility and the role-feasibility/selector-v2 repair, generated one immutable 4,000-game production reservoir (board 24, 400 sims, workers 4, seed `[20300000,20304000)`, no top-up), screened 20,464 proposals, and selected a fingerprinted 120-row whole-game-isolated corpus. | **not run.** Selected-A is downstream of the failed `r0` prerequisite. | **not run.** | **not run.** | **not run.** | no match | **REJECT parent-relative policy-mass family at the prerequisite (2026-07-24).** `r0` ran successfully on the untouched 80-row tuning split but failed development safety: lower-prior control flips `11/40 = 27.5%` vs required `<10%`. Target lock-ins improved `1→0` and mean top share fell `0.390125→0.295344`, but those descriptive improvements do not override the collateral gate. No nonzero `r`, frozen check, selected-A candidate gate, A/B/C/D, collateral, or strength result was run. |
-
 | **v17** — baseline-preserving policy-mass FPU | `FPU = −r·sqrt(P_explored)`, NO Q_parent; grid {0.15,0.20,0.25,0.35,0.45}; fresh 1,600-game reservoir + 32-position corpus | not reached | not reached | not reached | not reached | no match | **Reject (null).** All five coefficients fail §7.2 safety at development. No held-out, no Task 12, no grid extension. |
+| **v18** — depth-2 provisional backup, shipped-only preflight | Proposed cap on unusually large sign-correct raw parent/leaf residuals at newly expanded nonterminal depth-2 leaves; shipped selection/FPU unchanged; preflight only, no positive-cap search | **mechanism reach only:** pooled exposed positive backup mass 0.5639 passes; A-vs-matched-control AUC 0.5089 fails | not reached | not reached | not reached | no match | **Reject (preflight null).** Selectivity and sign-dominance fail; frozen selector produces 0 targets and sizing fails even at all 800 games. No implementation, positive cap, Stage 0, held-out, grid extension, or strength match. |
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
 
 ## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
@@ -230,6 +230,134 @@ selection context. It does not permit advancing.
   would be exactly the post-hoc grid extension the freeze exists to prevent.
 - **No strength match.** Nothing reached the strength stage.
 
+## v18 depth-2 provisional backup — REJECTED at shipped-only preflight, 2026-08-03
+
+### Hypothesis and why it was plausible
+
+v18 was a new intervention point, not v17b and not a third policy-mass FPU formula.
+The motivating evidence was that selected-A's 400-simulation inflation came from a
+**broad, shallow depth-2 frontier**, while additional search removed the bump:
+
+- the top positive depth-1 child had mean raw black value about `-0.087` but mean
+  searched black value about `+0.619`;
+- selected positive branches contained `4,443` depth-2 nodes accounting for `77.3%`
+  of leaf evaluations, with mean raw black value about `+0.793` and `98.8%`
+  raw-positive;
+- a median `196` depth-2 nodes per root was needed to cover 70% of positive raw
+  mass, ruling out a few-PV-row correction; and
+- increasing search from 400 to 1,600 and 6,400 simulations reduced selected-A
+  mean `+0.2570 -> +0.0626 -> -0.0451`.
+
+The frozen hypothesis was therefore:
+
+> Preserve shipped selection and frontier breadth, but treat a newly expanded
+> nonterminal leaf exactly two plies below the root as provisional. Cap only an
+> unusually large sign-correct disagreement between that leaf's raw value and its
+> expanded parent's raw value; if revisited, back up depth-3-and-deeper evidence
+> normally.
+
+Unlike FPU, this would act **after** a leaf had already been selected and evaluated,
+so it might redirect some depth-1 reply scanning into deeper confirmation without
+preventing unexplored moves from receiving their shipped first visit. The proposal
+earned implementation only if shipped-only residual exposure first separated the
+selected-A phenomenon from matched ordinary/tactical positions and supported a
+viable fresh corpus. Merely showing large A residuals was explicitly insufficient.
+
+### Preregistration and execution boundary
+
+- Design revision 3 SHA-1: `7be30d4eea9eccf0316fa5927757fc404ca83ecb`.
+- Execution plan revision 45 SHA-1: `0f793ca0d53562dc5926c2425b3e5b15e61099e5`.
+- Binding clean HEAD: `83f47465b2dd7da76d062dc5b162c9fe902d5d31`.
+- Shipped search only: synchronous 400 simulations, `add_noise=false`, `c_puct=1.5`,
+  batching `(14,48,8)`; 30 authenticated selected-A rows plus a residual-blind
+  1,957-position census from exactly 800 authenticated games.
+- The cap grid, exposure formula, matching variables, thresholds, selector geometry,
+  sizing rule, winner's-curse guard and verdict vocabulary were frozen before the
+  binding measurement.
+- `mcts.py` stayed at SHA-1 `b60c983399dbc5ed292de9b15944b8850a1d8508`
+  and has no v18 diff from the pinned branch point. No positive-cap search ran.
+
+### Evidence of record
+
+| Artifact | SHA-1 |
+|---|---|
+| `step5_verdict.json` | `13f1fb65c414d86b5e5c0d1887c84e05bde69a6f` |
+| `step5_sizing.json` | `521892899820eaf619e44515569fb601bce72b05` |
+| `step5_matched_cohort.json` | `01d79f3d030b93e27fbe1aaa37ab704ad8fba343` |
+| `preflight_artifact.json` | `004e72a4b589c853713bf74e38e3cd148878d4eb` |
+| `census_positions.csv` | `718f9abfe221a66b26c4e79517f6ea08f0802008` |
+| `crossover_tables.csv` | `ee6040b7b83b4c2f4a97366abdd22014c4084b58` |
+| `residual_rows.csv` | `4f0ea1783dac4d3c8302b65fde180ecbc354a742` |
+| `frozen_preflight_criteria.json` | `87f645dd25ab71b86f4a3b70369e5eebb456dfee` |
+| `frozen_source_universe.json` | `631876610c10127bd0678224ab9ee8d25198c8b4` |
+| `step4_a6400_reference_bundle.json` | `60c9d7dd111e5ab34367fb4849cc0d872a8f5dca` |
+
+The public evaluator authenticated and reproduced the census, crossover rows,
+leaf-level reach evidence, matched cohort, production sizing ladder, criteria,
+universe, runtime source identities and A/6,400 reference bundle before evaluating
+the gates. Superseded and rejected diagnostics are retained separately and are not
+part of this result.
+
+### Outcome — `PREFLIGHT_FAIL`
+
+| Gate | Frozen requirement | Observed | Result |
+|---|---:|---:|---|
+| A-vs-matched-control selectivity | AUC `>=0.70`; bootstrap lower bound `>=0.50` | AUC `0.5088888889`; lower bound `0.39` | **FAIL** |
+| positive-residual sign dominance | `>=0.80` | `0.7847506370` | **FAIL** |
+| selected-A reach | pooled `>=0.50` | `0.5638789580` | PASS |
+| terminal depth-2 fraction | `<=0.10` | `0.0011669828` | PASS |
+| selector sizing | a qualifying frozen tier | `0/299` successes at every 200–700 tier; `0/1` at all 800 games | **FAIL** |
+
+The selectivity failure is decisive: `exposure_primary_0.50` was essentially chance
+at separating 30 selected-A rows from 30 residual-blind matched controls despite
+10,000 frozen-seed bootstrap replicates. The record's exact interpretation is:
+**required A-vs-matched-control selectivity was not established**. It explicitly
+does **not** mean that no depth-2 effect exists.
+
+The sizing failure independently exposes the same problem. Of 1,957 census rows,
+24 cleared the exposure cutoff (`0.2475800522`); all 24 also cleared sign dominance
+and eligible-leaf count; only 2 were near-even; and both of those were flip controls.
+Thus **0 rows satisfied the complete target predicate**. Frozen role counts were
+target `0`, representative `16`, identity `411`, flip `95`, unassigned `1,435`.
+The full-universe failure was `target|late capacity 0 < demand 16`, not a sampling
+accident at a smaller tier.
+
+### Interpretation
+
+The preflight is a real negative scientific result, not merely a platform test.
+It shows both of the following:
+
+1. The proposed observable reaches the mechanism: selected-A pooled exposure passes,
+   terminal contamination is negligible, and a formal candidate band is derivable
+   (`R_min=0.0106029774`, `R_max=0.1167949298`).
+2. The observable does not provide the required **selectivity or viable target
+   geometry**. It cannot distinguish the hoped-for shallow-horizon population from
+   collateral-sensitive positions well enough to justify changing shipped search.
+
+The passed reach gate cannot rescue failed selectivity, and a derivable cap band
+cannot create a target corpus that does not exist. Conversely, the null does not
+prove that every depth-2 provisional-backup mechanism is ineffective; it closes
+this preregistered residual observable, role geometry and cap-development path on
+the consumed evidence.
+
+### Decision and frozen consequences
+
+- **Close v18 at preflight.** Keep `calib020_0001` and shipped MCTS.
+- **No `mcts.py` implementation and no positive-cap search.** The intervention was
+  deliberately stopped before it could affect search behavior.
+- **No Stage 0, development grid, held-out generation, A/B/C/D acceptance run or
+  strength match.** None is authorized by this result.
+- **No threshold, role-predicate, near-even, flip-control or sizing relaxation after
+  seeing the null.** Those rules were the protection against selecting a flattering
+  corpus post hoc.
+- **Evidence consumed.** The 800-game universe, 1,957-position census, matched cohort
+  and selected-A measurement may inform a genuinely new mechanism or observable,
+  but may not serve as fresh confirmatory evidence for it.
+- Any successor must state a new selective observable and falsification criterion in
+  writing, use fresh preregistered confirmation, and still earn the final benchmark:
+  equal-checkpoint, equal-400-simulation, balanced-color significant strength gain
+  after safety and guardrail checks pass.
+
 ## What got better vs worse
 
 **Improved — A (black pre-drop):** targeted correction is **real**. The strongest A correction so far is **v4 teacher-retention**: mean **−0.305**, over **13.3%**, severe **6.7%** (from baseline mean +0.257 / over 50.0% / severe 43.3%). This is an A-only success, not a promotion candidate, because B/C/D failed.
@@ -299,6 +427,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 44. **Treating the v16 postmortem as a rescue of `Q_parent` or as positive evidence for a replacement coefficient.** The postmortem explains an already-final rejection: flips moved from mean prior rank 1.27 to 9.00 and concentrated in opening/red-to-move controls without a flip-specific top-share increase. It supports removing `Q_parent` from the neutral baseline; it does not validate `shipped_FPU-r*context`, select `r`, or authorize reuse of the consumed tuning/frozen positions.
 
 45. **Any policy-mass FPU coefficient, in either formulation.** v16's parent-relative `Q_parent − r·sqrt(P_explored)` died at its own `r=0` prerequisite (27.5% control flips vs a <10% gate). v17's baseline-preserving `−r·sqrt(P_explored)` ran the full preregistered grid on fresh evidence and failed §7.2 safety at **all five** coefficients, with control flip rates of 0.31–0.50 that do **not** improve as `r` shrinks. Two independent formulations, two independent corpora, same failure mode: the policy-mass FPU line is closed. Do not propose `r > 0.45`, a finer grid, a relaxed control gate, or a third formulation of the same idea.
+
+46. **Rescuing v18 by implementing the cap anyway, relaxing the preflight, or reusing its evidence.** v18 had real selected-A reach (`0.5639`) but failed its decisive A-vs-matched-control selectivity gate (AUC `0.5089`, lower bound `0.39`), missed sign dominance (`0.78475 < 0.80`), and produced **zero complete target rows**; selector sizing failed even on the full 800-game universe. Do not edit `mcts.py`, run a positive cap, extend or interpolate the grid, weaken the exposure/sign/near-even/flip/sizing predicates, or reuse the consumed census/cohort as fresh evidence to rescue this formulation. A successor needs a genuinely new selective observable, a new written hypothesis and fresh preregistered confirmation. This null means selectivity was not established; do not overstate it as proof that no depth-2 effect exists.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 

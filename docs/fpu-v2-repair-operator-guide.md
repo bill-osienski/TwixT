@@ -17,7 +17,7 @@ exact corpus selection, but `r0` (`FPU=Q_parent`) flipped the selected move to
 a lower-prior move on 11/40 controls (27.5%), above the frozen `<10%` limit.
 Do not run the nonzero coefficient grid or any frozen/downstream gate for this
 formula family. See §14 and
-`docs/updated-v16a-ledger.md`.
+`docs/alphazero-value-search-experiment-ledger.md`.
 
 ## 1. Pipeline order
 

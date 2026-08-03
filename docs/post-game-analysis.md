@@ -562,7 +562,7 @@ root retention — 2026-07-01, see the experiment ledger.)
 
 **Historical v1 outcome:** reservoir protocol v1 is **COMPLETE — POST-SCREEN GATE_FAIL.** The 4,800-game reservoir generated and passed `qualify` + `screen`, but `select` gate-failed: kept target capacity `0/0/0/136` (opening/early_mid/midgame/late) versus the 45-per-phase demand — target geometry is late-only on this net. No FPU coefficient was tested under v1. Its artifacts under `reservoir_v1/` remain immutable discovery evidence.
 
-The completed repaired-v2 procedure and production result are recorded in `docs/fpu-v2-repair-operator-guide.md` §§13–14. The full decision history is in `docs/updated-v16a-ledger.md`. Everything below this point is the historical operator runbook; do not execute its candidate or frozen stages after the recorded `r0` rejection.
+The completed repaired-v2 procedure and production result are recorded in `docs/fpu-v2-repair-operator-guide.md` §§13–14. The full decision history is in `docs/alphazero-value-search-experiment-ledger.md`. Everything below this point is the historical operator runbook; do not execute its candidate or frozen stages after the recorded `r0` rejection.
 
 **Frozen v1 generation commit:** `fca9c0dc563e47274b71059749ab451fb74e47f1`
 
