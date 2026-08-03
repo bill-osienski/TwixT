@@ -37,6 +37,7 @@ from .recovery_retargeting_diagnostics import (
     RecoveryRetargetingConfig,
     RecoveryRetargetingTracker,
 )
+from .inheritance_probe import InheritanceProbeConfig, InheritanceProbeTracker
 from .connectivity_diagnostics import compute_goal_completion_state as _compute_goal_completion_state
 
 # --- Temporary opening diagnostics (enable via TWIXT_OPENING_DEBUG env var) ---
@@ -447,6 +448,8 @@ class GameRecord:
     # Compact per-game recovery / re-targeting record (Spec 4 §4).
     # Top-level JSON key when present; omitted from JSON when None.
     recovery_retargeting_record: Optional[dict] = None
+    # Phase 0 inheritance preflight. None when the opt-in probe is absent.
+    inheritance_probe_record: Optional[dict] = None
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -633,6 +636,8 @@ def play_game(
     # When provided and enabled, instantiates a per-game tracker that fires
     # observe_move at each ply and emits a compact record at game end.
     recovery_retargeting_config: Optional[RecoveryRetargetingConfig] = None,
+    # Phase 0 inheritance preflight. None keeps the observer entirely absent.
+    inheritance_probe_config: Optional[InheritanceProbeConfig] = None,
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -698,6 +703,10 @@ def play_game(
             config=recovery_retargeting_config,
             gc_state_provider=_compute_goal_completion_state,
         )
+
+    inheritance_tracker = None
+    if inheritance_probe_config is not None and inheritance_probe_config.enabled:
+        inheritance_tracker = InheritanceProbeTracker(inheritance_probe_config)
 
     # Compute opening diagnostics window
     cfg = mcts.config
@@ -851,9 +860,19 @@ def play_game(
                     _sys.stderr.write(f"[gc-full] ply={ply} error: {_e!r}\n")
 
         # Run MCTS search from current root (reuses subtree)
+        if inheritance_tracker is not None:
+            inheritance_tracker.observe_search_start(
+                ply=ply,
+                root=root,
+                forced_sims_total=mcts._closeout_td1_forced_sims_total,
+            )
         visit_counts, root_value, root = mcts.search_from_root(
             root, add_noise=add_noise, ply=ply, gc_state_full=gc_state_full,
         )
+        if inheritance_tracker is not None:
+            inheritance_tracker.observe_search_end(
+                forced_sims_total=mcts._closeout_td1_forced_sims_total,
+            )
 
         # Build opening diagnostic record if within window
         if ply < _diag_end_ply and root.priors_raw is not None:
@@ -1143,6 +1162,13 @@ def play_game(
                 )
 
         # TREE REUSE: advance root to chosen child
+        if inheritance_tracker is not None:
+            _played_child = root.children.get(encode_move(move[0], move[1]))
+            inheritance_tracker.observe_played_child(
+                visits=(
+                    None if _played_child is None else _played_child.visit_count
+                )
+            )
         root = mcts.advance_root(root, move)
 
         # SYNC: state comes from root (don't apply_move twice!)
@@ -1350,6 +1376,10 @@ def play_game(
         )
         if recovery_tracker is not None else None
     )
+    inheritance_probe_record = (
+        inheritance_tracker.finalize_game()
+        if inheritance_tracker is not None else None
+    )
 
     return GameRecord(
         positions=positions,
@@ -1417,6 +1447,7 @@ def play_game(
         # Spec 3 Fix 2: snapshot per-game closeout_selection_tiebreak telemetry.
         closeout_tiebreak_telemetry=mcts.get_closeout_tiebreak_telemetry(),
         recovery_retargeting_record=recovery_retargeting_record,
+        inheritance_probe_record=inheritance_probe_record,
     )
 
 
