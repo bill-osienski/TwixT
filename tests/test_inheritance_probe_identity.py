@@ -1,7 +1,12 @@
 """Identity and integration qualification for the opt-in inheritance probe."""
 import random
 
-from scripts.GPU.alphazero.inheritance_probe import InheritanceProbeConfig
+from scripts.GPU.alphazero.inheritance_probe import (
+    InheritanceProbeConfig,
+    SearchRow,
+    evaluate_verdict,
+    summarize,
+)
 from scripts.GPU.alphazero.mcts import MCTSConfig
 from scripts.GPU.alphazero.self_play import play_game
 from tests.eval_fakes import FakeEvaluator
@@ -90,3 +95,17 @@ def test_batched_path_was_actually_exercised():
         off.flush_stall,
         off.flush_tail,
     )
+
+
+def test_real_producer_feeds_the_real_consumer():
+    record = _play(InheritanceProbeConfig())
+    rows = [
+        SearchRow(**row) for row in record.inheritance_probe_record["rows"]
+    ]
+    summary = summarize(rows)
+    verdict = evaluate_verdict(summary)
+
+    assert summary["n_searches"] == len(rows)
+    assert verdict["verdict"] == "PREFLIGHT_INCOMPLETE"
+    assert verdict["coverage_complete"] is False
+    assert summary["by_phase"]["late"]["median"] is None
