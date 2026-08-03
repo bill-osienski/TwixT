@@ -996,6 +996,10 @@ def play_game(
                 resigned_by = state.to_move
                 winner = opponent(resigned_by)
                 draw_reason = RESIGN
+                if inheritance_tracker is not None:
+                    # This search completed but resignation means no child was
+                    # played or advanced into. Close the row explicitly.
+                    inheritance_tracker.observe_played_child(visits=None)
                 break
 
         # Record position with explicit to_move

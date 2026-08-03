@@ -109,3 +109,27 @@ def test_real_producer_feeds_the_real_consumer():
     assert verdict["verdict"] == "PREFLIGHT_INCOMPLETE"
     assert verdict["coverage_complete"] is False
     assert summary["by_phase"]["late"]["median"] is None
+
+
+def test_probe_closes_search_row_when_game_resigns_before_playing():
+    record = play_game(
+        evaluator=FakeEvaluator(value=0.0),
+        mcts_config=_shipped_batching_config(n_simulations=16),
+        rng=random.Random(7),
+        max_moves=8,
+        add_noise=False,
+        active_size=24,
+        game_id=2,
+        resign_enabled=True,
+        resign_min_ply=0,
+        resign_threshold=1.0,
+        resign_min_visits=0,
+        resign_k=1,
+        resign_window=1,
+        inheritance_probe_config=InheritanceProbeConfig(),
+    )
+
+    assert record.resigned_by is not None
+    rows = record.inheritance_probe_record["rows"]
+    assert len(rows) == 1
+    assert rows[0]["played_child_visits"] is None
