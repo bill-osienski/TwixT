@@ -474,13 +474,29 @@ def test_universe_selection_inputs_must_match_the_committed_module(run, universe
 
 
 def test_records_must_describe_this_commit_and_a_clean_tree(criteria_path):
+    """Every case is CONSTRUCTED, never borrowed from the ambient tree.
+
+    The original first assertion required the freshly emitted record to be
+    REJECTED, which only happens when the working tree is dirty -- so the test
+    passed only while `git status --porcelain` was non-empty and failed at a
+    genuinely clean HEAD. That is precisely the state Execution Step 1 demands
+    ("`git status --porcelain` empty ... Full suite green"), so as written the
+    two halves of that gate could never both hold. A provenance test must not
+    depend on the environment it is asserting about.
+    """
     payload = json.loads(criteria_path.read_text())
     head = M.fpu_provenance.git_commit()
-    with pytest.raises(ValueError, match="git_commit|dirty worktree"):
-        M.assert_runtime_matches_records(("criteria", payload),
-                                         expected_commit=head)
+
+    # Passes in EITHER environment: the record is built to be correct.
     clean = dict(payload, worktree_clean=True, git_commit=head)
     M.assert_runtime_matches_records(("criteria", clean), expected_commit=head)
+
+    # The dirty case is built, not observed.
+    dirty = dict(clean, worktree_clean=False)
+    with pytest.raises(ValueError, match="dirty worktree"):
+        M.assert_runtime_matches_records(("criteria", dirty),
+                                         expected_commit=head)
+
     with pytest.raises(ValueError, match="git_commit"):
         M.assert_runtime_matches_records(("criteria", dict(clean, git_commit="0" * 40)),
                                          expected_commit=head)
