@@ -14,9 +14,9 @@
 - **No `mcts.py` change.** Not one line. `forced_count` is obtained caller-side as a delta of the existing monotonic counter `MCTS._closeout_td1_forced_sims_total`.
 - **Byte-identical off.** `inheritance_probe_config=None` must leave `play_game` behaviour bit-for-bit unchanged. The entire pre-existing test suite must pass unchanged.
 - **An undefined row-level or summary statistic is `None`, never `0.0`,** and never a reason to drop a row or abort a run. This is a durable v18 lesson and is load-bearing here: a phase with no searches has an undefined median, not a zero one.
-- **Fail loud on impossible input.** A negative forced-sim delta means the telemetry counter was reset mid-game; raise, never clamp.
+- **Fail loud on impossible input.** A negative forced-sim delta means the telemetry counter was reset mid-search; raise, never clamp. Out-of-order lifecycle calls raise too.
 - **Phase 0 is a technical preflight, not evidence.** Its rows are serially correlated single-trajectory observations. No later work may cite it as an inheritance distribution.
-- **Frozen decision rule (design §2), verbatim:** median `inherited_fraction_320 >= 0.10` in any post-opening phase, **or** overall p75 `>= 0.20` → warm-start regime required; otherwise fresh-root probing acceptable.
+- **Frozen decision rule (design §2, as amended 2026-08-03):** median `inherited_fraction_320 >= 0.10` in any post-opening phase **or** overall p75 `>= 0.20` → `WARM_START_REQUIRED`, and this stands even under partial coverage. Nothing crossed **and** every post-opening phase observed → `FRESH_ROOT_ACCEPTABLE`. Nothing crossed **and** coverage incomplete → `PREFLIGHT_INCOMPLETE`, which resolves nothing and must **not** trigger another game.
 - **Frozen phase bounds:** opening `0–30`, early-mid `31–60`, midgame `61–90`, late `91+`. Post-opening = early-mid, midgame, late.
 - **Shipped batching is `(14, 48, 8)`** = `eval_batch_size=14`, `stall_flush_sims=48`, `pending_virtual_visits=8`. Note `MCTSConfig.stall_flush_sims` defaults to `16`, so **48 must be set explicitly** wherever shipped batching is required.
 - Commit after every task. Do not run the preflight itself — this plan builds and qualifies the instrument only.
@@ -28,7 +28,7 @@
 | File | Responsibility |
 |---|---|
 | `scripts/GPU/alphazero/inheritance_probe.py` (create) | Phase classification, row model, tracker, summary, frozen verdict evaluator. Single module: the v18 lesson is to drive real producers into real consumers, and keeping them adjacent makes the integration test trivial. |
-| `scripts/GPU/alphazero/self_play.py` (modify) | One optional parameter, one tracker construction, two observation call sites, one finalize. Default `None` = no-op. |
+| `scripts/GPU/alphazero/self_play.py` (modify) | One import, one `GameRecord` field, one optional parameter, one tracker construction, three observation call sites, one finalize. Default `None` = no-op. |
 | `scripts/GPU/alphazero/run_inheritance_preflight.py` (create) | CLI: play exactly one game, write the artifact, print the verdict. |
 | `tests/test_inheritance_probe.py` (create) | Unit tests for classification, rows, tracker, summary, verdict, and threshold pinning. |
 | `tests/test_inheritance_probe_identity.py` (create) | Batched observer-on/off identity qualification, and the real-producer-to-real-consumer integration test. |
@@ -191,10 +191,9 @@ class SearchRow:
         if starting_visited_children < 0:
             raise ValueError("starting_visited_children must be non-negative")
         if forced_count < 0:
-            raise ValueError(
-                f"forced_count must be non-negative, got {forced_count}; "
-                "a negative delta means the td1 telemetry counter was reset mid-game"
-            )
+            # The tracker always builds with 0 and fills this in at
+            # observe_search_end; this guard covers direct construction.
+            raise ValueError(f"forced_count must be non-negative, got {forced_count}")
         return cls(
             ply=ply,
             phase=phase_for_ply(ply),
@@ -208,7 +207,7 @@ class SearchRow:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_inheritance_probe.py -v -p no:cacheprovider`
-Expected: PASS — 7 passed.
+Expected: PASS — 12 passed (test_phase_boundaries_are_exact is parametrized over 8 cases).
 
 - [ ] **Step 5: Commit**
 
@@ -227,9 +226,21 @@ git commit -m "feat(phase0): phase classification and inherited-fraction row mod
 
 **Interfaces:**
 - Consumes: `SearchRow.build` from Task 1.
-- Produces: `@dataclass InheritanceProbeConfig(enabled: bool = True)`; `class InheritanceProbeTracker` with `observe_search_start(ply: int, root, forced_sims_total: int) -> None`, `observe_played_child(visits: Optional[int]) -> None`, `finalize_game() -> dict`. The tracker holds `rows: List[SearchRow]`.
+- Produces: `@dataclass InheritanceProbeConfig(enabled: bool = True)`; `class InheritanceProbeTracker` with `observe_search_start(ply: int, root, forced_sims_total: int) -> None`, `observe_search_end(forced_sims_total: int) -> None`, `observe_played_child(visits: Optional[int]) -> None`, `finalize_game() -> dict`. The tracker holds `rows: List[SearchRow]`.
 
-Note the argument order contract: `observe_search_start` is called **before** `mcts.search_from_root`, and `observe_played_child` **before** `mcts.advance_root`, once each per ply, strictly alternating.
+**Three-call lifecycle per ply, strictly ordered:**
+
+```text
+observe_search_start(counter_before)   # immediately BEFORE search_from_root
+        mcts.search_from_root(...)
+observe_search_end(counter_after)      # immediately AFTER  search_from_root
+observe_played_child(visits)           # immediately BEFORE advance_root
+```
+
+`forced_count` is `counter_after - counter_before` **on the same row**. A two-call
+lifecycle that sampled the counter only at search start would attribute each ply's
+forcing to the *following* ply and would report zero on row 0 unconditionally — the
+counter is incremented by the very search the row describes.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -254,12 +265,17 @@ class _FakeRoot:
         self.children = {i: _FakeChild(v) for i, v in enumerate(child_visits)}
 
 
+def _ply(tracker, ply, root, before, after, played):
+    """One complete three-call lifecycle."""
+    tracker.observe_search_start(ply=ply, root=root, forced_sims_total=before)
+    tracker.observe_search_end(forced_sims_total=after)
+    tracker.observe_played_child(visits=played)
+
+
 def test_tracker_records_one_row_per_search():
     t = InheritanceProbeTracker(InheritanceProbeConfig())
-    t.observe_search_start(ply=0, root=_FakeRoot(0, []), forced_sims_total=0)
-    t.observe_played_child(visits=140)
-    t.observe_search_start(ply=1, root=_FakeRoot(140, [3, 0, 9]), forced_sims_total=0)
-    t.observe_played_child(visits=None)
+    _ply(t, 0, _FakeRoot(0, []), 0, 0, 140)
+    _ply(t, 1, _FakeRoot(140, [3, 0, 9]), 0, 0, None)
     assert len(t.rows) == 2
     assert t.rows[0].starting_visits == 0
     assert t.rows[0].played_child_visits == 140
@@ -268,38 +284,40 @@ def test_tracker_records_one_row_per_search():
     assert t.rows[1].played_child_visits is None
 
 
-def test_forced_count_is_the_counter_delta():
+def test_forced_count_belongs_to_the_search_that_produced_it():
+    """The counter is incremented BY the search the row describes, so the delta
+    must be taken ACROSS that search. Sampling only at the next search start
+    shifts every value one ply late and forces row 0 to zero."""
     t = InheritanceProbeTracker(InheritanceProbeConfig())
-    t.observe_search_start(ply=0, root=_FakeRoot(0, []), forced_sims_total=0)
-    t.observe_played_child(visits=1)
-    t.observe_search_start(ply=1, root=_FakeRoot(1, []), forced_sims_total=7)
-    t.observe_played_child(visits=1)
-    t.observe_search_start(ply=2, root=_FakeRoot(1, []), forced_sims_total=7)
-    t.observe_played_child(visits=1)
-    assert [r.forced_count for r in t.rows] == [0, 7, 0]
+    _ply(t, 0, _FakeRoot(0, []), 0, 7, 1)     # ply 0's search forced 7
+    _ply(t, 1, _FakeRoot(1, []), 7, 7, 1)     # ply 1 forced none
+    _ply(t, 2, _FakeRoot(1, []), 7, 10, 1)    # ply 2 forced 3
+    assert [r.forced_count for r in t.rows] == [7, 0, 3]
 
 
 def test_counter_going_backwards_fails_loud():
     t = InheritanceProbeTracker(InheritanceProbeConfig())
     t.observe_search_start(ply=0, root=_FakeRoot(0, []), forced_sims_total=9)
-    t.observe_played_child(visits=1)
-    with pytest.raises(ValueError, match="reset mid-game"):
-        t.observe_search_start(ply=1, root=_FakeRoot(1, []), forced_sims_total=2)
+    with pytest.raises(ValueError, match="went backwards"):
+        t.observe_search_end(forced_sims_total=2)
 
 
 def test_out_of_order_calls_fail_loud():
     t = InheritanceProbeTracker(InheritanceProbeConfig())
     with pytest.raises(RuntimeError):
-        t.observe_played_child(visits=1)  # no open search
+        t.observe_search_end(forced_sims_total=0)   # no open row
+    with pytest.raises(RuntimeError):
+        t.observe_played_child(visits=1)            # no open row
     t.observe_search_start(ply=0, root=_FakeRoot(0, []), forced_sims_total=0)
     with pytest.raises(RuntimeError):
         t.observe_search_start(ply=1, root=_FakeRoot(0, []), forced_sims_total=0)
+    with pytest.raises(RuntimeError):
+        t.observe_played_child(visits=1)            # search_end not called yet
 
 
 def test_disabled_tracker_records_nothing():
     t = InheritanceProbeTracker(InheritanceProbeConfig(enabled=False))
-    t.observe_search_start(ply=0, root=_FakeRoot(0, []), forced_sims_total=0)
-    t.observe_played_child(visits=5)
+    _ply(t, 0, _FakeRoot(0, []), 0, 5, 5)
     assert t.rows == []
 ```
 
@@ -325,22 +343,29 @@ class InheritanceProbeConfig:
 class InheritanceProbeTracker:
     """Records start-of-search telemetry for one game.
 
-    Call contract, strictly alternating and once each per ply:
+    Call contract, three calls per ply in strict order:
       1. `observe_search_start` immediately BEFORE `mcts.search_from_root`
-      2. `observe_played_child`  immediately BEFORE `mcts.advance_root`
+      2. `observe_search_end`   immediately AFTER  `mcts.search_from_root`
+      3. `observe_played_child` immediately BEFORE `mcts.advance_root`
 
     `forced_sims_total` is `MCTS._closeout_td1_forced_sims_total`, a monotonic
-    per-instance counter. This class takes its delta rather than requiring any
-    `mcts.py` change: `forced_count` is a local inside `search_from_root` and is
-    resolved there after the forcing check, so it is start-of-search telemetry
-    and cannot be read before the call.
+    per-instance counter. This class takes its delta ACROSS the search rather
+    than requiring any `mcts.py` change: `forced_count` is a local inside
+    `search_from_root`, resolved there after the forcing check, so it is
+    start-of-search telemetry that cannot be read before the call returns.
+
+    The delta must span the search. Sampling the counter only at the next
+    search start attributes each ply's forcing to the following ply and makes
+    row 0 unconditionally zero, because the counter is incremented by the very
+    search the row describes.
     """
 
     def __init__(self, config: InheritanceProbeConfig) -> None:
         self.config = config
         self.rows: List[SearchRow] = []
-        self._prev_forced_total: int = 0
         self._open_row: Optional[SearchRow] = None
+        self._open_forced_before: Optional[int] = None
+        self._awaiting_search_end: bool = False
 
     def observe_search_start(self, ply: int, root: Any, forced_sims_total: int) -> None:
         if not self.config.enabled:
@@ -350,14 +375,6 @@ class InheritanceProbeTracker:
                 f"observe_search_start at ply {ply} with an unclosed row from "
                 f"ply {self._open_row.ply}; observe_played_child was not called"
             )
-        delta = forced_sims_total - self._prev_forced_total
-        if delta < 0:
-            raise ValueError(
-                f"td1 forced-sims counter went backwards at ply {ply} "
-                f"({self._prev_forced_total} -> {forced_sims_total}); "
-                "the telemetry counter was reset mid-game"
-            )
-        self._prev_forced_total = forced_sims_total
         visited = sum(
             1 for c in root.children.values() if getattr(c, "visit_count", 0) > 0
         )
@@ -365,10 +382,27 @@ class InheritanceProbeTracker:
             ply=ply,
             starting_visits=root.visit_count,
             starting_visited_children=visited,
-            forced_count=delta,
+            forced_count=0,          # provisional; set in observe_search_end
         )
         self.rows.append(row)
         self._open_row = row
+        self._open_forced_before = forced_sims_total
+        self._awaiting_search_end = True
+
+    def observe_search_end(self, forced_sims_total: int) -> None:
+        if not self.config.enabled:
+            return
+        if self._open_row is None or not self._awaiting_search_end:
+            raise RuntimeError("observe_search_end called with no open search row")
+        delta = forced_sims_total - self._open_forced_before
+        if delta < 0:
+            raise ValueError(
+                f"td1 forced-sims counter went backwards during ply "
+                f"{self._open_row.ply} ({self._open_forced_before} -> "
+                f"{forced_sims_total}); the telemetry counter was reset mid-search"
+            )
+        self._open_row.forced_count = delta
+        self._awaiting_search_end = False
 
     def observe_played_child(self, visits: Optional[int]) -> None:
         """`visits` is the played child's visit_count read BEFORE advance_root,
@@ -377,8 +411,14 @@ class InheritanceProbeTracker:
             return
         if self._open_row is None:
             raise RuntimeError("observe_played_child called with no open search row")
+        if self._awaiting_search_end:
+            raise RuntimeError(
+                f"observe_played_child at ply {self._open_row.ply} before "
+                "observe_search_end; forced_count would be left provisional"
+            )
         self._open_row.played_child_visits = visits
         self._open_row = None
+        self._open_forced_before = None
 
     def finalize_game(self) -> Dict[str, Any]:
         if self._open_row is not None:
@@ -391,7 +431,7 @@ class InheritanceProbeTracker:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_inheritance_probe.py -v -p no:cacheprovider`
-Expected: PASS — 12 passed.
+Expected: PASS — 17 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -453,18 +493,32 @@ def test_p75_is_none_with_fewer_than_two_observations():
     assert summarize(_rows((0, 100), (1, 100)))["overall"]["p75"] is not None
 
 
-def test_warm_start_when_a_post_opening_median_crosses():
-    # 40 inherited visits -> 40/360 = 0.111 >= 0.10, in midgame.
+def test_warm_start_stands_on_partial_coverage():
+    """Amendment 1: a crossing is valid evidence even when coverage is partial
+    -- a phase that fired had enough evidence to fire.
+    40 inherited visits -> 40/360 = 0.111 >= 0.10, in midgame."""
     v = evaluate_verdict(summarize(_rows((61, 40), (62, 40), (63, 40))))
     assert v["verdict"] == "WARM_START_REQUIRED"
+    assert v["coverage_complete"] is False
     assert any("midgame" in r for r in v["reasons"])
 
 
-def test_opening_alone_cannot_trigger_the_median_branch():
-    # Same magnitude, but opening is excluded from the post-opening rule.
-    # Overall p75 of a constant 0.111 series is 0.111 < 0.20, so no trigger.
-    v = evaluate_verdict(summarize(_rows((0, 40), (1, 40), (2, 40))))
+def test_fresh_root_requires_complete_coverage():
+    """The negative conclusion needs every post-opening phase observed."""
+    v = evaluate_verdict(summarize(_rows((0, 0), (31, 0), (61, 0), (91, 0))))
     assert v["verdict"] == "FRESH_ROOT_ACCEPTABLE"
+    assert v["coverage_complete"] is True
+    assert v["unobserved_post_opening_phases"] == []
+
+
+def test_no_crossing_with_partial_coverage_is_incomplete():
+    """Opening is excluded from the median branch, and p75 of a constant 0.111
+    series is 0.111 < 0.20 -- so nothing fires. With every post-opening phase
+    unobserved this must NOT read as fresh-root acceptability."""
+    v = evaluate_verdict(summarize(_rows((0, 40), (1, 40), (2, 40))))
+    assert v["verdict"] == "PREFLIGHT_INCOMPLETE"
+    assert v["coverage_complete"] is False
+    assert set(v["unobserved_post_opening_phases"]) == {"early_mid", "midgame", "late"}
 
 
 def test_overall_p75_branch_fires_independently():
@@ -473,13 +527,6 @@ def test_overall_p75_branch_fires_independently():
     v = evaluate_verdict(summarize(_rows((0, 0), (1, 160), (2, 160), (3, 160))))
     assert v["verdict"] == "WARM_START_REQUIRED"
     assert any("p75" in r for r in v["reasons"])
-
-
-def test_verdict_reports_unobserved_post_opening_coverage():
-    v = evaluate_verdict(summarize(_rows((0, 0), (1, 0))))
-    assert v["verdict"] == "FRESH_ROOT_ACCEPTABLE"
-    assert v["coverage_complete"] is False
-    assert set(v["unobserved_post_opening_phases"]) == {"early_mid", "midgame", "late"}
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -530,22 +577,27 @@ def summarize(rows: List[SearchRow]) -> Dict[str, Any]:
 
 
 def evaluate_verdict(summary: Dict[str, Any]) -> Dict[str, Any]:
-    """The FROZEN design section 2 decision rule.
+    """The FROZEN design section 2 decision rule, as amended 2026-08-03.
 
-    Warm-start required if median inherited_fraction_320 >= 0.10 in ANY
-    post-opening phase, OR overall p75 >= 0.20. Otherwise fresh-root probing
-    is acceptable, with the remaining mismatch stated.
+    - Median inherited_fraction_320 >= 0.10 in ANY post-opening phase, OR
+      overall p75 >= 0.20                       -> WARM_START_REQUIRED
+    - Nothing crossed AND coverage complete     -> FRESH_ROOT_ACCEPTABLE
+    - Nothing crossed AND coverage incomplete   -> PREFLIGHT_INCOMPLETE
 
-    An unobserved phase cannot satisfy the median branch. That is reported as
-    a coverage fact, not converted into a third verdict -- the frozen rule is
-    binary and this function must not extend it.
+    The asymmetry is deliberate. A crossing is valid evidence on partial
+    coverage: the phase that fired had enough evidence to fire. The negative
+    conclusion is not: concluding fresh-root probing is safe requires having
+    looked at every post-opening phase.
+
+    PREFLIGHT_INCOMPLETE resolves nothing and MUST NOT trigger another game --
+    that is the top-up pattern the protocol forbids. It requires a written
+    protocol revision.
     """
     reasons: List[str] = []
     unobserved: List[str] = []
 
     for phase in POST_OPENING_PHASES:
-        cell = summary["by_phase"][phase]
-        median = cell["median"]
+        median = summary["by_phase"][phase]["median"]
         if median is None:
             unobserved.append(phase)
             continue
@@ -559,8 +611,15 @@ def evaluate_verdict(summary: Dict[str, Any]) -> Dict[str, Any]:
     if overall_p75 is not None and overall_p75 >= OVERALL_P75_LIMIT:
         reasons.append(f"overall p75 {overall_p75:.6f} >= {OVERALL_P75_LIMIT}")
 
+    if reasons:
+        verdict = "WARM_START_REQUIRED"
+    elif unobserved:
+        verdict = "PREFLIGHT_INCOMPLETE"
+    else:
+        verdict = "FRESH_ROOT_ACCEPTABLE"
+
     return {
-        "verdict": "WARM_START_REQUIRED" if reasons else "FRESH_ROOT_ACCEPTABLE",
+        "verdict": verdict,
         "reasons": reasons,
         "coverage_complete": not unobserved,
         "unobserved_post_opening_phases": unobserved,
@@ -570,7 +629,7 @@ def evaluate_verdict(summary: Dict[str, Any]) -> Dict[str, Any]:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_inheritance_probe.py -v -p no:cacheprovider`
-Expected: PASS — 19 passed.
+Expected: PASS — 24 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -584,7 +643,7 @@ git commit -m "feat(phase0): summary plus the frozen verdict evaluator, threshol
 ### Task 4: Wire the probe into `play_game`
 
 **Files:**
-- Modify: `scripts/GPU/alphazero/self_play.py` (seven edits: the import at the top, the `GameRecord` field at line 449, and five inside `play_game`, which begins at line 579)
+- Modify: `scripts/GPU/alphazero/self_play.py` (eight edits: the import at the top, the `GameRecord` field at line 449, and six inside `play_game`, which begins at line 579)
 - Test: `tests/test_inheritance_probe_identity.py`
 
 **Interfaces:**
@@ -691,6 +750,17 @@ Edit 4 — observation, immediately before the `mcts.search_from_root` call (~li
             )
 ```
 
+Edit 4b — observation, immediately **after** the `mcts.search_from_root(...)` call
+returns (~line 856, before the `# Build opening diagnostic record` block). The counter
+is incremented by this search, so the delta must span it:
+
+```python
+        if inheritance_tracker is not None:
+            inheritance_tracker.observe_search_end(
+                forced_sims_total=mcts._closeout_td1_forced_sims_total,
+            )
+```
+
 Edit 5 — observation, immediately before `root = mcts.advance_root(root, move)` (~line 1146, under the `# TREE REUSE:` comment). `encode_move` is already imported at `self_play.py:24`; add no import:
 
 ```python
@@ -769,6 +839,13 @@ def _identity_fields(rec):
         "winner": rec.winner,
         "n_moves": rec.n_moves,
         "draw_reason": rec.draw_reason,
+        # Per-move root summaries -- these ARE the search's value output, and
+        # they already exist on GameRecord, so no new instrumentation is needed
+        # to meet the design's root-value identity requirement.
+        "move_root_values": list(rec.move_root_values),
+        "move_top1_shares": list(rec.move_top1_shares),
+        "final_root_value": rec.final_root_value,
+        "final_top1_share": rec.final_top1_share,
         "positions": [
             (p.ply, p.to_move, list(p.legal_moves), list(p.visit_counts))
             for p in rec.positions
@@ -789,13 +866,20 @@ def test_identity_check_is_not_vacuous():
 
 
 def test_batched_path_was_actually_exercised():
-    """With eval_batch_size=14 and 64 sims, a full batch flush must occur --
-    otherwise the identity result says nothing about the batched path."""
-    cfg = _shipped_batching_config()
-    assert cfg.n_simulations > cfg.eval_batch_size
-    assert cfg.eval_batch_size == 14
-    assert cfg.stall_flush_sims == 48
-    assert cfg.pending_virtual_visits == 8
+    """Configuration alone proves nothing -- the run must actually reach a
+    full batch flush, in BOTH observer states, or the identity comparison
+    says nothing about the batched path."""
+    off = _play(None)
+    on = _play(InheritanceProbeConfig())
+    assert off.flush_full > 0, (
+        "no batch-full flush occurred; the fixture never exercised the batched "
+        "path. Strengthen the fixture (more sims or more plies) -- do NOT accept "
+        "this qualification."
+    )
+    assert on.flush_full > 0
+    assert (on.flush_full, on.flush_stall, on.flush_tail) == (
+        off.flush_full, off.flush_stall, off.flush_tail
+    )
 ```
 
 - [ ] **Step 2: Run the tests**
@@ -908,7 +992,12 @@ def main() -> int:
     p.add_argument("--out", required=True, help="output JSON path (required)")
     args = p.parse_args()
 
-    from .local_evaluator import LocalEvaluator  # GPU import stays out of module scope
+    # Established checkpoint-loading path: auto-detects 24/30-channel, wraps in
+    # LocalGPUEvaluator with the project's eval compile setting. `local_evaluator`
+    # exports LocalGPUEvaluator(net, compile=...) -- it takes a loaded network,
+    # NOT a path -- so do not construct it directly. Imported lazily: this keeps
+    # MLX out of module scope so the tests stay GPU-free.
+    from .eval_runner import _default_evaluator_factory
 
     cfg = MCTSConfig(
         n_simulations=args.sims,
@@ -917,7 +1006,7 @@ def main() -> int:
         pending_virtual_visits=8,
     )
     record = play_game(
-        evaluator=LocalEvaluator(args.checkpoint),
+        evaluator=_default_evaluator_factory(args.checkpoint),
         mcts_config=cfg,
         rng=random.Random(args.seed),
         max_moves=args.max_moves,
@@ -969,6 +1058,19 @@ if __name__ == "__main__":
 ```
 
 `--out` is deliberately **required with no default**. The v18 postmortem records a script whose default output path was a frozen evidence artifact, so the documented bare command would have destroyed it.
+
+> **Flag before the operator run — unresolved contradiction about `compile=True`.**
+> `_default_evaluator_factory` constructs `LocalGPUEvaluator(net, compile=True)`, and
+> its docstring says compile is there *to prevent* Metal resource exhaustion during
+> long sequential eval runs. A recorded project gotcha says the opposite: *"MLX
+> compile=True breaks sequential eval."* Phase 0 is a single in-process sequential
+> game, which is exactly the contested regime.
+>
+> Use the factory as written — it is the established path and the reviewer directed
+> it. But if the run hangs, produces garbage values, or exhausts Metal resources, the
+> first thing to try is a `compile=False` evaluator, and the contradiction should be
+> resolved and recorded rather than worked around silently. Do not resolve it by
+> editing `eval_runner`.
 
 - [ ] **Step 4: Run the full suite**
 
