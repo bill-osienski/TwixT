@@ -1059,18 +1059,26 @@ if __name__ == "__main__":
 
 `--out` is deliberately **required with no default**. The v18 postmortem records a script whose default output path was a frozen evidence artifact, so the documented bare command would have destroyed it.
 
-> **Flag before the operator run — unresolved contradiction about `compile=True`.**
-> `_default_evaluator_factory` constructs `LocalGPUEvaluator(net, compile=True)`, and
-> its docstring says compile is there *to prevent* Metal resource exhaustion during
-> long sequential eval runs. A recorded project gotcha says the opposite: *"MLX
-> compile=True breaks sequential eval."* Phase 0 is a single in-process sequential
-> game, which is exactly the contested regime.
+> **`compile=True` is correct here, and `compile=False` is not a fallback.**
+> There is no real conflict with the recorded "sequential eval" gotcha — that gotcha
+> is about **repeatedly constructing** compiled evaluators, not about reusing one.
+> `diagnose_a_predrop_trajectory_budget.py:123` states it exactly: *"One evaluator,
+> reused across budgets... Rebuilding an evaluator per budget would be slower and
+> trips the known MLX compile=True sequential-eval gotcha."*
 >
-> Use the factory as written — it is the established path and the reviewer directed
-> it. But if the run hangs, produces garbage values, or exhausts Metal resources, the
-> first thing to try is a `compile=False` evaluator, and the contradiction should be
-> resolved and recorded rather than worked around silently. Do not resolve it by
-> editing `eval_runner`.
+> Phase 0 constructs **one** evaluator and reuses it across every search of one game,
+> so the factory's `compile=True` is the right setting. Note the direction of the
+> risk: per `local_evaluator.py:9-16`, it is `compile=False` that re-traces the graph
+> on every `infer()` call, accumulating ~84 Metal buffers per call and reaching the
+> ~499k limit after ~5,900 inferences — roughly two eval games. Falling back to
+> `compile=False` would move *toward* resource exhaustion, not away from it.
+>
+> **If the authoritative run hangs or produces invalid values, stop and diagnose.**
+> Do not let a noncanonical configuration produce the regime decision.
+> `tests/test_local_evaluator_compile_equiv.py` can support troubleshooting — it pins
+> compiled/uncompiled inference equivalence across input shapes against MLX version
+> drift — but it establishes equivalence per call, **not** long-run `compile=False`
+> reliability. Do not resolve anything by editing `eval_runner`.
 
 - [ ] **Step 4: Run the full suite**
 
