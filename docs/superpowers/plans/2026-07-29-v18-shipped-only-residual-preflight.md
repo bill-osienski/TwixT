@@ -1,4 +1,4 @@
-# v18 Shipped-Only Residual Preflight Implementation Plan (revision 41)
+# v18 Shipped-Only Residual Preflight Implementation Plan (revision 42)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -490,6 +490,7 @@ Every task's requirements implicitly include this section.
 - **A rows establish reach only.** Every numeric threshold derives from the non-A control cohort (spec §2.2.3). Task 9 has a test that must be able to fail on this.
 - **Game identity is the replay's content SHA-1**, via `diagnose_fpu_baseline_policy_mass.game_identities` (`:1694`). `game_idx` is reservoir-local: comparing raw indices both invents overlaps and misses a copied game that was renumbered. Never identify a game by `(replay_dir, game_idx)`.
 - **At most one control position per game.** This removes within-game correlation at the source, so no game-clustered bootstrap is required. With an 800-game universe the cohort is not supply-constrained.
+- **Every path stored in an artifact is canonical repo-root-relative POSIX text.** One spelling per file, so equality of the stored string is equality of the file. Producers normalize before emission and refuse anything outside the frozen artifact root `logs/eval`; consumers resolve against a repo root derived from the **module's own location** — never the artifact's directory, never the working directory — and refuse any non-canonical spelling (absolute, `./`, or a `..` hop) even when it resolves to the right file. `canonical_artifact_path` in `capture_v18_a6400` is the single implementation; `v18_preflight_verdict` imports it and `ARTIFACT_ROOT` rather than restating either.
 - **No capture may default to the frozen v17 evidence path.** `capture_v18_a6400` re-exports `OUT` from the v17 module for identity comparisons, and that path *is* the frozen selected-move artifact `162c9a5a…`. It is gitignored, so an overwrite destroys evidence git cannot restore — unlike the tracked `prechange_baseline.json` beside it. `--out` is therefore **required**, and `assert_writable_out` refuses the protected path before mode dispatch, evaluator construction, or delegation to `v17.capture()`.
 
 ## Implementation order
@@ -5314,3 +5315,70 @@ Step 2 criteria record (`4667093e…`) and the Step 3 universe record
 regenerated at the new HEAD, not re-verified, before Step 4 restarts from run 1.
 The rejected run-1 output is retained as a diagnostic and is excluded from the
 bundle.
+
+## Revision 42 change log
+
+Revision 42 repairs a fourth producer/consumer contract defect, found when the
+restarted Step 4 reached its bundle check at HEAD `dd6240b9`. Like revisions 41's
+three, it is not a v18 gate failure: runs 1-3 all passed their scientific checks
+before it fired.
+
+**The defect.** Task 6's builder emitted `historical_source_path` from the shared
+constant `A6400_SOURCE` — repo-root-relative text — while Task 9's
+`_resolve_within_root` resolved relative paths against **the bundle's own
+directory**, on the reasoning that "the bundle is written beside its captures".
+The same stored string therefore named a different file for every directory a
+bundle could sit in, and a bundle under `logs/eval/v18_depth2_provisional_backup/`
+resolved the source to
+`logs/eval/v18_depth2_provisional_backup/logs/eval/v15_budget_check/…`, which does
+not exist. **No caller could repair it**: `source_path` is not a builder argument.
+The only spelling that verified was `../v15_budget_check/…`, which the builder
+cannot emit — accepting it would have meant hand-supplying a path Task 6 cannot
+produce, so it was rejected as a repair.
+
+**Why the suite was green.** Task 9's `bundle_tree` fixture hand-wrote its bundle
+document with bundle-relative names in one flat directory and never called
+`build_a6400_reference_bundle`; Task 6's builder tests never called the verifier.
+Both tasks were correct in isolation and disagreed only at the seam. This is the
+same shape as revision 41's items 1 and 2, and it is now the third time an
+untested producer/consumer boundary has cost a Step 4 restart.
+
+**The repair.**
+
+1. **One canonical path form**, frozen in Global Constraints: repo-root-relative
+   POSIX text.
+2. **Task 6 normalizes before emission.** `canonical_artifact_path` converts an
+   absolute path, a `./` prefix or a `..` hop to the one canonical string and
+   refuses anything resolving outside `logs/eval` — `..` resolved *before* the
+   containment test. Capture paths and the hardcoded source constant both go
+   through it, so the field no caller controls is checked too.
+3. **Task 9 resolves against a repo root derived from the module's location**
+   (`Path(__file__).resolve().parents[3]`), not the bundle directory and not the
+   working directory, and refuses any non-canonical spelling even when it
+   resolves to the correct file. `ARTIFACT_ROOT` and the resolver are imported
+   from Task 6, so the two sides cannot drift on what the root is again.
+4. **`historical_source_path` must equal the frozen canonical string exactly**,
+   and only then is it resolved and its bytes hashed against the pin. Two
+   spellings of one file are one file but not one string, and only the frozen
+   string is the frozen source.
+5. **An end-to-end test drives the real builder into the real verifier**, with
+   the bundle nested under the v18 artifact directory and the frozen source at
+   its own separate canonical path — the exact arrangement that failed. A second
+   test proves builder output is position-independent.
+6. **Every prior attack is retained** — traversal, out-of-root, source
+   substitution by path and by content, forged `byte_identical`, capture altered
+   after hashing, fabricated authentication, honest-but-failing authentication,
+   missing/extra keys — plus three new non-canonical-spelling refusals.
+
+Six mutants — builder normalization dropped for a capture path and for the source
+constant, containment test removed, canonical-text requirement removed, CWD used
+instead of the module repo root, exact-text source check removed — are each killed
+by their own dedicated test.
+
+**Consequence.** The repair changes Task 9, so under the Execution step 4 rule
+every Step 4 output is invalidated even though runs 1-3 passed: run 1 at 6/6, both
+A/6,400 captures byte-identical with 30/30 cases authenticated on value and top
+share, reproducing the frozen `V_REF` and mean top share exactly. They are retained
+as rejected diagnostics and may not enter the final bundle. HEAD moves, so the Step
+2 criteria record and the Step 3 universe record are regenerated again, and Step 4
+restarts from run 1.
