@@ -652,6 +652,16 @@ class MCTS:
             while node.is_expanded and not node.state.is_terminal():
                 move_id, child = self._select_child(node, pending_node_ids)
 
+                # Atlas §8: after move resolution, BEFORE lazy child creation, so
+                # `existing_child is None` means first touch.
+                if self._selection_observer is not None:
+                    self._selection_observer.on_select_child(
+                        parent=node, selected_move=move_id, existing_child=child,
+                        depth=len(search_path) - 1,
+                        parent_completed_visits=node.visit_count,
+                        root_override=False, within_forced_simulation=False,
+                    )
+
                 # Instantiate child if missing (critical for tree reuse!)
                 if child is None:
                     # Decode move_id to (row, col) for apply_move
@@ -819,12 +829,27 @@ class MCTS:
         # the first iteration if set), then falls through to PUCT for all
         # remaining hops.
         while node.is_expanded and not node.state.is_terminal():
+            _was_override = override is not None
             if override is not None:
                 move_id = override
                 child = node.children.get(move_id)
                 override = None
             else:
                 move_id, child = self._select_child(node)
+
+            # Atlas §8: emitted at the point where the override and PUCT branches
+            # CONVERGE on (move_id, child), before lazy creation. A wrapper around
+            # _select_child would miss the override entirely -- it reads
+            # node.children.get(move_id) directly and never calls _select_child.
+            if self._selection_observer is not None:
+                self._selection_observer.on_select_child(
+                    parent=node, selected_move=move_id, existing_child=child,
+                    depth=len(search_path) - 1,
+                    parent_completed_visits=node.visit_count,
+                    root_override=_was_override,
+                    within_forced_simulation=root_move_override is not None,
+                )
+
             if child is None:
                 r, c = decode_move(move_id)
                 child = MCTSNode(
