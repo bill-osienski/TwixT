@@ -1,16 +1,19 @@
 # Convergence Atlas — Design
 
-**Created:** 2026-08-03 · **Status:** design approved; Phase 0 frozen, atlas measurement NOT execution-frozen
+**Created:** 2026-08-03 · **Status:** EXECUTION-FROZEN 2026-08-03 — Phase 0 run and decided; all five open items closed
 · **Scope:** one fresh corpus, one multi-budget search ladder, three read-outs.
 
 ## Execution-freeze status
 
 | Section | Status |
 |---|---|
-| §2 Phase 0 inheritance preflight | **FROZEN.** Decision rule fixed before the run. |
-| §3–§12 atlas measurement | **NOT execution-frozen.** |
+| §2 Phase 0 inheritance preflight | **FROZEN**, and **RUN**: `WARM_START_REQUIRED`. |
+| §3–§12 atlas measurement | **EXECUTION-FROZEN 2026-08-03.** |
 
-**Open items that must all be closed before §3–§12 are execution-frozen:**
+**All five open items are now closed.** No parameter, threshold, predicate, producer or
+geometry rule below may be changed after this point except by a written amendment that
+precedes the work it governs — never after seeing a result.
+
 
 | # | Item | Where |
 |---|---|---|
@@ -18,7 +21,7 @@
 | 2 | ~~Batch-safe decision boundary~~ — **CLOSED 2026-08-03.** Boundary frozen (first flush completion at or after 320 target-search backups), per-row fields and the preregistered deployability failure defined, and a scoped `mcts.py` exception approved for diagnostic observer surfaces. | §4, §9 |
 | 3 | ~~Convergence predicate signed off~~ — **CLOSED 2026-08-03.** Signed off with two exactness corrections: distribution convergence checks both deep rungs for the same metric, and the gate denominator is `eligible_triggers`. | §7 |
 | 4 | ~~Read-out C's producer~~ — **CLOSED 2026-08-03.** Diagnostic selection tracer chosen (reduced scope rejected); hook signature, dual emission sites, semantics, aggregation contract and qualification all frozen. | §8 |
-| 5 | Deterministic game-to-cell assignment and phase-geometry no-go — **rule FROZEN 2026-08-03** (bipartite matching, pilot geometry gate, 254-subset sizing, stable-digest ties, min-cut witness). **NOT closed:** the rule collides with the frozen 400-game seed range, since `G_total` must exceed `N`. Either the range exceeds the position cap or `N_max` drops. | §3 |
+| 5 | ~~Game-to-cell assignment and phase-geometry no-go~~ — **CLOSED 2026-08-03.** Bipartite matching, pilot geometry gate, 254-subset sizing, stable-digest ties and min-cut witness all frozen; seed range raised 400 → 480 games, which the pilot gate proves sufficient. | §3 |
 
 Writing and committing this document authorizes no measurement and no GPU work.
 
@@ -410,7 +413,29 @@ where one late game can serve either side but supplies only one row. Eight cells
 already frozen for sizing; **no new tuning number is introduced.**
 
 Stop with `PHASE_GEOMETRY_NO_GO` if `q_S = 0` for any demanded cell, or if
-`G_total > 400`.
+`G_total > 480`.
+
+**Why 480, and why both of those stops are invariant assertions rather than live
+gates.** The pilot gate matches three *distinct* games into each of the eight cells at
+capacity one, so any subset of `k` cells is served by at least `3k` of the 24 pilot
+games:
+
+```text
+q_S      >= k/8
+D_S       = k(N-24)/8
+D_S/q_S  <= N - 24
+g_S      <= ceil(1.20 * (N - 24))
+```
+
+At the maximum `N = 400` that gives `g_cont <= ceil(1.20 x 376) = 452` and
+`G_total <= round_up_40(24 + 452) = 480`. **480 is therefore sufficient for every
+geometry the pilot gate admits** — a bound derived from the gate, not headroom chosen
+by guess. It preserves `N_max = 400`, retains the 20% margin, and adds nothing spare.
+
+Consequently, once the pilot gate has passed, neither `q_S = 0` (since `q_S >= k/8 > 0`
+for nonempty `S`) nor `G_total > 480` can fire on legitimate geometry. Keep both: they
+are assertions that would catch an implementation error in the `q_S` computation, and
+they should be read that way rather than as decision points.
 
 **Final matching.** Generate exactly `G_total − 24` continuation games **once**, then
 solve the final matching against per-cell demands:
@@ -442,24 +467,12 @@ This closes the v16/v18 failure mode by construction: feasibility is established
 **actual assignment**, while the pilot-derived formula fixes **one** preregistered
 generation size and never becomes an adaptive top-up mechanism.
 
-> **UNRESOLVED — this rule collides with the frozen seed range.** §3 freezes a
-> contiguous seed range **at the 400-game maximum**, and the sizing rule caps `N` at
-> **400 positions**. But `G_total` is a *game* count that must exceed `N` whenever any
-> proper subset binds: `g_S = ceil(1.20 · D_S / q_S)` with `q_S ≤ 1` gives
-> `g_cont > N − 24` for any binding `S`. So a large `N` demands more games than the
-> frozen range contains and trips `G_total > 400` — a `PHASE_GEOMETRY_NO_GO` caused by
-> the range, not by geometry. Worked illustration: even taking `q_S ≈ 1` for the eight
-> 7-cell subsets gives `g_S ≈ 1.2 · (7/8) · (N − 24) = 1.05(N − 24)`, so `N = 400`
-> needs `G_total ≥ 440` and is unreachable, and `N = 360` sits exactly at the cap.
-> **Either the frozen seed range must exceed the position cap, or `N_max` must drop.**
-> This must be resolved before §3–§12 are execution-frozen.
-
 ### `N` counts positions, not games
 
 `N` is a required **position** count. With one position per game, `N` games are needed
 *that can serve their assigned cell* — and not every game can. A game must survive to
 ply 91+ to supply a late row, so the number of games generated necessarily exceeds `N`
-by a factor the pilot measures. Only the **400-game maximum seed range** is frozen
+by a factor the pilot measures. Only the **480-game maximum seed range** is frozen
 before pilot generation; the exact continuation count is chosen afterwards by the
 frozen sizing formula and the measured phase geometry.
 
