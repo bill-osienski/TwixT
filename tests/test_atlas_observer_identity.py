@@ -63,3 +63,33 @@ def test_hooks_actually_fired_during_the_identity_run():
     fo, so = RecordingFlush(), RecordingSelection()
     run_fixed_search(flush_observer=fo, selection_observer=so)
     assert fo.calls and so.calls
+
+
+def test_tracer_overhead_is_measured_and_reported():
+    """Not a pass/fail bar -- a MEASUREMENT. The atlas-budget decision is the
+    operator's, made against this number.
+
+    FakeEvaluator isolates tracer cost from NN cost, so this OVERSTATES relative
+    overhead versus a real evaluator where inference dominates. Report it as an
+    upper bound, never as the production figure.
+    """
+    import time
+
+    def timed(**kw):
+        # 400, not the golden's 200: design section 8 requires a real
+        # 400-simulation smoke.
+        t0 = time.perf_counter()
+        run_fixed_search(n_simulations=400, **kw)
+        return time.perf_counter() - t0
+
+    off = min(timed() for _ in range(5))
+    on = min(timed(flush_observer=RecordingFlush(),
+                   selection_observer=SelectionTracer()) for _ in range(5))
+    overhead = (on - off) / off
+    verdict = (
+        "BELOW MEASUREMENT NOISE (not a speedup -- treat as ~0)"
+        if overhead <= 0 else f"{overhead:+.1%} upper bound"
+    )
+    print(f"\nATLAS STAGE 1 TRACER OVERHEAD: {overhead:+.1%} -- {verdict}"
+          f"\n  off {off:.4f}s, all-on {on:.4f}s, 400 sims, min-of-5, FakeEvaluator")
+    assert on > 0 and off > 0

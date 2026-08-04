@@ -858,9 +858,11 @@ def test_tracer_overhead_is_measured_and_reported():
         run_fixed_search(n_simulations=400, **kw)
         return time.perf_counter() - t0
 
-    off = min(timed() for _ in range(3))
+    off = min(timed() for _ in range(5))
     on = min(timed(flush_observer=RecordingFlush(),
-                   selection_observer=SelectionTracer()) for _ in range(3))
+                   selection_observer=SelectionTracer()) for _ in range(5))
+    # min-of-5, not 3: at ~0.2s per run, 3 repeats sit inside the noise floor
+    # and can report a spurious NEGATIVE overhead.
     overhead = (on - off) / off
     print(f"\nATLAS STAGE 1 TRACER OVERHEAD: {overhead:+.1%} "
           f"(off {off:.3f}s, all-on {on:.3f}s)")
