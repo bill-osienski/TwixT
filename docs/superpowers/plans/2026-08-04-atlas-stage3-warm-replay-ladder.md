@@ -727,7 +727,7 @@ def run_additive_ladder(mcts, root: MCTSNode, inherited_I: int, ply: int,
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_warm_prefix_replay.py -v -p no:cacheprovider`
-Expected: PASS — 20 passed.
+Expected: PASS — 19 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -859,7 +859,7 @@ def test_within_forced_simulation_is_observed_during_a_warm_replay():
 - [ ] **Step 2: Run and confirm**
 
 Run: `.venv/bin/python -m pytest tests/test_warm_prefix_replay.py -v -p no:cacheprovider`
-Expected: PASS — 29 passed.
+Expected: PASS — 28 passed.
 
 If `test_tracer_cache_is_cleared_at_every_real_advance_root` fails, `replay_prefix` is not clearing at the `advance_root` boundary. Fix the driver; **do not** relax the assertion — the whole point is that a stale `id()` silently returns another node's ranks.
 
@@ -972,7 +972,7 @@ def replay_seed_for(meta: GameMeta, base_seed: int) -> int:
 - [ ] **Step 3: Run and commit**
 
 Run: `.venv/bin/python -m pytest tests/test_warm_prefix_replay.py -v -p no:cacheprovider`
-Expected: PASS — 33 passed.
+Expected: PASS — 32 passed.
 
 ```bash
 git add scripts/GPU/alphazero/warm_prefix_replay.py tests/test_warm_prefix_replay.py
@@ -1248,6 +1248,10 @@ if __name__ == "__main__":
 
 - [ ] **Step 3: Full suite, then commit**
 
+Expected full suite: **2397 + 38 = 2435 passed**, 4 skipped, 0 failed. A different
+total means tests were added, lost or renamed — investigate before committing;
+the delta is the qualification check, not decoration.
+
 ```bash
 .venv/bin/python -m pytest -p no:cacheprovider -q > /tmp/s3.out 2>&1; echo "REAL_EXIT=$?" >> /tmp/s3.out; tail -3 /tmp/s3.out
 git add scripts/GPU/alphazero/warm_prefix_replay.py scripts/GPU/alphazero/run_atlas_ladder.py tests/
@@ -1275,7 +1279,8 @@ Read `REAL_EXIT` from the file. **Never trust a `| tail` exit code.**
 - [ ] A **real** Stage 2 sidecar drives the **real** replay consumer.
 - [ ] Row artifact survives `_jsonable`; geometry is not re-keyed.
 - [ ] Runtime projection uses Stage 1's measured `+1.0%`, labelled an upper bound, with no default `mean_prefix_plies`.
-- [ ] Full suite green, exit code read from the process.
+- [ ] **38 new tests** — 32 in `test_warm_prefix_replay.py`, 6 in `test_atlas_ladder_integration.py`. Cumulative per task: 6 / 13 / 19 / 28 / 32, then 3 / 6 in the integration file.
+- [ ] Full suite **2435 passed**, 4 skipped, 0 failed, exit code read from the process.
 
 ## Out of scope
 
