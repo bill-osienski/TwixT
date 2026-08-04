@@ -335,9 +335,12 @@ entirely. Serializing a 400-simulation tree at every ply of every game is far pa
 
 ### Source protocol (frozen at generation time)
 
-- A new, non-overlapping contiguous half-open seed range, frozen **at the 400-game
+- A new, non-overlapping contiguous half-open seed range, frozen **at the 480-game
   maximum** before any generation, so staged generation stays reproducible and no
-  range is chosen after seeing data.
+  range is chosen after seeing data. (Contradiction repair, 2026-08-04: this bullet
+  previously said 400, contradicting the frozen sizing rule and the `q_S ≥ k/8` proof
+  below, both of which establish 480. An operator reading this first would have frozen
+  the wrong source range. No design change.)
 - A fixed game count chosen before generation, per the sizing rule below.
 - **No top-up** after inspecting phase supply, labels or tree features.
 - Unchanged shipped game generation, with tree reuse.
