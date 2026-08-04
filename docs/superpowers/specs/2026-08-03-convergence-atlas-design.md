@@ -45,13 +45,10 @@ Nothing in this document is a candidate, a prototype, or a step toward adoption.
 
 ### What is closed
 
-The governing record is the experiment ledger. **On this branch it is
-`docs/updated-v16a-ledger.md`, which ends at do-not-repeat entry 42 and contains no
-v17 or v18 record.** Entries 43–46 and the v17 and v18 closeouts exist only on the
-unmerged `v18-depth2-provisional-backup` branch, where the file is also renamed to
-`docs/alphazero-value-search-experiment-ledger.md`. The constraints they encode are
-reproduced below and are binding on this design regardless of which branch carries
-the file. In summary:
+The governing record is `docs/alphazero-value-search-experiment-ledger.md`, restored
+to this branch as documentation-only history (see §12) and complete through
+do-not-repeat entry 46, including the v17 and v18 closeouts. The v17 and v18 designs
+and plans are likewise present under `docs/superpowers/`. In summary:
 
 - **Value calibration against the A signal (v2 → v14b).** The A "post-opening sharp
   value drop" is a 400-simulation search artifact: BASE A mean moves
@@ -1178,16 +1175,35 @@ itself built on a tree inherited at ply `k`. Candidate producers, their cost and
 fidelity to real trajectory inheritance must be specified and frozen before §3–§12
 become execution-frozen.
 
-### Branch-level ledger gap
+### Restored governing history — provenance
 
-This branch is cut from `main`, whose ledger `docs/updated-v16a-ledger.md` ends at
-do-not-repeat entry 42 and records neither v17 nor v18. The constraints from entries
-43–46 — the policy-mass FPU closure and the v18 selectivity null — are binding on this
-design and are reproduced in §0, so the spec is self-contained. But a reader on this
-branch cannot verify them against the repository. Resolving this is a provenance
-decision, not a design one, and it does not block Phase 0.
+This branch was cut from `main`, whose ledger ended at do-not-repeat entry 42 with no
+v17 or v18 record, and which carried neither line's design or plan. That gap has been
+**closed as documentation-only history**: the governing files were restored verbatim
+from `v18-depth2-provisional-backup`, **without merging any code ancestry** and
+without reopening any frozen atlas decision.
 
-### Known biases and limits
+| Restored file | SHA-1 |
+|---|---|
+| `docs/alphazero-value-search-experiment-ledger.md` | `994f76abdaf0adebb3fe4a77254cb7e931efb020` |
+| `docs/superpowers/specs/2026-07-24-v17-…-design.md` | `944f358c0e3ef66503d2cbb56e31dabd145bafc2` |
+| `docs/superpowers/plans/2026-07-24-v17-…-plan.md` | `35381f3350605a1f319ab17c2d1c3b8754ee4483` |
+| `docs/superpowers/specs/2026-07-29-v18-…-design.md` | `7be30d4eea9eccf0316fa5927757fc404ca83ecb` |
+| `docs/superpowers/plans/2026-07-29-v18-…-preflight.md` | `0f793ca0d53562dc5926c2425b3e5b15e61099e5` |
+
+Three of these hashes **independently verify** against the frozen records that cite
+them: the v17 design against the ledger's "Design frozen 2026-07-24, SHA-1
+`944f358c`", and the v18 design and plan against the v18 closeout's recorded revision-3
+and revision-45 hashes. The restored files are byte-identical to the artifacts the
+frozen protocols were run under.
+
+Source commits, doc-only: `a9fe332` (v17 preregistration), `60da20c` (v16 closeout),
+`fc94a60` and `345ec93` (v17 null and closeout), `a324e55` (v18 design and plan),
+`32bfc42` (v18 null and the ledger rename), plus the v18 plan revision commits.
+`docs/updated-v16a-ledger.md` was removed, completing the rename. **No `mcts.py`,
+`self_play.py` or other code ancestry was merged.**
+
+### Known biases and limits### Known biases and limits
 
 - **Late-stratum composition.** Filling the late cells requires games that survive to
   ply 91+, so the late stratum over-represents long games. v16a saw this directly: 19
@@ -1221,12 +1237,9 @@ decision, not a design one, and it does not block Phase 0.
 
 ## Related
 
-- `docs/updated-v16a-ledger.md` — the governing record **as it exists on this branch**:
-  do-not-repeat entries 1–42, no v17 or v18 record. Entries 43–46 and the v17/v18
-  closeouts live on the unmerged `v18-depth2-provisional-backup` branch, where the
-  file is renamed to `docs/alphazero-value-search-experiment-ledger.md`. §0 reproduces
-  the constraints this design depends on, so the spec is self-contained, but the
-  branch-level gap is real and is flagged in §12.
+- `docs/alphazero-value-search-experiment-ledger.md` — the governing record, complete
+  through do-not-repeat entry 46 with the v17 and v18 closeouts. Restored to this
+  branch as documentation-only history; see §12 for provenance.
 - `logs/eval/v18_depth2_provisional_backup/V18_FINAL_NULL.md` — the v18 closeout whose
   operational-no-go framing this design preserves. Gitignored: a local artifact, not a
   repository reference.

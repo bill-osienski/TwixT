@@ -11,6 +11,14 @@ top up, reclassify, or select from
 `logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/` as confirmatory data — it is
 discovery evidence only.
 
+**Final production-v2 status (2026-07-24): REJECTED at the tuning-control
+prerequisite.** The authorized 4,000-game production chain completed through
+exact corpus selection, but `r0` (`FPU=Q_parent`) flipped the selected move to
+a lower-prior move on 11/40 controls (27.5%), above the frozen `<10%` limit.
+Do not run the nonzero coefficient grid or any frozen/downstream gate for this
+formula family. See §14 and
+`docs/alphazero-value-search-experiment-ledger.md`.
+
 ## 1. Pipeline order
 
 ```
@@ -69,7 +77,7 @@ GEOMETRY could support the corpus, not that any row's raw-policy `role`
 read a `qualify` PASS as "the corpus is ready" — it only clears the
 reservoir for `screen`.
 
-## 3. Production profile (schema-2 `AllocationProfile`, 120 rows)
+## 3. Original production profile (schema-2 `AllocationProfile`, 120 rows)
 
 Verbatim JSON shape (the `PRODUCTION_PROFILE_RAW` literal,
 `tests/test_fpu_v2_repair.py`):
@@ -104,6 +112,11 @@ NO phase-relative quantile targets). The late-target band minima
 (`b400_plus`/`b300_399`/`b200_299`) are candidates, NOT frozen, until the
 exact selector produces a witness on the v1 screen (repair plan Task 14) —
 if infeasible, STOP for a science decision; never silently lower a minimum.
+
+The only later scientific amendment was `b400-coverage-floor-v1` (§12), which
+changed b400_plus from total 8 (4+4) to total 4 (2+2). The completed production
+run used that amended profile; all other allocation and isolation rules above
+were unchanged.
 
 ## 4. Smoke profile (schema-2, tooling_smoke, 18 rows)
 
@@ -262,7 +275,7 @@ The 400-game 24×24 `tooling_smoke` chain ran end-to-end from the frozen protoco
 ## 11. Selector v2 (constraint-aware split assignment) + revised sizing + smoke_v2 (2026-07-21)
 
 - **Selector v2** (`split_assignment_version: 2`, commits a005fa0 + 08ef42d): schema-2 selection pre-pins scarce per-split-minima-band games to splits (deterministic largest-shortfall-first cover), with the historical pin-free assigner retained as fallback — the feasible set provably contains selector v1's (differential fuzz: 250 pools × 30 seeds, zero regressions). Schema-1 selection is byte-identical. Motivation: the 8-attempt greedy caused false infeasibility (measured 255/299 → 288/299 at 4,200 games with more attempts).
-- **Sizing (selector v2, preregistered ladder incl. 4,400/4,600):** `sizing_report_selector_v2.json` (SHA-1 92c… superseded; final 81499afc2ac5c04300a4c7c5f376cf8b65f7335f) — **4,600 games: 299/299, lb95 0.9900 ≥ 0.99 MEETS**; preregistered next-tier-up rule → **production count 4,800**. Not emitted; production launch requires explicit authorization.
+- **Sizing at this checkpoint (selector v2, preregistered ladder incl. 4,400/4,600):** `sizing_report_selector_v2.json` (SHA-1 92c… superseded; final 81499afc2ac5c04300a4c7c5f376cf8b65f7335f) — **4,600 games: 299/299, lb95 0.9900 ≥ 0.99 MEETS**; preregistered next-tier-up rule → **production count 4,800**. No protocol was emitted at this checkpoint; the later §12 amendment and §13 authorization superseded this pending status.
 - **smoke_v2** (400 games, seed 20290000, selector-v2 tree): full chain; **controlled sampling GATE_FAIL** at post-screen-qualify (`target|late capacity 5 < demand 6` — 6 kept late-target rows in 3 games under ≤2/game), select refused exit 3, idempotent, isolation verified. Per the standing rule this is a small-sample yield result, never permission to top up or weaken production minima. Failure-machinery plumbing thereby exercised end-to-end on real data.
 - **Assigner exercise (zero-GPU):** `analyze-screen-feasibility` on the authenticated smoke_v2 screen with a discovery-only tooling profile (target|late 2+2, per-split b200_299 minima) — PASS, witness 16 rows, `split_assignment_version: 2`, pins distributed the scarce-band games across splits on attempt 0. Plumbing evidence only (`smoke_v2_assigner_exercise.json`, SHA-1 73a337f1…).
 
@@ -280,3 +293,50 @@ The 400-game 24×24 `tooling_smoke` chain ran end-to-end from the frozen protoco
 > Production reservoir authorized at 4,000 games, board 24, four workers, seed range `[20300000,20304000)`, `run_kind=production`, and no top-up. This intentionally deviates from the preregistered 3,800 margin result because 4,000 independently met the unchanged criterion at 299/299, while 3,800 produced 298/299. All allocation, target, b300/b200, side, spacing, isolation, and amended b400 2+2 requirements remain unchanged.
 
 Decision basis: `sizing_report_b400amend.json` (SHA-1 `7ff76fcb8a5a9d58f1ca2227767142a3c2f307dd`) under amendment `b400-coverage-floor-v1` (§12) with the frozen profile `production_profile_v2_b400amend.json` (SHA-1 `eb1dd21648e49388bff92de8c7831eb0a1a3f6e8`).
+
+## 14. Final production-v2 outcome (2026-07-24)
+
+The single authorized production run completed under frozen source commit
+`9e6a606ee6385d0dd34de3b09ba38bb1d5c721f1`: 4,000 games, board 24,
+400 simulations, four workers, seed range `[20300000,20304000)`, replay
+capture, and no top-up. Production root:
+
+```text
+logs/eval/fpu_v16_policy_mass_v2/production_v2_b400amend_4000g_seed20300000/
+```
+
+Reservoir qualification and `qualify --check` exited 0. The authenticated GPU
+screen processed 20,464 proposals and kept 5,065. `post-screen-qualify` PASSed
+with selector v2 on assignment attempt 0; `select` hard-matched all eleven
+identities and wrote exactly 120 rows (80 tuning / 40 frozen_check, 60 target /
+60 control, perfectly balanced sides by split). Late-target bands were b200=33,
+b300=20, b400=7, clearing the amended total and per-split minima.
+
+Key immutable artifacts:
+
+| Artifact | SHA-1 |
+|---|---|
+| `reservoir_protocol.json` | `0ee3ad8d8a2973d127b9518af66002030f78cdd6` |
+| `fpu_dev_source_screen.csv` | `05db59f8f0c96410d1e3dd4091c83ba39f09c44c` |
+| `post_screen_qualification_report.json` | `f59e531a6f405e2d28588117dbfbe1224ca5d269` |
+| `fpu_dev_corpus_v2_manifest.csv` | `84cdd4b45e089a2ebb292491c146ba00bff17ea9` |
+| `fpu_dev_corpus_v2_manifest.csv.meta.json` | `5501e8b7aa220975d597c0245bf9d74c66d13035` |
+
+The tuning-controls stage then ran `absolute_off` and `r0` over the untouched
+80-row tuning split. It completed normally, but the frozen §6.2 collateral gate
+rejected `r0`: **11/40 controls = 27.5%** flipped to a lower-prior selected move,
+versus the required `<10%`. `r0_qualified=false`; sole reject reason:
+`control_flip_rate=0.2750>=0.1`.
+
+| Control artifact | SHA-1 |
+|---|---|
+| `controls_cases.csv` | `306167f7e1bb0d3ba26842d5bd960419ac5317a7` |
+| `controls_summary.csv` | `d0b0941fa323362aeca1f5afd943fcf60bb629aa` |
+| `controls_gate.json` | `198e5387b81b6f513e557efe5df9828078bbba3c` |
+
+**Final decision:** reject the parent-relative context-policy-mass family. No
+nonzero `r`, frozen check, selected-A candidate gate, pooled collateral,
+A/B/C/D, strength match, or self-play change was run. Keep `calib020_0001`
+and the shipped FPU. The reservoir/corpus/qualification/selector/fingerprint
+machinery remains reusable for a new, separately preregistered mechanism, but
+the observed tuning/frozen splits must not be reused to rescue this formula.

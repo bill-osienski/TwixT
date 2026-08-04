@@ -1,0 +1,36 @@
+{
+  "config_schema_version": 2,
+  "corpus_size": 32,
+  "late_floors": {},
+  "late_target_band_minima": {
+    "frozen_check": {},
+    "tuning": {}
+  },
+  "max_per_game": 2,
+  "min_ply_gap": 12,
+  "phase_allocation": {
+    "control|early_mid": {
+      "frozen_check": 0,
+      "tuning": 4
+    },
+    "control|late": {
+      "frozen_check": 0,
+      "tuning": 4
+    },
+    "control|midgame": {
+      "frozen_check": 0,
+      "tuning": 4
+    },
+    "control|opening": {
+      "frozen_check": 0,
+      "tuning": 4
+    },
+    "target|late": {
+      "frozen_check": 0,
+      "tuning": 16
+    }
+  },
+  "run_kind": "tooling_smoke",
+  "selection_seed": 20260725,
+  "side_tol": 0
+}

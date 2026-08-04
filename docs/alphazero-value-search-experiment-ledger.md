@@ -1,10 +1,14 @@
-# Targeted Value Calibration — Experiment Ledger
+# AlphaZero Value and Search — Experiment Ledger
 
-**Created:** 2026-06-26 · **Status:** active · **Scope:** the value-head calibration line of work (fix the black pre-drop overvalue without breaking the guardrail families).
+**Created:** 2026-06-26 · **Status:** active · **Scope:** the connected value-head calibration and search-reliability line of work centered on the black pre-drop artifact, its guardrail families, and same-budget playing strength.
 
-A durable, append-only record of every value-calibration experiment: what changed, how it scored on the four acceptance gates, what we learned, and what **not** to retry. **Read this before proposing any new calibration knob** — if the change is on the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of a knob we've already swept), the answer is probably "no, we already saw the tradeoff."
+The durable, append-only record of every value-calibration and search-reliability experiment: what changed, how it scored on the applicable acceptance gates, what we learned, and what **not** to retry. **Read this before proposing any new calibration or search knob** — if the change is on the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of a knob we've already swept), the answer is probably "no, we already saw the tradeoff."
 
-> **Key conclusion (updated 2026-07-10, post v16a held-out validation):** The A black-pre-drop calibration target is explained as a **400-sim search artifact**, not a stable value-head defect. v14 closed the adapter cleanup line; v15 showed the 400-sim backup came from broad depth-2 frontier optimism; and the budget/trajectory checks showed BASE A collapses with more search (**400/1600/6400 mean +0.2570 → +0.0626 → −0.0451**, gate-over **50.0% → 30.0% → 10.0%**, severe **43.3% → 6.7% → 3.3%**), with the apparent predrop “drop” mostly a selected shallow-search bump (**6400−400 = −0.573 at predrop, −0.001 at drop**). Therefore **value calibration against A remains unjustified**: no v15 Phase 1, no frontier hard-value correction, and no further adapter/projection/schedule cleanup. v16 then falsified c_puct and showed that negative FPU directly reaches the first-touch reply-scanning mechanism on the selected A set: `fpu_value=−0.20` moved mean **+0.2570 → −0.0344** and opponent replies **134.7 → 24.5**. However, the frozen v16a game-held-out test **rejected absolute `fpu_value=−0.20` as a general 400-sim setting**. Across 324 held-out positions it caused **15 new collapsed roots (4.63%)**, and the preregistered stratum reject gate fired in late play: **13/84 = 15.48%** new collapses, including **6/42 = 14.29% late-red** and **7/42 = 16.67% late-black**. Effective children fell **107.58 → 70.92** (−36.66; about −34.1%), top-move flips reached **27.16%**, and late collapsed roots rose **17/84 → 28/84**, despite small central value movement (mean mover delta **+0.0028**, median absolute **0.0180**, p95 absolute **0.2822**). The selected-A result remains valid **mechanistic evidence**, but the fixed absolute candidate does not generalize safely. **Do not run B/C/D or a strength match with `−0.20`.** Next: a read-only postmortem of the 15 new-collapse cases, followed by a new search candidate designed on discovery data only—likely adaptive or parent-relative FPU. The v16a held-out manifest is consumed and must not be used to tune that replacement. The decisive success benchmark remains an equal-checkpoint, equal-400-sim, balanced-color, statistically significant head-to-head strength gain after collateral and guardrail checks pass.
+> **Key conclusion (updated 2026-07-29, post v17 null — the policy-mass FPU line is closed):** The A black-pre-drop calibration target is explained as a **400-sim search artifact**, not a stable value-head defect. v14 closed the adapter cleanup line; v15 showed the 400-sim backup came from broad depth-2 frontier optimism; and the budget/trajectory checks showed BASE A collapses with more search (**400/1600/6400 mean +0.2570 → +0.0626 → −0.0451**, gate-over **50.0% → 30.0% → 10.0%**, severe **43.3% → 6.7% → 3.3%**), with the apparent predrop “drop” mostly a selected shallow-search bump (**6400−400 = −0.573 at predrop, −0.001 at drop**). Therefore **value calibration against A remains unjustified**: no v15 Phase 1, no frontier hard-value correction, and no further adapter/projection/schedule cleanup. v16 then falsified c_puct and showed that negative FPU directly reaches the first-touch reply-scanning mechanism on the selected A set: `fpu_value=−0.20` moved mean **+0.2570 → −0.0344** and opponent replies **134.7 → 24.5**. However, the frozen v16a game-held-out test **rejected absolute `fpu_value=−0.20` as a general 400-sim setting**. Across 324 held-out positions it caused **15 new collapsed roots (4.63%)**, and the preregistered stratum reject gate fired in late play: **13/84 = 15.48%** new collapses, including **6/42 = 14.29% late-red** and **7/42 = 16.67% late-black**. Effective children fell **107.58 → 70.92** (−36.66; about −34.1%), top-move flips reached **27.16%**, and late collapsed roots rose **17/84 → 28/84**, despite small central value movement (mean mover delta **+0.0028**, median absolute **0.0180**, p95 absolute **0.2822**). The selected-A result remains valid **mechanistic evidence**, but the fixed absolute candidate does not generalize safely. The context-relative policy-mass successor was then implemented and taken through a fresh, fully fingerprinted production-v2 corpus, but it failed its prerequisite before any nonzero coefficient ran: `r=0` (`FPU=Q_parent`) changed the selected move to a lower-prior move on **11/40 tuning controls = 27.5%**, exceeding the frozen `<10%` collateral limit. Per the preregistered rule, this **rejects the entire parent-relative policy-mass family**; no candidate grid, frozen check, selected-A candidate gate, B/C/D, collateral, or strength match is authorized. The shipped-baseline successor **v17** (`FPU = −r·sqrt(P_explored)`, no `Q_parent`) was then implemented, preregistered and run end-to-end on entirely fresh evidence — a 1,600-game reservoir and a deterministic 32-position corpus disjoint from all prior sets — and returned a **null (2026-07-29)**: shipped vs `r=0` identity held exactly (32/32 rows byte-identical), every positive coefficient measurably changed search (32/32 positions), and **all five preregistered coefficients failed the §7.2 safety gates**. Target new-collapse was 1–2 of 16 where the rule permits zero, and control flips to lower-prior moves remained **31–50% across the tested grid** where two of sixteen already rejects. The intended reply-suppression mechanism is active (reply reduction 0.23 → 0.79 with `r`), but its control cost does not fall as `r` shrinks, so no coefficient is cheap. Per the preregistered §13 rule a null **closes v17**: no held-out generation, no A/B/C/D, no strength match, and **no grid extension**. **Both policy-mass FPU formulations — parent-relative and baseline-preserving — are now rejected on independent corpora with the same failure mode; the line is closed.** Keep `calib020_0001` and the shipped FPU. Any further search-reliability proposal requires a new written mechanism and fresh preregistered evidence; do not relax the observed control gate, extend the coefficient grid, or reuse the consumed tuning/frozen splits to rescue policy-mass FPU. The decisive success benchmark remains an equal-checkpoint, equal-400-sim, balanced-color, statistically significant head-to-head strength gain after collateral and guardrail checks pass.
+
+> **v18 closeout (updates the key conclusion above through 2026-08-03):** The new depth-2 provisional-backup hypothesis was tested by a shipped-only, read-only preflight before any `mcts.py` implementation or positive-cap search. The proposed observable has **reach** on selected A (**0.5639 ≥ 0.50**) and a derivable candidate band, so this is not a no-op result. It nevertheless fails the properties required to justify implementation: A-vs-matched-control exposure is essentially chance (**AUC 0.5089**, bootstrap lower bound **0.39**, below **0.70/0.50**), sign dominance is **0.78475 < 0.80**, and the frozen selector has **zero target rows** and fails at every sizing tier, including the full authenticated 800-game universe. Therefore **v18 is closed at preflight**: no `mcts.py` edit, no positive cap, no Stage 0, no grid extension, no held-out generation, and no strength match. This failure means the required selectivity was not established; it does **not** prove no depth-2 provisional-backup effect exists. The consumed v18 evidence may motivate a genuinely new observable, but may not be reused as fresh confirmation or rescued by relaxing the frozen predicates after seeing the result. Keep `calib020_0001` and shipped search.
+
+> **v16 postmortem closeout (2026-07-24):** The read-only tuning-control postmortem reproduced the exact **11/40** lower-prior flips with no frozen-check participation. Flips concentrated in opening (**5/10**) and red-to-move controls (**8/20**). On flipped rows, the mean selected-move prior rank moved **1.27→9.00**; effective children changed by **−20.10** versus **−7.35** on non-flips, while root-value movement stayed small (**+0.0080**) and mean top share fell slightly (**−0.0141**). Reply reduction was actually smaller on flipped rows (**−20.18** replies versus **−40.52** on non-flips), so the failures are not evidence that stronger reply suppression caused the move changes. The measured pattern implicates replacing shipped FPU with the `Q_parent` neutral baseline as the destabilizing step; it does **not** prove any shipped-baseline successor will work. Any successor must remove `Q_parent`, preserve shipped behavior exactly at coefficient zero, and use fresh preregistered evidence.
 
 ## Before proposing a new calibration experiment
 
@@ -84,13 +88,12 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **v16 c_puct falsification diagnostic** — c_puct is not the fix | Read-only search-reliability diagnostic on BASE A probe rows; no checkpoint, no manifest, no training. Integrity check passed: c_puct=1.5 reproduced Phase 0 per-case root values within 1e-6, then only `MCTSConfig.c_puct` varied. | **c_puct worsens A:** c_puct 1.5→0.25 raised mean +0.2570→+0.3778, gate-over 50.0%→60.0%, severe 43.3%→50.0%. Top-child visit share rose 0.474→0.642; top-child visited children rose 134.7→232.9; corr(top_child_n_visited_children, root value)=+0.943. | n/a | n/a | n/a | no match | **Reject c_puct as a fix / continue v16 only via FPU diagnostic.** Lower c_puct funnels visits into the selected root child and increases one-visit opponent-reply frontier scanning. Raising c_puct must not be used to pass A because it would lower the metric by spreading visits onto inferior root moves, not by repairing the frontier. Next search-code lever is an opt-in FPU field with default 0.0 preserving current behavior exactly. |
 | **v16 FPU selected-A diagnostic** — first knob that reaches the measured mechanism | Search-code diagnostic on BASE A probe rows; no checkpoint, no manifest, no training. Added opt-in `MCTSConfig.fpu_value` with default 0.0, routing unvisited-child q through the field. Integrity check passed: fpu=0.0 reproduced Phase 0 within 1e-6 and the full suite passed, proving default behavior is byte-identical. | **FPU works on selected A:** fpu 0.0→−0.20 moved mean +0.2570→−0.0344, gate-over 50.0%→6.7%, severe 43.3%→6.7%, and opponent replies scanned 134.7→24.5. fpu −0.35/−0.50 reached severe 0.0% but with much narrower search. `−0.20` was frozen as the single held-out candidate because it was closest to the 6400 reference (mean −0.0451) while preserving more breadth than −0.35/−0.50. | n/a | n/a | n/a | no match | **Promising mechanism / not adoption.** FPU directly suppresses first-touch opponent-reply scanning, the mechanism c_puct could not reach. But the sample is biased by A selection, and FPU gets the value by narrowing search rather than searching deeper. The next rung was the frozen v16a comparison `0.0` vs `−0.20` on a game-held-out neutral sample; see the following row. |
 | **v16a held-out FPU validation** — frozen `0.0` vs `−0.20` collateral screen | Search-code diagnostic only on a deterministic stratified, game-held-out, non-selected manifest: 324 positions from 252 games, buckets 40 opening / 100 early-mid / 100 midgame / 84 late, exactly 162 red / 162 black, and zero games shared with A discovery. The 19 winner-null 280-ply state-cap marathons were retained as stressed valid samples. No checkpoint or training changes. | **Not an A gate. Neutral result:** mean mover delta +0.0028, median absolute 0.0180, p95 absolute 0.2822; top-move flips 27.16%; effective children 107.58→70.92 (−36.66, about −34.1%); top-share +0.0716; 15 new collapses / 2 resolved. | n/a | n/a | **Late collateral failure:** 13/84 = 15.48% new collapse; late-red 6/42 = 14.29%, late-black 7/42 = 16.67%; late collapsed roots 17/84→28/84. | no match | **REJECT absolute `fpu_value=−0.20` as a general 400-sim setting.** The preregistered reject rule (any n≥20 stratum with new-collapse rate ≥10%) fired independently for late overall and both late-side strata. Do not proceed to B/C/D or strength evaluation with this candidate. Selected-A success remains mechanistic evidence only. Next: read-only postmortem of the 15 new-collapse cases, then design a new adaptive/parent-relative candidate on discovery data only. The v16a held-out manifest is consumed and must not be used for tuning. |
-
-
-| **v16 policy-mass successor — reservoir protocol v1** | Search-code successor on unchanged BASE `calib020_0001`: `FPU=Q_parent-r*sqrt(P_explored)`, with completed-visit policy mass. New phase-primary dev-corpus pipeline, immutable 4,800-game reservoir protocol, tuning/frozen whole-game split, matched controls, late-band floors, and end-to-end fingerprints. Frozen generation commit `fca9c0d`; reservoir seed range `[20270000,20274800)`. | **pending.** Selected-A is tuning-only and later must pass the reply-reduction/progress mechanism gate. | **pending guardrail.** | **pending guardrail.** | **pending guardrail.** | pending | **RUNNING (2026-07-16).** Protocol emitted successfully; exact 4,800-game `calib020_0001` vs `0379` replay reservoir is generating with board 24, 400 sims, workers 4, replay capture, and no top-up. No qualification, candidate, frozen-check, A/B/C/D, or strength result has been observed. Do not interpret or promote. |
-
+| **v16 policy-mass successor — production v2 control qualification** | Search-code successor on unchanged BASE `calib020_0001`: `FPU=Q_parent-r*sqrt(P_explored)`, with completed-visit policy mass. After v1 corpus infeasibility and the role-feasibility/selector-v2 repair, generated one immutable 4,000-game production reservoir (board 24, 400 sims, workers 4, seed `[20300000,20304000)`, no top-up), screened 20,464 proposals, and selected a fingerprinted 120-row whole-game-isolated corpus. | **not run.** Selected-A is downstream of the failed `r0` prerequisite. | **not run.** | **not run.** | **not run.** | no match | **REJECT parent-relative policy-mass family at the prerequisite (2026-07-24).** `r0` ran successfully on the untouched 80-row tuning split but failed development safety: lower-prior control flips `11/40 = 27.5%` vs required `<10%`. Target lock-ins improved `1→0` and mean top share fell `0.390125→0.295344`, but those descriptive improvements do not override the collateral gate. No nonzero `r`, frozen check, selected-A candidate gate, A/B/C/D, collateral, or strength result was run. |
+| **v17** — baseline-preserving policy-mass FPU | `FPU = −r·sqrt(P_explored)`, NO Q_parent; grid {0.15,0.20,0.25,0.35,0.45}; fresh 1,600-game reservoir + 32-position corpus | not reached | not reached | not reached | not reached | no match | **Reject (null).** All five coefficients fail §7.2 safety at development. No held-out, no Task 12, no grid extension. |
+| **v18** — depth-2 provisional backup, shipped-only preflight | Proposed cap on unusually large sign-correct raw parent/leaf residuals at newly expanded nonterminal depth-2 leaves; shipped selection/FPU unchanged; preflight only, no positive-cap search | **mechanism reach only:** pooled exposed positive backup mass 0.5639 passes; A-vs-matched-control AUC 0.5089 fails | not reached | not reached | not reached | no match | **Reject (preflight null).** Selectivity and sign-dominance fail; frozen selector produces 0 targets and sizing fails even at all 800 games. No implementation, positive cap, Stage 0, held-out, grid extension, or strength match. |
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
 
-## v16 policy-mass successor — reservoir protocol v1 (RUNNING 2026-07-16)
+## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
 
 This is the first context-relative successor to rejected v16a. It is a search experiment on unchanged `calib020_0001`, not a new trained checkpoint. The rule under test is:
 
@@ -127,14 +130,14 @@ Machine-authoritative protocol:
 logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/reservoir_protocol.json
 ```
 
-Current observed status:
+Historical checkpoint status (recorded before reservoir v1 completed):
 
 - Clean `main == origin/main` at `fca9c0d` was confirmed.
 - `emit-protocol` succeeded.
 - `emit-gen-command` reproduced the reviewed command exactly.
 - Reservoir generation started 2026-07-16 and is expected to take approximately 39 hours at historical four-worker throughput.
 - The match CLI is silent until completion and writes replay sidecars incrementally.
-- **No scientific result exists yet.** Qualification, geometry, screen eligibility, coefficient safety, selected-A progress, frozen performance, B/C/D guardrails, and playing strength are all pending.
+- **At this checkpoint, no scientific result existed yet.** Qualification, geometry, screen eligibility, coefficient safety, selected-A progress, frozen performance, B/C/D guardrails, and playing strength were pending; the later v1 outcome and final production-v2 decision are recorded below.
 
 Frozen progression/stopping rule:
 
@@ -153,6 +156,207 @@ reservoir qualification
 If the reservoir faithfully matches the protocol but fails geometry, protocol v1 is retired; never append/top-up. If `r0` or every candidate fails, reject the formula family. No self-play adoption before the final strength match passes.
 
 Full reproducible commands and artifact descriptions belong in `docs/post-game-analysis.md` section `v16 Context-Relative Policy-Mass FPU — Operator Runbook`.
+
+## v17 baseline-preserving policy-mass FPU — REJECTED (null), 2026-07-29
+
+**Rule.** `FPU = fpu_value − r·sqrt(clamp(P_explored, 0, 1))`, with validation forcing
+`fpu_value == 0.0`, so the operative rule is `−r·sqrt(P_explored)`. **No `Q_parent`** —
+this is what distinguishes v17 from the retired v16 parent-relative rule.
+
+**Preregistration.** Design frozen 2026-07-24, SHA-1
+`944f358c0e3ef66503d2cbb56e31dabd145bafc2`. Grid `{0.15, 0.20, 0.25, 0.35, 0.45}`,
+fixed in advance; §13 forbids interpolating or extending it.
+
+### Evidence
+
+| Artifact | SHA-1 |
+|---|---|
+| `development_diagnostic.json` | `af7778c84e1ea04f463febfc615e5363400d6aad` |
+| `selected_coefficient.json` (rejection witness) | `fad6ccb6fe678e86fc474c6d99234dc8841d0f2a` |
+| reservoir protocol | `386d14f48a05380b94d252cf815e84121f06b0b7` |
+| diagnostic protocol / config | `41f1612f4706c52c9393946b4319a67998cb955f` / `6d4fe3fbd7fc1fa54d6ed3f0ecd88962a6223378` |
+| corpus manifest | `15b0228edc1ed605fea799694d4ca0eda3e3468b` |
+| corpus source index | `960408f0b8e980730160112cd77f9661b4c41a10` |
+| selected replays (16 games) | `0b8609cff6fb0c9ac66c7f008c73d3297309b3a4` |
+| `mcts.py` at run time | `b60c983399dbc5ed292de9b15944b8850a1d8508` |
+
+Fresh evidence throughout: 1,600 games at seeds `[20310000, 20311600)`, board 24,
+400 sims, batching `(14, 48, 8)`, `add_noise=false`, no top-up; deterministic
+32-position corpus (16 late flat-policy targets, 16 concentrated controls, four per
+phase, 16 red / 16 black, ≤2 per game, ≥12-ply spacing), disjoint from all v16
+production, v16a neutral and A/B/C/D positions.
+
+**Identity prerequisite passed.** Shipped vs `r=0` byte-identical on **32/32** rows
+including `search_result_sha1`. Each positive coefficient differs from shipped on
+**32/32** positions, so the identity result is not vacuous.
+
+### Gate table — all five coefficients fail
+
+| r | target new-collapse (`<0.05`) | control flip to lower prior (`<0.10`) | reply reduction (`≥0.50`) | verdict |
+|---|---|---|---|---|
+| 0.15 | **0.0625** | **0.4375** | **0.2336** | FAIL |
+| 0.20 | **0.0625** | **0.3125** | **0.3712** | FAIL |
+| 0.25 | **0.1250** | **0.5000** | 0.5038 | FAIL |
+| 0.35 | **0.1250** | **0.4375** | 0.6827 | FAIL |
+| 0.45 | **0.0625** | **0.4375** | 0.7863 | FAIL |
+
+Every coefficient fails **both** §7.2 safety gates. On 16 targets the `>=5%`
+new-collapse rule passes only at zero collapses; each coefficient produced 1–2. The
+16-control flip gate permits at most one flip and rejects at two; observed rates of
+0.31–0.50 are **5–8 flips**.
+
+**Selected coefficient: `null`.** The §7.3 reply-reduction mechanism gate is met at
+`r ≥ 0.25`, but never becomes decisive because safety fails at every grid point.
+
+### Interpretation
+
+The intended reply-suppression mechanism is active — reply reduction rises
+monotonically with `r` (0.23 → 0.79) — but it carries an unacceptable control cost at
+**every** strength tested, and that cost does not fall as `r` shrinks: the control
+flip rate remains **31–50% across the tested grid** while reply reduction varies more
+than threefold. There is no region where the intended effect is obtained cheaply.
+
+`selected_coefficient.json` is a **rejection witness**, not an authorization: it
+records `coefficient: null` bound to the development artifact, gate table and
+selection context. It does not permit advancing.
+
+### Frozen-plan consequences
+
+- **No held-out generation.** Task 11's stop condition is met.
+- **No Task 12.** Held-out collateral is not authorized and must not be built.
+- **No grid extension.** §13 pre-registers a null as closing v17. Reply reduction is
+  still climbing at `r = 0.45`, which invites a larger coefficient — but control flips
+  are already 7/16 there, and the preregistration forbids it. Trying `r > 0.45`
+  would be exactly the post-hoc grid extension the freeze exists to prevent.
+- **No strength match.** Nothing reached the strength stage.
+
+## v18 depth-2 provisional backup — REJECTED at shipped-only preflight, 2026-08-03
+
+### Hypothesis and why it was plausible
+
+v18 was a new intervention point, not v17b and not a third policy-mass FPU formula.
+The motivating evidence was that selected-A's 400-simulation inflation came from a
+**broad, shallow depth-2 frontier**, while additional search removed the bump:
+
+- the top positive depth-1 child had mean raw black value about `-0.087` but mean
+  searched black value about `+0.619`;
+- selected positive branches contained `4,443` depth-2 nodes accounting for `77.3%`
+  of leaf evaluations, with mean raw black value about `+0.793` and `98.8%`
+  raw-positive;
+- a median `196` depth-2 nodes per root was needed to cover 70% of positive raw
+  mass, ruling out a few-PV-row correction; and
+- increasing search from 400 to 1,600 and 6,400 simulations reduced selected-A
+  mean `+0.2570 -> +0.0626 -> -0.0451`.
+
+The frozen hypothesis was therefore:
+
+> Preserve shipped selection and frontier breadth, but treat a newly expanded
+> nonterminal leaf exactly two plies below the root as provisional. Cap only an
+> unusually large sign-correct disagreement between that leaf's raw value and its
+> expanded parent's raw value; if revisited, back up depth-3-and-deeper evidence
+> normally.
+
+Unlike FPU, this would act **after** a leaf had already been selected and evaluated,
+so it might redirect some depth-1 reply scanning into deeper confirmation without
+preventing unexplored moves from receiving their shipped first visit. The proposal
+earned implementation only if shipped-only residual exposure first separated the
+selected-A phenomenon from matched ordinary/tactical positions and supported a
+viable fresh corpus. Merely showing large A residuals was explicitly insufficient.
+
+### Preregistration and execution boundary
+
+- Design revision 3 SHA-1: `7be30d4eea9eccf0316fa5927757fc404ca83ecb`.
+- Execution plan revision 45 SHA-1: `0f793ca0d53562dc5926c2425b3e5b15e61099e5`.
+- Binding clean HEAD: `83f47465b2dd7da76d062dc5b162c9fe902d5d31`.
+- Shipped search only: synchronous 400 simulations, `add_noise=false`, `c_puct=1.5`,
+  batching `(14,48,8)`; 30 authenticated selected-A rows plus a residual-blind
+  1,957-position census from exactly 800 authenticated games.
+- The cap grid, exposure formula, matching variables, thresholds, selector geometry,
+  sizing rule, winner's-curse guard and verdict vocabulary were frozen before the
+  binding measurement.
+- `mcts.py` stayed at SHA-1 `b60c983399dbc5ed292de9b15944b8850a1d8508`
+  and has no v18 diff from the pinned branch point. No positive-cap search ran.
+
+### Evidence of record
+
+| Artifact | SHA-1 |
+|---|---|
+| `step5_verdict.json` | `13f1fb65c414d86b5e5c0d1887c84e05bde69a6f` |
+| `step5_sizing.json` | `521892899820eaf619e44515569fb601bce72b05` |
+| `step5_matched_cohort.json` | `01d79f3d030b93e27fbe1aaa37ab704ad8fba343` |
+| `preflight_artifact.json` | `004e72a4b589c853713bf74e38e3cd148878d4eb` |
+| `census_positions.csv` | `718f9abfe221a66b26c4e79517f6ea08f0802008` |
+| `crossover_tables.csv` | `ee6040b7b83b4c2f4a97366abdd22014c4084b58` |
+| `residual_rows.csv` | `4f0ea1783dac4d3c8302b65fde180ecbc354a742` |
+| `frozen_preflight_criteria.json` | `87f645dd25ab71b86f4a3b70369e5eebb456dfee` |
+| `frozen_source_universe.json` | `631876610c10127bd0678224ab9ee8d25198c8b4` |
+| `step4_a6400_reference_bundle.json` | `60c9d7dd111e5ab34367fb4849cc0d872a8f5dca` |
+
+The public evaluator authenticated and reproduced the census, crossover rows,
+leaf-level reach evidence, matched cohort, production sizing ladder, criteria,
+universe, runtime source identities and A/6,400 reference bundle before evaluating
+the gates. Superseded and rejected diagnostics are retained separately and are not
+part of this result.
+
+### Outcome — `PREFLIGHT_FAIL`
+
+| Gate | Frozen requirement | Observed | Result |
+|---|---:|---:|---|
+| A-vs-matched-control selectivity | AUC `>=0.70`; bootstrap lower bound `>=0.50` | AUC `0.5088888889`; lower bound `0.39` | **FAIL** |
+| positive-residual sign dominance | `>=0.80` | `0.7847506370` | **FAIL** |
+| selected-A reach | pooled `>=0.50` | `0.5638789580` | PASS |
+| terminal depth-2 fraction | `<=0.10` | `0.0011669828` | PASS |
+| selector sizing | a qualifying frozen tier | `0/299` successes at every 200–700 tier; `0/1` at all 800 games | **FAIL** |
+
+The selectivity failure is decisive: `exposure_primary_0.50` was essentially chance
+at separating 30 selected-A rows from 30 residual-blind matched controls despite
+10,000 frozen-seed bootstrap replicates. The record's exact interpretation is:
+**required A-vs-matched-control selectivity was not established**. It explicitly
+does **not** mean that no depth-2 effect exists.
+
+The sizing failure independently exposes the same problem. Of 1,957 census rows,
+24 cleared the exposure cutoff (`0.2475800522`); all 24 also cleared sign dominance
+and eligible-leaf count; only 2 were near-even; and both of those were flip controls.
+Thus **0 rows satisfied the complete target predicate**. Frozen role counts were
+target `0`, representative `16`, identity `411`, flip `95`, unassigned `1,435`.
+The full-universe failure was `target|late capacity 0 < demand 16`, not a sampling
+accident at a smaller tier.
+
+### Interpretation
+
+The preflight is a real negative scientific result, not merely a platform test.
+It shows both of the following:
+
+1. The proposed observable reaches the mechanism: selected-A pooled exposure passes,
+   terminal contamination is negligible, and a formal candidate band is derivable
+   (`R_min=0.0106029774`, `R_max=0.1167949298`).
+2. The observable does not provide the required **selectivity or viable target
+   geometry**. It cannot distinguish the hoped-for shallow-horizon population from
+   collateral-sensitive positions well enough to justify changing shipped search.
+
+The passed reach gate cannot rescue failed selectivity, and a derivable cap band
+cannot create a target corpus that does not exist. Conversely, the null does not
+prove that every depth-2 provisional-backup mechanism is ineffective; it closes
+this preregistered residual observable, role geometry and cap-development path on
+the consumed evidence.
+
+### Decision and frozen consequences
+
+- **Close v18 at preflight.** Keep `calib020_0001` and shipped MCTS.
+- **No `mcts.py` implementation and no positive-cap search.** The intervention was
+  deliberately stopped before it could affect search behavior.
+- **No Stage 0, development grid, held-out generation, A/B/C/D acceptance run or
+  strength match.** None is authorized by this result.
+- **No threshold, role-predicate, near-even, flip-control or sizing relaxation after
+  seeing the null.** Those rules were the protection against selecting a flattering
+  corpus post hoc.
+- **Evidence consumed.** The 800-game universe, 1,957-position census, matched cohort
+  and selected-A measurement may inform a genuinely new mechanism or observable,
+  but may not serve as fresh confirmatory evidence for it.
+- Any successor must state a new selective observable and falsification criterion in
+  writing, use fresh preregistered confirmation, and still earn the final benchmark:
+  equal-checkpoint, equal-400-simulation, balanced-color significant strength gain
+  after safety and guardrail checks pass.
 
 ## What got better vs worse
 
@@ -219,9 +423,16 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 40. **Treating selected-A FPU success as adoption.** The v16 FPU selected-A diagnostic is the first positive search-mechanism result, but it is still on a biased set selected by the flawed 400-sim A statistic. Do not adopt FPU into gates, self-play, or promotion rules based on selected-A results alone. Validate on an unbiased/non-selected sample first, then B/C/D under the same setting, then a head-to-head strength evaluation before any self-play adoption.
 41. **Using absolute `fpu_value=−0.20` as a general 400-sim setting, or advancing it to B/C/D or a strength match.** v16a rejected it on the game-held-out sample: late new-collapse rate was 15.48% (13/84), with both late-red and late-black above the preregistered 10% stratum reject bar. The small mean value delta does not rescue a candidate that materially increases late root collapse.
 42. **Tuning the replacement FPU candidate on the v16a held-out manifest.** The 324-position v16a sample has been observed and is consumed. Do not select absolute values, formulas, thresholds, or schedules against it. Diagnose the failure read-only, but design/tune any adaptive or parent-relative replacement using discovery data only; use a fresh or separately preregistered confirmatory holdout before adoption.
+43. **Running or interpreting any nonzero policy-mass coefficient after the `r0` prerequisite failure, or relaxing the control-flip gate post hoc.** On the untouched production-v2 tuning split, `r0` (`FPU=Q_parent`) flipped the selected move to a lower-prior move on 11/40 controls = 27.5%, versus the frozen requirement `<10%`. The protocol explicitly makes `r0` qualification a prerequisite for the whole parent-relative family. Do not run the `{0.10,0.20,0.35,0.50,0.75}` grid, inspect the frozen split, or reuse these consumed splits to redesign the formula.
+44. **Treating the v16 postmortem as a rescue of `Q_parent` or as positive evidence for a replacement coefficient.** The postmortem explains an already-final rejection: flips moved from mean prior rank 1.27 to 9.00 and concentrated in opening/red-to-move controls without a flip-specific top-share increase. It supports removing `Q_parent` from the neutral baseline; it does not validate `shipped_FPU-r*context`, select `r`, or authorize reuse of the consumed tuning/frozen positions.
 
+45. **Any policy-mass FPU coefficient, in either formulation.** v16's parent-relative `Q_parent − r·sqrt(P_explored)` died at its own `r=0` prerequisite (27.5% control flips vs a <10% gate). v17's baseline-preserving `−r·sqrt(P_explored)` ran the full preregistered grid on fresh evidence and failed §7.2 safety at **all five** coefficients, with control flip rates of 0.31–0.50 that do **not** improve as `r` shrinks. Two independent formulations, two independent corpora, same failure mode: the policy-mass FPU line is closed. Do not propose `r > 0.45`, a finer grid, a relaxed control gate, or a third formulation of the same idea.
+
+46. **Rescuing v18 by implementing the cap anyway, relaxing the preflight, or reusing its evidence.** v18 had real selected-A reach (`0.5639`) but failed its decisive A-vs-matched-control selectivity gate (AUC `0.5089`, lower bound `0.39`), missed sign dominance (`0.78475 < 0.80`), and produced **zero complete target rows**; selector sizing failed even on the full 800-game universe. Do not edit `mcts.py`, run a positive cap, extend or interpolate the grid, weaken the exposure/sign/near-even/flip/sizing predicates, or reuse the consumed census/cohort as fresh evidence to rescue this formulation. A successor needs a genuinely new selective observable, a new written hypothesis and fresh preregistered confirmation. This null means selectivity was not established; do not overstate it as proof that no depth-2 effect exists.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
+
+
 
 ## v14 adapter-projection cleanup status (2026-07-09)
 
@@ -1142,7 +1353,7 @@ Lesson: v14b is the best adapter result so far. Projection helped A relative to 
 - **v14 adapter line:** value-adapter surface (`value_head.*` + `value_adapter.*`) with scalar gate/bottleneck 32; v14b best near-pass checkpoint `checkpoints/alphazero-v14b-value-adapter-projection-from-calib020-0001/model_iter_0001.safetensors`; v14c/v14d rejected and close cleanup.
 - **v15 raw/MCTS + continuation diagnostics:** raw A/D drift CSV `logs/eval/v15prep_raw_AD_drift_base_v14b_v14d.csv`; Phase 0 concentration script `scripts/GPU/alphazero/diagnose_v15_a_continuation_concentration.py` output `logs/eval/v15prep_a_continuation_concentration.csv`; Phase 0.5 subtree script `scripts/GPU/alphazero/diagnose_v15_a_selected_branch_subtrees.py` outputs `logs/eval/v15prep_a_selected_branch_subtrees.csv` and `logs/eval/v15prep_a_selected_branch_subtrees_by_depth_summary.csv`; closure summary files `logs/eval/v15prep_a_phase05_*.csv` / `.txt`; decision: no v15 Phase 1.
 - **v16/v16a search-reliability diagnostics:** FPU hook and sweep `scripts/GPU/alphazero/diagnose_fpu_sweep.py`; neutral-manifest builder `scripts/GPU/alphazero/build_v16a_neutral_position_manifest.py`; manifest/meta `logs/eval/v16a_fpu_unbiased/neutral_position_manifest.csv` and `.meta.json`; held-out outputs `neutral_fpu_sweep_cases.csv`, `neutral_fpu_sweep_summary.csv`, `neutral_fpu_sweep_by_stratum.csv`, and `operator_sweep.log` in the same directory; design `docs/superpowers/specs/2026-07-10-v16a-unbiased-fpu-validation-design.md`; result: fixed absolute `−0.20` rejected by the late-stratum collapse gate.
-- **v16 context-relative policy-mass successor:** rule/observer/diagnostic `scripts/GPU/alphazero/mcts.py` + `scripts/GPU/alphazero/diagnose_fpu_policy_mass.py`; phase-primary corpus `scripts/GPU/alphazero/fpu_dev_corpus_v2.py`; immutable reservoir protocol/qualification `scripts/GPU/alphazero/fpu_dev_reservoir_protocol.py`; production protocol root `logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/`; design `docs/superpowers/specs/2026-07-10-context-relative-fpu-policy-mass-design.md`; corpus design `docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md`; qualification design `docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-qualification-design.md`; operator guide `docs/post-game-analysis.md` §11; status: reservoir protocol v1 RUNNING, no result yet.
+- **v16 context-relative policy-mass successor:** rule/observer/diagnostic `scripts/GPU/alphazero/mcts.py` + `scripts/GPU/alphazero/diagnose_fpu_policy_mass.py`; phase-primary corpus `scripts/GPU/alphazero/fpu_dev_corpus_v2.py`; immutable reservoir protocol/qualification `scripts/GPU/alphazero/fpu_dev_reservoir_protocol.py`; historical discovery root `logs/eval/fpu_v16_policy_mass_v2/reservoir_v1/`; final production-v2 root `logs/eval/fpu_v16_policy_mass_v2/production_v2_b400amend_4000g_seed20300000/`; diagnostic root `logs/eval/fpu_v16_policy_mass_v2/diagnostic/production_v2_b400amend_4000g_seed20300000/`; design `docs/superpowers/specs/2026-07-10-context-relative-fpu-policy-mass-design.md`; corpus design `docs/superpowers/specs/2026-07-12-fpu-dev-corpus-v2-phase-design.md`; qualification design `docs/superpowers/specs/2026-07-14-fpu-v2-reservoir-protocol-qualification-design.md`; operator guide `docs/post-game-analysis.md` §11; final status: **REJECTED at production tuning-control qualification on 2026-07-24; no nonzero coefficient ran.**
 
 - **Plans:** `docs/superpowers/plans/2026-06-24-targeted-value-calibration-v2.md`, `docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md`, `docs/superpowers/plans/2026-06-29-targeted-value-calibration-v4-teacher-retention.md`.
 
@@ -1165,10 +1376,60 @@ Lesson: v14b is the best adapter result so far. Projection helped A relative to 
 
 **Task 16 sizing (2026-07-21, preregistered 299-trial finite-reservoir subsampling, seed 20260718; decision artifact `sizing_report.json` SHA-1 92c130b34f8b5c31bf606b8b20530f622515e444): NO tier ≤ 4,800 meets the 95% lower bound ≥ 0.99 criterion.** Success by tier: 1200 0/299 · 1800 0/299 · 2400 9/299 · 3000 67/299 · 3600 175/299 · 4200 255/299 (lb95 0.8149) · 4800 degenerate 1/1. Failure spectrum: ≤1800 total late-target capacity < 60; 2400 b400_plus band capacity < 8; ≥3000 increasingly selector-level (per-split b400 on the scarce pool). **Per the preregistered rule the production protocol was NOT emitted; reservoir size beyond the 4,800-game discovery screen is an open science decision.** The b400_plus scarcity (12 candidate rows in 4,800 games) is the binding resource, consistent with the zero-slack Task 14 witness.
 
-**Selector v2 revision (2026-07-21): the sizing verdict above was PARTLY an allocator artifact.** Constraint-aware split assignment (`split_assignment_version: 2`; scarce-band pins + historical fallback, feasible set ⊇ v1's, 250×30-seed differential fuzz zero regressions, schema-1 byte-identical) rerun on the preregistered finer ladder: **4,600 games 299/299, lb95 0.9900 — MEETS the criterion; preregistered next-tier-up rule → production count 4,800** (`sizing_report_selector_v2.json` SHA-1 81499afc2ac5c04300a4c7c5f376cf8b65f7335f). smoke_v2 (400g, seed 20290000): controlled sampling GATE_FAIL (`target|late capacity 5 < demand 6`), select refused, idempotent, isolation verified — small-sample variance, machinery correct. Zero-GPU assigner exercise on the authenticated smoke_v2 screen: PASS, selector v2 executed, pins engaged (SHA-1 73a337f19a093e43f560f5e7c8639abbc09c96ef). **Production 4,800-game run NOT authorized yet — explicit user decision pending.**
+**Selector v2 revision (2026-07-21): the sizing verdict above was PARTLY an allocator artifact.** Constraint-aware split assignment (`split_assignment_version: 2`; scarce-band pins + historical fallback, feasible set ⊇ v1's, 250×30-seed differential fuzz zero regressions, schema-1 byte-identical) rerun on the preregistered finer ladder: **4,600 games 299/299, lb95 0.9900 — MEETS the criterion; preregistered next-tier-up rule → production count 4,800** (`sizing_report_selector_v2.json` SHA-1 81499afc2ac5c04300a4c7c5f376cf8b65f7335f). smoke_v2 (400g, seed 20290000): controlled sampling GATE_FAIL (`target|late capacity 5 < demand 6`), select refused, idempotent, isolation verified — small-sample variance, machinery correct. Zero-GPU assigner exercise on the authenticated smoke_v2 screen: PASS, selector v2 executed, pins engaged (SHA-1 73a337f19a093e43f560f5e7c8639abbc09c96ef). **At that checkpoint, the 4,800-game production run remained unauthorized; this status was later superseded by the b400 amendment and explicit 4,000-game authorization below.**
 
 **Amendment `b400-coverage-floor-v1` (2026-07-21, user decision): b400_plus floor 8→4 total (2+2 per split) — coverage-only rationale (n < DEV_BAND_MIN_N can never activate a per-band gate); everything else unchanged.** Frozen profile `production_profile_v2_b400amend.json` (SHA-1 eb1dd21648e49388bff92de8c7831eb0a1a3f6e8). Witness under 2+2 on the discovery screen: PASS, 120 rows, selector v2, frozen_check b400 3≥2 (slack restored). Preregistered decision sizing (ladder 3000–4000 step 200, 299 trials): 287/295/298/**299 @3,600 MEETS**/298/**299 @4,000 MEETS** → smallest qualifying 3,600 → **preregistered margin rule yields production count 3,800** (`sizing_report_b400amend.json` SHA-1 7ff76fcb8a5a9d58f1ca2227767142a3c2f307dd; noted transparently: 3,800's own draw 298/299, single selector failure, non-monotonic noise). **AUTHORIZATION (2026-07-21): Production reservoir authorized at 4,000 games, board 24, four workers, seed range `[20300000,20304000)`, `run_kind=production`, no top-up. This intentionally deviates from the preregistered 3,800 margin result because 4,000 independently met the unchanged criterion at 299/299, while 3,800 produced 298/299. All allocation, target, b300/b200, side, spacing, isolation, and amended b400 2+2 requirements remain unchanged.**
 
+## v16 policy-mass successor — production v2 corpus PASS, `r0` prerequisite REJECT (2026-07-24)
+
+**Production reservoir and qualification.** The one authorized production-v2 reservoir completed under frozen source commit `9e6a606ee6385d0dd34de3b09ba38bb1d5c721f1`: 4,000 games, board 24, 400 simulations, four workers, base seed `20300000` / half-open range `[20300000,20304000)`, replay capture, and no top-up. The reservoir opponent result (`calib020_0001` score rate 0.588875 vs `0379`) is generation metadata only, not the policy-mass endpoint. `qualify` and `qualify --check` both exited 0; conformance and summary binding passed, geometric preflight was feasible with no binding constraint, and the terminal histogram was 3,915 wins / 85 state-cap games. Frozen protocol SHA-1: `0ee3ad8d8a2973d127b9518af66002030f78cdd6`.
+
+**GPU screen.** The authenticated screen completed with exit 0: 20,464 proposal rows, of which 5,065 were kept, 11,381 failed the anchor, 3,879 collided with forbidden/consumed positions, and 139 were role-ineligible. Screen CSV SHA-1: `05db59f8f0c96410d1e3dd4091c83ba39f09c44c`; meta SHA-1: `e62b136362131563a230d188e09c85e190838242`. The screen recorded `add_noise=false`, the correct anchor checkpoint identity, and the expected config/protocol/source-index/replay fingerprints.
+
+**Post-screen qualification and exact selection.** `post-screen-qualify` PASSed with no binding constraint and selector v2 succeeded on assignment attempt 0. The 120-row witness exactly realized the frozen allocation: 80 tuning / 40 frozen_check; 60 target / 60 control; tuning sides 40 red / 40 black; frozen sides 20/20. Late-target band counts were b200=33, b300=20, b400=7; per split, tuning `{b200:21,b300:15,b400:4}` and frozen `{b200:12,b300:5,b400:3}`, clearing every amended minimum. Post-screen report SHA-1: `f59e531a6f405e2d28588117dbfbe1224ca5d269`. `select` then exited 0, hard-matched all 11 screen identities, cross-checked all rows, and wrote the production manifest: `fpu_dev_corpus_v2_manifest.csv` SHA-1 `84cdd4b45e089a2ebb292491c146ba00bff17ea9`; meta SHA-1 `5501e8b7aa220975d597c0245bf9d74c66d13035`. Independent audit: 120 rows from 69 selected games, at most 2/game, no <12-ply-gap violation, and no game shared between splits.
+
+**Tuning control qualification — scientific stop.** The controls stage ran successfully and immutably on the untouched 80-row tuning split under the production fingerprint (`worktree_clean=true`, `add_noise=false`). `absolute_off` had 1 target lock-in and mean top share 0.390125; `r0` (`FPU=Q_parent`) had 0 target lock-ins and mean top share 0.29534375. Those descriptive improvements did **not** clear the full §6.2 safety table: `r0` changed the selected move to a lower-prior move on **11 of 40 controls = 27.5%**, versus the preregistered requirement `<10%`. Therefore `r0_qualified=false`, with reject reason `control_flip_rate=0.2750>=0.1`. Evidence SHA-1s: `controls_cases.csv` `306167f7e1bb0d3ba26842d5bd960419ac5317a7`; `controls_summary.csv` `d0b0941fa323362aeca1f5afd943fcf60bb629aa`; `controls_gate.json` `198e5387b81b6f513e557efe5df9828078bbba3c`.
+
+**Decision: REJECT the parent-relative context-policy-mass formula family at its prerequisite.** The exit-0 controls run is a valid negative scientific result, not a tooling failure. Per the frozen protocol, do not run or interpret nonzero `r∈{0.10,0.20,0.35,0.50,0.75}`; do not inspect the frozen-check split; and do not run selected-A candidate, pooled collateral, A/B/C/D, or strength gates. No coefficient was selected, no FPU setting was promoted, and no self-play change is authorized. Preserve the production reservoir, screen, manifest, and controls artifacts unchanged as the completed evidence chain.
+
+### Read-only 11-flip tuning-control postmortem (completed 2026-07-24)
+
+**Scope and integrity.** The postmortem replayed the existing 80 tuning rows only, reported all 40 tuning controls, and used no nonzero coefficient. It reproduced exactly **11/40 lower-prior flips = 27.5%**, included **zero frozen-check rows**, and left the manifest, source index, replay data, production screen, and controls evidence byte-unchanged. Two complete runs emitted byte-identical canonical artifacts. The full repository suite after the analysis implementation was **2,274 passed / 4 skipped / 53 deselected**.
+
+**Measured concentration.**
+
+- Phase: opening **5/10**, early-mid **1/10**, midgame **3/10**, late **2/10**.
+- Side to move: red **8/20**, black **3/20**.
+- Branching band: b300–399 **2/4** and b400-plus **9/36**. The b300 rate is descriptive only because `n=4`.
+- The 11 flips occurred across 11 separate games; no game contributed more than one flipped control.
+
+**Flipped versus non-flipped controls.**
+
+| Metric | Flipped (`n=11`) | Non-flipped (`n=29`) |
+|---|---:|---:|
+| Mean shipped selected-move prior rank | 1.2727 | 4.2759 |
+| Mean `r0` selected-move prior rank | 9.0000 | 1.9655 |
+| Mean effective-children delta (`r0-shipped`) | −20.0983 | −7.3547 |
+| Mean reply-count delta (`r0-shipped`) | −20.1818 | −40.5172 |
+| Mean root-value delta (`r0-shipped`) | +0.0080 | +0.0116 |
+| Mean top-share delta (`r0-shipped`) | −0.0141 | +0.0106 |
+
+**Interpretation boundary.** Measured: the flipped controls show a large shift away from initially high-prior moves and a larger effective-children loss, with small root-value movement and no flip-specific top-share increase. They do not show unusually strong reply reduction; non-flips reduced replies more. Inference: making `Q_parent` the FPU neutral point altered first-touch move ordering before any positive policy-mass coefficient existed. This justifies retiring the parent-relative baseline and requiring any successor's zero setting to dispatch through the shipped branch exactly. It does not establish that policy mass is beneficial, validate the proposed v17 formula, or provide coefficient-selection evidence.
+
+**Reproduction command and evidence.**
+
+```bash
+.venv/bin/python -m scripts.GPU.alphazero.postmortem_fpu_policy_mass_controls
+```
+
+Artifact root:
+`logs/eval/fpu_v16_policy_mass_v2/diagnostic/production_v2_b400amend_4000g_seed20300000/tuning/postmortem/`
+
+- `control_flip_pairs.csv`: `cc423f5ed29af94be653017e0140edf3baa1aa68`
+- `summary.json`: `63c22af1ca068e9c2c7e89ddfa7192299632dd8e`
+- `provenance.json`: `cf98f99f1cdd1b5153d16a007003e993205b895c`
+- `report.md`: `708401666be5712b5a7ca229f07c45431f7109eb`
+
 ---
 
-*Append a new row to the [experiment ledger](#experiment-ledger) and update [do-not-repeat](#do-not-repeat-prevents-going-in-circles) whenever a branch is run and judged. Keep the [key conclusion](#targeted-value-calibration--experiment-ledger) current.*
+*Append a new row to the [experiment ledger](#experiment-ledger) and update [do-not-repeat](#do-not-repeat-prevents-going-in-circles) whenever a branch is run and judged. Keep the key conclusion at the top current.*
