@@ -760,7 +760,7 @@ class SelectionTracer:
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_selection_tracer.py -v -p no:cacheprovider`
-Expected: PASS — 17 passed (the two `k_of_n` tests are parametrized over 5 cases each).
+Expected: PASS — 18 passed (the two `k_of_n` tests are parametrized over 5 cases each; one extra test covers the outside-K counting path).
 
 - [ ] **Step 5: Commit**
 
