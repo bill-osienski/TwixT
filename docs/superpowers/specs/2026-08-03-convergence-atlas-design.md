@@ -17,7 +17,7 @@
 | 1 | ~~Root regime + warm-root producer~~ — **CLOSED 2026-08-03.** Phase 0 returned `WARM_START_REQUIRED`; producer is full-prefix replay; ladder, budget vocabulary, seeding and forced-move semantics are all frozen. | §2, §2b, §4 |
 | 2 | ~~Batch-safe decision boundary~~ — **CLOSED 2026-08-03.** Boundary frozen (first flush completion at or after 320 target-search backups), per-row fields and the preregistered deployability failure defined, and a scoped `mcts.py` exception approved for diagnostic observer surfaces. | §4, §9 |
 | 3 | ~~Convergence predicate signed off~~ — **CLOSED 2026-08-03.** Signed off with two exactness corrections: distribution convergence checks both deep rungs for the same metric, and the gate denominator is `eligible_triggers`. | §7 |
-| 4 | Read-out C's producer chosen — selection tracer or reduced scope. | §8 |
+| 4 | ~~Read-out C's producer~~ — **CLOSED 2026-08-03.** Diagnostic selection tracer chosen (reduced scope rejected); hook signature, dual emission sites, semantics, aggregation contract and qualification all frozen. | §8 |
 | 5 | Deterministic game-to-cell assignment and phase-geometry no-go frozen. | §3 |
 
 Writing and committing this document authorizes no measurement and no GPU work.
@@ -791,7 +791,95 @@ For actual shipped selection events through the 320-completion prefix and 400, r
 
 Aggregate online. Full event dumps are unnecessary.
 
-### Producer gap — the existing observer cannot supply this
+### Producer — diagnostic selection tracer, FROZEN 2026-08-03
+
+**Reduced scope is rejected.** It cannot answer depth-1 reply retention, descendant
+exclusions, or first-touch intervention — the three questions that decide whether
+progressive widening is safe. A producer that cannot reach them makes Read-out C
+unable to fail for the right reason.
+
+**Hook, fired after PUCT resolves a move and before lazy child creation:**
+
+```text
+on_select_child(
+    parent,
+    selected_move,
+    existing_child,
+    depth,
+    parent_completed_visits,
+    root_override,
+    within_forced_simulation,
+)
+```
+
+**Two emission sites, not one.** `_select_child` is called from *both* descent loops —
+`search_from_root` (batched, line 617) and `_run_single_simulation` (synchronous,
+line 782), the latter being the path forced root visits take
+(`_run_single_simulation(root, root_move_override=move_id)`, line 839). A hook placed
+only in the batched loop would never emit a forced-root event, making
+`root_override=True` unreachable.
+
+In both loops the override branch and the PUCT branch **converge on `(move_id, child)`
+before the `if child is None` lazy creation**, so a single emission point per loop —
+placed after move resolution, before creation — covers both cases. Note the root
+override bypasses `_select_child` entirely (it reads `node.children.get(move_id)`
+directly), which is precisely why the emission point must be the convergence point
+rather than a wrapper around `_select_child`.
+
+*Semantics:*
+
+- `first_touch := existing_child is None`; **present-with-zero-visits remains
+  distinct** and is never folded into first-touch.
+- Prior rank uses **adjusted prior descending, move-ID ascending**.
+- Root forced overrides **do** emit an event, marked `root_override=True`.
+- Root overrides bypass widening: **excluded from primary intervention denominators**,
+  reported separately.
+- Normal descendant selections inside a forced simulation **remain eligible**, because
+  widening would still govern them. `within_forced_simulation` is retained as a
+  covariate.
+- **No node mutation, no event objects, no event logs.**
+
+*Aggregation contract.* The tracer accumulates counters online. It keeps an external
+cache of each parent's prior ranks and cumulative prior mass, so the hot path performs
+counter increments and cached lookups rather than repeated sorting.
+
+> **Cache lifetime — narrowed from "per row" to "per search", a correctness fix.**
+> `MCTSNode` is a plain `@dataclass`, so it is **unhashable** and the cache must key on
+> `id(node)`. A row spans a full prefix replay plus four ladder legs, and every
+> `advance_root` detaches a subtree that then becomes garbage — freeing `id()` values
+> for reuse by new nodes. A row-scoped cache could therefore return another node's
+> prior ranks under a recycled id, silently and with no error. **Clear the cache at
+> every `advance_root`.** This is strictly narrower than per-row, preserves the whole
+> performance intent (the tree is stable within a search, which is where the ~10³
+> lookups occur), and removes the hazard.
+
+*Snapshots.* Capture aggregates twice: at the batch-safe `N_actual` boundary (§4) and
+again at nominal `B = 400`.
+
+*Recorded per widening shape, overall and for depth buckets `0`, `1`, `2+`:*
+
+- Eligible selection events; outside-`K(n)` events and rate.
+- First-touch events; first-touch outside events and rate.
+- Event-weighted excluded prior mass.
+- Forced-root bypass events and their outside rate, **separately**.
+- Counts inside forced simulations.
+- Per-row `meaningfully_affected`, using the frozen 10% first-touch rule.
+
+**If a denominator is zero, its rate and `meaningfully_affected` are `None` — never
+`0` and never `false`.** Same discipline as §5's absent-phase medians.
+
+*Unchanged:* stable root-move and depth-1 reply retention remain **static tree checks**
+using the same cached rank rule. No selection-event dump is needed for them.
+
+*Qualification, both required:*
+
+1. Every hook individually **and all hooks together** under the batched observer-on/off
+   identity prerequisite (§9).
+2. A **real 400-simulation timing smoke** reporting tracer overhead. If projected
+   runtime breaks the atlas budget, stop with an **operational producer no-go** —
+   never silently reduce scope.
+
+### Producer gap — why the existing observer cannot supply this
 
 The existing `MCTSObserver` fires as `on_root_simulation(count, root, move,
 visit_leader_move(root))` from inside `_backup`: it receives **post-backup, root-level
@@ -894,7 +982,7 @@ surfaces is covered — no selection-rule, backup, config-default or budget chan
 |---|---|---|
 | `on_root_simulation` | exists | per completed backup |
 | `on_flush_complete` | new, §4 | after each flush, after the clears |
-| `on_select_child` | new, §8 (item 4, not yet designed) | per selection event |
+| `on_select_child` | new, §8 — **designed and frozen** | per selection event, at the move-resolution point in **both** descent loops |
 
 `_select_child` runs once per node per descent — order 10³ calls per search — so
 `on_select_child` is on a hot path. §8's "aggregate online, full event dumps are
