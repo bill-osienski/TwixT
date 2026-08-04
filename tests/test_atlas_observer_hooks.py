@@ -10,32 +10,11 @@ from scripts.GPU.alphazero.mcts import (
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
 
 from tests.eval_fakes import FakeEvaluator
-from tests.test_atlas_observer_identity import shipped_config
-
-
-class RecordingFlush:
-    def __init__(self):
-        self.calls = []
-
-    def on_flush_complete(self, flush_type, root):
-        self.calls.append((flush_type, root.visit_count))
-
-
-class RecordingSelection:
-    def __init__(self):
-        self.calls = []
-
-    def on_select_child(self, parent, selected_move, existing_child, depth,
-                        parent_completed_visits, root_override,
-                        within_forced_simulation):
-        self.calls.append({
-            "move": selected_move,
-            "first_touch": existing_child is None,
-            "depth": depth,
-            "parent_visits": parent_completed_visits,
-            "root_override": root_override,
-            "forced_sim": within_forced_simulation,
-        })
+from tests.atlas_stage1_fixtures import (
+    RecordingFlush,
+    RecordingSelection,
+    shipped_config,
+)
 
 
 def _run(n_simulations=200, active_size=24, **kw):

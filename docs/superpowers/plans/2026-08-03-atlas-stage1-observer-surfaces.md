@@ -34,6 +34,7 @@
 | `tests/golden/atlas_stage1_prehook_search.json` (create, **Task 0**) | Golden captured from **unmodified** `mcts.py`. The byte-identity proof depends on this existing before any edit and cannot be reconstructed afterwards. |
 | `scripts/GPU/alphazero/mcts.py` (modify) | Two Protocols, two constructor params, five call sites. Nothing else. |
 | `scripts/GPU/alphazero/selection_tracer.py` (create) | The tracer: prior-rank cache, `K(n)` for the two frozen shapes, online counters. |
+| `tests/atlas_stage1_fixtures.py` (create) | Shared fixtures. **Required**: the two test modules must NOT import from each other — that is a circular import which passes per-file and fails only under full-suite collection order. |
 | `tests/test_atlas_observer_hooks.py` (create) | Hook firing, placement, `root_override` reachability, flush-site coverage. |
 | `tests/test_selection_tracer.py` (create) | Rank order, cache lifetime, counter accumulation, `None` denominators. |
 | `tests/test_atlas_observer_identity.py` (create) | Byte-identical-off, per-hook and all-on identity, timing smoke. |
