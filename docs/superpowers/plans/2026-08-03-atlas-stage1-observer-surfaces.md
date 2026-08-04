@@ -81,12 +81,17 @@ def shipped_config(n_simulations: int = 200) -> MCTSConfig:
     )
 
 
-def run_fixed_search(**observer_kwargs):
-    """One deterministic batched search. observer_kwargs are passed to MCTS."""
+def run_fixed_search(n_simulations: int = 200, **observer_kwargs):
+    """One deterministic batched search. observer_kwargs are passed to MCTS.
+
+    The 200 default is the GOLDEN's budget and must not change -- every identity
+    comparison depends on it. The timing smoke passes 400 explicitly, because
+    design section 8 requires a real 400-simulation measurement.
+    """
     state = TwixtState(active_size=24, to_move="red")
     mcts = MCTS(
         FakeEvaluator(value=0.0),
-        shipped_config(),
+        shipped_config(n_simulations),
         random.Random(20260803),
         **observer_kwargs,
     )
@@ -336,9 +341,15 @@ def test_flush_hook_fires_and_types_match_counters():
     assert seen.count("tail") == mcts._flush_tail
 
 
-def test_flush_hook_sees_an_empty_pending_set():
-    """The hook must fire AFTER the clears. Backups completed must be
-    monotonically non-decreasing and the tail event must come last."""
+def test_flush_events_are_ordered_and_tail_is_last():
+    """What this CAN establish: events arrive in non-decreasing root-visit
+    order and the tail flush is last.
+
+    What it CANNOT: that `pending_nodes` / `pending_waiters` / `pending_node_ids`
+    were empty at the callback. Those are locals inside `search_from_root` and
+    are not observable from a test. After-the-clears placement is enforced as a
+    CALL-SITE REQUIREMENT (Global Constraints, Task 2 Step 3) and by review --
+    not by this test, and not by exposing internal queues."""
     fo = RecordingFlush()
     _run(flush_observer=fo)
     counts = [n for _t, n in fo.calls]
@@ -836,8 +847,9 @@ def test_tracer_overhead_is_measured_and_reported():
     """Not a pass/fail bar -- a MEASUREMENT. The atlas-budget decision is the
     operator's, made against this number."""
     def timed(**kw):
+        # 400, not the golden's 200: section 8 requires a real 400-simulation smoke.
         t0 = time.perf_counter()
-        run_fixed_search(**kw)
+        run_fixed_search(n_simulations=400, **kw)
         return time.perf_counter() - t0
 
     off = min(timed() for _ in range(3))
@@ -879,3 +891,21 @@ git commit -m "test(atlas-s1): tracer overhead timing smoke, reported as an uppe
 ## Out of scope
 
 No corpus generation, no reservoir, no replay, no ladder, no read-out logic, no analysis, no artifact schema, no measurement run. Stage 2 is planned only after this stage's interfaces exist and qualify.
+
+## Handoff to Stage 3 — one thing Stage 1 cannot prove
+
+`N_actual = root.visit_count − I` is the §4 boundary quantity, and **Stage 1 never
+exercises it with a nonzero `I`.** Every search here starts from a fresh
+`MCTSNode(state=state)`, so `I = 0` throughout and the subtraction is trivially
+correct in a way that establishes nothing.
+
+Stage 3 owns the boundary consumer and **must pin the subtraction against a genuinely
+nonzero `I`** — a root carrying inherited visits from a real `advance_root`, where
+`root.visit_count` at flush time is `I + completed_target_backups` and the assertion
+`320 ≤ N_actual ≤ 400` has real content. Until then, treat the derivation as designed
+but unverified.
+
+Two related Stage 3 obligations follow from the same gap: `SelectionTracer.clear_node_cache()`
+is exercised here only by a direct unit call, never by an actual `advance_root`, and
+`within_forced_simulation` is only observed on synchronous forced simulations, never
+inside a warm-root replay.
