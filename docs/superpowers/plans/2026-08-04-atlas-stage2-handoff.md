@@ -1,7 +1,11 @@
 # Atlas Stage 2 — Delivered Interfaces and Qualification (Stage 3 Handoff)
 
-**Status:** Stage 2 LANDED and QUALIFIED, 2026-08-04. **No reservoir was generated
-and no GPU work was performed.**
+**Status:** Stage 2 LANDED and QUALIFIED, 2026-08-04, at clean tree `bef2a96`.
+**No reservoir was generated and no GPU work was performed.**
+
+Qualification is complete: the full-suite `REAL_EXIT=0` landed and is recorded
+below, read from the process rather than a pipe. Stage 2 is no longer
+provisional.
 
 **Spec:** `docs/superpowers/specs/2026-08-03-convergence-atlas-design.md` §3
 (EXECUTION-FROZEN). **Plan:** `2026-08-04-atlas-stage2-corpus-geometry.md`.
@@ -20,6 +24,49 @@ its timing smoke was added after that measurement, and the suite was not re-run.
 
 Every Stage 2 test uses synthetic `GameMeta` or `FakeEvaluator`. Nothing here
 touches MLX, a checkpoint, or a reservoir.
+
+### Test delta
+
+| | tests |
+|---|---:|
+| `tests/test_corpus_geometry.py` | 33 |
+| `tests/test_generate_atlas_reservoir.py` | 16 |
+| `tests/test_build_atlas_corpus_cli.py` | 13 |
+| **Stage 2 total** | **62** |
+
+Suite at Stage 1 completion **2335** → Stage 2 **2397**. Delta **+62**, entirely
+new tests; **no pre-existing test changed behaviour**, and none was modified,
+skipped or deleted.
+
+### No reservoir, no GPU — confirmed
+
+No reservoir block was generated. No checkpoint was loaded. No MLX code ran: every
+Stage 2 test uses synthetic `GameMeta` or `FakeEvaluator`, and the CLI's
+generation subcommands only *print* commands. The `--checkpoint` arguments in
+tests point at temporary byte files created solely so a SHA-1 exists to compare.
+
+## Defects found and fixed during Stage 2
+
+### Tuple keys are not JSON-serializable — reached the failure path
+
+`json.dumps` cannot use **tuple keys**, and `default=` rescues unserializable
+*values* only. `pilot_geometry_gate` returns `unmet` keyed by
+`(split, phase, side)`, so `pilot-gate` raised `TypeError` and exited **1** where
+the protocol specifies **3** — that is, the `PHASE_GEOMETRY_NO_GO` path, the one
+an operator hits when the corpus is infeasible. The success path was unaffected
+and green throughout.
+
+**Why the unit tests could not catch it.** They call `pilot_geometry_gate`
+directly and never serialize its result. Only running the CLI as a real
+subprocess exercised the boundary. This is the producer/consumer-seam lesson
+again, this time at the serialization boundary rather than the data one, and it
+is the third distinct instance in this line of work.
+
+**Fix, deliberately scoped:** a `_jsonable` converter in `build_atlas_corpus.py`,
+normalizing only at the JSON boundary. The geometry module keeps `(split, phase,
+side)` tuples, which are the natural type there and which every downstream
+consumer indexes with. Stage 3 must apply the same normalization — reuse
+`_jsonable`, do not re-key the geometry module.
 
 ## Delivered interfaces
 
