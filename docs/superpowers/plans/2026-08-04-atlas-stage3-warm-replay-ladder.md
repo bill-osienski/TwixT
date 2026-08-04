@@ -183,6 +183,7 @@ class PrefixStep:
     forced_child_visits: Optional[int]     # None == child absent, never 0
     inheritance_reset: bool
     zero_effective_inheritance: bool
+    state_agrees: bool = False             # canonical agreement after advance
 
 
 @dataclass
@@ -193,6 +194,7 @@ class PrefixResult:
     reset_count: int = 0
     reset_rate: Optional[float] = None
     last_reset_ply: Optional[int] = None
+    cache_clears: int = 0                  # one per advance_root, counted
 
 
 def replay_prefix(mcts, meta: GameMeta, move_history: Sequence[Tuple[int, int]],
@@ -209,29 +211,58 @@ def replay_prefix(mcts, meta: GameMeta, move_history: Sequence[Tuple[int, int]],
         raise ValueError(
             f"target_ply {target_ply} outside history of {len(move_history)} moves")
 
+    if meta.n_moves != len(move_history):
+        raise ValueError(
+            f"metadata says n_moves={meta.n_moves} but history has "
+            f"{len(move_history)} moves; the sidecar and replay disagree")
+
     root = MCTSNode(state=TwixtState(active_size=active_size,
                                      to_move=meta.start_player))
     steps: List[PrefixStep] = []
+    cache_clears = 0
     for ply in range(target_ply):
         mcts.search_from_root(root, add_noise=False, ply=ply)
         move = tuple(move_history[ply])
+
+        # Section 2b step 2: legality, then state agreement after the advance.
+        if move not in root.state.legal_moves():
+            raise ValueError(
+                f"ply {ply}: recorded move {move} is not legal in the replayed "
+                f"state; the replay has diverged from the source game")
+        expected_state = root.state.apply_move(move)
+
         child = root.children.get(encode_move(move[0], move[1]))
         visits = None if child is None else child.visit_count
         reset = child is None
+
+        root = mcts.advance_root(root, move)
+        # Canonical agreement over (to_move, pegs, bridges) -- an inherited
+        # child's state must equal the independently applied move. A silent
+        # divergence here would make every downstream measurement describe a
+        # different game.
+        if root.state != expected_state or hash(root.state) != hash(expected_state):
+            raise ValueError(
+                f"ply {ply}: state disagreement after advance_root; the "
+                f"inherited child does not match the applied recorded move")
+
         steps.append(PrefixStep(
             ply=ply, forced_move=encode_move(move[0], move[1]),
             forced_child_visits=visits, inheritance_reset=reset,
             # Unions absent-or-zero WITHOUT collapsing the pair: the fields
             # above keep None and 0 distinct.
             zero_effective_inheritance=(visits is None or visits == 0),
+            state_agrees=True,
         ))
-        root = mcts.advance_root(root, move)
+
         # Cache lifetime (design section 8): a detached subtree frees id()
         # values for reuse, so a longer-lived rank cache would silently return
-        # another node's ranks.
+        # another node's ranks. Cleared at EVERY advance, and counted so a test
+        # can prove every boundary cleared -- final emptiness alone would pass
+        # if only the last advance did.
         tracer = getattr(mcts, "_selection_observer", None)
         if tracer is not None and hasattr(tracer, "clear_node_cache"):
             tracer.clear_node_cache()
+            cache_clears += 1
 
     resets = [s.ply for s in steps if s.inheritance_reset]
     return PrefixResult(
@@ -239,6 +270,7 @@ def replay_prefix(mcts, meta: GameMeta, move_history: Sequence[Tuple[int, int]],
         reset_count=len(resets),
         reset_rate=(len(resets) / len(steps)) if steps else None,
         last_reset_ply=(resets[-1] if resets else None),
+        cache_clears=cache_clears,
     )
 ```
 
@@ -336,10 +368,11 @@ def test_boundary_in_a_REAL_400_sim_leg_on_a_warm_root():
                         active_size=SIZE)
     assert pre.inherited_I > 0
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
-    m2 = _mcts(BASE, flush_observer=obs)
-    # continue the SAME tree, but a fresh MCTS would break seed continuity --
-    # this test only exercises the boundary, and Task 5 proves continuity.
-    m2.search_from_root(pre.root, add_noise=False, ply=2)
+    # SAME MCTS, so the single frozen RNG stream continues from the prefix --
+    # a fresh MCTS would reset it, which section 2b forbids. The observer is
+    # attached only now, so it cannot capture a boundary from a PREFIX search.
+    m._flush_observer = obs
+    m.search_from_root(pre.root, add_noise=False, ply=2)
     rec = obs.record
     assert rec is not None
     assert BOUNDARY_THRESHOLD <= rec.N_actual <= 400
@@ -376,13 +409,17 @@ class BatchSafeBoundaryObserver:
     """
 
     def __init__(self, inherited_I: int, threshold: int = BOUNDARY_THRESHOLD,
-                 leg_B: int = 400) -> None:
+                 leg_B: int = 400, tracer=None) -> None:
         if inherited_I < 0:
             raise ValueError("inherited_I must be non-negative")
         self._I = inherited_I
         self._threshold = threshold
         self._leg_B = leg_B
+        self._tracer = tracer
         self.record: Optional[BoundaryRecord] = None
+        # Section 8's FIRST frozen snapshot, taken at exactly the quiescent
+        # boundary moment. Taking it later would describe a different tree.
+        self.tracer_snapshot_at_boundary: Optional[Dict[str, Any]] = None
 
     def on_flush_complete(self, flush_type: str, root: Any) -> None:
         if self.record is not None:
@@ -399,6 +436,8 @@ class BatchSafeBoundaryObserver:
             remaining=self._leg_B - n_actual,
             flush_type=flush_type,
         )
+        if self._tracer is not None:
+            self.tracer_snapshot_at_boundary = self._tracer.snapshot()
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -451,9 +490,9 @@ def test_ladder_records_B_I_and_effective_separately():
     pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
-    legs = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
-                               boundary_observer=obs,
-                               increments=(4, 4, 4, 4))     # tiny, for speed
+    legs, _snaps = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
+                                       boundary_observer=obs,
+                                       increments=(4, 4, 4, 4))   # tiny, for speed
     assert [l.nominal_B for l in legs] == [4, 8, 12, 16]
     assert all(l.inherited_I == pre.inherited_I for l in legs)
     assert all(l.effective == l.inherited_I + l.nominal_B for l in legs)
@@ -468,6 +507,49 @@ def test_ladder_is_additive_on_one_tree_not_four_searches():
     run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
                         boundary_observer=obs, increments=(4, 4, 4, 4))
     assert pre.root.visit_count == pre.inherited_I + 16
+
+
+def test_every_rung_preserves_its_own_evidence():
+    """After leg 4 the tree is at 6,400 and the earlier rungs are GONE. Each
+    LegResult must already carry what sections 5 and 7 need."""
+    m = _mcts(BASE, n_simulations=1)
+    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+                        active_size=SIZE)
+    obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
+    legs, _ = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
+                                  boundary_observer=obs,
+                                  increments=(8, 8, 8, 8))
+    for leg in legs:
+        assert leg.visit_counts and all(v > 0 for v in leg.visit_counts.values())
+        assert leg.n_visited_children == len(leg.visit_counts)
+        assert leg.top_share is not None
+        assert leg.effective_children is not None
+        assert leg.selected_move_prior_rank is not None
+    # The distributions genuinely differ between rungs -- otherwise preserving
+    # them would be pointless.
+    assert legs[0].visit_counts != legs[-1].visit_counts
+    assert sum(legs[0].visit_counts.values()) < sum(legs[-1].visit_counts.values())
+
+
+def test_tracer_snapshots_are_taken_at_the_boundary_and_at_400():
+    """Section 8's two frozen snapshots, and neither may include prefix events."""
+    m = _mcts(BASE, n_simulations=1)
+    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+                        active_size=SIZE)
+    target_tracer = SelectionTracer()          # FRESH, attached after the prefix
+    m._selection_observer = target_tracer
+    obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I, threshold=4,
+                                    leg_B=8, tracer=target_tracer)
+    _legs, snaps = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
+                                       boundary_observer=obs,
+                                       target_tracer=target_tracer,
+                                       increments=(8, 8, 8, 8))
+    assert snaps["at_boundary"] is not None
+    assert snaps["at_400"] is not None
+    # The boundary snapshot is strictly earlier, so it saw fewer events.
+    a = snaps["at_boundary"]["by_shape"]["c4a05"]["overall"]["eligible_events"]
+    b = snaps["at_400"]["by_shape"]["c4a05"]["overall"]["eligible_events"]
+    assert 0 < a <= b
 
 
 def test_ladder_rejects_a_wrong_length_increment_tuple():
@@ -491,19 +573,84 @@ Expected: FAIL — `ImportError: cannot import name 'run_additive_ladder'`
 # append to scripts/GPU/alphazero/warm_prefix_replay.py
 @dataclass
 class LegResult:
+    """A rung's evidence, captured BEFORE the tree advances past it.
+
+    The ladder is additive on ONE tree, so by the end of leg 4 the 400/1,600/3,200
+    states no longer exist anywhere. Everything sections 5 and 7 need must be
+    frozen here or it is unrecoverable: section 5 wants V_B and the 6,400 top-two
+    margin; section 7 wants effective children, top share, and the selected
+    move's prior RANK for the lower-prior-flip gate.
+    """
     nominal_B: int
     inherited_I: int
     effective: int
     root_value: float
     selected_move: Optional[int]
+    selected_move_prior_rank: Optional[int]
     top_share: Optional[float]
+    top_two_margin: Optional[float]
+    effective_children: Optional[float]
+    n_visited_children: int
+    visit_counts: Dict[int, int]           # compact: NONZERO entries only
+
+
+def _root_summary(root: MCTSNode, visit_counts: Dict[Any, int],
+                  selected_move: Optional[int]) -> Dict[str, Any]:
+    """Derive section 5 / section 7 metrics from a root, at this rung.
+
+    Undefined statistics are None, never 0.0 -- an empty or single-child
+    distribution has no top-two margin, and that is a different fact from a
+    margin of zero.
+    """
+    import math
+
+    nonzero = {encode_move(r, c): v for (r, c), v in visit_counts.items() if v > 0}
+    total = sum(nonzero.values())
+    ordered = sorted(nonzero.values(), reverse=True)
+
+    top_share = (ordered[0] / total) if (ordered and total) else None
+    top_two_margin = (((ordered[0] - ordered[1]) / total)
+                      if (len(ordered) >= 2 and total) else None)
+    if total:
+        # exp(entropy) -- the section 7 "effective children" metric.
+        ent = -sum((v / total) * math.log(v / total) for v in nonzero.values())
+        eff_children = math.exp(ent)
+    else:
+        eff_children = None
+
+    # Prior rank of the selected move: adjusted prior DESCENDING, move-ID
+    # ASCENDING -- the same frozen order the selection tracer uses.
+    rank = None
+    if selected_move is not None and root.priors:
+        order = sorted(root.priors.items(), key=lambda kv: (-kv[1], kv[0]))
+        for i, (mv, _p) in enumerate(order, start=1):
+            if mv == selected_move:
+                rank = i
+                break
+
+    return {
+        "visit_counts": nonzero,
+        "n_visited_children": len(nonzero),
+        "top_share": top_share,
+        "top_two_margin": top_two_margin,
+        "effective_children": eff_children,
+        "selected_move_prior_rank": rank,
+    }
 
 
 def run_additive_ladder(mcts, root: MCTSNode, inherited_I: int, ply: int,
-                        boundary_observer=None,
+                        boundary_observer=None, target_tracer=None,
                         increments: Sequence[int] = LEG_INCREMENTS
-                        ) -> List[LegResult]:
+                        ) -> Tuple[List[LegResult], Dict[str, Any]]:
     """Four ADDITIVE legs on ONE tree. `mcts` keeps its RNG throughout.
+
+    Returns (legs, snapshots). `snapshots` carries section 8's two frozen
+    target-search tracer snapshots: "at_boundary" (taken by the boundary
+    observer at N_actual) and "at_400" (taken here immediately after leg 1).
+
+    `target_tracer` MUST be a fresh tracer attached AFTER prefix replay. A tracer
+    that ran through the prefix would have its counters contaminated by unrelated
+    searches, and section 8's statistics are about the TARGET search alone.
 
     The boundary observer is attached for leg 1 only: the 320-completion prefix
     lives inside the first 400-simulation leg (design section 4).
@@ -512,6 +659,7 @@ def run_additive_ladder(mcts, root: MCTSNode, inherited_I: int, ply: int,
         raise ValueError(f"the frozen ladder has four legs, got {len(increments)}")
 
     legs: List[LegResult] = []
+    snapshots: Dict[str, Any] = {"at_boundary": None, "at_400": None}
     running_B = 0
     original_n = mcts.config.n_simulations
     original_flush_obs = getattr(mcts, "_flush_observer", None)
@@ -523,27 +671,36 @@ def run_additive_ladder(mcts, root: MCTSNode, inherited_I: int, ply: int,
             visit_counts, root_value, root = mcts.search_from_root(
                 root, add_noise=False, ply=ply)
             running_B += inc
-            total = sum(visit_counts.values()) or None
-            top = max(visit_counts.values()) if visit_counts else None
+            sel_rc = (max(visit_counts, key=visit_counts.get)
+                      if any(visit_counts.values()) else None)
+            sel = encode_move(*sel_rc) if sel_rc is not None else None
+            summary = _root_summary(root, visit_counts, sel)
             legs.append(LegResult(
                 nominal_B=running_B, inherited_I=inherited_I,
                 effective=inherited_I + running_B,
-                root_value=float(root_value),
-                selected_move=(max(visit_counts, key=visit_counts.get)
-                               if visit_counts else None),
-                # None, never 0.0, when there is nothing to divide.
-                top_share=(top / total) if (top is not None and total) else None,
+                root_value=float(root_value), selected_move=sel,
+                selected_move_prior_rank=summary["selected_move_prior_rank"],
+                top_share=summary["top_share"],
+                top_two_margin=summary["top_two_margin"],
+                effective_children=summary["effective_children"],
+                n_visited_children=summary["n_visited_children"],
+                visit_counts=summary["visit_counts"],
             ))
+            if leg_idx == 0 and target_tracer is not None:
+                # Section 8: the SECOND frozen snapshot, at nominal B = 400.
+                snapshots["at_400"] = target_tracer.snapshot()
     finally:
         mcts.config.n_simulations = original_n
         mcts._flush_observer = original_flush_obs
-    return legs
+    if boundary_observer is not None:
+        snapshots["at_boundary"] = boundary_observer.tracer_snapshot_at_boundary
+    return legs, snapshots
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_warm_prefix_replay.py -v -p no:cacheprovider`
-Expected: PASS — 17 passed.
+Expected: PASS — 19 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -590,12 +747,44 @@ def test_tracer_accumulates_across_a_warm_replay_and_ladder():
                         active_size=SIZE)
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
     run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
-                        boundary_observer=obs, increments=(4, 4, 4, 4))
+                        boundary_observer=obs, target_tracer=tracer,
+                        increments=(4, 4, 4, 4))
     snap = tracer.snapshot()
     for shape in ("c4a05", "c13a03"):
         cell = snap["by_shape"][shape]["overall"]
         assert cell["eligible_events"] > 0
         assert cell["outside_rate"] is not None      # denominator is non-empty
+
+
+def test_cache_is_cleared_ONCE_PER_ADVANCE_not_just_at_the_end():
+    """Final emptiness alone would pass if only the LAST advance cleared it."""
+    tracer = SelectionTracer()
+    m = _mcts(BASE, selection_observer=tracer)
+    r = replay_prefix(m, _meta(), _legal_history(5), target_ply=4,
+                      active_size=SIZE)
+    assert r.cache_clears == len(r.steps) == 4
+
+
+def test_prefix_asserts_canonical_state_agreement_at_every_ply():
+    m = _mcts(BASE)
+    r = replay_prefix(m, _meta(), _legal_history(4), target_ply=3,
+                      active_size=SIZE)
+    assert all(s.state_agrees for s in r.steps)
+
+
+def test_prefix_rejects_an_illegal_recorded_move():
+    m = _mcts(BASE)
+    history = _legal_history(4)
+    history[2] = history[0]              # repeat an occupied cell
+    with pytest.raises(ValueError, match="not legal"):
+        replay_prefix(m, _meta(), history, target_ply=3, active_size=SIZE)
+
+
+def test_prefix_rejects_metadata_that_disagrees_with_the_history():
+    m = _mcts(BASE)
+    with pytest.raises(ValueError, match="disagree"):
+        replay_prefix(m, _meta(n_moves=99), _legal_history(4), target_ply=2,
+                      active_size=SIZE)
 
 
 def test_within_forced_simulation_is_observed_during_a_warm_replay():
@@ -613,7 +802,7 @@ def test_within_forced_simulation_is_observed_during_a_warm_replay():
 - [ ] **Step 2: Run and confirm**
 
 Run: `.venv/bin/python -m pytest tests/test_warm_prefix_replay.py -v -p no:cacheprovider`
-Expected: PASS — 20 passed.
+Expected: PASS — 26 passed.
 
 If `test_tracer_cache_is_cleared_at_every_real_advance_root` fails, `replay_prefix` is not clearing at the `advance_root` boundary. Fix the driver; **do not** relax the assertion — the whole point is that a stale `id()` silently returns another node's ranks.
 
@@ -721,7 +910,7 @@ def replay_seed_for(meta: GameMeta, base_seed: int) -> int:
 - [ ] **Step 3: Run and commit**
 
 Run: `.venv/bin/python -m pytest tests/test_warm_prefix_replay.py -v -p no:cacheprovider`
-Expected: PASS — 24 passed.
+Expected: PASS — 30 passed.
 
 ```bash
 git add scripts/GPU/alphazero/warm_prefix_replay.py tests/test_warm_prefix_replay.py
@@ -825,8 +1014,9 @@ def test_the_row_artifact_survives_jsonable(tmp_path):
              random.Random(replay_seed_for(meta, BASE)))
     pre = replay_prefix(m, meta, history, target_ply=2, active_size=SIZE)
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
-    legs = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
-                               boundary_observer=obs, increments=(4, 4, 4, 4))
+    legs, snaps = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
+                                      boundary_observer=obs,
+                                      increments=(4, 4, 4, 4))
     artifact = {
         "game_idx": meta.game_id, "replay_seed": meta.seed,
         "inherited_I": pre.inherited_I,
@@ -834,6 +1024,7 @@ def test_the_row_artifact_survives_jsonable(tmp_path):
         "last_reset_ply": pre.last_reset_ply,
         "legs": [vars(l) for l in legs],
         "boundary": (vars(obs.record) if obs.record else None),
+        "tracer_snapshots": snaps,
     }
     text = json.dumps(_jsonable(artifact), sort_keys=True)
     back = json.loads(text)
@@ -1000,6 +1191,10 @@ Read `REAL_EXIT` from the file. **Never trust a `| tail` exit code.**
 - [ ] Prefix produces a **nonzero** inherited `I`, and `N_actual = root.visit_count − I` is correct with `I > 0`.
 - [ ] Boundary fires at the **first flush at or after 320** target-search backups, with `320 ≤ N_actual ≤ 400` asserted, and `remaining == 0` reachable on a tail-only search.
 - [ ] Ladder legs are additive on one tree, recording `B` / `I` / `I + B`.
+- [ ] **Every rung preserves its own evidence before the tree advances past it** — nonzero visit counts, `n_visited_children`, `top_share`, `top_two_margin`, `effective_children`, and the selected move's prior **rank**. After leg 4 the earlier rungs no longer exist anywhere, and §5/§7 cannot be recomputed from the mutated tree.
+- [ ] **Two frozen tracer snapshots** (§8): at `N_actual`, taken by the boundary observer at the quiescent moment, and at nominal `B = 400`, taken after leg 1. The tracer is **fresh and attached after prefix replay**, so no prefix search contaminates the counters.
+- [ ] Prefix asserts move **legality** and **canonical state agreement** (`to_move`, `pegs`, `bridges`) after every advance, and rejects metadata disagreeing with the history.
+- [ ] Cache clears are **counted, one per advance** — final emptiness alone would pass if only the last advance cleared.
 - [ ] Tracer cache cleared at **real** `advance_root` boundaries; `within_forced_simulation` observed during a warm replay.
 - [ ] Replay-seed continuity proven across prefix and all four legs, **with a non-vacuity control** showing that reseeding changes the result.
 - [ ] `replay_seed_for` verifies against the sidecar rather than assuming.
