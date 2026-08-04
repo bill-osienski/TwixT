@@ -60,3 +60,30 @@ def test_existing_observer_protocol_is_untouched():
     to MCTSObserver would break it."""
     assert not hasattr(MCTSFlushObserver, "on_root_simulation")
     assert not hasattr(MCTSSelectionObserver, "on_root_simulation")
+
+
+def test_flush_hook_fires_and_types_match_counters():
+    fo = RecordingFlush()
+    mcts, _root = _run(flush_observer=fo)
+    assert fo.calls, "no flush events emitted"
+    seen = [t for t, _n in fo.calls]
+    assert seen.count("full") == mcts._flush_full
+    assert seen.count("stall") == mcts._flush_stall
+    assert seen.count("tail") == mcts._flush_tail
+
+
+def test_flush_events_are_ordered_and_tail_is_last():
+    """What this CAN establish: events arrive in non-decreasing root-visit order
+    and the tail flush is last.
+
+    What it CANNOT: that pending_nodes / pending_waiters / pending_node_ids were
+    empty at the callback. Those are locals inside search_from_root and are not
+    observable from a test. After-the-clears placement is enforced as a CALL-SITE
+    REQUIREMENT and by review -- not by this test, and not by exposing internal
+    queues.
+    """
+    fo = RecordingFlush()
+    _run(flush_observer=fo)
+    counts = [n for _t, n in fo.calls]
+    assert counts == sorted(counts)
+    assert fo.calls[-1][0] == "tail"

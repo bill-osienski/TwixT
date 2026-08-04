@@ -697,6 +697,9 @@ class MCTS:
                     pending_waiters.clear()
                     pending_node_ids.clear()
                     stall_count = 0
+                    # Atlas §4: fires only AFTER the clears -- in-flight is empty.
+                    if self._flush_observer is not None:
+                        self._flush_observer.on_flush_complete("full", root)
 
                 # Stall flush: tree narrowed, not finding new leaves
                 # Note: stall_flush_sims == 0 means disabled
@@ -711,6 +714,9 @@ class MCTS:
                     pending_waiters.clear()
                     pending_node_ids.clear()
                     stall_count = 0
+                    # Atlas §4: fires only AFTER the clears -- in-flight is empty.
+                    if self._flush_observer is not None:
+                        self._flush_observer.on_flush_complete("stall", root)
 
         # Flush remaining (tail flush)
         if pending_nodes:
@@ -719,6 +725,9 @@ class MCTS:
             pending_nodes.clear()
             pending_waiters.clear()
             pending_node_ids.clear()
+            # Atlas §4: fires only AFTER the clears -- in-flight is empty.
+            if self._flush_observer is not None:
+                self._flush_observer.on_flush_complete("tail", root)
 
         # Build visit_counts from ALL legal moves (not root.priors)
         visit_counts: Dict[Tuple[int, int], int] = {}
