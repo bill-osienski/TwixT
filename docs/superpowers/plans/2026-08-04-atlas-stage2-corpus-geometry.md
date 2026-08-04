@@ -902,7 +902,8 @@ def test_block_may_not_exceed_the_frozen_seed_range(tmp_path):
 def test_load_block_validates_the_frozen_seed_identity(tmp_path):
     d = tmp_path / "v"
     _block(d, 0, 3)
-    metas = load_block(d, base_seed=BASE, start_index=0, n_games=3)
+    metas = load_block(d, base_seed=BASE, start_index=0, n_games=3,
+                       require_production=False)
     assert [m.game_id for m in metas] == [0, 1, 2]
     assert isinstance(metas[0], GameMeta)
 
@@ -911,20 +912,43 @@ def test_load_block_validates_the_frozen_seed_identity(tmp_path):
     side["seed"] = BASE + 999
     (d / "game_000001.json").write_text(json.dumps(side))
     with pytest.raises(ValueError, match="seed"):
-        load_block(d, base_seed=BASE, start_index=0, n_games=3)
+        load_block(d, base_seed=BASE, start_index=0, n_games=3,
+                   require_production=False)
 
 
 def test_load_block_rejects_gaps_extras_and_wrong_blocks(tmp_path):
     d = tmp_path / "g"
     _block(d, 0, 3)
     (d / "game_000001.json").unlink()                       # gap
-    with pytest.raises(ValueError, match="index"):
-        load_block(d, base_seed=BASE, start_index=0, n_games=3)
+    with pytest.raises(ValueError, match="filename"):
+        load_block(d, base_seed=BASE, start_index=0, n_games=3,
+                   require_production=False)
 
     d2 = tmp_path / "e"
     _block(d2, 0, 3)
     with pytest.raises(ValueError, match="manifest"):        # wrong block requested
-        load_block(d2, base_seed=BASE, start_index=24, n_games=3)
+        load_block(d2, base_seed=BASE, start_index=24, n_games=3,
+                   require_production=False)
+
+
+def test_load_block_rejects_a_non_production_block(tmp_path):
+    """A tiny smoke block passes every interval and seed check. Only the frozen
+    production settings distinguish it from a corpus block."""
+    d = tmp_path / "smoke"
+    _block(d, 0, 2)                       # active_size=6, 8 sims, max_moves=6
+    with pytest.raises(ValueError, match="production settings"):
+        load_block(d, base_seed=BASE, start_index=0, n_games=2)
+
+
+def test_load_block_rejects_a_duplicate_index_behind_another_filename(tmp_path):
+    d = tmp_path / "dup2"
+    _block(d, 0, 3)
+    side = json.loads((d / "game_000002.json").read_text())
+    side["game_idx"] = 1                  # same index, different filename
+    (d / "game_000002.json").write_text(json.dumps(side))
+    with pytest.raises(ValueError, match="disagree|duplicate"):
+        load_block(d, base_seed=BASE, start_index=0, n_games=3,
+                   require_production=False)
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1052,20 +1076,61 @@ def generate_block(evaluator, base_seed: int, start_index: int, n_games: int,
     return rows
 
 
-def load_block(block_dir, base_seed: int, start_index: int,
-               n_games: int) -> List[GameMeta]:
-    """Load a block, verifying the FROZEN seed identity before use.
+# The frozen production settings a corpus block MUST have been generated under
+# (design section 3). A block that misses any of these is not a corpus block --
+# an active_size=6 smoke, a noise-off run, or wrong batching would otherwise pass
+# every interval and seed check and become the corpus.
+PRODUCTION_SETTINGS = {
+    "active_size": 24,
+    "n_simulations": 400,
+    "max_moves": 280,
+    "batching": [14, 48, 8],
+    "add_noise": True,
+}
 
-    Validates: the manifest exists and describes the requested block; the sidecar
-    index set is exactly [start_index, start_index + n_games) with no gaps and no
-    extras; and every sidecar carries seed == base_seed + game_idx. Without this,
-    a tampered, mixed or partial directory would silently become the corpus.
-    """
-    block_dir = Path(block_dir)
-    man_path = block_dir / MANIFEST
+
+def load_manifest(block_dir) -> Dict[str, Any]:
+    man_path = Path(block_dir) / MANIFEST
     if not man_path.exists():
         raise ValueError(f"no {MANIFEST} in {block_dir}")
-    man = json.loads(man_path.read_text())
+    return json.loads(man_path.read_text())
+
+
+def assert_blocks_agree(pilot_manifest: Dict[str, Any],
+                        cont_manifest: Dict[str, Any]) -> None:
+    """Pilot and continuation must come from the SAME checkpoint and source.
+
+    A continuation generated from a different checkpoint, or from a dirty tree,
+    is a different reservoir wearing the same seed range.
+    """
+    for field in ("base_seed", "checkpoint_path", "checkpoint_sha1", "git_head"):
+        if pilot_manifest.get(field) != cont_manifest.get(field):
+            raise ValueError(
+                f"pilot/continuation disagree on {field}: "
+                f"{pilot_manifest.get(field)!r} vs {cont_manifest.get(field)!r}")
+    for name, man in (("pilot", pilot_manifest), ("continuation", cont_manifest)):
+        if not man.get("worktree_clean", False):
+            raise ValueError(f"{name} block was generated from a dirty worktree")
+
+
+def load_block(block_dir, base_seed: int, start_index: int, n_games: int,
+               *, require_production: bool = True) -> List[GameMeta]:
+    """Load a block, verifying the FROZEN identity and provenance before use.
+
+    Validates, in order:
+      1. the manifest exists and describes exactly the requested block;
+      2. the frozen production settings, unless require_production=False
+         (tiny-scale producer tests only -- the CLI never disables it);
+      3. filenames are exactly game_{idx:06d}.json, one per index, so a duplicate
+         game_idx hidden behind a second filename cannot silently overwrite;
+      4. the index set is exactly [start_index, start_index + n_games);
+      5. every sidecar carries seed == base_seed + game_idx.
+
+    Without all five, a tampered, mixed, under-settings or partial directory
+    silently becomes the corpus.
+    """
+    block_dir = Path(block_dir)
+    man = load_manifest(block_dir)
     if (man["base_seed"], man["start_index"], man["n_games"]) != (
             base_seed, start_index, n_games):
         raise ValueError(
@@ -1073,11 +1138,33 @@ def load_block(block_dir, base_seed: int, start_index: int,
             f"start={man['start_index']} n={man['n_games']}, requested "
             f"base={base_seed} start={start_index} n={n_games}")
 
+    if require_production:
+        for field, want in PRODUCTION_SETTINGS.items():
+            got = man.get(field)
+            if got != want:
+                raise ValueError(
+                    f"block was not generated under production settings: "
+                    f"{field}={got!r}, frozen value is {want!r}")
+
     expected = set(range(start_index, start_index + n_games))
-    sides = {}
-    for p in sorted(block_dir.glob("game_*.json")):
-        d = json.loads(p.read_text())
-        sides[d["game_idx"]] = d
+    files = sorted(block_dir.glob("game_*.json"))
+    want_names = {f"game_{i:06d}.json" for i in expected}
+    got_names = {f.name for f in files}
+    if got_names != want_names:
+        raise ValueError(
+            f"filename set mismatch: missing={sorted(want_names - got_names)} "
+            f"unexpected={sorted(got_names - want_names)}")
+
+    sides: Dict[int, Dict[str, Any]] = {}
+    for f in files:
+        d = json.loads(f.read_text())
+        idx = d["game_idx"]
+        if idx in sides:
+            raise ValueError(f"duplicate game_idx {idx} across filenames")
+        if f.name != f"game_{idx:06d}.json":
+            raise ValueError(
+                f"{f.name} declares game_idx {idx}; filename and index disagree")
+        sides[idx] = d
     if set(sides) != expected:
         missing, extra = sorted(expected - set(sides)), sorted(set(sides) - expected)
         raise ValueError(f"index set mismatch: missing={missing} extra={extra}")
@@ -1189,12 +1276,17 @@ def _run(*args):
 
 
 def _block(tmp_path, start_index, n_games, n_moves=200):
-    """A synthetic but VALID block: manifest plus seed-consistent sidecars."""
+    """A synthetic but VALID block: production manifest plus seed-consistent
+    sidecars. The production fields are mandatory -- load_block rejects a block
+    generated under smoke settings."""
     d = Path(tmp_path)
     d.mkdir(parents=True, exist_ok=True)
     (d / "block_manifest.json").write_text(json.dumps({
         "base_seed": BASE, "start_index": start_index, "n_games": n_games,
-        "add_noise": True, "checkpoint_path": "x", "checkpoint_sha1": "0" * 40,
+        "active_size": 24, "n_simulations": 400, "max_moves": 280,
+        "batching": [14, 48, 8], "add_noise": True,
+        "checkpoint_path": "x", "checkpoint_sha1": "0" * 40,
+        "git_head": "deadbeef", "worktree_clean": True,
     }))
     for i in range(start_index, start_index + n_games):
         (d / f"game_{i:06d}.json").write_text(json.dumps({
@@ -1224,24 +1316,36 @@ def test_emit_pilot_command_is_pre_pilot_and_needs_no_N():
     assert "--n-target" not in r.stdout
 
 
-def test_continuation_command_derives_g_total_from_the_size_artifact(tmp_path):
+def test_continuation_command_consumes_the_REAL_size_output(tmp_path):
+    """Drive the real `size` subcommand into the real consumer. Hand-writing the
+    artifact here would repeat the surrogate mistake this project has paid for
+    twice."""
+    pilot = _block(tmp_path / "p", 0, 24)
+    sz = _run("size", "--sidecar-dir", pilot, "--base-seed", str(BASE),
+              "--n-target", "240")
+    assert sz.returncode == 0, sz.stderr
     art = tmp_path / "size.json"
-    art.write_text(json.dumps({"verdict": "OK", "G_total": 280, "g_cont": 216,
-                               "n_target": 240}))
+    art.write_text(sz.stdout)
+    assert json.loads(sz.stdout)["G_total"] == 280      # the formula's answer
+
     r = _run("emit-continuation-command", "--base-seed", str(BASE),
+             "--pilot-dir", pilot, "--n-target", "240",
              "--size-artifact", str(art), "--checkpoint", "ck", "--out-dir", "root")
     assert r.returncode == 0, r.stderr
     assert "--start-index 24 --n-games 256" in r.stdout     # 280 - 24
-    assert "root/continuation" in r.stdout                  # distinct directory
-    assert "root/pilot" not in r.stdout
+    assert "root/continuation" in r.stdout and "root/pilot" not in r.stdout
 
 
-def test_continuation_command_refuses_a_failed_size_artifact(tmp_path):
-    art = tmp_path / "bad.json"
-    art.write_text(json.dumps({"verdict": "PHASE_GEOMETRY_NO_GO", "G_total": None}))
+def test_continuation_command_rejects_a_tampered_size_artifact(tmp_path):
+    """A hand-edited G_total must not authorize the expensive block."""
+    pilot = _block(tmp_path / "p2", 0, 24)
+    art = tmp_path / "tampered.json"
+    art.write_text(json.dumps({"verdict": "OK", "G_total": 480, "g_cont": 456}))
     r = _run("emit-continuation-command", "--base-seed", str(BASE),
+             "--pilot-dir", pilot, "--n-target", "240",
              "--size-artifact", str(art), "--checkpoint", "ck", "--out-dir", "root")
-    assert r.returncode != 0
+    assert r.returncode == 2
+    assert "does not match a recomputation" in r.stderr
 
 
 def test_pilot_gate_passes_and_no_gos_with_exit_3(tmp_path):
@@ -1276,20 +1380,48 @@ def test_size_reports_g_total_and_binding_subset(tmp_path):
     assert out["verdict"] == "OK" and out["G_total"] <= 480 and out["binding_subset"]
 
 
-def test_assign_succeeds_and_shortfall_exits_4(tmp_path):
+def test_assign_succeeds_at_the_AUTHORIZED_continuation_size(tmp_path):
+    """At N=200 with a full-coverage pilot the frozen rule gives G_total=240, so
+    the continuation is exactly 216 games. The demand is 176; the 40-game slack
+    IS the 20% margin, not spare capacity to draw on."""
     pilot = _block(tmp_path / "p", 0, 24)
-    cont = _block(tmp_path / "c", 24, 400)
+    cont = _block(tmp_path / "c", 24, 216)
     r = _run("assign", "--pilot-dir", pilot, "--continuation-dir", cont,
              "--base-seed", str(BASE), "--n-target", "200", "--sampling-seed", "7")
     assert r.returncode == 0, r.stderr
     assert len(json.loads(r.stdout)["rows"]) == 176
 
-    short = _block(tmp_path / "c2", 24, 400, n_moves=50)
-    r2 = _run("assign", "--pilot-dir", pilot, "--continuation-dir", short,
-              "--base-seed", str(BASE), "--n-target", "200", "--sampling-seed", "7")
-    out = json.loads(r2.stdout)
-    assert r2.returncode == 4 and out["verdict"] == "ASSIGNMENT_SHORTFALL"
+
+def test_assign_rejects_an_oversized_continuation_as_a_top_up(tmp_path):
+    """400 games where the rule authorizes 216 is an unauthorized top-up: the
+    surplus becomes matching capacity the sizing rule never granted."""
+    pilot = _block(tmp_path / "p3", 0, 24)
+    cont = _block(tmp_path / "c3", 24, 400)
+    r = _run("assign", "--pilot-dir", pilot, "--continuation-dir", cont,
+             "--base-seed", str(BASE), "--n-target", "200", "--sampling-seed", "7")
+    assert r.returncode == 2
+    assert "requires exactly [24, 240)" in r.stderr
+
+
+def test_assign_shortfall_exits_4_with_no_partial_corpus(tmp_path):
+    pilot = _block(tmp_path / "p4", 0, 24)
+    short = _block(tmp_path / "c4", 24, 216, n_moves=50)
+    r = _run("assign", "--pilot-dir", pilot, "--continuation-dir", short,
+             "--base-seed", str(BASE), "--n-target", "200", "--sampling-seed", "7")
+    out = json.loads(r.stdout)
+    assert r.returncode == 4 and out["verdict"] == "ASSIGNMENT_SHORTFALL"
     assert "rows" not in out and out["min_cut_cells"]
+
+
+def test_assign_rejects_blocks_from_different_checkpoints(tmp_path):
+    pilot = _block(tmp_path / "p5", 0, 24)
+    cont = Path(_block(tmp_path / "c5", 24, 216))
+    man = json.loads((cont / "block_manifest.json").read_text())
+    man["checkpoint_sha1"] = "1" * 40
+    (cont / "block_manifest.json").write_text(json.dumps(man))
+    r = _run("assign", "--pilot-dir", pilot, "--continuation-dir", str(cont),
+             "--base-seed", str(BASE), "--n-target", "200", "--sampling-seed", "7")
+    assert r.returncode == 2 and "checkpoint_sha1" in r.stderr
 
 
 def test_cli_refuses_a_disallowed_n(tmp_path):
@@ -1330,7 +1462,7 @@ from .corpus_geometry import (
     ALLOWED_N, MAX_SEED_RANGE_GAMES, PILOT_GAMES, assign_corpus,
     pilot_geometry_gate, size_continuation,
 )
-from .generate_atlas_reservoir import load_block
+from .generate_atlas_reservoir import assert_blocks_agree, load_block, load_manifest
 
 _STOP = ("=" * 72 + "\nOPERATOR STOP -- reservoir generation is NOT AUTHORIZED by "
          "this tool.\nObtain authorization, then run the command below.\n" + "=" * 72)
@@ -1375,7 +1507,9 @@ def main() -> int:
 
     s = sub.add_parser("emit-continuation-command")
     s.add_argument("--base-seed", type=int, required=True)
-    s.add_argument("--size-artifact", required=True)
+    s.add_argument("--pilot-dir", required=True)      # to RECOMPUTE the sizing
+    s.add_argument("--n-target", type=int, required=True)
+    s.add_argument("--size-artifact", required=True)  # compared, never trusted
     s.add_argument("--checkpoint", required=True)
     s.add_argument("--out-dir", required=True)
 
@@ -1417,12 +1551,24 @@ def main() -> int:
             return 0
 
         if args.cmd == "emit-continuation-command":
+            # RECOMPUTE, then compare. The artifact is a claim, not an authority:
+            # trusting it would let a hand-edited G_total authorize a block the
+            # frozen sizing rule never produced -- and the continuation block is
+            # the expensive one.
+            pilot = load_block(args.pilot_dir, args.base_seed, 0, PILOT_GAMES)
+            recomputed = size_continuation(pilot, args.n_target)
             art = json.loads(Path(args.size_artifact).read_text())
-            if art.get("verdict") != "OK" or not art.get("G_total"):
-                print(f"error: size artifact is not an OK result: "
-                      f"verdict={art.get('verdict')!r}", file=sys.stderr)
-                return 2
-            g_total = int(art["G_total"])
+            if recomputed.get("verdict") != "OK":
+                print(f"error: recomputed sizing is not OK: "
+                      f"{recomputed.get('verdict')!r}", file=sys.stderr)
+                return 3
+            for field in ("verdict", "G_total", "g_cont"):
+                if art.get(field) != recomputed.get(field):
+                    print(f"error: size artifact does not match a recomputation "
+                          f"from the pilot: {field}={art.get(field)!r} vs "
+                          f"{recomputed.get(field)!r}", file=sys.stderr)
+                    return 2
+            g_total = int(recomputed["G_total"])
             print(_STOP)
             print(f"\n# continuation block [24, {g_total}) -- its OWN directory:")
             print(_gen_cmd(args.base_seed, PILOT_GAMES, g_total - PILOT_GAMES,
@@ -1449,10 +1595,27 @@ def main() -> int:
         if gate["verdict"] != "PASS":
             print(json.dumps(gate, indent=2, sort_keys=True, default=str))
             return 3
-        cont_man = json.loads(
-            (Path(args.continuation_dir) / "block_manifest.json").read_text())
+
+        # The continuation interval is DERIVED, never read from the block being
+        # validated. Taking it from the block's own manifest would accept any
+        # self-consistent size -- and a continuation larger than G_total is an
+        # unauthorized top-up in disguise, since the surplus games become extra
+        # matching capacity the frozen sizing rule never granted.
+        sizing = size_continuation(pilot, args.n_target)
+        if sizing["verdict"] != "OK":
+            print(json.dumps(sizing, indent=2, sort_keys=True, default=str))
+            return 3
+        want_n = int(sizing["G_total"]) - PILOT_GAMES
+        cont_man = load_manifest(args.continuation_dir)
+        if (cont_man["start_index"], cont_man["n_games"]) != (PILOT_GAMES, want_n):
+            print(f"error: continuation block is [{cont_man['start_index']}, "
+                  f"{cont_man['start_index'] + cont_man['n_games']}); the frozen "
+                  f"sizing rule requires exactly [{PILOT_GAMES}, "
+                  f"{sizing['G_total']}) for N={args.n_target}", file=sys.stderr)
+            return 2
+        assert_blocks_agree(load_manifest(args.pilot_dir), cont_man)
         cont = load_block(args.continuation_dir, args.base_seed,
-                          cont_man["start_index"], cont_man["n_games"])
+                          PILOT_GAMES, want_n)
         r = assign_corpus(gate["assignment"], cont, args.n_target, args.sampling_seed)
         print(json.dumps(r, indent=2, sort_keys=True, default=str))
         return 0 if r["verdict"] == "OK" else 4
@@ -1469,7 +1632,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_build_atlas_corpus_cli.py -v -p no:cacheprovider`
-Expected: PASS — 9 passed.
+Expected: PASS — 12 passed.
 
 - [ ] **Step 5: Full suite, then commit**
 
@@ -1494,7 +1657,10 @@ pipe's status, which masked a collection error twice in Stage 1.
 - [ ] Producer: `game_seed = base_seed + game_idx`; a continuation block genuinely continues; any single index reproduces independently of its block.
 - [ ] Each block writes its **own** directory and **fails closed** on a pre-existing manifest or game files.
 - [ ] `block_manifest.json` records the block interval, `add_noise=True`, and the **checkpoint path plus digest**.
-- [ ] `load_block` verifies manifest agreement, exact index coverage (no gaps, no extras) and `seed == base_seed + game_idx` **before** any `GameMeta` is built.
+- [ ] `load_block` verifies manifest agreement, the **frozen production settings** (board 24, 400 sims, 280 moves, batching `(14,48,8)`, noise on), exact filenames with no duplicate index behind another name, exact index coverage, and `seed == base_seed + game_idx` — **all before** any `GameMeta` is built.
+- [ ] Pilot and continuation manifests must agree on `base_seed`, checkpoint path, **checkpoint digest** and `git_head`, and both must be `worktree_clean`.
+- [ ] `assign` **recomputes** `G_total` from the pilot and `N` and requires the continuation to be exactly `[24, G_total)`. An oversized block is rejected as an unauthorized top-up.
+- [ ] `emit-continuation-command` **recomputes** the sizing and compares the artifact field-by-field; a tampered `G_total` cannot authorize the expensive block.
 - [ ] CLI implements **six** subcommands in staged order. Pre-pilot commands require **no `N`**; the continuation command **derives** `G_total` from the size artifact and accepts no `--g-total`. Exit codes 0/2/3/4.
 - [ ] Full suite green, exit code read from the process.
 
