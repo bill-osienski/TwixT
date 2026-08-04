@@ -15,6 +15,7 @@
 - **No `mcts.py` change.** The Stage 1 scoped exception covers diagnostic observer surfaces only, and Stage 2 needs none.
 - **Eligibility uses only non-search-derived metadata:** `game_id`, `seed`, `n_moves`, `start_player`. Never a value, residual, entropy, branching count or outcome.
 - **Frozen phase bounds:** opening `0–30`, early-mid `31–60`, midgame `61–90`, late `91+`.
+- **Board `active_size = 24`** — the only size played, and now pinned in §3. `generate_block` defaults to it and the CLI **deliberately does not expose an `--active-size` flag**, so a block cannot be generated at another size by accident. Where tests use `active_size=6` it is purely for CPU speed, and those runs never produce a corpus.
 - **Two cell spaces, do not conflate them.** Sizing and the pilot gate use the **8 phase×side** cells. The final matching uses the **16 split×phase×side** cells.
 - **Frozen demands:** `d_c = N/8 − 3` residual per phase×side cell; final per-cell `discovery = 3N/40 − 3`, `validation = N/20`. They sum to `d_c`, and to `N − 24` overall.
 - **`N` ∈ {200, 240, 280, 320, 360, 400}.** Seed range frozen at **480 games** maximum.
@@ -31,7 +32,7 @@
 |---|---|
 | `scripts/GPU/alphazero/corpus_geometry.py` (create) | Pure: phases, eligibility, stable ordering, max-flow matching + min-cut witness, pilot gate, subset sizing. |
 | `scripts/GPU/alphazero/generate_atlas_reservoir.py` (create) | The producer. `game_seed = base_seed + game_idx`, `--start-index` continuation, per-game sidecars, provenance. |
-| `scripts/GPU/alphazero/build_atlas_corpus.py` (create) | CLI: **all five** of `emit-protocol`, `emit-gen-command`, `pilot-gate`, `size`, `assign`. Emits commands; runs none. |
+| `scripts/GPU/alphazero/build_atlas_corpus.py` (create) | CLI: **six** subcommands in staged order — `emit-protocol`, `emit-pilot-command`, `pilot-gate`, `size`, `emit-continuation-command`, `assign`. Emits commands; runs none. |
 | `tests/test_corpus_geometry.py` (create) | Phases, eligibility, ordering, matching, min-cut, pilot gate, sizing — all on synthetic metadata. |
 | `tests/test_generate_atlas_reservoir.py` (create) | Seed identity, continuation offset, single-index reproduction, sidecar contents. |
 | `tests/test_build_atlas_corpus_cli.py` (create) | All five subcommands, the operator stop, exit codes, failure artifacts. |
@@ -802,96 +803,128 @@ git commit -m "feat(atlas-s2): final assignment, ply selection and the failure a
 - Test: `tests/test_generate_atlas_reservoir.py`
 
 **Interfaces:**
-- Consumes: `play_game` from `self_play`, `GameMeta` from `corpus_geometry`.
-- Produces: CLI `--base-seed --start-index --n-games --checkpoint --out-dir`; per-game sidecars; a run-level provenance record; `game_meta_from_sidecar(d) -> GameMeta`.
+- Consumes: `play_game` from `self_play`, `GameMeta`/`MAX_SEED_RANGE_GAMES` from `corpus_geometry`.
+- Produces: `seed_for_index(base_seed, game_idx)`, `generate_block(...) -> list[dict]`, `game_meta_from_sidecar(d) -> GameMeta`, `load_block(dir, base_seed, start_index, n_games) -> list[GameMeta]`.
 
 > **Why the shipped generator cannot be used.** `generate_games.py` passes one master
 > seed to `play_games`, which derives each game's RNG as
 > `random.Random(rng.randint(0, 2**31))` (`self_play.py:1485-1490`). Game *i*'s seed
-> therefore depends on **every preceding draw**, so:
->
-> - there is **no start offset** — a continuation block at index 24 is unreachable
->   without replaying the first 24 draws;
-> - a rerun at `base_seed` **regenerates the pilot** rather than the continuation;
-> - `GameRecord` carries **neither index nor seed**, so §2b's
->   `replay_seed = reservoir_base_seed + game_idx` is unsatisfiable and there is no
->   sidecar for Stage 3 to verify against.
->
-> This producer exists solely to restore the frozen per-game seed identity. It changes
-> nothing about how a game is played.
+> therefore depends on **every preceding draw**, so there is no start offset, a
+> continuation block is unreachable, a rerun regenerates the pilot, and `GameRecord`
+> carries neither index nor seed — leaving §2b's `replay_seed = base_seed + game_idx`
+> unsatisfiable with no sidecar to verify.
 
 **Shipped-equivalence requirement.** `play_games` derives `start_player` by consuming
-one draw from the game RNG *before* playing (`"red" if game_rng.random() < 0.5 else
-"black"`). Reproduce that **exactly** — same draw, same order — so each game is
-shipped-identical given its RNG. Only the RNG's *provenance* changes.
+one draw from the game RNG *before* playing. Reproduce that **exactly** — same draw,
+same order — so a game is shipped-identical given its RNG. Only the RNG's *provenance*
+changes.
+
+**Fail closed on existing targets.** Each block writes its own directory and refuses
+to touch a directory that already holds a manifest or game files. Two blocks sharing
+one directory would silently overwrite the pilot's manifest and games.
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 # tests/test_generate_atlas_reservoir.py
 import json
-import random
 from pathlib import Path
 
-from scripts.GPU.alphazero.generate_atlas_reservoir import (
-    game_meta_from_sidecar, generate_block, seed_for_index,
-)
+import pytest
+
 from scripts.GPU.alphazero.corpus_geometry import GameMeta
+from scripts.GPU.alphazero.generate_atlas_reservoir import (
+    game_meta_from_sidecar, generate_block, load_block, seed_for_index,
+)
 
 from tests.eval_fakes import FakeEvaluator
 
-
-def test_seed_is_base_plus_index_exactly():
-    assert seed_for_index(20400000, 0) == 20400000
-    assert seed_for_index(20400000, 24) == 20400024
-    assert seed_for_index(20400000, 479) == 20400479
+BASE = 20400000
 
 
-def _block(tmp_path, start_index, n_games):
+def _block(d, start_index, n_games, n_moves_cfg=6):
     return generate_block(
-        evaluator=FakeEvaluator(value=0.0), base_seed=20400000,
-        start_index=start_index, n_games=n_games, out_dir=Path(tmp_path),
-        n_simulations=8, max_moves=6, active_size=6,
+        evaluator=FakeEvaluator(value=0.0), base_seed=BASE,
+        start_index=start_index, n_games=n_games, out_dir=Path(d),
+        checkpoint_path="fake://evaluator", checkpoint_sha1="0" * 40,
+        n_simulations=8, max_moves=n_moves_cfg, active_size=6,
     )
 
 
+def test_seed_is_base_plus_index_exactly():
+    assert seed_for_index(BASE, 0) == BASE
+    assert seed_for_index(BASE, 24) == BASE + 24
+    assert seed_for_index(BASE, 479) == BASE + 479
+
+
 def test_continuation_block_is_disjoint_and_offset(tmp_path):
-    pilot = _block(tmp_path / "a", 0, 3)
-    cont = _block(tmp_path / "b", 3, 3)
+    pilot = _block(tmp_path / "pilot", 0, 3)
+    cont = _block(tmp_path / "cont", 3, 3)
     assert [g["game_idx"] for g in pilot] == [0, 1, 2]
-    assert [g["game_idx"] for g in cont] == [3, 4, 5]
-    assert [g["seed"] for g in cont] == [20400003, 20400004, 20400005]
+    assert [g["seed"] for g in cont] == [BASE + 3, BASE + 4, BASE + 5]
     assert not ({g["seed"] for g in pilot} & {g["seed"] for g in cont})
 
 
 def test_a_single_index_reproduces_exactly(tmp_path):
-    """The whole point: index 4 is the same game whether it is produced in a
-    block starting at 0 or a continuation starting at 4."""
+    """The whole point: index 4 is the same game whether produced in a block
+    starting at 0 or a continuation starting at 4."""
     from_zero = _block(tmp_path / "x", 0, 6)[4]
     from_four = _block(tmp_path / "y", 4, 1)[0]
-    assert from_zero["seed"] == from_four["seed"] == 20400004
+    assert from_zero["seed"] == from_four["seed"] == BASE + 4
     assert from_zero["start_player"] == from_four["start_player"]
     assert from_zero["n_moves"] == from_four["n_moves"]
     assert from_zero["move_history"] == from_four["move_history"]
 
 
-def test_sidecar_carries_everything_GameMeta_needs(tmp_path):
-    rows = _block(tmp_path / "s", 0, 2)
-    side = json.loads((Path(tmp_path / "s") / "game_000000.json").read_text())
-    for k in ("game_idx", "seed", "start_player", "n_moves"):
-        assert k in side
-    meta = game_meta_from_sidecar(side)
-    assert isinstance(meta, GameMeta)
-    assert meta.game_id == 0 and meta.seed == 20400000
+def test_manifest_records_the_block_and_the_checkpoint(tmp_path):
+    _block(tmp_path / "m", 24, 2)
+    man = json.loads((tmp_path / "m" / "block_manifest.json").read_text())
+    assert man["base_seed"] == BASE
+    assert man["start_index"] == 24 and man["n_games"] == 2
+    assert man["seed_range"] == [BASE + 24, BASE + 26]
+    assert man["add_noise"] is True          # shipped generation keeps noise ON
+    assert man["checkpoint_path"] == "fake://evaluator"
+    assert man["checkpoint_sha1"] == "0" * 40
+    assert "git_head" in man and "worktree_clean" in man
 
 
-def test_provenance_record_is_written(tmp_path):
-    _block(tmp_path / "p", 0, 2)
-    prov = json.loads((Path(tmp_path / "p") / "provenance.json").read_text())
-    assert prov["base_seed"] == 20400000
-    assert prov["start_index"] == 0 and prov["n_games"] == 2
-    assert prov["add_noise"] is True          # shipped generation keeps noise ON
-    assert "git_head" in prov and "worktree_clean" in prov
+def test_refuses_a_directory_that_already_holds_a_block(tmp_path):
+    _block(tmp_path / "dup", 0, 2)
+    with pytest.raises(FileExistsError):
+        _block(tmp_path / "dup", 0, 2)
+
+
+def test_block_may_not_exceed_the_frozen_seed_range(tmp_path):
+    with pytest.raises(ValueError):
+        _block(tmp_path / "over", 470, 20)      # 470 + 20 > 480
+
+
+def test_load_block_validates_the_frozen_seed_identity(tmp_path):
+    d = tmp_path / "v"
+    _block(d, 0, 3)
+    metas = load_block(d, base_seed=BASE, start_index=0, n_games=3)
+    assert [m.game_id for m in metas] == [0, 1, 2]
+    assert isinstance(metas[0], GameMeta)
+
+    # tampered seed
+    side = json.loads((d / "game_000001.json").read_text())
+    side["seed"] = BASE + 999
+    (d / "game_000001.json").write_text(json.dumps(side))
+    with pytest.raises(ValueError, match="seed"):
+        load_block(d, base_seed=BASE, start_index=0, n_games=3)
+
+
+def test_load_block_rejects_gaps_extras_and_wrong_blocks(tmp_path):
+    d = tmp_path / "g"
+    _block(d, 0, 3)
+    (d / "game_000001.json").unlink()                       # gap
+    with pytest.raises(ValueError, match="index"):
+        load_block(d, base_seed=BASE, start_index=0, n_games=3)
+
+    d2 = tmp_path / "e"
+    _block(d2, 0, 3)
+    with pytest.raises(ValueError, match="manifest"):        # wrong block requested
+        load_block(d2, base_seed=BASE, start_index=24, n_games=3)
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -906,14 +939,13 @@ Expected: FAIL — `ModuleNotFoundError: No module named '...generate_atlas_rese
 """Atlas reservoir producer -- design section 3 source protocol and 2b seeding.
 
 Exists because the shipped generator cannot satisfy the frozen per-game seed
-identity: play_games derives each game RNG from a MASTER stream
-(random.Random(rng.randint(...))), so game i's seed depends on every preceding
-draw -- there is no start offset, a continuation block is unreachable, and the
-emitted GameRecord carries neither index nor seed.
+identity: play_games derives each game RNG from a MASTER stream, so game i's seed
+depends on every preceding draw -- no start offset, no continuation block, and no
+per-game seed recorded anywhere.
 
-Here: game_seed = base_seed + game_idx, exactly. A block is therefore fully
-determined by (base_seed, start_index, n_games), and any single index reproduces
-independently of the block it was produced in.
+Here: game_seed = base_seed + game_idx, exactly. A block is fully determined by
+(base_seed, start_index, n_games), and any single index reproduces independently
+of the block it was produced in.
 
 How a game is PLAYED is unchanged: same play_game, shipped settings, Dirichlet
 noise ON, and start_player derived by the same leading draw play_games uses.
@@ -921,15 +953,18 @@ noise ON, and start_player derived by the same leading draw play_games uses.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Sequence
 
-from .corpus_geometry import GameMeta, MAX_SEED_RANGE_GAMES
+from .corpus_geometry import MAX_SEED_RANGE_GAMES, GameMeta
 from .mcts import MCTSConfig
 from .self_play import play_game
+
+MANIFEST = "block_manifest.json"
 
 
 def seed_for_index(base_seed: int, game_idx: int) -> int:
@@ -946,15 +981,31 @@ def _git(args: Sequence[str]) -> str:
     return subprocess.check_output(["git", *args], text=True).strip()
 
 
+def _sha1_file(path: str) -> str:
+    p = Path(path)
+    if not p.is_file():
+        return ""          # non-file evaluator source (tests); recorded as empty
+    return hashlib.sha1(p.read_bytes()).hexdigest()
+
+
 def generate_block(evaluator, base_seed: int, start_index: int, n_games: int,
-                   out_dir: Path, n_simulations: int = 400,
-                   max_moves: int = 280, active_size: int = 24) -> List[Dict[str, Any]]:
-    """Generate games [start_index, start_index + n_games) and write sidecars."""
+                   out_dir: Path, checkpoint_path: str,
+                   checkpoint_sha1: str | None = None,
+                   n_simulations: int = 400, max_moves: int = 280,
+                   active_size: int = 24) -> List[Dict[str, Any]]:
+    """Generate games [start_index, start_index + n_games) into a FRESH dir."""
     if start_index < 0 or n_games <= 0:
         raise ValueError("start_index must be >= 0 and n_games > 0")
     if start_index + n_games > MAX_SEED_RANGE_GAMES:
         raise ValueError(
-            f"block exceeds the frozen {MAX_SEED_RANGE_GAMES}-game seed range")
+            f"block [{start_index}, {start_index + n_games}) exceeds the frozen "
+            f"{MAX_SEED_RANGE_GAMES}-game seed range")
+    out_dir = Path(out_dir)
+    if (out_dir / MANIFEST).exists() or any(out_dir.glob("game_*.json")):
+        raise FileExistsError(
+            f"{out_dir} already holds a block. Each block writes its OWN "
+            f"directory -- sharing one would overwrite the other's manifest "
+            f"and games. Refusing to proceed.")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = MCTSConfig(n_simulations=n_simulations, eval_batch_size=14,
@@ -981,7 +1032,7 @@ def generate_block(evaluator, base_seed: int, start_index: int, n_games: int,
             json.dumps(row, indent=2, sort_keys=True))
         rows.append(row)
 
-    (out_dir / "provenance.json").write_text(json.dumps({
+    (out_dir / MANIFEST).write_text(json.dumps({
         "base_seed": base_seed, "start_index": start_index, "n_games": n_games,
         "seed_range": [seed_for_index(base_seed, start_index),
                        seed_for_index(base_seed, start_index + n_games)],
@@ -992,10 +1043,55 @@ def generate_block(evaluator, base_seed: int, start_index: int, n_games: int,
         # Shipped generation keeps root Dirichlet noise ON. This is NOT the
         # atlas ladder's add_noise=False; the two must not be conflated.
         "add_noise": True,
+        "checkpoint_path": checkpoint_path,
+        "checkpoint_sha1": (checkpoint_sha1 if checkpoint_sha1 is not None
+                            else _sha1_file(checkpoint_path)),
         "git_head": _git(["rev-parse", "HEAD"]),
         "worktree_clean": _git(["status", "--porcelain"]) == "",
     }, indent=2, sort_keys=True))
     return rows
+
+
+def load_block(block_dir, base_seed: int, start_index: int,
+               n_games: int) -> List[GameMeta]:
+    """Load a block, verifying the FROZEN seed identity before use.
+
+    Validates: the manifest exists and describes the requested block; the sidecar
+    index set is exactly [start_index, start_index + n_games) with no gaps and no
+    extras; and every sidecar carries seed == base_seed + game_idx. Without this,
+    a tampered, mixed or partial directory would silently become the corpus.
+    """
+    block_dir = Path(block_dir)
+    man_path = block_dir / MANIFEST
+    if not man_path.exists():
+        raise ValueError(f"no {MANIFEST} in {block_dir}")
+    man = json.loads(man_path.read_text())
+    if (man["base_seed"], man["start_index"], man["n_games"]) != (
+            base_seed, start_index, n_games):
+        raise ValueError(
+            f"manifest describes block base={man['base_seed']} "
+            f"start={man['start_index']} n={man['n_games']}, requested "
+            f"base={base_seed} start={start_index} n={n_games}")
+
+    expected = set(range(start_index, start_index + n_games))
+    sides = {}
+    for p in sorted(block_dir.glob("game_*.json")):
+        d = json.loads(p.read_text())
+        sides[d["game_idx"]] = d
+    if set(sides) != expected:
+        missing, extra = sorted(expected - set(sides)), sorted(set(sides) - expected)
+        raise ValueError(f"index set mismatch: missing={missing} extra={extra}")
+
+    metas = []
+    for idx in sorted(expected):
+        d = sides[idx]
+        want = seed_for_index(base_seed, idx)
+        if d["seed"] != want:
+            raise ValueError(
+                f"game {idx}: seed {d['seed']} != base_seed + game_idx ({want}); "
+                f"the frozen replay seed identity is violated")
+        metas.append(game_meta_from_sidecar(d))
+    return metas
 
 
 def main() -> int:
@@ -1016,6 +1112,7 @@ def main() -> int:
         evaluator=_default_evaluator_factory(args.checkpoint),
         base_seed=args.base_seed, start_index=args.start_index,
         n_games=args.n_games, out_dir=Path(args.out_dir),
+        checkpoint_path=args.checkpoint,
         n_simulations=args.simulations, max_moves=args.max_moves,
     )
     print(f"generated {len(rows)} games, indices "
@@ -1030,34 +1127,47 @@ if __name__ == "__main__":
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_generate_atlas_reservoir.py -v -p no:cacheprovider`
-Expected: PASS — 5 passed.
-
-`test_a_single_index_reproduces_exactly` is the load-bearing one: it proves the
-continuation block is genuinely the continuation, which is exactly what the shipped
-master-stream generator cannot provide.
+Expected: PASS — 8 passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/GPU/alphazero/generate_atlas_reservoir.py tests/test_generate_atlas_reservoir.py
-git commit -m "feat(atlas-s2): atlas reservoir producer with frozen per-game seeding"
+git commit -m "feat(atlas-s2): reservoir producer with frozen seeding and block validation"
 ```
 
 ---
 
-### Task 7: The CLI — all five subcommands, and the operator stop
+### Task 7: The CLI — staged chronology, six subcommands, operator stops
 
 **Files:**
 - Create: `scripts/GPU/alphazero/build_atlas_corpus.py`
 - Test: `tests/test_build_atlas_corpus_cli.py`
 
 **Interfaces:**
-- Consumes: all of `corpus_geometry`; `game_meta_from_sidecar` from Task 6.
-- Produces: `emit-protocol`, `emit-gen-command`, `pilot-gate`, `size`, `assign`. **All five, or the operator cannot invoke the qualified geometry.**
+- Consumes: `corpus_geometry`; `load_block` from Task 6.
+- Produces: `emit-protocol`, `emit-pilot-command`, `pilot-gate`, `size`, `emit-continuation-command`, `assign`.
 
-`pilot-gate`, `size` and `assign` read sidecar JSON produced by Task 6 and emit the
-verdict or the failure artifact. `emit-gen-command` prints **two** commands — pilot
-`[0, 24)` and continuation `[24, G_total)` — and runs neither.
+> **The staged chronology is the point.** `N` does **not** exist before the pilot
+> ladder — §3 derives it from the pilot's measured class frequencies
+> (`N_required = max(24/(0.4·p_m), 30/(0.4·p_s))`), and `G_total` is derived from `N`
+> in turn. So the pre-pilot commands must not require either. The real order is:
+>
+> ```text
+> emit-protocol            (base_seed, sampling_seed, 480-range)   -- no N
+> emit-pilot-command       ([0, 24))                               -- no N
+>   >> generate pilot <<                        [separate authorization]
+> pilot-gate               (pure geometry, no ladder)
+>   >> pilot ladder <<                          [Stage 3, separate authorization]
+>                          -> p_m, p_s -> N
+> size --n-target N        -> G_total, written to a size artifact
+> emit-continuation-command --size-artifact ... -> derives G_total, prints [24, G_total)
+>   >> generate continuation <<                 [separate authorization]
+> assign
+> ```
+>
+> **`--g-total` is deliberately not accepted anywhere.** A free-form value would let an
+> operator pass a number the sizing rule never produced.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1068,6 +1178,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+BASE = 20400000
+
 
 def _run(*args):
     return subprocess.run(
@@ -1076,88 +1188,113 @@ def _run(*args):
     )
 
 
-def _sidecars(tmp_path, n, n_moves=200):
+def _block(tmp_path, start_index, n_games, n_moves=200):
+    """A synthetic but VALID block: manifest plus seed-consistent sidecars."""
     d = Path(tmp_path)
     d.mkdir(parents=True, exist_ok=True)
-    for i in range(n):
+    (d / "block_manifest.json").write_text(json.dumps({
+        "base_seed": BASE, "start_index": start_index, "n_games": n_games,
+        "add_noise": True, "checkpoint_path": "x", "checkpoint_sha1": "0" * 40,
+    }))
+    for i in range(start_index, start_index + n_games):
         (d / f"game_{i:06d}.json").write_text(json.dumps({
-            "game_idx": i, "seed": 20400000 + i, "n_moves": n_moves,
+            "game_idx": i, "seed": BASE + i, "n_moves": n_moves,
             "start_player": "red" if i % 2 == 0 else "black",
         }))
     return str(d)
 
 
-def test_emit_protocol_records_the_frozen_parameters():
-    r = _run("emit-protocol", "--n-target", "240", "--base-seed", "20400000",
-             "--sampling-seed", "20260804")
+def test_emit_protocol_needs_no_N():
+    r = _run("emit-protocol", "--base-seed", str(BASE), "--sampling-seed", "20260804")
     assert r.returncode == 0, r.stderr
     p = json.loads(r.stdout)
-    assert p["n_target"] == 240
     assert p["max_seed_range_games"] == 480
-    assert p["seed_range"] == [20400000, 20400480]
-    assert p["one_position_per_game"] is True and p["no_top_up"] is True
+    assert p["seed_range"] == [BASE, BASE + 480]
+    assert p["pilot_games"] == 24
+    assert "n_target" not in p          # N does not exist before the pilot ladder
 
 
-def test_emit_gen_command_prints_two_blocks_and_does_not_run():
-    r = _run("emit-gen-command", "--n-target", "240", "--base-seed", "20400000",
-             "--sampling-seed", "20260804", "--g-total", "280")
+def test_emit_pilot_command_is_pre_pilot_and_needs_no_N():
+    r = _run("emit-pilot-command", "--base-seed", str(BASE),
+             "--sampling-seed", "1", "--checkpoint", "ck", "--out-dir", "root")
     assert r.returncode == 0, r.stderr
     assert "OPERATOR STOP" in r.stdout and "NOT AUTHORIZED" in r.stdout
-    assert "--start-index 0 --n-games 24" in r.stdout      # pilot block
-    assert "--start-index 24 --n-games 256" in r.stdout    # continuation
-    assert "generate_atlas_reservoir" in r.stdout
-    assert "generated" not in r.stdout.lower()
+    assert "--start-index 0 --n-games 24" in r.stdout
+    assert "root/pilot" in r.stdout              # its OWN directory
+    assert "--n-target" not in r.stdout
 
 
-def test_pilot_gate_passes_on_long_games(tmp_path):
-    d = _sidecars(tmp_path / "pg", 24)
-    r = _run("pilot-gate", "--sidecar-dir", d, "--sampling-seed", "7")
+def test_continuation_command_derives_g_total_from_the_size_artifact(tmp_path):
+    art = tmp_path / "size.json"
+    art.write_text(json.dumps({"verdict": "OK", "G_total": 280, "g_cont": 216,
+                               "n_target": 240}))
+    r = _run("emit-continuation-command", "--base-seed", str(BASE),
+             "--size-artifact", str(art), "--checkpoint", "ck", "--out-dir", "root")
     assert r.returncode == 0, r.stderr
-    assert json.loads(r.stdout)["verdict"] == "PASS"
+    assert "--start-index 24 --n-games 256" in r.stdout     # 280 - 24
+    assert "root/continuation" in r.stdout                  # distinct directory
+    assert "root/pilot" not in r.stdout
 
 
-def test_pilot_gate_no_gos_on_short_games_with_exit_3(tmp_path):
-    d = _sidecars(tmp_path / "pg2", 24, n_moves=60)
-    r = _run("pilot-gate", "--sidecar-dir", d, "--sampling-seed", "7")
-    out = json.loads(r.stdout)
-    assert out["verdict"] == "PHASE_GEOMETRY_NO_GO"
-    assert r.returncode == 3
-    assert out["min_cut_cells"]
+def test_continuation_command_refuses_a_failed_size_artifact(tmp_path):
+    art = tmp_path / "bad.json"
+    art.write_text(json.dumps({"verdict": "PHASE_GEOMETRY_NO_GO", "G_total": None}))
+    r = _run("emit-continuation-command", "--base-seed", str(BASE),
+             "--size-artifact", str(art), "--checkpoint", "ck", "--out-dir", "root")
+    assert r.returncode != 0
+
+
+def test_pilot_gate_passes_and_no_gos_with_exit_3(tmp_path):
+    ok = _block(tmp_path / "pg", 0, 24)
+    r = _run("pilot-gate", "--sidecar-dir", ok, "--base-seed", str(BASE),
+             "--sampling-seed", "7")
+    assert r.returncode == 0 and json.loads(r.stdout)["verdict"] == "PASS"
+
+    short = _block(tmp_path / "pg2", 0, 24, n_moves=60)
+    r2 = _run("pilot-gate", "--sidecar-dir", short, "--base-seed", str(BASE),
+              "--sampling-seed", "7")
+    assert r2.returncode == 3
+    assert json.loads(r2.stdout)["verdict"] == "PHASE_GEOMETRY_NO_GO"
+
+
+def test_cli_rejects_a_block_with_a_tampered_seed(tmp_path):
+    d = Path(_block(tmp_path / "t", 0, 24))
+    bad = json.loads((d / "game_000005.json").read_text())
+    bad["seed"] = BASE + 9999
+    (d / "game_000005.json").write_text(json.dumps(bad))
+    r = _run("pilot-gate", "--sidecar-dir", str(d), "--base-seed", str(BASE),
+             "--sampling-seed", "7")
+    assert r.returncode != 0
+    assert "seed" in (r.stderr + r.stdout).lower()
 
 
 def test_size_reports_g_total_and_binding_subset(tmp_path):
-    d = _sidecars(tmp_path / "sz", 24)
-    r = _run("size", "--sidecar-dir", d, "--n-target", "240")
+    d = _block(tmp_path / "sz", 0, 24)
+    r = _run("size", "--sidecar-dir", d, "--base-seed", str(BASE), "--n-target", "240")
     assert r.returncode == 0, r.stderr
     out = json.loads(r.stdout)
-    assert out["verdict"] == "OK" and out["G_total"] <= 480
-    assert out["binding_subset"]
+    assert out["verdict"] == "OK" and out["G_total"] <= 480 and out["binding_subset"]
 
 
-def test_assign_emits_rows_or_a_failure_artifact(tmp_path):
-    pilot = _sidecars(tmp_path / "p", 24)
-    cont = _sidecars(tmp_path / "c", 400)
+def test_assign_succeeds_and_shortfall_exits_4(tmp_path):
+    pilot = _block(tmp_path / "p", 0, 24)
+    cont = _block(tmp_path / "c", 24, 400)
     r = _run("assign", "--pilot-dir", pilot, "--continuation-dir", cont,
-             "--n-target", "200", "--sampling-seed", "7")
+             "--base-seed", str(BASE), "--n-target", "200", "--sampling-seed", "7")
     assert r.returncode == 0, r.stderr
-    out = json.loads(r.stdout)
-    assert out["verdict"] == "OK" and len(out["rows"]) == 176
+    assert len(json.loads(r.stdout)["rows"]) == 176
 
-
-def test_assign_shortfall_exits_4_with_no_partial_corpus(tmp_path):
-    pilot = _sidecars(tmp_path / "p2", 24)
-    cont = _sidecars(tmp_path / "c2", 400, n_moves=50)
-    r = _run("assign", "--pilot-dir", pilot, "--continuation-dir", cont,
-             "--n-target", "200", "--sampling-seed", "7")
-    out = json.loads(r.stdout)
-    assert out["verdict"] == "ASSIGNMENT_SHORTFALL"
-    assert r.returncode == 4
+    short = _block(tmp_path / "c2", 24, 400, n_moves=50)
+    r2 = _run("assign", "--pilot-dir", pilot, "--continuation-dir", short,
+              "--base-seed", str(BASE), "--n-target", "200", "--sampling-seed", "7")
+    out = json.loads(r2.stdout)
+    assert r2.returncode == 4 and out["verdict"] == "ASSIGNMENT_SHORTFALL"
     assert "rows" not in out and out["min_cut_cells"]
 
 
-def test_cli_refuses_a_disallowed_n():
-    r = _run("emit-protocol", "--n-target", "250", "--base-seed", "20400000",
-             "--sampling-seed", "1")
+def test_cli_refuses_a_disallowed_n(tmp_path):
+    d = _block(tmp_path / "n", 0, 24)
+    r = _run("size", "--sidecar-dir", d, "--base-seed", str(BASE), "--n-target", "250")
     assert r.returncode != 0
 ```
 
@@ -1172,11 +1309,15 @@ Expected: FAIL — `No module named scripts.GPU.alphazero.build_atlas_corpus`
 # scripts/GPU/alphazero/build_atlas_corpus.py
 """Atlas corpus builder CLI -- design section 3.
 
-THIS TOOL GENERATES NOTHING. `emit-gen-command` prints the two generation
-commands -- pilot and continuation -- and stops. Running them is a separate
-operator authorization, exactly as Phase 0's preflight was.
+THIS TOOL GENERATES NOTHING. It prints generation commands and stops; running
+them is a separate operator authorization, exactly as Phase 0's preflight was.
 
-Exit codes: 0 OK, 2 usage, 3 PHASE_GEOMETRY_NO_GO, 4 ASSIGNMENT_SHORTFALL.
+Staged chronology (N does NOT exist before the pilot ladder):
+    emit-protocol -> emit-pilot-command -> [generate pilot] -> pilot-gate
+    -> [pilot ladder, Stage 3] -> N -> size -> emit-continuation-command
+    -> [generate continuation] -> assign
+
+Exit codes: 0 OK, 2 usage/validation, 3 PHASE_GEOMETRY_NO_GO, 4 ASSIGNMENT_SHORTFALL.
 """
 from __future__ import annotations
 
@@ -1184,27 +1325,19 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import List
 
 from .corpus_geometry import (
-    ALLOWED_N, MAX_SEED_RANGE_GAMES, PILOT_GAMES, GameMeta, assign_corpus,
+    ALLOWED_N, MAX_SEED_RANGE_GAMES, PILOT_GAMES, assign_corpus,
     pilot_geometry_gate, size_continuation,
 )
-from .generate_atlas_reservoir import game_meta_from_sidecar
+from .generate_atlas_reservoir import load_block
 
-
-def _load(sidecar_dir: str) -> List[GameMeta]:
-    metas = []
-    for p in sorted(Path(sidecar_dir).glob("game_*.json")):
-        metas.append(game_meta_from_sidecar(json.loads(p.read_text())))
-    if not metas:
-        raise SystemExit(f"no game_*.json sidecars in {sidecar_dir}")
-    return metas
+_STOP = ("=" * 72 + "\nOPERATOR STOP -- reservoir generation is NOT AUTHORIZED by "
+         "this tool.\nObtain authorization, then run the command below.\n" + "=" * 72)
 
 
 def _protocol(args) -> dict:
     return {
-        "n_target": args.n_target,
         "base_seed": args.base_seed,
         "seed_range": [args.base_seed, args.base_seed + MAX_SEED_RANGE_GAMES],
         "max_seed_range_games": MAX_SEED_RANGE_GAMES,
@@ -1213,36 +1346,53 @@ def _protocol(args) -> dict:
         "one_position_per_game": True,
         "no_top_up": True,
         "selection_inputs": ["game_id", "phase", "side", "sampling_seed"],
-        "note": "Selection reads NO search result. Generation is a separate "
-                "authorization and is not performed by this tool.",
+        "note": "N is NOT fixed here -- it is derived from the pilot ladder's "
+                "measured class frequencies, and G_total from N. Selection reads "
+                "no search result. Generation is separately authorized.",
     }
+
+
+def _gen_cmd(base_seed, start, n, checkpoint, out_dir) -> str:
+    return (f"#   .venv/bin/python -m scripts.GPU.alphazero.generate_atlas_reservoir \\\\\n"
+            f"#     --base-seed {base_seed} --start-index {start} --n-games {n} \\\\\n"
+            f"#     --checkpoint {checkpoint} --out-dir {out_dir} \\\\\n"
+            f"#     --simulations 400 --max-moves 280")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Atlas corpus builder (generates nothing)")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    for name in ("emit-protocol", "emit-gen-command"):
-        s = sub.add_parser(name)
-        s.add_argument("--n-target", type=int, required=True)
-        s.add_argument("--base-seed", type=int, required=True)
-        s.add_argument("--sampling-seed", type=int, required=True)
-        if name == "emit-gen-command":
-            s.add_argument("--g-total", type=int, required=True)
-            s.add_argument("--checkpoint", default="<checkpoint>")
-            s.add_argument("--out-dir", default="<out-dir>")
+    s = sub.add_parser("emit-protocol")
+    s.add_argument("--base-seed", type=int, required=True)
+    s.add_argument("--sampling-seed", type=int, required=True)
+
+    s = sub.add_parser("emit-pilot-command")
+    s.add_argument("--base-seed", type=int, required=True)
+    s.add_argument("--sampling-seed", type=int, required=True)
+    s.add_argument("--checkpoint", required=True)
+    s.add_argument("--out-dir", required=True)
+
+    s = sub.add_parser("emit-continuation-command")
+    s.add_argument("--base-seed", type=int, required=True)
+    s.add_argument("--size-artifact", required=True)
+    s.add_argument("--checkpoint", required=True)
+    s.add_argument("--out-dir", required=True)
 
     s = sub.add_parser("pilot-gate")
     s.add_argument("--sidecar-dir", required=True)
+    s.add_argument("--base-seed", type=int, required=True)
     s.add_argument("--sampling-seed", type=int, required=True)
 
     s = sub.add_parser("size")
     s.add_argument("--sidecar-dir", required=True)
+    s.add_argument("--base-seed", type=int, required=True)
     s.add_argument("--n-target", type=int, required=True)
 
     s = sub.add_parser("assign")
     s.add_argument("--pilot-dir", required=True)
     s.add_argument("--continuation-dir", required=True)
+    s.add_argument("--base-seed", type=int, required=True)
     s.add_argument("--n-target", type=int, required=True)
     s.add_argument("--sampling-seed", type=int, required=True)
 
@@ -1251,49 +1401,65 @@ def main() -> int:
         print(f"error: --n-target must be one of {ALLOWED_N}", file=sys.stderr)
         return 2
 
-    if args.cmd == "emit-protocol":
-        print(json.dumps(_protocol(args), indent=2, sort_keys=True))
-        return 0
+    try:
+        if args.cmd == "emit-protocol":
+            print(json.dumps(_protocol(args), indent=2, sort_keys=True))
+            return 0
 
-    if args.cmd == "emit-gen-command":
-        print("=" * 72)
-        print("OPERATOR STOP -- reservoir generation is NOT AUTHORIZED by this tool.")
-        print("Review the protocol, obtain authorization, then run BOTH blocks below.")
-        print("=" * 72)
-        print(json.dumps(_protocol(args), indent=2, sort_keys=True))
-        base = (f".venv/bin/python -m scripts.GPU.alphazero.generate_atlas_reservoir"
-                f" --base-seed {args.base_seed}")
-        tail = (f" --checkpoint {args.checkpoint} --out-dir {args.out_dir}"
-                f" --simulations 400 --max-moves 280")
-        print("\n# 1. pilot block (NOT run here):")
-        print(f"#   {base} --start-index 0 --n-games {PILOT_GAMES}{tail}")
-        print("\n# 2. continuation block, AFTER the pilot gate passes (NOT run here):")
-        print(f"#   {base} --start-index {PILOT_GAMES} "
-              f"--n-games {args.g_total - PILOT_GAMES}{tail}")
-        print("\n# Per-game seed is base_seed + game_idx, so the continuation block")
-        print("# genuinely continues the pilot rather than regenerating it.")
-        return 0
+        if args.cmd == "emit-pilot-command":
+            print(_STOP)
+            print(json.dumps(_protocol(args), indent=2, sort_keys=True))
+            print("\n# pilot block [0, 24) -- its OWN directory (NOT run here):")
+            print(_gen_cmd(args.base_seed, 0, PILOT_GAMES, args.checkpoint,
+                           f"{args.out_dir}/pilot"))
+            print("\n# N and G_total do not exist yet. Run the pilot gate, then the")
+            print("# pilot ladder, then `size`, then emit-continuation-command.")
+            return 0
 
-    if args.cmd == "pilot-gate":
-        r = pilot_geometry_gate(_load(args.sidecar_dir), args.sampling_seed)
+        if args.cmd == "emit-continuation-command":
+            art = json.loads(Path(args.size_artifact).read_text())
+            if art.get("verdict") != "OK" or not art.get("G_total"):
+                print(f"error: size artifact is not an OK result: "
+                      f"verdict={art.get('verdict')!r}", file=sys.stderr)
+                return 2
+            g_total = int(art["G_total"])
+            print(_STOP)
+            print(f"\n# continuation block [24, {g_total}) -- its OWN directory:")
+            print(_gen_cmd(args.base_seed, PILOT_GAMES, g_total - PILOT_GAMES,
+                           args.checkpoint, f"{args.out_dir}/continuation"))
+            print(f"\n# G_total = {g_total} was DERIVED from {args.size_artifact};")
+            print("# this tool accepts no free-form --g-total.")
+            return 0
+
+        if args.cmd == "pilot-gate":
+            metas = load_block(args.sidecar_dir, args.base_seed, 0, PILOT_GAMES)
+            r = pilot_geometry_gate(metas, args.sampling_seed)
+            print(json.dumps(r, indent=2, sort_keys=True, default=str))
+            return 0 if r["verdict"] == "PASS" else 3
+
+        if args.cmd == "size":
+            metas = load_block(args.sidecar_dir, args.base_seed, 0, PILOT_GAMES)
+            r = size_continuation(metas, args.n_target)
+            print(json.dumps(r, indent=2, sort_keys=True, default=str))
+            return 0 if r["verdict"] == "OK" else 3
+
+        # assign
+        pilot = load_block(args.pilot_dir, args.base_seed, 0, PILOT_GAMES)
+        gate = pilot_geometry_gate(pilot, args.sampling_seed)
+        if gate["verdict"] != "PASS":
+            print(json.dumps(gate, indent=2, sort_keys=True, default=str))
+            return 3
+        cont_man = json.loads(
+            (Path(args.continuation_dir) / "block_manifest.json").read_text())
+        cont = load_block(args.continuation_dir, args.base_seed,
+                          cont_man["start_index"], cont_man["n_games"])
+        r = assign_corpus(gate["assignment"], cont, args.n_target, args.sampling_seed)
         print(json.dumps(r, indent=2, sort_keys=True, default=str))
-        return 0 if r["verdict"] == "PASS" else 3
+        return 0 if r["verdict"] == "OK" else 4
 
-    if args.cmd == "size":
-        r = size_continuation(_load(args.sidecar_dir), args.n_target)
-        print(json.dumps(r, indent=2, sort_keys=True, default=str))
-        return 0 if r["verdict"] == "OK" else 3
-
-    # assign
-    pilot = _load(args.pilot_dir)
-    gate = pilot_geometry_gate(pilot, args.sampling_seed)
-    if gate["verdict"] != "PASS":
-        print(json.dumps(gate, indent=2, sort_keys=True, default=str))
-        return 3
-    r = assign_corpus(gate["assignment"], _load(args.continuation_dir),
-                      args.n_target, args.sampling_seed)
-    print(json.dumps(r, indent=2, sort_keys=True, default=str))
-    return 0 if r["verdict"] == "OK" else 4
+    except (ValueError, FileNotFoundError, KeyError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
@@ -1303,14 +1469,14 @@ if __name__ == "__main__":
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_build_atlas_corpus_cli.py -v -p no:cacheprovider`
-Expected: PASS — 8 passed.
+Expected: PASS — 9 passed.
 
 - [ ] **Step 5: Full suite, then commit**
 
 ```bash
 .venv/bin/python -m pytest -p no:cacheprovider -q > /tmp/s2.out 2>&1; echo "REAL_EXIT=$?" >> /tmp/s2.out; tail -3 /tmp/s2.out
 git add scripts/GPU/alphazero/build_atlas_corpus.py tests/test_build_atlas_corpus_cli.py
-git commit -m "feat(atlas-s2): corpus builder CLI, all five subcommands, operator stop"
+git commit -m "feat(atlas-s2): corpus builder CLI with staged chronology and block validation"
 ```
 
 Read `REAL_EXIT` from the file. **Never trust a `| tail` exit code** — it reports the
@@ -1326,8 +1492,10 @@ pipe's status, which masked a collection error twice in Stage 1.
 - [ ] Final demands integral at every allowed `N`, summing to `N − 24`.
 - [ ] Shortfall emits the failure artifact and **no partial corpus**.
 - [ ] Producer: `game_seed = base_seed + game_idx`; a continuation block genuinely continues; any single index reproduces independently of its block.
-- [ ] Sidecars carry `game_idx`, `seed`, `start_player`, `n_moves`; provenance records `add_noise=True`.
-- [ ] CLI implements **all five** subcommands, prints **both** generation blocks, and stops. Exit codes 0/2/3/4.
+- [ ] Each block writes its **own** directory and **fails closed** on a pre-existing manifest or game files.
+- [ ] `block_manifest.json` records the block interval, `add_noise=True`, and the **checkpoint path plus digest**.
+- [ ] `load_block` verifies manifest agreement, exact index coverage (no gaps, no extras) and `seed == base_seed + game_idx` **before** any `GameMeta` is built.
+- [ ] CLI implements **six** subcommands in staged order. Pre-pilot commands require **no `N`**; the continuation command **derives** `G_total` from the size artifact and accepts no `--g-total`. Exit codes 0/2/3/4.
 - [ ] Full suite green, exit code read from the process.
 
 ## Out of scope

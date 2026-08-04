@@ -343,6 +343,14 @@ entirely. Serializing a 400-simulation tree at every ply of every game is far pa
   the wrong source range. No design change.)
 - A fixed game count chosen before generation, per the sizing rule below.
 - **No top-up** after inspecting phase supply, labels or tree features.
+- **Board `active_size = 24`, the only size played.** (Gap repair, 2026-08-04: the
+  frozen protocol never stated this, though every prior protocol in this line did
+  — v16's "Board 24; 400 simulations", v17's "board 24, 400 sims, batching
+  (14,48,8)". Phase 0 ran at 24 and the producer defaults to it, but convention is
+  not a frozen parameter. No design change.) Board size is load-bearing well beyond
+  convention: `n_legal ≈ 528 − ply` holds only at 24, and it is what keeps `K(n)`
+  clear of its `min(n_legal, ...)` clamp and what makes the phase bounds correspond
+  to real game lengths.
 - Unchanged shipped game generation, with tree reuse.
 - Games completely disjoint from selected A, A/B/C/D, v16, v16a, v17 and the consumed
   v18 universe.
