@@ -98,10 +98,12 @@ def run_fixed_search(n_simulations: int = 200, **observer_kwargs):
     visit_counts, root_value, root = mcts.search_from_root(
         _fresh_root(mcts, state), add_noise=False, ply=0
     )
+    # NOTE: lists, not tuples -- json.dumps writes arrays, so a tuple-valued
+    # fresh run would never compare equal to the JSON-decoded golden.
     return {
         "root_value": round(float(root_value), 12),
         "root_visit_count": root.visit_count,
-        "visit_counts": sorted((f"{r}:{c}", v) for (r, c), v in visit_counts.items()),
+        "visit_counts": sorted([f"{r}:{c}", v] for (r, c), v in visit_counts.items()),
         "flush_full": mcts._flush_full,
         "flush_stall": mcts._flush_stall,
         "flush_tail": mcts._flush_tail,
@@ -126,7 +128,7 @@ def test_golden_is_not_vacuous():
     state = TwixtState(active_size=24, to_move="red")
     mcts = MCTS(FakeEvaluator(value=0.0), shipped_config(), random.Random(999999))
     vc, _rv, _root = mcts.search_from_root(_fresh_root(mcts, state), add_noise=False, ply=0)
-    other = sorted((f"{r}:{c}", v) for (r, c), v in vc.items())
+    other = sorted([f"{r}:{c}", v] for (r, c), v in vc.items())
     assert other != json.loads(GOLDEN.read_text())["visit_counts"]
 
 
