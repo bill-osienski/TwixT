@@ -18,7 +18,7 @@
 | 2 | ~~Batch-safe decision boundary~~ — **CLOSED 2026-08-03.** Boundary frozen (first flush completion at or after 320 target-search backups), per-row fields and the preregistered deployability failure defined, and a scoped `mcts.py` exception approved for diagnostic observer surfaces. | §4, §9 |
 | 3 | ~~Convergence predicate signed off~~ — **CLOSED 2026-08-03.** Signed off with two exactness corrections: distribution convergence checks both deep rungs for the same metric, and the gate denominator is `eligible_triggers`. | §7 |
 | 4 | ~~Read-out C's producer~~ — **CLOSED 2026-08-03.** Diagnostic selection tracer chosen (reduced scope rejected); hook signature, dual emission sites, semantics, aggregation contract and qualification all frozen. | §8 |
-| 5 | Deterministic game-to-cell assignment and phase-geometry no-go frozen. | §3 |
+| 5 | Deterministic game-to-cell assignment and phase-geometry no-go — **rule FROZEN 2026-08-03** (bipartite matching, pilot geometry gate, 254-subset sizing, stable-digest ties, min-cut witness). **NOT closed:** the rule collides with the frozen 400-game seed range, since `G_total` must exceed `N`. Either the range exceeds the position cap or `N_max` drops. | §3 |
 
 Writing and committing this document authorizes no measurement and no GPU work.
 
@@ -378,6 +378,81 @@ expected to be underpowered.
 After the formula selects `N`, generate the continuation block from the already-frozen
 seed range. There is no second resizing step and no top-up after validation labels are
 observed.
+
+### Game-to-cell assignment and phase geometry — FROZEN 2026-08-03
+
+**Assignment is deterministic bipartite matching, never greedy sampling.**
+
+- Left: games, capacity **one**.
+- Right: `split × phase × side` cells, with exact quotas.
+- Edge: the game contains at least one eligible position for that phase/side.
+- **Pilot assignments are fixed as discovery rows and never reconsidered.**
+
+**Pilot geometry gate.** The first 24 games must admit a complete matching of three
+positions into each of the eight phase/side cells. If not, stop with
+`PHASE_GEOMETRY_NO_GO` **before running the pilot ladder** — no replacement games, no
+reassignment based on search results.
+
+**Continuation count, frozen from pilot geometry.** With `d_c = N/8 − 3` the residual
+per-cell demand, `q_S` the fraction of pilot games able to serve at least one cell in
+`S`, and `D_S = Σ d_c` over `S`, compute for **every nonempty proper subset** of the
+eight cells:
+
+```text
+g_S     = ceil(1.20 * D_S / q_S)
+g_cont  = max( N - 24,  max_S g_S )
+G_total = round_up_to_multiple_of_40( 24 + g_cont )
+```
+
+The subset sweep is the point: checking cells independently misses **shared capacity**,
+where one late game can serve either side but supplies only one row. Eight cells give
+`2⁸ − 2 = 254` proper nonempty subsets — cheap and exact. The 20% margin is the one
+already frozen for sizing; **no new tuning number is introduced.**
+
+Stop with `PHASE_GEOMETRY_NO_GO` if `q_S = 0` for any demanded cell, or if
+`G_total > 400`.
+
+**Final matching.** Generate exactly `G_total − 24` continuation games **once**, then
+solve the final matching against per-cell demands:
+
+```text
+discovery:  3N/40 − 3
+validation: N/20
+```
+
+These sum to `d_c` exactly and are integral at every allowed `N`
+(e.g. `N=240` → `15 + 12 = 27`). Success requires a **constructive full matching of
+exactly `N − 24` games**. If maximum flow falls short, **stop** — do not top up,
+rebalance cells, move pilot rows, or relax one-position-per-game.
+
+**Reproducible ties.** Order by a stable digest derived only from
+`sampling_seed, game identity, split, phase, side, ply`. **Never Python's `hash()`** —
+it is process-randomized for `str`/`bytes`, so a rerun would silently produce a
+different corpus. After a game receives a cell, select the eligible ply by the same
+stable ordering.
+
+**Witness.** Record the assignment witness. On failure record demands, raw capacities,
+achieved flow, unmet cells, and the **binding residual / min-cut subset** — the min-cut
+names which cell group is actually infeasible, which is what v16's
+`assign_split: capacity 0 < demand 60` and v18's `target|late capacity 0 < demand 16`
+each had to be diagnosed backwards from. Game-length distributions are reported by
+split and phase but are **not** another gate.
+
+This closes the v16/v18 failure mode by construction: feasibility is established by an
+**actual assignment**, while the pilot-derived formula fixes **one** preregistered
+generation size and never becomes an adaptive top-up mechanism.
+
+> **UNRESOLVED — this rule collides with the frozen seed range.** §3 freezes a
+> contiguous seed range **at the 400-game maximum**, and the sizing rule caps `N` at
+> **400 positions**. But `G_total` is a *game* count that must exceed `N` whenever any
+> proper subset binds: `g_S = ceil(1.20 · D_S / q_S)` with `q_S ≤ 1` gives
+> `g_cont > N − 24` for any binding `S`. So a large `N` demands more games than the
+> frozen range contains and trips `G_total > 400` — a `PHASE_GEOMETRY_NO_GO` caused by
+> the range, not by geometry. Worked illustration: even taking `q_S ≈ 1` for the eight
+> 7-cell subsets gives `g_S ≈ 1.2 · (7/8) · (N − 24) = 1.05(N − 24)`, so `N = 400`
+> needs `G_total ≥ 440` and is unreachable, and `N = 360` sits exactly at the cap.
+> **Either the frozen seed range must exceed the position cap, or `N_max` must drop.**
+> This must be resolved before §3–§12 are execution-frozen.
 
 ### `N` counts positions, not games
 
