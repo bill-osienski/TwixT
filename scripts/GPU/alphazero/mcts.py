@@ -273,6 +273,35 @@ class MCTSObserver(Protocol):
                            current_root_leader_move: Optional[int]) -> None: ...
 
 
+class MCTSFlushObserver(Protocol):
+    """Read-only batch-flush completion hook (atlas design §4).
+
+    Fires ONLY after `_flush_pending_batch` and after `pending_nodes`,
+    `pending_waiters` and `pending_node_ids` are cleared -- i.e. at a point
+    where the in-flight set is provably empty. Never mid-flush.
+
+    No backup counter is passed, and `_backup` is NOT modified: `root.visit_count`
+    already counts completed backups (every `_backup` walks from the root), so a
+    consumer derives §4's N_actual as `root.visit_count - I` from the inherited
+    visit count it already records. `_observer_completed_count` is unusable here
+    -- it is only INITIALIZED when a root observer is attached, so reading it
+    with only this hook present would raise AttributeError.
+    """
+    def on_flush_complete(self, flush_type: str, root: "MCTSNode") -> None: ...
+
+
+class MCTSSelectionObserver(Protocol):
+    """Read-only per-selection hook (atlas design §8).
+
+    Fires after the move is resolved -- by PUCT or by a root override -- and
+    BEFORE lazy child creation, so `existing_child is None` means first touch.
+    """
+    def on_select_child(self, parent: "MCTSNode", selected_move: int,
+                        existing_child: Optional["MCTSNode"], depth: int,
+                        parent_completed_visits: int, root_override: bool,
+                        within_forced_simulation: bool) -> None: ...
+
+
 class MCTS:
     """Monte Carlo Tree Search with neural network guidance.
 
@@ -288,6 +317,8 @@ class MCTS:
         config: Optional[MCTSConfig] = None,
         rng: Optional[random.Random] = None,
         observer: Optional["MCTSObserver"] = None,
+        flush_observer: Optional["MCTSFlushObserver"] = None,
+        selection_observer: Optional["MCTSSelectionObserver"] = None,
     ):
         """Initialize MCTS.
 
@@ -307,6 +338,11 @@ class MCTS:
         self._observer = observer
         if observer is not None:
             self._observer_completed_count = 0      # observer-off mutates nothing (fix 5b)
+
+        # Atlas diagnostic surfaces (design §9 scoped exception). None (default)
+        # mutates nothing and is part of the byte-identical-off path.
+        self._flush_observer = flush_observer
+        self._selection_observer = selection_observer
 
         # For testing: track NN calls
         self._nn_call_count = 0
