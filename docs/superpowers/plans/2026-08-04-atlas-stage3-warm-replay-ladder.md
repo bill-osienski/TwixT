@@ -75,9 +75,24 @@ def _mcts(seed, n_simulations=400, **kw):
                 random.Random(seed), **kw)
 
 
-def _legal_history(n_plies, size=SIZE):
-    """A legal move sequence on an empty board: distinct cells, row-major."""
-    return [(i // size, i % size) for i in range(n_plies)]
+def _legal_history(n_plies, size=SIZE, start_player="red"):
+    """A genuinely legal move sequence, derived from the state itself.
+
+    Row-major cells are NOT safe: (0, 0) is a corner and illegal, and each side
+    has its own restricted border rows/columns. Walking legal_moves() keeps the
+    fixture deterministic and correct on any board size.
+    """
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    s = TwixtState(active_size=size, to_move=start_player)
+    moves = []
+    for _ in range(n_plies):
+        lm = s.legal_moves()
+        if not lm:
+            break
+        mv = lm[0]                 # deterministic: first legal move
+        moves.append(mv)
+        s = s.apply_move(mv)
+    return moves
 
 
 def _meta(game_idx=0, n_moves=12):
@@ -89,7 +104,7 @@ def test_prefix_produces_a_NONZERO_inherited_root():
     """The gap Stage 1 could not close: every Stage 1 search started fresh, so
     I was always 0 and the subtraction was trivially correct."""
     m = _mcts(BASE)
-    r = replay_prefix(m, _meta(), _legal_history(4), target_ply=3,
+    r = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=3,
                       active_size=SIZE)
     assert r.inherited_I > 0
     assert r.root.visit_count == r.inherited_I
@@ -97,7 +112,7 @@ def test_prefix_produces_a_NONZERO_inherited_root():
 
 def test_prefix_stops_immediately_before_the_target_search():
     m = _mcts(BASE)
-    r = replay_prefix(m, _meta(), _legal_history(4), target_ply=3,
+    r = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=3,
                       active_size=SIZE)
     assert [s.ply for s in r.steps] == [0, 1, 2]      # searches at plies 0..2
     assert len(r.steps) == 3
@@ -105,14 +120,14 @@ def test_prefix_stops_immediately_before_the_target_search():
 
 def test_target_ply_zero_yields_a_cold_root():
     m = _mcts(BASE)
-    r = replay_prefix(m, _meta(), _legal_history(4), target_ply=0,
+    r = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=0,
                       active_size=SIZE)
     assert r.steps == [] and r.inherited_I == 0
 
 
 def test_forced_move_present_records_exact_visits_not_a_threshold():
     m = _mcts(BASE)
-    r = replay_prefix(m, _meta(), _legal_history(4), target_ply=3,
+    r = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=3,
                       active_size=SIZE)
     for s in r.steps:
         if not s.inheritance_reset:
@@ -125,7 +140,7 @@ def test_forced_move_present_records_exact_visits_not_a_threshold():
 
 def test_reset_statistics_are_recorded_and_no_row_is_dropped():
     m = _mcts(BASE)
-    r = replay_prefix(m, _meta(), _legal_history(4), target_ply=3,
+    r = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=3,
                       active_size=SIZE)
     assert r.reset_count == sum(1 for s in r.steps if s.inheritance_reset)
     assert r.reset_rate == pytest.approx(r.reset_count / len(r.steps))
@@ -137,7 +152,7 @@ def test_reset_statistics_are_recorded_and_no_row_is_dropped():
 def test_prefix_rejects_a_target_ply_outside_the_history():
     m = _mcts(BASE)
     with pytest.raises(ValueError):
-        replay_prefix(m, _meta(), _legal_history(4), target_ply=9,
+        replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=9,
                       active_size=SIZE)
 ```
 
@@ -364,7 +379,7 @@ def test_boundary_asserts_the_frozen_range():
 def test_boundary_in_a_REAL_400_sim_leg_on_a_warm_root():
     """End-to-end: a real batched search on a genuinely inherited root."""
     m = _mcts(BASE)
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     assert pre.inherited_I > 0
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
@@ -488,7 +503,7 @@ def test_leg_increments_sum_to_the_frozen_nominal_budgets():
 
 def test_ladder_records_B_I_and_effective_separately():
     m = _mcts(BASE, n_simulations=1)          # per-leg budget is set by the ladder
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
     legs, _snaps = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
@@ -502,7 +517,7 @@ def test_ladder_records_B_I_and_effective_separately():
 def test_ladder_is_additive_on_one_tree_not_four_searches():
     """Root visits accumulate; each leg continues the previous tree."""
     m = _mcts(BASE, n_simulations=1)
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
     run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
@@ -514,7 +529,7 @@ def test_every_rung_preserves_its_own_evidence():
     """After leg 4 the tree is at 6,400 and the earlier rungs are GONE. Each
     LegResult must already carry what sections 5 and 7 need."""
     m = _mcts(BASE, n_simulations=1)
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
     legs, _ = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
@@ -541,7 +556,7 @@ def test_tracer_snapshots_are_taken_at_DISTINCT_times_in_a_real_400_leg():
     so the boundary lands near 320 with real budget left after it.
     """
     m = _mcts(BASE, n_simulations=1)
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     target_tracer = SelectionTracer()          # FRESH, attached after the prefix
     m._selection_observer = target_tracer
@@ -564,7 +579,7 @@ def test_tracer_snapshots_are_taken_at_DISTINCT_times_in_a_real_400_leg():
 
 def test_ladder_rejects_a_wrong_length_increment_tuple():
     m = _mcts(BASE, n_simulations=1)
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=1,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=1,
                         active_size=SIZE)
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
     with pytest.raises(ValueError):
@@ -762,7 +777,7 @@ def test_tracer_cache_is_cleared_at_every_real_advance_root():
     id() values for reuse -- the hazard the cache lifetime exists to prevent."""
     tracer = SelectionTracer()
     m = _mcts(BASE, selection_observer=tracer)
-    replay_prefix(m, _meta(), _legal_history(5), target_ply=4, active_size=SIZE)
+    replay_prefix(m, _meta(n_moves=5), _legal_history(5), target_ply=4, active_size=SIZE)
     # After the final advance_root the cache holds nothing stale.
     assert tracer._cache == {}
 
@@ -771,7 +786,7 @@ def test_target_tracer_is_attached_AFTER_the_prefix():
     """The prefix runs with NO target tracer, so its events never enter section
     8's counters."""
     m = _mcts(BASE, n_simulations=1)
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     tracer = SelectionTracer()                    # FRESH, after the prefix
     m._selection_observer = tracer
@@ -792,7 +807,7 @@ def test_ladder_refuses_a_contaminated_tracer():
     -- nothing downstream could tell the difference."""
     tracer = SelectionTracer()
     m = _mcts(BASE, n_simulations=1, selection_observer=tracer)
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
     with pytest.raises(ValueError, match="not empty"):
@@ -803,7 +818,7 @@ def test_ladder_refuses_a_contaminated_tracer():
 
 def test_ladder_refuses_a_tracer_that_is_not_the_selection_observer():
     m = _mcts(BASE, n_simulations=1)
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I)
     with pytest.raises(ValueError, match="selection observer"):
@@ -817,14 +832,14 @@ def test_cache_is_cleared_ONCE_PER_ADVANCE_not_just_at_the_end():
     """Final emptiness alone would pass if only the LAST advance cleared it."""
     tracer = SelectionTracer()
     m = _mcts(BASE, selection_observer=tracer)
-    r = replay_prefix(m, _meta(), _legal_history(5), target_ply=4,
+    r = replay_prefix(m, _meta(n_moves=5), _legal_history(5), target_ply=4,
                       active_size=SIZE)
     assert r.cache_clears == len(r.steps) == 4
 
 
 def test_prefix_asserts_canonical_state_agreement_at_every_ply():
     m = _mcts(BASE)
-    r = replay_prefix(m, _meta(), _legal_history(4), target_ply=3,
+    r = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=3,
                       active_size=SIZE)
     assert all(s.state_agrees for s in r.steps)
 
@@ -834,7 +849,8 @@ def test_prefix_rejects_an_illegal_recorded_move():
     history = _legal_history(4)
     history[2] = history[0]              # repeat an occupied cell
     with pytest.raises(ValueError, match="not legal"):
-        replay_prefix(m, _meta(), history, target_ply=3, active_size=SIZE)
+        replay_prefix(m, _meta(n_moves=4), history, target_ply=3,
+                      active_size=SIZE)
 
 
 def test_prefix_rejects_metadata_that_disagrees_with_the_history():
@@ -848,7 +864,7 @@ def test_within_forced_simulation_is_observed_during_a_warm_replay():
     """Stage 1 saw this covariate only on synchronous forced simulations."""
     tracer = SelectionTracer()
     m = _mcts(BASE, selection_observer=tracer)
-    replay_prefix(m, _meta(), _legal_history(3), target_ply=2, active_size=SIZE)
+    replay_prefix(m, _meta(n_moves=3), _legal_history(3), target_ply=2, active_size=SIZE)
     snap = tracer.snapshot()
     # A warm replay uses the BATCHED path, where no simulation is forced, so the
     # covariate must be present and zero -- not absent.
@@ -895,7 +911,7 @@ def _row(seed, increments=(4, 4, 4, 4), reseed_between_legs=False):
     capture intermediate states.
     """
     m = MCTS(FakeEvaluator(value=0.0), shipped_cfg(1), random.Random(seed))
-    pre = replay_prefix(m, _meta(), _legal_history(4), target_ply=2,
+    pre = replay_prefix(m, _meta(n_moves=4), _legal_history(4), target_ply=2,
                         active_size=SIZE)
     states = [m.rng.getstate()]
     legs = []
@@ -1000,6 +1016,8 @@ git commit -m "test(atlas-s3): prove replay-seed continuity across prefix and al
 import json
 import random
 from pathlib import Path
+
+import pytest
 
 from scripts.GPU.alphazero.build_atlas_corpus import _jsonable
 from scripts.GPU.alphazero.generate_atlas_reservoir import (
