@@ -835,6 +835,7 @@ import pytest
 from scripts.GPU.alphazero.corpus_geometry import GameMeta
 from scripts.GPU.alphazero.generate_atlas_reservoir import (
     game_meta_from_sidecar, generate_block, load_block, seed_for_index,
+    validate_source_provenance,
 )
 
 from tests.eval_fakes import FakeEvaluator
@@ -842,13 +843,43 @@ from tests.eval_fakes import FakeEvaluator
 BASE = 20400000
 
 
-def _block(d, start_index, n_games, n_moves_cfg=6):
+FAKE_PROV = {
+    "git_head": "deadbeef" * 5, "worktree_clean": True,
+    "checkpoint_path": "fake://evaluator", "checkpoint_sha1": "0" * 40,
+}
+
+
+def _block(d, start_index, n_games, n_moves_cfg=6, provenance=None):
     return generate_block(
         evaluator=FakeEvaluator(value=0.0), base_seed=BASE,
         start_index=start_index, n_games=n_games, out_dir=Path(d),
-        checkpoint_path="fake://evaluator", checkpoint_sha1="0" * 40,
+        provenance=dict(provenance or FAKE_PROV),
         n_simulations=8, max_moves=n_moves_cfg, active_size=6,
     )
+
+
+def test_validate_source_provenance_rejects_a_CONSTRUCTED_dirty_tree():
+    """The dirty case is CONSTRUCTED, never observed from ambient worktree
+    state. v18's provenance test built its negative out of a dirty tree and so
+    passed only while the tree was dirty -- failing at the clean HEAD the
+    protocol actually required."""
+    with pytest.raises(RuntimeError, match="dirty"):
+        validate_source_provenance(
+            porcelain=" M scripts/GPU/alphazero/mcts.py\n",
+            git_head="a" * 40, checkpoint_path="ck", checkpoint_sha1="0" * 40)
+
+
+def test_validate_source_provenance_requires_checkpoint_identity():
+    with pytest.raises(ValueError, match="checkpoint identity"):
+        validate_source_provenance(porcelain="", git_head="a" * 40,
+                                   checkpoint_path="missing.safetensors",
+                                   checkpoint_sha1="")
+
+
+def test_validate_source_provenance_passes_when_clean():
+    got = validate_source_provenance(porcelain="", git_head="a" * 40,
+                                     checkpoint_path="ck", checkpoint_sha1="0" * 40)
+    assert got["worktree_clean"] is True and got["checkpoint_sha1"] == "0" * 40
 
 
 def test_seed_is_base_plus_index_exactly():
@@ -885,6 +916,7 @@ def test_manifest_records_the_block_and_the_checkpoint(tmp_path):
     assert man["add_noise"] is True          # shipped generation keeps noise ON
     assert man["checkpoint_path"] == "fake://evaluator"
     assert man["checkpoint_sha1"] == "0" * 40
+    assert man["worktree_clean"] is True
     assert "git_head" in man and "worktree_clean" in man
 
 
@@ -929,6 +961,30 @@ def test_load_block_rejects_gaps_extras_and_wrong_blocks(tmp_path):
     with pytest.raises(ValueError, match="manifest"):        # wrong block requested
         load_block(d2, base_seed=BASE, start_index=24, n_games=3,
                    require_production=False)
+
+
+def test_load_block_rejects_a_block_from_a_dirty_tree(tmp_path):
+    """Dirty provenance is injected via the manifest, not produced by dirtying
+    the worktree."""
+    d = tmp_path / "dirty"
+    _block(d, 0, 2, provenance={**FAKE_PROV, "worktree_clean": False})
+    man = json.loads((d / "block_manifest.json").read_text())
+    man.update({"active_size": 24, "n_simulations": 400, "max_moves": 280,
+                "batching": [14, 48, 8]})
+    (d / "block_manifest.json").write_text(json.dumps(man))
+    with pytest.raises(ValueError, match="dirty worktree"):
+        load_block(d, base_seed=BASE, start_index=0, n_games=2)
+
+
+def test_load_block_rejects_missing_checkpoint_identity(tmp_path):
+    d = tmp_path / "nock"
+    _block(d, 0, 2, provenance={**FAKE_PROV, "checkpoint_sha1": ""})
+    man = json.loads((d / "block_manifest.json").read_text())
+    man.update({"active_size": 24, "n_simulations": 400, "max_moves": 280,
+                "batching": [14, 48, 8]})
+    (d / "block_manifest.json").write_text(json.dumps(man))
+    with pytest.raises(ValueError, match="checkpoint identity"):
+        load_block(d, base_seed=BASE, start_index=0, n_games=2)
 
 
 def test_load_block_rejects_a_non_production_block(tmp_path):
@@ -1008,16 +1064,59 @@ def _git(args: Sequence[str]) -> str:
 def _sha1_file(path: str) -> str:
     p = Path(path)
     if not p.is_file():
-        return ""          # non-file evaluator source (tests); recorded as empty
+        return ""
     return hashlib.sha1(p.read_bytes()).hexdigest()
 
 
+def validate_source_provenance(porcelain: str, git_head: str,
+                               checkpoint_path: str,
+                               checkpoint_sha1: str) -> Dict[str, Any]:
+    """PURE. Raises unless the source is clean and the checkpoint is identified.
+
+    Pure so the dirty case can be CONSTRUCTED in a test rather than observed from
+    ambient worktree state -- the v18 lesson, where a provenance test built its
+    negative out of a dirty tree and therefore passed only while the tree was
+    dirty, and failed at the clean HEAD the protocol required.
+    """
+    if porcelain.strip():
+        raise RuntimeError(
+            "refusing to generate: the worktree is dirty. Source provenance must "
+            "be clean BEFORE the run, not recorded as unclean after it.\n"
+            f"{porcelain.strip()}")
+    if not checkpoint_sha1 or len(checkpoint_sha1) != 40:
+        raise ValueError(
+            f"checkpoint identity missing or invalid for {checkpoint_path!r}: "
+            f"sha1={checkpoint_sha1!r}")
+    return {
+        "git_head": git_head, "worktree_clean": True,
+        "checkpoint_path": checkpoint_path, "checkpoint_sha1": checkpoint_sha1,
+    }
+
+
+def preflight_source_provenance(checkpoint_path: str) -> Dict[str, Any]:
+    """MUST run BEFORE evaluator construction and before the first game.
+
+    Checking afterwards means a dirty tree can consume an entire GPU reservoir
+    run before anything rejects it.
+    """
+    return validate_source_provenance(
+        porcelain=_git(["status", "--porcelain"]),
+        git_head=_git(["rev-parse", "HEAD"]),
+        checkpoint_path=checkpoint_path,
+        checkpoint_sha1=_sha1_file(checkpoint_path),
+    )
+
+
 def generate_block(evaluator, base_seed: int, start_index: int, n_games: int,
-                   out_dir: Path, checkpoint_path: str,
-                   checkpoint_sha1: str | None = None,
+                   out_dir: Path, provenance: Dict[str, Any],
                    n_simulations: int = 400, max_moves: int = 280,
                    active_size: int = 24) -> List[Dict[str, Any]]:
-    """Generate games [start_index, start_index + n_games) into a FRESH dir."""
+    """Generate games [start_index, start_index + n_games) into a FRESH dir.
+
+    `provenance` MUST come from `preflight_source_provenance`, run before the
+    evaluator was built. This function does not compute it: source validity is a
+    precondition of spending the run, not a fact discovered at the end of it.
+    """
     if start_index < 0 or n_games <= 0:
         raise ValueError("start_index must be >= 0 and n_games > 0")
     if start_index + n_games > MAX_SEED_RANGE_GAMES:
@@ -1067,11 +1166,7 @@ def generate_block(evaluator, base_seed: int, start_index: int, n_games: int,
         # Shipped generation keeps root Dirichlet noise ON. This is NOT the
         # atlas ladder's add_noise=False; the two must not be conflated.
         "add_noise": True,
-        "checkpoint_path": checkpoint_path,
-        "checkpoint_sha1": (checkpoint_sha1 if checkpoint_sha1 is not None
-                            else _sha1_file(checkpoint_path)),
-        "git_head": _git(["rev-parse", "HEAD"]),
-        "worktree_clean": _git(["status", "--porcelain"]) == "",
+        **provenance,      # preflighted BEFORE the run, never recomputed here
     }, indent=2, sort_keys=True))
     return rows
 
@@ -1145,6 +1240,15 @@ def load_block(block_dir, base_seed: int, start_index: int, n_games: int,
                 raise ValueError(
                     f"block was not generated under production settings: "
                     f"{field}={got!r}, frozen value is {want!r}")
+        if man.get("worktree_clean") is not True:
+            raise ValueError(
+                f"block in {block_dir} was generated from a dirty worktree; "
+                f"its source provenance is not reconstructible")
+        sha1 = man.get("checkpoint_sha1")
+        if not sha1 or len(sha1) != 40:
+            raise ValueError(
+                f"block in {block_dir} has missing or invalid checkpoint "
+                f"identity: checkpoint_sha1={sha1!r}")
 
     expected = set(range(start_index, start_index + n_games))
     files = sorted(block_dir.glob("game_*.json"))
@@ -1192,6 +1296,10 @@ def main() -> int:
     ap.add_argument("--max-moves", type=int, default=280)
     args = ap.parse_args()
 
+    # PREFLIGHT FIRST -- before the evaluator is built and before any game runs.
+    # A dirty tree or an unidentifiable checkpoint must cost nothing.
+    provenance = preflight_source_provenance(args.checkpoint)
+
     # One long-lived evaluator, shared across every game in the block. Rebuilding
     # a compiled evaluator per unit of work is the documented MLX trap.
     from .eval_runner import _default_evaluator_factory
@@ -1199,7 +1307,7 @@ def main() -> int:
         evaluator=_default_evaluator_factory(args.checkpoint),
         base_seed=args.base_seed, start_index=args.start_index,
         n_games=args.n_games, out_dir=Path(args.out_dir),
-        checkpoint_path=args.checkpoint,
+        provenance=provenance,
         n_simulations=args.simulations, max_moves=args.max_moves,
     )
     print(f"generated {len(rows)} games, indices "
@@ -1296,10 +1404,14 @@ def _block(tmp_path, start_index, n_games, n_moves=200):
     return str(d)
 
 
-def test_emit_protocol_needs_no_N():
-    r = _run("emit-protocol", "--base-seed", str(BASE), "--sampling-seed", "20260804")
+def test_emit_protocol_freezes_the_checkpoint_and_needs_no_N(tmp_path):
+    ck = tmp_path / "ck.safetensors"
+    ck.write_bytes(b"weights")
+    r = _run("emit-protocol", "--base-seed", str(BASE), "--sampling-seed",
+             "20260804", "--checkpoint", str(ck))
     assert r.returncode == 0, r.stderr
     p = json.loads(r.stdout)
+    assert p["checkpoint_path"] == str(ck) and len(p["checkpoint_sha1"]) == 40
     assert p["max_seed_range_games"] == 480
     assert p["seed_range"] == [BASE, BASE + 480]
     assert p["pilot_games"] == 24
@@ -1462,15 +1574,25 @@ from .corpus_geometry import (
     ALLOWED_N, MAX_SEED_RANGE_GAMES, PILOT_GAMES, assign_corpus,
     pilot_geometry_gate, size_continuation,
 )
-from .generate_atlas_reservoir import assert_blocks_agree, load_block, load_manifest
+from .generate_atlas_reservoir import (
+    _sha1_file, assert_blocks_agree, load_block, load_manifest,
+)
 
 _STOP = ("=" * 72 + "\nOPERATOR STOP -- reservoir generation is NOT AUTHORIZED by "
          "this tool.\nObtain authorization, then run the command below.\n" + "=" * 72)
 
 
 def _protocol(args) -> dict:
+    # The checkpoint is frozen HERE, pre-pilot, because every block must use the
+    # same one. Freezing the seed range but not the checkpoint would let a
+    # continuation come from a different network under the same seeds.
+    sha1 = _sha1_file(args.checkpoint)
+    if not sha1:
+        raise ValueError(f"checkpoint not found or unreadable: {args.checkpoint}")
     return {
         "base_seed": args.base_seed,
+        "checkpoint_path": args.checkpoint,
+        "checkpoint_sha1": sha1,
         "seed_range": [args.base_seed, args.base_seed + MAX_SEED_RANGE_GAMES],
         "max_seed_range_games": MAX_SEED_RANGE_GAMES,
         "pilot_games": PILOT_GAMES,
@@ -1498,6 +1620,7 @@ def main() -> int:
     s = sub.add_parser("emit-protocol")
     s.add_argument("--base-seed", type=int, required=True)
     s.add_argument("--sampling-seed", type=int, required=True)
+    s.add_argument("--checkpoint", required=True)
 
     s = sub.add_parser("emit-pilot-command")
     s.add_argument("--base-seed", type=int, required=True)
@@ -1568,6 +1691,21 @@ def main() -> int:
                           f"from the pilot: {field}={art.get(field)!r} vs "
                           f"{recomputed.get(field)!r}", file=sys.stderr)
                     return 2
+            # The supplied checkpoint must be the SAME network the pilot used.
+            # Checking at assignment instead would reject only after the costly
+            # continuation had already been generated.
+            pilot_man = load_manifest(args.pilot_dir)
+            supplied_sha1 = _sha1_file(args.checkpoint)
+            if not supplied_sha1:
+                print(f"error: checkpoint not found or unreadable: "
+                      f"{args.checkpoint}", file=sys.stderr)
+                return 2
+            if supplied_sha1 != pilot_man.get("checkpoint_sha1"):
+                print(f"error: checkpoint digest {supplied_sha1} does not match "
+                      f"the pilot's {pilot_man.get('checkpoint_sha1')}; the "
+                      f"continuation would be a different network under the same "
+                      f"seed range", file=sys.stderr)
+                return 2
             g_total = int(recomputed["G_total"])
             print(_STOP)
             print(f"\n# continuation block [24, {g_total}) -- its OWN directory:")
@@ -1632,7 +1770,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_build_atlas_corpus_cli.py -v -p no:cacheprovider`
-Expected: PASS — 12 passed.
+Expected: PASS — 13 passed.
 
 - [ ] **Step 5: Full suite, then commit**
 
@@ -1659,6 +1797,9 @@ pipe's status, which masked a collection error twice in Stage 1.
 - [ ] `block_manifest.json` records the block interval, `add_noise=True`, and the **checkpoint path plus digest**.
 - [ ] `load_block` verifies manifest agreement, the **frozen production settings** (board 24, 400 sims, 280 moves, batching `(14,48,8)`, noise on), exact filenames with no duplicate index behind another name, exact index coverage, and `seed == base_seed + game_idx` — **all before** any `GameMeta` is built.
 - [ ] Pilot and continuation manifests must agree on `base_seed`, checkpoint path, **checkpoint digest** and `git_head`, and both must be `worktree_clean`.
+- [ ] **Source provenance is a PREFLIGHT.** `preflight_source_provenance` runs before evaluator construction and before the first game; a dirty tree or unidentifiable checkpoint costs nothing. `generate_block` receives provenance and never recomputes it.
+- [ ] The dirty-tree case is **constructed** in tests via the pure `validate_source_provenance`, never observed from ambient worktree state.
+- [ ] `emit-protocol` freezes checkpoint path **and digest** pre-pilot; `emit-continuation-command` rejects a checkpoint whose digest differs from the pilot's, **before** printing the command.
 - [ ] `assign` **recomputes** `G_total` from the pilot and `N` and requires the continuation to be exactly `[24, G_total)`. An oversized block is rejected as an unauthorized top-up.
 - [ ] `emit-continuation-command` **recomputes** the sizing and compares the artifact field-by-field; a tampered `G_total` cannot authorize the expensive block.
 - [ ] CLI implements **six** subcommands in staged order. Pre-pilot commands require **no `N`**; the continuation command **derives** `G_total` from the size artifact and accepts no `--g-total`. Exit codes 0/2/3/4.
