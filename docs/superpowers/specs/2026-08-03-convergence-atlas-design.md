@@ -743,6 +743,27 @@ simulations.
 tracer in the same pass. A caller-supplied lagged count cannot be produced by a
 real row and would make the bound untestable in practice.
 
+### `K(n)` at a warm root uses EFFECTIVE parent visits
+
+`K(n) = min(n_legal, max(1, ceil(C * n^alpha)))` keys on the parent's **completed
+visit count**. At a warm root that count **includes inherited visits**, so the
+root's `n` is:
+
+```text
+n_root(at boundary) = I + N_actual
+n_root(at B = 400)  = I + 400
+```
+
+**Not** the nominal 320 or 400. Using the nominal budget would compute a
+narrower admitted set than the rule actually produces — understating retention
+and overstating intervention, in the same direction as the batch lag and on top
+of it.
+
+This follows from §4's budget vocabulary (`B` nominal, `I` inherited, `I + B`
+effective) but was not stated for `K(n)`, and the natural reading is the wrong
+one. Descendant parents are unaffected: their visit counts are already whole,
+since nothing was inherited below the root.
+
 ### Bootstrap and classifier hyperparameters
 
 | Parameter | Frozen value |
