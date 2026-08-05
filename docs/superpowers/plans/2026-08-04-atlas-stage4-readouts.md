@@ -34,6 +34,230 @@
 
 ---
 
+### Task 0: Producer closure — freeze what the pure analyses will consume
+
+**Files:**
+- Modify: `scripts/GPU/alphazero/warm_prefix_replay.py`
+- Modify: `scripts/GPU/alphazero/selection_tracer.py`
+- Test: `tests/test_atlas_producer_closure.py`
+
+**Interfaces:**
+- Produces: `capture_backup_accounting(root) -> dict` (`D3`, `n_visited_children`, `one_visit_children`); `BoundaryFeatureCapture`; `reference_line_summary(legs, root) -> dict`; `SelectionTracer` extended with **simultaneous `K(n+14)` counters**; `run_additive_ladder` returning frozen `features_at_boundary` / `features_at_400`.
+
+> **Why this task exists, and why it is first.** Stage 4's analyses are pure, which
+> made three producer gaps invisible until review:
+>
+> 1. `depth3plus_backup_fraction` was read off **selection events**, but those are edge
+>    traversals — a depth-5 simulation emits five of them and is one backup. §6a now
+>    freezes the two-point `D3` accounting instead.
+> 2. Boundary features were computed from `pre.root` **after** the ladder, but the
+>    ladder mutates that root in place through all four legs, so the values described
+>    the 6,400 tree. They must be frozen at the boundary and at `B = 400`.
+> 3. The `K(n+14)` lagged count was **caller-supplied**. No real row could produce it,
+>    so the bound was untestable in practice.
+>
+> Building the pure analyses on top of these would have produced confidently wrong
+> numbers with green tests.
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/test_atlas_producer_closure.py
+import random
+
+import pytest
+
+from scripts.GPU.alphazero.corpus_geometry import GameMeta
+from scripts.GPU.alphazero.mcts import MCTS, MCTSConfig
+from scripts.GPU.alphazero.selection_tracer import SelectionTracer
+from scripts.GPU.alphazero.warm_prefix_replay import (
+    BatchSafeBoundaryObserver, capture_backup_accounting, replay_prefix,
+    run_additive_ladder,
+)
+
+from tests.eval_fakes import FakeEvaluator
+
+BASE = 20400000
+SIZE = 6
+
+
+class _N:
+    def __init__(self, visits, kids=None):
+        self.visit_count = visits
+        self.children = kids or {}
+
+
+def test_D3_counts_nodes_at_depth_exactly_three():
+    """Every backup reaching depth >=3 passes through exactly ONE depth-3 node,
+    so summing visits there counts each such backup once."""
+    root = _N(10, {0: _N(6, {0: _N(4, {0: _N(3), 1: _N(1)})}),
+                   1: _N(4, {0: _N(2, {0: _N(2)})})})
+    acc = capture_backup_accounting(root)
+    assert acc["D3"] == 3 + 1 + 2          # depth-3 nodes only
+    assert acc["n_visited_children"] == 2
+    assert acc["one_visit_children"] == 0
+
+
+def test_one_visit_children_is_counted_on_the_root_only():
+    root = _N(5, {0: _N(3), 1: _N(1), 2: _N(1), 3: _N(0)})
+    acc = capture_backup_accounting(root)
+    assert acc["one_visit_children"] == 2
+    assert acc["n_visited_children"] == 3        # the 0-visit child is excluded
+
+
+def test_tracer_counts_the_lagged_bound_simultaneously():
+    """Section 6a: K(n+14) is PRODUCED online, never supplied by a caller."""
+    t = SelectionTracer()
+    parent = type("P", (), {"priors": {i: 1.0 / (i + 1) for i in range(40)},
+                            "children": {}})()
+    rank20 = sorted(parent.priors.items(), key=lambda kv: (-kv[1], kv[0]))[19][0]
+    t.on_select_child(parent=parent, selected_move=rank20, existing_child=None,
+                      depth=1, parent_completed_visits=5, root_override=False,
+                      within_forced_simulation=False)
+    snap = t.snapshot()["by_shape"]["c4a05"]["overall"]
+    # K(5) = 9 so rank 20 is outside; K(19) = 18 so it is still outside.
+    assert snap["first_touch_outside_events"] == 1
+    assert "lagged_first_touch_outside_events" in snap
+    assert snap["lagged_first_touch_outside_events"] == 1
+
+
+def test_the_lagged_counter_is_never_larger_than_the_unlagged_one():
+    """K(n+14) >= K(n), so the lagged admitted set is wider and can only
+    exclude fewer events."""
+    t = SelectionTracer()
+    parent = type("P", (), {"priors": {i: 1.0 / (i + 1) for i in range(60)},
+                            "children": {}})()
+    for rank in range(1, 40):
+        mv = sorted(parent.priors.items(), key=lambda kv: (-kv[1], kv[0]))[rank - 1][0]
+        t.on_select_child(parent=parent, selected_move=mv, existing_child=None,
+                          depth=1, parent_completed_visits=5,
+                          root_override=False, within_forced_simulation=False)
+    o = t.snapshot()["by_shape"]["c4a05"]["overall"]
+    assert o["lagged_first_touch_outside_events"] <= o["first_touch_outside_events"]
+
+
+def _history(n, size=SIZE):
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    s = TwixtState(active_size=size, to_move="red")
+    out = []
+    for _ in range(n):
+        lm = s.legal_moves()
+        if not lm:
+            break
+        out.append(lm[0])
+        s = s.apply_move(lm[0])
+    return out
+
+
+def test_features_are_frozen_at_the_boundary_not_after_the_ladder():
+    """The decisive one: the root is mutated to 6,400 by leg 4, so a
+    post-ladder read describes a different tree entirely."""
+    hist = _history(4)
+    meta = GameMeta(game_id=0, seed=BASE, n_moves=len(hist), start_player="red")
+    m = MCTS(FakeEvaluator(value=0.0),
+             MCTSConfig(n_simulations=1, eval_batch_size=14,
+                        stall_flush_sims=48, pending_virtual_visits=8),
+             random.Random(BASE))
+    pre = replay_prefix(m, meta, hist, target_ply=2, active_size=SIZE)
+    tracer = SelectionTracer()
+    m._selection_observer = tracer
+    obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I, threshold=40,
+                                    leg_B=80, tracer=tracer)
+    _legs, snaps = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
+                                       boundary_observer=obs,
+                                       target_tracer=tracer,
+                                       increments=(80, 80, 80, 80))
+    fb = snaps["features_at_boundary"]
+    f4 = snaps["features_at_400"]
+    assert fb is not None and f4 is not None
+    # The frozen boundary capture must NOT equal a post-ladder read of the same
+    # root, or freezing bought nothing.
+    after = capture_backup_accounting(pre.root)
+    assert fb["n_visited_children"] <= after["n_visited_children"]
+    assert fb["D3"] <= after["D3"]
+
+
+def test_the_backup_invariant_is_asserted():
+    """Section 6a: 0 <= D3(boundary) - D3(start) <= N_actual. A violation means
+    the accounting is wrong and the row must fail, not be recorded."""
+    from scripts.GPU.alphazero.warm_prefix_replay import check_backup_invariant
+    assert check_backup_invariant(d3_start=10, d3_boundary=40, n_actual=326) is True
+    with pytest.raises(ValueError):
+        check_backup_invariant(d3_start=40, d3_boundary=10, n_actual=326)
+    with pytest.raises(ValueError):
+        check_backup_invariant(d3_start=0, d3_boundary=400, n_actual=326)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_atlas_producer_closure.py -v -p no:cacheprovider`
+Expected: FAIL — `ImportError: cannot import name 'capture_backup_accounting'`
+
+- [ ] **Step 3: Implement**
+
+In `warm_prefix_replay.py`:
+
+```python
+def capture_backup_accounting(root: MCTSNode) -> Dict[str, Any]:
+    """Section 6a's explicit two-point measurement, taken at one instant.
+
+    D3 sums visit_count over nodes at depth EXACTLY 3 below `root`: every backup
+    reaching depth >=3 passes through exactly one of them, so the sum counts each
+    such backup once. Selection events cannot substitute -- they are edge
+    traversals, and one deep simulation emits several.
+    """
+    d3 = 0
+    frontier = [(root, 0)]
+    while frontier:
+        node, depth = frontier.pop()
+        if depth == 3:
+            d3 += node.visit_count
+            continue                     # deeper nodes are already counted here
+        if depth < 3:
+            frontier.extend((c, depth + 1) for c in node.children.values())
+    visited = [c for c in root.children.values() if c.visit_count > 0]
+    return {
+        "D3": d3,
+        "n_visited_children": len(visited),
+        "one_visit_children": sum(1 for c in visited if c.visit_count == 1),
+    }
+
+
+def check_backup_invariant(d3_start: int, d3_boundary: int,
+                           n_actual: int) -> bool:
+    """Section 6a. A violation is a broken accounting, not a datum."""
+    delta = d3_boundary - d3_start
+    if delta < 0 or delta > n_actual:
+        raise ValueError(
+            f"backup accounting invariant violated: D3 delta {delta} outside "
+            f"[0, {n_actual}]; the row must fail rather than be recorded")
+    return True
+```
+
+`run_additive_ladder` additionally captures `capture_backup_accounting(root)` at
+the start of leg 1, hands it to the boundary observer so the boundary capture can
+be frozen at the same instant as `at_boundary`, and freezes another immediately
+after leg 1 as `features_at_400`. `snapshots` gains `features_at_start`,
+`features_at_boundary`, `features_at_400`.
+
+In `selection_tracer.py`, each cell gains `lagged_first_touch_outside_events`,
+incremented in the same pass using `k_of_n(parent_completed_visits + 14, ...)`.
+`BATCH_LAG = 14` is a module constant.
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_atlas_producer_closure.py tests/test_warm_prefix_replay.py tests/test_selection_tracer.py -v -p no:cacheprovider`
+Expected: PASS — 6 new, plus the existing 32 warm-replay and 18 tracer tests all still green.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add scripts/GPU/alphazero/warm_prefix_replay.py scripts/GPU/alphazero/selection_tracer.py tests/test_atlas_producer_closure.py
+git commit -m "feat(atlas-s4): producer closure -- backup accounting, frozen captures, lagged counters"
+```
+
+---
+
 ### Task 1: Labelling and capacity sizing
 
 **Files:**
@@ -310,7 +534,9 @@ git commit -m "feat(atlas-s4): labelling, class counts and frozen capacity sizin
 
 **Interfaces:**
 - Consumes: a root node (or a synthetic stand-in exposing `priors`/`children`) and a Stage 3 tracer snapshot.
-- Produces: `FEATURE_NAMES`; `collect_boundary_features(root, tracer_snapshot) -> dict`.
+- Produces: `FEATURE_NAMES`; `collect_boundary_features(capture_start, capture_boundary, n_actual, root_priors, leader_breadth) -> dict`.
+
+> Consumes Task 0's **frozen captures**, never a live root: by the time Stage 4 runs, the root has advanced to 6,400. The two backup features use §6a's accounting, not selection events.
 
 The five frozen §6 features, and **only** these five. Q dispersion, residual summaries
 and terminating-backup concentration may be reported descriptively elsewhere but must
@@ -597,8 +823,17 @@ def standardize(rows: Sequence[Dict[str, Any]],
             mu = statistics.fmean(vals) if vals else 0.0
             sd = statistics.pstdev(vals) if len(vals) > 1 else 1.0
             stats[f] = (mu, sd if sd else 1.0)
-    X = [[((r[f] - stats[f][0]) / stats[f][1]) if r.get(f) is not None else 0.0
-          for f in feature_names] for r in rows]
+    # Section 6a: a missing feature REJECTS the row. Imputing it to the
+    # discovery mean would fabricate a maximally-uninformative observation at
+    # the centre of the training distribution and silently dilute both classes.
+    for i, r in enumerate(rows):
+        missing = [f for f in feature_names if r.get(f) is None]
+        if missing:
+            raise ValueError(
+                f"row {i} is missing features {missing}; rows with undefined "
+                f"features are rejected, never imputed")
+    X = [[(r[f] - stats[f][0]) / stats[f][1] for f in feature_names]
+         for r in rows]
     return X, stats
 
 
@@ -753,7 +988,18 @@ git commit -m "feat(atlas-s4): Read-out A classifier, frozen bars and deployabil
 
 **Interfaces:**
 - Consumes: Stage 3 `LegResult` rows at all four rungs, plus the stable-reference result.
-- Produces: `gate_triggers(legs) -> dict`; `closes_half(m400, m1600, D) -> bool`; `convergent(legs, ref) -> dict`; `calibrate_gate(rows, gate_name) -> dict`.
+- Produces: `gate_triggers(legs, hi=1600) -> dict`; `closes_half(...)`; `convergent(legs, ref) -> dict`; `calibrate_gate(rows, gate_name) -> dict`; **`natural_convergence_report(rows) -> dict`** (the 400→6,400 reference distribution); **`compound_narrowing(legs) -> Optional[bool]`**; **`by_stratum_summary(rows, gate_name) -> dict`**.
+
+> `gate_triggers` takes the upper rung as a parameter so the **400→6,400** report uses
+> the same code as 400→1,600 — §7 requires both, and the 6,400 changes are the
+> natural-convergence reference distribution. They are **reported, never used as
+> causal evidence** that a same-budget intervention is safe.
+>
+> `compound_narrowing` returns `None` where it does not apply, never `False` — §7 says
+> "where applicable", and an inapplicable condition is not a negative one.
+>
+> `by_stratum_summary` reports overall plus late / flat-policy / near-even. **No
+> per-stratum acceptance gate** is created.
 
 Frozen §7. The historical metrics are computed at **all four rungs** — the 3,200 rung is
 required because distribution convergence checks **both** deep rungs for the **same**
@@ -770,7 +1016,8 @@ import pytest
 from scripts.GPU.alphazero.atlas_labelling import stable_reference
 from scripts.GPU.alphazero.atlas_readout_b import (
     BASE_RATE_MARGIN, MIN_ELIGIBLE_TRIGGERS, MIN_CONVERGENT_RATE,
-    calibrate_gate, closes_half, convergent, gate_triggers,
+    by_stratum_summary, calibrate_gate, closes_half, compound_narrowing,
+    convergent, gate_triggers, natural_convergence_report,
 )
 from scripts.GPU.alphazero.warm_prefix_replay import LegResult
 
@@ -849,10 +1096,45 @@ def test_calibration_uses_the_ELIGIBLE_denominator():
 
 
 def test_needs_review_requires_all_three_conditions():
-    rows = [_row() for _ in range(12)]
-    r = calibrate_gate(rows, "top_share_increase")
-    assert r["verdict"] in {"needs review", "no finding"}
-    assert "invalid" not in r["verdict"]     # never "invalid"
+    """Each condition is falsified individually; accepting either verdict would
+    prove nothing."""
+    conv = [_row() for _ in range(12)]              # convergent, gate fires
+    # 1. too few eligible triggers
+    assert calibrate_gate(conv[:5], "top_share_increase")["verdict"] == "no finding"
+    # 2. convergent rate below 0.75 -- half the rows fail persistence
+    mixed = conv[:6] + [_row(m=(7, 9, 3, 3)) for _ in range(6)]
+    r_mixed = calibrate_gate(mixed, "top_share_increase")
+    assert (r_mixed["convergent_rate"] or 0) < 0.75
+    assert r_mixed["verdict"] == "no finding"
+    # 3. base-rate margin: a gate firing on everything convergent gains nothing
+    r_all = calibrate_gate(conv, "top_share_increase")
+    if r_all["convergent_rate"] is not None and r_all["base_convergent_rate"] is not None:
+        margin = r_all["convergent_rate"] - r_all["base_convergent_rate"]
+        assert (r_all["verdict"] == "needs review") == (
+            r_all["eligible_triggers"] >= 10 and r_all["convergent_rate"] >= 0.75
+            and margin >= 0.15)
+    assert "invalid" not in r_all["verdict"]         # never "invalid"
+
+
+def test_natural_convergence_report_covers_400_to_6400():
+    rows = [_row() for _ in range(4)]
+    r = natural_convergence_report(rows)
+    assert set(r) >= {"new_collapse", "top_share_increase"}
+    # Reported as the reference distribution, NOT as causal evidence that a
+    # same-budget intervention is safe.
+    assert r["is_causal_evidence"] is False
+
+
+def test_compound_narrowing_is_None_where_inapplicable():
+    assert compound_narrowing(_row(shares=(None, None, None, None))) is None
+
+
+def test_stratum_summary_reports_without_gating():
+    rows = [_row() for _ in range(4)]
+    s = by_stratum_summary(rows, "top_share_increase")
+    assert "overall" in s
+    for k, v in s.items():
+        assert "verdict" not in v or k == "overall"
 
 
 def test_calibration_is_None_not_zero_with_no_eligible_triggers():
@@ -1027,7 +1309,20 @@ git commit -m "feat(atlas-s4): Read-out B four-rung gate calibration with eligib
 
 **Interfaces:**
 - Consumes: Stage 3's two tracer snapshots and Stage 1's `k_of_n` / `n_admit`.
-- Produces: `static_retention(root_priors, required_moves, n_at_selection, shape) -> dict`; `intervention_from_snapshots(snapshots, shape) -> dict`; `select_shape(per_shape) -> dict`; `STRATA`.
+- Produces: `static_retention(...)`; `intervention_from_snapshots(...)`; **`classify_strata(row) -> set[str]`**; **`aggregate_shape(rows, shape) -> dict`**; `select_shape(per_shape) -> dict`; **`select_on_discovery_validate_on_selected(discovery, validation) -> dict`**; `STRATA`.
+
+> **The row-to-aggregate path is the point.** `select_shape` consumes rates; nothing
+> derived them from per-row results, which is why `MISLEADING_INTERVENTION_BAR` was
+> unused. `aggregate_shape` now folds per-row three-valued results into the four
+> rates, deriving root / depth-1 / two-ply retention from the 3,200 and 6,400
+> reference lines and classifying the frozen strata. **Inconclusive rows are excluded
+> from the intervention denominator and counted separately** — folding them in as
+> either outcome would invent a measurement. If the denominator empties, the shape's
+> rate is `None` and it **cannot pass**, rather than defaulting.
+>
+> Selection happens on **discovery**; only the selected shape is evaluated on
+> **validation**, so a shape cannot be chosen for looking good on the split that
+> judges it.
 
 Frozen §8 bar: retain **≥95%** of stable deep root moves, **≥90%** of stable depth-1
 replies, intervene on **≥50%** of misleading roots and **≤25%** of stable-negative roots.
@@ -1037,6 +1332,14 @@ intervention on misleading → tie broken by higher descendant retention.
 **Lag is directional.** Retention is evaluated under `K(n)`; the intervention threshold
 must **also** pass under `K(n+14)`. Passing only under `K(n)` is **inconclusive**, not a
 pass — the lag is conservative for retention and anti-conservative for intervention.
+
+> **Incomplete in this revision — must be written before Task 5 is executed.**
+> The Interfaces block above declares `classify_strata`, `aggregate_shape` and
+> `select_on_discovery_validate_on_selected`, and the design note states what they
+> must do, but their **implementations and tests are not yet written**. Task 5 is
+> not executable until they are. Recorded here rather than left implicit, because a
+> declared-but-absent function is exactly the shape of defect this plan keeps
+> catching.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1204,8 +1507,7 @@ def static_retention(root_priors: Dict[int, float],
             "rate": retained / len(required_moves), "k": k}
 
 
-def intervention_from_snapshots(snapshots: Dict[str, Any], shape_key: str,
-                                lagged_first_touch_outside: Optional[int] = None
+def intervention_from_snapshots(snapshots: Dict[str, Any], shape_key: str
                                 ) -> Dict[str, Any]:
     """Meaningful intervention, with the DIRECTIONAL lag bound.
 
@@ -1217,8 +1519,9 @@ def intervention_from_snapshots(snapshots: Dict[str, Any], shape_key: str,
     cell = snapshots["at_boundary"]["by_shape"][shape_key]["overall"]
     ft = cell["first_touch_events"]
     rate = (cell["first_touch_outside_events"] / ft) if ft else None
-    lagged_rate = ((lagged_first_touch_outside / ft)
-                   if (ft and lagged_first_touch_outside is not None) else None)
+    # PRODUCED by the tracer under K(n+14), never supplied by a caller.
+    lagged_rate = ((cell["lagged_first_touch_outside_events"] / ft)
+                   if ft else None)
 
     if rate is None:
         return {"first_touch_outside_rate": None, "lagged_rate": None,
@@ -1431,7 +1734,9 @@ def validate_provenance(prov: Dict[str, Any]) -> Dict[str, Any]:
 def emit(run: Dict[str, Any]) -> str:
     """Serialize through _jsonable -- geometry and ladder types keep their
     natural tuples, and only the boundary normalizes."""
-    return json.dumps(_jsonable(run), indent=2, sort_keys=True, default=str)
+    # No default=str: it would stringify a schema defect instead of rejecting
+    # it, turning an unserializable object into a plausible-looking value.
+    return json.dumps(_jsonable(run), indent=2, sort_keys=True)
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -1507,12 +1812,14 @@ def _real_row():
     pre = replay_prefix(m, meta, hist, target_ply=2, active_size=SIZE)
     tracer = SelectionTracer()
     m._selection_observer = tracer
-    obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I, threshold=4,
-                                    leg_B=8, tracer=tracer)
+    # THE FROZEN INCREMENTS. Tiny ones give nominal budgets 8/16/24/32, which
+    # labelling and gate calibration -- both of which index 400/1,600/3,200/6,400
+    # -- reject outright, so the "real chain" would never reach an assertion.
+    # 6,400 simulations of FakeEvaluator at active_size=6 is CPU-only and fast.
+    obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I, tracer=tracer)
     legs, snaps = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
                                       boundary_observer=obs,
-                                      target_tracer=tracer,
-                                      increments=(8, 8, 8, 8))
+                                      target_tracer=tracer)   # frozen defaults
     return meta, pre, legs, snaps, obs, tracer
 
 
@@ -1535,7 +1842,11 @@ def test_real_gate_triggers_and_calibration_run_on_real_legs():
 
 def test_real_boundary_features_are_collected_from_the_real_tree():
     _meta, pre, _legs, snaps, _obs, _tr = _real_row()
-    f = collect_boundary_features(pre.root, snaps["at_boundary"])
+    f = collect_boundary_features(
+        capture_start=snaps["features_at_start"],
+        capture_boundary=snaps["features_at_boundary"],
+        n_actual=obs.record.N_actual, root_priors=pre.root.priors,
+        leader_breadth=snaps["features_at_boundary"]["n_visited_children"])
     assert set(f) == {"one_visit_backup_share", "depth3plus_backup_fraction",
                       "leader_visit_margin", "root_policy_entropy",
                       "leader_breadth"}
@@ -1567,10 +1878,9 @@ Expected: PASS — 4 passed.
 .venv/bin/python -m pytest -p no:cacheprovider -q > /tmp/s4.out 2>&1; echo "REAL_EXIT=$?" >> /tmp/s4.out; tail -3 /tmp/s4.out
 ```
 
-Expected full suite: **2435 + 53 = 2488 passed**, 4 skipped, 0 failed. Per file:
-labelling 10, read-out A 13, read-out B 9, read-out C 10, artifact 7, chain 4. A
-different total means tests were added, lost or renamed — investigate before
-committing; the delta is the qualification check, not decoration.
+Expected full suite: **2435 + 62 = 2497 passed**, 4 skipped, 0 failed.
+Per file: artifact 7, labelling 10, producer_closure 6, readout_a 13, readout_b 12, readout_c 10, readout_chain 4. A different total means tests were added, lost or renamed —
+investigate before committing; the delta is the qualification check.
 
 - [ ] **Step 3: Commit**
 
@@ -1583,6 +1893,7 @@ git commit -m "test(atlas-s4): real Stage 3 ladder output into the real read-out
 
 ## Stage 4 completion criteria
 
+- [ ] **Task 0 producer closure lands first.** Backup accounting uses §6a's two-point `D3` measurement, not selection events; features are frozen at the boundary and at `B=400` while those states exist; the tracer counts `K(n+14)` online; the backup invariant is asserted and a violation fails the row.
 - [ ] §5 labelling exact: stable reference needs all three conditions; misleading is an OR; stable-negative an AND; ambiguous kept and counted; value and move components reported separately.
 - [ ] §3 sizing matches the frozen formula and **fails closed** on a zero class frequency or a requirement above 400; the final capacity gate needs ≥20 / ≥25.
 - [ ] Read-out A collects **exactly five** frozen features; standardization is learned on **discovery only**; AUC / bootstrap-lower-bound / flag-rate / precision bars all enforced; `INSUFFICIENT_CLASSES` fails closed.
@@ -1591,7 +1902,7 @@ git commit -m "test(atlas-s4): real Stage 3 ladder output into the real read-out
 - [ ] Read-out C: retention under `K(n)`; intervention must **also** pass under `K(n+14)`, otherwise **inconclusive**; lexicographic selection with a named `NO_SHAPE_PASSES`.
 - [ ] Artifact carries resets, `remaining`, `boundary_missing`, and `None` for every undefined value through emission; provenance fails closed; `_jsonable` at the boundary.
 - [ ] Real Stage 3 ladder output drives the real read-outs.
-- [ ] **53 new tests** (10 / 13 / 9 / 10 / 7 / 4). Full suite **2488 passed**, exit code read from the process.
+- [ ] **62 new tests** (artifact 7, labelling 10, producer_closure 6, readout_a 13, readout_b 12, readout_c 10, readout_chain 4). Full suite **2497 passed**, exit code read from the process.
 
 ## Out of scope
 
