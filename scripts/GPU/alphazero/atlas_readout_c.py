@@ -160,7 +160,7 @@ def classify_edge_strata(edge: Dict[str, Any]) -> Set[str]:
     """
     s: Set[str] = set()
     priors = edge.get("parent_priors")
-    if not priors or not _is_flat(priors):
+    if not priors or not is_flat(priors):
         return s
     # EXPLICIT branches. An `else depth2` fallthrough would map a flat ROOT edge
     # (depth 0) -- and any malformed or missing depth -- to locally_flat_depth2,
@@ -173,10 +173,15 @@ def classify_edge_strata(edge: Dict[str, Any]) -> Set[str]:
     return s
 
 
-def _is_flat(priors: Dict[int, float]) -> bool:
+def is_flat(priors: Dict[int, float]) -> bool:
     """The FROZEN flat-policy definition: normalized entropy >= 0.90 AND top
     prior <= 0.025. Checking only the top prior misclassifies a concentrated
-    low-top distribution as flat -- both halves are required."""
+    low-top distribution as flat -- both halves are required.
+
+    PUBLIC because the root-level `flat_policy` row fact applies the same
+    predicate (atlas_row_facts). One frozen definition, one implementation:
+    a second copy is how the root stratum and the local strata drift apart.
+    """
     vals = [p for p in priors.values() if p > 0]
     if len(vals) < 2:
         return False
