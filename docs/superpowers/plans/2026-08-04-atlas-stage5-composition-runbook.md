@@ -98,7 +98,16 @@ The contract, stated once and implemented in this order:
 otherwise raise "dirty worktree" first; `size_continuation["verdict"]` is checked before
 `G_total` is read; and the stale task expectations become artifact **+5**, run **34** and CLI **18**.
 
-Planned tests **61 → 65**; expected suite **2621**.
+Planned tests **61 → 65**, then **65 → 68** with revision 6's repairs; expected suite
+**2624**.
+
+## Revision 6 — 2026-08-05, two hard failures and one silent-consistency gap
+
+| # | Defect | Repair |
+|---|---|---|
+| 1 | **`verify_pilot` read assignment field names off an artifact row.** `build_row` stores `game_idx` / `replay_seed` / `target_ply`; `assign_corpus` emits `game_id` / `seed` / `ply`. Every *honest* call raised `KeyError` — the happy path was the broken one. | An explicit `_AS_ASSIGNED` mapping, with **`seed` included in the comparison** so replay provenance is verified rather than merely carried. |
+| 2 | **`_fake_block` spread `**prov` without assigning it.** Every CLI fixture would have died with `NameError` before loading a block. | `prov = _fixture_prov(ck)` immediately after `ck` is resolved; the stale `import hashlib` goes with it. |
+| 3 | **The carried row's `label` was still trusted**, while sizing was re-derived. Read-out A takes its classes and Read-out C its intervention denominators from that stored label, and both strata sets from `flat_policy` / `near_even` — so editing only the label moves a row between classes while every leg-derived check still passes. | `verify_pilot` requires `label == classify_row(legs)` and re-derives `phase` / `side` / `flat_policy` / `near_even` through `derive_row_facts`. The fixture derives them too, since a fixture that cannot survive the validation it tests qualifies nothing — which surfaced that its own prior map is **flat**, so the previously hardcoded `flat_policy=False` was wrong. |
 
 **Revision 4's mechanical pass:** `run_corpus` gains `prefix_sims`; deployability reads
 `boundary.remaining` by attribute, not by key; the two bare `_pilot_metas()` calls get
@@ -1188,6 +1197,44 @@ def test_verify_pilot_rejects_rows_that_are_not_the_recomputed_assignment():
         verify_pilot(tampered, _pilot_metas(len(_late_history())))
 
 
+def test_verify_pilot_compares_the_ARTIFACT_field_names_not_the_assignment_ones():
+    """`build_row` stores game_idx / replay_seed / target_ply; `assign_corpus`
+    emits game_id / seed / ply. A comparison that reads the assignment names
+    off an artifact row raises KeyError on every honest call -- so the happy
+    path is the test that catches it."""
+    pilot = _complete_pilot_doc(n=200)
+    assert "game_id" not in pilot["rows"][0]          # the trap, made explicit
+    assert verify_pilot(pilot, _pilot_metas(len(_late_history())))
+    # `seed` is part of the comparison, so replay provenance is verified.
+    bad_seed = dict(pilot, rows=[dict(pilot["rows"][0], replay_seed=BASE + 999)]
+                    + pilot["rows"][1:])
+    with pytest.raises(ValueError, match="recomputed"):
+        verify_pilot(bad_seed, _pilot_metas(len(_late_history())))
+
+
+def test_verify_pilot_refuses_a_row_whose_STORED_LABEL_was_edited():
+    """Sizing reads the legs, but Read-out A takes its classes and Read-out C
+    its intervention denominators from the stored `label`. Editing only the
+    label moves a row between classes while every leg-derived check passes."""
+    pilot = _complete_pilot_doc(n=200)
+    relabelled = dict(pilot["rows"][0], label="misleading")   # legs say otherwise
+    with pytest.raises(ValueError, match="label"):
+        verify_pilot(dict(pilot, rows=[relabelled] + pilot["rows"][1:]),
+                     _pilot_metas(len(_late_history())))
+
+
+def test_verify_pilot_rederives_the_stratum_facts():
+    """`flat_policy` and `near_even` drive both strata sets, so a stored value
+    that the row's own measurements do not produce is a silently wrong
+    stratum."""
+    pilot = _complete_pilot_doc(n=200)
+    for field, wrong in (("flat_policy", True), ("near_even", False)):
+        tampered = dict(pilot["rows"][0], **{field: wrong})
+        with pytest.raises(ValueError, match=field):
+            verify_pilot(dict(pilot, rows=[tampered] + pilot["rows"][1:]),
+                         _pilot_metas(len(_late_history())))
+
+
 def _four_rung_legs(label_as="stable_negative"):
     """All four frozen rungs, shaped to CLASSIFY as `label_as`.
 
@@ -1250,26 +1297,41 @@ def _pilot_assignment():
     return gate["assignment"]
 
 
-def _row_for(assigned, label_as="stable_negative"):
+def _row_for(assigned, label_as="stable_negative", start_player="red"):
     """A schema-valid row FOR A SPECIFIC ASSIGNED ROW.
 
     Every identifying field is carried through -- game id, split, phase, side,
     ply -- so a stub built from these cannot silently substitute a different
     corpus for the one the assignment selected.
+
+    The row facts and the label are DERIVED here exactly as the production path
+    derives them, because `verify_pilot` re-derives both and would reject a
+    fixture that asserted otherwise. A fixture that cannot survive the
+    validation it is used to test qualifies nothing.
     """
     from scripts.GPU.alphazero.atlas_artifact import build_row
+    from scripts.GPU.alphazero.atlas_labelling import classify_row
+    from scripts.GPU.alphazero.atlas_row_facts import derive_row_facts
     from scripts.GPU.alphazero.warm_prefix_replay import BoundaryRecord
+
+    legs, snaps = _four_rung_legs(label_as), _populated_snapshots()
+    facts = derive_row_facts(legs, snaps, assigned["ply"], start_player,
+                             assigned_phase=assigned["phase"],
+                             assigned_side=assigned["side"])
+    assert classify_row(legs) == label_as, (
+        f"the fixture's legs classify as {classify_row(legs)}, not {label_as}")
     return build_row(
         game_idx=assigned["game_id"], replay_seed=assigned["seed"],
-        target_ply=assigned["ply"], phase=assigned["phase"],
-        side=assigned["side"], split=assigned["split"], inherited_I=137,
+        target_ply=assigned["ply"], phase=facts["phase"],
+        side=facts["side"], split=assigned["split"], inherited_I=137,
         reset_count=0, reset_rate=0.0, last_reset_ply=None,
         boundary=BoundaryRecord(N_actual=326, overshoot=6, remaining=74,
                                 flush_type="full"),
-        legs=_four_rung_legs(label_as), label=label_as,
+        legs=legs, label=label_as,
         features_at_boundary={k: 0.5 for k in FEATURE_NAMES},
         features_at_400={k: 0.5 for k in FEATURE_NAMES},
-        snapshots=_populated_snapshots(), flat_policy=False, near_even=True)
+        snapshots=snaps,
+        flat_policy=facts["flat_policy"], near_even=facts["near_even"])
 
 
 def _measured_pilot_rows():
@@ -1621,11 +1683,19 @@ def verify_pilot(pilot_doc, pilot_games) -> Dict[int, Tuple[str, str, str]]:
     if gate["verdict"] != "PASS":
         raise ValueError(f"PHASE_GEOMETRY_NO_GO on the pilot block: "
                          f"{gate['unmet']}")
+    # An ARTIFACT row and an ASSIGNMENT row name the same facts differently:
+    # build_row stores game_idx / replay_seed / target_ply, while assign_corpus
+    # emits game_id / seed / ply. Mapping them explicitly is the difference
+    # between a comparison and a KeyError. `seed` is included so replay
+    # provenance is actually verified, not merely carried.
+    _AS_ASSIGNED = {"game_idx": "game_id", "replay_seed": "seed",
+                    "target_ply": "ply", "split": "split", "phase": "phase",
+                    "side": "side"}
     expected = pilot_rows(pilot_games, seed)
-    measured = [{k: r[k] for k in ("game_id", "split", "phase", "side")}
-                | {"ply": r["target_ply"]} for r in pilot_doc["rows"]]
-    if measured != [{k: e[k] for k in ("game_id", "split", "phase", "side",
-                                       "ply")} for e in expected]:
+    measured = [{dst: r[src] for src, dst in _AS_ASSIGNED.items()}
+                for r in pilot_doc["rows"]]
+    if measured != [{k: e[k] for k in _AS_ASSIGNED.values()}
+                    for e in expected]:
         raise ValueError("the pilot artifact's rows do not match a recomputed "
                          "pilot assignment; it is stale, edited or mis-seeded")
 
@@ -1637,6 +1707,27 @@ def verify_pilot(pilot_doc, pilot_games) -> Dict[int, Tuple[str, str, str]]:
         raise ValueError(
             f"stored sizing {pilot_doc['sizing']} is not what the carried "
             f"pilot rows produce ({size_from_pilot(counts)})")
+
+    # The STORED label and row facts are re-derived too. Sizing reads the legs,
+    # but Read-out A takes its classes and Read-out C its intervention
+    # denominators from `label`, and both strata sets from `flat_policy` /
+    # `near_even` -- so an edited label silently moves a row between classes
+    # while every leg-derived check still passes.
+    by_id = {g.game_id: g for g in pilot_games}
+    for row in pilot_doc["rows"]:
+        if row["label"] != classify_row(row["legs"]):
+            raise ValueError(
+                f"row {row['game_idx']}: stored label {row['label']!r} is not "
+                f"what its own legs classify as "
+                f"({classify_row(row['legs'])!r})")
+        facts = derive_row_facts(row["legs"], row["snapshots"],
+                                 row["target_ply"],
+                                 by_id[row["game_idx"]].start_player)
+        for field in ("phase", "side", "flat_policy", "near_even"):
+            if row[field] != facts[field]:
+                raise ValueError(
+                    f"row {row['game_idx']}: stored {field} {row[field]!r} != "
+                    f"re-derived {facts[field]!r}")
     return gate["assignment"]
 
 
@@ -1736,7 +1827,7 @@ def combine_final_runs(pilot_doc, continuation_doc, *, provenance) -> dict:
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_run.py -v -p no:cacheprovider`
-Expected: PASS — 34 passed.
+Expected: PASS — 37 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -1930,11 +2021,11 @@ def _fake_block(tmp_path, name="pilot", n_games=24, start_index=0,
 
     Constructed, not generated: Stage 5 generates no reservoir.
     """
-    import hashlib
     from scripts.GPU.alphazero.generate_atlas_reservoir import (
         MANIFEST, seed_for_index,
     )
     ck = checkpoint or _fake_ck(tmp_path)
+    prov = _fixture_prov(ck)          # the ONE fixture provenance object
     hist = history if history is not None else _late_history()
     d = tmp_path / name
     d.mkdir(parents=True, exist_ok=True)
@@ -2510,9 +2601,9 @@ git commit -m "feat(atlas-s5): operator CLI, stop conditions and exit-status sid
       no-edit-after-preflight and no-commit-between rules.
 - [ ] `preflight` and `emit-runbook` are zero-GPU; `run` is the only branch that
       constructs an evaluator, and it imports the factory lazily.
-- [ ] **Test counting.** Planned: row-facts 8, artifact +5, run 34, CLI 18 = **65**
-      (29 → 45 → 55 → 61 → 65; each superseded, never adjusted). Stage 4 measured
-      **2556**, so the expected total is **2621**. Recount from `def test_` on disk at qualification
+- [ ] **Test counting.** Planned: row-facts 8, artifact +5, run 37, CLI 18 = **68**
+      (29 → 45 → 55 → 61 → 65 → 68; each superseded, never adjusted). Stage 4 measured
+      **2556**, so the expected total is **2624**. Recount from `def test_` on disk at qualification
       and **baseline against a measured collect**,
       not against any number in a document — Stage 4's predicted total was short by
       exactly two tests a post-qualification commit had added. The full-suite delta must
