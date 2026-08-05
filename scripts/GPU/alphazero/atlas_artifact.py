@@ -30,8 +30,8 @@ def build_row(*, game_idx: int, replay_seed: int, target_ply: int, phase: str,
               boundary: Optional[Any], legs: Sequence[Any],
               label: str, features_at_boundary: Optional[Dict[str, Any]],
               features_at_400: Optional[Dict[str, Any]],
-              snapshots: Dict[str, Any], flat_policy: bool,
-              near_even: bool) -> Dict[str, Any]:
+              snapshots: Dict[str, Any], flat_policy: Optional[bool],
+              near_even: Optional[bool]) -> Dict[str, Any]:
     return {
         "schema_version": ROW_SCHEMA_VERSION,
         "game_idx": game_idx, "replay_seed": replay_seed,
