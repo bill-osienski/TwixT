@@ -72,11 +72,35 @@ facts stay Task 0.
 | # | Defect | Repair |
 |---|---|---|
 | 1 | **HEAD identity was asymmetric.** Revision 3 argued generation predates this tooling — **wrong: no reservoir exists yet.** Generation happens *after* Stage 5 qualifies, so the whole chain comes from one frozen commit and there is no mismatch to accommodate. | `measure_provenance` **requires** the measured `git_head` to equal both block manifests and the pilot artifact. A mismatch means regeneration or requalification. |
-| 2 | **The assignment artifact was trusted.** `run-final` consumed hand-written continuation rows without re-deriving a *deterministic* assignment, and the fixture set the continuation block and the selected rows both to 176 — so an assignment that selected everything would have passed. | `verify_assignment` reads `sampling_seed` from the pilot artifact, loads the **complete** `G_total − 24` block, re-runs `size_continuation` + `assign_corpus`, and requires exact equality. Fixtures now keep **216 games** distinct from **176 rows**. |
+| 2 | **The assignment artifact was trusted.** `run-final` consumed hand-written continuation rows without re-deriving a *deterministic* assignment, and the fixture set the continuation block and the selected rows both to 176 — so an assignment that selected everything would have passed. | `verify_assignment` takes `sampling_seed` from the pilot artifact, loads the **complete** `G_total − 24` block, re-runs `size_continuation` + `assign_corpus`, and requires exact equality. Fixtures now keep **216 games** distinct from **176 rows**. |
 | 3 | **The successful `run-final` was left unqualified**, on the argument that 200 real ladders cannot run on CPU. The ladders and the composition are **separable**. | New pure `combine_final_runs`, plus a CLI success-path test at the real frozen `N = 200` with `run_corpus` patched to a schema-valid complete 176-row document. No ladder, no budget override, no CLI flag. **The first production run stays evidence.** |
 | 4 | **The loader restored only merged edges.** `at_3200` / `at_6400` carry `edges`, not `required_edges`, so both deep lines came back with list paths and string-keyed priors — an inverse in name only. It also accepted a truncated document as an empty run. | Both keys rehydrated and both pinned in the round trip; a missing or non-list `rows` field is refused. |
 
-**Mechanical, same pass:** `run_corpus` gains `prefix_sims`; deployability reads
+## Revision 5 — 2026-08-05, the verified-inputs contract
+
+The contract, stated once and implemented in this order:
+
+> **Load pilot games from the verified pilot block, recompute and cross-check the pilot
+> assignment and sizing, derive selected continuation metadata from the verified complete
+> continuation block, then measure exactly those assigned rows.**
+
+| # | Defect | Repair |
+|---|---|---|
+| 1 | **The real pilot artifact lacked the assignment inputs.** `run_pilot` never recorded `sampling_seed`, `pilot_games` or `pilot_assignment`, yet `verify_assignment` required all three — and `pilot_games` could not be stored anyway, since `emit` flattens `GameMeta` to dicts and `load_run` does not rehydrate them. | The artifact stores **`sampling_seed` and the measured rows, nothing else**. New `verify_pilot` re-derives the gate, the assignment and the rows from the **verified pilot block** plus that seed, and returns the assignment for the continuation step. |
+| 2 | **Pilot sizing was never revalidated.** The synthetic pilot held 24 stable-negatives yet claimed `N = 200`; the frozen rule returns `PROJECTED_CAPACITY_NO_GO` at `p_m = 0`. | `verify_pilot` recomputes `class_counts` + `size_from_pilot` from the carried rows and requires exact agreement. The fixture is now the formula's own worked case — **8 misleading, 9 stable-negative, 7 ambiguous**, which genuinely yields 200 — with a test proving it. |
+| 3 | **The success stub could return an unrelated corpus.** The patched `run_corpus` invented ids `1000+` with an arbitrary split, so the seam would have passed even if measurement had substituted a different corpus. | The stub is built **from the `assigned_rows` it receives**, carrying every game id, split, phase, side and ply. The real split at `N = 200` — **96 discovery + 80 validation** — is pinned. |
+| 4 | **The fixture artifact failed provenance.** It wrote `checkpoint_sha1 = "0"*40` while the manifests and the measurement carried the real digest, so symmetric validation rejected both CLI paths before `run-final` began. | One `_fixture_prov(ck)` object, used by the manifests, the artifact **and** the patched measurement. |
+
+**Mechanical, same pass:** `run_final`'s stale `continuation_rows` becomes
+`assignment_rows` and its gate tests take the new `pilot_games` /
+`continuation_games`; the checkpoint-mismatch test patches
+`preflight_source_provenance` too, since a TDD run's own uncommitted code would
+otherwise raise "dirty worktree" first; `size_continuation["verdict"]` is checked before
+`G_total` is read; and the stale task expectations become artifact **+5**, run **34** and CLI **18**.
+
+Planned tests **61 → 65**; expected suite **2621**.
+
+**Revision 4's mechanical pass:** `run_corpus` gains `prefix_sims`; deployability reads
 `boundary.remaining` by attribute, not by key; the two bare `_pilot_metas()` calls get
 their required length; `_authoritative_pilot_artifact` is built from **schema-valid**
 rows (four rungs, a `BoundaryRecord`, populated snapshots) since recomposition consumes
@@ -579,7 +603,7 @@ def load_run(source) -> Dict[str, Any]:
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_artifact.py -v -p no:cacheprovider`
-Expected: PASS — Stage 4's 14 plus 4 new.
+Expected: PASS — Stage 4's 14 plus 5 new.
 
 - [ ] **Step 5: Commit**
 
@@ -598,7 +622,7 @@ git commit -m "feat(atlas-s5): authenticated load_run, the reloadable inverse of
 
 **Interfaces:**
 - Consumes: `GameMeta`; an assigned row `{"game_id", "seed", "split", "phase", "side", "ply"}` exactly as `corpus_geometry.assign_corpus` emits it; `replay_seed_for`, `replay_prefix`, `BatchSafeBoundaryObserver`, `run_additive_ladder`, `SelectionTracer`; `collect_features`; `derive_row_facts`; `classify_row`; `build_row`; all three read-outs; `emit`.
-- Produces: `LADDER_BATCHING`; `PREFIX_SIMS`; `ladder_config(n_simulations) -> MCTSConfig`; `RowOutcome`; `run_row(...) -> RowOutcome`; `run_corpus(...) -> dict`; `pilot_rows(pilot_games, sampling_seed) -> list[dict]`; `_early_widening_check(rows) -> dict`; `run_pilot(...) -> dict`; `run_final(...) -> dict`.
+- Produces: `LADDER_BATCHING`; `PREFIX_SIMS`; `ladder_config(n_simulations) -> MCTSConfig`; `RowOutcome`; `run_row(...) -> RowOutcome`; `run_corpus(...) -> dict`; `pilot_rows(pilot_games, sampling_seed) -> list[dict]`; `_early_widening_check(rows) -> dict`; `run_pilot(...) -> dict`; **`verify_pilot(pilot_doc, pilot_games) -> assignment`**; **`verify_assignment(pilot_games, pilot_assignment, sampling_seed, n_target, continuation_games, assignment_rows)`**; **`combine_final_runs(pilot_doc, continuation_doc, *, provenance) -> dict`**; `run_final(evaluator, *, pilot_doc, pilot_games, continuation_games, assignment_rows, base_seed, move_histories, provenance) -> dict`.
 - **Imports no MLX and never constructs an evaluator.**
 
 #### §3's chronology, which the runner must obey
@@ -1121,11 +1145,19 @@ def test_run_final_takes_N_ONLY_from_the_pilot_sizing():
     assert "n_target" not in inspect.signature(run_final).parameters
 
 
+def _final_kw(**over):
+    """The gate arguments, defaulted so each test overrides only its own."""
+    base = dict(pilot_games=_pilot_metas(len(_late_history())),
+                continuation_games=[], assignment_rows=[], base_seed=BASE,
+                move_histories={}, provenance=_PROV)
+    base.update(over)
+    return base
+
+
 def test_run_final_requires_the_continuation_to_be_exactly_N_minus_24():
     with pytest.raises(ValueError, match="exactly"):
         run_final(FakeEvaluator(value=0.0), pilot_doc=_pilot_stub(n=200),
-                  metas=[], continuation_rows=[_assigned(100)] * 3,
-                  base_seed=BASE, move_histories={}, provenance=_PROV)
+                  **_final_kw(assignment_rows=[_assigned(100)] * 3))
 
 
 def test_run_final_refuses_a_non_authoritative_or_unsized_pilot():
@@ -1134,20 +1166,62 @@ def test_run_final_refuses_a_non_authoritative_or_unsized_pilot():
                  _pilot_stub(sizing_verdict="UNAVAILABLE"),
                  _pilot_stub(rows=23)):            # not the fixed 24
         with pytest.raises(ValueError):
-            run_final(FakeEvaluator(value=0.0), pilot_doc=stub, metas=[],
-                      continuation_rows=[], base_seed=BASE,
-                      move_histories={}, provenance=_PROV)
+            run_final(FakeEvaluator(value=0.0), pilot_doc=stub, **_final_kw())
 
 
-def _four_rung_legs(game_idx):
-    """All four frozen rungs. Labelling and Read-out B index every one, so a
-    row missing any of them raises in `_by_b` before any assertion runs."""
+def test_run_final_revalidates_the_pilots_OWN_sizing():
+    """A stored N that the carried rows do not produce is the difference
+    between "N=200" and "N=200 because 8 of 24 were misleading"."""
+    pilot = _complete_pilot_doc(n=200)
+    lied = dict(pilot, sizing={**pilot["sizing"], "N": 400})
+    with pytest.raises(ValueError, match="sizing"):
+        verify_pilot(lied, _pilot_metas(len(_late_history())))
+    # The honest one passes, and returns the recomputed assignment.
+    assert verify_pilot(pilot, _pilot_metas(len(_late_history())))
+
+
+def test_verify_pilot_rejects_rows_that_are_not_the_recomputed_assignment():
+    pilot = _complete_pilot_doc(n=200)
+    tampered = dict(pilot, rows=[dict(pilot["rows"][0], target_ply=7)]
+                    + pilot["rows"][1:])
+    with pytest.raises(ValueError, match="recomputed"):
+        verify_pilot(tampered, _pilot_metas(len(_late_history())))
+
+
+def _four_rung_legs(label_as="stable_negative"):
+    """All four frozen rungs, shaped to CLASSIFY as `label_as`.
+
+    `class_counts` re-derives labels from the LEGS, so a fixture cannot simply
+    claim a label: a pilot of 24 stable-negatives has p_m = 0 and its own
+    sizing rule returns PROJECTED_CAPACITY_NO_GO, whatever the artifact says.
+    """
+    v400 = {"misleading": 0.90,        # |0.90 - 0.05| = 0.85 >= 0.25
+            "ambiguous": 0.20,        # 0.15 sits in the kept band
+            "stable_negative": 0.06}[label_as]
+    values = {400: v400, 1600: 0.10, 3200: 0.05, 6400: 0.05}
     return [LegResult(nominal_B=b, inherited_I=137, effective=137 + b,
-                      root_value=0.05, selected_move=3,
+                      root_value=values[b], selected_move=3,
                       selected_move_prior_rank=1, top_share=0.5,
                       top_two_margin=0.2, effective_children=12.0,
                       n_visited_children=20, visit_counts={3: 100})
             for b in (400, 1600, 3200, 6400)]
+
+
+# 8 misleading + 9 stable-negative of 24 is the frozen formula's own worked
+# case: max(60/(8/24), 75/(9/24)) = max(180, 200) = 200, already a multiple of
+# 40. The remaining 7 are ambiguous, which section 5 keeps and counts.
+_PILOT_MIX = (["misleading"] * 8 + ["stable_negative"] * 9 + ["ambiguous"] * 7)
+
+
+def test_the_pilot_mix_really_produces_N_200():
+    """If the fixture's own class counts do not yield 200, every run-final test
+    built on it is asserting against an impossible artifact."""
+    from scripts.GPU.alphazero.atlas_labelling import class_counts, size_from_pilot
+    counts = class_counts([_four_rung_legs(m) for m in _PILOT_MIX])
+    assert counts["misleading"] == 8 and counts["stable_negative"] == 9
+    assert size_from_pilot(counts) == {"p_m": 8 / 24, "p_s": 9 / 24,
+                                       "verdict": "OK", "N": 200,
+                                       "required": 200}
 
 
 def _populated_snapshots():
@@ -1176,38 +1250,48 @@ def _pilot_assignment():
     return gate["assignment"]
 
 
-def _schema_valid_row(game_idx, split="discovery"):
-    """A row the read-outs can actually consume: four real LegResult rungs, a
-    BoundaryRecord, and populated snapshots.
+def _row_for(assigned, label_as="stable_negative"):
+    """A schema-valid row FOR A SPECIFIC ASSIGNED ROW.
 
-    Rows with no legs or empty snapshots are not what the production path
-    emits, and recomposing read-outs over them raises -- so a test built on
-    them asserts against a document that can never occur.
+    Every identifying field is carried through -- game id, split, phase, side,
+    ply -- so a stub built from these cannot silently substitute a different
+    corpus for the one the assignment selected.
     """
     from scripts.GPU.alphazero.atlas_artifact import build_row
     from scripts.GPU.alphazero.warm_prefix_replay import BoundaryRecord
     return build_row(
-        game_idx=game_idx, replay_seed=BASE + game_idx, target_ply=95,
-        phase="late", side="red", split=split, inherited_I=137,
+        game_idx=assigned["game_id"], replay_seed=assigned["seed"],
+        target_ply=assigned["ply"], phase=assigned["phase"],
+        side=assigned["side"], split=assigned["split"], inherited_I=137,
         reset_count=0, reset_rate=0.0, last_reset_ply=None,
         boundary=BoundaryRecord(N_actual=326, overshoot=6, remaining=74,
                                 flush_type="full"),
-        legs=_four_rung_legs(game_idx), label="stable_negative",
+        legs=_four_rung_legs(label_as), label=label_as,
         features_at_boundary={k: 0.5 for k in FEATURE_NAMES},
         features_at_400={k: 0.5 for k in FEATURE_NAMES},
         snapshots=_populated_snapshots(), flat_policy=False, near_even=True)
 
 
+def _measured_pilot_rows():
+    """The 24 pilot rows as a COMPLETE pilot run would have measured them:
+    real assigned rows, and the class mix that genuinely yields N = 200."""
+    assigned = pilot_rows(_pilot_metas(len(_late_history())), SAMPLING_SEED)
+    return [_row_for(a, m) for a, m in zip(assigned, _PILOT_MIX)]
+
+
 def _complete_pilot_doc(n=200):
-    """The in-memory equivalent of `_authoritative_pilot_artifact`, for the
-    pure combine and assignment tests."""
+    """The in-memory equivalent of `_authoritative_pilot_artifact`.
+
+    It stores `sampling_seed` and the measured rows and NOTHING ELSE about the
+    assignment -- exactly what `run_pilot` writes, because GameMeta objects
+    cannot survive emit/load and must be re-derived from the pilot block.
+    """
     return {"mode": "pilot", "verdict": "OK", "authoritative": True,
-            "rows": [_schema_valid_row(i, "discovery") for i in range(24)],
+            "rows": _measured_pilot_rows(),
             "failed_rows": [], "assigned": 24, "measured": 24,
             "sampling_seed": SAMPLING_SEED,
-            "pilot_games": _pilot_metas(len(_late_history())),
-            "pilot_assignment": _pilot_assignment(),
-            "sizing": {"verdict": "OK", "N": n}}
+            "sizing": {"p_m": 8 / 24, "p_s": 9 / 24, "verdict": "OK",
+                       "N": n, "required": n}}
 
 
 def _continuation_metas(n_games, start_index=24):
@@ -1219,19 +1303,54 @@ def _continuation_metas(n_games, start_index=24):
             for i in range(n_games)]
 
 
-def _complete_continuation_doc(n_rows=176):
-    """A schema-valid, COMPLETE continuation result -- as run_corpus would have
-    returned after measuring every row. Synthetic because the ladders are the
-    expensive part and the composition is the part most likely to be wrong."""
-    rows = [_schema_valid_row(1000 + i, split=("validation" if i % 5 == 0
-                                               else "discovery"))
-            for i in range(n_rows)]
+def _complete_continuation_doc(assigned_rows):
+    """A schema-valid COMPLETE continuation result, built FROM the assigned
+    rows the caller actually received.
+
+    Not from an arbitrary range: a stub that invents its own game ids would let
+    the success seam pass even if measurement had substituted a different
+    corpus for the one the assignment selected. Every id, split, phase, side
+    and ply is carried through.
+    """
+    rows = [_row_for(a) for a in assigned_rows]
     return {"verdict": "OK", "authoritative": True, "rows": rows,
-            "failed_rows": [], "assigned": n_rows, "measured": n_rows,
+            "failed_rows": [], "assigned": len(rows), "measured": len(rows),
             "splits": {"discovery": sum(1 for r in rows
                                         if r["split"] == "discovery"),
                        "validation": sum(1 for r in rows
                                          if r["split"] == "validation")}}
+
+
+def _stub_measurement(monkeypatch, *, complete=True):
+    """Patch the expensive half only, deriving its result from the REAL
+    assigned rows so the substitution the seam must reject is impossible."""
+    import scripts.GPU.alphazero.atlas_run as ar
+
+    def _fake(evaluator, metas, assigned_rows, **kw):
+        doc = _complete_continuation_doc(assigned_rows)
+        if complete:
+            return doc
+        return dict(doc, verdict="ABORTED", authoritative=False,
+                    rows=doc["rows"][:-1], measured=len(doc["rows"]) - 1,
+                    failed_rows=[{"game_id": doc["rows"][-1]["game_idx"],
+                                  "failure": "seed mismatch"}])
+
+    monkeypatch.setattr(ar, "run_corpus", _fake)
+
+
+def _assigned_176():
+    """The REAL 176 continuation rows: 96 discovery + 80 validation at N=200."""
+    games = _continuation_metas(216)                 # G_total - 24
+    return assign_corpus(_pilot_assignment(), games, 200, SAMPLING_SEED)["rows"]
+
+
+def test_the_continuation_split_is_96_discovery_and_80_validation():
+    """8 x (3N/40 - 3) = 96 and 8 x N/20 = 80 at N = 200. With the pilot's 24
+    counted as discovery the corpus is 120/80 -- the frozen 60/40."""
+    rows = _assigned_176()
+    assert len(rows) == 176
+    assert sum(1 for r in rows if r["split"] == "discovery") == 96
+    assert sum(1 for r in rows if r["split"] == "validation") == 80
 
 
 def test_combine_final_runs_is_PURE_and_recomposes_over_the_whole_corpus():
@@ -1239,7 +1358,7 @@ def test_combine_final_runs_is_PURE_and_recomposes_over_the_whole_corpus():
     N -- no ladders, no budget override, no CLI flag. Carry, recomposition and
     the completeness inheritance are all exercised."""
     pilot = _complete_pilot_doc(n=200)               # 24 schema-valid rows
-    cont = _complete_continuation_doc(176)
+    cont = _complete_continuation_doc(_assigned_176())
     doc = combine_final_runs(pilot, cont, provenance=_PROV)
     assert doc["verdict"] == "OK" and doc["authoritative"] is True
     assert len(doc["rows"]) == 200
@@ -1254,11 +1373,12 @@ def test_combine_final_runs_is_PURE_and_recomposes_over_the_whole_corpus():
 
 def test_combine_inherits_incompleteness_from_EITHER_half():
     pilot = _complete_pilot_doc(n=200)
+    rows = _assigned_176()
     for bad in (dict(pilot, authoritative=False),):
-        doc = combine_final_runs(bad, _complete_continuation_doc(176),
+        doc = combine_final_runs(bad, _complete_continuation_doc(rows),
                                  provenance=_PROV)
         assert doc["verdict"] == "ABORTED" and doc["authoritative"] is False
-    cont = dict(_complete_continuation_doc(175), authoritative=False,
+    cont = dict(_complete_continuation_doc(rows[:-1]), authoritative=False,
                 measured=175, failed_rows=[{"game_id": 9, "failure": "seed"}])
     doc = combine_final_runs(pilot, cont, provenance=_PROV)
     assert doc["verdict"] == "ABORTED" and doc["authoritative"] is False
@@ -1267,26 +1387,25 @@ def test_combine_inherits_incompleteness_from_EITHER_half():
 def test_run_final_recomputes_the_assignment_rather_than_trusting_it():
     """Assignment is deterministic, so a hand-edited or stale artifact must not
     become the corpus."""
-    pilot = _complete_pilot_doc(n=200)
+    pilot_games = _pilot_metas(len(_late_history()))
     games = _continuation_metas(216)                 # G_total - 24, not N - 24
-    good = assign_corpus(pilot["pilot_assignment"], games, 200,
-                         pilot["sampling_seed"])["rows"]
-    verify_assignment(pilot, games, good)            # baseline: accepted
+    good = _assigned_176()
+    args = (pilot_games, _pilot_assignment(), SAMPLING_SEED, 200, games)
+    verify_assignment(*args, good)                   # baseline: accepted
     tampered = [dict(good[0], ply=good[0]["ply"] + 2)] + good[1:]
     with pytest.raises(ValueError, match="recomputed"):
-        verify_assignment(pilot, games, tampered)
+        verify_assignment(*args, tampered)
 
 
 def test_the_continuation_BLOCK_is_larger_than_the_selected_rows():
     """G_total - 24 = 216 games supply N - 24 = 176 rows at N = 200. A fixture
     that made them equal would pass an assignment that selected everything."""
-    pilot = _complete_pilot_doc(n=200)
-    games = _continuation_metas(216)
-    rows = assign_corpus(pilot["pilot_assignment"], games, 200,
-                         pilot["sampling_seed"])["rows"]
+    pilot_games = _pilot_metas(len(_late_history()))
+    games, rows = _continuation_metas(216), _assigned_176()
     assert len(games) == 216 and len(rows) == 176
     with pytest.raises(ValueError, match="frozen sizing"):
-        verify_assignment(pilot, _continuation_metas(176), rows)
+        verify_assignment(pilot_games, _pilot_assignment(), SAMPLING_SEED, 200,
+                          _continuation_metas(176), rows)
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -1463,6 +1582,11 @@ def run_pilot(evaluator, pilot_games, *, sampling_seed, base_seed,
                      base_seed=base_seed, move_histories=move_histories,
                      provenance=provenance, **kw)
     doc["mode"] = "pilot"
+    # The ONLY assignment input the artifact carries. `pilot_games` and the
+    # gate's assignment are deliberately NOT stored: `emit` would flatten
+    # GameMeta objects to dicts and `load_run` does not rehydrate them, so
+    # run-final re-derives both from the verified pilot block plus this seed.
+    doc["sampling_seed"] = sampling_seed
     if not doc["authoritative"]:
         # An incomplete pilot must not size: N would come from a class
         # frequency measured over fewer than 24 rows, and closing progressive
@@ -1480,42 +1604,89 @@ def run_pilot(evaluator, pilot_games, *, sampling_seed, base_seed,
     return doc
 
 
-def verify_assignment(pilot_doc, continuation_games, assignment_rows) -> None:
+def verify_pilot(pilot_doc, pilot_games) -> Dict[int, Tuple[str, str, str]]:
+    """Recompute and cross-check everything the pilot claims.
+
+    `pilot_games` comes from the VERIFIED pilot block, not from the artifact:
+    `emit` would have flattened `GameMeta` objects to dicts and `load_run` does
+    not rehydrate them, so the artifact stores only `sampling_seed` and the
+    measured rows. The geometry gate, the assignment and the sizing are all
+    re-derived here from the block plus that one seed.
+
+    Returns the recomputed pilot assignment, which the continuation assignment
+    needs as its input.
+    """
+    seed = pilot_doc["sampling_seed"]
+    gate = pilot_geometry_gate(pilot_games, seed)
+    if gate["verdict"] != "PASS":
+        raise ValueError(f"PHASE_GEOMETRY_NO_GO on the pilot block: "
+                         f"{gate['unmet']}")
+    expected = pilot_rows(pilot_games, seed)
+    measured = [{k: r[k] for k in ("game_id", "split", "phase", "side")}
+                | {"ply": r["target_ply"]} for r in pilot_doc["rows"]]
+    if measured != [{k: e[k] for k in ("game_id", "split", "phase", "side",
+                                       "ply")} for e in expected]:
+        raise ValueError("the pilot artifact's rows do not match a recomputed "
+                         "pilot assignment; it is stale, edited or mis-seeded")
+
+    # Sizing is re-derived from the CARRIED rows, not trusted. A stored N that
+    # its own class counts do not produce is the difference between "N=200" and
+    # "N=200 because 8 of 24 were misleading".
+    counts = class_counts([r["legs"] for r in pilot_doc["rows"]])
+    if size_from_pilot(counts) != pilot_doc["sizing"]:
+        raise ValueError(
+            f"stored sizing {pilot_doc['sizing']} is not what the carried "
+            f"pilot rows produce ({size_from_pilot(counts)})")
+    return gate["assignment"]
+
+
+def verify_assignment(pilot_games, pilot_assignment, sampling_seed, n_target,
+                      continuation_games, assignment_rows) -> None:
     """Assignment is DETERMINISTIC, so recompute it rather than trusting the
     artifact. A hand-edited, stale or mis-seeded file would otherwise become
     the corpus.
 
-    `sampling_seed` comes from the PILOT artifact, so one seed governs the whole
-    corpus and cannot be re-supplied here.
+    `continuation_games` is the COMPLETE authorized block -- `G_total - 24`,
+    which is larger than the `N - 24` rows selected from it. Passing the
+    selected rows here instead would make any selection look correct.
     """
-    n = pilot_doc["sizing"]["N"]
-    seed = pilot_doc["sampling_seed"]
-    sizing = size_continuation(pilot_doc["pilot_games"], n)
+    sizing = size_continuation(pilot_games, n_target)
+    if sizing.get("verdict") != "OK":
+        raise ValueError(f"continuation sizing is {sizing.get('verdict')!r}, "
+                         f"so there is no G_total to check against")
     if len(continuation_games) != sizing["G_total"] - PILOT_GAMES:
         raise ValueError(
             f"continuation block holds {len(continuation_games)} games but the "
             f"frozen sizing requires {sizing['G_total'] - PILOT_GAMES}")
-    recomputed = assign_corpus(pilot_doc["pilot_assignment"],
-                               continuation_games, n, seed)
+    recomputed = assign_corpus(pilot_assignment, continuation_games,
+                               n_target, sampling_seed)
     if recomputed["verdict"] != "OK" or recomputed["rows"] != assignment_rows:
         raise ValueError("the assignment artifact does not match a recomputed "
                          "assignment; it is stale, edited, or mis-seeded")
 
 
-def run_final(evaluator, *, pilot_doc, metas, continuation_games,
+def run_final(evaluator, *, pilot_doc, pilot_games, continuation_games,
               assignment_rows, base_seed, move_histories, provenance,
               **kw) -> dict:
     """The pilot's 24 discovery rows PLUS the continuation's N-24.
 
-    N comes from `pilot_doc["sizing"]` and from NOWHERE else -- there is no
-    `n_target` parameter, so an invented or out-of-set value cannot be supplied.
-    The pilot rows are CARRIED, never re-measured: section 3 fixes them as
-    discovery rows that are never reconsidered, and `assign_corpus` already
-    excluded their game ids from its pool.
+    The contract, in order:
 
-    `continuation_games` is the COMPLETE authorized block (G_total - 24), which
-    is a different and larger number than the N-24 selected rows -- the
-    selection step is what `verify_assignment` re-derives.
+        1. load pilot games from the VERIFIED pilot block
+        2. recompute and cross-check the pilot assignment AND its sizing
+        3. derive the selected continuation rows from the VERIFIED complete
+           continuation block, by recomputing the assignment
+        4. measure exactly those assigned rows
+
+    N comes from `pilot_doc["sizing"]` and from NOWHERE else -- there is no
+    `n_target` parameter, so an invented or out-of-set value cannot be
+    supplied. The pilot rows are CARRIED, never re-measured: section 3 fixes
+    them as discovery rows that are never reconsidered, and `assign_corpus`
+    already excluded their game ids from its pool.
+
+    `continuation_games` is the COMPLETE authorized block (G_total - 24), a
+    different and larger number than the N-24 selected rows; the selection step
+    is what `verify_assignment` re-derives.
     """
     if pilot_doc.get("verdict") != "OK" or not pilot_doc.get("authoritative"):
         raise ValueError("refusing to run: the pilot artifact is not an "
@@ -1529,11 +1700,18 @@ def run_final(evaluator, *, pilot_doc, metas, continuation_games,
         raise ValueError(f"pilot artifact holds {len(carried)} rows, not the "
                          f"fixed {PILOT_GAMES}")
     n_target = sizing["N"]
-    if len(carried) + len(continuation_rows) != n_target:
+    if len(carried) + len(assignment_rows) != n_target:
         raise ValueError(
             f"corpus must contain exactly N={n_target} positions: "
-            f"{len(carried)} pilot + {len(continuation_rows)} continuation")
-    verify_assignment(pilot_doc, continuation_games, assignment_rows)
+            f"{len(carried)} pilot + {len(assignment_rows)} continuation")
+    pilot_assignment = verify_pilot(pilot_doc, pilot_games)
+    verify_assignment(pilot_games, pilot_assignment,
+                      pilot_doc["sampling_seed"], n_target,
+                      continuation_games, assignment_rows)
+    # Measure exactly the assigned rows, whose metadata comes from the VERIFIED
+    # continuation block rather than from the assignment file.
+    by_id = {g.game_id: g for g in continuation_games}
+    metas = [by_id[r["game_id"]] for r in assignment_rows]
     cont = run_corpus(evaluator, metas, assignment_rows, base_seed=base_seed,
                       move_histories=move_histories, provenance=provenance, **kw)
     return combine_final_runs(pilot_doc, cont, provenance=provenance)
@@ -1558,7 +1736,7 @@ def combine_final_runs(pilot_doc, continuation_doc, *, provenance) -> dict:
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_run.py -v -p no:cacheprovider`
-Expected: PASS — 22 passed.
+Expected: PASS — 34 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -1677,7 +1855,22 @@ def _fake_ck(tmp_path):
     return ck
 
 
-def _authoritative_pilot_artifact(n=200):
+def _fixture_prov(ck):
+    """ONE provenance object for the whole fixture chain.
+
+    Symmetric validation compares the measured digest and HEAD against the
+    manifests AND the pilot artifact, so a fixture that writes "0"*40 in the
+    artifact while the manifests carry the real digest is rejected before
+    run-final starts -- and the test would be asserting on a provenance
+    failure it did not mean to create.
+    """
+    import hashlib
+    return {"git_head": "a" * 40, "worktree_clean": True,
+            "checkpoint_path": str(ck),
+            "checkpoint_sha1": hashlib.sha1(ck.read_bytes()).hexdigest()}
+
+
+def _authoritative_pilot_artifact(ck, n=200):
     """A complete, sized pilot artifact as `emit` would have written one.
 
     Its rows are SCHEMA-VALID -- four rungs of real LegResults, a
@@ -1688,11 +1881,12 @@ def _authoritative_pilot_artifact(n=200):
     produce.
     """
     from scripts.GPU.alphazero.atlas_artifact import emit
-    rows = [_schema_valid_row(i, split="discovery") for i in range(24)]
-    return emit({"rows": rows, "provenance": PROV,
+    return emit({"rows": _measured_pilot_rows(),
+                 "provenance": _fixture_prov(ck),      # the SAME object
                  "mode": "pilot", "verdict": "OK", "authoritative": True,
                  "sampling_seed": SAMPLING_SEED,
-                 "sizing": {"verdict": "OK", "N": n}})
+                 "sizing": {"p_m": 8 / 24, "p_s": 9 / 24, "verdict": "OK",
+                            "N": n, "required": n}})
 
 
 def _assign_artifact(tmp_path, cont_block):
@@ -1719,12 +1913,9 @@ def _patch_measured_provenance(monkeypatch, ck):
     function -- not `measure_provenance` itself -- leaves the manifest,
     artifact and HEAD equality checks under test.
     """
-    import hashlib
     import scripts.GPU.alphazero.run_atlas as ra
-    monkeypatch.setattr(ra, "preflight_source_provenance", lambda path: {
-        "git_head": "a" * 40, "worktree_clean": True,
-        "checkpoint_path": str(path),
-        "checkpoint_sha1": hashlib.sha1(ck.read_bytes()).hexdigest()})
+    monkeypatch.setattr(ra, "preflight_source_provenance",
+                        lambda path: _fixture_prov(ck))
 
 
 def _fake_block(tmp_path, name="pilot", n_games=24, start_index=0,
@@ -1754,10 +1945,9 @@ def _fake_block(tmp_path, name="pilot", n_games=24, start_index=0,
         # The frozen production settings, verbatim.
         "n_simulations": 400, "max_moves": 280, "active_size": 24,
         "batching": [14, 48, 8], "add_noise": True,
-        # Clean provenance, CONSTRUCTED -- never read from the ambient tree.
-        "git_head": "a" * 40, "worktree_clean": True,
-        "checkpoint_path": str(ck),
-        "checkpoint_sha1": hashlib.sha1(ck.read_bytes()).hexdigest(),
+        # Clean provenance, CONSTRUCTED -- never read from the ambient tree,
+        # and the SAME object the artifact and the patched measurement use.
+        **prov,
     }, indent=2, sort_keys=True))
     for i in range(start_index, start_index + n_games):
         (d / f"game_{i:06d}.json").write_text(json.dumps({
@@ -1849,16 +2039,22 @@ def test_the_dirty_tree_case_is_CONSTRUCTED_not_observed():
     assert ok["worktree_clean"] is True
 
 
-def test_preflight_rejects_a_checkpoint_that_disagrees_with_the_manifest(tmp_path):
+def test_preflight_rejects_a_checkpoint_that_disagrees_with_the_manifest(
+        tmp_path, monkeypatch):
     """The run must not use a different network from the one that generated its
     games. Constructed: two files with different digests."""
-    from scripts.GPU.alphazero.run_atlas import measure_provenance
-    ck = tmp_path / "net.safetensors"; ck.write_bytes(b"real")
-    block = tmp_path / "pilot"; block.mkdir()
-    (block / "block_manifest.json").write_text(json.dumps(
-        {"checkpoint_sha1": "f" * 40, "base_seed": 1, "n_games": 24}))
-    with pytest.raises(ValueError, match="checkpoint"):
-        measure_provenance(str(ck), pilot_dir=str(block))
+    import scripts.GPU.alphazero.run_atlas as ra
+    ck = _fake_ck(tmp_path)
+    # Patch the MEASUREMENT only: a TDD run has uncommitted code, so ambient
+    # provenance would raise "dirty worktree" long before the comparison runs.
+    monkeypatch.setattr(ra, "preflight_source_provenance",
+                        lambda path: _fixture_prov(ck))
+    block = _fake_block(tmp_path, checkpoint=ck)
+    manifest = json.loads((block / "block_manifest.json").read_text())
+    (block / "block_manifest.json").write_text(
+        json.dumps({**manifest, "checkpoint_sha1": "f" * 40}))
+    with pytest.raises(ValueError, match="checkpoint_sha1"):
+        ra.measure_provenance(str(ck), pilot_dir=str(block))
 
 
 def test_preflight_rejects_an_unreadable_corpus_artifact(tmp_path):
@@ -1965,12 +2161,10 @@ def test_run_final_SUCCESS_path_end_to_end(tmp_path, monkeypatch):
     """
     _patch_factory(monkeypatch)
     _patch_measured_provenance(monkeypatch, _fake_ck(tmp_path))
-    import scripts.GPU.alphazero.atlas_run as ar
-    monkeypatch.setattr(ar, "run_corpus",
-                        lambda *a, **k: _complete_continuation_doc(176))
+    _stub_measurement(monkeypatch, complete=True)
     ck, out = _fake_ck(tmp_path), tmp_path / "out"
     pilot = tmp_path / "pilot_artifact.json"
-    pilot.write_text(_authoritative_pilot_artifact(n=200))
+    pilot.write_text(_authoritative_pilot_artifact(ck, n=200))
 
     rc = run_atlas_main(_final_argv(tmp_path, ck, out, pilot))
     assert rc == EXIT_OK
@@ -1986,14 +2180,10 @@ def test_run_final_ABORTED_path_end_to_end(tmp_path, monkeypatch):
     """Same path, one unmeasured position: exit 5 and non-authoritative."""
     _patch_factory(monkeypatch)
     _patch_measured_provenance(monkeypatch, _fake_ck(tmp_path))
-    import scripts.GPU.alphazero.atlas_run as ar
-    short = dict(_complete_continuation_doc(175), authoritative=False,
-                 verdict="ABORTED", assigned=176, measured=175,
-                 failed_rows=[{"game_id": 99, "failure": "seed mismatch"}])
-    monkeypatch.setattr(ar, "run_corpus", lambda *a, **k: short)
+    _stub_measurement(monkeypatch, complete=False)
     ck, out = _fake_ck(tmp_path), tmp_path / "out"
     pilot = tmp_path / "pilot_artifact.json"
-    pilot.write_text(_authoritative_pilot_artifact(n=200))
+    pilot.write_text(_authoritative_pilot_artifact(ck, n=200))
 
     rc = run_atlas_main(_final_argv(tmp_path, ck, out, pilot))
     assert rc == EXIT_ABORTED
@@ -2225,6 +2415,8 @@ OPERATOR STOP -- this tool has not been authorized to run the atlas.
 
 - [ ] **Step 4: Run to verify it passes, then the full suite**
 
+Expected: PASS — 18 passed.
+
 ```bash
 .venv/bin/python -m pytest tests/test_run_atlas_cli.py -v -p no:cacheprovider
 .venv/bin/python -m pytest -p no:cacheprovider -q > /tmp/s5.out 2>&1; echo "REAL_EXIT=$?" >> /tmp/s5.out; tail -3 /tmp/s5.out
@@ -2318,9 +2510,9 @@ git commit -m "feat(atlas-s5): operator CLI, stop conditions and exit-status sid
       no-edit-after-preflight and no-commit-between rules.
 - [ ] `preflight` and `emit-runbook` are zero-GPU; `run` is the only branch that
       constructs an evaluator, and it imports the factory lazily.
-- [ ] **Test counting.** Planned: row-facts 8, artifact +5, run 30, CLI 18 = **61**
-      (29 → 45 → 55 → 61; each superseded, never adjusted). Stage 4 measured **2556**, so
-      the expected total is **2617**. Recount from `def test_` on disk at qualification
+- [ ] **Test counting.** Planned: row-facts 8, artifact +5, run 34, CLI 18 = **65**
+      (29 → 45 → 55 → 61 → 65; each superseded, never adjusted). Stage 4 measured
+      **2556**, so the expected total is **2621**. Recount from `def test_` on disk at qualification
       and **baseline against a measured collect**,
       not against any number in a document — Stage 4's predicted total was short by
       exactly two tests a post-qualification commit had added. The full-suite delta must
