@@ -31,13 +31,45 @@ operator path did not, and one qualification gap was missing.
 | 4 | **`wait $!` cannot recover a disowned PID.** A later shell has neither the job table nor a useful `$!` — the exact Phase 0 defect already on record, reproduced in the runbook that was supposed to prevent it. | Launch through a **detached shell wrapper** that runs Python and writes `REAL_EXIT` to a `shell_status` sidecar. The operator later reads that sidecar and `status.json`; no `wait` anywhere. |
 | 5 | **No test invoked the launchable command.** The only entry point the operator can run was an unqualified producer/consumer seam. | `run-pilot` and `run-final` are each driven end to end with a patched `FakeEvaluator` factory over real temporary directories, assignments, artifacts and both sidecars. |
 
-Planned tests move **29 → 45** (row-facts 8, run 22, CLI 15), recounted from the test
-functions in this document and to be recounted again from disk at qualification.
-
 **No frozen parameter, threshold or predicate changed.** The completeness condition
 counts assigned positions against measured ones; `PREFIX_SIMS = 400` is §2b's frozen
 "400-sim searches" named once; `PILOT_GAMES` and `PILOT_PER_CELL` come from
 `corpus_geometry`. Stage 5 still introduces no number of its own.
+
+## Revision 3 — 2026-08-05, the pilot-to-final boundary
+
+The two-stage structure survives review; seven defects at its seam did not. Most share a
+cause: **revision 2 treated the pilot artifact as if it were still live memory.**
+
+| # | Defect | Repair |
+|---|---|---|
+| 1 | **The pilot artifact is not reloadable.** `emit` runs everything through `_jsonable` and `json.dumps`: `LegResult`/`BoundaryRecord` become dicts, tuple paths become `"7\|3"` strings, `()` becomes `""`, and every integer map key becomes a string. Read-outs A and B address legs by *attribute*; C indexes `parent_visits` by *tuple* and priors by *int*. `run-final` would have fed all three a representation none of them can read. | New **Task 1**: `atlas_artifact.load_run` — the authenticated inverse of `emit`, rehydrating every type — qualified by an **emit → disk → load → all three read-outs** round trip. |
+| 2 | **The pilot fixture cannot produce its own history.** It asked an `active_size=6` game for 94 moves (a 6×6 fixture game terminates around 29) and then declared `n_moves=95`, which `replay_prefix` rejects outright: it requires `meta.n_moves == len(move_history)`. | A real `active_size=24` late-position fixture with `n_moves` **derived from the history actually produced**, kept CPU-only by `FakeEvaluator` and an internal reduced prefix budget. |
+| 3 | **`run-final` accepted an invented `N`.** The test passed `n_target=26` — outside the frozen `ALLOWED_N`, and produced by nobody. | `N` comes **exclusively** from `pilot_doc["sizing"]["N"]`, after validating an authoritative, successful pilot artifact holding exactly 24 fixed discovery rows. The `n_target` parameter is gone from the production path, and the continuation count must equal `N − 24`. |
+| 4 | **Undefined widening evidence was scored as failure.** `_early_widening_check` treated a `None` retention rate as a failing shape, so a sparse pilot could close progressive widening on an *absence* of evidence. | Each shape gets `validation_verdict`'s frozen `FAIL > INCONCLUSIVE > PASS`, and `both_fail` fires only when **both** are genuine `FAIL`. |
+| 5 | **Frozen parameters leaked onto the CLI.** `--active-size`, `--prefix-sims` and `--tiny-legs` would have let an operator change the board, the replay budget and the ladder. | The production parser exposes **none** of them, with a test proving it. Reduced budgets stay **internal test injection** at the module seam. |
+| 6 | **The launch wrapper lost the exit code.** Emitted shell where the outer redirection races the sidecar write, and — worse — a substring assertion can never catch a redirection-order bug. | `launch_wrapper(...)` becomes a **function**, structured `rc=$?; echo "REAL_EXIT=$rc" > sidecar; exit $rc`, and the test **executes a harmless emitted wrapper and reads the file**. |
+| 7 | *(corrections, below)* | |
+
+**Corrections carried in the same pass**
+
+- An **aborted pilot must not size**: `size_from_pilot` is not called, `sizing` is
+  `UNAVAILABLE` with `N: None`, `early_widening_check` is non-authoritative, partial
+  read-outs are preserved, exit 5.
+- **Provenance binds `git_head`**, not just the checkpoint digest — see the asymmetry
+  note in Task 3, which is a judgement call worth confirming.
+- `_fake_block` writes the **full production manifest**: board 24, 400 simulations, 280
+  max moves, batching `(14, 48, 8)`, noise **on**, clean provenance, exact filenames and
+  seeds. Its `active_size=6` manifest could never have passed the real `load_block`.
+- The stop-condition table said a row failure exits 0; it says **`ABORTED`, exit 5**.
+- Task 2's expected result said 12 tests while the task contained 22.
+
+Tasks renumber: **1** reloadable artifact, **2** composition, **3** operator CLI. Row
+facts stay Task 0.
+
+Planned tests move **45 → 55** (row-facts 8, artifact +4, run 27, CLI 16), recounted from
+the test functions in this document. Revision 2's 45 was internally correct for its own
+draft and is superseded rather than adjusted.
 
 ## Global Constraints
 
@@ -316,7 +348,199 @@ git commit -m "feat(atlas-s5): derive phase, side, flat_policy and near_even fro
 
 ---
 
-### Task 1: The composition — assigned row to authenticated artifact
+### Task 1: The pilot artifact must be reloadable
+
+**Files:**
+- Modify: `scripts/GPU/alphazero/atlas_artifact.py`
+- Test: `tests/test_atlas_artifact.py` (append)
+
+**Interfaces:**
+- Produces: `load_run(path_or_text) -> dict` — the **authenticated inverse of `emit`**.
+
+> **Why this task exists, and why it is before the composition.** `run-final` consumes
+> the pilot artifact. `emit` writes it through `_jsonable` and `json.dumps`, which is
+> lossy for exactly the types the read-outs need:
+>
+> | written as | comes back as | who breaks |
+> |---|---|---|
+> | `LegResult` dataclass | `dict` | Read-out B and `atlas_labelling` read `l.nominal_B` by **attribute** |
+> | `BoundaryRecord` | `dict` | `deployability` reads `.remaining` |
+> | `parent_visits` key `()` | `""` | `edge_retention` looks up **tuples** |
+> | `parent_visits` key `(7, 3)` | `"7\|3"` | same |
+> | `parent_priors` key `7` (int) | `"7"` | `static_retention` ranks **int** move ids |
+> | `visit_counts` key `7` | `"7"` | same |
+> | `parent_path` / `sources` tuple | `list` | edge keys and dedup identity |
+>
+> Every one of these is silently *wrong* rather than loudly broken: a string-keyed prior
+> map still sorts, still has a length, and still produces a rank — just not the right
+> one. Round-tripping is therefore not a nicety, it is the only thing that makes the
+> two-stage protocol possible at all.
+
+Rehydration is exactly invertible because move ids are integers, so `"7|3" → (7, 3)` and
+`"" → ()` are unambiguous. `load_run` also **authenticates**: it checks
+`schema_version`, and re-runs `validate_provenance` on the loaded provenance so a
+hand-edited or truncated artifact cannot be consumed.
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# append to tests/test_atlas_artifact.py
+from scripts.GPU.alphazero.atlas_artifact import load_run
+
+
+def test_load_run_is_the_inverse_of_emit_for_every_lossy_type():
+    leg = LegResult(nominal_B=400, inherited_I=137, effective=537,
+                    root_value=0.25, selected_move=7,
+                    selected_move_prior_rank=1, top_share=0.5,
+                    top_two_margin=0.2, effective_children=12.0,
+                    n_visited_children=20, visit_counts={7: 100})
+    snaps = _snapshots(
+        parent_visits={"at_boundary": {(): 463, (7, 3): 12},
+                       "at_400": {(): 537}},
+        reference_lines={"at_3200": None, "at_6400": None, "merged": {
+            "required_edges": [{"parent_path": (), "move": 7, "depth": 0,
+                                "parent_priors": {7: 0.6, 8: 0.4},
+                                "sources": (3200, 6400)}],
+            "agreement": {}}})
+    row = build_row(**_kw(legs=[leg], boundary=None, snapshots=snaps))
+    back = load_run(emit({"rows": [row], "provenance": PROV}))["rows"][0]
+
+    # Dataclasses, by ATTRIBUTE -- Read-out B and atlas_labelling need this.
+    assert back["legs"][0].nominal_B == 400
+    assert back["legs"][0].visit_counts == {7: 100}        # int keys, not "7"
+    # Tuple paths, including the empty root path.
+    pv = back["snapshots"]["parent_visits"]["at_boundary"]
+    assert pv[()] == 463 and pv[(7, 3)] == 12
+    # Edge identity: tuple path, int-keyed priors, tuple sources.
+    edge = back["snapshots"]["reference_lines"]["merged"]["required_edges"][0]
+    assert edge["parent_path"] == () and edge["sources"] == (3200, 6400)
+    assert edge["parent_priors"] == {7: 0.6, 8: 0.4}
+
+
+def test_a_boundary_record_rehydrates_or_stays_None():
+    row = build_row(**_kw(boundary=BoundaryRecord(N_actual=326, overshoot=6,
+                                                  remaining=74,
+                                                  flush_type="full")))
+    back = load_run(emit({"rows": [row], "provenance": PROV}))["rows"][0]
+    assert back["boundary"].remaining == 74
+    none_row = build_row(**_kw(boundary=None))
+    back = load_run(emit({"rows": [none_row], "provenance": PROV}))["rows"][0]
+    assert back["boundary"] is None and back["boundary_missing"] is True
+
+
+def test_load_run_AUTHENTICATES_rather_than_merely_parsing():
+    """A hand-edited or truncated artifact must not be consumable."""
+    good = emit({"rows": [], "provenance": PROV})
+    load_run(good)                                   # baseline: accepted
+    doc = json.loads(good)
+    doc["provenance"]["worktree_clean"] = False
+    with pytest.raises(ValueError, match="provenance"):
+        load_run(json.dumps(doc))
+    doc = json.loads(good)
+    doc["rows"] = [dict(build_row(**_kw()), schema_version=999)]
+    with pytest.raises(ValueError, match="schema_version"):
+        load_run(json.dumps(doc))
+
+
+def test_the_ROUND_TRIP_feeds_all_three_readouts(tmp_path):
+    """emit -> DISK -> load -> A, B and C. The two-stage protocol is exactly
+    this path, so it is qualified as one."""
+    from scripts.GPU.alphazero.atlas_readout_a import evaluate_detector_both
+    from scripts.GPU.alphazero.atlas_readout_b import calibrate_gate
+    from scripts.GPU.alphazero.atlas_readout_c import aggregate_shape
+
+    def _four_rungs():
+        """All four frozen rungs -- labelling and Read-out B index every one."""
+        return [LegResult(nominal_B=b, inherited_I=10, effective=10 + b,
+                          root_value=0.05, selected_move=3,
+                          selected_move_prior_rank=1, top_share=0.5,
+                          top_two_margin=0.2, effective_children=12.0,
+                          n_visited_children=20, visit_counts={3: 100})
+                for b in (400, 1600, 3200, 6400)]
+
+    rows = [build_row(**_kw(legs=_four_rungs(), label=lbl))
+            for lbl in ("misleading", "stable_negative")]
+    p = tmp_path / "pilot_artifact.json"
+    p.write_text(emit({"rows": rows, "provenance": PROV}))
+
+    back = load_run(p)["rows"]
+    # B reads legs by attribute; a dict would raise AttributeError here.
+    assert calibrate_gate(back, "top_share_increase")["verdict"] in {
+        "needs review", "no finding"}
+    # C indexes parent_visits by tuple and ranks int-keyed priors.
+    agg = aggregate_shape(back, ("c4a05", 4.0, 0.5))
+    assert agg["gated_on"] == "at_400"
+    # A reads the two feature dicts off the row.
+    r = evaluate_detector_both(back, back, replicates=8)
+    assert r["authoritative"] == "features_at_boundary"
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_atlas_artifact.py -v -p no:cacheprovider`
+Expected: FAIL — `ImportError: cannot import name 'load_run'`
+
+- [ ] **Step 3: Implement**
+
+```python
+def _unpath(key: str) -> Tuple[int, ...]:
+    """"" -> (), "7|3" -> (7, 3). Unambiguous because move ids are integers."""
+    return tuple(int(p) for p in key.split("|")) if key else ()
+
+
+def load_run(source) -> Dict[str, Any]:
+    """The AUTHENTICATED inverse of `emit`.
+
+    `emit` is lossy for exactly the types the read-outs need -- dataclasses,
+    tuple keys, integer keys -- and every loss is silently wrong rather than
+    loudly broken: a string-keyed prior map still sorts and still yields a rank,
+    just not the right one. Nothing may consume an artifact except through here.
+    """
+    doc = json.loads(source.read_text() if hasattr(source, "read_text")
+                     else source)
+    checked = validate_provenance(doc.get("provenance"))
+    if checked["verdict"] != "OK":
+        raise ValueError(f"refusing to load: provenance does not validate "
+                         f"({', '.join(checked['problems'])})")
+    for row in doc.get("rows", ()):
+        if row.get("schema_version") != ROW_SCHEMA_VERSION:
+            raise ValueError(
+                f"row schema_version {row.get('schema_version')!r} != "
+                f"{ROW_SCHEMA_VERSION}; this artifact was not written by this code")
+        row["legs"] = [LegResult(**{**l, "visit_counts": {
+            int(k): v for k, v in l["visit_counts"].items()}})
+            for l in row["legs"]]
+        row["boundary"] = (BoundaryRecord(**row["boundary"])
+                           if row["boundary"] is not None else None)
+        snaps = row["snapshots"]
+        snaps["parent_visits"] = {
+            inst: ({_unpath(k): v for k, v in (m or {}).items()}
+                   if m is not None else None)
+            for inst, m in snaps["parent_visits"].items()}
+        for line in snaps["reference_lines"].values():
+            for edge in (line or {}).get("required_edges", ()):
+                edge["parent_path"] = tuple(edge["parent_path"])
+                edge["sources"] = tuple(edge["sources"])
+                edge["parent_priors"] = {int(k): v for k, v
+                                         in edge["parent_priors"].items()}
+    return doc
+```
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_atlas_artifact.py -v -p no:cacheprovider`
+Expected: PASS — Stage 4's 14 plus 4 new.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add scripts/GPU/alphazero/atlas_artifact.py tests/test_atlas_artifact.py
+git commit -m "feat(atlas-s5): authenticated load_run, the reloadable inverse of emit"
+```
+
+---
+
+### Task 2: The composition — assigned row to authenticated artifact
 
 **Files:**
 - Create: `scripts/GPU/alphazero/atlas_run.py`
@@ -631,15 +855,44 @@ def test_run_corpus_cannot_build_an_evaluator():
 # -- section 3's chronology: pilot first, then final --------------------------
 
 from scripts.GPU.alphazero.atlas_run import pilot_rows, run_final, run_pilot
+from scripts.GPU.alphazero.atlas_labelling import ALLOWED_N
 from scripts.GPU.alphazero.corpus_geometry import PILOT_GAMES, PILOT_PER_CELL
 
 SAMPLING_SEED = 20260805
 
 
-def _pilot_metas(n_moves=95):
-    """24 games long enough to reach ply 91+, which is what a late cell
-    requires. Every game can then serve every cell, so the matching is
-    feasible and the gate exercises its PASS path."""
+def _late_history(min_plies=92):
+    """A REAL board-24 history long enough to serve a late cell.
+
+    Three things this cannot be faked around. A 6x6 fixture game terminates
+    after roughly 29 legal moves, so `active_size=6` can never reach ply 91+.
+    `replay_prefix` asserts `meta.n_moves == len(move_history)`, so the length
+    must be DERIVED, never declared. And a history that walks into a win ends
+    the game early, so the walk stops at terminal and the caller checks what it
+    actually got.
+    """
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    s, out = TwixtState(active_size=24, to_move="red"), []
+    while len(out) < min_plies + 8:
+        if s.is_terminal():
+            break
+        lm = s.legal_moves()
+        if not lm:
+            break
+        # Spread the moves out rather than always taking legal_moves()[0],
+        # which walks a single file and can connect early.
+        mv = lm[(len(out) * 37) % len(lm)]
+        out.append(mv)
+        s = s.apply_move(mv)
+    assert len(out) >= min_plies, (
+        f"fixture produced only {len(out)} plies; a late cell needs ply 91+")
+    return out
+
+
+def _pilot_metas(n_moves):
+    """24 games, all of length `n_moves` -- DERIVED from the history actually
+    produced, never declared. Every game can then serve every cell, so the
+    matching is feasible and the gate exercises its PASS path."""
     return [GameMeta(game_id=i, seed=BASE + i, n_moves=n_moves,
                      start_player="red") for i in range(PILOT_GAMES)]
 
@@ -648,24 +901,36 @@ _PILOT_CACHE = {}
 
 
 def _tiny_pilot():
-    """One cached 24-row pilot at `prefix_sims=2`.
+    """One cached 24-row pilot at board 24 with `prefix_sims=2`.
 
     Prefix replay costs `target_ply x prefix_sims` per row and the late cells
     sit at ply 91+, so the frozen 400 would be ~36,000 simulations per late row
     -- fine on a GPU, absurd in a unit test. `prefix_sims` defaults to the
-    frozen 400 and is overridden only here, exactly as `replicates` is in
-    Read-out A.
+    frozen 400 and is lowered only here, exactly as `replicates` is in
+    Read-out A. The BOARD is not reduced: it is a frozen production setting and
+    the block manifest would reject anything else.
     """
     if "doc" not in _PILOT_CACHE:
-        metas = _pilot_metas()
-        hist = _history(94)
+        hist = _late_history()
+        metas = _pilot_metas(len(hist))
         _PILOT_CACHE["doc"] = run_pilot(
             FakeEvaluator(value=0.0), metas, sampling_seed=SAMPLING_SEED,
             base_seed=BASE,
             move_histories={m.game_id: hist for m in metas},
-            provenance=_PROV, active_size=SIZE, prefix_sims=2,
+            provenance=_PROV, prefix_sims=2,
             increments=(80, 80, 80, 80), threshold=40, leg_B=80)
     return _PILOT_CACHE["doc"]
+
+
+def test_the_pilot_fixture_can_actually_serve_a_late_cell():
+    """The fixture is load-bearing: if it cannot reach ply 91+, the geometry
+    gate fails and every pilot test below is vacuous."""
+    hist = _late_history()
+    assert len(hist) >= 92
+    rows = pilot_rows(_pilot_metas(len(hist)), SAMPLING_SEED)
+    assert max(r["ply"] for r in rows) >= 91
+    assert {r["phase"] for r in rows} == {"opening", "early_mid", "midgame",
+                                          "late"}
 
 
 def test_pilot_rows_are_the_24_fixed_discovery_rows():
@@ -703,50 +968,122 @@ def test_run_pilot_sizes_from_ITS_OWN_class_counts():
     doc = _tiny_pilot()
     assert doc["sizing"]["verdict"] in {"OK", "PROJECTED_CAPACITY_NO_GO"}
     if doc["sizing"]["verdict"] == "OK":
-        assert doc["sizing"]["N"] % 40 == 0
+        assert doc["sizing"]["N"] in ALLOWED_N
     else:
         assert doc["sizing"]["N"] is None          # None, never a default
     assert doc["splits"] == {"discovery": len(doc["rows"])}
 
 
+def test_an_ABORTED_pilot_does_not_size_and_does_not_close_widening():
+    """Sizing an incomplete pilot would set N from a class frequency measured
+    over fewer than 24 rows, and closing progressive widening on it would end a
+    read-out on evidence that was never gathered."""
+    hist = _late_history()
+    metas = _pilot_metas(len(hist))
+    metas[0] = GameMeta(game_id=0, seed=BASE + 999, n_moves=len(hist),
+                        start_player="red")          # seed will not verify
+    doc = run_pilot(FakeEvaluator(value=0.0), metas,
+                    sampling_seed=SAMPLING_SEED, base_seed=BASE,
+                    move_histories={m.game_id: hist for m in metas},
+                    provenance=_PROV, prefix_sims=2,
+                    increments=(80, 80, 80, 80), threshold=40, leg_B=80)
+    assert doc["verdict"] == "ABORTED" and doc["authoritative"] is False
+    assert doc["sizing"]["verdict"] == "UNAVAILABLE"
+    assert doc["sizing"]["N"] is None
+    assert doc["early_widening_check_authoritative"] is False
+    # Partial diagnostics are preserved, not discarded.
+    assert doc["rows"] and doc["failed_rows"]
+
+
 def test_run_pilot_reports_the_early_static_widening_check():
     """Section 8: if BOTH shapes clearly fail retention on the pilot, close
-    progressive widening without inventing another shape. Reported here so the
-    operator can act on it before paying for the full corpus."""
+    progressive widening without inventing another shape."""
     doc = _tiny_pilot()
-    assert set(doc["early_widening_check"]) == {"c4a05", "c13a03", "both_fail"}
-    assert doc["early_widening_check"]["both_fail"] in (True, False)
+    ew = doc["early_widening_check"]
+    assert set(ew) == {"c4a05", "c13a03", "both_fail"}
+    for shape in ("c4a05", "c13a03"):
+        assert ew[shape]["verdict"] in {"PASS", "FAIL", "INCONCLUSIVE"}
+    assert doc["early_widening_check_authoritative"] is True
 
 
-def test_run_final_combines_the_pilot_24_with_the_continuation():
-    """The pilot rows are READ BACK from the pilot artifact, never re-derived:
-    section 3 fixes them as discovery rows that are never reconsidered."""
-    pilot = _tiny_pilot()
-    cont = [_assigned(100, "validation"), _assigned(101, "validation")]
-    doc = run_final(FakeEvaluator(value=0.0), pilot_doc=pilot,
-                    metas=[_meta(100), _meta(101)], continuation_rows=cont,
-                    base_seed=BASE,
-                    move_histories={100: _history(4), 101: _history(4)},
-                    provenance=_PROV, n_target=len(pilot["rows"]) + 2,
-                    active_size=SIZE, increments=(80, 80, 80, 80),
-                    threshold=40, leg_B=80)
-    assert doc["measured"] == len(pilot["rows"]) + 2
-    assert doc["pilot_rows_carried"] == len(pilot["rows"])
-    # The carried rows keep their pilot identity and their discovery split.
-    assert all(r["split"] == "discovery"
-               for r in doc["rows"][:len(pilot["rows"])])
+def _row_with_no_reference_edges():
+    """A row whose merged line reached nothing, so every retention denominator
+    is empty and every rate is None."""
+    return {"snapshots": {"at_boundary": None, "at_400": None,
+                          "parent_visits": {"at_boundary": {}, "at_400": {}},
+                          "reference_lines": {"merged": {
+                              "required_edges": [],
+                              "agreement": {d: {"state": "absent_both"}
+                                            for d in ("root", "reply",
+                                                      "two_ply")}}}},
+            "label": "ambiguous", "phase": "late",
+            "flat_policy": None, "near_even": None}
 
 
-def test_run_final_fails_closed_unless_the_total_is_EXACTLY_N():
-    pilot = _tiny_pilot()
-    cont = [_assigned(100, "validation")]
+def test_INCONCLUSIVE_widening_evidence_is_not_a_failure():
+    """A None retention rate means the rate is UNDEFINED, not that the shape
+    failed. Closing progressive widening on an absence of evidence is exactly
+    the mistake the verdict precedence exists to prevent."""
+    from scripts.GPU.alphazero.atlas_run import _early_widening_check
+    # No required edges anywhere -> every retention rate is None.
+    rows = [_row_with_no_reference_edges() for _ in range(3)]
+    ew = _early_widening_check(rows)
+    assert ew["c4a05"]["verdict"] == "INCONCLUSIVE"
+    assert ew["c13a03"]["verdict"] == "INCONCLUSIVE"
+    assert ew["both_fail"] is False               # NOT closed
+
+
+# -- N comes from the pilot, and from nowhere else ---------------------------
+
+def _pilot_stub(n=200, rows=24, verdict="OK", authoritative=True,
+                sizing_verdict="OK"):
+    """A pilot DOCUMENT, not a pilot run: these gates must reject before any
+    measurement is paid for, so they are tested without one."""
+    return {"mode": "pilot", "verdict": verdict, "authoritative": authoritative,
+            "rows": [{"split": "discovery"} for _ in range(rows)],
+            "sizing": {"verdict": sizing_verdict,
+                       "N": n if sizing_verdict == "OK" else None}}
+
+
+def test_run_final_takes_N_ONLY_from_the_pilot_sizing():
+    """There is no n_target parameter to supply an invented value through."""
+    import inspect
+    assert "n_target" not in inspect.signature(run_final).parameters
+
+
+def test_run_final_requires_the_continuation_to_be_exactly_N_minus_24():
     with pytest.raises(ValueError, match="exactly"):
-        run_final(FakeEvaluator(value=0.0), pilot_doc=pilot,
-                  metas=[_meta(100)], continuation_rows=cont, base_seed=BASE,
-                  move_histories={100: _history(4)}, provenance=_PROV,
-                  n_target=999,                    # not 24 + 1
-                  active_size=SIZE, increments=(80, 80, 80, 80),
-                  threshold=40, leg_B=80)
+        run_final(FakeEvaluator(value=0.0), pilot_doc=_pilot_stub(n=200),
+                  metas=[], continuation_rows=[_assigned(100)] * 3,
+                  base_seed=BASE, move_histories={}, provenance=_PROV)
+
+
+def test_run_final_refuses_a_non_authoritative_or_unsized_pilot():
+    for stub in (_pilot_stub(verdict="ABORTED", authoritative=False),
+                 _pilot_stub(sizing_verdict="PROJECTED_CAPACITY_NO_GO"),
+                 _pilot_stub(sizing_verdict="UNAVAILABLE"),
+                 _pilot_stub(rows=23)):            # not the fixed 24
+        with pytest.raises(ValueError):
+            run_final(FakeEvaluator(value=0.0), pilot_doc=stub, metas=[],
+                      continuation_rows=[], base_seed=BASE,
+                      move_histories={}, provenance=_PROV)
+
+
+def test_run_final_carries_the_pilot_rows_rather_than_re_measuring_them():
+    """Section 3 fixes them as discovery rows never reconsidered, and
+    assign_corpus already excluded their game ids from its pool."""
+    pilot = _pilot_stub(n=200)
+    doc = run_final(FakeEvaluator(value=0.0), pilot_doc=pilot, metas=[],
+                    continuation_rows=[_assigned(1000 + i) for i in range(176)],
+                    base_seed=BASE, move_histories={}, provenance=_PROV,
+                    prefix_sims=2, increments=(80, 80, 80, 80),
+                    threshold=40, leg_B=80)
+    # Every continuation row fails at seed verification (no metas), so the run
+    # is ABORTED -- but the chronology, the N check and the carry all ran.
+    assert doc["n_target"] == 200
+    assert doc["pilot_rows_carried"] == 24
+    assert doc["assigned"] == 200
+    assert doc["verdict"] == "ABORTED" and doc["authoritative"] is False
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -896,46 +1233,70 @@ def pilot_rows(pilot_games: Sequence[GameMeta], sampling_seed: int
 def _early_widening_check(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
     """Section 8's early static check, on the pilot only.
 
-    Reuses `aggregate_shape` per frozen shape and reports whether BOTH fail the
-    retention floors -- the frozen condition for closing progressive widening
-    "without inventing another shape". Reported, never acted on automatically.
+    Each shape gets the FROZEN three-way precedence, because a `None` retention
+    rate means the rate is UNDEFINED -- not that the shape failed. Scoring an
+    undefined rate as a failure would let a sparse pilot close progressive
+    widening on an ABSENCE of evidence, which is the exact mistake
+    `validation_verdict`'s precedence exists to prevent.
+
+    `both_fail` therefore fires only on two genuine FAILs. Reported to the
+    operator; never acted on automatically.
     """
-    per = {s[0]: aggregate_shape(rows, s) for s in WIDENING_SHAPES}
-    failed = {k: (v["root_retention"] is None
-                  or v["root_retention"] < RETENTION_ROOT_BAR
-                  or v["depth1_retention"] is None
-                  or v["depth1_retention"] < RETENTION_DEPTH1_BAR)
-              for k, v in per.items()}
-    return {**failed, "both_fail": all(failed.values())}
+    per = {s[0]: validation_verdict(aggregate_shape(rows, s))
+           for s in WIDENING_SHAPES}
+    return {**per,
+            "both_fail": all(v["verdict"] == "FAIL" for v in per.values())}
 
 
 def run_pilot(evaluator, pilot_games, *, sampling_seed, base_seed,
               move_histories, provenance, **kw) -> dict:
     """Section 3's pilot: 24 rows, ALL discovery, on the full ladder.
 
-    N is this function's OUTPUT, not its input. It also runs section 8's early
-    static widening check, so `both_fail` -- close progressive widening without
-    inventing another shape -- reaches the operator before the full corpus is
-    paid for.
+    N is this function's OUTPUT, not its input.
     """
     doc = run_corpus(evaluator, pilot_games, pilot_rows(pilot_games, sampling_seed),
                      base_seed=base_seed, move_histories=move_histories,
                      provenance=provenance, **kw)
+    doc["mode"] = "pilot"
+    if not doc["authoritative"]:
+        # An incomplete pilot must not size: N would come from a class
+        # frequency measured over fewer than 24 rows, and closing progressive
+        # widening on it would end a read-out on evidence never gathered.
+        # Partial diagnostics are preserved; the conclusions are not offered.
+        doc["sizing"] = {"verdict": "UNAVAILABLE", "N": None,
+                         "reason": "the pilot did not measure all 24 assigned "
+                                   "positions; sizing needs a complete pilot"}
+        doc["early_widening_check"] = _early_widening_check(doc["rows"])
+        doc["early_widening_check_authoritative"] = False
+        return doc
     doc["sizing"] = size_from_pilot(doc["class_counts"])
     doc["early_widening_check"] = _early_widening_check(doc["rows"])
-    doc["mode"] = "pilot"
+    doc["early_widening_check_authoritative"] = True
     return doc
 
 
-def run_final(evaluator, *, pilot_doc, metas, continuation_rows, n_target,
+def run_final(evaluator, *, pilot_doc, metas, continuation_rows,
               base_seed, move_histories, provenance, **kw) -> dict:
     """The pilot's 24 discovery rows PLUS the continuation's N-24.
 
-    The pilot rows are READ BACK from the pilot artifact, never re-derived:
-    section 3 fixes them as discovery rows that are never reconsidered, and
-    `assign_corpus` already excluded their game ids from its pool.
+    N comes from `pilot_doc["sizing"]` and from NOWHERE else -- there is no
+    `n_target` parameter, so an invented or out-of-set value cannot be supplied.
+    The pilot rows are CARRIED, never re-measured: section 3 fixes them as
+    discovery rows that are never reconsidered, and `assign_corpus` already
+    excluded their game ids from its pool.
     """
+    if pilot_doc.get("verdict") != "OK" or not pilot_doc.get("authoritative"):
+        raise ValueError("refusing to run: the pilot artifact is not an "
+                         "authoritative, complete pilot")
+    sizing = pilot_doc.get("sizing") or {}
+    if sizing.get("verdict") != "OK" or sizing.get("N") is None:
+        raise ValueError(f"refusing to run: pilot sizing is "
+                         f"{sizing.get('verdict')!r}, so there is no N")
     carried = pilot_doc["rows"]
+    if len(carried) != PILOT_GAMES:
+        raise ValueError(f"pilot artifact holds {len(carried)} rows, not the "
+                         f"fixed {PILOT_GAMES}")
+    n_target = sizing["N"]
     if len(carried) + len(continuation_rows) != n_target:
         raise ValueError(
             f"corpus must contain exactly N={n_target} positions: "
@@ -950,7 +1311,7 @@ def run_final(evaluator, *, pilot_doc, metas, continuation_rows, n_target,
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_run.py -v -p no:cacheprovider`
-Expected: PASS — 12 passed.
+Expected: PASS — 22 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -961,14 +1322,14 @@ git commit -m "feat(atlas-s5): compose assigned row through the read-outs into o
 
 ---
 
-### Task 2: The operator CLI, stop conditions and exit-status sidecars
+### Task 3: The operator CLI, stop conditions and exit-status sidecars
 
 **Files:**
 - Create: `scripts/GPU/alphazero/run_atlas.py`
 - Test: `tests/test_run_atlas_cli.py`
 
 **Interfaces:**
-- Produces: `EXIT_OK=0`, `EXIT_USAGE=2`, `EXIT_PROVENANCE=3`, `EXIT_ABORTED=5`; `STOP_CONDITIONS`; `measure_provenance(checkpoint, *, pilot_dir=None, continuation_dir=None, pilot_artifact=None) -> dict`; `write_status_sidecar(path, *, verdict, exit_code, **extra)`; **`main(argv=None) -> int`** with `preflight`, `emit-runbook`, `run-pilot`, `run-final`. `argv` is a parameter so the launchable commands can be driven in-process by tests, rather than only through a subprocess that could never patch the evaluator factory.
+- Produces: `EXIT_OK=0`, `EXIT_USAGE=2`, `EXIT_PROVENANCE=3`, `EXIT_ABORTED=5`; `STOP_CONDITIONS`; `measure_provenance(checkpoint, *, pilot_dir=None, continuation_dir=None, pilot_artifact=None) -> dict`; **`launch_wrapper(argv, *, out_dir) -> str`**; `write_status_sidecar(path, *, verdict, exit_code, **extra)`; **`main(argv=None) -> int`** with `preflight`, `emit-runbook`, `run-pilot`, `run-final`. `argv` is a parameter so the launchable commands can be driven in-process by tests, rather than only through a subprocess that could never patch the evaluator factory.
 - **`run-pilot` and `run-final` are the only places `_default_evaluator_factory` is called, and it is imported lazily inside those branches.** Stage 5 writes them, drives them once each against a patched factory, and never executes them for real.
 
 #### Provenance is MEASURED, not claimed
@@ -984,8 +1345,19 @@ on a dirty tree, passes the gate. `measure_provenance` instead:
 2. compares the **measured** digest against `load_manifest(pilot_dir)` and
    `load_manifest(continuation_dir)`, and calls `assert_blocks_agree` on the pair, so the
    run cannot use a different network from the one that generated its games;
-3. compares it against the pilot artifact's recorded provenance at `run-final`, so the
-   two halves of the corpus cannot come from different checkpoints.
+3. **binds the measured `git_head`**, which the manifests also record, to both blocks and
+   to the pilot artifact — not merely the checkpoint digest.
+
+**The `git_head` binding is asymmetric, and deliberately so.** Generation necessarily
+predates this tooling, so requiring the run's HEAD to equal the *manifests'* HEAD would
+be unsatisfiable — that relationship is **recorded** in the run's provenance block and
+reported, never required. The **pilot artifact** is different: §9 forbids a source edit
+between preflight and qualification, so the pilot and final halves of one atlas run must
+be at the same HEAD, and `run-final` **requires** equality there. Recording both makes
+the run reconstructible; requiring the one that must hold catches a mid-run edit.
+
+*This asymmetry is a judgement call rather than a frozen rule, and is flagged for
+confirmation before implementation.*
 
 **Negative cases are CONSTRUCTED, never observed.** `validate_source_provenance` is pure
 and takes `porcelain` as a string, so the dirty-tree test passes `" M foo.py"` directly.
@@ -1041,6 +1413,8 @@ from scripts.GPU.alphazero.run_atlas import (
 from tests.eval_fakes import FakeEvaluator
 
 BASE = 20500000
+PROV = {"git_head": "a" * 40, "worktree_clean": True,
+        "checkpoint_sha1": "0" * 40}
 
 
 def _cli(*args):
@@ -1057,18 +1431,77 @@ def _fake_ck(tmp_path):
     return ck
 
 
-def _fake_block(tmp_path, name="pilot", n_games=24, checkpoint=None):
-    """A block directory with a manifest and per-game sidecars, written to
-    match what load_block verifies. Constructed, not generated: Stage 5
-    generates no reservoir."""
+def _authoritative_pilot_artifact(n=200):
+    """A complete, sized pilot artifact as `emit` would have written one.
+
+    Constructed rather than measured: these tests exercise run-final's gates
+    and chronology, and paying for 24 real ladders to reach them would qualify
+    nothing extra.
+    """
+    from scripts.GPU.alphazero.atlas_artifact import build_row, emit
+    rows = [build_row(game_idx=i, replay_seed=BASE + i, target_ply=95,
+                      phase="late", side="red", split="discovery",
+                      inherited_I=0, reset_count=0, reset_rate=None,
+                      last_reset_ply=None, boundary=None, legs=[],
+                      label="ambiguous", features_at_boundary=None,
+                      features_at_400=None,
+                      snapshots={"at_boundary": None, "at_400": None,
+                                 "captures": {}, "parent_visits": {},
+                                 "reference_lines": {}},
+                      flat_policy=None, near_even=None)
+            for i in range(24)]
+    return emit({"rows": rows, "provenance": PROV,
+                 "mode": "pilot", "verdict": "OK", "authoritative": True,
+                 "sizing": {"verdict": "OK", "N": n}})
+
+
+def _assign_artifact(tmp_path, n_rows):
+    """`assign_corpus`'s output shape: the continuation rows only."""
+    p = tmp_path / "assign.json"
+    p.write_text(json.dumps({"verdict": "OK", "rows": [
+        {"game_id": 24 + i, "seed": BASE + 24 + i, "split": "validation",
+         "phase": "late", "side": "red", "ply": 95} for i in range(n_rows)]}))
+    return p
+
+
+def _fake_block(tmp_path, name="pilot", n_games=24, start_index=0,
+                checkpoint=None, history=None):
+    """A block directory carrying the FULL PRODUCTION manifest.
+
+    `load_block` verifies PRODUCTION_SETTINGS -- board 24, 400 simulations, 280
+    max moves, batching (14, 48, 8), noise ON -- plus clean provenance, exact
+    filenames, exact index coverage and `seed == base_seed + game_idx`. A
+    manifest claiming active_size=6 could never pass it, and a fixture that
+    cannot pass the real loader qualifies nothing.
+
+    Constructed, not generated: Stage 5 generates no reservoir.
+    """
     import hashlib
+    from scripts.GPU.alphazero.generate_atlas_reservoir import (
+        MANIFEST, seed_for_index,
+    )
+    ck = checkpoint or _fake_ck(tmp_path)
+    hist = history if history is not None else _late_history()
     d = tmp_path / name
     d.mkdir(parents=True, exist_ok=True)
-    sha = hashlib.sha1((checkpoint or _fake_ck(tmp_path)).read_bytes()).hexdigest()
-    (d / "block_manifest.json").write_text(json.dumps({
-        "checkpoint_sha1": sha, "base_seed": BASE, "start_index": 0,
-        "n_games": n_games, "settings": {"active_size": 6}}))
-    ...   # per-game sidecars: game_idx, seed, start_player, n_moves, move_history
+    (d / MANIFEST).write_text(json.dumps({
+        "base_seed": BASE, "start_index": start_index, "n_games": n_games,
+        "seed_range": [seed_for_index(BASE, start_index),
+                       seed_for_index(BASE, start_index + n_games)],
+        # The frozen production settings, verbatim.
+        "n_simulations": 400, "max_moves": 280, "active_size": 24,
+        "batching": [14, 48, 8], "add_noise": True,
+        # Clean provenance, CONSTRUCTED -- never read from the ambient tree.
+        "git_head": "a" * 40, "worktree_clean": True,
+        "checkpoint_path": str(ck),
+        "checkpoint_sha1": hashlib.sha1(ck.read_bytes()).hexdigest(),
+    }, indent=2, sort_keys=True))
+    for i in range(start_index, start_index + n_games):
+        (d / f"game_{i:06d}.json").write_text(json.dumps({
+            "game_idx": i, "seed": seed_for_index(BASE, i),
+            "start_player": "red", "n_moves": len(hist),
+            "winner": None, "draw_reason": "state_cap",
+            "move_history": [list(m) for m in hist]}))
     return d
 
 
@@ -1198,46 +1631,100 @@ def _patch_factory(monkeypatch):
                         lambda _p: FakeEvaluator(value=0.0), raising=True)
 
 
+def _cheap_budgets(monkeypatch):
+    """Reduced budgets are INTERNAL TEST INJECTION at the module seam, never
+    CLI flags: the board, the replay budget and the ladder are frozen, and an
+    operator must not be able to change them from the command line."""
+    import scripts.GPU.alphazero.atlas_run as ar
+    monkeypatch.setattr(ar, "PREFIX_SIMS", 2)
+    monkeypatch.setattr(ar, "LEG_INCREMENTS_DEFAULT", (80, 80, 80, 80))
+    monkeypatch.setattr(ar, "BOUNDARY_THRESHOLD_DEFAULT", 40)
+    monkeypatch.setattr(ar, "LEG_B_DEFAULT", 80)
+
+
+def test_the_production_parser_exposes_NO_frozen_parameter():
+    """The board, the replay budget and the ladder are frozen. A flag that can
+    change them is a protocol change with a command-line interface."""
+    for sub in ("run-pilot", "run-final"):
+        out = _cli(sub, "--help").stdout
+        for leaked in ("--active-size", "--prefix-sims", "--tiny-legs",
+                       "--increments", "--threshold", "--leg-b",
+                       "--n-target", "--n-simulations"):
+            assert leaked not in out, f"{sub} exposes {leaked}"
+
+
 def test_run_pilot_end_to_end_with_a_patched_factory(tmp_path, monkeypatch):
-    """The only entry point the operator can launch, actually launched."""
+    """The only entry point the operator can launch, actually launched --
+    against real blocks, a real artifact and both real sidecars."""
     _patch_factory(monkeypatch)
+    _cheap_budgets(monkeypatch)
+    ck = _fake_ck(tmp_path)
     out = tmp_path / "out"
-    rc = run_atlas_main(["run-pilot", "--pilot-dir", str(_fake_block(tmp_path)),
-                         "--base-seed", str(BASE), "--sampling-seed", "20260805",
-                         "--checkpoint", str(_fake_ck(tmp_path)),
-                         "--out-dir", str(out), "--prefix-sims", "2",
-                         "--active-size", "6", "--tiny-legs"])
+    rc = run_atlas_main(["run-pilot",
+                         "--pilot-dir", str(_fake_block(tmp_path, checkpoint=ck)),
+                         "--base-seed", str(BASE),
+                         "--sampling-seed", "20260805",
+                         "--checkpoint", str(ck), "--out-dir", str(out)])
     assert rc == EXIT_OK
     doc = json.loads((out / "pilot_artifact.json").read_text())
     assert doc["mode"] == "pilot" and doc["verdict"] == "OK"
-    assert len(doc["rows"]) == 24 and doc["sizing"]["verdict"] in {
-        "OK", "PROJECTED_CAPACITY_NO_GO"}
+    assert len(doc["rows"]) == 24
+    assert doc["sizing"]["verdict"] in {"OK", "PROJECTED_CAPACITY_NO_GO"}
     status = json.loads((out / "status.json").read_text())
     assert status["verdict"] == "OK" and status["exit_code"] == EXIT_OK
+    # ...and the artifact it wrote is RELOADABLE, which is what run-final needs.
+    from scripts.GPU.alphazero.atlas_artifact import load_run
+    assert len(load_run(out / "pilot_artifact.json")["rows"]) == 24
 
 
 def test_run_final_end_to_end_consumes_the_pilot_artifact(tmp_path, monkeypatch):
-    """The chronology, end to end: the pilot artifact is an INPUT here."""
-    _patch_factory(monkeypatch)
-    ...
-    rc = run_atlas_main(["run-final", "--pilot-artifact", str(pilot_json),
-                         "--corpus-artifact", str(assign_json), ...])
-    assert rc == EXIT_OK
-    doc = json.loads((out / "atlas_artifact.json").read_text())
-    assert doc["measured"] == doc["assigned"] == doc["n_target"]
-    assert doc["authoritative"] is True
+    """The chronology end to end: the pilot artifact is an INPUT, N comes from
+    its sizing, and the continuation must be exactly N-24.
 
-
-def test_an_incomplete_run_exits_5_and_says_so_in_the_sidecar(tmp_path, monkeypatch):
-    """Completeness is the operator-visible failure: exit 5, ABORTED, and the
-    read-outs explicitly non-authoritative."""
+    The continuation metas are deliberately absent, so every continuation row
+    fails at seed verification and the run is ABORTED. That is the honest CPU
+    scope: a SUCCESSFUL run-final is 200+ real ladders and cannot be qualified
+    on CPU -- see the residual-gap note in the completion criteria.
+    """
     _patch_factory(monkeypatch)
-    ...   # one assignment row whose sidecar seed does not match base_seed
+    _cheap_budgets(monkeypatch)
+    ck = _fake_ck(tmp_path)
+    out = tmp_path / "out"
+    pilot = tmp_path / "pilot_artifact.json"
+    pilot.write_text(_authoritative_pilot_artifact(n=200))
+    rc = run_atlas_main(["run-final", "--pilot-artifact", str(pilot),
+                         "--corpus-artifact", str(_assign_artifact(tmp_path, 176)),
+                         "--pilot-dir", str(_fake_block(tmp_path, checkpoint=ck)),
+                         "--continuation-dir", str(_fake_block(
+                             tmp_path, name="cont", n_games=176,
+                             start_index=24, checkpoint=ck)),
+                         "--base-seed", str(BASE),
+                         "--checkpoint", str(ck), "--out-dir", str(out)])
     assert rc == EXIT_ABORTED
+    doc = json.loads((out / "atlas_artifact.json").read_text())
+    assert doc["n_target"] == 200 and doc["assigned"] == 200
+    assert doc["pilot_rows_carried"] == 24
+    assert doc["authoritative"] is False and doc["failed_rows"]
     status = json.loads((out / "status.json").read_text())
     assert status["verdict"] == "ABORTED" and status["exit_code"] == EXIT_ABORTED
-    doc = json.loads((out / "atlas_artifact.json").read_text())
-    assert doc["authoritative"] is False and doc["failed_rows"]
+
+
+def test_the_emitted_launch_wrapper_ACTUALLY_records_the_exit_code(tmp_path):
+    """Executed, not asserted about.
+
+    A substring check cannot catch a redirection-order defect -- the previous
+    revision's wrapper read plausibly and left the sidecar empty. So the
+    wrapper is built for a harmless command that exits 3, run, and the file is
+    read back.
+    """
+    from scripts.GPU.alphazero.run_atlas import launch_wrapper
+    out = tmp_path / "out"; out.mkdir()
+    script = launch_wrapper([sys.executable, "-c", "raise SystemExit(3)"],
+                            out_dir=out)
+    rc = subprocess.run(["sh", "-c", script]).returncode
+    assert (out / "shell_status").read_text().strip() == "REAL_EXIT=3"
+    assert rc == 3                      # the wrapper exits with the real code
+    assert (out / "run.log").exists()   # ...and the log was still captured
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -1256,6 +1743,8 @@ entry point; it is the only place an evaluator is ever constructed, and the
 factory is imported lazily inside that branch so the other subcommands -- and
 every test in this stage -- never touch MLX.
 """
+import shlex
+
 EXIT_OK, EXIT_USAGE, EXIT_PROVENANCE, EXIT_ABORTED = 0, 2, 3, 5
 
 # Verdict, the module that raises it, the operator action, and the exit code.
@@ -1283,6 +1772,25 @@ def measure_provenance(checkpoint: str, *, pilot_dir=None,
     if pilot_artifact:
         ...   # same comparison against the pilot artifact's recorded digest
     return prov
+
+
+def launch_wrapper(argv: Sequence[str], *, out_dir) -> str:
+    """The detached wrapper body, as a string a shell can run.
+
+    A FUNCTION, not runbook prose, so a test can build a harmless one, EXECUTE
+    it, and read the sidecar back. A substring assertion cannot catch a
+    redirection-order defect: the previous revision's wrapper read plausibly
+    and left the file empty.
+
+    `rc` is captured FIRST, then written, then re-raised as the wrapper's own
+    exit status. Nothing about the ordering is left to redirection precedence.
+    """
+    q = " ".join(shlex.quote(a) for a in argv)
+    out = shlex.quote(str(out_dir))
+    return (f"{q} > {out}/run.log 2>&1\n"
+            f"rc=$?\n"
+            f"echo \"REAL_EXIT=$rc\" > {out}/shell_status\n"
+            f"exit $rc\n")
 
 
 def write_status_sidecar(path, *, verdict: str, exit_code: int, **extra) -> None:
@@ -1322,7 +1830,8 @@ action, and the exit code:
 | `NOT_DEPLOYABLE` | `deployability` | 0 | Median `remaining` is zero: Read-out A cannot authorize the bounded 320+80 prototype. Separation is still reported. |
 | `NO_SHAPE_PASSES` | `select_shape` | 0 | No widening shape clears the floors. Do not invent a third shape. |
 | `PROVENANCE_FAILURE` | `atlas_artifact.emit` / `preflight` | 3 | The run is not reconstructible. Fix the tree or the checkpoint digest and start over. |
-| row `failure` | `atlas_run.run_row` | 0 | Reported per row. **No aggregate failure threshold exists** — the frozen capacity gates are the only stop. |
+| row `failure` → `ABORTED` | `atlas_run.run_corpus` | **5** | The corpus is exactly `N` assigned positions, so **one** unmeasured position disqualifies the run. Failures and partial rows are retained and the read-outs are marked non-authoritative. **No failure-tolerance number exists** — completeness is binary. |
+| `UNAVAILABLE` sizing | `atlas_run.run_pilot` | **5** | An aborted pilot does not size and does not close widening. Re-run the pilot; do not carry a partial `N`. |
 
 `emit-runbook` prints the operator sequence, with the recorded §9 rules inline:
 
@@ -1355,14 +1864,25 @@ OPERATOR STOP -- this tool has not been authorized to run the atlas.
     process group when the launch and the wait share one call. Launch through a
     DETACHED SHELL WRAPPER so the shell -- not python -- records the exit code:
 
+    `run_atlas emit-runbook --out-dir <dir> ...` prints the exact wrapper for
+    your arguments; it is generated by `launch_wrapper`, which is the same code
+    the tests execute. Its shape:
+
       OUT=<out_dir>; mkdir -p "$OUT"
-      nohup sh -c '.venv/bin/python -m scripts.GPU.alphazero.run_atlas run-final \
-          --pilot-artifact <pilot.json> --corpus-artifact <assign.json> \
-          --pilot-dir <pilot_block> --continuation-dir <cont_block> \
-          --base-seed <n> --checkpoint <net> --out-dir "'"$OUT"'" \
-          > "'"$OUT"'/run.log" 2>&1
-        echo "REAL_EXIT=$?" > "'"$OUT"'/shell_status"' > /dev/null 2>&1 &
+      cat > "$OUT/launch.sh" <<'EOF'
+      .venv/bin/python -m scripts.GPU.alphazero.run_atlas run-final \
+        --pilot-artifact <pilot.json> --corpus-artifact <assign.json> \
+        --pilot-dir <pilot_block> --continuation-dir <cont_block> \
+        --base-seed <n> --checkpoint <net> --out-dir <dir> \
+        > <dir>/run.log 2>&1
+      rc=$?
+      echo "REAL_EXIT=$rc" > <dir>/shell_status
+      exit $rc
+      EOF
+      nohup sh "$OUT/launch.sh" > /dev/null 2>&1 &
       disown
+
+    `rc` is captured BEFORE anything else writes, so no redirection can eat it.
 
  8. In a LATER call, read the two sidecars. Do NOT use `wait $!`: after
     `disown` a later shell has neither the job table nor a usable $!, which is
@@ -1431,9 +1951,37 @@ git commit -m "feat(atlas-s5): operator CLI, stop conditions and exit-status sid
       `shell_status`, and tells the operator to read the two sidecars rather than
       `wait $!` — which cannot work on a disowned PID and is the defect Phase 0 already
       paid for.
+- [ ] **The pilot artifact is RELOADABLE.** `load_run` is the authenticated inverse of
+      `emit`, rehydrating dataclasses, tuple paths and integer keys, and is qualified by
+      an **emit → disk → load → all three read-outs** round trip. Nothing consumes an
+      artifact except through it.
+- [ ] **An aborted pilot does not size and does not close widening**: `sizing` is
+      `UNAVAILABLE` with `N: None`, `early_widening_check_authoritative` is false,
+      partial read-outs are preserved, exit 5.
+- [ ] **The early widening check uses the frozen three-way precedence.** `both_fail`
+      fires only on two genuine `FAIL`s, so a sparse pilot cannot close progressive
+      widening on an absence of evidence.
+- [ ] **The production parser exposes no frozen parameter** — no `--active-size`,
+      `--prefix-sims`, `--tiny-legs`, `--increments` or `--n-target` — with a test
+      proving it. Reduced budgets are internal test injection at the module seam.
+- [ ] **The launch wrapper is a tested function.** `launch_wrapper` captures `rc` before
+      writing and re-raises it, and the test **executes** a harmless emitted wrapper and
+      reads `shell_status` back. Substring assertions are explicitly insufficient here.
 - [ ] **Both launchable commands are driven end to end** against a patched
-      `FakeEvaluator` factory, over real temporary block directories, assignments,
-      artifacts and both sidecars — including the `ABORTED` path.
+      `FakeEvaluator` factory, over real production-schema block directories,
+      assignments, artifacts and both sidecars — including the `ABORTED` path.
+
+### Residual gap, stated rather than papered over
+
+**A fully successful `run-final` cannot be qualified on CPU.** The smallest frozen `N` is
+200, so a complete final run is 200+ real ladders with 90-ply prefixes; no test may
+shrink it, because `N` now comes only from the pilot and the budgets are no longer
+reachable from the CLI. What *is* qualified: the shared engine's success path (via
+`run-pilot`'s complete 24-row run), every `run-final` gate as a pure check, and
+`run-final` end to end on the `ABORTED` path. The first authorized production run closes
+the remainder — and it is exactly the kind of seam this project has been bitten by, so
+the operator should expect the first real `run-final` to be treated as a qualification
+run, not as evidence.
 - [ ] The run document carries rows, provenance, all three read-outs, class counts, the
       capacity gate, deployability, splits, failures, and emits through the fail-closed
       `emit`.
@@ -1444,9 +1992,9 @@ git commit -m "feat(atlas-s5): operator CLI, stop conditions and exit-status sid
       no-edit-after-preflight and no-commit-between rules.
 - [ ] `preflight` and `emit-runbook` are zero-GPU; `run` is the only branch that
       constructs an evaluator, and it imports the factory lazily.
-- [ ] **Test counting.** Planned: row-facts 8, run 22, CLI 15 = **45** (revision 1's 29
-      is superseded, not adjusted). Recount from `def test_` on disk at qualification and
-      **baseline against a measured collect**,
+- [ ] **Test counting.** Planned: row-facts 8, artifact +4, run 27, CLI 16 = **55**
+      (revision 1's 29 and revision 2's 45 are superseded, not adjusted). Recount from
+      `def test_` on disk at qualification and **baseline against a measured collect**,
       not against any number in a document — Stage 4's predicted total was short by
       exactly two tests a post-qualification commit had added. The full-suite delta must
       equal the recount; anything else means a pre-existing test changed behaviour and
