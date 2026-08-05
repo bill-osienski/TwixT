@@ -1531,8 +1531,8 @@ import pytest
 from scripts.GPU.alphazero.atlas_readout_c import (
     MISLEADING_INTERVENTION_BAR, RETENTION_DEPTH1_BAR, RETENTION_ROOT_BAR,
     STABLE_INTERVENTION_CEILING, STRATA, aggregate_shape, classify_strata,
-    intervention_from_snapshots, select_on_discovery_validate_on_selected,
-    select_shape, static_retention,
+    classify_edge_strata, intervention_from_snapshots,
+    select_on_discovery_validate_on_selected, select_shape, static_retention,
 )
 
 SHAPE = ("c4a05", 4.0, 0.5)
@@ -1599,6 +1599,15 @@ def test_intervention_passes_when_both_bounds_clear():
 def test_classify_strata_reads_the_row_not_a_bare_leg_list():
     s = classify_strata(_row(phase="late", flat=True, near_even=True))
     assert {"late", "root_flat", "near_even"} <= s
+
+
+def test_local_flat_strata_are_EDGE_level_not_row_level():
+    """A row can hold both flat and non-flat reference parents; pooling them
+    would hide the contrast the stratum exists to expose."""
+    flat = {"depth": 1, "parent_priors": {i: 1.0 / 500 for i in range(500)}}
+    sharp = {"depth": 1, "parent_priors": {0: 0.9, 1: 0.05, 2: 0.05}}
+    assert "locally_flat_depth1" in classify_edge_strata(flat)
+    assert classify_edge_strata(sharp) == set()
 
 
 def test_aggregate_excludes_INCONCLUSIVE_rows_from_the_denominator():
@@ -1760,12 +1769,23 @@ def classify_strata(row: Dict[str, Any]) -> Set[str]:
         s.add("near_even")
     if row.get("flat_policy"):
         s.add("root_flat")
-    ref = row.get("reference_line") or {}
-    for key, name in (("reply", "locally_flat_depth1"),
-                      ("two_ply", "locally_flat_depth2")):
-        node = ref.get(key)
-        if node and node.get("priors") and _is_flat(node["priors"]):
-            s.add(name)
+    return s
+
+
+def classify_edge_strata(edge: Dict[str, Any]) -> Set[str]:
+    """Locally-flat strata are EDGE-LEVEL, not row-level.
+
+    Under the union-of-two-deep-lines rule a single row can contain both flat
+    and non-flat reference parents. A row-level "any parent is flat" flag would
+    pool their retention into one number and hide exactly the contrast the
+    stratum exists to expose. Each deduplicated required edge is classified
+    using ITS OWN parent priors.
+    """
+    s: Set[str] = set()
+    priors = edge.get("parent_priors")
+    if priors and _is_flat(priors):
+        s.add("locally_flat_depth1" if edge.get("depth") == 1
+              else "locally_flat_depth2")
     return s
 
 

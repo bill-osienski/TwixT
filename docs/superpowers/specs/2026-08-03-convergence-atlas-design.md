@@ -761,6 +761,13 @@ final-tree counts — neither of which is the horizon the rule is about. Frozen:
   is a *finding*, not an assumption.
 - Report **reply and two-ply agreement rates separately**. They are reported;
   they add **no gate**.
+- **Agreement means equality of the complete `(parent path, move)` edge**, not of
+  the final move id. The same move id reached through a different parent is a
+  different edge, and counting it as agreement would overstate how much the two
+  deep rungs actually concur.
+- **A pair present in only one line is counted separately**, outside the
+  agreement denominator. It is neither an agreement nor a disagreement — there is
+  nothing to compare it against.
 
 **Retention is evaluated at the boundary and at `B = 400`, not at 6,400.**
 
@@ -794,21 +801,32 @@ cache exists to make the correct quantity cheap.
 After discovery selects a shape, the selected shape's validation aggregate must
 receive a **three-way verdict**:
 
-| verdict | condition |
-|---|---|
-| `PASS` | every **defined** required rate satisfies its bar |
-| `FAIL` | any defined rate misses its bar |
-| `INCONCLUSIVE` | a required rate is **undefined** |
+**Precedence is ordered**, because a result can contain both a defined miss and
+an undefined rate and would otherwise satisfy two verdicts at once:
 
-An undefined rate is not a satisfied bar, and it is not a measured miss either.
+```text
+1. FAIL          -- any DEFINED rate misses its bar
+2. INCONCLUSIVE  -- otherwise, any required rate is UNDEFINED
+3. PASS          -- otherwise
+```
+
+A defined miss is evidence and outranks a gap in the evidence. An undefined rate
+is not a satisfied bar, and it is not a measured miss either.
 
 ### Read-out A runs on both feature sets
 
 The identical detector pipeline runs on the **boundary** features and on the
-**`B = 400`** features. **The boundary remains authoritative.** "400 passes,
-boundary fails" is a named outcome — `LATE_ONLY_SEPARATION` — because it means the
-information arrives too late to allocate the remaining budget, which is §6's
-stated failure condition rather than a success.
+**`B = 400`** features. **The boundary remains authoritative.**
+
+`LATE_ONLY_SEPARATION` requires **boundary `FAIL` and `B = 400` `PASS`** —
+both, exactly. It means the information exists but arrives too late to allocate
+the remaining budget, which is §6's stated failure condition rather than a
+success.
+
+A boundary result of `INSUFFICIENT_CLASSES`, `INSUFFICIENT_DISCOVERY_CLASSES` or
+a missing-feature rejection is **not** evidence of lateness — it is an absence of
+evidence, and must be reported as itself rather than promoted to a finding about
+timing.
 
 ### The compound narrowing condition is an AGGREGATE, not a per-row boolean
 

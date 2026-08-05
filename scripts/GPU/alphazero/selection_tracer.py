@@ -62,7 +62,8 @@ class SelectionTracer:
     """One tracer per row. Counters only -- no events retained."""
 
     def __init__(self) -> None:
-        self._cache: Dict[int, Dict[int, int]] = {}
+        # move -> rank, cumulative prior mass, total prior mass.
+        self._cache: Dict[int, Tuple[Dict[int, int], List[float], float]] = {}
         self._cells: Dict[str, Dict[str, Dict[str, Any]]] = {
             shape: {b: _empty_cell() for b in ("overall",) + DEPTH_BUCKETS}
             for shape, _c, _a in WIDENING_SHAPES
