@@ -67,9 +67,24 @@ cause: **revision 2 treated the pilot artifact as if it were still live memory.*
 Tasks renumber: **1** reloadable artifact, **2** composition, **3** operator CLI. Row
 facts stay Task 0.
 
-Planned tests move **45 → 55** (row-facts 8, artifact +4, run 27, CLI 16), recounted from
-the test functions in this document. Revision 2's 45 was internally correct for its own
-draft and is superseded rather than adjusted.
+## Revision 4 — 2026-08-05, two calls and the last four seam defects
+
+| # | Defect | Repair |
+|---|---|---|
+| 1 | **HEAD identity was asymmetric.** Revision 3 argued generation predates this tooling — **wrong: no reservoir exists yet.** Generation happens *after* Stage 5 qualifies, so the whole chain comes from one frozen commit and there is no mismatch to accommodate. | `measure_provenance` **requires** the measured `git_head` to equal both block manifests and the pilot artifact. A mismatch means regeneration or requalification. |
+| 2 | **The assignment artifact was trusted.** `run-final` consumed hand-written continuation rows without re-deriving a *deterministic* assignment, and the fixture set the continuation block and the selected rows both to 176 — so an assignment that selected everything would have passed. | `verify_assignment` reads `sampling_seed` from the pilot artifact, loads the **complete** `G_total − 24` block, re-runs `size_continuation` + `assign_corpus`, and requires exact equality. Fixtures now keep **216 games** distinct from **176 rows**. |
+| 3 | **The successful `run-final` was left unqualified**, on the argument that 200 real ladders cannot run on CPU. The ladders and the composition are **separable**. | New pure `combine_final_runs`, plus a CLI success-path test at the real frozen `N = 200` with `run_corpus` patched to a schema-valid complete 176-row document. No ladder, no budget override, no CLI flag. **The first production run stays evidence.** |
+| 4 | **The loader restored only merged edges.** `at_3200` / `at_6400` carry `edges`, not `required_edges`, so both deep lines came back with list paths and string-keyed priors — an inverse in name only. It also accepted a truncated document as an empty run. | Both keys rehydrated and both pinned in the round trip; a missing or non-list `rows` field is refused. |
+
+**Mechanical, same pass:** `run_corpus` gains `prefix_sims`; deployability reads
+`boundary.remaining` by attribute, not by key; the two bare `_pilot_metas()` calls get
+their required length; `_authoritative_pilot_artifact` is built from **schema-valid**
+rows (four rungs, a `BoundaryRecord`, populated snapshots) since recomposition consumes
+them; and the CLI tests patch **only** `preflight_source_provenance`, because a TDD run
+necessarily sees its own uncommitted implementation as a dirty tree and would compare the
+real HEAD against the fixtures' `"a"*40`.
+
+Planned tests move **45 → 55** (revision 3), then **55 → 61** with revision 4's repairs.
 
 ## Global Constraints
 
@@ -394,14 +409,18 @@ def test_load_run_is_the_inverse_of_emit_for_every_lossy_type():
                     selected_move_prior_rank=1, top_share=0.5,
                     top_two_margin=0.2, effective_children=12.0,
                     n_visited_children=20, visit_counts={7: 100})
+    deep_edge = {"parent_path": (7,), "move": 3, "depth": 1,
+                 "parent_priors": {3: 0.7, 4: 0.3}}
     snaps = _snapshots(
         parent_visits={"at_boundary": {(): 463, (7, 3): 12},
                        "at_400": {(): 537}},
-        reference_lines={"at_3200": None, "at_6400": None, "merged": {
-            "required_edges": [{"parent_path": (), "move": 7, "depth": 0,
-                                "parent_priors": {7: 0.6, 8: 0.4},
-                                "sources": (3200, 6400)}],
-            "agreement": {}}})
+        reference_lines={
+            "at_3200": {"edges": [dict(deep_edge)], "moves": [3]},
+            "at_6400": {"edges": [dict(deep_edge)], "moves": [3]},
+            "merged": {"required_edges": [
+                {"parent_path": (), "move": 7, "depth": 0,
+                 "parent_priors": {7: 0.6, 8: 0.4},
+                 "sources": (3200, 6400)}], "agreement": {}}})
     row = build_row(**_kw(legs=[leg], boundary=None, snapshots=snaps))
     back = load_run(emit({"rows": [row], "provenance": PROV}))["rows"][0]
 
@@ -412,9 +431,27 @@ def test_load_run_is_the_inverse_of_emit_for_every_lossy_type():
     pv = back["snapshots"]["parent_visits"]["at_boundary"]
     assert pv[()] == 463 and pv[(7, 3)] == 12
     # Edge identity: tuple path, int-keyed priors, tuple sources.
-    edge = back["snapshots"]["reference_lines"]["merged"]["required_edges"][0]
+    lines = back["snapshots"]["reference_lines"]
+    edge = lines["merged"]["required_edges"][0]
     assert edge["parent_path"] == () and edge["sources"] == (3200, 6400)
     assert edge["parent_priors"] == {7: 0.6, 8: 0.4}
+    # BOTH DEEP LINES too: `merged` uses `required_edges`, the deep lines use
+    # `edges`, and rehydrating only one leaves the other list-pathed and
+    # string-keyed -- an inverse in name only.
+    for rung in ("at_3200", "at_6400"):
+        e = lines[rung]["edges"][0]
+        assert e["parent_path"] == (7,)
+        assert e["parent_priors"] == {3: 0.7, 4: 0.3}
+
+
+def test_load_run_refuses_a_truncated_document():
+    """A file that lost its rows must not read as a valid zero-row run."""
+    doc = json.loads(emit({"rows": [], "provenance": PROV}))
+    del doc["rows"]
+    with pytest.raises(ValueError, match="rows"):
+        load_run(json.dumps(doc))
+    with pytest.raises(ValueError, match="rows"):
+        load_run(json.dumps({**doc, "rows": {"0": {}}}))   # not a list
 
 
 def test_a_boundary_record_rehydrates_or_stays_None():
@@ -502,7 +539,12 @@ def load_run(source) -> Dict[str, Any]:
     if checked["verdict"] != "OK":
         raise ValueError(f"refusing to load: provenance does not validate "
                          f"({', '.join(checked['problems'])})")
-    for row in doc.get("rows", ()):
+    # A truncated document must not read as an empty run: `.get("rows", ())`
+    # would turn a file that lost its rows into a valid zero-row artifact.
+    if not isinstance(doc.get("rows"), list):
+        raise ValueError("refusing to load: `rows` is missing or not a list; "
+                         "the artifact is truncated or was not written by emit")
+    for row in doc["rows"]:
         if row.get("schema_version") != ROW_SCHEMA_VERSION:
             raise ValueError(
                 f"row schema_version {row.get('schema_version')!r} != "
@@ -517,12 +559,20 @@ def load_run(source) -> Dict[str, Any]:
             inst: ({_unpath(k): v for k, v in (m or {}).items()}
                    if m is not None else None)
             for inst, m in snaps["parent_visits"].items()}
+        # BOTH edge lists. The deep lines carry `edges`; only `merged` carries
+        # `required_edges`, so rehydrating one key leaves at_3200 / at_6400
+        # holding list paths and string-keyed priors -- which is not an
+        # inverse of emit, and is silently wrong rather than broken.
         for line in snaps["reference_lines"].values():
-            for edge in (line or {}).get("required_edges", ()):
-                edge["parent_path"] = tuple(edge["parent_path"])
-                edge["sources"] = tuple(edge["sources"])
-                edge["parent_priors"] = {int(k): v for k, v
-                                         in edge["parent_priors"].items()}
+            if not line:
+                continue
+            for key in ("edges", "required_edges"):
+                for edge in line.get(key, ()):
+                    edge["parent_path"] = tuple(edge["parent_path"])
+                    if "sources" in edge:          # merged edges only
+                        edge["sources"] = tuple(edge["sources"])
+                    edge["parent_priors"] = {int(k): v for k, v
+                                             in edge["parent_priors"].items()}
     return doc
 ```
 
@@ -577,6 +627,25 @@ supplied 3, so the pilot rows are not re-derived at the final stage — they are
 from the pilot artifact**, which is what makes "pilot assignments are fixed as discovery
 rows and never reconsidered" (§3) true in code rather than in intent. The 60/40 split
 holds only when the pilot counts as discovery: `8 × (3N/40 − 3) + 24 = 3N/5`.
+
+#### The assignment artifact is RECOMPUTED, never trusted
+
+The continuation rows arrive as a JSON file. Consuming them as given would let a
+hand-edited, stale or mis-seeded assignment become the corpus — and assignment is
+**deterministic**, so there is no reason to trust rather than verify. `run-final`:
+
+1. reads `sampling_seed` from the **pilot artifact**, so one seed governs the whole
+   corpus and cannot be re-supplied at the final stage;
+2. `load_block`s the complete authorized continuation block — **all `G_total − 24`
+   games**, not just the selected ones;
+3. re-runs `size_continuation` and `assign_corpus` against the pilot's `N`;
+4. requires **exact equality** with the assignment artifact's rows.
+
+**`G_total − 24` and `N − 24` are different numbers, and the fixture must reflect it.**
+At `N = 200` the frozen sizing gives `g_cont = 185`, `G_total = 240`, so the continuation
+*block* holds **216 games** while the assignment selects **176 rows** from it. Revision 3
+made both 176, which would have hidden any defect in the selection step: an assignment
+that simply took every game would have passed.
 
 #### The completeness condition
 
@@ -934,7 +1003,7 @@ def test_the_pilot_fixture_can_actually_serve_a_late_cell():
 
 
 def test_pilot_rows_are_the_24_fixed_discovery_rows():
-    rows = pilot_rows(_pilot_metas(), SAMPLING_SEED)
+    rows = pilot_rows(_pilot_metas(len(_late_history())), SAMPLING_SEED)
     assert len(rows) == PILOT_GAMES
     # Three per phase x side cell, exactly as the gate demanded.
     cells = {}
@@ -950,7 +1019,8 @@ def test_pilot_rows_are_the_24_fixed_discovery_rows():
 def test_pilot_rows_are_discovery_only_and_never_validation():
     """Section 3: included in DISCOVERY only and never eligible for
     validation."""
-    assert {r["split"] for r in pilot_rows(_pilot_metas(), SAMPLING_SEED)} == {
+    metas = _pilot_metas(len(_late_history()))
+    assert {r["split"] for r in pilot_rows(metas, SAMPLING_SEED)} == {
         "discovery"}
 
 
@@ -1069,21 +1139,154 @@ def test_run_final_refuses_a_non_authoritative_or_unsized_pilot():
                       move_histories={}, provenance=_PROV)
 
 
-def test_run_final_carries_the_pilot_rows_rather_than_re_measuring_them():
-    """Section 3 fixes them as discovery rows never reconsidered, and
-    assign_corpus already excluded their game ids from its pool."""
-    pilot = _pilot_stub(n=200)
-    doc = run_final(FakeEvaluator(value=0.0), pilot_doc=pilot, metas=[],
-                    continuation_rows=[_assigned(1000 + i) for i in range(176)],
-                    base_seed=BASE, move_histories={}, provenance=_PROV,
-                    prefix_sims=2, increments=(80, 80, 80, 80),
-                    threshold=40, leg_B=80)
-    # Every continuation row fails at seed verification (no metas), so the run
-    # is ABORTED -- but the chronology, the N check and the carry all ran.
-    assert doc["n_target"] == 200
+def _four_rung_legs(game_idx):
+    """All four frozen rungs. Labelling and Read-out B index every one, so a
+    row missing any of them raises in `_by_b` before any assertion runs."""
+    return [LegResult(nominal_B=b, inherited_I=137, effective=137 + b,
+                      root_value=0.05, selected_move=3,
+                      selected_move_prior_rank=1, top_share=0.5,
+                      top_two_margin=0.2, effective_children=12.0,
+                      n_visited_children=20, visit_counts={3: 100})
+            for b in (400, 1600, 3200, 6400)]
+
+
+def _populated_snapshots():
+    """Snapshots Read-out C can aggregate: a merged line with a root edge, and
+    parent-visit maps at both instants."""
+    priors = {i: (1.0 if i == 3 else 0.5 - i * 1e-4) for i in range(500)}
+    edge = {"parent_path": (), "move": 3, "depth": 0,
+            "parent_priors": priors, "sources": (3200, 6400)}
+    agree = {d: {"in_3200": True, "in_6400": True, "state": "agree"}
+             for d in ("root", "reply", "two_ply")}
+    return {"at_boundary": None, "at_400": None,
+            "captures": {"at_start": {}, "at_boundary": {}, "at_400": {}},
+            "parent_visits": {"at_boundary": {(): 463}, "at_400": {(): 537}},
+            "reference_lines": {"at_3200": {"edges": [dict(edge)]},
+                                "at_6400": {"edges": [dict(edge)]},
+                                "merged": {"required_edges": [edge],
+                                           "agreement": agree}}}
+
+
+def _pilot_assignment():
+    """`pilot_geometry_gate`'s assignment for the standard pilot fixture."""
+    from scripts.GPU.alphazero.corpus_geometry import pilot_geometry_gate
+    gate = pilot_geometry_gate(_pilot_metas(len(_late_history())),
+                               SAMPLING_SEED)
+    assert gate["verdict"] == "PASS"
+    return gate["assignment"]
+
+
+def _schema_valid_row(game_idx, split="discovery"):
+    """A row the read-outs can actually consume: four real LegResult rungs, a
+    BoundaryRecord, and populated snapshots.
+
+    Rows with no legs or empty snapshots are not what the production path
+    emits, and recomposing read-outs over them raises -- so a test built on
+    them asserts against a document that can never occur.
+    """
+    from scripts.GPU.alphazero.atlas_artifact import build_row
+    from scripts.GPU.alphazero.warm_prefix_replay import BoundaryRecord
+    return build_row(
+        game_idx=game_idx, replay_seed=BASE + game_idx, target_ply=95,
+        phase="late", side="red", split=split, inherited_I=137,
+        reset_count=0, reset_rate=0.0, last_reset_ply=None,
+        boundary=BoundaryRecord(N_actual=326, overshoot=6, remaining=74,
+                                flush_type="full"),
+        legs=_four_rung_legs(game_idx), label="stable_negative",
+        features_at_boundary={k: 0.5 for k in FEATURE_NAMES},
+        features_at_400={k: 0.5 for k in FEATURE_NAMES},
+        snapshots=_populated_snapshots(), flat_policy=False, near_even=True)
+
+
+def _complete_pilot_doc(n=200):
+    """The in-memory equivalent of `_authoritative_pilot_artifact`, for the
+    pure combine and assignment tests."""
+    return {"mode": "pilot", "verdict": "OK", "authoritative": True,
+            "rows": [_schema_valid_row(i, "discovery") for i in range(24)],
+            "failed_rows": [], "assigned": 24, "measured": 24,
+            "sampling_seed": SAMPLING_SEED,
+            "pilot_games": _pilot_metas(len(_late_history())),
+            "pilot_assignment": _pilot_assignment(),
+            "sizing": {"verdict": "OK", "N": n}}
+
+
+def _continuation_metas(n_games, start_index=24):
+    """G_total - 24 games -- the COMPLETE authorized block, which is larger
+    than the N - 24 rows the assignment selects from it."""
+    hist = _late_history()
+    return [GameMeta(game_id=start_index + i, seed=BASE + start_index + i,
+                     n_moves=len(hist), start_player="red")
+            for i in range(n_games)]
+
+
+def _complete_continuation_doc(n_rows=176):
+    """A schema-valid, COMPLETE continuation result -- as run_corpus would have
+    returned after measuring every row. Synthetic because the ladders are the
+    expensive part and the composition is the part most likely to be wrong."""
+    rows = [_schema_valid_row(1000 + i, split=("validation" if i % 5 == 0
+                                               else "discovery"))
+            for i in range(n_rows)]
+    return {"verdict": "OK", "authoritative": True, "rows": rows,
+            "failed_rows": [], "assigned": n_rows, "measured": n_rows,
+            "splits": {"discovery": sum(1 for r in rows
+                                        if r["split"] == "discovery"),
+                       "validation": sum(1 for r in rows
+                                         if r["split"] == "validation")}}
+
+
+def test_combine_final_runs_is_PURE_and_recomposes_over_the_whole_corpus():
+    """The SUCCESSFUL final composition, qualified on CPU at the real frozen
+    N -- no ladders, no budget override, no CLI flag. Carry, recomposition and
+    the completeness inheritance are all exercised."""
+    pilot = _complete_pilot_doc(n=200)               # 24 schema-valid rows
+    cont = _complete_continuation_doc(176)
+    doc = combine_final_runs(pilot, cont, provenance=_PROV)
+    assert doc["verdict"] == "OK" and doc["authoritative"] is True
+    assert len(doc["rows"]) == 200
     assert doc["pilot_rows_carried"] == 24
-    assert doc["assigned"] == 200
+    # The pilot's rows come FIRST and keep their discovery split.
+    assert all(r["split"] == "discovery" for r in doc["rows"][:24])
+    # All three read-outs ran over the COMBINED corpus, not one half.
+    for key in ("readout_a", "readout_b", "readout_c"):
+        assert doc[key] is not None
+    assert doc["readout_a_authoritative"] is True
+
+
+def test_combine_inherits_incompleteness_from_EITHER_half():
+    pilot = _complete_pilot_doc(n=200)
+    for bad in (dict(pilot, authoritative=False),):
+        doc = combine_final_runs(bad, _complete_continuation_doc(176),
+                                 provenance=_PROV)
+        assert doc["verdict"] == "ABORTED" and doc["authoritative"] is False
+    cont = dict(_complete_continuation_doc(175), authoritative=False,
+                measured=175, failed_rows=[{"game_id": 9, "failure": "seed"}])
+    doc = combine_final_runs(pilot, cont, provenance=_PROV)
     assert doc["verdict"] == "ABORTED" and doc["authoritative"] is False
+
+
+def test_run_final_recomputes_the_assignment_rather_than_trusting_it():
+    """Assignment is deterministic, so a hand-edited or stale artifact must not
+    become the corpus."""
+    pilot = _complete_pilot_doc(n=200)
+    games = _continuation_metas(216)                 # G_total - 24, not N - 24
+    good = assign_corpus(pilot["pilot_assignment"], games, 200,
+                         pilot["sampling_seed"])["rows"]
+    verify_assignment(pilot, games, good)            # baseline: accepted
+    tampered = [dict(good[0], ply=good[0]["ply"] + 2)] + good[1:]
+    with pytest.raises(ValueError, match="recomputed"):
+        verify_assignment(pilot, games, tampered)
+
+
+def test_the_continuation_BLOCK_is_larger_than_the_selected_rows():
+    """G_total - 24 = 216 games supply N - 24 = 176 rows at N = 200. A fixture
+    that made them equal would pass an assignment that selected everything."""
+    pilot = _complete_pilot_doc(n=200)
+    games = _continuation_metas(216)
+    rows = assign_corpus(pilot["pilot_assignment"], games, 200,
+                         pilot["sampling_seed"])["rows"]
+    assert len(games) == 216 and len(rows) == 176
+    with pytest.raises(ValueError, match="frozen sizing"):
+        verify_assignment(pilot, _continuation_metas(176), rows)
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -1157,6 +1360,7 @@ def run_corpus(evaluator, metas: Sequence[GameMeta],
                assigned_rows: Sequence[Dict[str, Any]], *, base_seed: int,
                move_histories: Dict[int, Sequence[Tuple[int, int]]],
                provenance: Dict[str, Any], active_size: int = 24,
+               prefix_sims: int = PREFIX_SIMS,
                increments: Sequence[int] = LEG_INCREMENTS,
                threshold: int = BOUNDARY_THRESHOLD, leg_B: int = 400,
                _on_row=None) -> Dict[str, Any]:
@@ -1198,7 +1402,8 @@ condition, then composes:
     c = select_on_discovery_validate_on_selected(discovery_rows, validation_rows)
     counts = class_counts([r["legs"] for r in all_rows])
     capacity = final_capacity_gate(class_counts([r["legs"] for r in validation_rows]))
-    remaining = deployability([r["boundary"]["remaining"] for r in all_rows
+    # `boundary` is a BoundaryRecord dataclass, not a dict -- by ATTRIBUTE.
+    remaining = deployability([r["boundary"].remaining for r in all_rows
                                if r["boundary"] is not None])
 ```
 
@@ -1275,8 +1480,31 @@ def run_pilot(evaluator, pilot_games, *, sampling_seed, base_seed,
     return doc
 
 
-def run_final(evaluator, *, pilot_doc, metas, continuation_rows,
-              base_seed, move_histories, provenance, **kw) -> dict:
+def verify_assignment(pilot_doc, continuation_games, assignment_rows) -> None:
+    """Assignment is DETERMINISTIC, so recompute it rather than trusting the
+    artifact. A hand-edited, stale or mis-seeded file would otherwise become
+    the corpus.
+
+    `sampling_seed` comes from the PILOT artifact, so one seed governs the whole
+    corpus and cannot be re-supplied here.
+    """
+    n = pilot_doc["sizing"]["N"]
+    seed = pilot_doc["sampling_seed"]
+    sizing = size_continuation(pilot_doc["pilot_games"], n)
+    if len(continuation_games) != sizing["G_total"] - PILOT_GAMES:
+        raise ValueError(
+            f"continuation block holds {len(continuation_games)} games but the "
+            f"frozen sizing requires {sizing['G_total'] - PILOT_GAMES}")
+    recomputed = assign_corpus(pilot_doc["pilot_assignment"],
+                               continuation_games, n, seed)
+    if recomputed["verdict"] != "OK" or recomputed["rows"] != assignment_rows:
+        raise ValueError("the assignment artifact does not match a recomputed "
+                         "assignment; it is stale, edited, or mis-seeded")
+
+
+def run_final(evaluator, *, pilot_doc, metas, continuation_games,
+              assignment_rows, base_seed, move_histories, provenance,
+              **kw) -> dict:
     """The pilot's 24 discovery rows PLUS the continuation's N-24.
 
     N comes from `pilot_doc["sizing"]` and from NOWHERE else -- there is no
@@ -1284,6 +1512,10 @@ def run_final(evaluator, *, pilot_doc, metas, continuation_rows,
     The pilot rows are CARRIED, never re-measured: section 3 fixes them as
     discovery rows that are never reconsidered, and `assign_corpus` already
     excluded their game ids from its pool.
+
+    `continuation_games` is the COMPLETE authorized block (G_total - 24), which
+    is a different and larger number than the N-24 selected rows -- the
+    selection step is what `verify_assignment` re-derives.
     """
     if pilot_doc.get("verdict") != "OK" or not pilot_doc.get("authoritative"):
         raise ValueError("refusing to run: the pilot artifact is not an "
@@ -1301,10 +1533,25 @@ def run_final(evaluator, *, pilot_doc, metas, continuation_rows,
         raise ValueError(
             f"corpus must contain exactly N={n_target} positions: "
             f"{len(carried)} pilot + {len(continuation_rows)} continuation")
-    cont = run_corpus(evaluator, metas, continuation_rows, base_seed=base_seed,
+    verify_assignment(pilot_doc, continuation_games, assignment_rows)
+    cont = run_corpus(evaluator, metas, assignment_rows, base_seed=base_seed,
                       move_histories=move_histories, provenance=provenance, **kw)
-    # Recompose the read-outs over the COMBINED corpus, and inherit the
-    # completeness condition from both halves.
+    return combine_final_runs(pilot_doc, cont, provenance=provenance)
+
+
+def combine_final_runs(pilot_doc, continuation_doc, *, provenance) -> dict:
+    """PURE. Carry the pilot rows, recompose all three read-outs over the
+    combined corpus, and inherit the completeness condition from both halves.
+
+    Separated from `run_final` on purpose: the expensive part is the ladders,
+    and the part most likely to be wrong is this one. Splitting them lets the
+    SUCCESSFUL final composition be qualified on CPU with a synthetic complete
+    continuation result -- at the real frozen N, with no budget override and no
+    ladder -- so the first production run stays evidence rather than becoming a
+    disposable qualification run.
+    """
+    rows = list(pilot_doc["rows"]) + list(continuation_doc["rows"])
+    complete = pilot_doc["authoritative"] and continuation_doc["authoritative"]
     ...
 ```
 
@@ -1345,19 +1592,18 @@ on a dirty tree, passes the gate. `measure_provenance` instead:
 2. compares the **measured** digest against `load_manifest(pilot_dir)` and
    `load_manifest(continuation_dir)`, and calls `assert_blocks_agree` on the pair, so the
    run cannot use a different network from the one that generated its games;
-3. **binds the measured `git_head`**, which the manifests also record, to both blocks and
-   to the pilot artifact — not merely the checkpoint digest.
+3. **requires the measured `git_head` to equal both block manifests and the pilot
+   artifact** — symmetric, not merely the checkpoint digest.
 
-**The `git_head` binding is asymmetric, and deliberately so.** Generation necessarily
-predates this tooling, so requiring the run's HEAD to equal the *manifests'* HEAD would
-be unsatisfiable — that relationship is **recorded** in the run's provenance block and
-reported, never required. The **pilot artifact** is different: §9 forbids a source edit
-between preflight and qualification, so the pilot and final halves of one atlas run must
-be at the same HEAD, and `run-final` **requires** equality there. Recording both makes
-the run reconstructible; requiring the one that must hold catches a mid-run edit.
+**The HEAD requirement is symmetric.** Revision 3 argued for an asymmetry on the grounds
+that generation predates this tooling; that is **wrong — no reservoir exists yet.**
+Generation happens *after* Stage 5 is implemented and qualified, so the whole chain —
+pilot block, continuation block, pilot run, final run — is produced at one frozen,
+qualified commit. There is no unavoidable mismatch to accommodate, and accepting one
+would discard the strongest provenance guarantee available for free.
 
-*This asymmetry is a judgement call rather than a frozen rule, and is flagged for
-confirmation before implementation.*
+**A HEAD mismatch therefore means regeneration or requalification, not a recorded note.**
+Blocks generated at an older commit are not this protocol's blocks.
 
 **Negative cases are CONSTRUCTED, never observed.** `validate_source_provenance` is pure
 and takes `porcelain` as a string, so the dirty-tree test passes `" M foo.py"` directly.
@@ -1434,34 +1680,51 @@ def _fake_ck(tmp_path):
 def _authoritative_pilot_artifact(n=200):
     """A complete, sized pilot artifact as `emit` would have written one.
 
-    Constructed rather than measured: these tests exercise run-final's gates
-    and chronology, and paying for 24 real ladders to reach them would qualify
-    nothing extra.
+    Its rows are SCHEMA-VALID -- four rungs of real LegResults, a
+    BoundaryRecord, and populated snapshots -- because `run-final` recomposes
+    all three read-outs over them. A row with no legs and empty snapshots is
+    not an authoritative pilot row; recomposition would raise on it, and the
+    test would be asserting against a document the production path can never
+    produce.
     """
-    from scripts.GPU.alphazero.atlas_artifact import build_row, emit
-    rows = [build_row(game_idx=i, replay_seed=BASE + i, target_ply=95,
-                      phase="late", side="red", split="discovery",
-                      inherited_I=0, reset_count=0, reset_rate=None,
-                      last_reset_ply=None, boundary=None, legs=[],
-                      label="ambiguous", features_at_boundary=None,
-                      features_at_400=None,
-                      snapshots={"at_boundary": None, "at_400": None,
-                                 "captures": {}, "parent_visits": {},
-                                 "reference_lines": {}},
-                      flat_policy=None, near_even=None)
-            for i in range(24)]
+    from scripts.GPU.alphazero.atlas_artifact import emit
+    rows = [_schema_valid_row(i, split="discovery") for i in range(24)]
     return emit({"rows": rows, "provenance": PROV,
                  "mode": "pilot", "verdict": "OK", "authoritative": True,
+                 "sampling_seed": SAMPLING_SEED,
                  "sizing": {"verdict": "OK", "N": n}})
 
 
-def _assign_artifact(tmp_path, n_rows):
-    """`assign_corpus`'s output shape: the continuation rows only."""
+def _assign_artifact(tmp_path, cont_block):
+    """`assign_corpus`'s real output over the real block -- not hand-written.
+
+    `run-final` recomputes this, so a hand-written file would only ever test
+    that the recomputation rejects it.
+    """
+    from scripts.GPU.alphazero.corpus_geometry import assign_corpus
+    from scripts.GPU.alphazero.generate_atlas_reservoir import load_block
+    games = load_block(cont_block, BASE, 24, 216)
+    rows = assign_corpus(_pilot_assignment(), games, 200, SAMPLING_SEED)["rows"]
     p = tmp_path / "assign.json"
-    p.write_text(json.dumps({"verdict": "OK", "rows": [
-        {"game_id": 24 + i, "seed": BASE + 24 + i, "split": "validation",
-         "phase": "late", "side": "red", "ply": 95} for i in range(n_rows)]}))
+    p.write_text(json.dumps({"verdict": "OK", "rows": rows}, sort_keys=True))
     return p
+
+
+def _patch_measured_provenance(monkeypatch, ck):
+    """Patch ONLY the measurement, so every comparison still runs for real.
+
+    Without this, a TDD run necessarily observes its own uncommitted
+    implementation as a DIRTY TREE, and symmetric HEAD validation compares the
+    machine's real HEAD against the fixture's "a"*40. Patching the measuring
+    function -- not `measure_provenance` itself -- leaves the manifest,
+    artifact and HEAD equality checks under test.
+    """
+    import hashlib
+    import scripts.GPU.alphazero.run_atlas as ra
+    monkeypatch.setattr(ra, "preflight_source_provenance", lambda path: {
+        "git_head": "a" * 40, "worktree_clean": True,
+        "checkpoint_path": str(path),
+        "checkpoint_sha1": hashlib.sha1(ck.read_bytes()).hexdigest()})
 
 
 def _fake_block(tmp_path, name="pilot", n_games=24, start_index=0,
@@ -1659,6 +1922,7 @@ def test_run_pilot_end_to_end_with_a_patched_factory(tmp_path, monkeypatch):
     _patch_factory(monkeypatch)
     _cheap_budgets(monkeypatch)
     ck = _fake_ck(tmp_path)
+    _patch_measured_provenance(monkeypatch, ck)
     out = tmp_path / "out"
     rc = run_atlas_main(["run-pilot",
                          "--pilot-dir", str(_fake_block(tmp_path, checkpoint=ck)),
@@ -1677,36 +1941,81 @@ def test_run_pilot_end_to_end_with_a_patched_factory(tmp_path, monkeypatch):
     assert len(load_run(out / "pilot_artifact.json")["rows"]) == 24
 
 
-def test_run_final_end_to_end_consumes_the_pilot_artifact(tmp_path, monkeypatch):
-    """The chronology end to end: the pilot artifact is an INPUT, N comes from
-    its sizing, and the continuation must be exactly N-24.
+def _final_argv(tmp_path, ck, out, pilot):
+    """The frozen production argument set -- no budget flags exist to pass."""
+    cont_block = _fake_block(tmp_path, name="cont", n_games=216,
+                             start_index=24, checkpoint=ck)   # G_total - 24
+    return ["run-final", "--pilot-artifact", str(pilot),
+            "--corpus-artifact", str(_assign_artifact(tmp_path, cont_block)),
+            "--pilot-dir", str(_fake_block(tmp_path, checkpoint=ck)),
+            "--continuation-dir", str(cont_block),
+            "--base-seed", str(BASE), "--checkpoint", str(ck),
+            "--out-dir", str(out)]
 
-    The continuation metas are deliberately absent, so every continuation row
-    fails at seed verification and the run is ABORTED. That is the honest CPU
-    scope: a SUCCESSFUL run-final is 200+ real ladders and cannot be qualified
-    on CPU -- see the residual-gap note in the completion criteria.
+
+def test_run_final_SUCCESS_path_end_to_end(tmp_path, monkeypatch):
+    """The successful final run, qualified without a single ladder.
+
+    `run_corpus` -- the expensive half -- is patched to return a schema-valid
+    COMPLETE 176-row document at the pilot-produced N=200. Everything else is
+    real: the pilot artifact is loaded and authenticated, the assignment is
+    recomputed, the carry and recomposition run, the artifact is emitted, and
+    the success sidecar is written. No frozen parameter is relaxed and no CLI
+    budget flag exists, so the first production run stays evidence.
     """
     _patch_factory(monkeypatch)
-    _cheap_budgets(monkeypatch)
-    ck = _fake_ck(tmp_path)
-    out = tmp_path / "out"
+    _patch_measured_provenance(monkeypatch, _fake_ck(tmp_path))
+    import scripts.GPU.alphazero.atlas_run as ar
+    monkeypatch.setattr(ar, "run_corpus",
+                        lambda *a, **k: _complete_continuation_doc(176))
+    ck, out = _fake_ck(tmp_path), tmp_path / "out"
     pilot = tmp_path / "pilot_artifact.json"
     pilot.write_text(_authoritative_pilot_artifact(n=200))
-    rc = run_atlas_main(["run-final", "--pilot-artifact", str(pilot),
-                         "--corpus-artifact", str(_assign_artifact(tmp_path, 176)),
-                         "--pilot-dir", str(_fake_block(tmp_path, checkpoint=ck)),
-                         "--continuation-dir", str(_fake_block(
-                             tmp_path, name="cont", n_games=176,
-                             start_index=24, checkpoint=ck)),
-                         "--base-seed", str(BASE),
-                         "--checkpoint", str(ck), "--out-dir", str(out)])
+
+    rc = run_atlas_main(_final_argv(tmp_path, ck, out, pilot))
+    assert rc == EXIT_OK
+    doc = json.loads((out / "atlas_artifact.json").read_text())
+    assert doc["n_target"] == 200 and doc["measured"] == 200
+    assert doc["pilot_rows_carried"] == 24
+    assert doc["authoritative"] is True
+    status = json.loads((out / "status.json").read_text())
+    assert status["verdict"] == "OK" and status["exit_code"] == EXIT_OK
+
+
+def test_run_final_ABORTED_path_end_to_end(tmp_path, monkeypatch):
+    """Same path, one unmeasured position: exit 5 and non-authoritative."""
+    _patch_factory(monkeypatch)
+    _patch_measured_provenance(monkeypatch, _fake_ck(tmp_path))
+    import scripts.GPU.alphazero.atlas_run as ar
+    short = dict(_complete_continuation_doc(175), authoritative=False,
+                 verdict="ABORTED", assigned=176, measured=175,
+                 failed_rows=[{"game_id": 99, "failure": "seed mismatch"}])
+    monkeypatch.setattr(ar, "run_corpus", lambda *a, **k: short)
+    ck, out = _fake_ck(tmp_path), tmp_path / "out"
+    pilot = tmp_path / "pilot_artifact.json"
+    pilot.write_text(_authoritative_pilot_artifact(n=200))
+
+    rc = run_atlas_main(_final_argv(tmp_path, ck, out, pilot))
     assert rc == EXIT_ABORTED
     doc = json.loads((out / "atlas_artifact.json").read_text())
-    assert doc["n_target"] == 200 and doc["assigned"] == 200
-    assert doc["pilot_rows_carried"] == 24
     assert doc["authoritative"] is False and doc["failed_rows"]
     status = json.loads((out / "status.json").read_text())
     assert status["verdict"] == "ABORTED" and status["exit_code"] == EXIT_ABORTED
+
+
+def test_a_HEAD_mismatch_is_refused_symmetrically(tmp_path, monkeypatch):
+    """The chain is produced at ONE qualified commit, so a HEAD that differs
+    from a manifest is regeneration or requalification -- not a note."""
+    import hashlib
+    import scripts.GPU.alphazero.run_atlas as ra
+    ck = _fake_ck(tmp_path)
+    monkeypatch.setattr(ra, "preflight_source_provenance", lambda path: {
+        "git_head": "b" * 40, "worktree_clean": True,      # fixtures say "a"*40
+        "checkpoint_path": str(path),
+        "checkpoint_sha1": hashlib.sha1(ck.read_bytes()).hexdigest()})
+    with pytest.raises(ValueError, match="git_head"):
+        ra.measure_provenance(str(ck),
+                              pilot_dir=str(_fake_block(tmp_path, checkpoint=ck)))
 
 
 def test_the_emitted_launch_wrapper_ACTUALLY_records_the_exit_code(tmp_path):
@@ -1759,18 +2068,30 @@ def measure_provenance(checkpoint: str, *, pilot_dir=None,
     Runs before any evaluator exists, because checking afterwards means a dirty
     tree can consume an entire GPU run before anything rejects it.
     """
+    def _sources(pilot_dir, continuation_dir, pilot_artifact):
+        """Everything the run must agree with, named for the error message."""
+        for label, d in (("pilot block", pilot_dir),
+                         ("continuation block", continuation_dir)):
+            if d:
+                yield label, load_manifest(d)
+        if pilot_artifact:
+            yield "pilot artifact", pilot_artifact["provenance"]
+
     prov = preflight_source_provenance(checkpoint)       # git + sha1, measured
-    for d in (pilot_dir, continuation_dir):
-        if d and load_manifest(d)["checkpoint_sha1"] != prov["checkpoint_sha1"]:
-            raise ValueError(
-                f"checkpoint {prov['checkpoint_sha1']} does not match the "
-                f"manifest in {d}; the run would use a different network from "
-                f"the one that generated its games")
+    # SYMMETRIC: the whole chain is produced at one frozen qualified commit, so
+    # both the digest and the HEAD must match everywhere. A mismatch means
+    # regeneration or requalification, not a recorded note.
+    for name, recorded in _sources(pilot_dir, continuation_dir, pilot_artifact):
+        for field in ("checkpoint_sha1", "git_head"):
+            if recorded.get(field) != prov[field]:
+                raise ValueError(
+                    f"{field} mismatch against {name}: measured "
+                    f"{prov[field]} != recorded {recorded.get(field)}. The "
+                    f"chain must be produced at ONE qualified commit; "
+                    f"regenerate or requalify rather than proceeding.")
     if pilot_dir and continuation_dir:
         assert_blocks_agree(load_manifest(pilot_dir),
                             load_manifest(continuation_dir))
-    if pilot_artifact:
-        ...   # same comparison against the pilot artifact's recorded digest
     return prov
 
 
@@ -1971,17 +2292,22 @@ git commit -m "feat(atlas-s5): operator CLI, stop conditions and exit-status sid
       `FakeEvaluator` factory, over real production-schema block directories,
       assignments, artifacts and both sidecars — including the `ABORTED` path.
 
-### Residual gap, stated rather than papered over
-
-**A fully successful `run-final` cannot be qualified on CPU.** The smallest frozen `N` is
-200, so a complete final run is 200+ real ladders with 90-ply prefixes; no test may
-shrink it, because `N` now comes only from the pilot and the budgets are no longer
-reachable from the CLI. What *is* qualified: the shared engine's success path (via
-`run-pilot`'s complete 24-row run), every `run-final` gate as a pure check, and
-`run-final` end to end on the `ABORTED` path. The first authorized production run closes
-the remainder — and it is exactly the kind of seam this project has been bitten by, so
-the operator should expect the first real `run-final` to be treated as a qualification
-run, not as evidence.
+- [ ] **The assignment artifact is RECOMPUTED, not trusted**: `sampling_seed` comes from
+      the pilot artifact, the **complete** `G_total − 24` continuation block is loaded,
+      `size_continuation` and `assign_corpus` are re-derived, and exact equality with the
+      artifact's rows is required. The fixtures keep `G_total − 24 = 216` distinct from
+      `N − 24 = 176`, so an assignment that selected everything would fail.
+- [ ] **The successful `run-final` is qualified without GPU work.** `combine_final_runs`
+      is pure and separately tested, and the CLI success path runs at the real frozen
+      `N = 200` with `run_corpus` patched to a schema-valid complete 176-row document —
+      no ladder, no budget override, no CLI flag. **The first production run therefore
+      remains evidence** rather than becoming a disposable qualification run.
+- [ ] **HEAD identity is symmetric**: the measured `git_head` must equal both block
+      manifests and the pilot artifact. A mismatch means regeneration or requalification.
+- [ ] **CLI tests patch the measured-provenance boundary only.** Otherwise a TDD run
+      observes its own uncommitted implementation as a dirty tree and compares the real
+      HEAD against the fixtures' `"a"*40`. Every comparison the gate performs stays under
+      test; only the measurement is stubbed.
 - [ ] The run document carries rows, provenance, all three read-outs, class counts, the
       capacity gate, deployability, splits, failures, and emits through the fail-closed
       `emit`.
@@ -1992,9 +2318,10 @@ run, not as evidence.
       no-edit-after-preflight and no-commit-between rules.
 - [ ] `preflight` and `emit-runbook` are zero-GPU; `run` is the only branch that
       constructs an evaluator, and it imports the factory lazily.
-- [ ] **Test counting.** Planned: row-facts 8, artifact +4, run 27, CLI 16 = **55**
-      (revision 1's 29 and revision 2's 45 are superseded, not adjusted). Recount from
-      `def test_` on disk at qualification and **baseline against a measured collect**,
+- [ ] **Test counting.** Planned: row-facts 8, artifact +5, run 30, CLI 18 = **61**
+      (29 → 45 → 55 → 61; each superseded, never adjusted). Stage 4 measured **2556**, so
+      the expected total is **2617**. Recount from `def test_` on disk at qualification
+      and **baseline against a measured collect**,
       not against any number in a document — Stage 4's predicted total was short by
       exactly two tests a post-qualification commit had added. The full-suite delta must
       equal the recount; anything else means a pre-existing test changed behaviour and
