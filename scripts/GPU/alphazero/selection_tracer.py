@@ -12,7 +12,7 @@ CPU-SAFE: stdlib only, no MLX, no scipy.
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # Frozen widening shapes (design section 8). Matched at the root, divergent below.
 WIDENING_SHAPES: Tuple[Tuple[str, float, float], ...] = (
@@ -74,15 +74,23 @@ class SelectionTracer:
         self._within_forced_events = 0
 
     # -- cache ---------------------------------------------------------
-    def _ranks_for(self, parent: Any) -> Dict[int, int]:
-        """Prior rank: adjusted prior DESCENDING, move-ID ASCENDING."""
+    def _ranks_for(self, parent: Any) -> Tuple[Dict[int, int], List[float], float]:
+        """Prior rank (adjusted prior DESCENDING, move-ID ASCENDING) plus the
+        cumulative prior mass, which is what makes event-weighted excluded mass
+        cheap: mass outside top-K is `total - cum[K]`.
+        """
         key = id(parent)
-        ranks = self._cache.get(key)
-        if ranks is None:
+        hit = self._cache.get(key)
+        if hit is None:
             ordered = sorted(parent.priors.items(), key=lambda kv: (-kv[1], kv[0]))
             ranks = {mv: i + 1 for i, (mv, _p) in enumerate(ordered)}
-            self._cache[key] = ranks
-        return ranks
+            cum, run = [0.0], 0.0
+            for _mv, pr in ordered:
+                run += float(pr)
+                cum.append(run)
+            hit = (ranks, cum, run)
+            self._cache[key] = hit
+        return hit
 
     def clear_node_cache(self) -> None:
         """MUST be called at every `advance_root` -- see the module docstring."""
@@ -92,7 +100,7 @@ class SelectionTracer:
     def on_select_child(self, parent, selected_move, existing_child, depth,
                         parent_completed_visits, root_override,
                         within_forced_simulation) -> None:
-        ranks = self._ranks_for(parent)
+        ranks, cum, total_mass = self._ranks_for(parent)
         rank = ranks[selected_move]
         n_legal = len(parent.priors)
         first_touch = existing_child is None
@@ -109,12 +117,17 @@ class SelectionTracer:
                 if outside:
                     self._forced_bypass[shape]["outside_events"] += 1
                 continue
+            # Event-weighted excluded mass: the total prior mass OUTSIDE the
+            # admitted top-K set at this event -- NOT the selected move's prior.
+            # The selected-move reading reports ZERO for an event whose selected
+            # move is admitted while most of the distribution is excluded.
+            excluded_mass = total_mass - cum[min(k, len(cum) - 1)]
             for key in ("overall", _bucket(depth)):
                 cell = self._cells[shape][key]
                 cell["eligible_events"] += 1
+                cell["excluded_prior_mass"] += excluded_mass
                 if outside:
                     cell["outside_events"] += 1
-                    cell["excluded_prior_mass"] += float(parent.priors[selected_move])
                 if first_touch:
                     cell["first_touch_events"] += 1
                     if outside:
@@ -139,6 +152,9 @@ class SelectionTracer:
                     cell["outside_events"], cell["eligible_events"])
                 cells[key]["first_touch_outside_rate"] = self._rate(
                     cell["first_touch_outside_events"], cell["first_touch_events"])
+                # Reported as an event-wise MEAN, per the spec amendment.
+                cells[key]["mean_excluded_prior_mass"] = self._rate(
+                    cell["excluded_prior_mass"], cell["eligible_events"])
             ft_rate = cells["overall"]["first_touch_outside_rate"]
             bypass = dict(self._forced_bypass[shape])
             out["by_shape"][shape] = {

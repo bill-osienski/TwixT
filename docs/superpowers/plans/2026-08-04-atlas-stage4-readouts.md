@@ -1213,6 +1213,17 @@ def test_compound_narrowing_is_None_where_inapplicable():
     assert compound_narrowing([]) is None
 
 
+def test_compound_narrowing_is_None_when_ANY_row_is_partially_missing():
+    """Both means must describe the SAME cohort. A row contributing to one mean
+    but not the other would make them summarize different row sets."""
+    good = _row(_legs(shares=(0.50, 0.90, 0.90, 0.90),
+                      effs=(20.0, 8.0, 8.0, 8.0)))
+    partial = _row(_legs(shares=(0.50, 0.90, 0.90, 0.90),
+                         effs=(None, None, None, None)))   # share only
+    assert compound_narrowing([good] * 4) is True
+    assert compound_narrowing([good] * 4 + [partial]) is None
+
+
 def test_natural_convergence_report_covers_400_to_6400():
     rows = [_row() for _ in range(4)]
     r = natural_convergence_report(rows)
@@ -1347,17 +1358,21 @@ def compound_narrowing(rows: Sequence[Dict[str, Any]], hi: int = 1600
 
     None when the cohort has no defined aggregate -- inapplicable is not failing.
     """
+    # COMPLETE CASE: both means must describe the SAME cohort. Accumulating them
+    # independently lets a partially missing row contribute to one mean and not
+    # the other, so the two would summarize different row sets.
     reductions, increases = [], []
     for row in rows:
         d = _by_b(row["legs"])
         a, b = d[400], d[hi]
-        if (a.effective_children is not None and b.effective_children
-                and a.effective_children > 0):
-            reductions.append((a.effective_children - b.effective_children)
-                              / a.effective_children)
-        if a.top_share is not None and b.top_share is not None:
-            increases.append(b.top_share - a.top_share)
-    if not reductions or not increases:
+        if (a.effective_children is None or b.effective_children is None
+                or a.effective_children <= 0
+                or a.top_share is None or b.top_share is None):
+            return None            # any incomplete row makes the aggregate None
+        reductions.append((a.effective_children - b.effective_children)
+                          / a.effective_children)
+        increases.append(b.top_share - a.top_share)
+    if not reductions:
         return None
     mean_red = sum(reductions) / len(reductions)
     mean_inc = sum(increases) / len(increases)

@@ -46,7 +46,12 @@ class _Node:
 def test_rank_order_is_prior_desc_then_move_id_asc():
     t = SelectionTracer()
     parent = _Node({7: 0.5, 3: 0.5, 9: 0.2})   # 3 and 7 tie on prior
-    assert t._ranks_for(parent) == {3: 1, 7: 2, 9: 3}
+    ranks, cum, total = t._ranks_for(parent)
+    assert ranks == {3: 1, 7: 2, 9: 3}
+    # The cumulative-prior cache is what makes event-weighted excluded mass
+    # cheap: mass outside top-K is total - cum[K].
+    assert cum == pytest.approx([0.0, 0.5, 1.0, 1.2])
+    assert total == pytest.approx(1.2)
 
 
 def test_cache_is_cleared_on_demand():
@@ -96,3 +101,33 @@ def test_outside_k_counts_and_excluded_mass_accumulate():
     # Depth bucketing: this was depth 1.
     assert snap["by_shape"]["c4a05"]["1"]["eligible_events"] == 1
     assert snap["by_shape"]["c4a05"]["0"]["eligible_events"] == 0
+
+
+def test_excluded_mass_counts_the_TAIL_not_the_selected_move():
+    """The distinction: a selected move INSIDE the admitted set still leaves a
+    large excluded tail. The old reading reported zero for exactly that case."""
+    t = SelectionTracer()
+    priors = {mv: 1.0 / (mv + 1) for mv in range(60)}
+    s = sum(priors.values())
+    priors = {k: v / s for k, v in priors.items()}          # normalized
+    parent = _Node(priors, visit_count=5)
+    top = sorted(priors.items(), key=lambda kv: (-kv[1], kv[0]))[0][0]
+    t.on_select_child(parent=parent, selected_move=top, existing_child=None,
+                      depth=1, parent_completed_visits=5, root_override=False,
+                      within_forced_simulation=False)
+    cell = t.snapshot()["by_shape"]["c4a05"]["overall"]
+    assert cell["outside_events"] == 0            # the selected move is admitted
+    assert cell["excluded_prior_mass"] > 0.0      # yet a real tail is excluded
+    assert cell["mean_excluded_prior_mass"] == pytest.approx(
+        cell["excluded_prior_mass"])              # one event
+
+
+def test_excluded_mass_is_zero_when_everything_is_admitted():
+    t = SelectionTracer()
+    priors = {0: 0.6, 1: 0.4}                     # 2 legal, K(5) >= 2
+    parent = _Node(priors, visit_count=5)
+    t.on_select_child(parent=parent, selected_move=0, existing_child=None,
+                      depth=1, parent_completed_visits=5, root_override=False,
+                      within_forced_simulation=False)
+    cell = t.snapshot()["by_shape"]["c4a05"]["overall"]
+    assert cell["excluded_prior_mass"] == pytest.approx(0.0)
