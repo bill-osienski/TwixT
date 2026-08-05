@@ -743,6 +743,73 @@ simulations.
 tracer in the same pass. A caller-supplied lagged count cannot be produced by a
 real row and would make the bound untestable in practice.
 
+### Amendment 4 (2026-08-04) — the reference-line contract
+
+Read-out C evaluates admission against the moves stable deeper search requires.
+Stage 4's review found the natural implementation summarizes only the **final**
+6,400 tree, so `root_effective_visits` is `I + 6400` and the reply counts are
+final-tree counts — neither of which is the horizon the rule is about. Frozen:
+
+**Two deep lines, captured separately.**
+
+- Capture a **two-ply reference line at 3,200 and again at 6,400**, each while
+  that state exists.
+- **Required moves = the deduplicated union** of distinct `(parent path, move)`
+  edges from both lines. Agreements collapse to one edge.
+- **If the replies differ, retain both.** Neither is declared truth, and neither
+  is called "stable" — the whole point of the 3,200/6,400 pair is that agreement
+  is a *finding*, not an assumption.
+- Report **reply and two-ply agreement rates separately**. They are reported;
+  they add **no gate**.
+
+**Retention is evaluated at the boundary and at `B = 400`, not at 6,400.**
+
+- Capture **parent visit counts for every existing path through depth two** at
+  both instants. A path absent at that instant has **zero** visits.
+- Use the **deep capture's priors and ranks**. Under the frozen
+  `add_noise=False` ladder priors do not change, so when both deep rungs captured
+  the same parent, **assert equality** rather than assuming it.
+- Evaluate the union at **both** instants. **Root and reply floors must pass at
+  both.**
+- Use the **`B = 400` intervention** for the feasibility bars; report the
+  **boundary intervention separately**.
+
+This makes `K(n)` use the right horizon at each instant — `I + N_actual` at the
+boundary and `I + 400` at leg 1's end — rather than the final `I + 6400`, which
+would admit a far wider set than the rule ever produces.
+
+### Event-weighted excluded prior mass
+
+`excluded_prior_mass` is the **total prior mass outside the admitted top-`K(n)`
+set at each eligible event**, averaged event-wise — **not** the prior of the
+selected move when that move happens to fall outside.
+
+The two differ whenever the selected move is admitted while a substantial tail is
+not, which is the common case: the selected-move reading reports **zero** excluded
+mass for an event that excluded most of the distribution. The cumulative-prior
+cache exists to make the correct quantity cheap.
+
+### Validation is judged, not merely computed
+
+After discovery selects a shape, the selected shape's validation aggregate must
+receive a **three-way verdict**:
+
+| verdict | condition |
+|---|---|
+| `PASS` | every **defined** required rate satisfies its bar |
+| `FAIL` | any defined rate misses its bar |
+| `INCONCLUSIVE` | a required rate is **undefined** |
+
+An undefined rate is not a satisfied bar, and it is not a measured miss either.
+
+### Read-out A runs on both feature sets
+
+The identical detector pipeline runs on the **boundary** features and on the
+**`B = 400`** features. **The boundary remains authoritative.** "400 passes,
+boundary fails" is a named outcome — `LATE_ONLY_SEPARATION` — because it means the
+information arrives too late to allocate the remaining budget, which is §6's
+stated failure condition rather than a success.
+
 ### The compound narrowing condition is an AGGREGATE, not a per-row boolean
 
 §7 lists "the historical compound narrowing condition where applicable" without
