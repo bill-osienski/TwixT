@@ -743,6 +743,26 @@ simulations.
 tracer in the same pass. A caller-supplied lagged count cannot be produced by a
 real row and would make the bound untestable in practice.
 
+### The compound narrowing condition is an AGGREGATE, not a per-row boolean
+
+§7 lists "the historical compound narrowing condition where applicable" without
+restating it, and the natural reading — *this row's top share rose and its
+effective children fell* — is **wrong**. The historical condition is a
+**cohort-level threshold**:
+
+```text
+compound_narrowing(cohort) :=
+      mean effective-children REDUCTION  >= 0.50   (i.e. >= 50%)
+  AND mean top-share INCREASE            >= 0.15
+```
+
+Both means are taken over the cohort's 400→`hi` transitions. A per-row directional
+boolean would fire on any row that narrowed at all, however slightly, and would
+report a "compound narrowing" cohort where the historical gate saw none.
+
+`None` where inapplicable — a cohort with undefined top shares or effective
+children has no aggregate, which is not the same as failing the threshold.
+
 ### `K(n)` at a warm root uses EFFECTIVE parent visits
 
 `K(n) = min(n_legal, max(1, ceil(C * n^alpha)))` keys on the parent's **completed

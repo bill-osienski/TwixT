@@ -113,16 +113,27 @@ SIZE = 6
 
 
 class _N:
-    def __init__(self, visits, kids=None):
+    """Stand-in reaching the WHOLE capture, not just the D3 walker.
+
+    capture_tree_state calls visit_leader_move(root), which reads each child's
+    `.move`, and reads root.priors. A stand-in without them raises
+    AttributeError before D3 is ever checked.
+    """
+    def __init__(self, visits, kids=None, move=0, priors=None):
         self.visit_count = visits
         self.children = kids or {}
+        self.move = move
+        self.priors = priors if priors is not None else {
+            k: 1.0 / (i + 1) for i, k in enumerate(sorted(self.children))
+        }
 
 
 def test_D3_counts_nodes_at_depth_exactly_three():
     """Every backup reaching depth >=3 passes through exactly ONE depth-3 node,
     so summing visits there counts each such backup once."""
-    root = _N(10, {0: _N(6, {0: _N(4, {0: _N(3), 1: _N(1)})}),
-                   1: _N(4, {0: _N(2, {0: _N(2)})})})
+    root = _N(10, {0: _N(6, {0: _N(4, {0: _N(3, move=0), 1: _N(1, move=1)},
+                                    move=0)}, move=0),
+                   1: _N(4, {0: _N(2, {0: _N(2, move=0)}, move=0)}, move=1)})
     acc = capture_tree_state(root)
     assert acc["D3"] == 3 + 1 + 2          # depth-3 nodes only
     assert acc["n_visited_children"] == 2
@@ -130,7 +141,8 @@ def test_D3_counts_nodes_at_depth_exactly_three():
 
 
 def test_one_visit_children_is_counted_on_the_root_only():
-    root = _N(5, {0: _N(3), 1: _N(1), 2: _N(1), 3: _N(0)})
+    root = _N(5, {0: _N(3, move=0), 1: _N(1, move=1),
+                  2: _N(1, move=2), 3: _N(0, move=3)})
     acc = capture_tree_state(root)
     assert acc["one_visit_children"] == 2
     assert acc["n_visited_children"] == 3        # the 0-visit child is excluded
@@ -1175,7 +1187,7 @@ def test_gate_triggers_take_the_upper_rung_as_a_parameter():
     assert gate_triggers(legs, hi=1600)["new_collapse"] is True
     assert gate_triggers(legs, hi=6400)["new_collapse"] is True
     quiet = _legs(shares=(0.90, 0.91, 0.97, 0.97))
-    assert quiet_ := gate_triggers(quiet, hi=1600)["new_collapse"] is False
+    assert gate_triggers(quiet, hi=1600)["new_collapse"] is False
 
 
 def test_lower_prior_flip_uses_the_prior_RANK():
@@ -1183,11 +1195,22 @@ def test_lower_prior_flip_uses_the_prior_RANK():
     assert gate_triggers(legs, hi=1600)["lower_prior_flip"] is True
 
 
+def test_compound_narrowing_is_an_AGGREGATE_not_a_per_row_boolean():
+    """Mean effective-children reduction >= 0.50 AND mean top-share increase
+    >= 0.15, over the cohort."""
+    strong = [_row(_legs(shares=(0.50, 0.90, 0.90, 0.90),
+                         effs=(20.0, 8.0, 8.0, 8.0))) for _ in range(4)]
+    assert compound_narrowing(strong) is True          # 60% and +0.40
+    # Narrowed, but nowhere near the aggregate thresholds -- a per-row
+    # directional test would wrongly call this compound narrowing.
+    slight = [_row(_legs(shares=(0.50, 0.52, 0.52, 0.52),
+                         effs=(20.0, 19.0, 19.0, 19.0))) for _ in range(4)]
+    assert compound_narrowing(slight) is False
+
+
 def test_compound_narrowing_is_None_where_inapplicable():
-    """Section 7 says 'where applicable'; inapplicable is not a negative."""
-    assert compound_narrowing(_legs(shares=(None, None, None, None))) is None
-    assert compound_narrowing(_legs(shares=(0.5, 0.9, 0.9, 0.9),
-                                    effs=(20.0, 8.0, 8.0, 8.0))) is True
+    assert compound_narrowing([_row(_legs(shares=(None, None, None, None)))]) is None
+    assert compound_narrowing([]) is None
 
 
 def test_natural_convergence_report_covers_400_to_6400():
@@ -1308,19 +1331,38 @@ def gate_triggers(legs: Sequence[Any], hi: int = 1600) -> Dict[str, bool]:
     }
 
 
-def compound_narrowing(legs: Sequence[Any], hi: int = 1600) -> Optional[bool]:
-    """Section 7's compound condition, "where applicable".
+COMPOUND_EFF_CHILDREN_REDUCTION = 0.50
+COMPOUND_TOP_SHARE_INCREASE = 0.15
 
-    Returns None when the inputs are undefined -- an inapplicable condition is
-    not a negative one.
+
+def compound_narrowing(rows: Sequence[Dict[str, Any]], hi: int = 1600
+                       ) -> Optional[bool]:
+    """Section 7's compound condition -- an AGGREGATE over the cohort, not a
+    per-row boolean (spec amendment).
+
+    mean effective-children reduction >= 0.50 AND mean top-share increase
+    >= 0.15. A per-row directional test would fire on any row that narrowed at
+    all, however slightly, and would report compound narrowing where the
+    historical gate saw none.
+
+    None when the cohort has no defined aggregate -- inapplicable is not failing.
     """
-    d = _by_b(legs)
-    a, b = d[400], d[hi]
-    if (a.top_share is None or b.top_share is None
-            or a.effective_children is None or b.effective_children is None):
+    reductions, increases = [], []
+    for row in rows:
+        d = _by_b(row["legs"])
+        a, b = d[400], d[hi]
+        if (a.effective_children is not None and b.effective_children
+                and a.effective_children > 0):
+            reductions.append((a.effective_children - b.effective_children)
+                              / a.effective_children)
+        if a.top_share is not None and b.top_share is not None:
+            increases.append(b.top_share - a.top_share)
+    if not reductions or not increases:
         return None
-    return bool(b.top_share > a.top_share
-                and b.effective_children < a.effective_children)
+    mean_red = sum(reductions) / len(reductions)
+    mean_inc = sum(increases) / len(increases)
+    return bool(mean_red >= COMPOUND_EFF_CHILDREN_REDUCTION
+                and mean_inc >= COMPOUND_TOP_SHARE_INCREASE)
 
 
 def closes_half(m400: Optional[float], m1600: Optional[float],
@@ -1625,6 +1667,7 @@ improve search, because applying widening changes the later tree.
 """
 from __future__ import annotations
 
+import math
 from typing import Any, Dict, Optional, Sequence, Set, Tuple
 
 from .selection_tracer import (
@@ -1706,11 +1749,22 @@ def classify_strata(row: Dict[str, Any]) -> Set[str]:
     for key, name in (("reply", "locally_flat_depth1"),
                       ("two_ply", "locally_flat_depth2")):
         node = ref.get(key)
-        if node and node.get("priors"):
-            top = max(node["priors"].values())
-            if top <= FLAT_TOP_PRIOR_BAR:
-                s.add(name)
+        if node and node.get("priors") and _is_flat(node["priors"]):
+            s.add(name)
     return s
+
+
+def _is_flat(priors: Dict[int, float]) -> bool:
+    """The FROZEN flat-policy definition: normalized entropy >= 0.90 AND top
+    prior <= 0.025. Checking only the top prior misclassifies a concentrated
+    low-top distribution as flat -- both halves are required."""
+    vals = [p for p in priors.values() if p > 0]
+    if len(vals) < 2:
+        return False
+    s = sum(vals)
+    norm = [v / s for v in vals]
+    entropy = (-sum(q * math.log(q) for q in norm)) / math.log(len(priors))
+    return entropy >= FLAT_ENTROPY_BAR and max(norm) <= FLAT_TOP_PRIOR_BAR
 
 
 def aggregate_shape(rows: Sequence[Dict[str, Any]],
