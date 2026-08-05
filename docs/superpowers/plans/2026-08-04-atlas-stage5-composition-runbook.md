@@ -1215,9 +1215,17 @@ def test_verify_pilot_compares_the_ARTIFACT_field_names_not_the_assignment_ones(
 def test_verify_pilot_refuses_a_row_whose_STORED_LABEL_was_edited():
     """Sizing reads the legs, but Read-out A takes its classes and Read-out C
     its intervention denominators from the stored `label`. Editing only the
-    label moves a row between classes while every leg-derived check passes."""
+    label moves a row between classes while every leg-derived check passes.
+
+    The replacement is derived from the row's OWN label rather than written in:
+    `_PILOT_MIX` begins with eight misleading rows, so a hardcoded
+    `label="misleading"` on row 0 is not a tamper at all -- `verify_pilot`
+    would rightly accept it and the `pytest.raises` would fail.
+    """
     pilot = _complete_pilot_doc(n=200)
-    relabelled = dict(pilot["rows"][0], label="misleading")   # legs say otherwise
+    row = pilot["rows"][0]
+    other = "stable_negative" if row["label"] != "stable_negative" else "misleading"
+    relabelled = dict(row, label=other)
     with pytest.raises(ValueError, match="label"):
         verify_pilot(dict(pilot, rows=[relabelled] + pilot["rows"][1:]),
                      _pilot_metas(len(_late_history())))
@@ -1226,10 +1234,17 @@ def test_verify_pilot_refuses_a_row_whose_STORED_LABEL_was_edited():
 def test_verify_pilot_rederives_the_stratum_facts():
     """`flat_policy` and `near_even` drive both strata sets, so a stored value
     that the row's own measurements do not produce is a silently wrong
-    stratum."""
+    stratum.
+
+    Each wrong value is the NEGATION of what the row actually carries. Writing
+    literals here would assert nothing the moment the fixture derives those
+    same values -- which is exactly what happened once already.
+    """
     pilot = _complete_pilot_doc(n=200)
-    for field, wrong in (("flat_policy", True), ("near_even", False)):
-        tampered = dict(pilot["rows"][0], **{field: wrong})
+    row = pilot["rows"][0]
+    for field in ("flat_policy", "near_even"):
+        assert row[field] in (True, False)          # a negation must be real
+        tampered = dict(row, **{field: not row[field]})
         with pytest.raises(ValueError, match=field):
             verify_pilot(dict(pilot, rows=[tampered] + pilot["rows"][1:]),
                          _pilot_metas(len(_late_history())))
