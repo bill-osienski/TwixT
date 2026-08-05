@@ -25,6 +25,11 @@ MEANINGFUL_INTERVENTION_FIRST_TOUCH_RATE = 0.10
 
 DEPTH_BUCKETS = ("0", "1", "2+")
 
+# Completed visits lag in-flight work by up to one batch (design section 8).
+# The lag is conservative for retention and ANTI-conservative for intervention,
+# so the intervention threshold must also pass under K(n + BATCH_LAG).
+BATCH_LAG = 14
+
 
 def _bucket(depth: int) -> str:
     return "0" if depth == 0 else ("1" if depth == 1 else "2+")
@@ -54,6 +59,10 @@ def _empty_cell() -> Dict[str, Any]:
         "outside_events": 0,
         "first_touch_events": 0,
         "first_touch_outside_events": 0,
+        # PRODUCED online, in the same pass as the unlagged counter: a
+        # caller-supplied lagged count cannot be produced by a real row, which
+        # would make section 8's bound untestable in practice.
+        "lagged_first_touch_outside_events": 0,
         "excluded_prior_mass": 0.0,
     }
 
@@ -111,6 +120,11 @@ class SelectionTracer:
         for shape, c, alpha in WIDENING_SHAPES:
             k = k_of_n(parent_completed_visits, c, alpha, n_legal)
             outside = rank > k
+            # K(n+14) >= K(n), so the lagged admitted set is WIDER and can only
+            # exclude fewer events -- a conservative lower estimate of
+            # intervention after allowing for the maximum in-flight batch.
+            lagged_outside = rank > k_of_n(parent_completed_visits + BATCH_LAG,
+                                           c, alpha, n_legal)
             if root_override:
                 # Bypasses widening: excluded from the primary denominator,
                 # reported separately (design section 8).
@@ -133,6 +147,8 @@ class SelectionTracer:
                     cell["first_touch_events"] += 1
                     if outside:
                         cell["first_touch_outside_events"] += 1
+                    if lagged_outside:
+                        cell["lagged_first_touch_outside_events"] += 1
 
     # -- output --------------------------------------------------------
     @staticmethod

@@ -138,6 +138,194 @@ def replay_prefix(mcts, meta: GameMeta, move_history: Sequence[Tuple[int, int]],
 
 
 # ---------------------------------------------------------------------------
+# Frozen captures (design section 6a) and the reference-line contract (4)
+# ---------------------------------------------------------------------------
+
+def capture_tree_state(root: MCTSNode) -> Dict[str, Any]:
+    """The COMPLETE compact capture (section 6a), taken at ONE instant.
+
+    D3 sums visit_count over nodes at depth EXACTLY 3 below `root`: every backup
+    reaching depth >=3 passes through exactly one of them, so the sum counts each
+    such backup once. Selection events cannot substitute -- they are edge
+    traversals, and one deep simulation emits several.
+
+    Everything else here exists because the ladder mutates this root in place:
+    after leg 4 it describes 6,400 simulations, so any value not frozen now is
+    unrecoverable.
+    """
+    d3 = 0
+    frontier: List[Tuple[MCTSNode, int]] = [(root, 0)]
+    while frontier:
+        node, depth = frontier.pop()
+        if depth == 3:
+            d3 += node.visit_count
+            continue                     # deeper nodes are already counted here
+        if depth < 3:
+            frontier.extend((c, depth + 1) for c in node.children.values())
+
+    visited = [c for c in root.children.values() if c.visit_count > 0]
+    counts = sorted((c.visit_count for c in visited), reverse=True)
+    leader = visit_leader_move(root)
+    leader_breadth = (len(root.children[leader].children)
+                      if leader is not None and leader in root.children else None)
+
+    priors = [p for p in (root.priors or {}).values() if p > 0]
+    entropy = None
+    if len(priors) >= 2:
+        s = sum(priors)
+        norm = [p / s for p in priors]
+        # Normalized by log(n_legal), the existing convention.
+        entropy = (-sum(q * math.log(q) for q in norm)) / math.log(len(root.priors))
+
+    return {
+        "D3": d3,
+        # K(n)'s EFFECTIVE n at a warm root -- I + backups, not the nominal budget.
+        "root_visits": root.visit_count,
+        "total_child_visits": sum(counts),
+        "top_child_visits": counts[0] if counts else None,
+        "second_child_visits": counts[1] if len(counts) >= 2 else None,
+        "n_visited_children": len(visited),
+        "one_visit_children": sum(1 for c in visited if c.visit_count == 1),
+        "leader_move": leader,
+        # Children OF THE LEADER, not of the root -- a different quantity.
+        "leader_breadth": leader_breadth,
+        "policy_entropy": entropy,
+        "n_legal": len(root.priors or {}),
+    }
+
+
+def capture_parent_visits(root: MCTSNode, max_depth: int = 2
+                          ) -> Dict[Tuple[int, ...], int]:
+    """Visit counts for EVERY existing path through depth `max_depth`, at ONE
+    instant (amendment 4).
+
+    A complete map rather than a lookup of the reference line's paths, because
+    the union of required edges is not known until leg 4 while this is captured
+    during leg 1. A path ABSENT from the map has zero visits, where
+    K(0) = min(n_legal, max(1, 0)) = 1 admits only rank 1.
+
+    Bounded by the nodes that exist, not by the branching factor: at most
+    `I + N_actual + 1` paths can exist at this instant, so this is hundreds of
+    entries -- not the 250k a 500-wide two-ply enumeration would suggest.
+
+    Keys are TUPLES, the natural type here. `build_atlas_corpus._jsonable`
+    normalizes them at the artifact boundary; the pure modules keep tuples.
+    """
+    out: Dict[Tuple[int, ...], int] = {}
+    frontier: List[Tuple[MCTSNode, Tuple[int, ...]]] = [(root, ())]
+    while frontier:
+        node, path = frontier.pop()
+        out[path] = node.visit_count
+        if len(path) < max_depth:
+            frontier.extend((c, path + (mv,)) for mv, c in node.children.items())
+    return out
+
+
+def deep_reference_line(root: MCTSNode) -> Dict[str, Any]:
+    """The two-ply reference line at ONE instant (amendment 4).
+
+    Called at the end of leg 3 and again at the end of leg 4: the ladder is
+    additive on ONE tree, so after leg 4 the 3,200 state exists nowhere and a
+    single post-ladder summary could only ever describe 6,400.
+
+    Emits EDGES -- `(parent_path, move)` plus the parent's priors, which is what
+    ranks are computed from. It deliberately does NOT emit the parent's visit
+    count: that is a deep-rung number, and retention must key on the boundary and
+    B=400 maps instead. Not producing it is what makes the earlier defect
+    unreachable rather than merely discouraged.
+    """
+    edges: List[Dict[str, Any]] = []
+    node: Optional[MCTSNode] = root
+    path: Tuple[int, ...] = ()
+    for _ in range(3):                       # root move, reply, two-ply
+        if node is None:
+            break
+        mv = visit_leader_move(node)         # canonical: ties by lowest move id
+        if mv is None:
+            break                            # nothing below here has a visit
+        edges.append({
+            "parent_path": path, "move": mv, "depth": len(path),
+            "parent_priors": dict(node.priors or {}),
+        })
+        path = path + (mv,)
+        node = node.children.get(mv)
+    return {"edges": edges, "moves": [e["move"] for e in edges]}
+
+
+DEPTH_NAMES = ("root", "reply", "two_ply")
+
+
+def merge_reference_lines(line_3200: Dict[str, Any], line_6400: Dict[str, Any]
+                          ) -> Dict[str, Any]:
+    """The DEDUPLICATED UNION of both deep lines' edges (amendment 4).
+
+    Agreements collapse to one edge; disagreements retain BOTH. Neither rung is
+    declared truth and neither is called stable -- the point of the 3,200/6,400
+    pair is that agreement is a FINDING, not an assumption.
+    """
+    by_key: Dict[Tuple[Tuple[int, ...], int], Dict[str, Any]] = {}
+    priors_by_parent: Dict[Tuple[int, ...], Dict[int, float]] = {}
+    at_depth: Dict[int, Dict[int, Tuple[Tuple[int, ...], int]]] = {}
+
+    for rung, line in ((3200, line_3200), (6400, line_6400)):
+        for e in line["edges"]:
+            path = e["parent_path"]
+            # Priors cannot change between rungs under the frozen
+            # add_noise=False ladder, so ASSERT rather than assume. Keyed on the
+            # PARENT, not the edge: two different edges can share a parent, and
+            # that is exactly the case worth checking.
+            prev = priors_by_parent.get(path)
+            if prev is not None and prev != e["parent_priors"]:
+                raise ValueError(
+                    f"parent priors differ between deep rungs at path {path}; "
+                    f"under the frozen add_noise=False ladder they cannot")
+            priors_by_parent[path] = e["parent_priors"]
+
+            key = (path, e["move"])
+            if key in by_key:
+                by_key[key]["sources"] = by_key[key]["sources"] + (rung,)
+            else:
+                by_key[key] = {**e, "sources": (rung,)}
+            at_depth.setdefault(e["depth"], {})[rung] = key
+
+    agreement: Dict[str, Any] = {}
+    for depth, name in enumerate(DEPTH_NAMES):
+        seen = at_depth.get(depth, {})
+        in32, in64 = 3200 in seen, 6400 in seen
+        if in32 and in64:
+            # Agreement is equality of the COMPLETE edge: the same move id
+            # under a different parent is a different edge.
+            state = "agree" if seen[3200] == seen[6400] else "disagree"
+        elif in32 or in64:
+            # Amendment 4's "present in only one line": counted separately,
+            # outside the agreement denominator. There is nothing to compare.
+            state = "single_line"
+        else:
+            # Neither line reached this depth. A DIFFERENT missingness state --
+            # collapsing it into single_line would report a comparison that was
+            # never even half-available. Also outside the denominator.
+            state = "absent_both"
+        agreement[name] = {"in_3200": in32, "in_6400": in64, "state": state}
+
+    return {
+        # Sorted by (parent_path, move) so the union is reproducible run to run.
+        "required_edges": [by_key[k] for k in sorted(by_key)],
+        "agreement": agreement,
+    }
+
+
+def check_backup_invariant(d3_start: int, d3_boundary: int,
+                           n_actual: int) -> bool:
+    """Section 6a. A violation is a broken accounting, not a datum."""
+    delta = d3_boundary - d3_start
+    if delta < 0 or delta > n_actual:
+        raise ValueError(
+            f"backup accounting invariant violated: D3 delta {delta} outside "
+            f"[0, {n_actual}]; the row must fail rather than be recorded")
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Batch-safe boundary
 # ---------------------------------------------------------------------------
 
@@ -172,6 +360,10 @@ class BatchSafeBoundaryObserver:
         # Section 8's FIRST frozen snapshot, taken at exactly the quiescent
         # boundary moment. Taking it later would describe a different tree.
         self.tracer_snapshot_at_boundary: Optional[Dict[str, Any]] = None
+        # The boundary instant is the OBSERVER's to freeze: by the time
+        # run_additive_ladder regains control, leg 1 has already finished.
+        self.capture_at_boundary: Optional[Dict[str, Any]] = None
+        self.parent_visits_at_boundary: Optional[Dict[Tuple[int, ...], int]] = None
 
     def on_flush_complete(self, flush_type: str, root: Any) -> None:
         if self.record is not None:
@@ -190,6 +382,9 @@ class BatchSafeBoundaryObserver:
         )
         if self._tracer is not None:
             self.tracer_snapshot_at_boundary = self._tracer.snapshot()
+        # Frozen at the SAME instant as the tracer snapshot, by value.
+        self.capture_at_boundary = capture_tree_state(root)
+        self.parent_visits_at_boundary = capture_parent_visits(root)
 
 
 # ---------------------------------------------------------------------------
@@ -297,7 +492,16 @@ def run_additive_ladder(mcts, root: MCTSNode, inherited_I: int, ply: int,
                 "its snapshots would be contaminated by prefix replay")
 
     legs: List[LegResult] = []
-    snapshots: Dict[str, Any] = {"at_boundary": None, "at_400": None}
+    snapshots: Dict[str, Any] = {
+        "at_boundary": None, "at_400": None,
+        # Frozen captures and amendment 4's producer output. Every entry is
+        # taken at the instant it names -- the ladder mutates ONE tree, so a
+        # value not frozen there is unrecoverable.
+        "captures": {"at_start": capture_tree_state(root),
+                     "at_boundary": None, "at_400": None},
+        "parent_visits": {"at_boundary": None, "at_400": None},
+        "reference_lines": {"at_3200": None, "at_6400": None, "merged": None},
+    }
     running_B = 0
     original_n = mcts.config.n_simulations
     original_flush_obs = getattr(mcts, "_flush_observer", None)
@@ -326,14 +530,31 @@ def run_additive_ladder(mcts, root: MCTSNode, inherited_I: int, ply: int,
                 n_visited_children=summary["n_visited_children"],
                 visit_counts=summary["visit_counts"],
             ))
-            if leg_idx == 0 and target_tracer is not None:
-                # Section 8: the SECOND frozen snapshot, at nominal B = 400.
-                snapshots["at_400"] = target_tracer.snapshot()
+            if leg_idx == 0:
+                if target_tracer is not None:
+                    # Section 8: the SECOND frozen snapshot, at nominal B = 400.
+                    snapshots["at_400"] = target_tracer.snapshot()
+                snapshots["captures"]["at_400"] = capture_tree_state(root)
+                snapshots["parent_visits"]["at_400"] = capture_parent_visits(root)
+            # Select the deep rungs by LEG INDEX, never by running_B: CPU tests
+            # run tiny increments where running_B never reaches 3,200, and a
+            # budget test would silently capture no deep line at all.
+            if leg_idx == 2:
+                snapshots["reference_lines"]["at_3200"] = deep_reference_line(root)
+            elif leg_idx == 3:
+                snapshots["reference_lines"]["at_6400"] = deep_reference_line(root)
     finally:
         mcts.config.n_simulations = original_n
         mcts._flush_observer = original_flush_obs
     if boundary_observer is not None:
         snapshots["at_boundary"] = boundary_observer.tracer_snapshot_at_boundary
+        snapshots["captures"]["at_boundary"] = boundary_observer.capture_at_boundary
+        snapshots["parent_visits"]["at_boundary"] = (
+            boundary_observer.parent_visits_at_boundary)
+    lines = snapshots["reference_lines"]
+    if lines["at_3200"] is not None and lines["at_6400"] is not None:
+        lines["merged"] = merge_reference_lines(lines["at_3200"],
+                                                lines["at_6400"])
     return legs, snapshots
 
 

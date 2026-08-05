@@ -111,8 +111,14 @@ from scripts.GPU.alphazero.warm_prefix_replay import (
 
 
 class _FakeRoot:
+    """Stage 4 Task 0 widened what the observer reads at the boundary: it now
+    also freezes capture_tree_state and capture_parent_visits there, both of
+    which walk `children` and `priors`. The stub grows to match the interface;
+    no assertion in this file changed."""
     def __init__(self, visit_count):
         self.visit_count = visit_count
+        self.children = {}
+        self.priors = {}
 
 
 def test_boundary_fires_at_the_first_flush_at_or_after_320():
