@@ -42,7 +42,38 @@
 - Test: `tests/test_atlas_producer_closure.py`
 
 **Interfaces:**
-- Produces: `capture_backup_accounting(root) -> dict` (`D3`, `n_visited_children`, `one_visit_children`); `BoundaryFeatureCapture`; `reference_line_summary(legs, root) -> dict`; `SelectionTracer` extended with **simultaneous `K(n+14)` counters**; `run_additive_ladder` returning frozen `features_at_boundary` / `features_at_400`.
+- Produces: `capture_tree_state(root) -> dict` — the **complete compact capture schema** below; `check_backup_invariant(...)`; `reference_line_summary(root, legs) -> dict`; `SelectionTracer` extended with **simultaneous `K(n+14)` counters**; `run_additive_ladder` returning `captures = {at_start, at_boundary, at_400}` and `reference_lines`.
+
+**The capture schema, frozen here because every consumer depends on it.** One
+dict, taken at one instant, carrying everything the pure analyses need after the
+tree has moved on:
+
+```python
+{
+  # section 6a backup accounting
+  "D3": int,                       # sum of visits at depth EXACTLY 3
+  # root visit distribution -- section 6 leader margin, section 7 metrics
+  "root_visits": int,              # I + backups so far  (== K(n)'s effective n)
+  "total_child_visits": int,
+  "top_child_visits": int | None,
+  "second_child_visits": int | None,
+  "n_visited_children": int,
+  "one_visit_children": int,
+  # section 6 leader breadth: children OF the canonical leader, not of the root
+  "leader_move": int | None,
+  "leader_breadth": int | None,
+  # section 6 normalized policy entropy, H / log(n_legal)
+  "policy_entropy": float | None,
+  "n_legal": int,
+}
+```
+
+`root_visits` is the field §6a's amendment requires for `K(n)`: at a warm root the
+effective `n` is `I + N_actual`, never the nominal 320. Capturing it here is what
+makes that computable later.
+
+`leader_breadth` counts children **of the canonical `visit_leader_move`**, not of
+the root — a distinct quantity, and the chain test previously conflated them.
 
 > **Why this task exists, and why it is first.** Stage 4's analyses are pure, which
 > made three producer gaps invisible until review:
@@ -71,7 +102,7 @@ from scripts.GPU.alphazero.corpus_geometry import GameMeta
 from scripts.GPU.alphazero.mcts import MCTS, MCTSConfig
 from scripts.GPU.alphazero.selection_tracer import SelectionTracer
 from scripts.GPU.alphazero.warm_prefix_replay import (
-    BatchSafeBoundaryObserver, capture_backup_accounting, replay_prefix,
+    BatchSafeBoundaryObserver, capture_tree_state, replay_prefix,
     run_additive_ladder,
 )
 
@@ -92,7 +123,7 @@ def test_D3_counts_nodes_at_depth_exactly_three():
     so summing visits there counts each such backup once."""
     root = _N(10, {0: _N(6, {0: _N(4, {0: _N(3), 1: _N(1)})}),
                    1: _N(4, {0: _N(2, {0: _N(2)})})})
-    acc = capture_backup_accounting(root)
+    acc = capture_tree_state(root)
     assert acc["D3"] == 3 + 1 + 2          # depth-3 nodes only
     assert acc["n_visited_children"] == 2
     assert acc["one_visit_children"] == 0
@@ -100,7 +131,7 @@ def test_D3_counts_nodes_at_depth_exactly_three():
 
 def test_one_visit_children_is_counted_on_the_root_only():
     root = _N(5, {0: _N(3), 1: _N(1), 2: _N(1), 3: _N(0)})
-    acc = capture_backup_accounting(root)
+    acc = capture_tree_state(root)
     assert acc["one_visit_children"] == 2
     assert acc["n_visited_children"] == 3        # the 0-visit child is excluded
 
@@ -167,14 +198,22 @@ def test_features_are_frozen_at_the_boundary_not_after_the_ladder():
                                        boundary_observer=obs,
                                        target_tracer=tracer,
                                        increments=(80, 80, 80, 80))
-    fb = snaps["features_at_boundary"]
-    f4 = snaps["features_at_400"]
+    fb = snaps["captures"]["at_boundary"]
+    f4 = snaps["captures"]["at_400"]
     assert fb is not None and f4 is not None
-    # The frozen boundary capture must NOT equal a post-ladder read of the same
-    # root, or freezing bought nothing.
-    after = capture_backup_accounting(pre.root)
-    assert fb["n_visited_children"] <= after["n_visited_children"]
-    assert fb["D3"] <= after["D3"]
+
+    # 1. The capture is anchored to the boundary instant, exactly.
+    assert fb["root_visits"] == pre.inherited_I + obs.record.N_actual
+
+    # 2. It must not have moved when later legs ran. Re-reading the returned
+    #    dict after the ladder finished proves the snapshot was taken by value.
+    assert snaps["captures"]["at_boundary"]["root_visits"] == fb["root_visits"]
+
+    # 3. At least one field must have STRICTLY changed by the end, or `<=`
+    #    comparisons would pass even if both reads happened at the end.
+    after = capture_tree_state(pre.root)
+    assert after["root_visits"] > fb["root_visits"]
+    assert after["root_visits"] == pre.inherited_I + 320       # 4 x 80
 
 
 def test_the_backup_invariant_is_asserted():
@@ -191,20 +230,24 @@ def test_the_backup_invariant_is_asserted():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_producer_closure.py -v -p no:cacheprovider`
-Expected: FAIL — `ImportError: cannot import name 'capture_backup_accounting'`
+Expected: FAIL — `ImportError: cannot import name 'capture_tree_state'`
 
 - [ ] **Step 3: Implement**
 
 In `warm_prefix_replay.py`:
 
 ```python
-def capture_backup_accounting(root: MCTSNode) -> Dict[str, Any]:
-    """Section 6a's explicit two-point measurement, taken at one instant.
+def capture_tree_state(root: MCTSNode) -> Dict[str, Any]:
+    """The COMPLETE compact capture (section 6a), taken at ONE instant.
 
     D3 sums visit_count over nodes at depth EXACTLY 3 below `root`: every backup
     reaching depth >=3 passes through exactly one of them, so the sum counts each
     such backup once. Selection events cannot substitute -- they are edge
     traversals, and one deep simulation emits several.
+
+    Everything else here exists because the ladder mutates this root in place:
+    after leg 4 it describes 6,400 simulations, so any value not frozen now is
+    unrecoverable.
     """
     d3 = 0
     frontier = [(root, 0)]
@@ -215,12 +258,71 @@ def capture_backup_accounting(root: MCTSNode) -> Dict[str, Any]:
             continue                     # deeper nodes are already counted here
         if depth < 3:
             frontier.extend((c, depth + 1) for c in node.children.values())
+
     visited = [c for c in root.children.values() if c.visit_count > 0]
+    counts = sorted((c.visit_count for c in visited), reverse=True)
+    leader = visit_leader_move(root)
+    leader_breadth = (len(root.children[leader].children)
+                      if leader is not None and leader in root.children else None)
+
+    priors = [p for p in (root.priors or {}).values() if p > 0]
+    entropy = None
+    if len(priors) >= 2:
+        s = sum(priors)
+        norm = [p / s for p in priors]
+        # Normalized by log(n_legal), the existing convention.
+        entropy = (-sum(q * math.log(q) for q in norm)) / math.log(len(root.priors))
+
     return {
         "D3": d3,
+        # K(n)'s EFFECTIVE n at a warm root -- I + backups, not the nominal budget.
+        "root_visits": root.visit_count,
+        "total_child_visits": sum(counts),
+        "top_child_visits": counts[0] if counts else None,
+        "second_child_visits": counts[1] if len(counts) >= 2 else None,
         "n_visited_children": len(visited),
         "one_visit_children": sum(1 for c in visited if c.visit_count == 1),
+        "leader_move": leader,
+        # Children OF THE LEADER, not of the root -- a different quantity.
+        "leader_breadth": leader_breadth,
+        "policy_entropy": entropy,
+        "n_legal": len(root.priors or {}),
     }
+
+
+def reference_line_summary(root: MCTSNode, legs: Sequence[LegResult]
+                           ) -> Dict[str, Any]:
+    """What Read-out C needs from the 3,200 / 6,400 reference lines.
+
+    Preserves the stable deep root move, its best reply, a two-ply horizon, and
+    -- critically -- the PRIORS and EFFECTIVE parent visit counts at each of
+    those nodes, since `static_retention` cannot recompute them once the tree has
+    advanced.
+    """
+    d = {l.nominal_B: l for l in legs}
+    deep_move = d[6400].selected_move
+    out: Dict[str, Any] = {
+        "stable_deep_move": deep_move,
+        "root_priors": dict(root.priors or {}),
+        "root_effective_visits": root.visit_count,
+        "reply": None, "two_ply": None,
+    }
+    child = root.children.get(deep_move) if deep_move is not None else None
+    if child is not None:
+        reply = visit_leader_move(child)
+        out["reply"] = {
+            "move": reply,
+            "priors": dict(child.priors or {}),
+            "effective_visits": child.visit_count,
+        }
+        gc = child.children.get(reply) if reply is not None else None
+        if gc is not None:
+            out["two_ply"] = {
+                "move": visit_leader_move(gc),
+                "priors": dict(gc.priors or {}),
+                "effective_visits": gc.visit_count,
+            }
+    return out
 
 
 def check_backup_invariant(d3_start: int, d3_boundary: int,
@@ -234,7 +336,7 @@ def check_backup_invariant(d3_start: int, d3_boundary: int,
     return True
 ```
 
-`run_additive_ladder` additionally captures `capture_backup_accounting(root)` at
+`run_additive_ladder` additionally captures `capture_tree_state(root)` at
 the start of leg 1, hands it to the boundary observer so the boundary capture can
 be frozen at the same instant as `at_boundary`, and freezes another immediately
 after leg 1 as `features_at_400`. `snapshots` gains `features_at_start`,
