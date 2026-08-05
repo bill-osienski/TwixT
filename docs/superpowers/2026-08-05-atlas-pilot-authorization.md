@@ -5,10 +5,18 @@
 This document authorizes GPU work. It is deliberately narrow, and it is the **only**
 atlas authorization currently in force.
 
-**Binding tooling state:** branch `atlas-convergence-diagnostic`, HEAD
+**Binding tooling state:** branch `atlas-convergence-diagnostic`, **code** qualified at
 `04bc8eccc64d4f48560d5742a7bc8fabf4bed2dd`, clean worktree, full suite
 **2624 passed / 4 skipped / 53 deselected / 0 failed**. Qualification recorded in
 `docs/superpowers/plans/2026-08-05-atlas-stage5-handoff.md`.
+
+The run will measure and bind **whatever HEAD is current when it starts**, which is later
+than the qualification commit because this document has itself been amended since.
+Documentation-only commits after `04bc8ec` do not invalidate the qualification — the code
+is unchanged. **Any commit touching `scripts/` does**, and requires re-running the suite
+before launch. The rule that matters at run time is unchanged: no source edit after
+preflight, and no commit between generation and qualification, so that every manifest and
+artifact in one run carries the same HEAD.
 
 ## The checkpoint — the one input the tooling cannot validate
 
