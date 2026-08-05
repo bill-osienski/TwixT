@@ -1791,12 +1791,30 @@ def test_convergent_requires_persistence_as_a_JOINT_condition():
 
 
 def test_dist_convergent_needs_the_SAME_metric_at_both_deep_rungs():
+    """The disjunction is over METRICS, not rungs.
+
+    IMPLEMENTATION NOTE (found while executing this plan): the original `mixed`
+    fixture -- `shares=(0.20, 0.60, 0.90, 0.62)` with default effs -- did not
+    mix anything. top_share closes toward BOTH 0.90 and 0.62, so the case
+    asserted False while the correct predicate returns True. The fixture below
+    constructs the mixing it names: top_share closes toward 3,200 but NOT
+    6,400, effective_children closes toward 6,400 but NOT 3,200.
+    """
     ok = _legs(v=(0.06, 0.05, 0.05, 0.05), m=(3, 3, 3, 3),
                shares=(0.20, 0.60, 0.62, 0.62))
     assert convergent(ok, stable_reference(ok))["dist_convergent"] is True
+
     mixed = _legs(v=(0.06, 0.05, 0.05, 0.05), m=(3, 3, 3, 3),
-                  shares=(0.20, 0.60, 0.90, 0.62))
-    assert convergent(mixed, stable_reference(mixed))["dist_convergent"] is False
+                  # top_share: 0.20 -> 0.60. Toward 0.90 closes (0.30 <= 0.35);
+                  # toward 0.30 does not (0.30 > 0.05).
+                  shares=(0.20, 0.60, 0.90, 0.30),
+                  # effective_children: 20 -> 16. Toward 12 closes (4 <= 4);
+                  # toward 30 does not (14 > 5).
+                  effs=(20.0, 16.0, 30.0, 12.0))
+    r = convergent(mixed, stable_reference(mixed))
+    assert closes_half(0.20, 0.60, 0.90) is True      # each half is real...
+    assert closes_half(20.0, 16.0, 12.0) is True
+    assert r["dist_convergent"] is False              # ...but not the same metric
 
 
 def test_gate_triggers_take_the_upper_rung_as_a_parameter():
