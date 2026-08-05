@@ -4,7 +4,62 @@
 
 **Goal:** Build and qualify labelling, capacity sizing, all three read-outs, and the artifact schema — every part pure and testable on synthetic ladder output, with no reservoir, checkpoint, MLX or measurement.
 
-**Architecture:** Four pure modules over Stage 3's `LegResult` / `BoundaryRecord` / tracer snapshots: `atlas_labelling.py` (stable reference, classes, capacity), `atlas_readout_a.py` (boundary features, ridge classifier, deployability), `atlas_readout_b.py` (four-rung gate calibration), `atlas_readout_c.py` (retention, strata, shape selection). One `atlas_artifact.py` handles schema, provenance and `_jsonable` boundaries. Every input is a plain dataclass or dict, so the whole stage qualifies on synthetic rows.
+**Architecture:** Four pure modules over Stage 3's `LegResult` / `BoundaryRecord` / tracer snapshots: `atlas_labelling.py` (stable reference, classes, capacity), `atlas_readout_a.py` (features at both frozen instants, ridge classifier, dual pipeline, deployability), `atlas_readout_b.py` (four-rung gate calibration), `atlas_readout_c.py` (edge retention, strata, shape selection, validation verdict). One `atlas_artifact.py` handles schema, provenance and `_jsonable` boundaries. Every input is a plain dataclass or dict, so the whole stage qualifies on synthetic rows.
+
+## Revision 2 — 2026-08-04, rewritten against amendments 3 and 4
+
+Revision 1 was drafted before spec amendment 4 and before the amendment-3 clauses on
+`K(n)`, excluded mass, verdict precedence and `LATE_ONLY_SEPARATION` were frozen. Four
+coupled sections were rewritten together, because amendment 4 changes the **shape** of
+what crosses the producer/consumer seam and fixing one end alone leaves the other
+describing a contract that no longer exists:
+
+| # | Was | Now | Governed by |
+|---|---|---|---|
+| 1 | Task 0 summarized **one** line off the final 6,400 tree, so `root_effective_visits` was `I + 6400` and every reply count was a final-tree count | **Two** deep lines captured while each state exists, plus complete depth-two parent-visit maps at the boundary **and** `B = 400`, with priors equality asserted where both rungs captured the same parent | §6a amendment 4 |
+| 2 | Read-out C walked one line's `root_priors` / `reply` / `two_ply` | `aggregate_shape` over the **deduplicated union** of `(parent path, move)` edges at both instants — depth buckets, excluded prior mass, forced-root bypasses, forced-simulation counts, per-stratum retention; `classify_edge_strata` wired in | §6a amendment 4, §8 |
+| 3 | The validation aggregate was computed and never judged | Three-way verdict with frozen precedence `FAIL > INCONCLUSIVE > PASS` | §6a "Validation is judged, not merely computed" |
+| 4 | `evaluate_detector` ran once | Identical pipeline on **both** feature sets, boundary authoritative, `LATE_ONLY_SEPARATION` = boundary `FAIL` **and** `B = 400` `PASS` | §6a "Read-out A runs on both feature sets" |
+
+Also corrected here: the interface blocks that still said `reference_line` singular while
+the chain test already read `reference_lines` plural; Task 5's interface block, which
+omitted `classify_edge_strata` entirely although Task 5 defines it; and the per-file test
+counts, which were wrong for Read-out B (claimed 12, the plan contains 14) and Read-out C
+(claimed 14, the plan contains 16) before any of this rewrite. **No frozen parameter,
+threshold or predicate changed.**
+
+## Revision 3 — 2026-08-04, review fixes
+
+Six defects found reviewing revision 2. Four of them are the same failure this line of
+work keeps producing — a contract that reads correctly in prose and is not the one the
+code implements.
+
+| # | Defect | Fix |
+|---|---|---|
+| 1 | **The artifact could not feed Read-out C.** `build_row` stored the producer document as `tracer_snapshots` and *separately* copied `reference_lines` and `parent_visits` to the top level, while Read-out C consumes `row["snapshots"]`. The chain worked around it with a hand-built `_c_row` — recreating the surrogate seam this plan exists to eliminate, and leaving the artifact path untested. | One undivided `snapshots` document. An artifact row **is** a Read-out A row and a Read-out C row; the chain drives both from real `build_row` output and `_c_row` is gone. |
+| 2 | **Unstable roots entered the retention bars.** Every row contributed required edges, including `no_stable_reference` rows whose deep rungs never agreed — but §8's floors are about *stable* deep moves. | Gated retention accumulates only over `STABLE_REFERENCE_LABELS` (an allow-list); selection-event counters still cover every row; `retention_rows` and `rows_without_stable_reference` are reported. |
+| 3 | **Two missingness states were conflated.** `agree is None` covered both "present in one line" and "absent from both". | Four explicit states — `agree` / `disagree` / `single_line` / `absent_both`; the last two are counted separately and neither enters the denominator. |
+| 4 | **Row overlap ignored discovery**, so two models fitted on different discovery rows could report identical row sets. Separately, the plan let a boundary missing-feature rejection sit inside a `LATE_ONLY_SEPARATION`, contradicting amendment 4's own text. | `row_overlap` reports discovery and validation separately. **The contradiction is resolved in favour of the amendment**: any boundary-set rejection blocks the lateness verdict, reported as the boundary's own `FAIL` plus `lateness_blocked_by`. See the reasoning under Task 3 — narrowing the amendment was the alternative and was rejected. |
+| 5 | **Provenance was not fail-closed.** `emit` never called `validate_provenance`, and the chain proved an empty provenance object could be emitted. Digests were checked for length 40 only. | `emit` refuses to serialize a run whose provenance does not validate, before serializing so a payload defect still raises `TypeError`; digests must be hexadecimal. |
+| 6 | Task 4's expected result said 12 against 14 present. | Corrected. |
+
+Test count moved **113 → 119**; expected suite **2554**. Again a derivation, not a target.
+
+## Revision 4 — 2026-08-04, second review pass
+
+| # | Defect | Fix |
+|---|---|---|
+| 1 | **The `LATE_ONLY_SEPARATION` fixture could not pass.** Revision 3 grew it by three *misleading* rows — 23 of 83 — so a perfect `B = 400` detector flags 27.7% and busts the frozen 25% ceiling. The test asserted a `PASS` that was arithmetically unreachable. | `_dual_rows` takes class counts; the fixture is **21 / 63**. `B = 400` flags 21/84 = exactly 0.25, and rejecting one boundary misleading row leaves 20/83 — still capacity-valid, so the boundary genuinely `FAIL`s rather than going insufficient. |
+| 2 | **Read-out B still bypassed the artifact**, rebuilding its row by hand and contradicting the criterion that every read-out consumes a real `build_row` result. The cause was a type mismatch: `build_row` stored `vars(l)`-flattened legs, while Read-out B and `atlas_labelling` read `l.nominal_B` by **attribute**. | The row keeps `LegResult` / `BoundaryRecord` **objects**, and `_jsonable` gains an additive dataclass branch — the same "normalize at the JSON boundary" rule it already applies to tuple keys. The chain hands `artifact_row` straight to `calibrate_gate`. |
+
+Test count **unchanged at 119**: the fixture fix is a parameter change, the Read-out B fix
+is a rewrite of an existing test, and the dataclass boundary is pinned by extending the
+emission test rather than adding one. Fix 2 touches landed Stage 2 code, so
+`tests/test_build_atlas_corpus_cli.py` is re-run and must stay at 13.
+
+A **Stage 5 handoff** is now recorded in the completion criteria: `flat_policy` and
+`near_even` are supplied facts here, hardcoded throughout the synthetic chain, and Stage 5
+must derive them from the frozen measured fields and qualify that producer seam.
 
 **Tech Stack:** Python 3, stdlib only (`math`, `statistics`, `random` for the frozen bootstrap seed). **No scipy, no numpy-dependent fitting** — the ridge classifier is a few lines of closed-form gradient descent. Tests: `.venv/bin/python -m pytest -p no:cacheprovider`.
 
@@ -26,11 +81,13 @@
 | File | Responsibility |
 |---|---|
 | `scripts/GPU/alphazero/atlas_labelling.py` (create) | Stable reference, misleading / stable-negative / ambiguous, class counts, capacity sizing, fail-closed verdicts. |
-| `scripts/GPU/alphazero/atlas_readout_a.py` (create) | Boundary feature collector, ridge classifier, validation bars, deployability aggregation. |
+| `scripts/GPU/alphazero/atlas_readout_a.py` (create) | Features from the frozen captures, ridge classifier, validation bars, deployability, and the dual boundary/`B=400` pipeline with `LATE_ONLY_SEPARATION`. |
 | `scripts/GPU/alphazero/atlas_readout_b.py` (create) | Four-rung historical metrics, frozen convergence predicate, eligible-trigger gate. |
-| `scripts/GPU/alphazero/atlas_readout_c.py` (create) | Two-snapshot consumption, static retention, strata, lexicographic shape selection, lag bound. |
+| `scripts/GPU/alphazero/atlas_readout_c.py` (create) | Edge-union retention at both instants, per-stratum and depth-bucket aggregation, lag bound, lexicographic shape selection, three-way validation verdict. |
 | `scripts/GPU/alphazero/atlas_artifact.py` (create) | Row/run schema, provenance validation, `_jsonable` emission. |
-| `tests/test_atlas_labelling.py`, `..._readout_a.py`, `..._readout_b.py`, `..._readout_c.py`, `..._artifact.py` (create) | One suite per module, synthetic inputs only. |
+| `scripts/GPU/alphazero/warm_prefix_replay.py` (modify, Task 0) | Adds the frozen captures, both deep reference lines and both parent-visit maps. |
+| `scripts/GPU/alphazero/selection_tracer.py` (modify, Task 0) | Adds the online `K(n+14)` lagged counters. |
+| `tests/test_atlas_producer_closure.py`, `..._labelling.py`, `..._readout_a.py`, `..._readout_b.py`, `..._readout_c.py`, `..._artifact.py`, `..._readout_chain.py` (create) | One suite per module plus the real-chain suite; synthetic or `FakeEvaluator` inputs only. |
 
 ---
 
@@ -42,7 +99,24 @@
 - Test: `tests/test_atlas_producer_closure.py`
 
 **Interfaces:**
-- Produces: `capture_tree_state(root) -> dict` — the **complete compact capture schema** below; `check_backup_invariant(...)`; `reference_line_summary(root, legs) -> dict`; `SelectionTracer` extended with **simultaneous `K(n+14)` counters**; `run_additive_ladder` returning `captures = {at_start, at_boundary, at_400}` and `reference_lines`.
+- Consumes: Stage 3's `run_additive_ladder`, `BatchSafeBoundaryObserver`, `SelectionTracer`, and `mcts.visit_leader_move` — all delivered and unchanged.
+- Produces, in `warm_prefix_replay.py`: `capture_tree_state(root) -> dict` (the **complete compact capture schema** below); `check_backup_invariant(d3_start, d3_boundary, n_actual) -> bool`; `capture_parent_visits(root, max_depth=2) -> dict[tuple[int, ...], int]`; `deep_reference_line(root) -> dict`; `merge_reference_lines(line_3200, line_6400) -> dict`.
+- Produces, in `selection_tracer.py`: `BATCH_LAG = 14` and a per-cell `lagged_first_touch_outside_events` counted **in the same pass** as the unlagged one.
+- Produces, from `run_additive_ladder`: the Stage 3 return shape `(legs, snapshots)` is kept and **extended additively** — `snapshots` keeps its delivered `at_boundary` / `at_400` tracer snapshots at top level and gains three sibling keys:
+
+```python
+{
+  "at_boundary": <tracer snapshot>,      # Stage 3, unchanged
+  "at_400":      <tracer snapshot>,      # Stage 3, unchanged
+  "captures":       {"at_start": ..., "at_boundary": ..., "at_400": ...},
+  "parent_visits":  {"at_boundary": ..., "at_400": ...},
+  "reference_lines": {"at_3200": ..., "at_6400": ..., "merged": ...},
+}
+```
+
+Additive, so every Stage 3 consumer and every already-green Stage 3 test keeps working
+unchanged. `reference_lines` is **plural** everywhere — revision 1 declared it plural in
+one place and singular in five others.
 
 **The capture schema, frozen here because every consumer depends on it.** One
 dict, taken at one instant, carrying everything the pure analyses need after the
@@ -75,8 +149,57 @@ makes that computable later.
 `leader_breadth` counts children **of the canonical `visit_leader_move`**, not of
 the root — a distinct quantity, and the chain test previously conflated them.
 
+#### The reference-line contract (amendment 4), frozen here
+
+Read-out C evaluates admission against the moves stable deeper search requires. Four
+things follow, and all four are producer obligations:
+
+**a. Two deep lines, each captured while its state exists.** `deep_reference_line(root)`
+is called at the end of leg 3 (nominal `B = 3,200`) and again at the end of leg 4
+(`B = 6,400`). The ladder is additive on one tree, so after leg 4 the 3,200 state exists
+nowhere and a single post-ladder summary can only ever describe 6,400.
+
+**b. Edges, not moves.** A line is a list of `(parent_path, move)` edges, where
+`parent_path` is the tuple of move ids from the target root — `()` at the root, `(m0,)`
+at the reply, `(m0, m1)` at two ply. The required set is the **deduplicated union** of
+both lines' edges: agreements collapse to one entry, and **where the two rungs disagree
+both edges are retained.** Neither line is truth; the 3,200/6,400 pair exists so that
+agreement is a *finding*.
+
+**c. Agreement is equality of the complete edge.** The same move id reached through a
+different parent is a different edge, and scoring it as agreement would overstate how
+much the two rungs concur. Each depth carries one of **four** states, and the last two
+both sit **outside the agreement denominator**:
+
+```text
+agree        both lines reached this depth and the edges are identical
+disagree     both lines reached it and the edges differ
+single_line  exactly one line reached it   -- nothing to compare against
+absent_both  neither line reached it       -- a DIFFERENT missingness state
+```
+
+`single_line` and `absent_both` are counted **separately**. Amendment 4 names only the
+former; folding a depth neither line reached into it would report a comparison that was
+never even half-available. Reply and two-ply agreement are reported separately and **add
+no gate**.
+
+**d. Parent visits are captured as COMPLETE MAPS at the two shallow instants.**
+`capture_parent_visits` records `path -> visit_count` for every existing path through
+depth two, at the boundary and again at `B = 400`. It must be a complete map rather than
+a lookup of the line's paths, because **the union is not known until leg 4 and these
+maps are taken during leg 1.** A path absent from a map has **zero** visits, and
+`K(0) = min(n_legal, max(1, 0)) = 1` admits only rank 1 there.
+
+Retention therefore never reads a 6,400-era visit count. To make that structurally
+impossible rather than merely intended, `deep_reference_line` records each edge's
+**parent priors and nothing else about the parent** — the field that caused the revision-1
+defect (`root_effective_visits` off the final tree) is simply not produced. Priors are
+what ranks require, and under the frozen `add_noise=False` ladder they do not change
+between rungs, so where both lines captured the same **parent** the two prior maps are
+**asserted equal** rather than assumed so.
+
 > **Why this task exists, and why it is first.** Stage 4's analyses are pure, which
-> made three producer gaps invisible until review:
+> made four producer gaps invisible until review:
 >
 > 1. `depth3plus_backup_fraction` was read off **selection events**, but those are edge
 >    traversals — a depth-5 simulation emits five of them and is one backup. §6a now
@@ -86,6 +209,10 @@ the root — a distinct quantity, and the chain test previously conflated them.
 >    the 6,400 tree. They must be frozen at the boundary and at `B = 400`.
 > 3. The `K(n+14)` lagged count was **caller-supplied**. No real row could produce it,
 >    so the bound was untestable in practice.
+> 4. The reference line was summarized **once, off the final 6,400 tree**, so the
+>    horizon Read-out C measured against was `I + 6400` rather than the `I + N_actual`
+>    and `I + 400` the widening rule would actually see. Amendment 4 now requires two
+>    lines and two parent-visit maps, all captured while their states exist.
 >
 > Building the pure analyses on top of these would have produced confidently wrong
 > numbers with green tests.
@@ -102,7 +229,8 @@ from scripts.GPU.alphazero.corpus_geometry import GameMeta
 from scripts.GPU.alphazero.mcts import MCTS, MCTSConfig
 from scripts.GPU.alphazero.selection_tracer import SelectionTracer
 from scripts.GPU.alphazero.warm_prefix_replay import (
-    BatchSafeBoundaryObserver, capture_tree_state, replay_prefix,
+    BatchSafeBoundaryObserver, capture_parent_visits, capture_tree_state,
+    deep_reference_line, merge_reference_lines, replay_prefix,
     run_additive_ladder,
 )
 
@@ -110,6 +238,12 @@ from tests.eval_fakes import FakeEvaluator
 
 BASE = 20400000
 SIZE = 6
+
+
+def _edge(path, move, priors):
+    """A reference-line edge as `deep_reference_line` emits it."""
+    return {"parent_path": path, "move": move, "depth": len(path),
+            "parent_priors": priors}
 
 
 class _N:
@@ -237,6 +371,127 @@ def test_the_backup_invariant_is_asserted():
         check_backup_invariant(d3_start=40, d3_boundary=10, n_actual=326)
     with pytest.raises(ValueError):
         check_backup_invariant(d3_start=0, d3_boundary=400, n_actual=326)
+
+
+# -- amendment 4: two deep lines, and complete parent-visit maps --------------
+
+def test_parent_visits_map_covers_every_path_through_depth_two():
+    """A COMPLETE map, not a lookup of the line's paths: the union of required
+    edges is not known until leg 4, and this map is taken during leg 1."""
+    root = _N(10, {0: _N(6, {0: _N(4, {0: _N(3, move=0)}, move=0)}, move=0),
+                   1: _N(4, move=1)})
+    pv = capture_parent_visits(root)
+    assert pv[()] == 10                      # the root is a parent, at depth 0
+    assert pv[(0,)] == 6 and pv[(1,)] == 4
+    assert pv[(0, 0)] == 4
+    # Depth three is below every possible parent of a two-ply edge.
+    assert (0, 0, 0) not in pv
+
+
+def test_a_deep_line_is_a_list_of_edges_with_parent_paths():
+    """Edges, not moves: the same move id under a different parent is a
+    different edge, which is what makes agreement checkable at all."""
+    root = _N(10, {5: _N(8, {3: _N(6, {1: _N(4, move=1)}, move=3)}, move=5),
+                   9: _N(2, move=9)})
+    line = deep_reference_line(root)
+    assert [(e["parent_path"], e["move"]) for e in line["edges"]] == [
+        ((), 5), ((5,), 3), ((5, 3), 1)]
+    assert [e["depth"] for e in line["edges"]] == [0, 1, 2]
+    # Parent PRIORS ride along, because ranks need them. The parent's visit
+    # count deliberately does NOT: it would be a 6,400-era number, and its
+    # presence is what let revision 1 measure against the wrong horizon.
+    assert line["edges"][0]["parent_priors"] == root.priors
+    assert "parent_effective_visits" not in line["edges"][0]
+
+
+def test_the_union_keeps_both_replies_when_the_deep_lines_disagree():
+    """Neither deep rung is truth, so a disagreement retains BOTH edges."""
+    root_p = {7: 0.6, 8: 0.4}
+    reply_p = {1: 0.5, 2: 0.5}
+    l32 = {"edges": [_edge((), 7, root_p), _edge((7,), 1, reply_p)]}
+    l64 = {"edges": [_edge((), 7, root_p), _edge((7,), 2, reply_p)]}
+    m = merge_reference_lines(l32, l64)
+    assert [(e["parent_path"], e["move"]) for e in m["required_edges"]] == [
+        ((), 7), ((7,), 1), ((7,), 2)]
+    assert m["required_edges"][0]["sources"] == (3200, 6400)   # collapsed
+    assert m["required_edges"][1]["sources"] == (3200,)
+    assert m["agreement"]["reply"]["state"] == "disagree"
+
+
+def test_agreement_is_equality_of_the_complete_edge_not_the_move_id():
+    """Move id 1 sits at depth 1 in both lines, under DIFFERENT parents. Scoring
+    that as agreement would overstate how much the two rungs concur."""
+    root_p = {7: 0.6, 8: 0.4}
+    reply_p = {1: 0.5, 2: 0.5}
+    l32 = {"edges": [_edge((), 7, root_p), _edge((7,), 1, reply_p)]}
+    l64 = {"edges": [_edge((), 8, root_p), _edge((8,), 1, reply_p)]}
+    m = merge_reference_lines(l32, l64)
+    assert m["agreement"]["root"]["state"] == "disagree"
+    assert m["agreement"]["reply"]["state"] == "disagree"
+    assert len(m["required_edges"]) == 4          # nothing collapsed
+
+
+def test_single_line_and_absent_both_are_DIFFERENT_missingness_states():
+    """Amendment 4 calls a pair present in only one line "counted separately".
+    A depth neither line reached is a different fact -- collapsing the two
+    would report a comparison that was never even half-available. Neither
+    enters the agreement denominator."""
+    root_p = {7: 1.0}
+    l32 = {"edges": [_edge((), 7, root_p), _edge((7,), 1, {1: 1.0})]}
+    l64 = {"edges": [_edge((), 7, root_p)]}                 # shallower line
+    m = merge_reference_lines(l32, l64)
+    reply = m["agreement"]["reply"]
+    assert reply["state"] == "single_line"
+    assert reply["in_3200"] is True and reply["in_6400"] is False
+    assert m["agreement"]["root"]["state"] == "agree"
+    # Neither line reached two ply at all.
+    assert m["agreement"]["two_ply"]["state"] == "absent_both"
+
+
+def test_priors_equality_is_asserted_where_both_rungs_captured_a_parent():
+    """add_noise=False, so priors cannot change between rungs. The assertion is
+    keyed on the PARENT PATH, not the edge -- two different edges can share a
+    parent, which is exactly the case worth checking."""
+    l32 = {"edges": [_edge((), 7, {7: 0.6, 8: 0.4})]}
+    same_parent = {"edges": [_edge((), 8, {7: 0.6, 8: 0.4})]}
+    merge_reference_lines(l32, same_parent)                 # different move, OK
+    drifted = {"edges": [_edge((), 8, {7: 0.9, 8: 0.1})]}
+    with pytest.raises(ValueError, match="priors"):
+        merge_reference_lines(l32, drifted)
+
+
+def test_the_ladder_freezes_both_deep_lines_and_both_parent_visit_maps():
+    hist = _history(4)
+    meta = GameMeta(game_id=0, seed=BASE, n_moves=len(hist), start_player="red")
+    m = MCTS(FakeEvaluator(value=0.0),
+             MCTSConfig(n_simulations=1, eval_batch_size=14,
+                        stall_flush_sims=48, pending_virtual_visits=8),
+             random.Random(BASE))
+    pre = replay_prefix(m, meta, hist, target_ply=2, active_size=SIZE)
+    tracer = SelectionTracer()
+    m._selection_observer = tracer
+    obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I, threshold=40,
+                                    leg_B=80, tracer=tracer)
+    _legs, snaps = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
+                                       boundary_observer=obs,
+                                       target_tracer=tracer,
+                                       increments=(80, 80, 80, 80))
+    assert set(snaps["reference_lines"]) == {"at_3200", "at_6400", "merged"}
+    assert set(snaps["parent_visits"]) == {"at_boundary", "at_400"}
+
+    # Each map is anchored to its own instant: the root entry must equal the
+    # tree capture taken at the same moment.
+    pv_b, pv_4 = snaps["parent_visits"]["at_boundary"], snaps["parent_visits"]["at_400"]
+    assert pv_b[()] == snaps["captures"]["at_boundary"]["root_visits"]
+    assert pv_4[()] == snaps["captures"]["at_400"]["root_visits"]
+    assert pv_4[()] >= pv_b[()]        # equal only if the boundary was the tail flush
+    # ...and neither moved when legs 2-4 ran. The post-ladder tree is strictly
+    # larger, so `>` here cannot be satisfied by two reads at the end.
+    assert capture_parent_visits(pre.root)[()] > pv_4[()]
+
+    # Every required edge carries the priors its rank will be computed from.
+    assert all(e["parent_priors"]
+               for e in snaps["reference_lines"]["merged"]["required_edges"])
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -302,39 +557,124 @@ def capture_tree_state(root: MCTSNode) -> Dict[str, Any]:
     }
 
 
-def reference_line_summary(root: MCTSNode, legs: Sequence[LegResult]
-                           ) -> Dict[str, Any]:
-    """What Read-out C needs from the 3,200 / 6,400 reference lines.
+def capture_parent_visits(root: MCTSNode, max_depth: int = 2
+                          ) -> Dict[Tuple[int, ...], int]:
+    """Visit counts for EVERY existing path through depth `max_depth`, at ONE
+    instant (amendment 4).
 
-    Preserves the stable deep root move, its best reply, a two-ply horizon, and
-    -- critically -- the PRIORS and EFFECTIVE parent visit counts at each of
-    those nodes, since `static_retention` cannot recompute them once the tree has
-    advanced.
+    A complete map rather than a lookup of the reference line's paths, because
+    the union of required edges is not known until leg 4 while this is captured
+    during leg 1. A path ABSENT from the map has zero visits, where
+    K(0) = min(n_legal, max(1, 0)) = 1 admits only rank 1.
+
+    Bounded by the nodes that exist, not by the branching factor: at most
+    `I + N_actual + 1` paths can exist at this instant, so this is hundreds of
+    entries -- not the 250k a 500-wide two-ply enumeration would suggest.
+
+    Keys are TUPLES, the natural type here. `build_atlas_corpus._jsonable`
+    normalizes them at the artifact boundary; the pure modules keep tuples.
     """
-    d = {l.nominal_B: l for l in legs}
-    deep_move = d[6400].selected_move
-    out: Dict[str, Any] = {
-        "stable_deep_move": deep_move,
-        "root_priors": dict(root.priors or {}),
-        "root_effective_visits": root.visit_count,
-        "reply": None, "two_ply": None,
-    }
-    child = root.children.get(deep_move) if deep_move is not None else None
-    if child is not None:
-        reply = visit_leader_move(child)
-        out["reply"] = {
-            "move": reply,
-            "priors": dict(child.priors or {}),
-            "effective_visits": child.visit_count,
-        }
-        gc = child.children.get(reply) if reply is not None else None
-        if gc is not None:
-            out["two_ply"] = {
-                "move": visit_leader_move(gc),
-                "priors": dict(gc.priors or {}),
-                "effective_visits": gc.visit_count,
-            }
+    out: Dict[Tuple[int, ...], int] = {}
+    frontier: List[Tuple[MCTSNode, Tuple[int, ...]]] = [(root, ())]
+    while frontier:
+        node, path = frontier.pop()
+        out[path] = node.visit_count
+        if len(path) < max_depth:
+            frontier.extend((c, path + (mv,)) for mv, c in node.children.items())
     return out
+
+
+def deep_reference_line(root: MCTSNode) -> Dict[str, Any]:
+    """The two-ply reference line at ONE instant (amendment 4).
+
+    Called at the end of leg 3 and again at the end of leg 4: the ladder is
+    additive on ONE tree, so after leg 4 the 3,200 state exists nowhere and a
+    single post-ladder summary could only ever describe 6,400.
+
+    Emits EDGES -- `(parent_path, move)` plus the parent's priors, which is what
+    ranks are computed from. It deliberately does NOT emit the parent's visit
+    count: that is a deep-rung number, and retention must key on the boundary and
+    B=400 maps instead. Not producing it is what makes the revision-1 defect
+    unreachable rather than merely discouraged.
+    """
+    edges: List[Dict[str, Any]] = []
+    node: Optional[MCTSNode] = root
+    path: Tuple[int, ...] = ()
+    for _ in range(3):                       # root move, reply, two-ply
+        if node is None:
+            break
+        mv = visit_leader_move(node)         # canonical: ties by lowest move id
+        if mv is None:
+            break                            # nothing below here has a visit
+        edges.append({
+            "parent_path": path, "move": mv, "depth": len(path),
+            "parent_priors": dict(node.priors or {}),
+        })
+        path = path + (mv,)
+        node = node.children.get(mv)
+    return {"edges": edges, "moves": [e["move"] for e in edges]}
+
+
+DEPTH_NAMES = ("root", "reply", "two_ply")
+
+
+def merge_reference_lines(line_3200: Dict[str, Any], line_6400: Dict[str, Any]
+                          ) -> Dict[str, Any]:
+    """The DEDUPLICATED UNION of both deep lines' edges (amendment 4).
+
+    Agreements collapse to one edge; disagreements retain BOTH. Neither rung is
+    declared truth and neither is called stable -- the point of the 3,200/6,400
+    pair is that agreement is a FINDING, not an assumption.
+    """
+    by_key: Dict[Tuple[Tuple[int, ...], int], Dict[str, Any]] = {}
+    priors_by_parent: Dict[Tuple[int, ...], Dict[int, float]] = {}
+    at_depth: Dict[int, Dict[int, Tuple[Tuple[int, ...], int]]] = {}
+
+    for rung, line in ((3200, line_3200), (6400, line_6400)):
+        for e in line["edges"]:
+            path = e["parent_path"]
+            # Priors cannot change between rungs under the frozen
+            # add_noise=False ladder, so ASSERT rather than assume. Keyed on the
+            # PARENT, not the edge: two different edges can share a parent, and
+            # that is exactly the case worth checking.
+            prev = priors_by_parent.get(path)
+            if prev is not None and prev != e["parent_priors"]:
+                raise ValueError(
+                    f"parent priors differ between deep rungs at path {path}; "
+                    f"under the frozen add_noise=False ladder they cannot")
+            priors_by_parent[path] = e["parent_priors"]
+
+            key = (path, e["move"])
+            if key in by_key:
+                by_key[key]["sources"] = by_key[key]["sources"] + (rung,)
+            else:
+                by_key[key] = {**e, "sources": (rung,)}
+            at_depth.setdefault(e["depth"], {})[rung] = key
+
+    agreement: Dict[str, Any] = {}
+    for depth, name in enumerate(DEPTH_NAMES):
+        seen = at_depth.get(depth, {})
+        in32, in64 = 3200 in seen, 6400 in seen
+        if in32 and in64:
+            # Agreement is equality of the COMPLETE edge: the same move id
+            # under a different parent is a different edge.
+            state = "agree" if seen[3200] == seen[6400] else "disagree"
+        elif in32 or in64:
+            # Amendment 4's "present in only one line": counted separately,
+            # outside the agreement denominator. There is nothing to compare.
+            state = "single_line"
+        else:
+            # Neither line reached this depth. A DIFFERENT missingness state --
+            # collapsing it into single_line would report a comparison that was
+            # never even half-available. Also outside the denominator.
+            state = "absent_both"
+        agreement[name] = {"in_3200": in32, "in_6400": in64, "state": state}
+
+    return {
+        # Sorted by (parent_path, move) so the union is reproducible run to run.
+        "required_edges": [by_key[k] for k in sorted(by_key)],
+        "agreement": agreement,
+    }
 
 
 def check_backup_invariant(d3_start: int, d3_boundary: int,
@@ -348,20 +688,35 @@ def check_backup_invariant(d3_start: int, d3_boundary: int,
     return True
 ```
 
-`run_additive_ladder` additionally captures `capture_tree_state(root)` at
-the start of leg 1, hands it to the boundary observer so the boundary capture can
-be frozen at the same instant as `at_boundary`, and freezes another immediately
-after leg 1 as `features_at_400`. `snapshots` gains `features_at_start`,
-`features_at_boundary`, `features_at_400`.
+**Who freezes what, and when.** `BatchSafeBoundaryObserver.on_flush_complete`
+already receives `root`, so the boundary instant is the observer's to freeze:
+alongside the existing `tracer_snapshot_at_boundary` it also stores
+`capture_tree_state(root)` and `capture_parent_visits(root)`. Nothing else can
+reach that instant — by the time `run_additive_ladder` regains control, leg 1 has
+already finished.
+
+| instant | frozen there | by |
+|---|---|---|
+| before leg 1 | `captures["at_start"]` | ladder |
+| boundary flush, inside leg 1 | `captures["at_boundary"]`, `parent_visits["at_boundary"]`, `at_boundary` tracer snapshot | observer |
+| after leg 1 (`B = 400`) | `captures["at_400"]`, `parent_visits["at_400"]`, `at_400` tracer snapshot | ladder |
+| after leg 3 (`B = 3,200`) | `reference_lines["at_3200"]` | ladder |
+| after leg 4 (`B = 6,400`) | `reference_lines["at_6400"]`, then `merged` | ladder |
+
+**Select the deep rungs by LEG INDEX (`leg_idx == 2` and `leg_idx == 3`), never by
+`running_B`.** CPU tests pass `increments=(80, 80, 80, 80)`, where `running_B` reaches
+320 and never 3,200 — a `running_B == 3200` test would silently capture no deep line at
+all and every downstream retention number would be computed over an empty union, with
+green tests throughout.
 
 In `selection_tracer.py`, each cell gains `lagged_first_touch_outside_events`,
-incremented in the same pass using `k_of_n(parent_completed_visits + 14, ...)`.
+incremented in the same pass using `k_of_n(parent_completed_visits + BATCH_LAG, ...)`.
 `BATCH_LAG = 14` is a module constant.
 
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_producer_closure.py tests/test_warm_prefix_replay.py tests/test_selection_tracer.py -v -p no:cacheprovider`
-Expected: PASS — 6 new, plus the existing 32 warm-replay and 18 tracer tests all still green.
+Expected: PASS — 13 new, plus the existing 32 warm-replay and 18 tracer tests all still green (the ladder's return shape is extended additively, so none of them changes).
 
 - [ ] **Step 5: Commit**
 
@@ -800,14 +1155,16 @@ git commit -m "feat(atlas-s4): Read-out A features from the frozen two-point cap
 
 ---
 
-### Task 3: Read-out A — classifier, string labels, bars, deployability
+### Task 3: Read-out A — classifier, string labels, bars, deployability, dual pipeline
 
 **Files:**
 - Modify: `scripts/GPU/alphazero/atlas_readout_a.py`
 - Test: `tests/test_atlas_readout_a.py`
 
 **Interfaces:**
-- Produces: `LABEL_TO_Y`; `prepare_rows(rows) -> dict`; `standardize(...)`; `fit_ridge_logistic(...)`; `auc(...)`; `bootstrap_auc_lower_bound(...)`; `evaluate_detector(discovery, validation) -> dict`; `deployability(...)`.
+- Consumes: rows shaped `{"label": str, "features_at_boundary": {...}, "features_at_400": {...}}` — which is exactly the artifact row Task 6 builds, so no translation layer exists to drift. The single-set entry points keep a `feature_key` with a `"features"` default, so Task 3's own synthetic rows stay one-set.
+- Produces: `LABEL_TO_Y`; `prepare_rows(rows, feature_key="features") -> dict`; `standardize(...)`; `fit_ridge_logistic(...)`; `auc(...)`; `bootstrap_auc_lower_bound(...)`; `evaluate_detector(discovery, validation, *, feature_key="features") -> dict`; `deployability(...)`.
+- Produces, for §6a's dual pipeline: `FEATURE_SETS`; `AUTHORITATIVE_FEATURE_SET`; `INSUFFICIENCY_VERDICTS`; `evaluate_detector_both(discovery, validation) -> dict`.
 
 > **`classify_row` returns STRINGS.** A detector expecting numeric `1`/`0` would count
 > every real row as neither class and silently train on nothing. `prepare_rows` filters
@@ -815,13 +1172,65 @@ git commit -m "feat(atlas-s4): Read-out A features from the frozen two-point cap
 > feature per §6a, and reports the rejection count — and capacity is rechecked **after**
 > rejection, because rejection is what can push a split below its own gate.
 
+#### The dual pipeline (§6a "Read-out A runs on both feature sets")
+
+The **identical** pipeline runs on the boundary features and on the `B = 400` features.
+**The boundary remains authoritative** — it is the only instant at which a controller
+could still act.
+
+```text
+boundary INSUFFICIENT_*                                    -> that verdict, as itself
+boundary PASS                                              -> PASS
+boundary FAIL, B=400 PASS, boundary rejected NO rows       -> LATE_ONLY_SEPARATION
+boundary FAIL, B=400 PASS, boundary rejected ANY row       -> FAIL + lateness_blocked_by
+boundary FAIL, B=400 not PASS                              -> FAIL
+```
+
+`LATE_ONLY_SEPARATION` requires **boundary `FAIL` and `B = 400` `PASS` — both, exactly**.
+It is §6's stated failure condition, not a success: the information exists but arrives
+too late to allocate the remaining budget.
+
+#### Resolving the missing-feature contradiction — the amendment wins
+
+Amendment 4 lists three things that are **not** evidence of lateness: a boundary
+`INSUFFICIENT_CLASSES`, an `INSUFFICIENT_DISCOVERY_CLASSES`, **or a missing-feature
+rejection.** The third is not a verdict — it is a *condition* that may or may not produce
+one. Revision 2 read the clause as naming three verdicts and therefore let a boundary
+rejection sit inside a `LATE_ONLY_SEPARATION`, while separately declaring unequal
+complete-case sets "reported, not gated". Those two positions contradict each other.
+
+**Resolved in favour of the amendment's literal text: any missing-feature rejection in
+the boundary feature set blocks `LATE_ONLY_SEPARATION`.** Two reasons, and neither is
+convenience:
+
+- **It targets the exact failure direction.** Rejected rows shrink the boundary sample,
+  and a smaller sample is *more* likely to miss the AUC and bootstrap bars. A boundary
+  rejection is precisely what can manufacture the `FAIL` half of a lateness finding.
+- **The alternative amends a frozen clause.** Narrowing "a missing-feature rejection" to
+  "an insufficiency caused by rejection" is permissible only as a written amendment
+  preceding the work — and it would weaken a safety clause to fit an implementation.
+  Reading it as written costs nothing and fails closed.
+
+Blocking counts rejections in **either split** of the boundary set: discovery rejections
+change the fitted model, validation rejections change what it is scored on. The result is
+reported as the boundary's own `FAIL`, inside the frozen verdict vocabulary, with
+`lateness_blocked_by` and the counts recording why the lateness reading was withheld —
+"reported as itself" rather than promoted, and never silently.
+
+**What stays reported-not-gated.** Everything else about unequal row sets. `prepare_rows`
+returns `kept_indices`, and `row_overlap` carries `n_common` / `identical` **separately
+for discovery and for validation** — revision 2 computed validation only, so two models
+fitted on different discovery rows could be reported as identical row sets. No gate is
+invented on top of that; the one place it matters for a verdict is handled above.
+
 - [ ] **Step 1: Write the failing test**
 
 ```python
 # append to tests/test_atlas_readout_a.py
 from scripts.GPU.alphazero.atlas_readout_a import (
-    LABEL_TO_Y, auc, bootstrap_auc_lower_bound, deployability,
-    evaluate_detector, fit_ridge_logistic, prepare_rows, standardize,
+    AUTHORITATIVE_FEATURE_SET, FEATURE_SETS, INSUFFICIENCY_VERDICTS, LABEL_TO_Y,
+    auc, bootstrap_auc_lower_bound, deployability, evaluate_detector,
+    evaluate_detector_both, fit_ridge_logistic, prepare_rows, standardize,
 )
 
 
@@ -913,6 +1322,116 @@ def test_deployability_of_an_empty_set_is_None_not_zero():
     r = deployability([])
     assert r["median_remaining"] is None and r["zero_budget_fraction"] is None
     assert r["verdict"] == "NO_ROWS"
+
+
+# -- section 6a: the IDENTICAL pipeline on BOTH feature sets ------------------
+
+def _dual_rows(boundary_separates, four_hundred_separates,
+               n_misleading=20, n_stable=60):
+    """20 misleading + 60 stable-negative: the smallest set that satisfies the
+    frozen capacity gate (>=20 / >=25) AND can clear the <=25% flag-rate bar,
+    since 20/80 is exactly 0.25. At 45 rows a perfect detector would fail its
+    own flag rate at 44%, and the test would pin the wrong thing.
+
+    The class counts are parameters because the ceiling binds them: a perfect
+    detector flags every positive, so `n_misleading / (n_misleading + n_stable)`
+    must stay <= 0.25 for a PASS to be reachable at all. Adding positives to a
+    fixture is therefore NOT a safe way to grow it.
+    """
+    rows = []
+    for i in range(n_misleading + n_stable):
+        label = "misleading" if i < n_misleading else "stable_negative"
+        hi = 1.0 if label == "misleading" else 0.0
+        rows.append({
+            "label": label,
+            "features_at_boundary": {k: (hi if boundary_separates else 0.5)
+                                     for k in FEATURE_NAMES},
+            "features_at_400": {k: (hi if four_hundred_separates else 0.5)
+                                for k in FEATURE_NAMES},
+        })
+    return rows
+
+
+def test_the_pipeline_runs_on_both_frozen_feature_sets():
+    assert FEATURE_SETS == ("features_at_boundary", "features_at_400")
+    assert AUTHORITATIVE_FEATURE_SET == "features_at_boundary"
+    rows = _dual_rows(True, True)
+    r = evaluate_detector_both(rows, rows, replicates=64)
+    assert set(r["per_feature_set"]) == set(FEATURE_SETS)
+    assert r["authoritative"] == AUTHORITATIVE_FEATURE_SET
+
+
+def test_the_boundary_result_is_authoritative_when_it_passes():
+    rows = _dual_rows(True, False)
+    r = evaluate_detector_both(rows, rows, replicates=64)
+    assert r["per_feature_set"]["features_at_boundary"]["verdict"] == "PASS"
+    assert r["per_feature_set"]["features_at_400"]["verdict"] == "FAIL"
+    assert r["verdict"] == "PASS"            # a failing B=400 cannot demote it
+
+
+def test_LATE_ONLY_SEPARATION_requires_boundary_FAIL_and_400_PASS():
+    """Both, exactly. It is section 6's stated FAILURE condition: the
+    information exists but arrives too late to allocate the last 80 sims."""
+    rows = _dual_rows(False, True)
+    r = evaluate_detector_both(rows, rows, replicates=64)
+    assert r["per_feature_set"]["features_at_boundary"]["verdict"] == "FAIL"
+    assert r["per_feature_set"]["features_at_400"]["verdict"] == "PASS"
+    assert r["verdict"] == "LATE_ONLY_SEPARATION"
+
+
+def test_both_sets_failing_is_a_plain_FAIL():
+    rows = _dual_rows(False, False)
+    assert evaluate_detector_both(rows, rows, replicates=64)["verdict"] == "FAIL"
+
+
+def test_a_boundary_insufficiency_is_reported_as_itself_not_as_lateness():
+    """Absence of evidence is never evidence of timing: a B=400 PASS must not
+    promote an insufficient boundary result to LATE_ONLY_SEPARATION."""
+    rows = _dual_rows(False, True)
+    rows[0]["features_at_boundary"]["leader_breadth"] = None   # 19 misleading
+    r = evaluate_detector_both(rows, rows, replicates=64)
+    assert r["per_feature_set"]["features_at_boundary"]["verdict"] in \
+        INSUFFICIENCY_VERDICTS
+    assert r["per_feature_set"]["features_at_400"]["verdict"] == "PASS"
+    assert r["verdict"] == "INSUFFICIENT_CLASSES"
+
+
+def test_a_boundary_REJECTION_blocks_LATE_ONLY_SEPARATION():
+    """Amendment 4 lists a missing-feature rejection alongside the two
+    insufficiency verdicts as something that cannot establish lateness.
+
+    Rejections shrink the boundary sample, and a smaller sample is MORE likely
+    to miss the AUC and bootstrap bars -- so a rejection is exactly what could
+    manufacture the FAIL half of a lateness finding.
+
+    Sizing is exact and both halves are load-bearing. 21/84 keeps the B=400
+    flag rate at exactly the 0.25 ceiling, so a perfect detector still PASSES;
+    rejecting one boundary misleading row leaves 20/83, which still clears the
+    >=20 / >=25 capacity gate, so the boundary reaches the bars and returns a
+    genuine FAIL rather than an INSUFFICIENT_CLASSES. Adding three MISLEADING
+    rows instead would give 23/83 = 27.7% and the B=400 half could never pass.
+    """
+    rows = _dual_rows(False, True, n_misleading=21, n_stable=63)
+    rows[0]["features_at_boundary"]["leader_breadth"] = None
+    r = evaluate_detector_both(rows, rows, replicates=64)
+    assert r["per_feature_set"]["features_at_boundary"]["verdict"] == "FAIL"
+    assert r["per_feature_set"]["features_at_400"]["verdict"] == "PASS"
+    # Reported as the boundary's OWN result, not promoted to a timing finding.
+    assert r["verdict"] == "FAIL"
+    assert r["lateness_blocked_by"] == "boundary_missing_feature_rejections"
+
+
+def test_row_overlap_is_reported_for_DISCOVERY_and_validation_separately():
+    """Missing discovery features make the two models train on different rows,
+    which a validation-only overlap would report as identical row sets."""
+    rows = _dual_rows(True, True)
+    disc = [dict(r, features_at_400=dict(r["features_at_400"])) for r in rows]
+    disc[0]["features_at_400"]["root_policy_entropy"] = None
+    r = evaluate_detector_both(disc, rows, replicates=64)
+    assert r["per_feature_set"]["features_at_400"]["rejected_missing_features"] == 0
+    assert r["row_overlap"]["validation"]["identical"] is True
+    assert r["row_overlap"]["discovery"]["identical"] is False
+    assert r["row_overlap"]["discovery"]["n_common"] == 79
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -936,23 +1455,33 @@ BOOTSTRAP_REPLICATES = 10000
 BOOTSTRAP_SEED = 20260804
 
 
-def prepare_rows(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+def prepare_rows(rows: Sequence[Dict[str, Any]],
+                 feature_key: str = "features") -> Dict[str, Any]:
     """String labels -> numeric, ineligible classes dropped, missing-feature
-    rows REJECTED and counted (section 6a)."""
-    feats, y = [], []
+    rows REJECTED and counted (section 6a).
+
+    `feature_key` selects which frozen capture to read, so the SAME pipeline
+    serves both feature sets. `kept_indices` is what lets the dual pipeline
+    report whether the two sets ran on the same rows.
+    """
+    feats, y, kept = [], [], []
     dropped = rejected = 0
-    for r in rows:
+    for i, r in enumerate(rows):
         if r["label"] not in LABEL_TO_Y:
             dropped += 1                       # ambiguous / no_stable_reference
             continue
-        f = r["features"]
+        # A MISSING capture rejects the row exactly like a missing feature:
+        # `or {}` makes every feature None rather than raising a KeyError that a
+        # caller might be tempted to catch and default.
+        f = r.get(feature_key) or {}
         if any(f.get(k) is None for k in FEATURE_NAMES):
             rejected += 1
             continue
         feats.append(f)
         y.append(LABEL_TO_Y[r["label"]])
-    return {"features": feats, "y": y, "dropped_ineligible": dropped,
-            "rejected_missing_features": rejected}
+        kept.append(i)
+    return {"features": feats, "y": y, "kept_indices": kept,
+            "dropped_ineligible": dropped, "rejected_missing_features": rejected}
 
 
 def standardize(rows, feature_names: Sequence[str] = FEATURE_NAMES,
@@ -1033,13 +1562,22 @@ def bootstrap_auc_lower_bound(scores, labels, seed: int = BOOTSTRAP_SEED,
 
 def evaluate_detector(discovery: Sequence[Dict[str, Any]],
                       validation: Sequence[Dict[str, Any]],
-                      seed: int = BOOTSTRAP_SEED) -> Dict[str, Any]:
+                      seed: int = BOOTSTRAP_SEED,
+                      replicates: int = BOOTSTRAP_REPLICATES,
+                      feature_key: str = "features") -> Dict[str, Any]:
     """Section 6's frozen bars. Fails CLOSED, and capacity is checked AFTER
-    missing-feature rejection."""
-    d = prepare_rows(discovery)
-    v = prepare_rows(validation)
+    missing-feature rejection.
+
+    `seed` and `replicates` default to the FROZEN values and are parameters only
+    so CPU tests can run a cheap bootstrap; nothing on the measurement path
+    passes either. `feature_key` is what makes this the same pipeline for both
+    feature sets rather than a second implementation of it.
+    """
+    d = prepare_rows(discovery, feature_key)
+    v = prepare_rows(validation, feature_key)
     v_pos, v_neg = v["y"].count(1), v["y"].count(0)
-    base = {"n_misleading": v_pos, "n_stable_negative": v_neg,
+    base = {"feature_set": feature_key,
+            "n_misleading": v_pos, "n_stable_negative": v_neg,
             "rejected_missing_features": v["rejected_missing_features"],
             "dropped_ineligible": v["dropped_ineligible"],
             "auc": None, "auc_lower_bound": None}
@@ -1056,7 +1594,7 @@ def evaluate_detector(discovery: Sequence[Dict[str, Any]],
     sv = [model["predict"](x) for x in Xv]
 
     a = auc(sv, v["y"])
-    lb = bootstrap_auc_lower_bound(sv, v["y"], seed=seed)
+    lb = bootstrap_auc_lower_bound(sv, v["y"], seed=seed, replicates=replicates)
     sd = sorted((model["predict"](x) for x in Xd), reverse=True)
     thr = sd[max(0, int(MAX_FLAG_RATE * len(sd)) - 1)] if sd else 1.0
     flagged = [(s, y) for s, y in zip(sv, v["y"]) if s >= thr]
@@ -1093,18 +1631,97 @@ def deployability(remaining_values: Sequence[int],
                else "NOT_DEPLOYABLE" if med == 0 else "DEPLOYABLE")
     return {**overall, "verdict": verdict,
             "by_stratum": {k: summarize(v) for k, v in (strata or {}).items()}}
+
+
+# -- section 6a: Read-out A runs on BOTH feature sets -------------------------
+
+FEATURE_SETS = ("features_at_boundary", "features_at_400")
+AUTHORITATIVE_FEATURE_SET = "features_at_boundary"
+INSUFFICIENCY_VERDICTS = ("INSUFFICIENT_CLASSES",
+                          "INSUFFICIENT_DISCOVERY_CLASSES")
+
+
+def evaluate_detector_both(discovery: Sequence[Dict[str, Any]],
+                           validation: Sequence[Dict[str, Any]],
+                           seed: int = BOOTSTRAP_SEED,
+                           replicates: int = BOOTSTRAP_REPLICATES
+                           ) -> Dict[str, Any]:
+    """The IDENTICAL pipeline on both frozen feature sets (amendment 6a).
+
+    The boundary remains AUTHORITATIVE -- it is the only instant at which a
+    controller could still act on the result.
+
+        boundary PASS                    -> PASS
+        boundary FAIL  and B=400 PASS    -> LATE_ONLY_SEPARATION
+        boundary FAIL  and B=400 not PASS-> FAIL
+        boundary INSUFFICIENT_*          -> that verdict, reported as itself
+
+    LATE_ONLY_SEPARATION means the information exists but arrives too late to
+    allocate the remaining budget -- section 6's stated FAILURE condition, not a
+    success.
+    """
+    per = {fs: evaluate_detector(discovery, validation, seed=seed,
+                                 replicates=replicates, feature_key=fs)
+           for fs in FEATURE_SETS}
+    auth = per[AUTHORITATIVE_FEATURE_SET]["verdict"]
+    late = per["features_at_400"]["verdict"]
+
+    # Amendment 4 lists a MISSING-FEATURE REJECTION alongside the two
+    # insufficiency verdicts as something that cannot establish lateness.
+    # Rejections shrink the boundary sample and a smaller sample is MORE likely
+    # to miss the bars, so a rejection is exactly what could manufacture the
+    # FAIL half of a lateness finding. Counted in BOTH splits: discovery
+    # rejections change the fitted model, validation rejections change what it
+    # is scored on.
+    boundary_rejections = sum(
+        prepare_rows(split, feature_key=AUTHORITATIVE_FEATURE_SET
+                     )["rejected_missing_features"]
+        for split in (discovery, validation))
+
+    blocked = None
+    if auth in INSUFFICIENCY_VERDICTS:
+        # An ABSENCE of evidence, never evidence about timing.
+        verdict = auth
+    elif auth == "PASS":
+        verdict = "PASS"
+    elif late == "PASS" and boundary_rejections == 0:
+        verdict = "LATE_ONLY_SEPARATION"          # boundary FAIL and 400 PASS
+    elif late == "PASS":
+        # Reported as the boundary's OWN result, inside the frozen verdict
+        # vocabulary, with the reason recorded rather than silently dropped.
+        verdict, blocked = "FAIL", "boundary_missing_feature_rejections"
+    else:
+        verdict = "FAIL"
+
+    def overlap(split):
+        kept = {fs: set(prepare_rows(split, feature_key=fs)["kept_indices"])
+                for fs in FEATURE_SETS}
+        a, b = kept[FEATURE_SETS[0]], kept[FEATURE_SETS[1]]
+        return {"n_common": len(a & b), "identical": a == b}
+
+    return {
+        "verdict": verdict,
+        "authoritative": AUTHORITATIVE_FEATURE_SET,
+        "per_feature_set": per,
+        "boundary_rejections": boundary_rejections,
+        "lateness_blocked_by": blocked,
+        # REPORTED, never gated. BOTH splits: a validation-only overlap would
+        # call two models identical when they were fitted on different rows.
+        "row_overlap": {"discovery": overlap(discovery),
+                        "validation": overlap(validation)},
+    }
 ```
 
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_a.py -v -p no:cacheprovider`
-Expected: PASS — 20 passed.
+Expected: PASS — 27 passed (7 from Task 2, 13 here, 7 dual-pipeline).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/GPU/alphazero/atlas_readout_a.py tests/test_atlas_readout_a.py
-git commit -m "feat(atlas-s4): Read-out A string-label mapping, frozen bars, deployability"
+git commit -m "feat(atlas-s4): Read-out A frozen bars, deployability, dual-feature-set pipeline"
 ```
 
 ---
@@ -1116,8 +1733,8 @@ git commit -m "feat(atlas-s4): Read-out A string-label mapping, frozen bars, dep
 - Test: `tests/test_atlas_readout_b.py`
 
 **Interfaces:**
-- Consumes: a **calibration row** — `{"legs": [...], "phase": str, "flat_policy": bool, "near_even": bool}`. A bare `list[LegResult]` cannot identify the strata §7 requires.
-- Produces: `CalibrationRow` keys; `gate_triggers(legs, hi=1600)`; `closes_half(...)`; `convergent(legs, ref)`; `compound_narrowing(legs) -> Optional[bool]`; `calibrate_gate(rows, gate_name)`; `natural_convergence_report(rows)`; `by_stratum_summary(rows, gate_name)`.
+- Consumes: a **calibration row**, a plain dict — `{"legs": [...], "phase": str, "flat_policy": bool, "near_even": bool}`. A bare `list[LegResult]` cannot identify the strata §7 requires. There is no row *class*: revision 1's interface block named a `CalibrationRow` that nothing defines, which is the declared-but-absent trap this plan has now hit four times.
+- Produces: `COLLAPSE_TOP_SHARE`; `MIN_ELIGIBLE_TRIGGERS`; `MIN_CONVERGENT_RATE`; `BASE_RATE_MARGIN`; `GATE_NAMES`; `gate_triggers(legs, hi=1600)`; `closes_half(...)`; `convergent(legs, ref)`; `compound_narrowing(rows, hi=1600) -> Optional[bool]`; `calibrate_gate(rows, gate_name)`; `natural_convergence_report(rows)`; `by_stratum_summary(rows, gate_name)`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1496,7 +2113,7 @@ def by_stratum_summary(rows: Sequence[Dict[str, Any]], gate_name: str
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_b.py -v -p no:cacheprovider`
-Expected: PASS — 12 passed.
+Expected: PASS — 14 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -1514,13 +2131,39 @@ git commit -m "feat(atlas-s4): Read-out B four rungs, natural convergence and st
 - Test: `tests/test_atlas_readout_c.py`
 
 **Interfaces:**
-- Consumes: a **Read-out C row** — `{"reference_line": <Task 0 summary>, "snapshots": {...}, "label": str, "phase": str, "flat_policy": bool, "near_even": bool}`.
-- Produces: `STRATA`; `static_retention(...)`; `intervention_from_snapshots(...)`; `classify_strata(row)`; `aggregate_shape(rows, shape)`; `select_shape(per_shape)`; `select_on_discovery_validate_on_selected(discovery, validation)`.
+- Consumes: a **Read-out C row** — `{"snapshots": <run_additive_ladder's snapshots dict, verbatim>, "label": str, "phase": str, "flat_policy": bool, "near_even": bool}`. The whole producer document travels as **one** key rather than being re-assembled from three, because a consumer that reconstructs its producer's document is the seam that cost v18 four contract defects.
+- Produces: `STRATA`; `INSTANTS`; `GATING_INSTANT`; `REQUIRED_RATES`; `STABLE_REFERENCE_LABELS`; `static_retention(...)`; `edge_retention(edge, parent_visits, shape)`; `intervention_from_snapshots(snapshots, shape_key, *, instant)`; `classify_strata(row)`; **`classify_edge_strata(edge)`**; `aggregate_shape(rows, shape)`; `validation_verdict(aggregate)`; `select_shape(per_shape)`; `select_on_discovery_validate_on_selected(discovery, validation)`.
+- **The row is exactly what `atlas_artifact.build_row` returns.** Task 6 stores the Stage 3 producer document once, under `snapshots`, so Read-out C consumes an artifact row directly and no surrogate translation exists between them.
 
-> **`K(n)` uses EFFECTIVE parent visits** (§6a). At the warm root that is
-> `reference_line["root_effective_visits"]` — `I + N_actual` — **not** the nominal 320.
-> Using the nominal would narrow the admitted set, understating retention and
-> overstating intervention, in the same direction as the batch lag.
+> **`K(n)` uses EFFECTIVE parent visits, read from the instant's own map** (§6a).
+> At the warm root that is `I + N_actual` at the boundary and `I + 400` after leg 1 —
+> **not** the nominal 320, and **not** the `I + 6400` of the final tree. Using a nominal
+> or a final-tree count would narrow or widen the admitted set, understating retention
+> and overstating intervention, in the same direction as the batch lag and on top of it.
+
+#### What amendment 4 changes here
+
+| | revision 1 | now |
+|---|---|---|
+| required moves | one line's root move, its reply, its two-ply move | the **deduplicated union** of `(parent path, move)` edges from **both** deep lines; both replies retained when they differ |
+| `K(n)`'s `n` | `root_effective_visits` off the final 6,400 tree | the **instant's** parent-visit map — absent path ⇒ **0** visits ⇒ `K(0) = 1` |
+| where retention is judged | once | at the **boundary and at `B = 400`**; root and reply floors must pass at **both** |
+| what drives the bars | the boundary snapshot | the **`B = 400`** intervention; the boundary one is reported |
+| flat-policy strata | row-level | **edge-level**, via `classify_edge_strata` — a row can hold both flat and non-flat reference parents |
+| who feeds the retention bars | every row | **stable-reference-eligible rows only** — the floors are about *stable* deep moves, and a `no_stable_reference` row has none. Selection-event counters still cover every row |
+| the aggregate | four rates | plus depth buckets, event-weighted excluded prior mass, forced-root bypasses, forced-simulation counts, per-stratum retention, `retention_rows`, and the agreement states |
+| the validation aggregate | computed | **judged**, by `validation_verdict` |
+
+**Hoisting rule, so `select_shape` stays a flat read.** Because the floors must hold at
+both instants, the hoisted `root_retention` / `depth1_retention` / `descendant_retention`
+are the **worse of the two instants** — `min(a, b) >= bar` is exactly "passes at both",
+and `None` if either is undefined, since an undefined rate is not a satisfied bar. The
+hoisted `misleading_intervention` / `stable_intervention` are the **`B = 400`** numbers.
+Per-instant values stay in `instants` for reporting, so nothing is hidden by the hoist.
+
+**Pooling rule.** Cohort counters sum numerators and denominators; they are never a mean
+of per-row rates. Event-weighted excluded prior mass is `Σ mass / Σ eligible_events`, so
+a 3-event row does not weigh the same as a 400-event one.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1529,40 +2172,84 @@ git commit -m "feat(atlas-s4): Read-out B four rungs, natural convergence and st
 import pytest
 
 from scripts.GPU.alphazero.atlas_readout_c import (
-    MISLEADING_INTERVENTION_BAR, RETENTION_DEPTH1_BAR, RETENTION_ROOT_BAR,
-    STABLE_INTERVENTION_CEILING, STRATA, aggregate_shape, classify_strata,
-    classify_edge_strata, intervention_from_snapshots,
+    GATING_INSTANT, INSTANTS, MISLEADING_INTERVENTION_BAR, REQUIRED_RATES,
+    RETENTION_DEPTH1_BAR, RETENTION_ROOT_BAR, STABLE_INTERVENTION_CEILING,
+    STABLE_REFERENCE_LABELS, STRATA, aggregate_shape, classify_edge_strata,
+    classify_strata, edge_retention, intervention_from_snapshots,
     select_on_discovery_validate_on_selected, select_shape, static_retention,
+    validation_verdict,
 )
+from scripts.GPU.alphazero.selection_tracer import WIDENING_SHAPES
 
 SHAPE = ("c4a05", 4.0, 0.5)
 
 
 def _priors(n, best=0):
+    """Descending, so prior rank == move id + 1."""
     return {i: (1.0 if i == best else 0.5 - i * 1e-4) for i in range(n)}
 
 
-def _snap(ft=100, ft_out=15, lagged=12, elig=200):
-    return {"at_boundary": {"by_shape": {"c4a05": {"overall": {
-        "eligible_events": elig, "outside_events": 30,
-        "first_touch_events": ft, "first_touch_outside_events": ft_out,
-        "lagged_first_touch_outside_events": lagged,
-        "excluded_prior_mass": 0.4}}}}}
+def _edge(path, move, priors=None, sources=(3200, 6400)):
+    return {"parent_path": path, "move": move, "depth": len(path),
+            "parent_priors": priors if priors is not None else _priors(500),
+            "sources": sources}
 
 
-def _ref(root_n=326 + 137, reply_n=90, root_move=0, reply_move=1):
-    return {"stable_deep_move": root_move, "root_priors": _priors(500),
-            "root_effective_visits": root_n,
-            "reply": {"move": reply_move, "priors": _priors(400),
-                      "effective_visits": reply_n},
-            "two_ply": None}
+def _merged(edges=None, agreement=None):
+    """`merge_reference_lines` output: the union plus the agreement report."""
+    return {
+        "required_edges": edges if edges is not None else [
+            _edge((), 0), _edge((0,), 1, _priors(400))],
+        "agreement": agreement or {
+            "root": {"in_3200": True, "in_6400": True, "state": "agree"},
+            "reply": {"in_3200": True, "in_6400": True, "state": "agree"},
+            "two_ply": {"in_3200": False, "in_6400": False,
+                        "state": "absent_both"}},
+    }
+
+
+def _cell(elig=200, outside=30, ft=100, ft_out=15, lagged=12, mass=80.0):
+    """One tracer cell, shaped exactly like SelectionTracer.snapshot emits."""
+    return {"eligible_events": elig, "outside_events": outside,
+            "first_touch_events": ft, "first_touch_outside_events": ft_out,
+            "lagged_first_touch_outside_events": lagged,
+            "excluded_prior_mass": mass,
+            "outside_rate": (outside / elig) if elig else None,
+            "first_touch_outside_rate": (ft_out / ft) if ft else None,
+            "mean_excluded_prior_mass": (mass / elig) if elig else None}
+
+
+def _tracer(overall=None, within_forced=5, bypass=2, bypass_out=1):
+    o = overall if overall is not None else _cell()
+    block = {**{k: dict(o) for k in ("overall", "0", "1", "2+")},
+             "forced_root_bypass_events": bypass,
+             "forced_root_bypass_outside_events": bypass_out,
+             "forced_root_bypass_outside_rate": ((bypass_out / bypass)
+                                                 if bypass else None),
+             "meaningfully_affected": (o["first_touch_outside_rate"] is not None
+                                       and o["first_touch_outside_rate"] >= 0.10)}
+    return {"by_shape": {n: dict(block) for n, _c, _a in WIDENING_SHAPES},
+            "within_forced_events": within_forced}
+
+
+def _pv(root=463, reply=90):
+    return {(): root, (0,): reply}
+
+
+def _snaps(boundary=None, at400=None, merged=None, pv=None):
+    """The ladder's snapshots dict, verbatim -- one producer document."""
+    return {"at_boundary": _tracer() if boundary is None else boundary,
+            "at_400": _tracer() if at400 is None else at400,
+            "reference_lines": {"at_3200": None, "at_6400": None,
+                                "merged": merged or _merged()},
+            "parent_visits": {"at_boundary": pv or _pv(),
+                              "at_400": pv or _pv()}}
 
 
 def _row(label="misleading", phase="late", flat=False, near_even=False,
-         ref=None, snaps=None):
-    return {"reference_line": ref or _ref(), "snapshots": snaps or _snap(),
-            "label": label, "phase": phase, "flat_policy": flat,
-            "near_even": near_even}
+         snaps=None):
+    return {"snapshots": snaps or _snaps(), "label": label, "phase": phase,
+            "flat_policy": flat, "near_even": near_even}
 
 
 def test_frozen_bars_and_strata_are_pinned():
@@ -1571,6 +2258,11 @@ def test_frozen_bars_and_strata_are_pinned():
     assert STABLE_INTERVENTION_CEILING == 0.25
     assert set(STRATA) == {"late", "near_even", "root_flat",
                            "locally_flat_depth1", "locally_flat_depth2"}
+    assert INSTANTS == ("at_boundary", "at_400")
+    assert GATING_INSTANT == "at_400"           # amendment 4: B=400 drives bars
+    # An ALLOW-list: a label added later must not be admitted by default.
+    assert set(STABLE_REFERENCE_LABELS) == {"misleading", "stable_negative",
+                                            "ambiguous"}
 
 
 def test_static_retention_uses_EFFECTIVE_parent_visits():
@@ -1585,14 +2277,73 @@ def test_static_retention_of_nothing_is_None():
     assert static_retention(_priors(10), [], 400, SHAPE)["rate"] is None
 
 
+def test_edge_retention_reads_the_INSTANT_parent_visit_map():
+    """n comes from THAT instant's map, never a nominal budget and never the
+    6,400 tree. An ABSENT path has zero visits, where K(0) = 1 admits rank 1
+    only."""
+    edge = _edge((), 80)                              # prior rank 81
+    wide = edge_retention(edge, {(): 463}, SHAPE)     # K = 87
+    narrow = edge_retention(edge, {(): 320}, SHAPE)   # K = 72
+    assert wide["k"] > narrow["k"]
+    assert wide["retained"] is True and narrow["retained"] is False
+    absent = edge_retention(edge, {}, SHAPE)
+    assert absent["n"] == 0 and absent["k"] == 1 and absent["retained"] is False
+    assert edge_retention(_edge((), 0), {}, SHAPE)["retained"] is True
+
+
+def test_retention_covers_the_deduplicated_union_of_edges():
+    """When the deep lines disagree BOTH replies are required, so both count
+    toward the depth-1 denominator. Neither is truth."""
+    merged = _merged([_edge((), 0),
+                      _edge((0,), 1, _priors(400), sources=(3200,)),
+                      _edge((0,), 300, _priors(400), sources=(6400,))])
+    a = aggregate_shape([_row(snaps=_snaps(merged=merged))], SHAPE)
+    reply = a["instants"]["at_400"]["by_role"]["reply"]
+    assert reply["required"] == 2                 # both replies retained
+    assert reply["retained"] == 1                 # rank 301 is far outside K(90)
+
+
+def test_a_retention_floor_must_pass_at_BOTH_instants():
+    """Amendment 4. The hoisted number is the WORSE instant, so `>= bar` is
+    exactly "passed at both"."""
+    snaps = _snaps(merged=_merged([_edge((), 80)]))          # rank 81
+    snaps["parent_visits"] = {"at_boundary": {(): 320},      # K = 72 -> missed
+                              "at_400": {(): 463}}           # K = 87 -> retained
+    a = aggregate_shape([_row(snaps=snaps)], SHAPE)
+    assert a["instants"]["at_400"]["root_retention"] == 1.0
+    assert a["instants"]["at_boundary"]["root_retention"] == 0.0
+    assert a["root_retention"] == 0.0            # the worse one, not the better
+
+
+def test_the_bars_use_the_B400_intervention_and_report_the_boundary_one():
+    snaps = _snaps(boundary=_tracer(_cell(ft=100, ft_out=2, lagged=1)),
+                   at400=_tracer(_cell(ft=100, ft_out=40, lagged=35)))
+    a = aggregate_shape([_row(label="misleading", snaps=snaps)], SHAPE)
+    assert a["gated_on"] == "at_400"
+    assert a["instants"]["at_400"]["misleading_intervention"] == 1.0
+    assert a["instants"]["at_boundary"]["misleading_intervention"] == 0.0
+    assert a["misleading_intervention"] == 1.0          # the B=400 number
+
+
+def test_a_missing_snapshot_is_NO_SNAPSHOT_not_zero():
+    """A row whose boundary never fired has no snapshot. That is not an
+    intervention rate of zero."""
+    snaps = _snaps()
+    snaps["at_boundary"] = None
+    r = intervention_from_snapshots(snaps, "c4a05", instant="at_boundary")
+    assert r["verdict"] == "NO_SNAPSHOT" and r["meaningfully_affected"] is None
+
+
 def test_intervention_requires_the_PRODUCED_lagged_bound():
-    r = intervention_from_snapshots(_snap(ft=100, ft_out=12, lagged=8), "c4a05")
+    snaps = _snaps(at400=_tracer(_cell(ft=100, ft_out=12, lagged=8)))
+    r = intervention_from_snapshots(snaps, "c4a05", instant="at_400")
     assert r["meaningfully_affected"] is None      # None, not False
     assert r["verdict"] == "INCONCLUSIVE"
 
 
 def test_intervention_passes_when_both_bounds_clear():
-    r = intervention_from_snapshots(_snap(ft=100, ft_out=15, lagged=12), "c4a05")
+    snaps = _snaps(at400=_tracer(_cell(ft=100, ft_out=15, lagged=12)))
+    r = intervention_from_snapshots(snaps, "c4a05", instant="at_400")
     assert r["meaningfully_affected"] is True and r["verdict"] == "OK"
 
 
@@ -1622,19 +2373,84 @@ def test_a_flat_ROOT_edge_gets_no_local_stratum():
     assert classify_edge_strata({"depth": 7, "parent_priors": flat_priors}) == set()
 
 
+def test_per_stratum_retention_uses_edge_level_flatness():
+    """One row, one flat reference parent and one concentrated one. `_priors`
+    is itself flat under the frozen definition -- normalized entropy ~1.0 and a
+    top prior of ~0.005 -- so the non-flat case must be built explicitly."""
+    flat = {i: 1.0 / 500 for i in range(500)}
+    sharp = {0: 0.5, 1: 0.3, 2: 0.2}                      # NOT flat
+    merged = _merged([_edge((), 0),
+                      _edge((0,), 1, flat),               # locally flat, depth 1
+                      _edge((0, 1), 2, sharp)])
+    snaps = _snaps(merged=merged, pv={(): 463, (0,): 90, (0, 1): 20})
+    a = aggregate_shape([_row(phase="late", snaps=snaps)], SHAPE)
+    st = a["instants"]["at_400"]["by_stratum"]
+    assert st["locally_flat_depth1"]["required"] == 1
+    assert st["locally_flat_depth2"]["required"] == 0
+    assert st["locally_flat_depth2"]["rate"] is None      # None, never 0.0
+    assert st["late"]["required"] == 3                    # row-level: all edges
+
+
 def test_aggregate_excludes_INCONCLUSIVE_rows_from_the_denominator():
     """Folding them in as either outcome would invent a measurement."""
-    rows = [_row(snaps=_snap(ft=100, ft_out=15, lagged=12)),        # OK, affected
-            _row(snaps=_snap(ft=100, ft_out=12, lagged=8))]         # inconclusive
+    rows = [_row(snaps=_snaps(at400=_tracer(_cell(ft=100, ft_out=15, lagged=12)))),
+            _row(snaps=_snaps(at400=_tracer(_cell(ft=100, ft_out=12, lagged=8))))]
     a = aggregate_shape(rows, SHAPE)
     assert a["misleading_denominator"] == 1
     assert a["inconclusive"] == 1
 
 
 def test_aggregate_rate_is_None_when_the_denominator_empties():
-    rows = [_row(snaps=_snap(ft=100, ft_out=12, lagged=8))]
+    rows = [_row(snaps=_snaps(at400=_tracer(_cell(ft=100, ft_out=12, lagged=8))))]
     a = aggregate_shape(rows, SHAPE)
     assert a["misleading_intervention"] is None
+
+
+def test_aggregate_reports_depth_buckets_forced_counts_and_agreement():
+    """Section 8's online aggregates, pooled across the cohort."""
+    a = aggregate_shape([_row(), _row()], SHAPE)
+    c = a["counters"]["at_400"]
+    assert set(c["by_depth"]) == {"0", "1", "2+"}
+    assert c["eligible_events"] == 400                    # 2 rows x 200
+    # Forced-root bypasses are reported SEPARATELY, never in the primary
+    # intervention denominator.
+    assert c["forced_root_bypass_events"] == 4
+    assert c["forced_root_bypass_outside_rate"] == 0.5
+    assert c["within_forced_events"] == 10
+    # Agreement is reported and adds NO gate. The two missingness states are
+    # counted separately, and neither is in the denominator.
+    assert a["agreement"]["reply"]["agree_rate"] == 1.0
+    assert a["agreement"]["two_ply"]["absent_both"] == 2
+    assert a["agreement"]["two_ply"]["single_line"] == 0
+    assert a["agreement"]["two_ply"]["agree_rate"] is None
+
+
+def test_retention_bars_exclude_rows_without_a_stable_reference():
+    """Section 8's floors are about STABLE deep moves. A row whose 3,200 and
+    6,400 rungs never agreed has none, so it contributes no required edges --
+    but its selection events still count, because those describe what widening
+    would have done regardless of the label."""
+    rows = [_row(label="misleading"), _row(label="no_stable_reference")]
+    a = aggregate_shape(rows, SHAPE)
+    at400 = a["instants"]["at_400"]
+    assert at400["retention_rows"] == 1                 # not 2
+    assert at400["by_role"]["root"]["required"] == 1    # one row's edges only
+    assert a["rows_without_stable_reference"] == 1
+    # Event counters cover EVERY row.
+    assert a["counters"]["at_400"]["eligible_events"] == 400
+    # ...and the excluded row is in neither intervention denominator.
+    assert at400["misleading_denominator"] == 1
+    assert at400["stable_denominator"] == 0
+
+
+def test_excluded_prior_mass_pools_event_wise_across_rows():
+    """Sum the mass and sum the events. A mean of per-row means would weight a
+    10-event row the same as a 990-event one."""
+    small = _snaps(at400=_tracer(_cell(elig=10, mass=1.0)))       # row mean 0.10
+    large = _snaps(at400=_tracer(_cell(elig=990, mass=495.0)))    # row mean 0.50
+    a = aggregate_shape([_row(snaps=small), _row(snaps=large)], SHAPE)
+    # Pooled 496/1000; a mean of per-row means would have given 0.30.
+    assert a["counters"]["at_400"]["mean_excluded_prior_mass"] == pytest.approx(0.496)
 
 
 def test_a_shape_with_a_None_rate_cannot_pass():
@@ -1685,6 +2501,70 @@ def test_selection_happens_on_discovery_and_only_that_shape_is_validated():
     r = select_on_discovery_validate_on_selected(disc, val)
     assert r["selected_on"] == "discovery"
     assert set(r["validated"]) <= {r["selected"]}      # never both shapes
+
+
+# -- amendment 6a: the validation aggregate is JUDGED, not merely computed ----
+
+def test_validation_verdict_precedence_is_FAIL_then_INCONCLUSIVE_then_PASS():
+    """A DEFINED miss is evidence and outranks a gap in the evidence."""
+    good = {"root_retention": 0.99, "depth1_retention": 0.95,
+            "misleading_intervention": 0.60, "stable_intervention": 0.10}
+    assert validation_verdict(good)["verdict"] == "PASS"
+    assert validation_verdict(
+        dict(good, misleading_intervention=None))["verdict"] == "INCONCLUSIVE"
+    assert validation_verdict(dict(good, root_retention=0.50))["verdict"] == "FAIL"
+
+    # BOTH at once -- the case the precedence exists for. Without an ordering
+    # this result satisfies two verdicts simultaneously.
+    r = validation_verdict(dict(good, root_retention=0.50,
+                                misleading_intervention=None))
+    assert r["verdict"] == "FAIL"
+    assert r["failed"] == ["root_retention"]
+    assert r["undefined"] == ["misleading_intervention"]
+
+
+def test_the_ceiling_is_judged_as_a_ceiling_not_a_floor():
+    good = {"root_retention": 0.99, "depth1_retention": 0.95,
+            "misleading_intervention": 0.60, "stable_intervention": 0.10}
+    assert validation_verdict(dict(good, stable_intervention=0.90))["verdict"] == "FAIL"
+
+
+def test_the_tie_break_retention_is_not_a_required_rate():
+    """descendant_retention breaks exact ties in shape selection; it is not a
+    bar, so an undefined one must not turn a passing aggregate INCONCLUSIVE."""
+    assert "descendant_retention" not in REQUIRED_RATES
+    a = {"root_retention": 0.99, "depth1_retention": 0.95,
+         "misleading_intervention": 0.60, "stable_intervention": 0.10,
+         "descendant_retention": None}
+    assert validation_verdict(a)["verdict"] == "PASS"
+
+
+def _cohort():
+    """Misleading rows that widening would intervene on, stable-negative rows
+    it would leave alone -- the shape a passing feasibility result has."""
+    hot = _tracer(_cell(ft=100, ft_out=40, lagged=35))
+    cold = _tracer(_cell(ft=100, ft_out=2, lagged=1))
+    return ([_row(label="misleading", snaps=_snaps(boundary=hot, at400=hot))
+             for _ in range(2)]
+            + [_row(label="stable_negative", snaps=_snaps(boundary=cold,
+                                                          at400=cold))
+               for _ in range(2)])
+
+
+def test_the_selected_shape_receives_the_three_way_verdict():
+    rows = _cohort()
+    r = select_on_discovery_validate_on_selected(rows, rows)
+    assert r["selected"] is not None
+    assert set(r["validated"]) == {r["selected"]}
+    assert r["validation_verdict"]["verdict"] == "PASS"
+
+
+def test_no_selected_shape_means_no_verdict_to_give():
+    """NO_SHAPE_PASSES is not an INCONCLUSIVE validation -- nothing was
+    validated, so there is no validation aggregate to judge."""
+    r = select_on_discovery_validate_on_selected([_row()], [_row()])
+    assert r["selected"] is None and r["verdict"] == "NO_SHAPE_PASSES"
+    assert r["validation_verdict"] is None
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -1696,19 +2576,29 @@ Expected: FAIL — `ModuleNotFoundError`
 
 ```python
 # scripts/GPU/alphazero/atlas_readout_c.py
-"""Atlas Read-out C -- design section 8 and amendment 6a, FROZEN.
+"""Atlas Read-out C -- design section 8 and amendments 6a / 4, FROZEN.
 
 Counterfactual COVERAGE analysis. It cannot prove progressive widening would
 improve search, because applying widening changes the later tree.
+
+Everything here is evaluated at TWO instants -- the batch-safe boundary and
+nominal B = 400 -- because those are the horizons a widening rule would actually
+see. The 6,400 tree is never a retention horizon, and no function here can reach
+one: the producer does not emit deep-rung visit counts at all.
 """
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from .selection_tracer import (
-    MEANINGFUL_INTERVENTION_FIRST_TOUCH_RATE, WIDENING_SHAPES, k_of_n,
+    DEPTH_BUCKETS, MEANINGFUL_INTERVENTION_FIRST_TOUCH_RATE, WIDENING_SHAPES,
+    k_of_n,
 )
+# DEPTH_NAMES ("root", "reply", "two_ply") is the reference line's own vocabulary
+# and belongs with the producer that emits it. Imported rather than restated:
+# a second copy of a frozen constant is how the two drift apart.
+from .warm_prefix_replay import DEPTH_NAMES
 
 RETENTION_ROOT_BAR = 0.95
 RETENTION_DEPTH1_BAR = 0.90
@@ -1719,6 +2609,30 @@ FLAT_TOP_PRIOR_BAR = 0.025
 
 STRATA = ("late", "near_even", "root_flat",
           "locally_flat_depth1", "locally_flat_depth2")
+
+# Amendment 4: retention is judged at BOTH instants, and the B=400 intervention
+# drives the feasibility bars while the boundary one is reported.
+INSTANTS = ("at_boundary", "at_400")
+GATING_INSTANT = "at_400"
+
+# Section 8's floors are about "stable deep root moves" and "stable depth-1
+# replies", so only rows that HAVE a stable deep reference may contribute to
+# them. A `no_stable_reference` row's two deep rungs disagree; its reference
+# line is not a stable deep move and cannot be evidence of retaining one.
+#
+# An explicit ALLOW-list, never `label != "no_stable_reference"`: a label added
+# later would silently be admitted by the deny-list form.
+STABLE_REFERENCE_LABELS = ("misleading", "stable_negative", "ambiguous")
+
+# The rates the validation verdict requires. `descendant_retention` is NOT one:
+# it breaks exact ties in shape selection and is not a bar, so an undefined one
+# must not turn a passing aggregate INCONCLUSIVE.
+REQUIRED_RATES = ("root_retention", "depth1_retention",
+                  "misleading_intervention", "stable_intervention")
+_BARS = {"root_retention": (RETENTION_ROOT_BAR, "floor"),
+         "depth1_retention": (RETENTION_DEPTH1_BAR, "floor"),
+         "misleading_intervention": (MISLEADING_INTERVENTION_BAR, "floor"),
+         "stable_intervention": (STABLE_INTERVENTION_CEILING, "ceiling")}
 
 
 def static_retention(root_priors: Dict[int, float],
@@ -1742,16 +2656,45 @@ def static_retention(root_priors: Dict[int, float],
             "rate": retained / len(required_moves), "k": k}
 
 
-def intervention_from_snapshots(snapshots: Dict[str, Any], shape_key: str
-                                ) -> Dict[str, Any]:
-    """Meaningful intervention with the DIRECTIONAL lag bound.
+def edge_retention(edge: Dict[str, Any],
+                   parent_visits: Dict[Tuple[int, ...], int],
+                   shape: Tuple[str, float, float]) -> Dict[str, Any]:
+    """Would this required edge have been admitted AT THIS INSTANT?
+
+    `n` is the parent's effective completed visit count read from the instant's
+    OWN map -- `I + N_actual` at the boundary, `I + 400` after leg 1; never the
+    nominal 320 and never the final 6,400 tree (amendments 6a and 4).
+
+    A path ABSENT from the map has ZERO visits. `K(0) = min(n_legal, max(1, 0))
+    = 1` through the `max(1, ...)` floor, so rank 1 is still admitted there --
+    a real admission, not a vacuous one.
+    """
+    n = parent_visits.get(edge["parent_path"], 0)
+    r = static_retention(edge["parent_priors"], [edge["move"]], n, shape)
+    return {"retained": r["retained"] == 1, "k": r["k"], "n": n,
+            "depth": edge["depth"]}
+
+
+def intervention_from_snapshots(snapshots: Dict[str, Any], shape_key: str,
+                                *, instant: str) -> Dict[str, Any]:
+    """Meaningful intervention with the DIRECTIONAL lag bound, at ONE instant.
 
     The lag is conservative for retention and ANTI-conservative for
     intervention, so the threshold must also pass under K(n+14) -- a counter the
     tracer PRODUCES, never a caller-supplied number. Passing only under K(n) is
     INCONCLUSIVE, not a pass.
+
+    `instant` is keyword-only with NO default. Amendment 4 gates on B=400 and
+    reports the boundary separately, and a defaulted instant is exactly how a
+    caller silently gets the other one.
     """
-    cell = snapshots["at_boundary"]["by_shape"][shape_key]["overall"]
+    snap = snapshots.get(instant)
+    if snap is None:
+        # A row whose boundary never fired has no snapshot at that instant.
+        # That is not a rate of zero and not an intervention of False.
+        return {"first_touch_outside_rate": None, "lagged_rate": None,
+                "meaningfully_affected": None, "verdict": "NO_SNAPSHOT"}
+    cell = snap["by_shape"][shape_key]["overall"]
     ft = cell["first_touch_events"]
     if not ft:
         return {"first_touch_outside_rate": None, "lagged_rate": None,
@@ -1821,58 +2764,226 @@ def _is_flat(priors: Dict[int, float]) -> bool:
     return entropy >= FLAT_ENTROPY_BAR and max(norm) <= FLAT_TOP_PRIOR_BAR
 
 
+def _rate(num: float, den: float) -> Optional[float]:
+    """Zero denominator -> None. Never 0.0, never False."""
+    return (num / den) if den else None
+
+
+def _pair() -> Dict[str, int]:
+    return {"retained": 0, "required": 0}
+
+
+def _empty_counters() -> Dict[str, Any]:
+    def z():
+        return {"eligible_events": 0, "outside_events": 0,
+                "first_touch_events": 0, "first_touch_outside_events": 0,
+                "lagged_first_touch_outside_events": 0,
+                "excluded_prior_mass": 0.0}
+    return {**z(), "by_depth": {b: z() for b in DEPTH_BUCKETS},
+            "forced_root_bypass_events": 0,
+            "forced_root_bypass_outside_events": 0,
+            "within_forced_events": 0, "missing_snapshots": 0}
+
+
+def _pool_counters(acc: Dict[str, Any], snap: Optional[Dict[str, Any]],
+                   shape_key: str) -> None:
+    """Section 8's online aggregates, pooled across the cohort.
+
+    SUM numerators and denominators; never average per-row rates. A mean of
+    means would weigh a 10-event row the same as a 990-event one.
+    """
+    if snap is None:
+        acc["missing_snapshots"] += 1
+        return
+    block = snap["by_shape"][shape_key]
+    for key in ("overall",) + DEPTH_BUCKETS:
+        cell = block[key]
+        target = acc if key == "overall" else acc["by_depth"][key]
+        for f in ("eligible_events", "outside_events", "first_touch_events",
+                  "first_touch_outside_events",
+                  "lagged_first_touch_outside_events", "excluded_prior_mass"):
+            target[f] += cell[f]
+    # Forced-root bypasses are reported SEPARATELY and never enter the primary
+    # intervention denominator (design section 8).
+    acc["forced_root_bypass_events"] += block["forced_root_bypass_events"]
+    acc["forced_root_bypass_outside_events"] += block[
+        "forced_root_bypass_outside_events"]
+    acc["within_forced_events"] += snap["within_forced_events"]
+
+
+def _finalize_counters(acc: Dict[str, Any]) -> Dict[str, Any]:
+    def rates(c):
+        c["outside_rate"] = _rate(c["outside_events"], c["eligible_events"])
+        c["first_touch_outside_rate"] = _rate(c["first_touch_outside_events"],
+                                              c["first_touch_events"])
+        c["lagged_first_touch_outside_rate"] = _rate(
+            c["lagged_first_touch_outside_events"], c["first_touch_events"])
+        # EVENT-WEIGHTED: total mass outside top-K over total eligible events.
+        c["mean_excluded_prior_mass"] = _rate(c["excluded_prior_mass"],
+                                              c["eligible_events"])
+    rates(acc)
+    for cell in acc["by_depth"].values():
+        rates(cell)
+    acc["forced_root_bypass_outside_rate"] = _rate(
+        acc["forced_root_bypass_outside_events"],
+        acc["forced_root_bypass_events"])
+    return acc
+
+
 def aggregate_shape(rows: Sequence[Dict[str, Any]],
                     shape: Tuple[str, float, float]) -> Dict[str, Any]:
-    """Fold per-row three-valued results into the four rates section 8 gates.
+    """Fold per-row results into the rates section 8 gates, AT BOTH INSTANTS.
 
-    INCONCLUSIVE rows are excluded from the intervention denominator and counted
-    separately -- folding them in as either outcome would invent a measurement.
-    If a denominator empties, the rate is None and the shape CANNOT pass.
+    Retention runs over the DEDUPLICATED UNION of required edges from both deep
+    lines (amendment 4), each evaluated against that instant's own parent-visit
+    map. INCONCLUSIVE rows are excluded from the intervention denominator and
+    counted separately -- folding them in as either outcome would invent a
+    measurement. If a denominator empties, the rate is None and the shape CANNOT
+    pass.
     """
     name = shape[0]
-    root_ret = {"retained": 0, "required": 0}
-    d1_ret = {"retained": 0, "required": 0}
-    desc_ret = {"retained": 0, "required": 0}
-    mis_num = mis_den = st_num = st_den = inconclusive = 0
+    acc = {inst: {"by_role": {r: _pair() for r in DEPTH_NAMES},
+                  "by_stratum": {s: _pair() for s in STRATA},
+                  "retention_rows": 0,
+                  "mis_num": 0, "mis_den": 0, "stab_num": 0, "stab_den": 0,
+                  "inconclusive": 0}
+           for inst in INSTANTS}
+    counters = {inst: _empty_counters() for inst in INSTANTS}
+    agreement = {d: {"agree": 0, "disagree": 0,
+                     "single_line": 0, "absent_both": 0}
+                 for d in DEPTH_NAMES}
+    rows_without_stable_reference = 0
 
     for row in rows:
-        ref = row["reference_line"]
-        r = static_retention(ref["root_priors"], [ref["stable_deep_move"]],
-                             ref["root_effective_visits"], shape)
-        root_ret["retained"] += r["retained"]; root_ret["required"] += r["required"]
-        reply = ref.get("reply")
-        if reply and reply.get("move") is not None:
-            rr = static_retention(reply["priors"], [reply["move"]],
-                                  reply["effective_visits"], shape)
-            d1_ret["retained"] += rr["retained"]; d1_ret["required"] += rr["required"]
-        two = ref.get("two_ply")
-        if two and two.get("move") is not None:
-            tr = static_retention(two["priors"], [two["move"]],
-                                  two["effective_visits"], shape)
-            desc_ret["retained"] += tr["retained"]; desc_ret["required"] += tr["required"]
+        snaps = row["snapshots"]
+        merged = snaps["reference_lines"]["merged"]
+        row_strata = classify_strata(row)
+        # Agreement is reported over EVERY row, including unstable ones: a row
+        # can be no_stable_reference because of the value gap or the top-two
+        # margin while its deep root moves agree, so agreement and stability
+        # are different facts and pooling all rows is the honest report.
+        for depth_name, a in merged["agreement"].items():
+            agreement[depth_name][a["state"]] += 1
 
-        iv = intervention_from_snapshots(row["snapshots"], name)
-        if iv["meaningfully_affected"] is None:
-            inconclusive += 1
-            continue
-        if row["label"] == "misleading":
-            mis_den += 1; mis_num += 1 if iv["meaningfully_affected"] else 0
-        elif row["label"] == "stable_negative":
-            st_den += 1; st_num += 1 if iv["meaningfully_affected"] else 0
+        # Section 8's floors concern STABLE deep moves. A row whose deep rungs
+        # never agreed has no stable deep move, so it contributes no required
+        # edges -- but its selection events still count, because those describe
+        # what widening would have done regardless of label.
+        stable = row["label"] in STABLE_REFERENCE_LABELS
+        if not stable:
+            rows_without_stable_reference += 1
 
-    def rate(n, d):
-        return (n / d) if d else None
+        for inst in INSTANTS:
+            a = acc[inst]
+            visits = (snaps.get("parent_visits") or {}).get(inst) or {}
+            if stable:
+                a["retention_rows"] += 1
+                for edge in merged["required_edges"]:
+                    if edge["depth"] >= len(DEPTH_NAMES):
+                        continue                 # beyond the two-ply horizon
+                    res = edge_retention(edge, visits, shape)
+                    # Flat-policy status is recomputed LOCALLY per edge; row
+                    # strata apply to every edge of that row.
+                    buckets = [a["by_role"][DEPTH_NAMES[edge["depth"]]]]
+                    buckets += [a["by_stratum"][s]
+                                for s in row_strata | classify_edge_strata(edge)]
+                    for bucket in buckets:
+                        bucket["required"] += 1
+                        bucket["retained"] += 1 if res["retained"] else 0
 
+            iv = intervention_from_snapshots(snaps, name, instant=inst)
+            if iv["meaningfully_affected"] is None:
+                a["inconclusive"] += 1
+            elif row["label"] == "misleading":
+                a["mis_den"] += 1
+                a["mis_num"] += 1 if iv["meaningfully_affected"] else 0
+            elif row["label"] == "stable_negative":
+                a["stab_den"] += 1
+                a["stab_num"] += 1 if iv["meaningfully_affected"] else 0
+
+            _pool_counters(counters[inst], snaps.get(inst), name)
+
+    def with_rate(p):
+        return {**p, "rate": _rate(p["retained"], p["required"])}
+
+    instants: Dict[str, Any] = {}
+    for inst in INSTANTS:
+        a = acc[inst]
+        roles = {r: with_rate(p) for r, p in a["by_role"].items()}
+        instants[inst] = {
+            "by_role": roles,
+            "root_retention": roles["root"]["rate"],
+            "depth1_retention": roles["reply"]["rate"],
+            "descendant_retention": roles["two_ply"]["rate"],
+            "by_stratum": {s: with_rate(p) for s, p in a["by_stratum"].items()},
+            # How many rows the retention bars actually rest on.
+            "retention_rows": a["retention_rows"],
+            "misleading_intervention": _rate(a["mis_num"], a["mis_den"]),
+            "stable_intervention": _rate(a["stab_num"], a["stab_den"]),
+            "misleading_denominator": a["mis_den"],
+            "stable_denominator": a["stab_den"],
+            "inconclusive": a["inconclusive"],
+        }
+
+    def worst(field):
+        """Amendment 4: the floors must pass at BOTH instants, and
+        `min(a, b) >= bar` is exactly that. None if either is undefined, since
+        an undefined rate is not a satisfied bar."""
+        vals = [instants[i][field] for i in INSTANTS]
+        return None if any(v is None for v in vals) else min(vals)
+
+    gated = instants[GATING_INSTANT]
     return {
         "shape": name,
-        "root_retention": rate(root_ret["retained"], root_ret["required"]),
-        "depth1_retention": rate(d1_ret["retained"], d1_ret["required"]),
-        "descendant_retention": rate(desc_ret["retained"], desc_ret["required"]),
-        "misleading_intervention": rate(mis_num, mis_den),
-        "stable_intervention": rate(st_num, st_den),
-        "misleading_denominator": mis_den, "stable_denominator": st_den,
-        "inconclusive": inconclusive,
+        "gated_on": GATING_INSTANT,
+        "instants": instants,
+        "counters": {i: _finalize_counters(counters[i]) for i in INSTANTS},
+        # Reported, never gated (amendment 4). single_line and absent_both are
+        # DIFFERENT missingness states and neither enters the denominator.
+        "agreement": {d: {**v, "agree_rate": _rate(v["agree"],
+                                                   v["agree"] + v["disagree"])}
+                      for d, v in agreement.items()},
+        # The retention bars rest only on stable-reference-eligible rows; this
+        # says how many were set aside, so a floor computed over three rows is
+        # not mistaken for one computed over the corpus.
+        "rows_without_stable_reference": rows_without_stable_reference,
+        "retention_rows": instants[GATING_INSTANT]["retention_rows"],
+        # Hoisted for select_shape / validation_verdict: retention is the WORSE
+        # instant, intervention is the B=400 number.
+        "root_retention": worst("root_retention"),
+        "depth1_retention": worst("depth1_retention"),
+        "descendant_retention": worst("descendant_retention"),
+        "misleading_intervention": gated["misleading_intervention"],
+        "stable_intervention": gated["stable_intervention"],
+        "misleading_denominator": gated["misleading_denominator"],
+        "stable_denominator": gated["stable_denominator"],
+        "inconclusive": gated["inconclusive"],
     }
+
+
+def validation_verdict(aggregate: Dict[str, Any]) -> Dict[str, Any]:
+    """The frozen three-way precedence (amendment 6a):
+
+        1. FAIL          -- any DEFINED rate misses its bar
+        2. INCONCLUSIVE  -- otherwise, any required rate is UNDEFINED
+        3. PASS          -- otherwise
+
+    ORDERED, because a result can hold both a defined miss and an undefined rate
+    and would otherwise satisfy two verdicts at once. A defined miss is evidence
+    and outranks a gap in the evidence; an undefined rate is not a satisfied bar
+    and is not a measured miss either.
+    """
+    failed: List[str] = []
+    undefined: List[str] = []
+    for rate_name in REQUIRED_RATES:
+        value = aggregate.get(rate_name)
+        bar, kind = _BARS[rate_name]
+        if value is None:
+            undefined.append(rate_name)
+        elif (value < bar) if kind == "floor" else (value > bar):
+            failed.append(rate_name)
+    verdict = "FAIL" if failed else ("INCONCLUSIVE" if undefined else "PASS")
+    return {"verdict": verdict, "failed": failed, "undefined": undefined}
 
 
 def select_shape(per_shape: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
@@ -1912,23 +3023,31 @@ def select_on_discovery_validate_on_selected(
     disc = {s[0]: aggregate_shape(discovery, s) for s in WIDENING_SHAPES}
     chosen = select_shape(disc)
     if chosen["selected"] is None:
-        return {**chosen, "selected_on": "discovery", "validated": {}}
+        # Nothing was validated, so there is no validation aggregate to judge.
+        # NO_SHAPE_PASSES is a selection outcome, not an INCONCLUSIVE
+        # validation, and must not be reported as one.
+        return {**chosen, "selected_on": "discovery", "validated": {},
+                "validation_verdict": None}
     shape = next(s for s in WIDENING_SHAPES if s[0] == chosen["selected"])
+    validated = aggregate_shape(validation, shape)
     return {**chosen, "selected_on": "discovery",
             "discovery": disc,
-            "validated": {chosen["selected"]: aggregate_shape(validation, shape)}}
+            "validated": {chosen["selected"]: validated},
+            # Amendment 6a: the validation aggregate is JUDGED, not merely
+            # computed.
+            "validation_verdict": validation_verdict(validated)}
 ```
 
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_c.py -v -p no:cacheprovider`
-Expected: PASS — 14 passed.
+Expected: PASS — 30 passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/GPU/alphazero/atlas_readout_c.py tests/test_atlas_readout_c.py
-git commit -m "feat(atlas-s4): Read-out C aggregation, strata and discovery-selected shape"
+git commit -m "feat(atlas-s4): Read-out C edge-union retention at both instants, strata, verdict"
 ```
 
 ---
@@ -1937,10 +3056,56 @@ git commit -m "feat(atlas-s4): Read-out C aggregation, strata and discovery-sele
 
 **Files:**
 - Create: `scripts/GPU/alphazero/atlas_artifact.py`
+- Modify: `scripts/GPU/alphazero/build_atlas_corpus.py` — one additive branch in `_jsonable`
 - Test: `tests/test_atlas_artifact.py`
 
+> **Why landed Stage 2 code is touched.** The row holds **native Python**, not
+> JSON-ready values — tuple-keyed `parent_visits`, and `LegResult` / `BoundaryRecord`
+> dataclasses — and `_jsonable` normalizes at the JSON boundary. That is Stage 2's own
+> stated principle ("keeps the pure module free of a JSON concern"), and dataclasses are
+> the same problem as tuple keys.
+>
+> Converting the dataclasses earlier, inside `build_row`, is what revision 3 did with
+> `vars(l)` — and it broke the seam: Read-out B and `atlas_labelling` read `l.nominal_B`
+> by **attribute**, so a row carrying `vars()`-flattened legs cannot be handed to
+> `calibrate_gate` at all. The chain hid that by rebuilding a Read-out B row by hand.
+>
+> The branch is additive and byte-identical for every existing caller, whose payloads
+> contain no dataclasses:
+>
+> ```python
+> if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+>     return _jsonable(dataclasses.asdict(obj))
+> ```
+
 **Interfaces:**
-- Produces: `ROW_SCHEMA_VERSION`; `build_row(...)` carrying **both** `features_at_boundary` and `features_at_400`; `validate_provenance(run)`; `emit(run)`.
+- Consumes: Stage 3's `snapshots` document verbatim, Task 2/3's feature dicts, and Stage 3's `BoundaryRecord` / `PrefixResult`.
+- Produces: `ROW_SCHEMA_VERSION`; `build_row(..., snapshots=...)`; `validate_provenance(prov)`; `emit(run)`.
+
+> **One authoritative `snapshots` document, stored once.** Revision 2 stored the Stage 3
+> document under `tracer_snapshots` *and* separately copied `reference_lines` and
+> `parent_visits` to the top level — three keys holding overlapping copies of one
+> producer's output, none of them the shape Read-out C consumes. The chain then worked
+> around it with a hand-built `_c_row`, **recreating exactly the producer/consumer
+> surrogate this plan exists to eliminate** and leaving the artifact path itself
+> untested.
+>
+> Now `build_row` takes `snapshots=` and stores it under `snapshots`, unchanged and
+> undivided. **An artifact row is therefore already a valid Read-out C row** (it carries
+> `snapshots`, `label`, `phase`, `flat_policy`, `near_even`) **and a valid Read-out A row**
+> (`label`, `features_at_boundary`, `features_at_400`). The chain drives both read-outs
+> from real `build_row` output, so the seam is exercised rather than bypassed.
+>
+> **Tuple keys become `"a|b"` strings at emission**, via the existing `_jsonable`, and the
+> root path `()` becomes the **empty-string key** `""`. That is deterministic, but it is
+> surprising enough to pin: a reader who expects `"root"` would silently treat `""` as an
+> absent entry. Emission is a report, not a re-loadable input.
+>
+> **`emit` refuses to serialize a run whose provenance does not validate.** Revision 2
+> defined `validate_provenance` and never called it, and its own chain test emitted an
+> empty provenance object successfully — a fail-closed check nothing invokes is
+> decoration. Digests must also be **hexadecimal**, not merely 40 characters long: a
+> 40-character non-hex string is not a SHA-1, and length alone would accept one.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1953,6 +3118,25 @@ import pytest
 from scripts.GPU.alphazero.atlas_artifact import (
     ROW_SCHEMA_VERSION, build_row, emit, validate_provenance,
 )
+from scripts.GPU.alphazero.warm_prefix_replay import LegResult
+
+# Valid synthetic provenance. Emission is fail-closed, so serialization tests
+# must supply one rather than proving that an empty object gets through.
+PROV = {"git_head": "a" * 40, "worktree_clean": True,
+        "checkpoint_sha1": "0" * 40}
+
+
+def _snapshots(**over):
+    """The Stage 3 producer document, stored ONCE and undivided."""
+    base = {"at_boundary": {"by_shape": {}}, "at_400": {"by_shape": {}},
+            "captures": {"at_start": {}, "at_boundary": {}, "at_400": {}},
+            "parent_visits": {"at_boundary": {(): 463}, "at_400": {(): 537}},
+            "reference_lines": {"at_3200": {"moves": [7]},
+                                "at_6400": {"moves": [7]},
+                                "merged": {"required_edges": [],
+                                           "agreement": {}}}}
+    base.update(over)
+    return base
 
 
 def _kw(**over):
@@ -1965,8 +3149,7 @@ def _kw(**over):
         legs=[{"nominal_B": 400}], label="misleading",
         features_at_boundary={"one_visit_backup_share": 0.4},
         features_at_400={"one_visit_backup_share": 0.3},
-        reference_line={"stable_deep_move": 7},
-        tracer_snapshots={"at_boundary": {}, "at_400": {}},
+        snapshots=_snapshots(),
         flat_policy=False, near_even=True)
     base.update(over)
     return base
@@ -1980,6 +3163,50 @@ def test_row_carries_BOTH_feature_captures():
     assert r["features_at_400"]["one_visit_backup_share"] == 0.3
 
 
+def test_the_row_stores_ONE_undivided_producer_document():
+    """Amendment 4's output is kept whole, under the key Read-out C consumes.
+    The tree is gone by the time anything re-reads this row, so a map that is
+    not carried is a permanently missing measurement -- and a map carried in
+    two overlapping places is how the two copies drift."""
+    r = build_row(**_kw())
+    assert set(r["snapshots"]["reference_lines"]) == {"at_3200", "at_6400",
+                                                      "merged"}
+    assert set(r["snapshots"]["parent_visits"]) == {"at_boundary", "at_400"}
+    # No duplicated copies and no abolished singular field.
+    for gone in ("reference_line", "reference_lines", "parent_visits",
+                 "tracer_snapshots"):
+        assert gone not in r
+
+
+def test_an_artifact_row_IS_a_readout_row_for_both_consumers():
+    """The seam is the contract: no translation layer exists to drift."""
+    r = build_row(**_kw())
+    assert {"snapshots", "label", "phase", "flat_policy", "near_even"} <= set(r)
+    assert {"label", "features_at_boundary", "features_at_400"} <= set(r)
+
+
+def test_the_rows_NATIVE_shapes_survive_emission():
+    """The row holds native Python and `_jsonable` normalizes at the boundary.
+
+    Tuple KEYS join with "|", so the root path () becomes "" -- deterministic,
+    but surprising enough that a reader must not mistake it for an absent
+    entry. Dataclasses convert too, which is what lets `legs` stay a list of
+    LegResult objects that Read-out B can read by ATTRIBUTE.
+    """
+    leg = LegResult(nominal_B=400, inherited_I=137, effective=537,
+                    root_value=0.25, selected_move=7,
+                    selected_move_prior_rank=1, top_share=0.5,
+                    top_two_margin=0.2, effective_children=12.0,
+                    n_visited_children=20, visit_counts={7: 100})
+    r = build_row(**_kw(legs=[leg], snapshots=_snapshots(
+        parent_visits={"at_boundary": {(): 463, (7, 3): 12}})))
+    back = json.loads(emit({"rows": [r], "provenance": PROV}))["rows"][0]
+    assert back["snapshots"]["parent_visits"]["at_boundary"] == {"": 463,
+                                                                "7|3": 12}
+    assert back["legs"][0]["nominal_B"] == 400
+    assert back["legs"][0]["root_value"] == 0.25
+
+
 def test_row_carries_resets_remaining_strata_and_the_schema_version():
     r = build_row(**_kw())
     assert r["schema_version"] == ROW_SCHEMA_VERSION
@@ -1991,7 +3218,7 @@ def test_row_carries_resets_remaining_strata_and_the_schema_version():
 def test_undefined_values_stay_None_through_emission():
     r = build_row(**_kw(reset_rate=None, last_reset_ply=None, boundary=None,
                         features_at_400=None))
-    back = json.loads(emit({"rows": [r], "provenance": {}}))["rows"][0]
+    back = json.loads(emit({"rows": [r], "provenance": PROV}))["rows"][0]
     assert back["reset_rate"] is None and back["last_reset_ply"] is None
     assert back["boundary"] is None and back["features_at_400"] is None
 
@@ -2001,16 +3228,26 @@ def test_a_row_missing_the_boundary_is_flagged_not_defaulted():
 
 
 def test_emission_goes_through_jsonable():
-    run = {"rows": [], "provenance": {},
+    run = {"rows": [], "provenance": PROV,
            "cells": {("discovery", "late", "red"): 12}}
     assert json.loads(emit(run))["cells"] == {"discovery|late|red": 12}
 
 
 def test_emission_REJECTS_an_unserializable_payload():
     """No default=str: it would stringify a schema defect into a
-    plausible-looking value instead of failing."""
+    plausible-looking value instead of failing. Provenance is VALID here, so
+    the TypeError proves the serializer refused -- not the provenance gate."""
     with pytest.raises(TypeError):
-        emit({"rows": [{"bad": object()}], "provenance": {}})
+        emit({"rows": [{"bad": object()}], "provenance": PROV})
+
+
+def test_emission_REFUSES_a_run_whose_provenance_does_not_validate():
+    """A fail-closed check nothing invokes is decoration. Emission is the one
+    place every artifact passes through, so the gate belongs here."""
+    for bad in ({}, {"git_head": "a" * 40, "worktree_clean": False,
+                     "checkpoint_sha1": "0" * 40}):
+        with pytest.raises(ValueError, match="provenance"):
+            emit({"rows": [], "provenance": bad})
 
 
 def test_provenance_fails_closed_on_a_dirty_tree():
@@ -2025,10 +3262,20 @@ def test_provenance_requires_a_checkpoint_digest():
     assert "checkpoint_sha1" in r["problems"]
 
 
+def test_a_forty_character_non_hexadecimal_digest_is_rejected():
+    """Length alone is not a SHA-1. Checking only `len == 40` accepts a
+    placeholder, a truncated path, or a typo'd branch name."""
+    r = validate_provenance({"git_head": "z" * 40, "worktree_clean": True,
+                             "checkpoint_sha1": "not-a-hash" + "x" * 30})
+    assert r["verdict"] == "PROVENANCE_FAILURE"
+    assert set(r["problems"]) == {"git_head", "checkpoint_sha1"}
+
+
 def test_valid_provenance_passes():
-    r = validate_provenance({"git_head": "a" * 40, "worktree_clean": True,
-                             "checkpoint_sha1": "0" * 40})
+    r = validate_provenance(PROV)
     assert r["verdict"] == "OK" and r["problems"] == []
+    # Upper case is still hexadecimal.
+    assert validate_provenance({**PROV, "git_head": "A" * 40})["verdict"] == "OK"
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -2045,25 +3292,33 @@ Expected: FAIL — `ModuleNotFoundError`
 Every undefined value stays None through emission. A missing boundary is
 FLAGGED, never defaulted -- a zero-filled record is indistinguishable from a
 real one.
+
+The Stage 3 producer document is stored ONCE, undivided, under `snapshots`, so
+an artifact row is directly consumable by Read-outs A, B and C with no
+translation layer between them to drift. The row holds NATIVE Python -- tuple
+keys, LegResult and BoundaryRecord dataclasses -- and `_jsonable` normalizes it
+at the JSON boundary, exactly where Stage 2 put that concern.
 """
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+import re
+from typing import Any, Dict, List, Optional, Sequence
 
 from .build_atlas_corpus import _jsonable
 
-ROW_SCHEMA_VERSION = 2
+# 1, not 2: no artifact of this schema has ever been emitted, and a version
+# number implying a predecessor invites a reader to hunt for one.
+ROW_SCHEMA_VERSION = 1
 
 
 def build_row(*, game_idx: int, replay_seed: int, target_ply: int, phase: str,
               side: str, split: str, inherited_I: int, reset_count: int,
               reset_rate: Optional[float], last_reset_ply: Optional[int],
-              boundary: Optional[Dict[str, Any]], legs: List[Dict[str, Any]],
+              boundary: Optional[Any], legs: Sequence[Any],
               label: str, features_at_boundary: Optional[Dict[str, Any]],
               features_at_400: Optional[Dict[str, Any]],
-              reference_line: Optional[Dict[str, Any]],
-              tracer_snapshots: Dict[str, Any], flat_policy: bool,
+              snapshots: Dict[str, Any], flat_policy: bool,
               near_even: bool) -> Dict[str, Any]:
     return {
         "schema_version": ROW_SCHEMA_VERSION,
@@ -2074,50 +3329,98 @@ def build_row(*, game_idx: int, replay_seed: int, target_ply: int, phase: str,
         "reset_count": reset_count, "reset_rate": reset_rate,
         "last_reset_ply": last_reset_ply,
         "boundary": boundary, "boundary_missing": boundary is None,
+        # LegResult objects, NOT vars()-flattened dicts: Read-out B and
+        # atlas_labelling read `l.nominal_B` by ATTRIBUTE, so a flattened row
+        # could not be handed to calibrate_gate at all. `_jsonable` converts
+        # them at emission.
         "legs": legs, "label": label,
-        # BOTH captures: B=400 supplies section 6's 400-tree diagnostic contrast.
+        # BOTH captures: B=400 supplies section 6's 400-tree diagnostic
+        # contrast. Together with `label` this row IS a Read-out A row.
         "features_at_boundary": features_at_boundary,
         "features_at_400": features_at_400,
-        "reference_line": reference_line,
-        "tracer_snapshots": tracer_snapshots,
+        # The Stage 3 document, WHOLE and under the key Read-out C consumes:
+        # tracer snapshots, captures, both parent-visit maps and both deep
+        # lines. Splitting it into overlapping copies is how they drift, and
+        # storing it under any other name forces a surrogate row in between.
+        "snapshots": snapshots,
         # Strata facts, so Read-outs B and C need no second source.
         "flat_policy": flat_policy, "near_even": near_even,
     }
 
 
-def validate_provenance(prov: Dict[str, Any]) -> Dict[str, Any]:
+_SHA1 = re.compile(r"[0-9a-fA-F]{40}\Z")
+
+
+def validate_provenance(prov: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """Fails CLOSED. A dirty tree or unidentifiable checkpoint means the run is
-    not reconstructible, whatever its numbers say."""
+    not reconstructible, whatever its numbers say.
+
+    Digests must be HEXADECIMAL, not merely 40 characters: a placeholder, a
+    truncated path or a typo'd ref can be 40 characters long and is not a SHA-1.
+    """
+    prov = prov or {}
     problems = []
     if prov.get("worktree_clean") is not True:
         problems.append("worktree_clean")
-    sha1 = prov.get("checkpoint_sha1")
-    if not sha1 or len(sha1) != 40:
-        problems.append("checkpoint_sha1")
-    head = prov.get("git_head")
-    if not head or len(head) != 40:
-        problems.append("git_head")
+    for field in ("checkpoint_sha1", "git_head"):
+        value = prov.get(field)
+        if not isinstance(value, str) or not _SHA1.match(value):
+            problems.append(field)
     return {"verdict": "PROVENANCE_FAILURE" if problems else "OK",
             "problems": problems}
 
 
 def emit(run: Dict[str, Any]) -> str:
-    """Serialize through _jsonable. NO default=str -- it would stringify a
-    schema defect into a plausible-looking value instead of failing."""
+    """Serialize through _jsonable, but ONLY for a run that validates.
+
+    The provenance gate lives here because emission is the one point every
+    artifact passes through. A fail-closed check that nothing calls is
+    decoration: the previous revision defined `validate_provenance` and never
+    invoked it, and its own chain test emitted an empty provenance object.
+
+    Validation runs BEFORE serialization so a payload defect still raises
+    TypeError rather than being masked by the gate. NO default=str -- it would
+    stringify a schema defect into a plausible-looking value instead of failing.
+    """
+    checked = validate_provenance(run.get("provenance"))
+    if checked["verdict"] != "OK":
+        raise ValueError(
+            f"refusing to emit: provenance does not validate "
+            f"({', '.join(checked['problems'])})")
     return json.dumps(_jsonable(run), indent=2, sort_keys=True)
+```
+
+And in `build_atlas_corpus.py`, add `import dataclasses` (the module currently
+imports only `argparse`, `json`, `sys` and `pathlib`) plus one additive branch at
+the top of `_jsonable`, before the `dict` case:
+
+```python
+    # Dataclasses are the same boundary problem as tuple keys: the rows hold
+    # LegResult / BoundaryRecord objects because the read-outs address them by
+    # attribute, and only the JSON boundary needs them flattened. Additive --
+    # every existing caller's payload contains no dataclasses, so their output
+    # is byte-identical.
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return _jsonable(dataclasses.asdict(obj))
 ```
 
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_artifact.py -v -p no:cacheprovider`
-Expected: PASS — 9 passed.
+Expected: PASS — 14 passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/GPU/alphazero/atlas_artifact.py tests/test_atlas_artifact.py
-git commit -m "feat(atlas-s4): artifact carrying both captures, fail-closed provenance"
+git add scripts/GPU/alphazero/atlas_artifact.py \
+        scripts/GPU/alphazero/build_atlas_corpus.py \
+        tests/test_atlas_artifact.py
+git commit -m "feat(atlas-s4): one undivided snapshots document, fail-closed emission"
 ```
+
+Re-run the Stage 2 CLI suite too — `_jsonable` is shared:
+`.venv/bin/python -m pytest tests/test_build_atlas_corpus_cli.py -p no:cacheprovider`
+Expected: 13 passed, unchanged.
 
 ---
 
@@ -2146,13 +3449,14 @@ import pytest
 from scripts.GPU.alphazero.atlas_artifact import build_row, emit
 from scripts.GPU.alphazero.atlas_labelling import class_counts, classify_row
 from scripts.GPU.alphazero.atlas_readout_a import (
-    collect_features, deployability, evaluate_detector,
+    collect_features, deployability, evaluate_detector, evaluate_detector_both,
 )
 from scripts.GPU.alphazero.atlas_readout_b import (
     by_stratum_summary, calibrate_gate, natural_convergence_report,
 )
 from scripts.GPU.alphazero.atlas_readout_c import (
     aggregate_shape, classify_strata, intervention_from_snapshots,
+    select_on_discovery_validate_on_selected, validation_verdict,
 )
 from scripts.GPU.alphazero.corpus_geometry import GameMeta
 from scripts.GPU.alphazero.mcts import MCTS, MCTSConfig
@@ -2166,6 +3470,8 @@ from tests.eval_fakes import FakeEvaluator
 BASE = 20400000
 SIZE = 6
 SHAPE = ("c4a05", 4.0, 0.5)
+PROV = {"git_head": "a" * 40, "worktree_clean": True,
+        "checkpoint_sha1": "0" * 40}
 
 
 def _history(n, size=SIZE):
@@ -2201,6 +3507,35 @@ def real_row():
     return {"meta": meta, "pre": pre, "legs": legs, "snaps": snaps, "obs": obs}
 
 
+@pytest.fixture(scope="module")
+def artifact_row(real_row):
+    """A REAL `build_row` result.
+
+    Every downstream read-out below consumes THIS, never a hand-written
+    stand-in. The producer/consumer seam is the thing under test, and a chain
+    test that rebuilds its own row shape tests everything except the seam --
+    which is how the previous revision left the artifact path unexercised.
+    """
+    pre, legs, snaps, obs = (real_row["pre"], real_row["legs"],
+                             real_row["snaps"], real_row["obs"])
+    caps = snaps["captures"]
+    return build_row(
+        game_idx=real_row["meta"].game_id, replay_seed=real_row["meta"].seed,
+        target_ply=2, phase="opening", side="red", split="discovery",
+        inherited_I=pre.inherited_I, reset_count=pre.reset_count,
+        reset_rate=pre.reset_rate, last_reset_ply=pre.last_reset_ply,
+        # Dataclasses, not vars(): the read-outs address these by attribute and
+        # `_jsonable` flattens them at emission.
+        boundary=obs.record, legs=legs, label=classify_row(legs),
+        features_at_boundary=collect_features(caps["at_start"],
+                                              caps["at_boundary"],
+                                              obs.record.N_actual),
+        features_at_400=collect_features(caps["at_start"], caps["at_400"], 400),
+        # SUPPLIED facts in this synthetic chain -- see the Stage 5 handoff note
+        # in the completion criteria. Stage 5 must DERIVE them.
+        snapshots=snaps, flat_policy=False, near_even=True)
+
+
 def test_the_fixture_uses_the_frozen_rungs(real_row):
     assert [l.nominal_B for l in real_row["legs"]] == [400, 1600, 3200, 6400]
 
@@ -2230,66 +3565,116 @@ def test_readout_A_detector_runs_end_to_end_on_real_features(real_row):
                          obs.record.N_actual)
     rows = ([{"label": "misleading", "features": f} for _ in range(20)]
             + [{"label": "stable_negative", "features": f} for _ in range(25)])
-    r = evaluate_detector(discovery=rows, validation=rows)
+    r = evaluate_detector(discovery=rows, validation=rows, replicates=64)
     # Identical features cannot separate; the point is that the REAL path runs
-    # and reports a verdict rather than raising.
+    # and reports a verdict rather than raising. `replicates` is cut from the
+    # frozen 10,000 because this row set reaches the bootstrap: 10,000 x 500
+    # rank comparisons is several seconds of pure Python for no added signal.
     assert r["verdict"] in {"PASS", "FAIL", "INSUFFICIENT_CLASSES",
                             "INSUFFICIENT_DISCOVERY_CLASSES"}
     d = deployability([real_row["obs"].record.remaining])
     assert d["verdict"] in {"DEPLOYABLE", "NOT_DEPLOYABLE"}
 
 
-def test_readout_B_runs_on_real_rows(real_row):
-    row = {"legs": real_row["legs"], "phase": "opening",
-           "flat_policy": False, "near_even": True}
-    assert calibrate_gate([row], "top_share_increase")["verdict"] in {
+def test_readout_B_consumes_the_ARTIFACT_ROW_directly(artifact_row):
+    """A Read-out B row is an artifact row too: `legs`, `phase`, `flat_policy`
+    and `near_even` are all already there, and `legs` holds LegResult OBJECTS
+    so the attribute access in `_by_b` works on the real row."""
+    assert calibrate_gate([artifact_row], "top_share_increase")["verdict"] in {
         "needs review", "no finding"}
-    nc = natural_convergence_report([row])
+    nc = natural_convergence_report([artifact_row])
     assert nc["transition"] == "400->6400" and nc["is_causal_evidence"] is False
-    assert "overall" in by_stratum_summary([row], "top_share_increase")
+    assert "overall" in by_stratum_summary([artifact_row], "top_share_increase")
 
 
-def test_readout_C_runs_on_the_real_reference_line(real_row):
-    ref = real_row["snaps"]["reference_lines"]
-    row = {"reference_line": ref, "snapshots": real_row["snaps"],
-           "label": "misleading", "phase": "opening",
-           "flat_policy": False, "near_even": True}
-    assert isinstance(classify_strata(row), set)
-    iv = intervention_from_snapshots(real_row["snaps"], "c4a05")
-    assert iv["verdict"] in {"OK", "INCONCLUSIVE", "NO_EVENTS"}
-    agg = aggregate_shape([row], SHAPE)
+def test_the_real_ladder_freezes_both_deep_lines_and_both_visit_maps(real_row):
+    """The producer half of amendment 4, driven by the real ladder rather than
+    by a hand-written stand-in for it."""
+    snaps = real_row["snaps"]
+    assert set(snaps["reference_lines"]) == {"at_3200", "at_6400", "merged"}
+    assert set(snaps["parent_visits"]) == {"at_boundary", "at_400"}
+    merged = snaps["reference_lines"]["merged"]
+    assert set(merged["agreement"]) == {"root", "reply", "two_ply"}
+    # Every edge carries its own parent's priors, and no deep-rung visit count.
+    for e in merged["required_edges"]:
+        assert e["parent_priors"] and "parent_effective_visits" not in e
+
+
+def test_readout_C_consumes_the_ARTIFACT_ROW_directly(artifact_row):
+    """No surrogate row: `aggregate_shape` is handed `build_row`'s output.
+
+    At active_size=6 the admitted set clamps to n_legal, so these numbers
+    cannot be interesting -- the point is that the real seam holds and the
+    real path reports rates rather than raising.
+    """
+    assert isinstance(classify_strata(artifact_row), set)
+    for instant in ("at_boundary", "at_400"):
+        iv = intervention_from_snapshots(artifact_row["snapshots"], "c4a05",
+                                         instant=instant)
+        assert iv["verdict"] in {"OK", "INCONCLUSIVE", "NO_EVENTS",
+                                 "NO_SNAPSHOT"}
+    agg = aggregate_shape([artifact_row], SHAPE)
+    assert agg["gated_on"] == "at_400"
+    assert set(agg["instants"]) == {"at_boundary", "at_400"}
     assert set(agg) >= {"root_retention", "misleading_intervention",
-                        "inconclusive"}
+                        "inconclusive", "counters", "agreement",
+                        "retention_rows", "rows_without_stable_reference"}
+    assert validation_verdict(agg)["verdict"] in {"FAIL", "INCONCLUSIVE", "PASS"}
 
 
-def test_a_real_row_survives_the_artifact_boundary(real_row):
-    pre, legs, snaps, obs = (real_row["pre"], real_row["legs"],
-                             real_row["snaps"], real_row["obs"])
-    caps = snaps["captures"]
-    row = build_row(
-        game_idx=real_row["meta"].game_id, replay_seed=real_row["meta"].seed,
-        target_ply=2, phase="opening", side="red", split="discovery",
-        inherited_I=pre.inherited_I, reset_count=pre.reset_count,
-        reset_rate=pre.reset_rate, last_reset_ply=pre.last_reset_ply,
-        boundary=(vars(obs.record) if obs.record else None),
-        legs=[vars(l) for l in legs], label=classify_row(legs),
-        features_at_boundary=collect_features(caps["at_start"],
-                                              caps["at_boundary"],
-                                              obs.record.N_actual),
-        features_at_400=collect_features(caps["at_start"], caps["at_400"], 400),
-        reference_line=snaps["reference_lines"], tracer_snapshots=snaps,
-        flat_policy=False, near_even=True)
-    back = json.loads(emit({"rows": [row], "provenance": {}}))["rows"][0]
-    assert back["inherited_I"] == pre.inherited_I
+def test_readout_C_selection_and_verdict_run_on_real_artifact_rows(artifact_row):
+    """Labels are forced, because whatever the FakeEvaluator ladder happens to
+    classify this position as must not decide whether the test exercises the
+    intervention denominators."""
+    rows = [{**artifact_row, "label": "misleading"},
+            {**artifact_row, "label": "stable_negative"}]
+    r = select_on_discovery_validate_on_selected(rows, rows)
+    assert r["selected_on"] == "discovery"
+    assert set(r["validated"]) <= {r["selected"]}
+    if r["selected"] is None:
+        assert r["validation_verdict"] is None
+    else:
+        assert r["validation_verdict"]["verdict"] in {"FAIL", "INCONCLUSIVE",
+                                                      "PASS"}
+
+
+def test_readout_A_dual_pipeline_consumes_the_artifact_row(artifact_row):
+    """The detector row IS the artifact row -- no translation layer to drift."""
+    rows = ([{**artifact_row, "label": "misleading"} for _ in range(20)]
+            + [{**artifact_row, "label": "stable_negative"} for _ in range(25)])
+    r = evaluate_detector_both(rows, rows, replicates=32)
+    assert r["authoritative"] == "features_at_boundary"
+    assert r["verdict"] in {"PASS", "FAIL", "LATE_ONLY_SEPARATION",
+                            "INSUFFICIENT_CLASSES",
+                            "INSUFFICIENT_DISCOVERY_CLASSES"}
+    assert r["row_overlap"]["discovery"]["identical"] is True
+    assert r["row_overlap"]["validation"]["identical"] is True
+
+
+def test_a_real_row_survives_the_artifact_boundary(artifact_row, real_row):
+    back = json.loads(emit({"rows": [artifact_row],
+                            "provenance": PROV}))["rows"][0]
+    assert back["inherited_I"] == real_row["pre"].inherited_I
     assert len(back["legs"]) == 4
     assert back["features_at_boundary"] is not None
     assert back["features_at_400"] is not None
+    # Amendment 4's producer output survives the JSON boundary, tuple keys and
+    # all: the root path () emits as the empty-string key.
+    assert set(back["snapshots"]["reference_lines"]) == {"at_3200", "at_6400",
+                                                         "merged"}
+    assert "" in back["snapshots"]["parent_visits"]["at_400"]
+
+
+def test_emission_of_a_real_run_still_fails_closed_on_provenance(artifact_row):
+    """The gate is not bypassed by a row that is otherwise perfectly valid."""
+    with pytest.raises(ValueError, match="provenance"):
+        emit({"rows": [artifact_row], "provenance": {}})
 ```
 
 - [ ] **Step 2: Run, then the full suite**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_chain.py -v -p no:cacheprovider`
-Expected: PASS — 7 passed.
+Expected: PASS — 11 passed.
 
 ```bash
 .venv/bin/python -m pytest -p no:cacheprovider -q > /tmp/s4.out 2>&1; echo "REAL_EXIT=$?" >> /tmp/s4.out; tail -3 /tmp/s4.out
@@ -2307,15 +3692,76 @@ git commit -m "test(atlas-s4): real Stage 3 output through all three read-outs"
 ## Stage 4 completion criteria
 
 - [ ] **Task 0 producer closure lands first.** Backup accounting uses §6a's two-point `D3` measurement, not selection events; features are frozen at the boundary and at `B=400` while those states exist; the tracer counts `K(n+14)` online; the backup invariant is asserted and a violation fails the row.
+- [ ] **Amendment 4's producer contract.** Both deep lines captured while their states exist, selected by **leg index** not `running_B`; complete depth-two parent-visit maps at the boundary and at `B = 400`; the union deduplicated by `(parent path, move)` with both replies retained on disagreement; agreement judged on the complete edge with single-line depths outside the denominator; parent priors **asserted** equal where both rungs captured the same parent; no deep-rung visit count emitted at all.
 - [ ] §5 labelling exact: stable reference needs all three conditions; misleading is an OR; stable-negative an AND; ambiguous kept and counted; value and move components reported separately.
 - [ ] §3 sizing matches the frozen formula and **fails closed** on a zero class frequency or a requirement above 400; the final capacity gate needs ≥20 / ≥25.
 - [ ] Read-out A collects **exactly five** frozen features; standardization is learned on **discovery only**; AUC / bootstrap-lower-bound / flag-rate / precision bars all enforced; `INSUFFICIENT_CLASSES` fails closed.
+- [ ] **Read-out A runs the identical pipeline on both feature sets**, boundary authoritative; `LATE_ONLY_SEPARATION` requires boundary `FAIL` **and** `B = 400` `PASS`, both exactly, **and zero boundary missing-feature rejections in either split**; a boundary insufficiency or a blocked lateness reading is reported **as itself**, never promoted to a finding about timing; row overlap is reported for **discovery and validation separately**, and not gated.
 - [ ] Deployability: `remaining == 0` non-actionable, **median zero fails**, strata **reported not gated**, empty set yields `None`.
 - [ ] Read-out B computes metrics at **all four rungs**; `closes_half` guards a zero gap and checks **both** deep rungs for the **same** metric; persistence is joint; the denominator is `eligible_triggers` with the **base-rate margin**; the verdict is *needs review*, never *invalid*.
-- [ ] Read-out C: retention under `K(n)`; intervention must **also** pass under `K(n+14)`, otherwise **inconclusive**; lexicographic selection with a named `NO_SHAPE_PASSES`.
-- [ ] Artifact carries resets, `remaining`, `boundary_missing`, and `None` for every undefined value through emission; provenance fails closed; `_jsonable` at the boundary.
-- [ ] Real Stage 3 ladder output drives the real read-outs.
-- [ ] **78 new tests** (labelling 10, producer-closure 6, read-out A 20, read-out B 12, read-out C 14, artifact 9, chain 7). Full suite **2513 passed**, exit code read from the process.
+- [ ] **Read-out C aggregates over the deduplicated edge union at both instants**: `K(n)` reads the instant's own parent-visit map (absent path ⇒ `0` ⇒ `K(0) = 1`); root and reply floors must pass at **both**; the `B = 400` intervention drives the bars and the boundary one is reported; intervention must **also** pass under `K(n+14)`, otherwise **inconclusive**; depth buckets, event-weighted excluded prior mass, forced-root bypasses, forced-simulation counts and per-stratum retention are all reported; `classify_edge_strata` is **wired into the aggregation**, not merely defined; lexicographic selection with a named `NO_SHAPE_PASSES`.
+- [ ] **Only stable-reference-eligible rows feed the retention bars**, via an allow-list; selection-event counters still cover every row; `retention_rows` and `rows_without_stable_reference` are reported so a floor resting on three rows is not mistaken for one resting on the corpus.
+- [ ] **Agreement carries four states** — `agree` / `disagree` / `single_line` / `absent_both` — with the last two counted separately and neither in the denominator.
+- [ ] **The selected shape's validation aggregate receives the three-way verdict** with the frozen precedence `FAIL > INCONCLUSIVE > PASS`, and `NO_SHAPE_PASSES` yields **no** verdict rather than an `INCONCLUSIVE` one.
+- [ ] Artifact stores the Stage 3 producer document **once, undivided, under `snapshots`**, so an artifact row is directly consumable by Read-outs A and C; it carries resets, `remaining`, `boundary_missing` and `None` for every undefined value through emission; `_jsonable` at the boundary with the `()` → `""` root key pinned.
+- [ ] **`emit` refuses a run whose provenance does not validate**, checking hexadecimal digests rather than length alone, and validating *before* serializing so a payload defect still raises `TypeError`.
+- [ ] Real Stage 3 ladder output drives **all three** read-outs **through a real `build_row` result** — no hand-written row stands in for the artifact anywhere in the chain.
+
+### Handoff to Stage 5 — `flat_policy` and `near_even` are SUPPLIED, not derived
+
+Stage 4 accepts both as caller-supplied booleans and every test hardcodes them. That is
+correct for a synthetic stage — they are inputs to strata classification, not something
+Stage 4 measures — but it means **the one seam Stage 4 cannot qualify is the one that
+computes them.** Read-out B's `late` / `flat_policy` / `near_even` strata and Read-out C's
+`root_flat` / `near_even` strata are only as good as that unqualified producer.
+
+Stage 5 must derive both from **already-frozen measured fields** and qualify the
+producer → `build_row` seam the same way this stage qualifies the others:
+
+| field | frozen definition | available from |
+|---|---|---|
+| `flat_policy` | normalized policy entropy ≥ `0.90` **and** top prior ≤ `0.025` (§8, "use the existing flat-policy definition ... rather than inventing strata after measurement") | `captures[*]["policy_entropy"]` and the root priors — the same predicate `atlas_readout_c._is_flat` already applies per edge |
+| `near_even` | `\|V_stm\| ≤ 0.30` (§8) | `LegResult.root_value` at nominal `B = 400` |
+| `phase` | ply bounds 0–30 / 31–60 / 61–90 / 91+ (§3) | `corpus_geometry.phase_for_ply(target_ply)` |
+
+Note `_is_flat` already exists and is applied to reference-line parents; the root-level
+`flat_policy` must use **that same predicate**, not a second implementation of it.
+Deriving them in Stage 4 would mean writing a producer no Stage 4 test can drive with
+real data — which is how the atlas acquired its first three phantom names.
+
+### Test counting — recounted, and deliberately not frozen
+
+The revision-1 target ("78 new tests, full suite 2513") was **stale and wrong in both
+halves**: it predated this rewrite, and its per-file figures were already inaccurate for
+Read-out B (12 claimed, 14 present) and Read-out C (14 claimed, 16 present). It is
+removed rather than adjusted.
+
+Counted from the test functions actually written in this plan:
+
+| file | tests |
+|---|---:|
+| `tests/test_atlas_producer_closure.py` | 13 |
+| `tests/test_atlas_labelling.py` | 10 |
+| `tests/test_atlas_readout_a.py` | 27 |
+| `tests/test_atlas_readout_b.py` | 14 |
+| `tests/test_atlas_readout_c.py` | 30 |
+| `tests/test_atlas_artifact.py` | 14 |
+| `tests/test_atlas_readout_chain.py` | 11 |
+| **planned new** | **119** |
+
+Stage 3 qualified at **2435**, so the expected full-suite total is **2554**.
+
+**This is a derivation to re-verify, not an acceptance number.** At qualification:
+
+1. Recount `def test_` in the files as they were actually written — the plan is a
+   starting point and the count moves when implementation reveals a case worth pinning.
+2. The full-suite delta must equal that recount. **Any other delta means a pre-existing
+   test changed behaviour**, which must be explained before Stage 4 is called qualified —
+   that is the whole value of the number, and it is why the arithmetic is stated here
+   rather than left implicit.
+3. Read the exit code from the process: `... > /tmp/s4.out 2>&1; echo "REAL_EXIT=$?"`.
+   **`cmd | tail` reports the pipe's exit code** and has masked a collection error as
+   `exit 0` twice in this line of work.
 
 ## Out of scope
 
