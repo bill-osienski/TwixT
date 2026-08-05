@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .build_atlas_corpus import _jsonable
+from .warm_prefix_replay import BoundaryRecord, LegResult
 
 # 1, not 2: no artifact of this schema has ever been emitted, and a version
 # number implying a predecessor invites a reader to hunt for one.
@@ -98,3 +99,59 @@ def emit(run: Dict[str, Any]) -> str:
             f"refusing to emit: provenance does not validate "
             f"({', '.join(checked['problems'])})")
     return json.dumps(_jsonable(run), indent=2, sort_keys=True)
+
+
+def _unpath(key: str) -> Tuple[int, ...]:
+    """"" -> (), "7|3" -> (7, 3). Unambiguous because move ids are integers."""
+    return tuple(int(p) for p in key.split("|")) if key else ()
+
+
+def load_run(source) -> Dict[str, Any]:
+    """The AUTHENTICATED inverse of `emit`.
+
+    `emit` is lossy for exactly the types the read-outs need -- dataclasses,
+    tuple keys, integer keys -- and every loss is silently WRONG rather than
+    loudly broken: a string-keyed prior map still sorts and still yields a rank,
+    just not the right one. Nothing may consume an artifact except through here.
+    """
+    doc = json.loads(source.read_text() if hasattr(source, "read_text")
+                     else source)
+    checked = validate_provenance(doc.get("provenance"))
+    if checked["verdict"] != "OK":
+        raise ValueError(f"refusing to load: provenance does not validate "
+                         f"({', '.join(checked['problems'])})")
+    # A truncated document must not read as an empty run: `.get("rows", ())`
+    # would turn a file that lost its rows into a valid zero-row artifact.
+    if not isinstance(doc.get("rows"), list):
+        raise ValueError("refusing to load: `rows` is missing or not a list; "
+                         "the artifact is truncated or was not written by emit")
+    for row in doc["rows"]:
+        if row.get("schema_version") != ROW_SCHEMA_VERSION:
+            raise ValueError(
+                f"row schema_version {row.get('schema_version')!r} != "
+                f"{ROW_SCHEMA_VERSION}; this artifact was not written by this code")
+        row["legs"] = [LegResult(**{**l, "visit_counts": {
+            int(k): v for k, v in l["visit_counts"].items()}})
+            for l in row["legs"]]
+        row["boundary"] = (BoundaryRecord(**row["boundary"])
+                           if row["boundary"] is not None else None)
+        snaps = row["snapshots"]
+        snaps["parent_visits"] = {
+            inst: ({_unpath(k): v for k, v in (m or {}).items()}
+                   if m is not None else None)
+            for inst, m in snaps["parent_visits"].items()}
+        # BOTH edge lists. The deep lines carry `edges`; only `merged` carries
+        # `required_edges`, so rehydrating one key leaves at_3200 / at_6400
+        # holding list paths and string-keyed priors -- which is not an
+        # inverse of emit, and is silently wrong rather than broken.
+        for line in snaps["reference_lines"].values():
+            if not line:
+                continue
+            for key in ("edges", "required_edges"):
+                for edge in line.get(key, ()):
+                    edge["parent_path"] = tuple(edge["parent_path"])
+                    if "sources" in edge:          # merged edges only
+                        edge["sources"] = tuple(edge["sources"])
+                    edge["parent_priors"] = {int(k): v for k, v
+                                             in edge["parent_priors"].items()}
+    return doc

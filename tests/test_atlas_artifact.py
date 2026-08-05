@@ -48,6 +48,40 @@ def _kw(**over):
     return base
 
 
+def _real_legs():
+    """A single genuine LegResult. `_kw`'s default `[{"nominal_B": 400}]` is a
+    bare dict that predates load_run, and rehydrating it would fabricate the
+    fields it lacks."""
+    return [LegResult(nominal_B=400, inherited_I=137, effective=537,
+                      root_value=0.05, selected_move=3,
+                      selected_move_prior_rank=1, top_share=0.5,
+                      top_two_margin=0.2, effective_children=12.0,
+                      n_visited_children=20, visit_counts={3: 100})]
+
+
+def _tracer_snapshots():
+    """Tracer snapshots shaped like SelectionTracer.snapshot() emits.
+
+    `_snapshots`'s default `{"by_shape": {}}` is enough for emission but Read-out
+    C indexes `by_shape["c4a05"]`, so the round trip needs the real shape.
+    """
+    from scripts.GPU.alphazero.selection_tracer import WIDENING_SHAPES
+    cell = {"eligible_events": 200, "outside_events": 30,
+            "first_touch_events": 100, "first_touch_outside_events": 15,
+            "lagged_first_touch_outside_events": 12,
+            "excluded_prior_mass": 80.0, "outside_rate": 0.15,
+            "first_touch_outside_rate": 0.15,
+            "mean_excluded_prior_mass": 0.4}
+    block = {**{k: dict(cell) for k in ("overall", "0", "1", "2+")},
+             "forced_root_bypass_events": 0,
+             "forced_root_bypass_outside_events": 0,
+             "forced_root_bypass_outside_rate": None,
+             "meaningfully_affected": True}
+    snap = {"by_shape": {n: dict(block) for n, _c, _a in WIDENING_SHAPES},
+            "within_forced_events": 0}
+    return {"at_boundary": snap, "at_400": dict(snap)}
+
+
 def test_row_carries_BOTH_feature_captures():
     """Section 6a: B=400 supplies the required 400-tree diagnostic contrast, so
     it must survive into the artifact, not just the boundary capture."""
@@ -169,3 +203,124 @@ def test_valid_provenance_passes():
     assert r["verdict"] == "OK" and r["problems"] == []
     # Upper case is still hexadecimal.
     assert validate_provenance({**PROV, "git_head": "A" * 40})["verdict"] == "OK"
+
+
+# -- Stage 5, Task 1: the artifact must be RELOADABLE ------------------------
+
+from scripts.GPU.alphazero.atlas_artifact import load_run
+from scripts.GPU.alphazero.warm_prefix_replay import BoundaryRecord
+
+
+def test_load_run_is_the_inverse_of_emit_for_every_lossy_type():
+    leg = LegResult(nominal_B=400, inherited_I=137, effective=537,
+                    root_value=0.25, selected_move=7,
+                    selected_move_prior_rank=1, top_share=0.5,
+                    top_two_margin=0.2, effective_children=12.0,
+                    n_visited_children=20, visit_counts={7: 100})
+    deep_edge = {"parent_path": (7,), "move": 3, "depth": 1,
+                 "parent_priors": {3: 0.7, 4: 0.3}}
+    snaps = _snapshots(
+        parent_visits={"at_boundary": {(): 463, (7, 3): 12},
+                       "at_400": {(): 537}},
+        reference_lines={
+            "at_3200": {"edges": [dict(deep_edge)], "moves": [3]},
+            "at_6400": {"edges": [dict(deep_edge)], "moves": [3]},
+            "merged": {"required_edges": [
+                {"parent_path": (), "move": 7, "depth": 0,
+                 "parent_priors": {7: 0.6, 8: 0.4},
+                 "sources": (3200, 6400)}], "agreement": {}}})
+    row = build_row(**_kw(legs=[leg], boundary=None, snapshots=snaps))
+    back = load_run(emit({"rows": [row], "provenance": PROV}))["rows"][0]
+
+    # Dataclasses, by ATTRIBUTE -- Read-out B and atlas_labelling need this.
+    assert back["legs"][0].nominal_B == 400
+    assert back["legs"][0].visit_counts == {7: 100}        # int keys, not "7"
+    # Tuple paths, including the empty root path.
+    pv = back["snapshots"]["parent_visits"]["at_boundary"]
+    assert pv[()] == 463 and pv[(7, 3)] == 12
+    # Edge identity: tuple path, int-keyed priors, tuple sources.
+    lines = back["snapshots"]["reference_lines"]
+    edge = lines["merged"]["required_edges"][0]
+    assert edge["parent_path"] == () and edge["sources"] == (3200, 6400)
+    assert edge["parent_priors"] == {7: 0.6, 8: 0.4}
+    # BOTH DEEP LINES too: `merged` uses `required_edges`, the deep lines use
+    # `edges`, and rehydrating only one leaves the other list-pathed and
+    # string-keyed -- an inverse in name only.
+    for rung in ("at_3200", "at_6400"):
+        e = lines[rung]["edges"][0]
+        assert e["parent_path"] == (7,)
+        assert e["parent_priors"] == {3: 0.7, 4: 0.3}
+
+
+def test_load_run_refuses_a_truncated_document():
+    """A file that lost its rows must not read as a valid zero-row run."""
+    doc = json.loads(emit({"rows": [], "provenance": PROV}))
+    del doc["rows"]
+    with pytest.raises(ValueError, match="rows"):
+        load_run(json.dumps(doc))
+    with pytest.raises(ValueError, match="rows"):
+        load_run(json.dumps({**doc, "rows": {"0": {}}}))   # not a list
+
+
+def test_a_boundary_record_rehydrates_or_stays_None():
+    # REAL legs: load_run rehydrates LegResult and must not be made tolerant of
+    # a partial one, so the fixture supplies what the production path emits.
+    row = build_row(**_kw(legs=_real_legs(),
+                          boundary=BoundaryRecord(N_actual=326, overshoot=6,
+                                                  remaining=74,
+                                                  flush_type="full")))
+    back = load_run(emit({"rows": [row], "provenance": PROV}))["rows"][0]
+    assert back["boundary"].remaining == 74
+    none_row = build_row(**_kw(legs=_real_legs(), boundary=None))
+    back = load_run(emit({"rows": [none_row], "provenance": PROV}))["rows"][0]
+    assert back["boundary"] is None and back["boundary_missing"] is True
+
+
+def test_load_run_AUTHENTICATES_rather_than_merely_parsing():
+    """A hand-edited or truncated artifact must not be consumable."""
+    good = emit({"rows": [], "provenance": PROV})
+    load_run(good)                                   # baseline: accepted
+    doc = json.loads(good)
+    doc["provenance"]["worktree_clean"] = False
+    with pytest.raises(ValueError, match="provenance"):
+        load_run(json.dumps(doc))
+    doc = json.loads(good)
+    doc["rows"] = [dict(json.loads(emit({"rows": [build_row(**_kw(
+        legs=_real_legs()))], "provenance": PROV}))["rows"][0],
+                        schema_version=999)]
+    with pytest.raises(ValueError, match="schema_version"):
+        load_run(json.dumps(doc))
+
+
+def test_the_ROUND_TRIP_feeds_all_three_readouts(tmp_path):
+    """emit -> DISK -> load -> A, B and C. The two-stage protocol is exactly
+    this path, so it is qualified as one."""
+    from scripts.GPU.alphazero.atlas_readout_a import evaluate_detector_both
+    from scripts.GPU.alphazero.atlas_readout_b import calibrate_gate
+    from scripts.GPU.alphazero.atlas_readout_c import aggregate_shape
+
+    def _four_rungs():
+        """All four frozen rungs -- labelling and Read-out B index every one."""
+        return [LegResult(nominal_B=b, inherited_I=10, effective=10 + b,
+                          root_value=0.05, selected_move=3,
+                          selected_move_prior_rank=1, top_share=0.5,
+                          top_two_margin=0.2, effective_children=12.0,
+                          n_visited_children=20, visit_counts={3: 100})
+                for b in (400, 1600, 3200, 6400)]
+
+    rows = [build_row(**_kw(legs=_four_rungs(), label=lbl,
+                            snapshots=_snapshots(**_tracer_snapshots())))
+            for lbl in ("misleading", "stable_negative")]
+    p = tmp_path / "pilot_artifact.json"
+    p.write_text(emit({"rows": rows, "provenance": PROV}))
+
+    back = load_run(p)["rows"]
+    # B reads legs by attribute; a dict would raise AttributeError here.
+    assert calibrate_gate(back, "top_share_increase")["verdict"] in {
+        "needs review", "no finding"}
+    # C indexes parent_visits by tuple and ranks int-keyed priors.
+    agg = aggregate_shape(back, ("c4a05", 4.0, 0.5))
+    assert agg["gated_on"] == "at_400"
+    # A reads the two feature dicts off the row.
+    r = evaluate_detector_both(back, back, replicates=8)
+    assert r["authoritative"] == "features_at_boundary"
