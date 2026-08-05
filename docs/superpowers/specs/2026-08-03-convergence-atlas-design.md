@@ -688,6 +688,77 @@ for a playing-strength intervention.
 
 ---
 
+## §6a Amendment 3 (2026-08-04) — frozen operationalizations
+
+§6 names five features, a classifier and a bootstrap, but does not pin the
+formulas. Stage 4's review found that the natural readings are ambiguous or
+wrong, so the following are frozen here **before any implementation**. This adds
+no new statistical threshold; it makes existing ones computable.
+
+### Backup accounting, not selection events
+
+A selection event is an **edge traversal**; a backup is a **root-to-leaf path**.
+A simulation descending to depth 5 emits selection events at depths 0–4 but is
+**one** backup. The selection tracer counts the former, so it must **not** be
+used for either backup feature.
+
+Both are computed from an explicit two-point tree measurement — a snapshot at
+the **start of the target search** and one at the **boundary** — so that
+inherited prefix visits are excluded by subtraction:
+
+```text
+D3(t)  = sum of visit_count over nodes at depth EXACTLY 3 below the target root
+depth3plus_backup_fraction = (D3(boundary) - D3(start)) / N_actual
+```
+
+Every backup reaching depth ≥3 passes through exactly one depth-3 node, so the
+numerator counts each such backup once. **Invariant, asserted at capture:**
+`0 <= D3(boundary) - D3(start) <= N_actual`. A violation means the accounting is
+wrong and the row must fail, not be recorded.
+
+```text
+one_visit_backup_share = |{root children with visit_count == 1 at the boundary}|
+                       / |{root children with visit_count >= 1 at the boundary}|
+```
+
+`None` when no child has a visit. This is a **frozen operationalization** of the
+feature §6 names, not a derivation from it — recorded as such so no later reader
+mistakes it for something the original text implied.
+
+### Feature capture must happen while the state exists
+
+The ladder is additive on **one** tree, so the root is mutated in place through
+all four legs. Features must therefore be **frozen at the boundary and again at
+nominal `B = 400`**, at those instants. Computing them afterwards describes the
+6,400 tree and is simply a different measurement.
+
+The `B = 400` capture also supplies §6's required diagnostic contrast: if the
+400-tree features separate but the 320-prefix features do not, the detector
+**fails**, because a complete 400 tree cannot decide how to allocate the last 80
+simulations.
+
+### Lagged intervention counters are produced, never supplied
+
+§8's `K(n+14)` bound must be counted **online, alongside `K(n)`**, by the same
+tracer in the same pass. A caller-supplied lagged count cannot be produced by a
+real row and would make the bound untestable in practice.
+
+### Bootstrap and classifier hyperparameters
+
+| Parameter | Frozen value |
+|---|---|
+| bootstrap method | percentile, resampling validation rows with replacement |
+| replicates | 10,000 |
+| bound | one-sided lower, `alpha = 0.05` |
+| seed | `20260804` |
+| classifier | ridge logistic, `l2 = 1.0`, `iters = 2000`, `lr = 0.1` |
+| standardization | z-score, statistics from **discovery only** |
+| missing feature | the row is **REJECTED**, never imputed |
+
+Imputing a missing feature to the discovery mean would place a row at the centre
+of the training distribution — a fabricated, maximally-uninformative observation
+that silently dilutes both classes. Fail closed instead.
+
 ## §6 Read-out A — convergence detector
 
 Only features available at the 320-completion prefix may feed the deployable detector.
