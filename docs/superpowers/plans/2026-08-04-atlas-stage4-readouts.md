@@ -628,21 +628,21 @@ git commit -m "feat(atlas-s4): labelling, class counts and frozen capacity sizin
 
 ---
 
-### Task 2: Read-out A — boundary feature collector
+### Task 2: Read-out A — features from the frozen captures
 
 **Files:**
 - Create: `scripts/GPU/alphazero/atlas_readout_a.py`
 - Test: `tests/test_atlas_readout_a.py`
 
 **Interfaces:**
-- Consumes: a root node (or a synthetic stand-in exposing `priors`/`children`) and a Stage 3 tracer snapshot.
-- Produces: `FEATURE_NAMES`; `collect_boundary_features(capture_start, capture_boundary, n_actual, root_priors, leader_breadth) -> dict`.
+- Consumes: Task 0's capture dicts and `N_actual`. **Never a live root, never a selection-tracer snapshot.**
+- Produces: `FEATURE_NAMES`; `collect_features(capture_start, capture_boundary, n_actual) -> dict`.
 
-> Consumes Task 0's **frozen captures**, never a live root: by the time Stage 4 runs, the root has advanced to 6,400. The two backup features use §6a's accounting, not selection events.
-
-The five frozen §6 features, and **only** these five. Q dispersion, residual summaries
-and terminating-backup concentration may be reported descriptively elsewhere but must
-not enter the detector — §6 forbids an unrestricted feature search.
+> Two things this task must get right, both of which the pre-amendment version got
+> wrong. The depth feature comes from §6a's **two-point `D3` accounting**, not from
+> selection events — those are edge traversals and one deep simulation emits several.
+> And the capture is a **frozen dict**: by the time Read-out A runs, the live root has
+> advanced to 6,400.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -652,34 +652,16 @@ import math
 
 import pytest
 
-from scripts.GPU.alphazero.atlas_readout_a import (
-    FEATURE_NAMES, collect_boundary_features,
-)
+from scripts.GPU.alphazero.atlas_readout_a import FEATURE_NAMES, collect_features
 
 
-class _Child:
-    def __init__(self, visits, n_grandchildren=0):
-        self.visit_count = visits
-        self.children = {i: _Child(0) for i in range(n_grandchildren)}
-
-
-class _Root:
-    def __init__(self, priors, child_visits, leader_breadth=0):
-        self.priors = priors
-        self.children = {mv: _Child(v) for mv, v in child_visits.items()}
-        if self.children:
-            top = max(self.children, key=lambda k: self.children[k].visit_count)
-            self.children[top] = _Child(child_visits[top], leader_breadth)
-
-
-def _snapshot(depth0, depth1, depth2plus):
-    """Minimal tracer snapshot shape: per-depth eligible-event counts."""
-    return {"by_shape": {"c4a05": {
-        "0": {"eligible_events": depth0},
-        "1": {"eligible_events": depth1},
-        "2+": {"eligible_events": depth2plus},
-        "overall": {"eligible_events": depth0 + depth1 + depth2plus},
-    }}}
+def _cap(D3=0, root_visits=400, total=390, top=200, second=100, n_vis=30,
+         one_vis=5, leader=7, breadth=17, entropy=0.8, n_legal=500):
+    return {"D3": D3, "root_visits": root_visits, "total_child_visits": total,
+            "top_child_visits": top, "second_child_visits": second,
+            "n_visited_children": n_vis, "one_visit_children": one_vis,
+            "leader_move": leader, "leader_breadth": breadth,
+            "policy_entropy": entropy, "n_legal": n_legal}
 
 
 def test_exactly_five_frozen_features():
@@ -689,32 +671,49 @@ def test_exactly_five_frozen_features():
         "leader_visit_margin", "root_policy_entropy", "leader_breadth"}
 
 
-def test_features_are_computed_from_the_root_and_the_snapshot():
-    root = _Root(priors={1: 0.5, 2: 0.3, 3: 0.2},
-                 child_visits={1: 200, 2: 100, 3: 1}, leader_breadth=17)
-    f = collect_boundary_features(root, _snapshot(100, 120, 80))
-    assert set(f) == set(FEATURE_NAMES)
-    # one child of three has exactly one visit
-    assert f["one_visit_backup_share"] == pytest.approx(1 / 3)
-    # depth 2+ is the proxy for backups reaching depth three or deeper
-    assert f["depth3plus_backup_fraction"] == pytest.approx(80 / 300)
-    # (200 - 100) / 301
-    assert f["leader_visit_margin"] == pytest.approx(100 / 301)
+def test_depth_feature_uses_the_two_point_D3_accounting():
+    """(D3(boundary) - D3(start)) / N_actual -- NOT selection events."""
+    f = collect_features(_cap(D3=40), _cap(D3=140), n_actual=326)
+    assert f["depth3plus_backup_fraction"] == pytest.approx(100 / 326)
+
+
+def test_the_backup_invariant_is_enforced_here_too():
+    with pytest.raises(ValueError):
+        collect_features(_cap(D3=140), _cap(D3=40), n_actual=326)      # negative
+    with pytest.raises(ValueError):
+        collect_features(_cap(D3=0), _cap(D3=999), n_actual=326)       # > N_actual
+
+
+def test_remaining_features_come_from_the_boundary_capture():
+    f = collect_features(_cap(D3=0), _cap(D3=10, one_vis=6, n_vis=30, top=200,
+                                          second=100, total=400, entropy=0.77,
+                                          breadth=17), n_actual=326)
+    assert f["one_visit_backup_share"] == pytest.approx(6 / 30)
+    assert f["leader_visit_margin"] == pytest.approx((200 - 100) / 400)
+    assert f["root_policy_entropy"] == pytest.approx(0.77)
     assert f["leader_breadth"] == 17
-    h = -sum(p * math.log(p) for p in (0.5, 0.3, 0.2)) / math.log(3)
-    assert f["root_policy_entropy"] == pytest.approx(h)
 
 
-def test_empty_root_yields_None_not_zero():
-    f = collect_boundary_features(_Root({}, {}), _snapshot(0, 0, 0))
+def test_undefined_features_are_None_not_zero():
+    f = collect_features(
+        _cap(D3=0),
+        _cap(D3=0, n_vis=0, one_vis=0, top=None, second=None, total=0,
+             entropy=None, breadth=None),
+        n_actual=326)
     for k in ("one_visit_backup_share", "leader_visit_margin",
-              "root_policy_entropy", "depth3plus_backup_fraction"):
-        assert f[k] is None, f"{k} must be None when undefined, never 0.0"
+              "root_policy_entropy", "leader_breadth"):
+        assert f[k] is None, f"{k} must be None when undefined"
 
 
-def test_a_single_child_has_no_margin():
-    f = collect_boundary_features(_Root({1: 1.0}, {1: 50}), _snapshot(10, 0, 0))
+def test_a_single_visited_child_has_no_margin():
+    f = collect_features(_cap(D3=0), _cap(D3=0, n_vis=1, second=None),
+                         n_actual=326)
     assert f["leader_visit_margin"] is None
+
+
+def test_zero_N_actual_yields_None_not_a_division_error():
+    f = collect_features(_cap(D3=0), _cap(D3=0), n_actual=0)
+    assert f["depth3plus_backup_fraction"] is None
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -726,12 +725,12 @@ Expected: FAIL — `ModuleNotFoundError`
 
 ```python
 # scripts/GPU/alphazero/atlas_readout_a.py
-"""Atlas Read-out A -- design section 6, FROZEN.
+"""Atlas Read-out A -- design section 6 and amendment 6a, FROZEN.
 
-Five features at the 320-completion prefix, a fixed-ridge logistic classifier,
-frozen validation bars, and the preregistered deployability aggregation.
+Consumes Task 0's FROZEN CAPTURES, never a live root: the ladder mutates that
+root through all four legs, so a later read describes the 6,400 tree.
 
-Pure: every input is a plain object or dict, so this qualifies on synthetic rows.
+Pure: every input is a plain dict, so this qualifies on synthetic rows.
 """
 from __future__ import annotations
 
@@ -740,9 +739,6 @@ import random
 import statistics
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-# The five frozen features and ONLY these five. Section 6 forbids an
-# unrestricted feature search; other tree statistics may be reported
-# descriptively but must not enter the detector.
 FEATURE_NAMES: Tuple[str, ...] = (
     "one_visit_backup_share",
     "depth3plus_backup_fraction",
@@ -752,87 +748,108 @@ FEATURE_NAMES: Tuple[str, ...] = (
 )
 
 
-def collect_boundary_features(root: Any, tracer_snapshot: Dict[str, Any]
-                              ) -> Dict[str, Optional[float]]:
-    """Features at the batch-safe boundary. Undefined -> None, never 0.0."""
-    visited = {mv: c.visit_count for mv, c in root.children.items()
-               if c.visit_count > 0}
-    total = sum(visited.values())
-    ordered = sorted(visited.values(), reverse=True)
+def collect_features(capture_start: Dict[str, Any],
+                     capture_boundary: Dict[str, Any],
+                     n_actual: int) -> Dict[str, Optional[float]]:
+    """The five frozen features. Undefined -> None, never 0.0."""
+    delta = capture_boundary["D3"] - capture_start["D3"]
+    if delta < 0 or delta > max(n_actual, 0):
+        raise ValueError(
+            f"backup accounting invariant violated: D3 delta {delta} outside "
+            f"[0, {n_actual}]; the row must fail rather than be recorded")
 
-    one_visit = (sum(1 for v in visited.values() if v == 1) / len(visited)
-                 if visited else None)
-    margin = ((ordered[0] - ordered[1]) / total
-              if (len(ordered) >= 2 and total) else None)
-
-    priors = [p for p in root.priors.values() if p > 0]
-    entropy = None
-    if len(priors) >= 2:
-        s = sum(priors)
-        norm = [p / s for p in priors]
-        entropy = (-sum(p * math.log(p) for p in norm)) / math.log(len(norm))
-
-    shape = next(iter(tracer_snapshot["by_shape"]))
-    cells = tracer_snapshot["by_shape"][shape]
-    overall = cells["overall"]["eligible_events"]
-    deep = cells["2+"]["eligible_events"]
-    depth_frac = (deep / overall) if overall else None
-
-    breadth = None
-    if visited:
-        top_mv = max(visited, key=lambda k: (visited[k], -k))
-        breadth = len(root.children[top_mv].children)
-
+    n_vis = capture_boundary["n_visited_children"]
+    top = capture_boundary["top_child_visits"]
+    second = capture_boundary["second_child_visits"]
+    total = capture_boundary["total_child_visits"]
     return {
-        "one_visit_backup_share": one_visit,
-        "depth3plus_backup_fraction": depth_frac,
-        "leader_visit_margin": margin,
-        "root_policy_entropy": entropy,
-        "leader_breadth": breadth,
+        "one_visit_backup_share": ((capture_boundary["one_visit_children"] / n_vis)
+                                   if n_vis else None),
+        "depth3plus_backup_fraction": ((delta / n_actual) if n_actual else None),
+        "leader_visit_margin": (((top - second) / total)
+                                if (top is not None and second is not None
+                                    and total) else None),
+        "root_policy_entropy": capture_boundary["policy_entropy"],
+        "leader_breadth": capture_boundary["leader_breadth"],
     }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_a.py -v -p no:cacheprovider`
-Expected: PASS — 4 passed.
+Expected: PASS — 7 passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/GPU/alphazero/atlas_readout_a.py tests/test_atlas_readout_a.py
-git commit -m "feat(atlas-s4): Read-out A boundary feature collector, five frozen features"
+git commit -m "feat(atlas-s4): Read-out A features from the frozen two-point captures"
 ```
 
 ---
 
-### Task 3: Read-out A — classifier, validation bars, deployability
+### Task 3: Read-out A — classifier, string labels, bars, deployability
 
 **Files:**
 - Modify: `scripts/GPU/alphazero/atlas_readout_a.py`
 - Test: `tests/test_atlas_readout_a.py`
 
 **Interfaces:**
-- Consumes: `FEATURE_NAMES`, feature dicts, class labels.
-- Produces: `fit_ridge_logistic(X, y, l2=1.0, iters=2000, lr=0.1) -> dict`; `standardize(rows, stats=None) -> tuple`; `auc(scores, labels) -> Optional[float]`; `bootstrap_auc_lower_bound(scores, labels, seed, replicates=10000) -> Optional[float]`; `evaluate_detector(discovery, validation) -> dict`; `deployability(remaining_values, strata=None) -> dict`.
+- Produces: `LABEL_TO_Y`; `prepare_rows(rows) -> dict`; `standardize(...)`; `fit_ridge_logistic(...)`; `auc(...)`; `bootstrap_auc_lower_bound(...)`; `evaluate_detector(discovery, validation) -> dict`; `deployability(...)`.
 
-Frozen §6 bars: validation holds **≥20 misleading and ≥25 stable-negative**; AUC **≥0.75**;
-bootstrap lower bound **≥0.60**; a discovery-frozen threshold flags **≤25%** of validation
-at precision **≥0.60**. Standardization is learned on **discovery only**.
-
-Frozen §6 deployability: every `remaining == 0` row is non-actionable; **median
-`remaining == 0` fails** the controller-deployability claim; report the zero-budget
-fraction and remaining quartiles overall and by required strata, with **no**
-stratum-specific gate.
+> **`classify_row` returns STRINGS.** A detector expecting numeric `1`/`0` would count
+> every real row as neither class and silently train on nothing. `prepare_rows` filters
+> to the two eligible classes, maps them explicitly, **rejects** rows with a missing
+> feature per §6a, and reports the rejection count — and capacity is rechecked **after**
+> rejection, because rejection is what can push a split below its own gate.
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 # append to tests/test_atlas_readout_a.py
 from scripts.GPU.alphazero.atlas_readout_a import (
-    auc, bootstrap_auc_lower_bound, deployability, evaluate_detector,
-    fit_ridge_logistic, standardize,
+    LABEL_TO_Y, auc, bootstrap_auc_lower_bound, deployability,
+    evaluate_detector, fit_ridge_logistic, prepare_rows, standardize,
 )
+
+
+def _row(label, **feats):
+    base = {k: 0.5 for k in FEATURE_NAMES}
+    base.update(feats)
+    return {"label": label, "features": base}
+
+
+def test_string_labels_map_explicitly_and_other_classes_are_dropped():
+    assert LABEL_TO_Y == {"misleading": 1, "stable_negative": 0}
+    r = prepare_rows([_row("misleading"), _row("stable_negative"),
+                      _row("ambiguous"), _row("no_stable_reference")])
+    assert r["y"] == [1, 0]
+    assert r["dropped_ineligible"] == 2
+
+
+def test_rows_with_a_missing_feature_are_REJECTED_and_reported():
+    bad = _row("misleading"); bad["features"]["leader_breadth"] = None
+    r = prepare_rows([bad, _row("stable_negative")])
+    assert r["rejected_missing_features"] == 1
+    assert len(r["y"]) == 1
+
+
+def test_capacity_is_rechecked_AFTER_rejection():
+    """Rejection is exactly what can push a split below its own gate."""
+    rows = [_row("misleading") for _ in range(20)] + \
+           [_row("stable_negative") for _ in range(25)]
+    rows[0]["features"]["root_policy_entropy"] = None       # one rejection
+    r = evaluate_detector(discovery=rows, validation=rows)
+    assert r["verdict"] == "INSUFFICIENT_CLASSES"
+    assert r["n_misleading"] == 19
+
+
+def test_fitting_requires_both_DISCOVERY_classes():
+    disc = [_row("misleading") for _ in range(30)]           # one class only
+    val = [_row("misleading") for _ in range(20)] + \
+          [_row("stable_negative") for _ in range(25)]
+    r = evaluate_detector(discovery=disc, validation=val)
+    assert r["verdict"] == "INSUFFICIENT_DISCOVERY_CLASSES"
 
 
 def test_auc_is_one_for_perfect_separation_and_half_for_none():
@@ -841,70 +858,62 @@ def test_auc_is_one_for_perfect_separation_and_half_for_none():
 
 
 def test_auc_is_None_when_a_class_is_absent():
-    assert auc([0.1, 0.2], [0, 0]) is None       # None, never 0.5 by default
+    assert auc([0.1, 0.2], [0, 0]) is None       # None, never a defaulted 0.5
 
 
 def test_standardization_stats_come_from_discovery_only():
     disc = [{"a": 1.0}, {"a": 3.0}]
     _z, stats = standardize(disc, feature_names=("a",))
-    val = [{"a": 5.0}]
-    z_val, stats2 = standardize(val, feature_names=("a",), stats=stats)
-    assert stats2 == stats                        # unchanged by validation data
+    z_val, stats2 = standardize([{"a": 5.0}], feature_names=("a",), stats=stats)
+    assert stats2 == stats
     assert z_val[0][0] == pytest.approx((5.0 - 2.0) / stats["a"][1])
 
 
+def test_standardize_rejects_a_missing_feature_rather_than_imputing():
+    with pytest.raises(ValueError, match="missing features"):
+        standardize([{"a": None}], feature_names=("a",))
+
+
 def test_ridge_logistic_separates_a_linearly_separable_set():
-    X = [[-2.0], [-1.0], [1.0], [2.0]]
-    y = [0, 0, 1, 1]
+    X, y = [[-2.0], [-1.0], [1.0], [2.0]], [0, 0, 1, 1]
     model = fit_ridge_logistic(X, y)
-    scores = [model["predict"](x) for x in X]
-    assert auc(scores, y) == pytest.approx(1.0)
-
-
-def test_detector_fails_closed_on_insufficient_validation_classes():
-    r = evaluate_detector(discovery=[], validation=[])
-    assert r["verdict"] == "INSUFFICIENT_CLASSES"
-    assert r["auc"] is None and r["auc_lower_bound"] is None
+    assert auc([model["predict"](x) for x in X], y) == pytest.approx(1.0)
 
 
 def test_deployability_fails_when_the_MEDIAN_remaining_is_zero():
     r = deployability([0, 0, 0, 40, 60])
-    assert r["median_remaining"] == 0
-    assert r["verdict"] == "NOT_DEPLOYABLE"
+    assert r["median_remaining"] == 0 and r["verdict"] == "NOT_DEPLOYABLE"
     assert r["zero_budget_fraction"] == pytest.approx(3 / 5)
 
 
 def test_deployability_passes_with_a_positive_median_and_reports_quartiles():
     r = deployability([10, 40, 60, 70, 80])
-    assert r["verdict"] == "DEPLOYABLE"
-    assert r["quartiles"] is not None and len(r["quartiles"]) == 3
-    assert r["zero_budget_fraction"] == 0.0
+    assert r["verdict"] == "DEPLOYABLE" and len(r["quartiles"]) == 3
 
 
 def test_deployability_reports_strata_without_gating_on_them():
     r = deployability([0, 40, 60], strata={"late": [0, 0], "midgame": [60]})
     assert set(r["by_stratum"]) == {"late", "midgame"}
-    # Section 6: no stratum-specific acceptance gate.
     assert "verdict" not in r["by_stratum"]["late"]
-    assert r["by_stratum"]["late"]["median_remaining"] == 0
 
 
 def test_deployability_of_an_empty_set_is_None_not_zero():
     r = deployability([])
-    assert r["median_remaining"] is None
-    assert r["zero_budget_fraction"] is None
+    assert r["median_remaining"] is None and r["zero_budget_fraction"] is None
     assert r["verdict"] == "NO_ROWS"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_a.py -v -p no:cacheprovider`
-Expected: FAIL — `ImportError: cannot import name 'auc'`
+Expected: FAIL — `ImportError: cannot import name 'LABEL_TO_Y'`
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
 # append to scripts/GPU/alphazero/atlas_readout_a.py
+LABEL_TO_Y = {"misleading": 1, "stable_negative": 0}
+
 MIN_VALIDATION_MISLEADING = 20
 MIN_VALIDATION_STABLE_NEGATIVE = 25
 AUC_BAR = 0.75
@@ -912,28 +921,44 @@ AUC_LOWER_BOUND_BAR = 0.60
 MAX_FLAG_RATE = 0.25
 MIN_PRECISION = 0.60
 BOOTSTRAP_REPLICATES = 10000
+BOOTSTRAP_SEED = 20260804
 
 
-def standardize(rows: Sequence[Dict[str, Any]],
-                feature_names: Sequence[str] = FEATURE_NAMES,
+def prepare_rows(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """String labels -> numeric, ineligible classes dropped, missing-feature
+    rows REJECTED and counted (section 6a)."""
+    feats, y = [], []
+    dropped = rejected = 0
+    for r in rows:
+        if r["label"] not in LABEL_TO_Y:
+            dropped += 1                       # ambiguous / no_stable_reference
+            continue
+        f = r["features"]
+        if any(f.get(k) is None for k in FEATURE_NAMES):
+            rejected += 1
+            continue
+        feats.append(f)
+        y.append(LABEL_TO_Y[r["label"]])
+    return {"features": feats, "y": y, "dropped_ineligible": dropped,
+            "rejected_missing_features": rejected}
+
+
+def standardize(rows, feature_names: Sequence[str] = FEATURE_NAMES,
                 stats: Optional[Dict[str, Tuple[float, float]]] = None):
-    """Z-score. `stats` is learned on DISCOVERY only and passed to validation."""
-    if stats is None:
-        stats = {}
-        for f in feature_names:
-            vals = [r[f] for r in rows if r.get(f) is not None]
-            mu = statistics.fmean(vals) if vals else 0.0
-            sd = statistics.pstdev(vals) if len(vals) > 1 else 1.0
-            stats[f] = (mu, sd if sd else 1.0)
-    # Section 6a: a missing feature REJECTS the row. Imputing it to the
-    # discovery mean would fabricate a maximally-uninformative observation at
-    # the centre of the training distribution and silently dilute both classes.
+    """Z-score; `stats` learned on DISCOVERY only. A missing feature raises --
+    imputing the mean would fabricate a maximally-uninformative observation."""
     for i, r in enumerate(rows):
         missing = [f for f in feature_names if r.get(f) is None]
         if missing:
-            raise ValueError(
-                f"row {i} is missing features {missing}; rows with undefined "
-                f"features are rejected, never imputed")
+            raise ValueError(f"row {i} is missing features {missing}; "
+                             f"rows with undefined features are rejected")
+    if stats is None:
+        stats = {}
+        for f in feature_names:
+            vals = [r[f] for r in rows]
+            mu = statistics.fmean(vals) if vals else 0.0
+            sd = statistics.pstdev(vals) if len(vals) > 1 else 1.0
+            stats[f] = (mu, sd if sd else 1.0)
     X = [[(r[f] - stats[f][0]) / stats[f][1] for f in feature_names]
          for r in rows]
     return X, stats
@@ -941,14 +966,11 @@ def standardize(rows: Sequence[Dict[str, Any]],
 
 def fit_ridge_logistic(X, y, l2: float = 1.0, iters: int = 2000,
                        lr: float = 0.1) -> Dict[str, Any]:
-    """Closed-form-free gradient descent. stdlib only; no numpy or scipy."""
+    """Frozen hyperparameters (section 6a). stdlib only; no numpy or scipy."""
     n_f = len(X[0]) if X else 0
-    w = [0.0] * n_f
-    b = 0.0
-    n = len(X) or 1
+    w, b, n = [0.0] * n_f, 0.0, (len(X) or 1)
     for _ in range(iters):
-        gw = [0.0] * n_f
-        gb = 0.0
+        gw, gb = [0.0] * n_f, 0.0
         for xi, yi in zip(X, y):
             z = b + sum(wj * xj for wj, xj in zip(w, xi))
             p = 1.0 / (1.0 + math.exp(-max(-60.0, min(60.0, z))))
@@ -967,8 +989,8 @@ def fit_ridge_logistic(X, y, l2: float = 1.0, iters: int = 2000,
 
 
 def auc(scores: Sequence[float], labels: Sequence[int]) -> Optional[float]:
-    """Rank AUC with ties at 0.5. None when a class is absent -- never a
-    defaulted 0.5, which would look like a real chance result."""
+    """Rank AUC, ties at 0.5. None when a class is absent -- never a defaulted
+    0.5, which would look like a real chance result."""
     pos = [s for s, y in zip(scores, labels) if y == 1]
     neg = [s for s, y in zip(scores, labels) if y == 0]
     if not pos or not neg:
@@ -978,11 +1000,10 @@ def auc(scores: Sequence[float], labels: Sequence[int]) -> Optional[float]:
     return wins / (len(pos) * len(neg))
 
 
-def bootstrap_auc_lower_bound(scores, labels, seed: int,
+def bootstrap_auc_lower_bound(scores, labels, seed: int = BOOTSTRAP_SEED,
                               replicates: int = BOOTSTRAP_REPLICATES,
                               alpha: float = 0.05) -> Optional[float]:
-    base = auc(scores, labels)
-    if base is None:
+    if auc(scores, labels) is None:
         return None
     rng = random.Random(seed)
     n = len(scores)
@@ -1000,114 +1021,91 @@ def bootstrap_auc_lower_bound(scores, labels, seed: int,
 
 def evaluate_detector(discovery: Sequence[Dict[str, Any]],
                       validation: Sequence[Dict[str, Any]],
-                      seed: int = 20260804) -> Dict[str, Any]:
-    """Section 6's frozen bars. Fails CLOSED on insufficient validation classes."""
-    v_pos = sum(1 for r in validation if r["label"] == 1)
-    v_neg = sum(1 for r in validation if r["label"] == 0)
+                      seed: int = BOOTSTRAP_SEED) -> Dict[str, Any]:
+    """Section 6's frozen bars. Fails CLOSED, and capacity is checked AFTER
+    missing-feature rejection."""
+    d = prepare_rows(discovery)
+    v = prepare_rows(validation)
+    v_pos, v_neg = v["y"].count(1), v["y"].count(0)
+    base = {"n_misleading": v_pos, "n_stable_negative": v_neg,
+            "rejected_missing_features": v["rejected_missing_features"],
+            "dropped_ineligible": v["dropped_ineligible"],
+            "auc": None, "auc_lower_bound": None}
     if v_pos < MIN_VALIDATION_MISLEADING or v_neg < MIN_VALIDATION_STABLE_NEGATIVE:
-        return {"verdict": "INSUFFICIENT_CLASSES", "auc": None,
-                "auc_lower_bound": None, "n_misleading": v_pos,
-                "n_stable_negative": v_neg,
+        return {**base, "verdict": "INSUFFICIENT_CLASSES",
                 "reason": "validation split cannot support its own gate"}
+    if d["y"].count(1) == 0 or d["y"].count(0) == 0:
+        return {**base, "verdict": "INSUFFICIENT_DISCOVERY_CLASSES",
+                "reason": "cannot fit with a single discovery class"}
 
-    Xd, stats = standardize(discovery)
-    yd = [r["label"] for r in discovery]
-    model = fit_ridge_logistic(Xd, yd)
-    Xv, _ = standardize(validation, stats=stats)
-    yv = [r["label"] for r in validation]
+    Xd, stats = standardize(d["features"])
+    model = fit_ridge_logistic(Xd, d["y"])
+    Xv, _ = standardize(v["features"], stats=stats)
     sv = [model["predict"](x) for x in Xv]
 
-    a = auc(sv, yv)
-    lb = bootstrap_auc_lower_bound(sv, yv, seed=seed)
-    # Threshold frozen on DISCOVERY, then applied to validation unchanged.
+    a = auc(sv, v["y"])
+    lb = bootstrap_auc_lower_bound(sv, v["y"], seed=seed)
     sd = sorted((model["predict"](x) for x in Xd), reverse=True)
     thr = sd[max(0, int(MAX_FLAG_RATE * len(sd)) - 1)] if sd else 1.0
-    flagged = [(s, y) for s, y in zip(sv, yv) if s >= thr]
+    flagged = [(s, y) for s, y in zip(sv, v["y"]) if s >= thr]
     flag_rate = len(flagged) / len(sv) if sv else None
     precision = (sum(y for _s, y in flagged) / len(flagged)) if flagged else None
 
-    passed = (a is not None and a >= AUC_BAR
-              and lb is not None and lb >= AUC_LOWER_BOUND_BAR
-              and flag_rate is not None and flag_rate <= MAX_FLAG_RATE
-              and precision is not None and precision >= MIN_PRECISION)
-    return {"verdict": "PASS" if passed else "FAIL", "auc": a,
+    passed = (a is not None and a >= AUC_BAR and lb is not None
+              and lb >= AUC_LOWER_BOUND_BAR and flag_rate is not None
+              and flag_rate <= MAX_FLAG_RATE and precision is not None
+              and precision >= MIN_PRECISION)
+    return {**base, "verdict": "PASS" if passed else "FAIL", "auc": a,
             "auc_lower_bound": lb, "flag_rate": flag_rate,
-            "precision": precision, "threshold": thr,
-            "n_misleading": v_pos, "n_stable_negative": v_neg}
+            "precision": precision, "threshold": thr}
 
 
 def deployability(remaining_values: Sequence[int],
                   strata: Optional[Dict[str, Sequence[int]]] = None
                   ) -> Dict[str, Any]:
-    """Section 6's preregistered rule: every remaining == 0 row is
-    non-actionable, and a MEDIAN of zero fails the controller-deployability
-    claim. Strata are REPORTED, never gated -- a median rule catches tail-only
-    and majority-tail behaviour without inventing a minimum second-stage budget.
-    """
+    """Section 6: remaining == 0 is non-actionable; a MEDIAN of zero fails the
+    controller-deployability claim. Strata are REPORTED, never gated."""
     def summarize(vals: Sequence[int]) -> Dict[str, Any]:
         if not vals:
             return {"n": 0, "median_remaining": None,
                     "zero_budget_fraction": None, "quartiles": None}
         s = sorted(vals)
-        return {
-            "n": len(s),
-            "median_remaining": statistics.median(s),
-            "zero_budget_fraction": sum(1 for v in s if v == 0) / len(s),
-            "quartiles": (statistics.quantiles(s, n=4, method="inclusive")
-                          if len(s) >= 2 else None),
-        }
+        return {"n": len(s), "median_remaining": statistics.median(s),
+                "zero_budget_fraction": sum(1 for x in s if x == 0) / len(s),
+                "quartiles": (statistics.quantiles(s, n=4, method="inclusive")
+                              if len(s) >= 2 else None)}
 
     overall = summarize(remaining_values)
-    if overall["median_remaining"] is None:
-        verdict = "NO_ROWS"
-    elif overall["median_remaining"] == 0:
-        verdict = "NOT_DEPLOYABLE"
-    else:
-        verdict = "DEPLOYABLE"
+    med = overall["median_remaining"]
+    verdict = ("NO_ROWS" if med is None
+               else "NOT_DEPLOYABLE" if med == 0 else "DEPLOYABLE")
     return {**overall, "verdict": verdict,
             "by_stratum": {k: summarize(v) for k, v in (strata or {}).items()}}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_a.py -v -p no:cacheprovider`
-Expected: PASS — 13 passed.
+Expected: PASS — 20 passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/GPU/alphazero/atlas_readout_a.py tests/test_atlas_readout_a.py
-git commit -m "feat(atlas-s4): Read-out A classifier, frozen bars and deployability rule"
+git commit -m "feat(atlas-s4): Read-out A string-label mapping, frozen bars, deployability"
 ```
 
 ---
 
-### Task 4: Read-out B — four-rung gate calibration
+### Task 4: Read-out B — four rungs, natural convergence, strata
 
 **Files:**
 - Create: `scripts/GPU/alphazero/atlas_readout_b.py`
 - Test: `tests/test_atlas_readout_b.py`
 
 **Interfaces:**
-- Consumes: Stage 3 `LegResult` rows at all four rungs, plus the stable-reference result.
-- Produces: `gate_triggers(legs, hi=1600) -> dict`; `closes_half(...)`; `convergent(legs, ref) -> dict`; `calibrate_gate(rows, gate_name) -> dict`; **`natural_convergence_report(rows) -> dict`** (the 400→6,400 reference distribution); **`compound_narrowing(legs) -> Optional[bool]`**; **`by_stratum_summary(rows, gate_name) -> dict`**.
-
-> `gate_triggers` takes the upper rung as a parameter so the **400→6,400** report uses
-> the same code as 400→1,600 — §7 requires both, and the 6,400 changes are the
-> natural-convergence reference distribution. They are **reported, never used as
-> causal evidence** that a same-budget intervention is safe.
->
-> `compound_narrowing` returns `None` where it does not apply, never `False` — §7 says
-> "where applicable", and an inapplicable condition is not a negative one.
->
-> `by_stratum_summary` reports overall plus late / flat-policy / near-even. **No
-> per-stratum acceptance gate** is created.
-
-Frozen §7. The historical metrics are computed at **all four rungs** — the 3,200 rung is
-required because distribution convergence checks **both** deep rungs for the **same**
-metric. The gate denominator is `eligible_triggers` (triggers on stable-reference rows),
-and the rule is ≥10 eligible, ≥75% convergent, **and** ≥15 percentage points above the
-base convergent rate. The outcome is *needs review*, never *invalid*.
+- Consumes: a **calibration row** — `{"legs": [...], "phase": str, "flat_policy": bool, "near_even": bool}`. A bare `list[LegResult]` cannot identify the strata §7 requires.
+- Produces: `CalibrationRow` keys; `gate_triggers(legs, hi=1600)`; `closes_half(...)`; `convergent(legs, ref)`; `compound_narrowing(legs) -> Optional[bool]`; `calibrate_gate(rows, gate_name)`; `natural_convergence_report(rows)`; `by_stratum_summary(rows, gate_name)`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1117,7 +1115,7 @@ import pytest
 
 from scripts.GPU.alphazero.atlas_labelling import stable_reference
 from scripts.GPU.alphazero.atlas_readout_b import (
-    BASE_RATE_MARGIN, MIN_ELIGIBLE_TRIGGERS, MIN_CONVERGENT_RATE,
+    BASE_RATE_MARGIN, MIN_CONVERGENT_RATE, MIN_ELIGIBLE_TRIGGERS,
     by_stratum_summary, calibrate_gate, closes_half, compound_narrowing,
     convergent, gate_triggers, natural_convergence_report,
 )
@@ -1132,10 +1130,15 @@ def _leg(b, value, move, top_share=0.5, eff=12.0, rank=1, margin=0.20):
                      n_visited_children=20, visit_counts={move: 100})
 
 
-def _row(v=(0.9, 0.4, 0.05, 0.05), m=(7, 3, 3, 3), shares=(0.5, 0.6, 0.7, 0.7),
-         effs=(20.0, 16.0, 12.0, 12.0), ranks=(1, 1, 1, 1)):
+def _legs(v=(0.9, 0.4, 0.05, 0.05), m=(7, 3, 3, 3), shares=(0.5, 0.6, 0.7, 0.7),
+          effs=(20.0, 16.0, 12.0, 12.0), ranks=(1, 1, 1, 1)):
     return [_leg(b, v[i], m[i], shares[i], effs[i], ranks[i])
             for i, b in enumerate((400, 1600, 3200, 6400))]
+
+
+def _row(legs=None, phase="late", flat=False, near_even=False):
+    return {"legs": legs or _legs(), "phase": phase,
+            "flat_policy": flat, "near_even": near_even}
 
 
 def test_frozen_thresholds_are_pinned():
@@ -1145,108 +1148,102 @@ def test_frozen_thresholds_are_pinned():
 
 
 def test_closes_half_needs_a_real_gap_and_half_closure():
-    assert closes_half(m400=1.0, m1600=0.4, D=0.0) is True      # 0.4 <= 0.5
-    assert closes_half(m400=1.0, m1600=0.8, D=0.0) is False
-    # No gap to begin with: vacuous, so it must NOT fire.
-    assert closes_half(m400=0.5, m1600=0.5, D=0.5) is False
+    assert closes_half(1.0, 0.4, 0.0) is True
+    assert closes_half(1.0, 0.8, 0.0) is False
+    assert closes_half(0.5, 0.5, 0.5) is False       # no gap: vacuous
 
 
 def test_convergent_requires_persistence_as_a_JOINT_condition():
-    legs = _row()
-    ref = stable_reference(legs)
-    r = convergent(legs, ref)
-    assert r["persistent"] is True and r["convergent"] is True
-    # Break persistence: 1,600 picks a move the deep rungs do not keep.
-    broken = _row(m=(7, 9, 3, 3))
-    r2 = convergent(broken, stable_reference(broken))
-    assert r2["persistent"] is False and r2["convergent"] is False
+    legs = _legs()
+    assert convergent(legs, stable_reference(legs))["convergent"] is True
+    broken = _legs(m=(7, 9, 3, 3))
+    r = convergent(broken, stable_reference(broken))
+    assert r["persistent"] is False and r["convergent"] is False
 
 
 def test_dist_convergent_needs_the_SAME_metric_at_both_deep_rungs():
-    """Checking 6,400 alone would let a distribution match a single unstable
-    deep reading and score as convergence."""
-    legs = _row(v=(0.06, 0.05, 0.05, 0.05), m=(3, 3, 3, 3),
-                shares=(0.20, 0.60, 0.62, 0.62))
-    r = convergent(legs, stable_reference(legs))
-    assert r["dist_convergent"] is True
-    mixed = _row(v=(0.06, 0.05, 0.05, 0.05), m=(3, 3, 3, 3),
-                 shares=(0.20, 0.60, 0.90, 0.62))
-    r2 = convergent(mixed, stable_reference(mixed))
-    assert r2["dist_convergent"] is False
+    ok = _legs(v=(0.06, 0.05, 0.05, 0.05), m=(3, 3, 3, 3),
+               shares=(0.20, 0.60, 0.62, 0.62))
+    assert convergent(ok, stable_reference(ok))["dist_convergent"] is True
+    mixed = _legs(v=(0.06, 0.05, 0.05, 0.05), m=(3, 3, 3, 3),
+                  shares=(0.20, 0.60, 0.90, 0.62))
+    assert convergent(mixed, stable_reference(mixed))["dist_convergent"] is False
 
 
-def test_gate_triggers_are_computed_at_all_four_rungs():
-    legs = _row(shares=(0.90, 0.96, 0.97, 0.97))
-    t = gate_triggers(legs)
-    assert set(t) >= {"new_collapse", "lower_prior_flip",
-                      "effective_children_drop", "top_share_increase"}
-    assert t["new_collapse"] is True         # crossed 0.95 between 400 and 1600
+def test_gate_triggers_take_the_upper_rung_as_a_parameter():
+    legs = _legs(shares=(0.90, 0.96, 0.97, 0.97))
+    assert gate_triggers(legs, hi=1600)["new_collapse"] is True
+    assert gate_triggers(legs, hi=6400)["new_collapse"] is True
+    quiet = _legs(shares=(0.90, 0.91, 0.97, 0.97))
+    assert quiet_ := gate_triggers(quiet, hi=1600)["new_collapse"] is False
 
 
 def test_lower_prior_flip_uses_the_prior_RANK():
-    legs = _row(m=(3, 9, 9, 9), ranks=(1, 7, 7, 7))
-    assert gate_triggers(legs)["lower_prior_flip"] is True
+    legs = _legs(m=(3, 9, 9, 9), ranks=(1, 7, 7, 7))
+    assert gate_triggers(legs, hi=1600)["lower_prior_flip"] is True
+
+
+def test_compound_narrowing_is_None_where_inapplicable():
+    """Section 7 says 'where applicable'; inapplicable is not a negative."""
+    assert compound_narrowing(_legs(shares=(None, None, None, None))) is None
+    assert compound_narrowing(_legs(shares=(0.5, 0.9, 0.9, 0.9),
+                                    effs=(20.0, 8.0, 8.0, 8.0))) is True
+
+
+def test_natural_convergence_report_covers_400_to_6400():
+    rows = [_row() for _ in range(4)]
+    r = natural_convergence_report(rows)
+    assert set(r["trigger_rates"]) >= {"new_collapse", "top_share_increase"}
+    # Reported as the reference distribution, NOT causal evidence that a
+    # same-budget intervention is safe.
+    assert r["is_causal_evidence"] is False
+    assert r["transition"] == "400->6400"
 
 
 def test_calibration_uses_the_ELIGIBLE_denominator():
-    """Triggers on rows without a stable reference cannot be classified, so
-    counting them as non-convergent would depress the rate."""
-    rows = [_row() for _ in range(12)] + [_row(m=(7, 3, 3, 9))] * 5   # unstable
+    rows = [_row() for _ in range(12)] + [_row(_legs(m=(7, 3, 3, 9)))] * 5
     r = calibrate_gate(rows, "top_share_increase")
     assert r["eligible_triggers"] <= r["total_triggers"]
     assert r["eligible_trigger_fraction"] is not None
 
 
 def test_needs_review_requires_all_three_conditions():
-    """Each condition is falsified individually; accepting either verdict would
+    """Each condition falsified individually -- accepting either verdict would
     prove nothing."""
-    conv = [_row() for _ in range(12)]              # convergent, gate fires
-    # 1. too few eligible triggers
+    conv = [_row() for _ in range(12)]
     assert calibrate_gate(conv[:5], "top_share_increase")["verdict"] == "no finding"
-    # 2. convergent rate below 0.75 -- half the rows fail persistence
-    mixed = conv[:6] + [_row(m=(7, 9, 3, 3)) for _ in range(6)]
-    r_mixed = calibrate_gate(mixed, "top_share_increase")
-    assert (r_mixed["convergent_rate"] or 0) < 0.75
-    assert r_mixed["verdict"] == "no finding"
-    # 3. base-rate margin: a gate firing on everything convergent gains nothing
-    r_all = calibrate_gate(conv, "top_share_increase")
-    if r_all["convergent_rate"] is not None and r_all["base_convergent_rate"] is not None:
-        margin = r_all["convergent_rate"] - r_all["base_convergent_rate"]
-        assert (r_all["verdict"] == "needs review") == (
-            r_all["eligible_triggers"] >= 10 and r_all["convergent_rate"] >= 0.75
-            and margin >= 0.15)
-    assert "invalid" not in r_all["verdict"]         # never "invalid"
-
-
-def test_natural_convergence_report_covers_400_to_6400():
-    rows = [_row() for _ in range(4)]
-    r = natural_convergence_report(rows)
-    assert set(r) >= {"new_collapse", "top_share_increase"}
-    # Reported as the reference distribution, NOT as causal evidence that a
-    # same-budget intervention is safe.
-    assert r["is_causal_evidence"] is False
-
-
-def test_compound_narrowing_is_None_where_inapplicable():
-    assert compound_narrowing(_row(shares=(None, None, None, None))) is None
-
-
-def test_stratum_summary_reports_without_gating():
-    rows = [_row() for _ in range(4)]
-    s = by_stratum_summary(rows, "top_share_increase")
-    assert "overall" in s
-    for k, v in s.items():
-        assert "verdict" not in v or k == "overall"
+    mixed = conv[:6] + [_row(_legs(m=(7, 9, 3, 3))) for _ in range(6)]
+    rm = calibrate_gate(mixed, "top_share_increase")
+    assert (rm["convergent_rate"] or 0) < MIN_CONVERGENT_RATE
+    assert rm["verdict"] == "no finding"
+    ra = calibrate_gate(conv, "top_share_increase")
+    margin = ((ra["convergent_rate"] - ra["base_convergent_rate"])
+              if ra["convergent_rate"] is not None else None)
+    assert (ra["verdict"] == "needs review") == (
+        ra["eligible_triggers"] >= MIN_ELIGIBLE_TRIGGERS
+        and (ra["convergent_rate"] or 0) >= MIN_CONVERGENT_RATE
+        and (margin or 0) >= BASE_RATE_MARGIN)
+    assert "invalid" not in ra["verdict"]
 
 
 def test_calibration_is_None_not_zero_with_no_eligible_triggers():
-    rows = [_row(m=(7, 3, 3, 9))] * 4        # no stable reference anywhere
+    rows = [_row(_legs(m=(7, 3, 3, 9)))] * 4
     r = calibrate_gate(rows, "new_collapse")
-    assert r["convergent_rate"] is None
-    assert r["verdict"] == "no finding"
+    assert r["convergent_rate"] is None and r["verdict"] == "no finding"
+
+
+def test_stratum_summary_uses_the_ROW_schema_and_does_not_gate():
+    rows = [_row(phase="late"), _row(phase="midgame", flat=True),
+            _row(phase="late", near_even=True)]
+    s = by_stratum_summary(rows, "top_share_increase")
+    assert set(s) >= {"overall", "late", "flat_policy", "near_even"}
+    # Section 7: no per-stratum acceptance gate.
+    for k, v in s.items():
+        if k != "overall":
+            assert "verdict" not in v
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_b.py -v -p no:cacheprovider`
 Expected: FAIL — `ModuleNotFoundError`
@@ -1260,9 +1257,10 @@ Expected: FAIL — `ModuleNotFoundError`
 Calibration, not a hypothesis: does an inherited collateral gate fire on changes
 that move TOWARD the stable deeper reference?
 
-The outcome is "needs review", never "invalid". Higher-budget fidelity is itself
-only a proxy, while the old gates protect against collateral behaviour it does
-not measure.
+Rows carry phase and flat/near-even facts, because a bare list of LegResults
+cannot identify the strata section 7 requires.
+
+The outcome is "needs review", never "invalid".
 """
 from __future__ import annotations
 
@@ -1276,42 +1274,61 @@ HALF = 0.5
 MIN_ELIGIBLE_TRIGGERS = 10
 MIN_CONVERGENT_RATE = 0.75
 BASE_RATE_MARGIN = 0.15
+GATE_NAMES = ("new_collapse", "lower_prior_flip",
+              "effective_children_drop", "top_share_increase")
 
 
 def _by_b(legs: Sequence[Any]) -> Dict[int, Any]:
     return {l.nominal_B: l for l in legs}
 
 
-def gate_triggers(legs: Sequence[Any]) -> Dict[str, bool]:
-    """The historical metrics, evaluated on the 400 -> 1,600 transition.
+def gate_triggers(legs: Sequence[Any], hi: int = 1600) -> Dict[str, bool]:
+    """Historical metrics on the 400 -> `hi` transition.
 
-    Computed with all four rungs available, because distribution convergence
-    below checks both deep rungs.
+    `hi` is a parameter so the required 400 -> 6,400 natural-convergence report
+    reuses this code rather than duplicating it.
     """
     d = _by_b(legs)
-    a, b = d[400], d[1600]
-    collapse = (a.top_share is not None and b.top_share is not None
-                and a.top_share < COLLAPSE_TOP_SHARE
-                and b.top_share >= COLLAPSE_TOP_SHARE)
-    flip = (a.selected_move != b.selected_move
-            and a.selected_move_prior_rank is not None
-            and b.selected_move_prior_rank is not None
-            and b.selected_move_prior_rank > a.selected_move_prior_rank)
-    eff_drop = (a.effective_children is not None
-                and b.effective_children is not None
+    a, b = d[400], d[hi]
+    return {
+        "new_collapse": (a.top_share is not None and b.top_share is not None
+                         and a.top_share < COLLAPSE_TOP_SHARE
+                         and b.top_share >= COLLAPSE_TOP_SHARE),
+        "lower_prior_flip": (a.selected_move != b.selected_move
+                             and a.selected_move_prior_rank is not None
+                             and b.selected_move_prior_rank is not None
+                             and b.selected_move_prior_rank
+                             > a.selected_move_prior_rank),
+        "effective_children_drop": (a.effective_children is not None
+                                    and b.effective_children is not None
+                                    and b.effective_children
+                                    < a.effective_children),
+        "top_share_increase": (a.top_share is not None and b.top_share is not None
+                               and b.top_share > a.top_share),
+    }
+
+
+def compound_narrowing(legs: Sequence[Any], hi: int = 1600) -> Optional[bool]:
+    """Section 7's compound condition, "where applicable".
+
+    Returns None when the inputs are undefined -- an inapplicable condition is
+    not a negative one.
+    """
+    d = _by_b(legs)
+    a, b = d[400], d[hi]
+    if (a.top_share is None or b.top_share is None
+            or a.effective_children is None or b.effective_children is None):
+        return None
+    return bool(b.top_share > a.top_share
                 and b.effective_children < a.effective_children)
-    share_up = (a.top_share is not None and b.top_share is not None
-                and b.top_share > a.top_share)
-    return {"new_collapse": collapse, "lower_prior_flip": flip,
-            "effective_children_drop": eff_drop, "top_share_increase": share_up}
 
 
 def closes_half(m400: Optional[float], m1600: Optional[float],
                 D: Optional[float]) -> bool:
     """|m400 - D| > 0 AND |m1600 - D| <= 0.5 * |m400 - D|.
 
-    The `> 0` guard matters: with no gap to begin with, "closes half" is vacuous
-    and must not fire rather than firing trivially.
+    The `> 0` guard matters: with no gap, "closes half" is vacuous and must not
+    fire rather than firing trivially.
     """
     if m400 is None or m1600 is None or D is None:
         return False
@@ -1325,14 +1342,13 @@ def convergent(legs: Sequence[Any], ref: Dict[str, Any]) -> Dict[str, Any]:
     """The FROZEN section 7 predicate. Persistence is a JOINT requirement."""
     d = _by_b(legs)
     deep = ref.get("stable_deep_move")
-    move_conv = (d[400].selected_move != deep
-                 and d[1600].selected_move == deep)
+    move_conv = d[400].selected_move != deep and d[1600].selected_move == deep
     value_conv = (abs(d[1600].root_value - d[6400].root_value)
                   <= abs(d[400].root_value - d[6400].root_value)
                   - VALUE_CONVERGENCE_TOL)
-    # SAME metric toward BOTH deep rungs -- the disjunction is over metrics,
-    # not over rungs. Mixing one metric's 3,200 agreement with another's 6,400
-    # is not evidence.
+    # SAME metric toward BOTH deep rungs. The disjunction is over METRICS, not
+    # rungs: mixing one metric's 3,200 agreement with another's 6,400 is not
+    # evidence.
     ts = (closes_half(d[400].top_share, d[1600].top_share, d[3200].top_share)
           and closes_half(d[400].top_share, d[1600].top_share, d[6400].top_share))
     ec = (closes_half(d[400].effective_children, d[1600].effective_children,
@@ -1348,100 +1364,106 @@ def convergent(legs: Sequence[Any], ref: Dict[str, Any]) -> Dict[str, Any]:
                                and (move_conv or value_conv or dist_conv))}
 
 
-def calibrate_gate(rows: Sequence[Sequence[Any]], gate_name: str
+def calibrate_gate(rows: Sequence[Dict[str, Any]], gate_name: str
                    ) -> Dict[str, Any]:
     """Section 7's frozen "needs review" rule, on the ELIGIBLE denominator."""
-    total_triggers = eligible = confirmed = 0
-    eligible_rows = base_convergent = 0
-    for legs in rows:
+    total = eligible = confirmed = eligible_rows = base_conv = 0
+    for row in rows:
+        legs = row["legs"]
         ref = stable_reference(legs)
         fired = gate_triggers(legs)[gate_name]
         if fired:
-            total_triggers += 1
+            total += 1
         if not ref["stable"]:
-            continue                       # unclassifiable: excluded, not counted
+            continue                      # unclassifiable: excluded, not counted
         eligible_rows += 1
         conv = convergent(legs, ref)["convergent"]
-        base_convergent += 1 if conv else 0
+        base_conv += 1 if conv else 0
         if fired:
             eligible += 1
             confirmed += 1 if conv else 0
 
     rate = (confirmed / eligible) if eligible else None
-    base_rate = (base_convergent / eligible_rows) if eligible_rows else None
+    base_rate = (base_conv / eligible_rows) if eligible_rows else None
     needs_review = (eligible >= MIN_ELIGIBLE_TRIGGERS
                     and rate is not None and rate >= MIN_CONVERGENT_RATE
                     and base_rate is not None
                     and (rate - base_rate) >= BASE_RATE_MARGIN)
-    return {
-        "gate": gate_name,
-        "total_triggers": total_triggers,
-        "eligible_triggers": eligible,
-        "eligible_trigger_fraction": ((eligible / total_triggers)
-                                      if total_triggers else None),
-        "confirmed_convergent": confirmed,
-        "convergent_rate": rate,
-        "base_convergent_rate": base_rate,
-        # "needs review" means the gate structure must be reviewed and frozen
-        # before it judges another prototype. It does NOT mean the gate is
-        # invalid and does not authorize deleting or relaxing it.
-        "verdict": "needs review" if needs_review else "no finding",
-    }
+    return {"gate": gate_name, "total_triggers": total,
+            "eligible_triggers": eligible,
+            "eligible_trigger_fraction": ((eligible / total) if total else None),
+            "confirmed_convergent": confirmed, "convergent_rate": rate,
+            "base_convergent_rate": base_rate,
+            # "needs review" means the gate structure must be reviewed and
+            # frozen before it judges another prototype. It does NOT mean the
+            # gate is invalid and does not authorize deleting or relaxing it.
+            "verdict": "needs review" if needs_review else "no finding"}
+
+
+def natural_convergence_report(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """Section 7: the same metrics at 400 -> 6,400, to show the SCALE of natural
+    deeper-search change.
+
+    This is the natural-convergence reference distribution. It is explicitly
+    NOT causal evidence that a same-budget intervention is safe.
+    """
+    n = len(rows)
+    counts = {g: 0 for g in GATE_NAMES}
+    for row in rows:
+        t = gate_triggers(row["legs"], hi=6400)
+        for g in GATE_NAMES:
+            counts[g] += 1 if t[g] else 0
+    return {"transition": "400->6400", "n_rows": n,
+            "trigger_counts": counts,
+            "trigger_rates": {g: (c / n if n else None) for g, c in counts.items()},
+            "is_causal_evidence": False}
+
+
+def by_stratum_summary(rows: Sequence[Dict[str, Any]], gate_name: str
+                       ) -> Dict[str, Any]:
+    """Overall plus late / flat-policy / near-even. Section 7 creates NO
+    per-stratum acceptance gate, so the strata carry counts only."""
+    def strip(d: Dict[str, Any]) -> Dict[str, Any]:
+        return {k: v for k, v in d.items() if k != "verdict"}
+
+    out: Dict[str, Any] = {"overall": calibrate_gate(rows, gate_name)}
+    for name, pred in (("late", lambda r: r["phase"] == "late"),
+                       ("flat_policy", lambda r: r["flat_policy"]),
+                       ("near_even", lambda r: r["near_even"])):
+        subset = [r for r in rows if pred(r)]
+        out[name] = strip(calibrate_gate(subset, gate_name)) if subset else {
+            "n_rows": 0, "convergent_rate": None}
+    return out
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_b.py -v -p no:cacheprovider`
-Expected: PASS — 9 passed.
+Expected: PASS — 12 passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/GPU/alphazero/atlas_readout_b.py tests/test_atlas_readout_b.py
-git commit -m "feat(atlas-s4): Read-out B four-rung gate calibration with eligible denominator"
+git commit -m "feat(atlas-s4): Read-out B four rungs, natural convergence and strata"
 ```
 
 ---
 
-### Task 5: Read-out C — retention, strata, shape selection
+### Task 5: Read-out C — retention, aggregation, discovery-selected shape
 
 **Files:**
 - Create: `scripts/GPU/alphazero/atlas_readout_c.py`
 - Test: `tests/test_atlas_readout_c.py`
 
 **Interfaces:**
-- Consumes: Stage 3's two tracer snapshots and Stage 1's `k_of_n` / `n_admit`.
-- Produces: `static_retention(...)`; `intervention_from_snapshots(...)`; **`classify_strata(row) -> set[str]`**; **`aggregate_shape(rows, shape) -> dict`**; `select_shape(per_shape) -> dict`; **`select_on_discovery_validate_on_selected(discovery, validation) -> dict`**; `STRATA`.
+- Consumes: a **Read-out C row** — `{"reference_line": <Task 0 summary>, "snapshots": {...}, "label": str, "phase": str, "flat_policy": bool, "near_even": bool}`.
+- Produces: `STRATA`; `static_retention(...)`; `intervention_from_snapshots(...)`; `classify_strata(row)`; `aggregate_shape(rows, shape)`; `select_shape(per_shape)`; `select_on_discovery_validate_on_selected(discovery, validation)`.
 
-> **The row-to-aggregate path is the point.** `select_shape` consumes rates; nothing
-> derived them from per-row results, which is why `MISLEADING_INTERVENTION_BAR` was
-> unused. `aggregate_shape` now folds per-row three-valued results into the four
-> rates, deriving root / depth-1 / two-ply retention from the 3,200 and 6,400
-> reference lines and classifying the frozen strata. **Inconclusive rows are excluded
-> from the intervention denominator and counted separately** — folding them in as
-> either outcome would invent a measurement. If the denominator empties, the shape's
-> rate is `None` and it **cannot pass**, rather than defaulting.
->
-> Selection happens on **discovery**; only the selected shape is evaluated on
-> **validation**, so a shape cannot be chosen for looking good on the split that
-> judges it.
-
-Frozen §8 bar: retain **≥95%** of stable deep root moves, **≥90%** of stable depth-1
-replies, intervene on **≥50%** of misleading roots and **≤25%** of stable-negative roots.
-**Lexicographic selection**: retention floors → stable-root intervention ceiling → higher
-intervention on misleading → tie broken by higher descendant retention.
-
-**Lag is directional.** Retention is evaluated under `K(n)`; the intervention threshold
-must **also** pass under `K(n+14)`. Passing only under `K(n)` is **inconclusive**, not a
-pass — the lag is conservative for retention and anti-conservative for intervention.
-
-> **Incomplete in this revision — must be written before Task 5 is executed.**
-> The Interfaces block above declares `classify_strata`, `aggregate_shape` and
-> `select_on_discovery_validate_on_selected`, and the design note states what they
-> must do, but their **implementations and tests are not yet written**. Task 5 is
-> not executable until they are. Recorded here rather than left implicit, because a
-> declared-but-absent function is exactly the shape of defect this plan keeps
-> catching.
+> **`K(n)` uses EFFECTIVE parent visits** (§6a). At the warm root that is
+> `reference_line["root_effective_visits"]` — `I + N_actual` — **not** the nominal 320.
+> Using the nominal would narrow the admitted set, understating retention and
+> overstating intervention, in the same direction as the batch lag.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1450,83 +1472,111 @@ pass — the lag is conservative for retention and anti-conservative for interve
 import pytest
 
 from scripts.GPU.alphazero.atlas_readout_c import (
-    RETENTION_DEPTH1_BAR, RETENTION_ROOT_BAR, STRATA,
-    intervention_from_snapshots, select_shape, static_retention,
+    MISLEADING_INTERVENTION_BAR, RETENTION_DEPTH1_BAR, RETENTION_ROOT_BAR,
+    STABLE_INTERVENTION_CEILING, STRATA, aggregate_shape, classify_strata,
+    intervention_from_snapshots, select_on_discovery_validate_on_selected,
+    select_shape, static_retention,
 )
-from scripts.GPU.alphazero.selection_tracer import WIDENING_SHAPES
+
+SHAPE = ("c4a05", 4.0, 0.5)
 
 
-def _priors(n, best):
-    """n moves; `best` gets the top prior."""
-    d = {i: (1.0 if i == best else 0.5 - i * 1e-4) for i in range(n)}
-    return d
+def _priors(n, best=0):
+    return {i: (1.0 if i == best else 0.5 - i * 1e-4) for i in range(n)}
+
+
+def _snap(ft=100, ft_out=15, lagged=12, elig=200):
+    return {"at_boundary": {"by_shape": {"c4a05": {"overall": {
+        "eligible_events": elig, "outside_events": 30,
+        "first_touch_events": ft, "first_touch_outside_events": ft_out,
+        "lagged_first_touch_outside_events": lagged,
+        "excluded_prior_mass": 0.4}}}}}
+
+
+def _ref(root_n=326 + 137, reply_n=90, root_move=0, reply_move=1):
+    return {"stable_deep_move": root_move, "root_priors": _priors(500),
+            "root_effective_visits": root_n,
+            "reply": {"move": reply_move, "priors": _priors(400),
+                      "effective_visits": reply_n},
+            "two_ply": None}
+
+
+def _row(label="misleading", phase="late", flat=False, near_even=False,
+         ref=None, snaps=None):
+    return {"reference_line": ref or _ref(), "snapshots": snaps or _snap(),
+            "label": label, "phase": phase, "flat_policy": flat,
+            "near_even": near_even}
 
 
 def test_frozen_bars_and_strata_are_pinned():
-    assert RETENTION_ROOT_BAR == 0.95
-    assert RETENTION_DEPTH1_BAR == 0.90
+    assert RETENTION_ROOT_BAR == 0.95 and RETENTION_DEPTH1_BAR == 0.90
+    assert MISLEADING_INTERVENTION_BAR == 0.50
+    assert STABLE_INTERVENTION_CEILING == 0.25
     assert set(STRATA) == {"late", "near_even", "root_flat",
                            "locally_flat_depth1", "locally_flat_depth2"}
 
 
-def test_static_retention_admits_a_top_prior_move():
-    r = static_retention(_priors(500, best=0), required_moves=[0],
-                         n_at_selection=400, shape=("c4a05", 4.0, 0.5))
-    assert r["retained"] == 1 and r["rate"] == pytest.approx(1.0)
+def test_static_retention_uses_EFFECTIVE_parent_visits():
+    """K(n) keys on completed visits, which at a warm root include I."""
+    wide = static_retention(_priors(500), [80], n_at_selection=463, shape=SHAPE)
+    narrow = static_retention(_priors(500), [80], n_at_selection=320, shape=SHAPE)
+    assert wide["k"] > narrow["k"]
+    assert wide["retained"] == 1 and narrow["retained"] == 0
 
 
-def test_static_retention_rejects_a_deep_tail_move():
-    r = static_retention(_priors(500, best=0), required_moves=[499],
-                         n_at_selection=400, shape=("c4a05", 4.0, 0.5))
-    assert r["retained"] == 0 and r["rate"] == 0.0
+def test_static_retention_of_nothing_is_None():
+    assert static_retention(_priors(10), [], 400, SHAPE)["rate"] is None
 
 
-def test_static_retention_of_nothing_is_None_not_zero():
-    r = static_retention(_priors(10, 0), required_moves=[],
-                         n_at_selection=400, shape=("c4a05", 4.0, 0.5))
-    assert r["rate"] is None
-
-
-def _snap(outside, first_touch, first_touch_outside, eligible):
-    return {"by_shape": {"c4a05": {"overall": {
-        "eligible_events": eligible, "outside_events": outside,
-        "first_touch_events": first_touch,
-        "first_touch_outside_events": first_touch_outside,
-        "excluded_prior_mass": 0.4,
-    }}}}
-
-
-def test_intervention_requires_the_LAGGED_bound_too():
-    """Passing only under K(n) is inconclusive: the lag over-estimates
-    intervention, so a marginal pass may be an artifact."""
-    r = intervention_from_snapshots(
-        {"at_boundary": _snap(30, 100, 12, 200)}, shape_key="c4a05",
-        lagged_first_touch_outside=8)          # 8/100 = 0.08 < 0.10
-    assert r["meaningfully_affected"] is None
+def test_intervention_requires_the_PRODUCED_lagged_bound():
+    r = intervention_from_snapshots(_snap(ft=100, ft_out=12, lagged=8), "c4a05")
+    assert r["meaningfully_affected"] is None      # None, not False
     assert r["verdict"] == "INCONCLUSIVE"
 
 
 def test_intervention_passes_when_both_bounds_clear():
-    r = intervention_from_snapshots(
-        {"at_boundary": _snap(30, 100, 15, 200)}, shape_key="c4a05",
-        lagged_first_touch_outside=12)         # 0.12 >= 0.10
-    assert r["meaningfully_affected"] is True
-    assert r["verdict"] == "OK"
+    r = intervention_from_snapshots(_snap(ft=100, ft_out=15, lagged=12), "c4a05")
+    assert r["meaningfully_affected"] is True and r["verdict"] == "OK"
+
+
+def test_classify_strata_reads_the_row_not_a_bare_leg_list():
+    s = classify_strata(_row(phase="late", flat=True, near_even=True))
+    assert {"late", "root_flat", "near_even"} <= s
+
+
+def test_aggregate_excludes_INCONCLUSIVE_rows_from_the_denominator():
+    """Folding them in as either outcome would invent a measurement."""
+    rows = [_row(snaps=_snap(ft=100, ft_out=15, lagged=12)),        # OK, affected
+            _row(snaps=_snap(ft=100, ft_out=12, lagged=8))]         # inconclusive
+    a = aggregate_shape(rows, SHAPE)
+    assert a["misleading_denominator"] == 1
+    assert a["inconclusive"] == 1
+
+
+def test_aggregate_rate_is_None_when_the_denominator_empties():
+    rows = [_row(snaps=_snap(ft=100, ft_out=12, lagged=8))]
+    a = aggregate_shape(rows, SHAPE)
+    assert a["misleading_intervention"] is None
+
+
+def test_a_shape_with_a_None_rate_cannot_pass():
+    per = {"c4a05": {"root_retention": 0.99, "depth1_retention": 0.95,
+                     "misleading_intervention": None, "stable_intervention": 0.10,
+                     "descendant_retention": 0.90}}
+    assert select_shape(per)["selected"] is None
 
 
 def test_shape_selection_is_lexicographic():
     a = {"root_retention": 0.99, "depth1_retention": 0.95,
          "misleading_intervention": 0.60, "stable_intervention": 0.20,
          "descendant_retention": 0.80}
-    b = {"root_retention": 0.99, "depth1_retention": 0.95,
-         "misleading_intervention": 0.55, "stable_intervention": 0.10,
-         "descendant_retention": 0.99}
-    # Both pass the floors and the ceiling; A wins on misleading intervention.
+    b = dict(a, misleading_intervention=0.55, stable_intervention=0.10,
+             descendant_retention=0.99)
     assert select_shape({"c4a05": a, "c13a03": b})["selected"] == "c4a05"
 
 
-def test_shape_failing_a_retention_floor_is_excluded_however_good_otherwise():
-    a = {"root_retention": 0.90, "depth1_retention": 0.95,      # below 0.95
+def test_a_retention_floor_excludes_a_shape_however_good_otherwise():
+    a = {"root_retention": 0.90, "depth1_retention": 0.95,
          "misleading_intervention": 0.99, "stable_intervention": 0.01,
          "descendant_retention": 0.99}
     b = {"root_retention": 0.96, "depth1_retention": 0.91,
@@ -1535,26 +1585,31 @@ def test_shape_failing_a_retention_floor_is_excluded_however_good_otherwise():
     assert select_shape({"c4a05": a, "c13a03": b})["selected"] == "c13a03"
 
 
-def test_no_shape_passing_is_a_named_failure_not_a_fallback():
+def test_no_shape_passing_is_a_named_failure():
     bad = {"root_retention": 0.10, "depth1_retention": 0.10,
            "misleading_intervention": 0.99, "stable_intervention": 0.99,
            "descendant_retention": 0.10}
     r = select_shape({"c4a05": bad, "c13a03": bad})
-    assert r["selected"] is None
-    assert r["verdict"] == "NO_SHAPE_PASSES"
+    assert r["selected"] is None and r["verdict"] == "NO_SHAPE_PASSES"
 
 
 def test_ties_break_on_descendant_retention():
     a = {"root_retention": 0.99, "depth1_retention": 0.95,
          "misleading_intervention": 0.60, "stable_intervention": 0.20,
          "descendant_retention": 0.70}
-    b = {"root_retention": 0.99, "depth1_retention": 0.95,
-         "misleading_intervention": 0.60, "stable_intervention": 0.20,
-         "descendant_retention": 0.90}
+    b = dict(a, descendant_retention=0.90)
     assert select_shape({"c4a05": a, "c13a03": b})["selected"] == "c13a03"
+
+
+def test_selection_happens_on_discovery_and_only_that_shape_is_validated():
+    disc = [_row() for _ in range(4)]
+    val = [_row() for _ in range(4)]
+    r = select_on_discovery_validate_on_selected(disc, val)
+    assert r["selected_on"] == "discovery"
+    assert set(r["validated"]) <= {r["selected"]}      # never both shapes
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_c.py -v -p no:cacheprovider`
 Expected: FAIL — `ModuleNotFoundError`
@@ -1563,14 +1618,14 @@ Expected: FAIL — `ModuleNotFoundError`
 
 ```python
 # scripts/GPU/alphazero/atlas_readout_c.py
-"""Atlas Read-out C -- design section 8, FROZEN.
+"""Atlas Read-out C -- design section 8 and amendment 6a, FROZEN.
 
 Counterfactual COVERAGE analysis. It cannot prove progressive widening would
 improve search, because applying widening changes the later tree.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence, Set, Tuple
 
 from .selection_tracer import (
     MEANINGFUL_INTERVENTION_FIRST_TOUCH_RATE, WIDENING_SHAPES, k_of_n,
@@ -1580,10 +1635,9 @@ RETENTION_ROOT_BAR = 0.95
 RETENTION_DEPTH1_BAR = 0.90
 MISLEADING_INTERVENTION_BAR = 0.50
 STABLE_INTERVENTION_CEILING = 0.25
-BATCH_LAG = 14                     # eval_batch_size
+FLAT_ENTROPY_BAR = 0.90
+FLAT_TOP_PRIOR_BAR = 0.025
 
-# Frozen strata. Flat-policy status is recomputed LOCALLY along the reference
-# line, not inherited from the root.
 STRATA = ("late", "near_even", "root_flat",
           "locally_flat_depth1", "locally_flat_depth2")
 
@@ -1593,9 +1647,9 @@ def static_retention(root_priors: Dict[int, float],
                      shape: Tuple[str, float, float]) -> Dict[str, Any]:
     """Would the moves stable deeper search requires have been admitted?
 
-    A static tree check using the same frozen rank rule; no selection-event dump
-    is needed. Retention is evaluated under K(n) -- the narrower, conservative
-    admitted set -- so a pass here is genuinely safe.
+    `n_at_selection` is the parent's EFFECTIVE completed visit count -- at a warm
+    root that is I + N_actual, never the nominal 320 (amendment 6a). Retention is
+    evaluated under K(n), the narrower conservative set, so a pass is safe.
     """
     _name, c, alpha = shape
     n_legal = len(root_priors)
@@ -1611,87 +1665,174 @@ def static_retention(root_priors: Dict[int, float],
 
 def intervention_from_snapshots(snapshots: Dict[str, Any], shape_key: str
                                 ) -> Dict[str, Any]:
-    """Meaningful intervention, with the DIRECTIONAL lag bound.
+    """Meaningful intervention with the DIRECTIONAL lag bound.
 
-    Completed visits lag in-flight work by up to one batch, so K(n) is narrower
-    than a real implementation's: conservative for retention, ANTI-conservative
-    for intervention. The threshold must therefore also pass under K(n+14).
-    Passing only under K(n) is INCONCLUSIVE, not a pass.
+    The lag is conservative for retention and ANTI-conservative for
+    intervention, so the threshold must also pass under K(n+14) -- a counter the
+    tracer PRODUCES, never a caller-supplied number. Passing only under K(n) is
+    INCONCLUSIVE, not a pass.
     """
     cell = snapshots["at_boundary"]["by_shape"][shape_key]["overall"]
     ft = cell["first_touch_events"]
-    rate = (cell["first_touch_outside_events"] / ft) if ft else None
-    # PRODUCED by the tracer under K(n+14), never supplied by a caller.
-    lagged_rate = ((cell["lagged_first_touch_outside_events"] / ft)
-                   if ft else None)
-
-    if rate is None:
+    if not ft:
         return {"first_touch_outside_rate": None, "lagged_rate": None,
                 "meaningfully_affected": None, "verdict": "NO_EVENTS"}
-    passes = rate >= MEANINGFUL_INTERVENTION_FIRST_TOUCH_RATE
-    lagged_passes = (lagged_rate is not None
-                     and lagged_rate >= MEANINGFUL_INTERVENTION_FIRST_TOUCH_RATE)
-    if passes and lagged_passes:
-        return {"first_touch_outside_rate": rate, "lagged_rate": lagged_rate,
-                "meaningfully_affected": True, "verdict": "OK"}
-    if passes and not lagged_passes:
-        # None, never False: this is undecided, not a measured negative.
-        return {"first_touch_outside_rate": rate, "lagged_rate": lagged_rate,
-                "meaningfully_affected": None, "verdict": "INCONCLUSIVE"}
-    return {"first_touch_outside_rate": rate, "lagged_rate": lagged_rate,
-            "meaningfully_affected": False, "verdict": "OK"}
+    rate = cell["first_touch_outside_events"] / ft
+    lagged = cell["lagged_first_touch_outside_events"] / ft
+    ok = rate >= MEANINGFUL_INTERVENTION_FIRST_TOUCH_RATE
+    lagged_ok = lagged >= MEANINGFUL_INTERVENTION_FIRST_TOUCH_RATE
+    if ok and lagged_ok:
+        verdict, affected = "OK", True
+    elif ok:
+        # None, never False: undecided is not a measured negative.
+        verdict, affected = "INCONCLUSIVE", None
+    else:
+        verdict, affected = "OK", False
+    return {"first_touch_outside_rate": rate, "lagged_rate": lagged,
+            "meaningfully_affected": affected, "verdict": verdict}
 
 
-def select_shape(per_shape: Dict[str, Dict[str, float]]) -> Dict[str, Any]:
-    """Frozen LEXICOGRAPHIC order (design section 8):
+def classify_strata(row: Dict[str, Any]) -> Set[str]:
+    """Frozen strata from the ROW. Flat-policy status is recomputed LOCALLY
+    along the reference line, not inherited from the root."""
+    s: Set[str] = set()
+    if row.get("phase") == "late":
+        s.add("late")
+    if row.get("near_even"):
+        s.add("near_even")
+    if row.get("flat_policy"):
+        s.add("root_flat")
+    ref = row.get("reference_line") or {}
+    for key, name in (("reply", "locally_flat_depth1"),
+                      ("two_ply", "locally_flat_depth2")):
+        node = ref.get(key)
+        if node and node.get("priors"):
+            top = max(node["priors"].values())
+            if top <= FLAT_TOP_PRIOR_BAR:
+                s.add(name)
+    return s
 
-      1. root and reference-reply retention floors must pass
-      2. the stable-root intervention ceiling must pass
-      3. among survivors, higher intervention on misleading roots
-      4. exact tie: higher descendant reference retention
+
+def aggregate_shape(rows: Sequence[Dict[str, Any]],
+                    shape: Tuple[str, float, float]) -> Dict[str, Any]:
+    """Fold per-row three-valued results into the four rates section 8 gates.
+
+    INCONCLUSIVE rows are excluded from the intervention denominator and counted
+    separately -- folding them in as either outcome would invent a measurement.
+    If a denominator empties, the rate is None and the shape CANNOT pass.
     """
-    survivors = {
-        k: v for k, v in per_shape.items()
-        if v["root_retention"] >= RETENTION_ROOT_BAR
-        and v["depth1_retention"] >= RETENTION_DEPTH1_BAR
-        and v["stable_intervention"] <= STABLE_INTERVENTION_CEILING
+    name = shape[0]
+    root_ret = {"retained": 0, "required": 0}
+    d1_ret = {"retained": 0, "required": 0}
+    desc_ret = {"retained": 0, "required": 0}
+    mis_num = mis_den = st_num = st_den = inconclusive = 0
+
+    for row in rows:
+        ref = row["reference_line"]
+        r = static_retention(ref["root_priors"], [ref["stable_deep_move"]],
+                             ref["root_effective_visits"], shape)
+        root_ret["retained"] += r["retained"]; root_ret["required"] += r["required"]
+        reply = ref.get("reply")
+        if reply and reply.get("move") is not None:
+            rr = static_retention(reply["priors"], [reply["move"]],
+                                  reply["effective_visits"], shape)
+            d1_ret["retained"] += rr["retained"]; d1_ret["required"] += rr["required"]
+        two = ref.get("two_ply")
+        if two and two.get("move") is not None:
+            tr = static_retention(two["priors"], [two["move"]],
+                                  two["effective_visits"], shape)
+            desc_ret["retained"] += tr["retained"]; desc_ret["required"] += tr["required"]
+
+        iv = intervention_from_snapshots(row["snapshots"], name)
+        if iv["meaningfully_affected"] is None:
+            inconclusive += 1
+            continue
+        if row["label"] == "misleading":
+            mis_den += 1; mis_num += 1 if iv["meaningfully_affected"] else 0
+        elif row["label"] == "stable_negative":
+            st_den += 1; st_num += 1 if iv["meaningfully_affected"] else 0
+
+    def rate(n, d):
+        return (n / d) if d else None
+
+    return {
+        "shape": name,
+        "root_retention": rate(root_ret["retained"], root_ret["required"]),
+        "depth1_retention": rate(d1_ret["retained"], d1_ret["required"]),
+        "descendant_retention": rate(desc_ret["retained"], desc_ret["required"]),
+        "misleading_intervention": rate(mis_num, mis_den),
+        "stable_intervention": rate(st_num, st_den),
+        "misleading_denominator": mis_den, "stable_denominator": st_den,
+        "inconclusive": inconclusive,
     }
+
+
+def select_shape(per_shape: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """Frozen LEXICOGRAPHIC order: retention floors -> stable-intervention
+    ceiling -> higher misleading intervention -> tie on descendant retention.
+
+    A None rate cannot pass: an undefined denominator is not a satisfied bar.
+    """
+    def passes(v):
+        return (v.get("root_retention") is not None
+                and v["root_retention"] >= RETENTION_ROOT_BAR
+                and v.get("depth1_retention") is not None
+                and v["depth1_retention"] >= RETENTION_DEPTH1_BAR
+                and v.get("stable_intervention") is not None
+                and v["stable_intervention"] <= STABLE_INTERVENTION_CEILING
+                and v.get("misleading_intervention") is not None)
+
+    survivors = {k: v for k, v in per_shape.items() if passes(v)}
     if not survivors:
         return {"selected": None, "verdict": "NO_SHAPE_PASSES",
                 "considered": sorted(per_shape)}
-    best = max(survivors,
-               key=lambda k: (survivors[k]["misleading_intervention"],
-                              survivors[k]["descendant_retention"]))
-    return {"selected": best, "verdict": "OK",
-            "survivors": sorted(survivors), "considered": sorted(per_shape)}
+    best = max(survivors, key=lambda k: (
+        survivors[k]["misleading_intervention"],
+        survivors[k].get("descendant_retention") or 0.0))
+    return {"selected": best, "verdict": "OK", "survivors": sorted(survivors),
+            "considered": sorted(per_shape)}
+
+
+def select_on_discovery_validate_on_selected(
+        discovery: Sequence[Dict[str, Any]],
+        validation: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """Choose on DISCOVERY, then evaluate ONLY the selected shape on VALIDATION.
+
+    Evaluating both on validation would let a shape be chosen for looking good
+    on the split that judges it.
+    """
+    disc = {s[0]: aggregate_shape(discovery, s) for s in WIDENING_SHAPES}
+    chosen = select_shape(disc)
+    if chosen["selected"] is None:
+        return {**chosen, "selected_on": "discovery", "validated": {}}
+    shape = next(s for s in WIDENING_SHAPES if s[0] == chosen["selected"])
+    return {**chosen, "selected_on": "discovery",
+            "discovery": disc,
+            "validated": {chosen["selected"]: aggregate_shape(validation, shape)}}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_c.py -v -p no:cacheprovider`
-Expected: PASS — 10 passed.
+Expected: PASS — 14 passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/GPU/alphazero/atlas_readout_c.py tests/test_atlas_readout_c.py
-git commit -m "feat(atlas-s4): Read-out C retention, lag bound and lexicographic selection"
+git commit -m "feat(atlas-s4): Read-out C aggregation, strata and discovery-selected shape"
 ```
 
 ---
 
-### Task 6: Artifact schema, provenance validation and `_jsonable`
+### Task 6: Artifact schema, provenance and `_jsonable`
 
 **Files:**
 - Create: `scripts/GPU/alphazero/atlas_artifact.py`
 - Test: `tests/test_atlas_artifact.py`
 
 **Interfaces:**
-- Consumes: everything above, plus `_jsonable` from `build_atlas_corpus`.
-- Produces: `ROW_SCHEMA_VERSION`; `build_row(...) -> dict`; `validate_provenance(run) -> dict`; `emit(run) -> str`.
-
-Every row must carry the §2b/§4 facts that a later reader cannot reconstruct:
-inheritance resets, `remaining`, and every undefined value **as `None`**.
+- Produces: `ROW_SCHEMA_VERSION`; `build_row(...)` carrying **both** `features_at_boundary` and `features_at_400`; `validate_provenance(run)`; `emit(run)`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1706,7 +1847,7 @@ from scripts.GPU.alphazero.atlas_artifact import (
 )
 
 
-def _row_kwargs(**over):
+def _kw(**over):
     base = dict(
         game_idx=3, replay_seed=20400003, target_ply=95, phase="late",
         side="black", split="validation", inherited_I=137,
@@ -1714,56 +1855,65 @@ def _row_kwargs(**over):
         boundary={"N_actual": 326, "overshoot": 6, "remaining": 74,
                   "flush_type": "full"},
         legs=[{"nominal_B": 400}], label="misleading",
-        features={"one_visit_backup_share": 0.4},
+        features_at_boundary={"one_visit_backup_share": 0.4},
+        features_at_400={"one_visit_backup_share": 0.3},
+        reference_line={"stable_deep_move": 7},
         tracer_snapshots={"at_boundary": {}, "at_400": {}},
-    )
+        flat_policy=False, near_even=True)
     base.update(over)
     return base
 
 
-def test_row_carries_resets_remaining_and_the_schema_version():
-    r = build_row(**_row_kwargs())
+def test_row_carries_BOTH_feature_captures():
+    """Section 6a: B=400 supplies the required 400-tree diagnostic contrast, so
+    it must survive into the artifact, not just the boundary capture."""
+    r = build_row(**_kw())
+    assert r["features_at_boundary"]["one_visit_backup_share"] == 0.4
+    assert r["features_at_400"]["one_visit_backup_share"] == 0.3
+
+
+def test_row_carries_resets_remaining_strata_and_the_schema_version():
+    r = build_row(**_kw())
     assert r["schema_version"] == ROW_SCHEMA_VERSION
     assert r["reset_count"] == 1 and r["reset_rate"] == 0.02
-    assert r["last_reset_ply"] == 44
-    assert r["boundary"]["remaining"] == 74
+    assert r["last_reset_ply"] == 44 and r["boundary"]["remaining"] == 74
+    assert r["near_even"] is True and r["flat_policy"] is False
 
 
 def test_undefined_values_stay_None_through_emission():
-    r = build_row(**_row_kwargs(reset_rate=None, last_reset_ply=None,
-                                boundary=None))
-    text = emit({"rows": [r], "provenance": {}})
-    back = json.loads(text)["rows"][0]
-    assert back["reset_rate"] is None
-    assert back["last_reset_ply"] is None
-    assert back["boundary"] is None          # never {} and never 0
+    r = build_row(**_kw(reset_rate=None, last_reset_ply=None, boundary=None,
+                        features_at_400=None))
+    back = json.loads(emit({"rows": [r], "provenance": {}}))["rows"][0]
+    assert back["reset_rate"] is None and back["last_reset_ply"] is None
+    assert back["boundary"] is None and back["features_at_400"] is None
 
 
 def test_a_row_missing_the_boundary_is_flagged_not_defaulted():
-    r = build_row(**_row_kwargs(boundary=None))
-    assert r["boundary_missing"] is True
+    assert build_row(**_kw(boundary=None))["boundary_missing"] is True
 
 
 def test_emission_goes_through_jsonable():
-    """Tuple-keyed payloads must survive; json.dumps cannot use tuple keys and
-    `default=` rescues only values."""
     run = {"rows": [], "provenance": {},
            "cells": {("discovery", "late", "red"): 12}}
-    back = json.loads(emit(run))
-    assert back["cells"] == {"discovery|late|red": 12}
+    assert json.loads(emit(run))["cells"] == {"discovery|late|red": 12}
 
 
-def test_provenance_validation_fails_closed_on_a_dirty_tree():
+def test_emission_REJECTS_an_unserializable_payload():
+    """No default=str: it would stringify a schema defect into a
+    plausible-looking value instead of failing."""
+    with pytest.raises(TypeError):
+        emit({"rows": [{"bad": object()}], "provenance": {}})
+
+
+def test_provenance_fails_closed_on_a_dirty_tree():
     r = validate_provenance({"git_head": "a" * 40, "worktree_clean": False,
                              "checkpoint_sha1": "0" * 40})
-    assert r["verdict"] == "PROVENANCE_FAILURE"
-    assert "worktree_clean" in r["problems"]
+    assert r["verdict"] == "PROVENANCE_FAILURE" and "worktree_clean" in r["problems"]
 
 
-def test_provenance_validation_requires_a_checkpoint_digest():
+def test_provenance_requires_a_checkpoint_digest():
     r = validate_provenance({"git_head": "a" * 40, "worktree_clean": True,
                              "checkpoint_sha1": ""})
-    assert r["verdict"] == "PROVENANCE_FAILURE"
     assert "checkpoint_sha1" in r["problems"]
 
 
@@ -1773,7 +1923,7 @@ def test_valid_provenance_passes():
     assert r["verdict"] == "OK" and r["problems"] == []
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_artifact.py -v -p no:cacheprovider`
 Expected: FAIL — `ModuleNotFoundError`
@@ -1784,8 +1934,9 @@ Expected: FAIL — `ModuleNotFoundError`
 # scripts/GPU/alphazero/atlas_artifact.py
 """Atlas artifact schema, provenance validation and emission.
 
-Every undefined value stays None through emission. A missing boundary is FLAGGED,
-never defaulted -- a zero-filled record is indistinguishable from a real one.
+Every undefined value stays None through emission. A missing boundary is
+FLAGGED, never defaulted -- a zero-filled record is indistinguishable from a
+real one.
 """
 from __future__ import annotations
 
@@ -1794,15 +1945,18 @@ from typing import Any, Dict, List, Optional
 
 from .build_atlas_corpus import _jsonable
 
-ROW_SCHEMA_VERSION = 1
+ROW_SCHEMA_VERSION = 2
 
 
 def build_row(*, game_idx: int, replay_seed: int, target_ply: int, phase: str,
               side: str, split: str, inherited_I: int, reset_count: int,
               reset_rate: Optional[float], last_reset_ply: Optional[int],
               boundary: Optional[Dict[str, Any]], legs: List[Dict[str, Any]],
-              label: str, features: Dict[str, Any],
-              tracer_snapshots: Dict[str, Any]) -> Dict[str, Any]:
+              label: str, features_at_boundary: Optional[Dict[str, Any]],
+              features_at_400: Optional[Dict[str, Any]],
+              reference_line: Optional[Dict[str, Any]],
+              tracer_snapshots: Dict[str, Any], flat_policy: bool,
+              near_even: bool) -> Dict[str, Any]:
     return {
         "schema_version": ROW_SCHEMA_VERSION,
         "game_idx": game_idx, "replay_seed": replay_seed,
@@ -1812,14 +1966,20 @@ def build_row(*, game_idx: int, replay_seed: int, target_ply: int, phase: str,
         "reset_count": reset_count, "reset_rate": reset_rate,
         "last_reset_ply": last_reset_ply,
         "boundary": boundary, "boundary_missing": boundary is None,
-        "legs": legs, "label": label, "features": features,
+        "legs": legs, "label": label,
+        # BOTH captures: B=400 supplies section 6's 400-tree diagnostic contrast.
+        "features_at_boundary": features_at_boundary,
+        "features_at_400": features_at_400,
+        "reference_line": reference_line,
         "tracer_snapshots": tracer_snapshots,
+        # Strata facts, so Read-outs B and C need no second source.
+        "flat_policy": flat_policy, "near_even": near_even,
     }
 
 
 def validate_provenance(prov: Dict[str, Any]) -> Dict[str, Any]:
-    """Fails CLOSED. A dirty tree or an unidentifiable checkpoint means the run
-    is not reconstructible, whatever its numbers say."""
+    """Fails CLOSED. A dirty tree or unidentifiable checkpoint means the run is
+    not reconstructible, whatever its numbers say."""
     problems = []
     if prov.get("worktree_clean") is not True:
         problems.append("worktree_clean")
@@ -1834,48 +1994,58 @@ def validate_provenance(prov: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def emit(run: Dict[str, Any]) -> str:
-    """Serialize through _jsonable -- geometry and ladder types keep their
-    natural tuples, and only the boundary normalizes."""
-    # No default=str: it would stringify a schema defect instead of rejecting
-    # it, turning an unserializable object into a plausible-looking value.
+    """Serialize through _jsonable. NO default=str -- it would stringify a
+    schema defect into a plausible-looking value instead of failing."""
     return json.dumps(_jsonable(run), indent=2, sort_keys=True)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_artifact.py -v -p no:cacheprovider`
-Expected: PASS — 7 passed.
+Expected: PASS — 9 passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/GPU/alphazero/atlas_artifact.py tests/test_atlas_artifact.py
-git commit -m "feat(atlas-s4): artifact schema, fail-closed provenance and jsonable emission"
+git commit -m "feat(atlas-s4): artifact carrying both captures, fail-closed provenance"
 ```
 
 ---
 
-### Task 7: End-to-end read-out chain and the full suite
+### Task 7: The real chain — Stage 3 output through all three read-outs
 
 **Files:**
 - Create: `tests/test_atlas_readout_chain.py`
 
 **Interfaces:**
-- Consumes: all four modules.
-- Produces: no new API — this drives real Stage 3 ladder output into the real read-outs.
+- Consumes: everything. Produces no new API.
+
+> One shared CPU fixture at the **frozen increments**. Tiny ones give nominal budgets
+> 8/16/24/32, which labelling and gate calibration reject outright since both index
+> 400/1,600/3,200/6,400 — the "real chain" would raise before its first assertion.
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 # tests/test_atlas_readout_chain.py
-"""Real Stage 3 ladder output -> real Stage 4 read-outs. No surrogates."""
+"""Real Stage 3 output -> real Read-outs A, B and C. No surrogates."""
 import json
 import random
 
+import pytest
+
 from scripts.GPU.alphazero.atlas_artifact import build_row, emit
 from scripts.GPU.alphazero.atlas_labelling import class_counts, classify_row
-from scripts.GPU.alphazero.atlas_readout_a import collect_boundary_features
-from scripts.GPU.alphazero.atlas_readout_b import calibrate_gate, gate_triggers
+from scripts.GPU.alphazero.atlas_readout_a import (
+    collect_features, deployability, evaluate_detector,
+)
+from scripts.GPU.alphazero.atlas_readout_b import (
+    by_stratum_summary, calibrate_gate, natural_convergence_report,
+)
+from scripts.GPU.alphazero.atlas_readout_c import (
+    aggregate_shape, classify_strata, intervention_from_snapshots,
+)
 from scripts.GPU.alphazero.corpus_geometry import GameMeta
 from scripts.GPU.alphazero.mcts import MCTS, MCTSConfig
 from scripts.GPU.alphazero.selection_tracer import SelectionTracer
@@ -1887,11 +2057,7 @@ from tests.eval_fakes import FakeEvaluator
 
 BASE = 20400000
 SIZE = 6
-
-
-def _cfg(n=1):
-    return MCTSConfig(n_simulations=n, eval_batch_size=14,
-                      stall_flush_sims=48, pending_virtual_visits=8)
+SHAPE = ("c4a05", 4.0, 0.5)
 
 
 def _history(n, size=SIZE):
@@ -1907,88 +2073,125 @@ def _history(n, size=SIZE):
     return out
 
 
-def _real_row():
+@pytest.fixture(scope="module")
+def real_row():
+    """ONE shared fixture at the FROZEN increments -- 6,400 FakeEvaluator
+    simulations at active_size=6, CPU-only."""
     hist = _history(4)
     meta = GameMeta(game_id=0, seed=BASE, n_moves=len(hist), start_player="red")
-    m = MCTS(FakeEvaluator(value=0.0), _cfg(), random.Random(BASE))
+    m = MCTS(FakeEvaluator(value=0.0),
+             MCTSConfig(n_simulations=1, eval_batch_size=14,
+                        stall_flush_sims=48, pending_virtual_visits=8),
+             random.Random(BASE))
     pre = replay_prefix(m, meta, hist, target_ply=2, active_size=SIZE)
     tracer = SelectionTracer()
     m._selection_observer = tracer
-    # THE FROZEN INCREMENTS. Tiny ones give nominal budgets 8/16/24/32, which
-    # labelling and gate calibration -- both of which index 400/1,600/3,200/6,400
-    # -- reject outright, so the "real chain" would never reach an assertion.
-    # 6,400 simulations of FakeEvaluator at active_size=6 is CPU-only and fast.
     obs = BatchSafeBoundaryObserver(inherited_I=pre.inherited_I, tracer=tracer)
     legs, snaps = run_additive_ladder(m, pre.root, pre.inherited_I, ply=2,
                                       boundary_observer=obs,
                                       target_tracer=tracer)   # frozen defaults
-    return meta, pre, legs, snaps, obs, tracer
+    return {"meta": meta, "pre": pre, "legs": legs, "snaps": snaps, "obs": obs}
 
 
-def test_real_legs_classify_without_error():
-    _meta, _pre, legs, _snaps, _obs, _tr = _real_row()
-    label = classify_row(legs)
+def test_the_fixture_uses_the_frozen_rungs(real_row):
+    assert [l.nominal_B for l in real_row["legs"]] == [400, 1600, 3200, 6400]
+
+
+def test_real_legs_classify_and_count(real_row):
+    label = classify_row(real_row["legs"])
     assert label in {"misleading", "stable_negative", "ambiguous",
                      "no_stable_reference"}
-    assert set(class_counts([legs])) >= {"misleading", "stable_negative"}
+    assert set(class_counts([real_row["legs"]])) >= {"misleading",
+                                                     "stable_negative"}
 
 
-def test_real_gate_triggers_and_calibration_run_on_real_legs():
-    _meta, _pre, legs, _snaps, _obs, _tr = _real_row()
-    t = gate_triggers(legs)
-    assert set(t) == {"new_collapse", "lower_prior_flip",
-                      "effective_children_drop", "top_share_increase"}
-    r = calibrate_gate([legs], "top_share_increase")
-    assert r["verdict"] in {"needs review", "no finding"}
-
-
-def test_real_boundary_features_are_collected_from_the_real_tree():
-    _meta, pre, _legs, snaps, _obs, _tr = _real_row()
-    f = collect_boundary_features(
-        capture_start=snaps["features_at_start"],
-        capture_boundary=snaps["features_at_boundary"],
-        n_actual=obs.record.N_actual, root_priors=pre.root.priors,
-        leader_breadth=snaps["features_at_boundary"]["n_visited_children"])
+def test_readout_A_features_come_from_the_frozen_captures(real_row):
+    caps, obs = real_row["snaps"]["captures"], real_row["obs"]
+    f = collect_features(caps["at_start"], caps["at_boundary"],
+                         obs.record.N_actual)
     assert set(f) == {"one_visit_backup_share", "depth3plus_backup_fraction",
                       "leader_visit_margin", "root_policy_entropy",
                       "leader_breadth"}
+    f400 = collect_features(caps["at_start"], caps["at_400"], 400)
+    assert f400 is not None            # the 400-tree diagnostic contrast
 
 
-def test_a_real_row_survives_the_artifact_boundary():
-    meta, pre, legs, snaps, obs, _tr = _real_row()
+def test_readout_A_detector_runs_end_to_end_on_real_features(real_row):
+    caps, obs = real_row["snaps"]["captures"], real_row["obs"]
+    f = collect_features(caps["at_start"], caps["at_boundary"],
+                         obs.record.N_actual)
+    rows = ([{"label": "misleading", "features": f} for _ in range(20)]
+            + [{"label": "stable_negative", "features": f} for _ in range(25)])
+    r = evaluate_detector(discovery=rows, validation=rows)
+    # Identical features cannot separate; the point is that the REAL path runs
+    # and reports a verdict rather than raising.
+    assert r["verdict"] in {"PASS", "FAIL", "INSUFFICIENT_CLASSES",
+                            "INSUFFICIENT_DISCOVERY_CLASSES"}
+    d = deployability([real_row["obs"].record.remaining])
+    assert d["verdict"] in {"DEPLOYABLE", "NOT_DEPLOYABLE"}
+
+
+def test_readout_B_runs_on_real_rows(real_row):
+    row = {"legs": real_row["legs"], "phase": "opening",
+           "flat_policy": False, "near_even": True}
+    assert calibrate_gate([row], "top_share_increase")["verdict"] in {
+        "needs review", "no finding"}
+    nc = natural_convergence_report([row])
+    assert nc["transition"] == "400->6400" and nc["is_causal_evidence"] is False
+    assert "overall" in by_stratum_summary([row], "top_share_increase")
+
+
+def test_readout_C_runs_on_the_real_reference_line(real_row):
+    ref = real_row["snaps"]["reference_lines"]
+    row = {"reference_line": ref, "snapshots": real_row["snaps"],
+           "label": "misleading", "phase": "opening",
+           "flat_policy": False, "near_even": True}
+    assert isinstance(classify_strata(row), set)
+    iv = intervention_from_snapshots(real_row["snaps"], "c4a05")
+    assert iv["verdict"] in {"OK", "INCONCLUSIVE", "NO_EVENTS"}
+    agg = aggregate_shape([row], SHAPE)
+    assert set(agg) >= {"root_retention", "misleading_intervention",
+                        "inconclusive"}
+
+
+def test_a_real_row_survives_the_artifact_boundary(real_row):
+    pre, legs, snaps, obs = (real_row["pre"], real_row["legs"],
+                             real_row["snaps"], real_row["obs"])
+    caps = snaps["captures"]
     row = build_row(
-        game_idx=meta.game_id, replay_seed=meta.seed, target_ply=2,
-        phase="opening", side="red", split="discovery",
+        game_idx=real_row["meta"].game_id, replay_seed=real_row["meta"].seed,
+        target_ply=2, phase="opening", side="red", split="discovery",
         inherited_I=pre.inherited_I, reset_count=pre.reset_count,
         reset_rate=pre.reset_rate, last_reset_ply=pre.last_reset_ply,
         boundary=(vars(obs.record) if obs.record else None),
         legs=[vars(l) for l in legs], label=classify_row(legs),
-        features=collect_boundary_features(pre.root, snaps["at_boundary"]),
-        tracer_snapshots=snaps)
+        features_at_boundary=collect_features(caps["at_start"],
+                                              caps["at_boundary"],
+                                              obs.record.N_actual),
+        features_at_400=collect_features(caps["at_start"], caps["at_400"], 400),
+        reference_line=snaps["reference_lines"], tracer_snapshots=snaps,
+        flat_policy=False, near_even=True)
     back = json.loads(emit({"rows": [row], "provenance": {}}))["rows"][0]
     assert back["inherited_I"] == pre.inherited_I
     assert len(back["legs"]) == 4
-    assert back["boundary_missing"] is (obs.record is None)
+    assert back["features_at_boundary"] is not None
+    assert back["features_at_400"] is not None
 ```
 
 - [ ] **Step 2: Run, then the full suite**
 
 Run: `.venv/bin/python -m pytest tests/test_atlas_readout_chain.py -v -p no:cacheprovider`
-Expected: PASS — 4 passed.
+Expected: PASS — 7 passed.
 
 ```bash
 .venv/bin/python -m pytest -p no:cacheprovider -q > /tmp/s4.out 2>&1; echo "REAL_EXIT=$?" >> /tmp/s4.out; tail -3 /tmp/s4.out
 ```
 
-Expected full suite: **2435 + 62 = 2497 passed**, 4 skipped, 0 failed.
-Per file: artifact 7, labelling 10, producer_closure 6, readout_a 13, readout_b 12, readout_c 10, readout_chain 4. A different total means tests were added, lost or renamed —
-investigate before committing; the delta is the qualification check.
-
 - [ ] **Step 3: Commit**
 
 ```bash
 git add tests/test_atlas_readout_chain.py
-git commit -m "test(atlas-s4): real Stage 3 ladder output into the real read-outs"
+git commit -m "test(atlas-s4): real Stage 3 output through all three read-outs"
 ```
 
 ---
@@ -2004,7 +2207,7 @@ git commit -m "test(atlas-s4): real Stage 3 ladder output into the real read-out
 - [ ] Read-out C: retention under `K(n)`; intervention must **also** pass under `K(n+14)`, otherwise **inconclusive**; lexicographic selection with a named `NO_SHAPE_PASSES`.
 - [ ] Artifact carries resets, `remaining`, `boundary_missing`, and `None` for every undefined value through emission; provenance fails closed; `_jsonable` at the boundary.
 - [ ] Real Stage 3 ladder output drives the real read-outs.
-- [ ] **62 new tests** (artifact 7, labelling 10, producer_closure 6, readout_a 13, readout_b 12, readout_c 10, readout_chain 4). Full suite **2497 passed**, exit code read from the process.
+- [ ] **78 new tests** (labelling 10, producer-closure 6, read-out A 20, read-out B 12, read-out C 14, artifact 9, chain 7). Full suite **2513 passed**, exit code read from the process.
 
 ## Out of scope
 
