@@ -3767,9 +3767,27 @@ Counted from the test functions actually written in this plan:
 | `tests/test_atlas_readout_chain.py` | 11 |
 | **planned new** | **119** |
 
-Stage 3 qualified at **2435**, so the expected full-suite total is **2554**.
+**RESOLVED AT QUALIFICATION.** The predicted total was **2554**, from a Stage 3 baseline
+of 2435. The measured result is **2556 passed / 4 skipped / 53 deselected / 0 failed**,
+`REAL_EXIT=0`, 7m10s.
 
-**This is a derivation to re-verify, not an acceptance number.** At qualification:
+The +2 is entirely in the **baseline**, not the delta. Commit `5dbcfe9`
+("event-weighted excluded mass in the shipped tracer") landed *after* Stage 3's
+qualification run and added two test functions to `tests/test_selection_tracer.py`
+(10 → 12), so the true pre-Stage-4 baseline is **2437 passed / 4 skipped**, verified by
+collecting at `b85ae19`: 2441 selected = 2437 + 4 skipped.
+
+```text
+2437  true baseline (not the 2435 recorded at Stage 3 qualification)
++119  Stage 4, recounted from `def test_` on disk
+=2556 measured
+```
+
+**The delta is exactly 119, so no pre-existing test changed behaviour.** This is the
+check earning its keep: the arithmetic failed first against a stale baseline, and
+chasing the two tests found a real gap in the record rather than a defect in the work.
+
+**This was a derivation to re-verify, not an acceptance number.** At qualification:
 
 1. Recount `def test_` in the files as they were actually written — the plan is a
    starting point and the count moves when implementation reveals a case worth pinning.

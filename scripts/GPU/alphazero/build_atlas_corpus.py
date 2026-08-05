@@ -13,6 +13,7 @@ Exit codes: 0 OK, 2 usage/validation, 3 PHASE_GEOMETRY_NO_GO, 4 ASSIGNMENT_SHORT
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -44,6 +45,13 @@ def _jsonable(obj):
     only rescues unserializable VALUES -- not keys. Converting here keeps the
     pure module free of a JSON concern.
     """
+    # Dataclasses are the same boundary problem as tuple keys: the atlas rows
+    # hold LegResult / BoundaryRecord objects because the read-outs address them
+    # by ATTRIBUTE, and only the JSON boundary needs them flattened. Additive --
+    # every pre-existing caller's payload contains no dataclasses, so their
+    # output is byte-identical.
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return _jsonable(dataclasses.asdict(obj))
     if isinstance(obj, dict):
         return {("|".join(map(str, k)) if isinstance(k, tuple) else k):
                 _jsonable(v) for k, v in obj.items()}
