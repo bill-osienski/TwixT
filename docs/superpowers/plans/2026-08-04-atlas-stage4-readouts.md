@@ -1604,10 +1604,22 @@ def test_classify_strata_reads_the_row_not_a_bare_leg_list():
 def test_local_flat_strata_are_EDGE_level_not_row_level():
     """A row can hold both flat and non-flat reference parents; pooling them
     would hide the contrast the stratum exists to expose."""
-    flat = {"depth": 1, "parent_priors": {i: 1.0 / 500 for i in range(500)}}
-    sharp = {"depth": 1, "parent_priors": {0: 0.9, 1: 0.05, 2: 0.05}}
-    assert "locally_flat_depth1" in classify_edge_strata(flat)
-    assert classify_edge_strata(sharp) == set()
+    flat_priors = {i: 1.0 / 500 for i in range(500)}
+    assert "locally_flat_depth1" in classify_edge_strata(
+        {"depth": 1, "parent_priors": flat_priors})
+    assert "locally_flat_depth2" in classify_edge_strata(
+        {"depth": 2, "parent_priors": flat_priors})
+    assert classify_edge_strata(
+        {"depth": 1, "parent_priors": {0: 0.9, 1: 0.05, 2: 0.05}}) == set()
+
+
+def test_a_flat_ROOT_edge_gets_no_local_stratum():
+    """Depth 0 is the root, not a local parent. An `else depth2` fallthrough
+    would invent a stratum membership the edge does not have."""
+    flat_priors = {i: 1.0 / 500 for i in range(500)}
+    assert classify_edge_strata({"depth": 0, "parent_priors": flat_priors}) == set()
+    assert classify_edge_strata({"parent_priors": flat_priors}) == set()
+    assert classify_edge_strata({"depth": 7, "parent_priors": flat_priors}) == set()
 
 
 def test_aggregate_excludes_INCONCLUSIVE_rows_from_the_denominator():
@@ -1783,9 +1795,16 @@ def classify_edge_strata(edge: Dict[str, Any]) -> Set[str]:
     """
     s: Set[str] = set()
     priors = edge.get("parent_priors")
-    if priors and _is_flat(priors):
-        s.add("locally_flat_depth1" if edge.get("depth") == 1
-              else "locally_flat_depth2")
+    if not priors or not _is_flat(priors):
+        return s
+    # EXPLICIT branches. An `else depth2` fallthrough would map a flat ROOT edge
+    # (depth 0) -- and any malformed or missing depth -- to locally_flat_depth2,
+    # inventing a stratum membership the edge does not have.
+    depth = edge.get("depth")
+    if depth == 1:
+        s.add("locally_flat_depth1")
+    elif depth == 2:
+        s.add("locally_flat_depth2")
     return s
 
 
