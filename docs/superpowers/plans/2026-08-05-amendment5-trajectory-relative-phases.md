@@ -24,8 +24,9 @@ read-out is touched.
 ## The change, in one line
 
 ```python
-# was:  phase_for_ply(ply)                -> absolute bounds 0-30 / 31-60 / 61-90 / 91+
-# now:  phase_for_ply(ply, n_moves)       -> PHASE_NAMES[min(3, (4*ply)//n_moves)]
+# was:  phase_for_ply(ply)           -> absolute bounds 0-30 / 31-60 / 61-90 / 91+
+# now:  phase_for_ply(ply, n_moves)  -> PHASES[min(3, (4*ply)//n_moves)]
+#                                       domain 0 <= ply < n_moves, else REJECT
 ```
 
 `n_moves` is a required positional argument, **not** an optional one with a default. A
@@ -52,8 +53,11 @@ is that every call site must now supply the trajectory.
 - Test: `tests/test_corpus_geometry.py`
 
 **Interfaces:**
-- Produces: `PHASE_NAMES`; `phase_for_ply(ply, n_moves) -> str`. `_PHASE_BOUNDS` is
-  **deleted** — leaving it would be a second, contradictory definition of the same word.
+- Produces: `phase_for_ply(ply, n_moves) -> str`, indexing the **existing** `PHASES`
+  tuple, which is already in formula order `("opening", "early_mid", "midgame", "late")`.
+  No parallel name tuple is introduced — a second ordered list of the same four words is
+  exactly the kind of duplicate that drifts. `_PHASE_BOUNDS` is **deleted**; leaving it
+  would be a second, contradictory definition of the same word.
 - `eligible_plies` / `eligible_cells` keep their signatures; only their internals change.
 
 - [ ] **Step 1: Write the failing test**
@@ -90,11 +94,24 @@ def test_the_final_ply_is_always_late_and_the_first_always_opening():
         assert phase_for_ply(n - 1, n) == "late"
 
 
-def test_the_min_clamp_holds_at_and_past_the_end():
-    """`min(3, ...)` is the amendment's own clamp: a ply at or past n_moves is
-    in the final quarter, not an index error."""
-    assert phase_for_ply(40, 40) == "late"
-    assert phase_for_ply(99, 40) == "late"
+def test_a_ply_at_or_past_the_end_is_REJECTED_not_classified():
+    """Amendment 5's domain is 0 <= ply < n_moves.
+
+    Unguarded, `min(3, ...)` would label these `late` -- so a row whose ply and
+    n_moves had come apart, which is corrupt metadata, would enter the corpus
+    wearing a plausible phase. There is no valid position at ply == n_moves:
+    the game is over.
+    """
+    for bad in (40, 41, 99):
+        with pytest.raises(ValueError, match="ply"):
+            phase_for_ply(bad, 40)
+
+
+def test_the_domain_restriction_changes_no_valid_classification():
+    """Over the whole domain the raw index never exceeds 3, so `min(3, ...)`
+    never binds for a real position. Rejecting outside the domain therefore
+    cannot alter any answer the formula gives inside it."""
+    assert max((4 * p) // n for n in range(1, 300) for p in range(n)) == 3
 
 
 def test_n_moves_is_REQUIRED_not_defaulted():
@@ -111,12 +128,24 @@ def test_guards_are_kept():
         phase_for_ply(0, 0)
 
 
-def test_every_game_of_at_least_eight_moves_serves_ALL_EIGHT_cells():
-    """The geometry failure this amendment exists to fix. Each quarter of a
-    game with n_moves >= 8 holds at least two plies, hence both sides."""
-    for n in (8, 39, 57, 76):
+def test_every_game_from_8_to_280_moves_serves_ALL_EIGHT_cells():
+    """The geometry failure this amendment exists to fix, swept EXHAUSTIVELY
+    over the whole producible range rather than sampled at four points.
+
+    280 is the frozen `max_moves`, so 8..280 is every length generation can
+    emit; below 8 a quarter can hold one ply and therefore one side. A sampled
+    test would miss a parity or rounding hole at some specific length, which is
+    precisely the class of defect that produced the no-go.
+    """
+    for n in range(8, 281):
         meta = GameMeta(game_id=0, seed=1, n_moves=n, start_player="red")
-        assert len(eligible_cells(meta)) == 8
+        assert len(eligible_cells(meta)) == 8, f"n_moves={n} serves fewer cells"
+
+
+def test_below_eight_moves_a_quarter_can_hold_a_single_side():
+    """Stated so the >= 8 bound is a measured boundary, not an assumption."""
+    short = GameMeta(game_id=0, seed=1, n_moves=4, start_player="red")
+    assert len(eligible_cells(short)) < 8
 
 
 def test_the_retired_pilots_lengths_would_now_all_serve_late():
@@ -130,8 +159,9 @@ def test_the_retired_pilots_lengths_would_now_all_serve_late():
 
 
 def test_quarters_partition_the_whole_trajectory():
-    """No ply is unassigned and none is double-assigned."""
-    for n in (8, 39, 57, 76):
+    """No ply is unassigned and none is double-assigned, over every producible
+    length."""
+    for n in range(8, 281):
         meta = GameMeta(game_id=0, seed=1, n_moves=n, start_player="red")
         seen = [p for ph in PHASES for s in ("red", "black")
                 for p in eligible_plies(meta, ph, s)]
@@ -151,29 +181,35 @@ two-argument calls.
 # trajectory, not an absolute ply band. Absolute bounds made the late cells
 # unfillable -- zero of 24 pilot games reached ply 91 -- and a lower fitted
 # cutoff would tune to those very lengths.
-PHASE_NAMES: Tuple[str, ...] = ("opening", "early_mid", "midgame", "late")
-
-
 def phase_for_ply(ply: int, n_moves: int) -> str:
-    """`min(3, (4 * ply) // n_moves)` -- amendment 5, verbatim.
+    """`min(3, (4 * ply) // n_moves)` over `0 <= ply < n_moves` -- amendment 5.
 
     `n_moves` is REQUIRED. A default would let a stale call site keep
     absolute-like behaviour silently, which is the one failure this change
     cannot tolerate.
 
-    A ply at or past `n_moves` is in the final quarter by the amendment's own
-    `min(3, ...)` clamp, not an error.
+    A ply at or past `n_moves` is REJECTED, not clamped to `late`: there is no
+    valid position at `ply == n_moves`, and silently labelling one would let a
+    row whose ply and n_moves had come apart enter the corpus wearing a
+    plausible phase. Over the valid domain the raw index never exceeds 3, so
+    the clamp never binds for a real position and this rejection changes no
+    valid answer.
+
+    Indexes PHASES directly -- it is already in formula order.
     """
     if ply < 0:
         raise ValueError(f"ply must be non-negative, got {ply}")
     if n_moves <= 0:
         raise ValueError(f"n_moves must be positive, got {n_moves}")
-    return PHASE_NAMES[min(3, (4 * ply) // n_moves)]
+    if ply >= n_moves:
+        raise ValueError(
+            f"ply {ply} is outside the game's trajectory (n_moves={n_moves}); "
+            f"amendment 5's domain is 0 <= ply < n_moves")
+    return PHASES[min(3, (4 * ply) // n_moves)]
 ```
 
-`_PHASE_BOUNDS` is deleted. `eligible_plies` and `eligible_cells` pass `meta.n_moves`.
-`PHASES` keeps its existing value and order; `PHASE_NAMES` is the index-ordered tuple the
-formula selects from, and a test asserts the two agree.
+`_PHASE_BOUNDS` is deleted. `eligible_plies` and `eligible_cells` pass `meta.n_moves`;
+both already iterate `range(meta.n_moves)`, so every ply they produce is in domain.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -276,10 +312,14 @@ def test_phase0_keeps_ABSOLUTE_bounds_and_is_not_amended():
 
 ## Completion criteria
 
-- [ ] `phase_for_ply(ply, n_moves)` implements `min(3, (4*ply)//n_moves)` verbatim, with
-      `n_moves` **required**; `_PHASE_BOUNDS` is deleted from `corpus_geometry`.
-- [ ] Every game with `n_moves ≥ 8` serves all eight phase×side cells, and the quarters
-      partition the trajectory exactly — no ply unassigned, none double-assigned.
+- [ ] `phase_for_ply(ply, n_moves)` implements `min(3, (4*ply)//n_moves)` verbatim over
+      the domain `0 <= ply < n_moves`, with `n_moves` **required** and out-of-domain
+      **rejected, never clamped to late**; it indexes the existing `PHASES` and adds no
+      parallel name tuple; `_PHASE_BOUNDS` is deleted from `corpus_geometry`.
+- [ ] Every `n_moves` from **8 through 280** — the whole producible range, swept
+      exhaustively rather than sampled — serves all eight phase×side cells, and the
+      quarters partition the trajectory exactly at each: no ply unassigned, none
+      double-assigned. The `< 8` boundary is asserted too, so the bound is measured.
 - [ ] The retired pilot's **lengths** (39–76) all yield late capacity on both sides,
       retained as a regression fixture only. **No retired position enters any corpus.**
 - [ ] `derive_row_facts` takes `n_moves`; `run_row` and `verify_pilot` supply it.

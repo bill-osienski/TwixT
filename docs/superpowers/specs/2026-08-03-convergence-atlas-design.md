@@ -403,12 +403,24 @@ frequency claim is made from 24 games.
 Phase is now the quarter of the game's **realized trajectory**:
 
 ```text
+domain      0 <= ply < n_moves          (outside this, REJECT -- see below)
 phase_index = min(3, (4 * ply) // n_moves)
               0 opening · 1 early_mid · 2 midgame · 3 late
 ```
 
 The four names are unchanged; "late" now means the final quarter of *that game's* own
-trajectory. Everything else about the corpus is unchanged: equal phase×side cells, one
+trajectory.
+
+**Domain, and why it is a rejection rather than a clamp.** A position must satisfy
+`0 ≤ ply < n_moves`; anything else is **rejected**, not classified. Left unguarded, a
+`ply` at or beyond the end would be silently labelled `late` — so a row whose `ply` and
+`n_moves` had come apart, which is corrupt metadata, would enter the corpus wearing a
+plausible phase. There is no valid position at `ply == n_moves`: the game is over.
+
+The restriction **changes no valid classification.** Over the entire domain the raw index
+`(4 * ply) // n_moves` never exceeds 3, so `min(3, …)` never binds for a real position;
+it is retained as written because it is the formula, and it is now unreachable rather
+than load-bearing. Everything else about the corpus is unchanged: equal phase×side cells, one
 position per game, the 24-game pilot with 3 per cell, the sizing formula and its allowed
 `N`, every gate, and all three read-outs.
 
