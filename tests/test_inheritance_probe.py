@@ -186,3 +186,30 @@ def test_overall_p75_branch_fires_independently():
     )
     assert verdict["verdict"] == "WARM_START_REQUIRED"
     assert any("p75" in reason for reason in verdict["reasons"])
+
+
+def test_phase0_keeps_ABSOLUTE_bounds_and_is_NOT_amended():
+    """Amendment 5 changed the CORPUS phase definition, not Phase 0's.
+
+    Phase 0 ran, returned WARM_START_REQUIRED, and its recorded per-phase
+    medians (opening 0.160105 n=31, early_mid 0.254947 n=20) are facts about
+    ABSOLUTE phases. Re-labelling them under a definition adopted afterwards
+    would retroactively rewrite a completed, frozen measurement.
+
+    The two functions are intentionally different. This is the seam that says
+    so out loud -- without it, a later reader would reasonably "fix" the
+    duplication and silently rewrite Phase 0's result.
+    """
+    import inspect
+
+    from scripts.GPU.alphazero import corpus_geometry, inheritance_probe
+
+    # Phase 0: absolute, one argument.
+    assert phase_for_ply(95) == "late"
+    assert phase_for_ply(30) == "opening"
+    assert len(inspect.signature(inheritance_probe.phase_for_ply).parameters) == 1
+
+    # The corpus: trajectory-relative, two arguments, and it DISAGREES.
+    assert corpus_geometry.phase_for_ply(30, 40) == "late"
+    assert corpus_geometry.phase_for_ply(95, 400) == "opening"
+    assert len(inspect.signature(corpus_geometry.phase_for_ply).parameters) == 2

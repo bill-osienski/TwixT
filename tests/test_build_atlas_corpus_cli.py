@@ -128,7 +128,13 @@ def test_pilot_gate_passes_and_no_gos_with_exit_3(tmp_path):
              "--sampling-seed", "7")
     assert r.returncode == 0 and json.loads(r.stdout)["verdict"] == "PASS"
 
-    short = _block(tmp_path / "pg2", 0, 24, n_moves=60)
+    # Amendment 5 dissolved the old no-go fixture: 60-move games have 15-ply
+    # quarters and fill every cell. `_block` ALTERNATES start_player, so a
+    # single-ply-quarter game does not starve anything either -- the two start
+    # players cover the eight cells between them. At n_moves=2 only two phases
+    # exist at all, (4p)//2 for p in {0,1} giving 0 and 2, so `late` and
+    # `early_mid` are unreachable whatever the start player.
+    short = _block(tmp_path / "pg2", 0, 24, n_moves=2)
     r2 = _run("pilot-gate", "--sidecar-dir", short, "--base-seed", str(BASE),
               "--sampling-seed", "7")
     assert r2.returncode == 3
@@ -179,7 +185,7 @@ def test_assign_rejects_an_oversized_continuation_as_a_top_up(tmp_path):
 
 def test_assign_shortfall_exits_4_with_no_partial_corpus(tmp_path):
     pilot = _block(tmp_path / "p4", 0, 24)
-    short = _block(tmp_path / "c4", 24, 216, n_moves=50)
+    short = _block(tmp_path / "c4", 24, 216, n_moves=2)   # see pilot-gate note
     r = _run("assign", "--pilot-dir", pilot, "--continuation-dir", short,
              "--base-seed", str(BASE), "--n-target", "200", "--sampling-seed", "7")
     out = json.loads(r.stdout)
