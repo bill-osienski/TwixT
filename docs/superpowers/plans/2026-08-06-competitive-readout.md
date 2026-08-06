@@ -2188,7 +2188,7 @@ def test_run_readout_match_produces_a_real_score_rate(tmp_path):
         config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                           opening_temp_plies=2),
         workers=1, output=str(out), evaluator_factory=fake_evaluator_factory,
-        allow_dirty=True,   # the worktree is dirty while implementing
+        repo_dir=clean_repo,
     )
     # The whole point of agent identity: this is NOT None.
     assert summary["a_score_rate"] is not None
@@ -2208,7 +2208,7 @@ def test_run_readout_match_writes_per_game_rows_with_agent_ids(tmp_path):
         config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                           opening_temp_plies=2),
         workers=1, output=str(out), evaluator_factory=fake_evaluator_factory,
-        allow_dirty=True,   # the worktree is dirty while implementing
+        repo_dir=clean_repo,
     )
     rows = [json.loads(line) for line in
             (tmp_path / "m_games.jsonl").read_text().splitlines()]
@@ -2217,7 +2217,7 @@ def test_run_readout_match_writes_per_game_rows_with_agent_ids(tmp_path):
     assert all(r["comparison_unit"] == "agent" for r in rows)
 
 
-def test_provenance_is_complete_and_never_silently_null(tmp_path):
+def test_provenance_is_complete_and_never_silently_null(tmp_path, clean_repo):
     out = tmp_path / "m.json"
     s = run_readout_match(
         checkpoint=CKPT,
@@ -2227,20 +2227,22 @@ def test_provenance_is_complete_and_never_silently_null(tmp_path):
         config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                           opening_temp_plies=2),
         workers=1, output=str(out), evaluator_factory=fake_evaluator_factory,
-        allow_dirty=True,
+        repo_dir=clean_repo, prior_seed_intervals=[[100, 200]],
     )
     assert s["git_commit"]                       # never None
-    assert "worktree_clean" in s
+    assert s["worktree_clean"] is True
     assert s["config"]["checkpoint_sha1"]        # never None
     assert s["wall_clock_seconds"] >= 0
     assert s["config"]["seed_interval"] == [902, 904]
     assert s["config"]["seed_interval_convention"] == "half_open_[start,end)"
+    assert s["config"]["prior_seed_intervals"] == [[100, 200]]
     assert set(s["config"]["rng_derivation"]) == {
         "search_red", "search_black", "readout_red", "readout_black",
         "game_seed"}
 
 
-def test_an_unreadable_checkpoint_aborts_instead_of_recording_a_null_hash(tmp_path):
+def test_an_unreadable_checkpoint_aborts_instead_of_recording_a_null_hash(
+        tmp_path, clean_repo):
     # CONSTRUCTED negative case: provenance must fail closed.
     with pytest.raises(RuntimeError, match="hash checkpoint"):
         run_readout_match(
@@ -2251,17 +2253,18 @@ def test_an_unreadable_checkpoint_aborts_instead_of_recording_a_null_hash(tmp_pa
             config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                               opening_temp_plies=2),
             workers=1, output=None, evaluator_factory=fake_evaluator_factory,
-            allow_dirty=True,
+            repo_dir=clean_repo,
         )
 
 
-def test_a_dirty_worktree_is_refused_by_default(tmp_path):
-    # This repo's worktree is dirty during implementation, so the default
-    # must refuse. If it ever passes here, the guard is not wired.
-    import subprocess
-    porcelain = subprocess.check_output(["git", "status", "--porcelain"]).decode()
-    if not porcelain.strip():
-        pytest.skip("worktree is clean; cannot exercise the refusal here")
+def test_a_dirty_worktree_is_refused(dirty_repo):
+    """CONSTRUCTED: a purpose-built dirty repo, so this never depends on the
+    ambient worktree's state and can never silently skip.
+
+    There is no override. `git status --porcelain` names changed files but not
+    their contents, so a recorded dirty run is not reproducible from its own
+    provenance.
+    """
     with pytest.raises(RuntimeError, match="dirty"):
         run_readout_match(
             checkpoint=CKPT,
@@ -2271,18 +2274,64 @@ def test_a_dirty_worktree_is_refused_by_default(tmp_path):
             config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                               opening_temp_plies=2),
             workers=1, output=None, evaluator_factory=fake_evaluator_factory,
+            repo_dir=dirty_repo,
+        )
+
+
+def test_overlapping_seed_interval_is_refused_before_any_game(clean_repo):
+    with pytest.raises(ValueError, match="overlap"):
+        run_readout_match(
+            checkpoint=CKPT,
+            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+            games=4, base_seed=1000,
+            config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
+                              opening_temp_plies=2),
+            workers=1, output=None, evaluator_factory=fake_evaluator_factory,
+            repo_dir=clean_repo, prior_seed_intervals=[[1002, 1010]],
         )
 ```
 
-**Note on `CKPT`:** the existing tests use a path string that need not exist,
-because `fake_evaluator_factory` ignores it. The hash now *does* read it, so
-`CKPT` in this test module must point at a real file. Create one at module
-scope:
+**Two fixtures this module needs.** Add them at the top of
+`tests/test_eval_agent_identity.py`:
 
 ```python
 import pathlib
-CKPT = str(pathlib.Path(__file__).parent / "eval_fakes.py")   # any real file
+import subprocess
+
+# The hash now actually READS the checkpoint, so this must be a real file.
+# fake_evaluator_factory still ignores its contents.
+CKPT = str(pathlib.Path(__file__).parent / "eval_fakes.py")
+
+
+def _init_repo(path):
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=path, check=True)
+    (path / "seed.txt").write_text("seed\n")
+    subprocess.run(["git", "add", "-A"], cwd=path, check=True)
+    subprocess.run(["git", "commit", "-qm", "seed"], cwd=path, check=True)
+    return str(path)
+
+
+@pytest.fixture
+def clean_repo(tmp_path):
+    """A committed, clean repository. Provenance checks run for real against
+    it -- there is no bypass flag to test through."""
+    return _init_repo(tmp_path / "clean_repo")
+
+
+@pytest.fixture
+def dirty_repo(tmp_path):
+    """Same, then made genuinely dirty."""
+    path = tmp_path / "dirty_repo"
+    _init_repo(path)
+    (path / "uncommitted.txt").write_text("dirty\n")
+    return str(path)
 ```
+
+Both fixtures must `mkdir` their directory before `git init`; use
+`path.mkdir(parents=True)` at the start of `_init_repo`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -2357,35 +2406,37 @@ def readout_config_from_name(name, opening_temp_plies, temp_high, temp_low):
     raise ValueError(f"unknown readout name {name!r}; expected {READOUT_NAMES}")
 
 
-def _git_provenance(allow_dirty: bool):
-    """Commit AND worktree state. Fails closed.
+def _git_provenance(repo_dir=None):
+    """Commit and worktree state. Fails closed.
 
-    The spec requires both. A run whose code state cannot be established is
-    not reproducible, so an unavailable commit raises rather than recording
-    None. A dirty worktree raises unless explicitly allowed, and when allowed
-    the exact `git status --porcelain` text is recorded -- never a bare flag.
+    A DIRTY WORKTREE IS REFUSED OUTRIGHT, with no override. Recording
+    `git status --porcelain` would name the changed files but not their
+    contents, so a "dirty but documented" run is still not reproducible from
+    its own provenance. There is no allow_dirty flag by design -- commit or
+    stash first.
+
+    `repo_dir` selects the repository (default: the process CWD). Tests pass a
+    constructed temporary repo so they exercise this exact code path rather
+    than a bypass.
     """
     try:
         commit = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], stderr=subprocess.PIPE
+            ["git", "rev-parse", "HEAD"], stderr=subprocess.PIPE, cwd=repo_dir
         ).decode().strip()
         porcelain = subprocess.check_output(
-            ["git", "status", "--porcelain"], stderr=subprocess.PIPE
+            ["git", "status", "--porcelain"], stderr=subprocess.PIPE, cwd=repo_dir
         ).decode()
     except (OSError, subprocess.CalledProcessError) as e:
         raise RuntimeError(
             f"cannot establish git provenance ({e!r}); a run whose code state "
             f"is unknown is not reproducible") from e
-    dirty = porcelain.strip() != ""
-    if dirty and not allow_dirty:
+    if porcelain.strip():
         raise RuntimeError(
-            "worktree is dirty; commit or stash before a recorded run, or pass "
-            f"allow_dirty=True to record the exact state:\n{porcelain}")
-    return {
-        "git_commit": commit,
-        "worktree_clean": not dirty,
-        "worktree_status_porcelain": porcelain if dirty else "",
-    }
+            "worktree is dirty; a recorded run must come from a committed "
+            "state. Recording the porcelain status would name the changed "
+            "files but not their contents, so it cannot substitute for a "
+            f"commit. Commit or stash first:\n{porcelain}")
+    return {"git_commit": commit, "worktree_clean": True}
 
 
 def _sha1(path):
@@ -2417,17 +2468,22 @@ def _write_outputs(output, summary, results):
 def run_readout_match(checkpoint, candidate_readout, control_readout, games,
                       base_seed, config: EvalConfig, workers, output,
                       pairing_id=None, evaluator_factory=None, replay_dir=None,
-                      allow_dirty=False):
+                      repo_dir=None, prior_seed_intervals=()):
     """Run one candidate-vs-control readout match. Returns the summary dict.
 
-    Provenance is established BEFORE any game runs, so an unreproducible
-    configuration costs nothing.
+    `prior_seed_intervals` is every interval already consumed by this line of
+    work, as half-open [start, end) pairs. Reuse is refused.
+
+    All provenance and disjointness checks run BEFORE any game, so an
+    unreproducible or overlapping configuration costs zero GPU time.
     """
     if candidate_readout == control_readout:
         raise ValueError("candidate and control readouts are identical; "
                          "this match would measure nothing")
-    provenance = _git_provenance(allow_dirty)
+    provenance = _git_provenance(repo_dir)
     checkpoint_sha1 = _sha1(checkpoint)
+    priors = [list(iv) for iv in prior_seed_intervals]
+    validate_seed_intervals([base_seed, base_seed + games], priors)
     started = time.monotonic()
     if pairing_id is None:
         pairing_id = f"{CANDIDATE_ID}_vs_{CONTROL_ID}"
@@ -2453,6 +2509,9 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
         # proving disjointness must compare against this convention.
         "seed_interval": [base_seed, base_seed + games],
         "seed_interval_convention": "half_open_[start,end)",
+        # Spec section 10 requires the intervals of every prior run, so a
+        # reader can verify disjointness without external bookkeeping.
+        "prior_seed_intervals": priors,
         # Search and readout draw from separate streams (spec section 7.1).
         # Recorded so a reader can reconstruct any game exactly.
         "rng_derivation": {
@@ -2494,12 +2553,24 @@ def _build_arg_parser():
     ap.add_argument("--replay-dir", default=None,
                     help="capture per-ply replays incl. top-two child "
                          "visits/Q (required to feed the preflight)")
-    ap.add_argument("--allow-dirty", action="store_true",
-                    help="record a run from a dirty worktree. The exact "
-                         "porcelain status is stored in the summary. Refused "
-                         "by default: an unreproducible run is not evidence.")
+    ap.add_argument("--prior-seed-interval", action="append", default=[],
+                    metavar="START:END",
+                    help="a half-open [START,END) seed interval already "
+                         "consumed by this line of work. Repeatable. Overlap "
+                         "with this run's interval is refused. Recorded in "
+                         "the summary so disjointness is verifiable from the "
+                         "artifact alone.")
     ap.add_argument("--output", required=True)
     return ap
+
+
+def _parse_interval(text):
+    try:
+        start, end = text.split(":")
+        return [int(start), int(end)]
+    except ValueError as e:
+        raise SystemExit(
+            f"bad --prior-seed-interval {text!r}; expected START:END") from e
 
 
 def main(argv=None):
@@ -2522,7 +2593,8 @@ def main(argv=None):
         control_readout=mk(args.control_readout),
         games=args.games, base_seed=args.base_seed, config=config,
         workers=args.workers, output=args.output, replay_dir=args.replay_dir,
-        allow_dirty=args.allow_dirty,
+        prior_seed_intervals=[_parse_interval(t)
+                              for t in args.prior_seed_interval],
     )
     print(f"{summary['pairing_id']}: a_score_rate={summary['a_score_rate']:.4f} "
           f"elo={summary['elo_estimate']:.1f} CI95={summary['elo_ci95']} "
@@ -2739,6 +2811,33 @@ def test_game_binding_rejects_unknown_error_on_its_own():
         validate_game_binding(r, tasks[0])
 
 
+def test_adjacent_half_open_intervals_do_not_overlap():
+    from scripts.GPU.alphazero.eval_integrity import validate_seed_intervals
+    validate_seed_intervals([64, 128], [[0, 64]])
+    validate_seed_intervals([0, 64], [[64, 128]])
+
+
+@pytest.mark.parametrize("prior", [
+    [60, 70],      # straddles the start
+    [120, 200],    # straddles the end
+    [0, 1000],     # contains it
+    [70, 80],      # contained by it
+    [64, 128],     # identical
+])
+def test_overlapping_intervals_raise(prior):
+    from scripts.GPU.alphazero.eval_integrity import validate_seed_intervals
+    with pytest.raises(ValueError, match="overlap"):
+        validate_seed_intervals([64, 128], [prior])
+
+
+def test_empty_or_reversed_interval_raises():
+    from scripts.GPU.alphazero.eval_integrity import validate_seed_intervals
+    with pytest.raises(ValueError, match="empty or reversed"):
+        validate_seed_intervals([100, 100], [])
+    with pytest.raises(ValueError, match="empty or reversed"):
+        validate_seed_intervals([200, 100], [])
+
+
 def test_colour_imbalance_raises():
     tasks = build_agent_pairing_tasks("p", A, B, 4, 100)
     results = [make_result(t, "red", "win", 40) for t in tasks]
@@ -2807,6 +2906,25 @@ def validate_ply(ply: int, expected_sims: int, root_visit_count: int,
                 raise IntegrityError(
                     f"ply {ply}: child {stat.move} has {stat.visits} visits but "
                     f"{label} is {q!r}; a visited child's mean is defined")
+
+
+def validate_seed_intervals(current, priors) -> None:
+    """Refuse a seed interval that overlaps any already-consumed interval.
+
+    Intervals are HALF-OPEN [start, end): [0, 64) and [64, 128) are adjacent,
+    not overlapping. Reusing seeds would silently correlate a "fresh" run with
+    an earlier one, which is the kind of contamination that is invisible in
+    the result and fatal to it.
+    """
+    start, end = current
+    if end <= start:
+        raise ValueError(f"empty or reversed seed interval [{start}, {end})")
+    for prior in priors:
+        p_start, p_end = prior
+        if start < p_end and p_start < end:
+            raise ValueError(
+                f"seed interval [{start}, {end}) overlaps the prior interval "
+                f"[{p_start}, {p_end}); seeds may not be reused")
 
 
 def validate_game_binding(result, task) -> None:
@@ -2938,7 +3056,7 @@ sentinel path, which already terminates the pool.
 In `scripts/GPU/alphazero/eval_readout_match.py`, add the import:
 
 ```python
-from .eval_integrity import validate_result_set
+from .eval_integrity import validate_result_set, validate_seed_intervals
 ```
 
 and call it in `run_readout_match` immediately after `results = run_game_tasks(...)`,
@@ -3065,22 +3183,40 @@ def test_non_finite_q_is_corrupt_not_merely_undefined(bad):
     assert s["undefined_q_plies"] == 1, f"{bad!r} must be caught, not scored"
 
 
-def test_replays_without_the_agent_are_reported_not_silently_skipped():
+def test_PARTIAL_agent_absence_raises():
+    """CONSTRUCTED: one replay contains the agent, one does not.
+
+    Skipping the odd one out and scoring the rest would produce a
+    clean-looking report over a population that quietly lost games -- exactly
+    the fail-open the identity contract exists to prevent.
+    """
     present = _replay(0, "candidate", [_ply(20, "red", _t2())])
     absent = _replay(1, "someone_else", [_ply(20, "red", _t2())])
-    s = preflight_stats([present, absent], agent_id="candidate",
+    with pytest.raises(ValueError, match="absent from 1 of 2"):
+        preflight_stats([present, absent], agent_id="candidate",
                         opening_temp_plies=20)
-    assert s["replays_total"] == 2
-    assert s["replays_matched"] == 1
-    assert s["replays_without_this_agent"] == [1]
+
+
+def test_the_missing_game_ids_are_named_in_the_error():
+    replays = [_replay(0, "candidate", [_ply(20, "red", _t2())]),
+               _replay(7, "someone_else", [_ply(20, "red", _t2())]),
+               _replay(9, "someone_else", [_ply(20, "red", _t2())])]
+    with pytest.raises(ValueError, match=r"\[7, 9\]"):
+        preflight_stats(replays, agent_id="candidate", opening_temp_plies=20)
 
 
 def test_an_agent_absent_from_every_replay_raises():
-    # CONSTRUCTED: silently reporting gates over an empty population would
-    # look like a clean pass.
     r = _replay(0, "someone_else", [_ply(20, "red", _t2())])
-    with pytest.raises(ValueError, match="appears in none"):
+    with pytest.raises(ValueError, match="absent from 1 of 1"):
         preflight_stats([r], agent_id="candidate", opening_temp_plies=20)
+
+
+def test_all_replays_containing_the_agent_pass():
+    replays = [_replay(0, "candidate", [_ply(20, "red", _t2())]),
+               _replay(1, "control", [_ply(20, "black", _t2())])]  # agent is black
+    replays[1]["black_agent_id"] = "candidate"
+    s = preflight_stats(replays, agent_id="candidate", opening_temp_plies=20)
+    assert s["replays_matched"] == 2
 
 
 def test_descriptive_outputs_are_present():
@@ -3272,7 +3408,7 @@ def preflight_stats(replays, agent_id, opening_temp_plies):
     by_bucket = {}
     challenger_visits_at_override = []
     matched_replays = 0
-    skipped_replays = []
+    missing_agent = []
 
     for replay in replays:
         if replay.get("schema_version") != REQUIRED_SCHEMA_VERSION:
@@ -3282,9 +3418,12 @@ def preflight_stats(replays, agent_id, opening_temp_plies):
                 f"top-two telemetry is absent and cannot be inferred")
         colour = _agent_colour(replay, agent_id)
         if colour is None:
-            # Recorded, never silently dropped: a replay set that mostly does
-            # not contain the agent is a selection mistake worth seeing.
-            skipped_replays.append(replay.get("game_idx"))
+            # Collected, then raised on below. A replay selected for this
+            # analysis that does not contain the named agent is an identity
+            # fault, not something to skip: scoring the remainder would report
+            # a clean-looking result over a population that silently lost
+            # games.
+            missing_agent.append(replay.get("game_idx"))
             continue
         matched_replays += 1
         gid = replay.get("game_idx")
@@ -3323,10 +3462,12 @@ def preflight_stats(replays, agent_id, opening_temp_plies):
                 colour_counts[colour] += 1
                 challenger_visits_at_override.append(top2[1].visits)
 
-    if matched_replays == 0:
+    if missing_agent:
         raise ValueError(
-            f"agent {agent_id!r} appears in none of the {len(replays)} replays; "
-            f"refusing to report gates over an empty population")
+            f"agent {agent_id!r} is absent from {len(missing_agent)} of "
+            f"{len(replays)} selected replays (game_idx "
+            f"{sorted(x for x in missing_agent if x is not None)[:20]}); "
+            f"every selected replay must contain the agent under analysis")
 
     max_share = (max(per_game.values()) / overrides) if overrides else None
     total_colour = colour_counts["red"] + colour_counts["black"]
@@ -3339,7 +3480,6 @@ def preflight_stats(replays, agent_id, opening_temp_plies):
         "agent_id": agent_id,
         "replays_total": len(replays),
         "replays_matched": matched_replays,
-        "replays_without_this_agent": skipped_replays,
         "population_plies": population,
         "eligible_plies": eligible,
         "overrides": overrides,
@@ -3552,8 +3692,14 @@ Tooling is complete when all of the following hold, each verified by a command w
   corrupt telemetry, binding/configuration faults, `unknown_error`, and
   incomplete or duplicate result sets.
 - Per-game rows and replay sidecars carry the **complete** readout config.
-  The RNG derivation scheme and the labelled seed interval live in the **run
-  summary**, which is where a reader reconstructs any game from its seed.
+  The RNG derivation scheme, the labelled seed interval and every **prior**
+  seed interval live in the **run summary**, so disjointness is verifiable
+  from the artifact alone.
+- A recorded run is impossible from a dirty worktree, and there is **no
+  override flag**. The refusal is exercised against a constructed dirty
+  repository, never by observing the ambient one.
+- The preflight raises when **any** selected replay lacks the agent under
+  analysis, naming the missing `game_idx` values.
 - `git diff d5326a0 -- scripts/GPU/alphazero/mcts.py scripts/GPU/alphazero/self_play.py` is **empty**. Neither file may change.
 
 **The baseline is `d5326a0`, not `main`.** Both files already differ from `main`
