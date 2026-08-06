@@ -357,7 +357,8 @@ entirely. Serializing a 400-simulation tree at every ply of every game is far pa
 
 ### Position sampling
 
-- Four phases: opening `0–30`, early-mid `31–60`, midgame `61–90`, late `91+`.
+- Four phases — **superseded by amendment 5 below.** Originally absolute ply bounds:
+  opening `0–30`, early-mid `31–60`, midgame `61–90`, late `91+`.
 - Equal representation by phase and side: eight phase×side cells, equal counts.
 - At most **one** position per game.
 - Selection uses **only** game identity, phase, side and the frozen sampling seed.
@@ -365,6 +366,100 @@ entirely. Serializing a 400-simulation tree at every ply of every game is far pa
   search result.
 - Valid state-cap and winner-null games are kept, and identified in summaries.
 - All three read-outs use the same resulting corpus.
+
+### Amendment 5 (2026-08-05) — trajectory-relative phases
+
+**This amendment precedes the work it governs.** It is written after a
+`PHASE_GEOMETRY_NO_GO` and before any implementation, re-run or authorization, and it
+changes **only the corpus phase definition**. No threshold, no pilot size, no sizing
+formula, no gate and no read-out changes.
+
+#### What the gate found
+
+The first authorized pilot generated 24 games over `[20320000, 20320024)` at the frozen
+checkpoint `209cf2d4…` and stopped at the geometry gate:
+
+```text
+achieved flow    18 / 24
+unmet            discovery|late|black   short by 3
+                 discovery|late|red     short by 3
+min-cut cells    both late cells
+game lengths     39 … 76   (median 57; longest game's final ply is MIDGAME)
+outcomes         24 decisive: 15 red, 9 black; no state cap
+```
+
+**Zero of 24 games reached ply 91**, so both late cells had capacity 0 against a demand
+of 3. The other six cells filled. The min-cut named the binding constraint directly,
+which is what it exists for — v16 and v18 each had to diagnose the same shape backwards
+from a bare `capacity 0`.
+
+*Accuracy qualification, recorded because the distinction matters:* these 24 games prove
+**zero late capacity for this frozen pilot**, not that the checkpoint has zero
+probability of ever reaching ply 91. The stop is valid under either reading, and no
+frequency claim is made from 24 games.
+
+#### The amended definition
+
+Phase is now the quarter of the game's **realized trajectory**:
+
+```text
+phase_index = min(3, (4 * ply) // n_moves)
+              0 opening · 1 early_mid · 2 midgame · 3 late
+```
+
+The four names are unchanged; "late" now means the final quarter of *that game's* own
+trajectory. Everything else about the corpus is unchanged: equal phase×side cells, one
+position per game, the 24-game pilot with 3 per cell, the sizing formula and its allowed
+`N`, every gate, and all three read-outs.
+
+`n_moves` is a completed-game property, and §3 already permits it explicitly — *"Game
+length is a game property, not a search result, so this does not violate blind
+sampling"*. Selection still reads only game identity, phase, side, game length and the
+frozen sampling seed.
+
+#### Why relative quarters and not a lower absolute cutoff
+
+Lowering `late` from ply 91 to a fitted absolute bound would tune the phase definition
+**directly to the 24 game lengths just observed**, and would fail again the moment the
+length distribution shifts — with a different checkpoint, a different budget, or simply
+a different seed range. A trajectory-relative definition is stable under that shift by
+construction.
+
+#### What this changes, stated as a trade
+
+**Removed.** §12's late-stratum bias — *"Filling the late cells requires games that
+survive to ply 91+, so the late stratum over-represents long games"* — is **gone**, since
+every game of sufficient length contributes a position to every quarter. The v16a
+observation that 19 state-cap marathons supplied 47 of 84 late positions cannot recur.
+
+**Introduced, and now the standing limitation in its place.** "Late" no longer denotes a
+fixed absolute depth. A 40-ply game's late positions sit at absolute plies 30–39, a
+76-ply game's at 57–75, so the late stratum **mixes absolute depths** and its results
+generalize to *final-quarter positions*, not to *deep positions*. Any later reading of a
+phase-stratified result must use this sense of the word.
+
+**Feasibility.** Every game with `n_moves ≥ 8` can serve all eight phase×side cells: each
+quarter then holds at least two plies, hence both sides to move. The observed 39–76
+range clears that comfortably, so the pilot geometry gate is expected to pass — but the
+gate remains the arbiter and is not presumed.
+
+#### Scope exclusion — Phase 0 is NOT amended
+
+`inheritance_probe.phase_for_ply` keeps the **absolute** bounds and is deliberately left
+alone. Phase 0 ran, returned `WARM_START_REQUIRED`, and its recorded per-phase medians
+(opening `0.160105` n=31, early-mid `0.254947` n=20) are facts about *absolute* phases.
+Re-labelling them under a definition adopted afterwards would retroactively rewrite a
+completed, frozen measurement. The two functions are intentionally different and must not
+be unified.
+
+#### Evidence disposition
+
+The 24 games at `[20320000, 20320024)` are retired as **geometry-design evidence only**.
+They must never enter discovery or validation, and no position from them may be reused.
+The successor corpus must come from a **wholly new range**: proposed
+`[20321000, 20321480)` with sampling seed `20260806`, to be frozen by a **new written
+authorization** after this amendment is implemented and qualified. Nothing here
+authorizes GPU work.
 
 ### Staged sizing (frozen before the pilot)
 
@@ -1413,12 +1508,16 @@ Source commits, doc-only: `a9fe332` (v17 preregistration), `60da20c` (v16 closeo
 
 ### Known biases and limits### Known biases and limits
 
-- **Late-stratum composition.** Filling the late cells requires games that survive to
-  ply 91+, so the late stratum over-represents long games. v16a saw this directly: 19
-  state-cap 280-ply marathons supplied 47 of its 84 late positions. **Late results
-  generalize to games that survive to ply 91+, not to the overall game population.**
-  Report state-cap rate, winner-null rate and game-length distribution beside late
-  results. No rebalancing after observing them.
+- **Late-stratum composition — REPLACED by amendment 5.** Under the original absolute
+  bounds, filling the late cells required games surviving to ply 91+, so the late
+  stratum over-represented long games (v16a: 19 state-cap 280-ply marathons supplied 47
+  of its 84 late positions). Trajectory-relative quarters remove that bias entirely —
+  every sufficiently long game contributes to every quarter. **The limitation in its
+  place: "late" now mixes absolute depths, so late results generalize to final-quarter
+  positions rather than to deep positions.** Continue to report state-cap rate,
+  winner-null rate and the game-length distribution beside late results, since the
+  length distribution is now what determines what "late" physically means. No
+  rebalancing after observing them.
 - **6,400 is a stable proxy, not ground truth.** The 3,200/6,400 agreement requirement
   is what keeps this falsifiable.
 - **Shared structure.** Labels and features come from the same searches, so label noise
