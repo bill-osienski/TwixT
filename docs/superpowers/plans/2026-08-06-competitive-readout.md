@@ -51,7 +51,8 @@ Copied verbatim from `docs/superpowers/specs/2026-08-05-competitive-readout-stre
 | `tests/test_eval_readout_telemetry.py` *(new)* | Telemetry contract + search-identity tests. |
 | `tests/test_eval_agent_identity.py` *(new)* | Task/result/colour-binding tests. |
 | `tests/test_eval_summary_agent_mode.py` *(new)* | Agent-mode aggregation + legacy rejection. |
-| `tests/test_eval_integrity.py` *(new)* | Zero-tolerance condition tests. |
+| `tests/test_eval_integrity.py` *(new)* | Zero-tolerance condition tests, incl. seed-interval validation. |
+| `tests/test_eval_provenance.py` *(new)* | `_git_provenance` against constructed clean/dirty/non-repo directories. |
 | `tests/test_readout_preflight.py` *(new)* | Frozen gate tests. |
 
 **Phase independence:** Phase A touches only JavaScript; Phase B touches only Python. They share no file and may be executed in either order, or concurrently.
@@ -2178,7 +2179,8 @@ def test_unknown_readout_name_is_rejected():
         readout_config_from_name("wishful", 20, 1.0, 0.1)
 
 
-def test_run_readout_match_produces_a_real_score_rate(tmp_path):
+def test_run_readout_match_produces_a_real_score_rate(monkeypatch, tmp_path):
+    _stub_provenance(monkeypatch)
     out = tmp_path / "m.json"
     summary = run_readout_match(
         checkpoint=CKPT,
@@ -2188,7 +2190,6 @@ def test_run_readout_match_produces_a_real_score_rate(tmp_path):
         config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                           opening_temp_plies=2),
         workers=1, output=str(out), evaluator_factory=fake_evaluator_factory,
-        repo_dir=clean_repo,
     )
     # The whole point of agent identity: this is NOT None.
     assert summary["a_score_rate"] is not None
@@ -2198,7 +2199,8 @@ def test_run_readout_match_produces_a_real_score_rate(tmp_path):
     assert json.loads(out.read_text())["agent_a"] == "candidate"
 
 
-def test_run_readout_match_writes_per_game_rows_with_agent_ids(tmp_path):
+def test_run_readout_match_writes_per_game_rows_with_agent_ids(monkeypatch, tmp_path):
+    _stub_provenance(monkeypatch)
     out = tmp_path / "m.json"
     run_readout_match(
         checkpoint=CKPT,
@@ -2208,7 +2210,6 @@ def test_run_readout_match_writes_per_game_rows_with_agent_ids(tmp_path):
         config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                           opening_temp_plies=2),
         workers=1, output=str(out), evaluator_factory=fake_evaluator_factory,
-        repo_dir=clean_repo,
     )
     rows = [json.loads(line) for line in
             (tmp_path / "m_games.jsonl").read_text().splitlines()]
@@ -2217,9 +2218,68 @@ def test_run_readout_match_writes_per_game_rows_with_agent_ids(tmp_path):
     assert all(r["comparison_unit"] == "agent" for r in rows)
 
 
-def test_provenance_is_complete_and_never_silently_null(tmp_path, clean_repo):
+def test_provenance_anchors_to_the_executing_source_repository():
+    """The anchor must be THIS repository, not the process CWD and not a
+    caller-supplied path. Otherwise a run could execute dirty engine code
+    while recording a pristine unrelated repository.
+    """
+    import inspect
+    from scripts.GPU.alphazero import eval_readout_match as M
+
+    anchor = pathlib.Path(M._source_repo_dir()).resolve()
+    module_dir = pathlib.Path(M.__file__).resolve().parent
+    assert anchor == module_dir
+
+    # run_readout_match must expose NO repository parameter.
+    params = inspect.signature(M.run_readout_match).parameters
+    assert "repo_dir" not in params and "allow_dirty" not in params
+
+
+def test_provenance_runs_before_any_game(monkeypatch, tmp_path):
+    """CONSTRUCTED: make provenance fail and assert no game was played.
+
+    monkeypatch is a TEST-ONLY reach into the module. It is deliberately not a
+    parameter, so no production caller can aim provenance elsewhere.
+    """
+    from scripts.GPU.alphazero import eval_readout_match as M
+
+    def _boom(_repo_dir):
+        raise RuntimeError("worktree is dirty")
+
+    calls = []
+
+    def _counting_factory(path):
+        calls.append(path)
+        return fake_evaluator_factory(path)
+
+    monkeypatch.setattr(M, "_git_provenance", _boom)
+    with pytest.raises(RuntimeError, match="dirty"):
+        M.run_readout_match(
+            checkpoint=CKPT,
+            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+            games=2, base_seed=902,
+            config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
+                              opening_temp_plies=2),
+            workers=1, output=None, evaluator_factory=_counting_factory,
+        )
+    assert calls == [], "a game ran despite failing provenance"
+
+
+def _stub_provenance(monkeypatch):
+    """Test-only: satisfy provenance so match MECHANICS can be exercised while
+    the working tree is legitimately dirty during development."""
+    from scripts.GPU.alphazero import eval_readout_match as M
+    monkeypatch.setattr(M, "_git_provenance",
+                        lambda _d: {"git_commit": "0" * 40,
+                                    "worktree_clean": True})
+
+
+def test_summary_records_the_full_provenance_block(monkeypatch, tmp_path):
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
     out = tmp_path / "m.json"
-    s = run_readout_match(
+    s = M.run_readout_match(
         checkpoint=CKPT,
         candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
         control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
@@ -2227,7 +2287,7 @@ def test_provenance_is_complete_and_never_silently_null(tmp_path, clean_repo):
         config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                           opening_temp_plies=2),
         workers=1, output=str(out), evaluator_factory=fake_evaluator_factory,
-        repo_dir=clean_repo, prior_seed_intervals=[[100, 200]],
+        prior_seed_intervals=[[100, 200]],
     )
     assert s["git_commit"]                       # never None
     assert s["worktree_clean"] is True
@@ -2242,10 +2302,11 @@ def test_provenance_is_complete_and_never_silently_null(tmp_path, clean_repo):
 
 
 def test_an_unreadable_checkpoint_aborts_instead_of_recording_a_null_hash(
-        tmp_path, clean_repo):
-    # CONSTRUCTED negative case: provenance must fail closed.
+        monkeypatch, tmp_path):
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
     with pytest.raises(RuntimeError, match="hash checkpoint"):
-        run_readout_match(
+        M.run_readout_match(
             checkpoint=str(tmp_path / "does_not_exist.safetensors"),
             candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
             control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
@@ -2253,34 +2314,14 @@ def test_an_unreadable_checkpoint_aborts_instead_of_recording_a_null_hash(
             config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                               opening_temp_plies=2),
             workers=1, output=None, evaluator_factory=fake_evaluator_factory,
-            repo_dir=clean_repo,
         )
 
 
-def test_a_dirty_worktree_is_refused(dirty_repo):
-    """CONSTRUCTED: a purpose-built dirty repo, so this never depends on the
-    ambient worktree's state and can never silently skip.
-
-    There is no override. `git status --porcelain` names changed files but not
-    their contents, so a recorded dirty run is not reproducible from its own
-    provenance.
-    """
-    with pytest.raises(RuntimeError, match="dirty"):
-        run_readout_match(
-            checkpoint=CKPT,
-            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
-            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
-            games=2, base_seed=904,
-            config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
-                              opening_temp_plies=2),
-            workers=1, output=None, evaluator_factory=fake_evaluator_factory,
-            repo_dir=dirty_repo,
-        )
-
-
-def test_overlapping_seed_interval_is_refused_before_any_game(clean_repo):
+def test_overlapping_seed_interval_is_refused_before_any_game(monkeypatch):
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
     with pytest.raises(ValueError, match="overlap"):
-        run_readout_match(
+        M.run_readout_match(
             checkpoint=CKPT,
             candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
             control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
@@ -2288,23 +2329,44 @@ def test_overlapping_seed_interval_is_refused_before_any_game(clean_repo):
             config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                               opening_temp_plies=2),
             workers=1, output=None, evaluator_factory=fake_evaluator_factory,
-            repo_dir=clean_repo, prior_seed_intervals=[[1002, 1010]],
+            prior_seed_intervals=[[1002, 1010]],
         )
 ```
 
-**Two fixtures this module needs.** Add them at the top of
-`tests/test_eval_agent_identity.py`:
+**Module-scope additions** for `tests/test_eval_agent_identity.py`:
 
 ```python
 import pathlib
-import subprocess
 
 # The hash now actually READS the checkpoint, so this must be a real file.
 # fake_evaluator_factory still ignores its contents.
 CKPT = str(pathlib.Path(__file__).parent / "eval_fakes.py")
+```
+
+**The dirty/clean repository fixtures belong with the provenance unit tests,
+not here.** Add them to `tests/test_eval_provenance.py` (Step 3a below), where
+they test `_git_provenance` directly against constructed repositories with no
+match machinery involved.
+
+- [ ] **Step 3a: Provenance unit tests against constructed repositories**
+
+Create `tests/test_eval_provenance.py`:
+
+```python
+"""_git_provenance against purpose-built repositories.
+
+These never consult the ambient worktree, so they cannot silently skip and
+cannot pass for the wrong reason.
+"""
+import subprocess
+
+import pytest
+
+from scripts.GPU.alphazero.eval_readout_match import _git_provenance
 
 
 def _init_repo(path):
+    path.mkdir(parents=True)
     subprocess.run(["git", "init", "-q"], cwd=path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t"], cwd=path, check=True)
     subprocess.run(["git", "config", "user.name", "t"], cwd=path, check=True)
@@ -2316,22 +2378,46 @@ def _init_repo(path):
 
 @pytest.fixture
 def clean_repo(tmp_path):
-    """A committed, clean repository. Provenance checks run for real against
-    it -- there is no bypass flag to test through."""
     return _init_repo(tmp_path / "clean_repo")
 
 
 @pytest.fixture
 def dirty_repo(tmp_path):
-    """Same, then made genuinely dirty."""
     path = tmp_path / "dirty_repo"
     _init_repo(path)
     (path / "uncommitted.txt").write_text("dirty\n")
     return str(path)
+
+
+def test_clean_repo_yields_a_commit_and_no_null_fields(clean_repo):
+    p = _git_provenance(clean_repo)
+    assert len(p["git_commit"]) == 40
+    assert p["worktree_clean"] is True
+
+
+def test_dirty_repo_is_refused(dirty_repo):
+    with pytest.raises(RuntimeError, match="dirty"):
+        _git_provenance(dirty_repo)
+
+
+def test_untracked_file_counts_as_dirty(clean_repo):
+    # CONSTRUCTED: an untracked file is a real difference in what ran.
+    (pathlib.Path(clean_repo) / "new.txt").write_text("x\n")
+    with pytest.raises(RuntimeError, match="dirty"):
+        _git_provenance(clean_repo)
+
+
+def test_a_non_repository_raises_rather_than_recording_null(tmp_path):
+    plain = tmp_path / "not_a_repo"
+    plain.mkdir()
+    with pytest.raises(RuntimeError, match="provenance"):
+        _git_provenance(str(plain))
 ```
 
-Both fixtures must `mkdir` their directory before `git init`; use
-`path.mkdir(parents=True)` at the start of `_init_repo`.
+Add `import pathlib` at the top of that file.
+
+Run: `python -m pytest tests/test_eval_provenance.py -q; echo "EXIT=$?"`
+Expected: `EXIT=0`
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -2406,18 +2492,28 @@ def readout_config_from_name(name, opening_temp_plies, temp_high, temp_low):
     raise ValueError(f"unknown readout name {name!r}; expected {READOUT_NAMES}")
 
 
-def _git_provenance(repo_dir=None):
-    """Commit and worktree state. Fails closed.
+def _source_repo_dir():
+    """The repository containing the EXECUTING source.
+
+    Provenance must describe the code that actually ran. Anchoring to the
+    process CWD, or to a caller-supplied path, would let dirty engine code run
+    while a pristine unrelated repository was recorded.
+    """
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def _git_provenance(repo_dir):
+    """Commit and worktree state for `repo_dir`. Fails closed.
 
     A DIRTY WORKTREE IS REFUSED OUTRIGHT, with no override. Recording
     `git status --porcelain` would name the changed files but not their
     contents, so a "dirty but documented" run is still not reproducible from
-    its own provenance. There is no allow_dirty flag by design -- commit or
-    stash first.
+    its own provenance.
 
-    `repo_dir` selects the repository (default: the process CWD). Tests pass a
-    constructed temporary repo so they exercise this exact code path rather
-    than a bypass.
+    PRIVATE. `repo_dir` exists so this function can be unit-tested against
+    constructed repositories. It is NOT reachable from run_readout_match's
+    signature -- production always passes _source_repo_dir(), so no caller can
+    aim provenance at a different repository.
     """
     try:
         commit = subprocess.check_output(
@@ -2468,11 +2564,15 @@ def _write_outputs(output, summary, results):
 def run_readout_match(checkpoint, candidate_readout, control_readout, games,
                       base_seed, config: EvalConfig, workers, output,
                       pairing_id=None, evaluator_factory=None, replay_dir=None,
-                      repo_dir=None, prior_seed_intervals=()):
+                      prior_seed_intervals=()):
     """Run one candidate-vs-control readout match. Returns the summary dict.
 
     `prior_seed_intervals` is every interval already consumed by this line of
     work, as half-open [start, end) pairs. Reuse is refused.
+
+    There is deliberately NO repository parameter: provenance is anchored to
+    the repository containing this source file, so a run can never record a
+    different repository than the one it executed from.
 
     All provenance and disjointness checks run BEFORE any game, so an
     unreproducible or overlapping configuration costs zero GPU time.
@@ -2480,7 +2580,7 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
     if candidate_readout == control_readout:
         raise ValueError("candidate and control readouts are identical; "
                          "this match would measure nothing")
-    provenance = _git_provenance(repo_dir)
+    provenance = _git_provenance(_source_repo_dir())
     checkpoint_sha1 = _sha1(checkpoint)
     priors = [list(iv) for iv in prior_seed_intervals]
     validate_seed_intervals([base_seed, base_seed + games], priors)
@@ -2830,12 +2930,42 @@ def test_overlapping_intervals_raise(prior):
         validate_seed_intervals([64, 128], [prior])
 
 
-def test_empty_or_reversed_interval_raises():
+def test_empty_or_reversed_CURRENT_interval_raises():
     from scripts.GPU.alphazero.eval_integrity import validate_seed_intervals
-    with pytest.raises(ValueError, match="empty or reversed"):
+    with pytest.raises(ValueError, match="current.*empty or reversed"):
         validate_seed_intervals([100, 100], [])
-    with pytest.raises(ValueError, match="empty or reversed"):
+    with pytest.raises(ValueError, match="current.*empty or reversed"):
         validate_seed_intervals([200, 100], [])
+
+
+def test_a_reversed_PRIOR_interval_raises():
+    """CONSTRUCTED: [200, 100) is malformed history. Checking only
+    current-versus-each-prior would let it through, because a reversed
+    interval overlaps nothing.
+    """
+    from scripts.GPU.alphazero.eval_integrity import validate_seed_intervals
+    with pytest.raises(ValueError, match=r"prior\[0\].*empty or reversed"):
+        validate_seed_intervals([1000, 1064], [[200, 100]])
+
+
+def test_an_empty_PRIOR_interval_raises():
+    from scripts.GPU.alphazero.eval_integrity import validate_seed_intervals
+    with pytest.raises(ValueError, match=r"prior\[1\].*empty or reversed"):
+        validate_seed_intervals([1000, 1064], [[0, 64], [300, 300]])
+
+
+def test_two_PRIORS_overlapping_each_other_raises():
+    """CONSTRUCTED: both priors are disjoint from the current interval, so
+    only a whole-set pairwise check can catch them overlapping each other.
+    """
+    from scripts.GPU.alphazero.eval_integrity import validate_seed_intervals
+    with pytest.raises(ValueError, match=r"prior\[0\].*overlaps prior\[1\]"):
+        validate_seed_intervals([1000, 1064], [[0, 100], [50, 150]])
+
+
+def test_a_fully_valid_set_passes():
+    from scripts.GPU.alphazero.eval_integrity import validate_seed_intervals
+    validate_seed_intervals([1000, 1064], [[0, 64], [64, 128], [500, 600]])
 
 
 def test_colour_imbalance_raises():
@@ -2915,16 +3045,28 @@ def validate_seed_intervals(current, priors) -> None:
     not overlapping. Reusing seeds would silently correlate a "fresh" run with
     an earlier one, which is the kind of contamination that is invisible in
     the result and fatal to it.
+
+    EVERY interval is validated, and the WHOLE set is checked pairwise -- not
+    just current-versus-each-prior. A reversed prior, or two priors that
+    overlap each other, means the recorded history is wrong, and a history
+    that cannot be trusted cannot establish that this run is fresh.
     """
-    start, end = current
-    if end <= start:
-        raise ValueError(f"empty or reversed seed interval [{start}, {end})")
-    for prior in priors:
-        p_start, p_end = prior
-        if start < p_end and p_start < end:
+    labelled = [("current", list(current))]
+    labelled += [(f"prior[{i}]", list(p)) for i, p in enumerate(priors)]
+
+    for label, (start, end) in labelled:
+        if end <= start:
             raise ValueError(
-                f"seed interval [{start}, {end}) overlaps the prior interval "
-                f"[{p_start}, {p_end}); seeds may not be reused")
+                f"{label} seed interval [{start}, {end}) is empty or reversed")
+
+    for i in range(len(labelled)):
+        label_a, (start_a, end_a) = labelled[i]
+        for j in range(i + 1, len(labelled)):
+            label_b, (start_b, end_b) = labelled[j]
+            if start_a < end_b and start_b < end_a:
+                raise ValueError(
+                    f"{label_a} [{start_a}, {end_a}) overlaps {label_b} "
+                    f"[{start_b}, {end_b}); seeds may not be reused")
 
 
 def validate_game_binding(result, task) -> None:
@@ -3696,8 +3838,14 @@ Tooling is complete when all of the following hold, each verified by a command w
   seed interval live in the **run summary**, so disjointness is verifiable
   from the artifact alone.
 - A recorded run is impossible from a dirty worktree, and there is **no
-  override flag**. The refusal is exercised against a constructed dirty
-  repository, never by observing the ambient one.
+  override flag and no repository parameter**. Provenance is anchored to the
+  repository containing the executing source, so a run cannot record a
+  different repository than the one it ran from. The refusal is exercised
+  against constructed repositories in `tests/test_eval_provenance.py`, never
+  by observing the ambient one.
+- `validate_seed_intervals` validates **every** interval and checks the
+  **whole set pairwise**, so a malformed prior or two priors overlapping each
+  other are caught, not just current-versus-prior collisions.
 - The preflight raises when **any** selected replay lacks the agent under
   analysis, naming the missing `game_idx` values.
 - `git diff d5326a0 -- scripts/GPU/alphazero/mcts.py scripts/GPU/alphazero/self_play.py` is **empty**. Neither file may change.
