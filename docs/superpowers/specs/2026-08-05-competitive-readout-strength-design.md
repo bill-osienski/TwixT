@@ -402,13 +402,36 @@ any assumption that deeper search is truth — and because §2.2's precedent sho
 override gate losing strength on this engine.
 
 Worked magnitudes: `ε(190) = 0.197`, `ε(100) = 0.272`, `ε(40) = 0.429`, `ε(8) = 0.960`.
-*(Corrected 2026-08-06 during implementation: `ε(40)` was first printed as `0.430`;
-the exact value is `0.4294694`. This is a display rounding fix to an illustrative
-figure — the frozen formula, `R`, `δ`, `n_min`, eligibility and tie order are
-unchanged, and the `0.232` override gap below is unaffected.)*
 With a 190-visit leader and a 40-visit challenger, the challenger must exceed the leader
 by `0.232` in root-perspective Q to override. **The rule is expected to fire rarely; a
 near-no-op is a legitimate outcome that closes Candidate 2 without a match.**
+
+#### Erratum — display rounding, 2026-08-06
+
+Two printed values in this section were misrounded. Both were caught by tests during
+Task B1 implementation and both are corrected above.
+
+| Printed | Correct | Exact value |
+|---|---|---|
+| `ε(n) = 2·sqrt(1.84445/n)` | `1.84444` | `ln(2/0.05)/2 = 1.8444397270569681` |
+| `ε(40) = 0.430` | `0.429` | `0.4294694083467376` |
+
+**NO EXECUTABLE CONSTANT CHANGED.** `eval_readout.py` has always computed
+`_HOEFFDING_NUM = math.log(2.0 / DELTA) / 2.0` directly from the frozen `R` and `δ`; it
+never contained a literal `1.84445`, `1.84444` or any worked magnitude. The two values
+above are display text for human reading, and both appear only in prose.
+
+**The exact formula `ε(n) = R·sqrt(ln(2/δ)/(2n))` with `R = 2` and `δ = 0.05` is
+authoritative.** Where a rounded figure ever disagrees with it, the formula wins. The
+frozen rule — formula, `R`, `δ`, `n_min = 8`, top-two eligibility, canonical `(row, col)`
+tie order — is exactly as frozen on 2026-08-06 and is untouched by this erratum. The
+`0.232` override gap and the `n_min` boundary (`ε(7) = 1.0266 > 1.0 ≥ ε(8) = 0.9603`)
+are both unaffected.
+
+`tests/test_eval_readout.py` now pins this: one test compares `hoeffding_radius(n)`
+against `R·sqrt(ln(2/δ)/(2n))` computed from the frozen constants at `rel=1e-12`, and a
+second asserts the printed display constant remains a faithful rounding of the formula —
+so spec text and code cannot drift apart again without a test failing.
 
 Rejected alternative: KataGo-style empirical-variance LCB. It requires second-moment
 telemetry `MCTSNode` does not store, which would mean editing the backup path.
