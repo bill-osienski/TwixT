@@ -221,19 +221,73 @@ Append to `server/test_readout_policy.js`:
 
 ```javascript
 import { readFileSync } from 'node:fs';
+import { selectMoveForRequest } from './readout_policy.js';
 
-// Parity is asserted at the POLICY layer, not by comparing moves: two
-// stochastic calls legitimately differ, so a move-equality test would be
-// either vacuous or flaky. Instead we assert no caller re-derives policy.
-test('no hardcoded temperature ladder survives in index.js', () => {
+const COUNTS = new Map([['3,4', 100], ['5,6', 80], ['7,7', 5]]);
+
+// A stub readout that records the temperature it was handed. Parity is then a
+// BEHAVIOURAL claim -- "both transports hand the readout the same temperature
+// for the same request" -- instead of a source-text claim.
+function recordingSelectMove(log) {
+  return (counts, temp) => {
+    log.push(temp);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  };
+}
+
+test('both transport option shapes produce the same readout temperature', () => {
+  const log = [];
+  // REST shape: flat body fields.
+  selectMoveForRequest({
+    visitCounts: COUNTS, difficulty: 'hard', deterministicMode: false,
+    temperature: undefined, selectMove: recordingSelectMove(log),
+  });
+  // WS shape: same fields arriving from a socket message.
+  const wsMsg = { difficulty: 'hard' };
+  selectMoveForRequest({
+    visitCounts: COUNTS, difficulty: wsMsg.difficulty,
+    deterministicMode: wsMsg.deterministicMode === true,
+    temperature: wsMsg.temperature, selectMove: recordingSelectMove(log),
+  });
+  assert.deepEqual(log[0], log[1]);
+  assert.equal(log[0], 0, 'hard must reach the readout as temperature 0');
+});
+
+test('the parity test can actually fail', () => {
+  // CONSTRUCTED negative case: a transport that resolved its own policy would
+  // hand the readout a different temperature, and this comparison catches it.
+  const log = [];
+  selectMoveForRequest({
+    visitCounts: COUNTS, difficulty: 'hard',
+    selectMove: recordingSelectMove(log),
+  });
+  const rogueTemp = 0.25;                 // the old WS ladder for 'hard'
+  log.push(rogueTemp);
+  assert.notEqual(log[0], log[1],
+    'if these matched, the parity assertion above would be vacuous');
+});
+
+test('selectMoveForRequest returns the move and the resolved policy', () => {
+  const out = selectMoveForRequest({
+    visitCounts: COUNTS, difficulty: 'medium',
+    selectMove: recordingSelectMove([]),
+  });
+  assert.equal(out.moveKey, '3,4');
+  assert.equal(out.policy.nSims, 400);
+  assert.equal(out.policy.moveTemp, 0.5);
+});
+
+// One structural claim remains, and it is now a strong one: there is exactly
+// ONE readout call site, so no transport can bypass the shared seam.
+test('neither transport calls selectMove directly', () => {
   const src = readFileSync(new URL('./index.js', import.meta.url), 'utf8');
   assert.ok(!src.includes('DIFFICULTY_PARAMS'),
-    'DIFFICULTY_PARAMS must be gone; resolvePolicy is the only source');
-  assert.ok(!src.includes("difficulty === 'easy' ? 0.5 : 0.1"),
-    'REST must not re-derive its own temperature ladder');
-  const resolveCalls = src.match(/resolvePolicy\(/g) || [];
-  assert.ok(resolveCalls.length >= 2,
-    `both transports must call resolvePolicy; found ${resolveCalls.length}`);
+    'DIFFICULTY_PARAMS must be gone; readout_policy is the only source');
+  assert.ok(!/\.selectMove\(/.test(src),
+    'transports must go through selectMoveForRequest, never mcts.selectMove');
+  const seamCalls = src.match(/selectMoveForRequest\(/g) || [];
+  assert.equal(seamCalls.length, 2,
+    `expected exactly 2 seam calls (REST + WS), found ${seamCalls.length}`);
 });
 
 test('websocket client sends deterministicMode', () => {
@@ -249,12 +303,33 @@ test('websocket client sends deterministicMode', () => {
 Run: `node --test server/test_readout_policy.js`
 Expected: FAIL — `DIFFICULTY_PARAMS must be gone`
 
-- [ ] **Step 3: Replace the REST path's policy derivation**
+- [ ] **Step 3: Add the shared readout seam**
 
-In `server/index.js`, add the import at the top with the other local imports:
+In `server/readout_policy.js`, append:
 
 ```javascript
-import { resolvePolicy } from './readout_policy.js';
+/**
+ * The ONE place a completed search becomes a played move.
+ *
+ * Both transports call this. `selectMove` is injected so the seam is testable
+ * without an engine, and so parity can be asserted behaviourally: the same
+ * request must reach the readout with the same temperature no matter which
+ * transport carried it.
+ */
+export function selectMoveForRequest({ visitCounts, difficulty,
+                                       deterministicMode = false, temperature,
+                                       selectMove }) {
+  const policy = resolvePolicy({ difficulty, deterministicMode, temperature });
+  return { moveKey: selectMove(visitCounts, policy.moveTemp), policy };
+}
+```
+
+- [ ] **Step 4: Route the REST path through the seam**
+
+In `server/index.js`, add the import with the other local imports:
+
+```javascript
+import { resolvePolicy, selectMoveForRequest } from './readout_policy.js';
 ```
 
 Delete the `DIFFICULTY_PARAMS` block at `:41-46` entirely.
@@ -269,10 +344,13 @@ In the `/api/move` handler, replace the `const params = DIFFICULTY_PARAMS[...]` 
     const { visitCounts, rootValue } = await mcts.search(gameState);
     const elapsed = Date.now() - startTime;
 
-    const moveKey = mcts.selectMove(visitCounts, policy.moveTemp);
+    const { moveKey } = selectMoveForRequest({
+      visitCounts, difficulty, deterministicMode, temperature,
+      selectMove: (counts, temp) => mcts.selectMove(counts, temp),
+    });
 ```
 
-- [ ] **Step 4: Replace `computeBestMove`'s policy derivation**
+- [ ] **Step 5: Route `computeBestMove` through the same seam**
 
 In `computeBestMove`, replace:
 
@@ -288,10 +366,22 @@ with:
     deterministicMode: opts.deterministicMode === true,
     temperature: opts.temperature,
   });
-  const { nSims, moveTemp } = policy;
+  const nSims = policy.nSims;
 ```
 
-- [ ] **Step 5: Forward the flag from the WebSocket handler**
+and replace its `const moveKey = mcts.selectMove(visitCounts, moveTemp);` with:
+
+```javascript
+  const { moveKey } = selectMoveForRequest({
+    visitCounts,
+    difficulty,
+    deterministicMode: opts.deterministicMode === true,
+    temperature: opts.temperature,
+    selectMove: (counts, temp) => mcts.selectMove(counts, temp),
+  });
+```
+
+- [ ] **Step 6: Forward the flag from the WebSocket handler**
 
 In the WS `move` handler, extend the `computeBestMove` call:
 
@@ -307,7 +397,7 @@ In the WS `move` handler, extend the `computeBestMove` call:
         });
 ```
 
-- [ ] **Step 6: Send the flag from the client**
+- [ ] **Step 7: Send the flag from the client**
 
 In `assets/js/ai/alphaZeroClient.js`, replace the `msg_out` construction:
 
@@ -318,14 +408,14 @@ In `assets/js/ai/alphaZeroClient.js`, replace the `msg_out` construction:
       if (opts?.temperature !== undefined) msg_out.temperature = opts.temperature;
 ```
 
-- [ ] **Step 7: Run tests and lint**
+- [ ] **Step 8: Run tests and lint**
 
 Run: `npm run test:server; echo "EXIT=$?"`
 Expected: `EXIT=0`
 Run: `npm run lint; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add server/index.js server/test_readout_policy.js assets/js/ai/alphaZeroClient.js
@@ -376,6 +466,51 @@ test('an unscoped key really does collide', () => {
   const c = new BoardMovesCache(10);
   c.set(PEGS, MOVES, { rootValue: 0.1 }, 24, '');
   assert.deepEqual(c.get(PEGS, MOVES, 24, ''), { rootValue: 0.1 });
+});
+
+test('a cache hit re-applies the readout instead of returning a sticky move', () => {
+  // BEHAVIOURAL: prime the cache with raw search output, then serve two
+  // requests from it. The readout must run on BOTH -- that is what makes a
+  // repeated stochastic request re-sample rather than repeat itself.
+  const c = new BoardMovesCache(10);
+  const scope = 'model.onnx|400';
+  c.set(PEGS, MOVES, { visits: { '3,4': 100, '5,6': 80 }, rootValue: 0.2 },
+        24, scope);
+
+  let readoutCalls = 0;
+  const selectMove = (counts, temp) => {
+    readoutCalls++;
+    return temp < 0.01 ? '3,4' : '5,6';
+  };
+
+  for (let i = 0; i < 2; i++) {
+    const hit = c.get(PEGS, MOVES, 24, scope);
+    assert.ok(hit !== undefined, 'expected a cache hit');
+    selectMoveForRequest({
+      visitCounts: new Map(Object.entries(hit.visits)),
+      difficulty: 'medium', selectMove,
+    });
+  }
+  assert.equal(readoutCalls, 2,
+    'readout must run on every request, including cache hits');
+});
+
+test('the same cached search yields different moves under different policy', () => {
+  // CONSTRUCTED negative case: if the cache returned a stored MOVE, policy
+  // could not change the answer and this assertion would fail.
+  const c = new BoardMovesCache(10);
+  const scope = 'model.onnx|400';
+  c.set(PEGS, MOVES, { visits: { '3,4': 100, '5,6': 80 }, rootValue: 0.2 },
+        24, scope);
+  const hit = c.get(PEGS, MOVES, 24, scope);
+  const counts = new Map(Object.entries(hit.visits));
+  const selectMove = (m, temp) => (temp < 0.01 ? '3,4' : '5,6');
+
+  const a = selectMoveForRequest({ visitCounts: counts, difficulty: 'hard',
+                                   selectMove }).moveKey;
+  const b = selectMoveForRequest({ visitCounts: counts, difficulty: 'medium',
+                                   selectMove }).moveKey;
+  assert.notEqual(a, b);
 });
 
 test('index.js caches raw search results, not selected moves', () => {
@@ -462,8 +597,11 @@ In `server/index.js`, replace the cache lookup block and the search block:
 
     // Readout is applied AFTER the cache lookup, so a cached stochastic
     // request re-samples instead of returning a sticky move.
-    const visitCounts = new Map(Object.entries(search.visits));
-    const moveKey = mcts.selectMove(visitCounts, policy.moveTemp);
+    const { moveKey } = selectMoveForRequest({
+      visitCounts: new Map(Object.entries(search.visits)),
+      difficulty, deterministicMode, temperature,
+      selectMove: (counts, temp) => mcts.selectMove(counts, temp),
+    });
     const [row, col] = moveKey.split(',').map(Number);
 
     res.json({
@@ -1767,6 +1905,40 @@ def test_agent_summary_reports_per_colour_stats_for_agent_a():
     assert s["a_as_black"]["wins"] == 2
 
 
+def test_per_colour_intervals_exist_because_the_colour_rule_needs_them():
+    """Spec 8.1 rejects only when a colour's own 95% UPPER bound is below
+    50%. Without a per-colour interval that rule cannot be applied at all."""
+    res = _results(["black", "red", "red", "black"])
+    s = summarize_agent_match(res, "candidate", "control", "p", {})
+    for key in ("a_as_red", "a_as_black"):
+        lo, hi = s[key]["score_rate_ci95"]
+        assert 0.0 <= lo <= hi <= 1.0
+
+
+def test_decisive_only_rates_are_reported_as_secondary():
+    res = _results(["black", "red", None, None])
+    s = summarize_agent_match(res, "candidate", "control", "p", {})
+    assert s["decisive_games"] == 2
+    assert s["a_decisive_score_rate"] == pytest.approx(1.0)
+    # Primary stays draw-inclusive: 2 wins + 2 draws over 4 games.
+    assert s["a_score_rate"] == pytest.approx(0.75)
+
+
+def test_decisive_rate_is_none_not_zero_when_every_game_drew():
+    res = _results([None, None])
+    s = summarize_agent_match(res, "candidate", "control", "p", {})
+    assert s["decisive_games"] == 0
+    assert s["a_decisive_score_rate"] is None
+    assert s["a_as_red"]["decisive_score_rate"] is None
+
+
+def test_termination_distribution_is_reported():
+    res = _results(["black", None, "red", None])
+    s = summarize_agent_match(res, "candidate", "control", "p", {})
+    assert s["termination_distribution"] == {"win": 2, "state_cap": 2}
+    assert s["state_cap_rate"] == pytest.approx(0.5)
+
+
 def test_agent_summary_treats_draws_as_half():
     res = _results(["black", None, "black", None])
     s = summarize_agent_match(res, "candidate", "control", "p", {})
@@ -1811,6 +1983,12 @@ Add a colour-stats helper keyed by agent, next to `_color_stats`:
 
 ```python
 def _agent_color_stats(results, agent_id, color):
+    """Per-colour stats INCLUDING a 95% interval.
+
+    Spec section 8.1's colour-safety rule rejects only when a colour's own 95%
+    UPPER bound falls below 50%, so the interval is a required decision input,
+    not a nicety. Undefined on an empty colour -> None, never 0.
+    """
     if color == "red":
         sub = [r for r in results if r.red_agent_id == agent_id]
         wins = sum(1 for r in sub if r.winner == "red")
@@ -1821,10 +1999,28 @@ def _agent_color_stats(results, agent_id, color):
         losses = sum(1 for r in sub if r.winner == "red")
     caps = sum(1 for r in sub if r.winner is None)
     n = len(sub)
+    if not n:
+        return {"games": 0, "wins": 0, "losses": 0, "caps": 0,
+                "score_rate": None, "score_rate_ci95": None,
+                "decisive_games": 0, "decisive_score_rate": None}
+    lo, hi = score_ci_trinomial(wins, caps, losses)
+    decisive = wins + losses
     return {
         "games": n, "wins": wins, "losses": losses, "caps": caps,
-        "score_rate": (score_rate(wins, caps, n) if n else None),
+        "score_rate": score_rate(wins, caps, n),
+        "score_rate_ci95": [lo, hi],
+        "decisive_games": decisive,
+        # Secondary per spec 8.1; None when there are no decisive games.
+        "decisive_score_rate": (wins / decisive) if decisive else None,
     }
+
+
+def _termination_distribution(results):
+    """Counts by termination reason. Every reason that occurred appears."""
+    out = {}
+    for r in results:
+        out[r.reason] = out.get(r.reason, 0) + 1
+    return out
 ```
 
 Add the guard at the top of `summarize_match`, right after the empty check:
@@ -1902,6 +2098,14 @@ def summarize_agent_match(results, agent_a_id, agent_b_id, pairing_id,
         "a_wins": a_wins, "b_wins": b_wins,
         "a_score": a_score,
         "a_score_rate": rate,
+        # SECONDARY per spec 8.1 -- reported, never decisive, because
+        # excluding draws biases the comparison if the candidate changes draw
+        # propensity. None when no game was decisive.
+        "decisive_games": decisive,
+        "a_decisive_score_rate": (a_wins / decisive) if decisive else None,
+        # Operational reporting required by spec 8.3.
+        "termination_distribution": _termination_distribution(results),
+        "state_cap_rate": state_caps / games,
         "elo_estimate": elo_diff(rate, games),
         "elo_ci95": [e_lo, e_hi],
         "score_rate_ci95": [s_lo, s_hi],
@@ -1984,6 +2188,7 @@ def test_run_readout_match_produces_a_real_score_rate(tmp_path):
         config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                           opening_temp_plies=2),
         workers=1, output=str(out), evaluator_factory=fake_evaluator_factory,
+        allow_dirty=True,   # the worktree is dirty while implementing
     )
     # The whole point of agent identity: this is NOT None.
     assert summary["a_score_rate"] is not None
@@ -2003,12 +2208,80 @@ def test_run_readout_match_writes_per_game_rows_with_agent_ids(tmp_path):
         config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
                           opening_temp_plies=2),
         workers=1, output=str(out), evaluator_factory=fake_evaluator_factory,
+        allow_dirty=True,   # the worktree is dirty while implementing
     )
     rows = [json.loads(line) for line in
             (tmp_path / "m_games.jsonl").read_text().splitlines()]
     assert len(rows) == 4
     assert {r["red_agent_id"] for r in rows} == {"candidate", "control"}
     assert all(r["comparison_unit"] == "agent" for r in rows)
+
+
+def test_provenance_is_complete_and_never_silently_null(tmp_path):
+    out = tmp_path / "m.json"
+    s = run_readout_match(
+        checkpoint=CKPT,
+        candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+        control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+        games=2, base_seed=902,
+        config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
+                          opening_temp_plies=2),
+        workers=1, output=str(out), evaluator_factory=fake_evaluator_factory,
+        allow_dirty=True,
+    )
+    assert s["git_commit"]                       # never None
+    assert "worktree_clean" in s
+    assert s["config"]["checkpoint_sha1"]        # never None
+    assert s["wall_clock_seconds"] >= 0
+    assert s["config"]["seed_interval"] == [902, 904]
+    assert s["config"]["seed_interval_convention"] == "half_open_[start,end)"
+    assert set(s["config"]["rng_derivation"]) == {
+        "search_red", "search_black", "readout_red", "readout_black",
+        "game_seed"}
+
+
+def test_an_unreadable_checkpoint_aborts_instead_of_recording_a_null_hash(tmp_path):
+    # CONSTRUCTED negative case: provenance must fail closed.
+    with pytest.raises(RuntimeError, match="hash checkpoint"):
+        run_readout_match(
+            checkpoint=str(tmp_path / "does_not_exist.safetensors"),
+            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+            games=2, base_seed=903,
+            config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
+                              opening_temp_plies=2),
+            workers=1, output=None, evaluator_factory=fake_evaluator_factory,
+            allow_dirty=True,
+        )
+
+
+def test_a_dirty_worktree_is_refused_by_default(tmp_path):
+    # This repo's worktree is dirty during implementation, so the default
+    # must refuse. If it ever passes here, the guard is not wired.
+    import subprocess
+    porcelain = subprocess.check_output(["git", "status", "--porcelain"]).decode()
+    if not porcelain.strip():
+        pytest.skip("worktree is clean; cannot exercise the refusal here")
+    with pytest.raises(RuntimeError, match="dirty"):
+        run_readout_match(
+            checkpoint=CKPT,
+            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+            games=2, base_seed=904,
+            config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
+                              opening_temp_plies=2),
+            workers=1, output=None, evaluator_factory=fake_evaluator_factory,
+        )
+```
+
+**Note on `CKPT`:** the existing tests use a path string that need not exist,
+because `fake_evaluator_factory` ignores it. The hash now *does* read it, so
+`CKPT` in this test module must point at a real file. Create one at module
+scope:
+
+```python
+import pathlib
+CKPT = str(pathlib.Path(__file__).parent / "eval_fakes.py")   # any real file
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -2040,6 +2313,7 @@ import hashlib
 import json
 import os
 import subprocess
+import time
 from dataclasses import asdict
 from datetime import datetime, timezone
 
@@ -2083,26 +2357,50 @@ def readout_config_from_name(name, opening_temp_plies, temp_high, temp_low):
     raise ValueError(f"unknown readout name {name!r}; expected {READOUT_NAMES}")
 
 
-def _git_commit():
+def _git_provenance(allow_dirty: bool):
+    """Commit AND worktree state. Fails closed.
+
+    The spec requires both. A run whose code state cannot be established is
+    not reproducible, so an unavailable commit raises rather than recording
+    None. A dirty worktree raises unless explicitly allowed, and when allowed
+    the exact `git status --porcelain` text is recorded -- never a bare flag.
+    """
     try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], stderr=subprocess.PIPE
         ).decode().strip()
-    except Exception:
-        return None
+        porcelain = subprocess.check_output(
+            ["git", "status", "--porcelain"], stderr=subprocess.PIPE
+        ).decode()
+    except (OSError, subprocess.CalledProcessError) as e:
+        raise RuntimeError(
+            f"cannot establish git provenance ({e!r}); a run whose code state "
+            f"is unknown is not reproducible") from e
+    dirty = porcelain.strip() != ""
+    if dirty and not allow_dirty:
+        raise RuntimeError(
+            "worktree is dirty; commit or stash before a recorded run, or pass "
+            f"allow_dirty=True to record the exact state:\n{porcelain}")
+    return {
+        "git_commit": commit,
+        "worktree_clean": not dirty,
+        "worktree_status_porcelain": porcelain if dirty else "",
+    }
 
 
 def _sha1(path):
-    """Checkpoint hash for provenance. None when the file is unreadable --
-    an unknown hash is None, never a placeholder string."""
+    """Checkpoint hash. Fails closed: the spec requires a cryptographic hash,
+    so an unreadable checkpoint aborts the run rather than recording None."""
+    h = hashlib.sha1()
     try:
-        h = hashlib.sha1()
         with open(path, "rb") as fh:
             for chunk in iter(lambda: fh.read(1 << 20), b""):
                 h.update(chunk)
-        return h.hexdigest()
-    except OSError:
-        return None
+    except OSError as e:
+        raise RuntimeError(
+            f"cannot hash checkpoint {path!r} ({e!r}); provenance requires a "
+            f"checkpoint hash") from e
+    return h.hexdigest()
 
 
 def _write_outputs(output, summary, results):
@@ -2118,11 +2416,19 @@ def _write_outputs(output, summary, results):
 
 def run_readout_match(checkpoint, candidate_readout, control_readout, games,
                       base_seed, config: EvalConfig, workers, output,
-                      pairing_id=None, evaluator_factory=None, replay_dir=None):
-    """Run one candidate-vs-control readout match. Returns the summary dict."""
+                      pairing_id=None, evaluator_factory=None, replay_dir=None,
+                      allow_dirty=False):
+    """Run one candidate-vs-control readout match. Returns the summary dict.
+
+    Provenance is established BEFORE any game runs, so an unreproducible
+    configuration costs nothing.
+    """
     if candidate_readout == control_readout:
         raise ValueError("candidate and control readouts are identical; "
                          "this match would measure nothing")
+    provenance = _git_provenance(allow_dirty)
+    checkpoint_sha1 = _sha1(checkpoint)
+    started = time.monotonic()
     if pairing_id is None:
         pairing_id = f"{CANDIDATE_ID}_vs_{CONTROL_ID}"
     candidate = AgentSpec(CANDIDATE_ID, checkpoint, candidate_readout)
@@ -2141,7 +2447,7 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
         "candidate_readout": asdict(candidate_readout),
         "control_readout": asdict(control_readout),
         "checkpoint": checkpoint,
-        "checkpoint_sha1": _sha1(checkpoint),
+        "checkpoint_sha1": checkpoint_sha1,
         # HALF-OPEN [start, end): game g uses seed base_seed + g for
         # g in range(games), so `end` is the first UNUSED seed. A later run
         # proving disjointness must compare against this convention.
@@ -2159,7 +2465,8 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
     }
     summary = summarize_agent_match(results, CANDIDATE_ID, CONTROL_ID,
                                     pairing_id, config_dict)
-    summary["git_commit"] = _git_commit()
+    summary.update(provenance)
+    summary["wall_clock_seconds"] = time.monotonic() - started
     summary["generated_at"] = datetime.now(timezone.utc).isoformat()
     if output:
         _write_outputs(output, summary, results)
@@ -2187,6 +2494,10 @@ def _build_arg_parser():
     ap.add_argument("--replay-dir", default=None,
                     help="capture per-ply replays incl. top-two child "
                          "visits/Q (required to feed the preflight)")
+    ap.add_argument("--allow-dirty", action="store_true",
+                    help="record a run from a dirty worktree. The exact "
+                         "porcelain status is stored in the summary. Refused "
+                         "by default: an unreproducible run is not evidence.")
     ap.add_argument("--output", required=True)
     return ap
 
@@ -2211,6 +2522,7 @@ def main(argv=None):
         control_readout=mk(args.control_readout),
         games=args.games, base_seed=args.base_seed, config=config,
         workers=args.workers, output=args.output, replay_dir=args.replay_dir,
+        allow_dirty=args.allow_dirty,
     )
     print(f"{summary['pairing_id']}: a_score_rate={summary['a_score_rate']:.4f} "
           f"elo={summary['elo_estimate']:.1f} CI95={summary['elo_ci95']} "
@@ -2382,6 +2694,51 @@ def test_readout_leak_across_the_colour_swap_raises():
         validate_result_set(results, tasks, "candidate", "control")
 
 
+def test_a_SYSTEMATIC_config_leak_is_caught():
+    """The decisive case: every row carries the wrong config CONSISTENTLY.
+
+    A consistency-only check (does this agent always play the same readout?)
+    passes here, because the wrong config is applied uniformly. Only a
+    comparison against the TASK's expected config catches it -- and a
+    systematic leak is exactly the failure that would silently invalidate a
+    whole match.
+    """
+    results, tasks = _ok_set()
+    wrong = {"mode": R.MODE_HOEFFDING_LCB, "opening_temp_plies": 20,
+             "temp_high": 1.0, "temp_low": 0.1}
+    for r in results:
+        if r.red_agent_id == "candidate":
+            r.red_readout = dict(wrong)
+        else:
+            r.black_readout = dict(wrong)
+    with pytest.raises(IntegrityError, match="configuration"):
+        validate_result_set(results, tasks, "candidate", "control")
+
+
+def test_game_binding_is_validated_immediately_not_at_the_end():
+    """Spec 8.3 requires an IMMEDIATE stop. validate_game_binding is the
+    per-game guard; it must reject a single bad result on its own, without
+    needing the rest of the run."""
+    from scripts.GPU.alphazero.eval_integrity import validate_game_binding
+
+    tasks = build_agent_pairing_tasks("p", A, B, 4, 100)
+    good = make_result(tasks[0], "red", "win", 40)
+    validate_game_binding(good, tasks[0])
+
+    bad = make_result(tasks[0], "red", "win", 40)
+    bad.red_readout = dict(bad.black_readout)
+    with pytest.raises(IntegrityError, match="configuration"):
+        validate_game_binding(bad, tasks[0])
+
+
+def test_game_binding_rejects_unknown_error_on_its_own():
+    tasks = build_agent_pairing_tasks("p", A, B, 2, 100)
+    r = make_result(tasks[0], None, "unknown_error", 40)
+    from scripts.GPU.alphazero.eval_integrity import validate_game_binding
+    with pytest.raises(IntegrityError, match="unknown_error"):
+        validate_game_binding(r, tasks[0])
+
+
 def test_colour_imbalance_raises():
     tasks = build_agent_pairing_tasks("p", A, B, 4, 100)
     results = [make_result(t, "red", "win", 40) for t in tasks]
@@ -2410,11 +2767,18 @@ than warning and continuing. A run that trips any of these is not a result.
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional
+from dataclasses import asdict
+from typing import Dict
 
 
 class IntegrityError(RuntimeError):
-    """A frozen zero-tolerance condition was observed."""
+    """A frozen zero-tolerance condition was observed.
+
+    Scope: budget mismatch, corrupt required telemetry, binding or
+    configuration faults, unknown_error, and incomplete or duplicate result
+    sets. Illegal moves and crashes are NOT raised here -- they already abort
+    through the engine and the worker failure path.
+    """
 
 
 def _finite(x) -> bool:
@@ -2445,15 +2809,55 @@ def validate_ply(ply: int, expected_sims: int, root_visit_count: int,
                     f"{label} is {q!r}; a visited child's mean is defined")
 
 
+def validate_game_binding(result, task) -> None:
+    """Per-game guard, applied AS EACH GAME FINISHES so a fault stops the run
+    immediately rather than after every game has been played (spec 8.3).
+
+    The decisive check is that each colour's recorded readout equals the
+    TASK's expected config. Checking only that an agent is self-consistent
+    across games would pass a SYSTEMATIC leak, where every row carries the
+    same wrong configuration.
+    """
+    if result.reason == "unknown_error":
+        raise IntegrityError(f"task {result.task_id}: game ended in unknown_error")
+
+    if task.red_agent is None or task.black_agent is None:
+        return   # legacy checkpoint-vs-checkpoint task; nothing to bind
+
+    for colour, agent_id, readout, spec in (
+            ("red", result.red_agent_id, result.red_readout, task.red_agent),
+            ("black", result.black_agent_id, result.black_readout, task.black_agent)):
+        if agent_id != spec.agent_id:
+            raise IntegrityError(
+                f"task {result.task_id}: {colour} agent id {agent_id!r} does "
+                f"not match the task binding {spec.agent_id!r}")
+        expected = asdict(spec.readout)
+        if readout != expected:
+            raise IntegrityError(
+                f"task {result.task_id}: configuration mismatch for {colour} "
+                f"agent {agent_id!r} -- recorded {readout!r}, task specifies "
+                f"{expected!r}")
+
+    if result.red_agent_id == result.black_agent_id:
+        raise IntegrityError(
+            f"task {result.task_id}: agent {result.red_agent_id!r} holds both "
+            f"colours")
+
+
 def validate_result_set(results, tasks, agent_a_id: str,
                         agent_b_id: str) -> None:
-    """Whole-run guard, applied before any statistic is computed."""
-    expected_ids = {agent_a_id, agent_b_id}
+    """Whole-run guard, applied before any statistic is computed.
 
-    bad = [r.task_id for r in results if r.reason == "unknown_error"]
-    if bad:
-        raise IntegrityError(
-            f"{len(bad)} game(s) ended in unknown_error: {sorted(bad)[:10]}")
+    Re-runs the per-game binding check, because a result set may reach here
+    from a path that did not call validate_game_binding, and then adds the
+    checks that only make sense over the whole run.
+    """
+    expected_ids = {agent_a_id, agent_b_id}
+    by_task_all = {t.task_id: t for t in tasks}
+    for r in results:
+        task = by_task_all.get(r.task_id)
+        if task is not None:
+            validate_game_binding(r, task)
 
     if len(results) != len(tasks):
         raise IntegrityError(
@@ -2469,36 +2873,13 @@ def validate_result_set(results, tasks, agent_a_id: str,
     if missing:
         raise IntegrityError(f"incomplete run: missing task_ids {missing[:10]}")
 
-    by_task = {t.task_id: t for t in tasks}
-    readouts: Dict[str, Optional[dict]] = {}
     red_counts: Dict[str, int] = {agent_a_id: 0, agent_b_id: 0}
-
     for r in results:
         got = {r.red_agent_id, r.black_agent_id}
         if None in got or not got <= expected_ids:
             raise IntegrityError(
                 f"task {r.task_id}: unexpected agent ids {sorted(map(str, got))}, "
                 f"expected {sorted(expected_ids)}")
-        if r.red_agent_id == r.black_agent_id:
-            raise IntegrityError(
-                f"task {r.task_id}: agent {r.red_agent_id!r} holds both colours")
-
-        task = by_task[r.task_id]
-        for colour, agent_id, readout in (
-                ("red", r.red_agent_id, r.red_readout),
-                ("black", r.black_agent_id, r.black_readout)):
-            spec = task.red_agent if colour == "red" else task.black_agent
-            if spec is None or spec.agent_id != agent_id:
-                raise IntegrityError(
-                    f"task {r.task_id}: {colour} agent id {agent_id!r} does not "
-                    f"match the task binding "
-                    f"{None if spec is None else spec.agent_id!r}")
-            prev = readouts.setdefault(agent_id, readout)
-            if prev != readout:
-                raise IntegrityError(
-                    f"task {r.task_id}: configuration leak -- agent "
-                    f"{agent_id!r} played readout {readout!r} here but "
-                    f"{prev!r} elsewhere")
         red_counts[r.red_agent_id] += 1
 
     if red_counts[agent_a_id] != red_counts[agent_b_id]:
@@ -2531,7 +2912,28 @@ placing it immediately after `top2 = eval_readout.top_two(stats)` (it needs
 `top2`), and delete the old `root.visit_count <= 0` check, which the budget
 comparison subsumes.
 
-- [ ] **Step 6: Wire the result-set guard into the match**
+- [ ] **Step 6: Wire the per-game guard so a fault stops the run immediately**
+
+In `scripts/GPU/alphazero/eval_runner.py`, extend the import:
+
+```python
+from .eval_integrity import validate_game_binding, validate_ply
+```
+
+and call it at the end of `_play_and_build_result`, before the replay is
+written, so a binding or `unknown_error` fault raises on the game that
+produced it rather than after every remaining game has been played:
+
+```python
+    result = make_result(task, winner, reason, nm)
+    validate_game_binding(result, task)
+    if records is not None:
+```
+
+Under `workers > 1` the raise surfaces through the existing `_WorkerFailed`
+sentinel path, which already terminates the pool.
+
+- [ ] **Step 7: Wire the whole-run guard into the match**
 
 In `scripts/GPU/alphazero/eval_readout_match.py`, add the import:
 
@@ -2546,21 +2948,21 @@ before `config_dict` is built:
     validate_result_set(results, tasks, CANDIDATE_ID, CONTROL_ID)
 ```
 
-- [ ] **Step 7: Run the affected suites**
+- [ ] **Step 8: Run the affected suites**
 
 Run: `python -m pytest tests/test_eval_integrity.py tests/test_eval_readout_telemetry.py tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
-If a `play_eval_game` test now fails on the budget assertion, the fixture's
-`mcts_sims` and the measured `root.visit_count` disagree — resolve it against
-the value measured in Task B4 Step 5, never by loosening `validate_ply`.
+The budget equality is safe to assert: `root.visit_count` was **measured**
+equal to the nominal budget at 8, 16, 32 and 400 simulations. If a
+`play_eval_game` test still fails on it, fix the fixture, never `validate_ply`.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add scripts/GPU/alphazero/eval_integrity.py scripts/GPU/alphazero/eval_runner.py \
         scripts/GPU/alphazero/eval_readout_match.py tests/test_eval_integrity.py
-git commit -m "feat(eval): fail-closed integrity validator for plies and result sets"
+git commit -m "feat(eval): fail-closed integrity validator for plies, games and result sets"
 ```
 
 ---
@@ -2590,8 +2992,9 @@ from scripts.GPU.alphazero.readout_preflight import (
 )
 
 
-def _ply(ply, player, top2, overrode=False):
+def _ply(ply, player, top2, overrode=False, rank=1):
     return {"ply": ply, "player": player, "row": 1, "col": 1,
+            "selected_visit_rank": rank,
             "top2": top2, "readout_overrode_leader": overrode}
 
 
@@ -2653,6 +3056,54 @@ def test_undefined_q_is_counted_and_reported_not_silently_dropped():
     assert s["undefined_q_plies"] == 1
 
 
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_q_is_corrupt_not_merely_undefined(bad):
+    t2 = _t2()
+    t2[0]["q_value_root_perspective"] = bad
+    r = _replay(0, "candidate", [_ply(20, "red", t2)])
+    s = preflight_stats([r], agent_id="candidate", opening_temp_plies=20)
+    assert s["undefined_q_plies"] == 1, f"{bad!r} must be caught, not scored"
+
+
+def test_replays_without_the_agent_are_reported_not_silently_skipped():
+    present = _replay(0, "candidate", [_ply(20, "red", _t2())])
+    absent = _replay(1, "someone_else", [_ply(20, "red", _t2())])
+    s = preflight_stats([present, absent], agent_id="candidate",
+                        opening_temp_plies=20)
+    assert s["replays_total"] == 2
+    assert s["replays_matched"] == 1
+    assert s["replays_without_this_agent"] == [1]
+
+
+def test_an_agent_absent_from_every_replay_raises():
+    # CONSTRUCTED: silently reporting gates over an empty population would
+    # look like a clean pass.
+    r = _replay(0, "someone_else", [_ply(20, "red", _t2())])
+    with pytest.raises(ValueError, match="appears in none"):
+        preflight_stats([r], agent_id="candidate", opening_temp_plies=20)
+
+
+def test_descriptive_outputs_are_present():
+    moves = [_ply(20, "red", _t2()), _ply(80, "red", _t2()),
+             _ply(120, "red", _t2(nc=3))]
+    s = preflight_stats([_replay(0, "candidate", moves)],
+                        agent_id="candidate", opening_temp_plies=20)
+    assert set(s["override_rate_by_ply_bucket"]) >= {"20-39", "70-109", "110+"}
+    for bucket in s["override_rate_by_ply_bucket"].values():
+        assert {"plies", "overrides", "rate"} <= set(bucket)
+    assert set(s["challenger_visits_at_override"]) == {"n", "min", "median", "max"}
+    assert isinstance(s["per_game_override_counts"], dict)
+
+
+def test_challenger_visit_summary_is_null_when_nothing_overrode():
+    r = _replay(0, "candidate", [_ply(20, "red", _t2(nc=3))])
+    s = preflight_stats([r], agent_id="candidate", opening_temp_plies=20)
+    assert s["overrides"] == 0
+    cv = s["challenger_visits_at_override"]
+    assert cv["n"] == 0
+    assert cv["min"] is None and cv["median"] is None and cv["max"] is None
+
+
 def test_gate_closes_on_a_near_no_op():
     g = evaluate_gates({"population_plies": 1000, "overrides": 4,
                         "override_rate": 0.004, "max_single_game_share": 0.2,
@@ -2701,6 +3152,31 @@ def test_colour_split_is_descriptive_and_never_a_gate():
     assert g["passed"] is True
 
 
+def test_nonleader_selection_splits_at_the_opening_boundary():
+    from scripts.GPU.alphazero.readout_preflight import nonleader_selection_report
+
+    def ply_ranked(ply, rank):
+        return _ply(ply, "red", _t2(), rank=rank)
+
+    r = _replay(0, "candidate", [
+        ply_ranked(0, 3), ply_ranked(5, 1),      # opening: 1 of 2 non-leader
+        ply_ranked(20, 1), ply_ranked(25, 1),    # post: 0 of 2 non-leader
+    ])
+    rep = nonleader_selection_report([r], "candidate", opening_temp_plies=20)
+    assert rep["opening"]["rate"] == pytest.approx(0.5)
+    assert rep["post_opening"]["rate"] == pytest.approx(0.0)
+
+
+def test_nonleader_report_raises_on_missing_rank():
+    from scripts.GPU.alphazero.readout_preflight import nonleader_selection_report
+
+    rec = _ply(20, "red", _t2())
+    rec.pop("selected_visit_rank", None)
+    with pytest.raises(ValueError, match="selected_visit_rank"):
+        nonleader_selection_report([_replay(0, "candidate", [rec])],
+                                   "candidate", opening_temp_plies=20)
+
+
 def test_old_schema_replays_are_rejected_not_silently_scored():
     r = _replay(0, "candidate", [_ply(20, "red", _t2())])
     r["schema_version"] = 1
@@ -2727,12 +3203,19 @@ in response to what this reports.
 Population (frozen): post-opening turns belonging to the named agent only.
 All such turns are in the denominator; an ineligible turn counts as
 "no override", it does NOT disappear.
+
+The stored `readout_overrode_leader` flag is deliberately NOT compared against
+the recomputed rule. On a Candidate 1 (argmax) agent the stored flag is always
+False by construction while the recomputed rule may fire, so a mismatch is
+EXPECTED there and would be a meaningless alarm. The frozen rule is the
+authority for these statistics; the flag records what was actually played.
 """
 from __future__ import annotations
 
 import argparse
 import glob
 import json
+import math
 import sys
 
 from .eval_readout import MIN_CHILD_VISITS, ChildStat, lcb_override
@@ -2763,14 +3246,33 @@ def _agent_colour(replay, agent_id):
     return None
 
 
+def _ply_bucket(ply):
+    """Coarse phase label for descriptive reporting only."""
+    if ply < 40:
+        return "20-39"
+    if ply < 70:
+        return "40-69"
+    if ply < 110:
+        return "70-109"
+    return "110+"
+
+
 def preflight_stats(replays, agent_id, opening_temp_plies):
-    """Compute the frozen population statistics over loaded replay dicts."""
+    """Compute the frozen population statistics over loaded replay dicts.
+
+    Fails closed: a wrong schema, a corrupt Q, or an agent that appears in no
+    replay is an error, not a silent skip.
+    """
     population = 0
     eligible = 0
     overrides = 0
     undefined_q = 0
     per_game = {}
     colour_counts = {"red": 0, "black": 0}
+    by_bucket = {}
+    challenger_visits_at_override = []
+    matched_replays = 0
+    skipped_replays = []
 
     for replay in replays:
         if replay.get("schema_version") != REQUIRED_SCHEMA_VERSION:
@@ -2780,27 +3282,51 @@ def preflight_stats(replays, agent_id, opening_temp_plies):
                 f"top-two telemetry is absent and cannot be inferred")
         colour = _agent_colour(replay, agent_id)
         if colour is None:
+            # Recorded, never silently dropped: a replay set that mostly does
+            # not contain the agent is a selection mistake worth seeing.
+            skipped_replays.append(replay.get("game_idx"))
             continue
+        matched_replays += 1
         gid = replay.get("game_idx")
         for rec in replay.get("moves", []):
             if rec["ply"] < opening_temp_plies or rec["player"] != colour:
                 continue
             population += 1
+            bucket = _ply_bucket(rec["ply"])
+            slot = by_bucket.setdefault(bucket, {"plies": 0, "overrides": 0})
+            slot["plies"] += 1
+
             top2_raw = rec.get("top2")
             if not top2_raw or len(top2_raw) < 2:
                 continue
             top2 = [_stat_from_dict(d) for d in top2_raw]
-            if any(s.q_root is None for s in top2):
+            # A None mean on a VISITED child, or any non-finite value, is
+            # corrupt telemetry -- not an undefined mean.
+            corrupt = any(
+                s.visits > 0 and (
+                    s.q_root is None or s.q_child is None
+                    or not math.isfinite(s.q_root)
+                    or not math.isfinite(s.q_child))
+                for s in top2)
+            if corrupt:
                 undefined_q += 1
                 continue
+            if any(s.q_root is None for s in top2):
+                continue    # undefined mean on an unvisited child: ineligible
             if all(s.visits >= MIN_CHILD_VISITS for s in top2):
                 eligible += 1
-            # Recompute rather than trusting the stored flag: the frozen rule
-            # is the authority, and a mismatch is a defect worth surfacing.
+            # The frozen rule is the authority; the stored flag is not trusted.
             if lcb_override(top2) is not None:
                 overrides += 1
+                slot["overrides"] += 1
                 per_game[gid] = per_game.get(gid, 0) + 1
                 colour_counts[colour] += 1
+                challenger_visits_at_override.append(top2[1].visits)
+
+    if matched_replays == 0:
+        raise ValueError(
+            f"agent {agent_id!r} appears in none of the {len(replays)} replays; "
+            f"refusing to report gates over an empty population")
 
     max_share = (max(per_game.values()) / overrides) if overrides else None
     total_colour = colour_counts["red"] + colour_counts["black"]
@@ -2808,8 +3334,12 @@ def preflight_stats(replays, agent_id, opening_temp_plies):
         {k: v / total_colour for k, v in colour_counts.items()}
         if total_colour else None
     )
+    cv = sorted(challenger_visits_at_override)
     return {
         "agent_id": agent_id,
+        "replays_total": len(replays),
+        "replays_matched": matched_replays,
+        "replays_without_this_agent": skipped_replays,
         "population_plies": population,
         "eligible_plies": eligible,
         "overrides": overrides,
@@ -2817,8 +3347,19 @@ def preflight_stats(replays, agent_id, opening_temp_plies):
         "undefined_q_plies": undefined_q,
         "max_single_game_share": max_share,
         "games_with_overrides": len(per_game),
-        # DESCRIPTIVE ONLY -- never a gate (spec section 7.4).
+        # --- DESCRIPTIVE ONLY, frozen as non-gating (spec section 7.4) ------
         "colour_split": colour_split,
+        "override_rate_by_ply_bucket": {
+            b: {**v, "rate": (v["overrides"] / v["plies"]) if v["plies"] else None}
+            for b, v in sorted(by_bucket.items())
+        },
+        "challenger_visits_at_override": {
+            "n": len(cv),
+            "min": cv[0] if cv else None,
+            "median": cv[len(cv) // 2] if cv else None,
+            "max": cv[-1] if cv else None,
+        },
+        "per_game_override_counts": dict(sorted(per_game.items())),
     }
 
 
@@ -2849,6 +3390,40 @@ def evaluate_gates(stats):
     }
 
 
+def nonleader_selection_report(replays, agent_id, opening_temp_plies):
+    """Non-leader selection rate before and after the opening boundary.
+
+    Required by spec section 7.3 so a Candidate 1 null can be attributed:
+    all-ply argmax changes BOTH the opening and post-opening play, and this
+    split says which half moved. Purely DESCRIPTIVE -- it gates nothing.
+
+    Uses `selected_visit_rank`, which ply_record already emits; rank > 1 means
+    the played move was not the visit leader.
+    """
+    buckets = {"opening": {"plies": 0, "nonleader": 0},
+               "post_opening": {"plies": 0, "nonleader": 0}}
+    for replay in replays:
+        colour = _agent_colour(replay, agent_id)
+        if colour is None:
+            continue
+        for rec in replay.get("moves", []):
+            if rec["player"] != colour:
+                continue
+            key = "opening" if rec["ply"] < opening_temp_plies else "post_opening"
+            buckets[key]["plies"] += 1
+            rank = rec.get("selected_visit_rank")
+            if rank is None:
+                raise ValueError(
+                    f"game {replay.get('game_idx')} ply {rec['ply']}: "
+                    f"selected_visit_rank missing; cannot report non-leader rate")
+            if rank > 1:
+                buckets[key]["nonleader"] += 1
+    return {
+        k: {**v, "rate": (v["nonleader"] / v["plies"]) if v["plies"] else None}
+        for k, v in buckets.items()
+    }
+
+
 def load_replays(pattern):
     out = []
     for path in sorted(glob.glob(pattern)):
@@ -2868,10 +3443,16 @@ def main(argv=None):
     ap.add_argument("--output", default=None)
     args = ap.parse_args(argv)
 
-    stats = preflight_stats(load_replays(args.replay_glob), args.agent_id,
-                            args.opening_temp_plies)
+    replays = load_replays(args.replay_glob)
+    stats = preflight_stats(replays, args.agent_id, args.opening_temp_plies)
     gates = evaluate_gates(stats)
-    report = {"stats": stats, "gates": gates}
+    report = {
+        "stats": stats,
+        "gates": gates,
+        # Descriptive, gates nothing. Spec section 7.3 attribution aid.
+        "nonleader_selection": nonleader_selection_report(
+            replays, args.agent_id, args.opening_temp_plies),
+    }
     if args.output:
         with open(args.output, "w") as fh:
             json.dump(report, fh, indent=2)
@@ -2961,11 +3542,18 @@ Tooling is complete when all of the following hold, each verified by a command w
 - `npm run lint` exits 0.
 - `python -m scripts.GPU.alphazero.eval_readout_match --help` exits 0.
 - `python -m scripts.GPU.alphazero.readout_preflight --help` exits 0.
-- Every zero-tolerance condition in spec §8.3 has a test that constructs it and
-  asserts `IntegrityError` (Task B7), and both guards are wired — `validate_ply`
-  in the game loop, `validate_result_set` before any statistic is computed.
-- Per-game rows and replay sidecars carry the **complete** readout config, the
-  RNG derivation scheme, and a seed interval labelled with its convention.
+- Every spec §8.3 condition that `IntegrityError` is responsible for has a test
+  that constructs it (Task B7), and all three guards are wired: `validate_ply`
+  per ply, `validate_game_binding` per game *as each game finishes*, and
+  `validate_result_set` before any statistic is computed.
+  **Scope note:** illegal moves and crashes are *not* `IntegrityError`
+  conditions — they already abort through `TwixtState.apply_move` and the
+  worker `_WorkerFailed` path. `IntegrityError` covers budget mismatch,
+  corrupt telemetry, binding/configuration faults, `unknown_error`, and
+  incomplete or duplicate result sets.
+- Per-game rows and replay sidecars carry the **complete** readout config.
+  The RNG derivation scheme and the labelled seed interval live in the **run
+  summary**, which is where a reader reconstructs any game from its seed.
 - `git diff d5326a0 -- scripts/GPU/alphazero/mcts.py scripts/GPU/alphazero/self_play.py` is **empty**. Neither file may change.
 
 **The baseline is `d5326a0`, not `main`.** Both files already differ from `main`
