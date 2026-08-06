@@ -129,7 +129,7 @@ def run_row(evaluator, meta, assigned, *, move_history, base_seed,
         return RowOutcome(False, None, str(e), meta.game_id)
 
     try:
-        facts = derive_row_facts(legs, snaps, assigned["ply"],
+        facts = derive_row_facts(legs, snaps, assigned["ply"], meta.n_moves,
                                  meta.start_player,
                                  assigned_phase=assigned["phase"],
                                  assigned_side=assigned["side"])
@@ -355,9 +355,10 @@ def verify_pilot(pilot_doc, pilot_games) -> Dict[int, Tuple[str, str, str]]:
             raise ValueError(
                 f"row {row['game_idx']}: stored label {row['label']!r} is not "
                 f"what its own legs classify as ({classify_row(row['legs'])!r})")
+        game = by_id[row["game_idx"]]
         facts = derive_row_facts(row["legs"], row["snapshots"],
-                                 row["target_ply"],
-                                 by_id[row["game_idx"]].start_player)
+                                 row["target_ply"], game.n_moves,
+                                 game.start_player)
         for field in ("phase", "side", "flat_policy", "near_even"):
             if row[field] != facts[field]:
                 raise ValueError(

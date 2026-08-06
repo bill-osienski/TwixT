@@ -82,9 +82,12 @@ def _meta(game_id=0, n_moves=None):
                     start_player="red")
 
 
-def _assigned(game_id=0, split="discovery", ply=2):
+def _assigned(game_id=0, split="discovery", ply=2, n_moves=None):
+    """Amendment 5: phase needs the trajectory, so the helper takes n_moves and
+    defaults to the small-board history the row-level tests replay."""
+    n = len(_small_history()) if n_moves is None else n_moves
     return {"game_id": game_id, "seed": BASE + game_id, "split": split,
-            "phase": phase_for_ply(ply), "side": side_for_ply(ply, "red"),
+            "phase": phase_for_ply(ply, n), "side": side_for_ply(ply, "red"),
             "ply": ply}
 
 
@@ -106,9 +109,16 @@ def test_a_row_produces_a_complete_artifact_row(one_row):
 
 
 def test_the_row_facts_are_DERIVED_not_supplied(one_row):
-    """The Stage 4 gap: these were hardcoded booleans everywhere."""
+    """The Stage 4 gap: these were hardcoded booleans everywhere.
+
+    Amendment 5 makes the phase assertion informative rather than incidental:
+    ply 2 of this 4-move history is MIDGAME -- the third quarter -- where the
+    old absolute bounds called every ply below 31 `opening`.
+    """
     row = one_row.row
-    assert row["phase"] == "opening" and row["side"] == "red"
+    assert len(_small_history()) == 4
+    assert row["phase"] == "midgame"        # (4*2)//4 == 2
+    assert row["side"] == "red"             # even ply, red started
     assert row["flat_policy"] in (True, False, None)
     assert row["near_even"] in (True, False, None)
     assert "row_facts_undefined" in row
@@ -310,8 +320,11 @@ def test_pilot_rows_are_discovery_only_and_never_validation():
 
 def test_pilot_rows_fail_closed_when_the_geometry_gate_did_not_pass():
     """A no-go here costs nothing but the pilot block, which is the point."""
-    short = [GameMeta(game_id=i, seed=BASE + i, n_moves=8, start_player="red")
-             for i in range(PILOT_GAMES)]          # no game reaches ply 91
+    # Amendment 5 dissolved the old fixture: 8-move games have four 2-ply
+    # quarters and therefore cover all eight cells. A cell is now unfillable
+    # when a QUARTER CANNOT SUPPLY THE SIDE -- single-ply quarters, one start.
+    short = [GameMeta(game_id=i, seed=BASE + i, n_moves=4, start_player="red")
+             for i in range(PILOT_GAMES)]
     with pytest.raises(ValueError, match="PHASE_GEOMETRY_NO_GO"):
         pilot_rows(short, SAMPLING_SEED)
 
@@ -369,7 +382,8 @@ def _populated_snapshots():
                                            "agreement": agree}}}
 
 
-def _row_for(assigned, label_as="stable_negative", start_player="red"):
+def _row_for(assigned, label_as="stable_negative", start_player="red",
+             n_moves=None):
     """A schema-valid row FOR A SPECIFIC ASSIGNED ROW.
 
     Every identifying field is carried through, so a stub built from these
@@ -379,8 +393,9 @@ def _row_for(assigned, label_as="stable_negative", start_player="red"):
     survive the validation it is used to test qualifies nothing.
     """
     from scripts.GPU.alphazero.atlas_artifact import build_row
+    n = len(_late_history()) if n_moves is None else n_moves
     legs, snaps = _four_rung_legs(label_as), _populated_snapshots()
-    facts = derive_row_facts(legs, snaps, assigned["ply"], start_player,
+    facts = derive_row_facts(legs, snaps, assigned["ply"], n, start_player,
                              assigned_phase=assigned["phase"],
                              assigned_side=assigned["side"])
     assert classify_row(legs) == label_as

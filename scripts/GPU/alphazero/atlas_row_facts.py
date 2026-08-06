@@ -35,16 +35,20 @@ def _root_edge_priors(snapshots: Dict[str, Any]) -> Optional[Dict[int, float]]:
 
 
 def derive_row_facts(legs: Sequence[Any], snapshots: Dict[str, Any],
-                     target_ply: int, start_player: str,
+                     target_ply: int, n_moves: int, start_player: str,
                      assigned_phase: Optional[str] = None,
                      assigned_side: Optional[str] = None) -> Dict[str, Any]:
     """The three row facts, plus the two the assignment already knows.
+
+    `n_moves` sits immediately after `target_ply` because amendment 5 makes the
+    two meaningless apart: a ply carries no phase without the trajectory it
+    belongs to.
 
     `assigned_phase` / `assigned_side` turn the derivation into a CROSS-CHECK:
     disagreement means the assignment and the ply have drifted, which fails the
     row rather than being silently overwritten by either side.
     """
-    phase = phase_for_ply(target_ply)
+    phase = phase_for_ply(target_ply, n_moves)
     side = side_for_ply(target_ply, start_player)
     if assigned_phase is not None and assigned_phase != phase:
         raise ValueError(

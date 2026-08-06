@@ -39,37 +39,46 @@ def test_the_frozen_near_even_bound_is_pinned_and_not_a_new_number():
     assert NEAR_EVEN_ABS_VALUE == 0.30          # design section 8, verbatim
 
 
-def test_phase_and_side_are_derived_from_the_frozen_ply_bounds():
-    f = derive_row_facts(_legs(), _snaps(), target_ply=95, start_player="red")
-    assert f["phase"] == "late"                 # 91+
-    assert f["side"] == "black"                 # odd ply, red started
-    f = derive_row_facts(_legs(), _snaps(), target_ply=12, start_player="red")
-    assert f["phase"] == "opening" and f["side"] == "red"
+def test_phase_is_TRAJECTORY_RELATIVE_and_side_alternates():
+    """Amendment 5: ply 30 is `late` in a 40-move game and `opening` in a
+    200-move one, so the cross-check must agree with the game, not the ply."""
+    f = derive_row_facts(_legs(), _snaps(), 30, 40, "red")
+    assert f["phase"] == "late" and f["side"] == "red"      # even ply
+    f = derive_row_facts(_legs(), _snaps(), 30, 200, "red")
+    assert f["phase"] == "opening"
+    f = derive_row_facts(_legs(), _snaps(), 95, 100, "red")
+    assert f["phase"] == "late" and f["side"] == "black"    # odd ply
+
+
+def test_n_moves_is_required_here_too():
+    """A default would let a stale call site keep absolute-like behaviour."""
+    with pytest.raises(TypeError):
+        derive_row_facts(_legs(), _snaps(), 30, start_player="red")
 
 
 def test_near_even_uses_the_B400_root_value_in_stm_perspective():
-    assert derive_row_facts(_legs(0.10), _snaps(), 12, "red")["near_even"] is True
-    assert derive_row_facts(_legs(-0.29), _snaps(), 12, "red")["near_even"] is True
-    assert derive_row_facts(_legs(0.31), _snaps(), 12, "red")["near_even"] is False
+    assert derive_row_facts(_legs(0.10), _snaps(), 12, 200, "red")["near_even"] is True
+    assert derive_row_facts(_legs(-0.29), _snaps(), 12, 200, "red")["near_even"] is True
+    assert derive_row_facts(_legs(0.31), _snaps(), 12, 200, "red")["near_even"] is False
     # The bound is inclusive, exactly as section 8 states it.
-    assert derive_row_facts(_legs(0.30), _snaps(), 12, "red")["near_even"] is True
+    assert derive_row_facts(_legs(0.30), _snaps(), 12, 200, "red")["near_even"] is True
 
 
 def test_near_even_is_None_when_the_400_rung_is_absent():
     legs = [l for l in _legs() if l.nominal_B != 400]
-    f = derive_row_facts(legs, _snaps(), 12, "red")
+    f = derive_row_facts(legs, _snaps(), 12, 200, "red")
     assert f["near_even"] is None               # None, never False
     assert "near_even" in f["undefined"]
 
 
 def test_flat_policy_applies_the_frozen_predicate_to_the_ROOT_EDGE_priors():
-    assert derive_row_facts(_legs(), _snaps(FLAT), 12, "red")["flat_policy"] is True
-    assert derive_row_facts(_legs(), _snaps(SHARP), 12, "red")["flat_policy"] is False
+    assert derive_row_facts(_legs(), _snaps(FLAT), 12, 200, "red")["flat_policy"] is True
+    assert derive_row_facts(_legs(), _snaps(SHARP), 12, 200, "red")["flat_policy"] is False
 
 
 def test_flat_policy_is_None_when_the_merged_line_has_no_root_edge():
     """Undefined, never False. The row is KEPT and the gap is reported."""
-    f = derive_row_facts(_legs(), _snaps(with_root_edge=False), 12, "red")
+    f = derive_row_facts(_legs(), _snaps(with_root_edge=False), 12, 200, "red")
     assert f["flat_policy"] is None
     assert "flat_policy" in f["undefined"]
 
@@ -88,9 +97,9 @@ def test_a_derived_phase_that_contradicts_the_assignment_FAILS_the_row():
     """assign_corpus already emits phase and side, so re-deriving them is a
     CROSS-CHECK. Disagreement means the assignment and the ply have drifted."""
     with pytest.raises(ValueError, match="phase"):
-        derive_row_facts(_legs(), _snaps(), 95, "red", assigned_phase="opening")
+        derive_row_facts(_legs(), _snaps(), 95, 100, "red", assigned_phase="opening")
     with pytest.raises(ValueError, match="side"):
-        derive_row_facts(_legs(), _snaps(), 95, "red", assigned_side="red")
+        derive_row_facts(_legs(), _snaps(), 95, 100, "red", assigned_side="red")
     # Agreement passes silently.
-    derive_row_facts(_legs(), _snaps(), 95, "red",
+    derive_row_facts(_legs(), _snaps(), 95, 100, "red",
                      assigned_phase="late", assigned_side="black")
