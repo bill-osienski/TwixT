@@ -44,6 +44,6 @@ def test_run_match_with_replays_writes_sidecars_and_links(tmp_path):
     for r in rows:
         assert (tmp_path / "m_replays" / f"game_{r['game_idx']:06d}.json").exists()
     rep = json.loads((tmp_path / "m_replays" / "game_000000.json").read_text())
-    assert rep["schema_version"] == 1
+    assert rep["schema_version"] == 2   # bumped by Task B2 (top-two telemetry)
     assert len(rep["moves"]) == rep["n_moves"]
     assert rep["seed"] == 5  # base_seed + offset(0) + game_idx(0)

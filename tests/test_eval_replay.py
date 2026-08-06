@@ -14,6 +14,9 @@ def test_ply_record_fields():
         "selected_visit_count": 124,
         "root_total_visits": 400,
         "n_legal": 3,
+        # Additive in schema 2. None means "not captured", never "no children".
+        "top2": None,
+        "readout_overrode_leader": False,
     }
 
 
@@ -44,8 +47,10 @@ def test_ply_record_fails_when_move_not_in_counts():
         ply_record(0, "red", (9, 9), {(4, 19): 10}, 0.0)
 
 
-def test_schema_version_is_one():
-    assert REPLAY_SCHEMA_VERSION == 1
+def test_schema_version_is_two():
+    # Bumped from 1 by Task B2, which added top-two root-child telemetry.
+    # Consumers must reject version 1 rather than infer the missing fields.
+    assert REPLAY_SCHEMA_VERSION == 2
 
 
 from dataclasses import dataclass
@@ -79,7 +84,7 @@ def test_build_replay_dict_shape():
     ]
     d = build_replay_dict(result, seed=35791, board_size=24, records=records)
     assert d == {
-        "schema_version": 1,
+        "schema_version": 2,
         "pairing_id": "0399_vs_0379",
         "game_idx": 3, "task_id": 7, "seed": 35791, "board_size": 24,
         "red_checkpoint": "A.safetensors", "black_checkpoint": "B.safetensors",

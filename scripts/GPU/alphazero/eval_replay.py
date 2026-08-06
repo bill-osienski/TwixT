@@ -10,16 +10,33 @@ from __future__ import annotations
 import json
 import os
 
-REPLAY_SCHEMA_VERSION = 1
+REPLAY_SCHEMA_VERSION = 2
 
 
-def ply_record(ply, player, move, counts, root_value):
+def _child_stat_dict(stat):
+    """Serialize one eval_readout.ChildStat. Undefined means stay None, never
+    0.0 -- MCTSNode.q_value returns 0.0 at zero visits, which is not a
+    measurement."""
+    return {
+        "row": stat.move[0],
+        "col": stat.move[1],
+        "completed_visit_count": stat.visits,
+        "q_value_child_perspective": stat.q_child,
+        "q_value_root_perspective": stat.q_root,
+    }
+
+
+def ply_record(ply, player, move, counts, root_value, top2=None,
+               overrode_leader=False):
     """One per-ply replay record.
 
     `move` is the selected (row, col). `counts` is the MCTS visit-count dict
     {(row, col): visits} over all legal moves at this root. `root_value` is
     root.q_value from the perspective of `player` (the side about to move),
-    before the move is applied. Fail loud rather than emit a corrupt record.
+    before the move is applied. `top2` is the top-two root children by
+    completed visits (eval_readout.ChildStat), or None when not captured --
+    None means "not captured", never "no children". Fail loud rather than
+    emit a corrupt record.
     """
     if not counts:
         raise ValueError(f"ply {ply}: empty visit counts")
@@ -41,6 +58,9 @@ def ply_record(ply, player, move, counts, root_value):
         "selected_visit_count": counts[move],
         "root_total_visits": total,
         "n_legal": len(counts),
+        "top2": ([_child_stat_dict(s) for s in top2]
+                 if top2 is not None else None),
+        "readout_overrode_leader": bool(overrode_leader),
     }
 
 

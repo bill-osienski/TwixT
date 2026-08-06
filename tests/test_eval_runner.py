@@ -117,7 +117,13 @@ def test_play_eval_game_capture_records_one_per_ply():
     for r in records:
         assert set(r) == {"ply", "player", "row", "col", "root_value",
                           "root_top1_share", "selected_visit_rank",
-                          "selected_visit_count", "root_total_visits", "n_legal"}
+                          "selected_visit_count", "root_total_visits", "n_legal",
+                          # Additive in replay schema 2 (Task B2).
+                          "top2", "readout_overrode_leader"}
+        # play_eval_game does not pass top2 yet -- Task B4 wires it. Until then
+        # the field must be None ("not captured"), never {} or [].
+        assert r["top2"] is None
+        assert r["readout_overrode_leader"] is False
         assert 0.0 <= r["root_top1_share"] <= 1.0
         assert r["selected_visit_rank"] >= 1
         assert r["selected_visit_count"] >= 1
