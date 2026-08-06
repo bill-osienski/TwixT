@@ -401,7 +401,11 @@ from existing means and visits, strictly post-tree, easy to falsify, and indepen
 any assumption that deeper search is truth — and because §2.2's precedent shows a relaxed
 override gate losing strength on this engine.
 
-Worked magnitudes: `ε(190) = 0.197`, `ε(100) = 0.272`, `ε(40) = 0.430`, `ε(8) = 0.960`.
+Worked magnitudes: `ε(190) = 0.197`, `ε(100) = 0.272`, `ε(40) = 0.429`, `ε(8) = 0.960`.
+*(Corrected 2026-08-06 during implementation: `ε(40)` was first printed as `0.430`;
+the exact value is `0.4294694`. This is a display rounding fix to an illustrative
+figure — the frozen formula, `R`, `δ`, `n_min`, eligibility and tie order are
+unchanged, and the `0.232` override gap below is unaffected.)*
 With a 190-visit leader and a 40-visit challenger, the challenger must exceed the leader
 by `0.232` in root-perspective Q to override. **The rule is expected to fire rarely; a
 near-no-op is a legitimate outcome that closes Candidate 2 without a match.**

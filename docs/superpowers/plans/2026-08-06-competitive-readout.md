@@ -681,10 +681,18 @@ def test_hoeffding_numerator_matches_the_frozen_value():
 
 
 def test_hoeffding_worked_magnitudes():
-    assert R.hoeffding_radius(190) == pytest.approx(0.197, abs=5e-4)
-    assert R.hoeffding_radius(100) == pytest.approx(0.272, abs=5e-4)
-    assert R.hoeffding_radius(40) == pytest.approx(0.430, abs=5e-4)
-    assert R.hoeffding_radius(8) == pytest.approx(0.960, abs=5e-4)
+    # Exact values, tighter than the spec's 3dp display figures. The spec
+    # originally printed eps(40) as 0.430; the true value is 0.42947, which
+    # rounds to 0.429. Corrected there; the RULE is unchanged.
+    assert R.hoeffding_radius(190) == pytest.approx(0.19705, abs=5e-5)
+    assert R.hoeffding_radius(100) == pytest.approx(0.27162, abs=5e-5)
+    assert R.hoeffding_radius(40) == pytest.approx(0.42947, abs=5e-5)
+    assert R.hoeffding_radius(8) == pytest.approx(0.96032, abs=5e-5)
+
+
+def test_the_worked_override_gap_is_what_the_spec_states():
+    gap = R.hoeffding_radius(40) - R.hoeffding_radius(190)
+    assert gap == pytest.approx(0.232, abs=5e-4)
 
 
 def test_min_child_visits_is_the_boundary_of_the_frozen_requirement():
