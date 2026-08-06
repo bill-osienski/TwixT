@@ -418,7 +418,7 @@ The frozen questions were:
 The earlier `[20320000, 20320024)` block stopped at its absolute-phase geometry gate
 and is retired as design evidence only. It contributed no atlas position.
 
-### Results
+### Outcome — `PROJECTED_CAPACITY_NO_GO` + widening `both_fail`
 
 | Check | Observed | Decision |
 |---|---:|---|
