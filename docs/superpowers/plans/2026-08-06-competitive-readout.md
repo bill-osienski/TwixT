@@ -45,11 +45,13 @@ Copied verbatim from `docs/superpowers/specs/2026-08-05-competitive-readout-stre
 | `scripts/GPU/alphazero/eval_runner.py` *(modify)* | `AgentSpec`; per-agent readout in `play_eval_game`; separate readout RNG; agent-aware tasks and results. |
 | `scripts/GPU/alphazero/eval_summary.py` *(modify)* | Agent-keyed aggregation; explicit rejection of agent artifacts by the legacy checkpoint path. |
 | `scripts/GPU/alphazero/eval_readout_match.py` *(new)* | Thin CLI for a two-agent, one-checkpoint match. The existing `eval_checkpoint_match.py` is left untouched. |
+| `scripts/GPU/alphazero/eval_integrity.py` *(new)* | Fail-closed zero-tolerance checks: per-ply budget and telemetry, whole-run completeness and binding. |
 | `scripts/GPU/alphazero/readout_preflight.py` *(new)* | Pure gate computation + CLI over captured replays. |
 | `tests/test_eval_readout.py` *(new)* | Frozen-constant and rule tests. |
 | `tests/test_eval_readout_telemetry.py` *(new)* | Telemetry contract + search-identity tests. |
 | `tests/test_eval_agent_identity.py` *(new)* | Task/result/colour-binding tests. |
 | `tests/test_eval_summary_agent_mode.py` *(new)* | Agent-mode aggregation + legacy rejection. |
+| `tests/test_eval_integrity.py` *(new)* | Zero-tolerance condition tests. |
 | `tests/test_readout_preflight.py` *(new)* | Frozen gate tests. |
 
 **Phase independence:** Phase A touches only JavaScript; Phase B touches only Python. They share no file and may be executed in either order, or concurrently.
@@ -1126,8 +1128,26 @@ def test_agent_results_are_labelled_as_agent_comparisons():
     r = make_result(tasks[0], "black", "win", 50)
     assert r.comparison_unit == AGENT_COMPARISON_UNIT
     assert r.same_checkpoint is True
-    assert r.red_readout == R.MODE_ARGMAX
-    assert r.black_readout == R.MODE_HOEFFDING_LCB
+    assert r.red_readout["mode"] == R.MODE_ARGMAX
+    assert r.black_readout["mode"] == R.MODE_HOEFFDING_LCB
+
+
+def test_results_carry_the_COMPLETE_readout_config_not_just_the_mode():
+    """`tournament` and `opening_then_argmax` are BOTH mode
+    'opening_temperature' and differ only in temp_low. Recording the mode
+    alone would make the two experiments indistinguishable in the artifact.
+    """
+    tournament = AgentSpec("control", CKPT, R.ReadoutConfig(
+        mode=R.MODE_OPENING_TEMPERATURE, temp_high=1.0, temp_low=0.1))
+    then_argmax = AgentSpec("candidate", CKPT, R.ReadoutConfig(
+        mode=R.MODE_OPENING_TEMPERATURE, temp_high=1.0, temp_low=0.0))
+    task = build_agent_pairing_tasks("p", then_argmax, tournament, 2, 100)[0]
+    r = make_result(task, "red", "win", 50)
+    assert r.red_readout["mode"] == r.black_readout["mode"]
+    assert r.red_readout["temp_low"] == 0.0
+    assert r.black_readout["temp_low"] == 0.1
+    assert r.red_readout["opening_temp_plies"] == 20
+    assert r.red_readout["temp_high"] == 1.0
 
 
 def test_legacy_checkpoint_tasks_carry_no_agent_fields():
@@ -1147,9 +1167,11 @@ Expected: FAIL — `ImportError: cannot import name 'AgentSpec'`
 
 - [ ] **Step 3: Write the implementation**
 
-In `scripts/GPU/alphazero/eval_runner.py`, add the import near the top:
+In `scripts/GPU/alphazero/eval_runner.py`, add the imports near the top
+(`asdict` serializes the complete readout config into every result row):
 
 ```python
+from dataclasses import asdict, dataclass
 from .eval_readout import ReadoutConfig
 ```
 
@@ -1208,8 +1230,11 @@ class EvalGameResult:
     red_agent_id: Optional[str] = None
     black_agent_id: Optional[str] = None
     winner_agent_id: Optional[str] = None
-    red_readout: Optional[str] = None
-    black_readout: Optional[str] = None
+    # COMPLETE readout configs, not just the mode: `tournament` and
+    # `opening_then_argmax` share mode "opening_temperature" and differ only
+    # in temp_low, so a mode string cannot identify the experiment.
+    red_readout: Optional[dict] = None
+    black_readout: Optional[dict] = None
     same_checkpoint: Optional[bool] = None
     comparison_unit: Optional[str] = None
 ```
@@ -1245,8 +1270,8 @@ def make_result(task: EvalGameTask, winner, reason, n_moves,
             "red_agent_id": task.red_agent.agent_id,
             "black_agent_id": task.black_agent.agent_id,
             "winner_agent_id": winner_agent_id,
-            "red_readout": task.red_agent.readout.mode,
-            "black_readout": task.black_agent.readout.mode,
+            "red_readout": asdict(task.red_agent.readout),
+            "black_readout": asdict(task.black_agent.readout),
             "same_checkpoint": task.red_agent.checkpoint == task.black_agent.checkpoint,
             "comparison_unit": AGENT_COMPARISON_UNIT,
         }
@@ -1355,31 +1380,57 @@ def test_readout_from_eval_config_rejects_unknown_modes():
         readout_from_eval_config(EvalConfig(selection_mode="wishful"))
 
 
-def test_search_identity_holds_at_a_fixed_root():
-    """CONSTRUCTED: the same completed search feeds both readouts, so visit
-    counts and root value are identical and only the played move may differ.
-
-    This is a per-position property. It is FALSE across a game by
-    construction, so it must never be asserted at game level.
-    """
+def _search_once(seed):
+    """One independent search from the same fixed state and search seed."""
     from scripts.GPU.alphazero.game.twixt_state import TwixtState
     from scripts.GPU.alphazero.mcts import MCTS, MCTSConfig
 
     state = TwixtState(active_size=6, to_move="red", max_plies_limit=24)
     mcts = MCTS(FakeEvaluator(0.0), MCTSConfig(n_simulations=32),
-                random.Random(7))
+                random.Random(seed))
     counts, root_value, root = mcts.search_with_root(state, add_noise=False)
-    stats = root_child_stats(counts, root)
-    top2 = R.top_two(stats)
+    return counts, root_value, R.top_two(root_child_stats(counts, root))
 
-    a, _ = R.select(counts, 5, R.ReadoutConfig(mode=R.MODE_ARGMAX),
+
+def test_search_identity_across_two_independent_searches():
+    """Two INDEPENDENT searches from the same state and search seed must
+    produce identical visit counts, root value and top-two telemetry.
+
+    Feeding one completed tree to two readouts would be tautological -- the
+    statistics are the same object. The real claim is that the search is
+    unaffected by which readout is configured, and only two separate runs can
+    test it.
+
+    This is a per-position property. It is FALSE across a game by
+    construction, so it must never be asserted at game level.
+    """
+    counts_a, rv_a, top2_a = _search_once(7)
+    counts_b, rv_b, top2_b = _search_once(7)
+
+    assert counts_a == counts_b
+    assert rv_a == rv_b
+    assert [(s.move, s.visits, s.q_child, s.q_root) for s in top2_a] == \
+           [(s.move, s.visits, s.q_child, s.q_root) for s in top2_b]
+
+    # Only the selected move may differ between readouts.
+    a, _ = R.select(counts_a, 5, R.ReadoutConfig(mode=R.MODE_ARGMAX),
                     random.Random(1))
-    b, _ = R.select(counts, 5, R.ReadoutConfig(mode=R.MODE_HOEFFDING_LCB,
-                                               opening_temp_plies=2),
-                    random.Random(1), top2=top2)
-    # Same tree in, same statistics out; only the choice may differ.
-    assert counts is not None and root_value is not None
-    assert a in counts and b in counts
+    b, _ = R.select(counts_b, 5, R.ReadoutConfig(mode=R.MODE_HOEFFDING_LCB,
+                                                 opening_temp_plies=2),
+                    random.Random(1), top2=top2_b)
+    assert a in counts_a and b in counts_b
+
+
+def test_search_identity_test_can_actually_fail():
+    """CONSTRUCTED negative case: a DIFFERENT search seed must change the
+    tree. If it does not, the identity test above is vacuous on this fixture
+    and the board/sim count must be made discriminating before it is trusted.
+    """
+    counts_a, _rv_a, _t_a = _search_once(7)
+    counts_c, _rv_c, _t_c = _search_once(9999)
+    assert counts_a != counts_c, (
+        "search is seed-insensitive on this fixture -- the identity test "
+        "proves nothing; enlarge the board or the simulation count")
 
 
 def test_readout_cannot_advance_the_search_rng():
@@ -1607,14 +1658,9 @@ def _play_and_build_result(task, red, black, config, capture, replay_dir):
 Run: `python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
-**If `test_play_eval_game_defaults_to_the_eval_config_readout` fails:** that is expected and correct — the RNG split changes which moves a temperature agent samples. Confirm the failure is *only* a different move sequence (not a crash or an invalid state), then change that test to assert the game merely completes validly:
+**Do not weaken `test_play_eval_game_defaults_to_the_eval_config_readout` if it fails.** Both calls run the *same* new implementation at the *same* seed, and `readout_from_eval_config(SMALL)` returns exactly what the default path constructs, so the two games must be identical. Disagreement is a bug in the default-resolution path — fix the code, not the assertion.
 
-```python
-def test_play_eval_game_defaults_to_the_eval_config_readout():
-    w, reason, n, _ = play_eval_game(
-        FakeEvaluator(0.0), FakeEvaluator(0.0), SMALL, seed=5)
-    assert n > 0 and reason in {"win", "state_cap", "board_full"}
-```
+(The RNG split does change results relative to *historical* runs. That is a different comparison, it is recorded in the spec, and no test in this plan asserts it.)
 
 - [ ] **Step 5: Measure the budget invariant and pin it**
 
@@ -2090,11 +2136,26 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
         **asdict(config),
         "base_seed": base_seed,
         "workers": workers,
+        # COMPLETE configs: mode alone cannot distinguish `tournament` from
+        # `opening_then_argmax` (both mode "opening_temperature").
         "candidate_readout": asdict(candidate_readout),
         "control_readout": asdict(control_readout),
         "checkpoint": checkpoint,
         "checkpoint_sha1": _sha1(checkpoint),
+        # HALF-OPEN [start, end): game g uses seed base_seed + g for
+        # g in range(games), so `end` is the first UNUSED seed. A later run
+        # proving disjointness must compare against this convention.
         "seed_interval": [base_seed, base_seed + games],
+        "seed_interval_convention": "half_open_[start,end)",
+        # Search and readout draw from separate streams (spec section 7.1).
+        # Recorded so a reader can reconstruct any game exactly.
+        "rng_derivation": {
+            "search_red": "seed ^ 0xA5A5A5",
+            "search_black": "seed ^ 0x5A5A5A",
+            "readout_red": "seed ^ 0xC3C3C3",
+            "readout_black": "seed ^ 0x3C3C3C",
+            "game_seed": "base_seed + game_idx",
+        },
     }
     summary = summarize_agent_match(results, CANDIDATE_ID, CONTROL_ID,
                                     pairing_id, config_dict)
@@ -2179,7 +2240,332 @@ git commit -m "feat(eval): two-agent readout match CLI"
 
 ---
 
-## Task B7: Preflight analyzer
+## Task B7: Fail-closed runtime integrity validator
+
+**Files:**
+- Create: `scripts/GPU/alphazero/eval_integrity.py`
+- Modify: `scripts/GPU/alphazero/eval_runner.py` (`play_eval_game` per-ply guard)
+- Modify: `scripts/GPU/alphazero/eval_readout_match.py` (`run_readout_match` result-set guard)
+- Create: `tests/test_eval_integrity.py`
+
+**Interfaces:**
+- Consumes: `ChildStat` (B1), `EvalGameResult` / `AgentSpec` (B3), `run_readout_match` (B6).
+- Produces:
+  - `IntegrityError(Exception)`
+  - `validate_ply(ply, expected_sims, root_visit_count, root_value, top2) -> None`
+  - `validate_result_set(results, tasks, agent_a_id, agent_b_id) -> None`
+
+The spec freezes these as zero-tolerance conditions (§8.3), but nothing so far
+enforces them. Every check **fails closed**: an unverifiable condition raises,
+it never warns and continues.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/test_eval_integrity.py`:
+
+```python
+"""Zero-tolerance integrity checks (design spec section 8.3)."""
+import math
+
+import pytest
+
+from scripts.GPU.alphazero import eval_readout as R
+from scripts.GPU.alphazero.eval_integrity import (
+    IntegrityError, validate_ply, validate_result_set,
+)
+from scripts.GPU.alphazero.eval_runner import (
+    AgentSpec, build_agent_pairing_tasks, make_result,
+)
+
+CKPT = "c.safetensors"
+A = AgentSpec("candidate", CKPT, R.ReadoutConfig(mode=R.MODE_ARGMAX))
+B = AgentSpec("control", CKPT, R.ReadoutConfig(mode=R.MODE_OPENING_TEMPERATURE))
+
+
+def _t2(nl=190, nc=40):
+    return [R.ChildStat((2, 2), nl, 0.3, -0.3),
+            R.ChildStat((1, 1), nc, -0.05, 0.05)]
+
+
+def test_valid_ply_passes():
+    validate_ply(5, expected_sims=400, root_visit_count=400,
+                 root_value=0.12, top2=_t2())
+
+
+def test_budget_mismatch_raises():
+    with pytest.raises(IntegrityError, match="budget"):
+        validate_ply(5, expected_sims=400, root_visit_count=399,
+                     root_value=0.12, top2=_t2())
+
+
+def test_non_finite_root_value_raises():
+    for bad in (float("nan"), float("inf")):
+        with pytest.raises(IntegrityError, match="root_value"):
+            validate_ply(5, expected_sims=400, root_visit_count=400,
+                         root_value=bad, top2=_t2())
+
+
+def test_non_finite_q_on_a_VISITED_child_raises():
+    bad = [R.ChildStat((2, 2), 190, float("nan"), float("nan")),
+           R.ChildStat((1, 1), 40, -0.05, 0.05)]
+    with pytest.raises(IntegrityError, match="q_value"):
+        validate_ply(5, expected_sims=400, root_visit_count=400,
+                     root_value=0.1, top2=bad)
+
+
+def test_none_q_on_an_UNVISITED_child_is_allowed():
+    # None on a zero-visit child is an UNDEFINED mean, not corrupt telemetry.
+    ok = [R.ChildStat((2, 2), 190, 0.3, -0.3),
+          R.ChildStat((1, 1), 0, None, None)]
+    validate_ply(5, expected_sims=400, root_visit_count=400,
+                 root_value=0.1, top2=ok)
+
+
+def test_none_q_on_a_VISITED_child_raises():
+    bad = [R.ChildStat((2, 2), 190, None, None),
+           R.ChildStat((1, 1), 40, -0.05, 0.05)]
+    with pytest.raises(IntegrityError, match="q_value"):
+        validate_ply(5, expected_sims=400, root_visit_count=400,
+                     root_value=0.1, top2=bad)
+
+
+def _ok_set(n=4):
+    tasks = build_agent_pairing_tasks("p", A, B, n, 100)
+    results = [make_result(t, "red", "win", 40) for t in tasks]
+    return results, tasks
+
+
+def test_valid_result_set_passes():
+    results, tasks = _ok_set()
+    validate_result_set(results, tasks, "candidate", "control")
+
+
+def test_unknown_error_raises():
+    results, tasks = _ok_set()
+    results[1].reason = "unknown_error"
+    with pytest.raises(IntegrityError, match="unknown_error"):
+        validate_result_set(results, tasks, "candidate", "control")
+
+
+def test_missing_result_raises():
+    results, tasks = _ok_set()
+    with pytest.raises(IntegrityError, match="incomplete"):
+        validate_result_set(results[:-1], tasks, "candidate", "control")
+
+
+def test_duplicate_task_id_raises():
+    results, tasks = _ok_set()
+    results[1].task_id = results[0].task_id
+    with pytest.raises(IntegrityError, match="duplicate"):
+        validate_result_set(results, tasks, "candidate", "control")
+
+
+def test_unexpected_agent_id_raises():
+    results, tasks = _ok_set()
+    results[0].red_agent_id = "impostor"
+    with pytest.raises(IntegrityError, match="agent"):
+        validate_result_set(results, tasks, "candidate", "control")
+
+
+def test_both_colours_held_by_the_same_agent_raises():
+    results, tasks = _ok_set()
+    results[0].black_agent_id = results[0].red_agent_id
+    with pytest.raises(IntegrityError, match="both colours"):
+        validate_result_set(results, tasks, "candidate", "control")
+
+
+def test_readout_leak_across_the_colour_swap_raises():
+    results, tasks = _ok_set()
+    # Same agent id, but the OTHER agent's readout config: a binding leak.
+    results[0].red_readout = dict(results[0].black_readout)
+    with pytest.raises(IntegrityError, match="configuration"):
+        validate_result_set(results, tasks, "candidate", "control")
+
+
+def test_colour_imbalance_raises():
+    tasks = build_agent_pairing_tasks("p", A, B, 4, 100)
+    results = [make_result(t, "red", "win", 40) for t in tasks]
+    results[1].red_agent_id = "candidate"
+    results[1].black_agent_id = "control"
+    with pytest.raises(IntegrityError, match="colour balance"):
+        validate_result_set(results, tasks, "candidate", "control")
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python -m pytest tests/test_eval_integrity.py -q; echo "EXIT=$?"`
+Expected: FAIL — `ModuleNotFoundError: ... eval_integrity`
+
+- [ ] **Step 3: Write the implementation**
+
+Create `scripts/GPU/alphazero/eval_integrity.py`:
+
+```python
+"""Zero-tolerance integrity checks for readout matches.
+
+Design spec section 8.3 freezes these conditions as immediate stops. Every
+check FAILS CLOSED: an unverifiable condition raises IntegrityError rather
+than warning and continuing. A run that trips any of these is not a result.
+"""
+from __future__ import annotations
+
+import math
+from typing import Dict, List, Optional
+
+
+class IntegrityError(RuntimeError):
+    """A frozen zero-tolerance condition was observed."""
+
+
+def _finite(x) -> bool:
+    return isinstance(x, (int, float)) and math.isfinite(x)
+
+
+def validate_ply(ply: int, expected_sims: int, root_visit_count: int,
+                 root_value, top2) -> None:
+    """Per-ply guard. Raises on budget mismatch or corrupt required telemetry.
+
+    A None mean on a ZERO-visit child is undefined, not corrupt, and passes.
+    A None or non-finite mean on a VISITED child is corrupt and raises.
+    """
+    if root_visit_count != expected_sims:
+        raise IntegrityError(
+            f"ply {ply}: simulation budget mismatch -- root completed "
+            f"{root_visit_count} visits, expected exactly {expected_sims}")
+    if not _finite(root_value):
+        raise IntegrityError(f"ply {ply}: root_value is not finite ({root_value!r})")
+    for stat in top2 or []:
+        if stat.visits <= 0:
+            continue
+        for label, q in (("q_value_child_perspective", stat.q_child),
+                         ("q_value_root_perspective", stat.q_root)):
+            if not _finite(q):
+                raise IntegrityError(
+                    f"ply {ply}: child {stat.move} has {stat.visits} visits but "
+                    f"{label} is {q!r}; a visited child's mean is defined")
+
+
+def validate_result_set(results, tasks, agent_a_id: str,
+                        agent_b_id: str) -> None:
+    """Whole-run guard, applied before any statistic is computed."""
+    expected_ids = {agent_a_id, agent_b_id}
+
+    bad = [r.task_id for r in results if r.reason == "unknown_error"]
+    if bad:
+        raise IntegrityError(
+            f"{len(bad)} game(s) ended in unknown_error: {sorted(bad)[:10]}")
+
+    if len(results) != len(tasks):
+        raise IntegrityError(
+            f"incomplete run: {len(results)} results for {len(tasks)} tasks")
+
+    seen: Dict[int, int] = {}
+    for r in results:
+        seen[r.task_id] = seen.get(r.task_id, 0) + 1
+    dupes = sorted(t for t, n in seen.items() if n > 1)
+    if dupes:
+        raise IntegrityError(f"duplicate task_ids in results: {dupes[:10]}")
+    missing = sorted({t.task_id for t in tasks} - set(seen))
+    if missing:
+        raise IntegrityError(f"incomplete run: missing task_ids {missing[:10]}")
+
+    by_task = {t.task_id: t for t in tasks}
+    readouts: Dict[str, Optional[dict]] = {}
+    red_counts: Dict[str, int] = {agent_a_id: 0, agent_b_id: 0}
+
+    for r in results:
+        got = {r.red_agent_id, r.black_agent_id}
+        if None in got or not got <= expected_ids:
+            raise IntegrityError(
+                f"task {r.task_id}: unexpected agent ids {sorted(map(str, got))}, "
+                f"expected {sorted(expected_ids)}")
+        if r.red_agent_id == r.black_agent_id:
+            raise IntegrityError(
+                f"task {r.task_id}: agent {r.red_agent_id!r} holds both colours")
+
+        task = by_task[r.task_id]
+        for colour, agent_id, readout in (
+                ("red", r.red_agent_id, r.red_readout),
+                ("black", r.black_agent_id, r.black_readout)):
+            spec = task.red_agent if colour == "red" else task.black_agent
+            if spec is None or spec.agent_id != agent_id:
+                raise IntegrityError(
+                    f"task {r.task_id}: {colour} agent id {agent_id!r} does not "
+                    f"match the task binding "
+                    f"{None if spec is None else spec.agent_id!r}")
+            prev = readouts.setdefault(agent_id, readout)
+            if prev != readout:
+                raise IntegrityError(
+                    f"task {r.task_id}: configuration leak -- agent "
+                    f"{agent_id!r} played readout {readout!r} here but "
+                    f"{prev!r} elsewhere")
+        red_counts[r.red_agent_id] += 1
+
+    if red_counts[agent_a_id] != red_counts[agent_b_id]:
+        raise IntegrityError(
+            f"colour balance broken: {agent_a_id} was red "
+            f"{red_counts[agent_a_id]} times, {agent_b_id} "
+            f"{red_counts[agent_b_id]}")
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python -m pytest tests/test_eval_integrity.py -q; echo "EXIT=$?"`
+Expected: `EXIT=0`
+
+- [ ] **Step 5: Wire the per-ply guard into the game loop**
+
+In `scripts/GPU/alphazero/eval_runner.py`, add the import:
+
+```python
+from .eval_integrity import validate_ply
+```
+
+In `play_eval_game`, replace the `if root.visit_count <= 0:` guard with:
+
+```python
+        validate_ply(ply, config.mcts_sims, root.visit_count, root_value, top2)
+```
+
+placing it immediately after `top2 = eval_readout.top_two(stats)` (it needs
+`top2`), and delete the old `root.visit_count <= 0` check, which the budget
+comparison subsumes.
+
+- [ ] **Step 6: Wire the result-set guard into the match**
+
+In `scripts/GPU/alphazero/eval_readout_match.py`, add the import:
+
+```python
+from .eval_integrity import validate_result_set
+```
+
+and call it in `run_readout_match` immediately after `results = run_game_tasks(...)`,
+before `config_dict` is built:
+
+```python
+    validate_result_set(results, tasks, CANDIDATE_ID, CONTROL_ID)
+```
+
+- [ ] **Step 7: Run the affected suites**
+
+Run: `python -m pytest tests/test_eval_integrity.py tests/test_eval_readout_telemetry.py tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
+Expected: `EXIT=0`
+
+If a `play_eval_game` test now fails on the budget assertion, the fixture's
+`mcts_sims` and the measured `root.visit_count` disagree — resolve it against
+the value measured in Task B4 Step 5, never by loosening `validate_ply`.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add scripts/GPU/alphazero/eval_integrity.py scripts/GPU/alphazero/eval_runner.py \
+        scripts/GPU/alphazero/eval_readout_match.py tests/test_eval_integrity.py
+git commit -m "feat(eval): fail-closed integrity validator for plies and result sets"
+```
+
+---
+
+## Task B8: Preflight analyzer
 
 **Files:**
 - Create: `scripts/GPU/alphazero/readout_preflight.py`
@@ -2515,6 +2901,10 @@ The preflight reads `red_agent_id` / `black_agent_id` from each replay. Add them
 ```python
         "red_agent_id": getattr(result, "red_agent_id", None),
         "black_agent_id": getattr(result, "black_agent_id", None),
+        # COMPLETE configs, not just the mode -- `tournament` and
+        # `opening_then_argmax` are both mode "opening_temperature".
+        "red_readout": getattr(result, "red_readout", None),
+        "black_readout": getattr(result, "black_readout", None),
         "comparison_unit": getattr(result, "comparison_unit", None),
 ```
 
@@ -2535,6 +2925,10 @@ def test_replay_dict_carries_agent_ids():
     assert d["red_agent_id"] == "candidate"
     assert d["black_agent_id"] == "control"
     assert d["comparison_unit"] == "agent"
+    # Full config, not just the mode: the replay must be self-describing.
+    assert d["red_readout"]["mode"] == R.MODE_ARGMAX
+    assert d["black_readout"]["temp_low"] == 0.1
+    assert d["black_readout"]["opening_temp_plies"] == 20
 ```
 
 Run: `python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
@@ -2567,7 +2961,18 @@ Tooling is complete when all of the following hold, each verified by a command w
 - `npm run lint` exits 0.
 - `python -m scripts.GPU.alphazero.eval_readout_match --help` exits 0.
 - `python -m scripts.GPU.alphazero.readout_preflight --help` exits 0.
-- `git diff main -- scripts/GPU/alphazero/mcts.py scripts/GPU/alphazero/self_play.py` is **empty**. Neither file may change.
+- Every zero-tolerance condition in spec §8.3 has a test that constructs it and
+  asserts `IntegrityError` (Task B7), and both guards are wired — `validate_ply`
+  in the game loop, `validate_result_set` before any statistic is computed.
+- Per-game rows and replay sidecars carry the **complete** readout config, the
+  RNG derivation scheme, and a seed interval labelled with its convention.
+- `git diff d5326a0 -- scripts/GPU/alphazero/mcts.py scripts/GPU/alphazero/self_play.py` is **empty**. Neither file may change.
+
+**The baseline is `d5326a0`, not `main`.** Both files already differ from `main`
+by 105 insertions — the Stage 1 atlas observer surfaces this branch inherits —
+so a `main` comparison could never pass and would silently normalize a broken
+check. `d5326a0` is the commit this implementation branch (`codex/competitive-readout`)
+starts from, and it is the only meaningful "unchanged" reference.
 
 ## Explicitly NOT in this plan
 
