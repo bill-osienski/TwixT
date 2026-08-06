@@ -10,7 +10,7 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 
-import { TwixtState, MAX_PLIES } from './gameLogic.js';
+import { TwixtState, MAX_PLIES, NUM_CHANNELS } from './gameLogic.js';
 import { BoardMovesCache } from './cache.js';
 import { MCTS, MCTSNode } from './mcts.js';
 
@@ -92,10 +92,10 @@ describe('TwixtState', () => {
 
     const tensor = state.toTensorHWC();
 
-    // Should be [24][24][24] = [H][W][C]
+    // Should be [24][24][NUM_CHANNELS] = [H][W][C]
     assert.strictEqual(tensor.length, 24, 'Height dimension');
     assert.strictEqual(tensor[0].length, 24, 'Width dimension');
-    assert.strictEqual(tensor[0][0].length, 24, 'Channel dimension');
+    assert.strictEqual(tensor[0][0].length, NUM_CHANNELS, 'Channel dimension');
 
     // Check red peg channel (0) at position (5, 5)
     assert.strictEqual(tensor[5][5][0], 1.0, 'Red peg at (5,5)');
@@ -308,10 +308,10 @@ describe('TwixtState toTensorHWC parity', () => {
     // Check dimensions
     assert.strictEqual(hwc.length, 24);
     assert.strictEqual(hwc[0].length, 24);
-    assert.strictEqual(hwc[0][0].length, 24);
+    assert.strictEqual(hwc[0][0].length, NUM_CHANNELS);
 
     // Verify transposition: hwc[h][w][c] === chw[c][h][w]
-    for (let c = 0; c < 24; c++) {
+    for (let c = 0; c < NUM_CHANNELS; c++) {
       for (let h = 0; h < 24; h++) {
         for (let w = 0; w < 24; w++) {
           assert.strictEqual(

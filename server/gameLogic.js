@@ -861,7 +861,7 @@ export class TwixtState {
 
   /**
    * Convert tensor to nested array format [channel][row][col] for JSON serialization.
-   * @returns {number[][][]} 3D array of shape [24][24][24]
+   * @returns {number[][][]} 3D array of shape [NUM_CHANNELS][24][24]
    */
   toTensorNested() {
     const flat = this.toTensor();
@@ -886,7 +886,7 @@ export class TwixtState {
   /**
    * Convert tensor to HWC format [row][col][channel] for ONNX inference.
    * This is the NHWC layout expected by inference.js.
-   * @returns {number[][][]} 3D array of shape [24][24][24] in HWC order
+   * @returns {number[][][]} 3D array of shape [24][24][NUM_CHANNELS] in HWC order
    */
   toTensorHWC() {
     const flat = this.toTensor();
