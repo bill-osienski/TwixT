@@ -71,13 +71,16 @@ not change character — only the definition of "late" did.
 ```text
 p_m 0.4583  (11/24 misleading: 8 by move, 6 by value)
 p_s 0.0417  ( 1/24 stable-negative)
-required N = max(60/p_m, 75/p_s) = max(131, 1800) = 1800  >  frozen maximum 400
+raw requirement = max(60/p_m, 75/p_s) = max(130.9, 1800) = 1800
+rounded allowed N = 1800  >  frozen maximum 400
 class counts   misleading 11 · stable_negative 1 · ambiguous 0 · no_stable_reference 12
 ```
 
 **The binding constraint is stable-negative scarcity, not misleading scarcity.**
-Misleading positions were abundant and on their own would have needed `N ≈ 131`. One
-stable-negative row in 24 drove the requirement to 4.5× the ceiling.
+Misleading positions were abundant and on their own give raw `130.9`, which rounds to
+the next legal size, `N = 160`. One stable-negative row in 24 drove the requirement to
+4.5× the ceiling. For scale, `9/24` stable-negative with the observed misleading rate
+would size to exactly `N = 200`; the observed `1/24` is not a marginal miss.
 
 The deeper number is that **12 of 24 rows had no stable deep reference at all** — 3,200
 and 6,400 did not agree on move, value within `0.10`, and a top-two margin `≥ 0.05`.

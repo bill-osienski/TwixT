@@ -423,7 +423,7 @@ and is retired as design evidence only. It contributed no atlas position.
 | Check | Observed | Decision |
 |---|---:|---|
 | pilot completeness | 24/24 measured, no failures | authoritative |
-| misleading frequency | 11/24 | sufficient by itself (`N ≈ 131`) |
+| misleading frequency | 11/24 | sufficient by itself (raw 130.9 → legal `N=160`) |
 | stable-negative frequency | 1/24 | `required N=1800 > 400` — **PROJECTED_CAPACITY_NO_GO** |
 | no stable 3,200/6,400 reference | 12/24 | half the pilot unclassifiable under frozen labels |
 | widening root retention, both shapes | 1.0 vs 0.95 floor | pass |
@@ -433,6 +433,9 @@ and is retired as design evidence only. It contributed no atlas position.
 The widening rejection rests on retention over 12 stable-reference-eligible rows, not
 on sparse intervention denominators. Both shapes preserved every stable root move and
 dropped roughly one-third of the depth-1 replies required by stable deeper search.
+For scale, `9/24` stable-negative with the observed misleading rate would have sized to
+exactly `N=200`; the observed `1/24` instead drove `N=1800`, so the capacity finding was
+not marginal.
 
 ### Interpretation and frozen consequences
 
