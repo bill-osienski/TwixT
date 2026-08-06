@@ -23,12 +23,104 @@ from scripts.GPU.alphazero.corpus_geometry import (
 )
 
 
+# -- Amendment 5: phase is the quarter of the game's REALIZED trajectory -----
+
 @pytest.mark.parametrize("ply,expected", [
-    (0, "opening"), (30, "opening"), (31, "early_mid"), (60, "early_mid"),
-    (61, "midgame"), (90, "midgame"), (91, "late"), (279, "late"),
+    (0, "opening"), (9, "opening"),
+    (10, "early_mid"), (19, "early_mid"),
+    (20, "midgame"), (29, "midgame"),
+    (30, "late"), (39, "late"),
 ])
-def test_phase_bounds_are_exact(ply, expected):
-    assert phase_for_ply(ply) == expected
+def test_quarters_of_a_40_move_game(ply, expected):
+    """(4p)//40 == p//10, so the quarters are exactly 10 plies each."""
+    assert phase_for_ply(ply, 40) == expected
+
+
+def test_the_SAME_ply_lands_in_different_phases_in_different_games():
+    """The whole point of the amendment: phase is trajectory-relative, so an
+    absolute ply carries no phase on its own."""
+    assert phase_for_ply(30, 40) == "late"
+    assert phase_for_ply(30, 200) == "opening"   # (4*30)//200 == 0
+
+
+def test_the_final_ply_is_always_late_and_the_first_always_opening():
+    for n in (8, 39, 57, 76, 280):
+        assert phase_for_ply(0, n) == "opening"
+        assert phase_for_ply(n - 1, n) == "late"
+
+
+def test_a_ply_at_or_past_the_end_is_REJECTED_not_classified():
+    """Amendment 5's domain is 0 <= ply < n_moves.
+
+    Unguarded, `min(3, ...)` would label these `late` -- so a row whose ply and
+    n_moves had come apart, which is corrupt metadata, would enter the corpus
+    wearing a plausible phase. There is no valid position at ply == n_moves:
+    the game is over.
+    """
+    for bad in (40, 41, 99):
+        with pytest.raises(ValueError, match="ply"):
+            phase_for_ply(bad, 40)
+
+
+def test_the_domain_restriction_changes_no_valid_classification():
+    """Over the whole domain the raw index never exceeds 3, so `min(3, ...)`
+    never binds for a real position. Rejecting outside the domain therefore
+    cannot alter any answer the formula gives inside it."""
+    assert max((4 * p) // n for n in range(1, 300) for p in range(n)) == 3
+
+
+def test_n_moves_is_REQUIRED_not_defaulted():
+    """A default would let a stale call site silently keep the old behaviour,
+    which is exactly what this amendment must not permit."""
+    with pytest.raises(TypeError):
+        phase_for_ply(5)
+
+
+def test_guards_are_kept():
+    with pytest.raises(ValueError, match="non-negative"):
+        phase_for_ply(-1, 40)
+    with pytest.raises(ValueError, match="n_moves"):
+        phase_for_ply(0, 0)
+
+
+def test_every_game_from_8_to_280_moves_serves_ALL_EIGHT_cells():
+    """The geometry failure this amendment exists to fix, swept EXHAUSTIVELY
+    over the whole producible range rather than sampled at four points.
+
+    280 is the frozen `max_moves`, so 8..280 is every length generation can
+    emit; below 8 a quarter can hold one ply and therefore one side. A sampled
+    test would miss a parity or rounding hole at some specific length, which is
+    precisely the class of defect that produced the no-go.
+    """
+    for n in range(8, 281):
+        meta = GameMeta(game_id=0, seed=1, n_moves=n, start_player="red")
+        assert len(eligible_cells(meta)) == 8, f"n_moves={n} serves fewer cells"
+
+
+def test_below_eight_moves_a_quarter_can_hold_a_single_side():
+    """Stated so the >= 8 bound is a measured boundary, not an assumption."""
+    short = GameMeta(game_id=0, seed=1, n_moves=4, start_player="red")
+    assert len(eligible_cells(short)) < 8
+
+
+def test_the_retired_pilots_lengths_would_now_all_serve_late():
+    """The 24 retired games ran 39-76 plies and produced ZERO late capacity
+    under absolute bounds. Retained as a regression fixture ONLY -- these are
+    lengths, not positions, and no retired position enters any corpus."""
+    for n in (39, 46, 48, 55, 57, 62, 70, 76):
+        meta = GameMeta(game_id=0, seed=1, n_moves=n, start_player="red")
+        assert eligible_plies(meta, "late", "red")
+        assert eligible_plies(meta, "late", "black")
+
+
+def test_quarters_partition_the_whole_trajectory():
+    """No ply is unassigned and none is double-assigned, over every producible
+    length."""
+    for n in range(8, 281):
+        meta = GameMeta(game_id=0, seed=1, n_moves=n, start_player="red")
+        seen = [p for ph in PHASES for s in SIDES
+                for p in eligible_plies(meta, ph, s)]
+        assert sorted(seen) == list(range(n))
 
 
 def test_side_alternates_from_the_start_player():
@@ -40,12 +132,15 @@ def test_side_alternates_from_the_start_player():
 
 def test_eligibility_derives_only_from_n_moves_and_start_player():
     """No value, residual, entropy, branching or outcome is consulted."""
-    short = GameMeta(game_id=1, seed=100, n_moves=40, start_player="red")
-    assert eligible_plies(short, "opening", "red") == list(range(0, 31, 2))
-    assert eligible_plies(short, "late", "red") == []        # never reaches ply 91
-    cells = eligible_cells(short)
+    g = GameMeta(game_id=1, seed=100, n_moves=40, start_player="red")
+    # Quarters of a 40-move game are 10 plies each; red is on even plies.
+    assert eligible_plies(g, "opening", "red") == [0, 2, 4, 6, 8]
+    # Amendment 5: a 40-move game DOES have late positions -- its own final
+    # quarter. Under the old absolute bounds this was [] "never reaches 91".
+    assert eligible_plies(g, "late", "red") == [30, 32, 34, 36, 38]
+    cells = eligible_cells(g)
     assert ("opening", "red") in cells and ("early_mid", "black") in cells
-    assert not any(p == "late" for p, _s in cells)
+    assert ("late", "red") in cells
 
 
 def test_a_long_game_serves_every_cell():
@@ -79,7 +174,11 @@ def test_full_matching_succeeds_and_respects_one_position_per_game():
 
 
 def test_shortfall_reports_unmet_cells_and_a_min_cut():
-    games = _games([(40, "red")] * 4)
+    # Amendment 5 changed how a cell becomes unfillable. A short game no longer
+    # lacks `late` -- it has its own final quarter -- so the negative is now
+    # built from a quarter that cannot supply the SIDE: in a 4-move red-start
+    # game each quarter is a single ply, and the last one is black to move.
+    games = _games([(4, "red")] * 4)
     demands = {("discovery", "late", "red"): 2}
     r = match_games_to_cells(games, demands, sampling_seed=1)
     assert r.achieved_flow == 0 and r.demanded_flow == 2
@@ -117,8 +216,11 @@ def test_pilot_gate_passes_when_24_long_games_cover_every_cell():
     assert len(r["assignment"]) == PILOT_GAMES
 
 
-def test_pilot_gate_no_gos_when_late_cells_cannot_be_filled():
-    r = pilot_geometry_gate(_pilot(n_moves=60), sampling_seed=7)
+def test_pilot_gate_no_gos_when_a_quarter_cannot_supply_both_sides():
+    """Amendment 5 dissolved the old no-go fixture: 60-move games now fill every
+    cell. A genuine no-go needs quarters of a single ply, all on one side --
+    24 four-move red-start games cover only 4 of the 8 cells."""
+    r = pilot_geometry_gate(_games([(4, "red")] * PILOT_GAMES), sampling_seed=7)
     assert r["verdict"] == "PHASE_GEOMETRY_NO_GO"
     assert ("discovery", "late", "red") in r["min_cut_cells"]
 
@@ -160,7 +262,7 @@ def test_sizing_rejects_a_disallowed_n():
 
 
 def test_zero_capacity_subset_is_a_no_go():
-    r = size_continuation(_pilot(n_moves=60), n_target=200)
+    r = size_continuation(_games([(4, "red")] * PILOT_GAMES), n_target=200)
     assert r["verdict"] == "PHASE_GEOMETRY_NO_GO"
 
 
@@ -182,7 +284,8 @@ def test_select_ply_is_stable_and_within_the_cell():
     meta = GameMeta(game_id=5, seed=9, n_moves=200, start_player="red")
     a = select_ply(meta, "discovery", "late", "black", sampling_seed=3)
     assert a == select_ply(meta, "discovery", "late", "black", sampling_seed=3)
-    assert phase_for_ply(a) == "late" and side_for_ply(a, "red") == "black"
+    assert phase_for_ply(a, meta.n_moves) == "late"
+    assert side_for_ply(a, "red") == "black"
 
 
 def _continuation(n_games, n_moves=200):
@@ -201,8 +304,11 @@ def test_assign_corpus_emits_a_witness_on_success():
 
 def test_assign_corpus_stops_with_a_failure_artifact_on_shortfall():
     pa = pilot_geometry_gate(_pilot(), sampling_seed=7)["assignment"]
-    r = assign_corpus(pa, _continuation(216, n_moves=50), n_target=200,
-                      sampling_seed=7)
+    # 50-move games now serve every cell, so the shortfall is built the same way
+    # as the gate's: single-ply quarters, all red-start, covering 4 cells of 8.
+    starved = [GameMeta(game_id=PILOT_GAMES + i, seed=2000 + i, n_moves=4,
+                        start_player="red") for i in range(216)]
+    r = assign_corpus(pa, starved, n_target=200, sampling_seed=7)
     assert r["verdict"] == "ASSIGNMENT_SHORTFALL"
     assert r["achieved_flow"] < r["demanded_flow"]
     assert r["unmet"] and r["min_cut_cells"]

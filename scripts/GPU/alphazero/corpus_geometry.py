@@ -19,13 +19,6 @@ SIDES: Tuple[str, ...] = ("red", "black")
 SPLITS: Tuple[str, ...] = ("discovery", "validation")
 
 # (name, first_ply, last_ply_inclusive_or_None)
-_PHASE_BOUNDS: Tuple[Tuple[str, int, Optional[int]], ...] = (
-    ("opening", 0, 30),
-    ("early_mid", 31, 60),
-    ("midgame", 61, 90),
-    ("late", 91, None),
-)
-
 ALLOWED_N = (200, 240, 280, 320, 360, 400)
 MAX_SEED_RANGE_GAMES = 480
 PILOT_GAMES = 24
@@ -33,13 +26,36 @@ PILOT_PER_CELL = 3
 SIZING_MARGIN = 1.20
 
 
-def phase_for_ply(ply: int) -> str:
+def phase_for_ply(ply: int, n_moves: int) -> str:
+    """`min(3, (4 * ply) // n_moves)` over `0 <= ply < n_moves` -- amendment 5.
+
+    Phase is the quarter of the game's REALIZED trajectory, not an absolute ply
+    band. Absolute bounds made the late cells unfillable -- zero of 24 pilot
+    games reached ply 91 -- and a lower fitted cutoff would have tuned directly
+    to those observed lengths.
+
+    `n_moves` is REQUIRED. A default would let a stale call site keep
+    absolute-like behaviour silently, which is the one failure this change
+    cannot tolerate.
+
+    A ply at or past `n_moves` is REJECTED, not clamped to `late`: there is no
+    valid position at `ply == n_moves`, and silently labelling one would let a
+    row whose ply and n_moves had come apart enter the corpus wearing a
+    plausible phase. Over the valid domain the raw index never exceeds 3, so
+    the clamp never binds for a real position and this rejection changes no
+    valid answer.
+
+    Indexes PHASES directly -- it is already in formula order.
+    """
     if ply < 0:
         raise ValueError(f"ply must be non-negative, got {ply}")
-    for name, lo, hi in _PHASE_BOUNDS:
-        if ply >= lo and (hi is None or ply <= hi):
-            return name
-    raise AssertionError(f"unreachable: no phase for ply {ply}")
+    if n_moves <= 0:
+        raise ValueError(f"n_moves must be positive, got {n_moves}")
+    if ply >= n_moves:
+        raise ValueError(
+            f"ply {ply} is outside the game's trajectory (n_moves={n_moves}); "
+            f"amendment 5's domain is 0 <= ply < n_moves")
+    return PHASES[min(3, (4 * ply) // n_moves)]
 
 
 def side_for_ply(ply: int, start_player: str) -> str:
@@ -62,14 +78,15 @@ class GameMeta:
 def eligible_plies(meta: GameMeta, phase: str, side: str) -> List[int]:
     return [
         p for p in range(meta.n_moves)
-        if phase_for_ply(p) == phase and side_for_ply(p, meta.start_player) == side
+        if phase_for_ply(p, meta.n_moves) == phase
+        and side_for_ply(p, meta.start_player) == side
     ]
 
 
 def eligible_cells(meta: GameMeta) -> Set[Tuple[str, str]]:
     """The (phase, side) cells this game can serve at all."""
     return {
-        (phase_for_ply(p), side_for_ply(p, meta.start_player))
+        (phase_for_ply(p, meta.n_moves), side_for_ply(p, meta.start_player))
         for p in range(meta.n_moves)
     }
 
