@@ -8,12 +8,17 @@
 
 **Tech Stack:** Python 3 + pytest (research harness, no MLX in any new module); Node ESM + `node --test` (server).
 
+**Interpreter:** `.venv/bin/python`, verified on this machine. `python` is not on
+PATH and the system `python3` lacks `mlx` and `torch` — running the suite with it
+produces 28 collection errors. Every Python command in this plan uses the venv
+explicitly; do not substitute a bare `python` or `python3`.
+
 ## Global Constraints
 
 Copied verbatim from `docs/superpowers/specs/2026-08-05-competitive-readout-strength-design.md`:
 
 - **No GPU work is authorized.** This plan ends at implemented, tested, run-ready tooling. Do **not** launch Candidate 1, Candidate 2, or any match.
-- Candidate 2's rule and gates are **FROZEN 2026-08-06**. `VALUE_RANGE = 2.0`, `DELTA = 0.05`, `MIN_CHILD_VISITS = 8`, `ε(n) = 2·sqrt(1.84445/n)`, top **two** children by completed visits, canonical numeric `(row, col)` tie order. Preflight gates: `< 0.5%` and `> 15%` override rate, `> 50%` single-game concentration. Colour split is **descriptive only**. No constant, threshold or eligibility rule may change.
+- Candidate 2's rule and gates are **FROZEN 2026-08-06**. `VALUE_RANGE = 2.0`, `DELTA = 0.05`, `MIN_CHILD_VISITS = 8`, `ε(n) = 2·sqrt(1.84444/n)`, top **two** children by completed visits, canonical numeric `(row, col)` tie order. Preflight gates: `< 0.5%` and `> 15%` override rate, `> 50%` single-game concentration. Colour split is **descriptive only**. No constant, threshold or eligibility rule may change.
 - **Undefined statistics are `None`/null — never `0`, never `false`.** Note `MCTSNode.q_value` returns `0.0` at `visit_count == 0` (`mcts.py:259-261`); that is an undefined mean and must be mapped to `None`.
 - **Fail closed.** An unverifiable condition is a failure. Every test constructs its negative case rather than observing it from ambient state.
 - **Self-play must not change.** `self_play.py` keeps calling `mcts.select_move`; nothing in this plan edits `mcts.py`.
@@ -675,9 +680,20 @@ def test_frozen_constants():
     assert R.MIN_CHILD_VISITS == 8
 
 
-def test_hoeffding_numerator_matches_the_frozen_value():
-    # eps(n) = 2*sqrt(1.84445/n) as written in the spec.
-    assert R.hoeffding_radius(1) == pytest.approx(2.0 * math.sqrt(1.84445), abs=1e-4)
+def test_hoeffding_radius_is_the_exact_frozen_formula():
+    """eps(n) = R*sqrt(ln(2/delta)/(2n)), computed from the frozen R and delta
+    rather than from the spec's rounded 1.84444 display constant. A loose
+    comparison against the rounded numerator would tolerate a real drift in R
+    or delta; this one cannot.
+    """
+    for n in (1, 7, 8, 40, 100, 190, 400):
+        expected = R.VALUE_RANGE * math.sqrt(
+            math.log(2.0 / R.DELTA) / (2.0 * n))
+        assert R.hoeffding_radius(n) == pytest.approx(expected, rel=1e-12)
+
+
+def test_the_rounded_display_constant_still_describes_the_formula():
+    assert math.log(2.0 / R.DELTA) / 2.0 == pytest.approx(1.84444, abs=5e-6)
 
 
 def test_hoeffding_worked_magnitudes():
@@ -730,7 +746,7 @@ def test_root_perspective_is_the_negation_of_child_perspective():
 
 def test_lcb_override_fires_when_challenger_lcb_is_higher():
     # leader 190 visits, q_root -0.30 -> LCB -0.497
-    # challenger 40 visits, q_root  0.00 -> LCB -0.430  (higher -> override)
+    # challenger 40 visits, q_root  0.00 -> LCB -0.429  (higher -> override)
     top2 = [
         R.ChildStat((2, 2), 190, 0.30, -0.30),
         R.ChildStat((1, 1), 40, -0.00, 0.00),
@@ -839,7 +855,7 @@ def test_select_rejects_empty_counts():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest tests/test_eval_readout.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_readout.py -q; echo "EXIT=$?"`
 Expected: FAIL — `ModuleNotFoundError: ... eval_readout`
 
 - [ ] **Step 3: Write the implementation**
@@ -1033,7 +1049,7 @@ def select(counts: Dict[Move, int], ply: int, readout: ReadoutConfig, rng,
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m pytest tests/test_eval_readout.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_readout.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`, all tests pass
 
 - [ ] **Step 5: Commit**
@@ -1114,7 +1130,7 @@ def test_ply_record_still_fails_loud_on_a_move_outside_the_counts():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
 Expected: FAIL — `assert 1 == 2` on the schema version
 
 - [ ] **Step 3: Write the implementation**
@@ -1176,12 +1192,12 @@ def ply_record(ply, player, move, counts, root_value, top2=None,
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 5: Run the existing replay tests for regressions**
 
-Run: `python -m pytest tests/ -q -k "replay" ; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/ -q -k "replay" ; echo "EXIT=$?"`
 Expected: `EXIT=0`. If a test pins `REPLAY_SCHEMA_VERSION == 1`, update that assertion to `2` — the bump is intentional.
 
 - [ ] **Step 6: Commit**
@@ -1309,7 +1325,7 @@ def test_legacy_checkpoint_tasks_carry_no_agent_fields():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
 Expected: FAIL — `ImportError: cannot import name 'AgentSpec'`
 
 - [ ] **Step 3: Write the implementation**
@@ -1463,12 +1479,12 @@ def build_agent_pairing_tasks(pairing_id, agent_a: AgentSpec, agent_b: AgentSpec
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m pytest tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 5: Verify no existing eval test regressed**
 
-Run: `python -m pytest tests/ -q -k "eval" ; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/ -q -k "eval" ; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 6: Commit**
@@ -1663,7 +1679,7 @@ def test_play_eval_game_defaults_to_the_eval_config_readout():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
 Expected: FAIL — `ImportError: cannot import name 'readout_from_eval_config'`
 
 - [ ] **Step 3: Write the implementation**
@@ -1802,7 +1818,7 @@ def _play_and_build_result(task, red, black, config, capture, replay_dir):
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 **Do not weaken `test_play_eval_game_defaults_to_the_eval_config_readout` if it fails.** Both calls run the *same* new implementation at the *same* seed, and `readout_from_eval_config(SMALL)` returns exactly what the default path constructs, so the two games must be identical. Disagreement is a bug in the default-resolution path — fix the code, not the assertion.
@@ -1830,12 +1846,12 @@ def test_root_visit_count_matches_the_nominal_budget():
     assert root.visit_count == 32
 ```
 
-Run: `python -m pytest tests/test_eval_readout_telemetry.py::test_root_visit_count_matches_the_nominal_budget -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_readout_telemetry.py::test_root_visit_count_matches_the_nominal_budget -q; echo "EXIT=$?"`
 If it fails, read the reported value and change `32` to the measured number, and add a one-line comment recording what the measurement was.
 
 - [ ] **Step 6: Full suite**
 
-Run: `python -m pytest tests/ -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/ -q; echo "EXIT=$?"`
 Expected: `EXIT=0`. Record the measured pass/skip/deselect counts in the commit body — that measured collect is the baseline for later tasks.
 
 - [ ] **Step 7: Commit**
@@ -1977,7 +1993,7 @@ def test_legacy_summary_still_works_for_checkpoint_results():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest tests/test_eval_summary_agent_mode.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_summary_agent_mode.py -q; echo "EXIT=$?"`
 Expected: FAIL — `ImportError: cannot import name 'summarize_agent_match'`
 
 - [ ] **Step 3: Write the implementation**
@@ -2126,12 +2142,12 @@ def summarize_agent_match(results, agent_a_id, agent_b_id, pairing_id,
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m pytest tests/test_eval_summary_agent_mode.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_summary_agent_mode.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 5: Check the existing summary tests**
 
-Run: `python -m pytest tests/test_eval_summary.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_summary.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 6: Commit**
@@ -2424,12 +2440,12 @@ def test_a_non_repository_raises_rather_than_recording_null(tmp_path):
 
 Add `import pathlib` at the top of that file.
 
-Run: `python -m pytest tests/test_eval_provenance.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_provenance.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
 Expected: FAIL — `ModuleNotFoundError: ... eval_readout_match`
 
 - [ ] **Step 3: Write the implementation**
@@ -2715,12 +2731,12 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m pytest tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 5: Check the CLI parses**
 
-Run: `python -m scripts.GPU.alphazero.eval_readout_match --help; echo "EXIT=$?"`
+Run: `.venv/bin/python -m scripts.GPU.alphazero.eval_readout_match --help; echo "EXIT=$?"`
 Expected: `EXIT=0`, help text lists all four readout names
 
 - [ ] **Step 6: Commit**
@@ -2987,7 +3003,7 @@ def test_colour_imbalance_raises():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest tests/test_eval_integrity.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_integrity.py -q; echo "EXIT=$?"`
 Expected: FAIL — `ModuleNotFoundError: ... eval_integrity`
 
 - [ ] **Step 3: Write the implementation**
@@ -3159,7 +3175,7 @@ def validate_result_set(results, tasks, agent_a_id: str,
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m pytest tests/test_eval_integrity.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_integrity.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 5: Wire the per-ply guard into the game loop**
@@ -3218,7 +3234,7 @@ before `config_dict` is built:
 
 - [ ] **Step 8: Run the affected suites**
 
-Run: `python -m pytest tests/test_eval_integrity.py tests/test_eval_readout_telemetry.py tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_integrity.py tests/test_eval_readout_telemetry.py tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 The budget equality is safe to assert: `root.visit_count` was **measured**
@@ -3472,7 +3488,7 @@ def test_old_schema_replays_are_rejected_not_silently_scored():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m pytest tests/test_readout_preflight.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_readout_preflight.py -q; echo "EXIT=$?"`
 Expected: FAIL — `ModuleNotFoundError: ... readout_preflight`
 
 - [ ] **Step 3: Write the implementation**
@@ -3757,12 +3773,12 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m pytest tests/test_readout_preflight.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_readout_preflight.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 5: Check the CLI parses**
 
-Run: `python -m scripts.GPU.alphazero.readout_preflight --help; echo "EXIT=$?"`
+Run: `.venv/bin/python -m scripts.GPU.alphazero.readout_preflight --help; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 6: Add the agent ids to the replay sidecar**
@@ -3802,12 +3818,12 @@ def test_replay_dict_carries_agent_ids():
     assert d["black_readout"]["opening_temp_plies"] == 20
 ```
 
-Run: `python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/test_eval_readout_telemetry.py -q; echo "EXIT=$?"`
 Expected: `EXIT=0`
 
 - [ ] **Step 7: Full suite and measured baseline**
 
-Run: `python -m pytest tests/ -q; echo "EXIT=$?"`
+Run: `.venv/bin/python -m pytest tests/ -q; echo "EXIT=$?"`
 Expected: `EXIT=0`. Record the **measured** pass/skip/deselect counts in the commit body.
 
 Run: `npm run test:server; echo "EXIT=$?"` and `npm run lint; echo "EXIT=$?"`
@@ -3827,11 +3843,15 @@ git commit -m "feat(eval): frozen preflight analyzer over captured readout repla
 
 Tooling is complete when all of the following hold, each verified by a command whose exit code was read from the process:
 
-- `python -m pytest tests/ -q` exits 0, with the measured collect recorded.
-- `npm run test:server` exits 0.
+- `.venv/bin/python -m pytest tests/ -q` exits 0, with the measured collect recorded.
+- `npm run test:server` exits 0. **Unchanged requirement:** the two
+  `toTensorHWC` failures present at `66c4f27` were stale TESTS, not a product
+  defect — `gameLogic.js` exports `NUM_CHANNELS = 30` while the assertions and
+  the parity loop hard-coded `24`. Repaired in Task A1; the suite reaches
+  27/27. Do not weaken this bar.
 - `npm run lint` exits 0.
-- `python -m scripts.GPU.alphazero.eval_readout_match --help` exits 0.
-- `python -m scripts.GPU.alphazero.readout_preflight --help` exits 0.
+- `.venv/bin/python -m scripts.GPU.alphazero.eval_readout_match --help` exits 0.
+- `.venv/bin/python -m scripts.GPU.alphazero.readout_preflight --help` exits 0.
 - Every spec §8.3 condition that `IntegrityError` is responsible for has a test
   that constructs it (Task B7), and all three guards are wired: `validate_ply`
   per ply, `validate_game_binding` per game *as each game finishes*, and

@@ -17,9 +17,23 @@ def test_frozen_constants():
     assert R.MIN_CHILD_VISITS == 8
 
 
-def test_hoeffding_numerator_matches_the_frozen_value():
-    # eps(n) = 2*sqrt(1.84445/n) as written in the spec.
-    assert R.hoeffding_radius(1) == pytest.approx(2.0 * math.sqrt(1.84445), abs=1e-4)
+def test_hoeffding_radius_is_the_exact_frozen_formula():
+    """eps(n) = R*sqrt(ln(2/delta)/(2n)), computed here from the frozen R and
+    delta rather than from the spec's rounded 1.84444 display constant.
+
+    A loose comparison against the rounded numerator would tolerate a real
+    drift in R or delta; this one cannot.
+    """
+    for n in (1, 7, 8, 40, 100, 190, 400):
+        expected = R.VALUE_RANGE * math.sqrt(
+            math.log(2.0 / R.DELTA) / (2.0 * n))
+        assert R.hoeffding_radius(n) == pytest.approx(expected, rel=1e-12)
+
+
+def test_the_rounded_display_constant_still_describes_the_formula():
+    # 1.84444 is what the spec prints; it must remain a faithful 5dp rounding
+    # of ln(2/delta)/2, or the spec text has drifted from the code.
+    assert math.log(2.0 / R.DELTA) / 2.0 == pytest.approx(1.84444, abs=5e-6)
 
 
 def test_hoeffding_worked_magnitudes():
@@ -74,7 +88,7 @@ def test_root_perspective_is_the_negation_of_child_perspective():
 
 def test_lcb_override_fires_when_challenger_lcb_is_higher():
     # leader 190 visits, q_root -0.30 -> LCB -0.497
-    # challenger 40 visits, q_root  0.00 -> LCB -0.430  (higher -> override)
+    # challenger 40 visits, q_root  0.00 -> LCB -0.429  (higher -> override)
     top2 = [
         R.ChildStat((2, 2), 190, 0.30, -0.30),
         R.ChildStat((1, 1), 40, -0.00, 0.00),

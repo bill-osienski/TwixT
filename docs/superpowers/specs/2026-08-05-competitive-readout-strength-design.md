@@ -363,7 +363,7 @@ root-perspective Q:
 
 ```
 ε(n) = R · sqrt( ln(2/δ) / (2n) )        R = 2, δ = 0.05
-     = 2 · sqrt( 1.84445 / n )
+     = 2 · sqrt( 1.84444 / n )
 
 LCB_i = q_root_perspective_i − ε(n_i)
 
@@ -379,7 +379,7 @@ otherwise play L
 - `δ = 0.05` is the conventional confidence level.
 - `n_min = 8` follows from a **preregistered judgement**, not from Hoeffding. We chose the
   usefulness requirement `ε(n) ≤ 1.0` — a radius no wider than half the value range — and
-  `2·sqrt(1.84445/n) ≤ 1 ⇒ n ≥ 7.4 ⇒ n_min = 8` follows from *that choice*. The
+  `2·sqrt(1.84444/n) ≤ 1 ⇒ n ≥ 7.4 ⇒ n_min = 8` follows from *that choice*. The
   requirement is a judgement; only the arithmetic is forced.
 
 **No constant is fitted to any TwixT data.**
