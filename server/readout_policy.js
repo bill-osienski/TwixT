@@ -37,3 +37,30 @@ export function resolvePolicy({ difficulty, deterministicMode = false, temperatu
   }
   return { difficulty: key, nSims: entry.nSims, moveTemp };
 }
+
+/**
+ * The ONE place a completed search becomes a played move.
+ *
+ * Both transports call this. `selectMove` is injected so the seam is testable
+ * without an engine, and so parity can be asserted behaviourally: the same
+ * request must reach the readout with the same temperature no matter which
+ * transport carried it.
+ *
+ * @param {object} args
+ * @param {Map<string, number>} args.visitCounts - "row,col" -> visit count
+ * @param {string} args.difficulty
+ * @param {boolean} [args.deterministicMode]
+ * @param {number} [args.temperature]
+ * @param {(counts: Map<string, number>, temp: number) => string} args.selectMove
+ * @returns {{moveKey: string, policy: {difficulty: string, nSims: number, moveTemp: number}}}
+ */
+export function selectMoveForRequest({
+  visitCounts,
+  difficulty,
+  deterministicMode = false,
+  temperature,
+  selectMove,
+}) {
+  const policy = resolvePolicy({ difficulty, deterministicMode, temperature });
+  return { moveKey: selectMove(visitCounts, policy.moveTemp), policy };
+}

@@ -285,15 +285,32 @@ test('selectMoveForRequest returns the move and the resolved policy', () => {
 
 // One structural claim remains, and it is now a strong one: there is exactly
 // ONE readout call site, so no transport can bypass the shared seam.
+//
+// NOTE: a blanket ban on ".selectMove(" would reject the CORRECT
+// implementation, because the seam takes mcts.selectMove as an injected
+// callback. The predicate below distinguishes a direct call from the
+// injection, and its own negative case is constructed.
+function directReadoutCalls(src) {
+  return src.split('\n').filter(
+    (line) => /\.selectMove\(/.test(line) && !/selectMove:\s*\(/.test(line));
+}
+
 test('neither transport calls selectMove directly', () => {
   const src = readFileSync(new URL('./index.js', import.meta.url), 'utf8');
   assert.ok(!src.includes('DIFFICULTY_PARAMS'),
     'DIFFICULTY_PARAMS must be gone; readout_policy is the only source');
-  assert.ok(!/\.selectMove\(/.test(src),
-    'transports must go through selectMoveForRequest, never mcts.selectMove');
+  assert.deepEqual(directReadoutCalls(src), [],
+    'transports must go through selectMoveForRequest, never call mcts.selectMove directly');
   const seamCalls = src.match(/selectMoveForRequest\(/g) || [];
   assert.equal(seamCalls.length, 2,
     `expected exactly 2 seam calls (REST + WS), found ${seamCalls.length}`);
+});
+
+test('the direct-call detector actually detects a bypass', () => {
+  const bypass = 'const moveKey = mcts.selectMove(visitCounts, policy.moveTemp);';
+  assert.equal(directReadoutCalls(bypass).length, 1);
+  const injected = 'selectMove: (counts, temp) => mcts.selectMove(counts, temp),';
+  assert.equal(directReadoutCalls(injected).length, 0);
 });
 
 test('websocket client sends deterministicMode', () => {

@@ -26,6 +26,7 @@ import { AlphaZeroInference } from './inference.js';
 import { MCTS } from './mcts.js';
 import { TwixtState } from './gameLogic.js';
 import { BoardMovesCache } from './cache.js';
+import { resolvePolicy, selectMoveForRequest } from './readout_policy.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -38,12 +39,10 @@ let inference = null;
 let cache = null;
 let modelPath = null;
 
-// Difficulty -> simulations and temperature mapping
-const DIFFICULTY_PARAMS = {
-  easy: { nSims: 100, moveTemp: 1.0 },
-  medium: { nSims: 400, moveTemp: 0.5 },
-  hard: { nSims: 800, moveTemp: 0.25 },
-};
+// Difficulty -> simulations and readout policy now lives in readout_policy.js,
+// which BOTH transports consume. Previously this table was used by the
+// WebSocket path while the REST handler derived its own temperature ladder,
+// so the same difficulty played differently depending on how it was reached.
 
 /**
  * Get best move for a position.
@@ -83,25 +82,20 @@ app.post('/api/move', async (req, res) => {
     }
 
     // Run MCTS
-    const params = DIFFICULTY_PARAMS[difficulty] || DIFFICULTY_PARAMS.medium;
-    const mcts = new MCTS(inference, { nSimulations: params.nSims });
+    const policy = resolvePolicy({ difficulty, deterministicMode, temperature });
+    const mcts = new MCTS(inference, { nSimulations: policy.nSims });
 
     const startTime = Date.now();
     const { visitCounts, rootValue } = await mcts.search(gameState);
     const elapsed = Date.now() - startTime;
 
-    // Select move with appropriate temperature
-    let moveTemp;
-    if (deterministicMode) {
-      moveTemp = 0;
-    } else if (temperature !== undefined) {
-      moveTemp = temperature;
-    } else {
-      // Default temperature by difficulty
-      moveTemp = difficulty === 'easy' ? 0.5 : 0.1;
-    }
-
-    const moveKey = mcts.selectMove(visitCounts, moveTemp);
+    const { moveKey } = selectMoveForRequest({
+      visitCounts,
+      difficulty,
+      deterministicMode,
+      temperature,
+      selectMove: (counts, temp) => mcts.selectMove(counts, temp),
+    });
     const [row, col] = moveKey.split(',').map(Number);
 
     // Convert visit counts to plain object
@@ -464,6 +458,8 @@ wss.on('connection', (ws) => {
       try {
         const result = await computeBestMove(msg.state, difficulty, {
           signal: controller.signal,
+          deterministicMode: msg.deterministicMode === true,
+          temperature: msg.temperature,
           onProgress: (p) => {
             if (cs.activeId !== id || controller.signal.aborted) return;
             safeSend({ type: 'progress', id, toMove, ...p });
@@ -523,7 +519,12 @@ wss.on('connection', (ws) => {
 async function computeBestMove(stateDict, difficulty = 'medium', opts = {}) {
   const t0 = Date.now();
   const gameState = TwixtState.fromDict(stateDict);
-  const { nSims, moveTemp } = DIFFICULTY_PARAMS[difficulty] || DIFFICULTY_PARAMS.medium;
+  const policy = resolvePolicy({
+    difficulty,
+    deterministicMode: opts.deterministicMode === true,
+    temperature: opts.temperature,
+  });
+  const nSims = policy.nSims;
 
   const mcts = new MCTS(inference, { nSimulations: nSims });
   const { visitCounts, rootValue } = await mcts.search(gameState, {
@@ -538,7 +539,13 @@ async function computeBestMove(stateDict, difficulty = 'medium', opts = {}) {
     throw new Error('Search aborted');
   }
 
-  const moveKey = mcts.selectMove(visitCounts, moveTemp);
+  const { moveKey } = selectMoveForRequest({
+    visitCounts,
+    difficulty,
+    deterministicMode: opts.deterministicMode === true,
+    temperature: opts.temperature,
+    selectMove: (counts, temp) => mcts.selectMove(counts, temp),
+  });
   const [row, col] = moveKey.split(',').map(Number);
 
   // Convert visitCounts Map to plain object

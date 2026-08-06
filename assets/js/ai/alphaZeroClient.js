@@ -225,6 +225,8 @@ export class AlphaZeroClient {
 
       const msg_out = { type: 'move', id, state, difficulty };
       if (opts?.includeVisits) msg_out.includeVisits = true;
+      if (opts?.deterministicMode) msg_out.deterministicMode = true;
+      if (opts?.temperature !== undefined) msg_out.temperature = opts.temperature;
       this.ws.send(JSON.stringify(msg_out));
       const msg = await promise;
 
