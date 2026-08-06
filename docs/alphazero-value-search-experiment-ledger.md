@@ -8,6 +8,8 @@ The durable, append-only record of every value-calibration and search-reliabilit
 
 > **v18 closeout (updates the key conclusion above through 2026-08-03):** The new depth-2 provisional-backup hypothesis was tested by a shipped-only, read-only preflight before any `mcts.py` implementation or positive-cap search. The proposed observable has **reach** on selected A (**0.5639 ≥ 0.50**) and a derivable candidate band, so this is not a no-op result. It nevertheless fails the properties required to justify implementation: A-vs-matched-control exposure is essentially chance (**AUC 0.5089**, bootstrap lower bound **0.39**, below **0.70/0.50**), sign dominance is **0.78475 < 0.80**, and the frozen selector has **zero target rows** and fails at every sizing tier, including the full authenticated 800-game universe. Therefore **v18 is closed at preflight**: no `mcts.py` edit, no positive cap, no Stage 0, no grid extension, no held-out generation, and no strength match. This failure means the required selectivity was not established; it does **not** prove no depth-2 provisional-backup effect exists. The consumed v18 evidence may motivate a genuinely new observable, but may not be reused as fresh confirmation or rescued by relaxing the frozen predicates after seeing the result. Keep `calib020_0001` and shipped search.
 
+> **Convergence-atlas closeout (updates the search-reliability line through 2026-08-05):** The read-only warm-root atlas completed its authoritative 24/24 pilot and stopped on two preregistered findings. Stable-negative scarcity produced `PROJECTED_CAPACITY_NO_GO` (`1/24`, required `N=1800` versus the frozen maximum 400), so Read-out A's detector selectivity and Read-out B's gate calibration are **unanswered, not failed**. Independently, both frozen progressive-widening shapes failed the authoritative pilot check on retention alone: root retention was `1.0`, but depth-1 retention was `0.6842 < 0.90` over 12 stable-reference-eligible rows. Progressive widening and the broader tree-local heuristic line are closed; no continuation, prototype, strength match or search change ran. Keep shipped search. Full closeout: `docs/superpowers/2026-08-05-atlas-closeout.md`.
+
 > **v16 postmortem closeout (2026-07-24):** The read-only tuning-control postmortem reproduced the exact **11/40** lower-prior flips with no frozen-check participation. Flips concentrated in opening (**5/10**) and red-to-move controls (**8/20**). On flipped rows, the mean selected-move prior rank moved **1.27→9.00**; effective children changed by **−20.10** versus **−7.35** on non-flips, while root-value movement stayed small (**+0.0080**) and mean top share fell slightly (**−0.0141**). Reply reduction was actually smaller on flipped rows (**−20.18** replies versus **−40.52** on non-flips), so the failures are not evidence that stronger reply suppression caused the move changes. The measured pattern implicates replacing shipped FPU with the `Q_parent` neutral baseline as the destabilizing step; it does **not** prove any shipped-baseline successor will work. Any successor must remove `Q_parent`, preserve shipped behavior exactly at coefficient zero, and use fresh preregistered evidence.
 
 ## Before proposing a new calibration experiment
@@ -91,6 +93,7 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **v16 policy-mass successor — production v2 control qualification** | Search-code successor on unchanged BASE `calib020_0001`: `FPU=Q_parent-r*sqrt(P_explored)`, with completed-visit policy mass. After v1 corpus infeasibility and the role-feasibility/selector-v2 repair, generated one immutable 4,000-game production reservoir (board 24, 400 sims, workers 4, seed `[20300000,20304000)`, no top-up), screened 20,464 proposals, and selected a fingerprinted 120-row whole-game-isolated corpus. | **not run.** Selected-A is downstream of the failed `r0` prerequisite. | **not run.** | **not run.** | **not run.** | no match | **REJECT parent-relative policy-mass family at the prerequisite (2026-07-24).** `r0` ran successfully on the untouched 80-row tuning split but failed development safety: lower-prior control flips `11/40 = 27.5%` vs required `<10%`. Target lock-ins improved `1→0` and mean top share fell `0.390125→0.295344`, but those descriptive improvements do not override the collateral gate. No nonzero `r`, frozen check, selected-A candidate gate, A/B/C/D, collateral, or strength result was run. |
 | **v17** — baseline-preserving policy-mass FPU | `FPU = −r·sqrt(P_explored)`, NO Q_parent; grid {0.15,0.20,0.25,0.35,0.45}; fresh 1,600-game reservoir + 32-position corpus | not reached | not reached | not reached | not reached | no match | **Reject (null).** All five coefficients fail §7.2 safety at development. No held-out, no Task 12, no grid extension. |
 | **v18** — depth-2 provisional backup, shipped-only preflight | Proposed cap on unusually large sign-correct raw parent/leaf residuals at newly expanded nonterminal depth-2 leaves; shipped selection/FPU unchanged; preflight only, no positive-cap search | **mechanism reach only:** pooled exposed positive backup mass 0.5639 passes; A-vs-matched-control AUC 0.5089 fails | not reached | not reached | not reached | no match | **Reject (preflight null).** Selectivity and sign-dominance fail; frozen selector produces 0 targets and sizing fails even at all 800 games. No implementation, positive cap, Stage 0, held-out, grid extension, or strength match. |
+| **Convergence atlas** — warm-root convergence, gate-calibration and widening diagnostic | Read-only full-prefix replay with one additive 400/1,600/3,200/6,400 ladder and three read-outs on unchanged `calib020_0001`; authoritative 24-row pilot only | **not reached:** detector selectivity unanswered after `PROJECTED_CAPACITY_NO_GO` | **not reached:** old-gate calibration unanswered | **progressive widening rejected:** both shapes retain only 0.6842 of depth-1 stable-reference moves vs 0.90 floor | **controller feasibility only:** median remaining budget 66, no prototype justified | no match | **Close at valid pilot.** Stable-negative rate 1/24 implies required `N=1800 > 400`; no continuation or full atlas. Both widening shapes independently fail the preregistered pilot check. Keep shipped search and close tree-local heuristics. |
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
 
 ## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
@@ -357,6 +360,94 @@ the consumed evidence.
   writing, use fresh preregistered confirmation, and still earn the final benchmark:
   equal-checkpoint, equal-400-simulation, balanced-color significant strength gain
   after safety and guardrail checks pass.
+
+## Convergence atlas — CLOSED at authoritative pilot, 2026-08-05
+
+### Hypotheses and reasoning
+
+The atlas was designed after v18's preflight null, without changing shipped search.
+It targeted two untested questions. First, the candidate set was the last untouched
+tree-local axis: shipped MCTS enumerates every legal move, while `c_puct`, absolute FPU,
+both policy-mass FPU formulations and v18 changed selection values or backups rather
+than move eligibility. Second, the inherited collateral gates had rejected four search
+interventions but had never been calibrated against movement toward stable deeper
+search; zero candidate had reached a strength match.
+
+Phase 0 established a third fact before the atlas froze: deployment search inherits a
+tree and then adds its nominal budget. A deployed 400-simulation search therefore ends
+at `I + 400` visits, while the historical reconstructed-position probes were fresh.
+The atlas used full-prefix replay so its 320-completion features and four-rung ladder
+were measured in the warm-root regime that actually plays games.
+
+The frozen questions were:
+
+1. Can batch-safe 320-prefix convergence features identify 400-simulation searches
+   that disagree with a stable 3,200/6,400 reference?
+2. Do the old collateral gates reject changes that consistently move toward that
+   reference?
+3. Can either of two preregistered prior-ranked widening shapes affect misleading roots
+   while retaining stable deeper root moves and replies?
+
+### Expected outcomes and stopping rules
+
+- A selective detector would make a bounded 320+80 verification prototype eligible.
+- A widening shape with strong misleading-root coverage and stable-move retention would
+  make a small progressive-widening prototype eligible.
+- A gate that rejected consistently convergent changes would be redesigned and frozen
+  before judging another prototype.
+- Failure of both tree-local methods would close tree-local heuristics and pivot to
+  direct strength or a separately designed distillation project.
+- A corpus-capacity failure would stop the atlas as an **operational no-go**, not be
+  misreported as proof that convergence information cannot exist.
+- Genuine failure of both widening shapes on the pilot would close widening without a
+  third shape, regardless of whether the full atlas proceeded.
+
+### Preregistration and evidence of record
+
+- Qualified code: `1332bcc`, full suite 2,636 passed / 4 skipped / 53 deselected.
+- Binding run HEAD: `24847869540d6ae1611bfa8bb62ee8a53428f8ac`.
+- Unchanged checkpoint: SHA-1 `209cf2d4fd24a48553d259dd71b4954867b9473e`.
+- Fresh pilot: seeds `[20321000, 20321024)`, sampling seed `20260806`, trajectory-relative
+  phase quarters from Amendment 5.
+- Complete execution: geometry PASS 24/24; pilot `verdict=OK`, `authoritative=true`,
+  assigned/measured 24/24, zero failed rows.
+- Evidence hashes: protocol `2152eac7f17a411290fca35b8e12ce88fc9a8128`;
+  block manifest `e0c2d6e49fbd76ba41c2c4e2ef85b2f465fbbeea`; pilot artifact
+  `ce15927f3c162c901b5c8211e79b21ac737f41b1`.
+
+The earlier `[20320000, 20320024)` block stopped at its absolute-phase geometry gate
+and is retired as design evidence only. It contributed no atlas position.
+
+### Results
+
+| Check | Observed | Decision |
+|---|---:|---|
+| pilot completeness | 24/24 measured, no failures | authoritative |
+| misleading frequency | 11/24 | sufficient by itself (`N ≈ 131`) |
+| stable-negative frequency | 1/24 | `required N=1800 > 400` — **PROJECTED_CAPACITY_NO_GO** |
+| no stable 3,200/6,400 reference | 12/24 | half the pilot unclassifiable under frozen labels |
+| widening root retention, both shapes | 1.0 vs 0.95 floor | pass |
+| widening depth-1 retention, both shapes | 0.6842 vs 0.90 floor | **FAIL** |
+| controller remaining budget | median 66; zero-budget fraction 0 | feasible, not justified |
+
+The widening rejection rests on retention over 12 stable-reference-eligible rows, not
+on sparse intervention denominators. Both shapes preserved every stable root move and
+dropped roughly one-third of the depth-1 replies required by stable deeper search.
+
+### Interpretation and frozen consequences
+
+- **Close the atlas at its valid pilot.** No continuation block or full atlas is run.
+- **Close progressive widening.** Do not add, tune or interpolate another shape.
+- **Read-out A and Read-out B remain unanswered.** Capacity failure is not evidence
+  that their information cannot exist.
+- **Do not enlarge or relabel the corpus, loosen stable-reference criteria, top up or
+  reuse either pilot block.** Both ranges are consumed for their recorded purposes.
+- **No prototype, A/B/C/D acceptance run or strength match.** Keep shipped search.
+- The remaining-budget pass establishes only that a controller could act before the
+  400-simulation budget ends; it supplies no selective signal and authorizes nothing.
+- Tree-local search heuristics are closed. Direct playing-strength work is the next
+  default. A high-budget distillation successor would need its own stability rule,
+  because 12/24 rows lacked a stable 3,200/6,400 reference.
 
 ## What got better vs worse
 

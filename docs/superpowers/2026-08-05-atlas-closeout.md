@@ -7,6 +7,48 @@ The atlas ran its authorized pilot and returned two stopping findings. This docu
 records them, states precisely what is **unanswered** rather than failed, and marks the
 pivot away from tree-local search heuristics.
 
+## Hypotheses and reasoning
+
+The atlas was a read-only diagnostic, not a candidate search version. It responded to
+two facts that the preceding search-reliability line had never tested directly:
+
+1. **The candidate set was the last untouched tree-local axis.** Shipped MCTS exposes
+   every legal move at every node. `c_puct`, three FPU formulations and v18 changed
+   values or backups; none restricted which moves were eligible for selection.
+2. **The collateral gates had rejected four interventions without a strength match.**
+   They had never been calibrated against whether a change moved 400-simulation search
+   toward a stable higher-budget result.
+
+Phase 0 then established that deployment search is warm, not fresh: tree reuse is
+additive, so a nominal 400-simulation search ends at `I + 400` visits. The atlas
+therefore replayed the complete game prefix and measured one warm-root ladder at
+nominal budgets 400, 1,600, 3,200 and 6,400.
+
+The frozen hypotheses were:
+
+- **Read-out A:** features available at the batch-safe 320-completion boundary can
+  predict which ordinary 400-simulation searches disagree with a stable 3,200/6,400
+  reference.
+- **Read-out B:** the old collateral gates can be calibrated by asking whether they
+  reject changes that consistently move toward the stable higher-budget reference.
+- **Read-out C:** a small prior-ranked progressive-widening rule can affect misleading
+  roots more often than stable ones while retaining the stable root moves and replies.
+
+## Preregistered expected outcomes
+
+| Result | Frozen consequence |
+|---|---|
+| Detector passes; widening fails | A bounded 320+80 verification prototype becomes eligible. |
+| Widening passes; detector fails | A small progressive-widening prototype becomes eligible. |
+| Both pass | Compare separation and implementation risk; neither wins by default. |
+| An old gate is marked `needs review` | Redesign and freeze that gate before it judges a prototype. |
+| Neither tree-local method separates misleading from stable roots | Close tree-local heuristics and pivot to direct strength or a separately designed distillation project. |
+| Corpus capacity fails | Record an operational no-go; do not claim that the information cannot exist. |
+| Both widening shapes genuinely fail the authoritative pilot check | Close progressive widening without adding or tuning another shape. |
+
+The last two paths were deliberate terminal outcomes, not software failures or
+incomplete runs. They are the paths the valid pilot took.
+
 ## What ran
 
 | | |
