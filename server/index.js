@@ -74,23 +74,30 @@ app.post('/api/move', async (req, res) => {
       return res.json({ error: 'no_legal_moves' });
     }
 
-    // Check cache
-    const cached = cache.get(gameState.pegs, moves, gameState.boardSize);
-    if (cached && !deterministicMode) {
-      // Don't use cache in deterministic mode to ensure consistency
-      return res.json({ ...cached, cached: true });
-    }
-
-    // Run MCTS
     const policy = resolvePolicy({ difficulty, deterministicMode, temperature });
+    // The cache holds RAW SEARCH OUTPUT, keyed by everything that changes it
+    // but is not on the board. Readout policy is deliberately absent from the
+    // scope: it is applied after the lookup, so a repeated stochastic request
+    // re-samples instead of replaying a sticky move.
+    const cacheScope = `${modelPath}|${policy.nSims}`;
     const mcts = new MCTS(inference, { nSimulations: policy.nSims });
 
     const startTime = Date.now();
-    const { visitCounts, rootValue } = await mcts.search(gameState);
+    let search = cache.get(gameState.pegs, moves, gameState.boardSize, cacheScope);
+    const cached = search !== undefined;
+    if (!cached) {
+      const out = await mcts.search(gameState);
+      const visits = {};
+      for (const [key, count] of out.visitCounts) {
+        visits[key] = count;
+      }
+      search = { visits, rootValue: out.rootValue };
+      cache.set(gameState.pegs, moves, search, gameState.boardSize, cacheScope);
+    }
     const elapsed = Date.now() - startTime;
 
     const { moveKey } = selectMoveForRequest({
-      visitCounts,
+      visitCounts: new Map(Object.entries(search.visits)),
       difficulty,
       deterministicMode,
       temperature,
@@ -98,25 +105,13 @@ app.post('/api/move', async (req, res) => {
     });
     const [row, col] = moveKey.split(',').map(Number);
 
-    // Convert visit counts to plain object
-    const visits = {};
-    for (const [key, count] of visitCounts) {
-      visits[key] = count;
-    }
-
-    const result = {
+    res.json({
       move: { row, col },
-      value: rootValue,
-      visits,
+      value: search.rootValue,
+      visits: search.visits,
       elapsed,
-    };
-
-    // Cache result (only if not deterministic mode)
-    if (!deterministicMode) {
-      cache.set(gameState.pegs, moves, result, gameState.boardSize);
-    }
-
-    res.json(result);
+      cached,
+    });
   } catch (err) {
     console.error('Error in /api/move:', err);
     res.status(500).json({ error: err.message });

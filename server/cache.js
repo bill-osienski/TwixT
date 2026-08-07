@@ -69,10 +69,26 @@ export class BoardMovesCache {
     return this._fnv1a(arr);
   }
 
-  makeKey(pegs, moves, size = 24) {
+  /**
+   * Key for a cached search result.
+   *
+   * `scope` MUST identify everything that changes the search output but is not
+   * part of the board: at minimum the model identity and the simulation
+   * budget. Without it a 100-simulation `easy` result could be served to an
+   * 800-simulation `hard` request at the same position.
+   *
+   * Readout policy is deliberately NOT in the scope, because only raw search
+   * results are cached and the readout is applied after the lookup.
+   *
+   * @param {Map<string, string>} pegs
+   * @param {Array<Array<number>>} moves
+   * @param {number} size
+   * @param {string} scope - e.g. `${modelPath}|${nSims}`
+   */
+  makeKey(pegs, moves, size = 24, scope = '') {
     const pegsHash = this._hashPegs(pegs, size);
     const movesHash = this._hashMoves(moves);
-    return `${pegsHash}:${movesHash}`;
+    return `${scope}:${pegsHash}:${movesHash}`;
   }
 
   /**
@@ -82,8 +98,8 @@ export class BoardMovesCache {
     return `v:${this._hashPegs(pegs, size)}`;
   }
 
-  get(pegs, moves, size = 24) {
-    const key = this.makeKey(pegs, moves, size);
+  get(pegs, moves, size = 24, scope = '') {
+    const key = this.makeKey(pegs, moves, size, scope);
     const value = this.cache.get(key);
 
     // LRU: move to end on access
@@ -97,8 +113,8 @@ export class BoardMovesCache {
     return value;
   }
 
-  set(pegs, moves, value, size = 24) {
-    const key = this.makeKey(pegs, moves, size);
+  set(pegs, moves, value, size = 24, scope = '') {
+    const key = this.makeKey(pegs, moves, size, scope);
 
     // If key exists, delete first (for LRU ordering)
     if (this.cache.has(key)) {

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolvePolicy, selectMoveForRequest, DIFFICULTY_TABLE } from './readout_policy.js';
+import { BoardMovesCache } from './cache.js';
 
 test('hard is deterministic by default', () => {
   const p = resolvePolicy({ difficulty: 'hard' });
@@ -154,4 +155,86 @@ test('the direct-call detector actually detects a bypass', () => {
 test('websocket client sends deterministicMode', () => {
   const src = readFileSync(new URL('../assets/js/ai/alphaZeroClient.js', import.meta.url), 'utf8');
   assert.ok(src.includes('deterministicMode'), 'client must forward deterministicMode over the websocket');
+});
+
+// --- Task A3: cache scoping and post-cache readout ------------------------
+
+const PEGS = new Map([
+  ['3,4', 'red'],
+  ['5,6', 'black'],
+]);
+const MOVES = [
+  [1, 1],
+  [2, 2],
+];
+
+test('cache scope separates simulation budgets', () => {
+  const c = new BoardMovesCache(10);
+  c.set(PEGS, MOVES, { rootValue: 0.1 }, 24, 'model.onnx|100');
+  assert.equal(c.get(PEGS, MOVES, 24, 'model.onnx|800'), undefined);
+  assert.deepEqual(c.get(PEGS, MOVES, 24, 'model.onnx|100'), { rootValue: 0.1 });
+});
+
+test('cache scope separates models', () => {
+  const c = new BoardMovesCache(10);
+  c.set(PEGS, MOVES, { rootValue: 0.1 }, 24, 'a.onnx|400');
+  assert.equal(c.get(PEGS, MOVES, 24, 'b.onnx|400'), undefined);
+});
+
+// NEGATIVE CASE, constructed: without a scope the two budgets collide. This
+// proves the two tests above are not vacuously passing.
+test('an unscoped key really does collide', () => {
+  const c = new BoardMovesCache(10);
+  c.set(PEGS, MOVES, { rootValue: 0.1 }, 24, '');
+  assert.deepEqual(c.get(PEGS, MOVES, 24, ''), { rootValue: 0.1 });
+});
+
+test('a cache hit re-applies the readout instead of returning a sticky move', () => {
+  // BEHAVIOURAL: prime the cache with raw search output, then serve two
+  // requests from it. The readout must run on BOTH -- that is what makes a
+  // repeated stochastic request re-sample rather than repeat itself.
+  const c = new BoardMovesCache(10);
+  const scope = 'model.onnx|400';
+  c.set(PEGS, MOVES, { visits: { '3,4': 100, '5,6': 80 }, rootValue: 0.2 }, 24, scope);
+
+  let readoutCalls = 0;
+  const selectMove = (counts, temp) => {
+    readoutCalls++;
+    return temp < 0.01 ? '3,4' : '5,6';
+  };
+
+  for (let i = 0; i < 2; i++) {
+    const hit = c.get(PEGS, MOVES, 24, scope);
+    assert.ok(hit !== undefined, 'expected a cache hit');
+    selectMoveForRequest({
+      visitCounts: new Map(Object.entries(hit.visits)),
+      difficulty: 'medium',
+      selectMove,
+    });
+  }
+  assert.equal(readoutCalls, 2, 'readout must run on every request, including cache hits');
+});
+
+test('the same cached search yields different moves under different policy', () => {
+  // CONSTRUCTED negative case: if the cache returned a stored MOVE, policy
+  // could not change the answer and this assertion would fail.
+  const c = new BoardMovesCache(10);
+  const scope = 'model.onnx|400';
+  c.set(PEGS, MOVES, { visits: { '3,4': 100, '5,6': 80 }, rootValue: 0.2 }, 24, scope);
+  const hit = c.get(PEGS, MOVES, 24, scope);
+  const counts = new Map(Object.entries(hit.visits));
+  const selectMove = (m, temp) => (temp < 0.01 ? '3,4' : '5,6');
+
+  const a = selectMoveForRequest({ visitCounts: counts, difficulty: 'hard', selectMove }).moveKey;
+  const b = selectMoveForRequest({ visitCounts: counts, difficulty: 'medium', selectMove }).moveKey;
+  assert.notEqual(a, b);
+});
+
+test('index.js caches raw search results, not selected moves', () => {
+  const src = readFileSync(new URL('./index.js', import.meta.url), 'utf8');
+  assert.ok(src.includes('cacheScope'), 'lookup must be scoped');
+  assert.ok(
+    !src.includes('cache.set(gameState.pegs, moves, result,'),
+    'the post-readout result object must not be cached'
+  );
 });
