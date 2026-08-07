@@ -293,7 +293,17 @@ def main(argv=None):
         with open(args.output, "w") as fh:
             json.dump(report, fh, indent=2)
     print(json.dumps(report, indent=2))
-    # Exit 0 = pass, 2 = a frozen gate closed the candidate.
+    # Exit 0 = every frozen gate passed.
+    # Exit 2 = at least one gate failed -- but 2 does NOT mean "candidate closed".
+    #   `failed_gates` distinguishes two dispositions that must not be conflated:
+    #     candidate-close : override_rate_floor / override_rate_ceiling /
+    #                       single_game_concentration
+    #     NO-VERDICT stop : undefined_q / empty_population
+    #   A no-verdict stop takes PRECEDENCE even when a candidate-close gate also
+    #   fired: the population is untrustworthy, so no statement about the
+    #   candidate can be made from it. Read `gates["failed_gates"]`, never the
+    #   exit code alone, to decide which occurred.
+    # Any other non-zero exit = the analyzer raised; there is no report.
     return 0 if gates["passed"] else 2
 
 
