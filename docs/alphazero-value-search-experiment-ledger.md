@@ -10,7 +10,7 @@ The durable, append-only record of every value-calibration and search-reliabilit
 
 > **Convergence-atlas closeout (updates the search-reliability line through 2026-08-05):** The read-only warm-root atlas completed its authoritative 24/24 pilot and stopped on two preregistered findings. Stable-negative scarcity produced `PROJECTED_CAPACITY_NO_GO` (`1/24`, required `N=1800` versus the frozen maximum 400), so Read-out A's detector selectivity and Read-out B's gate calibration are **unanswered, not failed**. Independently, both frozen progressive-widening shapes failed the authoritative pilot check on retention alone: root retention was `1.0`, but depth-1 retention was `0.6842 < 0.90` over 12 stable-reference-eligible rows. Progressive widening and the broader tree-local heuristic line are closed; no continuation, prototype, strength match or search change ran. Keep shipped search. Full closeout: `docs/superpowers/2026-08-05-atlas-closeout.md`.
 
-> **Competitive-readout line opened, first result 2026-08-07.** The successor to the closed atlas changes only the **final move readout** — the rule that picks a played move from a completed search — at unchanged `calib020_0001`, cold, 400 simulations. It is post-tree, so it is not tree-local and the A/B/C/D probes are **mathematically invariant** under it: they measure root value at frozen positions, and no readout can move that. Tooling is complete (11/11) and `mcts.py`/`self_play.py` are byte-identical to the implementation baseline. **Candidate 1 — all-ply argmax versus the shipped tournament readout — RAN and won 54–10, score rate `0.8438` (CI95 `0.755–0.933`), `+293` Elo**, with zero state-caps and no integrity abort. Per §7.3 that is confirmation only: **no 800-game follow-up and no change to the checkpoint-tournament default.** Read the number narrowly — it measures the cost of the control's deliberate twenty-ply opening exploration, is evidence about *readout* strength in the Python harness rather than about the checkpoint, and says nothing about the product, which serves a different network (`MISMATCH`, `docs/superpowers/2026-08-06-model-path-provenance-audit.md`). **`+293` must not become the prior for Candidate 2**, which keeps that same early sampling on both sides and changes only the post-opening readout. Candidate 2's rule and gates were frozen 2026-08-06 before any telemetry existed; its preflight has not run. Seeds: `docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`.
+> **Competitive-readout line opened, first result 2026-08-07.** The successor to the closed atlas changes only the **final move readout** — the rule that picks a played move from a completed search — at unchanged `calib020_0001`, cold, 400 simulations. It is post-tree, so it is not tree-local and the A/B/C/D probes are **mathematically invariant** under it: they measure root value at frozen positions, and no readout can move that. Tooling is complete (11/11) and `mcts.py`/`self_play.py` are byte-identical to the implementation baseline. **Candidate 1 — all-ply argmax versus the shipped tournament readout — RAN and won 54–10, score rate `0.8438` (CI95 `0.755–0.933`), `+293` Elo**, with zero state-caps and no integrity abort. Per §7.3 that is confirmation only: **no 800-game follow-up and no change to the checkpoint-tournament default.** Read the number narrowly: the contrast includes the control's deliberate twenty-ply opening exploration **and** its post-opening `T=0.1` sampling, and this run does not decompose their contributions. It is evidence about *readout* strength in the Python harness rather than about the checkpoint, and says nothing about the product, which serves a different network (`MISMATCH`, `docs/superpowers/2026-08-06-model-path-provenance-audit.md`). **`+293` must not become the prior for Candidate 2**, which keeps the same early sampling on both sides and changes only the post-opening readout. Candidate 2's rule and gates were frozen 2026-08-06 before any telemetry existed; its preflight has not run. Seeds: `docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`.
 
 > **v16 postmortem closeout (2026-07-24):** The read-only tuning-control postmortem reproduced the exact **11/40** lower-prior flips with no frozen-check participation. Flips concentrated in opening (**5/10**) and red-to-move controls (**8/20**). On flipped rows, the mean selected-move prior rank moved **1.27→9.00**; effective children changed by **−20.10** versus **−7.35** on non-flips, while root-value movement stayed small (**+0.0080**) and mean top share fell slightly (**−0.0141**). Reply reduction was actually smaller on flipped rows (**−20.18** replies versus **−40.52** on non-flips), so the failures are not evidence that stronger reply suppression caused the move changes. The measured pattern implicates replacing shipped FPU with the `Q_parent` neutral baseline as the destabilizing step; it does **not** prove any shipped-baseline successor will work. Any successor must remove `Q_parent`, preserve shipped behavior exactly at coefficient zero, and use fresh preregistered evidence.
 
@@ -96,7 +96,7 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **v17** — baseline-preserving policy-mass FPU | `FPU = −r·sqrt(P_explored)`, NO Q_parent; grid {0.15,0.20,0.25,0.35,0.45}; fresh 1,600-game reservoir + 32-position corpus | not reached | not reached | not reached | not reached | no match | **Reject (null).** All five coefficients fail §7.2 safety at development. No held-out, no Task 12, no grid extension. |
 | **v18** — depth-2 provisional backup, shipped-only preflight | Proposed cap on unusually large sign-correct raw parent/leaf residuals at newly expanded nonterminal depth-2 leaves; shipped selection/FPU unchanged; preflight only, no positive-cap search | **mechanism reach only:** pooled exposed positive backup mass 0.5639 passes; A-vs-matched-control AUC 0.5089 fails | not reached | not reached | not reached | no match | **Reject (preflight null).** Selectivity and sign-dominance fail; frozen selector produces 0 targets and sizing fails even at all 800 games. No implementation, positive cap, Stage 0, held-out, grid extension, or strength match. |
 | **Convergence atlas** — warm-root convergence, gate-calibration and widening diagnostic | Read-only full-prefix replay with one additive 400/1,600/3,200/6,400 ladder and three read-outs on unchanged `calib020_0001`; authoritative 24-row pilot only | **not reached:** detector selectivity unanswered after `PROJECTED_CAPACITY_NO_GO` | **not reached:** old-gate calibration unanswered | **progressive widening rejected:** both shapes retain only 0.6842 of depth-1 stable-reference moves vs 0.90 floor | **controller feasibility only:** median remaining budget 66, no prototype justified | no match | **Close at valid pilot.** Stable-negative rate 1/24 implies required `N=1800 > 400`; no continuation or full atlas. Both widening shapes independently fail the preregistered pilot check. Keep shipped search and close tree-local heuristics. |
-| **Candidate 1** — all-ply argmax readout diagnostic | Final move READOUT only: all-ply visit argmax vs the shipped tournament readout (temp `1.0` <20, then `0.1`). Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608060, 202608124)` | **invariant** — readout is post-tree; the probes measure root value at frozen positions and cannot fire | **invariant** | **invariant** | **invariant** | not a promotion match | **Large argmax win, 54–10, score rate 0.8438 (CI95 0.755–0.933), +293 Elo.** Per §7.3 this is confirmation only: **no 800-game follow-up**, no change to the tournament default. Measures the cost of the control's deliberate opening exploration, NOT search quality. Must NOT become the prior for Candidate 2. |
+| **Candidate 1** — all-ply argmax readout diagnostic | Final move READOUT only: all-ply visit argmax vs the shipped tournament readout (temp `1.0` <20, then `0.1`). Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608060, 202608124)` | **invariant** — readout is post-tree; the probes measure root value at frozen positions and cannot fire | **invariant** | **invariant** | **invariant** | not a promotion match | **Large argmax win, 54–10, score rate 0.8438 (CI95 0.755–0.933), +293 Elo.** Per §7.3 this is confirmation only: **no 800-game follow-up**, no change to the tournament default. The contrast combines opening `T=1.0` and post-opening `T=0.1` sampling; this run does not attribute the effect between them and is NOT search-quality evidence. Must NOT become the prior for Candidate 2. |
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
 
 ## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
@@ -460,6 +460,38 @@ not marginal.
 First result of the competitive-readout line, and the first new experimental result in
 this ledger since the atlas closed.
 
+### Hypothesis
+
+Selecting the completed search's visit leader deterministically at every ply may play
+more strongly than sampling from the same visit distribution under the tournament
+readout. Because the network, search algorithm, simulation budget and completed tree are
+identical, any game-level difference should come from the final move readout rather than
+from stronger search.
+
+### Why the hypothesis was plausible
+
+The tournament control deliberately samples at `T=1.0` through ply 19 and continues with
+`T=0.1` afterward, while Candidate 1 always chooses the visit leader. Sampling can select
+a non-leader even though the search has already assigned more visits to another move.
+The comparison therefore isolates the aggregate playing-strength cost or benefit of that
+stochastic readout. It does **not** isolate opening from post-opening sampling and does
+not test whether the underlying search tree is better.
+
+### Predicted result and preregistered interpretation
+
+No numeric effect size or positive pass threshold was preregistered. The qualitative
+hypothesis made an argmax gain plausible, but the governing design explicitly treated a
+near-null or a clear loss as credible outcomes rather than harness defects:
+
+- a **large argmax win** would be useful confirmation, with no 800-game follow-up;
+- a **near-null** would remain plausible and require mechanics inspection;
+- a **clear argmax loss** would halt the line until visit-leader reliability was
+  understood;
+- an integrity failure would be a harness result, not candidate evidence.
+
+The only 64-game decision boundary was one-sided futility. Candidate 1 was a diagnostic,
+not a promotion experiment.
+
 ### What ran
 
 Authorized by `docs/superpowers/2026-08-06-candidate-1-authorization.md`, countersigned
@@ -491,15 +523,29 @@ worktree; every frozen parameter pinned explicitly on the command line.
 The identical per-colour records are **not** a signal: with ten total losses, a 5/5 split
 is the most central outcome available.
 
-### Interpretation — narrower than the number looks
+### Did the result match the prediction, and why?
+
+It matched the qualitative direction of the hypothesis and landed in the preregistered
+“large argmax win” branch. Removing stochastic selection from the completed visit
+distribution produced a large aggregate gain in this harness. The run did **not** match
+a numeric prediction, because none was registered, and the `+293` magnitude was not
+predicted.
+
+The mechanism-level explanation remains deliberately limited. Candidate and control
+differed both during the opening (`argmax` versus `T=1.0`) and afterward (`argmax` versus
+`T=0.1`). The result is consistent with a cost from stochastic non-leader selection, but
+without the separately authorized phase-specific replay analysis it cannot say how much
+came from either phase.
+
+### Interpretation and consequences — narrower than the number looks
 
 - This is evidence about **readout strength using `calib020_0001` in the Python
   evaluation harness**. It is **not** evidence that the checkpoint is stronger, and
   **not** evidence about the product, which serves a different network entirely
   (`docs/superpowers/2026-08-06-model-path-provenance-audit.md`, verdict `MISMATCH`).
-- What it mostly measured is the **cost of the control's deliberate opening
-  exploration** — temperature `1.0` for twenty plies — not a difference in search
-  quality.
+- The contrast includes the control's deliberate opening exploration and its
+  post-opening `T=0.1` sampling. This run does not decompose their contributions and is
+  not evidence of a difference in search quality.
 - **`+293` Elo must NOT become the prior for Candidate 2.** Candidate 2 keeps that same
   early sampling on *both* sides and changes only the post-opening readout. The two
   experiments do not share an effect size.

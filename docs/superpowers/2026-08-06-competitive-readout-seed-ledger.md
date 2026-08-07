@@ -1,18 +1,18 @@
 # Competitive Readout — Seed Ledger
 
-**Durable record of every seed interval consumed by this line of work.**
+**Durable record of every seed interval reserved or consumed by this line of work.**
 
 Intervals are **half-open `[start, end)`**: game `g` uses seed `base_seed + g` for
 `g in range(games)`, so `end` is the first *unused* seed. `[0, 64)` and `[64, 128)` are
 adjacent, not overlapping.
 
-**Every future run in this line must pass all consumed intervals** via repeated
+**Every future run in this line must pass all reserved and consumed intervals** via repeated
 `--prior-seed-interval START:END`. `eval_integrity.validate_seed_intervals` validates the
 whole set pairwise — including priors against each other — and refuses any overlap
 **before a single game is played**. Reusing seeds would silently correlate a "fresh" run
 with an earlier one, which is invisible in the result and fatal to it.
 
-## Consumed
+## Ledger
 
 | # | interval | games | run | date | commit | status |
 |---|---|---:|---|---|---|---|
@@ -28,10 +28,14 @@ Copy verbatim. Append one `--prior-seed-interval` per row above.
 
 ## Rules
 
-- **Consumed means consumed.** An interval is spent whether the run succeeded, aborted
-  mid-way, or was discarded. A partially consumed interval is still unusable: the games
-  that did run correlate any re-use.
-- **Record the interval when the run is authorized, not when it finishes.** A run that
-  aborts under §A has still consumed its seeds.
+- **RESERVED** means a countersigned authorization owns the interval but execution has
+  not begun. Record the reservation before launch so another authorization cannot choose
+  an overlapping range.
+- **CONSUMED** begins when execution begins. The interval remains spent whether the run
+  succeeded, aborted mid-way, or was discarded. A partially consumed interval is still
+  unusable: the games that did run correlate any re-use.
+- A reservation that was never launched may be released only by an explicit ledger
+  entry; silence or an expired plan does not release it.
+- Pass every non-released `RESERVED` and `CONSUMED` interval to later runs as a prior.
 - Choose the next interval deliberately in its authorization document. Do not pick one at
   run time.
