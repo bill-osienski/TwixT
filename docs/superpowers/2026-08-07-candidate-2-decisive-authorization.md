@@ -139,9 +139,13 @@ seeds (`validate_seed_intervals`, whole set pairwise, before any game).
 1. **Shipped search unchanged.**
 
    ```bash
-   git diff --quiet d5326a0 -- scripts/GPU/alphazero/mcts.py scripts/GPU/alphazero/self_play.py
-   echo "EXIT=$?"     # must be 0
+   bash -c 'git diff --quiet d5326a0 -- scripts/GPU/alphazero/mcts.py scripts/GPU/alphazero/self_play.py
+   rc=$?
+   printf "EXIT=%s\n" "$rc"
+   exit "$rc"'
    ```
+
+   Must print `EXIT=0` **and** exit 0.
 
 2. **Suite passes**, measured immediately before the run — not quoted from a document.
 
@@ -166,12 +170,18 @@ seeds (`validate_seed_intervals`, whole set pairwise, before any game).
    exit status:
 
    ```bash
-   .venv/bin/python -m pytest -q \
+   bash -c '.venv/bin/python -m pytest -q \
      tests/test_eval_readout_telemetry.py::test_search_identity_across_two_independent_searches \
      tests/test_eval_readout_telemetry.py::test_search_identity_test_can_actually_fail \
      tests/test_eval_readout_telemetry.py::test_readout_cannot_advance_the_search_rng
-   echo "EXIT=$?"     # must be 0
+   rc=$?
+   printf "EXIT=%s\n" "$rc"
+   exit "$rc"'
    ```
+
+   Must print `EXIT=0` **and** exit 0. The wrapper ends with `exit "$rc"` because
+   `printf` would otherwise become the block's status — normally zero — and a failed
+   check would read as passed. (`rc`, not `status`: `status` is read-only in zsh.)
 
    The three carry distinct weight: the first shows two independent searches at the same
    seed produce identical counts, root value and top-two telemetry; the second shows a
