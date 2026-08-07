@@ -18,6 +18,7 @@ with an earlier one, which is invisible in the result and fatal to it.
 |---|---|---:|---|---|---|---|
 | 1 | `[202608060, 202608124)` | 64 | Candidate 1 — all-ply argmax diagnostic | 2026-08-07 | `d2aaf4f` | **CONSUMED** |
 | 2 | `[202608124, 202608188)` | 64 | Candidate 2 — 64-game mechanics screen | 2026-08-07 | `0d9678a` | **CONSUMED** |
+| 3 | `[202608188, 202608988)` | 800 | Candidate 2 — 800-game decisive match | 2026-08-07 | execution commit containing decisive-match countersignature | **RESERVED** |
 
 ## Flag string for the next run
 
@@ -26,6 +27,7 @@ Copy verbatim. Append one `--prior-seed-interval` per row above.
 ```
 --prior-seed-interval 202608060:202608124
 --prior-seed-interval 202608124:202608188
+--prior-seed-interval 202608188:202608988
 ```
 
 **Candidate 2's own run passes only the first**, because `[202608124, 202608188)` is that

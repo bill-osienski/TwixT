@@ -1,6 +1,6 @@
 # Candidate 2 — 800-Game Decisive Match — Operator Authorization
 
-**Date:** 2026-08-07 · **Status:** DRAFT, not yet countersigned · **Scope: one 800-game
+**Date:** 2026-08-07 · **Status:** COUNTERSIGNED — authorized for one execution · **Scope: one 800-game
 decisive match. Nothing else.**
 
 Governing design: `docs/superpowers/specs/2026-08-05-competitive-readout-strength-design.md`
@@ -88,7 +88,7 @@ threshold may change.
 **No top-up, ever.** If the run aborts, the interval is consumed and a continuation needs
 a fresh authorization with a *new* interval — not an extension of this one.
 
-**The interval is NOT yet reserved.** On countersignature, add this row verbatim to
+**The interval is RESERVED as of the countersignature**, added verbatim to
 `docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md` **in the same commit**:
 
 ```
@@ -289,9 +289,9 @@ Execution is authorized only when this block is filled in, committed, and pushed
 **Unsigned, this document authorizes nothing.**
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-07T16:02:15Z
+authorization basis : c6acdcb              # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : the exact command in "Procedure" above, unmodified —
                       every flag as written, none added, none omitted
