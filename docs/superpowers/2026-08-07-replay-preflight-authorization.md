@@ -1,6 +1,6 @@
 # Candidate 1 Replay Analysis — Operator Authorization
 
-**Date:** 2026-08-07 · **Status:** DRAFT, not yet countersigned
+**Date:** 2026-08-07 · **Status:** COUNTERSIGNED — authorized for one execution
 **Scope: exactly one read-only execution of the frozen preflight analyzer over the 64
 Candidate 1 replay sidecars. Nothing else.**
 
@@ -247,9 +247,9 @@ Execution is authorized only when this block is filled in, committed, and pushed
 **Unsigned, this document authorizes nothing.**
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-07T13:02:37Z
+authorization basis : 398d6b1              # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : the exact command in "Procedure" above, unmodified —
                       every flag as written, none added, none omitted
