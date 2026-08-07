@@ -120,10 +120,22 @@ def test_play_eval_game_capture_records_one_per_ply():
                           "selected_visit_count", "root_total_visits", "n_legal",
                           # Additive in replay schema 2 (Task B2).
                           "top2", "readout_overrode_leader"}
-        # play_eval_game does not pass top2 yet -- Task B4 wires it. Until then
-        # the field must be None ("not captured"), never {} or [].
-        assert r["top2"] is None
+        # Task B4 wires top2 through play_eval_game, so it is now populated.
+        # (Before B4 this asserted None; that pin marked the boundary and is
+        # what forced this update rather than letting the field quietly stay
+        # empty.) A default legacy readout never overrides the visit leader.
+        assert r["top2"] is not None
+        assert 1 <= len(r["top2"]) <= 2
         assert r["readout_overrode_leader"] is False
+        for stat in r["top2"]:
+            assert stat["completed_visit_count"] >= 0
+            if stat["completed_visit_count"] > 0:
+                # Root perspective is the negation of the child's stored mean.
+                assert stat["q_value_root_perspective"] == -stat["q_value_child_perspective"]
+            else:
+                # Undefined mean stays None, never 0.0.
+                assert stat["q_value_child_perspective"] is None
+                assert stat["q_value_root_perspective"] is None
         assert 0.0 <= r["root_top1_share"] <= 1.0
         assert r["selected_visit_rank"] >= 1
         assert r["selected_visit_count"] >= 1

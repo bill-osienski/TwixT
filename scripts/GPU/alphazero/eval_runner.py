@@ -16,7 +16,8 @@ from dataclasses import asdict, dataclass
 from typing import Callable, Optional
 
 from .game.twixt_state import TwixtState
-from .mcts import MCTS, MCTSConfig
+from .mcts import MCTS, MCTSConfig, encode_move
+from . import eval_readout
 from .eval_readout import ReadoutConfig
 from .eval_replay import ply_record, build_replay_dict, write_replay
 
@@ -125,27 +126,86 @@ def cfg_from(config: EvalConfig) -> MCTSConfig:
     )
 
 
+def readout_from_eval_config(config: EvalConfig) -> ReadoutConfig:
+    """The readout implied by a legacy EvalConfig.selection_mode."""
+    if config.selection_mode == "argmax":
+        return ReadoutConfig(mode=eval_readout.MODE_ARGMAX)
+    if config.selection_mode == "opening_temperature":
+        return ReadoutConfig(
+            mode=eval_readout.MODE_OPENING_TEMPERATURE,
+            opening_temp_plies=config.opening_temp_plies,
+            temp_high=config.temp_high, temp_low=config.temp_low,
+        )
+    raise ValueError(f"unknown selection_mode {config.selection_mode!r}")
+
+
+def root_child_stats(counts, root):
+    """Map every legal move -> (completed_visits, child_perspective_mean).
+
+    The mean is None when UNDEFINED. `MCTSNode.q_value` returns 0.0 at
+    visit_count == 0 (mcts.py:259-261); that is not a measurement and must not
+    be reported as one.
+    """
+    stats = {}
+    for move, visits in counts.items():
+        child = root.children.get(encode_move(move[0], move[1]))
+        if child is not None and child.visit_count > 0:
+            stats[move] = (child.visit_count, float(child.q_value))
+        else:
+            stats[move] = (0 if child is None else child.visit_count, None)
+    return stats
+
+
 def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
-                   capture: bool = False):
+                   capture: bool = False,
+                   red_readout: Optional[ReadoutConfig] = None,
+                   black_readout: Optional[ReadoutConfig] = None):
     """Play one A-vs-B game. Returns (winner, reason, n_moves, records).
 
     `records` is None unless capture=True, in which case it is a list of
     ply_record dicts (one per ply). Capturing reads already-computed search
     outputs only — no extra search calls, no RNG draws — so game outcomes are
     identical with capture on or off.
+
+    `red_readout`/`black_readout` default to the readout implied by `config`,
+    preserving the legacy single-config behaviour.
+
+    RNG: search and readout draw from SEPARATE streams. mcts.MCTS shares one
+    `self.rng` across prior-shuffle, PUCT tie-break and move readout, so a
+    readout that consumes a different number of draws would change the
+    generator state entering every later search. Evaluation therefore selects
+    moves through eval_readout with its own stream and never calls
+    mcts.select_move. Self-play is unaffected.
+
+    `search_with_root` is the same synchronous path `search()` delegates to
+    (mcts.py:598); the root node is simply no longer discarded.
     """
+    red_rd = red_readout or readout_from_eval_config(config)
+    black_rd = black_readout or readout_from_eval_config(config)
     mcts_red = MCTS(red_eval, cfg_from(config), random.Random(seed ^ 0xA5A5A5))
     mcts_black = MCTS(black_eval, cfg_from(config), random.Random(seed ^ 0x5A5A5A))
+    readout_rng_red = random.Random(seed ^ 0xC3C3C3)
+    readout_rng_black = random.Random(seed ^ 0x3C3C3C)
     state = TwixtState(active_size=config.board_size, to_move="red",
                        max_plies_limit=config.max_moves)
     ply = 0
     records = [] if capture else None
     while state.winner() is None and ply < config.max_moves and state.legal_moves():
-        mcts = mcts_red if state.to_move == "red" else mcts_black
-        counts, root_value = mcts.search(state, add_noise=False)
-        move = mcts.select_move(counts, ply)
+        is_red = state.to_move == "red"
+        mcts = mcts_red if is_red else mcts_black
+        rdt = red_rd if is_red else black_rd
+        rng = readout_rng_red if is_red else readout_rng_black
+        counts, root_value, root = mcts.search_with_root(state, add_noise=False)
+        if root.visit_count != config.mcts_sims:
+            raise RuntimeError(
+                f"ply {ply}: simulation budget mismatch -- root completed "
+                f"{root.visit_count} visits, expected exactly {config.mcts_sims}")
+        top2 = eval_readout.top_two(root_child_stats(counts, root))
+        move, overrode = eval_readout.select(counts, ply, rdt, rng, top2=top2)
         if capture:
-            records.append(ply_record(ply, state.to_move, move, counts, root_value))
+            records.append(ply_record(ply, state.to_move, move, counts,
+                                      root_value, top2=top2,
+                                      overrode_leader=overrode))
         state = state.apply_move(move)
         ply += 1
     winner = state.winner()
@@ -313,8 +373,11 @@ def _make_cache(factory):
 def _play_and_build_result(task, red, black, config, capture, replay_dir):
     """Play one game and build its result, writing a replay sidecar when
     capturing. Shared by the sequential and worker loops (both single-process)."""
+    red_rd = task.red_agent.readout if task.red_agent is not None else None
+    black_rd = task.black_agent.readout if task.black_agent is not None else None
     winner, reason, nm, records = play_eval_game(
-        red, black, config, task.seed, capture=capture)
+        red, black, config, task.seed, capture=capture,
+        red_readout=red_rd, black_readout=black_rd)
     result = make_result(task, winner, reason, nm)
     if records is not None:
         result.replay_path = write_replay(
