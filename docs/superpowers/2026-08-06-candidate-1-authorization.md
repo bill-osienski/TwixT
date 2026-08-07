@@ -248,8 +248,8 @@ Execution is authorized only when this block is filled in, committed, and pushed
 **Unsigned, this document authorizes nothing.**
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-07T02:36:42Z
 authorization basis : 1654426              # the reviewed state this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : the exact command in "Procedure" above, unmodified —
