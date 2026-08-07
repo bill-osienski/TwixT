@@ -82,36 +82,87 @@ These are not reminders; the tooling refuses to proceed without them.
 - **Disjoint seeds.** `validate_seed_intervals` runs before any game.
 - All three run **before the first game**, so a misconfiguration costs zero GPU time.
 
-Also confirm by hand before starting:
+### Manual preconditions — NOT code-enforced
 
-- `git diff --quiet d5326a0 -- scripts/GPU/alphazero/mcts.py scripts/GPU/alphazero/self_play.py`
-  exits 0. Shipped search must be unchanged.
-- The full suite passes. Last measured at `6d59c1d`: 2,795 passed / 4 skipped /
-  53 deselected / 0 failed.
+These four are the operator's responsibility. Unlike the three above, nothing in the
+tooling refuses the run if they are skipped.
+
+**1. Shipped search unchanged.**
+
+```bash
+git diff --quiet d5326a0 -- scripts/GPU/alphazero/mcts.py scripts/GPU/alphazero/self_play.py
+echo "EXIT=$?"     # must be 0
+```
+
+**2. Suite passes.** Last measured at `6d59c1d`: 2,795 passed / 4 skipped / 53 deselected
+/ 0 failed.
+
+**3. No output artifact already exists.** This block may be run once and may not be
+topped up or re-run, so a pre-existing artifact means either a stale file that would be
+silently overwritten, or an unauthorized earlier attempt. Either way, stop and
+investigate — do not delete and proceed.
+
+```bash
+for p in logs/eval/candidate1_diagnostic.json \
+         logs/eval/candidate1_diagnostic_games.jsonl \
+         logs/eval/candidate1_diagnostic.stdout \
+         logs/eval/candidate1_diagnostic.exit \
+         logs/eval/candidate1_diagnostic_replays; do
+  if [ -e "$p" ]; then echo "REFUSE: $p already exists"; exit 1; fi
+done
+echo "output paths clear"
+```
+
+**4. Checkpoint path and hash confirmed** against the block above.
 
 ## Procedure
 
-One command. Do not vary it.
+One command, with **every frozen parameter pinned explicitly**. Defaults are not relied
+on anywhere: a default that drifts must not silently change an authorized experiment.
+Do not vary, add or omit a flag.
 
 ```bash
-.venv/bin/python -m scripts.GPU.alphazero.eval_readout_match \
+nohup bash -c '.venv/bin/python -m scripts.GPU.alphazero.eval_readout_match \
   --checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
   --candidate-readout argmax \
   --control-readout tournament \
   --games 64 \
   --base-seed 202608060 \
+  --board-size 24 \
+  --mcts-sims 400 \
+  --mcts-eval-batch-size 14 \
+  --mcts-stall-flush-sims 48 \
+  --opening-temp-plies 20 \
+  --temp-high 1.0 \
+  --temp-low 0.1 \
+  --max-moves 280 \
   --workers 1 \
   --replay-dir logs/eval/candidate1_diagnostic_replays \
-  --output logs/eval/candidate1_diagnostic.json
+  --output logs/eval/candidate1_diagnostic.json; \
+  echo $? > logs/eval/candidate1_diagnostic.exit' \
+  > logs/eval/candidate1_diagnostic.stdout 2>&1 &
+disown
 ```
 
-Long runs: `nohup … & disown`. The harness kills foreground jobs, and `setsid` is absent
-on macOS. Read the exit status from the process, never from a pipe.
+**`--prior-seed-interval` is deliberately absent**, and that absence is itself a frozen
+parameter: it encodes the empty prior set `[]`, this being the first entry in the line's
+seed ledger. It is the only CLI flag not pinned above. Every subsequent run in this line
+must pass `--prior-seed-interval 202608060:202608124` plus any later intervals.
 
-## Stop conditions
+The harness kills foreground jobs and `setsid` is absent on macOS, hence `nohup` +
+`disown`. The `bash -c` wrapper exists so the **process's own exit code** is captured:
 
-Any of these stops the run. The first four are enforced by `eval_integrity`; the run
-raises rather than producing a result.
+```bash
+cat logs/eval/candidate1_diagnostic.exit     # 0 = success; anything else = failed run
+```
+
+That file is the authoritative status. Do not infer success from the presence of an
+output file, from a notification summary, or from a pipeline's exit code.
+
+## A. Immediate runtime aborts
+
+These raise **during** the run. No result is produced; the artifact is absent or partial
+and must not be scored. All are enforced by `eval_integrity`.
 
 - Illegal move or crash (aborts through the engine / `_WorkerFailed`).
 - Simulation-budget mismatch at any ply.
@@ -119,34 +170,54 @@ raises rather than producing a result.
   **visited** child.
 - Agent, configuration or colour mis-binding; `unknown_error`; incomplete or duplicate
   results.
+
+An abort is a **tooling or configuration fault**, not a result about the candidate. Fix
+the cause; re-running this block afterwards requires a fresh authorization, because the
+seed interval will already have been partially consumed.
+
+## B. Post-run disposition
+
+Evaluated **after all 64 games finish**, from the completed artifact. This is a reading
+of the result, not something that halts the run midway.
+
 - **Futility (§8.2):** a 95% score-rate interval entirely **below** 50% — at n=64, an
   observed score at or below about **`0.378`** (≈ −87 Elo).
 
-**"Stop" means HALT AND INVESTIGATE, not close the line.** Candidate 1 is a diagnostic
-with no 800-game path; a clear argmax loss is a *finding* about visit-leader reliability
-and must be understood before Candidate 2's budget is spent (§7.3).
+**Futility here means HALT AND INVESTIGATE, not close the line.** Candidate 1 is a
+diagnostic with no 800-game path; a clear argmax loss is a *finding* about visit-leader
+reliability and must be understood before Candidate 2's budget is spent (§7.3).
 
 **Not required at 64 games:** 55% overall, or 45% per colour. That gate would discard
 roughly two of every three candidates capable of clearing the 800-game bar while still
-advancing about one null in five, which is why §8.2 makes this screen futility-only.
+advancing about one null in five, which is why §8.2 makes this screen futility-only. Do
+not reinstate it after seeing the score.
 
 ## What to report
 
+**From the match artifact and the integrity outcome only.** Everything below is already
+in `candidate1_diagnostic.json` or the exit file; no analysis tool is run.
+
+- Contents of `candidate1_diagnostic.exit`.
 - Score rate with its 95% interval, and per-colour intervals.
 - Decisive-only rate, termination distribution, state-cap rate — secondary.
 - Wall-clock, to cost the eventual 800-game run.
-- Non-leader selection rates before and after ply 20, so a near-null can be attributed.
-  All-ply argmax changes **both** halves; these numbers say which moved. **Descriptive —
-  they gate nothing.**
 - Provenance block: commit, worktree-clean flag, checkpoint hash, complete readout
   configs, seed interval and convention, prior intervals, RNG derivation.
+- Whether any §A abort fired.
+
+**Telemetry analysis is NOT part of this authorization.** The replays are *captured*
+here and analyzed later. That includes the non-leader selection rates §7.3 calls for to
+attribute a near-null, and the entire preflight. Running `readout_preflight` against
+these replays — or computing its statistics by hand — needs its own authorization.
+Capture now, analyze under a separate signature.
 
 ## What remains UNAUTHORIZED
 
 - **Candidate 2** — its rule and gates are frozen, but no run of it is authorized.
 - Any **800-game** match, for either candidate.
-- Running the **preflight against real telemetry**. Capture it here; analyzing it needs
-  its own authorization.
+- **Any analysis of the captured telemetry**, including `readout_preflight`, the
+  non-leader selection rates, and any hand computation of the same statistics. Capture
+  here; analyze under a separate signature.
 - Re-running, topping up, extending, or replacing this 64-game block.
 - Any change to shipped search, self-play, the network, or the checkpoint-tournament
   default.
@@ -163,5 +234,29 @@ advancing about one null in five, which is why §8.2 makes this screen futility-
 
 ---
 
-**Countersignature required before execution.** Unsigned, this document authorizes
-nothing.
+## Countersignature
+
+Execution is authorized only when this block is filled in, committed, and pushed.
+**Unsigned, this document authorizes nothing.**
+
+```
+authorizer          : ____________________
+timestamp (UTC)     : ____________________
+authorized commit   : ____________________   # HEAD at signing; the run must execute
+                                             # from exactly this commit, clean
+approved scope      : the exact command in "Procedure" above, unmodified —
+                      every flag as written, none added, none omitted
+```
+
+**Conditions attached to the signature:**
+
+- The run must execute from the **authorized commit** with a clean worktree.
+  `_git_provenance` records the commit it actually ran from; if that does not match the
+  line above, the result is not covered by this authorization.
+- Approval covers **one execution**. It does not extend to a re-run, a top-up, a
+  parameter change, or a retry after an §A abort.
+- Changing any frozen parameter voids this signature. Amend and re-sign **before**
+  running, never after seeing a result.
+
+Commit and push this signed state **before** execution, so the authorization exists in
+history independently of the run's outcome.
