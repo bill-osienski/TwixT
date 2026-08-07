@@ -2892,6 +2892,9 @@ def test_missing_result_raises():
 
 
 def test_duplicate_task_id_raises():
+    """Duplicates are reported as duplicates, not as the binding mismatch a
+    collided lookup would produce. The structural checks run first for exactly
+    this reason."""
     results, tasks = _ok_set()
     results[1].task_id = results[0].task_id
     with pytest.raises(IntegrityError, match="duplicate"):
@@ -2905,11 +2908,29 @@ def test_unexpected_agent_id_raises():
         validate_result_set(results, tasks, "candidate", "control")
 
 
-def test_both_colours_held_by_the_same_agent_raises():
-    results, tasks = _ok_set()
-    results[0].black_agent_id = results[0].red_agent_id
+def test_game_binding_rejects_one_agent_holding_both_colours():
+    """CONSTRUCTED: a malformed TASK that binds the same agent to both colours.
+
+    Mutating a well-formed RESULT instead would trip the id-vs-binding check
+    first and never reach this guard, so the mutation has to be in the task.
+    Both ids then match their binding and only the both-colours check can fire.
+    """
+    task = EvalGameTask(task_id=0, pairing_id="p", game_idx=0,
+                        red_checkpoint=CKPT, black_checkpoint=CKPT,
+                        seed=100, red_agent=A, black_agent=A)
+    r = make_result(task, "red", "win", 40)
     with pytest.raises(IntegrityError, match="both colours"):
-        validate_result_set(results, tasks, "candidate", "control")
+        validate_game_binding(r, task)
+
+
+def test_game_binding_leaves_LEGACY_results_alone():
+    """CONSTRUCTED: legacy checkpoint tasks carry no AgentSpec, and
+    eval_checkpoint_match's behaviour must not change. The guard returns
+    without inspecting them -- including their termination reason."""
+    tasks = build_pairing_tasks("p", "a.safetensors", "b.safetensors", 2, 100, 0)
+    validate_game_binding(make_result(tasks[0], "red", "win", 40), tasks[0])
+    validate_game_binding(make_result(tasks[0], None, "unknown_error", 40),
+                          tasks[0])
 
 
 def test_readout_leak_across_the_colour_swap_raises():
@@ -3131,12 +3152,18 @@ def validate_game_binding(result, task) -> None:
     TASK's expected config. Checking only that an agent is self-consistent
     across games would pass a SYSTEMATIC leak, where every row carries the
     same wrong configuration.
-    """
-    if result.reason == "unknown_error":
-        raise IntegrityError(f"task {result.task_id}: game ended in unknown_error")
 
+    SCOPE: the legacy return comes FIRST, so a checkpoint-vs-checkpoint task is
+    untouched INCLUDING its termination reason. `unknown_error` is
+    zero-tolerance for AGENT-COMPARISON runs only -- this function is reached
+    through the shared _play_and_build_result, so raising on legacy results
+    would change eval_checkpoint_match's behaviour, which is out of scope.
+    """
     if task.red_agent is None or task.black_agent is None:
         return   # legacy checkpoint-vs-checkpoint task; nothing to bind
+
+    if result.reason == "unknown_error":
+        raise IntegrityError(f"task {result.task_id}: game ended in unknown_error")
 
     for colour, agent_id, readout, spec in (
             ("red", result.red_agent_id, result.red_readout, task.red_agent),
@@ -3167,11 +3194,14 @@ def validate_result_set(results, tasks, agent_a_id: str,
     checks that only make sense over the whole run.
     """
     expected_ids = {agent_a_id, agent_b_id}
-    by_task_all = {t.task_id: t for t in tasks}
-    for r in results:
-        task = by_task_all.get(r.task_id)
-        if task is not None:
-            validate_game_binding(r, task)
+
+    # STRUCTURAL checks FIRST. A duplicate or missing task_id makes the
+    # result->task lookup meaningless, so running the binding check ahead of
+    # it would report a binding mismatch and name the wrong defect.
+    bad = [r.task_id for r in results if r.reason == "unknown_error"]
+    if bad:
+        raise IntegrityError(
+            f"{len(bad)} game(s) ended in unknown_error: {sorted(bad)[:10]}")
 
     if len(results) != len(tasks):
         raise IntegrityError(
@@ -3186,6 +3216,11 @@ def validate_result_set(results, tasks, agent_a_id: str,
     missing = sorted({t.task_id for t in tasks} - set(seen))
     if missing:
         raise IntegrityError(f"incomplete run: missing task_ids {missing[:10]}")
+
+    # Only now is the lookup one-to-one and the binding check meaningful.
+    by_task_all = {t.task_id: t for t in tasks}
+    for r in results:
+        validate_game_binding(r, by_task_all[r.task_id])
 
     red_counts: Dict[str, int] = {agent_a_id: 0, agent_b_id: 0}
     for r in results:
@@ -3320,11 +3355,23 @@ def test_disjoint_prior_intervals_are_accepted(monkeypatch):
     assert s["config"]["prior_seed_intervals"] == [[0, 64], [64, 128]]
 ```
 
-Verify the pin is gone, not merely renamed:
+Verify the pin is gone from the WHOLE tree, not merely renamed or moved.
+`grep -c` on a directory is not a recursive absence check -- it errors on the
+directory and its exit status is unusable as a gate. Use:
 
 ```bash
-grep -c "NOT_yet_wired" tests/test_eval_agent_identity.py   # must print 0
+.venv/bin/python -c "
+import pathlib, sys
+hits = [str(p) for p in pathlib.Path('tests').rglob('*.py')
+        if 'NOT_yet_wired' in p.read_text()]
+if hits:
+    sys.exit('boundary pin still present in: ' + ', '.join(hits))
+print('boundary pin absent from tests/')
+"
 ```
+
+This exits non-zero and names the offending files if the pin survives anywhere
+under `tests/`.
 
 - [ ] **Step 8: Run the affected suites**
 
@@ -3951,8 +3998,13 @@ Tooling is complete when all of the following hold, each verified by a command w
   per ply, `validate_game_binding` per game *as each game finishes*,
   `validate_result_set` before any statistic is computed, and
   `validate_seed_intervals` before any game runs (Step 7a).
-- `grep -c "NOT_yet_wired" tests/` prints **0** — the B6/B7 boundary pin has
-  been replaced by a constructed rejection test, not renamed or left in place.
+  **Scope: these are AGENT-COMPARISON guards.** `validate_game_binding`
+  returns immediately on a legacy checkpoint-vs-checkpoint task, including its
+  termination reason, so `eval_checkpoint_match`'s behaviour is unchanged --
+  the guard is reached through the shared `_play_and_build_result`.
+- The recursive absence check in Task B7 Step 7a exits **0** — the B6/B7
+  boundary pin has been replaced by a constructed rejection test, not renamed,
+  moved, or left in place anywhere under `tests/`.
   **Scope note:** illegal moves and crashes are *not* `IntegrityError`
   conditions — they already abort through `TwixtState.apply_move` and the
   worker `_WorkerFailed` path. `IntegrityError` covers budget mismatch,

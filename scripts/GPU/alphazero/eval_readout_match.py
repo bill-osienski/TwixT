@@ -28,6 +28,7 @@ from .eval_readout import (
 from .eval_runner import (
     AgentSpec, EvalConfig, build_agent_pairing_tasks, run_game_tasks,
 )
+from .eval_integrity import validate_result_set, validate_seed_intervals
 from .eval_summary import summarize_agent_match
 
 CANDIDATE_ID = "candidate"
@@ -138,8 +139,8 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
     """Run one candidate-vs-control readout match. Returns the summary dict.
 
     `prior_seed_intervals` is every interval already consumed by this line of
-    work, as half-open [start, end) pairs. B6 RECORDS them; Task B7 adds
-    eval_integrity.validate_seed_intervals and ENFORCES disjointness here.
+    work, as half-open [start, end) pairs. Reuse is refused before any game
+    runs, so an overlapping configuration costs zero GPU time.
 
     There is deliberately NO repository parameter: provenance is anchored to
     the repository containing this source file, so a run can never record a
@@ -154,6 +155,7 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
     provenance = _git_provenance(_source_repo_dir())
     checkpoint_sha1 = _sha1(checkpoint)
     priors = [list(iv) for iv in prior_seed_intervals]
+    validate_seed_intervals([base_seed, base_seed + games], priors)
     started = time.monotonic()
     if pairing_id is None:
         pairing_id = f"{CANDIDATE_ID}_vs_{CONTROL_ID}"
@@ -164,6 +166,7 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
     results = run_game_tasks(tasks, workers=workers, config=config,
                              evaluator_factory=evaluator_factory,
                              replay_dir=replay_dir)
+    validate_result_set(results, tasks, CANDIDATE_ID, CONTROL_ID)
     config_dict = {
         **asdict(config),
         "base_seed": base_seed,

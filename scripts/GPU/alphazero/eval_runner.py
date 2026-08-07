@@ -19,6 +19,7 @@ from .game.twixt_state import TwixtState
 from .mcts import MCTS, MCTSConfig, encode_move
 from . import eval_readout
 from .eval_readout import ReadoutConfig
+from .eval_integrity import validate_game_binding, validate_ply
 from .eval_replay import ply_record, build_replay_dict, write_replay
 
 # game_idx and pairing offsets share this stride; games-per-pairing must
@@ -196,11 +197,8 @@ def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
         rdt = red_rd if is_red else black_rd
         rng = readout_rng_red if is_red else readout_rng_black
         counts, root_value, root = mcts.search_with_root(state, add_noise=False)
-        if root.visit_count != config.mcts_sims:
-            raise RuntimeError(
-                f"ply {ply}: simulation budget mismatch -- root completed "
-                f"{root.visit_count} visits, expected exactly {config.mcts_sims}")
         top2 = eval_readout.top_two(root_child_stats(counts, root))
+        validate_ply(ply, config.mcts_sims, root.visit_count, root_value, top2)
         move, overrode = eval_readout.select(counts, ply, rdt, rng, top2=top2)
         if capture:
             records.append(ply_record(ply, state.to_move, move, counts,
@@ -379,6 +377,11 @@ def _play_and_build_result(task, red, black, config, capture, replay_dir):
         red, black, config, task.seed, capture=capture,
         red_readout=red_rd, black_readout=black_rd)
     result = make_result(task, winner, reason, nm)
+    # Immediate stop (spec 8.3): a binding or unknown_error fault raises on the
+    # game that produced it, not after every remaining game has been played.
+    # Under workers > 1 this surfaces via the existing _WorkerFailed sentinel,
+    # which already terminates the pool.
+    validate_game_binding(result, task)
     if records is not None:
         result.replay_path = write_replay(
             replay_dir,

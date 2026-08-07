@@ -289,15 +289,30 @@ def test_prior_seed_intervals_default_to_empty_not_none(monkeypatch):
     assert s["config"]["prior_seed_intervals"] == []
 
 
-def test_seed_interval_validation_is_NOT_yet_wired(monkeypatch):
-    """B6/B7 BOUNDARY PIN.
+def test_overlapping_seed_interval_is_refused_before_any_game(monkeypatch):
+    """Closes the B6/B7 boundary. The overlap must be refused BEFORE any game,
+    so the evaluator factory is never called."""
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
+    calls = []
 
-    B6 RECORDS the seed intervals (provenance). B7 adds eval_integrity and
-    ENFORCES disjointness. Until then an overlapping interval is accepted, and
-    this test states that plainly so B7 must flip it rather than leaving the
-    guard silently unwired -- the same pattern that caught the B2/B4 telemetry
-    boundary.
-    """
+    def _counting_factory(path):
+        calls.append(path)
+        return fake_evaluator_factory(path)
+
+    with pytest.raises(ValueError, match="overlap"):
+        M.run_readout_match(
+            checkpoint=CKPT,
+            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+            games=4, base_seed=1000, config=TINY, workers=1, output=None,
+            evaluator_factory=_counting_factory,
+            prior_seed_intervals=[[1002, 1010]],      # overlaps [1000, 1004)
+        )
+    assert calls == [], "a game ran despite an overlapping seed interval"
+
+
+def test_disjoint_prior_intervals_are_accepted(monkeypatch):
     from scripts.GPU.alphazero import eval_readout_match as M
     _stub_provenance(monkeypatch)
     s = M.run_readout_match(
@@ -306,9 +321,9 @@ def test_seed_interval_validation_is_NOT_yet_wired(monkeypatch):
         control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
         games=4, base_seed=1000, config=TINY, workers=1, output=None,
         evaluator_factory=fake_evaluator_factory,
-        prior_seed_intervals=[[1002, 1010]],      # overlaps [1000, 1004)
+        prior_seed_intervals=[[0, 64], [64, 128]],   # adjacent, not overlapping
     )
-    assert s["config"]["prior_seed_intervals"] == [[1002, 1010]]
+    assert s["config"]["prior_seed_intervals"] == [[0, 64], [64, 128]]
 
 
 def test_an_unreadable_checkpoint_aborts_instead_of_recording_a_null_hash(
