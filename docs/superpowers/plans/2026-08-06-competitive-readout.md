@@ -2358,20 +2358,30 @@ def test_an_unreadable_checkpoint_aborts_instead_of_recording_a_null_hash(
         )
 
 
-def test_overlapping_seed_interval_is_refused_before_any_game(monkeypatch):
+def test_seed_interval_validation_is_NOT_yet_wired(monkeypatch):
+    """B6/B7 BOUNDARY PIN.
+
+    B6 RECORDS the seed intervals (provenance). B7 adds eval_integrity and
+    ENFORCES disjointness. Until then an overlapping interval is accepted, and
+    this test states that plainly so B7 must FLIP it rather than leaving the
+    guard silently unwired -- the same mechanism that caught the B2/B4
+    telemetry boundary.
+
+    Task B7 Step 7a replaces this test with a constructed rejection test.
+    """
     from scripts.GPU.alphazero import eval_readout_match as M
     _stub_provenance(monkeypatch)
-    with pytest.raises(ValueError, match="overlap"):
-        M.run_readout_match(
-            checkpoint=CKPT,
-            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
-            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
-            games=4, base_seed=1000,
-            config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
-                              opening_temp_plies=2),
-            workers=1, output=None, evaluator_factory=fake_evaluator_factory,
-            prior_seed_intervals=[[1002, 1010]],
-        )
+    s = M.run_readout_match(
+        checkpoint=CKPT,
+        candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+        control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+        games=4, base_seed=1000,
+        config=EvalConfig(board_size=6, mcts_sims=16, max_moves=24,
+                          opening_temp_plies=2),
+        workers=1, output=None, evaluator_factory=fake_evaluator_factory,
+        prior_seed_intervals=[[1002, 1010]],      # overlaps [1000, 1004)
+    )
+    assert s["config"]["prior_seed_intervals"] == [[1002, 1010]]
 ```
 
 **Module-scope additions** for `tests/test_eval_agent_identity.py`:
@@ -2609,14 +2619,18 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
     """Run one candidate-vs-control readout match. Returns the summary dict.
 
     `prior_seed_intervals` is every interval already consumed by this line of
-    work, as half-open [start, end) pairs. Reuse is refused.
+    work, as half-open [start, end) pairs.
 
     There is deliberately NO repository parameter: provenance is anchored to
     the repository containing this source file, so a run can never record a
     different repository than the one it executed from.
 
-    All provenance and disjointness checks run BEFORE any game, so an
-    unreproducible or overlapping configuration costs zero GPU time.
+    B6 RECORDS the intervals; Task B7 adds eval_integrity and ENFORCES
+    disjointness here. The call cannot live in B6 because eval_integrity does
+    not exist until B7 -- see the B6/B7 boundary pin.
+
+    Provenance runs BEFORE any game, so an unreproducible configuration costs
+    zero GPU time.
     """
     if candidate_readout == control_readout:
         raise ValueError("candidate and control readouts are identical; "
@@ -2624,7 +2638,6 @@ def run_readout_match(checkpoint, candidate_readout, control_readout, games,
     provenance = _git_provenance(_source_repo_dir())
     checkpoint_sha1 = _sha1(checkpoint)
     priors = [list(iv) for iv in prior_seed_intervals]
-    validate_seed_intervals([base_seed, base_seed + games], priors)
     started = time.monotonic()
     if pairing_id is None:
         pairing_id = f"{CANDIDATE_ID}_vs_{CONTROL_ID}"
@@ -3249,6 +3262,70 @@ before `config_dict` is built:
     validate_result_set(results, tasks, CANDIDATE_ID, CONTROL_ID)
 ```
 
+- [ ] **Step 7a: Close the B6/B7 boundary -- enforce seed disjointness**
+
+Task B6 deliberately left this unwired, because `eval_integrity` did not exist
+yet. **B6 is not run-ready until this step lands.**
+
+In `run_readout_match`, add the call immediately after `priors` is built and
+**before `started = time.monotonic()`**, so an overlapping configuration costs
+zero GPU time:
+
+```python
+    priors = [list(iv) for iv in prior_seed_intervals]
+    validate_seed_intervals([base_seed, base_seed + games], priors)
+    started = time.monotonic()
+```
+
+Then **replace** B6's boundary pin in `tests/test_eval_agent_identity.py`.
+Delete `test_seed_interval_validation_is_NOT_yet_wired` entirely -- do not
+leave it asserting the old behaviour -- and put the constructed rejection in
+its place:
+
+```python
+def test_overlapping_seed_interval_is_refused_before_any_game(monkeypatch):
+    """Closes the B6/B7 boundary. The overlap must be refused BEFORE any game,
+    so the evaluator factory is never called."""
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
+    calls = []
+
+    def _counting_factory(path):
+        calls.append(path)
+        return fake_evaluator_factory(path)
+
+    with pytest.raises(ValueError, match="overlap"):
+        M.run_readout_match(
+            checkpoint=CKPT,
+            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+            games=4, base_seed=1000, config=TINY, workers=1, output=None,
+            evaluator_factory=_counting_factory,
+            prior_seed_intervals=[[1002, 1010]],      # overlaps [1000, 1004)
+        )
+    assert calls == [], "a game ran despite an overlapping seed interval"
+
+
+def test_disjoint_prior_intervals_are_accepted(monkeypatch):
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
+    s = M.run_readout_match(
+        checkpoint=CKPT,
+        candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+        control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+        games=4, base_seed=1000, config=TINY, workers=1, output=None,
+        evaluator_factory=fake_evaluator_factory,
+        prior_seed_intervals=[[0, 64], [64, 128]],   # adjacent, not overlapping
+    )
+    assert s["config"]["prior_seed_intervals"] == [[0, 64], [64, 128]]
+```
+
+Verify the pin is gone, not merely renamed:
+
+```bash
+grep -c "NOT_yet_wired" tests/test_eval_agent_identity.py   # must print 0
+```
+
 - [ ] **Step 8: Run the affected suites**
 
 Run: `.venv/bin/python -m pytest tests/test_eval_integrity.py tests/test_eval_readout_telemetry.py tests/test_eval_agent_identity.py -q; echo "EXIT=$?"`
@@ -3870,9 +3947,12 @@ Tooling is complete when all of the following hold, each verified by a command w
 - `.venv/bin/python -m scripts.GPU.alphazero.eval_readout_match --help` exits 0.
 - `.venv/bin/python -m scripts.GPU.alphazero.readout_preflight --help` exits 0.
 - Every spec §8.3 condition that `IntegrityError` is responsible for has a test
-  that constructs it (Task B7), and all three guards are wired: `validate_ply`
-  per ply, `validate_game_binding` per game *as each game finishes*, and
-  `validate_result_set` before any statistic is computed.
+  that constructs it (Task B7), and all four guards are wired: `validate_ply`
+  per ply, `validate_game_binding` per game *as each game finishes*,
+  `validate_result_set` before any statistic is computed, and
+  `validate_seed_intervals` before any game runs (Step 7a).
+- `grep -c "NOT_yet_wired" tests/` prints **0** — the B6/B7 boundary pin has
+  been replaced by a constructed rejection test, not renamed or left in place.
   **Scope note:** illegal moves and crashes are *not* `IntegrityError`
   conditions — they already abort through `TwixtState.apply_move` and the
   worker `_WorkerFailed` path. `IntegrityError` covers budget mismatch,

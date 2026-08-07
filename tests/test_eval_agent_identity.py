@@ -1,4 +1,7 @@
 """Agent identity: colour binding, winner attribution, legacy preservation."""
+import json
+import pathlib
+
 import pytest
 
 from scripts.GPU.alphazero import eval_readout as R
@@ -7,7 +10,9 @@ from scripts.GPU.alphazero.eval_runner import (
     build_pairing_tasks, make_result,
 )
 
-CKPT = "checkpoints/x/model_iter_0001.safetensors"
+# Task B6's provenance hashes the checkpoint, so this must be a REAL file.
+# fake_evaluator_factory still ignores its contents.
+CKPT = str(pathlib.Path(__file__).parent / "eval_fakes.py")
 CONTROL = AgentSpec("control", CKPT, R.ReadoutConfig(mode=R.MODE_ARGMAX))
 CANDIDATE = AgentSpec("candidate", CKPT,
                       R.ReadoutConfig(mode=R.MODE_HOEFFDING_LCB))
@@ -112,3 +117,209 @@ def test_legacy_checkpoint_tasks_carry_no_agent_fields():
     assert r.red_readout is None
     assert r.same_checkpoint is None
     assert r.winner_checkpoint == "a.safetensors"
+
+
+# --- Task B6: two-agent match CLI ------------------------------------------
+
+from scripts.GPU.alphazero.eval_readout_match import (  # noqa: E402
+    readout_config_from_name, run_readout_match,
+)
+from scripts.GPU.alphazero.eval_runner import EvalConfig  # noqa: E402
+from tests.eval_fakes import fake_evaluator_factory  # noqa: E402
+
+TINY = EvalConfig(board_size=8, mcts_sims=16, mcts_eval_batch_size=4,
+                  mcts_stall_flush_sims=4, max_moves=16, opening_temp_plies=2)
+
+
+def _stub_provenance(monkeypatch):
+    """TEST-ONLY: satisfy provenance so match MECHANICS can be exercised while
+    the working tree is legitimately dirty during development.
+
+    This is a reach into the module, NOT a parameter -- no production caller
+    can aim provenance elsewhere or skip it.
+    """
+    from scripts.GPU.alphazero import eval_readout_match as M
+    monkeypatch.setattr(M, "_git_provenance",
+                        lambda _d: {"git_commit": "0" * 40,
+                                    "worktree_clean": True})
+
+
+def test_readout_names_map_to_the_frozen_configs():
+    control = readout_config_from_name("tournament", 20, 1.0, 0.1)
+    assert control.mode == R.MODE_OPENING_TEMPERATURE and control.temp_low == 0.1
+
+    c2_control = readout_config_from_name("opening_then_argmax", 20, 1.0, 0.1)
+    assert c2_control.mode == R.MODE_OPENING_TEMPERATURE
+    assert c2_control.temp_low == 0.0
+
+    assert readout_config_from_name("argmax", 20, 1.0, 0.1).mode == R.MODE_ARGMAX
+    assert readout_config_from_name(
+        "hoeffding_lcb", 20, 1.0, 0.1).mode == R.MODE_HOEFFDING_LCB
+
+
+def test_unknown_readout_name_is_rejected():
+    with pytest.raises(ValueError):
+        readout_config_from_name("wishful", 20, 1.0, 0.1)
+
+
+def test_identical_readouts_are_refused():
+    from scripts.GPU.alphazero import eval_readout_match as M
+    with pytest.raises(ValueError, match="identical"):
+        M.run_readout_match(
+            checkpoint=CKPT,
+            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            control_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            games=2, base_seed=900, config=TINY, workers=1, output=None,
+            evaluator_factory=fake_evaluator_factory,
+        )
+
+
+def test_provenance_anchors_to_the_executing_source_repository():
+    """The anchor must be THIS repository, not the process CWD and not a
+    caller-supplied path. Otherwise a run could execute dirty engine code
+    while recording a pristine unrelated repository.
+    """
+    import inspect
+    from scripts.GPU.alphazero import eval_readout_match as M
+
+    anchor = pathlib.Path(M._source_repo_dir()).resolve()
+    module_dir = pathlib.Path(M.__file__).resolve().parent
+    assert anchor == module_dir
+
+    params = inspect.signature(M.run_readout_match).parameters
+    assert "repo_dir" not in params and "allow_dirty" not in params
+
+
+def test_provenance_runs_before_any_game(monkeypatch):
+    """CONSTRUCTED: make provenance fail and assert no game was played."""
+    from scripts.GPU.alphazero import eval_readout_match as M
+
+    def _boom(_repo_dir):
+        raise RuntimeError("worktree is dirty")
+
+    calls = []
+
+    def _counting_factory(path):
+        calls.append(path)
+        return fake_evaluator_factory(path)
+
+    monkeypatch.setattr(M, "_git_provenance", _boom)
+    with pytest.raises(RuntimeError, match="dirty"):
+        M.run_readout_match(
+            checkpoint=CKPT,
+            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+            games=2, base_seed=902, config=TINY, workers=1, output=None,
+            evaluator_factory=_counting_factory,
+        )
+    assert calls == [], "a game ran despite failing provenance"
+
+
+def test_run_readout_match_produces_a_real_score_rate(monkeypatch, tmp_path):
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
+    out = tmp_path / "m.json"
+    summary = M.run_readout_match(
+        checkpoint=CKPT,
+        candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+        control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+        games=4, base_seed=900, config=TINY, workers=1, output=str(out),
+        evaluator_factory=fake_evaluator_factory,
+    )
+    # The whole point of agent identity: this is NOT None.
+    assert summary["a_score_rate"] is not None
+    assert summary["score_rate_ci95"] is not None
+    assert summary["comparison_unit"] == "agent"
+    assert summary["same_checkpoint"] is True
+    assert json.loads(out.read_text())["agent_a"] == "candidate"
+
+
+def test_run_readout_match_writes_per_game_rows_with_agent_ids(monkeypatch, tmp_path):
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
+    out = tmp_path / "m.json"
+    M.run_readout_match(
+        checkpoint=CKPT,
+        candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+        control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+        games=4, base_seed=901, config=TINY, workers=1, output=str(out),
+        evaluator_factory=fake_evaluator_factory,
+    )
+    rows = [json.loads(line) for line in
+            (tmp_path / "m_games.jsonl").read_text().splitlines()]
+    assert len(rows) == 4
+    assert {r["red_agent_id"] for r in rows} == {"candidate", "control"}
+    assert all(r["comparison_unit"] == "agent" for r in rows)
+
+
+def test_summary_records_the_full_provenance_block(monkeypatch, tmp_path):
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
+    out = tmp_path / "m.json"
+    s = M.run_readout_match(
+        checkpoint=CKPT,
+        candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+        control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+        games=2, base_seed=902, config=TINY, workers=1, output=str(out),
+        evaluator_factory=fake_evaluator_factory,
+        prior_seed_intervals=[[100, 200]],
+    )
+    assert s["git_commit"]                       # never None
+    assert s["worktree_clean"] is True
+    assert s["config"]["checkpoint_sha1"]        # never None
+    assert s["wall_clock_seconds"] >= 0
+    assert s["config"]["seed_interval"] == [902, 904]
+    assert s["config"]["seed_interval_convention"] == "half_open_[start,end)"
+    assert s["config"]["prior_seed_intervals"] == [[100, 200]]
+    assert set(s["config"]["rng_derivation"]) == {
+        "search_red", "search_black", "readout_red", "readout_black",
+        "game_seed"}
+
+
+def test_prior_seed_intervals_default_to_empty_not_none(monkeypatch):
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
+    s = M.run_readout_match(
+        checkpoint=CKPT,
+        candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+        control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+        games=2, base_seed=905, config=TINY, workers=1, output=None,
+        evaluator_factory=fake_evaluator_factory,
+    )
+    assert s["config"]["prior_seed_intervals"] == []
+
+
+def test_seed_interval_validation_is_NOT_yet_wired(monkeypatch):
+    """B6/B7 BOUNDARY PIN.
+
+    B6 RECORDS the seed intervals (provenance). B7 adds eval_integrity and
+    ENFORCES disjointness. Until then an overlapping interval is accepted, and
+    this test states that plainly so B7 must flip it rather than leaving the
+    guard silently unwired -- the same pattern that caught the B2/B4 telemetry
+    boundary.
+    """
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
+    s = M.run_readout_match(
+        checkpoint=CKPT,
+        candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+        control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+        games=4, base_seed=1000, config=TINY, workers=1, output=None,
+        evaluator_factory=fake_evaluator_factory,
+        prior_seed_intervals=[[1002, 1010]],      # overlaps [1000, 1004)
+    )
+    assert s["config"]["prior_seed_intervals"] == [[1002, 1010]]
+
+
+def test_an_unreadable_checkpoint_aborts_instead_of_recording_a_null_hash(
+        monkeypatch, tmp_path):
+    from scripts.GPU.alphazero import eval_readout_match as M
+    _stub_provenance(monkeypatch)
+    with pytest.raises(RuntimeError, match="hash checkpoint"):
+        M.run_readout_match(
+            checkpoint=str(tmp_path / "does_not_exist.safetensors"),
+            candidate_readout=readout_config_from_name("argmax", 2, 1.0, 0.1),
+            control_readout=readout_config_from_name("tournament", 2, 1.0, 0.1),
+            games=2, base_seed=903, config=TINY, workers=1, output=None,
+            evaluator_factory=fake_evaluator_factory,
+        )
