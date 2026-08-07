@@ -10,7 +10,7 @@ The durable, append-only record of every value-calibration and search-reliabilit
 
 > **Convergence-atlas closeout (updates the search-reliability line through 2026-08-05):** The read-only warm-root atlas completed its authoritative 24/24 pilot and stopped on two preregistered findings. Stable-negative scarcity produced `PROJECTED_CAPACITY_NO_GO` (`1/24`, required `N=1800` versus the frozen maximum 400), so Read-out A's detector selectivity and Read-out B's gate calibration are **unanswered, not failed**. Independently, both frozen progressive-widening shapes failed the authoritative pilot check on retention alone: root retention was `1.0`, but depth-1 retention was `0.6842 < 0.90` over 12 stable-reference-eligible rows. Progressive widening and the broader tree-local heuristic line are closed; no continuation, prototype, strength match or search change ran. Keep shipped search. Full closeout: `docs/superpowers/2026-08-05-atlas-closeout.md`.
 
-> **Competitive-readout line opened, first result 2026-08-07.** The successor to the closed atlas changes only the **final move readout** — the rule that picks a played move from a completed search — at unchanged `calib020_0001`, cold, 400 simulations. It is post-tree, so it is not tree-local and the A/B/C/D probes are **mathematically invariant** under it: they measure root value at frozen positions, and no readout can move that. Tooling is complete (11/11) and `mcts.py`/`self_play.py` are byte-identical to the implementation baseline. **Candidate 1 — all-ply argmax versus the shipped tournament readout — RAN and won 54–10, score rate `0.8438` (CI95 `0.755–0.933`), `+293` Elo**, with zero state-caps and no integrity abort. Per §7.3 that is confirmation only: **no 800-game follow-up and no change to the checkpoint-tournament default.** Read the number narrowly: the contrast includes the control's deliberate twenty-ply opening exploration **and** its post-opening `T=0.1` sampling, and this run does not decompose their contributions. It is evidence about *readout* strength in the Python harness rather than about the checkpoint, and says nothing about the product, which serves a different network (`MISMATCH`, `docs/superpowers/2026-08-06-model-path-provenance-audit.md`). **`+293` must not become the prior for Candidate 2**, which keeps the same early sampling on both sides and changes only the post-opening readout. Candidate 2's rule and gates were frozen 2026-08-06 before any telemetry existed, and its **preflight RAN 2026-08-07 and PASSED** — override rate **6.08%** (61/1,003 post-opening argmax-agent plies), single-game share 13.1%, zero corrupt Q, 64/64 sidecars validated. That establishes **reach and scope only; it is NOT evidence the overrides are good moves**, and no strength claim follows from it. Candidate 2's 64-game mechanics screen is reachable but unauthorized. Seeds: `docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`.
+> **Competitive-readout line opened, first result 2026-08-07.** The successor to the closed atlas changes only the **final move readout** — the rule that picks a played move from a completed search — at unchanged `calib020_0001`, cold, 400 simulations. It is post-tree, so it is not tree-local and the A/B/C/D probes are **mathematically invariant** under it: they measure root value at frozen positions, and no readout can move that. Tooling is complete (11/11) and `mcts.py`/`self_play.py` are byte-identical to the implementation baseline. **Candidate 1 — all-ply argmax versus the shipped tournament readout — RAN and won 54–10, score rate `0.8438` (CI95 `0.755–0.933`), `+293` Elo**, with zero state-caps and no integrity abort. Per §7.3 that is confirmation only: **no 800-game follow-up and no change to the checkpoint-tournament default.** Read the number narrowly: the contrast includes the control's deliberate twenty-ply opening exploration **and** its post-opening `T=0.1` sampling, and this run does not decompose their contributions. It is evidence about *readout* strength in the Python harness rather than about the checkpoint, and says nothing about the product, which serves a different network (`MISMATCH`, `docs/superpowers/2026-08-06-model-path-provenance-audit.md`). **`+293` must not become the prior for Candidate 2**, which keeps the same early sampling on both sides and changes only the post-opening readout. Candidate 2's rule and gates were frozen 2026-08-06 before any telemetry existed, and its **preflight RAN 2026-08-07 and PASSED** — override rate **6.08%** (61/1,003 post-opening argmax-agent plies), single-game share 13.1%, zero corrupt Q, 64/64 sidecars validated. That establishes **reach and scope only; it is NOT evidence the overrides are good moves**, and no strength claim follows from it. Candidate 2's **64-game mechanics screen RAN 2026-08-07**: it lost **28–36**, score rate **0.4375** (CI95 `0.316–0.559`), **−43.7** Elo (CI95 `−134` to `+41`), with no integrity abort and mechanics validated. The one preregistered gate — one-sided futility — did **not** fire, its interval's upper bound being `0.559`. The **800-game decisive match is therefore ELIGIBLE, which is not a pass**: 64 games cannot resolve an effect this size, the point estimate is adverse, and promotion needs an observed rate near `0.535`. Closing the line on that point estimate would install a post-result gate the futility-only design deliberately excluded. Seeds `[202608124, 202608188)` consumed. Seeds: `docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`.
 
 > **v16 postmortem closeout (2026-07-24):** The read-only tuning-control postmortem reproduced the exact **11/40** lower-prior flips with no frozen-check participation. Flips concentrated in opening (**5/10**) and red-to-move controls (**8/20**). On flipped rows, the mean selected-move prior rank moved **1.27→9.00**; effective children changed by **−20.10** versus **−7.35** on non-flips, while root-value movement stayed small (**+0.0080**) and mean top share fell slightly (**−0.0141**). Reply reduction was actually smaller on flipped rows (**−20.18** replies versus **−40.52** on non-flips), so the failures are not evidence that stronger reply suppression caused the move changes. The measured pattern implicates replacing shipped FPU with the `Q_parent` neutral baseline as the destabilizing step; it does **not** prove any shipped-baseline successor will work. Any successor must remove `Q_parent`, preserve shipped behavior exactly at coefficient zero, and use fresh preregistered evidence.
 
@@ -98,6 +98,7 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **Convergence atlas** — warm-root convergence, gate-calibration and widening diagnostic | Read-only full-prefix replay with one additive 400/1,600/3,200/6,400 ladder and three read-outs on unchanged `calib020_0001`; authoritative 24-row pilot only | **not reached:** detector selectivity unanswered after `PROJECTED_CAPACITY_NO_GO` | **not reached:** old-gate calibration unanswered | **progressive widening rejected:** both shapes retain only 0.6842 of depth-1 stable-reference moves vs 0.90 floor | **controller feasibility only:** median remaining budget 66, no prototype justified | no match | **Close at valid pilot.** Stable-negative rate 1/24 implies required `N=1800 > 400`; no continuation or full atlas. Both widening shapes independently fail the preregistered pilot check. Keep shipped search and close tree-local heuristics. |
 | **Candidate 1** — all-ply argmax readout diagnostic | Final move READOUT only: all-ply visit argmax vs the shipped tournament readout (temp `1.0` <20, then `0.1`). Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608060, 202608124)` | **invariant** — readout is post-tree; the probes measure root value at frozen positions and cannot fire | **invariant** | **invariant** | **invariant** | not a promotion match | **Large argmax win, 54–10, score rate 0.8438 (CI95 0.755–0.933), +293 Elo.** Per §7.3 this is confirmation only: **no 800-game follow-up**, no change to the tournament default. The contrast combines opening `T=1.0` and post-opening `T=0.1` sampling; this run does not attribute the effect between them and is NOT search-quality evidence. Must NOT become the prior for Candidate 2. |
 | **Candidate 2 preflight** — frozen replay analysis | Read-only over Candidate 1's 64 sidecars; frozen Hoeffding-LCB rule and gates applied, not revisited. No GPU, no checkpoint, no games, no seed interval touched. | n/a | n/a | n/a | n/a | not a match | **PASS, all frozen gates.** Override rate **6.08%** (61/1,003) inside `[0.5%, 15%]`; single-game share 13.1% < 50%; 0 corrupt Q; 64/64 replays validated. Establishes **REACH and SCOPE only — NOT that the overrides are good moves.** No strength claim follows. Candidate 2 reaches its 64-game screen, which needs its own authorization. |
+| **Candidate 2 screen** — 64-game mechanics screen | Frozen Hoeffding-LCB post-opening override vs post-opening argmax; both agents sample the opening identically at `T=1.0`, so only the override differs. Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608124, 202608188)` | **invariant** | **invariant** | **invariant** | **invariant** | screen only — cannot promote | **Futility NOT triggered; 800-game match becomes ELIGIBLE.** Lost 28–36, score rate 0.4375 (CI95 0.316–0.559), −43.7 Elo (CI95 −134 to +41). Upper bound 0.559 is not below 0.50, so the one gate did not fire. No §A abort; mechanics validated. **Adverse point estimate, but 64 games cannot resolve it** — eligible is not a pass, and expectations should be modest. |
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
 
 ## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
@@ -574,8 +575,10 @@ its own authorization.
    `docs/superpowers/2026-08-07-replay-preflight-authorization.md`.
 3. ~~Run the frozen Candidate 2 preflight — formula, population and gates unchanged.~~
    Done 2026-08-07: **PASS**, override rate 6.08%. See the preflight section below.
-4. Candidate 2's 64-game mechanics screen is now reachable, and needs its own
-   countersigned authorization with a new reserved seed interval.
+4. ~~Candidate 2's 64-game mechanics screen is now reachable, and needs its own
+   countersigned authorization with a new reserved seed interval.~~ Ran 2026-08-07:
+   futility not triggered, 28–36. See the screen section below.
+5. The 800-game decisive match is now **eligible**, unauthorized, and optional.
 
 ## Candidate 2 preflight — frozen replay analysis, RUN 2026-08-07
 
@@ -651,6 +654,83 @@ strength claim of any kind follows from `6.08%`.
 Candidate 2 reaches its 64-game mechanics screen. Passing this preflight **authorizes
 nothing by itself**: that screen requires its own countersigned authorization, a new
 reserved seed interval, and Candidate 1's consumed interval passed as a prior.
+
+## Candidate 2 — 64-game mechanics screen, RUN 2026-08-07
+
+Authorized by `docs/superpowers/2026-08-07-candidate-2-screen-authorization.md`,
+countersigned `bill-osienski` 2026-08-07T13:25:37Z, executed from `0d9678a` with a clean
+worktree. Suite measured green immediately before launch (2,795 passed / 0 failed).
+Interval `[202608124, 202608188)`, prior `[202608060, 202608124)`.
+
+### Hypothesis
+
+The frozen Hoeffding-LCB override, exercised against a real model for the first time,
+does not cause gross harm or operational failure.
+
+### Why the question was open
+
+Candidate 2 introduces root-aware selection code that had never played a game. The
+preflight established **reach and scope only** — that the rule fires at 6.08% — and said
+nothing about whether the moves it selects are better. The repository also carries
+adverse precedent: `docs/superpowers/decisions/2026-05-19-reverted-closeout-experiments.md`
+records a prior readout override whose relaxed value gate added false positives and
+worsened play.
+
+### Predicted result and preregistered interpretation
+
+**No pass bar, and no numeric prediction.** Per §8.2 the 64-game screen may only *stop*;
+it has no early-success path and takes no success decision. The single preregistered
+boundary was one-sided futility — a 95% score-rate interval entirely below 50%, about
+`0.378` at n=64 — and for Candidate 2, unlike Candidate 1, futility **closes the readout
+line**. The 55%/45% gates were deliberately excluded: they would discard roughly two of
+every three candidates capable of clearing the 800-game bar.
+
+### Result — futility NOT triggered
+
+| | |
+|---|---:|
+| score rate | **0.4375**, CI95 `[0.3160, 0.5590]` |
+| Elo | **−43.7**, CI95 `[−134.2, +41.2]` |
+| record | 28–36 |
+| as red | 12–20, 0.375, CI95 `[0.207, 0.543]` |
+| as black | 16–16, 0.500, CI95 `[0.327, 0.673]` |
+| decisive | 64/64 · state caps **0** · avg 49.9 plies |
+| wall clock | 3,705.7 s — 62 min, ~57.9 s/game at `workers=1` |
+| integrity | **no §A abort**; `same_checkpoint: true`; isolation confirmed in the recorded readouts |
+
+Futility test: the interval's upper bound is `0.5590`, not below `0.50`, so the gate did
+not fire.
+
+### Did the result match the prediction, and why?
+
+**There was no numeric prediction to match**, and no pass bar to clear. The screen did
+exactly its job: it exercised new selection code against a real model, produced no
+integrity fault, and did not trip its one gate.
+
+**The point estimate is adverse** — the candidate lost 28–36. But 64 games cannot resolve
+an effect of this size: the Elo interval spans `−134` to `+41`, which is as consistent
+with a genuinely harmful rule as with a neutral one plus noise. That irresolution is
+precisely why the decisive match exists and why this screen was designed futility-only.
+
+The red/black split (12–20 versus 16–16) carries no signal; those intervals overlap
+heavily, and Candidate 1 already showed how readily 64 games produce a colour pattern that
+means nothing.
+
+### Consequence
+
+The 800-game decisive match becomes **eligible**. Eligible is not a pass, and eligibility
+is not obligation.
+
+**Expectations should be modest.** The screen is adverse evidence, and promotion requires
+an observed score rate around `0.535` against an observed `0.4375` here. But closing the
+line on that point estimate would install a post-result gate the futility-only design
+deliberately excluded, and would leave Candidate 2 unresolved after it passed every frozen
+prerequisite. The decisive match exists to separate harm, null, and useful gain — which
+this screen cannot.
+
+Its projected cost is ~13 hours at this configuration, known before the screen ran. If
+that cost is independently unacceptable, the correct record is **"decisive match declined
+for resource cost,"** never "Candidate 2 failed."
 
 ## What got better vs worse
 

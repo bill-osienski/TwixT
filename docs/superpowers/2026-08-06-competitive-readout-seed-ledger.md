@@ -17,7 +17,7 @@ with an earlier one, which is invisible in the result and fatal to it.
 | # | interval | games | run | date | commit | status |
 |---|---|---:|---|---|---|---|
 | 1 | `[202608060, 202608124)` | 64 | Candidate 1 — all-ply argmax diagnostic | 2026-08-07 | `d2aaf4f` | **CONSUMED** |
-| 2 | `[202608124, 202608188)` | 64 | Candidate 2 — 64-game mechanics screen | 2026-08-07 | execution commit containing Candidate 2 countersignature | **RESERVED** |
+| 2 | `[202608124, 202608188)` | 64 | Candidate 2 — 64-game mechanics screen | 2026-08-07 | `0d9678a` | **CONSUMED** |
 
 ## Flag string for the next run
 
