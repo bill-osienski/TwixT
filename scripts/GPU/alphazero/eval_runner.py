@@ -12,18 +12,34 @@ import multiprocessing as mp
 import os
 import queue
 import random
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Callable, Optional
 
 from .game.twixt_state import TwixtState
 from .mcts import MCTS, MCTSConfig
+from .eval_readout import ReadoutConfig
 from .eval_replay import ply_record, build_replay_dict, write_replay
 
 # game_idx and pairing offsets share this stride; games-per-pairing must
 # stay below it so task_ids/seeds never collide across pairings.
 GAMES_PER_PAIRING_LIMIT = 1_000_000
 
+# Marks a result set whose comparison unit is the AGENT, not the checkpoint.
+# Same-checkpoint readout matches are meaningless under checkpoint keying:
+# eval_summary returns None for score rate, Elo and CIs on a self-match.
+AGENT_COMPARISON_UNIT = "agent"
+
 EvaluatorFactory = Callable[[str], object]
+
+
+@dataclass(frozen=True)
+class AgentSpec:
+    """One competitor. `agent_id` is the experimental identity and is
+    independent of `checkpoint` -- two agents may share a checkpoint and
+    differ only in readout."""
+    agent_id: str
+    checkpoint: str
+    readout: ReadoutConfig
 
 
 @dataclass(frozen=True)
@@ -34,6 +50,8 @@ class EvalGameTask:
     red_checkpoint: str
     black_checkpoint: str
     seed: int
+    red_agent: Optional[AgentSpec] = None
+    black_agent: Optional[AgentSpec] = None
 
 
 @dataclass
@@ -50,6 +68,18 @@ class EvalGameResult:
     red_score: float
     black_score: float
     replay_path: Optional[str] = None
+    # Agent-comparison fields. All None on legacy checkpoint-vs-checkpoint
+    # results, which is how a consumer tells the two artifact kinds apart.
+    red_agent_id: Optional[str] = None
+    black_agent_id: Optional[str] = None
+    winner_agent_id: Optional[str] = None
+    # COMPLETE readout configs, not just the mode: `tournament` and
+    # `opening_then_argmax` share mode "opening_temperature" and differ only
+    # in temp_low, so a mode string cannot identify the experiment.
+    red_readout: Optional[dict] = None
+    black_readout: Optional[dict] = None
+    same_checkpoint: Optional[bool] = None
+    comparison_unit: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -132,19 +162,45 @@ def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
 
 def make_result(task: EvalGameTask, winner, reason, n_moves,
                 replay_path=None) -> EvalGameResult:
-    """Build a result, mapping winner color -> checkpoint and 0/0.5/1 scores."""
+    """Build a result, mapping winner colour -> checkpoint and 0/0.5/1 scores.
+
+    When the task carries AgentSpecs, the experimental identity fields are
+    filled too. The winner's AGENT is read from the task's colour binding and
+    is never derived from winner_checkpoint, which is ambiguous when both
+    agents share a checkpoint.
+    """
     if winner == "red":
         red_score, black_score, winner_ckpt = 1.0, 0.0, task.red_checkpoint
     elif winner == "black":
         red_score, black_score, winner_ckpt = 0.0, 1.0, task.black_checkpoint
     else:
         red_score, black_score, winner_ckpt = 0.5, 0.5, None
+
+    agent_fields = {}
+    if task.red_agent is not None and task.black_agent is not None:
+        if winner == "red":
+            winner_agent_id = task.red_agent.agent_id
+        elif winner == "black":
+            winner_agent_id = task.black_agent.agent_id
+        else:
+            winner_agent_id = None
+        agent_fields = {
+            "red_agent_id": task.red_agent.agent_id,
+            "black_agent_id": task.black_agent.agent_id,
+            "winner_agent_id": winner_agent_id,
+            "red_readout": asdict(task.red_agent.readout),
+            "black_readout": asdict(task.black_agent.readout),
+            "same_checkpoint": (
+                task.red_agent.checkpoint == task.black_agent.checkpoint),
+            "comparison_unit": AGENT_COMPARISON_UNIT,
+        }
+
     return EvalGameResult(
         task_id=task.task_id, pairing_id=task.pairing_id, game_idx=task.game_idx,
         red_checkpoint=task.red_checkpoint, black_checkpoint=task.black_checkpoint,
         winner=winner, winner_checkpoint=winner_ckpt, reason=reason,
         n_moves=n_moves, red_score=red_score, black_score=black_score,
-        replay_path=replay_path,
+        replay_path=replay_path, **agent_fields,
     )
 
 
@@ -166,6 +222,34 @@ def build_pairing_tasks(pairing_id, a_ckpt, b_ckpt, games, base_seed, pairing_in
         tasks.append(EvalGameTask(
             task_id=offset + g, pairing_id=pairing_id, game_idx=g,
             red_checkpoint=red, black_checkpoint=black, seed=base_seed + offset + g,
+        ))
+    return tasks
+
+
+def build_agent_pairing_tasks(pairing_id, agent_a: AgentSpec, agent_b: AgentSpec,
+                              games, base_seed, pairing_index=0):
+    """Balanced-colour tasks for two AGENTS, which may share a checkpoint.
+
+    Even game_idx -> red=A; odd -> red=B. The readout travels WITH the agent
+    across the colour swap; that binding is what the experiment rests on.
+    """
+    if games < 2:
+        raise ValueError("games must be >= 2")
+    if games % 2 != 0:
+        # Colour balancing assigns A=red on even game_idx, A=black on odd.
+        # An odd count gives one agent an extra red game -> biased.
+        raise ValueError("games must be even for balanced colors")
+    if games >= GAMES_PER_PAIRING_LIMIT:
+        raise ValueError(f"games must be < {GAMES_PER_PAIRING_LIMIT}")
+    offset = pairing_index * GAMES_PER_PAIRING_LIMIT
+    tasks = []
+    for g in range(games):
+        red, black = (agent_a, agent_b) if g % 2 == 0 else (agent_b, agent_a)
+        tasks.append(EvalGameTask(
+            task_id=offset + g, pairing_id=pairing_id, game_idx=g,
+            red_checkpoint=red.checkpoint, black_checkpoint=black.checkpoint,
+            seed=base_seed + offset + g,
+            red_agent=red, black_agent=black,
         ))
     return tasks
 
