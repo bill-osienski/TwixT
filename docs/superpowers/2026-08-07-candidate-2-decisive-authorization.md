@@ -160,8 +160,30 @@ seeds (`validate_seed_intervals`, whole set pairwise, before any game).
 
 4. **Checkpoint path and hash confirmed.**
 
-5. **Disk headroom for ~800 replay sidecars.** The screen wrote 64 in ~55 KB of game
-   rows; budget accordingly and confirm before a 13-hour run.
+5. **Search identity — the promotion condition, established explicitly.** §8.1 requires
+   evidence that only final move selection differed. The full suite contains these tests,
+   but this artifact must record them in its own right, so run them targeted and keep the
+   exit status:
+
+   ```bash
+   .venv/bin/python -m pytest -q \
+     tests/test_eval_readout_telemetry.py::test_search_identity_across_two_independent_searches \
+     tests/test_eval_readout_telemetry.py::test_search_identity_test_can_actually_fail \
+     tests/test_eval_readout_telemetry.py::test_readout_cannot_advance_the_search_rng
+   echo "EXIT=$?"     # must be 0
+   ```
+
+   The three carry distinct weight: the first shows two independent searches at the same
+   seed produce identical counts, root value and top-two telemetry; the second shows a
+   *different* seed does change the tree, so the first is not vacuous; the third shows the
+   eval readout leaves `mcts.rng` untouched while `mcts.select_move` demonstrably advances
+   it. Together they are what makes "only the readout differed" a measured claim rather
+   than an assertion.
+
+6. **Disk headroom for ~800 replay sidecars.** Measured on the screen's output: 64
+   sidecars occupy **1.9 MB**, about 29.7 KB each, so 800 project to roughly **23 MB**.
+   Free space at drafting was ~112 GB, so headroom is ample — confirm before a 13-hour
+   run rather than assuming it.
 
 ## Procedure
 
@@ -222,6 +244,9 @@ From the match artifact and the integrity outcome only.
 - Provenance: commit, worktree-clean flag, checkpoint hash, complete readout configs,
   seed interval and convention, prior intervals, RNG derivation.
 - Whether any §A abort fired.
+- **The search-identity evidence**: the exit status of the three targeted tests from
+  precondition 5, reported alongside the protected-file diff. §8.1 lists this as a
+  promotion requirement, so the artifact must show it was satisfied rather than assumed.
 - The promotion verdict against §8.1, stated as met or not met — never as a near-miss
   that might justify a follow-up.
 

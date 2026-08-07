@@ -98,7 +98,7 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **Convergence atlas** — warm-root convergence, gate-calibration and widening diagnostic | Read-only full-prefix replay with one additive 400/1,600/3,200/6,400 ladder and three read-outs on unchanged `calib020_0001`; authoritative 24-row pilot only | **not reached:** detector selectivity unanswered after `PROJECTED_CAPACITY_NO_GO` | **not reached:** old-gate calibration unanswered | **progressive widening rejected:** both shapes retain only 0.6842 of depth-1 stable-reference moves vs 0.90 floor | **controller feasibility only:** median remaining budget 66, no prototype justified | no match | **Close at valid pilot.** Stable-negative rate 1/24 implies required `N=1800 > 400`; no continuation or full atlas. Both widening shapes independently fail the preregistered pilot check. Keep shipped search and close tree-local heuristics. |
 | **Candidate 1** — all-ply argmax readout diagnostic | Final move READOUT only: all-ply visit argmax vs the shipped tournament readout (temp `1.0` <20, then `0.1`). Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608060, 202608124)` | **invariant** — readout is post-tree; the probes measure root value at frozen positions and cannot fire | **invariant** | **invariant** | **invariant** | not a promotion match | **Large argmax win, 54–10, score rate 0.8438 (CI95 0.755–0.933), +293 Elo.** Per §7.3 this is confirmation only: **no 800-game follow-up**, no change to the tournament default. The contrast combines opening `T=1.0` and post-opening `T=0.1` sampling; this run does not attribute the effect between them and is NOT search-quality evidence. Must NOT become the prior for Candidate 2. |
 | **Candidate 2 preflight** — frozen replay analysis | Read-only over Candidate 1's 64 sidecars; frozen Hoeffding-LCB rule and gates applied, not revisited. No GPU, no checkpoint, no games, no seed interval touched. | n/a | n/a | n/a | n/a | not a match | **PASS, all frozen gates.** Override rate **6.08%** (61/1,003) inside `[0.5%, 15%]`; single-game share 13.1% < 50%; 0 corrupt Q; 64/64 replays validated. Establishes **REACH and SCOPE only — NOT that the overrides are good moves.** No strength claim follows. Candidate 2 reaches its 64-game screen, which needs its own authorization. |
-| **Candidate 2 screen** — 64-game mechanics screen | Frozen Hoeffding-LCB post-opening override vs post-opening argmax; both agents sample the opening identically at `T=1.0`, so only the override differs. Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608124, 202608188)` | **invariant** | **invariant** | **invariant** | **invariant** | screen only — cannot promote | **Futility NOT triggered; 800-game match becomes ELIGIBLE.** Lost 28–36, score rate 0.4375 (CI95 0.316–0.559), −43.7 Elo (CI95 −134 to +41). Upper bound 0.559 is not below 0.50, so the one gate did not fire. No §A abort; mechanics validated. **Adverse point estimate, but 64 games cannot resolve it** — eligible is not a pass, and expectations should be modest. |
+| **Candidate 2 screen** — 64-game mechanics screen | Frozen Hoeffding-LCB post-opening override vs post-opening argmax; both agents sample the opening identically at `T=1.0`, so only the override differs. Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608124, 202608188)` | **invariant** | **invariant** | **invariant** | **invariant** | screen only — cannot promote | **Futility NOT triggered; 800-game match becomes ELIGIBLE.** Lost 28–36, score rate 0.4375 (CI95 0.316–0.559), −43.7 Elo (CI95 −134 to +41). Upper bound 0.559 is not below 0.50, so the one gate did not fire. No §A abort; mechanics validated. **The adverse point estimate favours harm but does not resolve it** — the interval is compatible with both harm and null/noise. Eligible is not a pass, and expectations should be modest. |
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
 
 ## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
@@ -708,13 +708,13 @@ exactly its job: it exercised new selection code against a real model, produced 
 integrity fault, and did not trip its one gate.
 
 **The point estimate is adverse** — the candidate lost 28–36. But 64 games cannot resolve
-an effect of this size: the Elo interval spans `−134` to `+41`, which is as consistent
-with a genuinely harmful rule as with a neutral one plus noise. That irresolution is
-precisely why the decisive match exists and why this screen was designed futility-only.
+an effect of this size: the Elo interval spans `−134` to `+41`, **compatible with both
+harm and null/noise; the adverse point estimate favours harm but does not resolve it.**
+That irresolution is precisely why the decisive match exists and why this screen was
+designed futility-only.
 
-The red/black split (12–20 versus 16–16) carries no signal; those intervals overlap
-heavily, and Candidate 1 already showed how readily 64 games produce a colour pattern that
-means nothing.
+The red/black split (12–20 versus 16–16) **does not establish colour-specific harm and is
+non-decisive at this sample size**; the per-colour intervals overlap heavily.
 
 ### Consequence
 
