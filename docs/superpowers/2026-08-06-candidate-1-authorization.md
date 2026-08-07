@@ -138,11 +138,19 @@ nohup bash -c '.venv/bin/python -m scripts.GPU.alphazero.eval_readout_match \
   --max-moves 280 \
   --workers 1 \
   --replay-dir logs/eval/candidate1_diagnostic_replays \
-  --output logs/eval/candidate1_diagnostic.json; \
-  echo $? > logs/eval/candidate1_diagnostic.exit' \
+  --output logs/eval/candidate1_diagnostic.json
+rc=$?
+printf "%s\n" "$rc" > logs/eval/candidate1_diagnostic.exit
+exit "$rc"' \
   > logs/eval/candidate1_diagnostic.stdout 2>&1 &
 disown
 ```
+
+`rc` is captured immediately, written, and then re-raised with `exit "$rc"`. Without
+that final `exit`, the wrapper would return the status of the `printf` — normally zero —
+so a failed run would look successful to anything watching the background process.
+Both the file and the process status are now truthful. (`rc`, not `status`: `status` is
+read-only in zsh, and the assignment aborts the shell.)
 
 **`--prior-seed-interval` is deliberately absent**, and that absence is itself a frozen
 parameter: it encodes the empty prior set `[]`, this being the first entry in the line's
@@ -242,17 +250,29 @@ Execution is authorized only when this block is filled in, committed, and pushed
 ```
 authorizer          : ____________________
 timestamp (UTC)     : ____________________
-authorized commit   : ____________________   # HEAD at signing; the run must execute
-                                             # from exactly this commit, clean
+authorization basis : 1654426              # the reviewed state this signature approves
+execution commit    : the commit containing this completed countersignature block
 approved scope      : the exact command in "Procedure" above, unmodified —
                       every flag as written, none added, none omitted
 ```
 
+**Why `execution commit` is named this way and not written as a hash.** Committing the
+completed block changes the hash, so a document cannot contain the hash of the commit
+that contains it. `authorization basis` pins the reviewed content; the execution commit
+is whatever commit results from recording the signature, and it is identified by
+containment rather than by a value written in advance.
+
 **Conditions attached to the signature:**
 
-- The run must execute from the **authorized commit** with a clean worktree.
-  `_git_provenance` records the commit it actually ran from; if that does not match the
-  line above, the result is not covered by this authorization.
+- The run must execute from the **execution commit** — the commit that contains this
+  completed block — with a clean worktree. `_git_provenance` records the commit it
+  actually ran from; if that does not match the commit containing this signature, the
+  result is not covered by this authorization. Verify after signing with:
+
+  ```bash
+  git log -1 --format=%H -- docs/superpowers/2026-08-06-candidate-1-authorization.md
+  git rev-parse HEAD          # must be the same commit, and the tree must be clean
+  ```
 - Approval covers **one execution**. It does not extend to a re-run, a top-up, a
   parameter change, or a retry after an §A abort.
 - Changing any frozen parameter voids this signature. Amend and re-sign **before**
