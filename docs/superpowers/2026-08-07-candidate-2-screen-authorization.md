@@ -40,7 +40,9 @@ experiments do not share an effect size, and no numeric expectation is carried a
 
 Both agents sample the opening identically, solely to supply match diversity. **The only
 difference is the post-opening override.** The candidates are never stacked: this run
-contains no all-ply-argmax contrast, and Candidate 1's readout appears nowhere in it.
+contains no all-ply-argmax contrast. Candidate 1's **all-ply argmax agent** does not
+appear — but post-opening visit argmax certainly does, deliberately, as both the control's
+readout and the candidate's fallback whenever the frozen rule declines.
 
 ## The frozen rule — applied, not revisited
 
@@ -264,9 +266,21 @@ approved scope      : the exact command in "Procedure" above, unmodified —
   git rev-parse HEAD          # must be the same commit, and the tree must be clean
   ```
 
-- **On signature, add `[202608124, 202608188)` to the seed ledger as `RESERVED`**, before
-  launch, so no other authorization can claim an overlapping range. It becomes `CONSUMED`
-  when execution begins, and remains `CONSUMED` even if the run aborts.
+- **On signature, add the reservation row below to the seed ledger IN THE SAME COMMIT as
+  this countersignature**, so no other authorization can claim an overlapping range.
+
+  It cannot carry its own commit hash — the row is part of the commit it would name — so
+  the commit column holds a phrase, not a value. Copy this row verbatim into
+  `docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`:
+
+  ```
+  | 2 | `[202608124, 202608188)` | 64 | Candidate 2 — 64-game mechanics screen | 2026-08-07 | execution commit containing Candidate 2 countersignature | **RESERVED** |
+  ```
+
+  **After the run**, the result-recording commit replaces that phrase with the actual
+  execution hash and changes the status to `CONSUMED`. The interval remains `CONSUMED`
+  even if the run aborts. A reservation that is never launched may be released only by an
+  explicit ledger entry.
 - Approval covers **one execution**. It does not extend to a re-run, a top-up, a
   parameter change, or a retry after an §A abort.
 - Changing any frozen parameter voids this signature. Amend and re-sign **before**
