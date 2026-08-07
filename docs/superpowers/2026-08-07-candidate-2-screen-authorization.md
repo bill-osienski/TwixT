@@ -1,6 +1,6 @@
 # Candidate 2 — 64-Game Mechanics Screen — Operator Authorization
 
-**Date:** 2026-08-07 · **Status:** DRAFT, not yet countersigned · **Scope: one 64-game
+**Date:** 2026-08-07 · **Status:** COUNTERSIGNED — authorized for one execution · **Scope: one 64-game
 mechanics screen. Nothing else.**
 
 Governing design: `docs/superpowers/specs/2026-08-05-competitive-readout-strength-design.md`
@@ -84,10 +84,11 @@ Both agents load this one checkpoint; they differ only in readout.
 | workers | 1 |
 | replay capture | **required** |
 
-**The new interval is NOT yet reserved.** It becomes `RESERVED` in
-`docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md` only when this document
-is countersigned, and `CONSUMED` when execution begins. Adding the row before signature
-would reserve an interval for a run that may never be authorized.
+**The interval is `RESERVED` as of the countersignature**, recorded in
+`docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md` in the same commit as
+this signature. It becomes `CONSUMED` when execution begins, and remains `CONSUMED` even
+if the run aborts. It was deliberately not reserved while this document was a draft: an
+unsigned authorization must not claim a range for a run that may never happen.
 
 `[202608124, 202608188)` is adjacent to Candidate 1's `[202608060, 202608124)`, not
 overlapping — half-open intervals share no seed at the boundary.
@@ -248,9 +249,9 @@ Execution is authorized only when this block is filled in, committed, and pushed
 **Unsigned, this document authorizes nothing.**
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-07T13:25:37Z
+authorization basis : 42634f2              # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : the exact command in "Procedure" above, unmodified —
                       every flag as written, none added, none omitted
