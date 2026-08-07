@@ -3417,9 +3417,11 @@ from scripts.GPU.alphazero.readout_preflight import (
 )
 
 
-def _ply(ply, player, top2, overrode=False, rank=1):
+def _ply(ply, player, top2, overrode=False, rank=1, n_legal=None):
+    if n_legal is None:
+        n_legal = len(top2) if isinstance(top2, list) else 2
     return {"ply": ply, "player": player, "row": 1, "col": 1,
-            "selected_visit_rank": rank,
+            "selected_visit_rank": rank, "n_legal": n_legal,
             "top2": top2, "readout_overrode_leader": overrode}
 
 
@@ -3620,6 +3622,51 @@ def test_nonleader_report_raises_on_missing_rank():
                                    "candidate", opening_temp_plies=20)
 
 
+def test_missing_top2_raises_rather_than_scoring_no_override():
+    """CONSTRUCTED: schema 2 uses None for "NOT CAPTURED". Falling through as
+    "no override" would lower the override rate on absent data and could close
+    Candidate 2 against the `< 0.5%` floor gate."""
+    rec = _ply(20, "red", None, n_legal=30)
+    with pytest.raises(ValueError, match="not a list"):
+        preflight_stats([_replay(0, "candidate", [rec])],
+                        agent_id="candidate", opening_temp_plies=20)
+
+
+def test_a_short_top2_raises_when_two_moves_were_legal():
+    rec = _ply(20, "red", [_t2()[0]], n_legal=30)
+    with pytest.raises(ValueError, match="expected 2 for n_legal=30"):
+        preflight_stats([_replay(0, "candidate", [rec])],
+                        agent_id="candidate", opening_temp_plies=20)
+
+
+def test_missing_n_legal_raises():
+    rec = _ply(20, "red", _t2())
+    rec.pop("n_legal")
+    with pytest.raises(ValueError, match="n_legal"):
+        preflight_stats([_replay(0, "candidate", [rec])],
+                        agent_id="candidate", opening_temp_plies=20)
+
+
+def test_the_error_names_the_game_and_ply():
+    rec = _ply(37, "red", None, n_legal=30)
+    with pytest.raises(ValueError, match="game 4 ply 37"):
+        preflight_stats([_replay(4, "candidate", [rec])],
+                        agent_id="candidate", opening_temp_plies=20)
+
+
+def test_ONE_legal_move_is_legitimately_ineligible_and_stays_counted():
+    """The rule needs a challenger, so a forced move cannot override -- but it
+    is real play and must remain in the denominator, not vanish."""
+    forced = _ply(20, "red", [_t2()[0]], n_legal=1)
+    normal = _ply(22, "red", _t2())
+    s = preflight_stats([_replay(0, "candidate", [forced, normal])],
+                        agent_id="candidate", opening_temp_plies=20)
+    assert s["population_plies"] == 2
+    assert s["eligible_plies"] == 1
+    assert s["overrides"] == 1
+    assert s["override_rate"] == pytest.approx(0.5)
+
+
 def test_old_schema_replays_are_rejected_not_silently_scored():
     r = _replay(0, "candidate", [_ply(20, "red", _t2())])
     r["schema_version"] = 1
@@ -3703,8 +3750,12 @@ def _ply_bucket(ply):
 def preflight_stats(replays, agent_id, opening_temp_plies):
     """Compute the frozen population statistics over loaded replay dicts.
 
-    Fails closed: a wrong schema, a corrupt Q, or an agent that appears in no
-    replay is an error, not a silent skip.
+    Fails closed: a wrong schema, a corrupt Q, MISSING OR INCOMPLETE top-two
+    telemetry, or ANY selected replay lacking the agent is an error, not a
+    silent skip. Each analyzed turn must carry `n_legal` and a list-valued
+    `top2` of exactly `min(2, n_legal)` entries; a one-entry list is accepted
+    only when `n_legal == 1`, which is a forced move -- legitimately
+    ineligible, and it stays in the denominator.
     """
     population = 0
     eligible = 0
@@ -3742,8 +3793,30 @@ def preflight_stats(replays, agent_id, opening_temp_plies):
             slot = by_bucket.setdefault(bucket, {"plies": 0, "overrides": 0})
             slot["plies"] += 1
 
+            # FAIL CLOSED on telemetry. B2 defines top2=None as "NOT
+            # CAPTURED", so treating it as "no override" would silently lower
+            # the override rate and could close Candidate 2 on absent data --
+            # the floor gate is the one this would push us toward.
+            n_legal = rec.get("n_legal")
+            if not isinstance(n_legal, int) or n_legal < 1:
+                raise ValueError(
+                    f"game {gid} ply {rec['ply']}: n_legal is {n_legal!r}; "
+                    f"cannot verify top-two telemetry completeness")
             top2_raw = rec.get("top2")
-            if not top2_raw or len(top2_raw) < 2:
+            if not isinstance(top2_raw, list):
+                raise ValueError(
+                    f"game {gid} ply {rec['ply']}: top2 is {top2_raw!r}, not a "
+                    f"list; replay schema 2 records None only when telemetry "
+                    f"was NOT CAPTURED, and absent telemetry must never be "
+                    f"scored as 'no override'")
+            expected = min(2, n_legal)
+            if len(top2_raw) != expected:
+                raise ValueError(
+                    f"game {gid} ply {rec['ply']}: top2 has {len(top2_raw)} "
+                    f"entries, expected {expected} for n_legal={n_legal}")
+            if len(top2_raw) < 2:
+                # Exactly one legal move: the rule needs a challenger, so this
+                # turn is LEGITIMATELY ineligible. It stays in the denominator.
                 continue
             top2 = [_stat_from_dict(d) for d in top2_raw]
             # A None mean on a VISITED child, or any non-finite value, is

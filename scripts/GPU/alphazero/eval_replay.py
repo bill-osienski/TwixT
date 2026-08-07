@@ -77,6 +77,15 @@ def build_replay_dict(result, seed, board_size, records):
         "board_size": board_size,
         "red_checkpoint": result.red_checkpoint,
         "black_checkpoint": result.black_checkpoint,
+        # Agent identity, so a replay is self-describing and the preflight can
+        # tell whose turns to score. All None on legacy checkpoint artifacts.
+        # COMPLETE readout configs, not just the mode -- `tournament` and
+        # `opening_then_argmax` are both mode "opening_temperature".
+        "red_agent_id": getattr(result, "red_agent_id", None),
+        "black_agent_id": getattr(result, "black_agent_id", None),
+        "red_readout": getattr(result, "red_readout", None),
+        "black_readout": getattr(result, "black_readout", None),
+        "comparison_unit": getattr(result, "comparison_unit", None),
         "winner": result.winner,
         "winner_checkpoint": result.winner_checkpoint,
         "reason": result.reason,

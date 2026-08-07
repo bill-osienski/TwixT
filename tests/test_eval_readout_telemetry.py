@@ -264,3 +264,34 @@ def test_play_eval_game_capture_does_not_change_the_outcome():
     on = play_eval_game(FakeEvaluator(0.0), FakeEvaluator(0.0), SMALL, seed=21,
                         capture=True)
     assert off[:3] == on[:3]
+
+
+def test_replay_dict_carries_agent_identity_and_complete_readouts():
+    """The preflight reads whose turns to score from the sidecar, so a replay
+    must be self-describing. Mode alone would not distinguish `tournament`
+    from `opening_then_argmax`."""
+    from scripts.GPU.alphazero.eval_replay import build_replay_dict
+    from scripts.GPU.alphazero.eval_runner import (
+        AgentSpec, build_agent_pairing_tasks, build_pairing_tasks, make_result)
+
+    ckpt = "c.safetensors"
+    a = AgentSpec("candidate", ckpt, R.ReadoutConfig(mode=R.MODE_ARGMAX))
+    b = AgentSpec("control", ckpt, R.ReadoutConfig(
+        mode=R.MODE_OPENING_TEMPERATURE, temp_low=0.1))
+    task = build_agent_pairing_tasks("p", a, b, 2, 1)[0]
+    d = build_replay_dict(make_result(task, "red", "win", 10),
+                          seed=1, board_size=8, records=[])
+    assert d["red_agent_id"] == "candidate"
+    assert d["black_agent_id"] == "control"
+    assert d["comparison_unit"] == "agent"
+    assert d["red_readout"]["mode"] == R.MODE_ARGMAX
+    assert d["black_readout"]["temp_low"] == 0.1
+    assert d["black_readout"]["opening_temp_plies"] == 20
+
+    # LEGACY artifacts stay unlabelled, so the two kinds remain telling apart.
+    legacy_task = build_pairing_tasks("p", "a.st", "b.st", 2, 1, 0)[0]
+    legacy = build_replay_dict(make_result(legacy_task, "red", "win", 10),
+                               seed=1, board_size=8, records=[])
+    assert legacy["red_agent_id"] is None
+    assert legacy["comparison_unit"] is None
+    assert legacy["red_readout"] is None

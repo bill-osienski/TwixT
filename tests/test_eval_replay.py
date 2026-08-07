@@ -88,6 +88,11 @@ def test_build_replay_dict_shape():
         "pairing_id": "0399_vs_0379",
         "game_idx": 3, "task_id": 7, "seed": 35791, "board_size": 24,
         "red_checkpoint": "A.safetensors", "black_checkpoint": "B.safetensors",
+        # Agent identity, added by Task B8 so a replay is self-describing.
+        # All None here: _FakeResult is a LEGACY checkpoint-vs-checkpoint row.
+        "red_agent_id": None, "black_agent_id": None,
+        "red_readout": None, "black_readout": None,
+        "comparison_unit": None,
         "winner": "red", "winner_checkpoint": "A.safetensors",
         "reason": "win", "n_moves": 2,
         "moves": records,
