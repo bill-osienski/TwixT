@@ -46,13 +46,16 @@ successor picks an overlapping range.
 
 | # | interval | games | run | date | commit | status |
 |---|---|---:|---|---|---|---|
-| 4 | `[202608988, 202609388)` | 400 | Training continuation — cont5 vs calib020 | 2026-08-08 | the commit containing this reservation | **RESERVED** |
+| 4 | `[202608988, 202609388)` | 400 | Training continuation — cont5 vs calib020 | 2026-08-08 | `3c70fff` | **CONSUMED** |
 
 Disjoint from intervals 1–3, which all end at `202608988`. **Note:**
 `eval_checkpoint_match` has no `--prior-seed-interval` and never calls
 `validate_seed_intervals`, so disjointness on this path is a manual precondition and this
-ledger entry — it is not code-enforced. After the run, the result-recording commit
-replaces the commit phrase with the execution hash and flips `RESERVED` → `CONSUMED`.
+ledger entry — it is not code-enforced.
+
+Consumed 2026-08-08 by the countersigned run: 400 games, exit 0, candidate score rate
+`0.31375` (CI95 `[0.2687, 0.3588]`), Elo `−136.0`. The promotion bar was **not met** and
+the continuation recipe is stopped, so no further interval is drawn against this line.
 
 ## Rules
 
