@@ -16,6 +16,8 @@ The durable, append-only record of every value-calibration and search-reliabilit
 
 > **Competitive-readout closeout, 2026-08-08 — the line is CLOSED on a NULL.** Candidate 2's **800-game decisive match** returned **408–388, score rate `0.5125`, CI95 `[0.4779, 0.5471]`** — the 95% lower bound is `0.4779`, **not above `0.50`, so the promotion bar is NOT met**. Elo `+8.7` (CI95 `−15` to `+33`): the frozen Hoeffding-LCB override is **neither measurably stronger nor measurably weaker** than playing the visit leader. Colour harm was not established, no §A integrity abort fired, and the search-identity trio passed. Notably the screen's adverse 28–36 **did not reproduce** — at 800 games the point estimate is slightly positive — which is exactly the irresolution that made the screen futility-only and the decisive match necessary. **Per the frozen Afterward: close the readout line. No third formula, no relaxed bar, no larger match, no replay-driven rescue, no policy or product change.** The 800 sidecars are archival. Candidate 2 was this line's last strength hypothesis; the next work is a separately scoped training-line discovery. Full closeout: `docs/superpowers/2026-08-08-competitive-readout-closeout.md`.
 
+> **Training-continuation discovery, 2026-08-08 — the tested recipe is REJECTED on a clear regression.** Starting weights-only from `calib020_0001`, five iterations of calibration-free ordinary self-play training from an **empty replay buffer** (500 games and 800 training steps total) produced `model_iter_0005.safetensors`. In the frozen 400-game, equal-400-simulation match, the candidate scored **122 wins, 271 losses and 7 state caps: `0.31375`, CI95 `[0.2687, 0.3588]`, `−136.0` Elo, CI95 `[−173.9, −100.9]`**. Both colour-specific 95% upper bounds were below 50%, so the preregistered colour-harm rule fired independently as red and black. The prediction of **null or mildly negative** was right in direction but materially too optimistic in magnitude. Reject this exact five-iteration, cold-buffer, calibration-free continuation recipe; keep `calib020_0001`. Do **not** evaluate iterations 1–4, extend the run, adjust nearby dose or learning-rate knobs, add games, or replicate a failed recipe. Because cold-buffer continuation and removal of the parent's calibration objective changed together, this run does not isolate the cause and is **not proof that all training has plateaued or that every new training mechanism is futile**.
+
 ## Before proposing a new calibration experiment
 
 Run this check first (it encodes the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) findings):
@@ -103,6 +105,7 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **Candidate 2 screen** — 64-game mechanics screen | Frozen Hoeffding-LCB post-opening override vs post-opening argmax; both agents sample the opening identically at `T=1.0`, so only the override differs. Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608124, 202608188)` | **invariant** | **invariant** | **invariant** | **invariant** | screen only — cannot promote | **Futility NOT triggered; 800-game match becomes ELIGIBLE.** Lost 28–36, score rate 0.4375 (CI95 0.316–0.559), −43.7 Elo (CI95 −134 to +41). Upper bound 0.559 is not below 0.50, so the one gate did not fire. No §A abort; mechanics validated. **The adverse point estimate favours harm but does not resolve it** — the interval is compatible with both harm and null/noise. Eligible is not a pass, and expectations should be modest. |
 | **Candidate 2 decisive** — 800-game promotion match | Same frozen isolation as the screen: Hoeffding-LCB post-opening override vs visit argmax, identical `T=1.0` opening. Unchanged `calib020_0001`, cold, 400 sims, 800 games, seeds `[202608188, 202608988)` | **invariant** | **invariant** | **invariant** | **invariant** | **408–388 + 4 caps; 0.5125, CI95 0.4779–0.5471; +8.7 Elo, CI95 −15.3 to +32.8** | **PROMOTION BAR NOT MET — close the readout line.** Primary lower bound 0.4779 was not above 0.50. Colour safety did not fire; integrity and search identity passed. **Null against the research bar, not harm:** no measurable gain or loss. No third formula, relaxed bar, larger match, replay rescue, policy change, or product claim. |
 | **Candidate 2 decisive** — 800-game match | Frozen Hoeffding-LCB post-opening override vs post-opening argmax; identical opening sampling both sides. Unchanged `calib020_0001`, cold, 400 sims, 800 games, seeds `[202608188, 202608988)` | **invariant** | **invariant** | **invariant** | **invariant** | **decisive match RUN** | **NULL — promotion bar NOT met.** 408–388, score rate 0.5125, CI95 `[0.4779, 0.5471]`; lower bound `0.4779` not above `0.50`. Elo +8.7 (CI95 −15 to +33) — neither measurably better nor worse. Colour harm not established. No §A abort; search identity passed. **Readout line CLOSED**: no third formula, relaxed bar, larger match, or replay rescue. |
+| **Training continuation — cont5 cold-buffer, calibration-free** | Weights-only from `calib020_0001`; empty replay buffer; five iterations × 100 self-play games and 160 training steps; parent's post-opening calibration objective removed. Frozen `model_iter_0005`; 400-game parent match, equal 400 sims, balanced colours, seeds `[202608988, 202609388)` | **not run deliberately** — strength-first discovery; probes were reserved only for a promotable result | **not run deliberately** | **not run deliberately** | **not run deliberately** | **122–271 + 7 caps; 0.31375, CI95 0.2687–0.3588; −136.0 Elo, CI95 −173.9 to −100.9** | **REJECT the exact recipe.** Promotion failed decisively and colour harm fired independently as red and black. The prediction of null or mild loss matched direction but understated the regression. No iteration-1–4 search, extension, nearby recipe tweak, added games or replication. This does not isolate cold-buffer versus objective-removal effects and does not prove all training is plateaued. |
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
 
 ## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
@@ -909,6 +912,103 @@ archival. No policy or product change follows.
 Candidate 2 was the line's last strength hypothesis. Closeout:
 `docs/superpowers/2026-08-08-competitive-readout-closeout.md`.
 
+## Training continuation — five-iteration cold-buffer test, RUN 2026-08-08 — REJECTED
+
+Authorized by `docs/superpowers/2026-08-08-training-continuation-experiment-card.md`
+and executed from `3c70fffe3d660451f0f151f6d769f25f1fd6edb5` with a clean worktree.
+The parent was `calib020_0001` (SHA1
+`209cf2d4fd24a48553d259dd71b4954867b9473e`); the frozen endpoint was
+`checkpoints/alphazero-v2-cont5-from-calib020/model_iter_0005.safetensors`
+(SHA1 `c8cac3971c483af3c94aee71e79fb0e157136c95`). Training and evaluation
+exit files both recorded `0`. The 400-game evaluation consumed the half-open interval
+`[202608988, 202609388)` recorded in
+`docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`.
+
+### Hypothesis
+
+Five iterations of ordinary, calibration-free self-play training from the current-best
+checkpoint could produce a large playing-strength gain without another calibration or
+search intervention. The run loaded weights only, began with an empty replay buffer and
+used game outcomes as the value target. Its frozen endpoint comprised 500 self-play games
+and 800 training steps.
+
+### Why the hypothesis was plausible
+
+The previous calibration and search lines had exhausted their local mechanisms, while
+the basic question of whether training still gained beyond the prior point had not been
+answered directly. Ordinary self-play does not require deeper search to be treated as
+truth, and a direct parent match avoided another unvalidated proxy-gate pipeline.
+
+The dose was deliberately small enough to falsify cheaply but substantial per iteration:
+100 games and 160 training steps for each of five iterations. The learning rate inherited
+the documented parent-line value, but the run did **not** reproduce the parent's
+post-opening calibration objective. That distinction, and the empty replay buffer, were
+recorded before the run because either could affect the result.
+
+### Predicted result and preregistered interpretation
+
+The recorded forecast was **null or mildly negative**. A success required the candidate's
+draw-inclusive 95% lower score bound to exceed 50%, no colour's own 95% upper bound below
+50%, and clean provenance. Success would have authorized only a full retrain replication
+from the parent with a new training seed and evaluation interval—not an extension to more
+iterations.
+
+Failure meant stop the exact recipe. The card deliberately omitted a 64-game screen and
+A/B/C/D: the screen had little stopping value ahead of a cheap 400-game test, while the
+probes were reserved for a checkpoint that first showed credible strength. Their omission
+means this experiment does not measure behavioral regressions beyond the match and its
+predeclared per-colour safety check.
+
+### Result — clear regression; promotion bar NOT met
+
+| | |
+|---|---:|
+| score rate | **0.31375**, CI95 `[0.2687, 0.3588]` |
+| primary decision | lower bound `0.2687` is not above `0.50` — **NOT MET** |
+| record | candidate 122 wins · parent 271 wins · 7 state caps |
+| Elo | **−136.0**, CI95 `[−173.9, −100.9]` |
+| as red | 66–131 + 3 caps, 0.3375, CI95 `[0.2725, 0.4025]` |
+| as black | 56–140 + 4 caps, 0.2900, CI95 `[0.2279, 0.3521]` |
+| colour safety | **triggered independently for both colours** — upper bounds `0.4025` and `0.3521` are below `0.50` |
+| termination | 393 decisive · 7 state caps (1.75%) · board-full 0 |
+| average plies | 62.78 |
+| decisive red win rate | 0.5242 |
+| training wall clock | 1 h 45 m 55 s at `n_workers=10` |
+| evaluation wall clock | 3 h 11 m, ~28.7 s/game at `workers=4` |
+| integrity | both exit files `0` · clean worktree · endpoint provenance gate passed |
+
+The state-cap rate, absence of board-full endings and near-even decisive red win rate give
+no indication that the loss is a termination or colour-allocation artifact. Both colour
+views reject independently rather than the aggregate being driven by one side.
+
+### Did the result match the prediction, and why?
+
+**It matched the predicted direction but not the predicted magnitude.** The candidate was
+expected to be null or mildly negative; it was instead a clear regression of about 136
+Elo, with the entire 95% Elo interval below zero and the entire score interval below 50%.
+Calling the forecast simply “correct” would over-credit it: the preregistered expectation
+was materially too optimistic about how much strength the recipe would retain.
+
+The experiment does not identify a single cause. It simultaneously started from a cold
+replay buffer and removed the post-opening calibration objective used in the parent's
+lineage. The result is therefore compatible with damage from the cold start, objective
+removal, or their interaction; no one of those explanations was isolated. Iterations 1–4
+were neither probed nor strength-tested, so no claim is made about whether the trajectory
+briefly improved before the frozen endpoint.
+
+### Consequence — reject this recipe, not all training
+
+Keep `calib020_0001` as current best. Do not evaluate iterations 1–4, extend this run to
+10 or 20 iterations, adjust its learning rate or training dose, add match games, or run
+the success-only replication. Those are nearby rescues of a decisively failed recipe,
+not new hypotheses.
+
+This result does **not** prove that checkpoint strength is globally plateaued or that all
+training is futile. A future training project must name a genuinely different mechanism
+and explain why it addresses this failure—for example, preservation of replay state or
+parent behavior—then receive its own cheap falsification design. It may not be framed as
+a top-up or parameter rescue of this run.
+
 ## What got better vs worse
 
 **Improved — A (black pre-drop):** targeted correction is **real**. The strongest A correction so far is **v4 teacher-retention**: mean **−0.305**, over **13.3%**, severe **6.7%** (from baseline mean +0.257 / over 50.0% / severe 43.3%). This is an A-only success, not a promotion candidate, because B/C/D failed.
@@ -981,6 +1081,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 46. **Rescuing v18 by implementing the cap anyway, relaxing the preflight, or reusing its evidence.** v18 had real selected-A reach (`0.5639`) but failed its decisive A-vs-matched-control selectivity gate (AUC `0.5089`, lower bound `0.39`), missed sign dominance (`0.78475 < 0.80`), and produced **zero complete target rows**; selector sizing failed even on the full 800-game universe. Do not edit `mcts.py`, run a positive cap, extend or interpolate the grid, weaken the exposure/sign/near-even/flip/sizing predicates, or reuse the consumed census/cohort as fresh evidence to rescue this formulation. A successor needs a genuinely new selective observable, a new written hypothesis and fresh preregistered confirmation. This null means selectivity was not established; do not overstate it as proof that no depth-2 effect exists.
 47. **Progressive widening in any shape, and enlarging or re-labelling the atlas corpus to rescue it.** The convergence atlas ran its authorized pilot (24 games, `[20321000, 20321024)`, checkpoint `209cf2d4…`) and returned two stopping findings. **Progressive widening: both frozen shapes FAIL on retention alone** — depth-1 retention `0.6842` against the `0.90` floor, identically for `(C=4, α=0.5)` and `(C=13, α=0.3)`, over 12 stable-reference-eligible rows, with root retention a perfect `1.0`. Widening keeps every stable root move and drops roughly a third of the depth-1 replies stable deeper search requires. Do **not** add, tune or interpolate a third shape — §8 preregistered this check as authoritative on the pilot alone. The intervention rates are **not** the basis and must not be quoted as if they were: their denominators were 1 and 10 rows with 17 and 2 inconclusive. **Separately `PROJECTED_CAPACITY_NO_GO`:** `p_s = 1/24` stable-negative drove required `N` to 1800 against a frozen maximum of 400, and **12 of 24 rows had no stable 3,200/6,400 reference at all**. Do not enlarge the corpus, loosen the stable-reference criteria, or reuse either the retired `[20320000, 20320024)` rows or these. **Read-out A's selectivity and Read-out B's gate calibration are UNANSWERED, not failed** — an operational capacity failure, not proof the information is absent. The `remaining` median of 66 establishes controller *feasibility* only and justifies no prototype. Closeout: `docs/superpowers/2026-08-05-atlas-closeout.md`. **Tree-local search heuristics are closed; the candidate set was the last untried axis.** A high-budget distillation successor must not inherit "deeper is truth" — half these rows disagreed with themselves between 3,200 and 6,400.
+
+48. **Rescuing the rejected five-iteration cold-buffer continuation with nearby endpoints, dose changes or more match games.** The frozen iteration-5 checkpoint lost clearly to its parent over 400 games: score `0.31375`, CI95 `[0.2687, 0.3588]`, about `−136` Elo, with the colour-harm rule firing independently as red and black. Do not evaluate iterations 1–4, extend the same run to 10 or 20 iterations, alter its learning rate or training steps, add games, or invoke the success-only replication. The result rejects the exact calibration-free, cold-buffer continuation recipe; it does not isolate whether the cold replay buffer, removal of the parent's calibration objective, or their interaction caused the regression, and it does not prove all training has plateaued. A successor must introduce and justify a genuinely different training mechanism rather than relabeling a top-up as discovery.
 
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
