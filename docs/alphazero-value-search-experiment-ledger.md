@@ -14,6 +14,8 @@ The durable, append-only record of every value-calibration and search-reliabilit
 
 > **v16 postmortem closeout (2026-07-24):** The read-only tuning-control postmortem reproduced the exact **11/40** lower-prior flips with no frozen-check participation. Flips concentrated in opening (**5/10**) and red-to-move controls (**8/20**). On flipped rows, the mean selected-move prior rank moved **1.27→9.00**; effective children changed by **−20.10** versus **−7.35** on non-flips, while root-value movement stayed small (**+0.0080**) and mean top share fell slightly (**−0.0141**). Reply reduction was actually smaller on flipped rows (**−20.18** replies versus **−40.52** on non-flips), so the failures are not evidence that stronger reply suppression caused the move changes. The measured pattern implicates replacing shipped FPU with the `Q_parent` neutral baseline as the destabilizing step; it does **not** prove any shipped-baseline successor will work. Any successor must remove `Q_parent`, preserve shipped behavior exactly at coefficient zero, and use fresh preregistered evidence.
 
+> **Competitive-readout closeout, 2026-08-08 — the line is CLOSED on a NULL.** Candidate 2's **800-game decisive match** returned **408–388, score rate `0.5125`, CI95 `[0.4779, 0.5471]`** — the 95% lower bound is `0.4779`, **not above `0.50`, so the promotion bar is NOT met**. Elo `+8.7` (CI95 `−15` to `+33`): the frozen Hoeffding-LCB override is **neither measurably stronger nor measurably weaker** than playing the visit leader. Colour harm was not established, no §A integrity abort fired, and the search-identity trio passed. Notably the screen's adverse 28–36 **did not reproduce** — at 800 games the point estimate is slightly positive — which is exactly the irresolution that made the screen futility-only and the decisive match necessary. **Per the frozen Afterward: close the readout line. No third formula, no relaxed bar, no larger match, no replay-driven rescue, no policy or product change.** The 800 sidecars are archival. Candidate 2 was this line's last strength hypothesis; the next work is a separately scoped training-line discovery. Full closeout: `docs/superpowers/2026-08-08-competitive-readout-closeout.md`.
+
 ## Before proposing a new calibration experiment
 
 Run this check first (it encodes the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) findings):
@@ -100,6 +102,7 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **Candidate 2 preflight** — frozen replay analysis | Read-only over Candidate 1's 64 sidecars; frozen Hoeffding-LCB rule and gates applied, not revisited. No GPU, no checkpoint, no games, no seed interval touched. | n/a | n/a | n/a | n/a | not a match | **PASS, all frozen gates.** Override rate **6.08%** (61/1,003) inside `[0.5%, 15%]`; single-game share 13.1% < 50%; 0 corrupt Q; 64/64 replays validated. Establishes **REACH and SCOPE only — NOT that the overrides are good moves.** No strength claim follows. Candidate 2 reaches its 64-game screen, which needs its own authorization. |
 | **Candidate 2 screen** — 64-game mechanics screen | Frozen Hoeffding-LCB post-opening override vs post-opening argmax; both agents sample the opening identically at `T=1.0`, so only the override differs. Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608124, 202608188)` | **invariant** | **invariant** | **invariant** | **invariant** | screen only — cannot promote | **Futility NOT triggered; 800-game match becomes ELIGIBLE.** Lost 28–36, score rate 0.4375 (CI95 0.316–0.559), −43.7 Elo (CI95 −134 to +41). Upper bound 0.559 is not below 0.50, so the one gate did not fire. No §A abort; mechanics validated. **The adverse point estimate favours harm but does not resolve it** — the interval is compatible with both harm and null/noise. Eligible is not a pass, and expectations should be modest. |
 | **Candidate 2 decisive** — 800-game promotion match | Same frozen isolation as the screen: Hoeffding-LCB post-opening override vs visit argmax, identical `T=1.0` opening. Unchanged `calib020_0001`, cold, 400 sims, 800 games, seeds `[202608188, 202608988)` | **invariant** | **invariant** | **invariant** | **invariant** | **408–388 + 4 caps; 0.5125, CI95 0.4779–0.5471; +8.7 Elo, CI95 −15.3 to +32.8** | **PROMOTION BAR NOT MET — close the readout line.** Primary lower bound 0.4779 was not above 0.50. Colour safety did not fire; integrity and search identity passed. **Null against the research bar, not harm:** no measurable gain or loss. No third formula, relaxed bar, larger match, replay rescue, policy change, or product claim. |
+| **Candidate 2 decisive** — 800-game match | Frozen Hoeffding-LCB post-opening override vs post-opening argmax; identical opening sampling both sides. Unchanged `calib020_0001`, cold, 400 sims, 800 games, seeds `[202608188, 202608988)` | **invariant** | **invariant** | **invariant** | **invariant** | **decisive match RUN** | **NULL — promotion bar NOT met.** 408–388, score rate 0.5125, CI95 `[0.4779, 0.5471]`; lower bound `0.4779` not above `0.50`. Elo +8.7 (CI95 −15 to +33) — neither measurably better nor worse. Colour harm not established. No §A abort; search identity passed. **Readout line CLOSED**: no third formula, relaxed bar, larger match, or replay rescue. |
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
 
 ## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
@@ -830,6 +833,81 @@ No existing policy changes: no adoption into the product, the checkpoint-tournam
 default, or policy 3. The finding is scoped to the frozen readout comparison at
 `calib020_0001`, cold, 400 simulations, in the Python harness; it is not a checkpoint or
 product-strength claim. Any next project begins separately as training-line discovery.
+
+## Candidate 2 — 800-game decisive match, RUN 2026-08-08 — NULL, line closed
+
+Authorized by `docs/superpowers/2026-08-07-candidate-2-decisive-authorization.md`,
+countersigned `bill-osienski` 2026-08-07T16:02:15Z, executed from `2614795` with a clean
+worktree. Suite measured green immediately before launch (2,795 passed / 0 failed);
+search-identity trio passed `EXIT=0`. Interval `[202608188, 202608988)`, priors
+`[202608060, 202608124)` and `[202608124, 202608188)`.
+
+### Hypothesis
+
+The frozen Hoeffding-LCB post-opening override produces a statistically significant
+same-checkpoint strength gain at equal 400-simulation budget, against a control identical
+to it in every respect except the override.
+
+### Why it was plausible
+
+The rule reached its screen having cleared every frozen prerequisite: a preflight
+override rate of 6.08% — inside the band, with a median challenger of 87 completed visits
+rather than fringe moves — and a mechanics screen whose one gate did not fire. Overriding
+a visit leader on a conservative confidence comparison is a standard idea elsewhere, and
+the readout was the last untouched axis after tree-local heuristics closed.
+
+### Predicted result and preregistered interpretation
+
+The bar was frozen before the run: **draw-inclusive score rate with a 95% lower bound
+above 0.50**, i.e. an observed rate around `0.535` ≈ +24 Elo, with ~80% power at ~+35
+Elo. Colour safety rejects only on a colour's own 95% **upper** bound below 0.50. No
+colour-gap veto, no post-result additions.
+
+The adverse prior was recorded in the authorization itself: the screen had lost 28–36,
+and expectations were set to modest.
+
+### Result — promotion bar NOT met
+
+| | |
+|---|---:|
+| score rate | **0.5125**, CI95 `[0.4779, 0.5471]` |
+| **lower bound** | **`0.4779` — not above `0.50`** |
+| Elo | **+8.7**, CI95 `[−15.3, +32.8]` |
+| record | 408–388 of 800 |
+| as red | 214–183, 0.5387, CI95 `[0.4901, 0.5874]` |
+| as black | 194–205, 0.4863, CI95 `[0.4373, 0.5352]` |
+| decisive | 796 · state caps 4 (0.5%) · avg 54.5 plies |
+| wall clock | 49,530 s = **13.76 h** (61.9 s/game, `workers=1`) |
+| integrity | no §A abort; search identity `EXIT=0`; `same_checkpoint: true` |
+
+Colour safety not triggered — neither upper bound (red `0.5874`, black `0.5352`) falls
+below `0.50`, so one-sided harm is not established.
+
+### Did the result match the prediction, and why?
+
+**Partly, and the distinction is worth keeping honest.**
+
+The *decision-relevant* forecast was correct: the rule would not clear promotion, and it
+did not. The *point* forecast was too pessimistic — the screen's 28–36 pointed
+neutral-to-negative, while 800 games returned a slightly **positive** 0.5125.
+
+**This is a NULL, not a harm finding.** The interval spans `−15` to `+33` Elo: the rule
+is neither measurably better nor measurably worse than playing the visit leader. The
+screen's adverse point estimate did not reproduce, which is exactly the irresolution that
+made the screen futility-only and the decisive match necessary. Running it was right
+despite the screen.
+
+Read narrowly: evidence about a **readout rule** at fixed `calib020_0001`, cold, 400
+simulations, in the Python harness. Not about the checkpoint, and not about the product.
+
+### Frozen consequences
+
+**Close the readout line.** Per the authorization's Afterward: no third readout formula,
+no relaxed bar, no larger match, and no replay-driven rescue. The 800 sidecars are
+archival. No policy or product change follows.
+
+Candidate 2 was the line's last strength hypothesis. Closeout:
+`docs/superpowers/2026-08-08-competitive-readout-closeout.md`.
 
 ## What got better vs worse
 

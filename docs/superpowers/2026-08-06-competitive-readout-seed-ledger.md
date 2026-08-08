@@ -33,6 +33,10 @@ Copy verbatim. Append one `--prior-seed-interval` per row above.
 The Candidate 2 screen passed only interval 1 as a prior; the decisive match passed
 intervals 1 and 2. Any later run in this line must pass all three intervals above.
 
+**The competitive-readout line is CLOSED as of 2026-08-08.** No further interval is
+expected to be drawn against it. Any successor project chooses its own range and passes
+all three intervals above as priors.
+
 ## Rules
 
 - **RESERVED** means a countersigned authorization owns the interval but execution has
