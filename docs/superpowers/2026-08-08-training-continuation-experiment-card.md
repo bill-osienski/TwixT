@@ -176,6 +176,7 @@ here is a manual precondition and a ledger entry, nothing more.
 
 1. **New output paths, refuse if any exists** — `checkpoints/alphazero-v2-cont5-from-calib020`,
    `logs/selfplay/cont5_from_calib020`, `logs/eval/cont5_train.{stdout,exit}`,
+   `logs/eval/cont5_candidate_provenance.txt`,
    `logs/eval/cont5_vs_calib020.{json,stdout,exit}`, `logs/eval/cont5_vs_calib020_games.jsonl`.
 2. **Clean worktree**; HEAD recorded with both results.
 3. **Suite passes**, measured immediately before the training run.
@@ -198,19 +199,30 @@ same artifact as the hash:
 
 ```bash
 bash -c 'CK=checkpoints/alphazero-v2-cont5-from-calib020/model_iter_0005.safetensors
-test -f "$CK" || { echo "REFUSE: endpoint missing"; exit 1; }
-test "$(cat logs/eval/cont5_train.exit)" = "0" || { echo "REFUSE: training exit non-zero"; exit 1; }
-printf "candidate: %s\nsha1: %s\ntrain_head: %s\nworktree_clean: %s\n" \
-  "$CK" "$(shasum -a 1 "$CK" | awk "{print \$1}")" "$(git rev-parse HEAD)" \
-  "$([ -z "$(git status --porcelain)" ] && echo true || echo false)" \
-  > logs/eval/cont5_candidate_provenance.txt
-rc=$?
-cat logs/eval/cont5_candidate_provenance.txt
-exit "$rc"'
+OUT=logs/eval/cont5_candidate_provenance.txt
+
+[ -e "$OUT" ] && { echo "REFUSE: $OUT already exists"; exit 1; }
+[ -f "$CK" ] || { echo "REFUSE: endpoint missing: $CK"; exit 1; }
+[ "$(cat logs/eval/cont5_train.exit 2>/dev/null)" = "0" ] || { echo "REFUSE: training exit not 0"; exit 1; }
+[ -z "$(git status --porcelain)" ] || { echo "REFUSE: worktree dirty"; exit 1; }
+
+HEAD=$(git rev-parse HEAD) || { echo "REFUSE: git rev-parse failed"; exit 1; }
+SHA=$(shasum -a 1 "$CK" | cut -d" " -f1) || { echo "REFUSE: hashing failed"; exit 1; }
+[ ${#HEAD} -eq 40 ] || { echo "REFUSE: HEAD not 40 chars: [$HEAD]"; exit 1; }
+[ ${#SHA} -eq 40 ] || { echo "REFUSE: sha1 not 40 chars: [$SHA]"; exit 1; }
+
+printf "candidate: %s\nsha1: %s\ntrain_head: %s\nworktree_clean: true\n" \
+  "$CK" "$SHA" "$HEAD" > "$OUT" || { echo "REFUSE: write failed"; exit 1; }
+cat "$OUT"'
 ```
 
-That artifact is part of the gate and goes into the later ledger record. Refuse if
-`logs/eval/cont5_candidate_provenance.txt` already exists.
+**Every check precedes the write**, so the artifact exists only if all of them passed —
+its presence is therefore meaningful as a gate. A dirty worktree is **refused**, not
+recorded as `false`. `HEAD` and the SHA-1 are captured into variables and length-checked
+at 40 characters, so an empty result from a failed `git rev-parse` or `shasum` cannot pass
+as success. It refuses if the artifact already exists.
+
+That artifact is part of the gate and goes into the later ledger record.
 
 ## Decision rule
 
@@ -294,8 +306,12 @@ authorizer          : ____________________
 timestamp (UTC)     : ____________________
 authorization basis : ____________________   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
-approved scope      : the exact two commands above, unmodified — every flag as
-                      written, none added, none omitted
+approved scope      : the exact FOUR command blocks above, unmodified — every
+                      flag as written, none added, none omitted:
+                        1. training run              [GPU, state-changing]
+                        2. provenance gate           [no GPU; writes ONE artifact]
+                        3. evaluation match          [GPU, state-changing]
+                        4. per-colour interval calc  [read-only, no writes]
 ```
 
 **Conditions:**
@@ -307,6 +323,15 @@ approved scope      : the exact two commands above, unmodified — every flag as
   the same commit, in **`docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`**
   under a new, clearly labelled **"Successor project — training line"** section. The
   competitive-readout section above it stays marked CLOSED and is not reopened; the shared
-  file exists so no successor can pick an overlapping range.
+  file exists so no successor can pick an overlapping range. Copy this row verbatim — the
+  commit column holds a phrase because the row cannot contain the hash of the commit that
+  contains it:
+
+  ```
+  | 4 | `[202608988, 202609388)` | 400 | Training continuation — cont5 vs calib020 | 2026-08-08 | the commit containing this reservation | **RESERVED** |
+  ```
+
+  After the run, the result-recording commit replaces the phrase with the execution hash
+  and flips `RESERVED` → `CONSUMED`.
 - Changing any frozen parameter voids this signature. Amend and re-sign **before**
   running, never after seeing a result.
