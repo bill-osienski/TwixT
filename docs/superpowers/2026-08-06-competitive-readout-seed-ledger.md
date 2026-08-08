@@ -37,6 +37,23 @@ intervals 1 and 2. Any later run in this line must pass all three intervals abov
 expected to be drawn against it. Any successor project chooses its own range and passes
 all three intervals above as priors.
 
+## Successor project — training line
+
+Reserved by the countersigned experiment card
+`docs/superpowers/2026-08-08-training-continuation-experiment-card.md`. The
+competitive-readout section above remains **CLOSED**; this file is shared only so no
+successor picks an overlapping range.
+
+| # | interval | games | run | date | commit | status |
+|---|---|---:|---|---|---|---|
+| 4 | `[202608988, 202609388)` | 400 | Training continuation — cont5 vs calib020 | 2026-08-08 | the commit containing this reservation | **RESERVED** |
+
+Disjoint from intervals 1–3, which all end at `202608988`. **Note:**
+`eval_checkpoint_match` has no `--prior-seed-interval` and never calls
+`validate_seed_intervals`, so disjointness on this path is a manual precondition and this
+ledger entry — it is not code-enforced. After the run, the result-recording commit
+replaces the commit phrase with the execution hash and flips `RESERVED` → `CONSUMED`.
+
 ## Rules
 
 - **RESERVED** means a countersigned authorization owns the interval but execution has
