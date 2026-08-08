@@ -10,7 +10,7 @@ The durable, append-only record of every value-calibration and search-reliabilit
 
 > **Convergence-atlas closeout (updates the search-reliability line through 2026-08-05):** The read-only warm-root atlas completed its authoritative 24/24 pilot and stopped on two preregistered findings. Stable-negative scarcity produced `PROJECTED_CAPACITY_NO_GO` (`1/24`, required `N=1800` versus the frozen maximum 400), so Read-out A's detector selectivity and Read-out B's gate calibration are **unanswered, not failed**. Independently, both frozen progressive-widening shapes failed the authoritative pilot check on retention alone: root retention was `1.0`, but depth-1 retention was `0.6842 < 0.90` over 12 stable-reference-eligible rows. Progressive widening and the broader tree-local heuristic line are closed; no continuation, prototype, strength match or search change ran. Keep shipped search. Full closeout: `docs/superpowers/2026-08-05-atlas-closeout.md`.
 
-> **Competitive-readout line opened, first result 2026-08-07.** The successor to the closed atlas changes only the **final move readout** — the rule that picks a played move from a completed search — at unchanged `calib020_0001`, cold, 400 simulations. It is post-tree, so it is not tree-local and the A/B/C/D probes are **mathematically invariant** under it: they measure root value at frozen positions, and no readout can move that. Tooling is complete (11/11) and `mcts.py`/`self_play.py` are byte-identical to the implementation baseline. **Candidate 1 — all-ply argmax versus the shipped tournament readout — RAN and won 54–10, score rate `0.8438` (CI95 `0.755–0.933`), `+293` Elo**, with zero state-caps and no integrity abort. Per §7.3 that is confirmation only: **no 800-game follow-up and no change to the checkpoint-tournament default.** Read the number narrowly: the contrast includes the control's deliberate twenty-ply opening exploration **and** its post-opening `T=0.1` sampling, and this run does not decompose their contributions. It is evidence about *readout* strength in the Python harness rather than about the checkpoint, and says nothing about the product, which serves a different network (`MISMATCH`, `docs/superpowers/2026-08-06-model-path-provenance-audit.md`). **`+293` must not become the prior for Candidate 2**, which keeps the same early sampling on both sides and changes only the post-opening readout. Candidate 2's rule and gates were frozen 2026-08-06 before any telemetry existed, and its **preflight RAN 2026-08-07 and PASSED** — override rate **6.08%** (61/1,003 post-opening argmax-agent plies), single-game share 13.1%, zero corrupt Q, 64/64 sidecars validated. That establishes **reach and scope only; it is NOT evidence the overrides are good moves**, and no strength claim follows from it. Candidate 2's **64-game mechanics screen RAN 2026-08-07**: it lost **28–36**, score rate **0.4375** (CI95 `0.316–0.559`), **−43.7** Elo (CI95 `−134` to `+41`), with no integrity abort and mechanics validated. The one preregistered gate — one-sided futility — did **not** fire, its interval's upper bound being `0.559`. The **800-game decisive match is therefore ELIGIBLE, which is not a pass**: 64 games cannot resolve an effect this size, the point estimate is adverse, and promotion needs an observed rate near `0.535`. Closing the line on that point estimate would install a post-result gate the futility-only design deliberately excluded. Seeds `[202608124, 202608188)` consumed. Seeds: `docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`.
+> **Competitive-readout line CLOSED 2026-08-08.** The successor to the closed atlas changed only the **final move readout** — the rule that picks a played move from a completed search — at unchanged `calib020_0001`, cold, 400 simulations. It was post-tree, so the historical A/B/C/D probes were **mathematically invariant**: they measure root value at frozen positions, and no readout can move that. Candidate 1's 54–10 all-ply-argmax diagnostic mostly established that the tournament readout carries a large aggregate sampling cost; it was not a prior for Candidate 2, whose agents sampled identically through ply 19. Candidate 2's frozen Hoeffding-LCB rule passed preflight at **6.08%** reach, then its 64-game screen lost 28–36 without triggering the one-sided futility stop. The authorized **800-game decisive match RAN and did not meet the research promotion bar**: **408–388 with four state caps, score rate `0.5125` (CI95 `0.4779–0.5471`), `+8.7` Elo (CI95 `−15.3` to `+32.8`)**. The lower bound was not above 50%. Neither colour's upper bound fell below 50%, so colour harm was not established; integrity and search-identity evidence passed. This is a **null against the preregistered promotion bar, not a harm finding**. Per the frozen closeout, the competitive-readout line is finished: no third formula, relaxed threshold, larger match, replay-driven rescue, policy change, or product claim. Keep the existing policies. The next credible direction is a separately scoped training-line discovery, not another readout. Seeds: `docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`.
 
 > **v16 postmortem closeout (2026-07-24):** The read-only tuning-control postmortem reproduced the exact **11/40** lower-prior flips with no frozen-check participation. Flips concentrated in opening (**5/10**) and red-to-move controls (**8/20**). On flipped rows, the mean selected-move prior rank moved **1.27→9.00**; effective children changed by **−20.10** versus **−7.35** on non-flips, while root-value movement stayed small (**+0.0080**) and mean top share fell slightly (**−0.0141**). Reply reduction was actually smaller on flipped rows (**−20.18** replies versus **−40.52** on non-flips), so the failures are not evidence that stronger reply suppression caused the move changes. The measured pattern implicates replacing shipped FPU with the `Q_parent` neutral baseline as the destabilizing step; it does **not** prove any shipped-baseline successor will work. Any successor must remove `Q_parent`, preserve shipped behavior exactly at coefficient zero, and use fresh preregistered evidence.
 
@@ -99,6 +99,7 @@ v4 and `v3-frozenBN-control` were both run with `--freeze-batchnorm-stats`. The 
 | **Candidate 1** — all-ply argmax readout diagnostic | Final move READOUT only: all-ply visit argmax vs the shipped tournament readout (temp `1.0` <20, then `0.1`). Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608060, 202608124)` | **invariant** — readout is post-tree; the probes measure root value at frozen positions and cannot fire | **invariant** | **invariant** | **invariant** | not a promotion match | **Large argmax win, 54–10, score rate 0.8438 (CI95 0.755–0.933), +293 Elo.** Per §7.3 this is confirmation only: **no 800-game follow-up**, no change to the tournament default. The contrast combines opening `T=1.0` and post-opening `T=0.1` sampling; this run does not attribute the effect between them and is NOT search-quality evidence. Must NOT become the prior for Candidate 2. |
 | **Candidate 2 preflight** — frozen replay analysis | Read-only over Candidate 1's 64 sidecars; frozen Hoeffding-LCB rule and gates applied, not revisited. No GPU, no checkpoint, no games, no seed interval touched. | n/a | n/a | n/a | n/a | not a match | **PASS, all frozen gates.** Override rate **6.08%** (61/1,003) inside `[0.5%, 15%]`; single-game share 13.1% < 50%; 0 corrupt Q; 64/64 replays validated. Establishes **REACH and SCOPE only — NOT that the overrides are good moves.** No strength claim follows. Candidate 2 reaches its 64-game screen, which needs its own authorization. |
 | **Candidate 2 screen** — 64-game mechanics screen | Frozen Hoeffding-LCB post-opening override vs post-opening argmax; both agents sample the opening identically at `T=1.0`, so only the override differs. Unchanged `calib020_0001`, cold, 400 sims, 64 games, seeds `[202608124, 202608188)` | **invariant** | **invariant** | **invariant** | **invariant** | screen only — cannot promote | **Futility NOT triggered; 800-game match becomes ELIGIBLE.** Lost 28–36, score rate 0.4375 (CI95 0.316–0.559), −43.7 Elo (CI95 −134 to +41). Upper bound 0.559 is not below 0.50, so the one gate did not fire. No §A abort; mechanics validated. **The adverse point estimate favours harm but does not resolve it** — the interval is compatible with both harm and null/noise. Eligible is not a pass, and expectations should be modest. |
+| **Candidate 2 decisive** — 800-game promotion match | Same frozen isolation as the screen: Hoeffding-LCB post-opening override vs visit argmax, identical `T=1.0` opening. Unchanged `calib020_0001`, cold, 400 sims, 800 games, seeds `[202608188, 202608988)` | **invariant** | **invariant** | **invariant** | **invariant** | **408–388 + 4 caps; 0.5125, CI95 0.4779–0.5471; +8.7 Elo, CI95 −15.3 to +32.8** | **PROMOTION BAR NOT MET — close the readout line.** Primary lower bound 0.4779 was not above 0.50. Colour safety did not fire; integrity and search identity passed. **Null against the research bar, not harm:** no measurable gain or loss. No third formula, relaxed bar, larger match, replay rescue, policy change, or product claim. |
 *(The current best `calib020_0001` is the baseline row — see [Current best](#current-best).)*
 
 ## v16 policy-mass successor — reservoir protocol v1 (historical; final outcome below)
@@ -578,7 +579,11 @@ its own authorization.
 4. ~~Candidate 2's 64-game mechanics screen is now reachable, and needs its own
    countersigned authorization with a new reserved seed interval.~~ Ran 2026-08-07:
    futility not triggered, 28–36. See the screen section below.
-5. The 800-game decisive match is now **eligible**, unauthorized, and optional.
+5. ~~Run the separately authorized 800-game decisive match.~~ Done 2026-08-08: the
+   promotion bar was **NOT MET**, 408–388 plus four state caps, score rate 0.5125 (CI95
+   0.4779–0.5471). See the decisive section below.
+6. **Competitive-readout line CLOSED.** Keep existing policies. Any continuation is a
+   separately scoped training-line discovery, not another readout formula or rescue.
 
 ## Candidate 2 preflight — frozen replay analysis, RUN 2026-08-07
 
@@ -731,6 +736,100 @@ this screen cannot.
 Its projected cost is ~13 hours at this configuration, known before the screen ran. If
 that cost is independently unacceptable, the correct record is **"decisive match declined
 for resource cost,"** never "Candidate 2 failed."
+
+## Candidate 2 — 800-game decisive match, RUN 2026-08-08
+
+Authorized by `docs/superpowers/2026-08-07-candidate-2-decisive-authorization.md`,
+countersigned `bill-osienski` 2026-08-07T16:02:15Z, executed from `2614795` with a clean
+worktree. The full suite measured 2,795 passed / 0 failed immediately before launch; the
+three targeted search-identity tests passed with exit 0, and shipped search remained
+unchanged against `d5326a0`. Interval `[202608188, 202608988)`, with both earlier
+competitive-readout intervals recorded as priors.
+
+### Hypothesis
+
+The frozen post-opening Hoeffding-LCB override improves playing strength relative to
+post-opening visit argmax by enough to clear the preregistered research-promotion bar,
+without convincing one-colour harm. Both agents use the same checkpoint, search,
+simulation budget and opening sampling, so the only intended difference is the final
+post-opening move readout when the override fires.
+
+### Why the hypothesis was plausible — and why the prior was adverse
+
+The preflight established that the rule was neither a no-op nor unbounded: it fired on
+6.08% of the frozen post-opening population, across 35 of 64 games, and the median
+challenger at an override had 87 completed visits. The rule therefore had enough reach to
+affect games, and compared well-visited alternatives rather than only fringe children.
+
+But reach was not merit. MCTS backups are correlated and adaptively sampled, so the
+Hoeffding radius is a conservative ranking heuristic rather than a valid confidence
+guarantee. The repository also carried adverse readout precedent, and the 64-game screen
+lost 28–36. The authorization recorded that adverse prior explicitly and set modest
+expectations rather than treating screen eligibility as evidence of strength.
+
+### Predicted result and preregistered interpretation
+
+The frozen scientific decision was categorical, not an adjustable forecast:
+
+- **Research promotion** required the draw-inclusive 95% lower bound to exceed 50%, no
+  colour's own 95% upper bound below 50%, zero integrity failures, and search-identity
+  evidence.
+- **Bar not met** meant close the readout line — no third formula, relaxed bar, larger
+  match or post-result rescue.
+
+Before the run, the authorization recorded an adverse prior from the 28–36 screen. An
+informal forecast expected the promotion bar to fail, placed promotion below 10%, and
+expected a neutral-to-negative point estimate. That forecast was not a gate and did not
+alter the preregistered decision rule.
+
+### Result — promotion bar NOT met
+
+| | |
+|---|---:|
+| score rate | **0.5125**, CI95 `[0.4779, 0.5471]` |
+| primary decision | lower bound `0.4779` is not above `0.50` — **NOT MET** |
+| record | candidate 408 wins · control 388 wins · 4 state caps |
+| Elo | **+8.7**, CI95 `[−15.3, +32.8]` |
+| as red | 214–183 + 3 caps, 0.5387, CI95 `[0.4901, 0.5874]` |
+| as black | 194–205 + 1 cap, 0.4863, CI95 `[0.4373, 0.5352]` |
+| colour safety | **not triggered** — neither colour's upper bound is below 0.50 |
+| decisive / caps | 796 decisive · 4 state caps (0.5%) · board-full 0 |
+| average plies | 54.46 |
+| wall clock | 49,530.1 s — 13.76 h, ~61.9 s/game at `workers=1` |
+| integrity / identity | no §A abort · same checkpoint · targeted identity tests exit 0 |
+
+The authoritative process exit was 0. All 800 replay sidecars were written and remain
+unanalyzed.
+
+### Did the result match the prediction, and why?
+
+**The categorical forecast matched: the promotion bar was not met.** The measured effect
+was much smaller than the roughly +24 Elo observed threshold the match was designed to
+detect: +8.7 Elo, with a 95% interval spanning −15.3 to +32.8. The experiment therefore
+did not establish that the override is stronger.
+
+**The point forecast was too pessimistic.** The 64-game screen's adverse 28–36 did not
+reproduce; the decisive point estimate was slightly positive rather than neutral-to-
+negative. That is exactly the uncertainty the futility-only screen preserved for this
+match to resolve. The result is compatible with a small benefit, a null, or a small harm,
+but none clears the preregistered reliability bar. It is a null against that bar, not a
+finding that the rule is harmful and not proof that its true effect is exactly zero.
+
+The red/black point estimates differ, but neither colour triggered the frozen one-sided
+harm rule. No colour-gap veto existed, and none is introduced after seeing the result.
+
+### Consequence — competitive-readout line CLOSED
+
+Per the frozen authorization, bar not met closes Candidate 2 and the competitive-readout
+line. Do not run a third formula, relax the promotion or colour rules, enlarge or repeat
+the match, or analyze the captured replays to rescue the candidate. Candidate 1's large
+sampling contrast does not change this disposition, and A/B/C/D remain invariant because
+the experiments changed no tree or root value.
+
+No existing policy changes: no adoption into the product, the checkpoint-tournament
+default, or policy 3. The finding is scoped to the frozen readout comparison at
+`calib020_0001`, cold, 400 simulations, in the Python harness; it is not a checkpoint or
+product-strength claim. Any next project begins separately as training-line discovery.
 
 ## What got better vs worse
 
