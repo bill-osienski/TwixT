@@ -87,11 +87,12 @@ nohup bash -c '.venv/bin/python -m scripts.GPU.alphazero.train \
   --value-lr-scale 0.1 \
   --value-grad-max-norm 0.5 \
   --progress-weighted-value-loss \
-  --progress-weight-floor 0.25
+  --progress-weight-floor 0.25 \
+  --probes-inline-disable
 rc=$?
-printf "%s\n" "$rc" > logs/train/cont5_from_calib020.exit
+printf "%s\n" "$rc" > logs/eval/cont5_train.exit
 exit "$rc"' \
-  > logs/train/cont5_from_calib020.stdout 2>&1 &
+  > logs/eval/cont5_train.stdout 2>&1 &
 disown
 ```
 
@@ -105,7 +106,13 @@ disown
 | `--batch-size` / `--buffer-size` | 64 / 100000 | **[S]** |
 | `--curriculum-sizes` | 24 | **[S]** calib020 records `sizes:[24], idx 0` — **not** the `8,10,12,16,20,24` default |
 | `--mcts-eval-batch-size` / `--max-moves` | 14 / 280 | **[S]** |
-| `--hidden` `--blocks` `--mirror-prob` `--value-*` `--progress-*` `--dirichlet-*` `--temp-*` `--opening-noise-ply` `--mcts-pending-virtual-visits` `--mcts-stall-flush-sims` `--max-positions-per-game` `--endgame-keep-positions` | as written | **[D]** pinned explicitly |
+| `--hidden` / `--blocks` | 128 / 6 | **[S]** `network_hidden`, `network_blocks` |
+| `--mcts-pending-virtual-visits` | 8 | **[S]** `mcts_pending_virtual_visits` |
+| `--mcts-stall-flush-sims` | 48 | **[S]** `mcts_stall_flush_sims` |
+| `--max-positions-per-game` | 280 | **[S]** `replay_cap_max` |
+| `--endgame-keep-positions` | 16 | **[S]** `replay_cap_endgame_keep` |
+| `--mirror-prob` `--value-*` `--progress-*` `--dirichlet-*` `--temp-*` `--opening-noise-ply` | as written | **[D]** absent from the sidecars; defaults pinned explicitly |
+| `--probes-inline-disable` | set | **[O]** required so iterations 1–4 are genuinely unprobed |
 | `--seed` | 20260808 | **[O]** training seed, distinct from the evaluation interval |
 | `--n-workers` | 10 | **[O]** top of the CLI's "max recommended: 10" band |
 
@@ -168,7 +175,7 @@ here is a manual precondition and a ledger entry, nothing more.
 ## Preconditions
 
 1. **New output paths, refuse if any exists** — `checkpoints/alphazero-v2-cont5-from-calib020`,
-   `logs/selfplay/cont5_from_calib020`, `logs/train/cont5_from_calib020.{stdout,exit}`,
+   `logs/selfplay/cont5_from_calib020`, `logs/eval/cont5_train.{stdout,exit}`,
    `logs/eval/cont5_vs_calib020.{json,stdout,exit}`, `logs/eval/cont5_vs_calib020_games.jsonl`.
 2. **Clean worktree**; HEAD recorded with both results.
 3. **Suite passes**, measured immediately before the training run.
@@ -176,20 +183,63 @@ here is a manual precondition and a ledger entry, nothing more.
 
 ## Gate between the two runs
 
-Evaluation starts **only** when both hold:
+Evaluation starts **only** when all three hold:
 
-- `logs/train/cont5_from_calib020.exit` contains **`0`**; and
-- `checkpoints/alphazero-v2-cont5-from-calib020/model_iter_0005.safetensors` **exists**.
+1. `logs/eval/cont5_train.exit` contains **`0`**;
+2. `checkpoints/alphazero-v2-cont5-from-calib020/model_iter_0005.safetensors` **exists**;
+3. the candidate's **SHA-1 has been computed and persisted** by the command below.
 
 A non-zero training exit, a missing endpoint, or a different filename means **stop** —
 not evaluate what was produced.
+
+**The trainer does not record git HEAD** — verified, no git/commit key in any sidecar,
+unlike `eval_checkpoint_match` which records it. So HEAD is captured here by hand, in the
+same artifact as the hash:
+
+```bash
+bash -c 'CK=checkpoints/alphazero-v2-cont5-from-calib020/model_iter_0005.safetensors
+test -f "$CK" || { echo "REFUSE: endpoint missing"; exit 1; }
+test "$(cat logs/eval/cont5_train.exit)" = "0" || { echo "REFUSE: training exit non-zero"; exit 1; }
+printf "candidate: %s\nsha1: %s\ntrain_head: %s\nworktree_clean: %s\n" \
+  "$CK" "$(shasum -a 1 "$CK" | awk "{print \$1}")" "$(git rev-parse HEAD)" \
+  "$([ -z "$(git status --porcelain)" ] && echo true || echo false)" \
+  > logs/eval/cont5_candidate_provenance.txt
+rc=$?
+cat logs/eval/cont5_candidate_provenance.txt
+exit "$rc"'
+```
+
+That artifact is part of the gate and goes into the later ledger record. Refuse if
+`logs/eval/cont5_candidate_provenance.txt` already exists.
 
 ## Decision rule
 
 **Success:** the candidate's overall **95% lower bound above 50%** — at 400 games,
 an observed score rate around `0.549`, i.e. a conspicuous gain of roughly **+35 Elo or
-more**. Also reject on convincing one-colour harm (a colour's own 95% upper bound below
-50%).
+more**. Also reject on convincing one-colour harm: a colour's own **95% upper bound below
+50%**.
+
+**The colour rule needs an input the legacy tool does not emit.** `eval_summary._color_stats`
+returns games/wins/losses/caps/score_rate and **no interval** — verified; only the
+agent-mode path added per-colour CIs. This card therefore **authorizes one read-only
+calculation** over the produced artifact, using the existing `score_ci_trinomial` with no
+code change:
+
+```bash
+.venv/bin/python -c "
+import json
+from scripts.GPU.alphazero.eval_elo import score_ci_trinomial
+s = json.load(open('logs/eval/cont5_vs_calib020.json'))
+for k in ('a_as_red','a_as_black'):
+    d = s[k]
+    lo, hi = score_ci_trinomial(d['wins'], d['caps'], d['losses'])
+    print(f\"{k}: {d['wins']}-{d['losses']} caps={d['caps']} rate={d['score_rate']:.4f} \"
+          f\"CI95 [{lo:.4f}, {hi:.4f}]  UPPER<0.50? {hi < 0.50}\")
+"
+```
+
+Read-only, no new tool, no analyzer, no code change. It computes the frozen rule's input
+and nothing else.
 
 **Anything else:** no credible large gain. **Stop this continuation recipe.**
 
@@ -253,7 +303,10 @@ approved scope      : the exact two commands above, unmodified — every flag as
 - Both runs execute from the **execution commit** with a clean worktree.
 - Approval covers **one training run and one evaluation**. It does not extend to a
   re-run, a parameter change, an extra iteration, or a retry after failure.
-- On signature, record the evaluation interval `[202608988, 202609388)` in the seed ledger
-  as `RESERVED`, in the same commit.
+- On signature, record the evaluation interval `[202608988, 202609388)` as `RESERVED`, in
+  the same commit, in **`docs/superpowers/2026-08-06-competitive-readout-seed-ledger.md`**
+  under a new, clearly labelled **"Successor project — training line"** section. The
+  competitive-readout section above it stays marked CLOSED and is not reopened; the shared
+  file exists so no successor can pick an overlapping range.
 - Changing any frozen parameter voids this signature. Amend and re-sign **before**
   running, never after seeing a result.
