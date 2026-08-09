@@ -54,8 +54,12 @@ tooling, analyzers, telemetry frameworks, or any general replay-management surfa
 
 **RNG continuity is pinned.** Warmup consumes the **existing master RNG stream**
 (`master_rng`, `trainer.py:3065`) exactly as an ordinary self-play phase does, and iteration 0
-continues from its **advanced** state. No reseed, no separate stream, no reset — so warmup and
-training games can never overlap.
+continues from its **advanced** state. No reseed, no separate stream, no reset, and **no
+intentional seed reuse**. This is not a guarantee of disjointness: per-game seeds are drawn as
+random 31-bit integers, so ordinary collision risk between independently drawn seeds remains.
+
+**Warmup fails closed on a short return.** If self-play reports fewer games than requested,
+the run raises before the first optimizer step rather than training on a partial warmup.
 
 ### The four mechanical checks — and nothing else
 

@@ -2677,11 +2677,15 @@ def run_replay_warmup(
     the in-memory buffer, exactly like ordinary self-play positions.
 
     RNG continuity: `master_rng` is consumed in place, the same way an ordinary
-    self-play phase consumes it, so the first iteration continues from the
-    advanced stream instead of replaying it. Warmup and training games therefore
-    cannot overlap. Never reseed here.
+    self-play phase consumes it, so the first iteration continues from its
+    advanced state instead of replaying it. No intentional seed reuse occurs;
+    ordinary random-collision risk between independently drawn seeds remains.
+    Never reseed here.
 
-    Returns the number of positions added.
+    Fails closed: if self-play reports a different number of games than asked
+    for, this raises rather than letting a short warmup reach the optimizer.
+
+    Returns the number of positions self-play reported adding.
     """
     if n_games <= 0:
         return 0
@@ -2691,15 +2695,22 @@ def run_replay_warmup(
             f"reuses the parallel self-play path, which the sequential path "
             f"does not share (got n_workers={n_workers})."
         )
-    before = len(buffer)
-    run_parallel_selfplay(
+    _games, _positions, stats = run_parallel_selfplay(
         games_to_play=n_games,
         n_workers=n_workers,
         master_rng=master_rng,
         buffer=buffer,
         **selfplay_kwargs,
     )
-    return len(buffer) - before
+    generated = stats["games_generated"]
+    if generated != n_games:
+        raise RuntimeError(
+            f"replay warmup asked for {n_games} games but self-play reported "
+            f"{generated}; refusing to start training on a short warmup."
+        )
+    # Reported, not len(buffer) - before: once the ring buffer reaches capacity
+    # the length delta understates what was actually added.
+    return stats["positions_added"]
 
 
 def train(

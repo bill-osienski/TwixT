@@ -2,12 +2,15 @@
 
 1. default-off identity  — 0 (and the default) is a no-op: no self-play, no RNG
    consumption, no buffer change, and the call site in `train()` is guarded.
-2. exactly N            — N games are requested and their positions land in the buffer.
+2. exactly N            — N games are requested, and a short return fails closed
+   before the optimizer rather than training on a partial warmup.
 3. no weight change     — warmup leaves every network parameter identical.
 4. ordering             — the buffer is populated before the first optimizer step.
 
 Plus RNG continuity: warmup consumes the *existing* master stream in place, so
-iteration 0 continues from the advanced state and can never replay warmup games.
+iteration 0 continues from its advanced state rather than replaying warmup's
+draws. That is no-intentional-reuse, NOT disjointness — per-game seeds are random
+31-bit draws and can collide by chance like any others.
 
 Real self-play is far too slow for a unit test, so these monkeypatch the module
 attribute `trainer.run_parallel_selfplay` — a reach no production caller can make.
@@ -39,19 +42,24 @@ class _FakeSelfPlay:
     """Stands in for run_parallel_selfplay: records its call and fills the buffer.
 
     Draws from master_rng once per game, exactly as the real parallel path seeds
-    its workers, so RNG-continuity assertions mean something.
+    its workers, so RNG-continuity assertions mean something. `short_by` makes it
+    return fewer games than asked for *without raising* — the failure mode that
+    would otherwise let training start on a partial warmup.
     """
 
-    def __init__(self):
+    def __init__(self, short_by=0):
         self.calls = []
+        self.short_by = short_by
 
     def __call__(self, *, games_to_play, n_workers, master_rng, buffer, **kwargs):
         self.calls.append({"games_to_play": games_to_play, "n_workers": n_workers,
                            "master_rng": master_rng, "kwargs": kwargs})
-        for _ in range(games_to_play):
+        produced = games_to_play - self.short_by
+        for _ in range(produced):
             master_rng.randint(0, 2 ** 31)
             buffer.add_positions([_pos() for _ in range(POSITIONS_PER_GAME)])
-        return [], [], {}
+        return [], [], {"games_generated": produced,
+                        "positions_added": produced * POSITIONS_PER_GAME}
 
 
 @pytest.fixture
@@ -117,6 +125,32 @@ def test_return_value_counts_only_what_warmup_added(fake):
 
     assert added == 4 * POSITIONS_PER_GAME               # excludes the 2 already there
     assert len(buffer) == 2 + 4 * POSITIONS_PER_GAME
+
+
+def test_short_return_fails_closed_before_training(monkeypatch):
+    """Self-play returning 9 of 10 games must stop the run, not train on it."""
+    short = _FakeSelfPlay(short_by=1)
+    monkeypatch.setattr(trainer, "run_parallel_selfplay", short)
+
+    with pytest.raises(RuntimeError, match="asked for 10 games .* reported 9"):
+        _warm(10)
+
+    assert short.calls[0]["games_to_play"] == 10          # it *was* asked for 10
+
+
+def test_short_return_is_caught_however_small_the_shortfall(monkeypatch):
+    monkeypatch.setattr(trainer, "run_parallel_selfplay", _FakeSelfPlay(short_by=500))
+    with pytest.raises(RuntimeError):
+        _warm(500)                                        # zero games produced
+
+
+def test_count_is_reported_not_inferred_from_buffer_length(fake):
+    """At ring-buffer capacity the length delta understates what was added."""
+    buffer = ReplayBuffer(max_size=6)                     # 2 games' worth
+    added, buffer, _ = _warm(5, buffer=buffer)            # 15 positions into a 6 slot ring
+
+    assert len(buffer) == 6                               # saturated
+    assert added == 5 * POSITIONS_PER_GAME                # reported count survives it
 
 
 # ---------------------------------------------------------------- check 3
@@ -194,7 +228,11 @@ def test_warmup_consumes_the_existing_master_stream_in_place(fake):
 
 
 def test_iteration_zero_continues_from_the_advanced_stream(fake):
-    """Warmup then training must not draw the same seeds."""
+    """Iteration 0 continues the stream rather than replaying warmup's draws.
+
+    This is a no-intentional-reuse property, NOT a disjointness guarantee: the
+    per-game seeds are random 31-bit draws, so ordinary collision risk remains.
+    """
     rng = random.Random(20260809)
     _warm(3, master_rng=rng)
     after_warmup = [rng.randint(0, 2 ** 31) for _ in range(3)]
@@ -202,7 +240,7 @@ def test_iteration_zero_continues_from_the_advanced_stream(fake):
     fresh = random.Random(20260809)
     replayed = [fresh.randint(0, 2 ** 31) for _ in range(3)]
 
-    assert after_warmup != replayed               # no overlap with warmup's draws
+    assert after_warmup != replayed               # not a replay of warmup's draws
 
 
 def test_warmup_never_reseeds():
