@@ -323,7 +323,7 @@ approved scope      : the exact FOUR command blocks above, unmodified — every
   commit that contains it:
 
   ```
-  | 5 | `[202609388, 202609788)` | 400 | Parent-replay bootstrap — warm5 vs calib020 | 2026-08-08 | the commit containing this reservation | **RESERVED** |
+  | 5 | `[202609388, 202609788)` | 400 | Parent-replay bootstrap — warm5 vs calib020 | 2026-08-09 | the commit containing this reservation | **RESERVED** |
   ```
 
   After the run, the result-recording commit replaces the phrase with the execution hash and
