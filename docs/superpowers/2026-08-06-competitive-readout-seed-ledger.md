@@ -39,17 +39,19 @@ all three intervals above as priors.
 
 ## Successor project — training line
 
-Reserved by the countersigned experiment card
-`docs/superpowers/2026-08-08-training-continuation-experiment-card.md`. The
+Reserved by the countersigned experiment cards
+`docs/superpowers/2026-08-08-training-continuation-experiment-card.md` (row 4) and
+`docs/superpowers/2026-08-08-parent-replay-bootstrap-experiment-card.md` (row 5). The
 competitive-readout section above remains **CLOSED**; this file is shared only so no
 successor picks an overlapping range.
 
 | # | interval | games | run | date | commit | status |
 |---|---|---:|---|---|---|---|
 | 4 | `[202608988, 202609388)` | 400 | Training continuation — cont5 vs calib020 | 2026-08-08 | `3c70fff` | **CONSUMED** |
+| 5 | `[202609388, 202609788)` | 400 | Parent-replay bootstrap — warm5 vs calib020 | 2026-08-08 | the commit containing this reservation | **RESERVED** |
 
-Disjoint from intervals 1–3, which all end at `202608988`. **Note:**
-`eval_checkpoint_match` has no `--prior-seed-interval` and never calls
+Row 4 is disjoint from intervals 1–3, which all end at `202608988`; row 5 begins where row 4
+ends. **Note:** `eval_checkpoint_match` has no `--prior-seed-interval` and never calls
 `validate_seed_intervals`, so disjointness on this path is a manual precondition and this
 ledger entry — it is not code-enforced.
 

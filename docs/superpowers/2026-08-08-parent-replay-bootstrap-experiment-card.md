@@ -1,6 +1,6 @@
 # Parent-Replay Bootstrap — Experiment Card
 
-**Date:** 2026-08-08 · **Status:** DRAFT, not countersigned · **Scope: one opt-in trainer
+**Date:** 2026-08-08 · **Status:** COUNTERSIGNED · **Scope: one opt-in trainer
 flag, one training run, one 400-game evaluation. Nothing else.**
 
 Successor to the rejected cold-buffer continuation
@@ -298,9 +298,9 @@ Execution is authorized only when this block is filled in, committed, and pushed
 **no training or evaluation may run before it.**
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-09T14:45:54Z
+authorization basis : 0a55edd   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : the exact FOUR command blocks above, unmodified — every
                       flag as written, none added, none omitted:
