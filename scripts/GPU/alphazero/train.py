@@ -219,6 +219,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=1,  # Single-process by default for stability
         help=f"Parallel self-play workers (default: 1, max recommended: {default_workers})",
     )
+    parser.add_argument(
+        "--replay-warmup-games",
+        type=int,
+        default=0,
+        help="Generate this many self-play games with the loaded weights before the "
+             "first training step and put them in the replay buffer, so training "
+             "starts from a warm buffer instead of an empty one (default: 0 = off). "
+             "In-memory only, nothing is persisted. Requires --n-workers >= 2.",
+    )
 
     # Game replay saving
     parser.add_argument(
@@ -817,6 +826,7 @@ def main():
         curriculum_min_wins=args.curriculum_min_wins,
         # Multi-process self-play
         n_workers=args.n_workers,
+        replay_warmup_games=args.replay_warmup_games,
         # Game replay saving (default: enabled)
         save_games=not args.no_save_games,
         games_dir_override=args.games_dir,

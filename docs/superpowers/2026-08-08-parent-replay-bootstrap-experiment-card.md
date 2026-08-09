@@ -52,6 +52,11 @@ confirmed by grep, not assumed.
 **Explicitly not built:** buffer serialization or persistence, a replay format, migration
 tooling, analyzers, telemetry frameworks, or any general replay-management surface.
 
+**RNG continuity is pinned.** Warmup consumes the **existing master RNG stream**
+(`master_rng`, `trainer.py:3065`) exactly as an ordinary self-play phase does, and iteration 0
+continues from its **advanced** state. No reseed, no separate stream, no reset — so warmup and
+training games can never overlap.
+
 ### The four mechanical checks — and nothing else
 
 1. **Default-off identity.** Omitted, and `--replay-warmup-games 0`, leave behaviour
@@ -244,9 +249,11 @@ for k in ('a_as_red','a_as_black'):
 | **Clear loss** (materially below `0.50`, or colour harm fires) | **Close immediately.** |
 
 The most likely outcome is the middle of the first row: **recovery without promotion** — an
-interval straddling `0.50`. That is a real, informative result. It attributes the cold run's
-`−136` Elo to the empty buffer and closes the question. It **does not promote anything**, and
-it is **not** a licence for a warmup-size grid.
+interval straddling `0.50`. That is a real, informative result: it **supports the
+parent-replay-bootstrap hypothesis**. It is not a causal attribution of the cold run's `−136`
+Elo to the empty buffer — this run also carries a new training seed and 500 additional parent
+games, so one run cannot isolate the buffer strictly. It **does not promote anything**, and it
+is **not** a licence for a warmup-size grid.
 
 ## Deliberate omissions, and what they cost
 
