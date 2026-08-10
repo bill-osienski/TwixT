@@ -197,8 +197,15 @@ class _Spy:
     def __init__(self):
         self.instances = []          # one entry per MCTS built
         self.roots = {}              # instance index -> set of root ids it saw
+        self.root_refs = {}          # instance index -> [root objects], keeps
+                                     # them alive so an id() cannot be recycled
         self.advanced = {}           # instance index -> [moves advanced]
         self.selected = {}           # instance index -> call count
+
+    def _see(self, idx, root):
+        """Record a root, holding a real reference so its id cannot be reused."""
+        self.root_refs[idx].append(root)
+        self.roots[idx].add(id(root))
 
     def install(self, monkeypatch):
         from scripts.GPU.alphazero import self_play as sp
@@ -211,20 +218,21 @@ class _Spy:
                 self._spy_idx = len(spy.instances)
                 spy.instances.append(self)
                 spy.roots[self._spy_idx] = set()
+                spy.root_refs[self._spy_idx] = []
                 spy.advanced[self._spy_idx] = []
                 spy.selected[self._spy_idx] = 0
 
             def search_from_root(self, root, **kw):
-                spy.roots[self._spy_idx].add(id(root))
+                spy._see(self._spy_idx, root)
                 out = super().search_from_root(root, **kw)
-                spy.roots[self._spy_idx].add(id(out[2]))
+                spy._see(self._spy_idx, out[2])
                 return out
 
             def advance_root(self, root, move):
-                spy.roots[self._spy_idx].add(id(root))
+                spy._see(self._spy_idx, root)
                 spy.advanced[self._spy_idx].append(move)
                 out = super().advance_root(root, move)
-                spy.roots[self._spy_idx].add(id(out))
+                spy._see(self._spy_idx, out)
                 return out
 
             def select_move(self, visit_counts, ply):

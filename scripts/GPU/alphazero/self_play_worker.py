@@ -74,6 +74,10 @@ def self_play_worker_main(
     conversion_max_total_goal_distance: int = 2,
     # Spec 4 — recovery / re-targeting diagnostic (§5.6).
     recovery_retargeting_config: Optional[Any] = None,
+    # Frozen-opponent transport. Both None = ordinary self-play: no second
+    # evaluator is built and play_game is called exactly as before.
+    opponent_request_queue: Optional[Any] = None,
+    opponent_response_queue: Optional[Any] = None,
 ) -> None:
     """Worker process entry point.
 
@@ -108,11 +112,25 @@ def self_play_worker_main(
             max_positions_per_game, endgame_keep_positions,
             conversion_policy_loss_enabled, conversion_max_total_goal_distance,
             recovery_retargeting_config,
+            opponent_request_queue, opponent_response_queue,
         )
-    except (KeyboardInterrupt, BrokenPipeError, EOFError, RuntimeError):
-        # Graceful exit on interrupt, queue closure, or evaluator timeout
-        # RuntimeError from RemoteEvaluator is expected during shutdown
+    except KeyboardInterrupt:
+        # Parent handles Ctrl+C; leaving quietly is correct here.
         sys.exit(0)
+    except (BrokenPipeError, EOFError, RuntimeError) as exc:
+        # FAIL LOUD. Exiting 0 here would skip WorkerDone entirely, and the
+        # trainer waits for one WorkerDone per worker -- a transport failure
+        # with no accompanying server_error would hang the run forever.
+        try:
+            if stats_queue is not None:
+                stats_queue.put({
+                    "type": "worker_error",
+                    "worker_id": worker_id,
+                    "error": f"{type(exc).__name__}: {exc}",
+                })
+        except Exception:
+            pass
+        sys.exit(1)
 
 
 def _worker_loop(
@@ -152,11 +170,22 @@ def _worker_loop(
     conversion_max_total_goal_distance: int = 2,
     # Spec 4 — recovery / re-targeting diagnostic (§5.6).
     recovery_retargeting_config: Optional[Any] = None,
+    # Frozen-opponent transport (see main()).
+    opponent_request_queue: Optional[Any] = None,
+    opponent_response_queue: Optional[Any] = None,
 ) -> None:
     """Inner worker loop (extracted for clean exception handling)."""
     import time
 
     evaluator = RemoteEvaluator(worker_id, request_queue, response_queue)
+    # The frozen opponent talks to its OWN inference server over its own queues.
+    # There is deliberately no fallback to `evaluator`: if the opponent server is
+    # gone the run must fail, never quietly play the parent with learner weights.
+    opponent_evaluator = None
+    if opponent_request_queue is not None:
+        opponent_evaluator = RemoteEvaluator(
+            worker_id, opponent_request_queue, opponent_response_queue
+        )
 
     t0 = time.time()
     games_played = 0
@@ -173,6 +202,13 @@ def _worker_loop(
         # Per-game RNG for reproducibility regardless of scheduling
         game_seed = (seed ^ (gid * 0x9E3779B1)) & 0x7FFFFFFF
         game_rng = random.Random(game_seed)
+
+        # Learner colour is a function of the GAME ID, never of worker
+        # completion order, so an even games_total splits exactly 50/50
+        # regardless of scheduling. None when playing ordinary self-play.
+        learner_player = None
+        if opponent_evaluator is not None:
+            learner_player = "red" if gid % 2 == 0 else "black"
 
         # Generate one game (timed for parallel-mode percentile stats)
         game_t0 = time.perf_counter()
@@ -203,6 +239,8 @@ def _worker_loop(
             conversion_max_total_goal_distance=conversion_max_total_goal_distance,
             # Spec 4 — recovery / re-targeting diagnostic (§5.6).
             recovery_retargeting_config=recovery_retargeting_config,
+            opponent_evaluator=opponent_evaluator,
+            learner_player=learner_player,
         )
         games_played += 1
 

@@ -2002,6 +2002,9 @@ def run_parallel_selfplay(
     conversion_max_total_goal_distance: int = 2,
     # Spec 4 — recovery / re-targeting diagnostic (§5.6).
     recovery_retargeting_config: Optional[Any] = None,
+    # Frozen-opponent training. None = ordinary self-play: no second server,
+    # no second queues, no second evaluator anywhere in this call.
+    opponent_evaluator: Optional[Any] = None,
 ) -> Tuple[
     List["GameRecord"],  # All game records (for stats)
     List["PositionRecord"],  # New positions (for sanity stats)
@@ -2077,6 +2080,31 @@ def run_parallel_selfplay(
     server_thread = threading.Thread(target=server.run_forever, daemon=True)
     server_thread.start()
 
+    # Frozen opponent: a SECOND server on its own queues, serving the frozen
+    # network. It shares `stats_queue`, so a crash in either server reaches the
+    # same fail-closed handler below. Created only in frozen-opponent mode.
+    opp_request_queue = None
+    opp_response_queues: Dict[int, Any] = {}
+    opp_server = None
+    opp_server_thread = None
+    if opponent_evaluator is not None:
+        opp_request_queue = ctx.Queue(maxsize=request_q_max)
+        opp_response_queues = {
+            wid: ctx.Queue(maxsize=response_q_max) for wid in range(n_workers)
+        }
+        opp_server = InferenceServer(
+            evaluator=opponent_evaluator,
+            request_queue=opp_request_queue,
+            response_queues=opp_response_queues,
+            max_batch_rows=mcts_config.eval_batch_size,
+            flush_ms=2,
+            stats_queue=stats_queue,
+        )
+        opp_server_thread = threading.Thread(
+            target=opp_server.run_forever, daemon=True
+        )
+        opp_server_thread.start()
+
     # Don't spawn more workers than games (avoids idle processes in small runs)
     n_spawn = min(n_workers, games_to_play)
 
@@ -2125,6 +2153,11 @@ def run_parallel_selfplay(
                 "conversion_max_total_goal_distance": conversion_max_total_goal_distance,
                 # Spec 4 — recovery / re-targeting diagnostic (§5.6).
                 "recovery_retargeting_config": recovery_retargeting_config,
+                # Frozen-opponent transport (None in ordinary self-play).
+                "opponent_request_queue": opp_request_queue,
+                "opponent_response_queue": (
+                    opp_response_queues[wid] if opp_request_queue is not None else None
+                ),
             },
         )
         p.start()
@@ -2243,6 +2276,12 @@ def run_parallel_selfplay(
 
         if isinstance(msg, dict) and msg.get("type") == "server_error":
             raise RuntimeError(f"InferenceServer crashed: {msg.get('error')}")
+        if isinstance(msg, dict) and msg.get("type") == "worker_error":
+            # A worker that died mid-game will never send WorkerDone; without
+            # this the collection loop would wait for it indefinitely.
+            raise RuntimeError(
+                f"self-play worker {msg.get('worker_id')} failed: {msg.get('error')}"
+            )
         elif isinstance(msg, GameComplete):
             games_completed += 1
             total_plies += msg.n_moves
@@ -2446,6 +2485,13 @@ def run_parallel_selfplay(
             pass
         server.stop()
         server_thread.join(timeout=1.0)
+        if opp_server is not None:
+            try:
+                opp_request_queue.put(StopSignal(), timeout=0.5)
+            except queue.Full:
+                pass
+            opp_server.stop()
+            opp_server_thread.join(timeout=1.0)
 
         # Clean up queues to prevent blocking on exit
         # cancel_join_thread() prevents Queue from blocking in atexit
@@ -2456,6 +2502,14 @@ def run_parallel_selfplay(
             except Exception:
                 pass
         for q in response_queues.values():
+            try:
+                q.cancel_join_thread()
+                q.close()
+            except Exception:
+                pass
+        for q in ([opp_request_queue] if opp_request_queue is not None else []) + list(
+            opp_response_queues.values()
+        ):
             try:
                 q.cancel_join_thread()
                 q.close()
@@ -2750,6 +2804,9 @@ def train(
     # Opt-in parent-replay bootstrap: games generated before the first optimizer
     # step, with the loaded weights, to start training from a warm buffer. 0 = off.
     replay_warmup_games: int = 0,
+    # Frozen-opponent training: path to the checkpoint the learner plays against.
+    # None = ordinary self-play. The frozen network is never optimized.
+    frozen_opponent_checkpoint: Optional[str] = None,
     # Game replay saving
     save_games: bool = True,  # True = save all games to logs/games/, False = disabled
     games_dir_override: Optional[str] = None,  # Override games output directory
@@ -2916,6 +2973,37 @@ def train(
 
     # Create evaluator (wraps network for MCTS)
     evaluator = LocalGPUEvaluator(network)
+
+    # Frozen opponent: a SECOND network loaded from the pinned checkpoint and
+    # held OUTSIDE the optimizer -- it is never passed to opt_main/opt_value and
+    # never appears in a training surface, so it cannot drift during the run.
+    frozen_opponent_evaluator = None
+    if frozen_opponent_checkpoint:
+        frozen_network = create_network(hidden=hidden, n_blocks=n_blocks)
+        frozen_network.load_weights(frozen_opponent_checkpoint)
+        frozen_network.eval()
+        frozen_opponent_evaluator = LocalGPUEvaluator(frozen_network)
+        if n_workers < 2:
+            raise ValueError(
+                "frozen-opponent training requires n_workers >= 2: the opponent "
+                "is served over the parallel self-play transport, which the "
+                f"sequential path does not use (got n_workers={n_workers})."
+            )
+        # Checked at STARTUP, before the warmup spends an hour of self-play.
+        if resign_enabled or adjudicate_enabled:
+            raise ValueError(
+                "frozen-opponent training does not support resign or adjudication "
+                f"(resign_enabled={resign_enabled}, "
+                f"adjudicate_enabled={adjudicate_enabled}): both read learner-only "
+                "search state and are wrong on parent plies."
+            )
+        if games_per_iteration % 2 != 0:
+            raise ValueError(
+                "frozen-opponent training requires an even --games-per-iter so the "
+                "learner plays each colour equally (colour alternates by game id); "
+                f"got {games_per_iteration}."
+            )
+        print(f"  Frozen opponent: {frozen_opponent_checkpoint}")
 
     # Create wrapper module that references encoder + policy_head
     # This ensures opt_main.update() mutates the live network params
@@ -3589,6 +3677,10 @@ def train(
                     conversion_max_total_goal_distance=conversion_max_total_goal_distance,
                     # Spec 4 — recovery / re-targeting diagnostic (§5.6).
                     recovery_retargeting_config=recovery_retargeting_config,
+                    # Frozen opponent for the training iterations only. The
+                    # replay warmup above deliberately stays on the ordinary
+                    # single-network path.
+                    opponent_evaluator=frozen_opponent_evaluator,
                 )
 
                 # Unpack stats

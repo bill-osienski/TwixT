@@ -220,6 +220,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=f"Parallel self-play workers (default: 1, max recommended: {default_workers})",
     )
     parser.add_argument(
+        "--frozen-opponent-checkpoint",
+        type=str,
+        default=None,
+        help="Path to a frozen checkpoint the learner plays against during the "
+             "training iterations instead of playing itself. Only learner-to-move "
+             "positions are trained on, and learner colour alternates by game id. "
+             "The frozen network is never optimized. Default: ordinary self-play. "
+             "Requires --n-workers >= 2; incompatible with resign/adjudication.",
+    )
+    parser.add_argument(
         "--replay-warmup-games",
         type=int,
         default=0,
@@ -827,6 +837,7 @@ def main():
         # Multi-process self-play
         n_workers=args.n_workers,
         replay_warmup_games=args.replay_warmup_games,
+        frozen_opponent_checkpoint=args.frozen_opponent_checkpoint,
         # Game replay saving (default: enabled)
         save_games=not args.no_save_games,
         games_dir_override=args.games_dir,
