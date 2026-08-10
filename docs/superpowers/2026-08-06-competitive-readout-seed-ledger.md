@@ -60,7 +60,9 @@ Row 4 consumed 2026-08-08 by the countersigned run: 400 games, exit 0, candidate
 
 Row 5 consumed 2026-08-09 by the countersigned parent-replay bootstrap: 400 games, exit 0,
 score rate `0.4325` (CI95 `[0.3843, 0.4807]`), Elo `−47.2`. The promotion bar was **not met**
-and black-specific harm fired independently.
+on the aggregate result. The preregistered absolute per-colour rule mechanically fired for
+black (`0.3650`, upper `0.4317`), but the 2026-08-10 ledger erratum makes that result
+non-diagnostic of black-specific harm or an independent rejection.
 
 **The training line is CLOSED as of 2026-08-09** — ordinary continuation from `calib020_0001`
 is closed as a family, warm buffer included (do-not-repeat #49). **No further interval is
