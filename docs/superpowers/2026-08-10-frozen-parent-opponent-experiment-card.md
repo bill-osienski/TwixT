@@ -1,7 +1,49 @@
 # Frozen-Parent Opponent — Experiment Card
 
-**Date:** 2026-08-10 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: one training-data
-mechanism, one training run, one 400-game evaluation. Nothing else.**
+**Date:** 2026-08-10 · **Status: ABORTED BEFORE ITERATION 1 — NO SCIENTIFIC RESULT.**
+This authorization is **terminated**; it authorizes nothing further.
+
+> **What happened (2026-08-10).** The countersigned run launched from `fbe37f3` at 16:52:25Z
+> and aborted at 18:31:50Z with **exit 134** (`128 + 6`, SIGABRT). The 500-game parent warmup
+> completed normally — 46,407 positions, 5,963.5 s, 500/500 games, all ten workers done — and
+> the process died on the **first line of iteration 1's frozen-opponent self-play**:
+>
+> ```
+> Self-play: generating 200 games (parallel, 10 workers)...
+> -[AGXG15XFamilyCommandBuffer tryCoalescingPreviousComputeCommandEncoderWithConfig:nextEncoderClass:]:1094:
+>    failed assertion `A command encoder is already encoding to this command buffer'
+> ```
+>
+> A **Metal driver assertion**, not a Python exception — hence an abort rather than a raise.
+> Two inference-server threads submitted concurrent work to the same Metal device. The warmup
+> survived because it runs on the ordinary single-network path by design; the crash arrived the
+> moment the second server began serving alongside the first.
+>
+> **`checkpoints/alphazero-v2-fp5-from-calib020/` is empty.** No iteration was produced, so
+> there is nothing to evaluate and the "only iteration 5" condition is moot. The provenance
+> gate was never run, no evaluation was started, and nothing was retried or tuned.
+>
+> **This is an implementation failure. It is evidence neither for nor against frozen-parent
+> training** — the mechanism never generated a single training game.
+>
+> **Spent and not reusable:** training seed `20260810`, and every `fp5` path
+> (`checkpoints/alphazero-v2-fp5-from-calib020`, `logs/selfplay/fp5_from_calib020`,
+> `logs/eval/fp5_train.*`). **Not spent:** evaluation interval `[202609788, 202610188)`, which
+> belongs to the 400-game match that never started and drew zero seeds — released unused in the
+> seed ledger.
+>
+> **Why the gate passed anyway, stated plainly:** every pre-accelerated gate item was honest,
+> but the transport tests drive the two servers with *stub* evaluators that never touch Metal.
+> Nothing in the suite exercised two servers doing real GPU work at once. See do-not-repeat #50.
+>
+> **A successor must not be another full run.** It is a newly authorized, tiny real-GPU
+> feasibility smoke using **one Metal-owning inference arbiter serving both networks** — not two
+> independent servers. A mutex or an immediate retry is too weak a response to a
+> process-aborting driver defect. Only if that smoke survives should another warmup and training
+> run be considered.
+
+**Scope as authorized (historical): one training-data mechanism, one training run, one
+400-game evaluation.**
 
 Successor to the closed ordinary-continuation family
 (`docs/superpowers/2026-08-08-parent-replay-bootstrap-experiment-card.md`, rejected at

@@ -49,7 +49,7 @@ successor picks an overlapping range.
 |---|---|---:|---|---|---|---|
 | 4 | `[202608988, 202609388)` | 400 | Training continuation — cont5 vs calib020 | 2026-08-08 | `3c70fff` | **CONSUMED** |
 | 5 | `[202609388, 202609788)` | 400 | Parent-replay bootstrap — warm5 vs calib020 | 2026-08-09 | `bcf62e2` | **CONSUMED** |
-| 6 | `[202609788, 202610188)` | 400 | Frozen-parent opponent — fp5 vs calib020 | 2026-08-10 | the commit containing this reservation | **RESERVED** |
+| 6 | `[202609788, 202610188)` | 400 | Frozen-parent opponent — fp5 vs calib020 | 2026-08-10 | `fbe37f3` | **RELEASED UNUSED** |
 
 Row 4 is disjoint from intervals 1–3, which all end at `202608988`; row 5 begins where row 4
 ends. **Note:** `eval_checkpoint_match` has no `--prior-seed-interval` and never calls
@@ -73,7 +73,20 @@ Row 6 is **not** ordinary continuation and does not reopen it: the frozen-parent
 changes the data-generating process — the learner plays a fixed checkpoint rather than itself,
 and only learner-to-move positions are trained on. It is authorized separately by
 `docs/superpowers/2026-08-10-frozen-parent-opponent-experiment-card.md`, which #49 requires to
-name a genuinely different mechanism. Any successor passes all six intervals above as priors.
+name a genuinely different mechanism.
+
+**Row 6 is RELEASED UNUSED, by ruling, 2026-08-10.** Its run aborted with exit `134` (a Metal
+driver assertion) at the first line of iteration 1, before any checkpoint was produced. The
+interval belongs specifically to the **400-game evaluation**, which never started and **drew
+zero seeds** — `eval_checkpoint_match` is its only consumer. The authorization is terminated,
+so the reservation is released rather than left standing. **A successor may reserve
+`[202609788, 202610188)` again, explicitly, in its own countersignature.**
+
+Released **but** spent elsewhere: training seed `20260810` and every `fp5` path are consumed by
+the aborted run and must not be reused. Seeds drawn by training come from `--seed`, never from
+this ledger.
+
+Any successor passes intervals 1–5 as priors; interval 6 is available.
 
 ## Rules
 
