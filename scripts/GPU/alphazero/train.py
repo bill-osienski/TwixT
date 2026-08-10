@@ -223,10 +223,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--frozen-opponent-checkpoint",
         type=str,
         default=None,
-        help="Path to a frozen checkpoint the learner plays against during the "
-             "training iterations instead of playing itself. Only learner-to-move "
-             "positions are trained on, and learner colour alternates by game id. "
-             "The frozen network is never optimized. Default: ordinary self-play. "
+        help="DISABLED pending do-not-repeat #50 -- train() refuses this flag at "
+             "startup, because serving a second network needs a second inference "
+             "server and two servers on one Metal device abort the process. "
+             "When re-enabled: path to a frozen checkpoint the learner plays "
+             "against during the training iterations instead of playing itself; "
+             "only learner-to-move positions are trained on, learner colour "
+             "alternates by game id, and the frozen network is never optimized. "
              "Requires --n-workers >= 2; incompatible with resign/adjudication.",
     )
     parser.add_argument(

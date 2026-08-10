@@ -313,3 +313,27 @@ def test_startup_rejects_odd_games_per_iteration_and_resign():
     assert "does not support resign or adjudication" in src
     # both must sit with the frozen-opponent setup, i.e. before the warmup call
     assert src.index("requires an even --games-per-iter") < src.index("run_replay_warmup(")
+
+
+def test_frozen_opponent_flag_is_refused_at_startup_pending_dnr_50():
+    """The flag still routes to the aborting two-server path, so train() must
+    refuse before the warmup rather than burning an hour to reach the crash."""
+    src = inspect.getsource(trainer.train)
+    assert "--frozen-opponent-checkpoint is disabled" in src
+    assert "#50" in src
+
+    # the refusal must come before ANY frozen-opponent setup and before warmup
+    refusal = src.index("--frozen-opponent-checkpoint is disabled")
+    assert refusal < src.index("frozen_network = create_network")
+    assert refusal < src.index("run_replay_warmup(")
+    assert refusal < src.index("LocalGPUEvaluator(frozen_network)")
+
+
+def test_no_override_flag_exists_for_the_refusal():
+    """An escape hatch here would be a production hole, not a test seam."""
+    import scripts.GPU.alphazero.train as train_cli
+    cli = inspect.getsource(train_cli)
+    for hole in ("--allow-two-servers", "--force-frozen-opponent",
+                 "--ignore-dnr-50", "--unsafe-metal"):
+        assert hole not in cli
+    assert "allow_two_servers" not in inspect.getsource(trainer.train)

@@ -2979,6 +2979,29 @@ def train(
     # never appears in a training surface, so it cannot drift during the run.
     frozen_opponent_evaluator = None
     if frozen_opponent_checkpoint:
+        # HARD BLOCK (do-not-repeat #50). Serving the frozen network needs a
+        # SECOND InferenceServer thread, and two threads submitting concurrent
+        # work to the same Metal device abort the process on a driver assertion
+        # ("A command encoder is already encoding to this command buffer"). The
+        # 2026-08-10 run proved it: the single-network warmup completed, then
+        # iteration 1 died instantly with exit 134 after 1h39m of GPU time.
+        #
+        # Refused HERE, before the warmup, so the cost is a message rather than
+        # an hour. There is deliberately NO override flag: an escape hatch would
+        # be a production hole wearing a test-seam disguise. Lifting this needs a
+        # single Metal-owning inference arbiter serving both networks, plus its
+        # own authorized real-GPU feasibility smoke -- not a mutex or a retry.
+        raise ValueError(
+            "--frozen-opponent-checkpoint is disabled: serving a second network "
+            "requires a second InferenceServer, and two servers on one Metal "
+            "device abort the process (do-not-repeat #50; run 2026-08-10 exited "
+            "134 at iteration 1). A successor must route both networks through a "
+            "single Metal-owning inference arbiter and pass an authorized "
+            "real-GPU smoke first. The dual-root game seam itself is tested and "
+            "unaffected."
+        )
+        # Retained for when #50 is lifted: the checks below are still the correct
+        # preconditions for frozen-opponent training.
         frozen_network = create_network(hidden=hidden, n_blocks=n_blocks)
         frozen_network.load_weights(frozen_opponent_checkpoint)
         frozen_network.eval()
