@@ -94,8 +94,22 @@ Required:
    - **Sum learner and parent operational counters** — evaluations, backups, batches — and
      label them **combined**.
    - **Preserve active-agent move values** only where a complete game record requires them.
+     Two consequences, decided and approved: the **closeout selection tie-break follows the
+     active agent**, because it rewrites `visit_counts` before `select_move` and so changes
+     the move played — learner-only routing would alter the parent's search behaviour; and
+     **`gc_tracker` / `recovery_tracker` stay all-ply**, because they model whole-game
+     trajectories and skipping alternating plies would corrupt their records. Their scores are
+     therefore **active-agent / mixed-network telemetry** and must be read as such.
 6. **Learner-only positions enter training**, filtered on `PositionRecord.to_move`
    (`:1037`, already explicit).
+
+**Resign and adjudication are pinned OFF, and the mode refuses them.** Both are hard-wired to
+the learner and are wrong on a parent ply: the resign check reads the learner root's
+`visit_count` (`self_play.py` ~`:993`), which was never searched that ply, and timeout
+adjudication searches with the learner MCTS (~`:1277`) whoever is to move. Frozen-opponent
+mode therefore **raises** if either is enabled rather than silently mis-attributing.
+Supporting them needs its own design and is out of scope. Both are `store_true` and absent
+from the training command, so this costs the experiment nothing.
 
 **Explicitly not built:** opponent pool, league, ratings, persistence, adaptive matchmaking,
 checkpoint rotation, or any opponent-selection policy. One frozen opponent, fixed for the run.

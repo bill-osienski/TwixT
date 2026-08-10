@@ -588,10 +588,6 @@ def play_game(
     active_size: int = 24,
     start_player: Optional[str] = None,
     game_id: int = 0,
-    # Frozen-opponent training. Default None = ordinary self-play, unchanged:
-    # no second agent is built, no second tree exists, no extra RNG is drawn.
-    opponent_evaluator: Optional[Evaluator] = None,
-    learner_player: Optional[str] = None,
     # Resign parameters (conservative defaults = disabled)
     resign_enabled: bool = False,
     resign_min_ply: int = 80,
@@ -642,6 +638,11 @@ def play_game(
     recovery_retargeting_config: Optional[RecoveryRetargetingConfig] = None,
     # Phase 0 inheritance preflight. None keeps the observer entirely absent.
     inheritance_probe_config: Optional[InheritanceProbeConfig] = None,
+    # Frozen-opponent training. Default None = ordinary self-play, unchanged:
+    # no second agent is built, no second tree exists, no extra RNG is drawn.
+    # DELIBERATELY LAST: appending keeps every existing positional call valid.
+    opponent_evaluator: Optional[Evaluator] = None,
+    learner_player: Optional[str] = None,
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -689,6 +690,18 @@ def play_game(
             raise ValueError(
                 "opponent_evaluator requires learner_player='red' or 'black' "
                 f"(got {learner_player!r})"
+            )
+        # Fail closed rather than silently mis-attributing. Both paths are hard
+        # wired to the learner and are wrong on a parent ply: the resign check
+        # reads the learner root's visit_count (~:993), which was never searched
+        # this ply, and timeout adjudication searches with the learner MCTS
+        # (~:1277) whoever is to move. Supporting them needs its own design.
+        if resign_enabled or adjudicate_enabled:
+            raise ValueError(
+                "frozen-opponent mode does not support resign or adjudication "
+                f"(resign_enabled={resign_enabled}, "
+                f"adjudicate_enabled={adjudicate_enabled}): both read learner-only "
+                "search state and would be wrong on parent plies."
             )
         opp_mcts = MCTS(
             opponent_evaluator, mcts_config, random.Random(rng.randint(0, 2 ** 31))

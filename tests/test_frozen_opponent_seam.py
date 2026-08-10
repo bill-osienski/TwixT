@@ -185,6 +185,135 @@ def test_unexplored_move_does_not_break_the_inactive_tree():
     assert len(game.move_history) > 2
 
 
+# ------------------------------------------------- direct instrumentation
+#
+# The behavioural tests above infer the seam from outputs. These watch it
+# happen: how many agents are built, which roots each one touches, who is
+# dispatched to, and whether the RNG objects are distinct.
+
+class _Spy:
+    """Records every MCTS construction and the calls made on each instance."""
+
+    def __init__(self):
+        self.instances = []          # one entry per MCTS built
+        self.roots = {}              # instance index -> set of root ids it saw
+        self.advanced = {}           # instance index -> [moves advanced]
+        self.selected = {}           # instance index -> call count
+
+    def install(self, monkeypatch):
+        from scripts.GPU.alphazero import self_play as sp
+        real = sp.MCTS
+        spy = self
+
+        class SpyMCTS(real):
+            def __init__(self, evaluator, config, rng):
+                super().__init__(evaluator, config, rng)
+                self._spy_idx = len(spy.instances)
+                spy.instances.append(self)
+                spy.roots[self._spy_idx] = set()
+                spy.advanced[self._spy_idx] = []
+                spy.selected[self._spy_idx] = 0
+
+            def search_from_root(self, root, **kw):
+                spy.roots[self._spy_idx].add(id(root))
+                out = super().search_from_root(root, **kw)
+                spy.roots[self._spy_idx].add(id(out[2]))
+                return out
+
+            def advance_root(self, root, move):
+                spy.roots[self._spy_idx].add(id(root))
+                spy.advanced[self._spy_idx].append(move)
+                out = super().advance_root(root, move)
+                spy.roots[self._spy_idx].add(id(out))
+                return out
+
+            def select_move(self, visit_counts, ply):
+                spy.selected[self._spy_idx] += 1
+                return super().select_move(visit_counts, ply)
+
+        monkeypatch.setattr(sp, "MCTS", SpyMCTS)
+        return self
+
+
+def test_default_off_constructs_exactly_one_mcts(monkeypatch):
+    spy = _Spy().install(monkeypatch)
+    _play(41)
+    assert len(spy.instances) == 1
+
+
+def test_enabled_constructs_exactly_two_mcts(monkeypatch):
+    spy = _Spy().install(monkeypatch)
+    _play(41, opponent=StubEvaluator(0.10), learner="red")
+    assert len(spy.instances) == 2
+
+
+def test_the_two_agents_never_touch_the_same_root_object(monkeypatch):
+    spy = _Spy().install(monkeypatch)
+    _play(43, opponent=StubEvaluator(0.10), learner="red")
+    learner_roots, opp_roots = spy.roots[0], spy.roots[1]
+    assert learner_roots and opp_roots
+    assert learner_roots.isdisjoint(opp_roots), "a root object was shared"
+
+
+def test_both_agents_advance_on_every_played_move(monkeypatch):
+    spy = _Spy().install(monkeypatch)
+    game = _play(45, opponent=StubEvaluator(0.10), learner="red")
+    played = list(game.move_history)
+    # every played move except the last (the game ends before advancing past it)
+    assert spy.advanced[0] == spy.advanced[1], "trees advanced differently"
+    assert spy.advanced[0] == played[:len(spy.advanced[0])]
+    assert len(spy.advanced[0]) >= len(played) - 1
+
+
+def test_select_move_dispatches_to_the_active_agent_with_distinct_rngs(monkeypatch):
+    spy = _Spy().install(monkeypatch)
+    game = _play(47, opponent=StubEvaluator(0.10), learner="red")
+    learner_calls, opp_calls = spy.selected[0], spy.selected[1]
+    assert learner_calls > 0 and opp_calls > 0
+    assert learner_calls + opp_calls == len(game.move_history)
+    # red starts and is the learner, so it never selects fewer than the opponent
+    assert learner_calls >= opp_calls
+    assert spy.instances[0].rng is not spy.instances[1].rng
+
+
+def test_mirror_augmentation_never_fires_on_a_parent_ply(monkeypatch):
+    """With mirror probability 1 every learner ply yields exactly two rows."""
+    from scripts.GPU.alphazero import self_play as sp
+    monkeypatch.setattr(sp, "_MIRROR_PROB", 1.0)
+    game = _play(49, opponent=StubEvaluator(0.10), learner="black")
+
+    assert {p.to_move for p in game.positions} == {"black"}
+    by_ply = {}
+    for p in game.positions:
+        by_ply.setdefault(p.ply, 0)
+        by_ply[p.ply] += 1
+    assert by_ply, "expected learner rows"
+    assert set(by_ply.values()) == {2}, f"expected primary+mirror per ply, got {by_ply}"
+
+
+# ------------------------------------------------- unsupported combinations
+@pytest.mark.parametrize("flag", ["resign_enabled", "adjudicate_enabled"])
+def test_frozen_opponent_refuses_resign_and_adjudication(flag):
+    with pytest.raises(ValueError, match="does not support resign or adjudication"):
+        play_game(
+            StubEvaluator(0.9), mcts_config=_cfg(), rng=random.Random(2),
+            max_moves=16, active_size=BOARD, start_player="red",
+            opponent_evaluator=StubEvaluator(0.1), learner_player="red",
+            goal_completion_emit_enabled=False, goal_completion_record_enabled=False,
+            **{flag: True},
+        )
+
+
+def test_those_flags_are_still_allowed_without_a_frozen_opponent():
+    game = play_game(
+        StubEvaluator(0.9), mcts_config=_cfg(), rng=random.Random(2),
+        max_moves=16, active_size=BOARD, start_player="red",
+        resign_enabled=True, adjudicate_enabled=True,
+        goal_completion_emit_enabled=False, goal_completion_record_enabled=False,
+    )
+    assert game.n_moves > 0
+
+
 def test_frozen_opponent_games_are_reproducible():
     a = _play(29, opponent=StubEvaluator(0.1), learner="red")
     b = _play(29, opponent=StubEvaluator(0.1), learner="red")
