@@ -1,6 +1,6 @@
 # Frozen-Parent Opponent — Experiment Card
 
-**Date:** 2026-08-10 · **Status:** DRAFT, not countersigned · **Scope: one training-data
+**Date:** 2026-08-10 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: one training-data
 mechanism, one training run, one 400-game evaluation. Nothing else.**
 
 Successor to the closed ordinary-continuation family
@@ -335,9 +335,9 @@ Execution is authorized only when this block is filled in, committed, and pushed
 signature; **no training or evaluation may run before it**, and the pre-GPU gate must pass.
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-10T16:40:26Z
+authorization basis : fa6843cc4ea383847a840651ff7b488e47f47517   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : the exact FOUR command blocks above, unmodified — every
                       flag as written, none added, none omitted:

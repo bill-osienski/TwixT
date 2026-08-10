@@ -49,6 +49,7 @@ successor picks an overlapping range.
 |---|---|---:|---|---|---|---|
 | 4 | `[202608988, 202609388)` | 400 | Training continuation — cont5 vs calib020 | 2026-08-08 | `3c70fff` | **CONSUMED** |
 | 5 | `[202609388, 202609788)` | 400 | Parent-replay bootstrap — warm5 vs calib020 | 2026-08-09 | `bcf62e2` | **CONSUMED** |
+| 6 | `[202609788, 202610188)` | 400 | Frozen-parent opponent — fp5 vs calib020 | 2026-08-10 | the commit containing this reservation | **RESERVED** |
 
 Row 4 is disjoint from intervals 1–3, which all end at `202608988`; row 5 begins where row 4
 ends. **Note:** `eval_checkpoint_match` has no `--prior-seed-interval` and never calls
@@ -64,10 +65,15 @@ on the aggregate result. The preregistered absolute per-colour rule mechanically
 black (`0.3650`, upper `0.4317`), but the 2026-08-10 ledger erratum makes that result
 non-diagnostic of black-specific harm or an independent rejection.
 
-**The training line is CLOSED as of 2026-08-09** — ordinary continuation from `calib020_0001`
-is closed as a family, warm buffer included (do-not-repeat #49). **No further interval is
-expected to be drawn against it.** Any successor project chooses its own range and passes all
-five intervals above as priors.
+**Ordinary continuation is CLOSED as of 2026-08-09** — self-play continuation from
+`calib020_0001` is closed as a family, warm buffer included (do-not-repeat #49). **No further
+interval may be drawn for ordinary continuation**, and rows 4 and 5 are its last.
+
+Row 6 is **not** ordinary continuation and does not reopen it: the frozen-parent opponent
+changes the data-generating process — the learner plays a fixed checkpoint rather than itself,
+and only learner-to-move positions are trained on. It is authorized separately by
+`docs/superpowers/2026-08-10-frozen-parent-opponent-experiment-card.md`, which #49 requires to
+name a genuinely different mechanism. Any successor passes all six intervals above as priors.
 
 ## Rules
 
