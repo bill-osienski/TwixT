@@ -588,6 +588,10 @@ def play_game(
     active_size: int = 24,
     start_player: Optional[str] = None,
     game_id: int = 0,
+    # Frozen-opponent training. Default None = ordinary self-play, unchanged:
+    # no second agent is built, no second tree exists, no extra RNG is drawn.
+    opponent_evaluator: Optional[Evaluator] = None,
+    learner_player: Optional[str] = None,
     # Resign parameters (conservative defaults = disabled)
     resign_enabled: bool = False,
     resign_min_ply: int = 80,
@@ -676,6 +680,20 @@ def play_game(
 
     mcts = MCTS(evaluator, mcts_config, rng)
 
+    # Frozen-opponent mode: a second agent owning its own evaluator, MCTS state
+    # and RNG stream. Built ONLY when an opponent is supplied, so the ordinary
+    # path constructs nothing extra and draws no extra RNG.
+    opp_mcts = None
+    if opponent_evaluator is not None:
+        if learner_player not in ("red", "black"):
+            raise ValueError(
+                "opponent_evaluator requires learner_player='red' or 'black' "
+                f"(got {learner_player!r})"
+            )
+        opp_mcts = MCTS(
+            opponent_evaluator, mcts_config, random.Random(rng.randint(0, 2 ** 31))
+        )
+
     # Spec §12.1 invariant: detection_threshold must be <= emit_threshold
     # so post-detection plies are guaranteed to have full state available
     # when Phase 3 emit is enabled.
@@ -731,6 +749,9 @@ def play_game(
 
     # Initialize root for tree reuse
     root = MCTSNode(state=state)
+    # The opponent keeps its OWN tree. Sharing one root would blend priors from
+    # one network with visits and values produced by both.
+    opp_root = MCTSNode(state=state) if opp_mcts is not None else None
 
     # Resign tracking (K of last W sliding window)
     resign_window_hits: deque = deque(maxlen=resign_window)
@@ -859,23 +880,37 @@ def play_game(
                     import sys as _sys
                     _sys.stderr.write(f"[gc-full] ply={ply} error: {_e!r}\n")
 
+        # Frozen-opponent routing. Each side searches with its own agent, its own
+        # RNG and its own tree. In ordinary self-play opp_mcts is None, so
+        # learner_to_move is always True and every branch below is the old path.
+        learner_to_move = opp_mcts is None or state.to_move == learner_player
+        agent = mcts if learner_to_move else opp_mcts
+        agent_root = root if learner_to_move else opp_root
+
         # Run MCTS search from current root (reuses subtree)
-        if inheritance_tracker is not None:
+        # Search-derived diagnostics are learner-only: on a parent ply the
+        # learner's root was never searched, so reading it would be stale.
+        if inheritance_tracker is not None and learner_to_move:
             inheritance_tracker.observe_search_start(
                 ply=ply,
-                root=root,
+                root=agent_root,
                 forced_sims_total=mcts._closeout_td1_forced_sims_total,
             )
-        visit_counts, root_value, root = mcts.search_from_root(
-            root, add_noise=add_noise, ply=ply, gc_state_full=gc_state_full,
+        visit_counts, root_value, agent_root = agent.search_from_root(
+            agent_root, add_noise=add_noise, ply=ply, gc_state_full=gc_state_full,
         )
-        if inheritance_tracker is not None:
+        if learner_to_move:
+            root = agent_root
+        else:
+            opp_root = agent_root
+        if inheritance_tracker is not None and learner_to_move:
             inheritance_tracker.observe_search_end(
                 forced_sims_total=mcts._closeout_td1_forced_sims_total,
             )
 
-        # Build opening diagnostic record if within window
-        if ply < _diag_end_ply and root.priors_raw is not None:
+        # Build opening diagnostic record if within window.
+        # Learner-only: root.priors_raw belongs to the learner's network.
+        if learner_to_move and ply < _diag_end_ply and root.priors_raw is not None:
             _rec = build_root_diagnostic(
                 ply=ply,
                 side_to_move=state.to_move,
@@ -909,8 +944,10 @@ def play_game(
             _opening_diags.append(_rec)
 
         # Phase 3 partial build uses gc_state_full (computed pre-search above)
-        # plus post-search visit_counts / root priors.
-        if (goal_completion_emit_enabled
+        # plus post-search visit_counts / root priors. Learner-only: it reads
+        # the learner root's priors.
+        if (learner_to_move
+                and goal_completion_emit_enabled
                 and gc_state_full is not None
                 and total_now is not None
                 and total_now <= goal_completion_emit_threshold):
@@ -1031,72 +1068,78 @@ def play_game(
                     "selected_primary_class":    None,    # telemetry-only; deferred
                 }
 
-        positions.append(
-            PositionRecord(
-                board_tensor=board_hwc,  # (H, W, C) NHWC format
-                to_move=state.to_move,  # Explicit, not inferred from ply
-                legal_moves=moves,
-                visit_counts=counts,  # Raw counts, not normalized
-                active_size=active_size,  # Store for training with masked pooling
-                ply=ply,  # Ply at which this position occurred
-                conversion=conversion_meta,  # Spec 2: None unless conversion-eligible
-            )
-        )
-
-        # Probabilistic mirror augmentation
-        if _MIRROR_PROB > 0 and rng.random() < _MIRROR_PROB:
-            m_board, m_moves, m_counts = _mirror_position_lr(
-                board_hwc, moves, counts, active_size
-            )
-            # Spec 2: mirrored positions intentionally drop conversion metadata
-            # (defaults to None). Completion/reducing move coordinates would need
-            # column-flip (col -> active_size - 1 - col) to remain valid; deferred.
+        # Learner-only replay positions: a parent-to-move position carries the
+        # frozen opponent's visit distribution and must never become a training
+        # target. In ordinary self-play learner_to_move is always True.
+        if learner_to_move:
             positions.append(
                 PositionRecord(
-                    board_tensor=m_board,
-                    to_move=state.to_move,
-                    legal_moves=m_moves,
-                    visit_counts=m_counts,
-                    active_size=active_size,
-                    ply=ply,  # Mirror shares the same ply as the primary
+                    board_tensor=board_hwc,  # (H, W, C) NHWC format
+                    to_move=state.to_move,  # Explicit, not inferred from ply
+                    legal_moves=moves,
+                    visit_counts=counts,  # Raw counts, not normalized
+                    active_size=active_size,  # Store for training with masked pooling
+                    ply=ply,  # Ply at which this position occurred
+                    conversion=conversion_meta,  # Spec 2: None unless conversion-eligible
                 )
             )
+
+            # Probabilistic mirror augmentation
+            if _MIRROR_PROB > 0 and rng.random() < _MIRROR_PROB:
+                m_board, m_moves, m_counts = _mirror_position_lr(
+                    board_hwc, moves, counts, active_size
+                )
+                # Spec 2: mirrored positions intentionally drop conversion metadata
+                # (defaults to None). Completion/reducing move coordinates would need
+                # column-flip (col -> active_size - 1 - col) to remain valid; deferred.
+                positions.append(
+                    PositionRecord(
+                        board_tensor=m_board,
+                        to_move=state.to_move,
+                        legal_moves=m_moves,
+                        visit_counts=m_counts,
+                        active_size=active_size,
+                        ply=ply,  # Mirror shares the same ply as the primary
+                    )
+                )
 
         # Spec 3 Fix 2: narrow closeout selection tie-break — applied to
         # visit_counts before select_move so the override propagates to both
         # the training target (the position record below) and the move played.
-        if mcts.config.closeout_selection_tiebreak_enabled and gc_state_full is not None:
+        if agent.config.closeout_selection_tiebreak_enabled and gc_state_full is not None:
             argmax_move = max(visit_counts, key=visit_counts.get) if visit_counts else None
             argmax_class = (_classify_argmax_against_gc(argmax_move, gc_state_full)
                             if argmax_move is not None else "other")
-            mcts._closeout_tiebreak_eligible += 1
+            agent._closeout_tiebreak_eligible += 1
             visit_counts, tiebreak_record = MCTS.apply_closeout_selection_tiebreak(
                 visit_counts=visit_counts,
                 gc_state_full=gc_state_full,
                 root_q=root_value,
                 selected_argmax_class=argmax_class,
-                config=mcts.config,
+                config=agent.config,
             )
             overrode_to = tiebreak_record.get("overrode_to")
             if overrode_to == "endpoint":
-                mcts._closeout_tiebreak_overrides += 1
-                mcts._closeout_tiebreak_override_to_endpoint += 1
+                agent._closeout_tiebreak_overrides += 1
+                agent._closeout_tiebreak_override_to_endpoint += 1
             elif overrode_to == "reducer":
-                mcts._closeout_tiebreak_overrides += 1
-                mcts._closeout_tiebreak_override_to_reducer += 1
+                agent._closeout_tiebreak_overrides += 1
+                agent._closeout_tiebreak_override_to_reducer += 1
             if overrode_to:
                 if argmax_class == "redundant_reinforcement":
-                    mcts._closeout_tiebreak_would_have_redundant += 1
+                    agent._closeout_tiebreak_would_have_redundant += 1
                 elif argmax_class == "off_chain":
-                    mcts._closeout_tiebreak_would_have_off_chain += 1
+                    agent._closeout_tiebreak_would_have_off_chain += 1
                 elif argmax_class == "other":
-                    mcts._closeout_tiebreak_would_have_other += 1
+                    agent._closeout_tiebreak_would_have_other += 1
 
         # Select move
-        move = mcts.select_move(visit_counts, ply)
+        # Active agent selects, using ITS OWN rng stream.
+        move = agent.select_move(visit_counts, ply)
 
         if (
             _OPENING_DEBUG
+            and learner_to_move  # reads the learner root's priors
             and game_id < _OPENING_DEBUG_GAMES
             and ply < _OPENING_DEBUG_PLIES
         ):
@@ -1166,7 +1209,7 @@ def play_game(
                 )
 
         # TREE REUSE: advance root to chosen child
-        if inheritance_tracker is not None:
+        if inheritance_tracker is not None and learner_to_move:
             _played_child = root.children.get(encode_move(move[0], move[1]))
             inheritance_tracker.observe_played_child(
                 visits=(
@@ -1174,6 +1217,14 @@ def play_game(
                 )
             )
         root = mcts.advance_root(root, move)
+        if opp_mcts is not None:
+            # BOTH trees follow the played move. advance_root creates a fresh
+            # node when this side never explored it, so the inactive tree needs
+            # no special case. Desync would silently train on the wrong board.
+            opp_root = opp_mcts.advance_root(opp_root, move)
+            assert opp_root.state == root.state, (
+                f"frozen-opponent roots desynchronised at ply {ply}"
+            )
 
         # SYNC: state comes from root (don't apply_move twice!)
         state = root.state
@@ -1385,6 +1436,13 @@ def play_game(
         if inheritance_tracker is not None else None
     )
 
+    def _combined(attr, how=None):
+        """Operational counter across both agents (learner alone when solo)."""
+        learner_v = getattr(mcts, attr)
+        if opp_mcts is None:
+            return learner_v
+        return (how or (lambda a, b: a + b))(learner_v, getattr(opp_mcts, attr))
+
     return GameRecord(
         positions=positions,
         winner=winner,
@@ -1393,16 +1451,20 @@ def play_game(
         start_player=start_player,  # Needed for correct replay attribution
         draw_reason=draw_reason,
         resigned_by=resigned_by,  # Who resigned (or None)
-        nn_calls=mcts._nn_call_count,
-        expand_calls=mcts._expand_calls,
-        nn_batches=mcts._nn_batches,
-        total_backups=mcts._total_backups,
-        total_waiters=mcts._total_waiters_backed_up,
-        unique_leaves=mcts._unique_leaves_expanded,
-        max_waiters=mcts._max_waiters_on_any_leaf,
-        flush_full=mcts._flush_full,
-        flush_stall=mcts._flush_stall,
-        flush_tail=mcts._flush_tail,
+        # Operational counters are COMBINED across both agents: they measure the
+        # work this game cost, and in frozen-opponent mode the parent's searches
+        # are part of that cost. Search-derived *diagnostics* stay learner-only;
+        # these are throughput, not signal. Maxima combine by max, not sum.
+        nn_calls=_combined("_nn_call_count"),
+        expand_calls=_combined("_expand_calls"),
+        nn_batches=_combined("_nn_batches"),
+        total_backups=_combined("_total_backups"),
+        total_waiters=_combined("_total_waiters_backed_up"),
+        unique_leaves=_combined("_unique_leaves_expanded"),
+        max_waiters=_combined("_max_waiters_on_any_leaf", how=max),
+        flush_full=_combined("_flush_full"),
+        flush_stall=_combined("_flush_stall"),
+        flush_tail=_combined("_flush_tail"),
         adj_attempted=adj_attempted,
         adj_blocked_by=adj_blocked_by,
         adj_abs_rv=abs(adj_root_value) if adj_root_value is not None else None,
