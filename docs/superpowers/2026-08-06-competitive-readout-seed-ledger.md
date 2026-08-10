@@ -48,16 +48,24 @@ successor picks an overlapping range.
 | # | interval | games | run | date | commit | status |
 |---|---|---:|---|---|---|---|
 | 4 | `[202608988, 202609388)` | 400 | Training continuation — cont5 vs calib020 | 2026-08-08 | `3c70fff` | **CONSUMED** |
-| 5 | `[202609388, 202609788)` | 400 | Parent-replay bootstrap — warm5 vs calib020 | 2026-08-09 | the commit containing this reservation | **RESERVED** |
+| 5 | `[202609388, 202609788)` | 400 | Parent-replay bootstrap — warm5 vs calib020 | 2026-08-09 | `bcf62e2` | **CONSUMED** |
 
 Row 4 is disjoint from intervals 1–3, which all end at `202608988`; row 5 begins where row 4
 ends. **Note:** `eval_checkpoint_match` has no `--prior-seed-interval` and never calls
 `validate_seed_intervals`, so disjointness on this path is a manual precondition and this
 ledger entry — it is not code-enforced.
 
-Consumed 2026-08-08 by the countersigned run: 400 games, exit 0, candidate score rate
-`0.31375` (CI95 `[0.2687, 0.3588]`), Elo `−136.0`. The promotion bar was **not met** and
-the continuation recipe is stopped, so no further interval is drawn against this line.
+Row 4 consumed 2026-08-08 by the countersigned run: 400 games, exit 0, candidate score rate
+`0.31375` (CI95 `[0.2687, 0.3588]`), Elo `−136.0`. The promotion bar was **not met**.
+
+Row 5 consumed 2026-08-09 by the countersigned parent-replay bootstrap: 400 games, exit 0,
+score rate `0.4325` (CI95 `[0.3843, 0.4807]`), Elo `−47.2`. The promotion bar was **not met**
+and black-specific harm fired independently.
+
+**The training line is CLOSED as of 2026-08-09** — ordinary continuation from `calib020_0001`
+is closed as a family, warm buffer included (do-not-repeat #49). **No further interval is
+expected to be drawn against it.** Any successor project chooses its own range and passes all
+five intervals above as priors.
 
 ## Rules
 
