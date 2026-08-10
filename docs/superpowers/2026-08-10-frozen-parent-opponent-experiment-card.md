@@ -153,6 +153,129 @@ sha1  209cf2d4fd24a48553d259dd71b4954867b9473e
 The same checkpoint is the **warmup generator**, the **frozen opponent**, and the
 **evaluation baseline**. It never updates during the run.
 
+## Command block 1 — training `[GPU, state-changing]`
+
+```bash
+nohup bash -c '.venv/bin/python -m scripts.GPU.alphazero.train \
+  --load-weights checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --frozen-opponent-checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --checkpoint-dir checkpoints/alphazero-v2-fp5-from-calib020 \
+  --games-dir logs/selfplay/fp5_from_calib020 \
+  --replay-warmup-games 500 \
+  --iterations 5 \
+  --games-per-iter 200 \
+  --train-steps 160 \
+  --simulations 400 \
+  --lr 0.0003 \
+  --l2 0.0001 \
+  --batch-size 64 \
+  --buffer-size 100000 \
+  --curriculum-sizes 24 \
+  --hidden 128 \
+  --blocks 6 \
+  --seed 20260810 \
+  --n-workers 10 \
+  --mcts-eval-batch-size 14 \
+  --mcts-stall-flush-sims 48 \
+  --mcts-pending-virtual-visits 8 \
+  --max-moves 280 \
+  --max-positions-per-game 280 \
+  --endgame-keep-positions 16 \
+  --mirror-prob 0.5 \
+  --dirichlet-alpha 0.3 \
+  --dirichlet-eps 0.25 \
+  --opening-noise-ply 0 \
+  --temp-high 1.0 \
+  --temp-low 0.1 \
+  --temp-threshold-ply 20 \
+  --value-weight 0.5 \
+  --value-lr-scale 0.1 \
+  --value-grad-max-norm 0.5 \
+  --progress-weighted-value-loss \
+  --progress-weight-floor 0.25 \
+  --probes-inline-disable
+rc=$?
+printf "%s\n" "$rc" > logs/eval/fp5_train.exit
+exit "$rc"' \
+  > logs/eval/fp5_train.stdout 2>&1 &
+disown
+```
+
+Differences from `warm5`, and only these: `--frozen-opponent-checkpoint` (new, the same
+path as `--load-weights`), `--games-per-iter 200` (was 100), `--seed 20260810`, and the new
+output paths. Resign and adjudication remain absent, which the trainer now enforces at
+startup rather than trusting.
+
+## Command block 2 — provenance gate `[no GPU; writes ONE artifact]`
+
+```bash
+bash -c 'CK=checkpoints/alphazero-v2-fp5-from-calib020/model_iter_0005.safetensors
+OUT=logs/eval/fp5_candidate_provenance.txt
+
+[ -e "$OUT" ] && { echo "REFUSE: $OUT already exists"; exit 1; }
+[ -f "$CK" ] || { echo "REFUSE: endpoint missing: $CK"; exit 1; }
+[ "$(cat logs/eval/fp5_train.exit 2>/dev/null)" = "0" ] || { echo "REFUSE: training exit not 0"; exit 1; }
+[ -z "$(git status --porcelain)" ] || { echo "REFUSE: worktree dirty"; exit 1; }
+
+HEAD=$(git rev-parse HEAD) || { echo "REFUSE: git rev-parse failed"; exit 1; }
+SHA=$(shasum -a 1 "$CK" | cut -d" " -f1) || { echo "REFUSE: hashing failed"; exit 1; }
+[ ${#HEAD} -eq 40 ] || { echo "REFUSE: HEAD not 40 chars: [$HEAD]"; exit 1; }
+[ ${#SHA} -eq 40 ] || { echo "REFUSE: sha1 not 40 chars: [$SHA]"; exit 1; }
+
+printf "candidate: %s\nsha1: %s\ntrain_head: %s\nworktree_clean: true\n" \
+  "$CK" "$SHA" "$HEAD" > "$OUT" || { echo "REFUSE: write failed"; exit 1; }
+cat "$OUT"'
+```
+
+## Command block 3 — evaluation `[GPU, state-changing]`
+
+```bash
+nohup bash -c '.venv/bin/python -m scripts.GPU.alphazero.eval_checkpoint_match \
+  --checkpoint-a checkpoints/alphazero-v2-fp5-from-calib020/model_iter_0005.safetensors \
+  --checkpoint-b checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \
+  --games 400 \
+  --base-seed 202609788 \
+  --board-size 24 \
+  --mcts-sims 400 \
+  --mcts-eval-batch-size 14 \
+  --mcts-stall-flush-sims 48 \
+  --selection-mode opening_temperature \
+  --opening-temp-plies 20 \
+  --temp-high 1.0 \
+  --temp-low 0.1 \
+  --max-moves 280 \
+  --workers 4 \
+  --output logs/eval/fp5_vs_calib020.json
+rc=$?
+printf "%s\n" "$rc" > logs/eval/fp5_vs_calib020.exit
+exit "$rc"' \
+  > logs/eval/fp5_vs_calib020.stdout 2>&1 &
+disown
+```
+
+The evaluation is an **ordinary two-checkpoint match**; the frozen-opponent mechanism exists
+only in training and has no part in it.
+
+## Command block 4 — per-colour reporting `[read-only, DESCRIPTIVE ONLY]`
+
+```bash
+.venv/bin/python -c "
+import json
+from scripts.GPU.alphazero.eval_elo import score_ci_trinomial
+s = json.load(open('logs/eval/fp5_vs_calib020.json'))
+print(f\"red_win_rate_decisive: {s['color_bias']['red_win_rate_decisive']:.4f}\")
+for k in ('a_as_red','a_as_black'):
+    d = s[k]
+    lo, hi = score_ci_trinomial(d['wins'], d['caps'], d['losses'])
+    print(f\"{k}: {d['wins']}-{d['losses']} caps={d['caps']} rate={d['score_rate']:.4f} \"
+          f\"CI95 [{lo:.4f}, {hi:.4f}]\")
+"
+```
+
+**No `UPPER<0.50` column and no veto.** Per the 2026-08-10 erratum the absolute per-colour
+rule is retired; these numbers are reported for the record and decide nothing. The decisive
+red win rate is printed alongside precisely so the split is not read as candidate-specific.
+
 ## Frozen endpoint
 
 **Only `model_iter_0005.safetensors` is evaluated.** Iterations 1–4 are not evaluated,
@@ -216,8 +339,8 @@ authorizer          : ____________________
 timestamp (UTC)     : ____________________
 authorization basis : ____________________   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
-approved scope      : the exact FOUR command blocks (to be written once the
-                      implementation fixes the flag names), unmodified:
+approved scope      : the exact FOUR command blocks above, unmodified — every
+                      flag as written, none added, none omitted:
                         1. training run              [GPU, state-changing]
                         2. provenance gate           [no GPU; writes ONE artifact]
                         3. evaluation match          [GPU, state-changing]
