@@ -31,7 +31,19 @@ quantity that matters constant.
 
 ## Prediction, on record before the run
 
-*(to be filled in before countersignature — this card is not signable without it)*
+**Central forecast: material recovery relative to `warm5`, but no promotion.** Expect the
+frozen endpoint to finish roughly equal to or slightly weaker than the parent, with an
+aggregate point score around **`0.47–0.51`**. Estimated chance of clearing the promotion bar
+is **about 10%**.
+
+Holding opposition strength fixed directly addresses self-play co-drift, so improvement over
+the descriptive `warm5` result of `0.4325` is plausible. However, the mechanism does not
+change the terminal outcome targets, policy-dominated optimization, short five-iteration
+horizon, or risk of specializing against one opponent. Therefore parity is more likely than a
+statistically significant gain.
+
+**This forecast is not a gate.** The aggregate decision rule and the frozen disposition remain
+authoritative. **No per-colour direction is predicted.**
 
 ## The frozen budget — every choice pinned
 
@@ -51,6 +63,12 @@ quantity that matters constant.
 plus ≈ **1 h 12 m** warmup (both interpolated from measured `cont5`/`warm5` work), plus
 ≈ **3 h 07 m** evaluation ⇒ **≈ 8 h** end to end.
 
+**That eight hours is a planning estimate, not a timeout.** Two inference servers may fragment
+batches or contend for the GPU enough to make the real run slower than the single-network
+measurements it is interpolated from. Exceeding the estimate is **not** a failure condition and
+triggers **no automatic retry, no parameter change, and no abort** — only the frozen exit
+conditions govern.
+
 ## Implementation — the dual-root seam
 
 `play_game` currently threads **one** tree through the whole game: `root = MCTSNode(state)`
@@ -68,10 +86,14 @@ Required:
    fresh node when the move was never explored (`mcts.py`), so the inactive tree needs no new
    logic — only a second call.
 4. **Assert both roots stay synchronised to the same board state**, every ply.
-5. **Define game telemetry deliberately** — learner-only or combined, decided and written
-   down, never inherited stale from learner fields on parent plies. The opening diagnostics
-   at `:899`/`:933` read `root.priors_raw`/`root.priors`, which are network-specific and must
-   bind to the **learner** root.
+5. **Game telemetry, resolved here rather than left to implementation:**
+   - **Learner-only** for search-derived diagnostics and replay positions.
+   - **Skip opening/root diagnostics on parent-controlled plies** — never read an unsearched
+     or stale learner root there. The diagnostics at `:899`/`:933` read
+     `root.priors_raw`/`root.priors`, which are network-specific.
+   - **Sum learner and parent operational counters** — evaluations, backups, batches — and
+     label them **combined**.
+   - **Preserve active-agent move values** only where a complete game record requires them.
 6. **Learner-only positions enter training**, filtered on `PositionRecord.to_move`
    (`:1037`, already explicit).
 
@@ -93,8 +115,10 @@ boundary.
 
 ## Pre-GPU gate — all must pass before any training run
 
-1. **Default-off identity.** With the frozen-opponent flag absent or off, `play_game` and the
-   whole training path behave exactly as today. Byte-identical behaviour, tested.
+1. **Default-off identity — deterministic behavioural equivalence**, not literal byte identity
+   of the file, which editing necessarily breaks. With the flag absent or off, the run must
+   produce the same games and the same training data as today, and must **not** construct a
+   second root, evaluator or server, nor consume any extra RNG state.
 2. **Dual-root seam tests**, covering at minimum: the two roots never alias; each agent's
    search and `select_move` use its own instance and RNG; both roots advance on every played
    move; the inactive tree creates a fresh child for an unexplored move; the roots' board
