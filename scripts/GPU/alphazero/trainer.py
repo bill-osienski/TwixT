@@ -2002,8 +2002,8 @@ def run_parallel_selfplay(
     conversion_max_total_goal_distance: int = 2,
     # Spec 4 — recovery / re-targeting diagnostic (§5.6).
     recovery_retargeting_config: Optional[Any] = None,
-    # Frozen-opponent training. None = ordinary self-play: no second server,
-    # no second queues, no second evaluator anywhere in this call.
+    # Frozen-opponent training. None = ordinary self-play: one model registered
+    # on the arbiter, one response queue per worker, no opponent anywhere.
     opponent_evaluator: Optional[Any] = None,
 ) -> Tuple[
     List["GameRecord"],  # All game records (for stats)
@@ -2970,13 +2970,13 @@ def train(
         # single Metal-owning inference arbiter serving both networks, plus its
         # own authorized real-GPU feasibility smoke -- not a mutex or a retry.
         raise ValueError(
-            "--frozen-opponent-checkpoint is disabled: serving a second network "
-            "requires a second InferenceServer, and two servers on one Metal "
-            "device abort the process (do-not-repeat #50; run 2026-08-10 exited "
-            "134 at iteration 1). A successor must route both networks through a "
-            "single Metal-owning inference arbiter and pass an authorized "
-            "real-GPU smoke first. The dual-root game seam itself is tested and "
-            "unaffected."
+            "--frozen-opponent-checkpoint is disabled. The single Metal-owning "
+            "inference arbiter that do-not-repeat #50 requires now EXISTS -- one "
+            "server serving both models over one request queue -- but it has not "
+            "passed its authorized real-GPU smoke, and lifting this block is a "
+            "separate countersigned card. (The 2026-08-10 run exited 134 at "
+            "iteration 1 under the old two-server transport, which is deleted.) "
+            "The dual-root game seam is tested and unaffected."
         )
         # Retained for when #50 is lifted: the checks below are still the correct
         # preconditions for frozen-opponent training.

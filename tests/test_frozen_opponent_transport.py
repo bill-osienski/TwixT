@@ -5,7 +5,8 @@ servers are driven with a stub evaluator over real multiprocessing queues, and
 the trainer wiring is checked by monkeypatching the module attributes.
 
 Covered:
-* the second server, queues and evaluator exist ONLY in frozen-opponent mode;
+* the opponent model, its response queue and its evaluator exist ONLY in
+  frozen-opponent mode -- there is never a second server;
 * warmup stays on the ordinary single-network path;
 * learner colour is a pure function of game id, so an even game count splits
   exactly 100/100 regardless of scheduling;
@@ -216,7 +217,7 @@ def test_a_server_error_message_raises_rather_than_degrading():
 #
 # The server-only test above proves threads start and stop; it sends no request
 # and spawns no worker, so it cannot see RemoteEvaluator routing or learner /
-# opponent separation. These run the real thing: two workers, two servers, real
+# opponent separation. These run the real thing: two workers, ONE arbiter, real
 # spawn transport, stub evaluators, tiny games.
 
 def _tiny_run(learner_stub, opponent_stub, games=2, workers=2):
@@ -280,10 +281,17 @@ class ExplodingEvaluator(StubEvaluator):
         raise RuntimeError("opponent evaluator exploded")
 
 
-def test_opponent_server_failure_fails_the_run_closed():
-    """Failure companion: the opponent side dies and the run must raise, not
-    fall back to the learner and not hang waiting for WorkerDone."""
-    learner, opponent = StubEvaluator(0.9), ExplodingEvaluator(0.1)
+@pytest.mark.parametrize("exploding_slot", ["learner", "opponent"])
+def test_either_model_failure_fails_the_run_closed(exploding_slot):
+    """Behavioural half of the 'either model' gate -- not source inspection.
+
+    Whichever model dies, the run must raise rather than fall back to the other
+    or hang waiting for a WorkerDone that never comes.
+    """
+    if exploding_slot == "learner":
+        learner, opponent = ExplodingEvaluator(0.9), StubEvaluator(0.1)
+    else:
+        learner, opponent = StubEvaluator(0.9), ExplodingEvaluator(0.1)
     with pytest.raises(RuntimeError, match="InferenceServer crashed|worker .* failed"):
         _tiny_run(learner, opponent)
 
@@ -401,8 +409,10 @@ def test_both_models_are_served_on_exactly_one_thread():
 
     for i in range(6):
         rq.put(_req(DEFAULT_MODEL_ID if i % 2 == 0 else OPPONENT_MODEL_ID, i + 1))
-    for key in resp:
-        resp[key].get(timeout=10)
+    # consume AND check: a response must carry its own model's signature
+    for key, expect in ((( 0, DEFAULT_MODEL_ID), 0.9), ((0, OPPONENT_MODEL_ID), 0.1)):
+        r = resp[key].get(timeout=10)
+        assert np.allclose(r.priors[r.priors > 0], expect), f"{key} got foreign values"
 
     server.stop(); t.join(timeout=2.0)
     assert a.calls > 0 and b.calls > 0, "both models must be exercised"
@@ -448,6 +458,64 @@ def test_default_off_registers_one_model_and_one_queue_per_worker():
     # opponent queues and the opponent model are both behind that guard
     idx = src.index("_evaluators = {DEFAULT_MODEL_ID: evaluator}")
     assert "OPPONENT_MODEL_ID] = opponent_evaluator" in src[idx:idx + 260]
+
+
+class RecordingStub(StubEvaluator):
+    """Returns a value distinguishable per model, and records what it was given."""
+
+    def __init__(self, tag):
+        super().__init__(tag)
+        self.seen_boards = []
+
+    def infer(self, boards, move_rows, move_cols, move_mask, active_size):
+        self.seen_boards.append(np.array(boards, copy=True))
+        b, m = move_mask.shape
+        return (np.full((b, m), self.tag, np.float32) * move_mask,
+                np.full((b,), self.tag, np.float32))
+
+
+def test_one_flush_with_two_models_routes_values_and_inputs_correctly():
+    """The preregistered routing+grouping gate, asserted on VALUES not counts.
+
+    Both requests share worker_id AND request_id, so only the (worker_id,
+    model_id) key can disambiguate them -- exactly the collision that made a
+    shared response queue a silent contamination bug. Both go through ONE
+    _flush, so grouping by model is exercised too.
+    """
+    B, M, SIZE = 3, 4, 8
+    learner, opponent = RecordingStub(0.25), RecordingStub(0.75)
+    qs = {(0, DEFAULT_MODEL_ID): __import__("queue").Queue(),
+          (0, OPPONENT_MODEL_ID): __import__("queue").Queue()}
+    server = InferenceServer(
+        evaluators={DEFAULT_MODEL_ID: learner, OPPONENT_MODEL_ID: opponent},
+        request_queue=None, response_queues=qs, max_batch_rows=64, flush_ms=2)
+
+    def _req(model_id, fill):
+        return InferenceRequest(
+            worker_id=0, request_id=1,                 # SAME id on purpose
+            boards=np.full((B, SIZE, SIZE, 30), fill, np.float32),
+            move_rows=np.zeros((B, M), np.int32), move_cols=np.zeros((B, M), np.int32),
+            move_mask=np.ones((B, M), np.float32), active_size=SIZE, model_id=model_id)
+
+    server._flush([_req(DEFAULT_MODEL_ID, 1.0), _req(OPPONENT_MODEL_ID, 2.0)])
+
+    # 1. each response landed in its OWN model-addressed queue, with that
+    #    model's distinguishable values -- not the other's
+    lr = qs[(0, DEFAULT_MODEL_ID)].get_nowait()
+    orr = qs[(0, OPPONENT_MODEL_ID)].get_nowait()
+    assert np.allclose(lr.values, 0.25), f"learner queue got {lr.values[:1]}"
+    assert np.allclose(orr.values, 0.75), f"opponent queue got {orr.values[:1]}"
+    assert qs[(0, DEFAULT_MODEL_ID)].empty() and qs[(0, OPPONENT_MODEL_ID)].empty()
+
+    # 2. each evaluator saw ONLY its own input -- no cross-feeding
+    assert len(learner.seen_boards) == 1 and len(opponent.seen_boards) == 1
+    assert np.allclose(learner.seen_boards[0], 1.0)
+    assert np.allclose(opponent.seen_boards[0], 2.0)
+
+    # 3. never mixed in one forward pass: one batch each, exact rows
+    tel = server.model_telemetry()
+    for model in (DEFAULT_MODEL_ID, OPPONENT_MODEL_ID):
+        assert tel[model] == {"requests": 1, "rows": B, "batches": 1}, tel[model]
 
 
 def test_per_model_telemetry_is_exposed():

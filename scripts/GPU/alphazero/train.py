@@ -223,9 +223,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--frozen-opponent-checkpoint",
         type=str,
         default=None,
-        help="DISABLED pending do-not-repeat #50 -- train() refuses this flag at "
-             "startup, because serving a second network needs a second inference "
-             "server and two servers on one Metal device abort the process. "
+        help="DISABLED pending the authorized real-GPU smoke -- train() refuses "
+             "this flag at startup. The single-arbiter transport #50 requires now "
+             "exists (one server, both models, one request queue), but it is "
+             "unproven on the device and lifting the block is a separate card. "
              "When re-enabled: path to a frozen checkpoint the learner plays "
              "against during the training iterations instead of playing itself; "
              "only learner-to-move positions are trained on, learner colour "

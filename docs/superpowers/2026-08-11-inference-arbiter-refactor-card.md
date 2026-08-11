@@ -107,6 +107,26 @@ renamed and strengthened rather than left to pass vacuously.
 | `test_worker_to_two_server_round_trip_calls_both_evaluators` | both evaluators called | `test_worker_to_single_arbiter_round_trip` — plus one-owner and routing assertions it never made |
 | `test_round_trip_keeps_only_learner_positions` (vacuous) | learner-only replay filtering | strengthened to assert rows are learner-coloured **per game**, not merely red-or-black |
 
+**Second pass (routing/grouping gate).** The first rewrite asserted counts, not values: the
+thread test drained responses without checking them and the telemetry test only checked initial
+zeros. Added `test_one_flush_with_two_models_routes_values_and_inputs_correctly` — both requests
+carry the **same `worker_id` and the same `request_id`**, so only the `(worker_id, model_id)` key
+can disambiguate them, both pass through **one `_flush`**, and it asserts per-model values,
+per-evaluator inputs, drained queues and exact telemetry (`requests=1, rows=B, batches=1`). Its
+negative was constructed: aliasing both keys onto one queue leaves a foreign response and trips
+the assertion. `test_either_model_failure_fails_the_run_closed` is now **parameterized over both
+slots**, so "either model" rests on execution rather than source inspection.
+
+**Measured delta: 5 retired, 14 added, one parameterized into two ⇒ net +10.**
+2865 → **2875 passed / 4 skipped / 53 deselected / 0 failed**, which reconciles exactly.
+
+**Wording-only `train.py` change, recorded here as required.** The startup refusal and `--help`
+previously gave an obsolete reason — that frozen mode needs a second inference server, which this
+refactor deletes. **The refusal stays.** Its reason now reads: the single Metal-owning arbiter
+#50 requires **exists** (one server, both models, one request queue), but it is **unproven on the
+device**, and lifting the block is a **separate countersigned card** after the authorized
+real-GPU smoke. No behavioural change.
+
 Behaviours with **no** prior test, added here: unknown `model_id` fails without fallback; a
 missing response route fails without fallback; both evaluators are instrumented as running on
 **one** thread; and default-off equivalence in queue and thread count for the one-model case.
