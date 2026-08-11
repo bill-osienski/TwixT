@@ -25,10 +25,29 @@ networks cannot share a batch.
 | file | change |
 |---|---|
 | `ipc_messages.py` | `InferenceRequest` gains `model_id` |
-| `inference_server.py` | `evaluator` → `evaluators: Dict[str, evaluator]`; pending requests grouped by `model_id`; one flush per model |
-| `remote_evaluator.py` | `RemoteEvaluator` carries a `model_id` and stamps every request |
-| `trainer.py` | one server, one request queue; learner and opponent `RemoteEvaluator`s differ only by `model_id` |
-| `self_play_worker.py` | second evaluator built from the **same** queue pair, different `model_id` |
+| `inference_server.py` | `evaluator` → `evaluators: Dict[str, evaluator]`; pending grouped by `model_id`; one flush per model; responses routed by `(worker_id, model_id)` |
+| `remote_evaluator.py` | `RemoteEvaluator` carries a `model_id`, stamps every request, and keeps its **own** response queue |
+| `trainer.py` | one server, **one** request queue, response queues keyed `(worker_id, model_id)` in a single routing map |
+| `self_play_worker.py` | second evaluator on the **same request queue**, its **own** response queue, different `model_id` |
+
+### Response identity — frozen, because the obvious design is broken
+
+An earlier draft said both evaluators "share one queue pair." **That is a silent
+cross-model-contamination bug**, not merely an ambiguity. Verified in the current code:
+`InferenceRequest` carries `worker_id` + `request_id` but **no model id**;
+`InferenceResponse` carries **only `request_id`**; the server routes by
+`self.response_queues[req.worker_id]` (`inference_server.py:218`); and each `RemoteEvaluator`
+starts `itertools.count(1)` with its **own** `_mailbox` (`remote_evaluator.py:35-36`). Two
+evaluators on one response queue would both mint `request_id` 1, 2, 3…, and either could
+dequeue the other's response, match it as its own, and **return the wrong model's priors and
+values** — undetectably.
+
+**Frozen design: one request queue, one server, one device owner — and DISTINCT response
+queues addressed by `(worker_id, model_id)` in a single routing map.** Each evaluator owns its
+queue, so its counter and mailbox are unambiguous by construction and `InferenceResponse` needs
+no new field. Extra response queues **do not** violate the one-owner rule: they carry no device
+work. The rejected alternative — a model id on responses plus a genuinely shared counter and
+mailbox — is more moving parts for the same guarantee.
 
 **Deleted, not kept alongside:** the second server, the second request queue, the second
 response-queue set, and their symmetric start/stop/join/cleanup. Two owners must become
@@ -53,19 +72,64 @@ and re-scope rather than growing it.
 ## Tests required before any GPU work
 
 - Single-thread invariant: one owner, asserted structurally and by instrumentation.
-- Per-model routing: two models, interleaved requests, each response matches its own model's
-  expected output; never crossed.
+- Per-model routing: two models, interleaved requests, each response matches **its own** model;
+  never crossed.
 - Unknown model id raises rather than defaulting.
 - Batching groups by model and never mixes ids in one flush.
+- Response-queue addressing: `(worker_id, model_id)` is the key; no two evaluators share a queue.
 - Default-off equivalence for the one-model case.
-- The existing 2,865-test suite green, with the two-server tests **removed or rewritten** — they
-  describe a design that no longer exists.
 
-**Stub evaluators are insufficient on their own.** #50's standing lesson is that a stub-level
-integration test says nothing about a device-level contract, so this card also requires a
-**small real-GPU round trip**: two real networks through the arbiter via real workers, enough
-calls to be meaningful, verified the way the probe verified — per-call shapes, finiteness,
-digest stability, digests agreeing where the weights are identical.
+### Test replacement map — required, not an estimate
+
+The existing two-server tests describe a design that will no longer exist. **Do not delete
+coverage; map it.** Before countersignature the implementation must include a
+**behaviour-by-behaviour table**: each retired test, the behaviour it asserted, and the test
+that now asserts that behaviour — or an explicit note that the behaviour itself is gone with
+the second server.
+
+**Do not trust a count made in advance.** An earlier draft said "five tests"; a crude scan then
+flagged over twenty, but that scan over-reports because its window bleeds into neighbouring
+functions. The affected set — including shared helpers `_tiny_run`, `_balanced_call`, `_drain`
+and the `StubEvaluator`/`ExplodingEvaluator` companions — must be established during
+implementation and **the final suite-count delta reported** against the 2,865 baseline.
+
+### Real-GPU smoke — frozen dose
+
+Stubs cannot discharge this (#50). The smoke drives the **real arbiter** with **real workers**.
+
+| item | value |
+|---|---|
+| model A | `checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors`, sha1 `209cf2d4fd24a48553d259dd71b4954867b9473e` |
+| model B | `checkpoints/alphazero-v2-staged/model_iter_0379.safetensors`, sha1 `8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1` |
+| **why two DIFFERENT checkpoints** | identical weights would make a crossed response **invisible** — both models would return the same digest. Distinct weights are what make routing falsifiable. |
+| workers | 2 |
+| requests | 100 per model per worker ⇒ **400 total** |
+| batch | `B=14`, `M=64`, `C=30`, `active_size=24` |
+| inputs | deterministic, seed `20260811`, **the same batch to both models**, so each model's digest is a fixed reference |
+| timeout | `900 s` via `SIGALRM` ⇒ exit `142` |
+| artifacts | `logs/eval/arbiter_smoke.json`, `logs/eval/arbiter_smoke.exit` — **refuse if either exists** (exit `3`) |
+| both SHA-1s | verified **before** any evaluator is built or Metal touched ⇒ exit `4` on mismatch |
+
+**Digest agreement is NOT the criterion here.** The probe could compare digests because both its
+instances loaded one checkpoint; ordinary self-play sends *different* board states to the two
+models, so identical weights alone cannot produce agreeing digests. This smoke instead sends an
+**identical controlled batch to two different models** and requires **each model's every
+response to match that model's own reference digest**, computed in-process before the round
+trip. Crossing then fails loudly.
+
+**Pass requires all of:** exact per-model request counts; every response shape `priors (14, 64)`
+and `values (14,)`; every response finite; every response matching its own model's reference
+digest; `model_A_digest != model_B_digest` (proving the two models are genuinely distinct, so
+the check is not vacuous); and both SHA-1s verified pre-GPU.
+
+**Per-model telemetry is mandatory** — requests served, rows processed and batches flushed, per
+model — so neither model can pass vacuously or starve unnoticed. A model with zero batches is a
+**fail**, not a pass.
+
+**Exit semantics:** `0` pass · `1` verification fail · `3` artifact exists · `4` SHA mismatch ·
+`142` timeout · `-6`/`134` SIGABRT · anything else invalid. **Any non-zero result is a stop, not
+a retry.** Exact command blocks are written into this card once the smoke script exists and is
+committed unrun, exactly as the probe was.
 
 ## What this card does NOT authorize
 
@@ -79,9 +143,11 @@ digest stability, digests agreeing where the weights are identical.
 
 **The refactor lands and its real-GPU round trip passes.** The probe removed the main doubt —
 one thread can hold two resident networks — and what remains is ordinary plumbing. Moderate
-confidence: per-model batching halves effective batch size when both models are hot, so the
-throughput cost is real and unmeasured, and the probe's "no observed slowdown" was one sample at
-a dose with no queueing at all.
+confidence: per-model batching **may roughly halve** effective batch size **under balanced
+simultaneous demand**, so a throughput cost is plausible and unmeasured, and the probe's "no
+observed slowdown" was one sample at a dose with no queueing at all. Real demand is unlikely to
+be perfectly balanced, which is why the smoke reports per-model telemetry rather than assuming
+a ratio.
 
 ---
 
