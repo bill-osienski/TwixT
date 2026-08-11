@@ -179,6 +179,12 @@ and `values (14,)`; every response finite; every response matching its own model
 digest; `model_A_digest != model_B_digest` (proving the two models are genuinely distinct, so
 the check is not vacuous); and both SHA-1s verified pre-GPU.
 
+**Telemetry is measured as a ROUTED DELTA.** The reference calls go through the server — that
+is what "computed on the arbiter thread" requires — so they land in the counters. The smoke
+snapshots telemetry immediately after the two references and asserts the **delta** produced by
+the 400 routed requests, which is exactly the pinned figure below. Asserting the raw totals
+would have required 201 / 2,814 / 201 and silently contradicted this table.
+
 **Per-model telemetry is mandatory and its expected values are exact**, not merely "non-zero":
 
 | per model | expected |
@@ -192,8 +198,24 @@ more batches than requests, which would mean the row cap is not behaving as pinn
 
 **Exit semantics:** `0` pass · `1` verification fail · `3` artifact exists · `4` SHA mismatch ·
 `142` timeout · `-6`/`134` SIGABRT · anything else invalid. **Any non-zero result is a stop, not
-a retry.** Exact command blocks are written into this card once the smoke script exists and is
-committed unrun, exactly as the probe was.
+a retry.**
+
+## Command block — real-GPU smoke `[GPU, writes one report]`
+
+The script is `scripts/GPU/alphazero/smoke_inference_arbiter.py`, **307 lines**, committed
+**unrun** and verified only with `py_compile` and `--help` (neither touches the device: the
+network, evaluator and server imports all live inside `run()`).
+
+```bash
+bash -c '[ -e logs/eval/arbiter_smoke.exit ] && { echo "REFUSE: smoke .exit exists"; exit 3; }
+[ -e logs/eval/arbiter_smoke.json ] && { echo "REFUSE: smoke .json exists"; exit 3; }
+.venv/bin/python -m scripts.GPU.alphazero.smoke_inference_arbiter
+rc=$?
+printf "%s\n" "$rc" > logs/eval/arbiter_smoke.exit
+exit "$rc"'
+```
+
+One block, one run. A non-zero result is a stop.
 
 ## What this card does NOT authorize
 
