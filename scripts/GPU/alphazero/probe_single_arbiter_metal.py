@@ -87,17 +87,13 @@ def _build_evaluator():
     return LocalGPUEvaluator(net, compile=COMPILE)
 
 
-def _check(priors: np.ndarray, values: np.ndarray) -> dict:
-    return {
-        "priors_shape": list(priors.shape),
-        "values_shape": list(values.shape),
-        "priors_shape_ok": list(priors.shape) == [BATCH, MOVES],
-        "values_shape_ok": list(values.shape) == [BATCH],
-        "all_finite": bool(np.isfinite(priors).all() and np.isfinite(values).all()),
-    }
+def _shapes_ok(priors: np.ndarray, values: np.ndarray) -> bool:
+    return list(priors.shape) == [BATCH, MOVES] and list(values.shape) == [BATCH]
 
 
-def run(arm: str) -> dict:
+def run(arm: str, checkpoint_sha1: str) -> dict:
+    """Run one arm. `checkpoint_sha1` is verified by the caller BEFORE any
+    evaluator is built, so a wrong checkpoint cannot consume the probe dose."""
     rng = np.random.default_rng(INPUT_SEED)
     boards, rows, cols, mask = _make_inputs(rng)
 
@@ -111,17 +107,33 @@ def run(arm: str) -> dict:
         evaluators = [_build_evaluator(), _build_evaluator()]
         schedule = [i % 2 for i in range(2 * CALLS_PER_EVALUATOR)]
 
-    completed = [0] * len(evaluators)
-    last = [None] * len(evaluators)
-    checks = [None] * len(evaluators)
+    n = len(evaluators)
+    completed = [0] * n
+    first_digest = [None] * n
+    digest_stable = [True] * n
+    shapes_ok = [True] * n
+    finite_ok = [True] * n
+    first_shapes = [None] * n
 
     t0 = time.perf_counter()
     for idx in schedule:
         priors, values = evaluators[idx].infer(boards, rows, cols, mask, ACTIVE_SIZE)
         completed[idx] += 1
-        last[idx] = _digest(priors, values)
-        if checks[idx] is None:
-            checks[idx] = _check(priors, values)
+
+        # EVERY call is validated, not just the first: a later NaN, a later
+        # wrong shape, or output drift must all fail the arm.
+        if first_shapes[idx] is None:
+            first_shapes[idx] = [list(priors.shape), list(values.shape)]
+        if not _shapes_ok(priors, values):
+            shapes_ok[idx] = False
+        if not (np.isfinite(priors).all() and np.isfinite(values).all()):
+            finite_ok[idx] = False
+
+        d = _digest(priors, values)
+        if first_digest[idx] is None:
+            first_digest[idx] = d
+        elif d != first_digest[idx]:
+            digest_stable[idx] = False
     elapsed = time.perf_counter() - t0
 
     expected = [2 * CALLS_PER_EVALUATOR] if arm == "control" \
@@ -130,29 +142,30 @@ def run(arm: str) -> dict:
     report = {
         "arm": arm,
         "checkpoint": CHECKPOINT,
-        "checkpoint_sha1_actual": _sha1_file(CHECKPOINT),
+        "checkpoint_sha1_verified_before_gpu": checkpoint_sha1,
         "checkpoint_sha1_expected": CHECKPOINT_SHA1,
         "network": {"hidden": HIDDEN, "blocks": BLOCKS, "compile": COMPILE},
         "batch": {"B": BATCH, "M": MOVES, "C": CHANNELS, "active_size": ACTIVE_SIZE},
         "input_seed": INPUT_SEED,
-        "n_evaluators": len(evaluators),
+        "n_evaluators": n,
         "calls_expected": expected,
         "calls_completed": completed,
         "calls_match": completed == expected,
         "total_calls": sum(completed),
-        "digests": last,
-        "checks": checks,
+        "first_shapes": first_shapes,
+        "shapes_ok_every_call": shapes_ok,
+        "finite_ok_every_call": finite_ok,
+        "digests_first": first_digest,
+        "digest_stable_every_call": digest_stable,
         "elapsed_s": round(elapsed, 2),
         "mx_eval_forces_sync": True,   # local_evaluator.py:115,119
     }
-    report["sha1_match"] = report["checkpoint_sha1_actual"] == CHECKPOINT_SHA1
-    report["digests_agree"] = (len(set(last)) == 1) if len(evaluators) > 1 else None
-    report["all_shapes_ok"] = all(c["priors_shape_ok"] and c["values_shape_ok"] for c in checks)
-    report["all_finite"] = all(c["all_finite"] for c in checks)
+    report["digests_agree"] = (len(set(first_digest)) == 1) if n > 1 else None
     report["PASS"] = bool(
-        report["calls_match"] and report["sha1_match"]
-        and report["all_shapes_ok"] and report["all_finite"]
-        and all(d is not None for d in last)
+        report["calls_match"]
+        and checkpoint_sha1 == CHECKPOINT_SHA1
+        and all(shapes_ok) and all(finite_ok) and all(digest_stable)
+        and all(d is not None for d in first_digest)
         and (report["digests_agree"] in (True, None))
     )
     return report
@@ -165,12 +178,21 @@ def main(argv=None) -> int:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out = OUT_DIR / f"arbiter_probe_{args.arm}.json"
-    if out.exists():
-        print(f"REFUSE: {out} already exists")
-        return 3
+    exit_file = OUT_DIR / f"arbiter_probe_{args.arm}.exit"
+    for path in (out, exit_file):
+        if path.exists():
+            print(f"REFUSE: {path} already exists")
+            return 3
+
+    # Fail closed BEFORE building any evaluator or touching Metal: a wrong
+    # checkpoint must cost a hash, not the whole probe dose.
+    actual = _sha1_file(CHECKPOINT)
+    if actual != CHECKPOINT_SHA1:
+        print(f"REFUSE: checkpoint sha1 {actual} != expected {CHECKPOINT_SHA1}")
+        return 4
 
     signal.alarm(TIMEOUT_S)          # SIGALRM -> 142, distinguishable from abort
-    report = run(args.arm)
+    report = run(args.arm, actual)
     signal.alarm(0)
 
     out.write_text(json.dumps(report, indent=2))

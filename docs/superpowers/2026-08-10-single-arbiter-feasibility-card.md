@@ -68,7 +68,7 @@ correctness check: their digests must agree.
 | calls | `N=200` per evaluator ⇒ **400 `infer()` calls per arm** |
 | inputs | deterministic, `numpy` seed `20260810`, one batch reused for every call |
 | timeout | `900 s` via `SIGALRM` ⇒ exit `142` |
-| outputs | `logs/eval/arbiter_probe_control.json`, `logs/eval/arbiter_probe_treatment.json` (refuse if present) |
+| outputs | four paths, each refused if present (exit `3`): `logs/eval/arbiter_probe_control.json`, `arbiter_probe_control.exit`, `arbiter_probe_treatment.json`, `arbiter_probe_treatment.exit` |
 
 **`infer()` synchronously exercises Metal.** `LocalGPUEvaluator.infer()` calls `mx.eval`
 (`local_evaluator.py:115` and `:119`), so each call forces execution rather than queuing a lazy
@@ -80,11 +80,15 @@ Each arm writes a JSON report and passes **only** if all of:
 
 - `calls_completed` equals the expected count **per evaluator** (`[400]` control,
   `[200, 200]` treatment);
-- output shapes are exactly `priors (14, 64)` and `values (14,)`;
-- every output is **finite**;
-- a stable **digest** is present for each evaluator, and in treatment the two **agree** (same
-  checkpoint, same inputs);
-- the re-hashed checkpoint SHA-1 matches the pinned value.
+- **every call** returns shapes exactly `priors (14, 64)` and `values (14,)` — not merely the
+  first;
+- **every call** returns finite outputs;
+- each evaluator's **first digest is retained and every later call must reproduce it**, so
+  output drift fails the arm; in treatment the two evaluators' digests must also **agree**
+  (same checkpoint, same inputs);
+- the checkpoint SHA-1 was verified **before any evaluator was built or Metal touched** — a
+  wrong checkpoint costs a hash, not the probe dose — and is carried into the report as
+  `checkpoint_sha1_verified_before_gpu`. Exit `4` is that refusal.
 
 **Exit-code semantics.** `0` = completed; **SIGABRT = subprocess return code `-6`, or `134`
 when normalised by a shell** — the failure under test; `142` = timeout. **Any other nonzero
@@ -94,10 +98,10 @@ result is invalid: stop and diagnose, do not interpret it as a device finding.**
 
 | control | treatment | reading | consequence |
 |---|---|---|---|
-| PASS | PASS | One thread holds two resident networks safely | **The arbiter premise holds.** The refactor is justified and needs its **own** authorization; this card does not grant it. |
+| PASS | PASS | **The premise survived this frozen probe dose** — 400 calls, one batch shape, two instances of one checkpoint | The arbiter refactor is **worth writing**, not proven safe. It needs its **own** authorization; this card does not grant it, and a longer or more varied load could still fail. |
 | PASS | SIGABRT | Two resident networks abort a single owner | **The arbiter is dead.** Frozen-parent needs one-network-per-batch or abandonment. Record and stop. |
-| SIGABRT | either | The baseline itself aborts | **Stop.** The device fails on ordinary single-network load, so nothing here is about two networks. Re-diagnose from first principles. |
-| timeout / other nonzero / verification fail | any | Result invalid | **Stop.** Do not read a device finding out of an inconclusive run. |
+| SIGABRT | **NOT RUN** | The baseline itself aborts | **Stop.** The device fails on ordinary single-network load, so nothing here is about two networks. Re-diagnose from first principles. |
+| timeout / other nonzero / verification fail | **NOT RUN** | Result invalid | **Stop.** Do not read a device finding out of an inconclusive run. |
 
 **No outcome authorizes a training run**, and no outcome lifts the
 `--frozen-opponent-checkpoint` refusal.
@@ -113,8 +117,13 @@ whether the proposed replacement is viable at all.
 
 ## Cost and stop rule
 
-**Minutes of GPU time** — 400 `infer()` calls per arm, two arms. The script is already written
-and committed (see the preconditions); its size is the record of the ~100-line stop rule.
+**Minutes of GPU time** — 400 `infer()` calls per arm, two arms.
+
+**Stop-rule exception, recorded rather than glossed:** the card set a ~100-line ceiling and the
+script is **205 physical lines**. The threshold is **exceeded, reviewed and accepted, because
+the excess implements the preregistered verification** — per-call shape, finiteness and digest
+stability, and the pre-GPU hash refusal. Trimming to the ceiling would mean deleting the checks
+that stop a vacuous pass. No further growth without re-scoping.
 
 ## Explicitly NOT authorized by this card
 
@@ -131,13 +140,17 @@ and committed (see the preconditions); its size is the record of the ~100-line s
    **without being run**, so the countersignature approves reviewed code rather than an
    intention to write some.
 2. Clean worktree; the run executes from the countersigned commit.
-3. Both output paths absent — the script refuses if either exists (exit `3`).
+3. **All four output paths absent** — both `.json` and both `.exit` files. The script refuses
+   on its own `.json` **or** `.exit` (exit `3`), and each command block refuses before writing
+   its `.exit`, so neither arm can silently overwrite a prior result.
 4. Suite green before the run. The probe imports the training path but changes none of it.
 
 ## Command block 1 — control `[GPU, read-only apart from its report]`
 
 ```bash
-bash -c '.venv/bin/python -m scripts.GPU.alphazero.probe_single_arbiter_metal --arm control
+bash -c '[ -e logs/eval/arbiter_probe_control.exit ] && { echo "REFUSE: control .exit exists"; exit 3; }
+[ -e logs/eval/arbiter_probe_control.json ] && { echo "REFUSE: control .json exists"; exit 3; }
+.venv/bin/python -m scripts.GPU.alphazero.probe_single_arbiter_metal --arm control
 rc=$?
 printf "%s\n" "$rc" > logs/eval/arbiter_probe_control.exit
 exit "$rc"'
@@ -146,13 +159,16 @@ exit "$rc"'
 ## Command block 2 — treatment `[GPU, read-only apart from its report]`
 
 ```bash
-bash -c '.venv/bin/python -m scripts.GPU.alphazero.probe_single_arbiter_metal --arm treatment
+bash -c '[ -e logs/eval/arbiter_probe_treatment.exit ] && { echo "REFUSE: treatment .exit exists"; exit 3; }
+[ -e logs/eval/arbiter_probe_treatment.json ] && { echo "REFUSE: treatment .json exists"; exit 3; }
+.venv/bin/python -m scripts.GPU.alphazero.probe_single_arbiter_metal --arm treatment
 rc=$?
 printf "%s\n" "$rc" > logs/eval/arbiter_probe_treatment.exit
 exit "$rc"'
 ```
 
-Run **control first**. If control does not pass, treatment is not run.
+**Run control first. If control does not pass, treatment is NOT RUN** — and is recorded as
+`NOT RUN` in the result report rather than described as failed, skipped or pending.
 
 ---
 
@@ -168,8 +184,10 @@ authorization basis : ____________________   # the reviewed commit this signatur
 execution commit    : the commit containing this completed countersignature block
 approved scope      : run the ALREADY-COMMITTED, ALREADY-REVIEWED script
                       scripts/GPU/alphazero/probe_single_arbiter_metal.py
-                      once per arm via the two command blocks below, and report
-                      both reports and exit codes against the decision table.
+                      once per arm via the two command blocks below, control
+                      first, and report the resulting reports and exit codes
+                      against the decision table. If control does not pass,
+                      treatment is NOT RUN and is recorded as NOT RUN.
                       No edit to that script after signing. Nothing else.
 ```
 
