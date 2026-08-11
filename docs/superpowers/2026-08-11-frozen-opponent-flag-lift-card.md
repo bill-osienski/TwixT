@@ -43,7 +43,8 @@ the real path.** Not synthetic requests — actual games.
 | master RNG seed | **`20260812`**, pinned |
 | `TWIXT_MIRROR_PROB` | **`0.0`**, set in the environment **before** `self_play` is imported (it is read at import time) |
 | artifacts | `logs/eval/composition_smoke.json`, `.exit` — refuse if either exists |
-| both SHA-1s | verified before any evaluator is built |
+| checkpoint SHA-1 | verified before any evaluator is built ⇒ exit `4` on mismatch |
+| timeout | **1,800 s** via `SIGALRM` ⇒ exit `142` |
 
 **Mixed-model grouping must be measured, not inferred.** "A flush with more than one request"
 proves nothing: both requests could be the learner's. The smoke instruments the **pending flush
@@ -53,8 +54,19 @@ Only the second is evidence.
 
 **Pass requires all of:** exit `0`; **4 games generated**; **exactly 2 learner-as-red and 2
 learner-as-black**; **only learner-to-move positions**; **one observed inference thread**;
-**both models served** with non-zero per-model telemetry; **`mixed_model_flushes >= 1`**; no
-worker error; all workers exit `0`; server thread stopped.
+**both models served** with non-zero per-model telemetry; **`mixed_model_flushes >= 1`**;
+**all expected `WorkerDone` messages received and no `worker_error`**; and **the server thread
+stopped**.
+
+**The worker guarantee, stated to what is observable.** `run_parallel_selfplay` cannot return
+normally until every expected `WorkerDone` arrives, and a worker failure surfaces as
+`worker_error` → `RuntimeError`. It does **not** expose the child processes' OS exit codes, so
+the claim is "all `WorkerDone` received, no `worker_error`" — never "all workers exited `0`".
+
+**Server shutdown is measured, not assumed.** The instrumented server retains
+`threading.current_thread()` inside `run_forever()` and sets an exited flag in its `finally`.
+PASS requires the thread was recorded, the `finally` ran, and the thread is **not alive** after
+`run_parallel_selfplay` returns.
 
 **Learner-only and the colour split are checked on the streamed chunks**, non-vacuously: the
 smoke passes a recording buffer to `run_parallel_selfplay`, so it sees each chunk as the worker
@@ -62,6 +74,22 @@ sends it. **Every chunk must contain exactly one `to_move` colour**, and **exact
 game-start chunks** — those beginning at learner ply `0` or `1`, depending on who moved first —
 must exist, **two of each colour**. Plies increase within a game, so a later chunk cannot
 masquerade as a game start.
+
+## Command block — composition smoke `[GPU, writes one report]`
+
+The script writes the JSON itself; **the caller records the `.exit` file**, as with the probe.
+
+```bash
+bash -c '[ -e logs/eval/composition_smoke.exit ] && { echo "REFUSE: .exit exists"; exit 3; }
+[ -e logs/eval/composition_smoke.json ] && { echo "REFUSE: .json exists"; exit 3; }
+.venv/bin/python -m scripts.GPU.alphazero.smoke_selfplay_composition
+rc=$?
+printf "%s\n" "$rc" > logs/eval/composition_smoke.exit
+exit "$rc"'
+```
+
+One block, one run. Exit `0` PASS · `1` FAIL · **`2` NO_EXPOSURE** · `3` artifact exists ·
+`4` sha mismatch · `142` timeout · `-6`/`134` SIGABRT.
 
 ## Three outcomes, distinguished
 
