@@ -1,6 +1,6 @@
 # Single-Arbiter Metal Feasibility — Probe Card
 
-**Date:** 2026-08-10 · **Status:** DRAFT, not countersigned · **Scope: run an
+**Date:** 2026-08-10 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: run an
 already-written, already-reviewed probe script. No production change, no training, no
 evaluation, no seed interval.**
 
@@ -119,11 +119,19 @@ whether the proposed replacement is viable at all.
 
 **Minutes of GPU time** — 400 `infer()` calls per arm, two arms.
 
+**Both exceptions below were reviewed and ACCEPTED at countersignature
+(`bill-osienski`, 2026-08-11T01:27:36Z).**
+
 **Stop-rule exception, recorded rather than glossed:** the card set a ~100-line ceiling and the
 script is **205 physical lines**. The threshold is **exceeded, reviewed and accepted, because
 the excess implements the preregistered verification** — per-call shape, finiteness and digest
 stability, and the pre-GPU hash refusal. Trimming to the ceiling would mean deleting the checks
-that stop a vacuous pass. No further growth without re-scoping.
+that stop a vacuous pass. No further growth without re-scoping — **prohibited without review**.
+
+**Digest strictness, accepted:** the six-decimal digest-stability check may render the probe
+**inconclusive** if MLX varies numerically, but it **cannot manufacture a device finding** — the
+decision table classifies any verification failure as an **invalid result and a stop**, never as
+evidence that the arbiter is dead.
 
 ## Explicitly NOT authorized by this card
 
@@ -178,9 +186,9 @@ Execution is authorized only when this block is filled in, committed, and pushed
 **Unsigned, this card authorizes nothing.**
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-11T01:27:36Z
+authorization basis : 61be7962697f0306311d80a0b6420766df666a40   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : run the ALREADY-COMMITTED, ALREADY-REVIEWED script
                       scripts/GPU/alphazero/probe_single_arbiter_metal.py
