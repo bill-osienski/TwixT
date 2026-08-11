@@ -2922,6 +2922,31 @@ def train(
     from .self_play import play_game
     from .local_evaluator import LocalGPUEvaluator
 
+    # Frozen-opponent recipe validation runs HERE: before Metal is configured,
+    # before the checkpoint directory is created, and before either network is
+    # built. An unsupported recipe therefore costs a message and touches neither
+    # the device nor the filesystem.
+    if frozen_opponent_checkpoint:
+        if n_workers < 2:
+            raise ValueError(
+                "frozen-opponent training requires n_workers >= 2: the opponent "
+                "is served over the parallel self-play transport, which the "
+                f"sequential path does not use (got n_workers={n_workers})."
+            )
+        if resign_enabled or adjudicate_enabled:
+            raise ValueError(
+                "frozen-opponent training does not support resign or adjudication "
+                f"(resign_enabled={resign_enabled}, "
+                f"adjudicate_enabled={adjudicate_enabled}): both read learner-only "
+                "search state and are wrong on parent plies."
+            )
+        if games_per_iteration % 2 != 0:
+            raise ValueError(
+                "frozen-opponent training requires an even --games-per-iter so the "
+                "learner plays each colour equally (colour alternates by game id); "
+                f"got {games_per_iteration}."
+            )
+
     # Set Metal cache limit to prevent memory overflow
     if mx.metal.is_available():
         mx.set_cache_limit(metal_cache_limit)
@@ -2959,29 +2984,9 @@ def train(
     # servers on one Metal device abort the process (do-not-repeat #50).
     frozen_opponent_evaluator = None
     if frozen_opponent_checkpoint:
-        # Recipe validation runs FIRST -- before the frozen network is built and
-        # before anything touches the device -- so an unsupported recipe costs a
-        # message rather than a model load, and never reaches the warmup.
-        if n_workers < 2:
-            raise ValueError(
-                "frozen-opponent training requires n_workers >= 2: the opponent "
-                "is served over the parallel self-play transport, which the "
-                f"sequential path does not use (got n_workers={n_workers})."
-            )
-        if resign_enabled or adjudicate_enabled:
-            raise ValueError(
-                "frozen-opponent training does not support resign or adjudication "
-                f"(resign_enabled={resign_enabled}, "
-                f"adjudicate_enabled={adjudicate_enabled}): both read learner-only "
-                "search state and are wrong on parent plies."
-            )
-        if games_per_iteration % 2 != 0:
-            raise ValueError(
-                "frozen-opponent training requires an even --games-per-iter so the "
-                "learner plays each colour equally (colour alternates by game id); "
-                f"got {games_per_iteration}."
-            )
-
+        # Recipe validation already ran at the top of train(), before Metal
+        # configuration, the checkpoint directory and either network. Only
+        # construction remains here.
         frozen_network = create_network(hidden=hidden, n_blocks=n_blocks)
         frozen_network.load_weights(frozen_opponent_checkpoint)
         frozen_network.eval()

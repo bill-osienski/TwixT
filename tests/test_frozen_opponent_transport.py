@@ -356,12 +356,12 @@ class _ReachedFrozenSetup(Exception):
     """Sentinel: train() got past validation into frozen-network construction."""
 
 
-def _train_with(monkeypatch, **overrides):
+def _train_with(monkeypatch, checkpoint_dir, **overrides):
     """Drive train() far enough to see WHICH failure it produces.
 
-    create_network is called once for the learner, then again for the frozen
-    opponent. Raising a sentinel on the second call turns "did we reach frozen
-    setup?" into an observable outcome without building or loading anything.
+    create_network is counted on EVERY call, including the learner's, so an
+    invalid recipe must produce zero of them -- otherwise "before any device
+    setup" would be false while the test still passed.
     """
     import scripts.GPU.alphazero.trainer as tr
     calls = {"n": 0}
@@ -377,17 +377,17 @@ def _train_with(monkeypatch, **overrides):
     kwargs = dict(
         n_iterations=1, games_per_iteration=2, n_workers=2, hidden=8, n_blocks=1,
         frozen_opponent_checkpoint="checkpoints/does-not-need-to-exist.safetensors",
-        checkpoint_dir="/tmp/frozen_lift_probe",
+        checkpoint_dir=str(checkpoint_dir),
     )
     kwargs.update(overrides)
     return tr.train(**kwargs), calls
 
 
-def test_supported_recipe_reaches_frozen_setup(monkeypatch):
+def test_supported_recipe_reaches_frozen_setup(monkeypatch, tmp_path):
     """The lift: a valid frozen recipe is no longer refused and proceeds to the
     single-arbiter setup, rather than raising ValueError at startup."""
     with pytest.raises(_ReachedFrozenSetup):
-        _train_with(monkeypatch)
+        _train_with(monkeypatch, tmp_path / "ckpt")
 
 
 @pytest.mark.parametrize("bad,match", [
@@ -396,21 +396,44 @@ def test_supported_recipe_reaches_frozen_setup(monkeypatch):
     ({"adjudicate_enabled": True}, "does not support resign or adjudication"),
     ({"games_per_iteration": 3}, "even --games-per-iter"),
 ])
-def test_invalid_recipes_still_fail_before_any_device_setup(monkeypatch, bad, match):
-    """Each unsupported recipe raises ValueError, and -- the ordering claim --
-    the frozen network is never constructed, so nothing touches the device."""
+def test_invalid_recipes_fail_before_any_device_or_filesystem_setup(
+        monkeypatch, tmp_path, bad, match):
+    """Each unsupported recipe raises ValueError having built NO network at all
+    -- not even the learner's -- and having created no checkpoint directory."""
+    import scripts.GPU.alphazero.trainer as tr
+    calls = {"n": 0}
+
+    def counting(*a, **kw):
+        calls["n"] += 1
+        raise AssertionError("create_network called on an invalid recipe")
+
+    monkeypatch.setattr(tr, "create_network", counting)
+    ckpt = tmp_path / "ckpt"
+    kwargs = dict(
+        n_iterations=1, games_per_iteration=2, n_workers=2, hidden=8, n_blocks=1,
+        frozen_opponent_checkpoint="checkpoints/does-not-need-to-exist.safetensors",
+        checkpoint_dir=str(ckpt),
+    )
+    kwargs.update(bad)
+
     with pytest.raises(ValueError, match=match):
-        _train_with(monkeypatch, **bad)
+        tr.train(**kwargs)
+
+    assert calls["n"] == 0, "a network was constructed before validation"
+    assert not ckpt.exists(), "the checkpoint directory was created before validation"
 
 
 def test_validation_precedes_frozen_network_construction():
     """Source-level companion to the behavioural pair above."""
     src = inspect.getsource(trainer.train)
-    block = src[src.index("if frozen_opponent_checkpoint:"):]
-    build = block.index("frozen_network = create_network")
     for check in ("n_workers >= 2", "does not support resign or adjudication",
                   "even --games-per-iter"):
-        assert block.index(check) < build, f"{check} runs after construction"
+        assert src.index(check) < src.index("mx.metal.is_available"), \
+            f"{check} runs after Metal configuration"
+        assert src.index(check) < src.index("Path(checkpoint_dir).mkdir"), \
+            f"{check} runs after the checkpoint directory is created"
+        assert src.index(check) < src.index("network = create_network"), \
+            f"{check} runs after the learner network is built"
 
 
 def test_the_startup_refusal_is_gone():
