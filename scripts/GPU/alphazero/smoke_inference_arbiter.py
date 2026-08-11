@@ -13,9 +13,16 @@ routed requests (100 per model per worker, 2 workers). B=14, M=64, C=30,
 active_size=24, max_batch_rows=14, flush_ms=2, seed 20260811. Workers issue in
 OPPOSED order: worker 0 does A/B, worker 1 does B/A.
 
-Reference digests are computed BY THE ARBITER THREAD -- they are sent through the
-server like any other request. Computing them on the harness thread would put a
-second thread on the device while trying to prove there is only one.
+Reference digests are computed BY THE ARBITER THREAD, but by calling the two
+evaluator instances DIRECTLY, before that same thread enters run_forever(). They
+must not travel through the server: routing them would make the oracle circular,
+because a systematic model-selection swap would swap the references too and every
+later swapped response would match its swapped reference. Computing them on the
+harness thread instead would put a second thread on the device while trying to
+prove there is only one -- so it is the same thread, but not the same path.
+
+Both evaluators are wrapped in a thread-ID recorder, so "exactly one thread ever
+touched a model" is evidence rather than code inspection.
 
 Because B equals max_batch_rows, every request is its own device batch, so this
 smoke exercises DEVICE OWNERSHIP AND ROUTING. Mixed-model grouping inside one
@@ -40,7 +47,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .ipc_messages import InferenceRequest, StopSignal
+from .ipc_messages import StopSignal
 
 # ---------------------------------------------------------------- frozen dose
 MODEL_A = "model_a"
@@ -146,27 +153,47 @@ def smoke_worker_main(worker_id, request_queue, response_queues, result_queue,
     })
 
 
+class _ThreadRecordingEvaluator:
+    """Wraps a real evaluator and records which thread called into it.
+
+    Turns the one-owner claim into measured evidence: any second thread that
+    reaches a model shows up here.
+    """
+
+    def __init__(self, inner, seen: set):
+        self._inner = inner
+        self._seen = seen
+
+    def build_input_tensor(self, state):
+        return self._inner.build_input_tensor(state)
+
+    def infer(self, *args, **kwargs):
+        self._seen.add(threading.get_ident())
+        return self._inner.infer(*args, **kwargs)
+
+
 def run() -> dict:
+    import queue as _queue
+
     from .network import create_network
     from .local_evaluator import LocalGPUEvaluator
     from .inference_server import InferenceServer
 
     boards, rows, cols, mask = make_inputs()
+    seen_threads: set = set()
     evaluators = {}
     for model_id, (path, _sha) in CHECKPOINTS.items():
         net = create_network(hidden=HIDDEN, n_blocks=BLOCKS)
         net.load_weights(path)
         net.eval()
-        evaluators[model_id] = LocalGPUEvaluator(net, compile=False)
+        evaluators[model_id] = _ThreadRecordingEvaluator(
+            LocalGPUEvaluator(net, compile=False), seen_threads)
 
     ctx = mp.get_context("spawn")
     request_queue = ctx.Queue(maxsize=256)
-    # (worker_id, model_id) addressing, plus a reference channel per model.
-    REF_WORKER = -1
     response_queues = {
         (w, m): ctx.Queue(maxsize=64)
-        for w in list(range(N_WORKERS)) + [REF_WORKER]
-        for m in (MODEL_A, MODEL_B)
+        for w in range(N_WORKERS) for m in (MODEL_A, MODEL_B)
     }
 
     server = InferenceServer(
@@ -176,29 +203,30 @@ def run() -> dict:
         max_batch_rows=MAX_BATCH_ROWS,
         flush_ms=FLUSH_MS,
     )
-    server_thread = threading.Thread(target=server.run_forever, daemon=True)
-    server_thread.start()
+
+    # The arbiter thread computes the references by calling each evaluator
+    # DIRECTLY -- same thread, different path -- then hands them to the harness
+    # over a CPU-only queue and begins serving.
+    ref_channel: "_queue.Queue" = _queue.Queue()
+
+    def _arbiter() -> None:
+        refs = {}
+        for model_id in (MODEL_A, MODEL_B):
+            priors, values = evaluators[model_id].infer(
+                boards, rows, cols, mask, ACTIVE_SIZE)
+            refs[model_id] = digest(priors, values)
+        ref_channel.put(refs)          # CPU-only handoff, no device work
+        server.run_forever()
 
     t0 = time.perf_counter()
-
-    # --- 2 reference calls, computed BY THE ARBITER THREAD ---
-    references = {}
-    for model_id in (MODEL_A, MODEL_B):
-        request_queue.put(InferenceRequest(
-            worker_id=REF_WORKER, request_id=1, boards=boards, move_rows=rows,
-            move_cols=cols, move_mask=mask, active_size=ACTIVE_SIZE,
-            model_id=model_id))
-        resp = response_queues[(REF_WORKER, model_id)].get(timeout=120)
-        references[model_id] = digest(resp.priors, resp.values)
-
-    # Telemetry baseline AFTER the references, so the routed delta is exactly
-    # the pinned 200 / 2,800 / 200 rather than 201 / 2,814 / 201.
-    tel_before = server.model_telemetry()
+    server_thread = threading.Thread(target=_arbiter, daemon=True)
+    server_thread.start()
+    references = ref_channel.get(timeout=300)
 
     # --- 400 routed requests from two workers, opposed schedules ---
     result_queue = ctx.Queue()
     orders = {0: (MODEL_A, MODEL_B), 1: (MODEL_B, MODEL_A)}
-    procs = []
+    procs = {}
     for wid in range(N_WORKERS):
         p = ctx.Process(target=smoke_worker_main, kwargs={
             "worker_id": wid,
@@ -209,22 +237,36 @@ def run() -> dict:
             "model_order": orders[wid],
         })
         p.start()
-        procs.append(p)
+        procs[wid] = p
 
     worker_reports = [result_queue.get(timeout=TIMEOUT_S) for _ in procs]
-    for p in procs:
-        p.join(timeout=30)
 
-    tel_after = server.model_telemetry()
-    elapsed = time.perf_counter() - t0
+    # Worker lifecycle is a pass condition: a worker may publish a valid-looking
+    # report and then hang or exit non-zero.
+    worker_exit = {}
+    for wid, p in procs.items():
+        p.join(timeout=60)
+        if p.is_alive():
+            p.terminate()
+            p.join(timeout=10)
+            worker_exit[wid] = "ALIVE_AFTER_JOIN"
+        else:
+            worker_exit[wid] = p.exitcode
+    workers_clean = all(v == 0 for v in worker_exit.values())
 
+    # Stop and JOIN the server before reading telemetry: responses are queued
+    # before the counters increment, so reading earlier races the final flush.
     try:
         request_queue.put(StopSignal(), timeout=0.5)
     except Exception:
         pass
     server.stop()
-    server_thread.join(timeout=5.0)
+    server_thread.join(timeout=30.0)
     server_alive = server_thread.is_alive()
+
+    telemetry = server.model_telemetry()
+    elapsed = time.perf_counter() - t0
+
     for q in [request_queue, result_queue, *response_queues.values()]:
         try:
             q.cancel_join_thread()
@@ -232,13 +274,11 @@ def run() -> dict:
         except Exception:
             pass
 
-    routed = {
-        m: {k: tel_after[m][k] - tel_before[m][k] for k in ("requests", "rows", "batches")}
-        for m in (MODEL_A, MODEL_B)
-    }
     per_model_completed = {
         m: sum(r["completed"][m] for r in worker_reports) for m in (MODEL_A, MODEL_B)
     }
+    expected_tel = {"requests": EXPECTED_REQUESTS, "rows": EXPECTED_ROWS,
+                    "batches": EXPECTED_BATCHES}
 
     report = {
         "checkpoints": {m: {"path": p, "sha1": s} for m, (p, s) in CHECKPOINTS.items()},
@@ -249,15 +289,17 @@ def run() -> dict:
         "input_seed": INPUT_SEED,
         "schedules": {str(w): list(o) for w, o in orders.items()},
         "references": references,
-        "references_computed_on_arbiter_thread": True,
+        "reference_oracle": "direct evaluator calls on the arbiter thread, not routed",
         "references_differ": references[MODEL_A] != references[MODEL_B],
         "per_model_completed": per_model_completed,
         "per_model_expected": {MODEL_A: EXPECTED_REQUESTS, MODEL_B: EXPECTED_REQUESTS},
-        "routed_telemetry": routed,
-        "expected_telemetry": {"requests": EXPECTED_REQUESTS, "rows": EXPECTED_ROWS,
-                               "batches": EXPECTED_BATCHES},
+        "telemetry": telemetry,
+        "expected_telemetry": expected_tel,
         "worker_reports": worker_reports,
+        "worker_exit_codes": worker_exit,
+        "workers_clean": workers_clean,
         "server_thread_stopped": not server_alive,
+        "inference_threads_observed": len(seen_threads),
         "elapsed_s": round(elapsed, 2),
     }
 
@@ -265,13 +307,14 @@ def run() -> dict:
     report["worker_errors"] = errors
     report["PASS"] = bool(
         not errors
+        and workers_clean
         and all(per_model_completed[m] == EXPECTED_REQUESTS for m in (MODEL_A, MODEL_B))
         and all(r["digest_ok"][m] for r in worker_reports for m in (MODEL_A, MODEL_B))
         and all(r["shape_ok"][m] for r in worker_reports for m in (MODEL_A, MODEL_B))
         and all(r["finite_ok"][m] for r in worker_reports for m in (MODEL_A, MODEL_B))
-        and report["references_differ"]                # models genuinely distinct
-        and all(routed[m] == {"requests": EXPECTED_REQUESTS, "rows": EXPECTED_ROWS,
-                              "batches": EXPECTED_BATCHES} for m in (MODEL_A, MODEL_B))
+        and report["references_differ"]
+        and all(telemetry[m] == expected_tel for m in (MODEL_A, MODEL_B))
+        and len(seen_threads) == 1          # exactly one device owner, measured
         and not server_alive
     )
     return report

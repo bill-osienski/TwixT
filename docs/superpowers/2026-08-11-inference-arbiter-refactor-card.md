@@ -179,11 +179,26 @@ and `values (14,)`; every response finite; every response matching its own model
 digest; `model_A_digest != model_B_digest` (proving the two models are genuinely distinct, so
 the check is not vacuous); and both SHA-1s verified pre-GPU.
 
-**Telemetry is measured as a ROUTED DELTA.** The reference calls go through the server — that
-is what "computed on the arbiter thread" requires — so they land in the counters. The smoke
-snapshots telemetry immediately after the two references and asserts the **delta** produced by
-the 400 routed requests, which is exactly the pinned figure below. Asserting the raw totals
-would have required 201 / 2,814 / 201 and silently contradicted this table.
+**Telemetry is asserted as RAW TOTALS**, read only after the server is stopped and joined.
+An earlier draft routed the references through the server and compared a delta; that is
+superseded. The references are now **direct evaluator calls**, so they never enter the counters,
+and the raw totals are exactly the pinned figures. Reading telemetry before the join would race
+the final flush — responses are queued before the counters increment.
+
+**The reference oracle must be INDEPENDENT of routing.** Routing the references through the
+server makes the oracle circular: a systematic model-selection swap would swap the references
+too, every later swapped response would match its swapped reference, and the smoke would pass
+while routing was inverted. So the arbiter thread computes both references by calling the two
+evaluator instances **directly**, before that same thread enters `run_forever()`, and hands the
+digests to the harness over a **CPU-only** queue. Same thread — one device owner — different
+path.
+
+**One-owner is measured, not inspected.** Both evaluators are wrapped in a thread-ID recorder;
+`inference_threads_observed` must be exactly **1**.
+
+**Worker lifecycle is a pass condition.** A worker can publish a valid-looking report and then
+hang or exit non-zero. Every worker's exit code is recorded, all must be `0`, and any worker
+still alive after its join is terminated and fails the run.
 
 **Per-model telemetry is mandatory and its expected values are exact**, not merely "non-zero":
 
@@ -248,9 +263,15 @@ authorizer          : ____________________
 timestamp (UTC)     : ____________________
 authorization basis : ____________________   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
-approved scope      : implement the arbiter across the five files named above,
-                      pass the required tests, and run the small real-GPU round
-                      trip once. Nothing else.
+approved scope      : the reviewed implementation as committed --
+                        ipc_messages.py, inference_server.py,
+                        remote_evaluator.py, trainer.py, self_play_worker.py
+                        (the arbiter), the wording-only train.py change to the
+                        startup refusal and --help text, the rewritten
+                        transport/seam tests, and
+                        scripts/GPU/alphazero/smoke_inference_arbiter.py --
+                      plus ONE run of the single smoke command block above.
+                      Nothing else.
 ```
 
 **Conditions:**
