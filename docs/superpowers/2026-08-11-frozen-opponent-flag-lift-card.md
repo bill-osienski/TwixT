@@ -1,6 +1,60 @@
 # Frozen-Opponent Flag Lift — Composition Card
 
-**Date:** 2026-08-11 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: ONE execution of the
+**Date:** 2026-08-11 · **Status: COMPLETE / COMPOSITION PASS / AUTHORIZATION EXHAUSTED.**
+**Spent; authorizes nothing further.**
+
+> ## Closeout (2026-08-11)
+>
+> Executed once from countersigned execution commit **`50324a45`**, clean worktree.
+> **`logs/eval/composition_smoke.exit` = `0`, `OUTCOME = PASS`.**
+>
+> | condition | result |
+> |---|---|
+> | games generated | **4 / 4** |
+> | every chunk single colour | **true** — no opponent-to-move row reached the buffer |
+> | game-start chunks | **4**, colours `[black, black, red, red]` — exact 2/2 split |
+> | positions buffered | 115, learner-only |
+> | **inference threads observed** | **1** |
+> | server thread recorded · `finally` ran · not alive | **true · true · true** |
+> | learner telemetry | 360 requests · 2,231 rows · 349 batches |
+> | opponent telemetry | 320 requests · 1,668 rows · 312 batches |
+> | **`mixed_model_flushes`** | **38** (of 62 multi-request flushes) |
+> | `mirror_prob_effective` | 0.0, as pinned |
+> | workers | normal return ⇒ all expected `WorkerDone` received; no `worker_error` |
+> | elapsed | 28.85 s |
+>
+> **The load-bearing result is `mixed_model_flushes = 38`.** Mixed-model grouping has now
+> executed on the device — 38 pending flushes each held requests for **both** models. That is the
+> one condition neither the arbiter smoke nor any stub test could reach: there `B` equalled the
+> row cap, so every request was its own batch.
+>
+> The telemetry is also **ragged** — 360 vs 320 requests, 2,231 vs 1,668 rows, batches *below*
+> request counts — which is exactly the variable-size, partially coalesced traffic real MCTS
+> produces and the arbiter smoke structurally could not.
+>
+> **`NO_EXPOSURE` was the predicted most-likely non-pass and did not occur.** Four games at 32
+> simulations generated far more traffic than forecast; the exposure came easily.
+>
+> **Routing integrity is INHERITED, not re-measured.** Both evaluator instances load the same
+> checkpoint, so identical weights make a crossed response invisible here. Routing correctness
+> rests on the two-checkpoint arbiter smoke (`9c5847a0`) with its distinct references and
+> independent oracle.
+>
+> **Artifacts** (gitignored under `logs/*`, so hashed here):
+>
+> ```
+> composition_smoke.json  3e8579d75235acf680995b8fa6e54c5bd8d98170
+> composition_smoke.exit  09d2af8dd22201dd8d48e5dcfcaed281ff9422c7
+> ```
+>
+> **No results-table row and no seed-ledger entry** — an engineering smoke, not a scientific
+> result. No strength claim, no checkpoint, no evaluated games, no interval.
+>
+> **The `--frozen-opponent-checkpoint` refusal was still present in `train()` after the run** —
+> verified. This PASS authorizes only **drafting** the removal diff for separate review. No
+> training, warmup, evaluation or seed reservation is authorized.
+
+**Scope as authorized (historical): ONE execution of the
 committed real-GPU composition smoke, and reporting it. NOTHING ELSE — NO FLAG LIFT, NO
 TRAINING.**
 
