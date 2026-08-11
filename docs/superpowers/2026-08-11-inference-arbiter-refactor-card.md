@@ -1,6 +1,6 @@
 # Single Inference Arbiter — Refactor Card
 
-**Date:** 2026-08-11 · **Status:** DRAFT, not countersigned · **Scope: one refactor of the
+**Date:** 2026-08-11 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: one refactor of the
 inference transport. No training, no evaluation, no seed interval, and no lifting of the
 `--frozen-opponent-checkpoint` block.**
 
@@ -278,9 +278,9 @@ Execution is authorized only when this block is filled in, committed, and pushed
 **no real-GPU round trip may run before it.**
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-11T15:57:32Z
+authorization basis : f5113973585f8658d76a044e782dbcc9a1d1d5c5   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : the reviewed implementation as committed --
                         ipc_messages.py, inference_server.py,
