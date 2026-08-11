@@ -17,6 +17,7 @@ from typing import Any, List, Optional
 
 from .ipc_messages import WorkerStats, WorkerDone, GameComplete
 from .remote_evaluator import RemoteEvaluator
+from .ipc_messages import OPPONENT_MODEL_ID
 from .self_play import (
     play_game, PositionRecord,
     DRAW_TIMEOUT, DRAW_BOARD_FULL, DRAW_STATE_CAP, DRAW_UNKNOWN, RESIGN,
@@ -78,6 +79,7 @@ def self_play_worker_main(
     # evaluator is built and play_game is called exactly as before.
     opponent_request_queue: Optional[Any] = None,
     opponent_response_queue: Optional[Any] = None,
+    opponent_model_id: str = OPPONENT_MODEL_ID,
 ) -> None:
     """Worker process entry point.
 
@@ -112,7 +114,7 @@ def self_play_worker_main(
             max_positions_per_game, endgame_keep_positions,
             conversion_policy_loss_enabled, conversion_max_total_goal_distance,
             recovery_retargeting_config,
-            opponent_request_queue, opponent_response_queue,
+            opponent_request_queue, opponent_response_queue, opponent_model_id,
         )
     except KeyboardInterrupt:
         # Parent handles Ctrl+C; leaving quietly is correct here.
@@ -173,18 +175,23 @@ def _worker_loop(
     # Frozen-opponent transport (see main()).
     opponent_request_queue: Optional[Any] = None,
     opponent_response_queue: Optional[Any] = None,
+    opponent_model_id: str = OPPONENT_MODEL_ID,
 ) -> None:
     """Inner worker loop (extracted for clean exception handling)."""
     import time
 
     evaluator = RemoteEvaluator(worker_id, request_queue, response_queue)
-    # The frozen opponent talks to its OWN inference server over its own queues.
-    # There is deliberately no fallback to `evaluator`: if the opponent server is
-    # gone the run must fail, never quietly play the parent with learner weights.
+    # The frozen opponent shares the SINGLE arbiter and its ONE request queue --
+    # a second server would abort the process (do-not-repeat #50). Separation is
+    # by model_id, with its own model-addressed response queue so replies cannot
+    # cross. There is deliberately no fallback to `evaluator`: if the arbiter
+    # cannot serve the opponent the run must fail, never quietly play the parent
+    # with learner weights.
     opponent_evaluator = None
     if opponent_request_queue is not None:
         opponent_evaluator = RemoteEvaluator(
-            worker_id, opponent_request_queue, opponent_response_queue
+            worker_id, opponent_request_queue, opponent_response_queue,
+            model_id=opponent_model_id,
         )
 
     t0 = time.time()

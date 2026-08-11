@@ -15,21 +15,26 @@ import queue
 from typing import Tuple, Dict, Any
 import numpy as np
 
-from .ipc_messages import InferenceRequest, InferenceResponse
+from .ipc_messages import InferenceRequest, InferenceResponse, DEFAULT_MODEL_ID
 
 
 class RemoteEvaluator:
     """Evaluator that sends inference requests to main process."""
 
-    def __init__(self, worker_id: int, request_queue: Any, response_queue: Any):
+    def __init__(self, worker_id: int, request_queue: Any, response_queue: Any,
+                 model_id: str = DEFAULT_MODEL_ID):
         """Initialize remote evaluator.
 
         Args:
             worker_id: Unique ID for this worker
             request_queue: Shared queue for sending requests to server
-            response_queue: Per-worker queue for receiving responses
+            response_queue: Queue for THIS (worker, model) pair only. Two
+                evaluators must never share one: both mint request_id 1, 2, 3...
+                and either could match the other's response as its own.
+            model_id: Which network on the arbiter must serve these requests.
         """
         self.worker_id = worker_id
+        self.model_id = model_id
         self.request_queue = request_queue
         self.response_queue = response_queue
         self._req_counter = itertools.count(1)
@@ -79,6 +84,7 @@ class RemoteEvaluator:
             move_cols=move_cols,
             move_mask=move_mask,
             active_size=int(active_size),
+            model_id=self.model_id,
         )
 
         # Send request (backpressure here if request_queue full)

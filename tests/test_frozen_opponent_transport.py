@@ -23,7 +23,8 @@ import pytest
 from scripts.GPU.alphazero import trainer
 from scripts.GPU.alphazero.inference_server import InferenceServer
 from scripts.GPU.alphazero.self_play_worker import _worker_loop
-from scripts.GPU.alphazero.ipc_messages import StopSignal
+from scripts.GPU.alphazero.ipc_messages import (
+    StopSignal, InferenceRequest, DEFAULT_MODEL_ID, OPPONENT_MODEL_ID)
 
 
 class StubEvaluator:
@@ -86,10 +87,21 @@ def test_worker_never_falls_back_to_the_learner_evaluator():
     assert "opponent_evaluator or evaluator" not in src
 
 
-def test_second_server_is_conditional_in_run_parallel_selfplay():
+def test_exactly_one_server_serves_both_models():
+    """Replaces test_second_server_is_conditional_*: there is never a second."""
     src = inspect.getsource(trainer.run_parallel_selfplay)
-    assert "if opponent_evaluator is not None:" in src
-    assert "opp_server = None" in src
+    assert src.count("InferenceServer(") == 1
+    for gone in ("opp_server", "opp_request_queue = ctx.Queue", "opp_response_queues ="):
+        assert gone not in src, f"two-server remnant: {gone}"
+    assert "evaluators=_evaluators" in src
+
+
+def test_response_queues_are_addressed_by_worker_and_model():
+    src = inspect.getsource(trainer.run_parallel_selfplay)
+    assert "(wid, DEFAULT_MODEL_ID): ctx.Queue" in src
+    assert "(wid, OPPONENT_MODEL_ID): ctx.Queue" in src
+    # one request queue, shared by both models
+    assert src.count("request_queue = ctx.Queue") == 1
 
 
 def _balanced_call(src, name):
@@ -143,48 +155,52 @@ def _drain(q):
             return out
 
 
-def test_two_servers_run_and_stop_independently_on_real_queues():
-    """Both servers are started, serve their own queue, and stop cleanly."""
+def test_single_server_lifecycle_with_two_models():
+    """Replaces test_two_servers_run_and_stop_*: ONE server, two evaluators."""
     ctx = mp.get_context("spawn")
-    servers, threads, queues = [], [], []
-    for tag in (0.9, 0.1):
-        rq = ctx.Queue(maxsize=16)
-        resp = {0: ctx.Queue(maxsize=16)}
-        s = InferenceServer(evaluator=StubEvaluator(tag), request_queue=rq,
-                            response_queues=resp, max_batch_rows=4, flush_ms=2)
-        t = threading.Thread(target=s.run_forever, daemon=True)
-        t.start()
-        servers.append(s); threads.append(t); queues.append((rq, resp))
+    rq = ctx.Queue(maxsize=16)
+    resp = {(0, DEFAULT_MODEL_ID): ctx.Queue(maxsize=16),
+            (0, OPPONENT_MODEL_ID): ctx.Queue(maxsize=16)}
+    server = InferenceServer(
+        evaluators={DEFAULT_MODEL_ID: StubEvaluator(0.9),
+                    OPPONENT_MODEL_ID: StubEvaluator(0.1)},
+        request_queue=rq, response_queues=resp, max_batch_rows=14, flush_ms=2)
+    t = threading.Thread(target=server.run_forever, daemon=True)
+    t.start()
+    assert t.is_alive()
 
-    assert all(t.is_alive() for t in threads)
-
-    for s, t, (rq, resp) in zip(servers, threads, queues):
-        try:
-            rq.put(StopSignal(), timeout=0.5)
-        except Exception:
-            pass
-        s.stop()
-        t.join(timeout=2.0)
-        assert not t.is_alive(), "server thread failed to stop"
-        for q in [rq, *resp.values()]:
-            q.cancel_join_thread()
-            q.close()
+    try:
+        rq.put(StopSignal(), timeout=0.5)
+    except Exception:
+        pass
+    server.stop()
+    t.join(timeout=2.0)
+    assert not t.is_alive(), "server thread failed to stop"
+    for q in [rq, *resp.values()]:
+        q.cancel_join_thread(); q.close()
 
 
-def test_shutdown_path_is_symmetric_for_both_servers():
+def test_shutdown_cleans_every_model_addressed_queue():
+    """Replaces test_shutdown_path_is_symmetric_*: one lifecycle, whole map."""
     src = inspect.getsource(trainer.run_parallel_selfplay)
     tail = src[src.index("server.stop()"):]
-    assert "opp_server.stop()" in tail
-    assert "opp_server_thread.join" in tail
-    assert "opp_request_queue.put(StopSignal()" in tail
-    assert "opp_response_queues.values()" in tail       # queue cleanup
+    assert "server_thread.join" in tail
+    assert "response_queues.values()" in tail          # every (worker, model) queue
+    assert "opp_server.stop()" not in tail             # no second lifecycle
 
 
-def test_both_servers_report_crashes_to_the_same_fail_closed_handler():
+def test_server_requires_at_least_one_evaluator():
+    with pytest.raises(ValueError, match="at least one evaluator"):
+        InferenceServer(evaluators={}, request_queue=None, response_queues={})
+
+
+def test_either_model_failure_reaches_the_fail_closed_handler():
+    """Replaces test_both_servers_report_crashes_*: one server, one handler,
+    and a failure in EITHER model surfaces through it."""
     src = inspect.getsource(trainer.run_parallel_selfplay)
-    # one shared stats_queue is what makes the single handler cover both
-    assert src.count("stats_queue=stats_queue") == 2
+    assert src.count("stats_queue=stats_queue") == 1   # one server now
     assert 'raise RuntimeError(f"InferenceServer crashed' in src
+    assert 'msg.get("type") == "worker_error"' in src
 
 
 def test_a_server_error_message_raises_rather_than_degrading():
@@ -224,8 +240,8 @@ def _tiny_run(learner_stub, opponent_stub, games=2, workers=2):
     ), buffer
 
 
-def test_worker_to_two_server_round_trip_calls_both_evaluators():
-    """The gate item a green suite cannot cover: real worker -> two servers."""
+def test_worker_to_single_arbiter_round_trip():
+    """Real workers -> ONE arbiter -> two models -> buffer."""
     learner, opponent = StubEvaluator(0.9), StubEvaluator(0.1)
     (_games, _new_positions, stats), buffer = _tiny_run(learner, opponent)
 
@@ -235,13 +251,26 @@ def test_worker_to_two_server_round_trip_calls_both_evaluators():
     assert len(buffer) > 0, "no learner positions reached the buffer"
 
 
-def test_round_trip_keeps_only_learner_positions():
+def test_single_game_round_trip_yields_exactly_one_colour():
+    """Strengthened replacement for the vacuous {red, black}-subset assertion.
+
+    One game has one learner colour, so EVERY buffered row must share it. This
+    fails if a single opponent-to-move position leaks into training.
+    """
     learner, opponent = StubEvaluator(0.9), StubEvaluator(0.1)
-    (_g, _p, _s), buffer = _tiny_run(learner, opponent, games=2, workers=2)
-    # games 0 and 1 -> learner is red then black, so both colours appear across
-    # the run, but never both within one game's rows
-    assert {p.to_move for p in buffer.buffer} <= {"red", "black"}
-    assert len(buffer) > 0
+    (_g, _p, _s), buffer = _tiny_run(learner, opponent, games=1, workers=2)
+    colours = {r.to_move for r in buffer.buffer}
+    assert buffer.buffer, "expected learner rows"
+    assert len(colours) == 1, f"one game produced two colours of row: {colours}"
+
+
+def test_colour_alternates_across_games_in_the_buffer():
+    """Companion: over games 0 and 1 both colours appear, so the single-colour
+    assertion above is a per-game property and not an artefact of never
+    switching."""
+    (_g, _p, _s), buffer = _tiny_run(StubEvaluator(0.9), StubEvaluator(0.1),
+                                     games=2, workers=2)
+    assert {r.to_move for r in buffer.buffer} == {"red", "black"}
 
 
 class ExplodingEvaluator(StubEvaluator):
@@ -337,3 +366,96 @@ def test_no_override_flag_exists_for_the_refusal():
                  "--ignore-dnr-50", "--unsafe-metal"):
         assert hole not in cli
     assert "allow_two_servers" not in inspect.getsource(trainer.train)
+
+
+# ------------------------------------------------- one owner, and no fallback
+def test_both_models_are_served_on_exactly_one_thread():
+    """Invariant 1, instrumented: two evaluators, ONE thread ever calls them.
+
+    This is the whole point of the arbiter -- two owners abort the device (#50).
+    """
+    import threading as _th
+    seen_threads = set()
+
+    class ThreadRecordingStub(StubEvaluator):
+        def infer(self, *a, **kw):
+            seen_threads.add(_th.get_ident())
+            return super().infer(*a, **kw)
+
+    ctx = mp.get_context("spawn")
+    rq = ctx.Queue(maxsize=64)
+    resp = {(0, DEFAULT_MODEL_ID): ctx.Queue(maxsize=64),
+            (0, OPPONENT_MODEL_ID): ctx.Queue(maxsize=64)}
+    a, b = ThreadRecordingStub(0.9), ThreadRecordingStub(0.1)
+    server = InferenceServer(evaluators={DEFAULT_MODEL_ID: a, OPPONENT_MODEL_ID: b},
+                             request_queue=rq, response_queues=resp,
+                             max_batch_rows=14, flush_ms=2)
+    t = threading.Thread(target=server.run_forever, daemon=True); t.start()
+
+    def _req(model_id, rid):
+        return InferenceRequest(
+            worker_id=0, request_id=rid,
+            boards=np.zeros((2, 8, 8, 30), np.float32),
+            move_rows=np.zeros((2, 4), np.int32), move_cols=np.zeros((2, 4), np.int32),
+            move_mask=np.ones((2, 4), np.float32), active_size=8, model_id=model_id)
+
+    for i in range(6):
+        rq.put(_req(DEFAULT_MODEL_ID if i % 2 == 0 else OPPONENT_MODEL_ID, i + 1))
+    for key in resp:
+        resp[key].get(timeout=10)
+
+    server.stop(); t.join(timeout=2.0)
+    assert a.calls > 0 and b.calls > 0, "both models must be exercised"
+    assert len(seen_threads) == 1, f"more than one thread touched a model: {seen_threads}"
+    for q in [rq, *resp.values()]:
+        q.cancel_join_thread(); q.close()
+
+
+def test_unknown_model_id_raises_and_never_falls_back():
+    from scripts.GPU.alphazero.inference_server import InferenceServer as S
+    only = StubEvaluator(0.9)
+    server = S(evaluators={DEFAULT_MODEL_ID: only}, request_queue=None,
+               response_queues={}, max_batch_rows=14, flush_ms=2)
+    req = InferenceRequest(
+        worker_id=0, request_id=1,
+        boards=np.zeros((1, 8, 8, 30), np.float32),
+        move_rows=np.zeros((1, 4), np.int32), move_cols=np.zeros((1, 4), np.int32),
+        move_mask=np.ones((1, 4), np.float32), active_size=8, model_id="nope")
+    with pytest.raises(KeyError, match="unknown model_id"):
+        server._flush([req])
+    assert only.calls == 0, "fell back to the only registered evaluator"
+
+
+def test_missing_response_route_raises_rather_than_misrouting():
+    """A reply with nowhere to go must fail, not land in the wrong queue."""
+    server = InferenceServer(
+        evaluators={DEFAULT_MODEL_ID: StubEvaluator(0.9)},
+        request_queue=None, response_queues={}, max_batch_rows=14, flush_ms=2)
+    req = InferenceRequest(
+        worker_id=7, request_id=1,
+        boards=np.zeros((1, 8, 8, 30), np.float32),
+        move_rows=np.zeros((1, 4), np.int32), move_cols=np.zeros((1, 4), np.int32),
+        move_mask=np.ones((1, 4), np.float32), active_size=8,
+        model_id=DEFAULT_MODEL_ID)
+    with pytest.raises(KeyError):
+        server._flush([req])
+
+
+def test_default_off_registers_one_model_and_one_queue_per_worker():
+    """One-model equivalence: no extra queues, no extra models."""
+    src = inspect.getsource(trainer.run_parallel_selfplay)
+    assert "if opponent_evaluator is not None:" in src
+    # opponent queues and the opponent model are both behind that guard
+    idx = src.index("_evaluators = {DEFAULT_MODEL_ID: evaluator}")
+    assert "OPPONENT_MODEL_ID] = opponent_evaluator" in src[idx:idx + 260]
+
+
+def test_per_model_telemetry_is_exposed():
+    server = InferenceServer(
+        evaluators={DEFAULT_MODEL_ID: StubEvaluator(0.9),
+                    OPPONENT_MODEL_ID: StubEvaluator(0.1)},
+        request_queue=None, response_queues={}, max_batch_rows=14, flush_ms=2)
+    tel = server.model_telemetry()
+    assert set(tel) == {DEFAULT_MODEL_ID, OPPONENT_MODEL_ID}
+    assert all(set(v) == {"requests", "rows", "batches"} for v in tel.values())
+    assert all(v["batches"] == 0 for v in tel.values())

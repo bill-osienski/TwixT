@@ -92,6 +92,25 @@ coverage; map it.** Before countersignature the implementation must include a
 that now asserts that behaviour — or an explicit note that the behaviour itself is gone with
 the second server.
 
+### The map (measured, not estimated)
+
+Established by running the suite against the implemented refactor: **4 tests fail**, all
+two-server-shaped. Several others pass but assert a design that no longer exists, so they are
+renamed and strengthened rather than left to pass vacuously.
+
+| retired / stale test | behaviour it asserted | now asserted by |
+|---|---|---|
+| `test_second_server_is_conditional_in_run_parallel_selfplay` | second server exists only in frozen mode | `test_exactly_one_server_serves_both_models` — there is never a second |
+| `test_two_servers_run_and_stop_independently_on_real_queues` | both servers start, stop, join | `test_single_server_lifecycle_with_two_models` |
+| `test_shutdown_path_is_symmetric_for_both_servers` | symmetric lifecycle + queue cleanup | `test_shutdown_cleans_every_model_addressed_queue` |
+| `test_both_servers_report_crashes_to_the_same_fail_closed_handler` | either server's crash reaches one handler | `test_either_model_failure_reaches_the_fail_closed_handler` |
+| `test_worker_to_two_server_round_trip_calls_both_evaluators` | both evaluators called | `test_worker_to_single_arbiter_round_trip` — plus one-owner and routing assertions it never made |
+| `test_round_trip_keeps_only_learner_positions` (vacuous) | learner-only replay filtering | strengthened to assert rows are learner-coloured **per game**, not merely red-or-black |
+
+Behaviours with **no** prior test, added here: unknown `model_id` fails without fallback; a
+missing response route fails without fallback; both evaluators are instrumented as running on
+**one** thread; and default-off equivalence in queue and thread count for the one-model case.
+
 **Do not trust a count made in advance.** An earlier draft said "five tests"; a crude scan then
 flagged over twenty, but that scan over-reports because its window bleeds into neighbouring
 functions. The affected set — including shared helpers `_tiny_run`, `_balanced_call`, `_drain`

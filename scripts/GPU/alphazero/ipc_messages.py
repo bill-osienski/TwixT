@@ -11,6 +11,13 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 import numpy as np
 
+# Model identity for the single-arbiter transport. One server owns the device and
+# serves N networks; requests name their model and responses are routed back on a
+# queue addressed by (worker_id, model_id). Defaulting keeps every existing
+# one-model caller behaviourally unchanged.
+DEFAULT_MODEL_ID = "learner"
+OPPONENT_MODEL_ID = "opponent"
+
 
 @dataclass(frozen=True)
 class InferenceRequest:
@@ -22,6 +29,14 @@ class InferenceRequest:
     move_cols: np.ndarray   # (B, M) int32
     move_mask: np.ndarray   # (B, M) float32
     active_size: int
+    model_id: str = DEFAULT_MODEL_ID   # which network must serve this request
+
+    @property
+    def route(self) -> Tuple[int, str]:
+        """Response-queue address. Unique per (worker, model), so each evaluator
+        owns its own queue and its request_id counter cannot collide with the
+        other model's."""
+        return (self.worker_id, self.model_id)
 
 
 @dataclass(frozen=True)

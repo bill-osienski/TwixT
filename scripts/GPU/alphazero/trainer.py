@@ -2058,9 +2058,19 @@ def run_parallel_selfplay(
 
     # Create queues
     request_queue = ctx.Queue(maxsize=request_q_max)
-    response_queues: Dict[int, Any] = {
-        wid: ctx.Queue(maxsize=response_q_max) for wid in range(n_workers)
+    # Keyed by (worker_id, model_id): one map, one request queue, one server.
+    # The old separate opp_response_queues COLLECTION is gone; opponent-addressed
+    # queues live here alongside the learner's.
+    from .ipc_messages import DEFAULT_MODEL_ID, OPPONENT_MODEL_ID
+    response_queues: Dict[Any, Any] = {
+        (wid, DEFAULT_MODEL_ID): ctx.Queue(maxsize=response_q_max)
+        for wid in range(n_workers)
     }
+    if opponent_evaluator is not None:
+        response_queues.update({
+            (wid, OPPONENT_MODEL_ID): ctx.Queue(maxsize=response_q_max)
+            for wid in range(n_workers)
+        })
     position_queue = ctx.Queue(maxsize=position_q_max)
     stats_queue = ctx.Queue(maxsize=stats_q_max)
 
@@ -2069,8 +2079,11 @@ def run_parallel_selfplay(
     next_game_id = ctx.Value("i", 0)  # int
 
     # Start inference server in thread (same process as GPU)
+    _evaluators = {DEFAULT_MODEL_ID: evaluator}
+    if opponent_evaluator is not None:
+        _evaluators[OPPONENT_MODEL_ID] = opponent_evaluator
     server = InferenceServer(
-        evaluator=evaluator,
+        evaluators=_evaluators,
         request_queue=request_queue,
         response_queues=response_queues,
         max_batch_rows=mcts_config.eval_batch_size,
@@ -2079,31 +2092,6 @@ def run_parallel_selfplay(
     )
     server_thread = threading.Thread(target=server.run_forever, daemon=True)
     server_thread.start()
-
-    # Frozen opponent: a SECOND server on its own queues, serving the frozen
-    # network. It shares `stats_queue`, so a crash in either server reaches the
-    # same fail-closed handler below. Created only in frozen-opponent mode.
-    opp_request_queue = None
-    opp_response_queues: Dict[int, Any] = {}
-    opp_server = None
-    opp_server_thread = None
-    if opponent_evaluator is not None:
-        opp_request_queue = ctx.Queue(maxsize=request_q_max)
-        opp_response_queues = {
-            wid: ctx.Queue(maxsize=response_q_max) for wid in range(n_workers)
-        }
-        opp_server = InferenceServer(
-            evaluator=opponent_evaluator,
-            request_queue=opp_request_queue,
-            response_queues=opp_response_queues,
-            max_batch_rows=mcts_config.eval_batch_size,
-            flush_ms=2,
-            stats_queue=stats_queue,
-        )
-        opp_server_thread = threading.Thread(
-            target=opp_server.run_forever, daemon=True
-        )
-        opp_server_thread.start()
 
     # Don't spawn more workers than games (avoids idle processes in small runs)
     n_spawn = min(n_workers, games_to_play)
@@ -2118,7 +2106,7 @@ def run_parallel_selfplay(
             kwargs={
                 "worker_id": wid,
                 "request_queue": request_queue,
-                "response_queue": response_queues[wid],
+                "response_queue": response_queues[(wid, DEFAULT_MODEL_ID)],
                 "position_queue": position_queue,
                 "stats_queue": stats_queue,
                 "mcts_config": mcts_config,
@@ -2153,11 +2141,16 @@ def run_parallel_selfplay(
                 "conversion_max_total_goal_distance": conversion_max_total_goal_distance,
                 # Spec 4 — recovery / re-targeting diagnostic (§5.6).
                 "recovery_retargeting_config": recovery_retargeting_config,
-                # Frozen-opponent transport (None in ordinary self-play).
-                "opponent_request_queue": opp_request_queue,
-                "opponent_response_queue": (
-                    opp_response_queues[wid] if opp_request_queue is not None else None
+                # Frozen opponent rides the SAME request queue -- one server,
+                # one device owner -- with its own model-addressed response queue.
+                "opponent_request_queue": (
+                    request_queue if opponent_evaluator is not None else None
                 ),
+                "opponent_response_queue": (
+                    response_queues[(wid, OPPONENT_MODEL_ID)]
+                    if opponent_evaluator is not None else None
+                ),
+                "opponent_model_id": OPPONENT_MODEL_ID,
             },
         )
         p.start()
@@ -2485,13 +2478,6 @@ def run_parallel_selfplay(
             pass
         server.stop()
         server_thread.join(timeout=1.0)
-        if opp_server is not None:
-            try:
-                opp_request_queue.put(StopSignal(), timeout=0.5)
-            except queue.Full:
-                pass
-            opp_server.stop()
-            opp_server_thread.join(timeout=1.0)
 
         # Clean up queues to prevent blocking on exit
         # cancel_join_thread() prevents Queue from blocking in atexit
@@ -2502,14 +2488,6 @@ def run_parallel_selfplay(
             except Exception:
                 pass
         for q in response_queues.values():
-            try:
-                q.cancel_join_thread()
-                q.close()
-            except Exception:
-                pass
-        for q in ([opp_request_queue] if opp_request_queue is not None else []) + list(
-            opp_response_queues.values()
-        ):
             try:
                 q.cancel_join_thread()
                 q.close()
