@@ -1,6 +1,61 @@
 # Single Inference Arbiter — Refactor Card
 
-**Date:** 2026-08-11 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: one refactor of the
+**Date:** 2026-08-11 · **Status: COMPLETE — REAL-GPU SMOKE PASS — AUTHORIZATION EXHAUSTED.**
+**This authorization is spent and authorizes nothing further.**
+
+> ## Closeout (2026-08-11)
+>
+> Executed once from countersigned execution commit **`7fb7f70b`**, clean worktree matching
+> upstream. **`logs/eval/arbiter_smoke.exit` = `0`.**
+>
+> **Dose as pinned:** 402 synchronous GPU calls = **2 reference + 400 routed**; 2 workers ×
+> 100 requests per model; `B=14`, `M=64`, `C=30`, `active_size=24`; `max_batch_rows=14`,
+> `flush_ms=2`; seed `20260811`; opposed schedules (worker 0 A/B, worker 1 B/A). Models:
+> `calib020_0001` (`209cf2d4…`) and staged `0379` (`8ad62ac4…`), both SHA-verified before any
+> evaluator was built.
+>
+> | check | result |
+> |---|---|
+> | reference oracle | **direct evaluator calls on the arbiter thread, not routed** |
+> | references | `model_a 09f91991fefb14d6`, `model_b 7ad4d28d5180a46d` — **differ**, so the digest check is not vacuous |
+> | every response matched **its own** model's reference | **yes**, both models, both workers |
+> | per-model completed | **200 / 200** |
+> | telemetry, raw totals | **200 requests · 2,800 rows · 200 batches** per model — exactly as pinned |
+> | **inference threads observed** | **1** |
+> | worker exit codes | `{0: 0, 1: 0}`, `workers_clean: true` |
+> | server thread stopped | **yes** |
+> | shapes / finiteness | clean on every response |
+> | elapsed | **4.24 s** |
+>
+> **The two load-bearing results.** `inference_threads_observed == 1`: one thread served 402
+> GPU calls across two resident networks — the claim #50 demanded and precisely what the deleted
+> two-server transport could not do. And distinct references with universal digest matches under
+> an **independent** oracle: no response was ever crossed between models. Telemetry landing
+> exactly on 200/2,800/200 also confirms the pinning behaved — `B` equal to the row cap gave one
+> device batch per request, with no coalescing and no splitting.
+>
+> **Artifacts** (gitignored under `logs/*`, so hashed here):
+>
+> ```
+> arbiter_smoke.json  7afe02d9a660e6972ab53ccf5931f5bd3251ce1c
+> arbiter_smoke.exit  09d2af8dd22201dd8d48e5dcfcaed281ff9422c7
+> ```
+>
+> **What this does NOT establish.** Mixed-model grouping inside one flush — `B` equalled the row
+> cap, so it never occurred here and remains discharged only by the deterministic non-GPU tests.
+> Longer or unbalanced load. And, most importantly, **the composition with MCTS and real game
+> generation**: `run_parallel_selfplay` driving the dual-root `play_game` has been exercised
+> only with stub evaluators. This smoke validated the arbiter, its queues, both models and device
+> ownership — not the full self-play path.
+>
+> **No results-table row and no seed-ledger entry** — an engineering gate produced no strength
+> claim, no checkpoint, no evaluated games and no interval.
+>
+> **`--frozen-opponent-checkpoint` remains blocked at startup, and no training is authorized.**
+> Lifting the refusal is a separate card, which must first require a tiny real-GPU
+> `run_parallel_selfplay` smoke over the actual self-play path.
+
+**Scope as authorized (historical): one refactor of the
 inference transport. No training, no evaluation, no seed interval, and no lifting of the
 `--frozen-opponent-checkpoint` block.**
 
