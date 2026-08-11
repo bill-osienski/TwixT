@@ -1,6 +1,62 @@
 # Single-Arbiter Metal Feasibility — Probe Card
 
-**Date:** 2026-08-10 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: run an
+**Date:** 2026-08-10 · **Status: COMPLETE — PASS/PASS — PREMISE SURVIVED FROZEN PROBE DOSE.**
+**This authorization is EXHAUSTED and authorizes nothing further.**
+
+> ## Closeout (2026-08-11)
+>
+> Both arms executed once from countersigned execution commit **`4808f324`**, control first,
+> with a clean worktree matching upstream.
+>
+> | | control | treatment |
+> |---|---|---|
+> | exit code | **0** | **0** |
+> | evaluators | 1 | **2 independent instances** |
+> | calls completed / expected | **400 / 400** | **200/200 and 200/200** |
+> | shapes, every call | `priors (14, 64)`, `values (14,)` | same, both evaluators |
+> | finite, every call | yes | yes, both |
+> | digest stable across all calls | yes | yes, both |
+> | first digest | `12c4e65bf4adf338` | `12c4e65bf4adf338` and `12c4e65bf4adf338` |
+> | digests agree between evaluators | n/a | **yes** |
+> | SHA-1 verified before any GPU work | yes | yes |
+> | elapsed | **3.87 s** | **3.86 s** |
+>
+> **Reading, per the preregistered table: PASS/PASS ⇒ the premise survived this frozen probe
+> dose.** One thread held two resident networks through 400 interleaved synchronous Metal calls
+> without aborting. The arbiter refactor is **worth writing — not proven safe.**
+>
+> **Two claims stated precisely.** The digests show reproducibility **to the six-decimal digest
+> quantization**, not bit-for-bit reproducibility — anything varying below `1e-6` is invisible to
+> this check by construction. And the timings show **no observed slowdown at this dose**: one
+> sample per arm cannot establish throughput equivalence.
+>
+> All three evaluators across both arms produced the same digest, which is the free correctness
+> check landing — same checkpoint, same inputs, same answer, unaffected by a second resident
+> network.
+>
+> **What this does NOT establish:** that the original 2026-08-10 race is fixed; that the arbiter
+> is safe under longer or more varied load; or anything about request routing and per-model
+> batching, which the real arbiter adds and this probe never exercised. Dose was 400 calls, one
+> batch shape, two instances of **one** checkpoint.
+>
+> **Artifacts** (gitignored under `logs/*`, so hashed here):
+>
+> ```
+> control.json    16df2eb645978095a2a4430092c8f5645314bf46
+> treatment.json  dbd7f8c2f1b602ac2674b54d88e8c8c45d9009b6
+> control.exit    09d2af8dd22201dd8d48e5dcfcaed281ff9422c7
+> treatment.exit  09d2af8dd22201dd8d48e5dcfcaed281ff9422c7
+> ```
+>
+> The two `.exit` hashes are identical because both files contain `0` — not a transcription slip.
+>
+> **No results-table row and no seed-ledger entry.** This was an engineering feasibility gate; it
+> produced no strength claim, no checkpoint, no evaluated games, and drew no seed interval.
+>
+> **`--frozen-opponent-checkpoint` remains blocked at startup, and no training is authorized.**
+> The next step is the arbiter refactor under its own card.
+
+**Scope as authorized (historical): run an
 already-written, already-reviewed probe script. No production change, no training, no
 evaluation, no seed interval.**
 
