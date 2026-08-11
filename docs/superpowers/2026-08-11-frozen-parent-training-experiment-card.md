@@ -72,14 +72,22 @@ after an infrastructure abort would silently convert a repeat into a new experim
 | training logs | `logs/eval/fp6_train.{stdout,exit}` |
 | provenance | `logs/eval/fp6_candidate_provenance.txt` |
 | evaluation | `logs/eval/fp6_vs_calib020.{json,stdout,exit}` + `_games.jsonl` |
-| training seed | **`20260813`** — verified zero occurrences repo-wide |
+| training seed | **`20260813`** — zero pre-existing occurrences (see below) |
 | evaluation interval | **`[202609788, 202610188)`** — interval 6, **RELEASED UNUSED**, to be **explicitly re-reserved** at countersignature |
 
 **Why not `20260812`.** It was the composition smoke's `MASTER_SEED`, passed as `master_rng`
 to `run_parallel_selfplay` — the same role a training seed plays — and that smoke generated four
 **real** frozen-opponent games. Reusing it could overlap worker and per-game RNG streams. It is
-spent. `20260813` was checked with an exact-token search across `scripts/`, `docs/` and `tests/`
-and has **zero** occurrences.
+spent.
+
+**`20260813` had ZERO pre-existing exact-token occurrences** across `scripts/`, `docs/` and
+`tests/` **before this card was written**. Its **only current occurrences are inside this
+unsigned card** — four of them, all in this file, none anywhere else in the repository. Stated
+this way because the earlier phrasing ("zero occurrences repo-wide") was falsified the moment
+the card containing the seed was committed; the evidence that matters is that nothing
+*executable* and no prior authorization ever used it. Re-verifiable later with
+`grep -rEow 20260813 scripts/ docs/ tests/`, which should show occurrences confined to this
+card and its successors in the record.
 
 Interval 6 drew **zero** seeds: the aborted run died before the evaluation started, and
 `eval_checkpoint_match` is its only consumer. Re-reserving it is legitimate, and the ledger row
