@@ -1,6 +1,6 @@
 # Frozen-Opponent Flag Lift — Composition Card
 
-**Date:** 2026-08-11 · **Status:** DRAFT, not countersigned · **Scope: ONE execution of the
+**Date:** 2026-08-11 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: ONE execution of the
 committed real-GPU composition smoke, and reporting it. NOTHING ELSE — NO FLAG LIFT, NO
 TRAINING.**
 
@@ -150,9 +150,9 @@ Execution is authorized only when this block is filled in, committed, and pushed
 committed **unrun** before signature, as the previous two were.
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-11T18:50:23Z
+authorization basis : 4f02290561db9967d45bfc2bcebf35b7bda88278   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : ONE execution of the committed composition smoke script,
                       and reporting it against the three-outcome table.
