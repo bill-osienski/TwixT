@@ -1,6 +1,25 @@
 # Frozen-Opponent Implementation — Acceptance Card
 
-**Date:** 2026-08-11 · **Status:** DRAFT, not countersigned · **Scope: DOCUMENTATION ONLY.**
+**Date:** 2026-08-11 · **Status: COMPLETE / ACCEPTED / AUTHORIZATION EXHAUSTED.**
+**Scope was DOCUMENTATION ONLY; it is spent and authorizes nothing further.**
+
+> ## Closeout (2026-08-11)
+>
+> **The frozen-opponent implementation at `95987ffa` is ACCEPTED as the enabled baseline.**
+> Countersigned `bill-osienski` 2026-08-11T20:13:51Z on authorization basis
+> `d89f3fde3b8b6279cf0d1a7c743f2fe971057f25`. Nothing was executed — this card had no command
+> to run.
+>
+> Accepted: the single Metal-owning arbiter (`9c5847a0`), the dual-root seam, the composition
+> over real MCTS (`d312caa2`), and the lift with fail-fast validation (`95987ffa`), at suite
+> **2,881 passed / 4 skipped / 53 deselected / 0 failed**.
+>
+> **`--frozen-opponent-checkpoint` is enabled at HEAD. Its USE remains unauthorized** — a
+> frozen-parent training run needs its own countersigned card. Acceptance of an implementation
+> is not permission to run an experiment with it.
+>
+> **`#50` remains in force, unchanged.** No results-table row and no seed-ledger entry.
+
 Accepts the implementation at `95987ffa` as the **enabled baseline**. **No command execution,
 no training, no evaluation, no seed reservation.**
 
@@ -79,9 +98,9 @@ scientific result: no strength claim, no checkpoint, no evaluated games, no inte
 acceptance — there is no command to run.
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-11T20:13:51Z
+authorization basis : d89f3fde3b8b6279cf0d1a7c743f2fe971057f25   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : record acceptance of the frozen-opponent implementation at
                       95987ffa as the enabled baseline. DOCUMENTATION ONLY --
