@@ -68,11 +68,30 @@ addressing.
 4. **Fail closed:** an unknown `model_id` raises; it never falls back to a default evaluator.
    The existing `server_error` / `worker_error` paths keep working for both models.
 
-## Stop rule
+## Stop rule — settled against the measured diff
 
-Roughly **two working days and ~250 production lines**, counted across the five files. If
-`inference_server.py`'s batching loop cannot absorb per-model grouping without a rewrite, stop
-and re-scope rather than growing it.
+The ceiling was roughly **two working days and ~250 production lines**, with a re-scope trigger
+if `inference_server.py`'s batching loop could not absorb per-model grouping without a rewrite.
+
+**Final measured production diff: `+133 / −86` across SIX production files** (`eda4306..HEAD`):
+
+| file | +/− |
+|---|---|
+| `inference_server.py` | +59 / −19 |
+| `trainer.py` | +34 / −56 |
+| `ipc_messages.py` | +15 / −0 |
+| `self_play_worker.py` | +12 / −5 |
+| `remote_evaluator.py` | +9 / −3 |
+| `train.py` | +4 / −3 — **wording only**, the startup-refusal and `--help` text |
+
+Six files, not the five originally named: the wording-only `train.py` change is counted rather
+than quietly excluded. **Well inside the ~250 ceiling**, and the re-scope trigger never fired —
+`_flush` already grouped by `active_size`, so `(model_id, active_size)` extended it.
+
+**The 350-line `smoke_inference_arbiter.py` is excluded from that ceiling.** It is standalone
+verification infrastructure: it ships no training behaviour, nothing in the engine imports it,
+and it runs only when invoked. Counting it against a production budget would penalise the
+verification the gate demands.
 
 ## Tests required before any GPU work
 
@@ -217,7 +236,7 @@ a retry.**
 
 ## Command block — real-GPU smoke `[GPU, writes one report]`
 
-The script is `scripts/GPU/alphazero/smoke_inference_arbiter.py`, **307 lines**, committed
+The script is `scripts/GPU/alphazero/smoke_inference_arbiter.py`, **350 lines**, committed
 **unrun** and verified only with `py_compile` and `--help` (neither touches the device: the
 network, evaluator and server imports all live inside `run()`).
 
