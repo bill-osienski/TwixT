@@ -1,6 +1,6 @@
 # Frozen-Parent Training — Experiment Card
 
-**Date:** 2026-08-11 · **Status:** DRAFT, not countersigned · **Scope: one five-iteration
+**Date:** 2026-08-11 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: one five-iteration
 training run and one 400-game evaluation. Nothing else.**
 
 **Prior:** `cf76982f` — the closed acceptance card, which accepted the frozen-opponent
@@ -301,9 +301,9 @@ adoption is a separate decision with its own record.
 **Unsigned, this card authorizes nothing.**
 
 ```
-authorizer          : ____________________
-timestamp (UTC)     : ____________________
-authorization basis : ____________________   # the reviewed commit this signature approves
+authorizer          : bill-osienski
+timestamp (UTC)     : 2026-08-11T20:30:53Z
+authorization basis : a70ce7ff586b458ba20647817e97734d8b72fa7f   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
 approved scope      : the exact FOUR command blocks (to be written into this card
                       before signature), unmodified:
