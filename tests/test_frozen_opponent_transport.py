@@ -352,28 +352,87 @@ def test_startup_rejects_odd_games_per_iteration_and_resign():
     assert src.index("requires an even --games-per-iter") < src.index("run_replay_warmup(")
 
 
-def test_frozen_opponent_flag_is_refused_at_startup_pending_dnr_50():
-    """The flag still routes to the aborting two-server path, so train() must
-    refuse before the warmup rather than burning an hour to reach the crash."""
+class _ReachedFrozenSetup(Exception):
+    """Sentinel: train() got past validation into frozen-network construction."""
+
+
+def _train_with(monkeypatch, **overrides):
+    """Drive train() far enough to see WHICH failure it produces.
+
+    create_network is called once for the learner, then again for the frozen
+    opponent. Raising a sentinel on the second call turns "did we reach frozen
+    setup?" into an observable outcome without building or loading anything.
+    """
+    import scripts.GPU.alphazero.trainer as tr
+    calls = {"n": 0}
+    real = tr.create_network
+
+    def counting(*a, **kw):
+        calls["n"] += 1
+        if calls["n"] >= 2:
+            raise _ReachedFrozenSetup()
+        return real(hidden=8, n_blocks=1)
+
+    monkeypatch.setattr(tr, "create_network", counting)
+    kwargs = dict(
+        n_iterations=1, games_per_iteration=2, n_workers=2, hidden=8, n_blocks=1,
+        frozen_opponent_checkpoint="checkpoints/does-not-need-to-exist.safetensors",
+        checkpoint_dir="/tmp/frozen_lift_probe",
+    )
+    kwargs.update(overrides)
+    return tr.train(**kwargs), calls
+
+
+def test_supported_recipe_reaches_frozen_setup(monkeypatch):
+    """The lift: a valid frozen recipe is no longer refused and proceeds to the
+    single-arbiter setup, rather than raising ValueError at startup."""
+    with pytest.raises(_ReachedFrozenSetup):
+        _train_with(monkeypatch)
+
+
+@pytest.mark.parametrize("bad,match", [
+    ({"n_workers": 1}, "n_workers >= 2"),
+    ({"resign_enabled": True}, "does not support resign or adjudication"),
+    ({"adjudicate_enabled": True}, "does not support resign or adjudication"),
+    ({"games_per_iteration": 3}, "even --games-per-iter"),
+])
+def test_invalid_recipes_still_fail_before_any_device_setup(monkeypatch, bad, match):
+    """Each unsupported recipe raises ValueError, and -- the ordering claim --
+    the frozen network is never constructed, so nothing touches the device."""
+    with pytest.raises(ValueError, match=match):
+        _train_with(monkeypatch, **bad)
+
+
+def test_validation_precedes_frozen_network_construction():
+    """Source-level companion to the behavioural pair above."""
     src = inspect.getsource(trainer.train)
-    assert "--frozen-opponent-checkpoint is disabled" in src
-    assert "#50" in src
-
-    # the refusal must come before ANY frozen-opponent setup and before warmup
-    refusal = src.index("--frozen-opponent-checkpoint is disabled")
-    assert refusal < src.index("frozen_network = create_network")
-    assert refusal < src.index("run_replay_warmup(")
-    assert refusal < src.index("LocalGPUEvaluator(frozen_network)")
+    block = src[src.index("if frozen_opponent_checkpoint:"):]
+    build = block.index("frozen_network = create_network")
+    for check in ("n_workers >= 2", "does not support resign or adjudication",
+                  "even --games-per-iter"):
+        assert block.index(check) < build, f"{check} runs after construction"
 
 
-def test_no_override_flag_exists_for_the_refusal():
-    """An escape hatch here would be a production hole, not a test seam."""
+def test_the_startup_refusal_is_gone():
+    src = inspect.getsource(trainer.train)
+    assert "--frozen-opponent-checkpoint is disabled" not in src
+    assert "HARD BLOCK" not in src
+
+
+def test_no_unsafe_override_or_two_server_path_exists():
+    """The prohibition outlives the refusal: no escape hatch, and no way back to
+    two servers on one device (do-not-repeat #50)."""
     import scripts.GPU.alphazero.train as train_cli
     cli = inspect.getsource(train_cli)
     for hole in ("--allow-two-servers", "--force-frozen-opponent",
                  "--ignore-dnr-50", "--unsafe-metal"):
         assert hole not in cli
     assert "allow_two_servers" not in inspect.getsource(trainer.train)
+    # and the two-server transport must remain unreachable
+    sp = inspect.getsource(trainer.run_parallel_selfplay)
+    assert sp.count("InferenceServer(") == 1
+    for gone in ("opp_server", "opp_request_queue = ctx.Queue"):
+        assert gone not in sp
 
 
 # ------------------------------------------------- one owner, and no fallback
