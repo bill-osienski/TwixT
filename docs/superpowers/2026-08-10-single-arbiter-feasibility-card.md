@@ -1,7 +1,8 @@
 # Single-Arbiter Metal Feasibility — Probe Card
 
-**Date:** 2026-08-10 · **Status:** DRAFT, not countersigned · **Scope: one standalone
-diagnostic probe. No production change, no training, no evaluation, no seed interval.**
+**Date:** 2026-08-10 · **Status:** DRAFT, not countersigned · **Scope: run an
+already-written, already-reviewed probe script. No production change, no training, no
+evaluation, no seed interval.**
 
 Successor step to the aborted frozen-parent run
 (`docs/superpowers/2026-08-10-frozen-parent-opponent-experiment-card.md`, exit `134`,
@@ -21,7 +22,8 @@ load without a driver abort?**
 That is the premise of the arbiter design #50 prescribes — one thread owning the device,
 routing requests to per-model evaluators. **The premise is currently untested.** If it is
 false, the arbiter refactor is dead before it is written and the frozen-parent mechanism needs
-a different shape entirely (separate processes, or one network evaluated per batch).
+a different shape entirely — **not** separate processes, which #50 rejects as a successor
+shape; the remaining option would be one network evaluated per batch, or abandonment.
 
 ## Why probe before building
 
@@ -35,46 +37,84 @@ abort from a different direction.
 servers with stub evaluators that never touch the GPU. This probe exists precisely because a
 stub-level test is not evidence about a device-level contract.
 
-## Design — two arms, each in its own subprocess
+## Design — two arms, one thread in both, identical device work
 
-A standalone script, run manually, writing an exit code per arm. Neither arm imports or alters
-the training path.
+**There is no two-thread arm.** #50 forbids two owners submitting concurrently *"in any
+experiment, for any purpose"*, and an earlier draft of this card proposed exactly that as a
+"control" — a direct violation. It would also have been worthless: a race that fails to
+reproduce in one short run falsifies nothing about a timing-sensitive fault.
 
-**Arm A — control, reproduce the failure.** Two threads, one network each, submitting
-concurrently. **Expected: abort (SIGABRT / exit 134).** Its job is to prove the diagnosis in
-#50 is right. Deliberately crashing a subprocess is the point; it is isolated and expected.
+| arm | evaluators | calls | thread |
+|---|---|---|---|
+| **control** | one | `2N` on that one | one |
+| **treatment** | **two independent instances** | `N` each, strictly alternating | one |
 
-**Arm B — treatment, the arbiter premise.** **One** thread alternating inference between two
-distinct loaded networks, same total volume as arm A. **Expected: completes, exit 0.**
+Total device work is identical; the only difference is whether two networks are resident and
+interleaved. That isolates the premise without ever creating a second device owner.
 
-Both arms use real `LocalGPUEvaluator`s on real checkpoints at the pinned network shape, run a
-bounded number of interleaved batches, and print a per-arm exit code. Each arm runs in its own
-subprocess so arm A's abort cannot take arm B with it.
+Both instances load the **same** checkpoint, which is faithful to iteration 1 and yields a free
+correctness check: their digests must agree.
+
+## Frozen dose — every value pinned
+
+| item | value |
+|---|---|
+| checkpoint | `checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors` |
+| SHA-1 | `209cf2d4fd24a48553d259dd71b4954867b9473e`, re-hashed at run time and recorded |
+| network | `hidden=128`, `blocks=6`, two **independent** `create_network` + `load_weights` instances |
+| `compile` | **`False`**, explicit — the training path never compiles |
+| board | `active_size=24` |
+| batch dims | `B=14` (matches `--mcts-eval-batch-size`), `M=64` move slots, `C=30` channels |
+| calls | `N=200` per evaluator ⇒ **400 `infer()` calls per arm** |
+| inputs | deterministic, `numpy` seed `20260810`, one batch reused for every call |
+| timeout | `900 s` via `SIGALRM` ⇒ exit `142` |
+| outputs | `logs/eval/arbiter_probe_control.json`, `logs/eval/arbiter_probe_treatment.json` (refuse if present) |
+
+**`infer()` synchronously exercises Metal.** `LocalGPUEvaluator.infer()` calls `mx.eval`
+(`local_evaluator.py:115` and `:119`), so each call forces execution rather than queuing a lazy
+graph. Recorded in the report as `mx_eval_forces_sync`.
+
+## Verification — exit 0 alone is not a pass
+
+Each arm writes a JSON report and passes **only** if all of:
+
+- `calls_completed` equals the expected count **per evaluator** (`[400]` control,
+  `[200, 200]` treatment);
+- output shapes are exactly `priors (14, 64)` and `values (14,)`;
+- every output is **finite**;
+- a stable **digest** is present for each evaluator, and in treatment the two **agree** (same
+  checkpoint, same inputs);
+- the re-hashed checkpoint SHA-1 matches the pinned value.
+
+**Exit-code semantics.** `0` = completed; **SIGABRT = subprocess return code `-6`, or `134`
+when normalised by a shell** — the failure under test; `142` = timeout. **Any other nonzero
+result is invalid: stop and diagnose, do not interpret it as a device finding.**
 
 ## Preregistered decision table
 
-| arm A | arm B | reading | consequence |
+| control | treatment | reading | consequence |
 |---|---|---|---|
-| aborts | exit 0 | Diagnosis confirmed **and** the arbiter premise holds | The arbiter refactor is justified. It needs its **own** authorization; this card does not grant it. |
-| aborts | aborts | Diagnosis confirmed, **premise false** | The arbiter is dead. Two networks cannot share one device in-process at all. Frozen-parent needs a different shape or is abandoned — record it and stop. |
-| exit 0 | exit 0 | **We do not understand the 2026-08-10 failure** | Stop. Do **not** proceed on a diagnosis that failed to reproduce. Re-diagnose from the original log first. |
-| exit 0 | aborts | Incoherent — the safer arm failed | Stop and re-diagnose. Treat the probe itself as suspect. |
+| PASS | PASS | One thread holds two resident networks safely | **The arbiter premise holds.** The refactor is justified and needs its **own** authorization; this card does not grant it. |
+| PASS | SIGABRT | Two resident networks abort a single owner | **The arbiter is dead.** Frozen-parent needs one-network-per-batch or abandonment. Record and stop. |
+| SIGABRT | either | The baseline itself aborts | **Stop.** The device fails on ordinary single-network load, so nothing here is about two networks. Re-diagnose from first principles. |
+| timeout / other nonzero / verification fail | any | Result invalid | **Stop.** Do not read a device finding out of an inconclusive run. |
 
-**No arm's result authorizes a training run.**
+**No outcome authorizes a training run**, and no outcome lifts the
+`--frozen-opponent-checkpoint` refusal.
 
 ## Prediction, on record before the run
 
-**Arm A aborts, arm B completes.** The 2026-08-10 assertion names concurrent encoding on one
-command buffer, which is a *concurrency* fault rather than a two-networks fault, and MLX
-evaluates many distinct modules on one thread routinely. Confidence is moderate, not high — the
-non-reproduction row exists in the table because a heisenbug is a live possibility, and the
-"premise false" row exists because two large resident graphs may interact in ways a single
-network does not.
+**Both arms pass.** The 2026-08-10 assertion names concurrent encoding on one command buffer,
+which is a *concurrency* fault rather than a two-networks fault, and MLX evaluates many distinct
+modules on one thread routinely. Confidence is moderate, not high: the "arbiter is dead" row
+exists because two large resident graphs may exhaust or interleave device resources in ways one
+does not, and this probe deliberately cannot tell us whether the original race is fixed — only
+whether the proposed replacement is viable at all.
 
 ## Cost and stop rule
 
-**Minutes of GPU time**, both arms, at a bounded batch count. If the probe cannot be written in
-roughly **100 lines and half a day**, stop and re-scope rather than growing it.
+**Minutes of GPU time** — 400 `infer()` calls per arm, two arms. The script is already written
+and committed (see the preconditions); its size is the record of the ~100-line stop rule.
 
 ## Explicitly NOT authorized by this card
 
@@ -86,9 +126,33 @@ roughly **100 lines and half a day**, stop and re-scope rather than growing it.
 
 ## Preconditions
 
-1. Clean worktree; probe run from a committed HEAD.
-2. The probe writes only to `logs/eval/arbiter_probe_*` — new paths, refuse if present.
-3. Suite green before the run (the probe adds no production code, so this is cheap).
+1. **The probe script exists, is committed, and has been reviewed** —
+   `scripts/GPU/alphazero/probe_single_arbiter_metal.py`. It was written and committed
+   **without being run**, so the countersignature approves reviewed code rather than an
+   intention to write some.
+2. Clean worktree; the run executes from the countersigned commit.
+3. Both output paths absent — the script refuses if either exists (exit `3`).
+4. Suite green before the run. The probe imports the training path but changes none of it.
+
+## Command block 1 — control `[GPU, read-only apart from its report]`
+
+```bash
+bash -c '.venv/bin/python -m scripts.GPU.alphazero.probe_single_arbiter_metal --arm control
+rc=$?
+printf "%s\n" "$rc" > logs/eval/arbiter_probe_control.exit
+exit "$rc"'
+```
+
+## Command block 2 — treatment `[GPU, read-only apart from its report]`
+
+```bash
+bash -c '.venv/bin/python -m scripts.GPU.alphazero.probe_single_arbiter_metal --arm treatment
+rc=$?
+printf "%s\n" "$rc" > logs/eval/arbiter_probe_treatment.exit
+exit "$rc"'
+```
+
+Run **control first**. If control does not pass, treatment is not run.
 
 ---
 
@@ -102,15 +166,16 @@ authorizer          : ____________________
 timestamp (UTC)     : ____________________
 authorization basis : ____________________   # the reviewed commit this signature approves
 execution commit    : the commit containing this completed countersignature block
-approved scope      : write the standalone probe, run arm A and arm B once each,
-                      and report both exit codes against the decision table.
-                      Nothing else.
+approved scope      : run the ALREADY-COMMITTED, ALREADY-REVIEWED script
+                      scripts/GPU/alphazero/probe_single_arbiter_metal.py
+                      once per arm via the two command blocks below, and report
+                      both reports and exit codes against the decision table.
+                      No edit to that script after signing. Nothing else.
 ```
 
 **Conditions:**
 
-- The probe is standalone. If writing it requires touching production code, **stop** — that
-  itself is a finding and needs re-scoping.
-- Approval covers **one run of each arm**. A non-reproducing arm A is a stop, not a retry.
+- The script is frozen at signature. Editing it voids the signature; amend and re-sign first.
+- Approval covers **one run of each arm**. Any invalid result is a stop, not a retry.
 - No result of this probe authorizes the arbiter, the flag, or any training. Each needs its own
   card.
