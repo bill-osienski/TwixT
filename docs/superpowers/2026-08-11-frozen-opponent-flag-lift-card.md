@@ -1,8 +1,12 @@
 # Frozen-Opponent Flag Lift — Composition Card
 
-**Date:** 2026-08-11 · **Status:** DRAFT, not countersigned · **Scope: one tiny real-GPU
-self-play composition smoke, and — only if it passes — removal of the
-`--frozen-opponent-checkpoint` startup refusal. NO TRAINING.**
+**Date:** 2026-08-11 · **Status:** DRAFT, not countersigned · **Scope: ONE execution of the
+committed real-GPU composition smoke, and reporting it. NOTHING ELSE — NO FLAG LIFT, NO
+TRAINING.**
+
+The `--frozen-opponent-checkpoint` refusal is **not** removed by this card under any outcome.
+A PASS authorizes only *drafting* the removal diff for separate review; that diff is written,
+reviewed and authorized on its own.
 
 **Durable prior: `9c5847a0`** — the closed arbiter card
 (`docs/superpowers/2026-08-11-inference-arbiter-refactor-card.md`, real-GPU smoke PASS at
@@ -91,13 +95,21 @@ exit "$rc"'
 One block, one run. Exit `0` PASS · `1` FAIL · **`2` NO_EXPOSURE** · `3` artifact exists ·
 `4` sha mismatch · `142` timeout · `-6`/`134` SIGABRT.
 
+**Crossed routing is NOT detectable here, and is not claimed.** Both evaluator instances load
+the **same** checkpoint — faithful to iteration 1 of the real recipe — so identical weights make
+a crossed response invisible: both models would return the same values. **Routing integrity was
+established by the prior two-checkpoint arbiter smoke** (`9c5847a0`, distinct references with
+universal digest matches against an independent oracle) and is **inherited, not re-measured**.
+What this smoke adds is the composition: real MCTS, variable-size batches, tree reuse, and
+mixed-model grouping on the device.
+
 ## Three outcomes, distinguished
 
 | outcome | reading | consequence |
 |---|---|---|
 | **PASS** (all conditions, `mixed_model_flushes >= 1`) | the composition works on the device | authorizes **drafting** the refusal-removal diff for separate review — nothing more |
 | **NO EXPOSURE / STOP** (everything else passes but `mixed_model_flushes == 0`) | scheduling never put both models in one pending flush, so the central condition **was not exercised**. **This is not an arbiter failure and not a Metal failure.** | **Refusal stays.** Re-scope the exposure — timing, request rate, worker count — under a new authorization. Do not reinterpret an unexercised condition as a passed one. |
-| **FAIL** (SIGABRT, wrong routed results, worker error, non-zero exit) | a genuine failure of the composition | **Stop for redesign**, not patch-and-retry. Refusal stays. |
+| **FAIL** (SIGABRT, worker error, missing/mis-shaped games, wrong colour split, more than one inference thread, non-zero exit) | a genuine failure of the composition | **Stop for redesign**, not patch-and-retry. Refusal stays. |
 
 ## Only then: the lift — under its own authorization
 
