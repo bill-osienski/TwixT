@@ -49,9 +49,14 @@ no new field. Extra response queues **do not** violate the one-owner rule: they 
 work. The rejected alternative — a model id on responses plus a genuinely shared counter and
 mailbox — is more moving parts for the same guarantee.
 
-**Deleted, not kept alongside:** the second server, the second request queue, the second
-response-queue set, and their symmetric start/stop/join/cleanup. Two owners must become
-unreachable, not merely unused.
+**Deleted, not kept alongside:** the second server, the second request queue, and the separate
+`opp_response_queues` **collection**, together with their symmetric start/stop/join/cleanup.
+Two owners must become unreachable, not merely unused.
+
+**Not deleted — relocated:** opponent-addressed response queues still exist. They live *inside*
+the single `(worker_id, model_id)` routing map rather than in a second parallel collection. The
+thing being removed is the duplicate server and its duplicate queue *set*, not per-model
+addressing.
 
 ## Non-negotiable invariants
 
@@ -103,12 +108,25 @@ Stubs cannot discharge this (#50). The smoke drives the **real arbiter** with **
 | model B | `checkpoints/alphazero-v2-staged/model_iter_0379.safetensors`, sha1 `8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1` |
 | **why two DIFFERENT checkpoints** | identical weights would make a crossed response **invisible** — both models would return the same digest. Distinct weights are what make routing falsifiable. |
 | workers | 2 |
-| requests | 100 per model per worker ⇒ **400 total** |
+| requests | 100 per model per worker ⇒ **400 routed** |
+| **true dose** | **402 synchronous GPU calls** — 2 direct reference calls + 400 routed requests |
 | batch | `B=14`, `M=64`, `C=30`, `active_size=24` |
 | inputs | deterministic, seed `20260811`, **the same batch to both models**, so each model's digest is a fixed reference |
+| batching | `max_batch_rows=14`, `flush_ms=2`, both pinned |
+| schedule | alternating and **opposed**: worker 0 issues A/B, worker 1 issues B/A |
 | timeout | `900 s` via `SIGALRM` ⇒ exit `142` |
 | artifacts | `logs/eval/arbiter_smoke.json`, `logs/eval/arbiter_smoke.exit` — **refuse if either exists** (exit `3`) |
 | both SHA-1s | verified **before** any evaluator is built or Metal touched ⇒ exit `4` on mismatch |
+
+**The reference digests are computed on the arbiter-owning thread**, the same thread that
+later serves requests — never on the harness or main thread. Computing them anywhere else would
+put a second thread on the device and violate invariant 1 while trying to verify it.
+
+**What this smoke does and does not exercise.** With `B=14` and `max_batch_rows=14`, **every
+request becomes its own device batch**, so mixed-model grouping inside one flush never occurs
+here. The GPU smoke therefore tests **device ownership and routing**; **mixed-request grouping
+is discharged separately by deterministic non-GPU tests**. Saying otherwise would overclaim what
+400 single-request batches can show.
 
 **Digest agreement is NOT the criterion here.** The probe could compare digests because both its
 instances loaded one checkpoint; ordinary self-play sends *different* board states to the two
@@ -122,9 +140,16 @@ and `values (14,)`; every response finite; every response matching its own model
 digest; `model_A_digest != model_B_digest` (proving the two models are genuinely distinct, so
 the check is not vacuous); and both SHA-1s verified pre-GPU.
 
-**Per-model telemetry is mandatory** — requests served, rows processed and batches flushed, per
-model — so neither model can pass vacuously or starve unnoticed. A model with zero batches is a
-**fail**, not a pass.
+**Per-model telemetry is mandatory and its expected values are exact**, not merely "non-zero":
+
+| per model | expected |
+|---|---:|
+| requests served | **200** |
+| rows processed | **2,800** (200 × `B=14`) |
+| device batches flushed | **200** (one per request, since `B` equals the row cap) |
+
+Any deviation is a **fail**. A model with zero batches is a fail, not a pass; so is a model with
+more batches than requests, which would mean the row cap is not behaving as pinned.
 
 **Exit semantics:** `0` pass · `1` verification fail · `3` artifact exists · `4` SHA mismatch ·
 `142` timeout · `-6`/`134` SIGABRT · anything else invalid. **Any non-zero result is a stop, not
