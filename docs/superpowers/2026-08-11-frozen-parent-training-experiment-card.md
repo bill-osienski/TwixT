@@ -1,6 +1,105 @@
 # Frozen-Parent Training — Experiment Card
 
-**Date:** 2026-08-11 · **Status:** COUNTERSIGNED / AUTHORIZED · **Scope: one five-iteration
+**Date:** 2026-08-11 · **Status: COMPLETE / BAR NOT MET / AUTHORIZATION EXHAUSTED.**
+**Verdict: BAR NOT MET — PARITY NOT RESOLVED — FROZEN-PARENT LINE CLOSED.**
+
+> ## Closeout (2026-08-12)
+>
+> Executed once from execution commit **`13dd72f6261f60e5256f25af5ce1c851dbd821cf`**, clean
+> worktree. Both exit files `0`; the match JSON records the same `git_commit`.
+>
+> ### Aggregate result — the decision
+>
+> | | |
+> |---|---:|
+> | record | 184–211, 5 state caps ⇒ 186.5 / 400 |
+> | **score rate** | **`0.46625`**, CI95 **`[0.4177, 0.5148]`** |
+> | primary decision | lower bound `0.4177` is not above `0.50` — **BAR NOT MET** |
+> | Elo | **`−23.5`**, CI95 `[−57.7, +10.3]` |
+>
+> **The candidate was NOT shown stronger. It was also NOT shown weaker at this dose:** both the
+> score interval and the Elo interval **include parity**. The candidate is **not statistically
+> distinguishable from the parent** — which is not the same as equal, and must not be written
+> that way.
+>
+> Unlike `cont5` and `warm5`, this is **not a decisive rejection**. It is a non-pass with the
+> question left open.
+>
+> ### Prediction, assessed
+>
+> The preregistered forecast was an aggregate around **`0.47–0.51`**, roughly equal to or
+> slightly weaker than the parent, with about a **10%** chance of clearing the bar. Observed
+> `0.46625` sits **slightly below the band's `0.47` lower edge**, so the prediction matched
+> **approximately in direction and magnitude — not precisely.**
+>
+> **A single non-pass does not validate the 10% probability.** One draw cannot confirm or refute
+> a small stated probability; the figure remains unexamined as a calibration claim.
+>
+> ### Where it sits in the line — descriptive only
+>
+> | run | mechanism | score rate | Elo |
+> |---|---|---:|---:|
+> | `cont5` | cold-buffer continuation | 0.31375 | −136.0 |
+> | `warm5` | parent-bootstrap continuation | 0.4325 | −47.2 |
+> | `fp6` | **frozen parent** | **0.46625** | **−23.5** |
+>
+> **This progression is DESCRIPTIVE across three separate runs** — different mechanisms,
+> different seeds, different evaluation intervals — **not a paired causal estimate.** No
+> confidence interval on any difference between them exists or was computed.
+>
+> ### Per-colour — reported, decides nothing
+>
+> | | record | rate | CI95 |
+> |---|---|---:|---|
+> | as red | 102–94, caps 4 | 0.5200 | `[0.4515, 0.5885]` |
+> | as black | 82–117, caps 1 | 0.4125 | `[0.3444, 0.4806]` |
+>
+> `red_win_rate_decisive` **0.5544**. Per the 2026-08-10 erratum the absolute per-colour veto is
+> retired: with red winning 55.4% of decisive games, this split is confounded with the board's
+> colour advantage and the same-match null cannot separate it from candidate strength.
+>
+> ### Dose, actually measured
+>
+> Warmup **46,523 positions in 5,481.6 s**. Learner rows per iteration: **9,611 · 9,085 · 9,382
+> · 9,858 · 9,701** — confirming the assumption that pinned 200 mixed-agent games to reproduce
+> `warm5`'s ~9,000 learner rows from 100 self-play games. Final buffer 94,160 of 100,000, no
+> eviction. Secondary: 5/400 state caps (1.25%), 0 board-full, 395 decisive, avg 61.78 plies.
+>
+> ### Timings, and one anomaly
+>
+> Training **5 h 59 m** (estimate 8 h 21 m); evaluation **3 h 08 m**. Iteration timings
+> **8,114.9 · 1,703.6 · 1,788.0 · 2,324.4 · 2,142.5 s**.
+>
+> **Iteration 1 took roughly 4× the others and is unexplained. It is recorded as an
+> INFRASTRUCTURE OBSERVATION, not scientific evidence** — it says nothing about the checkpoint.
+>
+> ### Provenance and artifacts
+>
+> Candidate `checkpoints/alphazero-v2-fp6-from-calib020/model_iter_0005.safetensors`; parent
+> `209cf2d4fd24a48553d259dd71b4954867b9473e`; `train_head` and eval `git_commit` both
+> `13dd72f6261f60e5256f25af5ce1c851dbd821cf`. Iterations 1–4 were never evaluated, probed or
+> inspected.
+>
+> ```
+> candidate            22f8d2196140aff5b04fac0b68e1e5fa955d5ad4
+> fp6_vs_calib020.json 544d6e335a773a3ac0e410d3fda7950e04c545dc
+> games.jsonl          c6c4b76ccbd3005072c5fd512578fec939ac22ae
+> eval stdout          6dd40a97c312d224b829e5ea33369b6c65deea20
+> eval exit            09d2af8dd22201dd8d48e5dcfcaed281ff9422c7
+> provenance           f58b49db67d0bcfa079bc433298a6ce99b6e7c23
+> ```
+>
+> ### Consequence
+>
+> Per the frozen disposition, bar-not-met **closes frozen-opponent training**: no dose change, no
+> warmup change, no second opponent, no opponent pool, no extension, no iteration 1–4 inspection,
+> no larger match, and **no 0379 generalization match** — that was conditional on a bar-met
+> result. **Keep `calib020_0001`.** See do-not-repeat **#51**.
+>
+> **`#50` is unchanged and vindicated at scale:** the single arbiter served ~1,500 games at 400
+> simulations without a driver abort. The two-server prohibition stands.
+
+**Scope as authorized (historical): one five-iteration
 training run and one 400-game evaluation. Nothing else.**
 
 **Prior:** `cf76982f` — the closed acceptance card, which accepted the frozen-opponent

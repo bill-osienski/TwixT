@@ -49,7 +49,7 @@ successor picks an overlapping range.
 |---|---|---:|---|---|---|---|
 | 4 | `[202608988, 202609388)` | 400 | Training continuation — cont5 vs calib020 | 2026-08-08 | `3c70fff` | **CONSUMED** |
 | 5 | `[202609388, 202609788)` | 400 | Parent-replay bootstrap — warm5 vs calib020 | 2026-08-09 | `bcf62e2` | **CONSUMED** |
-| 6 | `[202609788, 202610188)` | 400 | Frozen-parent opponent — fp6 vs calib020 | 2026-08-11 | the commit containing this reservation | **RESERVED** |
+| 6 | `[202609788, 202610188)` | 400 | Frozen-parent opponent — fp6 vs calib020 | 2026-08-12 | `13dd72f` | **CONSUMED** |
 
 Row 4 is disjoint from intervals 1–3, which all end at `202608988`; row 5 begins where row 4
 ends. **Note:** `eval_checkpoint_match` has no `--prior-seed-interval` and never calls
@@ -98,7 +98,17 @@ the release note is kept as history.
 **Still spent from the aborted attempt and NOT reusable:** training seed `20260810` and every
 `fp5` path. The new run uses seed `20260813` and `fp6` paths.
 
-Any successor passes intervals 1–6 as priors; **interval 6 is no longer available.**
+**Row 6 CONSUMED 2026-08-12** by the countersigned `fp6` run from execution commit `13dd72f`:
+400 games, exit 0, score rate **`0.46625`** (CI95 `[0.4177, 0.5148]`), Elo `−23.5`
+(CI95 `[−57.7, +10.3]`). **The promotion bar was NOT met**, and the candidate was **not
+statistically distinguishable from the parent** — both intervals include parity. Match JSON
+SHA-1 **`544d6e335a773a3ac0e410d3fda7950e04c545dc`**.
+
+Row 6's full history: **RESERVED** for `fp5` (2026-08-10) → **RELEASED UNUSED** after that run's
+Metal abort, having drawn zero seeds → **RE-RESERVED** for `fp6` (2026-08-11) → **CONSUMED**
+(2026-08-12).
+
+Any successor passes intervals 1–6 as priors; **interval 6 is spent.**
 
 ## Rules
 
