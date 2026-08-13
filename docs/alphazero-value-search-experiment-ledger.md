@@ -1,10 +1,32 @@
 # AlphaZero Value and Search — Experiment Ledger
 
-**Created:** 2026-06-26 · **Status:** active · **Scope:** the connected value-head calibration and search-reliability line of work centered on the black pre-drop artifact, its guardrail families, and same-budget playing strength.
+**Created:** 2026-06-26 · **Status:** **CLOSED 2026-08-12** · **Scope:** the completed value-head calibration, search-reliability, competitive-readout and training-strength programme centered on `calib020_0001`.
 
-The durable, append-only record of every value-calibration and search-reliability experiment: what changed, how it scored on the applicable acceptance gates, what we learned, and what **not** to retry. **Read this before proposing any new calibration or search knob** — if the change is on the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of a knob we've already swept), the answer is probably "no, we already saw the tradeoff."
+The durable, append-only record of the connected calibration, search, readout and training
+programme: what changed, the hypothesis and rationale, how each branch scored on its applicable
+acceptance gates, what was concluded, and what **not** to retry. **Read this before proposing any
+new local variant** — the programme is closed, and a change on the
+[do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of an exhausted
+knob) is not a new hypothesis.
 
 > **Colour-rule erratum (2026-08-10; applies to the competitive-readout and training matches below).** The preregistered rule that compared each candidate's per-colour 95% upper score bound with an absolute `0.50` null was mis-specified for a game with board-colour advantage. Equal agents need not score `0.50` in each colour. Moreover, estimating the colour null from the same two-agent match cannot identify candidate-specific colour interaction: candidate strength and board-colour effects are confounded, and the two adjusted deficits are equal by construction. Historical rule firings remain recorded as protocol facts, but they do **not** establish independent red/black rejection or black-specific harm. Every promotion verdict below is unchanged because its aggregate bar failed independently. Prospectively, retire the absolute `0.50` per-colour veto; use the aggregate criterion unless a future card preregisters an independently measured colour baseline.
+
+> **Research-programme closeout (2026-08-12) — ALL EXPERIMENTAL LINES CLOSED; keep `calib020_0001`.**
+>
+> | field | durable conclusion |
+> |---|---|
+> | **Overall goal** | Find a checkpoint or same-budget search/readout policy with preregistered, statistically supported playing-strength improvement over the current best, without breaking the established safety/guardrail evidence. |
+> | **Hypothesis families tested** | Value-head calibration and guardrails; adapter/projection cleanup; searched-continuation and depth-2 observables; c_puct and FPU/policy-mass search reliability; convergence/progressive-widening diagnostics; competitive move readout; ordinary training continuation with cold and warm replay; and frozen-parent opposition. |
+> | **Conclusion** | **No tested candidate met its promotion bar. `calib020_0001` remains the best-supported checkpoint and the experimental programme is closed.** No experiment is running or authorized. |
+> | **Primary reason** | Every credible branch reached a preregistered stop: collateral/safety failure, lack of selectivity or feasible corpus, null against the strength bar, clear regression, or bar-not-met parity interval. The last open mechanism, frozen-parent opposition, scored `0.46625` (CI95 `[0.4177, 0.5148]`), so it was not shown stronger and did not earn its conditional generalization match. |
+> | **What the result does establish** | `calib020_0001` survived multiple independent challenges spanning model calibration, MCTS behavior, readout and training-data generation. The negative/null results sharply reduce the credible local search space and prevent repeating nearby variants under new names. |
+> | **What it does not establish** | It does not prove `calib020_0001` is globally optimal, that all future training is futile, or that no fundamentally new architecture/data/objective could improve it. It establishes that the tested families and their nearby rescues are exhausted under their recorded evidence and decision rules. |
+> | **Why not run more games or nearby variants** | Those continuations were frozen out before the results. Enlarging a match after observing parity, changing dose, inspecting intermediate checkpoints, extending grids or relaxing gates would be post-hoc selection rather than a new confirmatory experiment. See do-not-repeat entries `#1–#51`. |
+> | **Infrastructure that survives** | The single Metal-owning inference arbiter, model-addressed routing, dual-root game seam, learner-only filtering, deterministic colour assignment and fail-closed worker/server paths are shipped and tested (`2,881` passed / `0` failed). The arbiter also completed the full fp6 workload—roughly 1,500 games at 400 simulations—without the two-server driver abort prohibited by `#50`. |
+> | **Process conclusion** | Preregistration plus hostile verification caught defects that ordinary green tests or source inspection missed: a circular oracle, a patch to the wrong symbol owner, tests whose names exceeded their assertions, a seed collision hidden by substring matching, and a self-falsifying provenance statement. Future work should retain independent oracles, behaviorally negative-constructed tests, exact-token identity checks and commit-bound gates. |
+> | **Only open workstream** | **Product-model alignment, not research:** determine exactly what produced `server/model.onnx`, reproduce a verified ONNX export of `calib020_0001`, establish native-versus-ONNX numerical parity, and review deployment/rollback separately. This closeout authorizes none of those changes. |
+
+> **Portfolio result, stated narrowly:** calibration, FPU policy mass, depth-2 provisional backup, the convergence atlas, competitive readout, ordinary continuation and frozen-parent opposition are closed. None promoted a replacement. This is a durable result about the tested search space—not evidence that every possible future idea has failed.
 
 > **Key conclusion (updated 2026-07-29, post v17 null — the policy-mass FPU line is closed):** The A black-pre-drop calibration target is explained as a **400-sim search artifact**, not a stable value-head defect. v14 closed the adapter cleanup line; v15 showed the 400-sim backup came from broad depth-2 frontier optimism; and the budget/trajectory checks showed BASE A collapses with more search (**400/1600/6400 mean +0.2570 → +0.0626 → −0.0451**, gate-over **50.0% → 30.0% → 10.0%**, severe **43.3% → 6.7% → 3.3%**), with the apparent predrop “drop” mostly a selected shallow-search bump (**6400−400 = −0.573 at predrop, −0.001 at drop**). Therefore **value calibration against A remains unjustified**: no v15 Phase 1, no frontier hard-value correction, and no further adapter/projection/schedule cleanup. v16 then falsified c_puct and showed that negative FPU directly reaches the first-touch reply-scanning mechanism on the selected A set: `fpu_value=−0.20` moved mean **+0.2570 → −0.0344** and opponent replies **134.7 → 24.5**. However, the frozen v16a game-held-out test **rejected absolute `fpu_value=−0.20` as a general 400-sim setting**. Across 324 held-out positions it caused **15 new collapsed roots (4.63%)**, and the preregistered stratum reject gate fired in late play: **13/84 = 15.48%** new collapses, including **6/42 = 14.29% late-red** and **7/42 = 16.67% late-black**. Effective children fell **107.58 → 70.92** (−36.66; about −34.1%), top-move flips reached **27.16%**, and late collapsed roots rose **17/84 → 28/84**, despite small central value movement (mean mover delta **+0.0028**, median absolute **0.0180**, p95 absolute **0.2822**). The selected-A result remains valid **mechanistic evidence**, but the fixed absolute candidate does not generalize safely. The context-relative policy-mass successor was then implemented and taken through a fresh, fully fingerprinted production-v2 corpus, but it failed its prerequisite before any nonzero coefficient ran: `r=0` (`FPU=Q_parent`) changed the selected move to a lower-prior move on **11/40 tuning controls = 27.5%**, exceeding the frozen `<10%` collateral limit. Per the preregistered rule, this **rejects the entire parent-relative policy-mass family**; no candidate grid, frozen check, selected-A candidate gate, B/C/D, collateral, or strength match is authorized. The shipped-baseline successor **v17** (`FPU = −r·sqrt(P_explored)`, no `Q_parent`) was then implemented, preregistered and run end-to-end on entirely fresh evidence — a 1,600-game reservoir and a deterministic 32-position corpus disjoint from all prior sets — and returned a **null (2026-07-29)**: shipped vs `r=0` identity held exactly (32/32 rows byte-identical), every positive coefficient measurably changed search (32/32 positions), and **all five preregistered coefficients failed the §7.2 safety gates**. Target new-collapse was 1–2 of 16 where the rule permits zero, and control flips to lower-prior moves remained **31–50% across the tested grid** where two of sixteen already rejects. The intended reply-suppression mechanism is active (reply reduction 0.23 → 0.79 with `r`), but its control cost does not fall as `r` shrinks, so no coefficient is cheap. Per the preregistered §13 rule a null **closes v17**: no held-out generation, no A/B/C/D, no strength match, and **no grid extension**. **Both policy-mass FPU formulations — parent-relative and baseline-preserving — are now rejected on independent corpora with the same failure mode; the line is closed.** Keep `calib020_0001` and the shipped FPU. Any further search-reliability proposal requires a new written mechanism and fresh preregistered evidence; do not relax the observed control gate, extend the coefficient grid, or reuse the consumed tuning/frozen splits to rescue policy-mass FPU. The decisive success benchmark remains an equal-checkpoint, equal-400-sim, balanced-color, statistically significant head-to-head strength gain after collateral and guardrail checks pass.
 
@@ -26,9 +48,11 @@ The durable, append-only record of every value-calibration and search-reliabilit
 
 > **Frozen-parent opponent, 2026-08-12 — BAR NOT MET, PARITY NOT RESOLVED, line CLOSED.** The successor mechanism to closed ordinary continuation (learner plays the frozen best parent; only learner-to-move positions train) finally RAN, from execution commit `13dd72f`, after an earlier attempt aborted on the two-server Metal defect. **184–211 with 5 state caps: score rate `0.46625`, CI95 `[0.4177, 0.5148]`, Elo `−23.5`, CI95 `[−57.7, +10.3]`.** The lower bound is not above `0.50`, so **the promotion bar was NOT met** — but unlike `cont5` and `warm5` this is **not a decisive rejection**: **both the score and Elo intervals include parity**, so the candidate is **not statistically distinguishable from the parent**. It was not shown stronger; it was also not shown weaker at this dose. **Do not write this as "equal".** The preregistered prediction (`0.47–0.51`, ~10% chance of clearing the bar), written before the implementation existed, matched **approximately in direction and magnitude** — `0.46625` falls just below the band's lower edge — and **a single non-pass cannot validate the 10% probability**. The `cont5 0.31375` → `warm5 0.4325` → `fp6 0.46625` progression is **descriptive across three separate runs** with different mechanisms, seeds and evaluation intervals, **not a paired causal estimate**. Per-colour figures are descriptive only per the 2026-08-10 erratum. Dose confirmed by measurement: 9,085–9,858 learner rows per iteration. **Keep `calib020_0001`.** See do-not-repeat **#51**; `#50` is unchanged and vindicated at scale — the single arbiter served ~1,500 games at 400 simulations without a driver abort.
 
-## Before proposing a new calibration experiment
+## Historical proposal check — programme now closed
 
-Run this check first (it encodes the [do-not-repeat](#do-not-repeat-prevents-going-in-circles) findings):
+This checklist remains as process history and a guard against relabelling an exhausted local
+variant. It does **not** authorize a successor experiment. Any genuinely new programme would need
+its own scope, hypothesis, evidence and authorization.
 
 1. Check whether it is **only** a global-weight, retention-weight, or schedule-ratio sweep.
 2. Check whether it uses **scalar-MSE retention only**.
@@ -1120,6 +1144,138 @@ This does **not** prove that all training is futile or that the checkpoint has h
 ceiling. It does establish that two ordinary five-iteration continuations from this parent —
 one cold, one warm — both land below it, and that the bootstrap run's point estimate recovered
 much of the gap without closing it.
+
+## Frozen-parent opposition — fp6, RUN 2026-08-11/12 — BAR NOT MET, PARITY NOT RESOLVED, LINE CLOSED
+
+Authorized and closed by
+`docs/superpowers/2026-08-11-frozen-parent-training-experiment-card.md`; countersigned by
+`bill-osienski` and executed once from
+`13dd72f6261f60e5256f25af5ce1c851dbd821cf` with a clean worktree. Parent
+`calib020_0001` had SHA1 `209cf2d4fd24a48553d259dd71b4954867b9473e`; the frozen endpoint
+`checkpoints/alphazero-v2-fp6-from-calib020/model_iter_0005.safetensors` had SHA1
+`22f8d2196140aff5b04fac0b68e1e5fa955d5ad4`. Training and evaluation both exited `0`.
+The evaluation consumed `[202609788, 202610188)`. Iterations 1–4 were never inspected,
+probed, evaluated or selected from.
+
+### Hypothesis
+
+The ordinary continuations degraded because the learner trained against its own drifting play:
+as the learner weakened, its opposition weakened with it and errors could compound. Playing every
+training game against the **frozen best parent**, while training only on learner-to-move positions,
+would hold opposition quality fixed and preserve a strong reference throughout the five-iteration
+continuation.
+
+### Why the hypothesis was plausible
+
+The cold continuation lost about 136 Elo and the parent-bootstrap successor recovered to about
+47 Elo below the parent without closing the gap. That left self-play co-drift as a specific,
+untested mechanism. Frozen-parent opposition changed the data-generating process rather than
+rescuing ordinary continuation through a nearby dose: the opponent never updated, learner colour
+was fixed 100/100 per iteration by game id, and parent-to-move rows never entered training.
+
+The mechanism also directly matched the causal story. If a moving opponent was part of the
+problem, pinning it was the smallest intervention that removed that movement while leaving the
+optimizer, five-iteration horizon, 400-simulation search and warm replay dose unchanged. The
+earlier fp5 attempt supplied no scientific evidence because its obsolete two-server transport
+aborted before the first frozen-parent game; fp6 was the mechanism's first completed test.
+
+### Prediction and preregistered interpretation
+
+The forecast, written before implementation and preserved through the infrastructure abort, was:
+**material recovery relative to `warm5`, but no promotion; aggregate score `0.47–0.51`, roughly
+equal to or slightly weaker than the parent, with about a 10% chance of clearing the bar.** The
+reason was that fixed opposition addressed co-drift but did not change terminal outcome targets,
+policy-dominated optimization, the short horizon or the risk of specializing against one parent.
+
+Success required the candidate's aggregate 95% lower score bound to exceed `0.50` over the frozen
+400-game match. Per-colour results were descriptive only under the 2026-08-10 erratum. The frozen
+disposition was decisive: **bar not met closes frozen-parent opposition**; only a bar-met result
+could authorize a separate 0379 generalization match, and even then no immediate promotion.
+
+### Protocol and measured dose
+
+| parameter | frozen value / observed result |
+|---|---|
+| learner start / opponent / match baseline | `calib020_0001`, identical checkpoint for all three roles |
+| warmup | 500 ordinary parent games; **46,523 positions**, 5,481.6 s |
+| training | 5 iterations × 200 mixed-agent games × 160 optimizer steps; batch 64; buffer 100,000 |
+| learner colour | exactly 100 red / 100 black per iteration, derived from game id |
+| search | 400 simulations for learner and frozen parent |
+| learner rows by iteration | **9,611 · 9,085 · 9,382 · 9,858 · 9,701** |
+| final buffer | 94,160 / 100,000; no eviction |
+| training seed | `20260813` |
+| match | 400 games, equal 400-simulation agents, base seed `202609788` |
+
+The 200-game dose assumption was confirmed: learner-only filtering yielded roughly 9,000–9,900
+rows per iteration, the exposure it was chosen to preserve relative to `warm5`'s 100 ordinary
+self-play games. Training took 5 h 59 m and evaluation took 3 h 08 m. Iteration 1 took 8,114.9 s
+versus 1,703.6–2,324.4 s for iterations 2–5; this unexplained timing is an **infrastructure
+observation only**, not evidence about strength.
+
+### Result — promotion bar not met; parity unresolved
+
+| | |
+|---|---:|
+| score rate | **0.46625**, CI95 `[0.4177, 0.5148]` |
+| primary decision | lower bound `0.4177` is not above `0.50` — **BAR NOT MET** |
+| record | candidate 184 wins · parent 211 wins · 5 state caps |
+| Elo | **−23.5**, CI95 `[−57.7, +10.3]` |
+| as red | 102–94 + 4 caps, 0.5200, CI95 `[0.4515, 0.5885]` |
+| as black | 82–117 + 1 cap, 0.4125, CI95 `[0.3444, 0.4806]` |
+| termination | 395 decisive · 5 state caps (1.25%) · board-full 0 |
+| average plies | 61.78 |
+| decisive red win rate | 0.5544 |
+| integrity | both exits `0` · clean execution commit · provenance gate passed · match JSON commit matched training commit |
+
+The candidate was **not shown stronger**. It was also **not shown weaker at this dose**: both the
+score interval and Elo interval include parity, so it is **not statistically distinguishable
+from the parent**. That does not establish equality. The raw colour split decides nothing; red
+won 55.4% of decisive games, and this same match has no independent colour baseline capable of
+separating board advantage from candidate interaction.
+
+### Did the result match the prediction, and why?
+
+**Approximately in direction and magnitude, not precisely.** The observed `0.46625` sits just
+below the forecast band's `0.47` lower edge, while both intervals include parity. The central
+expectation—substantial recovery without a statistically supported promotion—therefore described
+the result reasonably well. A single non-pass does **not** validate the stated 10% probability;
+one outcome cannot calibrate a small prior probability.
+
+The descriptive sequence `cont5 0.31375` → `warm5 0.4325` → `fp6 0.46625` is consistent with
+each mechanism recovering part of the point-estimate deficit, but it is **not a paired causal
+estimate**. The runs used different mechanisms, training seeds and evaluation intervals, and no
+confidence interval on their differences was designed or computed. fp6 supports no claim that
+fixed opposition caused a quantified improvement over warm replay.
+
+### Conclusion, reason and frozen consequences
+
+**Conclusion: BAR NOT MET / PARITY NOT RESOLVED / FROZEN-PARENT LINE CLOSED. Keep
+`calib020_0001`.** The reason is the preregistered aggregate decision rule: a candidate had to
+show a lower confidence bound above `0.50`, and fp6's lower bound was `0.4177`. An unresolved
+interval is not evidence of improvement and does not trigger the success-only generalization
+match.
+
+Do not change the dose or warmup, add a second opponent or pool, extend the run, inspect
+iterations 1–4, buy resolution with a larger match, or run the 0379 match. Those actions were
+excluded before the result or conditional on success; doing them now would be post-hoc rescue.
+See do-not-repeat `#51`.
+
+The scientific line closed negatively, but the infrastructure succeeded. The single Metal-owning
+arbiter, dual-root seam, learner-only filtering and fail-closed transport completed roughly 1,500
+games at 400 simulations without the driver abort that terminated fp5. This validates the shipped
+one-owner architecture at full-run scale while leaving the two-server prohibition in `#50`
+unchanged.
+
+### Evidence of record
+
+| artifact | SHA1 |
+|---|---|
+| candidate `model_iter_0005.safetensors` | `22f8d2196140aff5b04fac0b68e1e5fa955d5ad4` |
+| match JSON | `544d6e335a773a3ac0e410d3fda7950e04c545dc` |
+| match games JSONL | `c6c4b76ccbd3005072c5fd512578fec939ac22ae` |
+| evaluation stdout | `6dd40a97c312d224b829e5ea33369b6c65deea20` |
+| evaluation exit | `09d2af8dd22201dd8d48e5dcfcaed281ff9422c7` |
+| candidate provenance | `f58b49db67d0bcfa079bc433298a6ce99b6e7c23` |
 
 ## What got better vs worse
 
