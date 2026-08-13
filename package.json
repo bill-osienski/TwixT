@@ -7,7 +7,7 @@
     "start": "node scripts/startServer.js",
     "server": "node server/index.js",
     "test": "node --test tests/smoke.test.mjs",
-    "test:server": "node --test server/test_server.js server/test_readout_policy.js",
+    "test:server": "node --test server/test_server.js server/test_readout_policy.js server/test_model_manifest.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "eslint . --max-warnings=0"

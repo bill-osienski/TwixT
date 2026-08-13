@@ -9,7 +9,7 @@
  * This is the ONLY place Node.js does layout conversion.
  */
 import * as ort from 'onnxruntime-node';
-import { NUM_CHANNELS } from './gameLogic.js';
+import { NUM_CHANNELS, BOARD_SIZE } from './gameLogic.js';
 
 export class AlphaZeroInference {
   constructor(modelPath) {
@@ -63,7 +63,7 @@ export class AlphaZeroInference {
     // mismatch, and the evaluate/analyze-position handlers would return
     // 500 — which is exactly how this drift was caught.
     const numChannels = NUM_CHANNELS;
-    const size = 24;
+    const size = BOARD_SIZE;
 
     // CRITICAL: Convert from toTensorHWC() [H][W][C] to ONNX NCHW (1, C, H, W)
     // This is the ONLY place we do layout conversion
@@ -161,7 +161,7 @@ export class AlphaZeroInference {
     // mismatch, and the evaluate/analyze-position handlers would return
     // 500 — which is exactly how this drift was caught.
     const numChannels = NUM_CHANNELS;
-    const size = 24;
+    const size = BOARD_SIZE;
 
     const board = new Float32Array(1 * numChannels * size * size);
     for (let c = 0; c < numChannels; c++) {

@@ -1,17 +1,25 @@
 import { createServer } from 'http';
-import { readFile, stat } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { exec, spawn } from 'child_process';
-import { readdirSync, existsSync } from 'fs';
+
+import { resolveModel } from '../server/model_manifest.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, '..');
 
-const PORT = 5500;
-const AI_PORT = 3001;
+// Overridable so the launcher itself can be exercised by tests: a regression
+// test needs to start it without racing for the real ports or opening a browser
+// on the developer's machine. `0` selects an ephemeral port, so an explicit 0
+// must survive the fallback.
+const envPort = (name, fallback) =>
+  process.env[name] === undefined ? fallback : Number(process.env[name]);
+
+const PORT = envPort('TWIXT_PORT', 5500);
+const AI_PORT = envPort('TWIXT_AI_PORT', 3001);
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -26,92 +34,44 @@ const MIME_TYPES = {
 };
 
 /**
- * Find the latest model checkpoint in a directory.
+ * Verify the pinned model before anything starts.
+ *
+ * This replaces a step that re-derived the served artifact on every launch by
+ * picking whatever file sorted last in a research checkpoint directory and
+ * re-exporting it whenever its mtime beat the ONNX's. Nothing here writes,
+ * exports, or selects a model: it reads one manifest and checks that the bytes
+ * on disk are the bytes that manifest names.
+ *
+ * On failure it reports loudly and declines to start the AI server. It never
+ * substitutes another artifact and never regenerates one.
  */
-function findLatestCheckpoint(checkpointDir) {
-  if (!existsSync(checkpointDir)) return null;
-
-  const files = readdirSync(checkpointDir)
-    .filter((f) => f.endsWith('.safetensors') && !f.includes('partial'))
-    .sort()
-    .reverse();
-
-  return files.length > 0 ? join(checkpointDir, files[0]) : null;
+async function checkPinnedModel() {
+  try {
+    const { manifest, manifestPath } = await resolveModel();
+    console.log(`  Model id: ${manifest.model_id}`);
+    console.log(`  Manifest: ${manifestPath}`);
+    return { ok: true, manifestPath };
+  } catch (err) {
+    console.error('');
+    console.error('  ❌ MODEL VALIDATION FAILED');
+    console.error(`     ${err.code || 'ERROR'}: ${err.message}`);
+    console.error('     The AI server will NOT start.');
+    console.error('     No model was exported, substituted, or regenerated.');
+    console.error('');
+    return { ok: false, manifestPath: null };
+  }
 }
 
 /**
- * Export checkpoint to ONNX if needed.
+ * Start the AI inference server against the manifest this launcher validated.
+ *
+ * The child is given MODEL_MANIFEST, not a raw artifact path, so it repeats the
+ * same validation rather than trusting the parent's word for it.
  */
-async function ensureOnnxModel() {
-  const onnxPath = join(ROOT_DIR, 'server', 'model.onnx');
-  const checkpointDir = join(ROOT_DIR, 'checkpoints', 'alphazero-v2-staged');
-
-  // Check if ONNX exists and is recent
-  const latestCheckpoint = findLatestCheckpoint(checkpointDir);
-  if (!latestCheckpoint) {
-    console.log('  No checkpoints found - AI server will not be available');
-    return false;
-  }
-
-  let needsExport = false;
-
-  if (!existsSync(onnxPath)) {
-    console.log('  ONNX model not found, exporting...');
-    needsExport = true;
-  } else {
-    // Check if checkpoint is newer than ONNX
-    const onnxStat = await stat(onnxPath);
-    const checkpointStat = await stat(latestCheckpoint);
-    if (checkpointStat.mtime > onnxStat.mtime) {
-      console.log('  Checkpoint newer than ONNX, re-exporting...');
-      needsExport = true;
-    }
-  }
-
-  if (needsExport) {
-    console.log(`  Checkpoint: ${latestCheckpoint}`);
-
-    const exportArgs = `-m scripts.GPU.alphazero.export_onnx --weights "${latestCheckpoint}" --output "${onnxPath}"`;
-
-    return new Promise((resolve) => {
-      // Try python3 first
-      exec(`python3 ${exportArgs}`, { cwd: ROOT_DIR }, (error, stdout, stderr) => {
-        if (!error) {
-          console.log('  Export complete!');
-          resolve(true);
-          return;
-        }
-
-        // Fall back to python
-        exec(`python ${exportArgs}`, { cwd: ROOT_DIR }, (error2, stdout2, stderr2) => {
-          if (error2) {
-            console.error('  Export failed:', stderr2 || stderr || error2.message);
-            console.error('  Make sure Python is installed with: torch, onnx, safetensors');
-            resolve(false);
-          } else {
-            console.log('  Export complete!');
-            resolve(true);
-          }
-        });
-      });
-    });
-  }
-
-  return true;
-}
-
-/**
- * Start the AI inference server.
- */
-function startAIServer() {
-  const onnxPath = join(ROOT_DIR, 'server', 'model.onnx');
-  if (!existsSync(onnxPath)) {
-    return null;
-  }
-
+function startAIServer(manifestPath) {
   const aiServer = spawn('node', ['server/index.js'], {
     cwd: ROOT_DIR,
-    env: { ...process.env, MODEL_PATH: onnxPath, PORT: AI_PORT.toString() },
+    env: { ...process.env, MODEL_MANIFEST: manifestPath, PORT: AI_PORT.toString() },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -163,6 +123,7 @@ const server = createServer(async (req, res) => {
 
 // Open browser automatically
 function openBrowser(url) {
+  if (process.env.TWIXT_NO_BROWSER) return;
   const start =
     process.platform === 'darwin'
       ? 'open'
@@ -177,15 +138,27 @@ function openBrowser(url) {
 async function main() {
   console.log('\n🎮 TwixT Game Server Starting...\n');
 
-  // Check/export ONNX model
-  console.log('Checking AI model...');
-  const hasModel = await ensureOnnxModel();
-
-  // Start AI server if model available
+  // Registered before anything is spawned. Previously this was installed only
+  // after the static server was listening, so a Ctrl+C in the window between
+  // spawning the AI server and listening left the child running.
   let aiServer = null;
+  const shutdown = () => {
+    console.log('\n\nShutting down...');
+    if (aiServer) aiServer.kill();
+    server.close();
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+
+  // Validate the pinned model. No export, no selection, no fallback.
+  console.log('Checking AI model...');
+  const { ok: hasModel, manifestPath } = await checkPinnedModel();
+
+  // Start AI server only if the pinned artifact validated.
   if (hasModel) {
     console.log('\nStarting AI server...');
-    aiServer = startAIServer();
+    aiServer = startAIServer(manifestPath);
   }
 
   // Start static file server
@@ -197,20 +170,12 @@ async function main() {
       console.log(`   AI:        http://localhost:${AI_PORT}`);
       console.log(`   WebSocket: ws://localhost:${AI_PORT}/ws`);
     } else {
-      console.log(`   AI:        Not available (no model)`);
+      console.log(`   AI:        UNAVAILABLE - model validation failed (see error above)`);
     }
     console.log('\n   Press Ctrl+C to stop\n');
 
     // Open browser after a short delay
-    setTimeout(() => openBrowser(url), 500);
-  });
-
-  // Clean shutdown
-  process.on('SIGINT', () => {
-    console.log('\n\nShutting down...');
-    if (aiServer) aiServer.kill();
-    server.close();
-    process.exit(0);
+    setTimeout(() => openBrowser(url), 500).unref();
   });
 }
 

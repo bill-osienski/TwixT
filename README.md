@@ -30,15 +30,49 @@ This starts:
 - **Game server** on http://localhost:5500 (opens browser automatically)
 - **AI server** on http://localhost:3001 (if ONNX model exists)
 
-### First-Time Setup: Export the AI Model
+### The AI Model
 
-The AI server requires an ONNX model exported from a trained checkpoint:
+The served model is **pinned**, committed, and validated at startup. No setup step
+is required, and `npm start` never exports or selects a model.
+
+The artifact lives under `models/<content-address>/` as three files: the ONNX
+graph, its `model.onnx.data` weight sidecar, and a `manifest.json` recording both
+SHA-256 hashes plus the tensor contract. `server/model_manifest.js` is the only
+loading path, shared by `npm start` and `npm run server`. If either file is
+missing or its hash does not match, startup fails loudly — it does not fall back
+to another artifact and does not re-export one.
+
+Startup checks more than the hashes. It parses the graph's external-data
+references and requires every one to name the declared sidecar (a filename merely
+appearing somewhere in the bytes proves nothing); it checks tensor names, types
+and shapes against the runtime's own metadata; and it checks all of that against
+the interface this server can actually consume, derived from `NUM_CHANNELS` and
+`BOARD_SIZE` in `gameLogic.js`. That last step is separate on purpose — a model
+and a manifest can agree perfectly with each other and still be unusable here.
+
+The served board is the official 24×24. The engine supports other sizes for
+curriculum training, but a model built for one is rejected rather than served.
+
+To try a different model, stage it in its own `models/<content-address>/`
+directory with its own manifest and point `MODEL_MANIFEST` at it:
 
 ```bash
-python3 -m scripts.GPU.alphazero.export_onnx --weights checkpoints/alphazero-fresh/model_iter_0168.safetensors --output server/model.onnx
+MODEL_MANIFEST=models/<content-address>/manifest.json npm run server
 ```
 
-After exporting, `npm start` will automatically use the model.
+The `model_id` is not chosen — it is `sha256(graph_sha256 + ":" +
+external_data_sha256)` truncated to 16 hex, so it addresses the **pair**. Startup
+rejects a manifest whose id does not follow from its own hashes. Derive it with
+`computeModelId` from `server/model_manifest.js`.
+
+Changing the default is a tracked edit to `DEFAULT_MODEL_ID` in
+`server/model_manifest.js`, so the served model changes only when someone decides
+it should.
+
+**The current baseline's provenance is unknown** and is recorded as `unknown`
+rather than guessed. Its identity is verified; no parity or playing-strength
+claim is attached to it. See
+`docs/superpowers/2026-08-13-product-model-alignment-decision-memo.md`.
 
 ## Architecture
 
@@ -75,8 +109,11 @@ pip install -r requirements.txt
 # Start/resume AlphaZero training
 python3 -m scripts.GPU.alphazero.train --iterations 200 --games 50
 
-# Export trained model to ONNX for the game server
-python3 -m scripts.GPU.alphazero.export_onnx --weights checkpoints/alphazero-fresh/model_iter_XXXX.safetensors --output server/model.onnx
+# Export a trained model to ONNX, into its own staging directory.
+# Never export over a pinned model — see "The AI Model" above.
+python3 -m scripts.GPU.alphazero.export_onnx \
+  --weights checkpoints/alphazero-fresh/model_iter_XXXX.safetensors \
+  --output models/staging-<name>/model.onnx
 ```
 
 ### Training Features
@@ -140,7 +177,12 @@ npm start
 ## Troubleshooting
 
 ### AI server not starting
-- Ensure `server/model.onnx` exists (run the export command above)
+- Read the startup error: model validation names the exact failure
+  (`MANIFEST_MISSING`, `GRAPH_MISSING`, `DATA_MISSING`, `GRAPH_HASH_MISMATCH`,
+  `DATA_HASH_MISMATCH`, `EXTERNAL_REF_MISMATCH`, `CONTRACT_MISMATCH`, ...)
+- Both files of the pair must be present and hash-match:
+  `shasum -a 256 models/<content-address>/model.onnx*` against `manifest.json`
+- Startup never re-exports a model to repair this; fix the artifact or the manifest
 - Check that port 3001 is not in use
 
 ### "AlphaZero server not available" in browser

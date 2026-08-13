@@ -36,6 +36,7 @@ export default [
         __filename: 'readonly',
         Buffer: 'readonly',
         global: 'readonly',
+        structuredClone: 'readonly',
         // THREE.js (for 3D renderer)
         THREE: 'readonly',
       },

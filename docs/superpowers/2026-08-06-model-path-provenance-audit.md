@@ -86,3 +86,56 @@ identification; it was judged unnecessary and was not performed.
   task**. The smallest durable fix is for `export_onnx.py` to write the source checkpoint
   path and its SHA-1 into `metadata_props`, making future artifacts self-identifying. It
   cannot retroactively identify the current file.
+
+---
+
+## Erratum — 2026-08-13: the artifact is a PAIR, not one file
+
+**The verdict is unaffected. The artifact description above is incomplete.**
+
+The table in *The artifact* records `server/model.onnx` — 82,855 bytes, sha256
+`f1b4411a…` — as though that file were the served artifact. It is only the **graph**.
+The graph holds **33 externally stored initializers** referencing a sibling weight
+sidecar by relative filename; the weights are not in it.
+
+| | graph | external data |
+|---|---|---|
+| filename | `model.onnx` | `model.onnx.data` |
+| size | 82,855 bytes | 7,493,120 bytes |
+| sha256 | `f1b4411a9d46cc767aa31a3f6885c307704897f21c327a3210da5d5c810a6ae5` | `111546445ea4db8eb775adb7ca611539ac60c63780e200fb9a8ec861ab3b0937` |
+
+Consequences of the correction:
+
+- **The `MISMATCH` verdict stands unchanged.** Both files carry the same
+  2026-05-15 20:57 mtime and both predate `calib020_0001` (2026-06-20 22:14:54). The
+  exclusion never depended on the artifact's internal structure.
+- **A single-file hash cannot identify this artifact.** Any check that hashes only the
+  graph would pass while the weights were replaced wholesale.
+- The probable-source identification remains **circumstantial** and was not pursued.
+  Note additionally that BatchNorm is folded into the convolutions in this export, so a
+  weight-level comparison against a `.safetensors` checkpoint would have to reproduce
+  the fusion as well as the layout conversion. It has no decision value.
+
+Measured directly from the artifact by walking the protobuf (`externalDataLocations`
+in `server/model_manifest.js`), replacing an earlier estimate in this erratum that was
+inferred from raw string counts and was wrong about the initializer arithmetic:
+
+| | |
+|---|---|
+| nodes | 76 |
+| initializers | 53, of which **33 carry external data** |
+| external-data locations | 33, all exactly `model.onnx.data` |
+| op types | `Relu` 16, `Conv` 14, `Slice` 8, `Add` 6, `Concat` 4, `Where` 4, `Gemm` 4, `Transpose` 2, `Gather` 2, `Unsqueeze` 2, `Squeeze` 2, `Tanh` 2, and nine singletons |
+| `BatchNormalization` | **0** — folded |
+
+**Superseded by Phase 1 (2026-08-13):** the selection chain recorded above no longer
+exists. `ensureOnnxModel`'s auto-export and `findLatestCheckpoint`'s lexicographic pick
+have been removed, and `server/index.js`'s cwd-relative `./model.onnx` default is gone.
+The same pair, byte-identical and hash-verified across the move, now lives at
+`models/1d64027db521a50f/` — content-addressed over **both** hashes, since an address
+derived from the graph alone would collide across every export of this architecture —
+with a manifest recording both hashes and `source_checkpoint: unknown`. Loading goes
+through `server/model_manifest.js` for both entry points, binds the graph to its sidecar
+by parsing the external-data references rather than searching for the filename, enforces
+the tensor contract against runtime metadata, and fails loudly rather than exporting. See
+`docs/superpowers/2026-08-13-product-model-alignment-decision-memo.md`.

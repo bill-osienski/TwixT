@@ -27,6 +27,7 @@ import { MCTS } from './mcts.js';
 import { TwixtState } from './gameLogic.js';
 import { BoardMovesCache } from './cache.js';
 import { resolvePolicy, selectMoveForRequest } from './readout_policy.js';
+import { resolveModel, assertSessionContract } from './model_manifest.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -570,13 +571,21 @@ async function computeBestMove(stateDict, difficulty = 'medium', opts = {}) {
 // ============================================================================
 
 async function main() {
-  modelPath = process.env.MODEL_PATH || './model.onnx';
+  // The model comes from a validated manifest — never from a cwd-relative
+  // default, and never from an environment variable naming a bare artifact.
+  // Any validation failure throws and takes the process down; this server does
+  // not serve unvalidated bytes.
+  const { manifestPath, manifest, graphPath } = await resolveModel();
+  modelPath = graphPath;
   const port = process.env.PORT || 3001;
   const cacheSize = parseInt(process.env.CACHE_SIZE || '10000', 10);
 
   console.log('AlphaZero Inference Server');
   console.log('==========================');
+  console.log(`Model id:   ${manifest.model_id}`);
+  console.log(`Manifest:   ${manifestPath}`);
   console.log(`Model path: ${modelPath}`);
+  console.log(`Provenance: source_checkpoint=${manifest.provenance.source_checkpoint_path}`);
   console.log(`Port: ${port}`);
   console.log(`Cache size: ${cacheSize}`);
   console.log();
@@ -584,6 +593,9 @@ async function main() {
   console.log('Loading ONNX model...');
   inference = new AlphaZeroInference(modelPath);
   await inference.load();
+  // Names, types, shapes, and the two semantic fields the tensor plumbing is
+  // built from — including this wrapper's move-buffer size.
+  assertSessionContract(manifest, inference.session, inference.maxMoves);
 
   cache = new BoardMovesCache(cacheSize);
 

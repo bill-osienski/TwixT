@@ -2038,12 +2038,17 @@ app.get('/api/health', (req, res) => {
 });
 
 async function main() {
-  const modelPath = process.env.MODEL_PATH || './model.onnx';
+  // Model identity comes from a validated manifest (server/model_manifest.js).
+  // There is no cwd-relative default and no raw MODEL_PATH override: both were
+  // unpinned seams. MODEL_MANIFEST stages an alternative, with identical
+  // validation. Any mismatch throws and the process exits.
+  const { manifest, graphPath } = await resolveModel();
   const port = process.env.PORT || 3001;
 
   console.log('Loading ONNX model...');
-  inference = new AlphaZeroInference(modelPath);
+  inference = new AlphaZeroInference(graphPath);
   await inference.load();
+  assertSessionContract(manifest, inference.session.inputNames, inference.session.outputNames);
 
   cache = new BoardMovesCache(10000);
 
