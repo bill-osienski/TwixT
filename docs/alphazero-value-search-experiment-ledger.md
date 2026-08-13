@@ -2,6 +2,10 @@
 
 **Created:** 2026-06-26 · **Status:** **CLOSED 2026-08-12** · **Scope:** the completed value-head calibration, search-reliability, competitive-readout and training-strength programme centered on `calib020_0001`.
 
+**"Closed" means no further experiment is authorized; the record itself stays append-only.**
+Results, errata and corrections are still added — nothing here is sealed or rewritten. Reopening
+the programme would take a new scope and authorization, not an edit to this line.
+
 The durable, append-only record of the connected calibration, search, readout and training
 programme: what changed, the hypothesis and rationale, how each branch scored on its applicable
 acceptance gates, what was concluded, and what **not** to retry. **Read this before proposing any
@@ -22,7 +26,7 @@ knob) is not a new hypothesis.
 > | **What the result does establish** | `calib020_0001` survived multiple independent challenges spanning model calibration, MCTS behavior, readout and training-data generation. The negative/null results sharply reduce the credible local search space and prevent repeating nearby variants under new names. |
 > | **What it does not establish** | It does not prove `calib020_0001` is globally optimal, that all future training is futile, or that no fundamentally new architecture/data/objective could improve it. It establishes that the tested families and their nearby rescues are exhausted under their recorded evidence and decision rules. |
 > | **Why not run more games or nearby variants** | Those continuations were frozen out before the results. Enlarging a match after observing parity, changing dose, inspecting intermediate checkpoints, extending grids or relaxing gates would be post-hoc selection rather than a new confirmatory experiment. See do-not-repeat entries `#1–#51`. |
-> | **Infrastructure that survives** | The single Metal-owning inference arbiter, model-addressed routing, dual-root game seam, learner-only filtering, deterministic colour assignment and fail-closed worker/server paths are shipped and tested (`2,881` passed / `0` failed). The arbiter also completed the full fp6 workload—roughly 1,500 games at 400 simulations—without the two-server driver abort prohibited by `#50`. |
+> | **Infrastructure that survives** | The single Metal-owning inference arbiter, model-addressed routing, dual-root game seam, learner-only filtering, deterministic colour assignment and fail-closed worker/server paths are shipped and tested (`2,881` passed / `0` failed). The arbiter also completed the full fp6 workload—roughly 1,500 games at 400 simulations—without the driver abort that terminated fp5. `#50` prohibits the two-server design; the abort was its consequence, and the prohibition stands unchanged. |
 > | **Process conclusion** | Preregistration plus hostile verification caught defects that ordinary green tests or source inspection missed: a circular oracle, a patch to the wrong symbol owner, tests whose names exceeded their assertions, a seed collision hidden by substring matching, and a self-falsifying provenance statement. Future work should retain independent oracles, behaviorally negative-constructed tests, exact-token identity checks and commit-bound gates. |
 > | **Only open workstream** | **Product-model alignment, not research:** determine exactly what produced `server/model.onnx`, reproduce a verified ONNX export of `calib020_0001`, establish native-versus-ONNX numerical parity, and review deployment/rollback separately. This closeout authorizes none of those changes. |
 
