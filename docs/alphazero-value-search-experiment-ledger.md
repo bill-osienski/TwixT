@@ -13,6 +13,10 @@ new local variant** — the programme is closed, and a change on the
 [do-not-repeat](#do-not-repeat-prevents-going-in-circles) list (or another sweep of an exhausted
 knob) is not a new hypothesis.
 
+> **Next-session memory:** `docs/superpowers/2026-08-12-next-session-handoff.md` condenses this
+> closeout, the latest frozen-parent plan and result, the surviving infrastructure, seed state and
+> the separate product-model-alignment workstream. This ledger remains authoritative if they differ.
+
 > **Colour-rule erratum (2026-08-10; applies to the competitive-readout and training matches below).** The preregistered rule that compared each candidate's per-colour 95% upper score bound with an absolute `0.50` null was mis-specified for a game with board-colour advantage. Equal agents need not score `0.50` in each colour. Moreover, estimating the colour null from the same two-agent match cannot identify candidate-specific colour interaction: candidate strength and board-colour effects are confounded, and the two adjusted deficits are equal by construction. Historical rule firings remain recorded as protocol facts, but they do **not** establish independent red/black rejection or black-specific harm. Every promotion verdict below is unchanged because its aggregate bar failed independently. Prospectively, retire the absolute `0.50` per-colour veto; use the aggregate criterion unless a future card preregisters an independently measured colour baseline.
 
 > **Research-programme closeout (2026-08-12) — ALL EXPERIMENTAL LINES CLOSED; keep `calib020_0001`.**
