@@ -1,4 +1,4 @@
-# Product-Stack Comparison Specification — DRAFT FOR REVIEW (rev 4)
+# Product-Stack Comparison Specification — DRAFT FOR REVIEW (rev 5)
 
 **Date:** 2026-08-14 · **Basis:** `bdbbeca` (closed Phase 2 head)
 **Status: DRAFT. NOT PREREGISTERED, and it authorizes nothing.**
@@ -42,6 +42,16 @@ was chosen as **stronger shipped play**.
 > | 4 | §8/§10 place `quarantine/` outside `match/` | A superseded sidecar must not be reachable as evidence. |
 >
 > Rev 3 is preserved at `07457a2`.
+>
+> ## Revision 5 — 2026-08-14, still before any approval, harness, opening or game
+>
+> | # | change | reason |
+> |---|---|---|
+> | 1 | §10 requires `opening_id === pair_index` and a distinct opening set of **exactly `0…P-1`** | Rev 4 accepted "`P` unique openings from `0…199`", which permits `100…199` at `P=100` — the right *size*, the wrong *set*. That is a selected sample wearing a cardinality rule. |
+> | 2 | §10 adds a **run fingerprint** invariant across every sidecar and every resume | Nothing stopped a `~30`-hour job being restarted at a different `execution_commit` and finishing a match whose halves were played by different code. |
+> | 3 | `candidate_score`, `ort_config` and the timing span reworded | The `candidate_score` entry still said the analyser "never re-derives", contradicting the re-derivation §10 gained in rev 4. `{}` misdescribes a one-argument call as an empty-but-present options object. "First move to last move" left search and sidecar write ambiguously inside or outside the span. |
+>
+> Rev 4 is preserved at `6f16de9`.
 
 ---
 
@@ -332,11 +342,16 @@ configuration (§5.1).
 games_per_hour = 10 × 3,600,000 / total_sequential_wall_ms
 ```
 
-`total_sequential_wall_ms` is **one wall-clock measurement** spanning the first move of game 1 to
-the last move of game 10 — **not** a sum of per-game `elapsed_ms`, which would silently exclude
-inter-game overhead and could land on the other side of the boundary. **Both sessions are loaded
-and both contracts asserted before the clock starts**, so model-load time is excluded from
-throughput while still being performed.
+`total_sequential_wall_ms` is **one wall-clock measurement**, from **immediately before the first
+MCTS search of game 1** to **the completion of the atomic rename of game 10's sidecar**. Stated
+that precisely because "first move to last move" leaves it ambiguous whether search and sidecar
+write are inside the span; they are, since the match pays both.
+
+It is **not** a sum of per-game `elapsed_ms`, which would silently exclude inter-game overhead
+and could land on the other side of the `8.8` boundary.
+
+**Both sessions are loaded and both contracts asserted before the clock starts**, so one-off
+model-load cost is excluded while still being performed.
 
 | measured throughput | `P` |
 |---|---:|
@@ -415,11 +430,11 @@ to whatever the harness happened to emit.
 | `red_model_id`, `black_model_id` | explicit per colour — the colour assignment, not merely which models played |
 | `moves` | the complete move sequence, opening included |
 | `result` | `"red"`, `"black"` or `"draw"` |
-| `candidate_score` | `1.0` / `0.5` / `0.0`, derived and stored so the analyser never re-derives colour |
+| `candidate_score` | `1.0` / `0.5` / `0.0`. Stored **for legibility only** and **independently recomputed** by the analyser; never consumed on trust |
 | `termination` | `"win"`, `"no_legal_moves"` or `"max_plies"` |
 | `ply_count` | final ply |
 | `n_simulations`, `c_puct`, `move_temp` | `800`, `1.5`, `0` |
-| `ort_version`, `ort_config` | `onnxruntime-node` version and the session options used (`{}` — the product default) |
+| `ort_version`, `ort_config` | `onnxruntime-node` version, and `"no options supplied"` — the product calls `InferenceSession.create(path)` with a single argument, so there is no options object to record, and writing `{}` would misdescribe it as an empty-but-present configuration |
 | `execution_commit` | git HEAD, with the worktree asserted clean |
 | `elapsed_ms` | for throughput reporting |
 
@@ -441,9 +456,28 @@ rules are stated per that fact:
 - within a `pair_index`, `game_in_pair` is `0` **once** and `1` **once**;
 - the two games of a pair share the **same** `opening_id` and carry **opposite** colour
   assignments;
-- the `P` **distinct** `opening_id`s are unique *across* pairs and drawn only from `0…199`;
+- **`opening_id === pair_index` for every sidecar**, and the distinct opening set is **exactly
+  `0…P-1`** — not merely `P` unique values drawn from `0…199`;
 - every `opening_sha256` matches the committed pool;
 - every sidecar carries `kind: "match"`.
+
+**Why the prefix is pinned, not just the count.** "`P` unique openings from `0…199`" would accept
+`100…199` at `P=100` — a set of the specified size that is nonetheless **not the frozen prefix**,
+and therefore a selected sample. Since `P` is chosen from timing alone (§7.3), the openings it
+selects must follow mechanically from `P`, with no freedom left in *which* ones.
+
+**Run fingerprint — one implementation, or no result.** These fields must be **byte-identical
+across every match sidecar in the run**, including across every resume:
+
+`execution_commit` · `schema` · `ort_version` · `ort_config` · `n_simulations` · `c_puct` ·
+`move_temp` · both model IDs
+
+Any variation invalidates the run. A `~30`-hour job will be restarted, and the tempting failure
+is benign-looking: fix an unrelated bug, restart, and finish a match whose first half was played
+by different code. **A clean restart at a different `execution_commit` is not a resume — it is a
+new run**, and the completed pairs from the old commit may not be reused. The fingerprint is
+recorded once when the run starts and re-asserted at every process start; a mismatch aborts
+rather than continues.
 
 **The analyser trusts nothing it can re-derive.** For every game it independently:
 
