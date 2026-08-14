@@ -1,0 +1,147 @@
+{
+  "schema": "twixt-parity-result/1",
+  "specification": "docs/superpowers/2026-08-13-phase2-parity-specification.md",
+  "verdict": "PASS",
+  "positions_compared": 126,
+  "primary_compared": 120,
+  "edge_compared": 6,
+  "corpus_sha256": "3e5faab0680ea94169be44c4113bf21cc086a9f70e528e666c5f7a709e58099c",
+  "model_id": "c34b7ff3297c785a",
+  "graph_sha256": "9df19e08ca438acbc3ba14d50925298389ddaf0d522f623fab617abdf24864ad",
+  "source_checkpoint_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "scratch_export_path": "/tmp/claude-501/-Users-bill-projects-TwixT-Game/e70df345-978f-42a5-9f37-1562738c4654/scratchpad/phase2_export",
+  "node_loaded_through_manifest": true,
+  "environment": {
+    "python_side": {
+      "python": "3.14.6",
+      "platform": "darwin arm64",
+      "mlx": "0.30.3",
+      "mlx_metal": "0.30.3",
+      "torch": "2.10.0",
+      "onnx": "1.20.1",
+      "onnxruntime": "1.24.4",
+      "numpy": "2.4.1",
+      "onnx_producer": "pytorch 2.10.0",
+      "onnx_opset": 18,
+      "ort_providers": [
+        "CPUExecutionProvider"
+      ]
+    },
+    "node_side": {
+      "node": "v26.7.0",
+      "platform": "darwin arm64",
+      "onnxruntime_node": "1.23.2"
+    }
+  },
+  "gates": {
+    "s1_encoding": {
+      "positions": 126,
+      "encoding_mismatches": 0,
+      "legal_move_mismatches": 0,
+      "rule": "exact equality, tolerance zero",
+      "mechanism": "SHA-256 over canonical little-endian float32 NCHW bytes on both sides"
+    },
+    "masks": {
+      "violations": 0,
+      "rule": "every index >= n_legal is exactly -1e9",
+      "note": "Checked on both ONNX Runtime surfaces. Native MLX returns only n_legal logits and exposes no padded tail, so the check is not applicable there rather than skipped."
+    },
+    "equivariance": {
+      "ort_py": {
+        "checked": 10,
+        "mismatches": []
+      },
+      "ort_node": {
+        "checked": 10,
+        "mismatches": []
+      }
+    },
+    "surfaces": {
+      "S2": {
+        "reference": "mlx",
+        "near_tie_band": 0.0002,
+        "max_abs_logit_diff": 0.0000362396240234375,
+        "max_abs_logit_at": "edge_one_move",
+        "mean_abs_logit_diff": 0.0000014216438310161454,
+        "max_abs_value_diff": 0.0000027045607566833496,
+        "max_abs_value_at": "midgame_28",
+        "top1_disagreements_outside_band": [],
+        "near_tie_exemptions": 0,
+        "near_tie_exemption_detail": [],
+        "topk_set_agreement": 1,
+        "kendall_tau_median": 1,
+        "kendall_tau_min": 0.9999736339067958,
+        "sign_mismatches": [],
+        "tolerances": {
+          "maxLogit": 0.0001,
+          "meanLogit": 0.00001,
+          "maxValue": 0.0001
+        },
+        "margins": {
+          "max_abs_logit": 0.0000637603759765625,
+          "mean_abs_logit": 0.000008578356168983856,
+          "max_abs_value": 0.00009729543924331666
+        }
+      },
+      "S3": {
+        "reference": "ort_py",
+        "near_tie_band": 0.00002,
+        "max_abs_logit_diff": 0,
+        "max_abs_logit_at": null,
+        "mean_abs_logit_diff": 0,
+        "max_abs_value_diff": 0,
+        "max_abs_value_at": null,
+        "top1_disagreements_outside_band": [],
+        "near_tie_exemptions": 0,
+        "near_tie_exemption_detail": [],
+        "topk_set_agreement": 1,
+        "kendall_tau_median": 1,
+        "kendall_tau_min": 0.9999908880505896,
+        "sign_mismatches": [],
+        "tolerances": {
+          "maxLogit": 0.00001,
+          "meanLogit": 0.000001,
+          "maxValue": 0.00001
+        },
+        "margins": {
+          "max_abs_logit": 0.00001,
+          "mean_abs_logit": 0.000001,
+          "max_abs_value": 0.00001
+        }
+      },
+      "S4": {
+        "reference": "mlx",
+        "near_tie_band": 0.00022,
+        "max_abs_logit_diff": 0.0000362396240234375,
+        "max_abs_logit_at": "edge_one_move",
+        "mean_abs_logit_diff": 0.0000014216438310161454,
+        "max_abs_value_diff": 0.0000027045607566833496,
+        "max_abs_value_at": "midgame_28",
+        "top1_disagreements_outside_band": [],
+        "near_tie_exemptions": 0,
+        "near_tie_exemption_detail": [],
+        "topk_set_agreement": 1,
+        "kendall_tau_median": 1,
+        "kendall_tau_min": 0.9999736339067958,
+        "sign_mismatches": [],
+        "tolerances": {
+          "maxLogit": 0.00011,
+          "meanLogit": 0.000011,
+          "maxValue": 0.00011
+        },
+        "margins": {
+          "max_abs_logit": 0.0000737603759765625,
+          "mean_abs_logit": 0.000009578356168983855,
+          "max_abs_value": 0.00010729543924331665
+        }
+      }
+    },
+    "value": {
+      "raw_range_violations": 0,
+      "red_perspective_max_abs_diff": 0,
+      "red_perspective_tolerance": 0.000001,
+      "note": "Both conversions are applied to the same fixed synthetic side-to-move values, so this isolates the conversion logic instead of re-measuring the S3 model difference."
+    }
+  },
+  "failures": []
+}

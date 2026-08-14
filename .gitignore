@@ -63,3 +63,9 @@ scripts/GPU/logs/
 tests/probes/strong_advantage_probes.draft.json
 tests/probes/strong_advantage_probes.draft.pre-thinning.json
 tests/probes/candidates_strong_advantage.json
+
+# Phase 2 parity raw measurement halves: large (3.1 MB and 1.7 MB) and fully
+# regenerable from the committed corpus, harness and candidate pair. The verdict
+# and every metric live in tests/parity/results/parity_result.json, which is
+# committed; their SHA-256s are recorded in the commit that produced them.
+tests/parity/results/*_side.json

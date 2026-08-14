@@ -1,0 +1,41 @@
+{
+  "manifest_version": 1,
+  "model_id": "c34b7ff3297c785a",
+  "description": "Phase 2 parity candidate: ONNX export of calib020_0001, the best-supported research checkpoint. Staged for numerical parity measurement only. NOT the served model, NOT promoted, and carrying no strength claim. See docs/superpowers/2026-08-13-phase2-parity-specification.md.",
+  "model_id_note": "sha256(graph_sha256 + ':' + external_data_sha256), first 16 hex. Addresses the PAIR. Note that this candidate's graph differs from the baseline's despite an identical 82855-byte size, because 20 of the 53 initializers are small enough to be stored inline and therefore carry weight values into the graph bytes; that is an artifact of the exporter's external-data threshold and is not something a content address may rely on.",
+  "graph": {
+    "filename": "model.onnx",
+    "size_bytes": 82855,
+    "sha256": "9df19e08ca438acbc3ba14d50925298389ddaf0d522f623fab617abdf24864ad"
+  },
+  "external_data": {
+    "filename": "model.onnx.data",
+    "size_bytes": 7493120,
+    "sha256": "fc1ffaacf397ebbef530ba2c7bbc76e092c549e4ebf2c7fa592508f50e4b64e2"
+  },
+  "provenance": {
+    "source_checkpoint_path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "source_checkpoint_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+    "export_commit": "32751284016f80771d8763b37922458acfd55ef7",
+    "exporter_config": "scripts/GPU/alphazero/export_onnx.py unmodified at the export commit; .venv/bin/python -m scripts.GPU.alphazero.export_onnx --weights checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors --output <scratch>/model.onnx; hidden=128, blocks=6 (defaults), in_channels=NUM_CHANNELS=30, max_moves=576, opset_version=18, dynamic_axes=None, do_constant_folding at the torch.onnx.export default (true), so BatchNorm is folded into the convolutions",
+    "runtime_versions": "python 3.14.6; mlx 0.30.3; mlx-metal 0.30.3; torch 2.10.0; onnx 1.20.1; onnxruntime 1.24.4 (python); numpy 2.4.1; node 26.7.0; onnxruntime-node 1.23.2; exported on darwin arm64. The two ONNX Runtime versions differ by design: 1.24.4 serves the Python parity surface and 1.23.2 is what the product actually loads, so S3 measures that difference rather than configuring it away."
+  },
+  "provenance_note": "Every field is known and recorded, unlike the pinned baseline whose provenance is unrecoverable. The source checkpoint SHA-1 was verified equal to 209cf2d4... immediately before the export, and the working tree carried no modified tracked files at that moment. Exported once, to scratch, then placed here by content address; no alternate export was produced.",
+  "contract": {
+    "inputs": [
+      { "name": "board", "type": "float32", "shape": [1, 30, 24, 24] },
+      { "name": "move_rows", "type": "int64", "shape": [576] },
+      { "name": "move_cols", "type": "int64", "shape": [576] },
+      { "name": "move_mask", "type": "float32", "shape": [576] }
+    ],
+    "outputs": [
+      { "name": "policy_logits", "type": "float32", "shape": [576] },
+      { "name": "value", "type": "float32", "shape": [] }
+    ],
+    "board_shape": [1, 30, 24, 24],
+    "max_moves": 576,
+    "onnxruntime_node": "^1.20.0"
+  },
+  "contract_note": "Transcribed from onnxruntime-node session metadata for this artifact and enforced at load time against the manifest, its own internal consistency, and the fixed application contract derived from gameLogic NUM_CHANNELS and BOARD_SIZE plus AlphaZeroInference.maxMoves.",
+  "claims": "Identity only. This manifest asserts that these are the exported bytes and where they came from, and nothing more. NO parity claim: parity against native MLX has not been measured at the time of writing, and this artifact is staged precisely so that it can be. NO strength claim: it has never been played in the product stack. It is not the served model and DEFAULT_MODEL_ID is unchanged."
+}
