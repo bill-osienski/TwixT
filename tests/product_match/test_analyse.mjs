@@ -29,6 +29,7 @@ import {
   FROZEN_SPEC,
   analyse,
   bootstrapInterval,
+  classify,
   decide,
   mulberry32,
   tInterval,
@@ -36,8 +37,8 @@ import {
 import {
   BASELINE_MODEL_ID,
   CANDIDATE_MODEL_ID,
+  FINGERPRINT_FIELDS,
   runMatch,
-  sidecarName,
 } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -77,23 +78,42 @@ let root;
 let validDir;
 let validSidecars;
 
-/** Write a run directory from sidecars, optionally mutated. */
-async function runFrom(name, mutate = () => {}) {
+/**
+ * Write a run directory from sidecars, optionally mutated.
+ *
+ * Files are named by index, not by pair/slot, so a malformed SET (duplicate
+ * slots, wrong pair numbering) can be written at all — naming by pair/slot
+ * would silently collapse collisions and hide the very cases under test.
+ */
+async function runFrom(name, mutate = () => {}, meta = {}) {
   const d = join(root, name);
   await mkdir(join(d, 'match'), { recursive: true });
   const cars = structuredClone(validSidecars);
   const out = mutate(cars) ?? cars;
-  for (const s of out) {
+  for (let i = 0; i < out.length; i++) {
     await writeFile(
-      join(d, 'match', sidecarName(s.pair_index, s.game_in_pair)),
-      JSON.stringify(s, null, 2)
+      join(d, 'match', `game_${String(i).padStart(4, '0')}.json`),
+      JSON.stringify(out[i], null, 2)
+    );
+  }
+  const fp = Object.fromEntries(
+    FINGERPRINT_FIELDS.map((f) => [f, validSidecars[0][f]])
+  );
+  if (meta.runJson !== null) {
+    await writeFile(
+      join(d, 'run.json'),
+      JSON.stringify(
+        { fingerprint: fp, P: meta.P ?? P, ...meta.extra },
+        null,
+        2
+      )
     );
   }
   return d;
 }
 
-const expectReject = async (name, code, mutate) => {
-  const d = await runFrom(name, mutate);
+const expectReject = async (name, code, mutate, meta) => {
+  const d = await runFrom(name, mutate, meta);
   const r = await analyse(d, OPENINGS, TEST_SPEC);
   assert.strictEqual(r.verdict, 'REJECTED', `expected rejection for ${name}`);
   const codes = r.failures.map((f) => f.code);
@@ -173,6 +193,16 @@ describe('statistics are exactly determined', () => {
     );
     assert.strictEqual(decide(straddle, straddle), 'UNRESOLVED');
   });
+
+  it('classifies three-valued, so weaker and inconclusive do not "agree"', () => {
+    const below = { lower: 0.3, upper: 0.45 };
+    const straddle = { lower: 0.45, upper: 0.6 };
+    assert.strictEqual(classify(below), 'weaker');
+    assert.strictEqual(classify(straddle), 'inconclusive');
+    // Both have a lower bound under 0.5, so a lower-bound comparison would
+    // have called this agreement.
+    assert.notStrictEqual(classify(below), classify(straddle));
+  });
 });
 
 describe('analysis of a real run', () => {
@@ -237,10 +267,51 @@ describe('analysis of a real run', () => {
       c[0].kind = 'timing';
     }));
 
-  it('rejects a half-finished pair', () =>
-    expectReject('halfpair', 'PAIR_NOT_COMPLETE', (c) =>
-      c.slice(0, 2 * P - 1)
-    ));
+  it('rejects a run missing a game, measured against the committed P', () =>
+    // Bound to run.json's P, so a partial run cannot pass as a smaller complete
+    // one — an interim peek must not be able to wear a final verdict.
+    expectReject('halfpair', 'SIDECAR_COUNT', (c) => c.slice(0, 2 * P - 1)));
+
+  it('rejects an incomplete pair even when the total count is right', () =>
+    expectReject('pairshape', 'PAIR_NOT_COMPLETE', (c) => {
+      // Three sidecars land on pair 0 and one on pair 2: 2P files, broken shape.
+      c[c.length - 1].pair_index = 0;
+      c[c.length - 1].opening_id = 0;
+    }));
+
+  it('rejects analysing a P=200 run as though it were P=100', () =>
+    expectReject('shortP', 'SIDECAR_COUNT', undefined, { P: P + 1 }));
+
+  it('rejects a run with no committed metadata', () =>
+    expectReject('nometa', 'NO_RUN_METADATA', undefined, { runJson: null }));
+
+  it('rejects a fingerprint that is not the committed run', () =>
+    expectReject('notthisrun', 'FINGERPRINT_NOT_THE_COMMITTED_RUN', (c) => {
+      for (const s of c) s.execution_commit = 'c'.repeat(40);
+    }));
+
+  it('rejects a sidecar missing required fields', () =>
+    // Equality against an ABSENT field succeeds vacuously, so structure is
+    // checked before any semantic comparison.
+    expectReject('missingfields', 'MISSING_OR_MALFORMED_FIELD', (c) => {
+      for (const s of c) {
+        delete s.execution_commit;
+        delete s.ort_version;
+        delete s.elapsed_ms;
+      }
+    }));
+
+  it('rejects a sidecar carrying unexpected fields', () =>
+    expectReject('extrafields', 'UNEXPECTED_FIELDS', (c) => {
+      c[0].injected_note = 'not part of the schema';
+    }));
+
+  it('rejects an empty match directory instead of throwing', async () => {
+    const d = await runFrom('empty', () => []);
+    const r = await analyse(d, OPENINGS, TEST_SPEC);
+    assert.strictEqual(r.verdict, 'REJECTED');
+    assert.ok(r.failures.map((f) => f.code).includes('EMPTY_MATCH_DIRECTORY'));
+  });
 
   it('rejects both games of a pair sharing a slot', () =>
     expectReject('slots', 'BAD_GAME_IN_PAIR', (c) => {
@@ -326,13 +397,11 @@ describe('analysis of a real run', () => {
     }));
 
   it('rejects moves that do not start with the declared opening', () =>
+    // Swapping the first two moves keeps the count, the hash and legality
+    // intact, so only the prefix check can catch it.
     expectReject('prefixmoves', 'OPENING_PREFIX_MISMATCH', (c) => {
-      const s = c.find((x) => x.pair_index === 1);
-      s.opening_sha256 = c[0].opening_sha256;
-      s.opening_id = 0;
-      s.pair_index = 0;
-      s.game_in_pair = s.game_in_pair === 0 ? 1 : 0;
-      return c.filter((x) => x.pair_index !== 2).concat();
+      const m = c[0].moves;
+      c[0].moves = [m[1], m[0], ...m.slice(2)];
     }));
 
   it('rejects an opening hash that does not match the pool', () =>

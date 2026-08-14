@@ -14,7 +14,14 @@
  */
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { mkdtemp, rm, readdir, readFile, writeFile } from 'node:fs/promises';
+import {
+  mkdtemp,
+  rm,
+  readdir,
+  readFile,
+  rename,
+  writeFile,
+} from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -350,9 +357,10 @@ describe('runMatch and resumption', () => {
       'the whole pair is replayed, never half-counted'
     );
 
-    // The survivor is preserved as evidence, not deleted.
+    // The survivor is preserved as evidence under a UNIQUE name, not deleted
+    // and not overwritable by a later interruption.
     assert.deepStrictEqual(await readdir(join(d, 'quarantine')), [
-      sidecarName(0, 0),
+      'pair_0000_game_0.q00.json',
     ]);
     // And the replay reproduced it.
     const replayed = JSON.parse(
@@ -387,10 +395,169 @@ describe('runMatch and resumption', () => {
       runMatch(opts({ runDir: d, P: 1 })),
       (e) => e instanceof HarnessError && e.code === 'REPLAY_MISMATCH'
     );
-    // Both copies survive for diagnosis.
-    assert.deepStrictEqual(await readdir(join(d, 'quarantine')), [
-      sidecarName(0, 0),
+    // BOTH copies survive for diagnosis: the original observation and the
+    // divergent replay. The disagreement itself is the evidence.
+    assert.deepStrictEqual((await readdir(join(d, 'quarantine'))).sort(), [
+      'pair_0000_game_0.q00.divergent.json',
+      'pair_0000_game_0.q00.json',
     ]);
+    await rm(d, { recursive: true, force: true });
+  });
+
+  it('validates existing sidecars on restart instead of trusting filenames', async () => {
+    // A completed pair carrying a different execution_commit must NOT be
+    // skipped: that is the mixed-implementation run the fingerprint exists to
+    // prevent, and a filename proves nothing about who wrote it.
+    const d = await mkdtemp(join(tmpdir(), 'twixt-stale-'));
+    await runMatch(opts({ runDir: d, P: 1 }));
+    const p = join(d, 'match', sidecarName(0, 0));
+    const s = JSON.parse(await readFile(p, 'utf8'));
+    s.execution_commit = 'd'.repeat(40);
+    await writeFile(p, JSON.stringify(s));
+
+    await assert.rejects(
+      runMatch(opts({ runDir: d, P: 1 })),
+      (e) => e instanceof HarnessError && e.code === 'EXISTING_SIDECAR_INVALID'
+    );
+    await rm(d, { recursive: true, force: true });
+  });
+
+  it('validates a half-pair survivor before quarantining it', async () => {
+    const d = await mkdtemp(join(tmpdir(), 'twixt-staleq-'));
+    await assert.rejects(
+      runMatch(
+        opts({
+          runDir: d,
+          P: 1,
+          onGameComplete: ({ gameInPair }) => {
+            if (gameInPair === 0) throw new Error('simulated interruption');
+          },
+        })
+      ),
+      /simulated interruption/
+    );
+    const p = join(d, 'match', sidecarName(0, 0));
+    const s = JSON.parse(await readFile(p, 'utf8'));
+    s.red_model_id = s.black_model_id; // colour assignment now contradicts the slot
+    await writeFile(p, JSON.stringify(s));
+
+    await assert.rejects(
+      runMatch(opts({ runDir: d, P: 1 })),
+      (e) => e instanceof HarnessError && e.code === 'EXISTING_SIDECAR_INVALID'
+    );
+    await rm(d, { recursive: true, force: true });
+  });
+
+  it('never overwrites a quarantine record, however often it is interrupted', async () => {
+    const d = await mkdtemp(join(tmpdir(), 'twixt-twice-'));
+    const interruptFirstGame = {
+      runDir: d,
+      P: 1,
+      onGameComplete: ({ gameInPair }) => {
+        if (gameInPair === 0) throw new Error('simulated interruption');
+      },
+    };
+    // Two interruptions, then a completing run. Each restart that finds a
+    // half-pair files a NEW record rather than clobbering the previous one.
+    await assert.rejects(
+      runMatch(opts(interruptFirstGame)),
+      /simulated interruption/
+    );
+    await assert.rejects(
+      runMatch(opts(interruptFirstGame)),
+      /simulated interruption/
+    );
+    const summary = await runMatch(opts({ runDir: d, P: 1 }));
+
+    const q = (await readdir(join(d, 'quarantine'))).sort();
+    assert.deepStrictEqual(q, [
+      'pair_0000_game_0.q00.json',
+      'pair_0000_game_0.q01.json',
+    ]);
+    // And the completing replay had to satisfy EVERY prior observation, not
+    // just the most recent: two quarantined copies that disagreed with each
+    // other would be caught here too.
+    assert.strictEqual(summary.replayed, 2);
+    await rm(d, { recursive: true, force: true });
+  });
+
+  it('still owes the comparison after a crash between quarantine and replay', async () => {
+    // The window that previously lost the obligation entirely: the survivor has
+    // been moved out of match/, so nothing in match/ records that a comparison
+    // is due. Recovery must come from the quarantine records themselves.
+    const d = await mkdtemp(join(tmpdir(), 'twixt-crashgap-'));
+    await assert.rejects(
+      runMatch(
+        opts({
+          runDir: d,
+          P: 1,
+          onGameComplete: ({ gameInPair }) => {
+            if (gameInPair === 0) throw new Error('simulated interruption');
+          },
+        })
+      ),
+      /simulated interruption/
+    );
+    // Simulate the crash: quarantine the survivor by hand, leaving match/ empty.
+    await rename(
+      join(d, 'match', sidecarName(0, 0)),
+      join(d, 'quarantine', 'pair_0000_game_0.q00.json')
+    );
+    assert.deepStrictEqual(await readdir(join(d, 'match')), []);
+
+    const summary = await runMatch(opts({ runDir: d, P: 1 }));
+    assert.strictEqual(
+      summary.replayed,
+      1,
+      'the owed comparison survived the crash'
+    );
+    assert.strictEqual(summary.quarantined, 0, 'nothing new to quarantine');
+    await rm(d, { recursive: true, force: true });
+  });
+
+  it('re-checks a completed pair against its quarantine history on later restarts', async () => {
+    const d = await mkdtemp(join(tmpdir(), 'twixt-recheck-'));
+    await assert.rejects(
+      runMatch(
+        opts({
+          runDir: d,
+          P: 1,
+          onGameComplete: ({ gameInPair }) => {
+            if (gameInPair === 0) throw new Error('simulated interruption');
+          },
+        })
+      ),
+      /simulated interruption/
+    );
+    await runMatch(opts({ runDir: d, P: 1 })); // completes and verifies
+    // A third start finds the pair complete AND a quarantine record present;
+    // it must re-verify from disk rather than either replaying forever or
+    // forgetting the record exists.
+    const summary = await runMatch(opts({ runDir: d, P: 1 }));
+    assert.strictEqual(summary.skipped, 1);
+    assert.strictEqual(summary.played, 0);
+    assert.ok(
+      summary.verifiedFromDisk >= 1,
+      'history is re-checked, not ignored'
+    );
+    await rm(d, { recursive: true, force: true });
+  });
+
+  it('refuses to play if a model directory holds the wrong role', async () => {
+    // Both directories are internally valid; they are simply swapped. Without
+    // this the error surfaces only at analysis, after the match time is spent.
+    const d = await mkdtemp(join(tmpdir(), 'twixt-roles-'));
+    await assert.rejects(
+      runMatch(
+        opts({
+          runDir: d,
+          P: 1,
+          baselineDir: CANDIDATE_DIR,
+          candidateDir: BASELINE_DIR,
+        })
+      ),
+      (e) => e instanceof HarnessError && e.code === 'WRONG_BASELINE_MODEL'
+    );
     await rm(d, { recursive: true, force: true });
   });
 

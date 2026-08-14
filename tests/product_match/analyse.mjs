@@ -45,6 +45,109 @@ export const FROZEN_SPEC = {
 
 const sha256 = (s) => createHash('sha256').update(s).digest('hex');
 
+/**
+ * Every §10 field, with its type. Checked structurally BEFORE any semantic
+ * comparison: an absent field compares `undefined === undefined` and passes,
+ * so equality checks alone would accept evidence that simply omits the thing
+ * being checked.
+ */
+const REQUIRED_FIELDS = {
+  kind: 'string',
+  schema: 'string',
+  opening_id: 'integer',
+  opening_sha256: 'string',
+  pair_index: 'integer',
+  game_in_pair: 'integer',
+  baseline_model_id: 'string',
+  candidate_model_id: 'string',
+  red_model_id: 'string',
+  black_model_id: 'string',
+  moves: 'moves',
+  result: 'string',
+  candidate_score: 'number',
+  termination: 'string',
+  ply_count: 'integer',
+  n_simulations: 'integer',
+  c_puct: 'number',
+  move_temp: 'number',
+  ort_version: 'string',
+  ort_config: 'string',
+  execution_commit: 'string',
+  elapsed_ms: 'number',
+};
+
+const RESULTS = new Set(['red', 'black', 'draw']);
+const TERMINATIONS = new Set(['win', 'no_legal_moves', 'max_plies']);
+
+const typeOk = (value, type) => {
+  if (value === undefined || value === null) return false;
+  if (type === 'string') return typeof value === 'string' && value.length > 0;
+  if (type === 'number')
+    return typeof value === 'number' && Number.isFinite(value);
+  if (type === 'integer') return Number.isInteger(value);
+  if (type === 'moves') {
+    return (
+      Array.isArray(value) &&
+      value.length > 0 &&
+      value.every(
+        (m) =>
+          Array.isArray(m) &&
+          m.length === 2 &&
+          m.every((x) => Number.isInteger(x))
+      )
+    );
+  }
+  return false;
+};
+
+/** Structural validation of one sidecar. Returns a list of failures. */
+export function structuralFailures(sidecar, where) {
+  const out = [];
+  if (
+    sidecar === null ||
+    typeof sidecar !== 'object' ||
+    Array.isArray(sidecar)
+  ) {
+    return [{ code: 'SIDECAR_NOT_AN_OBJECT', detail: { where } }];
+  }
+  for (const [field, type] of Object.entries(REQUIRED_FIELDS)) {
+    if (!typeOk(sidecar[field], type)) {
+      out.push({
+        code: 'MISSING_OR_MALFORMED_FIELD',
+        detail: { where, field, expected: type, found: sidecar[field] ?? null },
+      });
+    }
+  }
+  const extra = Object.keys(sidecar).filter((k) => !(k in REQUIRED_FIELDS));
+  if (extra.length)
+    out.push({ code: 'UNEXPECTED_FIELDS', detail: { where, extra } });
+
+  if (sidecar.result !== undefined && !RESULTS.has(sidecar.result))
+    out.push({
+      code: 'BAD_RESULT_VALUE',
+      detail: { where, result: sidecar.result },
+    });
+  if (
+    sidecar.termination !== undefined &&
+    !TERMINATIONS.has(sidecar.termination)
+  )
+    out.push({
+      code: 'BAD_TERMINATION_VALUE',
+      detail: { where, termination: sidecar.termination },
+    });
+  if (![0, 1].includes(sidecar.game_in_pair))
+    out.push({
+      code: 'BAD_GAME_IN_PAIR_VALUE',
+      detail: { where, value: sidecar.game_in_pair },
+    });
+  if (![0, 0.5, 1].includes(sidecar.candidate_score))
+    out.push({
+      code: 'BAD_CANDIDATE_SCORE_VALUE',
+      detail: { where, value: sidecar.candidate_score },
+    });
+  return out;
+}
+
 // --- statistics -------------------------------------------------------------
 
 /** mulberry32 — the same generator the corpus and openings use. */
@@ -101,14 +204,22 @@ export function tInterval(pairScores, spec = FROZEN_SPEC) {
   return { mean, sd, lower: mean - half, upper: mean + half };
 }
 
+/**
+ * Where one interval sits relative to parity.
+ *
+ * Three-valued on purpose: comparing only lower bounds would call "weaker" and
+ * "inconclusive" an agreement, because neither lower bound exceeds 0.5.
+ */
+export const classify = (ci) =>
+  ci.lower > 0.5 ? 'stronger' : ci.upper < 0.5 ? 'weaker' : 'inconclusive';
+
 /** §6.2 — both methods must agree, in either direction. */
 export function decide(boot, t) {
-  const bootStronger = boot.lower > 0.5;
-  const bootWeaker = boot.upper < 0.5;
-  const tStronger = t.lower > 0.5;
-  const tWeaker = t.upper < 0.5;
-  if (bootStronger && tStronger) return 'CANDIDATE_STRONGER';
-  if (bootWeaker && tWeaker) return 'CANDIDATE_WEAKER';
+  const b = classify(boot);
+  const s = classify(t);
+  if (b !== s) return 'UNRESOLVED';
+  if (b === 'stronger') return 'CANDIDATE_STRONGER';
+  if (b === 'weaker') return 'CANDIDATE_WEAKER';
   return 'UNRESOLVED';
 }
 
@@ -117,6 +228,27 @@ export function decide(boot, t) {
 export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
   const failures = [];
   const fail = (code, detail) => failures.push({ code, detail });
+
+  // `P` is the run's PREREGISTERED size, read from its own committed metadata --
+  // never inferred from how many sidecars happen to be on disk. Inferring it
+  // would let the first 100 finished pairs of a P=200 run be analysed as a
+  // complete P=100 result: an interim peek wearing a final verdict.
+  let runMeta;
+  try {
+    runMeta = JSON.parse(await readFile(join(runDir, 'run.json'), 'utf8'));
+  } catch {
+    return {
+      verdict: 'REJECTED',
+      failures: [{ code: 'NO_RUN_METADATA', detail: join(runDir, 'run.json') }],
+    };
+  }
+  const P = runMeta.P;
+  if (!Number.isInteger(P) || P < 2) {
+    return {
+      verdict: 'REJECTED',
+      failures: [{ code: 'BAD_COMMITTED_P', detail: { P } }],
+    };
+  }
 
   const matchDir = join(runDir, 'match');
   let names;
@@ -128,11 +260,39 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
       failures: [{ code: 'NO_MATCH_DIRECTORY', detail: matchDir }],
     };
   }
+  if (names.length === 0) {
+    return {
+      verdict: 'REJECTED',
+      failures: [{ code: 'EMPTY_MATCH_DIRECTORY', detail: matchDir }],
+    };
+  }
+  if (names.length !== 2 * P) {
+    return {
+      verdict: 'REJECTED',
+      failures: [
+        {
+          code: 'SIDECAR_COUNT',
+          detail: { found: names.length, required: 2 * P, P },
+        },
+      ],
+    };
+  }
 
   const sidecars = [];
   for (const n of names) {
-    sidecars.push(JSON.parse(await readFile(join(matchDir, n), 'utf8')));
+    let parsed;
+    try {
+      parsed = JSON.parse(await readFile(join(matchDir, n), 'utf8'));
+    } catch (err) {
+      fail('UNPARSEABLE_SIDECAR', { file: n, message: err.message });
+      continue;
+    }
+    sidecars.push(parsed);
+    for (const f of structuralFailures(parsed, n)) failures.push(f);
   }
+  // Structure first: every later check compares fields, and a comparison
+  // against an ABSENT field succeeds vacuously.
+  if (failures.length) return { verdict: 'REJECTED', failures };
 
   // Only match evidence is admissible. Timing sidecars are self-play by design
   // and live in a separate namespace; a stray one here is a hard reject, not a
@@ -143,10 +303,6 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
     if (s.schema !== spec.schema) fail('WRONG_SCHEMA', { schema: s.schema });
   }
   if (failures.length) return { verdict: 'REJECTED', failures };
-
-  if (sidecars.length % 2 !== 0)
-    fail('ODD_SIDECAR_COUNT', { count: sidecars.length });
-  const P = sidecars.length / 2;
 
   // --- run fingerprint: one implementation, or no result --------------------
   const FP = [
@@ -161,6 +317,16 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
     'candidate_model_id',
   ];
   const first = sidecars[0];
+  if (runMeta.fingerprint) {
+    for (const f of FP) {
+      if (first[f] !== runMeta.fingerprint[f])
+        fail('FINGERPRINT_NOT_THE_COMMITTED_RUN', {
+          field: f,
+          committed: runMeta.fingerprint[f],
+          found: first[f],
+        });
+    }
+  }
   for (const s of sidecars) {
     for (const f of FP) {
       if (s[f] !== first[f]) {
@@ -350,8 +516,12 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
     sd_pair_score: t.sd,
     bootstrap: boot,
     t_interval: { lower: t.lower, upper: t.upper },
-    methods_agree:
-      decision !== 'UNRESOLVED' || boot.lower > 0.5 === t.lower > 0.5,
+    bootstrap_class: classify(boot),
+    t_class: classify(t),
+    // Compares three-valued classifications, not lower bounds: "weaker" and
+    // "inconclusive" both have a lower bound below 0.5, so a lower-bound
+    // comparison would report them as agreeing.
+    methods_agree: classify(boot) === classify(t),
     pair_tally: tally,
     pair_scores: scores,
     fingerprint: Object.fromEntries(FP.map((f) => [f, first[f]])),

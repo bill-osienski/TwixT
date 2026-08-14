@@ -294,6 +294,8 @@ export async function runMatch({
   nSimulations = null,
   cPuct = 1.5,
   requireCleanWorktree = true,
+  expectBaselineId = BASELINE_MODEL_ID,
+  expectCandidateId = CANDIDATE_MODEL_ID,
   onGameComplete = null,
 }) {
   const matchDir = join(runDir, 'match');
@@ -303,6 +305,19 @@ export async function runMatch({
 
   const baseline = await loadModel(baselineDir);
   const candidate = await loadModel(candidateDir);
+  // Bind identity to ROLE before a single game is played. Both directories can
+  // be internally valid and still be the wrong two models, or swapped; without
+  // this the error surfaces only at analysis, after the match time is spent.
+  if (baseline.modelId !== expectBaselineId)
+    fail(
+      'WRONG_BASELINE_MODEL',
+      `baseline dir holds ${baseline.modelId}, expected ${expectBaselineId}`
+    );
+  if (candidate.modelId !== expectCandidateId)
+    fail(
+      'WRONG_CANDIDATE_MODEL',
+      `candidate dir holds ${candidate.modelId}, expected ${expectCandidateId}`
+    );
   const ortV = await ortVersion();
   const commit = executionCommit({ requireClean: requireCleanWorktree });
   const policy = hardPolicy();
@@ -348,28 +363,154 @@ export async function runMatch({
     await writeSidecarAtomic(runFile, { fingerprint, P, started_pairs: 0 });
   }
 
-  const existing = new Set(await readdir(matchDir));
-  const summary = { played: 0, skipped: 0, replayed: 0, quarantined: 0 };
+  const readJson = async (path) => JSON.parse(await readFile(path, 'utf8'));
+
+  /**
+   * Every quarantined observation of one (pair, slot).
+   *
+   * Names are unique and never reused, so a second interruption cannot
+   * overwrite the first record, and a crash between quarantining and replaying
+   * still leaves the owed comparison discoverable on the next restart.
+   */
+  const quarantineRecords = async (pairIndex, gameInPair) => {
+    const prefix = `${sidecarName(pairIndex, gameInPair).replace(/\.json$/, '')}.q`;
+    const files = (await readdir(quarantineDir)).filter(
+      (n) => n.startsWith(prefix) && n.endsWith('.json')
+    );
+    files.sort();
+    const out = [];
+    for (const f of files)
+      out.push({ file: f, data: await readJson(join(quarantineDir, f)) });
+    return out;
+  };
+
+  const nextQuarantinePath = async (pairIndex, gameInPair, tag) => {
+    const base = sidecarName(pairIndex, gameInPair).replace(/\.json$/, '');
+    const taken = new Set(await readdir(quarantineDir));
+    for (let n = 0; n < 10000; n++) {
+      const name = `${base}.q${String(n).padStart(2, '0')}${tag}.json`;
+      if (!taken.has(name)) return join(quarantineDir, name);
+    }
+    fail(
+      'QUARANTINE_FULL',
+      `cannot allocate a quarantine name for pair ${pairIndex}`
+    );
+  };
+
+  /**
+   * Is this existing sidecar evidence from THIS run, at THIS position?
+   *
+   * Checked before a pair is skipped OR quarantined. Trusting a filename would
+   * let a completed pair carrying a different `execution_commit` be skipped
+   * silently, which is precisely the mixed-implementation run the fingerprint
+   * exists to prevent.
+   */
+  const validateExisting = (sidecar, pairIndex, gameInPair, where) => {
+    const bad = (why, extra = {}) =>
+      fail(
+        'EXISTING_SIDECAR_INVALID',
+        `${where}: ${why} — ${JSON.stringify({ pairIndex, gameInPair, ...extra })}`
+      );
+    if (!sidecar || typeof sidecar !== 'object') bad('not an object');
+    if (sidecar.kind !== 'match')
+      bad('kind is not "match"', { kind: sidecar.kind });
+    if (sidecar.schema !== SCHEMA)
+      bad('wrong schema', { schema: sidecar.schema });
+    if (sidecar.pair_index !== pairIndex)
+      bad('pair_index does not match its filename');
+    if (sidecar.game_in_pair !== gameInPair)
+      bad('game_in_pair does not match its filename');
+    if (sidecar.opening_id !== pairIndex) bad('opening_id is not pair_index');
+    const expectedHash = sha256(JSON.stringify(openings[pairIndex]));
+    if (sidecar.opening_sha256 !== expectedHash)
+      bad('opening hash does not match the pool');
+    for (const f of FINGERPRINT_FIELDS) {
+      if (sidecar[f] !== fingerprint[f]) {
+        bad('fingerprint field differs from this run', {
+          field: f,
+          found: sidecar[f],
+          expected: fingerprint[f],
+        });
+      }
+    }
+    const expectRed =
+      gameInPair === 0
+        ? fingerprint.candidate_model_id
+        : fingerprint.baseline_model_id;
+    const expectBlack =
+      gameInPair === 0
+        ? fingerprint.baseline_model_id
+        : fingerprint.candidate_model_id;
+    if (
+      sidecar.red_model_id !== expectRed ||
+      sidecar.black_model_id !== expectBlack
+    ) {
+      bad('colour assignment contradicts game_in_pair', {
+        red: sidecar.red_model_id,
+        black: sidecar.black_model_id,
+      });
+    }
+  };
+
+  const differsFrom = (a, b) =>
+    REPLAY_FIELDS.find((f) => JSON.stringify(a[f]) !== JSON.stringify(b[f]));
+
+  const summary = {
+    played: 0,
+    skipped: 0,
+    replayed: 0,
+    quarantined: 0,
+    verifiedFromDisk: 0,
+  };
 
   for (let pairIndex = 0; pairIndex < P; pairIndex++) {
     const names = [0, 1].map((g) => sidecarName(pairIndex, g));
-    const present = names.map((n) => existing.has(n));
+    const onDisk = new Set(await readdir(matchDir));
+    const present = names.map((n) => onDisk.has(n));
+
+    const priorRecords = [
+      await quarantineRecords(pairIndex, 0),
+      await quarantineRecords(pairIndex, 1),
+    ];
 
     if (present[0] && present[1]) {
+      // Validate before skipping — existence of a filename is not evidence.
+      for (const g of [0, 1]) {
+        const sidecar = await readJson(join(matchDir, names[g]));
+        validateExisting(sidecar, pairIndex, g, names[g]);
+        // A completed pair that also has quarantined history must still agree
+        // with it. Re-checking from disk costs nothing and keeps the owed
+        // comparison honoured across any number of restarts.
+        for (const rec of priorRecords[g]) {
+          const field = differsFrom(sidecar, rec.data);
+          if (field) {
+            fail(
+              'REPLAY_MISMATCH',
+              `completed pair ${pairIndex} game ${g} differs from quarantined ${rec.file} in "${field}"`
+            );
+          }
+          summary.verifiedFromDisk += 1;
+        }
+      }
       summary.skipped += 1;
       continue;
     }
 
-    // A half-finished pair: keep the survivor as evidence, replay the whole
-    // pair, and require the replay to reproduce it exactly.
-    let quarantined = null;
-    if (present[0] || present[1]) {
-      const which = present[0] ? 0 : 1;
-      const from = join(matchDir, names[which]);
-      quarantined = { which, data: JSON.parse(await readFile(from, 'utf8')) };
-      await rename(from, join(quarantineDir, names[which]));
+    // Incomplete pair. Quarantine any survivor under a fresh name, then replay
+    // the whole pair: a pair is the statistical unit and is never half-counted.
+    for (const g of [0, 1]) {
+      if (!present[g]) continue;
+      const from = join(matchDir, names[g]);
+      const sidecar = await readJson(from);
+      validateExisting(sidecar, pairIndex, g, names[g]);
+      await rename(from, await nextQuarantinePath(pairIndex, g, ''));
       summary.quarantined += 1;
     }
+    // Re-read after quarantining, so the survivor just moved is included.
+    const owed = [
+      await quarantineRecords(pairIndex, 0),
+      await quarantineRecords(pairIndex, 1),
+    ];
 
     for (const gameInPair of [0, 1]) {
       const candidateIsRed = gameInPair === 0;
@@ -398,17 +539,27 @@ export async function runMatch({
         executionCommit: commit,
       });
 
-      if (quarantined && quarantined.which === gameInPair) {
-        for (const f of REPLAY_FIELDS) {
-          if (
-            JSON.stringify(sidecar[f]) !== JSON.stringify(quarantined.data[f])
-          ) {
-            fail(
-              'REPLAY_MISMATCH',
-              `resumed replay of pair ${pairIndex} game ${gameInPair} differs from the quarantined ` +
-                `sidecar in "${f}"; hard play is deterministic, so this means determinism does not hold`
-            );
-          }
+      // The replay must reproduce EVERY prior observation of this slot. If two
+      // quarantined copies already disagree with each other, that is itself a
+      // determinism failure and this catches it too.
+      for (const rec of owed[gameInPair]) {
+        const field = differsFrom(sidecar, rec.data);
+        if (field) {
+          // Persist the divergent replay BEFORE aborting. Both copies must
+          // survive: the disagreement is the evidence, and hard play being
+          // deterministic makes it the most serious defect this run can find.
+          const divergentPath = await nextQuarantinePath(
+            pairIndex,
+            gameInPair,
+            '.divergent'
+          );
+          await writeSidecarAtomic(divergentPath, sidecar);
+          fail(
+            'REPLAY_MISMATCH',
+            `resumed replay of pair ${pairIndex} game ${gameInPair} differs from quarantined ` +
+              `${rec.file} in "${field}"; hard play is deterministic, so this means determinism ` +
+              `does not hold. Divergent replay retained at ${divergentPath}`
+          );
         }
         summary.replayed += 1;
       }
