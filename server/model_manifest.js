@@ -47,7 +47,12 @@ const APP_ROOT = fileURLToPath(new URL('..', import.meta.url));
  * changed the served model without anyone deciding to.
  */
 export const DEFAULT_MODEL_ID = '1d64027db521a50f';
-export const DEFAULT_MANIFEST_PATH = join(APP_ROOT, 'models', DEFAULT_MODEL_ID, 'manifest.json');
+export const DEFAULT_MANIFEST_PATH = join(
+  APP_ROOT,
+  'models',
+  DEFAULT_MODEL_ID,
+  'manifest.json'
+);
 
 export const SUPPORTED_MANIFEST_VERSION = 1;
 
@@ -90,7 +95,9 @@ const fail = (code, message) => {
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
 const getPath = (obj, dotted) =>
-  dotted.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+  dotted
+    .split('.')
+    .reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
 
 /**
  * The artifact's identity: a digest over BOTH file hashes.
@@ -99,7 +106,10 @@ const getPath = (obj, dotted) =>
  * checks it, rather than chosen by hand.
  */
 export function computeModelId(graphSha256, dataSha256) {
-  return createHash('sha256').update(`${graphSha256}:${dataSha256}`).digest('hex').slice(0, 16);
+  return createHash('sha256')
+    .update(`${graphSha256}:${dataSha256}`)
+    .digest('hex')
+    .slice(0, 16);
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +130,11 @@ export function computeModelId(graphSha256, dataSha256) {
 // ---------------------------------------------------------------------------
 
 /** The wire encoding of a StringStringEntryProto whose key is exactly "location". */
-const ENCODED_LOCATION_KEY = Buffer.from([0x0a, 0x08, ...Buffer.from('location', 'utf8')]);
+const ENCODED_LOCATION_KEY = Buffer.from([
+  0x0a,
+  0x08,
+  ...Buffer.from('location', 'utf8'),
+]);
 
 function readVarint(buf, offset) {
   let result = 0;
@@ -128,7 +142,8 @@ function readVarint(buf, offset) {
   let byte;
   let i = offset;
   do {
-    if (i >= buf.length) fail('GRAPH_UNPARSEABLE', 'truncated varint in ONNX graph');
+    if (i >= buf.length)
+      fail('GRAPH_UNPARSEABLE', 'truncated varint in ONNX graph');
     byte = buf[i++];
     result += (byte & 0x7f) * 2 ** shift;
     shift += 7;
@@ -155,14 +170,18 @@ function* protoFields(buf) {
     } else if (wire === 2) {
       let len;
       [len, i] = readVarint(buf, i);
-      if (i + len > buf.length) fail('GRAPH_UNPARSEABLE', 'truncated length-delimited field');
+      if (i + len > buf.length)
+        fail('GRAPH_UNPARSEABLE', 'truncated length-delimited field');
       yield { field, wire, bytes: buf.subarray(i, i + len) };
       i += len;
     } else if (wire === 5) {
       yield { field, wire };
       i += 4;
     } else {
-      fail('GRAPH_UNPARSEABLE', `unsupported protobuf wire type ${wire} in ONNX graph`);
+      fail(
+        'GRAPH_UNPARSEABLE',
+        `unsupported protobuf wire type ${wire} in ONNX graph`
+      );
     }
   }
 }
@@ -173,7 +192,8 @@ export function externalDataLocations(graphBytes) {
   for (const f of protoFields(graphBytes)) {
     if (f.field === 7 && f.wire === 2) graph = f.bytes;
   }
-  if (graph === null) fail('GRAPH_UNPARSEABLE', 'ONNX file contains no ModelProto.graph');
+  if (graph === null)
+    fail('GRAPH_UNPARSEABLE', 'ONNX file contains no ModelProto.graph');
 
   const locations = [];
   for (const g of protoFields(graph)) {
@@ -194,8 +214,16 @@ export function externalDataLocations(graphBytes) {
 
 /** A filename that must stay inside the artifact directory. */
 function assertPlainBasename(name, what) {
-  if (name === '' || name.includes('/') || name.includes('\\') || name.split('/').includes('..')) {
-    fail('MANIFEST_INVALID', `${what} must be a plain filename, not a path: "${name}"`);
+  if (
+    name === '' ||
+    name.includes('/') ||
+    name.includes('\\') ||
+    name.split('/').includes('..')
+  ) {
+    fail(
+      'MANIFEST_INVALID',
+      `${what} must be a plain filename, not a path: "${name}"`
+    );
   }
 }
 
@@ -220,7 +248,12 @@ function assertExternalDataBinding(graphBytes, graphPath, declaredFilename) {
   }
 
   let rawCount = 0;
-  for (let i = 0; (i = graphBytes.indexOf(ENCODED_LOCATION_KEY, i)) !== -1; i += 1) rawCount++;
+  for (
+    let i = 0;
+    (i = graphBytes.indexOf(ENCODED_LOCATION_KEY, i)) !== -1;
+    i += 1
+  )
+    rawCount++;
   if (rawCount !== locations.length) {
     fail(
       'EXTERNAL_REF_MISMATCH',
@@ -264,14 +297,20 @@ export async function loadManifest(manifestPath) {
     if (err.code === 'ENOENT') {
       fail('MANIFEST_MISSING', `No model manifest at ${manifestPath}`);
     }
-    fail('MANIFEST_UNREADABLE', `Cannot read model manifest ${manifestPath}: ${err.message}`);
+    fail(
+      'MANIFEST_UNREADABLE',
+      `Cannot read model manifest ${manifestPath}: ${err.message}`
+    );
   }
 
   let manifest;
   try {
     manifest = JSON.parse(raw);
   } catch (err) {
-    fail('MANIFEST_UNREADABLE', `Model manifest ${manifestPath} is not valid JSON: ${err.message}`);
+    fail(
+      'MANIFEST_UNREADABLE',
+      `Model manifest ${manifestPath} is not valid JSON: ${err.message}`
+    );
   }
 
   if (manifest?.manifest_version !== SUPPORTED_MANIFEST_VERSION) {
@@ -282,7 +321,9 @@ export async function loadManifest(manifestPath) {
     );
   }
 
-  const missing = REQUIRED_FIELDS.filter((f) => getPath(manifest, f) === undefined);
+  const missing = REQUIRED_FIELDS.filter(
+    (f) => getPath(manifest, f) === undefined
+  );
   if (missing.length > 0) {
     fail(
       'MANIFEST_INVALID',
@@ -291,11 +332,17 @@ export async function loadManifest(manifestPath) {
   }
 
   assertPlainBasename(manifest.graph.filename, 'graph.filename');
-  assertPlainBasename(manifest.external_data.filename, 'external_data.filename');
+  assertPlainBasename(
+    manifest.external_data.filename,
+    'external_data.filename'
+  );
 
   // The id names the pair. A manifest whose id does not follow from its own
   // declared hashes is describing something other than what it points at.
-  const expectedId = computeModelId(manifest.graph.sha256, manifest.external_data.sha256);
+  const expectedId = computeModelId(
+    manifest.graph.sha256,
+    manifest.external_data.sha256
+  );
   if (manifest.model_id !== expectedId) {
     fail(
       'MODEL_ID_MISMATCH',
@@ -313,7 +360,8 @@ async function checkFile(path, declared, codes, label) {
   try {
     info = await stat(path);
   } catch (err) {
-    if (err.code === 'ENOENT') fail(codes.missing, `${label} not found at ${path}`);
+    if (err.code === 'ENOENT')
+      fail(codes.missing, `${label} not found at ${path}`);
     fail(codes.missing, `${label} at ${path} is unreadable: ${err.message}`);
   }
 
@@ -351,16 +399,28 @@ export async function validateArtifact(manifest, manifestDir) {
   const graphBytes = await checkFile(
     graphPath,
     manifest.graph,
-    { missing: 'GRAPH_MISSING', size: 'GRAPH_SIZE_MISMATCH', hash: 'GRAPH_HASH_MISMATCH' },
+    {
+      missing: 'GRAPH_MISSING',
+      size: 'GRAPH_SIZE_MISMATCH',
+      hash: 'GRAPH_HASH_MISMATCH',
+    },
     'ONNX graph'
   );
 
-  assertExternalDataBinding(graphBytes, graphPath, manifest.external_data.filename);
+  assertExternalDataBinding(
+    graphBytes,
+    graphPath,
+    manifest.external_data.filename
+  );
 
   await checkFile(
     dataPath,
     manifest.external_data,
-    { missing: 'DATA_MISSING', size: 'DATA_SIZE_MISMATCH', hash: 'DATA_HASH_MISMATCH' },
+    {
+      missing: 'DATA_MISSING',
+      size: 'DATA_SIZE_MISMATCH',
+      hash: 'DATA_HASH_MISMATCH',
+    },
     'ONNX external data'
   );
 
@@ -368,7 +428,10 @@ export async function validateArtifact(manifest, manifestDir) {
 }
 
 const sameShape = (a, b) =>
-  Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
+  Array.isArray(a) &&
+  Array.isArray(b) &&
+  a.length === b.length &&
+  a.every((v, i) => v === b[i]);
 
 /**
  * The interface this server can actually consume — fixed by the application,
@@ -400,7 +463,11 @@ const sameShape = (a, b) =>
 export function applicationContract(maxMoves) {
   return {
     inputs: [
-      { name: 'board', type: 'float32', shape: [1, NUM_CHANNELS, BOARD_SIZE, BOARD_SIZE] },
+      {
+        name: 'board',
+        type: 'float32',
+        shape: [1, NUM_CHANNELS, BOARD_SIZE, BOARD_SIZE],
+      },
       { name: 'move_rows', type: 'int64', shape: [maxMoves] },
       { name: 'move_cols', type: 'int64', shape: [maxMoves] },
       { name: 'move_mask', type: 'float32', shape: [maxMoves] },
@@ -445,7 +512,9 @@ function assertApplicationContract(contract, wrapperMaxMoves) {
       }
     }
 
-    const extra = [...declared.keys()].filter((n) => !requiredList.some((r) => r.name === n));
+    const extra = [...declared.keys()].filter(
+      (n) => !requiredList.some((r) => r.name === n)
+    );
     if (extra.length > 0) {
       fail(
         'APPLICATION_MISMATCH',
@@ -538,7 +607,8 @@ export function assertSessionContract(manifest, session, wrapperMaxMoves) {
 
   for (const name of ['move_rows', 'move_cols', 'move_mask', 'policy_logits']) {
     const tensor =
-      contract.inputs.find((t) => t.name === name) ?? contract.outputs.find((t) => t.name === name);
+      contract.inputs.find((t) => t.name === name) ??
+      contract.outputs.find((t) => t.name === name);
     if (tensor?.shape?.[0] !== contract.max_moves) {
       fail(
         'CONTRACT_MISMATCH',
@@ -566,6 +636,9 @@ export function assertSessionContract(manifest, session, wrapperMaxMoves) {
 export async function resolveModel(env = process.env, cwd = process.cwd()) {
   const manifestPath = resolveManifestPath(env, cwd);
   const manifest = await loadManifest(manifestPath);
-  const { graphPath, dataPath } = await validateArtifact(manifest, dirname(manifestPath));
+  const { graphPath, dataPath } = await validateArtifact(
+    manifest,
+    dirname(manifestPath)
+  );
   return { manifestPath, manifest, graphPath, dataPath };
 }

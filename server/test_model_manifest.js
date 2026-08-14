@@ -14,7 +14,14 @@
  */
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { mkdtemp, rm, writeFile, readFile, mkdir, copyFile } from 'node:fs/promises';
+import {
+  mkdtemp,
+  rm,
+  writeFile,
+  readFile,
+  mkdir,
+  copyFile,
+} from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, isAbsolute } from 'node:path';
@@ -59,7 +66,8 @@ const pbVarint = (n) => {
 const pbLenDelim = (field, payload) =>
   Buffer.concat([pbVarint(field * 8 + 2), pbVarint(payload.length), payload]);
 const pbString = (field, s) => pbLenDelim(field, Buffer.from(s, 'utf8'));
-const pbVarintField = (field, n) => Buffer.concat([pbVarint(field * 8), pbVarint(n)]);
+const pbVarintField = (field, n) =>
+  Buffer.concat([pbVarint(field * 8), pbVarint(n)]);
 const pbEntry = (k, v) => Buffer.concat([pbString(1, k), pbString(2, v)]);
 
 /** A TensorProto initializer (GraphProto field 5) loading from `location`. */
@@ -83,14 +91,19 @@ const pbInitializer = (name, location) =>
  * `strayLocationKey` encodes an external-data entry under an unknown top-level
  * field, i.e. somewhere the structured walk does not reach.
  */
-function buildOnnx({ locations = ['model.onnx.data'], docString = null, strayLocationKey = false }) {
+function buildOnnx({
+  locations = ['model.onnx.data'],
+  docString = null,
+  strayLocationKey = false,
+}) {
   const graph = Buffer.concat([
     pbString(2, 'test-graph'),
     ...locations.map((loc, i) => pbInitializer(`w${i}`, loc)),
   ]);
   const parts = [pbLenDelim(7, graph)];
   if (docString !== null) parts.push(pbString(6, docString));
-  if (strayLocationKey) parts.push(pbLenDelim(99, pbEntry('location', 'elsewhere.bin')));
+  if (strayLocationKey)
+    parts.push(pbLenDelim(99, pbEntry('location', 'elsewhere.bin')));
   return Buffer.concat(parts);
 }
 
@@ -113,7 +126,10 @@ const VALID_CONTRACT = {
 };
 
 /** A session stand-in exposing exactly what assertSessionContract reads. */
-const fakeSession = (inputs, outputs) => ({ inputMetadata: inputs, outputMetadata: outputs });
+const fakeSession = (inputs, outputs) => ({
+  inputMetadata: inputs,
+  outputMetadata: outputs,
+});
 
 /**
  * Write a self-consistent artifact directory and its manifest.
@@ -140,7 +156,11 @@ async function makeFixture(dir, { graphBytes = null, mutate = () => {} } = {}) {
     model_id: computeModelId(graphHash, dataHash),
     description: 'test fixture',
     graph: { filename: graphName, size_bytes: graph.length, sha256: graphHash },
-    external_data: { filename: dataName, size_bytes: data.length, sha256: dataHash },
+    external_data: {
+      filename: dataName,
+      size_bytes: data.length,
+      sha256: dataHash,
+    },
     provenance: {
       source_checkpoint_path: 'unknown',
       source_checkpoint_sha1: 'unknown',
@@ -168,7 +188,11 @@ async function assertRejectsWithCode(fn, code) {
       err instanceof ModelManifestError,
       `expected ModelManifestError, got ${err?.name}: ${err?.message}`
     );
-    assert.strictEqual(err.code, code, `expected code ${code}, got ${err.code}: ${err.message}`);
+    assert.strictEqual(
+      err.code,
+      code,
+      `expected code ${code}, got ${err.code}: ${err.message}`
+    );
     return err;
   }
   assert.fail(`expected ${code}, but the call resolved`);
@@ -190,17 +214,26 @@ describe('manifest path resolution', () => {
   });
 
   it('honours MODEL_MANIFEST as an override', () => {
-    const p = resolveManifestPath({ MODEL_MANIFEST: '/tmp/other/manifest.json' }, REPO_ROOT);
+    const p = resolveManifestPath(
+      { MODEL_MANIFEST: '/tmp/other/manifest.json' },
+      REPO_ROOT
+    );
     assert.strictEqual(p, '/tmp/other/manifest.json');
   });
 
   it('resolves a relative MODEL_MANIFEST against cwd, not the app', () => {
-    const p = resolveManifestPath({ MODEL_MANIFEST: 'rel/manifest.json' }, '/some/cwd');
+    const p = resolveManifestPath(
+      { MODEL_MANIFEST: 'rel/manifest.json' },
+      '/some/cwd'
+    );
     assert.strictEqual(p, '/some/cwd/rel/manifest.json');
   });
 
   it('ignores MODEL_PATH entirely — it is no longer a serving override', () => {
-    const p = resolveManifestPath({ MODEL_PATH: '/tmp/sneaky.onnx' }, REPO_ROOT);
+    const p = resolveManifestPath(
+      { MODEL_PATH: '/tmp/sneaky.onnx' },
+      REPO_ROOT
+    );
     assert.strictEqual(p, DEFAULT_MANIFEST_PATH);
   });
 });
@@ -236,15 +269,24 @@ describe('committed baseline artifact', () => {
 
     // Re-derive independently of the loader so a bug in the loader cannot
     // make this test agree with it.
-    assert.strictEqual(sha256(await readFile(graphPath)), manifest.graph.sha256);
-    assert.strictEqual(sha256(await readFile(dataPath)), manifest.external_data.sha256);
+    assert.strictEqual(
+      sha256(await readFile(graphPath)),
+      manifest.graph.sha256
+    );
+    assert.strictEqual(
+      sha256(await readFile(dataPath)),
+      manifest.external_data.sha256
+    );
   });
 
   it('every external-data reference in the real graph names the declared sidecar', async () => {
     const { manifest, graphPath } = await resolveModel({}, REPO_ROOT);
     const locations = externalDataLocations(await readFile(graphPath));
     assert.strictEqual(locations.length, 33);
-    assert.deepStrictEqual([...new Set(locations)], [manifest.external_data.filename]);
+    assert.deepStrictEqual(
+      [...new Set(locations)],
+      [manifest.external_data.filename]
+    );
   });
 
   it('records provenance as unknown rather than guessing it', async () => {
@@ -314,13 +356,17 @@ describe('fail-loud validation', () => {
 
   it('MANIFEST_INVALID when a required field is absent', async () => {
     const d = await fixtureDir('missingfield');
-    const p = await makeFixture(d, { mutate: (m) => delete m.contract.max_moves });
+    const p = await makeFixture(d, {
+      mutate: (m) => delete m.contract.max_moves,
+    });
     await assertRejectsWithCode(() => loadManifest(p), 'MANIFEST_INVALID');
   });
 
   it('MANIFEST_INVALID on an unsupported manifest_version', async () => {
     const d = await fixtureDir('badversion');
-    const p = await makeFixture(d, { mutate: (m) => (m.manifest_version = 99) });
+    const p = await makeFixture(d, {
+      mutate: (m) => (m.manifest_version = 99),
+    });
     await assertRejectsWithCode(() => loadManifest(p), 'MANIFEST_INVALID');
   });
 
@@ -337,7 +383,9 @@ describe('fail-loud validation', () => {
 
   it('MODEL_ID_MISMATCH when the id does not follow from the declared hashes', async () => {
     const d = await fixtureDir('badid');
-    const p = await makeFixture(d, { mutate: (m) => (m.model_id = 'deadbeefdeadbeef') });
+    const p = await makeFixture(d, {
+      mutate: (m) => (m.model_id = 'deadbeefdeadbeef'),
+    });
     await assertRejectsWithCode(() => loadManifest(p), 'MODEL_ID_MISMATCH');
   });
 
@@ -350,8 +398,13 @@ describe('fail-loud validation', () => {
 
   it('GRAPH_SIZE_MISMATCH when the declared size is wrong', async () => {
     const d = await fixtureDir('graphsize');
-    const p = await makeFixture(d, { mutate: (m) => (m.graph.size_bytes += 1) });
-    await assertRejectsWithCode(() => loadAndValidate(p), 'GRAPH_SIZE_MISMATCH');
+    const p = await makeFixture(d, {
+      mutate: (m) => (m.graph.size_bytes += 1),
+    });
+    await assertRejectsWithCode(
+      () => loadAndValidate(p),
+      'GRAPH_SIZE_MISMATCH'
+    );
   });
 
   it('GRAPH_HASH_MISMATCH when the graph bytes change', async () => {
@@ -362,7 +415,10 @@ describe('fail-loud validation', () => {
     const bytes = await readFile(graphPath);
     bytes[bytes.length - 1] ^= 0xff;
     await writeFile(graphPath, bytes);
-    await assertRejectsWithCode(() => loadAndValidate(p), 'GRAPH_HASH_MISMATCH');
+    await assertRejectsWithCode(
+      () => loadAndValidate(p),
+      'GRAPH_HASH_MISMATCH'
+    );
   });
 
   it('DATA_MISSING when the sidecar is absent', async () => {
@@ -374,7 +430,9 @@ describe('fail-loud validation', () => {
 
   it('DATA_SIZE_MISMATCH when the declared sidecar size is wrong', async () => {
     const d = await fixtureDir('datasize');
-    const p = await makeFixture(d, { mutate: (m) => (m.external_data.size_bytes += 1) });
+    const p = await makeFixture(d, {
+      mutate: (m) => (m.external_data.size_bytes += 1),
+    });
     await assertRejectsWithCode(() => loadAndValidate(p), 'DATA_SIZE_MISMATCH');
   });
 
@@ -405,7 +463,9 @@ describe('external-data binding is structural, not textual', () => {
   };
 
   it('parses locations out of a synthetic graph', () => {
-    const locs = externalDataLocations(buildOnnx({ locations: ['a.bin', 'b.bin'] }));
+    const locs = externalDataLocations(
+      buildOnnx({ locations: ['a.bin', 'b.bin'] })
+    );
     assert.deepStrictEqual(locs, ['a.bin', 'b.bin']);
   });
 
@@ -424,7 +484,10 @@ describe('external-data binding is structural, not textual', () => {
 
     const d = await fixtureDir('decoy');
     const p = await makeFixture(d, { graphBytes });
-    await assertRejectsWithCode(() => loadAndValidate(p), 'EXTERNAL_REF_MISMATCH');
+    await assertRejectsWithCode(
+      () => loadAndValidate(p),
+      'EXTERNAL_REF_MISMATCH'
+    );
   });
 
   it('rejects a graph loading from more than one sidecar', async () => {
@@ -432,26 +495,42 @@ describe('external-data binding is structural, not textual', () => {
     const p = await makeFixture(d, {
       graphBytes: buildOnnx({ locations: ['model.onnx.data', 'extra.bin'] }),
     });
-    await assertRejectsWithCode(() => loadAndValidate(p), 'EXTERNAL_REF_MISMATCH');
+    await assertRejectsWithCode(
+      () => loadAndValidate(p),
+      'EXTERNAL_REF_MISMATCH'
+    );
   });
 
   it('rejects a graph that references no external data at all', async () => {
     const d = await fixtureDir('noexternal');
-    const p = await makeFixture(d, { graphBytes: buildOnnx({ locations: [] }) });
-    await assertRejectsWithCode(() => loadAndValidate(p), 'EXTERNAL_REF_MISMATCH');
+    const p = await makeFixture(d, {
+      graphBytes: buildOnnx({ locations: [] }),
+    });
+    await assertRejectsWithCode(
+      () => loadAndValidate(p),
+      'EXTERNAL_REF_MISMATCH'
+    );
   });
 
   it('rejects external-data entries hidden outside graph.initializer', async () => {
     const d = await fixtureDir('stray');
     const p = await makeFixture(d, {
-      graphBytes: buildOnnx({ locations: ['model.onnx.data'], strayLocationKey: true }),
+      graphBytes: buildOnnx({
+        locations: ['model.onnx.data'],
+        strayLocationKey: true,
+      }),
     });
-    await assertRejectsWithCode(() => loadAndValidate(p), 'EXTERNAL_REF_MISMATCH');
+    await assertRejectsWithCode(
+      () => loadAndValidate(p),
+      'EXTERNAL_REF_MISMATCH'
+    );
   });
 
   it('GRAPH_UNPARSEABLE on bytes that are not a protobuf message', async () => {
     const d = await fixtureDir('garbage');
-    const p = await makeFixture(d, { graphBytes: Buffer.from('not a protobuf at all, sorry') });
+    const p = await makeFixture(d, {
+      graphBytes: Buffer.from('not a protobuf at all, sorry'),
+    });
     await assertRejectsWithCode(() => loadAndValidate(p), 'GRAPH_UNPARSEABLE');
   });
 });
@@ -463,7 +542,8 @@ describe('tensor contract is enforced, not merely recorded', () => {
   const expectMismatch = (manifest, session = live, wrapperMaxMoves = 576) =>
     assert.throws(
       () => assertSessionContract(manifest, session, wrapperMaxMoves),
-      (err) => err instanceof ModelManifestError && err.code === 'CONTRACT_MISMATCH'
+      (err) =>
+        err instanceof ModelManifestError && err.code === 'CONTRACT_MISMATCH'
     );
 
   it('accepts the matching contract in any tensor order', () => {
@@ -523,7 +603,8 @@ describe('tensor contract is enforced, not merely recorded', () => {
     // The artifact is internally fine here — this server just cannot feed it.
     assert.throws(
       () => assertSessionContract(manifestWith(VALID_CONTRACT), live, 512),
-      (err) => err instanceof ModelManifestError && err.code === 'APPLICATION_MISMATCH'
+      (err) =>
+        err instanceof ModelManifestError && err.code === 'APPLICATION_MISMATCH'
     );
   });
 });
@@ -547,7 +628,8 @@ describe('application compatibility, not just self-consistency', () => {
     const { manifest, session } = colluding(mutate);
     assert.throws(
       () => assertSessionContract(manifest, session, maxMoves),
-      (err) => err instanceof ModelManifestError && err.code === 'APPLICATION_MISMATCH'
+      (err) =>
+        err instanceof ModelManifestError && err.code === 'APPLICATION_MISMATCH'
     );
   };
 
@@ -558,18 +640,32 @@ describe('application compatibility, not just self-consistency', () => {
     assert.deepStrictEqual(manifest.contract.outputs, required.outputs);
     // Guards against the contract being written to match the artifact rather
     // than the application: these come from gameLogic, not from the manifest.
-    assert.deepStrictEqual(required.inputs[0].shape, [1, NUM_CHANNELS, BOARD_SIZE, BOARD_SIZE]);
+    assert.deepStrictEqual(required.inputs[0].shape, [
+      1,
+      NUM_CHANNELS,
+      BOARD_SIZE,
+      BOARD_SIZE,
+    ]);
     // The engine supports other sizes (curriculum training runs 8..24); the
     // served product is pinned to the official 24x24, and the contract follows
     // gameLogic rather than anything the artifact declares.
-    assert.strictEqual(BOARD_SIZE, 24, 'the served board is the official 24x24');
+    assert.strictEqual(
+      BOARD_SIZE,
+      24,
+      'the served board is the official 24x24'
+    );
   });
 
   it('rejects a 24-channel model whose manifest agrees with it', () => {
     // The reported defect. Both sides say 24 channels; AlphaZeroInference
     // still builds a 30-channel board and the run would fail at inference.
     expectApplicationMismatch((c) => {
-      c.inputs.find((t) => t.name === 'board').shape = [1, 24, BOARD_SIZE, BOARD_SIZE];
+      c.inputs.find((t) => t.name === 'board').shape = [
+        1,
+        24,
+        BOARD_SIZE,
+        BOARD_SIZE,
+      ];
       c.board_shape = [1, 24, BOARD_SIZE, BOARD_SIZE];
     });
   });
@@ -590,7 +686,8 @@ describe('application compatibility, not just self-consistency', () => {
     });
     assert.throws(
       () => assertSessionContract(manifest, session, 576),
-      (err) => err instanceof ModelManifestError && err.code === 'CONTRACT_MISMATCH'
+      (err) =>
+        err instanceof ModelManifestError && err.code === 'CONTRACT_MISMATCH'
     );
   });
 
@@ -602,7 +699,12 @@ describe('application compatibility, not just self-consistency', () => {
 
   it('rejects a board size other than the served 24', () => {
     expectApplicationMismatch((c) => {
-      c.inputs.find((t) => t.name === 'board').shape = [1, NUM_CHANNELS, 19, 19];
+      c.inputs.find((t) => t.name === 'board').shape = [
+        1,
+        NUM_CHANNELS,
+        19,
+        19,
+      ];
       c.board_shape = [1, NUM_CHANNELS, 19, 19];
     });
   });
@@ -632,7 +734,8 @@ describe('application compatibility, not just self-consistency', () => {
     const { manifest, session } = colluding(() => {});
     assert.throws(
       () => assertSessionContract(manifest, session, undefined),
-      (err) => err instanceof ModelManifestError && err.code === 'APPLICATION_MISMATCH'
+      (err) =>
+        err instanceof ModelManifestError && err.code === 'APPLICATION_MISMATCH'
     );
   });
 });
@@ -657,9 +760,15 @@ const cleanEnv = () => {
  * it. Long-lived servers never exit on their own, so `until` is how a test
  * observes startup and then stops it.
  */
-function runNode(script, { env = {}, cwd = REPO_ROOT, until = null, signal = 'SIGTERM' } = {}) {
+function runNode(
+  script,
+  { env = {}, cwd = REPO_ROOT, until = null, signal = 'SIGTERM' } = {}
+) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [script], { cwd, env: { ...cleanEnv(), ...env } });
+    const child = spawn(process.execPath, [script], {
+      cwd,
+      env: { ...cleanEnv(), ...env },
+    });
     let stdout = '';
     let stderr = '';
     let settled = false;
@@ -674,7 +783,8 @@ function runNode(script, { env = {}, cwd = REPO_ROOT, until = null, signal = 'SI
     timer.unref();
 
     const maybeStop = () => {
-      if (until && (until.test(stdout) || until.test(stderr))) child.kill(signal);
+      if (until && (until.test(stdout) || until.test(stderr)))
+        child.kill(signal);
     };
     child.stdout.on('data', (d) => {
       stdout += d;
@@ -733,7 +843,10 @@ describe('inference server entry point', () => {
       env: { PORT: '0' },
       until: /Server running/,
     });
-    assert.match(stdout, new RegExp(`Model path: ${join(REPO_ROOT, 'models', DEFAULT_MODEL_ID)}`));
+    assert.match(
+      stdout,
+      new RegExp(`Model path: ${join(REPO_ROOT, 'models', DEFAULT_MODEL_ID)}`)
+    );
   });
 
   it('exits non-zero on a missing manifest', async () => {
@@ -754,13 +867,23 @@ describe('inference server entry point', () => {
 
   it('leaves the pinned artifact untouched throughout', async () => {
     const { manifest, graphPath, dataPath } = await resolveModel({}, REPO_ROOT);
-    assert.strictEqual(sha256(await readFile(graphPath)), manifest.graph.sha256);
-    assert.strictEqual(sha256(await readFile(dataPath)), manifest.external_data.sha256);
+    assert.strictEqual(
+      sha256(await readFile(graphPath)),
+      manifest.graph.sha256
+    );
+    assert.strictEqual(
+      sha256(await readFile(dataPath)),
+      manifest.external_data.sha256
+    );
   });
 });
 
 describe('launcher entry point', () => {
-  const launcherEnv = { TWIXT_PORT: '0', TWIXT_AI_PORT: '0', TWIXT_NO_BROWSER: '1' };
+  const launcherEnv = {
+    TWIXT_PORT: '0',
+    TWIXT_AI_PORT: '0',
+    TWIXT_NO_BROWSER: '1',
+  };
 
   it('starts the AI server when the pinned artifact validates', async () => {
     const { stdout } = await runNode('scripts/startServer.js', {
@@ -774,7 +897,10 @@ describe('launcher entry point', () => {
 
   it('refuses to start the AI server on a broken manifest, and exports nothing', async () => {
     const { stdout, stderr } = await runNode('scripts/startServer.js', {
-      env: { ...launcherEnv, MODEL_MANIFEST: join(tmpdir(), 'definitely-absent', 'manifest.json') },
+      env: {
+        ...launcherEnv,
+        MODEL_MANIFEST: join(tmpdir(), 'definitely-absent', 'manifest.json'),
+      },
       until: /Press Ctrl\+C/,
       signal: 'SIGINT',
     });
@@ -792,24 +918,50 @@ describe('no startup export path', () => {
     // on startup. Assert the capability is absent from the module rather than
     // trusting that it is merely unused.
     const src = await readFile(join(HERE, 'model_manifest.js'), 'utf8');
-    for (const forbidden of ['child_process', 'export_onnx', 'safetensors', 'checkpoints']) {
-      assert.ok(!src.includes(`'${forbidden}`), `loader must not reference ${forbidden}`);
+    for (const forbidden of [
+      'child_process',
+      'export_onnx',
+      'safetensors',
+      'checkpoints',
+    ]) {
+      assert.ok(
+        !src.includes(`'${forbidden}`),
+        `loader must not reference ${forbidden}`
+      );
     }
     assert.ok(!/\bexec\(|\bspawn\(/.test(src), 'loader must not exec or spawn');
   });
 
   it('startServer.js no longer auto-exports the latest checkpoint', async () => {
-    const src = await readFile(join(REPO_ROOT, 'scripts', 'startServer.js'), 'utf8');
-    assert.ok(!src.includes('ensureOnnxModel'), 'auto-export entry point must be gone');
-    assert.ok(!src.includes('findLatestCheckpoint'), 'lexicographic checkpoint pick must be gone');
+    const src = await readFile(
+      join(REPO_ROOT, 'scripts', 'startServer.js'),
+      'utf8'
+    );
+    assert.ok(
+      !src.includes('ensureOnnxModel'),
+      'auto-export entry point must be gone'
+    );
+    assert.ok(
+      !src.includes('findLatestCheckpoint'),
+      'lexicographic checkpoint pick must be gone'
+    );
     assert.ok(!src.includes('export_onnx'), 'startup export must be gone');
-    assert.ok(!src.includes('MODEL_PATH'), 'MODEL_PATH must not be a serving override');
+    assert.ok(
+      !src.includes('MODEL_PATH'),
+      'MODEL_PATH must not be a serving override'
+    );
   });
 
   it('server/index.js takes its model from the manifest, not a cwd-relative default', async () => {
     const src = await readFile(join(REPO_ROOT, 'server', 'index.js'), 'utf8');
-    assert.ok(!src.includes("'./model.onnx'"), 'cwd-relative default must be gone');
-    assert.ok(!src.includes('MODEL_PATH'), 'MODEL_PATH must not be a serving override');
+    assert.ok(
+      !src.includes("'./model.onnx'"),
+      'cwd-relative default must be gone'
+    );
+    assert.ok(
+      !src.includes('MODEL_PATH'),
+      'MODEL_PATH must not be a serving override'
+    );
     assert.ok(src.includes('resolveModel'), 'must load through the manifest');
   });
 });
