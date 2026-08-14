@@ -37,6 +37,10 @@ const TOL = {
   S4: { maxLogit: 1.1e-4, meanLogit: 1.1e-5, maxValue: 1.1e-4 },
 };
 const NEAR_TIE_EXEMPTION_CAP = 6; // per surface pair, over the primary 120
+// Specification §6.1: "tested on 10 primary positions with a fixed permutation
+// seed". Hardcoded here rather than read from the measurement files, so a
+// payload cannot satisfy the count by declaring a smaller one.
+const EQUIVARIANCE_REQUIRED_POSITIONS = 10;
 const TOPK_SET_AGREEMENT_MIN = 0.95;
 const KENDALL_TAU_MEDIAN_MIN = 0.99;
 const SIGN_CHECK_DEADBAND = 1e-3;
@@ -204,50 +208,159 @@ const equivariance = Object.fromEntries(
 );
 const pyBase = new Map(py.positions.map((p) => [p.id, p]));
 
-/** permuted[k] must equal base.logits[permutation[k]] EXACTLY. */
+/**
+ * Check one surface's move-order equivariance.
+ *
+ * Counting a measurement is not enough: an entry that is present but truncated,
+ * empty, or carrying a malformed permutation would otherwise be counted and
+ * then compared over zero elements, which passes trivially. Every entry is
+ * therefore validated STRUCTURALLY before it is counted, and the surface must
+ * end with exactly the preregistered number of distinct positions.
+ */
 const checkEquivariance = (side, entries, permutedOf, baseOf) => {
+  const seenIds = new Set();
+
+  if (!Array.isArray(entries)) {
+    fail(side, 'move_order_equivariance_not_measured', {
+      note: 'no equivariance array present for this surface',
+    });
+    return seenIds;
+  }
+
   for (const e of entries) {
     const permuted = permutedOf(e);
-    if (!permuted) {
-      fail(side, 'move_order_equivariance_not_measured', { id: e.id });
+    if (!Array.isArray(permuted) || permuted.length === 0) {
+      fail(side, 'move_order_equivariance_payload_missing_or_empty', {
+        id: e.id,
+        length: Array.isArray(permuted) ? 0 : null,
+      });
       continue;
     }
-    const base = baseOf(e.id);
+
+    const basePosition = baseOf(e.id);
+    if (!basePosition) {
+      fail(side, 'move_order_equivariance_unknown_position', { id: e.id });
+      continue;
+    }
+    const n = basePosition.logits.length;
+
+    if (!Array.isArray(e.permutation) || e.permutation.length !== n) {
+      fail(side, 'move_order_equivariance_permutation_length', {
+        id: e.id,
+        permutation_length: Array.isArray(e.permutation)
+          ? e.permutation.length
+          : null,
+        expected: n,
+      });
+      continue;
+    }
+    if (permuted.length !== n) {
+      fail(side, 'move_order_equivariance_payload_length', {
+        id: e.id,
+        payload_length: permuted.length,
+        expected: n,
+      });
+      continue;
+    }
+
+    // A permutation must contain every index exactly once; anything else means
+    // the comparison below would not actually cover the whole output.
+    const covered = new Uint8Array(n);
+    let malformed = null;
+    for (const idx of e.permutation) {
+      if (!Number.isInteger(idx) || idx < 0 || idx >= n) {
+        malformed = { reason: 'index_out_of_range', index: idx };
+        break;
+      }
+      if (covered[idx]) {
+        malformed = { reason: 'duplicate_index', index: idx };
+        break;
+      }
+      covered[idx] = 1;
+    }
+    if (malformed) {
+      fail(side, 'move_order_equivariance_invalid_permutation', {
+        id: e.id,
+        ...malformed,
+      });
+      continue;
+    }
+
+    if (seenIds.has(e.id)) {
+      fail(side, 'move_order_equivariance_duplicate_position', { id: e.id });
+      continue;
+    }
+    seenIds.add(e.id);
     equivariance[side].checked++;
+
     let worst = 0;
-    for (let k = 0; k < e.permutation.length; k++) {
-      const d = Math.abs(permuted[k] - base.logits[e.permutation[k]]);
+    for (let k = 0; k < n; k++) {
+      const d = Math.abs(permuted[k] - basePosition.logits[e.permutation[k]]);
       if (d > worst) worst = d;
     }
     if (worst !== 0)
       equivariance[side].mismatches.push({ id: e.id, max_abs_diff: worst });
   }
+
+  if (seenIds.size !== EQUIVARIANCE_REQUIRED_POSITIONS) {
+    fail(side, 'move_order_equivariance_position_count', {
+      valid_measurements: seenIds.size,
+      required: EQUIVARIANCE_REQUIRED_POSITIONS,
+    });
+  }
+  return seenIds;
 };
 
-checkEquivariance(
-  'mlx',
-  py.equivariance,
-  (e) => e.mlx_permuted_logits,
-  (id) => pyBase.get(id).mlx
-);
-checkEquivariance(
-  'ort_py',
-  py.equivariance,
-  (e) => e.permuted_logits,
-  (id) => pyBase.get(id).ort_py
-);
-checkEquivariance(
-  'ort_node',
-  nd.equivariance,
-  (e) => e.permuted_logits,
-  (id) => byId.get(id).ort_node
-);
+const equivarianceIds = {
+  mlx: checkEquivariance(
+    'mlx',
+    py.equivariance,
+    (e) => e.mlx_permuted_logits,
+    (id) => pyBase.get(id)?.mlx
+  ),
+  ort_py: checkEquivariance(
+    'ort_py',
+    py.equivariance,
+    (e) => e.permuted_logits,
+    (id) => pyBase.get(id)?.ort_py
+  ),
+  ort_node: checkEquivariance(
+    'ort_node',
+    nd.equivariance,
+    (e) => e.permuted_logits,
+    (id) => byId.get(id)?.ort_node
+  ),
+};
+
+// The surfaces must have been measured on the SAME positions under the SAME
+// permutation, or the three results are not comparable evidence about one gate.
+const sortedIds = (s) => [...equivarianceIds[s]].sort().join(',');
+for (const side of ['ort_py', 'ort_node']) {
+  if (sortedIds(side) !== sortedIds('mlx'))
+    fail(side, 'move_order_equivariance_position_set_mismatch', {
+      mlx: sortedIds('mlx'),
+      [side]: sortedIds(side),
+    });
+}
+{
+  const pyPerm = new Map(
+    (py.equivariance ?? []).map((e) => [e.id, e.permutation])
+  );
+  for (const e of nd.equivariance ?? []) {
+    const other = pyPerm.get(e.id);
+    if (!other) continue;
+    const same =
+      Array.isArray(e.permutation) &&
+      other.length === e.permutation.length &&
+      other.every((v, i) => v === e.permutation[i]);
+    if (!same)
+      fail('ort_node', 'move_order_equivariance_permutation_mismatch', {
+        id: e.id,
+      });
+  }
+}
 
 for (const side of EQUIVARIANCE_SIDES) {
-  if (equivariance[side].checked === 0)
-    fail(side, 'move_order_equivariance_not_measured', {
-      note: 'no permuted logits were produced for this surface',
-    });
   if (equivariance[side].mismatches.length)
     fail(
       side,
@@ -538,13 +651,14 @@ console.log(
 );
 for (const side of EQUIVARIANCE_SIDES) {
   const e = equivariance[side];
+  const complete = e.checked === EQUIVARIANCE_REQUIRED_POSITIONS;
   console.log(
     `equivariance ${side.padEnd(9)}`,
-    e.checked === 0
-      ? 'NOT MEASURED'
-      : e.mismatches.length === 0
-        ? `PASS (${e.checked})`
-        : 'FAIL'
+    e.mismatches.length > 0
+      ? 'FAIL'
+      : complete
+        ? `PASS (${e.checked}/${EQUIVARIANCE_REQUIRED_POSITIONS})`
+        : `INCOMPLETE (${e.checked}/${EQUIVARIANCE_REQUIRED_POSITIONS})`
   );
 }
 console.log('');
