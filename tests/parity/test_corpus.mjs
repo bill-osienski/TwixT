@@ -29,18 +29,41 @@ import {
 } from './generate_corpus.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const corpus = JSON.parse(await readFile(join(HERE, 'corpus.json'), 'utf8'));
+// The raw text is kept, not just the parsed object. Re-serializing the parsed
+// form before comparison would normalize away whitespace and trailing bytes —
+// exactly the changes the byte-stability claim, and the .prettierignore entry
+// resting on it, are supposed to catch.
+const corpusText = await readFile(join(HERE, 'corpus.json'), 'utf8');
+const corpus = JSON.parse(corpusText);
 const all = [...corpus.primary, ...corpus.edge];
 
 describe('determinism', () => {
   it('regenerating reproduces the committed corpus byte for byte', () => {
     const regenerated = `${JSON.stringify(buildCorpus(), null, 2)}\n`;
-    const committed = `${JSON.stringify(corpus, null, 2)}\n`;
     assert.strictEqual(
       regenerated,
-      committed,
-      'generator output drifted from the committed corpus'
+      corpusText,
+      'generator output drifted from the committed corpus bytes'
     );
+  });
+
+  it('the byte comparison would actually notice a formatting change', () => {
+    // Guards the guard: a parse-then-reserialize comparison passes on all of
+    // these, which is how the original assertion was weaker than its name.
+    const regenerated = `${JSON.stringify(buildCorpus(), null, 2)}\n`;
+    for (const mutated of [
+      corpusText.replace(/\n$/, ''), // trailing newline stripped
+      `${corpusText}\n`, // extra trailing newline
+      corpusText.replace('\n  "schema"', '\n    "schema"'), // reindented
+      corpusText.replace(/,\n/, ' ,\n'), // stray whitespace
+    ]) {
+      assert.notStrictEqual(regenerated, mutated);
+      assert.deepStrictEqual(
+        JSON.parse(mutated),
+        corpus,
+        'mutation must be whitespace-only, or it is not testing the right thing'
+      );
+    }
   });
 
   it('the seed allocation is fully accounted for', () => {
