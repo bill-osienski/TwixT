@@ -5,3 +5,7 @@ logs/next-sweep.json
 logs/sweep-results.json
 logs/validation-results.json
 selfplay.json
+# Machine-generated, and byte-stability is a tested property: the corpus is
+# emitted by JSON.stringify(..., 2) and tests/parity/test_corpus.mjs asserts a
+# regeneration reproduces it exactly. Reformatting it would break that check.
+tests/parity/corpus.json
