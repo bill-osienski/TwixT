@@ -5,6 +5,10 @@
   "positions_compared": 126,
   "primary_compared": 120,
   "edge_compared": 6,
+  "audit": {
+    "recompute": "node tests/parity/compare.mjs tests/parity/results/python_side.json.gz tests/parity/results/node_side.json.gz /tmp/verdict.json",
+    "note": "Reproduces this file byte for byte from the committed gzipped measurement halves; compare.mjs reads either form. This makes the VERDICT auditable from the repository alone. It does NOT make the measurement reproducible from scratch: the source checkpoint is untracked, so regenerating the halves requires calib020_0001 (SHA-1 209cf2d4fd24a48553d259dd71b4954867b9473e) from outside the repository."
+  },
   "corpus_sha256": "3e5faab0680ea94169be44c4113bf21cc086a9f70e528e666c5f7a709e58099c",
   "model_id": "c34b7ff3297c785a",
   "graph_sha256": "9df19e08ca438acbc3ba14d50925298389ddaf0d522f623fab617abdf24864ad",
@@ -47,6 +51,10 @@
       "note": "Checked on both ONNX Runtime surfaces. Native MLX returns only n_legal logits and exposes no padded tail, so the check is not applicable there rather than skipped."
     },
     "equivariance": {
+      "mlx": {
+        "checked": 10,
+        "mismatches": []
+      },
       "ort_py": {
         "checked": 10,
         "mismatches": []
@@ -71,6 +79,83 @@
         "topk_set_agreement": 1,
         "kendall_tau_median": 1,
         "kendall_tau_min": 0.9999736339067958,
+        "aggregate_gates_scope": "primary 120 positions only",
+        "edge_ordering": [
+          {
+            "id": "edge_empty_board",
+            "n_legal": 528,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 399,
+            "top1_b": 399,
+            "ref_gap": 0.04824209213256836,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_one_move",
+            "n_legal": 527,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 449,
+            "top1_b": 449,
+            "ref_gap": 0.008597850799560547,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 0.9999927850448409
+          },
+          {
+            "id": "edge_fewest_legal",
+            "n_legal": 1,
+            "k": 1,
+            "top1_agree": true,
+            "top1_a": 0,
+            "top1_b": 0,
+            "ref_gap": null,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_over_512_legal",
+            "n_legal": 526,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 245,
+            "top1_b": 245,
+            "ref_gap": 0.0274507999420166,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_black_to_move",
+            "n_legal": 496,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 327,
+            "top1_b": 327,
+            "ref_gap": 0.7867527008056641,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_red_to_move",
+            "n_legal": 495,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 278,
+            "top1_b": 278,
+            "ref_gap": 0.1457679271697998,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          }
+        ],
+        "edge_ordering_note": "Reported individually, per the specification. These entries are deliberately extreme, so they are excluded from the percentage and median gates above; a top-1 flip outside the near-tie band is still a failure here, since that is a per-position rule rather than a rate.",
+        "edge_top1_failures": [],
         "sign_mismatches": [],
         "tolerances": {
           "maxLogit": 0.0001,
@@ -97,6 +182,83 @@
         "topk_set_agreement": 1,
         "kendall_tau_median": 1,
         "kendall_tau_min": 0.9999908880505896,
+        "aggregate_gates_scope": "primary 120 positions only",
+        "edge_ordering": [
+          {
+            "id": "edge_empty_board",
+            "n_legal": 528,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 399,
+            "top1_b": 399,
+            "ref_gap": 0.048239946365356445,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_one_move",
+            "n_legal": 527,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 449,
+            "top1_b": 449,
+            "ref_gap": 0.008600711822509766,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_fewest_legal",
+            "n_legal": 1,
+            "k": 1,
+            "top1_agree": true,
+            "top1_a": 0,
+            "top1_b": 0,
+            "ref_gap": null,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_over_512_legal",
+            "n_legal": 526,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 245,
+            "top1_b": 245,
+            "ref_gap": 0.027451276779174805,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_black_to_move",
+            "n_legal": 496,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 327,
+            "top1_b": 327,
+            "ref_gap": 0.7867474555969238,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_red_to_move",
+            "n_legal": 495,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 278,
+            "top1_b": 278,
+            "ref_gap": 0.1457688808441162,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          }
+        ],
+        "edge_ordering_note": "Reported individually, per the specification. These entries are deliberately extreme, so they are excluded from the percentage and median gates above; a top-1 flip outside the near-tie band is still a failure here, since that is a per-position rule rather than a rate.",
+        "edge_top1_failures": [],
         "sign_mismatches": [],
         "tolerances": {
           "maxLogit": 0.00001,
@@ -123,6 +285,83 @@
         "topk_set_agreement": 1,
         "kendall_tau_median": 1,
         "kendall_tau_min": 0.9999736339067958,
+        "aggregate_gates_scope": "primary 120 positions only",
+        "edge_ordering": [
+          {
+            "id": "edge_empty_board",
+            "n_legal": 528,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 399,
+            "top1_b": 399,
+            "ref_gap": 0.04824209213256836,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_one_move",
+            "n_legal": 527,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 449,
+            "top1_b": 449,
+            "ref_gap": 0.008597850799560547,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 0.9999927850448409
+          },
+          {
+            "id": "edge_fewest_legal",
+            "n_legal": 1,
+            "k": 1,
+            "top1_agree": true,
+            "top1_a": 0,
+            "top1_b": 0,
+            "ref_gap": null,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_over_512_legal",
+            "n_legal": 526,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 245,
+            "top1_b": 245,
+            "ref_gap": 0.0274507999420166,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_black_to_move",
+            "n_legal": 496,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 327,
+            "top1_b": 327,
+            "ref_gap": 0.7867527008056641,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_red_to_move",
+            "n_legal": 495,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 278,
+            "top1_b": 278,
+            "ref_gap": 0.1457679271697998,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          }
+        ],
+        "edge_ordering_note": "Reported individually, per the specification. These entries are deliberately extreme, so they are excluded from the percentage and median gates above; a top-1 flip outside the near-tie band is still a failure here, since that is a per-position rule rather than a rate.",
+        "edge_top1_failures": [],
         "sign_mismatches": [],
         "tolerances": {
           "maxLogit": 0.00011,

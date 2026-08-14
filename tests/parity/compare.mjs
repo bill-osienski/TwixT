@@ -12,6 +12,22 @@
  */
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { gunzipSync } from 'node:zlib';
+
+/**
+ * Read a measurement half, gzipped or not.
+ *
+ * The committed evidence is gzipped (4.73 MB -> 1.43 MB), so an auditor can
+ * recompute the verdict straight from the repository with no decompression
+ * step of their own.
+ */
+async function readSide(path) {
+  const raw = await readFile(path);
+  const text = path.endsWith('.gz')
+    ? gunzipSync(raw).toString('utf8')
+    : raw.toString('utf8');
+  return JSON.parse(text);
+}
 
 // --- preregistered thresholds, transcribed from the specification -----------
 
@@ -102,8 +118,8 @@ if (!pyArg || !nodeArg || !outArg) {
   process.exit(2);
 }
 
-const py = JSON.parse(await readFile(resolve(pyArg), 'utf8'));
-const nd = JSON.parse(await readFile(resolve(nodeArg), 'utf8'));
+const py = await readSide(resolve(pyArg));
+const nd = await readSide(resolve(nodeArg));
 
 const failures = [];
 const fail = (surface, metric, detail) =>
@@ -179,30 +195,59 @@ if (maskFailures.length)
 
 // --- move-order equivariance, exact ----------------------------------------
 
-const equivariance = {
-  ort_py: { checked: 0, mismatches: [] },
-  ort_node: { checked: 0, mismatches: [] },
-};
+// All three surfaces are checked, native MLX included. MLX is the reference
+// endpoint for S2 and S4, so omitting it would leave the reference side of two
+// surfaces unmeasured while still reporting those surfaces as gated.
+const EQUIVARIANCE_SIDES = ['mlx', 'ort_py', 'ort_node'];
+const equivariance = Object.fromEntries(
+  EQUIVARIANCE_SIDES.map((s) => [s, { checked: 0, mismatches: [] }])
+);
 const pyBase = new Map(py.positions.map((p) => [p.id, p]));
-for (const [side, source, key] of [
-  ['ort_py', py, 'ort_py'],
-  ['ort_node', nd, 'ort_node'],
-]) {
-  for (const e of source.equivariance) {
-    const base =
-      side === 'ort_py' ? pyBase.get(e.id)[key] : byId.get(e.id)[key];
+
+/** permuted[k] must equal base.logits[permutation[k]] EXACTLY. */
+const checkEquivariance = (side, entries, permutedOf, baseOf) => {
+  for (const e of entries) {
+    const permuted = permutedOf(e);
+    if (!permuted) {
+      fail(side, 'move_order_equivariance_not_measured', { id: e.id });
+      continue;
+    }
+    const base = baseOf(e.id);
     equivariance[side].checked++;
-    // permuted_logits[k] must equal base.logits[permutation[k]] exactly.
     let worst = 0;
     for (let k = 0; k < e.permutation.length; k++) {
-      const d = Math.abs(e.permuted_logits[k] - base.logits[e.permutation[k]]);
+      const d = Math.abs(permuted[k] - base.logits[e.permutation[k]]);
       if (d > worst) worst = d;
     }
     if (worst !== 0)
       equivariance[side].mismatches.push({ id: e.id, max_abs_diff: worst });
   }
-}
-for (const side of ['ort_py', 'ort_node']) {
+};
+
+checkEquivariance(
+  'mlx',
+  py.equivariance,
+  (e) => e.mlx_permuted_logits,
+  (id) => pyBase.get(id).mlx
+);
+checkEquivariance(
+  'ort_py',
+  py.equivariance,
+  (e) => e.permuted_logits,
+  (id) => pyBase.get(id).ort_py
+);
+checkEquivariance(
+  'ort_node',
+  nd.equivariance,
+  (e) => e.permuted_logits,
+  (id) => byId.get(id).ort_node
+);
+
+for (const side of EQUIVARIANCE_SIDES) {
+  if (equivariance[side].checked === 0)
+    fail(side, 'move_order_equivariance_not_measured', {
+      note: 'no permuted logits were produced for this surface',
+    });
   if (equivariance[side].mismatches.length)
     fail(
       side,
@@ -238,6 +283,8 @@ for (const { id, a, b } of surfaces) {
   const topkAgree = [];
   const taus = [];
   const signMismatches = [];
+  const edgeOrdering = [];
+  const edgeTop1Failures = [];
 
   for (const p of py.positions) {
     const n = byId.get(p.id);
@@ -267,24 +314,50 @@ for (const { id, a, b } of surfaces) {
       signMismatches.push({ id: p.id, a: A.value, b: B.value });
     }
 
-    // Ordering metrics use the primary 120 only.
-    if (!isPrimary) continue;
-
+    // Ordering is computed for EVERY position. Only the aggregate percentage
+    // and median gates are restricted to the primary 120, so the six
+    // deliberately extreme edge cases cannot dilute a rate; their ordering is
+    // reported individually instead, as the specification requires.
     const ref = refName === a ? A : B;
     const topA = argmax(A.logits);
     const topB = argmax(B.logits);
-    if (topA !== topB) {
-      const gap = topGap(ref.logits);
-      const entry = { id: p.id, ref_gap: gap, a_top: topA, b_top: topB };
-      if (gap <= band) exempted.push(entry);
-      else top1Disagreements.push(entry);
-    }
-
+    const gap = topGap(ref.logits);
     const k = Math.min(5, p.n_legal);
-    topkAgree.push(
-      setsEqual(topKSet(A.logits, k), topKSet(B.logits, k)) ? 1 : 0
-    );
-    taus.push(kendallTau(A.logits, B.logits));
+    const topkOk = setsEqual(topKSet(A.logits, k), topKSet(B.logits, k));
+    const tau = kendallTau(A.logits, B.logits);
+
+    if (isPrimary) {
+      if (topA !== topB) {
+        const entry = { id: p.id, ref_gap: gap, a_top: topA, b_top: topB };
+        if (gap <= band) exempted.push(entry);
+        else top1Disagreements.push(entry);
+      }
+      topkAgree.push(topkOk ? 1 : 0);
+      taus.push(tau);
+    } else {
+      edgeOrdering.push({
+        id: p.id,
+        n_legal: p.n_legal,
+        k,
+        top1_agree: topA === topB,
+        top1_a: topA,
+        top1_b: topB,
+        ref_gap: gap === Infinity ? null : gap,
+        within_near_tie_band: gap <= band,
+        topk_set_agree: topkOk,
+        kendall_tau: tau,
+      });
+      // A per-position rule, unlike the percentage and median gates: an edge
+      // top-1 flip outside the ambiguous band is a failure wherever it occurs.
+      if (topA !== topB && gap > band) {
+        edgeTop1Failures.push({
+          id: p.id,
+          ref_gap: gap,
+          a_top: topA,
+          b_top: topB,
+        });
+      }
+    }
   }
 
   const nPos = py.positions.length;
@@ -302,6 +375,11 @@ for (const { id, a, b } of surfaces) {
     topk_set_agreement: topkAgree.reduce((s, v) => s + v, 0) / topkAgree.length,
     kendall_tau_median: median(taus),
     kendall_tau_min: Math.min(...taus),
+    aggregate_gates_scope: `primary ${taus.length} positions only`,
+    edge_ordering: edgeOrdering,
+    edge_ordering_note:
+      'Reported individually, per the specification. These entries are deliberately extreme, so they are excluded from the percentage and median gates above; a top-1 flip outside the near-tie band is still a failure here, since that is a per-position rule rather than a rate.',
+    edge_top1_failures: edgeTop1Failures,
     sign_mismatches: signMismatches,
     tolerances: tol,
     margins: {
@@ -329,6 +407,8 @@ for (const { id, a, b } of surfaces) {
     });
   if (top1Disagreements.length > 0)
     fail(id, 'top1_disagreement_outside_near_tie_band', top1Disagreements);
+  if (edgeTop1Failures.length > 0)
+    fail(id, 'edge_top1_disagreement_outside_near_tie_band', edgeTop1Failures);
   if (exempted.length > NEAR_TIE_EXEMPTION_CAP)
     fail(id, 'near_tie_exemptions_exceed_cap', {
       exemptions: exempted.length,
@@ -398,6 +478,11 @@ const report = {
   positions_compared: py.positions.length,
   primary_compared: py.positions.filter((p) => p.stratum !== 'edge').length,
   edge_compared: py.positions.filter((p) => p.stratum === 'edge').length,
+  audit: {
+    recompute:
+      'node tests/parity/compare.mjs tests/parity/results/python_side.json.gz tests/parity/results/node_side.json.gz /tmp/verdict.json',
+    note: 'Reproduces this file byte for byte from the committed gzipped measurement halves; compare.mjs reads either form. This makes the VERDICT auditable from the repository alone. It does NOT make the measurement reproducible from scratch: the source checkpoint is untracked, so regenerating the halves requires calib020_0001 (SHA-1 209cf2d4fd24a48553d259dd71b4954867b9473e) from outside the repository.',
+  },
   corpus_sha256: py.corpus_sha256,
   model_id: py.model_id,
   graph_sha256: py.graph_sha256,
@@ -451,14 +536,17 @@ console.log(
   'masks         exact:',
   maskFailures.length === 0 ? 'PASS' : 'FAIL'
 );
-console.log(
-  'equivariance  exact:',
-  equivariance.ort_py.mismatches.length +
-    equivariance.ort_node.mismatches.length ===
-    0
-    ? 'PASS'
-    : 'FAIL'
-);
+for (const side of EQUIVARIANCE_SIDES) {
+  const e = equivariance[side];
+  console.log(
+    `equivariance ${side.padEnd(9)}`,
+    e.checked === 0
+      ? 'NOT MEASURED'
+      : e.mismatches.length === 0
+        ? `PASS (${e.checked})`
+        : 'FAIL'
+  );
+}
 console.log('');
 for (const { id } of surfaces) {
   const r = surfaceResults[id];
@@ -471,7 +559,15 @@ for (const { id } of surfaces) {
     `     top1 disagreements ${r.top1_disagreements_outside_band.length}` +
       `   near-tie exemptions ${r.near_tie_exemptions}/${NEAR_TIE_EXEMPTION_CAP}` +
       `   top-k ${(r.topk_set_agreement * 100).toFixed(1)}%` +
-      `   tau median ${r.kendall_tau_median.toFixed(6)}`
+      `   tau median ${r.kendall_tau_median.toFixed(6)}   [${r.aggregate_gates_scope}]`
+  );
+  const edgeAgree = r.edge_ordering.filter((e) => e.top1_agree).length;
+  const edgeTopk = r.edge_ordering.filter((e) => e.topk_set_agree).length;
+  console.log(
+    `     edge (reported separately): top1 ${edgeAgree}/${r.edge_ordering.length}` +
+      `   top-k ${edgeTopk}/${r.edge_ordering.length}` +
+      `   tau min ${Math.min(...r.edge_ordering.map((e) => e.kendall_tau)).toFixed(6)}` +
+      `   failures ${r.edge_top1_failures.length}`
   );
 }
 console.log(

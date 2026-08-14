@@ -64,8 +64,18 @@ tests/probes/strong_advantage_probes.draft.json
 tests/probes/strong_advantage_probes.draft.pre-thinning.json
 tests/probes/candidates_strong_advantage.json
 
-# Phase 2 parity raw measurement halves: large (3.1 MB and 1.7 MB) and fully
-# regenerable from the committed corpus, harness and candidate pair. The verdict
-# and every metric live in tests/parity/results/parity_result.json, which is
-# committed; their SHA-256s are recorded in the commit that produced them.
+# Phase 2 parity evidence. The uncompressed measurement halves are ignored, but
+# gzipped copies ARE committed (4.73 MB -> 1.43 MB) so the verdict can be
+# recomputed from the repository alone:
+#
+#   node tests/parity/compare.mjs \
+#     tests/parity/results/python_side.json.gz \
+#     tests/parity/results/node_side.json.gz /tmp/verdict.json
+#
+# compare.mjs reads either form, and that command reproduces
+# parity_result.json byte for byte. Note the limit honestly: this makes the
+# VERDICT auditable, not the measurement reproducible from scratch -- the
+# source checkpoint is itself untracked, so regenerating the halves needs
+# calib020_0001 (SHA-1 209cf2d4...) from outside the repository.
 tests/parity/results/*_side.json
+!tests/parity/results/*_side.json.gz

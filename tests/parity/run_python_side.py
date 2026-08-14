@@ -160,6 +160,11 @@ def main() -> int:
         results.append(entry)
 
     # --- move-order equivariance on the first N primary positions ---
+    #
+    # BOTH Python surfaces are permuted, native MLX included. The specification
+    # assigns this exact gate to S2, S3 and S4, and MLX is the reference
+    # endpoint for S2 and S4 -- measuring only ONNX Runtime would leave the
+    # reference side of two surfaces unmeasured while still reporting them.
     equivariance = []
     for pos in corpus["primary"][:EQUIVARIANCE_POSITIONS]:
         state = TwixtState.from_moves([tuple(m) for m in pos["moves"]])
@@ -170,17 +175,25 @@ def main() -> int:
 
         chw = np.ascontiguousarray(state.to_tensor(), dtype=np.float32)
         nchw = chw[None, ...]
+
         rows, cols, mask = pad_moves(permuted)
         out = session.run(
             ["policy_logits", "value"],
             {"board": nchw, "move_rows": rows, "move_cols": cols, "move_mask": mask},
         )
         permuted_logits = np.array(out[0], dtype=np.float64).reshape(-1)[:n_legal]
+
+        hwc = np.transpose(chw, (1, 2, 0))
+        mlx_perm_policy, _ = net(mx.array(hwc[None, ...]), permuted)
+        mx.eval(mlx_perm_policy)
+        mlx_permuted_logits = np.array(mlx_perm_policy, dtype=np.float64).reshape(-1)[:n_legal]
+
         equivariance.append(
             {
                 "id": pos["id"],
                 "permutation": perm,
                 "permuted_logits": permuted_logits.tolist(),
+                "mlx_permuted_logits": mlx_permuted_logits.tolist(),
             }
         )
 
