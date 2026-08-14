@@ -1,4 +1,4 @@
-# Product-Stack Comparison Specification — DRAFT FOR REVIEW (rev 5)
+# Product-Stack Comparison Specification — DRAFT FOR REVIEW (rev 6)
 
 **Date:** 2026-08-14 · **Basis:** `bdbbeca` (closed Phase 2 head)
 **Status: DRAFT. NOT PREREGISTERED, and it authorizes nothing.**
@@ -52,6 +52,14 @@ was chosen as **stronger shipped play**.
 > | 3 | `candidate_score`, `ort_config` and the timing span reworded | The `candidate_score` entry still said the analyser "never re-derives", contradicting the re-derivation §10 gained in rev 4. `{}` misdescribes a one-argument call as an empty-but-present options object. "First move to last move" left search and sidecar write ambiguously inside or outside the span. |
 >
 > Rev 4 is preserved at `6f16de9`.
+>
+> ## Revision 6 — 2026-08-14, still before any approval, harness, opening or game
+>
+> | # | change | reason |
+> |---|---|---|
+> | 1 | The §10 fingerprint uses colour-independent **role** fields `baseline_model_id` / `candidate_model_id`, added to the schema; colour assignment is validated separately | Rev 5's fingerprint said "both model IDs", but the stored fields are `red_model_id`/`black_model_id`, which **swap by design** between the two games of a pair. Read literally, the invariant rejected **every valid pair** — unsatisfiable, not strict. |
+>
+> Rev 5 is preserved at `e8e3952`. No statistical, model or measurement change.
 
 ---
 
@@ -401,10 +409,10 @@ Re-verified at every process start, including each resume:
 - both models pass **both** loading calls — `resolveModel` for hashes and external-data binding,
   **and** `assertSessionContract` after session creation for names, types, shapes and
   `maxMoves`. `resolveModel` alone does **not** check the contract (§3);
-- every **match** sidecar (`kind: "match"`) records both `model_id`s; any match game not showing
-  exactly `1d64027db521a50f` and `c34b7ff3297c785a` invalidates the run. Timing sidecars
-  (`kind: "timing"`) are self-play by design, live in a separate namespace, and are never read by
-  the analyser (§7.3);
+- every **match** sidecar (`kind: "match"`) carries the two role fields and a colour assignment
+  whose set equals them (§10); any match game not showing exactly `1d64027db521a50f` and
+  `c34b7ff3297c785a`, one per colour, invalidates the run. Timing sidecars (`kind: "timing"`) are
+  self-play by design, live in a separate namespace, and are never read by the analyser (§7.3);
 - both sides share simulations, `cPuct`, readout policy and termination — the **only**
   difference is the model;
 - colour assignment is derived from the opening index, never drawn; the 50/50 split is asserted
@@ -427,7 +435,8 @@ to whatever the harness happened to emit.
 | `opening_sha256` | hash of that opening's move list, binding the game to the frozen pool |
 | `pair_index` | `0…P-1`; absent for timing games |
 | `game_in_pair` | `0` (candidate as red) or `1` (candidate as black); absent for timing |
-| `red_model_id`, `black_model_id` | explicit per colour — the colour assignment, not merely which models played |
+| `baseline_model_id`, `candidate_model_id` | the two **roles**, colour-independent and therefore **constant across every sidecar in the run** — `1d64027db521a50f` and `c34b7ff3297c785a` |
+| `red_model_id`, `black_model_id` | the **colour assignment**, which by design **swaps** between the two games of a pair |
 | `moves` | the complete move sequence, opening included |
 | `result` | `"red"`, `"black"` or `"draw"` |
 | `candidate_score` | `1.0` / `0.5` / `0.0`. Stored **for legibility only** and **independently recomputed** by the analyser; never consumed on trust |
@@ -456,6 +465,10 @@ rules are stated per that fact:
 - within a `pair_index`, `game_in_pair` is `0` **once** and `1` **once**;
 - the two games of a pair share the **same** `opening_id` and carry **opposite** colour
   assignments;
+- for every sidecar, the **set** `{red_model_id, black_model_id}` equals exactly
+  `{baseline_model_id, candidate_model_id}` — the two roles, one per colour, neither repeated;
+- `game_in_pair` **determines** the assignment, and is checked rather than assumed:
+  `0` ⇒ `red_model_id === candidate_model_id`, `1` ⇒ `black_model_id === candidate_model_id`;
 - **`opening_id === pair_index` for every sidecar**, and the distinct opening set is **exactly
   `0…P-1`** — not merely `P` unique values drawn from `0…199`;
 - every `opening_sha256` matches the committed pool;
@@ -470,7 +483,12 @@ selects must follow mechanically from `P`, with no freedom left in *which* ones.
 across every match sidecar in the run**, including across every resume:
 
 `execution_commit` · `schema` · `ort_version` · `ort_config` · `n_simulations` · `c_puct` ·
-`move_temp` · both model IDs
+`move_temp` · `baseline_model_id` · `candidate_model_id`
+
+**The fingerprint uses the colour-independent ROLE fields, never `red_model_id`/`black_model_id`.**
+Those two swap between the games of a pair by design, so requiring them byte-identical across
+sidecars would reject **every valid pair** — the invariant would be unsatisfiable rather than
+strict. Colour assignment is validated separately, below.
 
 Any variation invalidates the run. A `~30`-hour job will be restarted, and the tempting failure
 is benign-looking: fix an unrelated bug, restart, and finish a match whose first half was played
