@@ -1,4 +1,4 @@
-# Product-Stack Comparison Specification — DRAFT FOR REVIEW (rev 3)
+# Product-Stack Comparison Specification — DRAFT FOR REVIEW (rev 4)
 
 **Date:** 2026-08-14 · **Basis:** `bdbbeca` (closed Phase 2 head)
 **Status: DRAFT. NOT PREREGISTERED, and it authorizes nothing.**
@@ -31,6 +31,17 @@ was chosen as **stronger shipped play**.
 > | 4 | New §10 freezes the evidence schema; §8 replaces "discard" with **quarantine and verify** | Rev 1's explicit field list was lost in rev 2. And silently deleting the only surviving evidence of a half-finished pair destroys exactly what would prove a nondeterminism defect. |
 >
 > Rev 2 is preserved at `190aad6`.
+>
+> ## Revision 4 — 2026-08-14, still before any approval, harness, opening or game
+>
+> | # | change | reason |
+> |---|---|---|
+> | 1 | §10 cardinality restated per **two sidecars per pair** | Rev 3's rule was **impossible to satisfy**: it required each `pair_index` exactly once when a pair emits two games. `opening_id` uniqueness likewise had to be stated across pairs, not across sidecars. |
+> | 2 | §10 requires the analyser to **re-derive** result, termination, ply count and `candidate_score`, and to replay `moves` through `TwixtState` | `candidate_score` was consumed on trust, so a self-consistent but wrong sidecar — a mislabelled colour, a stale result — would have entered the statistic unchallenged. The whole comparison rests on that number. |
+> | 3 | §6.1 freezes both `t` critical values; §7.2 labels its figures **planning** quantities; §7.3 defines throughput as one wall-clock span | A library's `t` precision, a power figure read as exact for a composite rule, and `elapsed_ms`-sum versus whole-run timing could each move a decision at a boundary. |
+> | 4 | §8/§10 place `quarantine/` outside `match/` | A superseded sidecar must not be reachable as evidence. |
+>
+> Rev 3 is preserved at `07457a2`.
 
 ---
 
@@ -192,6 +203,16 @@ substitute a different pair.
 **Confidence interval — secondary cross-check:** Student `t` interval,
 `s̄ ± t₀.₉₇₅,ₚ₋₁ · sd(s)/√P`, with `sd` the sample standard deviation (denominator `P−1`).
 
+Only two `P` values are possible, so both critical values are frozen here rather than left to a
+library's precision or a table lookup:
+
+| `P` | `df` | `t₀.₉₇₅` |
+|---:|---:|---|
+| 100 | 99 | `1.9842169515` |
+| 200 | 199 | `1.9719565442` |
+
+Verified independently by Cornish-Fisher expansion to all ten digits shown.
+
 **Both methods must agree on the decision, in either direction.** If they disagree — whichever
 way — the outcome is **unresolved** and the disagreement is reported. Requiring agreement only
 for "stronger" would make a harm finding easier to declare than a benefit, which is not a
@@ -254,8 +275,14 @@ These are different quantities and rev 1 conflated them.
 | | `P = 100` | `P = 200` |
 |---|---:|---:|
 | planning resolution threshold (observed `s̄`) | `0.598` | `0.569` |
-| **true** score giving 80% power | `0.640` | `0.599` |
-| power at a **true** `0.57` | **29%** | **51%** |
+| **true** score giving 80% planning power | `0.640` | `0.599` |
+| planning power at a **true** `0.57` | **29%** | **51%** |
+
+**Every figure in this table is a normal-approximation planning quantity.** None is the exact
+operating characteristic of the §6.2 rule, which is composite — it requires **both** the
+bootstrap and the `t` interval to agree — and therefore has power no greater than the weaker of
+the two, on an empirical distribution these formulas do not model. The table sizes the run; it
+does not predict the decision.
 
 **Resolution threshold** is a normal-approximation **planning** figure: `0.5 + 1.96·sd/√P` at
 worst-case `sd = 0.5`. It says roughly where an observed mean would need to land. It is **not** a
@@ -299,15 +326,27 @@ concurrency.** Otherwise measured throughput would describe an unspecified concu
 rather than the configuration the match will actually use. Both run at the product's default ORT
 configuration (§5.1).
 
+**Throughput is defined exactly**, so the `8.8` boundary cannot turn on an arithmetic choice:
+
+```
+games_per_hour = 10 × 3,600,000 / total_sequential_wall_ms
+```
+
+`total_sequential_wall_ms` is **one wall-clock measurement** spanning the first move of game 1 to
+the last move of game 10 — **not** a sum of per-game `elapsed_ms`, which would silently exclude
+inter-game overhead and could land on the other side of the boundary. **Both sessions are loaded
+and both contracts asserted before the clock starts**, so model-load time is excluded from
+throughput while still being performed.
+
 | measured throughput | `P` |
 |---|---:|
 | **≥ 8.8 games/hour** | 200 |
 | **< 8.8 games/hour** | 100 |
 
 `8.8` is the `13.2` estimate degraded by 1.5×. The choice is made from **timing alone**, and the
-resulting `P` — with the measured games/hour that produced it — is **committed to the repository
-before the first match game is played**. Both `P` branches have their operating characteristics
-preregistered in §7.2, so neither is a surprise.
+resulting `P` — with the measured games/hour and the raw `total_sequential_wall_ms` that produced
+it — is **committed to the repository before the first match game is played**. Both `P` branches
+have their planning characteristics preregistered in §7.2, so neither is a surprise.
 
 **No futility screen.** Candidate 2's 64-game screen produced an adverse `28–36` that did not
 reproduce at 800 games, so a small screen here would mostly buy noise at real cost.
@@ -324,7 +363,8 @@ deterministic, so a resumed run produces **exactly** what an uninterrupted one w
 - **Resume unit is the pair.** On restart, pairs with both sidecars are complete and skipped. A
   pair with one sidecar is replayed in full — but the existing sidecar is **moved to
   `quarantine/`, never deleted**, and the replayed game must reproduce it **exactly**: identical
-  move sequence, result, termination reason and ply count.
+  move sequence, result, termination reason and ply count. `quarantine/` sits **outside**
+  `match/` (§10), so a superseded sidecar can never be read as evidence.
 - **A replay mismatch is an integrity failure, not a retry.** Hard play is deterministic, so a
   divergence means determinism does not hold — the most important defect this run could
   surface. Deleting the only prior evidence would destroy the proof; the run aborts and both
@@ -383,19 +423,44 @@ to whatever the harness happened to emit.
 | `execution_commit` | git HEAD, with the worktree asserted clean |
 | `elapsed_ms` | for throughput reporting |
 
-**Analyser acceptance, all required:**
+**Directory layout.** Three sibling namespaces; `quarantine/` is **outside** the analyser's
+input, not a subdirectory of it:
 
-- exactly `P` pairs, no more and no fewer;
-- every pair complete — both games present;
-- `pair_index` values exactly `0…P-1`, each **once**;
-- `opening_id`s unique across pairs and drawn only from `0…199`;
-- within each pair, the two games carry **opposite** colour assignments;
+```
+<run_dir>/
+  match/        kind: "match"    — the ONLY input the analyser reads
+  timing/       kind: "timing"   — self-play smoke (§7.3)
+  quarantine/   superseded sidecars from resumed half-pairs (§8)
+```
+
+**Analyser acceptance, all required.** There are **two sidecars per pair**, so the cardinality
+rules are stated per that fact:
+
+- exactly `2P` match sidecars, forming exactly `P` pairs;
+- each `pair_index` in `0…P-1` occurs **exactly twice**;
+- within a `pair_index`, `game_in_pair` is `0` **once** and `1` **once**;
+- the two games of a pair share the **same** `opening_id` and carry **opposite** colour
+  assignments;
+- the `P` **distinct** `opening_id`s are unique *across* pairs and drawn only from `0…199`;
 - every `opening_sha256` matches the committed pool;
 - every sidecar carries `kind: "match"`.
 
-Anything else — a duplicate pair, a stray sidecar, a partial pair, an unexpected `kind` — is a
-**hard reject of the analysis**, not a row to skip. A run that cannot present exactly `P`
-complete unique pairs has no result.
+**The analyser trusts nothing it can re-derive.** For every game it independently:
+
+- **replays `moves` through `TwixtState`**, asserting each move was legal when played;
+- checks the first 4 plies equal the named opening, and that `opening_sha256` matches it;
+- re-derives `result`, `termination` and `ply_count` from the replayed terminal state and
+  requires equality with the stored fields;
+- **recomputes `candidate_score`** from the re-derived `result`, the per-colour model IDs and the
+  colour assignment, and requires equality with the stored value.
+
+`candidate_score` is stored for legibility, never consumed on trust. Without this, a sidecar that
+is internally self-consistent but wrong — a mislabelled colour, a stale result — would enter the
+statistic unchallenged, and the whole comparison rests on that one number.
+
+Anything else — a duplicate pair, a stray sidecar, a partial pair, an unexpected `kind`, a
+re-derivation mismatch — is a **hard reject of the analysis**, not a row to skip. A run that
+cannot present exactly `P` complete, self-verifying, unique pairs has no result.
 
 ## 11. Procedure order
 
