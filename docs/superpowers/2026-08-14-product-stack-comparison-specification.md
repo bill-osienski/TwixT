@@ -1,4 +1,4 @@
-# Product-Stack Comparison Specification — DRAFT FOR REVIEW (rev 2)
+# Product-Stack Comparison Specification — DRAFT FOR REVIEW (rev 3)
 
 **Date:** 2026-08-14 · **Basis:** `bdbbeca` (closed Phase 2 head)
 **Status: DRAFT. NOT PREREGISTERED, and it authorizes nothing.**
@@ -20,6 +20,17 @@ was chosen as **stronger shipped play**.
 > | 6 | §8 adds deterministic resumption, and separates integrity failure from interruption | Rev 1 said "across two sessions" and "any failure aborts" in the same document. |
 >
 > Rev 1 is preserved in git history at `654d191`.
+>
+> ## Revision 3 — 2026-08-14, still before any approval, harness, opening or game
+>
+> | # | change | reason |
+> |---|---|---|
+> | 1 | §3 and §9 require `assertSessionContract` per model; §9's claim that `resolveModel` checks the contract is **withdrawn** | **Factual error.** `resolveModel` returns at `model_manifest.js:643` having validated manifest, hashes, sizes and external-data binding — it never touches the tensor contract. The product calls `assertSessionContract` **separately** after `inference.load()` (`server/index.js:598`). A harness copying rev 2 would have skipped a check the product performs. |
+> | 2 | §6.1 fixes the percentile convention and the resampling index algorithm; §6.2 requires `t` agreement on **both** directional branches; §7.2 relabels `0.569` a planning threshold and adds the `P=100` characteristics | A seed and a replicate count do not define endpoints. Requiring cross-method agreement only for "stronger" was asymmetric — it made a harm finding easier to declare than a benefit. |
+> | 3 | §7.3 gives timing its own output namespace, freezes one-process sequential execution, fixes the opening mapping, and requires `P` committed before the first match game | The smoke plays self-play games, which §9 said invalidate the run — the two rules contradicted. Throughput also depends on a concurrency choice rev 2 never fixed. |
+> | 4 | New §10 freezes the evidence schema; §8 replaces "discard" with **quarantine and verify** | Rev 1's explicit field list was lost in rev 2. And silently deleting the only surviving evidence of a half-finished pair destroys exactly what would prove a nondeterminism defect. |
+>
+> Rev 2 is preserved at `190aad6`.
 
 ---
 
@@ -60,10 +71,21 @@ Neither is modified. `DEFAULT_MODEL_ID` is untouched by the match.
 requests; the research harness is MLX/Python and cannot drive ONNX Runtime. This must be built
 and reviewed as its own step.
 
-Requirements: load both models through `resolveModel`/`MODEL_MANIFEST`; alternate two `MCTS`
-instances over one `TwixtState` sequence; use the shipped `readout_policy.js` for both sides;
-terminate **only** via `state.isTerminal()`; write one atomic JSON sidecar per game; fail loud
-rather than substitute a model; never write to either model directory.
+Requirements: alternate two `MCTS` instances over one `TwixtState` sequence; use the shipped
+`readout_policy.js` for both sides; terminate **only** via `state.isTerminal()`; write one
+atomic JSON sidecar per game conforming to §10; fail loud rather than substitute a model; never
+write to either model directory.
+
+**Model loading must reproduce the product's full startup path, which is two calls, not one:**
+
+1. `resolveModel({ MODEL_MANIFEST: … })` — validates the manifest, both file hashes and sizes,
+   and the graph-to-sidecar external-data binding.
+2. **`assertSessionContract(manifest, session, inference.maxMoves)`** after `inference.load()`.
+
+`resolveModel` **does not** validate the tensor contract; it returns before any session exists
+(`server/model_manifest.js:643`). The product performs the second call separately at
+`server/index.js:598`. A harness that stopped at step 1 would run a check *weaker* than the
+server it is measuring — so both models get both calls, and either failing aborts.
 
 **Seeded RNG is NOT a prerequisite for this document.** Hard is `moveTemp: 0`, which never
 reaches the `Math.random()` branch at `server/mcts.js:289`. It is a prerequisite for medium,
@@ -144,25 +166,46 @@ any terminal state with no winner — no legal moves, or the 600-ply forced draw
 independent unit. Per-game binomial intervals are **wrong here**: the two games in a pair share
 an opening and are not independent.
 
-**Confidence interval — primary:** two-sided 95% **percentile bootstrap** over pairs,
-**10,000 resamples**, resampling whole pairs with replacement, RNG mulberry32 seeded
-`20260814`. Chosen because pair scores are discrete, bounded and possibly skewed, where a normal
-approximation is least trustworthy. The seed makes the interval exactly reproducible.
+**Confidence interval — primary: two-sided 95% percentile bootstrap over pairs.** Chosen because
+pair scores are discrete, bounded and possibly skewed, where a normal approximation is least
+trustworthy.
+
+A seed and a replicate count do **not** determine the endpoints, so the algorithm is fixed here
+completely. Two correct implementations must produce bit-identical bounds.
+
+| element | fixed value |
+|---|---|
+| replicates `B` | `10000` |
+| RNG | mulberry32, seeded `20260814` **once**, drawn as a single continuous stream |
+| draw order | replicate `b = 0…B-1`, and within each, `P` indices drawn in order `i = 0…P-1` |
+| index formula | `idx = Math.floor(rand() * P)`, clamped to `P-1` should `rand()` ever return exactly `1` |
+| replicate statistic | mean of the `P` resampled **pair** scores (whole pairs, never games) |
+| ordering | replicate means sorted **ascending**, ties kept, 0-indexed as `r[0…9999]` |
+| lower bound | `r[250]` |
+| upper bound | `r[9749]` |
+
+The endpoints are order statistics of the sorted replicates — **no interpolation**, no quantile
+variant. `r[250]` and `r[9749]` follow from `floor(0.025 × 10000)` and
+`ceil(0.975 × 10000) − 1`; they are written literally so no library's default convention can
+substitute a different pair.
 
 **Confidence interval — secondary cross-check:** Student `t` interval,
-`s̄ ± t₀.₉₇₅,ₚ₋₁ · sd(s)/√P`. Reported alongside. **If the two methods disagree on the decision,
-that is a reported finding and the outcome is treated as unresolved** — not an invitation to
-pick the friendlier one.
+`s̄ ± t₀.₉₇₅,ₚ₋₁ · sd(s)/√P`, with `sd` the sample standard deviation (denominator `P−1`).
 
-The observed `sd(s)` is reported, since the §7 power arithmetic assumes a worst case.
+**Both methods must agree on the decision, in either direction.** If they disagree — whichever
+way — the outcome is **unresolved** and the disagreement is reported. Requiring agreement only
+for "stronger" would make a harm finding easier to declare than a benefit, which is not a
+defensible asymmetry.
+
+The observed `sd(s)` is reported, since §7's arithmetic assumes a worst case.
 
 ### 6.2 Decision rule
 
 | outcome | decision |
 |---|---|
-| bootstrap 95% **lower** bound `> 0.50` (and the `t` interval agrees) | **candidate stronger.** Eligible for a separate, reviewed switch. Not automatic. |
-| interval contains `0.50`, or the two methods disagree | **unresolved.** Keep the baseline. |
-| bootstrap 95% **upper** bound `< 0.50` | **candidate weaker.** Keep the baseline. |
+| bootstrap 95% **lower** bound `> 0.50` **and the `t` interval agrees** | **candidate stronger.** Eligible for a separate, reviewed switch. Not automatic. |
+| bootstrap 95% **upper** bound `< 0.50` **and the `t` interval agrees** | **candidate weaker.** Keep the baseline. |
+| interval contains `0.50`, **or the two methods disagree in either direction** | **unresolved.** Keep the baseline. |
 
 **An unresolved result does not authorize a larger match.** Buying resolution after seeing the
 interval is a post-hoc power increase; do-not-repeat `#51` closed a research line for exactly
@@ -206,37 +249,65 @@ runtime is therefore an estimate, not a guarantee.
 
 ### 7.2 Resolution threshold versus power — different quantities
 
-**Resolution threshold.** With worst-case `sd = 0.5` at `P = 200`, the 95% half-width is
-`1.96 × 0.5/√200 ≈ 0.069`, so an **observed** `s̄ ≥ 0.569` would clear the bar. This is a
-property of the data once seen, **not** a power statement.
+These are different quantities and rev 1 conflated them.
 
-**Power.** For 80% power at one-sided `α = 0.025`,
-`δ = √((1.96 + 0.842)² · 0.25 / 200) ≈ 0.099` — a **true** score of about **`0.60`**.
+| | `P = 100` | `P = 200` |
+|---|---:|---:|
+| planning resolution threshold (observed `s̄`) | `0.598` | `0.569` |
+| **true** score giving 80% power | `0.640` | `0.599` |
+| power at a **true** `0.57` | **29%** | **51%** |
 
-At a true `0.57`, power at `P = 200` is only about **50%**: a coin flip. `P = 200` is powered to
-detect a **large** difference, which is the plausible case given the candidate is the
-best-supported research checkpoint and the baseline is probably ~200 iterations earlier in a
-different line. It is **not** powered to resolve a modest one, and per §6.2 a near-tie will be
-reported unresolved and left there.
+**Resolution threshold** is a normal-approximation **planning** figure: `0.5 + 1.96·sd/√P` at
+worst-case `sd = 0.5`. It says roughly where an observed mean would need to land. It is **not** a
+power statement, and it is **not a guarantee about the bootstrap rule** in §6.1 — the bootstrap
+is computed from the empirical distribution and may place its lower bound above or below this
+approximation. Only §6.2, applied to the actual bootstrap output, decides anything.
 
-Both figures use worst-case `sd = 0.5`. Pairing and draws will likely give a smaller `sd`,
-improving both; the observed value is reported and **does not retroactively change the rule**.
+**Power** is the probability of clearing the bar given a true effect:
+`δ = √((z₀.₉₇₅ + z₀.₈)²·sd²/P)`.
+
+Read the table plainly: at `P = 200` a true `0.57` is a **coin flip**, and at `P = 100` it fails
+**seven times in ten**. This design detects a **large** difference — the plausible case, since
+the candidate is the best-supported research checkpoint and the baseline is probably ~200
+iterations earlier in a different line. It cannot resolve a modest one, and per §6.2 a near-tie
+is reported unresolved and left there.
+
+All figures use worst-case `sd = 0.5`. Pairing and draws will likely give a smaller `sd`,
+improving every column; the observed value is reported and **does not retroactively change the
+rule**.
 
 ### 7.3 Timing smoke, and how `P` is fixed
 
-Before the match: **10 games** on the reserved openings `200…209` — 5 baseline-versus-baseline
-and 5 candidate-versus-candidate.
+Before the match: **10 games**, one per reserved opening, in this exact mapping.
+
+| openings | pairing | games |
+|---|---|---:|
+| `200…204` | baseline vs baseline | 5 |
+| `205…209` | candidate vs candidate | 5 |
 
 **Outcome-blind by construction:** a model playing itself yields no comparative information, so
 `P` cannot be chosen with any knowledge of the matchup.
+
+**Separate output namespace.** Timing sidecars are written to `timing/`, never to the match
+output directory, and carry `"kind": "timing"`. The match analyser reads **only** `match/` and
+**rejects** any sidecar whose `kind` is not `"match"`. This resolves rev 2's contradiction: §9
+invalidates a *match* game that does not show both model IDs, and a self-play timing game is not
+a match game. Timing evidence can never enter the statistic.
+
+**Execution is frozen for both the smoke and the match: one process, sequential, no
+concurrency.** Otherwise measured throughput would describe an unspecified concurrency choice
+rather than the configuration the match will actually use. Both run at the product's default ORT
+configuration (§5.1).
 
 | measured throughput | `P` |
 |---|---:|
 | **≥ 8.8 games/hour** | 200 |
 | **< 8.8 games/hour** | 100 |
 
-`8.8` is the estimate degraded by 1.5×. The choice is made from **timing alone, before any match
-game is played**, and is recorded before the match starts.
+`8.8` is the `13.2` estimate degraded by 1.5×. The choice is made from **timing alone**, and the
+resulting `P` — with the measured games/hour that produced it — is **committed to the repository
+before the first match game is played**. Both `P` branches have their operating characteristics
+preregistered in §7.2, so neither is a surprise.
 
 **No futility screen.** Candidate 2's 64-game screen produced an adverse `28–36` that did not
 reproduce at 800 games, so a small screen here would mostly buy noise at real cost.
@@ -250,9 +321,14 @@ deterministic, so a resumed run produces **exactly** what an uninterrupted one w
   then candidate-as-black. The order is a property of the opening file, not of the run.
 - **Atomic sidecars.** Each game is written to a temporary file and renamed, so a sidecar is
   never partially observed.
-- **Resume unit is the pair.** On restart, pairs with both sidecars are complete and skipped; a
-  pair with one sidecar has that sidecar **discarded and the pair replayed in full**. A pair is
-  the statistical unit and must never be half-counted.
+- **Resume unit is the pair.** On restart, pairs with both sidecars are complete and skipped. A
+  pair with one sidecar is replayed in full — but the existing sidecar is **moved to
+  `quarantine/`, never deleted**, and the replayed game must reproduce it **exactly**: identical
+  move sequence, result, termination reason and ply count.
+- **A replay mismatch is an integrity failure, not a retry.** Hard play is deterministic, so a
+  divergence means determinism does not hold — the most important defect this run could
+  surface. Deleting the only prior evidence would destroy the proof; the run aborts and both
+  copies are kept for diagnosis.
 - **Intentional pause is allowed** and is not a defect: stop the process, restart later.
 - **Integrity failure is different from interruption.** A model-identity mismatch, hash
   mismatch, contract failure or colour-assignment error **aborts and invalidates the run** — it
@@ -267,10 +343,13 @@ repaired".
 Re-verified at every process start, including each resume:
 
 - both model file hashes match their manifests, and the manifests match §2;
-- both models load through `resolveModel`, so external-data binding and the application contract
-  are checked;
-- every game sidecar records both `model_id`s; any game not showing exactly
-  `1d64027db521a50f` and `c34b7ff3297c785a` invalidates the run;
+- both models pass **both** loading calls — `resolveModel` for hashes and external-data binding,
+  **and** `assertSessionContract` after session creation for names, types, shapes and
+  `maxMoves`. `resolveModel` alone does **not** check the contract (§3);
+- every **match** sidecar (`kind: "match"`) records both `model_id`s; any match game not showing
+  exactly `1d64027db521a50f` and `c34b7ff3297c785a` invalidates the run. Timing sidecars
+  (`kind: "timing"`) are self-play by design, live in a separate namespace, and are never read by
+  the analyser (§7.3);
 - both sides share simulations, `cPuct`, readout policy and termination — the **only**
   difference is the model;
 - colour assignment is derived from the opening index, never drawn; the 50/50 split is asserted
@@ -278,7 +357,47 @@ Re-verified at every process start, including each resume:
 - execution commit recorded, worktree clean at launch;
 - after the run, both model pairs re-hashed to prove neither was touched.
 
-## 10. Procedure order
+## 10. Evidence schema — frozen before implementation
+
+Fixed here so the harness is written to a known contract rather than the schema being back-fitted
+to whatever the harness happened to emit.
+
+**One sidecar per game**, written atomically (temp file, then rename):
+
+| field | content |
+|---|---|
+| `kind` | `"match"` or `"timing"` — the analyser reads only `"match"` |
+| `schema` | `twixt-product-match/1` |
+| `opening_id` | index into the committed pool, `0…209` |
+| `opening_sha256` | hash of that opening's move list, binding the game to the frozen pool |
+| `pair_index` | `0…P-1`; absent for timing games |
+| `game_in_pair` | `0` (candidate as red) or `1` (candidate as black); absent for timing |
+| `red_model_id`, `black_model_id` | explicit per colour — the colour assignment, not merely which models played |
+| `moves` | the complete move sequence, opening included |
+| `result` | `"red"`, `"black"` or `"draw"` |
+| `candidate_score` | `1.0` / `0.5` / `0.0`, derived and stored so the analyser never re-derives colour |
+| `termination` | `"win"`, `"no_legal_moves"` or `"max_plies"` |
+| `ply_count` | final ply |
+| `n_simulations`, `c_puct`, `move_temp` | `800`, `1.5`, `0` |
+| `ort_version`, `ort_config` | `onnxruntime-node` version and the session options used (`{}` — the product default) |
+| `execution_commit` | git HEAD, with the worktree asserted clean |
+| `elapsed_ms` | for throughput reporting |
+
+**Analyser acceptance, all required:**
+
+- exactly `P` pairs, no more and no fewer;
+- every pair complete — both games present;
+- `pair_index` values exactly `0…P-1`, each **once**;
+- `opening_id`s unique across pairs and drawn only from `0…199`;
+- within each pair, the two games carry **opposite** colour assignments;
+- every `opening_sha256` matches the committed pool;
+- every sidecar carries `kind: "match"`.
+
+Anything else — a duplicate pair, a stray sidecar, a partial pair, an unexpected `kind` — is a
+**hard reject of the analysis**, not a row to skip. A run that cannot present exactly `P`
+complete unique pairs has no result.
+
+## 11. Procedure order
 
 1. Commit this specification; obtain separate review and explicit approval.
 2. Build and review the §3 harness. **No games.**
@@ -287,7 +406,7 @@ Re-verified at every process start, including each resume:
 5. Run Arm A.
 6. Analyse strictly per §6; report.
 
-## 11. Threats to validity
+## 12. Threats to validity
 
 - **Random openings are not human openings.** Both engines face identical positions, so the
   comparison is fair, but external validity to real play is an assumption.
@@ -300,8 +419,8 @@ Re-verified at every process start, including each resume:
   any named checkpoint.
 - **Opening depth 4** is a judgement call, not a measured optimum.
 
-## 12. What this document authorizes
+## 13. What this document authorizes
 
 **Nothing.** Not the harness, not the opening pool, not the timing smoke, not a game, not a
 switch of `DEFAULT_MODEL_ID`, not deployment, not training, not research-seed use. Each step in
-§10 needs its own approval, and the earliest is step 2.
+§11 needs its own approval, and the earliest is step 2.
