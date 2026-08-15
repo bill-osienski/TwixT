@@ -71,7 +71,9 @@ const OPENINGS = [
 const TEST_SPEC = {
   ...FROZEN_SPEC,
   nSimulations: SIMS,
-  tCritical: { 3: 4.30265273 }, // t(0.975, df=2)
+  // Two supported sizes so the count gate can be exercised separately from the
+  // unsupported-P gate.
+  tCritical: { 3: 4.30265273, 4: 3.182446305 }, // t(0.975, df=2 / df=3)
 };
 
 let root;
@@ -99,15 +101,11 @@ async function runFrom(name, mutate = () => {}, meta = {}) {
   const fp = Object.fromEntries(
     FINGERPRINT_FIELDS.map((f) => [f, validSidecars[0][f]])
   );
+  if (meta.dropFingerprintField) delete fp[meta.dropFingerprintField];
   if (meta.runJson !== null) {
-    await writeFile(
-      join(d, 'run.json'),
-      JSON.stringify(
-        { fingerprint: fp, P: meta.P ?? P, ...meta.extra },
-        null,
-        2
-      )
-    );
+    const runMeta = { P: meta.P ?? P, ...meta.extra };
+    if (!meta.omitFingerprint) runMeta.fingerprint = fp;
+    await writeFile(join(d, 'run.json'), JSON.stringify(runMeta, null, 2));
   }
   return d;
 }
@@ -279,11 +277,29 @@ describe('analysis of a real run', () => {
       c[c.length - 1].opening_id = 0;
     }));
 
-  it('rejects analysing a P=200 run as though it were P=100', () =>
-    expectReject('shortP', 'SIDECAR_COUNT', undefined, { P: P + 1 }));
+  it('rejects a run analysed against a larger committed P', () =>
+    // P=4 is a supported size, but only 3 pairs exist: the count gate, not the
+    // unsupported-size gate.
+    expectReject('shortP', 'SIDECAR_COUNT', undefined, { P: 4 }));
 
   it('rejects a run with no committed metadata', () =>
     expectReject('nometa', 'NO_RUN_METADATA', undefined, { runJson: null }));
+
+  it('rejects run metadata with no fingerprint at all', () =>
+    // The bypass this closes: deleting the fingerprint used to disable the
+    // binding it exists to enforce. A check that can be switched off by
+    // removing the thing being checked is not a check.
+    expectReject('nofp', 'MISSING_RUN_FINGERPRINT', undefined, {
+      omitFingerprint: true,
+    }));
+
+  it('rejects run metadata whose fingerprint is incomplete', () =>
+    expectReject('partialfp', 'MALFORMED_RUN_FINGERPRINT', undefined, {
+      dropFingerprintField: 'ort_version',
+    }));
+
+  it('rejects a P the specification does not support, before any replay', () =>
+    expectReject('badP', 'UNSUPPORTED_P', undefined, { P: 7 }));
 
   it('rejects a fingerprint that is not the committed run', () =>
     expectReject('notthisrun', 'FINGERPRINT_NOT_THE_COMMITTED_RUN', (c) => {
@@ -338,9 +354,19 @@ describe('analysis of a real run', () => {
 
   it('rejects a run whose simulation count is not the specified one', async () => {
     const d = await runFrom('sims');
-    const r = await analyse(d, OPENINGS, FROZEN_SPEC); // demands 800
+    // Same supported sizes, but demanding the specification's 800.
+    const r = await analyse(d, OPENINGS, { ...TEST_SPEC, nSimulations: 800 });
     assert.strictEqual(r.verdict, 'REJECTED');
     assert.ok(r.failures.map((f) => f.code).includes('WRONG_SIMULATIONS'));
+  });
+
+  it('rejects a P the frozen specification does not allow', async () => {
+    // Under FROZEN_SPEC only 100 and 200 exist, so this fixture's P=3 is
+    // refused up front, before any replay work.
+    const d = await runFrom('frozenP');
+    const r = await analyse(d, OPENINGS, FROZEN_SPEC);
+    assert.strictEqual(r.verdict, 'REJECTED');
+    assert.ok(r.failures.map((f) => f.code).includes('UNSUPPORTED_P'));
   });
 
   // --- colour rejections ----------------------------------------------------

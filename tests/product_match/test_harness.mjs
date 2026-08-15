@@ -543,6 +543,33 @@ describe('runMatch and resumption', () => {
     await rm(d, { recursive: true, force: true });
   });
 
+  it('cannot be talked into accepting swapped roles', async () => {
+    // The bypass this closes: swapped directories PLUS swapped expectations
+    // used to satisfy the guard and play a whole match backwards. The
+    // expectations are no longer parameters at all.
+    const d = await mkdtemp(join(tmpdir(), 'twixt-swap-'));
+    await assert.rejects(
+      runMatch(
+        opts({
+          runDir: d,
+          P: 1,
+          baselineDir: CANDIDATE_DIR,
+          candidateDir: BASELINE_DIR,
+          // Ignored: runMatch compares against the frozen constants.
+          expectBaselineId: CANDIDATE_MODEL_ID,
+          expectCandidateId: BASELINE_MODEL_ID,
+        })
+      ),
+      (e) => e instanceof HarnessError && e.code === 'WRONG_BASELINE_MODEL'
+    );
+    assert.deepStrictEqual(
+      await readdir(join(d, 'match')),
+      [],
+      'no game may be played'
+    );
+    await rm(d, { recursive: true, force: true });
+  });
+
   it('refuses to play if a model directory holds the wrong role', async () => {
     // Both directories are internally valid; they are simply swapped. Without
     // this the error surfaces only at analysis, after the match time is spent.

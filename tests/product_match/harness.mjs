@@ -294,8 +294,6 @@ export async function runMatch({
   nSimulations = null,
   cPuct = 1.5,
   requireCleanWorktree = true,
-  expectBaselineId = BASELINE_MODEL_ID,
-  expectCandidateId = CANDIDATE_MODEL_ID,
   onGameComplete = null,
 }) {
   const matchDir = join(runDir, 'match');
@@ -305,18 +303,19 @@ export async function runMatch({
 
   const baseline = await loadModel(baselineDir);
   const candidate = await loadModel(candidateDir);
-  // Bind identity to ROLE before a single game is played. Both directories can
-  // be internally valid and still be the wrong two models, or swapped; without
-  // this the error surfaces only at analysis, after the match time is spent.
-  if (baseline.modelId !== expectBaselineId)
+  // Bind identity to ROLE before a single game is played, against the FROZEN
+  // constants — never against caller-supplied expectations. An overridable
+  // expectation makes the guard self-selected: swapped directories plus
+  // swapped expectations would satisfy it and play a whole match backwards.
+  if (baseline.modelId !== BASELINE_MODEL_ID)
     fail(
       'WRONG_BASELINE_MODEL',
-      `baseline dir holds ${baseline.modelId}, expected ${expectBaselineId}`
+      `baseline dir holds ${baseline.modelId}, expected ${BASELINE_MODEL_ID}`
     );
-  if (candidate.modelId !== expectCandidateId)
+  if (candidate.modelId !== CANDIDATE_MODEL_ID)
     fail(
       'WRONG_CANDIDATE_MODEL',
-      `candidate dir holds ${candidate.modelId}, expected ${expectCandidateId}`
+      `candidate dir holds ${candidate.modelId}, expected ${CANDIDATE_MODEL_ID}`
     );
   const ortV = await ortVersion();
   const commit = executionCommit({ requireClean: requireCleanWorktree });

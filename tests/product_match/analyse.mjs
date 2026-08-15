@@ -76,6 +76,19 @@ const REQUIRED_FIELDS = {
   elapsed_ms: 'number',
 };
 
+/** The run fingerprint's fields and their types. All mandatory. */
+const FINGERPRINT_TYPES = {
+  execution_commit: 'string',
+  schema: 'string',
+  ort_version: 'string',
+  ort_config: 'string',
+  n_simulations: 'integer',
+  c_puct: 'number',
+  move_temp: 'number',
+  baseline_model_id: 'string',
+  candidate_model_id: 'string',
+};
+
 const RESULTS = new Set(['red', 'black', 'draw']);
 const TERMINATIONS = new Set(['win', 'no_legal_moves', 'max_plies']);
 
@@ -99,6 +112,54 @@ const typeOk = (value, type) => {
   }
   return false;
 };
+
+/**
+ * Structural validation of the run's own committed metadata.
+ *
+ * The fingerprint is MANDATORY. Treating it as optional would mean deleting it
+ * disables the binding it exists to enforce — a check that can be switched off
+ * by removing the thing being checked is not a check.
+ */
+export function runMetaFailures(runMeta, spec) {
+  const out = [];
+  if (
+    runMeta === null ||
+    typeof runMeta !== 'object' ||
+    Array.isArray(runMeta)
+  ) {
+    return [{ code: 'RUN_METADATA_NOT_AN_OBJECT', detail: {} }];
+  }
+  if (!Number.isInteger(runMeta.P) || runMeta.P < 2) {
+    out.push({ code: 'BAD_COMMITTED_P', detail: { P: runMeta.P ?? null } });
+  } else if (spec.tCritical[runMeta.P] === undefined) {
+    // Rejected up front, before any replay: an unsupported P means this is not
+    // the run that was preregistered, whatever its evidence looks like.
+    out.push({
+      code: 'UNSUPPORTED_P',
+      detail: {
+        P: runMeta.P,
+        supported: Object.keys(spec.tCritical).map(Number),
+      },
+    });
+  }
+  const fp = runMeta.fingerprint;
+  if (fp === null || typeof fp !== 'object' || Array.isArray(fp)) {
+    out.push({ code: 'MISSING_RUN_FINGERPRINT', detail: {} });
+    return out;
+  }
+  for (const [field, type] of Object.entries(FINGERPRINT_TYPES)) {
+    if (!typeOk(fp[field], type)) {
+      out.push({
+        code: 'MALFORMED_RUN_FINGERPRINT',
+        detail: { field, expected: type, found: fp[field] ?? null },
+      });
+    }
+  }
+  const extra = Object.keys(fp).filter((k) => !(k in FINGERPRINT_TYPES));
+  if (extra.length)
+    out.push({ code: 'UNEXPECTED_FINGERPRINT_FIELDS', detail: { extra } });
+  return out;
+}
 
 /** Structural validation of one sidecar. Returns a list of failures. */
 export function structuralFailures(sidecar, where) {
@@ -242,13 +303,10 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
       failures: [{ code: 'NO_RUN_METADATA', detail: join(runDir, 'run.json') }],
     };
   }
+  const metaFailures = runMetaFailures(runMeta, spec);
+  if (metaFailures.length)
+    return { verdict: 'REJECTED', failures: metaFailures };
   const P = runMeta.P;
-  if (!Number.isInteger(P) || P < 2) {
-    return {
-      verdict: 'REJECTED',
-      failures: [{ code: 'BAD_COMMITTED_P', detail: { P } }],
-    };
-  }
 
   const matchDir = join(runDir, 'match');
   let names;
@@ -317,15 +375,15 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
     'candidate_model_id',
   ];
   const first = sidecars[0];
-  if (runMeta.fingerprint) {
-    for (const f of FP) {
-      if (first[f] !== runMeta.fingerprint[f])
-        fail('FINGERPRINT_NOT_THE_COMMITTED_RUN', {
-          field: f,
-          committed: runMeta.fingerprint[f],
-          found: first[f],
-        });
-    }
+  // Unconditional: run.json's fingerprint is validated above, so it is always
+  // present and always binding.
+  for (const f of FP) {
+    if (first[f] !== runMeta.fingerprint[f])
+      fail('FINGERPRINT_NOT_THE_COMMITTED_RUN', {
+        field: f,
+        committed: runMeta.fingerprint[f],
+        found: first[f],
+      });
   }
   for (const s of sidecars) {
     for (const f of FP) {
