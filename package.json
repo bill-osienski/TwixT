@@ -9,7 +9,7 @@
     "test": "node --test tests/smoke.test.mjs",
     "test:server": "node --test server/test_server.js server/test_readout_policy.js server/test_model_manifest.js",
     "test:parity": "node --test tests/parity/test_corpus.mjs tests/parity/test_compare.mjs",
-    "test:match": "node --test tests/product_match/test_harness.mjs tests/product_match/test_analyse.mjs",
+    "test:match": "node --test tests/product_match/test_openings.mjs tests/product_match/test_harness.mjs tests/product_match/test_analyse.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "eslint . --max-warnings=0"

@@ -20,6 +20,9 @@ import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 
 import { TwixtState, MAX_PLIES } from '../../server/gameLogic.js';
+// Format adapter only — the module that owns the pool format also owns how to
+// read it. Carries no analysis logic and no harness code.
+import { openingMovesFrom } from './generate_openings.mjs';
 
 /**
  * The frozen constants. Defaults are the specification's; tests may pass their

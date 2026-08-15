@@ -9,3 +9,7 @@ selfplay.json
 # emitted by JSON.stringify(..., 2) and tests/parity/test_corpus.mjs asserts a
 # regeneration reproduces it exactly. Reformatting it would break that check.
 tests/parity/corpus.json
+
+# Machine-generated, and byte-stability is a tested property: emitted by
+# JSON.stringify(..., 2) and asserted in tests/product_match/test_openings.mjs.
+tests/product_match/openings.json

@@ -1,0 +1,5510 @@
+{
+  "schema": "twixt-opening-pool/1",
+  "specification": "docs/superpowers/2026-08-14-product-stack-comparison-specification.md",
+  "generated_by": "tests/product_match/generate_openings.mjs",
+  "regenerate": "node tests/product_match/generate_openings.mjs > tests/product_match/openings.json",
+  "loads_no_model": true,
+  "plays_no_game": true,
+  "board_size": 24,
+  "prng": {
+    "algorithm": "mulberry32",
+    "increment": "0x6d2b79f5",
+    "note": "Chosen for portability and auditability: no hidden state, no dependence on any engine built-in RNG."
+  },
+  "seeds": {
+    "initial": 20260814,
+    "allocation": "handed out in fixed opening-id order, one per attempt, incrementing by one",
+    "next_unused": 20261024,
+    "note": "Opening-construction seeds. Not drawn from the research evaluation seed ledger; nothing there is consumed."
+  },
+  "constraints": {
+    "pool_size": 210,
+    "match_set": "openings 0…199",
+    "timing_set": "openings 200…209, never used in the match",
+    "opening_plies": 4,
+    "min_continuations": 2,
+    "uniqueness": "canonical position key over sorted pegs, sorted bridges and side to move",
+    "exclusions": "terminal, or fewer than two legal continuations",
+    "retry_rule": "on rejection the seed is recorded with a reason and the next seed is drawn",
+    "max_attempts_per_slot": 2000
+  },
+  "summary": {
+    "openings": 210,
+    "match_set": 200,
+    "timing_set": 10,
+    "distinct_positions": 210,
+    "rejected_seeds": 0,
+    "rejected_seeds_note": "Zero is expected, not a disabled rule: a four-ply opening cannot end a game on a 24x24 board, always leaves hundreds of continuations, and collisions among 210 four-move sequences drawn from ~528 options are vanishingly unlikely. The rejection predicate is exercised directly in tests/product_match/test_openings.mjs.",
+    "side_to_move": [
+      "red"
+    ],
+    "side_to_move_note": "Uniformly red: four plies is an even number, so red is always to move. This introduces no bias, because every opening is played twice with the colours swapped (specification §4 pairing).",
+    "n_legal_range": [
+      524,
+      525
+    ]
+  },
+  "rejections": [],
+  "openings": [
+    {
+      "id": 0,
+      "role": "match",
+      "seed": 20260814,
+      "moves": [
+        [
+          13,
+          4
+        ],
+        [
+          7,
+          10
+        ],
+        [
+          1,
+          18
+        ],
+        [
+          21,
+          17
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 1,
+      "role": "match",
+      "seed": 20260815,
+      "moves": [
+        [
+          23,
+          16
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          16,
+          1
+        ],
+        [
+          4,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 2,
+      "role": "match",
+      "seed": 20260816,
+      "moves": [
+        [
+          5,
+          21
+        ],
+        [
+          14,
+          8
+        ],
+        [
+          6,
+          9
+        ],
+        [
+          10,
+          9
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 3,
+      "role": "match",
+      "seed": 20260817,
+      "moves": [
+        [
+          23,
+          1
+        ],
+        [
+          20,
+          18
+        ],
+        [
+          22,
+          20
+        ],
+        [
+          6,
+          3
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 4,
+      "role": "match",
+      "seed": 20260818,
+      "moves": [
+        [
+          22,
+          12
+        ],
+        [
+          14,
+          18
+        ],
+        [
+          12,
+          15
+        ],
+        [
+          16,
+          11
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 5,
+      "role": "match",
+      "seed": 20260819,
+      "moves": [
+        [
+          6,
+          12
+        ],
+        [
+          9,
+          17
+        ],
+        [
+          23,
+          1
+        ],
+        [
+          8,
+          16
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 6,
+      "role": "match",
+      "seed": 20260820,
+      "moves": [
+        [
+          10,
+          6
+        ],
+        [
+          21,
+          11
+        ],
+        [
+          13,
+          10
+        ],
+        [
+          20,
+          23
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 7,
+      "role": "match",
+      "seed": 20260821,
+      "moves": [
+        [
+          17,
+          5
+        ],
+        [
+          19,
+          11
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          13,
+          21
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 8,
+      "role": "match",
+      "seed": 20260822,
+      "moves": [
+        [
+          12,
+          2
+        ],
+        [
+          15,
+          9
+        ],
+        [
+          5,
+          18
+        ],
+        [
+          16,
+          11
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 9,
+      "role": "match",
+      "seed": 20260823,
+      "moves": [
+        [
+          9,
+          18
+        ],
+        [
+          4,
+          20
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 10,
+      "role": "match",
+      "seed": 20260824,
+      "moves": [
+        [
+          9,
+          18
+        ],
+        [
+          9,
+          17
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          14,
+          3
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 11,
+      "role": "match",
+      "seed": 20260825,
+      "moves": [
+        [
+          21,
+          2
+        ],
+        [
+          9,
+          2
+        ],
+        [
+          12,
+          21
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 12,
+      "role": "match",
+      "seed": 20260826,
+      "moves": [
+        [
+          15,
+          10
+        ],
+        [
+          22,
+          19
+        ],
+        [
+          14,
+          4
+        ],
+        [
+          2,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 13,
+      "role": "match",
+      "seed": 20260827,
+      "moves": [
+        [
+          21,
+          21
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          2,
+          15
+        ],
+        [
+          14,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 14,
+      "role": "match",
+      "seed": 20260828,
+      "moves": [
+        [
+          10,
+          19
+        ],
+        [
+          15,
+          23
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          22,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 15,
+      "role": "match",
+      "seed": 20260829,
+      "moves": [
+        [
+          22,
+          11
+        ],
+        [
+          19,
+          3
+        ],
+        [
+          22,
+          19
+        ],
+        [
+          17,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 16,
+      "role": "match",
+      "seed": 20260830,
+      "moves": [
+        [
+          15,
+          19
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          15,
+          13
+        ],
+        [
+          9,
+          16
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 17,
+      "role": "match",
+      "seed": 20260831,
+      "moves": [
+        [
+          18,
+          9
+        ],
+        [
+          1,
+          22
+        ],
+        [
+          22,
+          15
+        ],
+        [
+          11,
+          5
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 18,
+      "role": "match",
+      "seed": 20260832,
+      "moves": [
+        [
+          13,
+          4
+        ],
+        [
+          16,
+          9
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          7,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 19,
+      "role": "match",
+      "seed": 20260833,
+      "moves": [
+        [
+          2,
+          21
+        ],
+        [
+          17,
+          20
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          10,
+          17
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 20,
+      "role": "match",
+      "seed": 20260834,
+      "moves": [
+        [
+          13,
+          15
+        ],
+        [
+          11,
+          16
+        ],
+        [
+          3,
+          22
+        ],
+        [
+          3,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 21,
+      "role": "match",
+      "seed": 20260835,
+      "moves": [
+        [
+          0,
+          21
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          7,
+          21
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 22,
+      "role": "match",
+      "seed": 20260836,
+      "moves": [
+        [
+          8,
+          6
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          7,
+          16
+        ],
+        [
+          13,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 23,
+      "role": "match",
+      "seed": 20260837,
+      "moves": [
+        [
+          7,
+          13
+        ],
+        [
+          13,
+          20
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          1,
+          22
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 24,
+      "role": "match",
+      "seed": 20260838,
+      "moves": [
+        [
+          0,
+          5
+        ],
+        [
+          13,
+          10
+        ],
+        [
+          1,
+          19
+        ],
+        [
+          20,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 25,
+      "role": "match",
+      "seed": 20260839,
+      "moves": [
+        [
+          11,
+          10
+        ],
+        [
+          16,
+          19
+        ],
+        [
+          10,
+          17
+        ],
+        [
+          19,
+          6
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 26,
+      "role": "match",
+      "seed": 20260840,
+      "moves": [
+        [
+          7,
+          22
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          21,
+          22
+        ],
+        [
+          6,
+          2
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 27,
+      "role": "match",
+      "seed": 20260841,
+      "moves": [
+        [
+          4,
+          8
+        ],
+        [
+          12,
+          16
+        ],
+        [
+          1,
+          9
+        ],
+        [
+          19,
+          6
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 28,
+      "role": "match",
+      "seed": 20260842,
+      "moves": [
+        [
+          16,
+          11
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          11,
+          13
+        ],
+        [
+          1,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 29,
+      "role": "match",
+      "seed": 20260843,
+      "moves": [
+        [
+          1,
+          14
+        ],
+        [
+          17,
+          1
+        ],
+        [
+          3,
+          17
+        ],
+        [
+          7,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 30,
+      "role": "match",
+      "seed": 20260844,
+      "moves": [
+        [
+          9,
+          18
+        ],
+        [
+          7,
+          18
+        ],
+        [
+          11,
+          1
+        ],
+        [
+          13,
+          13
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 31,
+      "role": "match",
+      "seed": 20260845,
+      "moves": [
+        [
+          14,
+          10
+        ],
+        [
+          11,
+          17
+        ],
+        [
+          20,
+          22
+        ],
+        [
+          2,
+          9
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 32,
+      "role": "match",
+      "seed": 20260846,
+      "moves": [
+        [
+          11,
+          7
+        ],
+        [
+          14,
+          20
+        ],
+        [
+          16,
+          6
+        ],
+        [
+          16,
+          10
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 33,
+      "role": "match",
+      "seed": 20260847,
+      "moves": [
+        [
+          15,
+          20
+        ],
+        [
+          21,
+          13
+        ],
+        [
+          23,
+          6
+        ],
+        [
+          13,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 34,
+      "role": "match",
+      "seed": 20260848,
+      "moves": [
+        [
+          5,
+          11
+        ],
+        [
+          22,
+          10
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          17,
+          15
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 35,
+      "role": "match",
+      "seed": 20260849,
+      "moves": [
+        [
+          10,
+          15
+        ],
+        [
+          5,
+          0
+        ],
+        [
+          16,
+          7
+        ],
+        [
+          4,
+          2
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 36,
+      "role": "match",
+      "seed": 20260850,
+      "moves": [
+        [
+          5,
+          7
+        ],
+        [
+          14,
+          23
+        ],
+        [
+          0,
+          19
+        ],
+        [
+          19,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 37,
+      "role": "match",
+      "seed": 20260851,
+      "moves": [
+        [
+          20,
+          1
+        ],
+        [
+          5,
+          10
+        ],
+        [
+          13,
+          22
+        ],
+        [
+          15,
+          13
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 38,
+      "role": "match",
+      "seed": 20260852,
+      "moves": [
+        [
+          7,
+          7
+        ],
+        [
+          5,
+          22
+        ],
+        [
+          7,
+          1
+        ],
+        [
+          16,
+          10
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 39,
+      "role": "match",
+      "seed": 20260853,
+      "moves": [
+        [
+          11,
+          19
+        ],
+        [
+          11,
+          7
+        ],
+        [
+          17,
+          7
+        ],
+        [
+          18,
+          5
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 40,
+      "role": "match",
+      "seed": 20260854,
+      "moves": [
+        [
+          18,
+          3
+        ],
+        [
+          16,
+          4
+        ],
+        [
+          10,
+          6
+        ],
+        [
+          7,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 41,
+      "role": "match",
+      "seed": 20260855,
+      "moves": [
+        [
+          22,
+          4
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          18,
+          9
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 42,
+      "role": "match",
+      "seed": 20260856,
+      "moves": [
+        [
+          1,
+          1
+        ],
+        [
+          21,
+          9
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          7,
+          15
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 43,
+      "role": "match",
+      "seed": 20260857,
+      "moves": [
+        [
+          21,
+          14
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          6,
+          13
+        ],
+        [
+          10,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 44,
+      "role": "match",
+      "seed": 20260858,
+      "moves": [
+        [
+          7,
+          2
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          20,
+          6
+        ],
+        [
+          14,
+          11
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 45,
+      "role": "match",
+      "seed": 20260859,
+      "moves": [
+        [
+          13,
+          11
+        ],
+        [
+          17,
+          10
+        ],
+        [
+          14,
+          12
+        ],
+        [
+          1,
+          11
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 46,
+      "role": "match",
+      "seed": 20260860,
+      "moves": [
+        [
+          2,
+          13
+        ],
+        [
+          12,
+          16
+        ],
+        [
+          22,
+          13
+        ],
+        [
+          5,
+          23
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 47,
+      "role": "match",
+      "seed": 20260861,
+      "moves": [
+        [
+          0,
+          6
+        ],
+        [
+          9,
+          19
+        ],
+        [
+          17,
+          7
+        ],
+        [
+          18,
+          9
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 48,
+      "role": "match",
+      "seed": 20260862,
+      "moves": [
+        [
+          11,
+          15
+        ],
+        [
+          22,
+          16
+        ],
+        [
+          14,
+          22
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 49,
+      "role": "match",
+      "seed": 20260863,
+      "moves": [
+        [
+          23,
+          6
+        ],
+        [
+          12,
+          11
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          19,
+          15
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 50,
+      "role": "match",
+      "seed": 20260864,
+      "moves": [
+        [
+          21,
+          20
+        ],
+        [
+          13,
+          6
+        ],
+        [
+          14,
+          9
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 51,
+      "role": "match",
+      "seed": 20260865,
+      "moves": [
+        [
+          10,
+          3
+        ],
+        [
+          15,
+          23
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          18,
+          5
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 52,
+      "role": "match",
+      "seed": 20260866,
+      "moves": [
+        [
+          22,
+          1
+        ],
+        [
+          20,
+          0
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          22,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 53,
+      "role": "match",
+      "seed": 20260867,
+      "moves": [
+        [
+          22,
+          22
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          22,
+          11
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 54,
+      "role": "match",
+      "seed": 20260868,
+      "moves": [
+        [
+          23,
+          7
+        ],
+        [
+          9,
+          5
+        ],
+        [
+          11,
+          10
+        ],
+        [
+          2,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 55,
+      "role": "match",
+      "seed": 20260869,
+      "moves": [
+        [
+          23,
+          17
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          21,
+          22
+        ],
+        [
+          4,
+          16
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 56,
+      "role": "match",
+      "seed": 20260870,
+      "moves": [
+        [
+          19,
+          8
+        ],
+        [
+          12,
+          10
+        ],
+        [
+          9,
+          20
+        ],
+        [
+          16,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 57,
+      "role": "match",
+      "seed": 20260871,
+      "moves": [
+        [
+          20,
+          5
+        ],
+        [
+          14,
+          15
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          10,
+          16
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 58,
+      "role": "match",
+      "seed": 20260872,
+      "moves": [
+        [
+          13,
+          19
+        ],
+        [
+          8,
+          18
+        ],
+        [
+          23,
+          14
+        ],
+        [
+          20,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 59,
+      "role": "match",
+      "seed": 20260873,
+      "moves": [
+        [
+          3,
+          18
+        ],
+        [
+          21,
+          1
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          17,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 60,
+      "role": "match",
+      "seed": 20260874,
+      "moves": [
+        [
+          2,
+          19
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          5,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 61,
+      "role": "match",
+      "seed": 20260875,
+      "moves": [
+        [
+          18,
+          22
+        ],
+        [
+          7,
+          19
+        ],
+        [
+          23,
+          20
+        ],
+        [
+          12,
+          16
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 62,
+      "role": "match",
+      "seed": 20260876,
+      "moves": [
+        [
+          16,
+          12
+        ],
+        [
+          12,
+          6
+        ],
+        [
+          11,
+          21
+        ],
+        [
+          7,
+          9
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 63,
+      "role": "match",
+      "seed": 20260877,
+      "moves": [
+        [
+          15,
+          5
+        ],
+        [
+          19,
+          7
+        ],
+        [
+          7,
+          9
+        ],
+        [
+          7,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 64,
+      "role": "match",
+      "seed": 20260878,
+      "moves": [
+        [
+          5,
+          11
+        ],
+        [
+          14,
+          15
+        ],
+        [
+          1,
+          17
+        ],
+        [
+          4,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 65,
+      "role": "match",
+      "seed": 20260879,
+      "moves": [
+        [
+          18,
+          8
+        ],
+        [
+          20,
+          13
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          20,
+          16
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 66,
+      "role": "match",
+      "seed": 20260880,
+      "moves": [
+        [
+          8,
+          21
+        ],
+        [
+          17,
+          14
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          19,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 67,
+      "role": "match",
+      "seed": 20260881,
+      "moves": [
+        [
+          16,
+          15
+        ],
+        [
+          22,
+          11
+        ],
+        [
+          21,
+          9
+        ],
+        [
+          1,
+          10
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 68,
+      "role": "match",
+      "seed": 20260882,
+      "moves": [
+        [
+          19,
+          16
+        ],
+        [
+          21,
+          2
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          1,
+          23
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 69,
+      "role": "match",
+      "seed": 20260883,
+      "moves": [
+        [
+          8,
+          16
+        ],
+        [
+          6,
+          23
+        ],
+        [
+          19,
+          2
+        ],
+        [
+          19,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 70,
+      "role": "match",
+      "seed": 20260884,
+      "moves": [
+        [
+          11,
+          11
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          18,
+          2
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 71,
+      "role": "match",
+      "seed": 20260885,
+      "moves": [
+        [
+          10,
+          17
+        ],
+        [
+          13,
+          9
+        ],
+        [
+          17,
+          6
+        ],
+        [
+          22,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 72,
+      "role": "match",
+      "seed": 20260886,
+      "moves": [
+        [
+          11,
+          17
+        ],
+        [
+          2,
+          10
+        ],
+        [
+          13,
+          1
+        ],
+        [
+          17,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 73,
+      "role": "match",
+      "seed": 20260887,
+      "moves": [
+        [
+          13,
+          5
+        ],
+        [
+          14,
+          23
+        ],
+        [
+          17,
+          10
+        ],
+        [
+          17,
+          13
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 74,
+      "role": "match",
+      "seed": 20260888,
+      "moves": [
+        [
+          1,
+          4
+        ],
+        [
+          17,
+          0
+        ],
+        [
+          19,
+          21
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 75,
+      "role": "match",
+      "seed": 20260889,
+      "moves": [
+        [
+          8,
+          18
+        ],
+        [
+          16,
+          17
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          5,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 76,
+      "role": "match",
+      "seed": 20260890,
+      "moves": [
+        [
+          23,
+          7
+        ],
+        [
+          6,
+          21
+        ],
+        [
+          18,
+          20
+        ],
+        [
+          15,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 77,
+      "role": "match",
+      "seed": 20260891,
+      "moves": [
+        [
+          3,
+          22
+        ],
+        [
+          22,
+          2
+        ],
+        [
+          8,
+          14
+        ],
+        [
+          19,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 78,
+      "role": "match",
+      "seed": 20260892,
+      "moves": [
+        [
+          15,
+          17
+        ],
+        [
+          15,
+          12
+        ],
+        [
+          8,
+          13
+        ],
+        [
+          13,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 79,
+      "role": "match",
+      "seed": 20260893,
+      "moves": [
+        [
+          20,
+          22
+        ],
+        [
+          20,
+          19
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          20,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 80,
+      "role": "match",
+      "seed": 20260894,
+      "moves": [
+        [
+          21,
+          7
+        ],
+        [
+          2,
+          23
+        ],
+        [
+          19,
+          3
+        ],
+        [
+          14,
+          22
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 81,
+      "role": "match",
+      "seed": 20260895,
+      "moves": [
+        [
+          21,
+          15
+        ],
+        [
+          14,
+          18
+        ],
+        [
+          4,
+          20
+        ],
+        [
+          2,
+          6
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 82,
+      "role": "match",
+      "seed": 20260896,
+      "moves": [
+        [
+          1,
+          4
+        ],
+        [
+          21,
+          16
+        ],
+        [
+          17,
+          15
+        ],
+        [
+          4,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 83,
+      "role": "match",
+      "seed": 20260897,
+      "moves": [
+        [
+          2,
+          10
+        ],
+        [
+          13,
+          11
+        ],
+        [
+          7,
+          16
+        ],
+        [
+          10,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 84,
+      "role": "match",
+      "seed": 20260898,
+      "moves": [
+        [
+          14,
+          20
+        ],
+        [
+          17,
+          5
+        ],
+        [
+          11,
+          19
+        ],
+        [
+          2,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 85,
+      "role": "match",
+      "seed": 20260899,
+      "moves": [
+        [
+          14,
+          17
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          20,
+          11
+        ],
+        [
+          18,
+          10
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 86,
+      "role": "match",
+      "seed": 20260900,
+      "moves": [
+        [
+          20,
+          11
+        ],
+        [
+          4,
+          19
+        ],
+        [
+          20,
+          19
+        ],
+        [
+          17,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 87,
+      "role": "match",
+      "seed": 20260901,
+      "moves": [
+        [
+          17,
+          9
+        ],
+        [
+          21,
+          17
+        ],
+        [
+          11,
+          22
+        ],
+        [
+          1,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 88,
+      "role": "match",
+      "seed": 20260902,
+      "moves": [
+        [
+          6,
+          12
+        ],
+        [
+          12,
+          22
+        ],
+        [
+          19,
+          5
+        ],
+        [
+          11,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 89,
+      "role": "match",
+      "seed": 20260903,
+      "moves": [
+        [
+          8,
+          13
+        ],
+        [
+          19,
+          22
+        ],
+        [
+          2,
+          15
+        ],
+        [
+          20,
+          6
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 90,
+      "role": "match",
+      "seed": 20260904,
+      "moves": [
+        [
+          6,
+          18
+        ],
+        [
+          16,
+          10
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          3,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 91,
+      "role": "match",
+      "seed": 20260905,
+      "moves": [
+        [
+          20,
+          3
+        ],
+        [
+          11,
+          19
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          12,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 92,
+      "role": "match",
+      "seed": 20260906,
+      "moves": [
+        [
+          7,
+          20
+        ],
+        [
+          4,
+          20
+        ],
+        [
+          8,
+          20
+        ],
+        [
+          18,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 93,
+      "role": "match",
+      "seed": 20260907,
+      "moves": [
+        [
+          9,
+          10
+        ],
+        [
+          17,
+          21
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          3,
+          9
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 94,
+      "role": "match",
+      "seed": 20260908,
+      "moves": [
+        [
+          14,
+          2
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          9,
+          21
+        ],
+        [
+          18,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 95,
+      "role": "match",
+      "seed": 20260909,
+      "moves": [
+        [
+          4,
+          12
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          23,
+          11
+        ],
+        [
+          20,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 96,
+      "role": "match",
+      "seed": 20260910,
+      "moves": [
+        [
+          7,
+          8
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          15,
+          21
+        ],
+        [
+          9,
+          11
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 97,
+      "role": "match",
+      "seed": 20260911,
+      "moves": [
+        [
+          11,
+          12
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          13,
+          4
+        ],
+        [
+          3,
+          6
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 98,
+      "role": "match",
+      "seed": 20260912,
+      "moves": [
+        [
+          6,
+          19
+        ],
+        [
+          13,
+          18
+        ],
+        [
+          4,
+          13
+        ],
+        [
+          12,
+          17
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 99,
+      "role": "match",
+      "seed": 20260913,
+      "moves": [
+        [
+          12,
+          10
+        ],
+        [
+          12,
+          6
+        ],
+        [
+          7,
+          5
+        ],
+        [
+          4,
+          6
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 100,
+      "role": "match",
+      "seed": 20260914,
+      "moves": [
+        [
+          9,
+          3
+        ],
+        [
+          11,
+          21
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          8,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 101,
+      "role": "match",
+      "seed": 20260915,
+      "moves": [
+        [
+          7,
+          8
+        ],
+        [
+          10,
+          14
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          8,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 102,
+      "role": "match",
+      "seed": 20260916,
+      "moves": [
+        [
+          14,
+          16
+        ],
+        [
+          13,
+          1
+        ],
+        [
+          14,
+          6
+        ],
+        [
+          19,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 103,
+      "role": "match",
+      "seed": 20260917,
+      "moves": [
+        [
+          16,
+          10
+        ],
+        [
+          4,
+          11
+        ],
+        [
+          1,
+          21
+        ],
+        [
+          11,
+          21
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 104,
+      "role": "match",
+      "seed": 20260918,
+      "moves": [
+        [
+          6,
+          1
+        ],
+        [
+          3,
+          10
+        ],
+        [
+          22,
+          7
+        ],
+        [
+          10,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 105,
+      "role": "match",
+      "seed": 20260919,
+      "moves": [
+        [
+          20,
+          6
+        ],
+        [
+          9,
+          13
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          19,
+          23
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 106,
+      "role": "match",
+      "seed": 20260920,
+      "moves": [
+        [
+          3,
+          6
+        ],
+        [
+          7,
+          15
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          7,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 107,
+      "role": "match",
+      "seed": 20260921,
+      "moves": [
+        [
+          1,
+          4
+        ],
+        [
+          5,
+          12
+        ],
+        [
+          15,
+          19
+        ],
+        [
+          1,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 108,
+      "role": "match",
+      "seed": 20260922,
+      "moves": [
+        [
+          20,
+          7
+        ],
+        [
+          13,
+          7
+        ],
+        [
+          21,
+          6
+        ],
+        [
+          9,
+          10
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 109,
+      "role": "match",
+      "seed": 20260923,
+      "moves": [
+        [
+          6,
+          6
+        ],
+        [
+          1,
+          23
+        ],
+        [
+          16,
+          20
+        ],
+        [
+          18,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 110,
+      "role": "match",
+      "seed": 20260924,
+      "moves": [
+        [
+          12,
+          21
+        ],
+        [
+          15,
+          19
+        ],
+        [
+          19,
+          16
+        ],
+        [
+          7,
+          15
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 111,
+      "role": "match",
+      "seed": 20260925,
+      "moves": [
+        [
+          11,
+          9
+        ],
+        [
+          8,
+          12
+        ],
+        [
+          18,
+          13
+        ],
+        [
+          21,
+          13
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 112,
+      "role": "match",
+      "seed": 20260926,
+      "moves": [
+        [
+          13,
+          5
+        ],
+        [
+          8,
+          19
+        ],
+        [
+          23,
+          20
+        ],
+        [
+          20,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 113,
+      "role": "match",
+      "seed": 20260927,
+      "moves": [
+        [
+          13,
+          22
+        ],
+        [
+          7,
+          23
+        ],
+        [
+          7,
+          5
+        ],
+        [
+          2,
+          17
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 114,
+      "role": "match",
+      "seed": 20260928,
+      "moves": [
+        [
+          22,
+          13
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          16,
+          7
+        ],
+        [
+          9,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 115,
+      "role": "match",
+      "seed": 20260929,
+      "moves": [
+        [
+          7,
+          21
+        ],
+        [
+          17,
+          5
+        ],
+        [
+          6,
+          22
+        ],
+        [
+          6,
+          13
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 116,
+      "role": "match",
+      "seed": 20260930,
+      "moves": [
+        [
+          17,
+          3
+        ],
+        [
+          20,
+          20
+        ],
+        [
+          21,
+          12
+        ],
+        [
+          18,
+          23
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 117,
+      "role": "match",
+      "seed": 20260931,
+      "moves": [
+        [
+          12,
+          6
+        ],
+        [
+          5,
+          23
+        ],
+        [
+          5,
+          14
+        ],
+        [
+          11,
+          17
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 118,
+      "role": "match",
+      "seed": 20260932,
+      "moves": [
+        [
+          20,
+          16
+        ],
+        [
+          15,
+          13
+        ],
+        [
+          22,
+          11
+        ],
+        [
+          19,
+          17
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 119,
+      "role": "match",
+      "seed": 20260933,
+      "moves": [
+        [
+          15,
+          20
+        ],
+        [
+          19,
+          23
+        ],
+        [
+          7,
+          5
+        ],
+        [
+          19,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 120,
+      "role": "match",
+      "seed": 20260934,
+      "moves": [
+        [
+          6,
+          3
+        ],
+        [
+          2,
+          20
+        ],
+        [
+          20,
+          8
+        ],
+        [
+          13,
+          23
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 121,
+      "role": "match",
+      "seed": 20260935,
+      "moves": [
+        [
+          6,
+          10
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          16,
+          3
+        ],
+        [
+          16,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 122,
+      "role": "match",
+      "seed": 20260936,
+      "moves": [
+        [
+          7,
+          14
+        ],
+        [
+          10,
+          0
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          16,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 123,
+      "role": "match",
+      "seed": 20260937,
+      "moves": [
+        [
+          16,
+          20
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 124,
+      "role": "match",
+      "seed": 20260938,
+      "moves": [
+        [
+          8,
+          20
+        ],
+        [
+          11,
+          21
+        ],
+        [
+          22,
+          9
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 125,
+      "role": "match",
+      "seed": 20260939,
+      "moves": [
+        [
+          14,
+          15
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          18,
+          17
+        ],
+        [
+          7,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 126,
+      "role": "match",
+      "seed": 20260940,
+      "moves": [
+        [
+          14,
+          15
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          15,
+          10
+        ],
+        [
+          6,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 127,
+      "role": "match",
+      "seed": 20260941,
+      "moves": [
+        [
+          6,
+          14
+        ],
+        [
+          17,
+          9
+        ],
+        [
+          22,
+          16
+        ],
+        [
+          7,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 128,
+      "role": "match",
+      "seed": 20260942,
+      "moves": [
+        [
+          15,
+          2
+        ],
+        [
+          8,
+          21
+        ],
+        [
+          19,
+          9
+        ],
+        [
+          13,
+          4
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 129,
+      "role": "match",
+      "seed": 20260943,
+      "moves": [
+        [
+          23,
+          15
+        ],
+        [
+          3,
+          12
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          20,
+          18
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 130,
+      "role": "match",
+      "seed": 20260944,
+      "moves": [
+        [
+          10,
+          13
+        ],
+        [
+          10,
+          14
+        ],
+        [
+          14,
+          22
+        ],
+        [
+          15,
+          4
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 131,
+      "role": "match",
+      "seed": 20260945,
+      "moves": [
+        [
+          12,
+          8
+        ],
+        [
+          9,
+          1
+        ],
+        [
+          3,
+          12
+        ],
+        [
+          5,
+          4
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 132,
+      "role": "match",
+      "seed": 20260946,
+      "moves": [
+        [
+          2,
+          19
+        ],
+        [
+          21,
+          7
+        ],
+        [
+          14,
+          15
+        ],
+        [
+          11,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 133,
+      "role": "match",
+      "seed": 20260947,
+      "moves": [
+        [
+          10,
+          12
+        ],
+        [
+          11,
+          0
+        ],
+        [
+          15,
+          2
+        ],
+        [
+          20,
+          3
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 134,
+      "role": "match",
+      "seed": 20260948,
+      "moves": [
+        [
+          14,
+          6
+        ],
+        [
+          20,
+          8
+        ],
+        [
+          6,
+          15
+        ],
+        [
+          21,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 135,
+      "role": "match",
+      "seed": 20260949,
+      "moves": [
+        [
+          10,
+          10
+        ],
+        [
+          21,
+          16
+        ],
+        [
+          22,
+          15
+        ],
+        [
+          12,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 136,
+      "role": "match",
+      "seed": 20260950,
+      "moves": [
+        [
+          18,
+          21
+        ],
+        [
+          7,
+          15
+        ],
+        [
+          5,
+          10
+        ],
+        [
+          4,
+          10
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 137,
+      "role": "match",
+      "seed": 20260951,
+      "moves": [
+        [
+          5,
+          14
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          4,
+          9
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 138,
+      "role": "match",
+      "seed": 20260952,
+      "moves": [
+        [
+          13,
+          8
+        ],
+        [
+          13,
+          21
+        ],
+        [
+          20,
+          10
+        ],
+        [
+          7,
+          11
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 139,
+      "role": "match",
+      "seed": 20260953,
+      "moves": [
+        [
+          17,
+          19
+        ],
+        [
+          13,
+          9
+        ],
+        [
+          5,
+          17
+        ],
+        [
+          10,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 140,
+      "role": "match",
+      "seed": 20260954,
+      "moves": [
+        [
+          17,
+          17
+        ],
+        [
+          5,
+          13
+        ],
+        [
+          19,
+          22
+        ],
+        [
+          12,
+          22
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 141,
+      "role": "match",
+      "seed": 20260955,
+      "moves": [
+        [
+          1,
+          12
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          2,
+          15
+        ],
+        [
+          16,
+          9
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 142,
+      "role": "match",
+      "seed": 20260956,
+      "moves": [
+        [
+          8,
+          21
+        ],
+        [
+          13,
+          16
+        ],
+        [
+          15,
+          17
+        ],
+        [
+          16,
+          22
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 143,
+      "role": "match",
+      "seed": 20260957,
+      "moves": [
+        [
+          23,
+          2
+        ],
+        [
+          13,
+          18
+        ],
+        [
+          20,
+          6
+        ],
+        [
+          17,
+          13
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 144,
+      "role": "match",
+      "seed": 20260958,
+      "moves": [
+        [
+          4,
+          1
+        ],
+        [
+          16,
+          10
+        ],
+        [
+          5,
+          18
+        ],
+        [
+          4,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 145,
+      "role": "match",
+      "seed": 20260959,
+      "moves": [
+        [
+          19,
+          5
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          3,
+          10
+        ],
+        [
+          1,
+          13
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 146,
+      "role": "match",
+      "seed": 20260960,
+      "moves": [
+        [
+          15,
+          10
+        ],
+        [
+          16,
+          12
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          19,
+          11
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 147,
+      "role": "match",
+      "seed": 20260961,
+      "moves": [
+        [
+          20,
+          12
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          1,
+          8
+        ],
+        [
+          17,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 148,
+      "role": "match",
+      "seed": 20260962,
+      "moves": [
+        [
+          5,
+          1
+        ],
+        [
+          13,
+          11
+        ],
+        [
+          1,
+          21
+        ],
+        [
+          10,
+          2
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 149,
+      "role": "match",
+      "seed": 20260963,
+      "moves": [
+        [
+          19,
+          8
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          14,
+          5
+        ],
+        [
+          18,
+          6
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 150,
+      "role": "match",
+      "seed": 20260964,
+      "moves": [
+        [
+          5,
+          7
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          11,
+          14
+        ],
+        [
+          7,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 151,
+      "role": "match",
+      "seed": 20260965,
+      "moves": [
+        [
+          3,
+          4
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          12,
+          3
+        ],
+        [
+          21,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 152,
+      "role": "match",
+      "seed": 20260966,
+      "moves": [
+        [
+          5,
+          10
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          4,
+          18
+        ],
+        [
+          5,
+          16
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 153,
+      "role": "match",
+      "seed": 20260967,
+      "moves": [
+        [
+          16,
+          1
+        ],
+        [
+          9,
+          16
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          8,
+          3
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 154,
+      "role": "match",
+      "seed": 20260968,
+      "moves": [
+        [
+          16,
+          10
+        ],
+        [
+          16,
+          12
+        ],
+        [
+          22,
+          9
+        ],
+        [
+          8,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 155,
+      "role": "match",
+      "seed": 20260969,
+      "moves": [
+        [
+          7,
+          6
+        ],
+        [
+          14,
+          8
+        ],
+        [
+          23,
+          22
+        ],
+        [
+          9,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 156,
+      "role": "match",
+      "seed": 20260970,
+      "moves": [
+        [
+          5,
+          14
+        ],
+        [
+          18,
+          12
+        ],
+        [
+          20,
+          4
+        ],
+        [
+          4,
+          13
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 157,
+      "role": "match",
+      "seed": 20260971,
+      "moves": [
+        [
+          17,
+          17
+        ],
+        [
+          18,
+          3
+        ],
+        [
+          23,
+          20
+        ],
+        [
+          18,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 158,
+      "role": "match",
+      "seed": 20260972,
+      "moves": [
+        [
+          18,
+          15
+        ],
+        [
+          15,
+          19
+        ],
+        [
+          17,
+          10
+        ],
+        [
+          18,
+          21
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 159,
+      "role": "match",
+      "seed": 20260973,
+      "moves": [
+        [
+          17,
+          7
+        ],
+        [
+          10,
+          16
+        ],
+        [
+          7,
+          20
+        ],
+        [
+          15,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 160,
+      "role": "match",
+      "seed": 20260974,
+      "moves": [
+        [
+          19,
+          17
+        ],
+        [
+          6,
+          12
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          16,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 161,
+      "role": "match",
+      "seed": 20260975,
+      "moves": [
+        [
+          3,
+          20
+        ],
+        [
+          17,
+          2
+        ],
+        [
+          4,
+          9
+        ],
+        [
+          16,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 162,
+      "role": "match",
+      "seed": 20260976,
+      "moves": [
+        [
+          19,
+          17
+        ],
+        [
+          4,
+          18
+        ],
+        [
+          22,
+          7
+        ],
+        [
+          19,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 163,
+      "role": "match",
+      "seed": 20260977,
+      "moves": [
+        [
+          0,
+          9
+        ],
+        [
+          8,
+          17
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          14,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 164,
+      "role": "match",
+      "seed": 20260978,
+      "moves": [
+        [
+          14,
+          7
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          9,
+          10
+        ],
+        [
+          6,
+          21
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 165,
+      "role": "match",
+      "seed": 20260979,
+      "moves": [
+        [
+          11,
+          22
+        ],
+        [
+          21,
+          15
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          18,
+          6
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 166,
+      "role": "match",
+      "seed": 20260980,
+      "moves": [
+        [
+          2,
+          9
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          22,
+          10
+        ],
+        [
+          17,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 167,
+      "role": "match",
+      "seed": 20260981,
+      "moves": [
+        [
+          10,
+          1
+        ],
+        [
+          15,
+          19
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          22,
+          3
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 168,
+      "role": "match",
+      "seed": 20260982,
+      "moves": [
+        [
+          3,
+          11
+        ],
+        [
+          17,
+          20
+        ],
+        [
+          19,
+          1
+        ],
+        [
+          13,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 169,
+      "role": "match",
+      "seed": 20260983,
+      "moves": [
+        [
+          0,
+          21
+        ],
+        [
+          20,
+          22
+        ],
+        [
+          20,
+          4
+        ],
+        [
+          10,
+          22
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 170,
+      "role": "match",
+      "seed": 20260984,
+      "moves": [
+        [
+          19,
+          3
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          20,
+          16
+        ],
+        [
+          13,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 171,
+      "role": "match",
+      "seed": 20260985,
+      "moves": [
+        [
+          10,
+          18
+        ],
+        [
+          21,
+          10
+        ],
+        [
+          8,
+          18
+        ],
+        [
+          16,
+          3
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 172,
+      "role": "match",
+      "seed": 20260986,
+      "moves": [
+        [
+          15,
+          10
+        ],
+        [
+          6,
+          12
+        ],
+        [
+          16,
+          13
+        ],
+        [
+          10,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 173,
+      "role": "match",
+      "seed": 20260987,
+      "moves": [
+        [
+          2,
+          3
+        ],
+        [
+          9,
+          10
+        ],
+        [
+          0,
+          22
+        ],
+        [
+          15,
+          21
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 174,
+      "role": "match",
+      "seed": 20260988,
+      "moves": [
+        [
+          23,
+          9
+        ],
+        [
+          19,
+          9
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          10,
+          1
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 175,
+      "role": "match",
+      "seed": 20260989,
+      "moves": [
+        [
+          18,
+          3
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          12,
+          23
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 176,
+      "role": "match",
+      "seed": 20260990,
+      "moves": [
+        [
+          7,
+          9
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          23,
+          9
+        ],
+        [
+          1,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 177,
+      "role": "match",
+      "seed": 20260991,
+      "moves": [
+        [
+          0,
+          19
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          7,
+          0
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 178,
+      "role": "match",
+      "seed": 20260992,
+      "moves": [
+        [
+          4,
+          16
+        ],
+        [
+          19,
+          16
+        ],
+        [
+          22,
+          20
+        ],
+        [
+          6,
+          3
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 179,
+      "role": "match",
+      "seed": 20260993,
+      "moves": [
+        [
+          0,
+          19
+        ],
+        [
+          14,
+          3
+        ],
+        [
+          23,
+          7
+        ],
+        [
+          10,
+          22
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 180,
+      "role": "match",
+      "seed": 20260994,
+      "moves": [
+        [
+          16,
+          11
+        ],
+        [
+          17,
+          4
+        ],
+        [
+          22,
+          16
+        ],
+        [
+          10,
+          9
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 181,
+      "role": "match",
+      "seed": 20260995,
+      "moves": [
+        [
+          3,
+          22
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          21,
+          15
+        ],
+        [
+          15,
+          2
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 182,
+      "role": "match",
+      "seed": 20260996,
+      "moves": [
+        [
+          15,
+          3
+        ],
+        [
+          5,
+          17
+        ],
+        [
+          2,
+          15
+        ],
+        [
+          14,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 183,
+      "role": "match",
+      "seed": 20260997,
+      "moves": [
+        [
+          0,
+          13
+        ],
+        [
+          9,
+          11
+        ],
+        [
+          20,
+          22
+        ],
+        [
+          14,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 184,
+      "role": "match",
+      "seed": 20260998,
+      "moves": [
+        [
+          20,
+          14
+        ],
+        [
+          14,
+          8
+        ],
+        [
+          23,
+          1
+        ],
+        [
+          21,
+          3
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 185,
+      "role": "match",
+      "seed": 20260999,
+      "moves": [
+        [
+          20,
+          18
+        ],
+        [
+          16,
+          14
+        ],
+        [
+          14,
+          1
+        ],
+        [
+          15,
+          7
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 186,
+      "role": "match",
+      "seed": 20261000,
+      "moves": [
+        [
+          8,
+          9
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          6,
+          20
+        ],
+        [
+          9,
+          11
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 187,
+      "role": "match",
+      "seed": 20261001,
+      "moves": [
+        [
+          7,
+          15
+        ],
+        [
+          4,
+          11
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          22,
+          21
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 188,
+      "role": "match",
+      "seed": 20261002,
+      "moves": [
+        [
+          1,
+          12
+        ],
+        [
+          10,
+          4
+        ],
+        [
+          5,
+          7
+        ],
+        [
+          9,
+          17
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 189,
+      "role": "match",
+      "seed": 20261003,
+      "moves": [
+        [
+          19,
+          16
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          15,
+          12
+        ],
+        [
+          13,
+          17
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 190,
+      "role": "match",
+      "seed": 20261004,
+      "moves": [
+        [
+          18,
+          8
+        ],
+        [
+          19,
+          17
+        ],
+        [
+          22,
+          18
+        ],
+        [
+          5,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 191,
+      "role": "match",
+      "seed": 20261005,
+      "moves": [
+        [
+          13,
+          14
+        ],
+        [
+          6,
+          20
+        ],
+        [
+          3,
+          12
+        ],
+        [
+          22,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 192,
+      "role": "match",
+      "seed": 20261006,
+      "moves": [
+        [
+          19,
+          19
+        ],
+        [
+          2,
+          18
+        ],
+        [
+          13,
+          8
+        ],
+        [
+          2,
+          19
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 193,
+      "role": "match",
+      "seed": 20261007,
+      "moves": [
+        [
+          23,
+          2
+        ],
+        [
+          10,
+          8
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          14,
+          4
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 194,
+      "role": "match",
+      "seed": 20261008,
+      "moves": [
+        [
+          22,
+          13
+        ],
+        [
+          11,
+          23
+        ],
+        [
+          0,
+          17
+        ],
+        [
+          5,
+          12
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 195,
+      "role": "match",
+      "seed": 20261009,
+      "moves": [
+        [
+          5,
+          22
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          0,
+          22
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 196,
+      "role": "match",
+      "seed": 20261010,
+      "moves": [
+        [
+          14,
+          5
+        ],
+        [
+          15,
+          16
+        ],
+        [
+          9,
+          3
+        ],
+        [
+          2,
+          18
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 197,
+      "role": "match",
+      "seed": 20261011,
+      "moves": [
+        [
+          8,
+          7
+        ],
+        [
+          18,
+          22
+        ],
+        [
+          13,
+          17
+        ],
+        [
+          7,
+          5
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 198,
+      "role": "match",
+      "seed": 20261012,
+      "moves": [
+        [
+          8,
+          5
+        ],
+        [
+          1,
+          9
+        ],
+        [
+          8,
+          18
+        ],
+        [
+          1,
+          4
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 199,
+      "role": "match",
+      "seed": 20261013,
+      "moves": [
+        [
+          1,
+          19
+        ],
+        [
+          9,
+          21
+        ],
+        [
+          22,
+          13
+        ],
+        [
+          17,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 200,
+      "role": "timing",
+      "seed": 20261014,
+      "moves": [
+        [
+          4,
+          16
+        ],
+        [
+          20,
+          16
+        ],
+        [
+          1,
+          18
+        ],
+        [
+          4,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 201,
+      "role": "timing",
+      "seed": 20261015,
+      "moves": [
+        [
+          9,
+          14
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          13,
+          5
+        ],
+        [
+          12,
+          2
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 202,
+      "role": "timing",
+      "seed": 20261016,
+      "moves": [
+        [
+          4,
+          11
+        ],
+        [
+          12,
+          14
+        ],
+        [
+          0,
+          20
+        ],
+        [
+          5,
+          5
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 203,
+      "role": "timing",
+      "seed": 20261017,
+      "moves": [
+        [
+          4,
+          5
+        ],
+        [
+          9,
+          13
+        ],
+        [
+          0,
+          19
+        ],
+        [
+          14,
+          14
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 204,
+      "role": "timing",
+      "seed": 20261018,
+      "moves": [
+        [
+          14,
+          22
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          11,
+          12
+        ],
+        [
+          6,
+          22
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 205,
+      "role": "timing",
+      "seed": 20261019,
+      "moves": [
+        [
+          19,
+          6
+        ],
+        [
+          22,
+          5
+        ],
+        [
+          14,
+          12
+        ],
+        [
+          13,
+          5
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 206,
+      "role": "timing",
+      "seed": 20261020,
+      "moves": [
+        [
+          6,
+          8
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          20,
+          16
+        ],
+        [
+          12,
+          8
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 207,
+      "role": "timing",
+      "seed": 20261021,
+      "moves": [
+        [
+          13,
+          20
+        ],
+        [
+          2,
+          16
+        ],
+        [
+          11,
+          19
+        ],
+        [
+          18,
+          23
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 525,
+      "terminal": false
+    },
+    {
+      "id": 208,
+      "role": "timing",
+      "seed": 20261022,
+      "moves": [
+        [
+          13,
+          10
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          13,
+          9
+        ],
+        [
+          9,
+          3
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    },
+    {
+      "id": 209,
+      "role": "timing",
+      "seed": 20261023,
+      "moves": [
+        [
+          2,
+          20
+        ],
+        [
+          18,
+          20
+        ],
+        [
+          22,
+          17
+        ],
+        [
+          1,
+          20
+        ]
+      ],
+      "to_move": "red",
+      "n_legal": 524,
+      "terminal": false
+    }
+  ]
+}
