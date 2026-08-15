@@ -203,6 +203,74 @@ describe('statistics are exactly determined', () => {
   });
 });
 
+describe('the committed pool flows through both consumers unchanged', () => {
+  // The seam this closes: openingMovesFrom was imported by the analyser and
+  // never called, so the adapter was provably correct in isolation while
+  // neither consumer used it. Bare move lists were ACCEPTED and the real pool
+  // was REJECTED with UNKNOWN_OPENING. This test passes the ACTUAL parsed
+  // openings.json — no caller-side extraction — through runMatch and analyse.
+  it('runMatch and analyse both accept the real openings.json object', async () => {
+    const pool = JSON.parse(
+      await readFile(
+        join(REPO_ROOT, 'tests/product_match/openings.json'),
+        'utf8'
+      )
+    );
+    const d = await mkdtemp(join(tmpdir(), 'twixt-pool-e2e-'));
+    await runMatch({
+      runDir: d,
+      P,
+      openings: pool, // the file object itself, deliberately not pool.openings
+      baselineDir: join(REPO_ROOT, 'models', BASELINE_MODEL_ID),
+      candidateDir: join(REPO_ROOT, 'models', CANDIDATE_MODEL_ID),
+      nSimulations: SIMS,
+      requireCleanWorktree: false,
+    });
+    const r = await analyse(d, pool, TEST_SPEC);
+    assert.strictEqual(
+      r.verdict,
+      'ACCEPTED',
+      JSON.stringify(r.failures?.slice(0, 3))
+    );
+    assert.strictEqual(r.P, P);
+    await rm(d, { recursive: true, force: true });
+  });
+
+  it('also accepts the bare openings array, so neither shape is privileged', async () => {
+    const pool = JSON.parse(
+      await readFile(
+        join(REPO_ROOT, 'tests/product_match/openings.json'),
+        'utf8'
+      )
+    );
+    const bare = pool.openings.map((o) => o.moves);
+    const d = await mkdtemp(join(tmpdir(), 'twixt-pool-bare-'));
+    await runMatch({
+      runDir: d,
+      P,
+      openings: bare,
+      baselineDir: join(REPO_ROOT, 'models', BASELINE_MODEL_ID),
+      candidateDir: join(REPO_ROOT, 'models', CANDIDATE_MODEL_ID),
+      nSimulations: SIMS,
+      requireCleanWorktree: false,
+    });
+    assert.strictEqual((await analyse(d, bare, TEST_SPEC)).verdict, 'ACCEPTED');
+    await rm(d, { recursive: true, force: true });
+  });
+
+  it('rejects a pool that is not openings at all, rather than throwing', async () => {
+    // The pool is normalized before the run directory is even read, so this
+    // rejects on the pool regardless of what run is named.
+    const r = await analyse(
+      join(tmpdir(), 'no-such-run'),
+      { nonsense: true },
+      TEST_SPEC
+    );
+    assert.strictEqual(r.verdict, 'REJECTED');
+    assert.ok(r.failures.map((f) => f.code).includes('BAD_OPENING_POOL'));
+  });
+});
+
 describe('analysis of a real run', () => {
   before(async () => {
     root = await mkdtemp(join(tmpdir(), 'twixt-analyse-'));

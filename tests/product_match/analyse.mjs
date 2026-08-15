@@ -4,10 +4,13 @@
  *
  *   node tests/product_match/analyse.mjs <run_dir> <openings.json> <out.json>
  *
- * Deliberately shares NO code with `harness.mjs`. It imports only `TwixtState`
- * and the standard library, and re-derives every quantity it could otherwise
- * take on trust — so the process that produced the evidence cannot also decide
- * what the evidence says.
+ * Deliberately shares NO code with `harness.mjs`. Beyond the standard library it
+ * imports only `TwixtState` — the game rules it re-derives against — and
+ * `openingMovesFrom`, a pure format adapter owned by the module that defines the
+ * opening pool. Neither carries analysis logic, so the process that produced the
+ * evidence still cannot decide what the evidence says.
+ *
+ * It re-derives every quantity it could otherwise take on trust.
  *
  * Every threshold is transcribed from the specification; none is computed from
  * the data.
@@ -293,6 +296,22 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
   const failures = [];
   const fail = (code, detail) => failures.push({ code, detail });
 
+  // Normalize at the PUBLIC boundary, so every caller is covered — the CLI, a
+  // programmatic caller, and a test alike. Normalizing only in the CLI would
+  // leave the adapter provably correct in isolation and unused in practice,
+  // which is the seam defect this is meant to close.
+  let openingMoves;
+  try {
+    openingMoves = openingMovesFrom(openings);
+  } catch (err) {
+    return {
+      verdict: 'REJECTED',
+      failures: [
+        { code: 'BAD_OPENING_POOL', detail: { message: err.message } },
+      ],
+    };
+  }
+
   // `P` is the run's PREREGISTERED size, read from its own committed metadata --
   // never inferred from how many sidecars happen to be on disk. Inferring it
   // would let the first 100 finished pairs of a P=200 run be analysed as a
@@ -474,7 +493,7 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
       });
 
     // Opening prefix and hash, against the committed pool.
-    const opening = openings[s.opening_id];
+    const opening = openingMoves[s.opening_id];
     if (!opening) {
       fail('UNKNOWN_OPENING', ctx);
       continue;
@@ -600,10 +619,7 @@ if (isMain) {
     console.error('usage: analyse.mjs <run_dir> <openings.json> <out.json>');
     process.exit(2);
   }
-  const openingsFile = JSON.parse(
-    await readFile(resolve(openingsPath), 'utf8')
-  );
-  const openings = openingsFile.openings ?? openingsFile;
+  const openings = JSON.parse(await readFile(resolve(openingsPath), 'utf8'));
   const report = await analyse(resolve(runDir), openings);
   await mkdir(dirname(resolve(outPath)), { recursive: true });
   await writeFile(resolve(outPath), JSON.stringify(report, null, 2));

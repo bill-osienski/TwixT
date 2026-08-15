@@ -33,6 +33,7 @@ import {
   resolvePolicy,
   selectMoveForRequest,
 } from '../../server/readout_policy.js';
+import { openingMovesFrom } from './generate_openings.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, '..', '..');
@@ -296,6 +297,12 @@ export async function runMatch({
   requireCleanWorktree = true,
   onGameComplete = null,
 }) {
+  // Normalize at the PUBLIC boundary. The committed pool stores rich entries,
+  // so indexing it directly yields objects that playGame cannot iterate, and
+  // indexing the file itself yields undefined. Doing this once here means no
+  // caller has to know which shape it is holding.
+  const openingMoves = openingMovesFrom(openings);
+
   const matchDir = join(runDir, 'match');
   const quarantineDir = join(runDir, 'quarantine');
   await mkdir(matchDir, { recursive: true });
@@ -420,7 +427,7 @@ export async function runMatch({
     if (sidecar.game_in_pair !== gameInPair)
       bad('game_in_pair does not match its filename');
     if (sidecar.opening_id !== pairIndex) bad('opening_id is not pair_index');
-    const expectedHash = sha256(JSON.stringify(openings[pairIndex]));
+    const expectedHash = sha256(JSON.stringify(openingMoves[pairIndex]));
     if (sidecar.opening_sha256 !== expectedHash)
       bad('opening hash does not match the pool');
     for (const f of FINGERPRINT_FIELDS) {
@@ -518,14 +525,14 @@ export async function runMatch({
         blackInference: candidateIsRed
           ? baseline.inference
           : candidate.inference,
-        openingMoves: openings[pairIndex],
+        openingMoves: openingMoves[pairIndex],
         nSimulations: nSims,
         cPuct,
       });
 
       const sidecar = buildSidecar({
         openingId: pairIndex, // §10: opening_id === pair_index
-        openingMoves: openings[pairIndex],
+        openingMoves: openingMoves[pairIndex],
         pairIndex,
         gameInPair,
         baselineModelId: baseline.modelId,
