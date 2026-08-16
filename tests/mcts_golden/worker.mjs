@@ -235,7 +235,11 @@ export async function captureTrace(testCase, state, loadFn = null) {
     (async (dir) => (await import('../product_match/harness.mjs')).loadModel(dir));
   const model = await load(join(REPO_ROOT, 'models', testCase.modelId));
 
-  let primary = null;
+  // `threw` is tracked separately from the value: a thrown `null`, `0`, `''` or
+  // `undefined` is a real failure, and testing the value's truthiness would
+  // silently turn it into a success.
+  let threw = false;
+  let primary;
   let trace = null;
   try {
     if (model.modelId !== testCase.modelId) {
@@ -246,6 +250,7 @@ export async function captureTrace(testCase, state, loadFn = null) {
     }
     trace = await searchAndTrace(testCase, state, model.inference);
   } catch (err) {
+    threw = true;
     primary = err;
   }
 
@@ -267,11 +272,20 @@ export async function captureTrace(testCase, state, loadFn = null) {
     }
   }
 
-  if (primary) {
+  if (threw) {
     if (releaseError) {
+      // The console line is the durable record. Attachment is BEST EFFORT:
+      // a primitive, frozen or non-extensible primary would make the
+      // assignment throw, and that TypeError would replace the very error this
+      // branch exists to preserve.
       console.error(`SECONDARY ${releaseError.code}: ${releaseError.message}`);
-      primary.secondary = releaseError;
+      try {
+        primary.secondary = releaseError;
+      } catch {
+        console.error('  (could not attach secondary to the primary error)');
+      }
     }
+    // The ORIGINAL value, unconditionally and unchanged — whatever it is.
     throw primary;
   }
   if (releaseError) throw releaseError;

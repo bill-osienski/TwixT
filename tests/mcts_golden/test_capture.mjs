@@ -978,6 +978,89 @@ test('LIFECYCLE: a failing release FAILS an otherwise good trace', async () => {
   assert.deepEqual(log, ['release']);
 });
 
+/** Run captureTrace and report exactly what came out, falsy values included. */
+async function captureOutcome(testCase, state, loadFn) {
+  try {
+    return { threw: false, value: await captureTrace(testCase, state, loadFn) };
+  } catch (err) {
+    return { threw: true, value: err };
+  }
+}
+
+test('PRECEDENCE: a FROZEN primary error survives a release failure unchanged', async () => {
+  const testCase = caseById('A1');
+  const { state } = readFixture(testCase);
+  const frozen = Object.freeze(new Error('frozen primary'));
+  const log = [];
+
+  const out = await captureOutcome(testCase, state, async () => ({
+    modelId: testCase.modelId,
+    inference: {
+      evaluate: async () => {
+        throw frozen;
+      },
+      session: {
+        release: async () => {
+          log.push('release');
+          throw new Error('release blew up');
+        },
+      },
+    },
+  }));
+
+  assert.equal(out.threw, true);
+  // Identity, not just shape: attaching `secondary` to a frozen Error throws a
+  // TypeError in strict mode, and that TypeError must not become the result.
+  assert.equal(out.value, frozen, 'the frozen primary was replaced');
+  assert.equal(out.value.message, 'frozen primary');
+  assert.equal(out.value.secondary, undefined, 'a frozen error cannot carry the secondary');
+  assert.deepEqual(log, ['release'], 'release was still attempted');
+});
+
+test('PRECEDENCE: a falsy thrown value is a failure, not a success', async () => {
+  const testCase = caseById('A1');
+  const { state } = readFixture(testCase);
+
+  for (const thrown of [null, undefined, 0, '', false]) {
+    const out = await captureOutcome(testCase, state, async () => ({
+      modelId: testCase.modelId,
+      inference: {
+        evaluate: async () => {
+          throw thrown;
+        },
+        session: { release: async () => {} },
+      },
+    }));
+    assert.equal(out.threw, true, `throwing ${String(thrown)} was swallowed`);
+    assert.equal(out.value, thrown, `throwing ${String(thrown)} changed the value`);
+  }
+});
+
+test('PRECEDENCE: a falsy primary still takes precedence over a release failure', async () => {
+  const testCase = caseById('A1');
+  const { state } = readFixture(testCase);
+  const log = [];
+
+  const out = await captureOutcome(testCase, state, async () => ({
+    modelId: testCase.modelId,
+    inference: {
+      evaluate: async () => {
+        throw null;
+      },
+      session: {
+        release: async () => {
+          log.push('release');
+          throw new Error('release blew up');
+        },
+      },
+    },
+  }));
+
+  assert.equal(out.threw, true);
+  assert.equal(out.value, null, 'the release failure replaced a falsy primary');
+  assert.deepEqual(log, ['release']);
+});
+
 test('LIFECYCLE: a session with no callable release() fails rather than being skipped', async () => {
   const testCase = caseById('A1');
   const { state } = readFixture(testCase);
