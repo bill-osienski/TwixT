@@ -34,9 +34,14 @@ import {
   selectMoveForRequest,
 } from '../../server/readout_policy.js';
 import { openingMovesFrom } from './generate_openings.mjs';
+import {
+  P_DECISION_RELPATH,
+  loadCommittedDecision,
+  sha256 as hashBytes,
+} from './p_decision.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(HERE, '..', '..');
+const REPO_ROOT_DIR = join(HERE, '..', '..');
 
 export const SCHEMA = 'twixt-product-match/1';
 
@@ -81,7 +86,7 @@ export async function loadModel(modelDir) {
 export async function ortVersion() {
   const pkg = JSON.parse(
     await readFile(
-      join(REPO_ROOT, 'node_modules/onnxruntime-node/package.json'),
+      join(REPO_ROOT_DIR, 'node_modules/onnxruntime-node/package.json'),
       'utf8'
     )
   );
@@ -96,7 +101,7 @@ export async function ortVersion() {
  */
 export function executionCommit({ requireClean = true } = {}) {
   const git = (...args) =>
-    execFileSync('git', args, { cwd: REPO_ROOT }).toString().trim();
+    execFileSync('git', args, { cwd: REPO_ROOT_DIR }).toString().trim();
   const commit = git('rev-parse', 'HEAD');
   if (requireClean && git('status', '--porcelain') !== '') {
     fail(
@@ -578,4 +583,76 @@ export async function runMatch({
   }
 
   return summary;
+}
+
+/**
+ * The production match entry point.
+ *
+ * `P` comes from the COMMITTED decision artifact and from nowhere else. There
+ * is deliberately no fallback to `run.json.P`: that file is written by the
+ * match about itself, so falling back to it would restore exactly the mutable
+ * binding the decision replaces.
+ *
+ * Any problem with the decision — missing, untracked, unparseable, malformed,
+ * or bound to different models, settings or a different opening pool — is
+ * fatal here, before a single game is played.
+ *
+ * No decision artifact exists yet, so calling this today fails. That is the
+ * intended state: the timing smoke and its committed decision are a separate
+ * gate.
+ */
+export async function runMatchFromCommittedDecision({
+  runDir,
+  openings,
+  baselineDir = join(REPO_ROOT_DIR, 'models', BASELINE_MODEL_ID),
+  candidateDir = join(REPO_ROOT_DIR, 'models', CANDIDATE_MODEL_ID),
+  requireCleanWorktree = true,
+  onGameComplete = null,
+}) {
+  const policy = hardPolicy();
+  const ortV = await ortVersion();
+
+  const decision = await loadCommittedDecision({
+    poolSha256: hashBytes(
+      await readFile(join(REPO_ROOT_DIR, 'tests/product_match/openings.json'))
+    ),
+    expected: {
+      baseline_model_id: BASELINE_MODEL_ID,
+      candidate_model_id: CANDIDATE_MODEL_ID,
+      ort_version: ortV,
+      ort_config: 'no options supplied',
+      n_simulations: policy.nSims,
+      c_puct: 1.5,
+      move_temp: policy.moveTemp,
+    },
+  });
+
+  // The timing measurement must describe the code the match will run. Equality
+  // of commits is unsatisfiable — committing the decision itself moves HEAD —
+  // so the decision's commit must be an ANCESTOR of the match's.
+  const commit = executionCommit({ requireClean: requireCleanWorktree });
+  try {
+    execFileSync(
+      'git',
+      ['merge-base', '--is-ancestor', decision.execution_commit, commit],
+      { cwd: REPO_ROOT_DIR, stdio: 'ignore' }
+    );
+  } catch {
+    fail(
+      'DECISION_COMMIT_NOT_ANCESTOR',
+      `${P_DECISION_RELPATH} was produced at ${decision.execution_commit}, which is not an ` +
+        `ancestor of the match commit ${commit}; the timing measurement does not describe this code`
+    );
+  }
+
+  return runMatch({
+    runDir,
+    P: decision.selected_p,
+    openings,
+    baselineDir,
+    candidateDir,
+    nSimulations: policy.nSims,
+    requireCleanWorktree,
+    onGameComplete,
+  });
 }

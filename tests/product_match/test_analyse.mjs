@@ -74,6 +74,10 @@ const TEST_SPEC = {
   // Two supported sizes so the count gate can be exercised separately from the
   // unsupported-P gate.
   tCritical: { 3: 4.30265273, 4: 3.182446305 }, // t(0.975, df=2 / df=3)
+  // These fixtures predate any timing run and are not match evidence. The
+  // committed-decision binding is exercised separately in test_timing.mjs,
+  // including that it is FATAL when required.
+  requirePDecision: false,
 };
 
 let root;

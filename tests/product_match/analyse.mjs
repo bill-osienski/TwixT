@@ -26,6 +26,9 @@ import { TwixtState, MAX_PLIES } from '../../server/gameLogic.js';
 // Format adapter only — the module that owns the pool format also owns how to
 // read it. Carries no analysis logic and no harness code.
 import { openingMovesFrom } from './generate_openings.mjs';
+// Enforces the committed P binding. Loads no model and plays no game, so the
+// analyser stays independent of the harness.
+import { loadCommittedDecision, P_DECISION_RELPATH } from './p_decision.mjs';
 
 /**
  * The frozen constants. Defaults are the specification's; tests may pass their
@@ -328,6 +331,45 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
   const metaFailures = runMetaFailures(runMeta, spec);
   if (metaFailures.length)
     return { verdict: 'REJECTED', failures: metaFailures };
+
+  // `P` must equal the COMMITTED decision. `run.json` is written by the match
+  // about itself, so it is corroboration and never the authority — and there
+  // is deliberately no fallback to it.
+  let pDecision = null;
+  if (spec.requirePDecision !== false) {
+    try {
+      pDecision = await loadCommittedDecision(spec.pDecision ?? {});
+    } catch (err) {
+      return {
+        verdict: 'REJECTED',
+        failures: [
+          {
+            code: 'P_DECISION_UNAVAILABLE',
+            detail: {
+              path: P_DECISION_RELPATH,
+              code: err.code,
+              message: err.message,
+            },
+          },
+        ],
+      };
+    }
+    if (runMeta.P !== pDecision.selected_p) {
+      return {
+        verdict: 'REJECTED',
+        failures: [
+          {
+            code: 'P_DOES_NOT_MATCH_COMMITTED_DECISION',
+            detail: {
+              run_json_P: runMeta.P,
+              committed_P: pDecision.selected_p,
+            },
+          },
+        ],
+      };
+    }
+  }
+
   const P = runMeta.P;
 
   const matchDir = join(runDir, 'match');
@@ -605,6 +647,13 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
     pair_tally: tally,
     pair_scores: scores,
     fingerprint: Object.fromEntries(FP.map((f) => [f, first[f]])),
+    p_decision: pDecision
+      ? {
+          selected_p: pDecision.selected_p,
+          games_per_hour: pDecision.measured.games_per_hour,
+          execution_commit: pDecision.execution_commit,
+        }
+      : null,
     failures: [],
   };
 }
