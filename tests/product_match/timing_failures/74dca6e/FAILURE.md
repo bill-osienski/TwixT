@@ -19,11 +19,17 @@ was selected, no `p_decision.json` was written, and none may be derived from thi
 | node | `v26.7.0` |
 | onnxruntime-node | `1.23.2` |
 | ORT configuration | product default — `InferenceSession.create(path)`, no options |
+| baseline `model_id` | `1d64027db521a50f` |
+| candidate `model_id` | `c34b7ff3297c785a` |
 | execution mode | one process, sequential, no concurrency |
 | PID | `13582` |
 
 Both models loaded and both session contracts asserted successfully before the clock started;
-that part of the run is not implicated.
+`oom_crash.log` records both artifacts resolving, and that part of the run is not implicated.
+
+Because only the baseline self-play arm ran, all four sidecars correctly carry
+`1d64027db521a50f` on **both** colours. The candidate `c34b7ff3297c785a` was loaded and
+contract-checked but **never played a move**.
 
 ## What completed
 
@@ -37,8 +43,12 @@ candidate self-play arm (`205…209`) **never ran**.
 | `timing_02_opening_202.json` | 202 | baseline self-play | red | win | 57 | 272,157 ms | `960a72869a72ccf93fe44faf73b34b9e4c6f23347cb02a527f5f10802a0436ce` |
 | `timing_03_opening_203.json` | 203 | baseline self-play | black | win | 54 | 250,883 ms | `4d51789f3ec226b9c084f8bd5ed14a2223264e5f350ad4932546d4e986df3cc9` |
 
-Sum of the four `elapsed_ms`: **924,309 ms = 15.41 min**. Per-search cost rose across the four
-games, `4.26 → 4.61 → 4.77 → 4.65` s.
+Sum of the four `elapsed_ms`: **924,309 ms = 15.41 min**.
+
+`elapsed_ms` starts **after** the four-ply opening is replayed (`tests/product_match/harness.mjs:157`),
+so the number of searches in a game is `ply_count − 4`, not `ply_count` — **35 / 47 / 53 / 50**.
+Per-search cost was therefore **`4.74 → 5.01 → 5.14 → 5.02` s**, which is *above* the `4.41` s
+single-search figure recorded in §7.1, not close to it.
 
 The fifth game (opening `204`, baseline self-play) began and never finished.
 
@@ -88,15 +98,19 @@ roughly 470–490 legal moves, so a single 800-simulation search materializes on
 duration of that search.
 
 **This is algorithmic peak retention within one search, not a leak across moves or games.**
-Ruled out by reading:
+Supported by reading:
 
 - `MCTS.search()` allocates a fresh root per call and returns only a `Map` of visit counts and a
-  number, so no tree survives a search;
+  number, so **the harness retains no search tree** once a search returns;
 - `playGame()` constructs its two `MCTS` objects per game and drops them at return;
-- `AlphaZeroInference.evaluateRaw()` allocates per call and retains nothing on the instance.
+- `AlphaZeroInference.evaluate()` — the method `_expand()` actually calls (`server/mcts.js:173`) —
+  allocates its input tensors and its returned `priors` Map per call and **does not accumulate on
+  the inference instance**. Note the returned Map *is* retained by the expanding node, so it forms
+  part of the same per-search peak.
 
-The two `AlphaZeroInference` sessions are the only objects living across all games, and neither
-accumulates.
+That is the narrow claim the reading supports, and no more. Other objects do outlive an
+individual game — the opening pool, the timing schedule, the written-file and evidence lists —
+and **without a heap snapshot, additional contributors are not excluded.**
 
 ## Consequences
 
@@ -108,10 +122,15 @@ accumulates.
 - **No comparative inference of any kind is available from this evidence.** Both arms of the
   smoke are self-play by design (§7.3), and only the baseline arm ran at all. These four games
   say nothing about baseline versus candidate, and must never be cited as if they did.
-- **The defect is not specific to timing.** The same search runs in the match, so the
-  ~30-hour Arm A run would have failed the same way — likely around game 5 of 400. It also
-  affects the shipped server, which runs the same `server/mcts.js` at `nSims: 800` on hard.
-- The worktree remained clean throughout; the failed run wrote only into gitignored `runs/`.
+- **The defect is not specific to timing.** The same search runs in the match and in the shipped
+  server at `nSims: 800` on hard, so **Arm A is exposed to the same unsafe mechanism and could
+  fail early.** This run does **not** establish *where* it would fail: the match plays a
+  different opening set and alternates model roles between colours, so the failure point is
+  unknown.
+- The worktree was clean **at launch** — `executionCommit()` refuses otherwise — and was observed
+  clean after the crash; the failed run wrote only into gitignored `runs/`. The abort prevented
+  the runner's end-of-run recheck, so continuous cleanliness across the run was **not**
+  mechanically established.
 
 ## Status and what is not authorized
 
