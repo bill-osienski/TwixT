@@ -548,13 +548,14 @@ describe('nothing may run a match without the committed decision', () => {
   });
 
   it('the production match entry point refuses, before loading a model', async () => {
+    // Either refusal is correct and both are fatal: no decision is committed,
+    // and the execution surface may also be dirty during development. Asserted
+    // as a set so the test is never flaky and never vacuous.
     await assert.rejects(
-      runMatchFromCommittedDecision({
-        runDir: join(dir, 'run'),
-        openings: [],
-        requireCleanWorktree: false,
-      }),
-      (e) => e instanceof PDecisionError && e.code === 'NOT_COMMITTED'
+      runMatchFromCommittedDecision({ runDir: join(dir, 'run') }),
+      (e) =>
+        e instanceof PDecisionError &&
+        ['NOT_COMMITTED', 'EXECUTION_SURFACE_DIRTY'].includes(e.code)
     );
     await assert.rejects(
       readdir(join(dir, 'run')),
@@ -569,9 +570,17 @@ describe('nothing may run a match without the committed decision', () => {
       join(runDir, 'run.json'),
       JSON.stringify({ P: 100, fingerprint: { execution_commit: 'HEAD' } })
     );
-    const r = await analyse(runDir, [], FROZEN_SPEC);
+    const r = await analyse(runDir);
     assert.strictEqual(r.verdict, 'REJECTED');
-    assert.strictEqual(r.failures[0].code, 'P_DECISION_UNAVAILABLE');
+    // P_DECISION_UNAVAILABLE when the tree is clean; the surface guard fires
+    // first when it is not. Both are refusals to analyse.
+    assert.ok(
+      [
+        'P_DECISION_UNAVAILABLE',
+        'EXECUTION_SURFACE_CHANGED_SINCE_RUN',
+      ].includes(r.failures[0].code),
+      r.failures[0].code
+    );
   });
 
   it('the production analyser refuses a run with no commit in its fingerprint', async () => {
@@ -581,7 +590,7 @@ describe('nothing may run a match without the committed decision', () => {
       join(runDir, 'run.json'),
       JSON.stringify({ P: 100, fingerprint: {} })
     );
-    const r = await analyse(runDir, [], FROZEN_SPEC);
+    const r = await analyse(runDir);
     assert.strictEqual(r.failures[0].code, 'NO_RUN_COMMIT');
   });
 
@@ -614,6 +623,47 @@ describe('nothing may run a match without the committed decision', () => {
         .map((f) => f.code)
         .includes('P_DOES_NOT_MATCH_COMMITTED_DECISION')
     );
+  });
+
+  it('neither production API accepts a caller-supplied pool or standard', async () => {
+    // Both sides could otherwise agree on a DIFFERENT pool while the decision
+    // still claimed the committed hash, and the analyser could be handed the
+    // very thresholds its evidence is judged against.
+    const harness = await readFile(join(HERE, 'harness.mjs'), 'utf8');
+    const wrapper = harness.slice(
+      harness.indexOf('export async function runMatchFromCommittedDecision(')
+    );
+    const signature = wrapper.slice(0, wrapper.indexOf(') {') + 1);
+    assert.ok(!signature.includes('openings'), 'no caller-supplied pool');
+    assert.ok(
+      !signature.includes('requireCleanWorktree'),
+      'clean tree is not optional'
+    );
+    assert.ok(
+      !signature.includes('baselineDir'),
+      'no caller-supplied model directory'
+    );
+
+    const src = await readFile(join(HERE, 'analyse.mjs'), 'utf8');
+    const production = src.slice(src.indexOf('export async function analyse('));
+    const analyseSig = production.slice(0, production.indexOf(') {') + 1);
+    assert.ok(!analyseSig.includes('spec'), 'no caller-supplied standard');
+    assert.ok(!analyseSig.includes('openings'), 'no caller-supplied pool');
+    assert.ok(production.includes('assertCleanExecutionSurface'));
+    assert.ok(production.includes('EXECUTION_SURFACE_CHANGED_SINCE_RUN'));
+    assert.ok(production.includes('ort_version'), 'ort_version must be bound');
+  });
+
+  it('the analysis implementation is itself inside the execution surface', () => {
+    // It holds the statistic, the thresholds and the decision rule, so a
+    // post-match edit to it could otherwise change the verdict.
+    assert.ok(
+      EXECUTION_SURFACE_FILES.includes('tests/product_match/analyse.mjs')
+    );
+    assert.ok(
+      EXECUTION_SURFACE_FILES.includes('tests/product_match/harness.mjs')
+    );
+    assert.ok(EXECUTION_SURFACE_FILES.includes('server/mcts.js'));
   });
 
   it('the production analyser has no opt-out and no run.json fallback', async () => {

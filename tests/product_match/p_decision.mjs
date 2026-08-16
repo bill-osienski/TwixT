@@ -76,6 +76,7 @@ export const expectedTimingFilenames = () =>
  */
 export const EXECUTION_SURFACE_FILES = Object.freeze([
   'server/gameLogic.js',
+  'tests/product_match/analyse.mjs',
   'server/inference.js',
   'server/mcts.js',
   'server/model_manifest.js',
@@ -108,6 +109,36 @@ export function executionSurfaceDigest(commit = 'HEAD', repoRoot = REPO_ROOT) {
     parts.push(`${rel}:${sha256(readCommittedBlob(rel, commit, repoRoot))}`);
   }
   return sha256(parts.join('\n'));
+}
+
+/**
+ * Refuse to proceed if any execution-critical file differs from HEAD.
+ *
+ * Validating a decision against committed bytes while EXECUTING modified
+ * working-tree modules would make the surface binding decorative: the digest
+ * would describe code that is not the code running.
+ */
+export function assertCleanExecutionSurface(repoRoot = REPO_ROOT) {
+  let dirty;
+  try {
+    dirty = execFileSync(
+      'git',
+      ['status', '--porcelain', '--', ...EXECUTION_SURFACE_FILES],
+      {
+        cwd: repoRoot,
+      }
+    )
+      .toString()
+      .trim();
+  } catch (err) {
+    throw new PDecisionError('SURFACE_STATUS_UNAVAILABLE', err.message);
+  }
+  if (dirty !== '') {
+    throw new PDecisionError(
+      'EXECUTION_SURFACE_DIRTY',
+      `execution-critical files differ from HEAD, so the running code is not the committed code:\n${dirty}`
+    );
+  }
 }
 
 /**

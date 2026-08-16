@@ -28,7 +28,15 @@ import { TwixtState, MAX_PLIES } from '../../server/gameLogic.js';
 import { openingMovesFrom } from './generate_openings.mjs';
 // Enforces the committed P binding. Loads no model and plays no game, so the
 // analyser stays independent of the harness.
-import { P_DECISION_RELPATH, loadCommittedDecision } from './p_decision.mjs';
+import {
+  POOL_RELPATH,
+  P_DECISION_RELPATH,
+  REPO_ROOT,
+  assertCleanExecutionSurface,
+  executionSurfaceDigest,
+  loadCommittedDecision,
+  readCommittedBlob,
+} from './p_decision.mjs';
 
 /**
  * The frozen constants. Defaults are the specification's; tests may pass their
@@ -641,56 +649,21 @@ export async function analyseEvidence(
   };
 }
 
-// --- CLI --------------------------------------------------------------------
-
-const isMain =
-  process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
-if (isMain) {
-  const [runDir, openingsPath, outPath] = process.argv.slice(2);
-  if (!runDir || !openingsPath || !outPath) {
-    console.error('usage: analyse.mjs <run_dir> <openings.json> <out.json>');
-    process.exit(2);
-  }
-  const openings = JSON.parse(await readFile(resolve(openingsPath), 'utf8'));
-  const report = await analyse(resolve(runDir), openings);
-  await mkdir(dirname(resolve(outPath)), { recursive: true });
-  await writeFile(resolve(outPath), JSON.stringify(report, null, 2));
-
-  if (report.verdict === 'REJECTED') {
-    console.log(`\nANALYSIS REJECTED — ${report.failures.length} failure(s)\n`);
-    for (const f of report.failures.slice(0, 20)) console.log(`  ${f.code}`);
-    process.exit(1);
-  }
-  console.log(`\n${report.decision}   P=${report.P}`);
-  console.log(
-    `  mean pair score ${report.mean_pair_score.toFixed(4)}  (sd ${report.sd_pair_score.toFixed(4)})`
-  );
-  console.log(
-    `  bootstrap 95%   [${report.bootstrap.lower.toFixed(4)}, ${report.bootstrap.upper.toFixed(4)}]`
-  );
-  console.log(
-    `  t 95%           [${report.t_interval.lower.toFixed(4)}, ${report.t_interval.upper.toFixed(4)}]`
-  );
-  console.log(
-    `  pairs W/D/L     ${report.pair_tally.win}/${report.pair_tally.draw}/${report.pair_tally.loss}`
-  );
-  process.exit(0);
-}
-
 /**
  * The production analyser.
  *
- * Always loads the committed decision — from the RUN's own commit, taken from
- * its fingerprint, so the decision that authorized this match is the one
- * checked — and enforces every binding the match entry point does: pool bytes,
- * execution surface, model identities and search settings, all read from that
- * same commit.
+ * Takes ONLY a run directory. The pool, the decision and every threshold come
+ * from the run's own commit; nothing about the standard is caller-selected.
  *
- * There is no option to skip this and no fallback to `run.json.P`. Tests that
- * need to analyse fixture evidence call `analyseEvidence` instead, which is
+ * Tests that need to analyse fixture evidence call `analyseEvidence`, which is
  * visibly not the production path.
  */
-export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
+export async function analyse(runDir) {
+  // No `spec` parameter: the frozen constants ARE the standard. Accepting a
+  // replacement would let a caller choose the model identities, search settings
+  // and thresholds their own evidence is judged against.
+  const spec = FROZEN_SPEC;
+
   let runMeta;
   try {
     runMeta = JSON.parse(await readFile(join(runDir, 'run.json'), 'utf8'));
@@ -714,18 +687,48 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
   }
 
   let decision;
+  let openings;
   try {
+    // This file is itself execution-critical: it holds the statistic, the
+    // thresholds and the decision rule. Validating a historical run while
+    // executing edited analysis code would let a post-match edit change the
+    // verdict, so the CURRENT surface must equal the run commit's.
+    assertCleanExecutionSurface(REPO_ROOT);
+    const current = executionSurfaceDigest('HEAD', REPO_ROOT);
+    const atRun = executionSurfaceDigest(commit, REPO_ROOT);
+    if (current !== atRun) {
+      return {
+        verdict: 'REJECTED',
+        failures: [
+          {
+            code: 'EXECUTION_SURFACE_CHANGED_SINCE_RUN',
+            detail: { at_run: atRun, current },
+          },
+        ],
+      };
+    }
+
     decision = await loadCommittedDecision({
       commit,
       expected: {
         baseline_model_id: spec.baselineModelId,
         candidate_model_id: spec.candidateModelId,
+        // ort_version determines results and was previously unbound between
+        // the decision and the run.
+        ort_version: runMeta.fingerprint.ort_version,
         ort_config: spec.ortConfig,
         n_simulations: spec.nSimulations,
         c_puct: spec.cPuct,
         move_temp: spec.moveTemp,
       },
     });
+
+    // The pool comes from the run's own commit, never from a caller: both
+    // sides could otherwise agree on a different pool while the decision still
+    // claimed the committed hash.
+    openings = JSON.parse(
+      readCommittedBlob(POOL_RELPATH, commit, REPO_ROOT).toString('utf8')
+    );
   } catch (err) {
     return {
       verdict: 'REJECTED',
@@ -758,4 +761,36 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
     };
   }
   return report;
+}
+
+// --- CLI --------------------------------------------------------------------
+// Takes only a run directory. The pool, the decision and every threshold come
+// from the run's own commit; nothing about the standard is caller-selected.
+
+const isMain =
+  process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+if (isMain) {
+  const [runDir, outPath] = process.argv.slice(2);
+  if (!runDir || !outPath) {
+    console.error('usage: analyse.mjs <run_dir> <out.json>');
+    process.exit(2);
+  }
+  const report = await analyse(resolve(runDir));
+  await mkdir(dirname(resolve(outPath)), { recursive: true });
+  await writeFile(resolve(outPath), JSON.stringify(report, null, 2));
+
+  if (report.verdict === 'REJECTED') {
+    console.log(`\nANALYSIS REJECTED — ${report.failures.length} failure(s)\n`);
+    for (const f of report.failures.slice(0, 20)) console.log(`  ${f.code}`);
+    process.exit(1);
+  }
+  console.log(`\n${report.decision}   P=${report.P}`);
+  console.log(`  mean pair score ${report.mean_pair_score.toFixed(4)}`);
+  console.log(
+    `  bootstrap 95%   [${report.bootstrap.lower.toFixed(4)}, ${report.bootstrap.upper.toFixed(4)}]`
+  );
+  console.log(
+    `  t 95%           [${report.t_interval.lower.toFixed(4)}, ${report.t_interval.upper.toFixed(4)}]`
+  );
+  process.exit(0);
 }

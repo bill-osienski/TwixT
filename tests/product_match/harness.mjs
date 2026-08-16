@@ -36,6 +36,7 @@ import {
 import { openingMovesFrom } from './generate_openings.mjs';
 import {
   POOL_RELPATH,
+  assertCleanExecutionSurface,
   loadCommittedDecision,
   readCommittedBlob,
 } from './p_decision.mjs';
@@ -613,17 +614,18 @@ export async function runMatchWithExplicitP({
  */
 export async function runMatchFromCommittedDecision({
   runDir,
-  openings,
-  baselineDir = join(REPO_ROOT_DIR, 'models', BASELINE_MODEL_ID),
-  candidateDir = join(REPO_ROOT_DIR, 'models', CANDIDATE_MODEL_ID),
-  requireCleanWorktree = true,
   onGameComplete = null,
 }) {
   const policy = hardPolicy();
   const ortV = await ortVersion();
 
+  // The executing code must BE the committed code, or the execution-surface
+  // digest describes something other than what runs.
+  assertCleanExecutionSurface(REPO_ROOT_DIR);
+  const commit = executionCommit({ requireClean: true });
+
   const decision = await loadCommittedDecision({
-    commit: 'HEAD',
+    commit,
     expected: {
       baseline_model_id: BASELINE_MODEL_ID,
       candidate_model_id: CANDIDATE_MODEL_ID,
@@ -635,27 +637,21 @@ export async function runMatchFromCommittedDecision({
     },
   });
 
-  // Ancestry is NOT sufficient. Every descendant of the timing commit passes an
-  // is-ancestor check, including one that rewrote MCTS, inference, the readout
-  // policy or this harness afterwards — a timing measurement that no longer
-  // describes the match code. loadCommittedDecision binds the execution-surface
-  // digest instead, computed from the same commit, which catches that directly.
-  // A clean worktree is required so HEAD actually describes the running code;
-  // the decision was validated against that same commit above.
-  executionCommit({ requireClean: requireCleanWorktree });
+  // The pool is read from the SAME commit the decision was validated against.
+  // Accepting a caller-supplied pool would let both sides consistently use a
+  // different one while the decision still claimed the committed hash.
+  const openings = JSON.parse(
+    readCommittedBlob(POOL_RELPATH, commit, REPO_ROOT_DIR).toString('utf8')
+  );
 
   return runMatchWithExplicitP({
     runDir,
     P: decision.selected_p,
-    openings:
-      openings ??
-      JSON.parse(
-        readCommittedBlob(POOL_RELPATH, 'HEAD', REPO_ROOT_DIR).toString('utf8')
-      ),
-    baselineDir,
-    candidateDir,
+    openings,
+    baselineDir: join(REPO_ROOT_DIR, 'models', BASELINE_MODEL_ID),
+    candidateDir: join(REPO_ROOT_DIR, 'models', CANDIDATE_MODEL_ID),
     nSimulations: policy.nSims,
-    requireCleanWorktree,
+    requireCleanWorktree: true,
     onGameComplete,
   });
 }
