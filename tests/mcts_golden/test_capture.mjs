@@ -51,8 +51,11 @@ import {
   sha256,
   validateCorpus,
 } from './cases.mjs';
+import { runAll } from './capture.mjs';
 import {
+  captureTrace,
   deriveExpectedFixtures,
+  mainWithCode,
   parseArgs,
   readFixture,
   runCase,
@@ -873,6 +876,171 @@ const fakeInference = {
     return { priors, value: ((moves.length % 11) / 11) * 2 - 1 };
   },
 };
+
+// --- session lifecycle and exit discipline ----------------------------------
+// The first real capture aborted after publishing its artifact, with the ORT
+// session unreleased and the process then forced down by process.exit(). These
+// tests pin the two halves the harness controls. They use FAKES only — no test
+// at this gate loads a real model.
+
+function fakeModel({ modelId, releaseThrows = false, log }) {
+  return {
+    modelId,
+    inference: {
+      ...fakeInference,
+      session: {
+        release: async () => {
+          log.push('release');
+          if (releaseThrows) throw new Error('release blew up');
+        },
+      },
+    },
+  };
+}
+
+test('LIFECYCLE: the session is released after a successful trace', async () => {
+  const testCase = caseById('G_P01_baseline_s8');
+  const { state } = readFixture(testCase);
+  const log = [];
+  const trace = await captureTrace(testCase, state, async () => {
+    log.push('load');
+    return fakeModel({ modelId: testCase.modelId, log });
+  });
+  log.push('returned');
+  assert.deepEqual(log, ['load', 'release', 'returned'], 'release must precede the return');
+  assert.equal(trace.progress.length, 8);
+});
+
+test('LIFECYCLE: the session is released when the search throws', async () => {
+  const testCase = caseById('G_P01_baseline_s8');
+  const { state } = readFixture(testCase);
+  const log = [];
+  const exploding = {
+    modelId: testCase.modelId,
+    inference: {
+      evaluate: async () => {
+        throw new Error('inference exploded');
+      },
+      session: {
+        release: async () => log.push('release'),
+      },
+    },
+  };
+  await assert.rejects(
+    () => captureTrace(testCase, state, async () => exploding),
+    /inference exploded/
+  );
+  assert.deepEqual(log, ['release'], 'a failed search must still release the session');
+});
+
+test('LIFECYCLE: the session is released when the model role is wrong, and the role error survives', async () => {
+  const testCase = caseById('G_P01_baseline_s8');
+  const { state } = readFixture(testCase);
+  const log = [];
+  await assert.rejects(
+    () => captureTrace(testCase, state, async () => fakeModel({ modelId: 'wrong', log })),
+    (err) => err.code === 'MODEL_ROLE'
+  );
+  assert.deepEqual(log, ['release']);
+});
+
+test('LIFECYCLE: a failing release does not mask the original error', async () => {
+  const testCase = caseById('A1');
+  const { state } = readFixture(testCase);
+  const log = [];
+  await assert.rejects(
+    () =>
+      captureTrace(testCase, state, async () =>
+        fakeModel({ modelId: 'wrong', releaseThrows: true, log })
+      ),
+    (err) => err.code === 'MODEL_ROLE'
+  );
+  assert.deepEqual(log, ['release']);
+});
+
+test('LIFECYCLE: a failing release does not fail an otherwise good trace', async () => {
+  const testCase = caseById('A1');
+  const { state } = readFixture(testCase);
+  const log = [];
+  const trace = await captureTrace(testCase, state, async () =>
+    fakeModel({ modelId: testCase.modelId, releaseThrows: true, log })
+  );
+  assert.deepEqual(log, ['release']);
+  assert.equal(trace.visitCounts.length, 0, 'A1 still returns an empty map');
+});
+
+/** Strip comments, so prose mentioning `process.exit()` is not read as a call. */
+const stripComments = (src) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+test('EXIT: neither harness entry point calls process.exit — both return codes', () => {
+  for (const file of ['worker.mjs', 'capture.mjs']) {
+    const src = stripComments(
+      readFileSync(join(REPO_ROOT, 'tests', 'mcts_golden', file), 'utf8')
+    );
+    assert.equal(
+      /process\.exit\s*\(/.test(src),
+      false,
+      `${file}: process.exit tears the process down while native threads may be live`
+    );
+    assert.match(src, /process\.exitCode\s*=/, file);
+  }
+});
+
+test('EXIT: mainWithCode returns the documented codes without terminating', async (t) => {
+  if (!gitClean()) return t.skip('worktree dirty');
+  rmSync(OUT_DIR, { recursive: true, force: true });
+
+  assert.equal(await mainWithCode(['A1']), 2, 'usage error');
+  assert.equal(
+    await mainWithCode(['G_NOPE', OUT_DIR, '--expect-commit', HEAD, '--dry-run']),
+    2,
+    'unknown case'
+  );
+  assert.equal(
+    await mainWithCode([
+      'G_P01_baseline_s1',
+      OUT_DIR,
+      '--expect-commit',
+      'b'.repeat(40),
+      '--dry-run',
+    ]),
+    3,
+    'refusal'
+  );
+  assert.equal(
+    await mainWithCode(['G_P01_baseline_s1', OUT_DIR, '--expect-commit', HEAD, '--dry-run']),
+    0,
+    'success'
+  );
+  // Reaching here at all proves nothing terminated the test process.
+  assert.ok(true);
+});
+
+test('the orchestrator preserves worker stdout, stderr, signal and status on failure', () => {
+  const src = readFileSync(join(REPO_ROOT, 'tests', 'mcts_golden', 'capture.mjs'), 'utf8');
+  for (const needle of ['proc.signal', 'proc.error', 'proc.stdout', 'proc.stderr', 'proc.status']) {
+    assert.ok(src.includes(needle), `failure branch must surface ${needle}`);
+  }
+});
+
+test('runAll returns the full failure record for a refusing worker', (t) => {
+  if (!gitClean()) return t.skip('worktree dirty');
+  const dir = join(REPO_ROOT, 'runs', 'mcts_golden_failrec');
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
+  // Pre-place case 1's artifact so the first worker refuses with ARTIFACT_EXISTS.
+  writeFileSync(join(dir, 'G_P01_baseline_s1.json'), '{"stale":true}\n');
+
+  const out = runAll({ outDir: dir, mode: 'dry-run', expectCommit: HEAD });
+  assert.equal(out.ok, false);
+  assert.equal(out.failedAt, 'G_P01_baseline_s1');
+  assert.equal(out.failure.status, 3);
+  assert.equal(out.failure.signal, null);
+  assert.match(out.failure.stderr, /ARTIFACT_EXISTS/);
+  assert.equal(typeof out.failure.stdout, 'string', 'stdout must be captured even when empty');
+  rmSync(dir, { recursive: true, force: true });
+});
 
 test('INTEGRATION: real MCTS output satisfies the validator (normal case, A1, A2)', async () => {
   const ids = ['G_P01_baseline_s8', 'A1', 'A2'];

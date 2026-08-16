@@ -84,14 +84,38 @@ export function runAll({ outDir, mode, expectCommit }) {
     const label = `[${String(i + 1).padStart(2)}/${cases.length}] ${testCase.caseId}`;
 
     if (proc.status !== 0) {
-      console.error(`${label}  FAILED exit=${proc.status}`);
-      if (proc.stderr) console.error(proc.stderr.trim());
-      return { ok: false, results, failedAt: testCase.caseId };
+      // EVERYTHING the child produced. The first real capture failed with
+      // `status: null` (killed by a signal) and this branch printed only
+      // stderr, discarding the worker's stdout — which was the one observation
+      // that would have said whether the post-run log line executed. Losing
+      // evidence at the moment of failure is the worst possible time to lose it.
+      console.error(`${label}  FAILED`);
+      console.error(`  status: ${proc.status}`);
+      console.error(`  signal: ${proc.signal ?? '(none)'}`);
+      console.error(`  error : ${proc.error ? proc.error.message : '(none)'}`);
+      console.error(`  --- worker stdout (${(proc.stdout ?? '').length} bytes) ---`);
+      if (proc.stdout) console.error(proc.stdout.trimEnd());
+      console.error(`  --- worker stderr (${(proc.stderr ?? '').length} bytes) ---`);
+      if (proc.stderr) console.error(proc.stderr.trimEnd());
+      console.error('  --- end worker output ---');
+      return {
+        ok: false,
+        results,
+        failedAt: testCase.caseId,
+        failure: {
+          status: proc.status,
+          signal: proc.signal ?? null,
+          error: proc.error ? proc.error.message : null,
+          stdout: proc.stdout ?? '',
+          stderr: proc.stderr ?? '',
+        },
+      };
     }
     console.log(`${label}  ${proc.stdout.trim()}`);
+    if (proc.stderr?.trim()) console.error(`${label}  stderr: ${proc.stderr.trim()}`);
     results.push(testCase.caseId);
   }
-  return { ok: true, results, failedAt: null };
+  return { ok: true, results, failedAt: null, failure: null };
 }
 
 /**
@@ -142,23 +166,30 @@ export function summarize(outDir) {
   return { artifacts: files.length, distinctPids: pids.size, statuses };
 }
 
-function main() {
-  const [mode, outDir] = process.argv.slice(2);
+/**
+ * Compute the exit code without terminating.
+ *
+ * No `process.exit` anywhere in this harness: a forced exit tears the process
+ * down while native threads may still be running, which is the half of the
+ * observed capture abort that the harness controls.
+ */
+export function mainWithCode(argv) {
+  const [mode, outDir] = argv;
 
   if (mode === 'list') {
     const cases = enumerateCases();
     cases.forEach((c, i) => console.log(formatCase(c, i + 1)));
     console.log(`\n${cases.length} cases (expected ${EXPECTED_CASE_COUNT})`);
-    return;
+    return 0;
   }
 
   if (mode !== 'dry-run' && mode !== 'capture') {
     console.error('usage: capture.mjs list | dry-run <out_dir> | capture <out_dir>');
-    process.exit(2);
+    return 2;
   }
   if (!outDir) {
     console.error(`usage: capture.mjs ${mode} <out_dir>`);
-    process.exit(2);
+    return 2;
   }
 
   // Fail fast before spawning 92 processes. This does NOT replace the guard —
@@ -169,7 +200,7 @@ function main() {
     createOutputDirExclusively(outDir);
   } catch (err) {
     console.error(`${err.code ?? 'ERROR'}: ${err.message}`);
-    process.exit(3);
+    return 3;
   }
   console.log(`capture commit ${commit}`);
   console.log(`mode           ${mode}\n`);
@@ -177,7 +208,7 @@ function main() {
   const { ok, failedAt } = runAll({ outDir, mode, expectCommit: commit });
   if (!ok) {
     console.error(`\nstopped at ${failedAt}; the corpus is incomplete and is not a corpus`);
-    process.exit(1);
+    return 1;
   }
 
   const s = summarize(outDir);
@@ -202,10 +233,11 @@ function main() {
       console.error(`  ${f.code} ${JSON.stringify(f.detail)}`);
     }
     if (failures.length > 20) console.error(`  ... and ${failures.length - 20} more`);
-    process.exit(1);
+    return 1;
   }
   console.log(`corpus VALID: ${EXPECTED_CASE_COUNT} cases verified against the matrix`);
+  return 0;
 }
 
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
-if (isMain) main();
+if (isMain) process.exitCode = mainWithCode(process.argv.slice(2));

@@ -207,17 +207,40 @@ export async function searchAndTrace(testCase, state, inference) {
   };
 }
 
-/** Load the model, then trace. The only path that touches ONNX. */
-export async function captureTrace(testCase, state) {
-  const { loadModel } = await import('../product_match/harness.mjs');
-  const model = await loadModel(join(REPO_ROOT, 'models', testCase.modelId));
-  if (model.modelId !== testCase.modelId) {
-    throw new CaptureError(
-      'MODEL_ROLE',
-      `models/${testCase.modelId} resolved to ${model.modelId}`
-    );
+/**
+ * Load the model, trace, and ALWAYS release the session.
+ *
+ * The first real capture aborted with `mutex lock failed: Invalid argument`
+ * after publishing its artifact, with the session never released and the
+ * process then forced down by `process.exit()`. Releasing in `finally` — on the
+ * failure path as much as the success path — removes the unreleased-session
+ * half of that; `process.exitCode` (below) removes the forced-teardown half.
+ *
+ * `loadFn` is injectable so the lifecycle can be tested with a fake: no test
+ * may load a real model at this gate.
+ */
+export async function captureTrace(testCase, state, loadFn = null) {
+  const load =
+    loadFn ??
+    (async (dir) => (await import('../product_match/harness.mjs')).loadModel(dir));
+  const model = await load(join(REPO_ROOT, 'models', testCase.modelId));
+  try {
+    if (model.modelId !== testCase.modelId) {
+      throw new CaptureError(
+        'MODEL_ROLE',
+        `models/${testCase.modelId} resolved to ${model.modelId}`
+      );
+    }
+    return await searchAndTrace(testCase, state, model.inference);
+  } finally {
+    // Release failures must not mask the original error, and must not
+    // themselves abort the run — but they are reported.
+    try {
+      await model?.inference?.session?.release?.();
+    } catch (err) {
+      console.error(`SESSION_RELEASE_FAILED: ${err?.message ?? err}`);
+    }
   }
-  return searchAndTrace(testCase, state, model.inference);
 }
 
 /**
@@ -366,15 +389,24 @@ export function parseArgs(argv) {
   return { caseId, outDir, mode, expectCommit };
 }
 
-async function main() {
+/**
+ * Compute the exit code without terminating.
+ *
+ * Exported so the mapping can be tested directly, and so `main` never calls
+ * `process.exit`: a forced exit tears the process down while native threads may
+ * still be running, which is the half of the observed abort the harness
+ * controls. Setting `process.exitCode` lets the event loop drain and the runtime
+ * shut down in its own order.
+ */
+export async function mainWithCode(argv) {
   let parsed;
   let testCase;
   try {
-    parsed = parseArgs(process.argv.slice(2));
+    parsed = parseArgs(argv);
     testCase = caseById(parsed.caseId);
   } catch (err) {
     console.error(`${err.code ?? 'ERROR'}: ${err.message}`);
-    process.exit(EXIT_USAGE);
+    return EXIT_USAGE;
   }
 
   try {
@@ -385,11 +417,15 @@ async function main() {
       expectCommit: parsed.expectCommit,
     });
     console.log(`${artifact.status} ${artifact.case_id} pid=${artifact.pid}`);
-    process.exit(EXIT_OK);
+    return EXIT_OK;
   } catch (err) {
     console.error(`${err.code ?? 'ERROR'}: ${err.message}`);
-    process.exit(REFUSAL_CODES.has(err.code) ? EXIT_REFUSED : EXIT_FAILED);
+    return REFUSAL_CODES.has(err.code) ? EXIT_REFUSED : EXIT_FAILED;
   }
+}
+
+async function main() {
+  process.exitCode = await mainWithCode(process.argv.slice(2));
 }
 
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;

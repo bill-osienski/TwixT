@@ -37,7 +37,15 @@ stopped at G_P01_baseline_s1; the corpus is incomplete and is not a corpus
 ```
 
 `capture.log` (sha256 `b1b69c5dcea48c327ae9a3d2709a0380ba8e994db04379056ee163769aa27f5f`) is the
-complete, unedited console output — all seven lines of it.
+complete, unedited **orchestrator** log — all seven lines of it.
+
+> **Correction (see `CORRECTIONS.md`).** An earlier revision of this memo called it "the complete
+> console output". It is not. On a worker failure `capture.mjs` printed only `proc.stderr` and
+> **discarded `proc.stdout`**, so the worker's own standard output for this case **was never
+> captured and no longer exists**. In particular the evidence **cannot** say whether the
+> post-`runCase` `console.log` executed — which is exactly the observation that would most
+> sharply localise the abort. That gap is a defect in the orchestrator, not a property of the
+> failure.
 
 `exit=null` from `spawnSync` means the worker was **killed by a signal**, not that it returned a
 non-zero status. The message is a native C++ abort, not a JavaScript error and **not an
@@ -61,31 +69,51 @@ and semantically well-formed**:
 The output directory contains **exactly one file and no `.tmp` residue**, so
 `writeAtomicNoClobber` ran to completion — temp created, linked to the final path, temp unlinked.
 
-**Therefore the search succeeded, the trace was produced, and `runCase` returned normally. The
-abort happened afterwards, during process teardown.**
+**What that establishes, precisely:** the search ran, the trace was constructed, and the artifact
+was atomically published. The abort therefore came **after publication**, and the failure is not
+a failure to produce an MCTS result.
 
-## Mechanism
+**What it does NOT establish:** that `runCase`'s promise resolved, or that `console.log` ran, or
+that `process.exit` was ever reached. A native thread can abort asynchronously at any moment,
+including immediately after publication and before the surrounding JavaScript continues. An
+earlier revision of this memo asserted "`runCase` returned normally"; that is not supported by
+the evidence and is withdrawn.
 
-Established by elimination, from the evidence above rather than by re-running anything:
+## Leading hypothesis — and it is a hypothesis
+
+Three facts, all recorded rather than re-derived:
 
 1. The **dry-run** path passed **92/92** twice. Dry-run reaches ONNX Runtime only through the
    dynamic `import()` inside `captureTrace`, so it never loads a model.
 2. The **first case that loads a model** aborted.
-3. It aborted **after** completing its work — the artifact is whole.
+3. It aborted **after the artifact was published**.
 
-The remaining code between `runCase` returning and the process ending is
-`console.log(...)` followed by **`process.exit(EXIT_OK)`** in `worker.mjs::main`. Calling
-`process.exit()` while an `onnxruntime-node` `InferenceSession` is still open tears the process
-down while ORT's native thread pool is live, and `mutex lock failed: Invalid argument` is that
-teardown failing.
+The code between publication and process end is `console.log(...)` followed by
+**`process.exit(EXIT_OK)`** in `worker.mjs::main`, and the worker **never released the
+`InferenceSession`** it opened. `mutex lock failed: Invalid argument` is **consistent with an
+unsafe forced teardown** — `process.exit()` terminating the process while ORT's native thread
+pool is still live and the session is unreleased.
 
-**This is a defect in the capture harness, not in ONNX Runtime, the models, the fixtures, or
-`server/mcts.js`.** It is also unrelated to the eager-expansion memory defect the whole design
-exists to remedy — the run never reached a large simulation count.
+**Stated as the defect: the harness does not release the session before forcing exit.** That is a
+description of the harness's behaviour, which is directly observable, rather than a claim about
+which native call aborts.
 
-**Not established:** the precise native call that aborts. No profiler, debugger or re-run was
-used, because none is authorized. The inference above rests on the artifact being complete and on
-the dry-run/capture asymmetry, both of which are recorded facts.
+**What the evidence does NOT support:**
+
+- It does **not** isolate `process.exit` as the aborting mechanism. No observation distinguishes
+  it from another asynchronous native fault on the ORT path.
+- It does **not** exonerate ONNX Runtime. A failure that arises only on the ORT path cannot be
+  ruled out as an ORT defect without a controlled probe, and none was run.
+- It does **not** identify the precise native fault. No profiler, debugger or re-run was used,
+  because none is authorized.
+
+**What the evidence does support:** the failure is **not** a failure to produce an MCTS result
+(the trace is complete and well-formed), and the eager-expansion memory defect is an
+**implausible** explanation — the failing case ran a single simulation, nowhere near the scale at
+which that defect bites.
+
+The models, the fixtures and `server/mcts.js` are likewise unimplicated by the trace being whole,
+though "unimplicated" is weaker than "exonerated".
 
 ## Consequences
 
@@ -102,9 +130,13 @@ the dry-run/capture asymmetry, both of which are recorded facts.
 ## Status
 
 The 92-case capture is **blocked** pending review. A remedy would be a change to
-`tests/mcts_golden/worker.mjs` — which is **not** an execution-surface file, so the pinned digest
-`228f57b5…` is unaffected and a fixed harness could still capture traces describing the same
-`74dca6e` search code.
+`tests/mcts_golden/worker.mjs` and `tests/mcts_golden/capture.mjs` — neither is an
+execution-surface file, so the pinned digest `228f57b5…` is unaffected and a fixed harness could
+still capture traces describing the same `74dca6e` search code.
+
+Because the hypothesis is not established, the correct next step is **one real, single-case
+worker lifecycle probe**, not a 92-case recapture: a corpus is not the instrument for testing
+whether a process can exit cleanly.
 
 Nothing here authorizes that change, a re-capture, an `server/mcts.js` edit, a falsification run,
 a heap measurement, a timing smoke, a `P` decision, or a match.
