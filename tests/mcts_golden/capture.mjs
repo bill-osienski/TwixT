@@ -24,7 +24,7 @@
  * Specification: docs/superpowers/2026-08-16-mcts-memory-remediation-design.md
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -92,16 +92,24 @@ export function runAll({ outDir, dryRun }) {
  * line between two runs. Nothing is deleted — an existing directory is somebody
  * else's evidence until they say otherwise.
  */
-export function assertOutputDirUsable(outDir) {
-  if (!existsSync(outDir)) return;
-  const entries = readdirSync(outDir);
-  if (entries.length > 0) {
-    throw new CaptureError(
-      'OUTPUT_DIR_NOT_EMPTY',
-      `${outDir} already contains ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}; ` +
-        `refusing to run into existing evidence. Move it aside or choose another directory — ` +
-        `this command will not delete anything.`
-    );
+export function createOutputDirExclusively(outDir) {
+  // The LEAF is created non-recursively, so mkdir itself is the exclusion:
+  // it fails with EEXIST if anything is already there. An existing directory
+  // is not accepted even when empty — "empty right now" is a check-then-use
+  // race, whereas "I created it" is decided by the kernel. Parents are created
+  // first, since only the leaf carries the claim.
+  mkdirSync(dirname(outDir), { recursive: true });
+  try {
+    mkdirSync(outDir);
+  } catch (err) {
+    if (err.code === 'EEXIST') {
+      throw new CaptureError(
+        'OUTPUT_DIR_EXISTS',
+        `${outDir} already exists; refusing to run into a directory this run did not create. ` +
+          `Move it aside or choose another — this command will not delete anything.`
+      );
+    }
+    throw err;
   }
 }
 
@@ -148,7 +156,7 @@ function main() {
   let commit;
   try {
     commit = preflight(executionSurfaceDigest);
-    assertOutputDirUsable(outDir);
+    createOutputDirExclusively(outDir);
   } catch (err) {
     console.error(`${err.code ?? 'ERROR'}: ${err.message}`);
     process.exit(3);
@@ -169,7 +177,12 @@ function main() {
   );
 
   // The verdict comes from full validation, never from those counts.
-  const failures = validateCorpus(outDir, { mode, readdirSync, readFileSync });
+  const failures = validateCorpus(outDir, {
+    mode,
+    expectedCaptureCommit: commit,
+    readdirSync,
+    readFileSync,
+  });
   if (failures.length) {
     console.error(`\nREFUSED: ${failures.length} corpus validation failure(s)`);
     for (const f of failures.slice(0, 20)) {

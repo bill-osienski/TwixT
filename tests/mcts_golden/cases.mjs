@@ -343,7 +343,41 @@ export const expectedArtifactNames = () =>
   enumerateCases().map((c) => artifactName(c.caseId));
 
 const isHex64 = (v) => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v);
+const isHex40 = (v) => typeof v === 'string' && /^[0-9a-f]{40}$/.test(v);
 const isPosInt = (v) => Number.isInteger(v) && v > 0;
+
+/**
+ * How many simulations a case is expected to complete.
+ *
+ * A1 aborts before the first simulation, so the search returns an empty map
+ * after the root expansion. A2 aborts from the progress callback at done === 5,
+ * and the loop breaks at the top of the next iteration, so exactly five
+ * simulations complete. Everything else runs its full count.
+ */
+export function expectedSimulationsFor(testCase) {
+  if (testCase.trigger === 'already_aborted') return 0;
+  if (testCase.trigger === 'progress_done_5') return 5;
+  return testCase.nSimulations;
+}
+
+/**
+ * Re-derive the readout from visit counts, replicating `MCTS.selectMove` at
+ * temperature 0 EXACTLY — including its lexicographic string tie-break and its
+ * compare-against-running-best form. A stored `selected_move` is never trusted.
+ */
+export function recomputeSelectedMove(entries) {
+  let maxCount = -1;
+  let best = null;
+  for (const [moveKey, count] of entries) {
+    if (count > maxCount) {
+      maxCount = count;
+      best = moveKey;
+    } else if (count === maxCount && moveKey < best) {
+      best = moveKey;
+    }
+  }
+  return best;
+}
 
 /**
  * Validate a whole corpus directory against the enumerated matrix.
@@ -355,7 +389,10 @@ const isPosInt = (v) => Number.isInteger(v) && v > 0;
  *
  * Returns a list of failures; empty means the corpus is valid.
  */
-export function validateCorpus(outDir, { mode, readdirSync, readFileSync }) {
+export function validateCorpus(
+  outDir,
+  { mode, expectedCaptureCommit, readdirSync, readFileSync }
+) {
   const failures = [];
   const fail = (code, detail) => failures.push({ code, detail });
 
@@ -364,12 +401,14 @@ export function validateCorpus(outDir, { mode, readdirSync, readFileSync }) {
 
   let present;
   try {
-    present = readdirSync(outDir).filter((f) => f.endsWith('.json'));
+    present = readdirSync(outDir);
   } catch (err) {
     return [{ code: 'OUTPUT_DIR_UNREADABLE', detail: err.message }];
   }
 
-  // Exact set equality: a stray artifact is as disqualifying as a missing one.
+  // EVERY directory entry, not just the ones ending in .json. Filtering to
+  // .json would let a stray file or a leftover .tmp sit in the corpus while
+  // this function claimed the directory was exactly right.
   const sortedPresent = [...present].sort();
   const sortedExpected = [...expected].sort();
   if (JSON.stringify(sortedPresent) !== JSON.stringify(sortedExpected)) {
@@ -379,7 +418,6 @@ export function validateCorpus(outDir, { mode, readdirSync, readFileSync }) {
   }
 
   const pids = new Set();
-  const commits = new Set();
 
   for (const testCase of enumerateCases()) {
     const name = artifactName(testCase.caseId);
@@ -423,9 +461,12 @@ export function validateCorpus(outDir, { mode, readdirSync, readFileSync }) {
       bad('pinned_surface_commit', a.pinned_surface_commit, PINNED_SURFACE_COMMIT);
     if (a.execution_surface_sha256 !== PINNED_EXECUTION_SURFACE_SHA256)
       bad('execution_surface_sha256', a.execution_surface_sha256, PINNED_EXECUTION_SURFACE_SHA256);
-    if (typeof a.capture_commit !== 'string' || a.capture_commit.length !== 40)
-      bad('capture_commit', a.capture_commit, '40-char sha');
-    else commits.add(a.capture_commit);
+    // Exact identity, not "some uniform 40-character string": the commit the
+    // orchestrator preflighted is passed in, so a corpus cannot agree with
+    // itself about a commit nobody checked.
+    if (!isHex40(a.capture_commit)) bad('capture_commit', a.capture_commit, '40-hex sha');
+    else if (expectedCaptureCommit && a.capture_commit !== expectedCaptureCommit)
+      bad('capture_commit', a.capture_commit, expectedCaptureCommit);
 
     const f = a.fixture ?? {};
     if (f.sidecar !== testCase.position.sidecar)
@@ -438,6 +479,8 @@ export function validateCorpus(outDir, { mode, readdirSync, readFileSync }) {
       bad('fixture.ply_after_prefix', f.ply_after_prefix, testCase.position.prefixPlies);
     if (!isHex64(f.prefix_moves_sha256))
       bad('fixture.prefix_moves_sha256', f.prefix_moves_sha256, 'sha256 hex');
+    if (!isHex64(f.legal_moves_sha256))
+      bad('fixture.legal_moves_sha256', f.legal_moves_sha256, 'sha256 hex');
     if (f.to_move !== 'red' && f.to_move !== 'black')
       bad('fixture.to_move', f.to_move, 'red|black');
     if (!isPosInt(f.n_legal)) bad('fixture.n_legal', f.n_legal, 'positive integer');
@@ -452,45 +495,112 @@ export function validateCorpus(outDir, { mode, readdirSync, readFileSync }) {
     } else if (a.trace === null || typeof a.trace !== 'object') {
       bad('trace', a.trace, 'object in capture');
     } else {
+      // SEMANTICS, not container types. Checking only that the fields are
+      // arrays and numbers accepts 92 cases with empty visit maps, no progress
+      // and root_value 999 — a corpus that is structurally well-formed and
+      // means nothing.
       const t = a.trace;
-      if (!Array.isArray(t.visit_counts))
-        bad('trace.visit_counts', typeof t.visit_counts, 'array of [move, count]');
-      else if (
-        !t.visit_counts.every(
-          (e) => Array.isArray(e) && e.length === 2 && typeof e[0] === 'string' && Number.isInteger(e[1])
-        )
-      )
-        bad('trace.visit_counts', 'malformed entries', '[move, integer] pairs');
+      const sims = expectedSimulationsFor(testCase);
+
+      // --- visit counts -----------------------------------------------------
+      const entriesOk =
+        Array.isArray(t.visit_counts) &&
+        t.visit_counts.every(
+          (e) =>
+            Array.isArray(e) &&
+            e.length === 2 &&
+            typeof e[0] === 'string' &&
+            Number.isInteger(e[1]) &&
+            e[1] >= 0
+        );
+      if (!entriesOk) {
+        bad('trace.visit_counts', 'malformed entries', '[move, non-negative integer] pairs');
+      } else if (sims === 0) {
+        // A1 aborts after the root expansion, so the search returns an EMPTY
+        // map by contract (I6). A populated one would mean it kept going.
+        if (t.visit_counts.length !== 0)
+          bad('trace.visit_counts', t.visit_counts.length, 0);
+      } else {
+        const keys = t.visit_counts.map((e) => e[0]);
+        if (new Set(keys).size !== keys.length)
+          bad('trace.visit_counts', 'duplicate move keys', 'unique keys');
+        // Complete AND correctly ordered, against a target the validator did
+        // not get from the trace: the hash of the fixture's ordered legal-move
+        // keys, recorded before any search ran.
+        if (isHex64(f.legal_moves_sha256) && sha256(JSON.stringify(keys)) !== f.legal_moves_sha256)
+          bad('trace.visit_counts', 'key set/order mismatch', 'fixture.legal_moves_sha256');
+        if (Number.isInteger(f.n_legal) && keys.length !== f.n_legal)
+          bad('trace.visit_counts', keys.length, f.n_legal);
+        // Every simulation backs up through exactly one root child.
+        const total = t.visit_counts.reduce((s, e) => s + e[1], 0);
+        if (total !== sims) bad('trace.visit_counts sum', total, sims);
+      }
+
+      // --- root value -------------------------------------------------------
       if (typeof t.root_value !== 'number' || !Number.isFinite(t.root_value))
         bad('trace.root_value', t.root_value, 'finite number');
-      if (t.selected_move !== null && typeof t.selected_move !== 'string')
+      else if (t.root_value < -1 || t.root_value > 1)
+        bad('trace.root_value', t.root_value, 'within [-1, 1]');
+      else if (sims === 0 && t.root_value !== 0)
+        bad('trace.root_value', t.root_value, '0 for an abort before the first simulation');
+
+      // --- readout, recomputed ---------------------------------------------
+      if (t.selected_move !== null && typeof t.selected_move !== 'string') {
         bad('trace.selected_move', t.selected_move, 'string or null');
-      if (!Array.isArray(t.progress)) bad('trace.progress', typeof t.progress, 'array');
-      else if (
-        !t.progress.every(
-          (e) =>
-            e &&
-            Number.isInteger(e.done) &&
-            Number.isInteger(e.total) &&
-            typeof e.valueEstimate === 'number' &&
-            e.elapsed === undefined
-        )
-      )
-        bad('trace.progress', 'malformed entries', '{done,total,valueEstimate} and NO elapsed');
-      if (!Array.isArray(t.progress_elapsed_ms))
+      } else if (entriesOk) {
+        const want = t.visit_counts.length === 0 ? null : recomputeSelectedMove(t.visit_counts);
+        if (t.selected_move !== want) bad('trace.selected_move', t.selected_move, want);
+      }
+
+      // --- progress ---------------------------------------------------------
+      if (!Array.isArray(t.progress)) {
+        bad('trace.progress', typeof t.progress, 'array');
+      } else {
+        if (t.progress.length !== sims) bad('trace.progress.length', t.progress.length, sims);
+        for (let i = 0; i < t.progress.length; i++) {
+          const e = t.progress[i];
+          if (!e || !Number.isInteger(e.done) || !Number.isInteger(e.total)) {
+            bad('trace.progress', `entry ${i} malformed`, '{done,total,valueEstimate}');
+            continue;
+          }
+          if (e.elapsed !== undefined)
+            bad('trace.progress', `entry ${i} carries elapsed`, 'no elapsed in a compared field');
+          if (e.done !== i + 1) bad('trace.progress.done', e.done, i + 1);
+          if (e.total !== testCase.nSimulations)
+            bad('trace.progress.total', e.total, testCase.nSimulations);
+          if (
+            typeof e.valueEstimate !== 'number' ||
+            !Number.isFinite(e.valueEstimate) ||
+            e.valueEstimate < -1 ||
+            e.valueEstimate > 1
+          )
+            bad('trace.progress.valueEstimate', e.valueEstimate, 'finite, within [-1, 1]');
+        }
+      }
+
+      // --- elapsed metadata: never compared, but must be sane ---------------
+      if (!Array.isArray(t.progress_elapsed_ms)) {
         bad('trace.progress_elapsed_ms', typeof t.progress_elapsed_ms, 'array');
-      else if (Array.isArray(t.progress) && t.progress_elapsed_ms.length !== t.progress.length)
-        bad('trace.progress_elapsed_ms', t.progress_elapsed_ms.length, t.progress?.length);
-      else if (!t.progress_elapsed_ms.every((v) => Number.isFinite(v) && v >= 0))
-        bad('trace.progress_elapsed_ms', 'non-finite or negative', 'finite, >= 0');
+      } else if (Array.isArray(t.progress) && t.progress_elapsed_ms.length !== t.progress.length) {
+        bad('trace.progress_elapsed_ms.length', t.progress_elapsed_ms.length, t.progress.length);
+      } else {
+        for (let i = 0; i < t.progress_elapsed_ms.length; i++) {
+          const v = t.progress_elapsed_ms[i];
+          if (!Number.isFinite(v) || v < 0)
+            bad('trace.progress_elapsed_ms', v, 'finite, >= 0');
+          else if (i > 0 && v < t.progress_elapsed_ms[i - 1])
+            bad('trace.progress_elapsed_ms', `decreased at ${i}`, 'non-decreasing');
+        }
+      }
     }
   }
 
-  // One process per case, and one commit for the whole corpus. A corpus whose
-  // halves were produced at different commits is two partial runs, not one.
-  if (present.length === expected.length && pids.size !== expected.length)
-    fail('PID_NOT_UNIQUE_PER_CASE', { distinct: pids.size, cases: expected.length });
-  if (commits.size > 1) fail('CAPTURE_COMMIT_NOT_UNIFORM', { commits: [...commits] });
+  // PID cardinality is DIAGNOSTIC, never a gate: an operating system may reuse
+  // a pid once a child has exited, so 92 genuinely separate processes are not
+  // guaranteed to yield 92 distinct numbers. Process isolation is established
+  // structurally — one spawn per case — and behaviourally by the focused
+  // subprocess test, not by counting.
+  void pids;
 
   return failures;
 }

@@ -21,7 +21,7 @@
  * Specification: docs/superpowers/2026-08-16-mcts-memory-remediation-design.md
  */
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { link, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { TwixtState } from '../../server/gameLogic.js';
@@ -126,6 +126,12 @@ export function readFixture(testCase) {
     );
   }
 
+  // The ordered legal-move keys, hashed BEFORE any search runs. This gives the
+  // validator a completeness-and-order target it did not obtain from the trace
+  // it is judging, so a fabricated or truncated visit map cannot agree with
+  // itself.
+  const legalKeys = state.legalMoves().map((m) => `${m[0]},${m[1]}`);
+
   return {
     state,
     describe: {
@@ -135,7 +141,8 @@ export function readFixture(testCase) {
       prefix_moves_sha256: sha256(JSON.stringify(prefix)),
       ply_after_prefix: state.ply,
       to_move: state.toMove,
-      n_legal: state.legalMoves().length,
+      n_legal: legalKeys.length,
+      legal_moves_sha256: sha256(JSON.stringify(legalKeys)),
     },
   };
 }
@@ -199,20 +206,41 @@ export async function captureTrace(testCase, state) {
  */
 async function writeAtomicNoClobber(path, value) {
   const tmp = `${path}.tmp`;
-  if (existsSync(path)) {
-    throw new CaptureError(
-      'ARTIFACT_EXISTS',
-      `${path} already exists; refusing to overwrite existing evidence`
-    );
+
+  // Exclusive create: the kernel decides the winner, so two concurrent workers
+  // cannot both believe the temp file is free. `wx` fails with EEXIST rather
+  // than truncating.
+  try {
+    await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx' });
+  } catch (err) {
+    if (err.code === 'EEXIST') {
+      throw new CaptureError(
+        'STALE_TEMP_ARTIFACT',
+        `${tmp} already exists — a previous write was interrupted, or another worker holds it; ` +
+          `refusing to overwrite it`
+      );
+    }
+    throw err;
   }
-  if (existsSync(tmp)) {
-    throw new CaptureError(
-      'STALE_TEMP_ARTIFACT',
-      `${tmp} already exists, so a previous write was interrupted; refusing to overwrite it`
-    );
+
+  // Publish WITHOUT replacement. `rename()` silently replaces its destination,
+  // so a check-then-rename pair races: both workers can observe no final file
+  // and then both rename, and the loser's bytes win. `link()` fails with
+  // EEXIST if the destination exists, which makes publication itself the
+  // exclusion rather than a preceding check.
+  try {
+    await link(tmp, path);
+  } catch (err) {
+    await unlink(tmp).catch(() => {});
+    if (err.code === 'EEXIST') {
+      throw new CaptureError(
+        'ARTIFACT_EXISTS',
+        `${path} already exists; refusing to overwrite existing evidence`
+      );
+    }
+    throw err;
   }
-  await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`);
-  await rename(tmp, path);
+  await unlink(tmp);
 }
 
 /**
