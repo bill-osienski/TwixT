@@ -27,7 +27,10 @@ import { fileURLToPath } from 'node:url';
 
 import {
   FROZEN_SPEC,
-  analyse,
+  // The evidence pipeline, not the production analyser: these fixtures predate
+  // any timing run, and the committed-decision gate is exercised in
+  // test_timing.mjs instead.
+  analyseEvidence as analyse,
   bootstrapInterval,
   classify,
   decide,
@@ -38,7 +41,7 @@ import {
   BASELINE_MODEL_ID,
   CANDIDATE_MODEL_ID,
   FINGERPRINT_FIELDS,
-  runMatch,
+  runMatchWithExplicitP,
 } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -221,7 +224,7 @@ describe('the committed pool flows through both consumers unchanged', () => {
       )
     );
     const d = await mkdtemp(join(tmpdir(), 'twixt-pool-e2e-'));
-    await runMatch({
+    await runMatchWithExplicitP({
       runDir: d,
       P,
       openings: pool, // the file object itself, deliberately not pool.openings
@@ -249,7 +252,7 @@ describe('the committed pool flows through both consumers unchanged', () => {
     );
     const bare = pool.openings.map((o) => o.moves);
     const d = await mkdtemp(join(tmpdir(), 'twixt-pool-bare-'));
-    await runMatch({
+    await runMatchWithExplicitP({
       runDir: d,
       P,
       openings: bare,
@@ -279,7 +282,7 @@ describe('analysis of a real run', () => {
   before(async () => {
     root = await mkdtemp(join(tmpdir(), 'twixt-analyse-'));
     validDir = join(root, 'valid');
-    await runMatch({
+    await runMatchWithExplicitP({
       runDir: validDir,
       P,
       openings: OPENINGS,

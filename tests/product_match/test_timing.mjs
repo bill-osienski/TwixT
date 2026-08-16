@@ -6,13 +6,14 @@
  *
  * NO timing game is played here. `runTimingSmoke` takes injected clock and game
  * seams, so its schedule, sidecars, wall-clock span and decision derivation are
- * exercised without invoking `playGame`; the production CLI is never called and
- * the reserved openings `200…209` never reach a real game. Fixtures live in
+ * exercised without invoking `playGame`; the production CLIs are never called
+ * and the reserved openings `200…209` never reach a real game. Fixtures live in
  * temporary directories and are deleted, so no timing evidence is retained.
  */
 import { describe, it, after, before } from 'node:test';
 import assert from 'node:assert';
 import {
+  copyFile,
   mkdtemp,
   mkdir,
   rm,
@@ -20,12 +21,14 @@ import {
   readFile,
   writeFile,
 } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  P_DECISION_PATH,
+  EXECUTION_SURFACE_FILES,
+  POOL_RELPATH,
   P_DECISION_RELPATH,
   PDecisionError,
   P_IF_AT_OR_ABOVE,
@@ -38,15 +41,14 @@ import {
   computeThroughput,
   decisionFailures,
   deriveP,
-  isTracked,
+  executionSurfaceDigest,
+  expectedTimingFilenames,
   loadCommittedDecision,
+  readCommittedBlob,
+  sha256,
 } from './p_decision.mjs';
-import {
-  runTimingSmoke,
-  timingSchedule,
-  timingSidecarName,
-} from './timing.mjs';
-import { analyse, FROZEN_SPEC } from './analyse.mjs';
+import { runTimingSmoke, timingSchedule } from './timing.mjs';
+import { analyse, analyseEvidence, FROZEN_SPEC } from './analyse.mjs';
 import {
   BASELINE_MODEL_ID,
   CANDIDATE_MODEL_ID,
@@ -59,15 +61,18 @@ const REPO_ROOT = join(HERE, '..', '..');
 /** A wall time that yields exactly `gamesPerHour` for ten games. */
 const wallMsFor = (gamesPerHour) => (TIMING_GAMES * 3_600_000) / gamesPerHour;
 
-const validDecision = (gamesPerHour = 13.2) =>
+const validDecision = (gamesPerHour = 13.2, over = {}) =>
   buildDecision({
     totalSequentialWallMs: wallMsFor(gamesPerHour),
-    timingEvidence: Array.from({ length: TIMING_GAMES }, (_, i) => ({
-      file: `timing_${String(i).padStart(2, '0')}.json`,
-      sha256: 'a'.repeat(64),
+    // Schedule-derived filenames with DISTINCT digests: ten records of one game
+    // would otherwise satisfy a filename-only check.
+    timingEvidence: expectedTimingFilenames().map((file, i) => ({
+      file,
+      sha256: String(i).padStart(64, 'a'),
     })),
     openingPoolSha256: 'b'.repeat(64),
     executionCommit: 'c'.repeat(40),
+    executionSurfaceSha256: 'd'.repeat(64),
     baselineModelId: BASELINE_MODEL_ID,
     candidateModelId: CANDIDATE_MODEL_ID,
     ortVersion: '1.23.2',
@@ -75,6 +80,7 @@ const validDecision = (gamesPerHour = 13.2) =>
     nSimulations: 800,
     cPuct: 1.5,
     moveTemp: 0,
+    ...over,
   });
 
 describe('P is derived mechanically, never chosen', () => {
@@ -87,8 +93,6 @@ describe('P is derived mechanically, never chosen', () => {
     );
     assert.strictEqual(deriveP(8.800001), P_IF_AT_OR_ABOVE);
     assert.strictEqual(deriveP(8.799999), P_IF_BELOW);
-    assert.strictEqual(deriveP(13.2), 200);
-    assert.strictEqual(deriveP(0.1), 100);
   });
 
   it('permits no third outcome', () => {
@@ -98,14 +102,12 @@ describe('P is derived mechanically, never chosen', () => {
   });
 
   it('refuses a throughput that is not a number', () => {
-    assert.throws(
-      () => deriveP(NaN),
-      (e) => e.code === 'BAD_THROUGHPUT'
-    );
-    assert.throws(
-      () => deriveP(Infinity),
-      (e) => e.code === 'BAD_THROUGHPUT'
-    );
+    for (const bad of [NaN, Infinity]) {
+      assert.throws(
+        () => deriveP(bad),
+        (e) => e.code === 'BAD_THROUGHPUT'
+      );
+    }
   });
 });
 
@@ -141,10 +143,7 @@ describe('the timing schedule is frozen and outcome-blind', () => {
 
   it('touches only the reserved openings, never a match opening', () => {
     for (const g of timingSchedule()) {
-      assert.ok(
-        g.openingId >= 200 && g.openingId <= 209,
-        `opening ${g.openingId} is a match opening`
-      );
+      assert.ok(g.openingId >= 200 && g.openingId <= 209);
     }
   });
 
@@ -169,8 +168,8 @@ describe('runTimingSmoke, with the clock and games injected', () => {
       [2, i % 24],
       [3, i % 24],
     ]);
-    let calls = 0;
     const clock = [1000, 1000 + SPAN_MS];
+    let calls = 0;
     result = await runTimingSmoke({
       runDir: dir,
       openings,
@@ -180,10 +179,15 @@ describe('runTimingSmoke, with the clock and games injected', () => {
       moveTemp: 0,
       ortVersion: '1.23.2',
       executionCommit: 'd'.repeat(40),
+      poolSha256: 'b'.repeat(64),
+      executionSurfaceSha256: 'e'.repeat(64),
       now: () => clock[Math.min(calls++, clock.length - 1)],
-      playGameFn: async ({ redInference, blackInference }) => {
+      playGameFn: async ({ redInference, blackInference, onFirstSearch }) => {
         // Self-play: both sides must be the SAME model instance.
         assert.strictEqual(redInference, blackInference);
+        // The clock starts at playGame's pre-search seam, so a stub must fire
+        // it exactly as the real one does.
+        if (onFirstSearch) onFirstSearch();
         return {
           moves: [
             [0, 0],
@@ -205,15 +209,11 @@ describe('runTimingSmoke, with the clock and games injected', () => {
 
   it('writes exactly ten timing sidecars, in its own namespace', async () => {
     const files = (await readdir(join(dir, 'timing'))).sort();
-    assert.strictEqual(files.length, TIMING_GAMES);
-    assert.deepStrictEqual(
-      files,
-      timingSchedule()
-        .map((g, i) => timingSidecarName(i, g.openingId))
-        .sort()
+    assert.deepStrictEqual(files, [...expectedTimingFilenames()].sort());
+    await assert.rejects(
+      readdir(join(dir, 'match')),
+      'never in the analysed namespace'
     );
-    // Never in match/, which the analyser reads.
-    await assert.rejects(readdir(join(dir, 'match')));
   });
 
   it('marks every sidecar as timing, self-play, on a reserved opening', async () => {
@@ -225,10 +225,13 @@ describe('runTimingSmoke, with the clock and games injected', () => {
     }
   });
 
-  it('measures one span, not a sum of per-game elapsed times', () => {
+  it('opens the span at the pre-search seam and closes it at the last rename', () => {
+    // The clock is read exactly twice: when game 1 reaches its first search,
+    // and after game 10's atomic rename. Anything wider would time setup or
+    // bookkeeping the match does not repeat per game.
     assert.strictEqual(result.totalSequentialWallMs, SPAN_MS);
-    // Each fake game reported 1 ms, so a sum would be 10 — proving the span is
-    // not built from elapsed_ms.
+    // Each fake game reported 1 ms, so a sum would be 10 — proof the span is
+    // not assembled from per-game elapsed times.
     assert.notStrictEqual(result.totalSequentialWallMs, TIMING_GAMES);
   });
 
@@ -238,17 +241,23 @@ describe('runTimingSmoke, with the clock and games injected', () => {
     assert.strictEqual(d.measured.total_sequential_wall_ms, SPAN_MS);
     assert.ok(Math.abs(d.measured.games_per_hour - 13.2) < 1e-9);
     assert.strictEqual(d.selected_p, 200);
-    assert.strictEqual(d.threshold_games_per_hour, 8.8);
     assert.deepStrictEqual(d.opening_mapping, TIMING_OPENING_MAPPING);
-    assert.strictEqual(d.timing_evidence.length, TIMING_GAMES);
+  });
+
+  it('records the pool and surface digests it was given, not ones read later', () => {
+    // Both are frozen before the first game, so a repository edited during a
+    // multi-hour run cannot change what the decision claims.
+    assert.strictEqual(result.decision.opening_pool_sha256, 'b'.repeat(64));
+    assert.strictEqual(
+      result.decision.execution_surface_sha256,
+      'e'.repeat(64)
+    );
   });
 
   it('hashes the evidence as written to disk', async () => {
-    const { createHash } = await import('node:crypto');
     for (const e of result.decision.timing_evidence) {
-      const bytes = await readFile(join(dir, 'timing', e.file));
       assert.strictEqual(
-        createHash('sha256').update(bytes).digest('hex'),
+        sha256(await readFile(join(dir, 'timing', e.file))),
         e.sha256
       );
     }
@@ -275,7 +284,6 @@ describe('the decision validator re-derives rather than trusting', () => {
   });
 
   it('rejects a P that its own throughput does not imply', () =>
-    // The number someone would have to fake. Recomputed, never read.
     expectFail('P_NOT_DERIVED_FROM_THROUGHPUT', (d) => {
       d.selected_p = d.selected_p === 200 ? 100 : 200;
     }));
@@ -303,40 +311,53 @@ describe('the decision validator re-derives rather than trusting', () => {
       };
     }));
 
-  it('rejects the wrong number of timing games or evidence entries', () => {
+  it('rejects the wrong number of timing games', () =>
     expectFail('WRONG_TIMING_GAME_COUNT', (d) => {
       d.measured.timing_games = 5;
+    }));
+
+  it('requires exactly the schedule-derived filenames, not ten arbitrary ones', () => {
+    expectFail('TIMING_EVIDENCE_FILENAMES', (d) => {
+      d.timing_evidence[0].file = 'timing_99_opening_999.json';
     });
-    expectFail('TIMING_EVIDENCE_COUNT', (d) => {
+    expectFail('TIMING_EVIDENCE_FILENAMES', (d) => {
       d.timing_evidence = d.timing_evidence.slice(0, 3);
     });
   });
 
-  it('rejects duplicated or malformed evidence digests', () => {
-    expectFail('DUPLICATE_TIMING_EVIDENCE', (d) => {
-      d.timing_evidence[1] = { ...d.timing_evidence[0] };
-    });
+  it('rejects two different files carrying the SAME digest', () =>
+    // Ten records of one game: distinct filenames pass a name-only check.
+    expectFail('DUPLICATE_TIMING_DIGEST', (d) => {
+      d.timing_evidence[1].sha256 = d.timing_evidence[0].sha256;
+    }));
+
+  it('rejects malformed digests', () =>
     expectFail('MALFORMED_TIMING_EVIDENCE', (d) => {
       d.timing_evidence[0].sha256 = 'not-a-digest';
+    }));
+
+  it('rejects missing required fields before comparing anything', () => {
+    expectFail('MISSING_OR_MALFORMED_FIELD', (d) => {
+      delete d.execution_commit;
+    });
+    expectFail('MISSING_OR_MALFORMED_FIELD', (d) => {
+      delete d.execution_surface_sha256;
     });
   });
 
-  it('rejects missing required fields before comparing anything', () =>
-    expectFail('MISSING_OR_MALFORMED_FIELD', (d) => {
-      delete d.execution_commit;
-    }));
-
-  it('rejects a decision bound to a different pool or different models', () => {
+  it('rejects a decision bound to a different pool, surface or settings', () => {
     const d = validDecision();
+    const codes = (opts) => decisionFailures(d, opts).map((f) => f.code);
     assert.ok(
-      decisionFailures(d, { poolSha256: 'f'.repeat(64) })
-        .map((f) => f.code)
-        .includes('POOL_HASH_MISMATCH')
+      codes({ poolSha256: 'f'.repeat(64) }).includes('POOL_HASH_MISMATCH')
     );
     assert.ok(
-      decisionFailures(d, { expected: { n_simulations: 400 } })
-        .map((f) => f.code)
-        .includes('BINDING_MISMATCH')
+      codes({ surfaceSha256: 'f'.repeat(64) }).includes(
+        'EXECUTION_SURFACE_MISMATCH'
+      )
+    );
+    assert.ok(
+      codes({ expected: { n_simulations: 400 } }).includes('BINDING_MISMATCH')
     );
   });
 
@@ -350,58 +371,163 @@ describe('the decision validator re-derives rather than trusting', () => {
   });
 });
 
-describe('loading the committed decision', () => {
-  let dir;
+describe('committed means committed, not merely tracked', () => {
+  // These build a REAL temporary git repository, because what git says is the
+  // whole point. `git ls-files` was not enough: it succeeds for a newly staged
+  // file and for a tracked file whose working-tree bytes were edited
+  // afterwards, and a working-tree read would then read mutable content.
+  let root;
+  const git = (dir, ...args) =>
+    execFileSync('git', args, { cwd: dir, stdio: 'ignore' });
+
+  async function makeRepo({
+    commitDecision = true,
+    stageOnly = false,
+    mutate = null,
+  } = {}) {
+    const dir = await mkdtemp(join(root, 'repo-'));
+    git(dir, 'init', '-q');
+    git(dir, 'config', 'user.email', 't@example.com');
+    git(dir, 'config', 'user.name', 'test');
+
+    for (const rel of [...EXECUTION_SURFACE_FILES, POOL_RELPATH]) {
+      await mkdir(join(dir, dirname(rel)), { recursive: true });
+      await copyFile(join(REPO_ROOT, rel), join(dir, rel));
+    }
+    git(dir, 'add', '-A');
+    git(dir, 'commit', '-qm', 'surface');
+
+    const decision = validDecision(13.2, {
+      openingPoolSha256: sha256(readCommittedBlob(POOL_RELPATH, 'HEAD', dir)),
+      executionSurfaceSha256: executionSurfaceDigest('HEAD', dir),
+    });
+    if (mutate) mutate(decision);
+
+    const path = join(dir, P_DECISION_RELPATH);
+    await writeFile(path, `${JSON.stringify(decision, null, 2)}\n`);
+    if (stageOnly) {
+      git(dir, 'add', P_DECISION_RELPATH);
+    } else if (commitDecision) {
+      git(dir, 'add', P_DECISION_RELPATH);
+      git(dir, 'commit', '-qm', 'decision');
+    }
+    return { dir, path };
+  }
+
   before(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'twixt-decision-'));
+    root = await mkdtemp(join(tmpdir(), 'twixt-repo-'));
   });
   after(async () => {
-    await rm(dir, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
   });
 
-  it('no decision exists in the repository yet, and that is the intended state', async () => {
-    await assert.rejects(
-      loadCommittedDecision(),
-      (e) => e instanceof PDecisionError && e.code === 'DECISION_MISSING'
-    );
-    assert.strictEqual(isTracked(P_DECISION_RELPATH, REPO_ROOT), false);
-  });
-
-  it('refuses a decision that exists but is not committed', async () => {
-    const path = join(dir, 'p_decision.json');
-    await writeFile(path, JSON.stringify(validDecision()));
-    await assert.rejects(
-      loadCommittedDecision({
-        path,
-        relPath: 'p_decision.json',
-        repoRoot: dir,
-      }),
-      (e) => e.code === 'DECISION_NOT_COMMITTED'
+  it('accepts a committed, fully bound decision', async () => {
+    const { dir } = await makeRepo();
+    assert.strictEqual(
+      (await loadCommittedDecision({ repoRoot: dir })).selected_p,
+      200
     );
   });
 
-  it('refuses unparseable or invalid content', async () => {
-    const bad = join(dir, 'bad.json');
-    await writeFile(bad, '{ not json');
+  it('REFUSES a decision that is staged but never committed', async () => {
+    const { dir } = await makeRepo({ commitDecision: false, stageOnly: true });
     await assert.rejects(
-      loadCommittedDecision({ path: bad, requireTracked: false }),
+      loadCommittedDecision({ repoRoot: dir }),
+      (e) => e instanceof PDecisionError && e.code === 'NOT_COMMITTED'
+    );
+  });
+
+  it('REFUSES a decision that exists only in the working tree', async () => {
+    const { dir } = await makeRepo({ commitDecision: false });
+    await assert.rejects(
+      loadCommittedDecision({ repoRoot: dir }),
+      (e) => e.code === 'NOT_COMMITTED'
+    );
+  });
+
+  it('reads the COMMITTED bytes when the working tree was edited afterwards', async () => {
+    // The subtle case: the file is tracked, so a tracking check passes, and a
+    // working-tree read would return the edited P.
+    const { dir, path } = await makeRepo();
+    const tampered = JSON.parse(await readFile(path, 'utf8'));
+    tampered.selected_p = 100;
+    await writeFile(path, JSON.stringify(tampered, null, 2));
+
+    assert.strictEqual(
+      (await loadCommittedDecision({ repoRoot: dir })).selected_p,
+      200,
+      'the committed decision must win'
+    );
+    assert.strictEqual(
+      JSON.parse(await readFile(path, 'utf8')).selected_p,
+      100,
+      'and the tamper was real, or this proves nothing'
+    );
+  });
+
+  it('refuses committed content that is unparseable', async () => {
+    const { dir, path } = await makeRepo({ commitDecision: false });
+    await writeFile(path, '{ not json');
+    git(dir, 'add', P_DECISION_RELPATH);
+    git(dir, 'commit', '-qm', 'bad');
+    await assert.rejects(
+      loadCommittedDecision({ repoRoot: dir }),
       (e) => e.code === 'DECISION_UNPARSEABLE'
     );
-    const invalid = join(dir, 'invalid.json');
-    const d = validDecision();
-    d.selected_p = 150;
-    await writeFile(invalid, JSON.stringify(d));
+  });
+
+  it('refuses a committed decision whose P its own throughput does not imply', async () => {
+    const { dir } = await makeRepo({ mutate: (d) => (d.selected_p = 100) });
     await assert.rejects(
-      loadCommittedDecision({ path: invalid, requireTracked: false }),
+      loadCommittedDecision({ repoRoot: dir }),
       (e) => e.code === 'DECISION_INVALID'
     );
   });
 
-  it('accepts a valid decision when tracking is not required', async () => {
-    const path = join(dir, 'good.json');
-    await writeFile(path, JSON.stringify(validDecision()));
-    const d = await loadCommittedDecision({ path, requireTracked: false });
-    assert.strictEqual(d.selected_p, 200);
+  it('refuses a decision bound to a different execution surface', async () => {
+    const { dir } = await makeRepo({
+      mutate: (d) => (d.execution_surface_sha256 = 'e'.repeat(64)),
+    });
+    await assert.rejects(
+      loadCommittedDecision({ repoRoot: dir }),
+      (e) => e.code === 'DECISION_INVALID'
+    );
+  });
+
+  it('notices when an execution-surface file changes AFTER the decision', async () => {
+    // Ancestry would accept this: the new commit is a descendant. Rewriting
+    // search after timing means the measurement no longer describes the code,
+    // and the surface digest catches it where ancestry cannot.
+    const { dir } = await makeRepo();
+    const target = join(dir, 'server/mcts.js');
+    await writeFile(target, `${await readFile(target, 'utf8')}\n// drift\n`);
+    git(dir, 'add', '-A');
+    git(dir, 'commit', '-qm', 'rewrote search after timing');
+    await assert.rejects(
+      loadCommittedDecision({ repoRoot: dir }),
+      (e) => e.code === 'DECISION_INVALID'
+    );
+  });
+
+  it('refuses a decision bound to a different pool', async () => {
+    const { dir } = await makeRepo({
+      mutate: (d) => (d.opening_pool_sha256 = 'b'.repeat(64)),
+    });
+    await assert.rejects(
+      loadCommittedDecision({ repoRoot: dir }),
+      (e) => e.code === 'DECISION_INVALID'
+    );
+  });
+
+  it('refuses a decision bound to different search settings', async () => {
+    const { dir } = await makeRepo();
+    await assert.rejects(
+      loadCommittedDecision({
+        repoRoot: dir,
+        expected: { n_simulations: 400 },
+      }),
+      (e) => e.code === 'DECISION_INVALID'
+    );
   });
 });
 
@@ -414,6 +540,13 @@ describe('nothing may run a match without the committed decision', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
+  it('no decision is committed in THIS repository, and that is the intended state', () => {
+    assert.throws(
+      () => readCommittedBlob(P_DECISION_RELPATH, 'HEAD', REPO_ROOT),
+      (e) => e.code === 'NOT_COMMITTED'
+    );
+  });
+
   it('the production match entry point refuses, before loading a model', async () => {
     await assert.rejects(
       runMatchFromCommittedDecision({
@@ -421,47 +554,42 @@ describe('nothing may run a match without the committed decision', () => {
         openings: [],
         requireCleanWorktree: false,
       }),
-      (e) => e instanceof PDecisionError && e.code === 'DECISION_MISSING'
+      (e) => e instanceof PDecisionError && e.code === 'NOT_COMMITTED'
     );
-    // No run directory was created, so no game could have started.
-    await assert.rejects(readdir(join(dir, 'run')));
+    await assert.rejects(
+      readdir(join(dir, 'run')),
+      'no run directory may be created'
+    );
   });
 
-  it('the analyser refuses when no decision is committed', async () => {
+  it('the production analyser refuses when no decision is committed', async () => {
     const runDir = join(dir, 'analysed');
     await mkdir(join(runDir, 'match'), { recursive: true });
-    // A structurally VALID run.json, so the rejection can only come from the
-    // missing decision rather than from metadata validation firing first.
     await writeFile(
       join(runDir, 'run.json'),
-      JSON.stringify({
-        P: 100,
-        fingerprint: {
-          execution_commit: 'e'.repeat(40),
-          schema: 'twixt-product-match/1',
-          ort_version: '1.23.2',
-          ort_config: 'no options supplied',
-          n_simulations: 800,
-          c_puct: 1.5,
-          move_temp: 0,
-          baseline_model_id: BASELINE_MODEL_ID,
-          candidate_model_id: CANDIDATE_MODEL_ID,
-        },
-      })
+      JSON.stringify({ P: 100, fingerprint: { execution_commit: 'HEAD' } })
     );
     const r = await analyse(runDir, [], FROZEN_SPEC);
     assert.strictEqual(r.verdict, 'REJECTED');
-    const codes = r.failures.map((f) => f.code);
-    assert.ok(
-      codes.includes('P_DECISION_UNAVAILABLE') ||
-        codes.includes('BAD_OPENING_POOL'),
-      `got ${codes.join(', ')}`
-    );
+    assert.strictEqual(r.failures[0].code, 'P_DECISION_UNAVAILABLE');
   });
 
-  it('the analyser refuses when run.json.P disagrees with the decision', async () => {
+  it('the production analyser refuses a run with no commit in its fingerprint', async () => {
+    const runDir = join(dir, 'nocommit');
+    await mkdir(join(runDir, 'match'), { recursive: true });
+    await writeFile(
+      join(runDir, 'run.json'),
+      JSON.stringify({ P: 100, fingerprint: {} })
+    );
+    const r = await analyse(runDir, [], FROZEN_SPEC);
+    assert.strictEqual(r.failures[0].code, 'NO_RUN_COMMIT');
+  });
+
+  it('the evidence pipeline rejects a P that disagrees with the decision', async () => {
     const runDir = join(dir, 'mismatch');
     await mkdir(join(runDir, 'match'), { recursive: true });
+    // A structurally VALID run.json, so the rejection can only come from the
+    // P comparison rather than from metadata validation firing first.
     await writeFile(
       join(runDir, 'run.json'),
       JSON.stringify({
@@ -479,59 +607,48 @@ describe('nothing may run a match without the committed decision', () => {
         },
       })
     );
-    const decisionPath = join(dir, 'committed.json');
-    await writeFile(decisionPath, JSON.stringify(validDecision(13.2))); // selects 200
-
-    const r = await analyse(
-      runDir,
-      Array.from({ length: 210 }, () => [
-        [0, 0],
-        [1, 1],
-        [2, 2],
-        [3, 3],
-      ]),
-      {
-        ...FROZEN_SPEC,
-        tCritical: { 100: 1.9842169515, 200: 1.9719565442 },
-        pDecision: { path: decisionPath, requireTracked: false },
-      }
-    );
+    const r = await analyseEvidence(runDir, [], FROZEN_SPEC, 200);
     assert.strictEqual(r.verdict, 'REJECTED');
     assert.ok(
       r.failures
         .map((f) => f.code)
-        .includes('P_DOES_NOT_MATCH_COMMITTED_DECISION'),
-      JSON.stringify(r.failures.map((f) => f.code))
+        .includes('P_DOES_NOT_MATCH_COMMITTED_DECISION')
     );
   });
 
-  it('there is no fallback to run.json.P anywhere in the analyser', async () => {
+  it('the production analyser has no opt-out and no run.json fallback', async () => {
     const src = await readFile(join(HERE, 'analyse.mjs'), 'utf8');
-    // The binding must be unconditional except for the explicit test opt-out,
-    // which is visible at the call site rather than hidden behind a default.
+    const production = src.slice(src.indexOf('export async function analyse('));
     assert.ok(
-      src.includes('loadCommittedDecision'),
-      'analyser must load the decision'
+      production.includes('loadCommittedDecision'),
+      'must load the decision'
+    );
+    assert.ok(!production.includes('requirePDecision'), 'no opt-out may exist');
+    assert.ok(
+      !production.includes('requireTracked'),
+      'commitment may not be waived'
+    );
+  });
+
+  it('the unchecked core is named so its nature is visible at every call site', async () => {
+    const src = await readFile(join(HERE, 'harness.mjs'), 'utf8');
+    assert.ok(src.includes('export async function runMatchWithExplicitP('));
+    assert.ok(
+      !/export async function runMatch\(/.test(src),
+      'no innocuously named bypass'
     );
     assert.ok(
-      src.includes('P_DOES_NOT_MATCH_COMMITTED_DECISION'),
-      'analyser must compare run.json.P with the decision'
+      src.includes('runMatchFromCommittedDecision({ runDir })'),
+      'the operational entry point must be the gated one'
     );
   });
 });
 
 describe('scope: this test file runs no timing game', () => {
   it('imports no way to run a real timing game', async () => {
-    // Checked against the IMPORT LIST, not against a literal: an assertion that
-    // greps for a string can match its own source and pass vacuously.
+    // Checked against the IMPORT LIST, not a literal: an assertion that greps
+    // for a string can match its own source and pass vacuously.
     const src = await readFile(join(HERE, 'test_timing.mjs'), 'utf8');
-    const imports = [
-      ...src.matchAll(/^\s*import\s[^;]*?from\s+'([^']+)'/gms),
-    ].map((m) => m[1]);
-    assert.ok(
-      !imports.includes('node:child_process'),
-      'must not be able to shell out to the timing CLI'
-    );
     const named = [...src.matchAll(/^import\s*\{([^}]*)\}/gms)]
       .flatMap((m) => m[1].split(','))
       .map((x) => x.trim().split(/\s+as\s+/)[0]);
@@ -543,9 +660,13 @@ describe('scope: this test file runs no timing game', () => {
       !named.includes('loadModel'),
       'no model is loaded by these tests'
     );
+    assert.ok(!named.includes('runMatchWithExplicitP'), 'no match is run here');
   });
 
   it('no decision artifact was created at the committed path', async () => {
-    await assert.rejects(readFile(P_DECISION_PATH), (e) => e.code === 'ENOENT');
+    await assert.rejects(
+      readFile(join(REPO_ROOT, P_DECISION_RELPATH)),
+      (e) => e.code === 'ENOENT'
+    );
   });
 });

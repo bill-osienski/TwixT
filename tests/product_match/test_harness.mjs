@@ -38,7 +38,7 @@ import {
   hardPolicy,
   loadModel,
   playGame,
-  runMatch,
+  runMatchWithExplicitP,
   sidecarName,
 } from './harness.mjs';
 
@@ -307,7 +307,7 @@ describe('runMatch and resumption', () => {
   });
 
   it('plays complete pairs and writes no temp files behind', async () => {
-    const summary = await runMatch(opts({ P: 2 }));
+    const summary = await runMatchWithExplicitP(opts({ P: 2 }));
     assert.strictEqual(summary.played, 4);
     assert.deepStrictEqual(await listMatch(), [
       sidecarName(0, 0),
@@ -319,7 +319,7 @@ describe('runMatch and resumption', () => {
   });
 
   it('skips completed pairs on a clean re-run', async () => {
-    const summary = await runMatch(opts({ P: 2 }));
+    const summary = await runMatchWithExplicitP(opts({ P: 2 }));
     assert.strictEqual(summary.skipped, 2);
     assert.strictEqual(summary.played, 0);
   });
@@ -328,7 +328,7 @@ describe('runMatch and resumption', () => {
     const d = await mkdtemp(join(tmpdir(), 'twixt-resume-'));
     // Interrupt for real: throw after game 0 of pair 0 is on disk.
     await assert.rejects(
-      runMatch(
+      runMatchWithExplicitP(
         opts({
           runDir: d,
           P: 1,
@@ -344,7 +344,7 @@ describe('runMatch and resumption', () => {
       await readFile(join(d, 'match', sidecarName(0, 0)), 'utf8')
     );
 
-    const summary = await runMatch(opts({ runDir: d, P: 1 }));
+    const summary = await runMatchWithExplicitP(opts({ runDir: d, P: 1 }));
     assert.strictEqual(
       summary.quarantined,
       1,
@@ -374,7 +374,7 @@ describe('runMatch and resumption', () => {
   it('aborts when a replay does not reproduce the quarantined game', async () => {
     const d = await mkdtemp(join(tmpdir(), 'twixt-mismatch-'));
     await assert.rejects(
-      runMatch(
+      runMatchWithExplicitP(
         opts({
           runDir: d,
           P: 1,
@@ -392,7 +392,7 @@ describe('runMatch and resumption', () => {
     await writeFile(p, JSON.stringify(s));
 
     await assert.rejects(
-      runMatch(opts({ runDir: d, P: 1 })),
+      runMatchWithExplicitP(opts({ runDir: d, P: 1 })),
       (e) => e instanceof HarnessError && e.code === 'REPLAY_MISMATCH'
     );
     // BOTH copies survive for diagnosis: the original observation and the
@@ -409,14 +409,14 @@ describe('runMatch and resumption', () => {
     // skipped: that is the mixed-implementation run the fingerprint exists to
     // prevent, and a filename proves nothing about who wrote it.
     const d = await mkdtemp(join(tmpdir(), 'twixt-stale-'));
-    await runMatch(opts({ runDir: d, P: 1 }));
+    await runMatchWithExplicitP(opts({ runDir: d, P: 1 }));
     const p = join(d, 'match', sidecarName(0, 0));
     const s = JSON.parse(await readFile(p, 'utf8'));
     s.execution_commit = 'd'.repeat(40);
     await writeFile(p, JSON.stringify(s));
 
     await assert.rejects(
-      runMatch(opts({ runDir: d, P: 1 })),
+      runMatchWithExplicitP(opts({ runDir: d, P: 1 })),
       (e) => e instanceof HarnessError && e.code === 'EXISTING_SIDECAR_INVALID'
     );
     await rm(d, { recursive: true, force: true });
@@ -425,7 +425,7 @@ describe('runMatch and resumption', () => {
   it('validates a half-pair survivor before quarantining it', async () => {
     const d = await mkdtemp(join(tmpdir(), 'twixt-staleq-'));
     await assert.rejects(
-      runMatch(
+      runMatchWithExplicitP(
         opts({
           runDir: d,
           P: 1,
@@ -442,7 +442,7 @@ describe('runMatch and resumption', () => {
     await writeFile(p, JSON.stringify(s));
 
     await assert.rejects(
-      runMatch(opts({ runDir: d, P: 1 })),
+      runMatchWithExplicitP(opts({ runDir: d, P: 1 })),
       (e) => e instanceof HarnessError && e.code === 'EXISTING_SIDECAR_INVALID'
     );
     await rm(d, { recursive: true, force: true });
@@ -460,14 +460,14 @@ describe('runMatch and resumption', () => {
     // Two interruptions, then a completing run. Each restart that finds a
     // half-pair files a NEW record rather than clobbering the previous one.
     await assert.rejects(
-      runMatch(opts(interruptFirstGame)),
+      runMatchWithExplicitP(opts(interruptFirstGame)),
       /simulated interruption/
     );
     await assert.rejects(
-      runMatch(opts(interruptFirstGame)),
+      runMatchWithExplicitP(opts(interruptFirstGame)),
       /simulated interruption/
     );
-    const summary = await runMatch(opts({ runDir: d, P: 1 }));
+    const summary = await runMatchWithExplicitP(opts({ runDir: d, P: 1 }));
 
     const q = (await readdir(join(d, 'quarantine'))).sort();
     assert.deepStrictEqual(q, [
@@ -487,7 +487,7 @@ describe('runMatch and resumption', () => {
     // is due. Recovery must come from the quarantine records themselves.
     const d = await mkdtemp(join(tmpdir(), 'twixt-crashgap-'));
     await assert.rejects(
-      runMatch(
+      runMatchWithExplicitP(
         opts({
           runDir: d,
           P: 1,
@@ -505,7 +505,7 @@ describe('runMatch and resumption', () => {
     );
     assert.deepStrictEqual(await readdir(join(d, 'match')), []);
 
-    const summary = await runMatch(opts({ runDir: d, P: 1 }));
+    const summary = await runMatchWithExplicitP(opts({ runDir: d, P: 1 }));
     assert.strictEqual(
       summary.replayed,
       1,
@@ -518,7 +518,7 @@ describe('runMatch and resumption', () => {
   it('re-checks a completed pair against its quarantine history on later restarts', async () => {
     const d = await mkdtemp(join(tmpdir(), 'twixt-recheck-'));
     await assert.rejects(
-      runMatch(
+      runMatchWithExplicitP(
         opts({
           runDir: d,
           P: 1,
@@ -529,11 +529,11 @@ describe('runMatch and resumption', () => {
       ),
       /simulated interruption/
     );
-    await runMatch(opts({ runDir: d, P: 1 })); // completes and verifies
+    await runMatchWithExplicitP(opts({ runDir: d, P: 1 })); // completes and verifies
     // A third start finds the pair complete AND a quarantine record present;
     // it must re-verify from disk rather than either replaying forever or
     // forgetting the record exists.
-    const summary = await runMatch(opts({ runDir: d, P: 1 }));
+    const summary = await runMatchWithExplicitP(opts({ runDir: d, P: 1 }));
     assert.strictEqual(summary.skipped, 1);
     assert.strictEqual(summary.played, 0);
     assert.ok(
@@ -549,7 +549,7 @@ describe('runMatch and resumption', () => {
     // expectations are no longer parameters at all.
     const d = await mkdtemp(join(tmpdir(), 'twixt-swap-'));
     await assert.rejects(
-      runMatch(
+      runMatchWithExplicitP(
         opts({
           runDir: d,
           P: 1,
@@ -575,7 +575,7 @@ describe('runMatch and resumption', () => {
     // this the error surfaces only at analysis, after the match time is spent.
     const d = await mkdtemp(join(tmpdir(), 'twixt-roles-'));
     await assert.rejects(
-      runMatch(
+      runMatchWithExplicitP(
         opts({
           runDir: d,
           P: 1,
@@ -593,14 +593,14 @@ describe('runMatch and resumption', () => {
     // match whose halves were played by different code is the failure this
     // prevents, and from the inside it looks entirely benign.
     await assert.rejects(
-      runMatch(opts({ P: 2, nSimulations: SIMS + 1 })),
+      runMatchWithExplicitP(opts({ P: 2, nSimulations: SIMS + 1 })),
       (e) => e instanceof HarnessError && e.code === 'FINGERPRINT_MISMATCH'
     );
   });
 
   it('refuses to resume with a different P', async () => {
     await assert.rejects(
-      runMatch(opts({ P: 3 })),
+      runMatchWithExplicitP(opts({ P: 3 })),
       (e) => e instanceof HarnessError && e.code === 'FINGERPRINT_MISMATCH'
     );
   });

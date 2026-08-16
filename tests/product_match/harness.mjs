@@ -35,9 +35,9 @@ import {
 } from '../../server/readout_policy.js';
 import { openingMovesFrom } from './generate_openings.mjs';
 import {
-  P_DECISION_RELPATH,
+  POOL_RELPATH,
   loadCommittedDecision,
-  sha256 as hashBytes,
+  readCommittedBlob,
 } from './p_decision.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -127,6 +127,7 @@ export async function playGame({
   nSimulations,
   cPuct = 1.5,
   difficulty = 'hard',
+  onFirstSearch = null,
 }) {
   // The readout temperature is taken from the shipped table, never passed in.
   // Accepting it as a parameter would let a caller play at a different
@@ -153,8 +154,17 @@ export async function playGame({
   }
 
   const t0 = Date.now();
+  let firstSearch = true;
   while (!state.isTerminal()) {
     const mcts = state.toMove === 'red' ? redMcts : blackMcts;
+    // The exact seam the timing span is preregistered to start at: after the
+    // MCTS objects exist and the opening has been replayed, immediately before
+    // the first search. Anything earlier would time setup the match does not
+    // pay per game.
+    if (firstSearch) {
+      firstSearch = false;
+      if (onFirstSearch) onFirstSearch();
+    }
     const { visitCounts } = await mcts.search(state);
     if (visitCounts.size === 0)
       fail('EMPTY_SEARCH', `search returned no moves at ply ${state.ply}`);
@@ -291,7 +301,7 @@ const REPLAY_FIELDS = ['moves', 'result', 'termination', 'ply_count'];
  * `onGameComplete` exists so tests can interrupt mid-pair. Production passes
  * nothing.
  */
-export async function runMatch({
+export async function runMatchWithExplicitP({
   runDir,
   P,
   openings,
@@ -613,9 +623,7 @@ export async function runMatchFromCommittedDecision({
   const ortV = await ortVersion();
 
   const decision = await loadCommittedDecision({
-    poolSha256: hashBytes(
-      await readFile(join(REPO_ROOT_DIR, 'tests/product_match/openings.json'))
-    ),
+    commit: 'HEAD',
     expected: {
       baseline_model_id: BASELINE_MODEL_ID,
       candidate_model_id: CANDIDATE_MODEL_ID,
@@ -627,32 +635,51 @@ export async function runMatchFromCommittedDecision({
     },
   });
 
-  // The timing measurement must describe the code the match will run. Equality
-  // of commits is unsatisfiable — committing the decision itself moves HEAD —
-  // so the decision's commit must be an ANCESTOR of the match's.
-  const commit = executionCommit({ requireClean: requireCleanWorktree });
-  try {
-    execFileSync(
-      'git',
-      ['merge-base', '--is-ancestor', decision.execution_commit, commit],
-      { cwd: REPO_ROOT_DIR, stdio: 'ignore' }
-    );
-  } catch {
-    fail(
-      'DECISION_COMMIT_NOT_ANCESTOR',
-      `${P_DECISION_RELPATH} was produced at ${decision.execution_commit}, which is not an ` +
-        `ancestor of the match commit ${commit}; the timing measurement does not describe this code`
-    );
-  }
+  // Ancestry is NOT sufficient. Every descendant of the timing commit passes an
+  // is-ancestor check, including one that rewrote MCTS, inference, the readout
+  // policy or this harness afterwards — a timing measurement that no longer
+  // describes the match code. loadCommittedDecision binds the execution-surface
+  // digest instead, computed from the same commit, which catches that directly.
+  // A clean worktree is required so HEAD actually describes the running code;
+  // the decision was validated against that same commit above.
+  executionCommit({ requireClean: requireCleanWorktree });
 
-  return runMatch({
+  return runMatchWithExplicitP({
     runDir,
     P: decision.selected_p,
-    openings,
+    openings:
+      openings ??
+      JSON.parse(
+        readCommittedBlob(POOL_RELPATH, 'HEAD', REPO_ROOT_DIR).toString('utf8')
+      ),
     baselineDir,
     candidateDir,
     nSimulations: policy.nSims,
     requireCleanWorktree,
     onGameComplete,
   });
+}
+
+// --- the only operational match entry point ---------------------------------
+// `runMatchWithExplicitP` takes P from its caller and is exported for the
+// timing-independent tests. THIS is what an operator runs, and it cannot start
+// without a committed, fully-bound decision.
+
+const isMain =
+  process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+if (isMain) {
+  const runDir = process.argv[2];
+  if (!runDir) {
+    console.error(
+      'usage: harness.mjs <run_dir>   (P comes from the committed decision)'
+    );
+    process.exit(2);
+  }
+  try {
+    const summary = await runMatchFromCommittedDecision({ runDir });
+    console.log(JSON.stringify(summary, null, 2));
+  } catch (err) {
+    console.error(`\nMATCH REFUSED — ${err.code ?? 'ERROR'}\n${err.message}\n`);
+    process.exit(1);
+  }
 }

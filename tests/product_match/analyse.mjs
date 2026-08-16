@@ -28,7 +28,7 @@ import { TwixtState, MAX_PLIES } from '../../server/gameLogic.js';
 import { openingMovesFrom } from './generate_openings.mjs';
 // Enforces the committed P binding. Loads no model and plays no game, so the
 // analyser stays independent of the harness.
-import { loadCommittedDecision, P_DECISION_RELPATH } from './p_decision.mjs';
+import { P_DECISION_RELPATH, loadCommittedDecision } from './p_decision.mjs';
 
 /**
  * The frozen constants. Defaults are the specification's; tests may pass their
@@ -295,7 +295,20 @@ export function decide(boot, t) {
 
 // --- analysis ---------------------------------------------------------------
 
-export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
+/**
+ * The evidence pipeline, given an already-decided `P`.
+ *
+ * Exported for tests, which need to exercise cardinality, replay and the
+ * statistic on fixtures that predate any timing run. It is NOT the production
+ * path: it cannot check the committed decision, because it is handed `P`
+ * rather than establishing it. `analyse` below is the production entry point.
+ */
+export async function analyseEvidence(
+  runDir,
+  openings,
+  spec = FROZEN_SPEC,
+  expectedP = null
+) {
   const failures = [];
   const fail = (code, detail) => failures.push({ code, detail });
 
@@ -332,42 +345,18 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
   if (metaFailures.length)
     return { verdict: 'REJECTED', failures: metaFailures };
 
-  // `P` must equal the COMMITTED decision. `run.json` is written by the match
-  // about itself, so it is corroboration and never the authority — and there
-  // is deliberately no fallback to it.
-  let pDecision = null;
-  if (spec.requirePDecision !== false) {
-    try {
-      pDecision = await loadCommittedDecision(spec.pDecision ?? {});
-    } catch (err) {
-      return {
-        verdict: 'REJECTED',
-        failures: [
-          {
-            code: 'P_DECISION_UNAVAILABLE',
-            detail: {
-              path: P_DECISION_RELPATH,
-              code: err.code,
-              message: err.message,
-            },
-          },
-        ],
-      };
-    }
-    if (runMeta.P !== pDecision.selected_p) {
-      return {
-        verdict: 'REJECTED',
-        failures: [
-          {
-            code: 'P_DOES_NOT_MATCH_COMMITTED_DECISION',
-            detail: {
-              run_json_P: runMeta.P,
-              committed_P: pDecision.selected_p,
-            },
-          },
-        ],
-      };
-    }
+  // `P` is supplied by the caller. `analyse` derives it from the committed
+  // decision; a test may pass it directly. `run.json` is never the authority.
+  if (expectedP !== null && runMeta.P !== expectedP) {
+    return {
+      verdict: 'REJECTED',
+      failures: [
+        {
+          code: 'P_DOES_NOT_MATCH_COMMITTED_DECISION',
+          detail: { run_json_P: runMeta.P, committed_P: expectedP },
+        },
+      ],
+    };
   }
 
   const P = runMeta.P;
@@ -647,13 +636,7 @@ export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
     pair_tally: tally,
     pair_scores: scores,
     fingerprint: Object.fromEntries(FP.map((f) => [f, first[f]])),
-    p_decision: pDecision
-      ? {
-          selected_p: pDecision.selected_p,
-          games_per_hour: pDecision.measured.games_per_hour,
-          execution_commit: pDecision.execution_commit,
-        }
-      : null,
+    expected_p: expectedP,
     failures: [],
   };
 }
@@ -692,4 +675,87 @@ if (isMain) {
     `  pairs W/D/L     ${report.pair_tally.win}/${report.pair_tally.draw}/${report.pair_tally.loss}`
   );
   process.exit(0);
+}
+
+/**
+ * The production analyser.
+ *
+ * Always loads the committed decision — from the RUN's own commit, taken from
+ * its fingerprint, so the decision that authorized this match is the one
+ * checked — and enforces every binding the match entry point does: pool bytes,
+ * execution surface, model identities and search settings, all read from that
+ * same commit.
+ *
+ * There is no option to skip this and no fallback to `run.json.P`. Tests that
+ * need to analyse fixture evidence call `analyseEvidence` instead, which is
+ * visibly not the production path.
+ */
+export async function analyse(runDir, openings, spec = FROZEN_SPEC) {
+  let runMeta;
+  try {
+    runMeta = JSON.parse(await readFile(join(runDir, 'run.json'), 'utf8'));
+  } catch {
+    return {
+      verdict: 'REJECTED',
+      failures: [{ code: 'NO_RUN_METADATA', detail: join(runDir, 'run.json') }],
+    };
+  }
+  const commit = runMeta?.fingerprint?.execution_commit;
+  if (typeof commit !== 'string' || commit.length === 0) {
+    return {
+      verdict: 'REJECTED',
+      failures: [
+        {
+          code: 'NO_RUN_COMMIT',
+          detail: { fingerprint: runMeta?.fingerprint ?? null },
+        },
+      ],
+    };
+  }
+
+  let decision;
+  try {
+    decision = await loadCommittedDecision({
+      commit,
+      expected: {
+        baseline_model_id: spec.baselineModelId,
+        candidate_model_id: spec.candidateModelId,
+        ort_config: spec.ortConfig,
+        n_simulations: spec.nSimulations,
+        c_puct: spec.cPuct,
+        move_temp: spec.moveTemp,
+      },
+    });
+  } catch (err) {
+    return {
+      verdict: 'REJECTED',
+      failures: [
+        {
+          code: 'P_DECISION_UNAVAILABLE',
+          detail: {
+            path: P_DECISION_RELPATH,
+            commit,
+            code: err.code,
+            message: err.message,
+          },
+        },
+      ],
+    };
+  }
+
+  const report = await analyseEvidence(
+    runDir,
+    openings,
+    spec,
+    decision.selected_p
+  );
+  if (report.verdict === 'ACCEPTED') {
+    report.p_decision = {
+      selected_p: decision.selected_p,
+      games_per_hour: decision.measured.games_per_hour,
+      execution_commit: decision.execution_commit,
+      execution_surface_sha256: decision.execution_surface_sha256,
+    };
+  }
+  return report;
 }
