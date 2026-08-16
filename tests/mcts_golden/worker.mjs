@@ -20,7 +20,7 @@
  *
  * Specification: docs/superpowers/2026-08-16-mcts-memory-remediation-design.md
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -44,7 +44,13 @@ export const EXIT_REFUSED = 3;
 export const EXIT_FAILED = 4;
 
 /** Refusals that mean "a guard said no", as opposed to "something broke". */
-const REFUSAL_CODES = new Set(['WORKTREE_DIRTY', 'EXECUTION_SURFACE_MOVED']);
+const REFUSAL_CODES = new Set([
+  'WORKTREE_DIRTY',
+  'EXECUTION_SURFACE_MOVED',
+  'FIXTURE_SHA256',
+  'ARTIFACT_EXISTS',
+  'STALE_TEMP_ARTIFACT',
+]);
 
 /**
  * Resolve a case's position: read the sidecar, replay its prefix, describe it.
@@ -58,6 +64,21 @@ export function readFixture(testCase) {
   const { position } = testCase;
   const path = join(REPO_ROOT, FIXTURE_RELDIR, position.sidecar);
   const bytes = readFileSync(path);
+
+  // Bytes first, before anything is parsed or replayed. Cleanliness and the
+  // execution-surface digest do NOT protect these files: a committed edit to a
+  // sidecar leaves the worktree clean and the ten-file digest unchanged, and
+  // would silently produce traces from different input than the preserved
+  // failure evidence.
+  const actualSha256 = sha256(bytes);
+  if (actualSha256 !== position.sidecarSha256) {
+    throw new CaptureError(
+      'FIXTURE_SHA256',
+      `${position.sidecar} is ${actualSha256}, expected ${position.sidecarSha256} ` +
+        `(the bytes preserved in ${FIXTURE_RELDIR}/FAILURE.md)`
+    );
+  }
+
   const sidecar = JSON.parse(bytes.toString('utf8'));
 
   if (sidecar.ply_count !== position.plyCount) {
@@ -109,7 +130,7 @@ export function readFixture(testCase) {
     state,
     describe: {
       sidecar: position.sidecar,
-      sidecar_sha256: sha256(bytes),
+      sidecar_sha256: actualSha256,
       prefix_plies: position.prefixPlies,
       prefix_moves_sha256: sha256(JSON.stringify(prefix)),
       ply_after_prefix: state.ply,
@@ -167,8 +188,29 @@ export async function captureTrace(testCase, state) {
   };
 }
 
-async function writeAtomic(path, value) {
+/**
+ * Write atomically, and REFUSE rather than replace.
+ *
+ * `rename()` silently replaces an existing destination, so without these two
+ * checks a re-run would overwrite completed evidence — including evidence from
+ * a capture that had already failed, which is exactly what §9 says to preserve.
+ * A stale temp file is refused too: it is the residue of an interrupted write
+ * and is itself evidence. Neither guard deletes anything.
+ */
+async function writeAtomicNoClobber(path, value) {
   const tmp = `${path}.tmp`;
+  if (existsSync(path)) {
+    throw new CaptureError(
+      'ARTIFACT_EXISTS',
+      `${path} already exists; refusing to overwrite existing evidence`
+    );
+  }
+  if (existsSync(tmp)) {
+    throw new CaptureError(
+      'STALE_TEMP_ARTIFACT',
+      `${tmp} already exists, so a previous write was interrupted; refusing to overwrite it`
+    );
+  }
   await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`);
   await rename(tmp, path);
 }
@@ -188,10 +230,27 @@ export async function runCase({ testCase, outDir, dryRun = false }, seams = {}) 
   // 1. Guards, before anything is read or loaded.
   const captureCommit = preflight(executionSurfaceDigest);
 
-  // 2. Fixture.
+  // 2. Refuse to clobber BEFORE doing the work. Checked again at write time --
+  //    this earlier check exists so a case that would be refused does not first
+  //    spend minutes on an 800-simulation search.
+  const finalPath = join(outDir, artifactName(testCase.caseId));
+  if (existsSync(finalPath)) {
+    throw new CaptureError(
+      'ARTIFACT_EXISTS',
+      `${finalPath} already exists; refusing to overwrite existing evidence`
+    );
+  }
+  if (existsSync(`${finalPath}.tmp`)) {
+    throw new CaptureError(
+      'STALE_TEMP_ARTIFACT',
+      `${finalPath}.tmp already exists, so a previous write was interrupted; refusing to overwrite it`
+    );
+  }
+
+  // 3. Fixture.
   const { state, describe } = readFixtureFn(testCase);
 
-  // 3. Model + search, unless this is a dry run.
+  // 4. Model + search, unless this is a dry run.
   const trace = dryRun ? null : await captureTraceFn(testCase, state);
 
   const artifact = buildArtifact({
@@ -203,7 +262,7 @@ export async function runCase({ testCase, outDir, dryRun = false }, seams = {}) 
   });
 
   await mkdir(outDir, { recursive: true });
-  await writeAtomic(join(outDir, artifactName(testCase.caseId)), artifact);
+  await writeAtomicNoClobber(finalPath, artifact);
   return artifact;
 }
 

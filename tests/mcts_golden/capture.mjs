@@ -24,15 +24,17 @@
  * Specification: docs/superpowers/2026-08-16-mcts-memory-remediation-design.md
  */
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { executionSurfaceDigest } from '../product_match/p_decision.mjs';
 import {
+  CaptureError,
   EXPECTED_CASE_COUNT,
   enumerateCases,
   preflight,
+  validateCorpus,
 } from './cases.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -83,11 +85,32 @@ export function runAll({ outDir, dryRun }) {
 }
 
 /**
- * Read back what was written and report the facts worth checking by eye.
+ * Refuse to start into a directory that already holds anything.
  *
- * The distinct-PID count is the observable evidence of per-case process
- * isolation: 92 artifacts carrying 92 distinct PIDs cannot have been produced
- * by a shared process.
+ * Counting files after the fact is too late: the workers refuse individually,
+ * but a run that begins against a half-finished corpus has already blurred the
+ * line between two runs. Nothing is deleted — an existing directory is somebody
+ * else's evidence until they say otherwise.
+ */
+export function assertOutputDirUsable(outDir) {
+  if (!existsSync(outDir)) return;
+  const entries = readdirSync(outDir);
+  if (entries.length > 0) {
+    throw new CaptureError(
+      'OUTPUT_DIR_NOT_EMPTY',
+      `${outDir} already contains ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}; ` +
+        `refusing to run into existing evidence. Move it aside or choose another directory — ` +
+        `this command will not delete anything.`
+    );
+  }
+}
+
+/**
+ * Read back what was written, for the human-readable line only.
+ *
+ * NOT a verdict. Counting files and distinct PIDs certifies almost nothing —
+ * 92 files with the wrong case ids, a stale surface digest or missing traces
+ * would satisfy both. `validateCorpus` decides; this only prints.
  */
 export function summarize(outDir) {
   const files = readdirSync(outDir).filter((f) => f.endsWith('.json'));
@@ -122,7 +145,14 @@ function main() {
 
   // Fail fast before spawning 92 processes. This does NOT replace the guard —
   // every worker re-runs preflight for itself, which is what actually binds.
-  const commit = preflight(executionSurfaceDigest);
+  let commit;
+  try {
+    commit = preflight(executionSurfaceDigest);
+    assertOutputDirUsable(outDir);
+  } catch (err) {
+    console.error(`${err.code ?? 'ERROR'}: ${err.message}`);
+    process.exit(3);
+  }
   console.log(`capture commit ${commit}`);
   console.log(`mode           ${mode}\n`);
 
@@ -137,10 +167,18 @@ function main() {
     `\n${s.artifacts} artifacts, ${s.distinctPids} distinct pids, ` +
       `${[...s.statuses].map(([k, v]) => `${k}=${v}`).join(' ')}`
   );
-  if (s.artifacts !== EXPECTED_CASE_COUNT || s.distinctPids !== EXPECTED_CASE_COUNT) {
-    console.error('REFUSED: artifact or pid count is not 92');
+
+  // The verdict comes from full validation, never from those counts.
+  const failures = validateCorpus(outDir, { mode, readdirSync, readFileSync });
+  if (failures.length) {
+    console.error(`\nREFUSED: ${failures.length} corpus validation failure(s)`);
+    for (const f of failures.slice(0, 20)) {
+      console.error(`  ${f.code} ${JSON.stringify(f.detail)}`);
+    }
+    if (failures.length > 20) console.error(`  ... and ${failures.length - 20} more`);
     process.exit(1);
   }
+  console.log(`corpus VALID: ${EXPECTED_CASE_COUNT} cases verified against the matrix`);
 }
 
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;

@@ -48,12 +48,40 @@ export const CANDIDATE_POSITION_IDS = Object.freeze(['P02', 'P11']);
  * matrix is a pure function: `list` must work without touching the filesystem,
  * and a sidecar edited on disk must not be able to reshape the corpus. The
  * worker verifies the declared value against the file it actually reads.
+ *
+ * `sha256` PINS THE BYTES. Cleanliness and the execution-surface digest between
+ * them do not protect these files: a *committed* edit to a sidecar leaves the
+ * worktree clean and the ten-file surface digest unchanged, and would produce
+ * traces from different input bytes than the preserved failure evidence. These
+ * are the hashes recorded in
+ * `tests/product_match/timing_failures/74dca6e/FAILURE.md`, so agreement is a
+ * gate rather than an observation.
  */
 export const SIDECARS = Object.freeze([
-  Object.freeze({ file: 'timing_00_opening_200.json', openingId: 200, plyCount: 39 }),
-  Object.freeze({ file: 'timing_01_opening_201.json', openingId: 201, plyCount: 51 }),
-  Object.freeze({ file: 'timing_02_opening_202.json', openingId: 202, plyCount: 57 }),
-  Object.freeze({ file: 'timing_03_opening_203.json', openingId: 203, plyCount: 54 }),
+  Object.freeze({
+    file: 'timing_00_opening_200.json',
+    openingId: 200,
+    plyCount: 39,
+    sha256: '0a63df9b9fc5b5b8d28660b92277910d9b6299a2f40dbd6ce428d1d7665122f8',
+  }),
+  Object.freeze({
+    file: 'timing_01_opening_201.json',
+    openingId: 201,
+    plyCount: 51,
+    sha256: '900f1c5c67337e27ae970ce946d510247cea8026c205547689c25c66e920fc36',
+  }),
+  Object.freeze({
+    file: 'timing_02_opening_202.json',
+    openingId: 202,
+    plyCount: 57,
+    sha256: '960a72869a72ccf93fe44faf73b34b9e4c6f23347cb02a527f5f10802a0436ce',
+  }),
+  Object.freeze({
+    file: 'timing_03_opening_203.json',
+    openingId: 203,
+    plyCount: 54,
+    sha256: '4d51789f3ec226b9c084f8bd5ed14a2223264e5f350ad4932546d4e986df3cc9',
+  }),
 ]);
 
 /**
@@ -101,6 +129,7 @@ export function enumeratePositions() {
         Object.freeze({
           id: `P${String(positions.length + 1).padStart(2, '0')}`,
           sidecar: sidecar.file,
+          sidecarSha256: sidecar.sha256,
           openingId: sidecar.openingId,
           plyCount: sidecar.plyCount,
           prefixPlies,
@@ -308,3 +337,160 @@ export function buildArtifact({
 }
 
 export const artifactName = (caseId) => `${caseId}.json`;
+
+/** The exact filename set a complete corpus must contain — no more, no fewer. */
+export const expectedArtifactNames = () =>
+  enumerateCases().map((c) => artifactName(c.caseId));
+
+const isHex64 = (v) => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v);
+const isPosInt = (v) => Number.isInteger(v) && v > 0;
+
+/**
+ * Validate a whole corpus directory against the enumerated matrix.
+ *
+ * A count of files and a count of distinct PIDs certify almost nothing: 92
+ * files carrying the wrong case ids, the wrong commit, a stale surface digest,
+ * a missing trace or an unexpected status would satisfy both. Success is
+ * declared from THIS, never from cardinality.
+ *
+ * Returns a list of failures; empty means the corpus is valid.
+ */
+export function validateCorpus(outDir, { mode, readdirSync, readFileSync }) {
+  const failures = [];
+  const fail = (code, detail) => failures.push({ code, detail });
+
+  const expectedStatus = mode === 'capture' ? 'captured' : 'dry-run';
+  const expected = expectedArtifactNames();
+
+  let present;
+  try {
+    present = readdirSync(outDir).filter((f) => f.endsWith('.json'));
+  } catch (err) {
+    return [{ code: 'OUTPUT_DIR_UNREADABLE', detail: err.message }];
+  }
+
+  // Exact set equality: a stray artifact is as disqualifying as a missing one.
+  const sortedPresent = [...present].sort();
+  const sortedExpected = [...expected].sort();
+  if (JSON.stringify(sortedPresent) !== JSON.stringify(sortedExpected)) {
+    const missing = sortedExpected.filter((f) => !present.includes(f));
+    const stray = sortedPresent.filter((f) => !expected.includes(f));
+    fail('ARTIFACT_FILENAME_SET', { missing, stray });
+  }
+
+  const pids = new Set();
+  const commits = new Set();
+
+  for (const testCase of enumerateCases()) {
+    const name = artifactName(testCase.caseId);
+    if (!present.includes(name)) continue; // already reported above
+
+    let a;
+    try {
+      a = JSON.parse(readFileSync(join(outDir, name), 'utf8'));
+    } catch (err) {
+      fail('ARTIFACT_UNPARSEABLE', { file: name, message: err.message });
+      continue;
+    }
+
+    const bad = (field, found, want) =>
+      fail('ARTIFACT_FIELD', { file: name, field, found, expected: want });
+
+    if (a.schema !== SCHEMA) bad('schema', a.schema, SCHEMA);
+    if (a.status !== expectedStatus) bad('status', a.status, expectedStatus);
+    if (a.case_id !== testCase.caseId) bad('case_id', a.case_id, testCase.caseId);
+    if (a.kind !== testCase.kind) bad('kind', a.kind, testCase.kind);
+    if ((a.trigger ?? null) !== (testCase.trigger ?? null))
+      bad('trigger', a.trigger, testCase.trigger ?? null);
+    if (a.model_id !== testCase.modelId) bad('model_id', a.model_id, testCase.modelId);
+    if (a.n_simulations !== testCase.nSimulations)
+      bad('n_simulations', a.n_simulations, testCase.nSimulations);
+    if (a.c_puct !== C_PUCT) bad('c_puct', a.c_puct, C_PUCT);
+    if (a.move_temp !== MOVE_TEMP) bad('move_temp', a.move_temp, MOVE_TEMP);
+
+    const p = a.position ?? {};
+    if (p.id !== testCase.position.id) bad('position.id', p.id, testCase.position.id);
+    if (p.sidecar !== testCase.position.sidecar)
+      bad('position.sidecar', p.sidecar, testCase.position.sidecar);
+    if (p.opening_id !== testCase.position.openingId)
+      bad('position.opening_id', p.opening_id, testCase.position.openingId);
+    if (p.prefix_plies !== testCase.position.prefixPlies)
+      bad('position.prefix_plies', p.prefix_plies, testCase.position.prefixPlies);
+    if (p.immediate_win !== testCase.position.immediateWin)
+      bad('position.immediate_win', p.immediate_win, testCase.position.immediateWin);
+
+    if (a.pinned_surface_commit !== PINNED_SURFACE_COMMIT)
+      bad('pinned_surface_commit', a.pinned_surface_commit, PINNED_SURFACE_COMMIT);
+    if (a.execution_surface_sha256 !== PINNED_EXECUTION_SURFACE_SHA256)
+      bad('execution_surface_sha256', a.execution_surface_sha256, PINNED_EXECUTION_SURFACE_SHA256);
+    if (typeof a.capture_commit !== 'string' || a.capture_commit.length !== 40)
+      bad('capture_commit', a.capture_commit, '40-char sha');
+    else commits.add(a.capture_commit);
+
+    const f = a.fixture ?? {};
+    if (f.sidecar !== testCase.position.sidecar)
+      bad('fixture.sidecar', f.sidecar, testCase.position.sidecar);
+    if (f.sidecar_sha256 !== testCase.position.sidecarSha256)
+      bad('fixture.sidecar_sha256', f.sidecar_sha256, testCase.position.sidecarSha256);
+    if (f.prefix_plies !== testCase.position.prefixPlies)
+      bad('fixture.prefix_plies', f.prefix_plies, testCase.position.prefixPlies);
+    if (f.ply_after_prefix !== testCase.position.prefixPlies)
+      bad('fixture.ply_after_prefix', f.ply_after_prefix, testCase.position.prefixPlies);
+    if (!isHex64(f.prefix_moves_sha256))
+      bad('fixture.prefix_moves_sha256', f.prefix_moves_sha256, 'sha256 hex');
+    if (f.to_move !== 'red' && f.to_move !== 'black')
+      bad('fixture.to_move', f.to_move, 'red|black');
+    if (!isPosInt(f.n_legal)) bad('fixture.n_legal', f.n_legal, 'positive integer');
+
+    if (!isPosInt(a.pid)) bad('pid', a.pid, 'positive integer');
+    else pids.add(a.pid);
+
+    // Trace nullability is mode-determined, and its shape is checked rather
+    // than its presence: an empty object would otherwise pass as "a trace".
+    if (mode !== 'capture') {
+      if (a.trace !== null) bad('trace', typeof a.trace, 'null in dry-run');
+    } else if (a.trace === null || typeof a.trace !== 'object') {
+      bad('trace', a.trace, 'object in capture');
+    } else {
+      const t = a.trace;
+      if (!Array.isArray(t.visit_counts))
+        bad('trace.visit_counts', typeof t.visit_counts, 'array of [move, count]');
+      else if (
+        !t.visit_counts.every(
+          (e) => Array.isArray(e) && e.length === 2 && typeof e[0] === 'string' && Number.isInteger(e[1])
+        )
+      )
+        bad('trace.visit_counts', 'malformed entries', '[move, integer] pairs');
+      if (typeof t.root_value !== 'number' || !Number.isFinite(t.root_value))
+        bad('trace.root_value', t.root_value, 'finite number');
+      if (t.selected_move !== null && typeof t.selected_move !== 'string')
+        bad('trace.selected_move', t.selected_move, 'string or null');
+      if (!Array.isArray(t.progress)) bad('trace.progress', typeof t.progress, 'array');
+      else if (
+        !t.progress.every(
+          (e) =>
+            e &&
+            Number.isInteger(e.done) &&
+            Number.isInteger(e.total) &&
+            typeof e.valueEstimate === 'number' &&
+            e.elapsed === undefined
+        )
+      )
+        bad('trace.progress', 'malformed entries', '{done,total,valueEstimate} and NO elapsed');
+      if (!Array.isArray(t.progress_elapsed_ms))
+        bad('trace.progress_elapsed_ms', typeof t.progress_elapsed_ms, 'array');
+      else if (Array.isArray(t.progress) && t.progress_elapsed_ms.length !== t.progress.length)
+        bad('trace.progress_elapsed_ms', t.progress_elapsed_ms.length, t.progress?.length);
+      else if (!t.progress_elapsed_ms.every((v) => Number.isFinite(v) && v >= 0))
+        bad('trace.progress_elapsed_ms', 'non-finite or negative', 'finite, >= 0');
+    }
+  }
+
+  // One process per case, and one commit for the whole corpus. A corpus whose
+  // halves were produced at different commits is two partial runs, not one.
+  if (present.length === expected.length && pids.size !== expected.length)
+    fail('PID_NOT_UNIQUE_PER_CASE', { distinct: pids.size, cases: expected.length });
+  if (commits.size > 1) fail('CAPTURE_COMMIT_NOT_UNIFORM', { commits: [...commits] });
+
+  return failures;
+}
