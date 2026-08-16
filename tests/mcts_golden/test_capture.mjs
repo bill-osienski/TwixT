@@ -866,7 +866,6 @@ test('in capture mode, validation rejects `elapsed` smuggled into a compared ent
  * of its own, so the REAL search runs against this without any model.
  */
 const fakeInference = {
-  // eslint-disable-next-line require-await
   async evaluate(_boardTensor, moves) {
     const priors = new Map();
     const denom = (moves.length * (moves.length + 1)) / 2;
