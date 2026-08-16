@@ -31,6 +31,11 @@ there are roughly 470–490 legal moves, so an 800-simulation search materialize
 `801 × ~480 ≈ 385,000` deep-copied states, all reachable from the live root for the duration of
 that search. This is the right order of magnitude for the 4,080 MB observed at failure.
 
+That product is an **estimate, not a formula**: it assumes a uniform legal-move count, whereas
+deeper expansions face fewer legal moves and terminal leaves are never expanded at all. It is
+used to show the mechanism is large enough to explain the observed heap, never as a quantity to
+be checked against. §5 states separately what is structurally guaranteed.
+
 **It is peak retention inside a single search, not a leak across moves or games.** `search()`
 allocates a fresh root per call and returns only a `Map` and a number; `playGame()` drops its two
 `MCTS` objects per game; `AlphaZeroInference.evaluate()` does not accumulate on the inference
@@ -109,8 +114,8 @@ surface being altered and requires re-review before implementation continues.
 ## 3. Structural bound
 
 **Criterion.** Over one `search(rootState, {nSimulations: S})`, the number of `TwixtState`
-objects retained by the search tree must be **≤ `1 + S`**, not `≈ (1 + S) × L` for `L` legal
-moves.
+objects retained by the search tree must be **≤ `1 + S`** — a quantity that does **not** scale
+with the legal-move count `L`, as the current implementation's does.
 
 The bound follows from the descent rule rather than from tuning. The selection loop runs
 `while (node.isExpanded && !node.state.isTerminal())`. A newly materialized child is by
@@ -226,7 +231,32 @@ running several cases in one process would let one case's heap pressure contamin
 and would reproduce, in the capture harness, the very confound that makes the original failure
 hard to attribute.
 
-Captures run at **`74dca6e` with a clean worktree**, before any edit to `server/mcts.js`.
+**The naive instruction "run at `74dca6e` with a clean worktree" is impossible, and saying so is
+the point of this subsection.** At `74dca6e` neither the capture harness (new work, §4.1) nor
+these timing-failure sidecars (committed later, at `7510660`) exists. A clean worktree at that
+commit cannot execute this corpus by itself. The protocol must therefore name *two* things: the
+code whose behaviour is captured, and the commit supplying the harness and fixtures.
+
+**Frozen protocol — clean descendant with a byte-identical execution surface:**
+
+1. The capture harness and any fixture helpers are **committed and reviewed first**, as their own
+   step, on a descendant of `74dca6e`.
+2. The capture runs from that descendant, with a **clean worktree**.
+3. **Before any case is captured**, the runner asserts
+   `executionSurfaceDigest(HEAD) === 228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd`.
+   Because that digest is taken over the ten execution-surface blobs, equality *is* the statement
+   "every execution-surface file is byte-identical to `74dca6e`" — it is not a proxy for it.
+4. Both the capture commit and the pinned surface digest are recorded in every captured artifact.
+
+This works precisely because the capture harness is **not** an execution-surface file: adding it
+changes `HEAD` without changing the digest, exactly as the evidence and design commits already
+did. If a future need ever forces the surface itself to differ, capture from that commit is
+invalid regardless, and the fallback applies: import the execution code from a **separate clean
+`74dca6e` worktree** while reading fixtures from the harness commit, recording both commits.
+
+**Consequence for sequencing:** building and reviewing the capture harness is a **separate,
+earlier gate** than any measurement. Measurement cannot be authorized first — there would be
+nothing to run it with. §10 is written accordingly.
 
 **A single eager 800-simulation search is expected to be capturable**: the four completed timing
 games performed `35 + 47 + 53 + 50 = 185` such searches without OOM, so the per-search peak fits
@@ -271,15 +301,30 @@ copies the design claims and would still pass an implementation that materialize
 per simulation. Every copy the implementation performs must be one this bound accounts for; any
 excess must be explained and re-reviewed, not absorbed.
 
+**What the eager side is claimed to do — the sufficient claim, not a formula.** `(1 + S) × L` is
+**not** structural and is not asserted here: deeper expansions face different legal-move counts,
+and terminal leaves are never expanded at all, so no single `L` characterises the whole search.
+
+The preregistered claim is confined to what is structurally guaranteed, and it is already more
+than enough:
+
+> The **root expansion alone** copies once per legal move at P11. Legal moves on this board
+> satisfy `n_legal ≥ 528 − ply`, so at ply 28 the root contributes **≥ 500** copies, before any
+> simulation runs.
+
 | implementation | `copyCount` | outcome |
 |---|---:|---|
-| eager (`74dca6e`) | `(1 + 8) × L` where `L ≥ 400` ⇒ **≥ 3,600** | **FAILS**, by ≥ 450× |
+| eager (`74dca6e`) | **≥ 500** from the root expansion alone | **FAILS** the `≤ 8` gate by **≥ 62.5×** |
 | lazy | ≤ `8` | passes |
 
-`L ≥ 400` holds at ply 28 because legal moves on this board satisfy `n_legal ≥ 528 − ply`; the
-actual `L` is recorded at capture time. `S = 8` keeps the test to nine network evaluations, cheap
-enough for the ordinary suite while separating the two implementations by more than two orders of
-magnitude.
+Copies from the eight subsequent expansions are **reported as measured evidence** and are
+expected to add several thousand more, but the gate does not depend on them and no fixed
+multiplier is claimed. The actual `L` at P11 and the total `copyCount` are both recorded at
+capture time.
+
+`S = 8` keeps the test to at most nine network evaluations, cheap enough for the ordinary suite
+while separating the two implementations by more than an order of magnitude on the guaranteed
+part alone.
 
 **The falsification must be demonstrated to fail on the pre-change code before the change is
 made** — run it against `74dca6e`, record the failure, then implement. A falsification first
@@ -310,8 +355,23 @@ Each observation is `process.memoryUsage().heapUsed`. The reported figure is the
 observed `heapUsed` across H1–H4**, and the protocol is stated in those terms rather than as a
 "peak", which the process cannot actually observe.
 
-H2 is the seam that matters: an expansion is the allocation event, so sampling either side of
-every one of the 801 evaluations brackets every point at which the tree grows.
+**What each seam does and does not bracket.** H2 does **not** bracket eager expansion, and an
+earlier draft claimed it did. In `_expand()`, `evaluate()` is awaited at `server/mcts.js:173` and
+returns *before* the `// Create children (unexpanded)` loop at `:178-183` — so **both** H2 samples
+fall on the near side of that expansion's allocations. Stated correctly:
+
+| seam | what it actually observes |
+|---|---|
+| H2 | the **inference envelope** — the tensors and `priors` Map allocated per evaluation — plus any **lazy materialization performed during descent** before that evaluation |
+| H3 | **retained state after a completed expansion**, since the progress callback fires at the end of each simulation. This is the first named seam positioned after the child-creation loop |
+
+The H1–H4 protocol stands; only that justification was wrong. Under the lazy design H2 and H3
+converge anyway, because at most one child is materialized per simulation and there is no
+expansion-time allocation burst left to miss.
+
+**Evaluation count: up to `1 + S` = up to 801**, not exactly 801. A simulation reaching a
+terminal leaf takes the explicit ±1/0 value and never calls `_expand()`, so it performs no
+evaluation (I8).
 
 **Preregistered criteria, both required:**
 
@@ -398,6 +458,13 @@ running the current code), not a profiler, not a heap snapshot, not a heap-limit
 timing smoke, not `P` selection, not the match, not deployment, not promotion, not any change to
 `DEFAULT_MODEL_ID`, not training.
 
-Each step needs its own explicit authorization. The earliest is capturing the §4 golden traces
-from the unmodified `74dca6e`, which is a *measurement* step and separate from implementing the
-change in §2.
+Each step needs its own explicit authorization, and §4.5 changes what the earliest one is:
+
+1. **Build and review the capture harness** — construction only, no measurement. This must come
+   first, because a clean worktree at `74dca6e` contains neither the harness nor the fixtures and
+   so cannot run the corpus at all.
+2. **Capture the 92 golden cases** from the pinned execution surface (§4.5) — a measurement step,
+   separate from step 1 and from step 3.
+3. **Implement the §2 change**, then satisfy §§3–7.
+
+Authorizing measurement before step 1 would authorize running something that does not exist.
