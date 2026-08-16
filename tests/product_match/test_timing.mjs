@@ -654,6 +654,60 @@ describe('nothing may run a match without the committed decision', () => {
     assert.ok(production.includes('ort_version'), 'ort_version must be bound');
   });
 
+  it('the frozen standard cannot be mutated in memory', async () => {
+    // BEHAVIOURAL, not a signature or source check. Removing the `spec`
+    // parameter did not make the standard immutable: an exported mutable object
+    // can be edited before the call, changing the bootstrap endpoints, the seed
+    // or a t critical value — and so the verdict — while the worktree and the
+    // execution-surface digest both stay perfectly clean.
+    const { FROZEN_SPEC: SPEC } = await import('./analyse.mjs');
+    assert.ok(Object.isFrozen(SPEC), 'the standard must be frozen');
+    assert.ok(Object.isFrozen(SPEC.tCritical), 'and so must its nested tables');
+
+    const attempts = [
+      ['bootstrapLowerIndex', () => (SPEC.bootstrapLowerIndex = 9999)],
+      ['bootstrapUpperIndex', () => (SPEC.bootstrapUpperIndex = 0)],
+      ['bootstrapSeed', () => (SPEC.bootstrapSeed = 1)],
+      ['bootstrapReplicates', () => (SPEC.bootstrapReplicates = 3)],
+      ['tCritical[100]', () => (SPEC.tCritical[100] = 0)],
+      ['a new tCritical entry', () => (SPEC.tCritical[7] = 1)],
+      ['baselineModelId', () => (SPEC.baselineModelId = 'x')],
+      ['an injected key', () => (SPEC.injected = true)],
+    ];
+    for (const [what, mutate] of attempts) {
+      assert.throws(mutate, TypeError, `mutating ${what} must throw`);
+    }
+
+    // And the values actually survived the attempts.
+    assert.strictEqual(SPEC.bootstrapLowerIndex, 250);
+    assert.strictEqual(SPEC.bootstrapUpperIndex, 9749);
+    assert.strictEqual(SPEC.bootstrapSeed, 20260814);
+    assert.strictEqual(SPEC.bootstrapReplicates, 10000);
+    assert.strictEqual(SPEC.tCritical[100], 1.9842169515);
+    assert.strictEqual(SPEC.tCritical[7], undefined);
+    assert.strictEqual(SPEC.baselineModelId, BASELINE_MODEL_ID);
+    assert.strictEqual(SPEC.injected, undefined);
+  });
+
+  it('a mutated standard cannot change a computed interval', async () => {
+    // The consequence, measured rather than asserted structurally: the
+    // bootstrap bounds must be identical before and after an attempted edit.
+    const { FROZEN_SPEC: SPEC, bootstrapInterval } = await import(
+      './analyse.mjs'
+    );
+    const scores = [0, 0.25, 0.5, 0.75, 1, 0.5];
+    const before = bootstrapInterval(scores, SPEC);
+    assert.throws(() => (SPEC.bootstrapLowerIndex = 9999), TypeError);
+    assert.deepStrictEqual(bootstrapInterval(scores, SPEC), before);
+  });
+
+  it('other exported constants are frozen too', async () => {
+    const h = await import('./harness.mjs');
+    assert.ok(Object.isFrozen(h.FINGERPRINT_FIELDS), 'fingerprint field list');
+    assert.ok(Object.isFrozen(TIMING_OPENING_MAPPING));
+    assert.ok(Object.isFrozen(EXECUTION_SURFACE_FILES));
+  });
+
   it('the analysis implementation is itself inside the execution surface', () => {
     // It holds the statistic, the thresholds and the decision rule, so a
     // post-match edit to it could otherwise change the verdict.

@@ -270,7 +270,7 @@ export const sidecarName = (pairIndex, gameInPair) =>
   `pair_${String(pairIndex).padStart(4, '0')}_game_${gameInPair}.json`;
 
 /** The §10 fingerprint fields. Colour-independent by construction. */
-export const FINGERPRINT_FIELDS = [
+export const FINGERPRINT_FIELDS = Object.freeze([
   'execution_commit',
   'schema',
   'ort_version',
@@ -280,7 +280,7 @@ export const FINGERPRINT_FIELDS = [
   'move_temp',
   'baseline_model_id',
   'candidate_model_id',
-];
+]);
 
 export const fingerprintOf = (o) =>
   Object.fromEntries(FINGERPRINT_FIELDS.map((f) => [f, o[f]]));

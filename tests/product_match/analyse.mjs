@@ -2,7 +2,7 @@
 /**
  * Independent analyser for a product-stack match.
  *
- *   node tests/product_match/analyse.mjs <run_dir> <openings.json> <out.json>
+ *   node tests/product_match/analyse.mjs <run_dir> <out.json>
  *
  * Deliberately shares NO code with `harness.mjs`. Beyond the standard library it
  * imports only `TwixtState` — the game rules it re-derives against — and
@@ -38,12 +38,28 @@ import {
   readCommittedBlob,
 } from './p_decision.mjs';
 
+/** Recursively freeze an object and every nested object it owns. */
+export function deepFreeze(obj) {
+  for (const value of Object.values(obj)) {
+    if (value && typeof value === 'object' && !Object.isFrozen(value))
+      deepFreeze(value);
+  }
+  return Object.freeze(obj);
+}
+
 /**
- * The frozen constants. Defaults are the specification's; tests may pass their
- * own `spec`, which makes any relaxation explicit and visible at the call site
- * rather than hidden behind a flag.
+ * The frozen constants — DEEPLY frozen, not merely named "frozen".
+ *
+ * Removing the `spec` parameter from `analyse` was not enough: an exported
+ * mutable object can be edited in memory before the call, changing
+ * `bootstrapLowerIndex`, `bootstrapSeed` or a `tCritical` entry — and hence the
+ * verdict rule — while the worktree and the execution-surface digest both stay
+ * clean. Freezing is what actually makes the standard fixed.
+ *
+ * `analyseEvidence` still accepts a replacement spec; that is the visible
+ * test seam, and it is not the production path.
  */
-export const FROZEN_SPEC = {
+export const FROZEN_SPEC = deepFreeze({
   schema: 'twixt-product-match/1',
   baselineModelId: '1d64027db521a50f',
   candidateModelId: 'c34b7ff3297c785a',
@@ -58,7 +74,7 @@ export const FROZEN_SPEC = {
   bootstrapSeed: 20260814,
   bootstrapLowerIndex: 250,
   bootstrapUpperIndex: 9749,
-};
+});
 
 const sha256 = (s) => createHash('sha256').update(s).digest('hex');
 
