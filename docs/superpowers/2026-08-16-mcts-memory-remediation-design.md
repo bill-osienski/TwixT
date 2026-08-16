@@ -137,40 +137,100 @@ There is no `server/test_mcts.js` today — MCTS is exercised only indirectly by
 `server/test_parity.js` and `server/test_server.js` — so this harness is new work, not an
 extension of an existing one.
 
-### 4.2 Fixture set
+### 4.2 The corpus, frozen exactly
 
-| axis | values |
-|---|---|
-| positions | ≥ 12 drawn from the four committed timing sidecars (`timing_failures/74dca6e/`), spanning opening / early-mid / midgame plies, plus ≥ 1 near-terminal and ≥ 1 position with a forced win available |
-| model | baseline `1d64027db521a50f` (candidate `c34b7ff3297c785a` for ≥ 2 positions, to prove the trace is not model-specific) |
-| `nSimulations` | `1, 2, 8, 64, 800` |
-| `cPuct` | `1.5` (product value; not varied) |
-| readout | `temperature = 0` only — `selectMove` above `0.01` calls `Math.random()` (`mcts.js:289`) and is not reproducible |
+"At least 12 positions across four strata" does not determine a corpus — it leaves a reviewer
+free to redraw after seeing an inconvenient result while still satisfying the document. The exact
+positions, matrix and count are therefore fixed here.
 
-Small `nSimulations` values are included deliberately: divergence in selection order shows up at
-simulation 2–8, where a 800-simulation aggregate could mask it.
+**Positions.** Each is a **prefix of the `moves` array of a named committed sidecar**, replayed
+through `TwixtState` from the empty board. Prefix rule, applied uniformly:
+`{4, 16, 28, ply_count − 1}`.
 
-**The positions are derived from already-committed evidence**, so the fixture set is fixed by
-this document and cannot be re-drawn after seeing a result.
+| id | sidecar (in `tests/product_match/timing_failures/74dca6e/`) | prefix plies |
+|---|---|---:|
+| P01–P04 | `timing_00_opening_200.json` (`ply_count` 39) | 4, 16, 28, **38** |
+| P05–P08 | `timing_01_opening_201.json` (`ply_count` 51) | 4, 16, 28, **50** |
+| P09–P12 | `timing_02_opening_202.json` (`ply_count` 57) | 4, 16, 28, **56** |
+| P13–P16 | `timing_03_opening_203.json` (`ply_count` 54) | 4, 16, 28, **53** |
 
-### 4.3 Recorded per fixture
+**16 positions.** Ply 4 is the opening itself, 16 early-mid, 28 midgame, `ply_count − 1`
+near-terminal.
+
+**"An immediate winning move exists" — mechanically, not by judgement.** Every sidecar records
+`termination: "win"`, and the four games have been replayed legally to their recorded terminal
+results. Therefore at prefix `ply_count − 1` the side to move has a move that immediately wins:
+the move actually recorded at that ply. This is derivable from committed evidence without running
+anything, and it replaces the earlier unverifiable "forced win available". **P04, P08, P12 and
+P16 are the immediate-win positions**, and they are also the near-terminal stratum.
+
+**Execution matrix, frozen:**
+
+| model | positions | `nSimulations` | cases |
+|---|---|---|---:|
+| baseline `1d64027db521a50f` | all 16 | `1, 2, 8, 64, 800` | 80 |
+| candidate `c34b7ff3297c785a` | **P02 and P11 only** | `1, 2, 8, 64, 800` | 10 |
+
+`cPuct` is `1.5` and is not varied. Readout is `temperature = 0` only — `selectMove` above `0.01`
+calls `Math.random()` (`server/mcts.js:289`) and is not reproducible.
+
+Small `nSimulations` values are deliberate: a selection-order divergence shows at simulation 2–8,
+where an 800-simulation aggregate can mask it.
+
+**Abort fixtures, with exact trigger points** (both on **P07**, baseline, `nSimulations: 64`):
+
+| id | trigger | expected |
+|---|---|---|
+| A1 | the `AbortSignal` is **already aborted** when `search()` is called | returns `{ visitCounts: new Map(), rootValue: 0 }` after the root expansion |
+| A2 | abort fired from the `onProgress` callback at `progressEvery: 1` when **`done === 5`** | loop `break`s; partial counts returned |
+
+**Expected fixture count: exactly 92** — `80 + 10 + 2`. A capture producing any other number is a
+§9 stop, not a corpus to be adjusted.
+
+### 4.3 Recorded per fixture, and what equality means
+
+**Compared for exact equality:**
 
 - the **complete** `visitCounts` Map — every key in iteration order with its count, **including
   every zero-count legal move** (I5);
 - `rootValue`;
 - the move `selectMoveDeterministic(visitCounts)` returns;
-- the ordered sequence of `onProgress` payloads at `progressEvery: 1`, which exposes
-  `root.visitCount` and `valueEstimate` after every simulation and is the cheapest available
-  proxy for per-simulation descent order (I1–I3);
-- for the abort fixtures: the exact return value for (a) abort before the first simulation and
-  (b) abort mid-loop (I6).
+- the ordered sequence of `onProgress` payloads at `progressEvery: 1`, restricted to
+  **`done`, `total` and `valueEstimate`** — this exposes `root.visitCount` and the running value
+  after every simulation, and is the cheapest available proxy for per-simulation descent order
+  (I1–I3);
+- for A1 and A2, the exact return value (I6).
+
+**Recorded but NOT compared for equality: `elapsed`.** `search()` derives it from `Date.now()`
+(`server/mcts.js:73`, emitted as `elapsed: now - t0` at `server/mcts.js:142`), so it is
+wall-clock and cannot reproduce across runs. **Requiring it would
+make a correct implementation fail**, which is a defect in the test, not in the code. It is
+checked only as metadata: present, a finite number, `≥ 0`, and non-decreasing across the payload
+sequence within a run. Nothing else about it is asserted.
+
+If exact reproduction of `elapsed` is ever wanted, it needs an injected clock seam added to
+`search()` **before both captures** — not a post-hoc relaxation of the comparison.
 
 ### 4.4 Acceptance
 
-**Exact equality on every field of every fixture.** Counts are integers and `rootValue` is a
-deterministic float from identical arithmetic on identical inputs, so this is byte equality, not
-tolerance-based. Any "close enough" comparison is a failure of the test, not a pass of the
-remedy.
+**Exact equality on every compared field of all 92 fixtures.** Counts are integers and
+`rootValue` is a deterministic float produced by identical arithmetic on identical inputs, so this
+is exact equality, not tolerance-based. Any "close enough" comparison on a compared field is a
+failure of the test, not a pass of the remedy.
+
+### 4.5 Capture protocol
+
+**Each of the 92 cases is captured in a freshly spawned process that runs that one case and
+exits.** The eager implementation is the one whose per-search retention is the problem, so
+running several cases in one process would let one case's heap pressure contaminate the next —
+and would reproduce, in the capture harness, the very confound that makes the original failure
+hard to attribute.
+
+Captures run at **`74dca6e` with a clean worktree**, before any edit to `server/mcts.js`.
+
+**A single eager 800-simulation search is expected to be capturable**: the four completed timing
+games performed `35 + 47 + 53 + 50 = 185` such searches without OOM, so the per-search peak fits
+the default heap on its own. That expectation is not a guarantee — see §9.
 
 ---
 
@@ -181,22 +241,45 @@ allocation scales with simulations rather than with simulations × legal moves. 
 both is worthless — it would be the "gate that does not bind" this project keeps finding.
 
 **Design.** In a test-local scope, count `TwixtState` construction by spying on
-`TwixtState.prototype.copy` (the sole path — `applyMove` → `copy`, §1.1). No production
+`TwixtState.prototype.copy` — the sole path, since `applyMove` → `copy` (§1.1). No production
 instrumentation, no counter shipped in `server/`.
 
+**Frozen protocol.** Every element below is fixed so the test cannot be loosened into passing:
+
+| element | frozen value |
+|---|---|
+| position | **P11** — `timing_02_opening_202.json`, prefix **28** plies |
+| model | baseline `1d64027db521a50f` |
+| `S` | **8** simulations, `cPuct` 1.5 |
+| spy installed | **after** the fixture state is fully constructed (prefix replay complete), **before** `search()` is called |
+| spy removed | immediately after `search()` returns |
+| counted | every `TwixtState.prototype.copy` invocation while the spy is installed, and nothing else |
+
+Replaying the 28-ply prefix itself performs copies; those are excluded by construction because
+the spy is installed afterwards. The root state is supplied by the fixture, so `search()` inherits
+it without a copy.
+
+**Threshold — the bound the algorithm actually claims:**
+
 ```
-position with L legal moves ≥ 400
-S = 8 simulations
-assert copyCount <= 2 * (1 + S)          # i.e. <= 18
+assert copyCount <= S            # i.e. <= 8
 ```
+
+Not `2 × (1 + S)`. Under §3 the root is not copied and each simulation materializes **at most
+one** child, so `S` is the exact ceiling; a bound of 18 would silently permit more than twice the
+copies the design claims and would still pass an implementation that materializes a spare child
+per simulation. Every copy the implementation performs must be one this bound accounts for; any
+excess must be explained and re-reviewed, not absorbed.
 
 | implementation | `copyCount` | outcome |
 |---|---:|---|
-| eager (`74dca6e`) | ≈ `(1 + 8) × ~480 ≈ 4,320` | **FAILS**, by ~240× |
-| lazy | ≤ `9` | passes |
+| eager (`74dca6e`) | `(1 + 8) × L` where `L ≥ 400` ⇒ **≥ 3,600** | **FAILS**, by ≥ 450× |
+| lazy | ≤ `8` | passes |
 
-`S = 8` keeps it to nine network evaluations, so it is cheap enough for the ordinary suite while
-still separating the two implementations by more than two orders of magnitude.
+`L ≥ 400` holds at ply 28 because legal moves on this board satisfy `n_legal ≥ 528 − ply`; the
+actual `L` is recorded at capture time. `S = 8` keeps the test to nine network evaluations, cheap
+enough for the ordinary suite while separating the two implementations by more than two orders of
+magnitude.
 
 **The falsification must be demonstrated to fail on the pre-change code before the change is
 made** — run it against `74dca6e`, record the failure, then implement. A falsification first
@@ -206,23 +289,45 @@ observed after the fix is not evidence that it binds.
 
 ## 6. Default-heap verification, with the criterion fixed now
 
-**Procedure.** One `search()` at `nSimulations: 800`, `cPuct: 1.5`, baseline model, product ORT
-configuration, **Node's default heap — no `--max-old-space-size`**, from a midgame fixture
-position (≥ 400 legal moves).
+**Procedure.** One `search()` at `nSimulations: 800`, `cPuct: 1.5`, baseline model
+`1d64027db521a50f`, product ORT configuration, **Node's default heap — no
+`--max-old-space-size`**, from position **P11** (`timing_02_opening_202.json`, prefix 28), in a
+**freshly spawned process that performs this one search and exits**.
+
+**Measurement protocol, frozen.** "Sampled during the search" is not reproducible: a timer cannot
+observe the peak, because the expansion and selection loops are synchronous and block the event
+loop for the interval that matters. The measurement is therefore taken at **named seams**, all
+test-local, with **no production instrumentation**:
+
+| # | seam | how it is reached without touching `server/` |
+|---|---|---|
+| H1 | immediately before `search()` is called | test code |
+| H2 | immediately **before** and **after** every `evaluate()` call | the `inference` object handed to `MCTS` is a **test-local proxy** that samples, delegates to the real `AlphaZeroInference`, samples again, and returns its result unchanged |
+| H3 | at every `onProgress` callback, `progressEvery: 1` | the callback is test-supplied |
+| H4 | immediately after `search()` returns | test code |
+
+Each observation is `process.memoryUsage().heapUsed`. The reported figure is the **maximum
+observed `heapUsed` across H1–H4**, and the protocol is stated in those terms rather than as a
+"peak", which the process cannot actually observe.
+
+H2 is the seam that matters: an expansion is the allocation event, so sampling either side of
+every one of the 801 evaluations brackets every point at which the tree grows.
 
 **Preregistered criteria, both required:**
 
 | # | criterion |
 |---|---|
 | M1 | the search **completes** without OOM at the default heap |
-| M2 | peak `process.memoryUsage().heapUsed` sampled during the search is **≤ 512 MB** |
+| M2 | the maximum observed `heapUsed` across H1–H4 is **≤ 512 MB** |
 
 `512 MB` is a ceiling chosen to sit decisively below the 4,080 MB failure and comfortably above
 the ~801 retained states plus their `priors` Maps that §3 predicts. **It is not a tuned target**,
 and it may not be revised after a measurement. Missing M2 while passing M1 is a §9 stop, not a
-pass — it would mean retention is bounded by something other than the mechanism in §2.
+pass — it would mean retention is bounded by something other than the mechanism in §2, which §1.2
+does not exclude.
 
-The measured peak is reported whatever it is.
+The maximum observed value is reported whatever it is, together with `L` at P11 and the
+observation count.
 
 ---
 
@@ -266,6 +371,12 @@ adjusting the criterion, the fixture set or the tolerance:
 
 - any golden-trace mismatch on any fixture, including a difference confined to zero-count entries
   or to move ordering;
+- **any eager golden capture failing or OOMing.** Preserve that failure as evidence and stop. Do
+  **not** substitute a different position, drop the case, shorten the prefix, lower
+  `nSimulations`, or re-run it with a larger heap. An eager capture that cannot complete at the
+  default heap is itself a finding about the mechanism in §1 and must be reported as one, not
+  routed around. The corpus is 92 cases (§4.2); a capture yielding any other number stops here
+  too;
 - the falsification in §5 passing against the eager implementation at `74dca6e`;
 - the §3 bound exceeded;
 - M1 or M2 in §6 not met — including M2 missed while M1 passes, which indicates a contributor §1.2
