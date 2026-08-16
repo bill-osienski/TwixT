@@ -1,0 +1,4 @@
+ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P01_baseline_s1 pid=89074
