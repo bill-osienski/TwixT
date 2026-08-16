@@ -241,12 +241,44 @@ code whose behaviour is captured, and the commit supplying the harness and fixtu
 
 1. The capture harness and any fixture helpers are **committed and reviewed first**, as their own
    step, on a descendant of `74dca6e`.
-2. The capture runs from that descendant, with a **clean worktree**.
-3. **Before any case is captured**, the runner asserts
+2. **Every capture process asserts a fully clean worktree at startup, before its case runs.**
+3. **Every capture process** then asserts
    `executionSurfaceDigest(HEAD) === 228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd`.
    Because that digest is taken over the ten execution-surface blobs, equality *is* the statement
    "every execution-surface file is byte-identical to `74dca6e`" — it is not a proxy for it.
 4. Both the capture commit and the pinned surface digest are recorded in every captured artifact.
+
+**Why step 2 is mechanical and not a convention.** The surface digest covers **ten files**
+(`tests/product_match/p_decision.mjs:77-88`). **The capture harness and these fixture sidecars are
+not among them.** Either could therefore be edited in the working tree while the step-3 assertion
+still passes, and the artifact would record a commit that supplied neither the code that ran nor
+the input bytes that were read. A digest check alone binds the search implementation and nothing
+else.
+
+| requirement | frozen form |
+|---|---|
+| check | `git status --porcelain` must be **empty** |
+| tracked modifications | rejected (` M`) |
+| untracked files | rejected (`??`) — **the same strict treatment**, no `-uno`, no untracked exemption |
+| ignored paths | already excluded by `--porcelain`, which omits them unless `--ignored` is passed. Capture output is therefore written **under a gitignored directory** (`runs/`), the existing convention, and needs no special case |
+| when | at the **startup of every one of the 92 capture processes**, not once for the run — each case is a fresh process (§4.5), so a per-process check is both natural and strictly stronger, and it closes edits made partway through a capture |
+
+This reuses the guard the project already relies on: `executionCommit()` at
+`tests/product_match/harness.mjs:103-114` refuses on any non-empty `git status --porcelain`, with
+no untracked exemption.
+
+**Negative tests, required before the first real capture.** A guard that has never been observed
+refusing is not known to bind:
+
+| # | perturbation | expected |
+|---|---|---|
+| N1 | modify the **capture harness** in the working tree | capture **refuses**, before any case runs |
+| N2 | modify one **fixture sidecar** in the working tree | capture **refuses** |
+| N3 | add a **stray untracked** file | capture **refuses** |
+
+N1 and N2 are independent, so neither can be satisfied by the other. N3 exists because the
+untracked half of the check is the part most likely to be "helpfully" relaxed to `-uno` later,
+and it would then silently stop binding.
 
 This works precisely because the capture harness is **not** an execution-surface file: adding it
 changes `HEAD` without changing the digest, exactly as the evidence and design commits already
@@ -438,6 +470,10 @@ adjusting the criterion, the fixture set or the tolerance:
   routed around. The corpus is 92 cases (§4.2); a capture yielding any other number stops here
   too;
 - the falsification in §5 passing against the eager implementation at `74dca6e`;
+- **any of the §4.5 negative tests N1–N3 failing to refuse.** A cleanliness guard that does not
+  demonstrably reject a dirty harness, a dirty fixture and a stray untracked file does not bind,
+  and every capture taken under it is unattributable. (A guard that *does* refuse during ordinary
+  work is not a stop — commit or revert, then re-run.);
 - the §3 bound exceeded;
 - M1 or M2 in §6 not met — including M2 missed while M1 passes, which indicates a contributor §1.2
   did not exclude;
