@@ -1,4 +1,4 @@
-# Golden capture FAILURE — native abort at worker teardown
+# Golden capture FAILURE — native abort after artifact publication
 
 **Date:** 2026-08-16 · **Outcome: FAILED at case 1 of 92. NO VALID CORPUS EXISTS.**
 

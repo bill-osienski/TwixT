@@ -40,12 +40,25 @@ defect in terms of directly observable harness behaviour: **the worker does not 
 What the evidence *does* support is retained: the failure is **not** a failure to produce an MCTS
 result, and the eager-expansion memory defect is an implausible explanation at one simulation.
 
+## 4. The title said "at worker teardown" — NOT SUPPORTED
+
+Retracted in the same way as #2, and for the same reason: the evidence places the abort **after
+artifact publication**, and does not establish that worker teardown had begun or that
+`process.exit()` was ever reached. The memo is now titled **"native abort after artifact
+publication"**, and the same wording was corrected in `worker.mjs`'s `captureTrace` docstring and
+in the lifecycle-test preamble, both of which had asserted the forced exit as fact.
+
 ## Remedy shipped alongside these corrections
 
 Construction only — no capture, no probe, no `server/mcts.js` change:
 
-- `worker.mjs` releases the session in `finally`, via `InferenceSession.release()`
-  (`onnxruntime-common/.../inference-session.d.ts:437`), on both the success and failure paths;
+- `worker.mjs` **requires a clean release** via `InferenceSession.release()`
+  (`onnxruntime-common/.../inference-session.d.ts:437`) on both the success and failure paths. A
+  release that rejects, or a session exposing no callable `release`, **fails the case** rather
+  than yielding a trace: a trace from a session that could not be released has not demonstrated
+  the teardown this remedy exists to establish, so it must not become a published artifact. When
+  the trace itself failed, that error stays primary and the release failure is attached as
+  `secondary`;
 - forced `process.exit()` is replaced by `process.exitCode`, so the event loop drains instead of
   the process being torn down under it;
 - `capture.mjs` preserves worker `status`, `signal`, `error`, `stdout` **and** `stderr` on every

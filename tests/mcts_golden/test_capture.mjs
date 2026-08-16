@@ -878,10 +878,11 @@ const fakeInference = {
 };
 
 // --- session lifecycle and exit discipline ----------------------------------
-// The first real capture aborted after publishing its artifact, with the ORT
-// session unreleased and the process then forced down by process.exit(). These
-// tests pin the two halves the harness controls. They use FAKES only — no test
-// at this gate loads a real model.
+// The first real capture aborted AFTER publishing its artifact, with the ORT
+// session never released. The old worker would then have called process.exit(),
+// though the evidence does not establish that the call was reached. These tests
+// pin the two halves the harness controls — release, and not forcing exit — and
+// use FAKES only: no test at this gate loads a real model.
 
 function fakeModel({ modelId, releaseThrows = false, log }) {
   return {
@@ -944,7 +945,7 @@ test('LIFECYCLE: the session is released when the model role is wrong, and the r
   assert.deepEqual(log, ['release']);
 });
 
-test('LIFECYCLE: a failing release does not mask the original error', async () => {
+test('LIFECYCLE: a failing release does not mask the original error, and is attached', async () => {
   const testCase = caseById('A1');
   const { state } = readFixture(testCase);
   const log = [];
@@ -953,20 +954,83 @@ test('LIFECYCLE: a failing release does not mask the original error', async () =
       captureTrace(testCase, state, async () =>
         fakeModel({ modelId: 'wrong', releaseThrows: true, log })
       ),
-    (err) => err.code === 'MODEL_ROLE'
+    (err) =>
+      err.code === 'MODEL_ROLE' && err.secondary?.code === 'SESSION_RELEASE_FAILED'
   );
   assert.deepEqual(log, ['release']);
 });
 
-test('LIFECYCLE: a failing release does not fail an otherwise good trace', async () => {
+test('LIFECYCLE: a failing release FAILS an otherwise good trace', async () => {
+  // A trace from a session that could not be released has not demonstrated the
+  // clean teardown this remedy exists to establish. An earlier revision
+  // returned the trace anyway, which would have certified a corpus while
+  // proving nothing about teardown.
   const testCase = caseById('A1');
   const { state } = readFixture(testCase);
   const log = [];
-  const trace = await captureTrace(testCase, state, async () =>
-    fakeModel({ modelId: testCase.modelId, releaseThrows: true, log })
+  await assert.rejects(
+    () =>
+      captureTrace(testCase, state, async () =>
+        fakeModel({ modelId: testCase.modelId, releaseThrows: true, log })
+      ),
+    (err) => err.code === 'SESSION_RELEASE_FAILED'
   );
   assert.deepEqual(log, ['release']);
-  assert.equal(trace.visitCounts.length, 0, 'A1 still returns an empty map');
+});
+
+test('LIFECYCLE: a session with no callable release() fails rather than being skipped', async () => {
+  const testCase = caseById('A1');
+  const { state } = readFixture(testCase);
+  await assert.rejects(
+    () =>
+      captureTrace(testCase, state, async () => ({
+        modelId: testCase.modelId,
+        inference: { ...fakeInference, session: {} },
+      })),
+    (err) => err.code === 'SESSION_RELEASE_UNAVAILABLE'
+  );
+  // ...and an absent session object is equally not a pass.
+  await assert.rejects(
+    () =>
+      captureTrace(testCase, state, async () => ({
+        modelId: testCase.modelId,
+        inference: { ...fakeInference },
+      })),
+    (err) => err.code === 'SESSION_RELEASE_UNAVAILABLE'
+  );
+});
+
+test('LIFECYCLE: a release failure publishes NO artifact', async (t) => {
+  if (!gitClean()) return t.skip('worktree dirty');
+  const dir = join(REPO_ROOT, 'runs', 'mcts_golden_release');
+  rmSync(dir, { recursive: true, force: true });
+  const testCase = caseById('A1');
+  const log = [];
+
+  await assert.rejects(
+    () =>
+      runCase(
+        { testCase, outDir: dir, mode: 'capture', expectCommit: HEAD },
+        {
+          // The REAL captureTrace, driven by a fake model — so the publication
+          // consequence of a release failure is exercised, not assumed.
+          captureTrace: (tc, st) =>
+            captureTrace(tc, st, async () =>
+              fakeModel({ modelId: tc.modelId, releaseThrows: true, log })
+            ),
+        }
+      ),
+    (err) => err.code === 'SESSION_RELEASE_FAILED'
+  );
+
+  assert.deepEqual(log, ['release']);
+  assert.equal(
+    existsSync(join(dir, 'A1.json')),
+    false,
+    'an artifact was published despite teardown failing'
+  );
+  assert.equal(existsSync(join(dir, 'A1.json.tmp')), false, 'a temp file was left behind');
+  rmSync(dir, { recursive: true, force: true });
 });
 
 /** Strip comments, so prose mentioning `process.exit()` is not read as a call. */

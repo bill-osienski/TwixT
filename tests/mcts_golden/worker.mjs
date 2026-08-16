@@ -208,13 +208,23 @@ export async function searchAndTrace(testCase, state, inference) {
 }
 
 /**
- * Load the model, trace, and ALWAYS release the session.
+ * Load the model, trace, and REQUIRE a clean session release.
  *
  * The first real capture aborted with `mutex lock failed: Invalid argument`
- * after publishing its artifact, with the session never released and the
- * process then forced down by `process.exit()`. Releasing in `finally` — on the
- * failure path as much as the success path — removes the unreleased-session
- * half of that; `process.exitCode` (below) removes the forced-teardown half.
+ * after publishing its artifact. The session was never released, and the old
+ * worker would have gone on to call `process.exit()` — though the evidence does
+ * not establish that the call was reached (see
+ * `capture_failures/0a76252/CORRECTIONS.md`).
+ *
+ * **Release is part of the result, not a courtesy.** A trace obtained from a
+ * session that could not be released has not demonstrated the clean teardown
+ * this whole remedy exists to establish, so it must NOT become a published
+ * artifact. Optional chaining is deliberately absent: a missing `release`
+ * silently skipped would certify exactly the thing being tested.
+ *
+ * When the trace itself failed, that error is PRIMARY and is what propagates; a
+ * release failure is reported as secondary and attached, never swallowed and
+ * never allowed to hide the real cause.
  *
  * `loadFn` is injectable so the lifecycle can be tested with a fake: no test
  * may load a real model at this gate.
@@ -224,6 +234,9 @@ export async function captureTrace(testCase, state, loadFn = null) {
     loadFn ??
     (async (dir) => (await import('../product_match/harness.mjs')).loadModel(dir));
   const model = await load(join(REPO_ROOT, 'models', testCase.modelId));
+
+  let primary = null;
+  let trace = null;
   try {
     if (model.modelId !== testCase.modelId) {
       throw new CaptureError(
@@ -231,16 +244,38 @@ export async function captureTrace(testCase, state, loadFn = null) {
         `models/${testCase.modelId} resolved to ${model.modelId}`
       );
     }
-    return await searchAndTrace(testCase, state, model.inference);
-  } finally {
-    // Release failures must not mask the original error, and must not
-    // themselves abort the run — but they are reported.
+    trace = await searchAndTrace(testCase, state, model.inference);
+  } catch (err) {
+    primary = err;
+  }
+
+  let releaseError = null;
+  const release = model?.inference?.session?.release;
+  if (typeof release !== 'function') {
+    releaseError = new CaptureError(
+      'SESSION_RELEASE_UNAVAILABLE',
+      'the inference session exposes no callable release(); teardown cannot be demonstrated'
+    );
+  } else {
     try {
-      await model?.inference?.session?.release?.();
+      await model.inference.session.release();
     } catch (err) {
-      console.error(`SESSION_RELEASE_FAILED: ${err?.message ?? err}`);
+      releaseError = new CaptureError(
+        'SESSION_RELEASE_FAILED',
+        `session.release() rejected: ${err?.message ?? err}`
+      );
     }
   }
+
+  if (primary) {
+    if (releaseError) {
+      console.error(`SECONDARY ${releaseError.code}: ${releaseError.message}`);
+      primary.secondary = releaseError;
+    }
+    throw primary;
+  }
+  if (releaseError) throw releaseError;
+  return trace;
 }
 
 /**
