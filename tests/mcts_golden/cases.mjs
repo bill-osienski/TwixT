@@ -391,8 +391,26 @@ export function recomputeSelectedMove(entries) {
  */
 export function validateCorpus(
   outDir,
-  { mode, expectedCaptureCommit, readdirSync, readFileSync }
+  { mode, expectedCaptureCommit, expectedFixtures, readdirSync, readFileSync }
 ) {
+  // Both bindings are MANDATORY, and missing them throws rather than returning
+  // a failure: a truthy check would let a programmatic caller disable the
+  // binding by omission, which is the "gate you can switch off by deleting its
+  // input" shape this project keeps finding.
+  if (typeof expectedCaptureCommit !== 'string' || !isHex40(expectedCaptureCommit)) {
+    throw new CaptureError(
+      'MISSING_EXPECTED_COMMIT',
+      'validateCorpus requires expectedCaptureCommit (40-hex) — the commit the orchestrator preflighted'
+    );
+  }
+  if (!(expectedFixtures instanceof Map) || expectedFixtures.size === 0) {
+    throw new CaptureError(
+      'MISSING_EXPECTED_FIXTURES',
+      'validateCorpus requires expectedFixtures, re-derived from the pinned sidecars — ' +
+        'the descriptor inside an artifact cannot certify itself'
+    );
+  }
+
   const failures = [];
   const fail = (code, detail) => failures.push({ code, detail });
 
@@ -468,22 +486,22 @@ export function validateCorpus(
     else if (expectedCaptureCommit && a.capture_commit !== expectedCaptureCommit)
       bad('capture_commit', a.capture_commit, expectedCaptureCommit);
 
+    // The fixture descriptor is compared field-by-field against one RE-DERIVED
+    // from the pinned sidecar — never against itself. A fabricated artifact can
+    // otherwise change the legal-move keys, their hash and the count together
+    // and remain perfectly self-consistent.
     const f = a.fixture ?? {};
-    if (f.sidecar !== testCase.position.sidecar)
-      bad('fixture.sidecar', f.sidecar, testCase.position.sidecar);
-    if (f.sidecar_sha256 !== testCase.position.sidecarSha256)
-      bad('fixture.sidecar_sha256', f.sidecar_sha256, testCase.position.sidecarSha256);
-    if (f.prefix_plies !== testCase.position.prefixPlies)
-      bad('fixture.prefix_plies', f.prefix_plies, testCase.position.prefixPlies);
-    if (f.ply_after_prefix !== testCase.position.prefixPlies)
-      bad('fixture.ply_after_prefix', f.ply_after_prefix, testCase.position.prefixPlies);
-    if (!isHex64(f.prefix_moves_sha256))
-      bad('fixture.prefix_moves_sha256', f.prefix_moves_sha256, 'sha256 hex');
-    if (!isHex64(f.legal_moves_sha256))
-      bad('fixture.legal_moves_sha256', f.legal_moves_sha256, 'sha256 hex');
-    if (f.to_move !== 'red' && f.to_move !== 'black')
-      bad('fixture.to_move', f.to_move, 'red|black');
-    if (!isPosInt(f.n_legal)) bad('fixture.n_legal', f.n_legal, 'positive integer');
+    const want = expectedFixtures.get(testCase.position.id);
+    if (!want) {
+      fail('NO_DERIVED_FIXTURE', { file: name, position: testCase.position.id });
+    } else {
+      for (const key of Object.keys(want)) {
+        if (f[key] !== want[key]) bad(`fixture.${key}`, f[key], want[key]);
+      }
+      for (const key of Object.keys(f)) {
+        if (!(key in want)) bad(`fixture.${key}`, 'unexpected field', 'not in the derived descriptor');
+      }
+    }
 
     if (!isPosInt(a.pid)) bad('pid', a.pid, 'positive integer');
     else pids.add(a.pid);
@@ -501,6 +519,8 @@ export function validateCorpus(
       // means nothing.
       const t = a.trace;
       const sims = expectedSimulationsFor(testCase);
+      // Derived, not read from the artifact.
+      const derived = expectedFixtures.get(testCase.position.id) ?? {};
 
       // --- visit counts -----------------------------------------------------
       const entriesOk =
@@ -524,13 +544,16 @@ export function validateCorpus(
         const keys = t.visit_counts.map((e) => e[0]);
         if (new Set(keys).size !== keys.length)
           bad('trace.visit_counts', 'duplicate move keys', 'unique keys');
-        // Complete AND correctly ordered, against a target the validator did
-        // not get from the trace: the hash of the fixture's ordered legal-move
-        // keys, recorded before any search ran.
-        if (isHex64(f.legal_moves_sha256) && sha256(JSON.stringify(keys)) !== f.legal_moves_sha256)
-          bad('trace.visit_counts', 'key set/order mismatch', 'fixture.legal_moves_sha256');
-        if (Number.isInteger(f.n_legal) && keys.length !== f.n_legal)
-          bad('trace.visit_counts', keys.length, f.n_legal);
+        // Complete AND correctly ordered against a target RE-DERIVED from the
+        // pinned sidecar — not the hash the artifact carries, which a
+        // fabricator controls alongside the keys themselves.
+        if (
+          isHex64(derived.legal_moves_sha256) &&
+          sha256(JSON.stringify(keys)) !== derived.legal_moves_sha256
+        )
+          bad('trace.visit_counts', 'key set/order mismatch', 'derived legal_moves_sha256');
+        if (Number.isInteger(derived.n_legal) && keys.length !== derived.n_legal)
+          bad('trace.visit_counts', keys.length, derived.n_legal);
         // Every simulation backs up through exactly one root child.
         const total = t.visit_counts.reduce((s, e) => s + e[1], 0);
         if (total !== sims) bad('trace.visit_counts sum', total, sims);

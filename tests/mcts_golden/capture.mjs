@@ -36,6 +36,7 @@ import {
   preflight,
   validateCorpus,
 } from './cases.mjs';
+import { deriveExpectedFixtures } from './worker.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WORKER = join(HERE, 'worker.mjs');
@@ -61,14 +62,23 @@ export function formatCase(testCase, index) {
  * (§4.2 fixes the count at 92), so continuing past a failure would produce a
  * set that looks complete in a directory listing and is not.
  */
-export function runAll({ outDir, dryRun }) {
+export function runAll({ outDir, mode, expectCommit }) {
   const cases = enumerateCases();
   const results = [];
 
   for (let i = 0; i < cases.length; i++) {
     const testCase = cases[i];
-    const args = [WORKER, testCase.caseId, outDir];
-    if (dryRun) args.push('--dry-run');
+    // The mode is explicit, and the run's commit is handed to every worker so a
+    // repository that moves mid-capture is caught at the NEXT case rather than
+    // after all 92 have finished.
+    const args = [
+      WORKER,
+      testCase.caseId,
+      outDir,
+      '--expect-commit',
+      expectCommit,
+      `--${mode}`,
+    ];
 
     const proc = spawnSync(process.execPath, args, { encoding: 'utf8' });
     const label = `[${String(i + 1).padStart(2)}/${cases.length}] ${testCase.caseId}`;
@@ -164,7 +174,7 @@ function main() {
   console.log(`capture commit ${commit}`);
   console.log(`mode           ${mode}\n`);
 
-  const { ok, failedAt } = runAll({ outDir, dryRun: mode === 'dry-run' });
+  const { ok, failedAt } = runAll({ outDir, mode, expectCommit: commit });
   if (!ok) {
     console.error(`\nstopped at ${failedAt}; the corpus is incomplete and is not a corpus`);
     process.exit(1);
@@ -177,9 +187,12 @@ function main() {
   );
 
   // The verdict comes from full validation, never from those counts.
+  // Fixture descriptors are re-derived here from the pinned sidecars, so the
+  // validator never takes the artifacts' word for what position they searched.
   const failures = validateCorpus(outDir, {
     mode,
     expectedCaptureCommit: commit,
+    expectedFixtures: deriveExpectedFixtures(),
     readdirSync,
     readFileSync,
   });

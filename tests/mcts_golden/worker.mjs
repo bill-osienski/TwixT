@@ -2,7 +2,12 @@
 /**
  * Capture worker: runs exactly ONE case, in its own process, then exits.
  *
- *   node tests/mcts_golden/worker.mjs <case_id> <out_dir> [--dry-run]
+ *   node tests/mcts_golden/worker.mjs <case_id> <out_dir> \
+ *        --expect-commit <sha> (--dry-run | --capture)
+ *
+ * The mode is REQUIRED and explicit. There is no default: an optional
+ * `--dry-run` flag means a typo or a forgotten argument silently performs a
+ * real capture, which is the expensive, authorization-gated thing.
  *
  * One process per case is the protocol (§4.5), not an implementation detail:
  * the eager implementation's per-search retention is the thing under study, so
@@ -10,13 +15,13 @@
  * the next — reproducing, inside the capture harness, the very confound that
  * makes the original failure hard to attribute.
  *
- * ORDER IS THE CONTRACT: preflight runs before ANY fixture byte is read and
- * before ANY model is loaded. A refusal must happen with the fixtures unread
- * and no session created. This is tested behaviourally in test_capture.mjs, not
- * asserted by this comment.
+ * ORDER IS THE CONTRACT: preflight — cleanliness, pinned execution surface, and
+ * the orchestrator's commit — runs before ANY fixture byte is read and before
+ * ANY model is loaded. Tested behaviourally in test_capture.mjs.
  *
- * ONNX Runtime is reached only through a dynamic import inside `captureTrace`,
- * so a dry-run process structurally cannot load a model.
+ * `server/mcts.js` has no imports of its own, so MCTS is loaded at the top
+ * level. ONNX Runtime is reached only through the dynamic import inside
+ * `captureTrace`, so a dry-run process structurally cannot load a model.
  *
  * Specification: docs/superpowers/2026-08-16-mcts-memory-remediation-design.md
  */
@@ -25,6 +30,7 @@ import { link, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { TwixtState } from '../../server/gameLogic.js';
+import { MCTS } from '../../server/mcts.js';
 import { executionSurfaceDigest } from '../product_match/p_decision.mjs';
 import {
   C_PUCT,
@@ -34,6 +40,7 @@ import {
   artifactName,
   buildArtifact,
   caseById,
+  enumeratePositions,
   preflight,
   sha256,
 } from './cases.mjs';
@@ -43,10 +50,13 @@ export const EXIT_USAGE = 2;
 export const EXIT_REFUSED = 3;
 export const EXIT_FAILED = 4;
 
+export const MODES = Object.freeze(['dry-run', 'capture']);
+
 /** Refusals that mean "a guard said no", as opposed to "something broke". */
 const REFUSAL_CODES = new Set([
   'WORKTREE_DIRTY',
   'EXECUTION_SURFACE_MOVED',
+  'CAPTURE_COMMIT_MOVED',
   'FIXTURE_SHA256',
   'ARTIFACT_EXISTS',
   'STALE_TEMP_ARTIFACT',
@@ -55,10 +65,9 @@ const REFUSAL_CODES = new Set([
 /**
  * Resolve a case's position: read the sidecar, replay its prefix, describe it.
  *
- * Every move is asserted legal as it is applied. The sidecar's recorded
- * `ply_count` and `opening_id` are checked against the values the matrix
- * declares, so a sidecar swapped for a different game is caught rather than
- * silently reshaping the fixture.
+ * This function is also the INDEPENDENT source of truth used at validation
+ * time (see `deriveExpectedFixtures`): the validator re-derives descriptors
+ * from the pinned sidecars rather than believing the ones an artifact carries.
  */
 export function readFixture(testCase) {
   const { position } = testCase;
@@ -67,9 +76,7 @@ export function readFixture(testCase) {
 
   // Bytes first, before anything is parsed or replayed. Cleanliness and the
   // execution-surface digest do NOT protect these files: a committed edit to a
-  // sidecar leaves the worktree clean and the ten-file digest unchanged, and
-  // would silently produce traces from different input than the preserved
-  // failure evidence.
+  // sidecar leaves the worktree clean and the ten-file digest unchanged.
   const actualSha256 = sha256(bytes);
   if (actualSha256 !== position.sidecarSha256) {
     throw new CaptureError(
@@ -126,10 +133,6 @@ export function readFixture(testCase) {
     );
   }
 
-  // The ordered legal-move keys, hashed BEFORE any search runs. This gives the
-  // validator a completeness-and-order target it did not obtain from the trace
-  // it is judging, so a fabricated or truncated visit map cannot agree with
-  // itself.
   const legalKeys = state.legalMoves().map((m) => `${m[0]},${m[1]}`);
 
   return {
@@ -147,20 +150,29 @@ export function readFixture(testCase) {
   };
 }
 
-/** Load the model and run the one search. The only path that touches ONNX. */
-export async function captureTrace(testCase, state) {
-  const { MCTS } = await import('../../server/mcts.js');
-  const { loadModel } = await import('../product_match/harness.mjs');
-
-  const model = await loadModel(join(REPO_ROOT, 'models', testCase.modelId));
-  if (model.modelId !== testCase.modelId) {
-    throw new CaptureError(
-      'MODEL_ROLE',
-      `models/${testCase.modelId} resolved to ${model.modelId}`
-    );
+/**
+ * Re-derive every position's descriptor from the pinned sidecars.
+ *
+ * The validator must not read the fixture descriptor out of the artifact it is
+ * judging: a fabricated artifact can change the legal-move keys and their hash
+ * together and agree with itself. These descriptors come from the committed,
+ * hash-pinned sidecars instead.
+ */
+export function deriveExpectedFixtures() {
+  const byPositionId = new Map();
+  for (const position of enumeratePositions()) {
+    byPositionId.set(position.id, readFixture({ position }).describe);
   }
+  return byPositionId;
+}
 
-  const mcts = new MCTS(model.inference, {
+/**
+ * Run the search and shape the trace. NO model loading — the inference object
+ * is supplied, so this exact production code path can be exercised against a
+ * deterministic fake without ONNX.
+ */
+export async function searchAndTrace(testCase, state, inference) {
+  const mcts = new MCTS(inference, {
     nSimulations: testCase.nSimulations,
     cPuct: C_PUCT,
   });
@@ -195,21 +207,29 @@ export async function captureTrace(testCase, state) {
   };
 }
 
+/** Load the model, then trace. The only path that touches ONNX. */
+export async function captureTrace(testCase, state) {
+  const { loadModel } = await import('../product_match/harness.mjs');
+  const model = await loadModel(join(REPO_ROOT, 'models', testCase.modelId));
+  if (model.modelId !== testCase.modelId) {
+    throw new CaptureError(
+      'MODEL_ROLE',
+      `models/${testCase.modelId} resolved to ${model.modelId}`
+    );
+  }
+  return searchAndTrace(testCase, state, model.inference);
+}
+
 /**
- * Write atomically, and REFUSE rather than replace.
+ * Write atomically and REFUSE rather than replace, with the kernel arbitrating.
  *
- * `rename()` silently replaces an existing destination, so without these two
- * checks a re-run would overwrite completed evidence — including evidence from
- * a capture that had already failed, which is exactly what §9 says to preserve.
- * A stale temp file is refused too: it is the residue of an interrupted write
- * and is itself evidence. Neither guard deletes anything.
+ * `wx` fails with EEXIST rather than truncating, and `link()` fails with EEXIST
+ * rather than replacing — unlike `rename()`, which replaces silently and makes
+ * any preceding existence check a race. Nothing is ever deleted except this
+ * call's own temp file.
  */
 async function writeAtomicNoClobber(path, value) {
   const tmp = `${path}.tmp`;
-
-  // Exclusive create: the kernel decides the winner, so two concurrent workers
-  // cannot both believe the temp file is free. `wx` fails with EEXIST rather
-  // than truncating.
   try {
     await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx' });
   } catch (err) {
@@ -223,11 +243,6 @@ async function writeAtomicNoClobber(path, value) {
     throw err;
   }
 
-  // Publish WITHOUT replacement. `rename()` silently replaces its destination,
-  // so a check-then-rename pair races: both workers can observe no final file
-  // and then both rename, and the loser's bytes win. `link()` fails with
-  // EEXIST if the destination exists, which makes publication itself the
-  // exclusion rather than a preceding check.
   try {
     await link(tmp, path);
   } catch (err) {
@@ -246,21 +261,45 @@ async function writeAtomicNoClobber(path, value) {
 /**
  * Run one case end to end.
  *
+ * `mode` and `expectCommit` are REQUIRED — no defaults. A defaulted mode makes
+ * the expensive path the accidental one, and a defaulted commit lets the
+ * binding be disabled by omission.
+ *
  * `seams` exists only so tests can observe that a refusal happens with the
  * fixtures unread and no model loaded. **`preflight` is deliberately not among
- * them** — a caller must not be able to supply the standard it is judged by.
- * The CLI never passes `seams`.
+ * them** — a caller must not supply the standard it is judged by.
  */
-export async function runCase({ testCase, outDir, dryRun = false }, seams = {}) {
+export async function runCase({ testCase, outDir, mode, expectCommit }, seams = {}) {
+  if (!MODES.includes(mode)) {
+    throw new CaptureError('MODE_REQUIRED', `mode must be one of ${MODES.join('|')}, got ${mode}`);
+  }
+  if (typeof expectCommit !== 'string' || !/^[0-9a-f]{40}$/.test(expectCommit)) {
+    throw new CaptureError(
+      'EXPECT_COMMIT_REQUIRED',
+      `expectCommit must be a 40-hex sha, got ${expectCommit}`
+    );
+  }
   const readFixtureFn = seams.readFixture ?? readFixture;
   const captureTraceFn = seams.captureTrace ?? captureTrace;
+  const dryRun = mode === 'dry-run';
 
   // 1. Guards, before anything is read or loaded.
   const captureCommit = preflight(executionSurfaceDigest);
+  if (captureCommit !== expectCommit) {
+    // A clean commit made mid-run leaves the surface digest unchanged, so
+    // without this every later worker would succeed under a different commit
+    // and the whole corpus would only be rejected after the last case finished
+    // — hours of capture thrown away.
+    throw new CaptureError(
+      'CAPTURE_COMMIT_MOVED',
+      `HEAD is ${captureCommit} but this run was started at ${expectCommit}; ` +
+        `the repository moved mid-capture`
+    );
+  }
 
-  // 2. Refuse to clobber BEFORE doing the work. Checked again at write time --
-  //    this earlier check exists so a case that would be refused does not first
-  //    spend minutes on an 800-simulation search.
+  // 2. Refuse to clobber BEFORE doing the work, so a doomed case does not first
+  //    spend minutes on an 800-simulation search. The binding guarantee is in
+  //    writeAtomicNoClobber; these are fast-fail only.
   const finalPath = join(outDir, artifactName(testCase.caseId));
   if (existsSync(finalPath)) {
     throw new CaptureError(
@@ -296,24 +335,55 @@ export async function runCase({ testCase, outDir, dryRun = false }, seams = {}) 
 
 // --- CLI ---------------------------------------------------------------------
 
-async function main() {
-  const [caseId, outDir, ...rest] = process.argv.slice(2);
-  if (!caseId || !outDir) {
-    console.error('usage: worker.mjs <case_id> <out_dir> [--dry-run]');
-    process.exit(EXIT_USAGE);
-  }
-  const dryRun = rest.includes('--dry-run');
+const USAGE =
+  'usage: worker.mjs <case_id> <out_dir> --expect-commit <sha> (--dry-run|--capture)';
 
+/**
+ * Parse argv strictly. Every unrecognised or duplicated argument is an error:
+ * silently ignoring an unknown flag is how `--dryrun` becomes a real capture.
+ */
+export function parseArgs(argv) {
+  const [caseId, outDir, ...rest] = argv;
+  if (!caseId || !outDir) throw new CaptureError('USAGE', USAGE);
+
+  let mode = null;
+  let expectCommit = null;
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i];
+    if (arg === '--dry-run' || arg === '--capture') {
+      if (mode !== null) throw new CaptureError('USAGE', `mode given twice: ${USAGE}`);
+      mode = arg.slice(2);
+    } else if (arg === '--expect-commit') {
+      if (expectCommit !== null) throw new CaptureError('USAGE', `--expect-commit given twice`);
+      expectCommit = rest[++i];
+      if (!expectCommit) throw new CaptureError('USAGE', `--expect-commit needs a value`);
+    } else {
+      throw new CaptureError('USAGE', `unrecognised argument ${arg}: ${USAGE}`);
+    }
+  }
+  if (mode === null) throw new CaptureError('USAGE', `a mode is required: ${USAGE}`);
+  if (expectCommit === null) throw new CaptureError('USAGE', `--expect-commit is required: ${USAGE}`);
+  return { caseId, outDir, mode, expectCommit };
+}
+
+async function main() {
+  let parsed;
   let testCase;
   try {
-    testCase = caseById(caseId);
+    parsed = parseArgs(process.argv.slice(2));
+    testCase = caseById(parsed.caseId);
   } catch (err) {
-    console.error(`${err.code}: ${err.message}`);
+    console.error(`${err.code ?? 'ERROR'}: ${err.message}`);
     process.exit(EXIT_USAGE);
   }
 
   try {
-    const artifact = await runCase({ testCase, outDir, dryRun });
+    const artifact = await runCase({
+      testCase,
+      outDir: parsed.outDir,
+      mode: parsed.mode,
+      expectCommit: parsed.expectCommit,
+    });
     console.log(`${artifact.status} ${artifact.case_id} pid=${artifact.pid}`);
     process.exit(EXIT_OK);
   } catch (err) {
