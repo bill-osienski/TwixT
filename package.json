@@ -10,7 +10,7 @@
     "test:server": "node --test server/test_server.js server/test_readout_policy.js server/test_model_manifest.js server/test_mcts.js",
     "test:parity": "node --test tests/parity/test_corpus.mjs tests/parity/test_compare.mjs",
     "test:match": "node --test tests/product_match/test_openings.mjs tests/product_match/test_timing.mjs tests/product_match/test_harness.mjs tests/product_match/test_analyse.mjs",
-    "test:golden": "node --test --test-concurrency=1 tests/mcts_golden/test_capture.mjs tests/mcts_golden/test_falsify.mjs",
+    "test:golden": "node --test --test-concurrency=1 tests/mcts_golden/test_capture.mjs tests/mcts_golden/test_falsify.mjs tests/mcts_golden/test_compare.mjs",
     "falsify": "node tests/mcts_golden/falsify.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

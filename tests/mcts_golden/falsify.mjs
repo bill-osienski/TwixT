@@ -38,6 +38,8 @@ import {
   STAGES,
   assertCleanWorktree,
   assertStageSurface,
+  codeOfThrown,
+  describeThrown,
   enumeratePositions,
   stageConfig,
 } from './cases.mjs';
@@ -74,22 +76,8 @@ export const FALSIFICATION = Object.freeze({
  */
 export { STAGES, STAGE_NAMES };
 
-/** Describe ANY thrown value safely — including null, undefined and primitives. */
-export function describeThrown(err) {
-  if (err === null) return 'null';
-  if (err === undefined) return 'undefined';
-  if (typeof err === 'object') {
-    const msg = typeof err.message === 'string' ? err.message : '';
-    return msg || Object.prototype.toString.call(err);
-  }
-  return String(err);
-}
-
-/** The `code` of a thrown value, if it safely has one. */
-export function codeOfThrown(err) {
-  if (err !== null && typeof err === 'object' && typeof err.code === 'string') return err.code;
-  return null;
-}
+/** Shared with the comparator; re-exported so existing importers keep working. */
+export { describeThrown, codeOfThrown };
 
 const REFUSAL_CODES = new Set([
   'WORKTREE_DIRTY',

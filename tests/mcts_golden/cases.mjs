@@ -172,6 +172,24 @@ export class CaptureError extends Error {
 
 export const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
+/** Describe ANY thrown value safely — including null, undefined and primitives. */
+export function describeThrown(err) {
+  if (err === null) return 'null';
+  if (err === undefined) return 'undefined';
+  if (typeof err === 'object') {
+    const msg = typeof err.message === 'string' ? err.message : '';
+    return msg || Object.prototype.toString.call(err);
+  }
+  return String(err);
+}
+
+/** The `code` of a thrown value, if it safely has one. */
+export function codeOfThrown(err) {
+  if (err !== null && typeof err === 'object' && typeof err.code === 'string') return err.code;
+  return null;
+}
+
+
 /** The 16 positions of §4.2, in P01..P16 order. */
 export function enumeratePositions() {
   const positions = [];
