@@ -1,0 +1,30 @@
+ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+{
+  "schema": "twixt-mcts-falsification/1",
+  "stage": "lazy",
+  "positionId": "P11",
+  "sidecar": "timing_02_opening_202.json",
+  "prefixPlies": 28,
+  "modelId": "1d64027db521a50f",
+  "nSimulations": 8,
+  "cPuct": 1.5,
+  "gateMaxCopies": 8,
+  "loaded_model_id": "1d64027db521a50f",
+  "position": {
+    "id": "P11",
+    "sidecar": "timing_02_opening_202.json",
+    "prefix_plies": 28
+  },
+  "n_legal": 500,
+  "copy_count": 8,
+  "gate": "copyCount <= 8",
+  "satisfied": true,
+  "required_outcome": "satisfied",
+  "execution_commit": "3189187615941b8e2fff2a9914d4cf779dbb4059",
+  "execution_surface_sha256": "d7fb6bc3fbc722e306940accadc2b8bdda6c92d125710b9b22c32d31dac4c769"
+}
+
+copyCount 8 vs gate 8 at 500 legal moves (stage: lazy)
+COPY-COUNT GATE SATISFIED
