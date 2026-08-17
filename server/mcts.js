@@ -36,8 +36,9 @@ export class MCTSNode {
     this.valueSum = 0;
 
     this.priors = null; // Map<"row,col", prior>
+    this.moves = null; // Ordered legal moves, set at expansion
     this.nnValue = null; // Stored NN value (single eval per expansion)
-    this.children = new Map(); // Map<"row,col", MCTSNode>
+    this.children = new Map(); // Map<"row,col", MCTSNode> — MATERIALIZED only
   }
 
   get qValue() {
@@ -144,10 +145,17 @@ export class MCTS {
       }
     }
 
-    // Collect visit counts
+    // Collect visit counts.
+    //
+    // Iterating the candidate MOVES rather than the materialized children is
+    // what keeps every legal root move present, including the zero-count ones
+    // that were never descended into. Those zeros are observable outside MCTS —
+    // server/index.js turns them into the cached `visits` payload — so dropping
+    // them would be a behaviour change, not an internal detail.
     const visitCounts = new Map();
-    for (const [moveKey, child] of root.children) {
-      visitCounts.set(moveKey, child.visitCount);
+    for (const move of root.moves ?? []) {
+      const moveKey = `${move[0]},${move[1]}`;
+      visitCounts.set(moveKey, root.children.get(moveKey)?.visitCount ?? 0);
     }
 
     return { visitCounts, rootValue: root.qValue };
@@ -163,6 +171,7 @@ export class MCTS {
     if (moves.length === 0) {
       // No legal moves (should be terminal, but handle gracefully)
       node.priors = new Map();
+      node.moves = [];
       node.nnValue = 0;
       return 0;
     }
@@ -176,14 +185,33 @@ export class MCTS {
     node.priors = priors;
     node.nnValue = value;
 
-    // Create children (unexpanded)
-    for (const move of moves) {
-      const key = `${move[0]},${move[1]}`;
-      const childState = node.state.applyMove(move);
-      node.children.set(key, new MCTSNode(childState, node, move));
-    }
+    // Candidate moves are recorded in legalMoves() order; child STATES are not
+    // built here. Building one per legal move made a single 800-simulation
+    // search retain ~801 x ~480 deep-copied states and exhausted the default
+    // heap. A child is materialized only when PUCT first descends into it
+    // (_childFor), which bounds retention by the simulation count.
+    //
+    // Selection is unaffected: an unvisited child contributes q = 0 and
+    // N_child = 0, both derivable from `priors` alone, and its state is never
+    // read while scoring. See _selectChild.
+    node.moves = moves;
 
     return value;
+  }
+
+  /**
+   * The child for `move`, materializing it on first descent.
+   *
+   * This is the only place a child state is constructed, and it runs at most
+   * once per (node, move) pair.
+   */
+  _childFor(node, moveKey, move) {
+    let child = node.children.get(moveKey);
+    if (child === undefined) {
+      child = new MCTSNode(node.state.applyMove(move), node, move);
+      node.children.set(moveKey, child);
+    }
+    return child;
   }
 
   _selectChild(node) {
@@ -197,32 +225,48 @@ export class MCTS {
 
     let bestScore = -Infinity;
     let bestMove = null;
-    let bestChild = null;
+    let bestMoveArr = null;
 
-    for (const [moveKey, child] of node.children) {
+    // Iterate the candidate MOVES, not the materialized children: with lazy
+    // materialization `children` holds only what has been descended into, and
+    // every legal move must still be scored. The order is legalMoves() order,
+    // which is what `children` used to be populated in — so the tie-break sees
+    // candidates in the same sequence as before.
+    for (const move of node.moves) {
+      const moveKey = `${move[0]},${move[1]}`;
       const prior = node.priors.get(moveKey) || 0;
+      const child = node.children.get(moveKey);
+
+      // An UNMATERIALIZED child is by definition unvisited, so it scores
+      // exactly as a materialized-but-unvisited one: q = 0 and a denominator of
+      // 1. `child.state` is never read here, which is what makes deferring its
+      // construction free of any effect on selection.
+      const visitCount = child === undefined ? 0 : child.visitCount;
 
       // Q from child perspective (negate because opponent's loss = our gain)
-      const q = child.visitCount > 0 ? -child.qValue : 0;
+      const q = visitCount > 0 ? -child.qValue : 0;
 
       // PUCT bonus
-      const u = (this.cPuct * prior * sqrtParent) / (1 + child.visitCount);
+      const u = (this.cPuct * prior * sqrtParent) / (1 + visitCount);
 
       const score = q + u;
 
       if (score > bestScore) {
         bestScore = score;
         bestMove = moveKey;
-        bestChild = child;
+        bestMoveArr = move;
       } else if (score === bestScore) {
         // Lexicographic tie-break for determinism
         if (moveKey < bestMove) {
           bestMove = moveKey;
-          bestChild = child;
+          bestMoveArr = move;
         }
       }
     }
 
+    // Only the winner is materialized.
+    const bestChild =
+      bestMove === null ? null : this._childFor(node, bestMove, bestMoveArr);
     return [bestMove, bestChild];
   }
 
