@@ -1,0 +1,23 @@
+{
+  "outcome": "match",
+  "comparedCases": 92,
+  "comparedFields": [
+    "visit_counts",
+    "root_value",
+    "selected_move",
+    "progress"
+  ],
+  "excludedFields": [
+    "progress_elapsed_ms"
+  ],
+  "eagerFingerprint": "9e3a9037409c6eb4e72206a8b01697c1c138b0a90291462d713116106f2239f6",
+  "eagerCaptureCommit": "841df6040a740a4b9f1753253e0e8bfc63e15366",
+  "lazyCaptureCommit": "aad579675967ba86a21e4b5faf826e685941bb3e",
+  "lazyArtifactCount": 92,
+  "mismatches": []
+}
+
+compared 92 cases on visit_counts, root_value, selected_move, progress
+excluded progress_elapsed_ms
+EXACT MATCH
+Interpretation, fixed before this ran: exact agreement on those fields across these 92 cases ONLY. It does not establish global implementation equivalence, heap safety, performance, strength, or correctness outside the frozen corpus.

@@ -1,0 +1,40 @@
+{
+  "schema": "twixt-mcts-golden/2",
+  "stage": "lazy",
+  "status": "captured",
+  "case_id": "A1",
+  "kind": "abort",
+  "trigger": "already_aborted",
+  "position": {
+    "id": "P07",
+    "sidecar": "timing_01_opening_201.json",
+    "opening_id": 201,
+    "prefix_plies": 28,
+    "immediate_win": false
+  },
+  "model_id": "1d64027db521a50f",
+  "n_simulations": 64,
+  "c_puct": 1.5,
+  "move_temp": 0,
+  "capture_commit": "aad579675967ba86a21e4b5faf826e685941bb3e",
+  "pinned_surface_commit": "85894b93392e63ce8f6e008f368ff7e798f91853",
+  "execution_surface_sha256": "d7fb6bc3fbc722e306940accadc2b8bdda6c92d125710b9b22c32d31dac4c769",
+  "fixture": {
+    "sidecar": "timing_01_opening_201.json",
+    "sidecar_sha256": "900f1c5c67337e27ae970ce946d510247cea8026c205547689c25c66e920fc36",
+    "prefix_plies": 28,
+    "prefix_moves_sha256": "609a7947698e5a4c513fa614ffb21cdcee31d1246f346da6b32e3d50ec2b1612",
+    "ply_after_prefix": 28,
+    "to_move": "red",
+    "n_legal": 501,
+    "legal_moves_sha256": "00671e403909a4c1221ae763a8dcd240fb7aebb24cac3b06c3b3719b264a8d27"
+  },
+  "pid": 7336,
+  "trace": {
+    "visit_counts": [],
+    "root_value": 0,
+    "selected_move": null,
+    "progress": [],
+    "progress_elapsed_ms": []
+  }
+}

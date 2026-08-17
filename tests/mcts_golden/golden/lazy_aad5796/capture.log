@@ -1,0 +1,375 @@
+capture commit aad579675967ba86a21e4b5faf826e685941bb3e
+stage          lazy
+mode           capture
+
+[ 1/92] G_P01_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P01_baseline_s1 pid=4826
+[ 2/92] G_P01_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P01_baseline_s2 pid=4851
+[ 3/92] G_P01_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P01_baseline_s8 pid=4876
+[ 4/92] G_P01_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P01_baseline_s64 pid=4901
+[ 5/92] G_P01_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P01_baseline_s800 pid=4926
+[ 6/92] G_P02_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_baseline_s1 pid=4959
+[ 7/92] G_P02_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_baseline_s2 pid=4984
+[ 8/92] G_P02_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_baseline_s8 pid=5009
+[ 9/92] G_P02_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_baseline_s64 pid=5034
+[10/92] G_P02_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_baseline_s800 pid=5059
+[11/92] G_P03_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P03_baseline_s1 pid=5094
+[12/92] G_P03_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P03_baseline_s2 pid=5119
+[13/92] G_P03_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P03_baseline_s8 pid=5144
+[14/92] G_P03_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P03_baseline_s64 pid=5169
+[15/92] G_P03_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P03_baseline_s800 pid=5194
+[16/92] G_P04_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P04_baseline_s1 pid=5219
+[17/92] G_P04_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P04_baseline_s2 pid=5246
+[18/92] G_P04_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P04_baseline_s8 pid=5271
+[19/92] G_P04_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P04_baseline_s64 pid=5297
+[20/92] G_P04_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P04_baseline_s800 pid=5323
+[21/92] G_P05_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P05_baseline_s1 pid=5362
+[22/92] G_P05_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P05_baseline_s2 pid=5424
+[23/92] G_P05_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P05_baseline_s8 pid=5449
+[24/92] G_P05_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P05_baseline_s64 pid=5474
+[25/92] G_P05_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P05_baseline_s800 pid=5500
+[26/92] G_P06_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P06_baseline_s1 pid=5531
+[27/92] G_P06_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P06_baseline_s2 pid=5556
+[28/92] G_P06_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P06_baseline_s8 pid=5581
+[29/92] G_P06_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P06_baseline_s64 pid=5606
+[30/92] G_P06_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P06_baseline_s800 pid=5632
+[31/92] G_P07_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P07_baseline_s1 pid=5708
+[32/92] G_P07_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P07_baseline_s2 pid=5733
+[33/92] G_P07_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P07_baseline_s8 pid=5758
+[34/92] G_P07_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P07_baseline_s64 pid=5784
+[35/92] G_P07_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P07_baseline_s800 pid=5809
+[36/92] G_P08_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P08_baseline_s1 pid=5834
+[37/92] G_P08_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P08_baseline_s2 pid=5859
+[38/92] G_P08_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P08_baseline_s8 pid=5884
+[39/92] G_P08_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P08_baseline_s64 pid=5909
+[40/92] G_P08_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P08_baseline_s800 pid=5934
+[41/92] G_P09_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P09_baseline_s1 pid=5959
+[42/92] G_P09_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P09_baseline_s2 pid=5988
+[43/92] G_P09_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P09_baseline_s8 pid=6013
+[44/92] G_P09_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P09_baseline_s64 pid=6038
+[45/92] G_P09_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P09_baseline_s800 pid=6063
+[46/92] G_P10_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P10_baseline_s1 pid=6088
+[47/92] G_P10_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P10_baseline_s2 pid=6113
+[48/92] G_P10_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P10_baseline_s8 pid=6139
+[49/92] G_P10_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P10_baseline_s64 pid=6164
+[50/92] G_P10_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P10_baseline_s800 pid=6189
+[51/92] G_P11_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_baseline_s1 pid=6220
+[52/92] G_P11_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_baseline_s2 pid=6245
+[53/92] G_P11_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_baseline_s8 pid=6270
+[54/92] G_P11_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_baseline_s64 pid=6296
+[55/92] G_P11_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_baseline_s800 pid=6321
+[56/92] G_P12_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P12_baseline_s1 pid=6346
+[57/92] G_P12_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P12_baseline_s2 pid=6371
+[58/92] G_P12_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P12_baseline_s8 pid=6397
+[59/92] G_P12_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P12_baseline_s64 pid=6422
+[60/92] G_P12_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P12_baseline_s800 pid=6447
+[61/92] G_P13_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P13_baseline_s1 pid=6472
+[62/92] G_P13_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P13_baseline_s2 pid=6497
+[63/92] G_P13_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P13_baseline_s8 pid=6523
+[64/92] G_P13_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P13_baseline_s64 pid=6548
+[65/92] G_P13_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P13_baseline_s800 pid=6573
+[66/92] G_P14_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P14_baseline_s1 pid=6649
+[67/92] G_P14_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P14_baseline_s2 pid=6674
+[68/92] G_P14_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P14_baseline_s8 pid=6699
+[69/92] G_P14_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P14_baseline_s64 pid=6724
+[70/92] G_P14_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P14_baseline_s800 pid=6749
+[71/92] G_P15_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P15_baseline_s1 pid=6774
+[72/92] G_P15_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P15_baseline_s2 pid=6799
+[73/92] G_P15_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P15_baseline_s8 pid=6824
+[74/92] G_P15_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P15_baseline_s64 pid=6849
+[75/92] G_P15_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P15_baseline_s800 pid=6874
+[76/92] G_P16_baseline_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P16_baseline_s1 pid=6908
+[77/92] G_P16_baseline_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P16_baseline_s2 pid=6933
+[78/92] G_P16_baseline_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P16_baseline_s8 pid=6958
+[79/92] G_P16_baseline_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P16_baseline_s64 pid=6997
+[80/92] G_P16_baseline_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P16_baseline_s800 pid=7059
+[81/92] G_P02_candidate_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_candidate_s1 pid=7085
+[82/92] G_P02_candidate_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_candidate_s2 pid=7110
+[83/92] G_P02_candidate_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_candidate_s8 pid=7135
+[84/92] G_P02_candidate_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_candidate_s64 pid=7160
+[85/92] G_P02_candidate_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P02_candidate_s800 pid=7185
+[86/92] G_P11_candidate_s1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_candidate_s1 pid=7210
+[87/92] G_P11_candidate_s2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_candidate_s2 pid=7235
+[88/92] G_P11_candidate_s8  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_candidate_s8 pid=7260
+[89/92] G_P11_candidate_s64  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_candidate_s64 pid=7286
+[90/92] G_P11_candidate_s800  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured G_P11_candidate_s800 pid=7311
+[91/92] A1  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured A1 pid=7336
+[92/92] A2  ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+captured A2 pid=7361
+
+92 artifacts, 92 distinct pids, captured=92
+corpus VALID: 92 cases verified against the matrix
