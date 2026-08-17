@@ -1,0 +1,31 @@
+ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+{
+  "schema": "twixt-mcts-falsification/1",
+  "stage": "eager",
+  "positionId": "P11",
+  "sidecar": "timing_02_opening_202.json",
+  "prefixPlies": 28,
+  "modelId": "1d64027db521a50f",
+  "nSimulations": 8,
+  "cPuct": 1.5,
+  "gateMaxCopies": 8,
+  "loaded_model_id": "1d64027db521a50f",
+  "position": {
+    "id": "P11",
+    "sidecar": "timing_02_opening_202.json",
+    "prefix_plies": 28
+  },
+  "n_legal": 500,
+  "copy_count": 4490,
+  "gate": "copyCount <= 8",
+  "satisfied": false,
+  "required_outcome": "violated",
+  "execution_commit": "481f9bd55743d4a453812c6d8581e31aae5f76b9",
+  "execution_surface_sha256": "228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd"
+}
+
+copyCount 4490 vs gate 8 at 500 legal moves (stage: eager)
+COPY-COUNT GATE VIOLATED
+(this stage requires: violated)
