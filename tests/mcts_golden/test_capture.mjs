@@ -1120,8 +1120,8 @@ test('LIFECYCLE: a release failure publishes NO artifact', async (t) => {
 const stripComments = (src) =>
   src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-test('EXIT: neither harness entry point calls process.exit — both return codes', () => {
-  for (const file of ['worker.mjs', 'capture.mjs']) {
+test('EXIT: no harness entry point calls process.exit — all return codes', () => {
+  for (const file of ['worker.mjs', 'capture.mjs', 'falsify.mjs']) {
     const src = stripComments(
       readFileSync(join(REPO_ROOT, 'tests', 'mcts_golden', file), 'utf8')
     );
