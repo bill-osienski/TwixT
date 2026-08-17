@@ -37,12 +37,14 @@ import {
   CaptureError,
   FIXTURE_RELDIR,
   REPO_ROOT,
+  STAGE_NAMES,
   artifactName,
   buildArtifact,
   caseById,
   enumeratePositions,
-  preflight,
+  preflightForStage,
   sha256,
+  stageConfig,
 } from './cases.mjs';
 
 export const EXIT_OK = 0;
@@ -341,7 +343,10 @@ async function writeAtomicNoClobber(path, value) {
  * fixtures unread and no model loaded. **`preflight` is deliberately not among
  * them** — a caller must not supply the standard it is judged by.
  */
-export async function runCase({ testCase, outDir, mode, expectCommit }, seams = {}) {
+export async function runCase({ testCase, outDir, mode, stage, expectCommit }, seams = {}) {
+  // No default stage: a defaulted one would attribute the artifact to whichever
+  // surface happened to be the default.
+  stageConfig(stage);
   if (!MODES.includes(mode)) {
     throw new CaptureError('MODE_REQUIRED', `mode must be one of ${MODES.join('|')}, got ${mode}`);
   }
@@ -356,7 +361,7 @@ export async function runCase({ testCase, outDir, mode, expectCommit }, seams = 
   const dryRun = mode === 'dry-run';
 
   // 1. Guards, before anything is read or loaded.
-  const captureCommit = preflight(executionSurfaceDigest);
+  const { head: captureCommit } = preflightForStage(stage, executionSurfaceDigest);
   if (captureCommit !== expectCommit) {
     // A clean commit made mid-run leaves the surface digest unchanged, so
     // without this every later worker would succeed under a different commit
@@ -397,6 +402,7 @@ export async function runCase({ testCase, outDir, mode, expectCommit }, seams = 
     captureCommit,
     fixture: describe,
     status: dryRun ? 'dry-run' : 'captured',
+    stage,
     trace,
   });
 
@@ -408,7 +414,8 @@ export async function runCase({ testCase, outDir, mode, expectCommit }, seams = 
 // --- CLI ---------------------------------------------------------------------
 
 const USAGE =
-  'usage: worker.mjs <case_id> <out_dir> --expect-commit <sha> (--dry-run|--capture)';
+  `usage: worker.mjs <case_id> <out_dir> --expect-commit <sha> ` +
+  `--stage <${STAGE_NAMES.join('|')}> (--dry-run|--capture)`;
 
 /**
  * Parse argv strictly. Every unrecognised or duplicated argument is an error:
@@ -420,6 +427,7 @@ export function parseArgs(argv) {
 
   let mode = null;
   let expectCommit = null;
+  let stage = null;
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i];
     if (arg === '--dry-run' || arg === '--capture') {
@@ -429,13 +437,20 @@ export function parseArgs(argv) {
       if (expectCommit !== null) throw new CaptureError('USAGE', `--expect-commit given twice`);
       expectCommit = rest[++i];
       if (!expectCommit) throw new CaptureError('USAGE', `--expect-commit needs a value`);
+    } else if (arg === '--stage') {
+      if (stage !== null) throw new CaptureError('USAGE', `--stage given twice`);
+      stage = rest[++i];
+      if (!stage) throw new CaptureError('USAGE', `--stage needs a value`);
+      if (!STAGE_NAMES.includes(stage))
+        throw new CaptureError('USAGE', `unknown stage ${stage}: ${USAGE}`);
     } else {
       throw new CaptureError('USAGE', `unrecognised argument ${arg}: ${USAGE}`);
     }
   }
   if (mode === null) throw new CaptureError('USAGE', `a mode is required: ${USAGE}`);
+  if (stage === null) throw new CaptureError('USAGE', `--stage is required: ${USAGE}`);
   if (expectCommit === null) throw new CaptureError('USAGE', `--expect-commit is required: ${USAGE}`);
-  return { caseId, outDir, mode, expectCommit };
+  return { caseId, outDir, mode, stage, expectCommit };
 }
 
 /**
@@ -463,6 +478,7 @@ export async function mainWithCode(argv) {
       testCase,
       outDir: parsed.outDir,
       mode: parsed.mode,
+      stage: parsed.stage,
       expectCommit: parsed.expectCommit,
     });
     console.log(`${artifact.status} ${artifact.case_id} pid=${artifact.pid}`);

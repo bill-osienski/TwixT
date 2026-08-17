@@ -222,11 +222,106 @@ test('progress reports one entry per simulation with the running root value', as
   assert.ok(seen.every((p) => p.valueEstimate >= -1 && p.valueEstimate <= 1));
 });
 
-test('one network evaluation per expansion, and none for a re-descended child', async () => {
+test('each expansion performs exactly one evaluation', async () => {
+  // Counted against the expansions actually performed, not against a range: a
+  // bound of "between 2 and 6" neither shows an expansion happened nor detects
+  // a duplicate evaluation inside it.
   const inference = fakeInference();
-  const mcts = new MCTS(inference, { nSimulations: 5, cPuct: 1.5 });
-  await mcts.search(smallState());
-  // 1 root expansion + at most one leaf expansion per simulation.
-  assert.ok(inference.calls <= 6, `evaluate called ${inference.calls} times`);
-  assert.ok(inference.calls >= 2);
+  const mcts = new MCTS(inference, { nSimulations: 1, cPuct: 1.5 });
+
+  const root = new MCTSNode(smallState());
+  assert.equal(inference.calls, 0);
+  await mcts._expand(root);
+  assert.equal(inference.calls, 1, 'root expansion');
+
+  const [, child] = mcts._selectChild(root);
+  assert.equal(inference.calls, 1, 'selection evaluated something');
+  await mcts._expand(child);
+  assert.equal(inference.calls, 2, 'child expansion');
+});
+
+test('re-selecting a materialized move reuses the cached child object', async () => {
+  // Narrow by design: this is about `children` caching, NOT about evaluation.
+  // `_selectChild` cannot evaluate anything, so asserting "no new evaluation"
+  // here would be vacuous — that claim is made by the search-level test below.
+  const inference = fakeInference();
+  const mcts = new MCTS(inference, { nSimulations: 1, cPuct: 1.5 });
+
+  const root = new MCTSNode(smallState());
+  await mcts._expand(root);
+  const [firstKey, firstChild] = mcts._selectChild(root);
+
+  // qValue -1 for the child means q = +1 from the parent's perspective, beating
+  // every unvisited sibling's q = 0, so the next selection must return it.
+  firstChild.visitCount = 1;
+  firstChild.valueSum = -1;
+
+  const copies = await countCopies(async () => {
+    const [againKey, againChild] = mcts._selectChild(root);
+    assert.equal(againKey, firstKey, 'the setup failed to force a re-selection');
+    assert.equal(againChild, firstChild, 'a second node was created for the same move');
+  });
+  assert.equal(copies, 0, 're-selecting reconstructed the child state');
+  assert.equal(root.children.size, 1, 'a duplicate child entry was added');
+});
+
+test('across a REAL search, no node is expanded twice and traversal repeats', async () => {
+  // The property that matters, asserted at the level where it can actually be
+  // violated: a full search re-descends through already-expanded nodes many
+  // times, and must never expand the same node object again.
+  const inference = fakeInference();
+  const state = smallState();
+  // The simulation count must comfortably exceed the branching factor, or every
+  // simulation just expands another fresh root child and no node is ever
+  // re-traversed. Measured on this board (48 legal moves): 53 simulations gives
+  // ZERO re-traversed children, 100 gives 12. The first draft used 12 and
+  // proved nothing — which this test's own final assertion caught.
+  const nSimulations = 3 * state.legalMoves().length;
+  const mcts = new MCTS(inference, { nSimulations, cPuct: 1.5 });
+
+  const expandedNodes = [];
+  const realExpand = mcts._expand.bind(mcts);
+  mcts._expand = (node) => {
+    expandedNodes.push(node);
+    return realExpand(node);
+  };
+
+  const traversedFrom = [];
+  const realSelect = mcts._selectChild.bind(mcts);
+  mcts._selectChild = (node) => {
+    traversedFrom.push(node);
+    return realSelect(node);
+  };
+
+  await mcts.search(state);
+
+  assert.equal(
+    new Set(expandedNodes).size,
+    expandedNodes.length,
+    'the same node object was expanded more than once'
+  );
+  assert.equal(
+    inference.calls,
+    expandedNodes.length,
+    'evaluations did not match expansions one-for-one'
+  );
+
+  // Prove re-traversal actually happened, rather than assuming it: some node
+  // was selected from more than once, and at least one of those was a CHILD
+  // (the root is trivially re-traversed every simulation).
+  const timesSelectedFrom = new Map();
+  for (const node of traversedFrom) {
+    timesSelectedFrom.set(node, (timesSelectedFrom.get(node) ?? 0) + 1);
+  }
+  const repeats = [...timesSelectedFrom.values()].filter((n) => n > 1);
+  assert.ok(repeats.length >= 1, 'no node was traversed twice; the test proves nothing');
+
+  const rootNode = traversedFrom[0];
+  const childRepeats = [...timesSelectedFrom.entries()].filter(
+    ([node, n]) => node !== rootNode && n > 1
+  );
+  assert.ok(
+    childRepeats.length >= 1,
+    'no already-expanded CHILD was traversed again; only the root repeated'
+  );
 });

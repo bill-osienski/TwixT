@@ -12,11 +12,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { executionSurfaceDigest } from '../product_match/p_decision.mjs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { TwixtState } from '../../server/gameLogic.js';
-import { BASELINE_MODEL_ID, C_PUCT, REPO_ROOT } from './cases.mjs';
+import { BASELINE_MODEL_ID, C_PUCT, REPO_ROOT, assertStageSurface } from './cases.mjs';
+import { stageConfig } from './cases.mjs';
 import {
   EXIT_ERROR,
   EXIT_REFUSED,
@@ -25,7 +27,6 @@ import {
   EXIT_VIOLATED,
   FALSIFICATION,
   STAGES,
-  assertStageSurface,
   codeOfThrown,
   describeThrown,
   exitCodeForError,
@@ -39,8 +40,10 @@ import {
 const gitClean = () =>
   execFileSync('git', ['status', '--porcelain'], { cwd: REPO_ROOT }).toString().trim() === '';
 
-const PINNED_EAGER_SURFACE =
-  '228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd';
+const EAGER_SURFACE = '228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd';
+const LAZY_SURFACE = 'd7fb6bc3fbc722e306940accadc2b8bdda6c92d125710b9b22c32d31dac4c769';
+/** HEAD carries the LAZY surface. */
+const STAGE = 'lazy';
 
 /** A model whose session records that release() was called. */
 function fakeModel({ modelId, log }) {
@@ -193,19 +196,22 @@ test('the falsification CLI is NOT part of the ordinary suite', () => {
 
 // --- stage binding -----------------------------------------------------------
 
-test('the eager stage is BOUND to the 74dca6e execution surface', () => {
-  assert.equal(STAGES.eager.expectedSurfaceSha256, PINNED_EAGER_SURFACE);
-  assert.equal(STAGES.eager.requiredOutcome, 'violated');
+test('both stages are frozen, with their own surface and required outcome', () => {
+  assert.equal(STAGES.eager.surfaceSha256, EAGER_SURFACE);
+  assert.equal(STAGES.eager.falsificationOutcome, 'violated');
+  assert.equal(STAGES.lazy.surfaceSha256, LAZY_SURFACE);
+  assert.equal(STAGES.lazy.falsificationOutcome, 'satisfied');
+  assert.notEqual(STAGES.eager.surfaceSha256, STAGES.lazy.surfaceSha256);
   assert.throws(() => {
-    STAGES.eager.expectedSurfaceSha256 = '0'.repeat(64);
+    STAGES.eager.surfaceSha256 = '0'.repeat(64);
   }, TypeError);
 });
 
-test('there is deliberately NO lazy stage yet', () => {
-  // Its digest cannot be honestly preregistered before server/mcts.js changes;
-  // a placeholder would be a gate that binds nothing.
-  assert.equal(STAGES.lazy, undefined);
-  assert.deepEqual(Object.keys(STAGES), ['eager']);
+test('the eager stage keeps its own surface, unaffected by the lazy change', () => {
+  // The eager corpus and falsification evidence are immutable and remain valid
+  // under the surface they recorded — not under HEAD's.
+  assert.equal(STAGES.eager.surfaceSha256, EAGER_SURFACE);
+  assert.equal(STAGES.eager.surfaceCommit, '74dca6e1535ee1e36d640dae3ba644c6c2ed2e5e');
 });
 
 test('the golden suite runs its files SEQUENTIALLY', () => {
@@ -222,22 +228,74 @@ test('the golden suite runs its files SEQUENTIALLY', () => {
   );
 });
 
-test("assertStageSurface refuses a surface that is not the stage's, and accepts the right one", (t) => {
+test('at the CURRENT HEAD, the lazy stage is accepted and the eager stage is refused', (t) => {
   if (!gitClean()) return t.skip('worktree dirty');
-  assert.throws(
-    () => assertStageSurface('0'.repeat(64)),
-    (err) => err.code === 'SURFACE_MISMATCH'
-  );
-  const ok = assertStageSurface(PINNED_EAGER_SURFACE);
+  // HEAD carries the lazy surface, so `lazy` is the only stage that may make a
+  // measurement here. `eager` must refuse rather than silently attribute a
+  // measurement of this code to the surface the eager corpus describes.
+  const ok = assertStageSurface('lazy', executionSurfaceDigest);
   assert.match(ok.head, /^[0-9a-f]{40}$/);
-  assert.equal(ok.digest, PINNED_EAGER_SURFACE);
+  assert.equal(ok.digest, LAZY_SURFACE);
+
+  assert.throws(
+    () => assertStageSurface('eager', executionSurfaceDigest),
+    (err) => err.code === 'EXECUTION_SURFACE_MOVED'
+  );
 });
 
-test('an unknown stage is refused', async () => {
+test('a stage NAME is required, and only a frozen name is accepted', async () => {
+  assert.throws(() => stageConfig(undefined), (err) => err.code === 'UNKNOWN_STAGE');
+  assert.throws(() => stageConfig('made-up'), (err) => err.code === 'UNKNOWN_STAGE');
+  // A caller cannot pass a digest where a stage name belongs.
+  assert.throws(() => stageConfig(EAGER_SURFACE), (err) => err.code === 'UNKNOWN_STAGE');
+  // ...and there is no default at the operational entry point.
   await assert.rejects(
-    () => runFalsification({ stage: 'lazy' }),
+    () => runFalsification({}),
     (err) => err.code === 'UNKNOWN_STAGE'
   );
+});
+
+test('INHERITED property names are not stages', async () => {
+  // STAGES is an ordinary object, so indexing it with these returns something
+  // truthy from Object.prototype. A truthiness check would have accepted them
+  // as stages and then read `undefined` surfaces off them.
+  for (const name of ['toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty']) {
+    assert.ok(STAGES[name] !== undefined, `premise: STAGES[${name}] is truthy via the prototype`);
+    assert.throws(
+      () => stageConfig(name),
+      (err) => err.code === 'UNKNOWN_STAGE',
+      `stageConfig accepted the inherited name ${name}`
+    );
+    assert.throws(
+      () => parseArgs(['--stage', name]),
+      (err) => err.code === 'USAGE',
+      `the CLI accepted the inherited name ${name}`
+    );
+    await assert.rejects(
+      () => runFalsification({ stage: name }),
+      (err) => err.code === 'UNKNOWN_STAGE',
+      `runFalsification accepted the inherited name ${name}`
+    );
+  }
+  // Non-strings are refused too, including one that indexes to something real.
+  for (const notAName of [undefined, null, 0, {}, ['eager']]) {
+    assert.throws(() => stageConfig(notAName), (err) => err.code === 'UNKNOWN_STAGE');
+  }
+});
+
+test('each stage’s commit actually PRODUCES its recorded surface digest', (t) => {
+  if (!gitClean()) return t.skip('worktree dirty');
+  // Both pairs are correct today, but nothing forced them to stay paired: a
+  // typo in either field would leave the digest gate working while every
+  // artifact misattributed its provenance. Re-derive from git instead.
+  for (const name of Object.keys(STAGES)) {
+    const config = STAGES[name];
+    assert.equal(
+      executionSurfaceDigest(config.surfaceCommit, REPO_ROOT),
+      config.surfaceSha256,
+      `stage "${name}": ${config.surfaceCommit} does not produce ${config.surfaceSha256}`
+    );
+  }
 });
 
 // --- model identity ----------------------------------------------------------
@@ -248,7 +306,7 @@ test('a loader supplying a DIFFERENT model is refused, and the session is releas
   await assert.rejects(
     () =>
       runFalsification({
-        stage: 'eager',
+        stage: STAGE,
         loadFn: async () => fakeModel({ modelId: 'c34b7ff3297c785a', log }),
       }),
     (err) => err.code === 'MODEL_ROLE'
@@ -263,7 +321,7 @@ test('MODEL_ROLE is refused BEFORE the search, so no count is produced', async (
   await assert.rejects(
     () =>
       runFalsification({
-        stage: 'eager',
+        stage: STAGE,
         loadFn: async () => ({
           modelId: 'not-the-baseline',
           inference: {
@@ -306,13 +364,13 @@ test('EVERY harness fault maps to EXIT_ERROR, never to the gate-violation code',
   // Named refusals are the one distinct class.
   assert.equal(exitCodeForError({ code: 'WORKTREE_DIRTY' }), EXIT_REFUSED);
   assert.equal(exitCodeForError({ code: 'MODEL_ROLE' }), EXIT_REFUSED);
-  assert.equal(exitCodeForError({ code: 'SURFACE_MISMATCH' }), EXIT_REFUSED);
+  assert.equal(exitCodeForError({ code: 'EXECUTION_SURFACE_MOVED' }), EXIT_REFUSED);
 });
 
 test('the CLI returns 4 for a thrown null, undefined or frozen Error — not 1', async () => {
   const frozen = Object.freeze(new Error('frozen fault'));
   for (const thrown of [null, undefined, 0, '', frozen]) {
-    const code = await mainWithCode(['--stage', 'eager'], {
+    const code = await mainWithCode(['--stage', STAGE], {
       runFn: async () => {
         throw thrown;
       },
@@ -324,7 +382,7 @@ test('the CLI returns 4 for a thrown null, undefined or frozen Error — not 1',
 
 test('the CLI returns 3 for a named refusal and 1 only for a real gate violation', async () => {
   assert.equal(
-    await mainWithCode(['--stage', 'eager'], {
+    await mainWithCode(['--stage', STAGE], {
       runFn: async () => {
         throw new (class extends Error {
           code = 'WORKTREE_DIRTY';
@@ -334,7 +392,7 @@ test('the CLI returns 3 for a named refusal and 1 only for a real gate violation
     EXIT_REFUSED
   );
   assert.equal(
-    await mainWithCode(['--stage', 'eager'], {
+    await mainWithCode(['--stage', STAGE], {
       runFn: async () => ({
         copy_count: 4500,
         gateMaxCopies: 8,
@@ -347,7 +405,7 @@ test('the CLI returns 3 for a named refusal and 1 only for a real gate violation
     EXIT_VIOLATED
   );
   assert.equal(
-    await mainWithCode(['--stage', 'eager'], {
+    await mainWithCode(['--stage', STAGE], {
       runFn: async () => ({
         copy_count: 8,
         gateMaxCopies: 8,
@@ -365,7 +423,8 @@ test('the CLI returns 3 for a named refusal and 1 only for a real gate violation
 
 test('parseArgs requires a known stage and rejects everything else', () => {
   assert.deepEqual(parseArgs(['--stage', 'eager']), { stage: 'eager' });
-  for (const argv of [[], ['--stage'], ['--stage', 'lazy'], ['--stage', 'eager', '--stage', 'eager'], ['oops']]) {
+  assert.deepEqual(parseArgs(['--stage', 'lazy']), { stage: 'lazy' });
+  for (const argv of [[], ['--stage'], ['--stage', 'nope'], ['--stage', 'eager', '--stage', 'eager'], ['oops']]) {
     assert.throws(() => parseArgs(argv), (err) => err.code === 'USAGE', JSON.stringify(argv));
   }
 });

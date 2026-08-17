@@ -3,8 +3,12 @@
  * Golden-trace capture orchestrator.
  *
  *   node tests/mcts_golden/capture.mjs list
- *   node tests/mcts_golden/capture.mjs dry-run <out_dir>
- *   node tests/mcts_golden/capture.mjs capture <out_dir>
+ *   node tests/mcts_golden/capture.mjs dry-run <out_dir> --stage <eager|lazy>
+ *   node tests/mcts_golden/capture.mjs capture <out_dir> --stage <eager|lazy>
+ *
+ * `--stage` names the execution surface the run is a statement about, and has
+ * no default: a defaulted stage would attribute artifacts to whichever surface
+ * happened to be the default.
  *
  * `list` is pure — no git, no filesystem, no model — so the corpus can be
  * inspected without touching anything.
@@ -32,8 +36,9 @@ import { executionSurfaceDigest } from '../product_match/p_decision.mjs';
 import {
   CaptureError,
   EXPECTED_CASE_COUNT,
+  STAGE_NAMES,
   enumerateCases,
-  preflight,
+  preflightForStage,
   validateCorpus,
 } from './cases.mjs';
 import { deriveExpectedFixtures } from './worker.mjs';
@@ -62,7 +67,7 @@ export function formatCase(testCase, index) {
  * (§4.2 fixes the count at 92), so continuing past a failure would produce a
  * set that looks complete in a directory listing and is not.
  */
-export function runAll({ outDir, mode, expectCommit }) {
+export function runAll({ outDir, mode, stage, expectCommit }) {
   const cases = enumerateCases();
   const results = [];
 
@@ -77,6 +82,8 @@ export function runAll({ outDir, mode, expectCommit }) {
       outDir,
       '--expect-commit',
       expectCommit,
+      '--stage',
+      stage,
       `--${mode}`,
     ];
 
@@ -174,7 +181,7 @@ export function summarize(outDir) {
  * observed capture abort that the harness controls.
  */
 export function mainWithCode(argv) {
-  const [mode, outDir] = argv;
+  const [mode, outDir, ...rest] = argv;
 
   if (mode === 'list') {
     const cases = enumerateCases();
@@ -183,12 +190,29 @@ export function mainWithCode(argv) {
     return 0;
   }
 
+  const USAGE =
+    `usage: capture.mjs list | (dry-run|capture) <out_dir> --stage <${STAGE_NAMES.join('|')}>`;
   if (mode !== 'dry-run' && mode !== 'capture') {
-    console.error('usage: capture.mjs list | dry-run <out_dir> | capture <out_dir>');
+    console.error(USAGE);
     return 2;
   }
   if (!outDir) {
-    console.error(`usage: capture.mjs ${mode} <out_dir>`);
+    console.error(USAGE);
+    return 2;
+  }
+  // No default stage at an operational entry point.
+  let stage = null;
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i] === '--stage') {
+      if (stage !== null) { console.error('--stage given twice'); return 2; }
+      stage = rest[++i];
+    } else {
+      console.error(`unrecognised argument ${rest[i]}: ${USAGE}`);
+      return 2;
+    }
+  }
+  if (!stage || !STAGE_NAMES.includes(stage)) {
+    console.error(`--stage is required and must be one of ${STAGE_NAMES.join('|')}: ${USAGE}`);
     return 2;
   }
 
@@ -196,16 +220,17 @@ export function mainWithCode(argv) {
   // every worker re-runs preflight for itself, which is what actually binds.
   let commit;
   try {
-    commit = preflight(executionSurfaceDigest);
+    ({ head: commit } = preflightForStage(stage, executionSurfaceDigest));
     createOutputDirExclusively(outDir);
   } catch (err) {
     console.error(`${err.code ?? 'ERROR'}: ${err.message}`);
     return 3;
   }
   console.log(`capture commit ${commit}`);
+  console.log(`stage          ${stage}`);
   console.log(`mode           ${mode}\n`);
 
-  const { ok, failedAt } = runAll({ outDir, mode, expectCommit: commit });
+  const { ok, failedAt } = runAll({ outDir, mode, stage, expectCommit: commit });
   if (!ok) {
     console.error(`\nstopped at ${failedAt}; the corpus is incomplete and is not a corpus`);
     return 1;
@@ -222,6 +247,7 @@ export function mainWithCode(argv) {
   // validator never takes the artifacts' word for what position they searched.
   const failures = validateCorpus(outDir, {
     mode,
+    stage,
     expectedCaptureCommit: commit,
     expectedFixtures: deriveExpectedFixtures(),
     readdirSync,

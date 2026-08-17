@@ -24,7 +24,6 @@
  *
  * Specification: docs/superpowers/2026-08-16-mcts-memory-remediation-design.md §5
  */
-import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
 import { TwixtState } from '../../server/gameLogic.js';
@@ -35,8 +34,12 @@ import {
   C_PUCT,
   CaptureError,
   REPO_ROOT,
+  STAGE_NAMES,
+  STAGES,
   assertCleanWorktree,
+  assertStageSurface,
   enumeratePositions,
+  stageConfig,
 } from './cases.mjs';
 import { readFixture } from './worker.mjs';
 
@@ -64,26 +67,12 @@ export const FALSIFICATION = Object.freeze({
 });
 
 /**
- * Stages, each BOUND to the execution surface it is a statement about.
- *
- * Recording the digest is not enough for the pre-change run: it would let the
- * harness produce an apparently valid eager falsification against any committed
- * surface at all. Each stage therefore pins the surface it may run against.
- *
- * There is deliberately **no `lazy` stage yet**. Its digest cannot be honestly
- * preregistered before `server/mcts.js` is changed, and inventing a placeholder
- * would be a gate that binds nothing. It is added when that surface exists.
+ * Stages come from `cases.mjs`, so the capture harness and this one cannot
+ * disagree about which surface a stage names. Each stage also fixes the outcome
+ * this falsification is REQUIRED to produce there: `violated` for eager,
+ * `satisfied` for lazy.
  */
-export const STAGES = Object.freeze({
-  eager: Object.freeze({
-    expectedSurfaceSha256:
-      '228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd',
-    requiredOutcome: 'violated',
-    note: 'the unmodified eager implementation at 74dca6e',
-  }),
-});
-
-const git = (...args) => execFileSync('git', args, { cwd: REPO_ROOT }).toString().trim();
+export { STAGES, STAGE_NAMES };
 
 /** Describe ANY thrown value safely — including null, undefined and primitives. */
 export function describeThrown(err) {
@@ -105,7 +94,7 @@ export function codeOfThrown(err) {
 const REFUSAL_CODES = new Set([
   'WORKTREE_DIRTY',
   'FIXTURE_DRIFT',
-  'SURFACE_MISMATCH',
+  'EXECUTION_SURFACE_MOVED',
   'COMMIT_MOVED',
   'MODEL_ROLE',
   'UNKNOWN_POSITION',
@@ -122,19 +111,6 @@ const REFUSAL_CODES = new Set([
 export function exitCodeForError(err) {
   const code = codeOfThrown(err);
   return code !== null && REFUSAL_CODES.has(code) ? EXIT_REFUSED : EXIT_ERROR;
-}
-
-/** Assert the execution surface is the one this stage is a statement about. */
-export function assertStageSurface(expectedSurfaceSha256) {
-  const head = git('rev-parse', 'HEAD');
-  const digest = executionSurfaceDigest(head, REPO_ROOT);
-  if (digest !== expectedSurfaceSha256) {
-    throw new CaptureError(
-      'SURFACE_MISMATCH',
-      `execution surface at ${head} is ${digest}, this stage requires ${expectedSurfaceSha256}`
-    );
-  }
-  return { head, digest };
 }
 
 /**
@@ -192,17 +168,13 @@ export function falsificationFixture() {
  * moves mid-run cannot make the code that actually ran look attributable to a
  * later commit.
  */
-export async function runFalsification({ stage = 'eager', loadFn = null } = {}) {
-  const config = STAGES[stage];
-  if (!config) {
-    throw new CaptureError(
-      'UNKNOWN_STAGE',
-      `no such stage: ${stage} (known: ${Object.keys(STAGES).join(', ')})`
-    );
-  }
+export async function runFalsification({ stage, loadFn = null } = {}) {
+  // No default stage: a defaulted one would attribute the measurement to
+  // whichever surface happened to be the default.
+  const config = stageConfig(stage);
 
   assertCleanWorktree();
-  const before = assertStageSurface(config.expectedSurfaceSha256);
+  const before = assertStageSurface(stage, executionSurfaceDigest);
   const { position, state, describe } = falsificationFixture();
 
   const load =
@@ -270,7 +242,7 @@ export async function runFalsification({ stage = 'eager', loadFn = null } = {}) 
 
   // The repository must not have moved under the measurement.
   assertCleanWorktree();
-  const after = assertStageSurface(config.expectedSurfaceSha256);
+  const after = assertStageSurface(stage, executionSurfaceDigest);
   if (after.head !== before.head) {
     throw new CaptureError(
       'COMMIT_MOVED',
@@ -288,7 +260,7 @@ export async function runFalsification({ stage = 'eager', loadFn = null } = {}) 
     copy_count: copyCount,
     gate: `copyCount <= ${FALSIFICATION.gateMaxCopies}`,
     satisfied: copyCount <= FALSIFICATION.gateMaxCopies,
-    required_outcome: config.requiredOutcome,
+    required_outcome: config.falsificationOutcome,
     execution_commit: after.head,
     execution_surface_sha256: after.digest,
   };
@@ -296,7 +268,7 @@ export async function runFalsification({ stage = 'eager', loadFn = null } = {}) 
 
 // --- CLI ---------------------------------------------------------------------
 
-const USAGE = `usage: falsify.mjs --stage <${Object.keys(STAGES).join('|')}>`;
+const USAGE = `usage: falsify.mjs --stage <${STAGE_NAMES.join('|')}>`;
 
 export function parseArgs(argv) {
   let stage = null;
@@ -310,7 +282,9 @@ export function parseArgs(argv) {
     }
   }
   if (stage === null) throw new CaptureError('USAGE', `--stage is required: ${USAGE}`);
-  if (!STAGES[stage]) throw new CaptureError('USAGE', `unknown stage ${stage}: ${USAGE}`);
+  // Membership, not indexing: `STAGES['toString']` is truthy via the prototype.
+  if (!STAGE_NAMES.includes(stage))
+    throw new CaptureError('USAGE', `unknown stage ${stage}: ${USAGE}`);
   return { stage };
 }
 

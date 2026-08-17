@@ -39,7 +39,7 @@ import {
   EXPECTED_CASE_COUNT,
   FIXTURE_RELDIR,
   N_SIMULATIONS_LADDER,
-  PINNED_EXECUTION_SURFACE_SHA256,
+  STAGES,
   REPO_ROOT,
   SIDECARS,
   buildArtifact,
@@ -70,6 +70,8 @@ const WORKER_MJS = join(REPO_ROOT, 'tests', 'mcts_golden', 'worker.mjs');
 const git = (...a) => execFileSync('git', a, { cwd: REPO_ROOT }).toString().trim();
 const gitClean = () => git('status', '--porcelain') === '';
 const HEAD = git('rev-parse', 'HEAD');
+/** HEAD carries the LAZY surface now, so operational calls name that stage. */
+const STAGE = 'lazy';
 
 /** Derived once from the pinned sidecars; the validator's independent target. */
 const DERIVED_FIXTURES = deriveExpectedFixtures();
@@ -223,14 +225,15 @@ test('`list` is pure: it runs and prints 92 cases', () => {
 // --- CLI: the mode is explicit ----------------------------------------------
 
 test('parseArgs accepts exactly the documented shape', () => {
-  assert.deepEqual(parseArgs(['A1', '/out', '--expect-commit', HEAD, '--dry-run']), {
+  assert.deepEqual(parseArgs(['A1', '/out', '--expect-commit', HEAD, '--stage', STAGE, '--dry-run']), {
     caseId: 'A1',
     outDir: '/out',
     mode: 'dry-run',
+    stage: STAGE,
     expectCommit: HEAD,
   });
   assert.equal(
-    parseArgs(['A1', '/out', '--capture', '--expect-commit', HEAD]).mode,
+    parseArgs(['A1', '/out', '--capture', '--expect-commit', HEAD, '--stage', STAGE]).mode,
     'capture'
   );
 });
@@ -239,7 +242,7 @@ test('parseArgs rejects a missing mode, a typo, a doubled mode and a missing com
   const bad = [
     ['A1', '/out', '--expect-commit', HEAD], // no mode: must NOT default to capture
     ['A1', '/out', '--expect-commit', HEAD, '--dryrun'], // typo, silently ignored before
-    ['A1', '/out', '--expect-commit', HEAD, '--dry-run', '--capture'],
+    ['A1', '/out', '--expect-commit', HEAD, '--stage', STAGE, '--dry-run', '--capture'],
     ['A1', '/out', '--dry-run'], // no --expect-commit
     ['A1', '/out', '--expect-commit'], // flag without a value
     ['A1'], // no out dir
@@ -263,14 +266,25 @@ test('the worker CLI exits 2 on a mode typo rather than capturing', () => {
   assert.match(proc.stderr, /unrecognised argument --dryrun/);
 });
 
-test('runCase refuses without an explicit mode or a valid expectCommit', async () => {
+test('runCase refuses without an explicit stage, mode or valid expectCommit', async () => {
   const testCase = caseById('G_P01_baseline_s1');
+  // The stage is checked first: without it the artifact could not name the
+  // surface it describes.
   await assert.rejects(
-    () => runCase({ testCase, outDir: OUT_DIR, expectCommit: HEAD }),
+    () => runCase({ testCase, outDir: OUT_DIR, mode: 'dry-run', expectCommit: HEAD }),
+    (e) => e.code === 'UNKNOWN_STAGE'
+  );
+  await assert.rejects(
+    () =>
+      runCase({ testCase, outDir: OUT_DIR, mode: 'dry-run', stage: 'made-up', expectCommit: HEAD }),
+    (e) => e.code === 'UNKNOWN_STAGE'
+  );
+  await assert.rejects(
+    () => runCase({ testCase, outDir: OUT_DIR, stage: STAGE, expectCommit: HEAD }),
     (e) => e.code === 'MODE_REQUIRED'
   );
   await assert.rejects(
-    () => runCase({ testCase, outDir: OUT_DIR, mode: 'dry-run' }),
+    () => runCase({ testCase, outDir: OUT_DIR, mode: 'dry-run', stage: STAGE }),
     (e) => e.code === 'EXPECT_COMMIT_REQUIRED'
   );
 });
@@ -287,6 +301,7 @@ test('POSITIVE CONTROL: on a clean worktree a dry run reaches the fixture', asyn
       testCase: caseById('G_P01_baseline_s1'),
       outDir: OUT_DIR,
       mode: 'dry-run',
+      stage: STAGE,
       expectCommit: HEAD,
     },
     {
@@ -300,7 +315,7 @@ test('POSITIVE CONTROL: on a clean worktree a dry run reaches the fixture', asyn
   assert.equal(artifact.status, 'dry-run');
   assert.equal(artifact.trace, null);
   assert.equal(captureTraceCalls, 0);
-  assert.equal(artifact.execution_surface_sha256, PINNED_EXECUTION_SURFACE_SHA256);
+  assert.equal(artifact.execution_surface_sha256, STAGES[STAGE].surfaceSha256);
   assert.equal(artifact.fixture.ply_after_prefix, 4);
   assert.ok(artifact.fixture.n_legal > 400);
 });
@@ -315,7 +330,7 @@ async function expectRefusalWhileDirty(t, dirty, clean) {
     await assert.rejects(
       () =>
         runCase(
-          { testCase, outDir: OUT_DIR, mode: 'dry-run', expectCommit: HEAD },
+          { testCase, outDir: OUT_DIR, mode: 'dry-run', stage: STAGE, expectCommit: HEAD },
           countingSeams(counters)
         ),
       (err) => err.code === 'WORKTREE_DIRTY'
@@ -376,6 +391,7 @@ test('a commit made mid-run refuses at the NEXT case, fixtures unread', async (t
           testCase: caseById('G_P01_baseline_s1'),
           outDir: OUT_DIR,
           mode: 'dry-run',
+          stage: STAGE,
           expectCommit: 'b'.repeat(40),
         },
         countingSeams(counters)
@@ -397,7 +413,7 @@ test('each case runs in its own process: three cases, three distinct pids', (t) 
   for (const id of ids) {
     const proc = spawnSync(
       process.execPath,
-      [WORKER_MJS, id, OUT_DIR, '--expect-commit', HEAD, '--dry-run'],
+      [WORKER_MJS, id, OUT_DIR, '--expect-commit', HEAD, '--stage', STAGE, '--dry-run'],
       { encoding: 'utf8' }
     );
     assert.equal(proc.status, 0, proc.stderr);
@@ -410,7 +426,7 @@ test('each case runs in its own process: three cases, three distinct pids', (t) 
 test('the worker refuses an unknown case id', () => {
   const proc = spawnSync(
     process.execPath,
-    [WORKER_MJS, 'G_NOPE_baseline_s1', OUT_DIR, '--expect-commit', HEAD, '--dry-run'],
+    [WORKER_MJS, 'G_NOPE_baseline_s1', OUT_DIR, '--expect-commit', HEAD, '--stage', STAGE, '--dry-run'],
     { encoding: 'utf8' }
   );
   assert.equal(proc.status, 2);
@@ -433,6 +449,7 @@ test('a stale FINAL artifact refuses, and is not deleted or modified', async (t)
         testCase: caseById('G_P01_baseline_s1'),
         outDir: CLOBBER_DIR,
         mode: 'dry-run',
+        stage: STAGE,
         expectCommit: HEAD,
       }),
     (err) => err.code === 'ARTIFACT_EXISTS'
@@ -454,6 +471,7 @@ test('a stale TEMP artifact refuses, and is not deleted or modified', async (t) 
         testCase: caseById('G_P01_baseline_s1'),
         outDir: CLOBBER_DIR,
         mode: 'dry-run',
+        stage: STAGE,
         expectCommit: HEAD,
       }),
     (err) => err.code === 'STALE_TEMP_ARTIFACT'
@@ -469,6 +487,7 @@ test('POSITIVE CONTROL: the same case succeeds into an empty directory', async (
       testCase: caseById('G_P01_baseline_s1'),
       outDir: CLOBBER_DIR,
       mode: 'dry-run',
+      stage: STAGE,
       expectCommit: HEAD,
     },
     { captureTrace: () => assert.fail('dry-run must not load a model') }
@@ -483,7 +502,7 @@ test('the orchestrator refuses a partially completed corpus, deleting nothing', 
   const partial = join(CLOBBER_DIR, 'G_P01_baseline_s1.json');
   writeFileSync(partial, '{"partial":"corpus"}\n');
 
-  const proc = spawnSync(process.execPath, [CAPTURE_MJS, 'dry-run', CLOBBER_DIR], {
+  const proc = spawnSync(process.execPath, [CAPTURE_MJS, 'dry-run', CLOBBER_DIR, '--stage', STAGE], {
     encoding: 'utf8',
   });
   assert.equal(proc.status, 3, proc.stdout + proc.stderr);
@@ -496,7 +515,7 @@ test('the orchestrator refuses even an EMPTY existing directory', (t) => {
   if (!gitClean()) return t.skip('worktree dirty');
   rmSync(CLOBBER_DIR, { recursive: true, force: true });
   mkdirSync(CLOBBER_DIR, { recursive: true });
-  const proc = spawnSync(process.execPath, [CAPTURE_MJS, 'dry-run', CLOBBER_DIR], {
+  const proc = spawnSync(process.execPath, [CAPTURE_MJS, 'dry-run', CLOBBER_DIR, '--stage', STAGE], {
     encoding: 'utf8',
   });
   assert.equal(proc.status, 3, proc.stdout + proc.stderr);
@@ -509,7 +528,7 @@ test('two concurrent workers on one case: exactly one wins, its bytes intact', a
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
 
-  const args = [WORKER_MJS, 'G_P01_baseline_s1', dir, '--expect-commit', HEAD, '--dry-run'];
+  const args = [WORKER_MJS, 'G_P01_baseline_s1', dir, '--expect-commit', HEAD, '--stage', STAGE, '--dry-run'];
   const run = () =>
     new Promise((resolve) => {
       const p = spawn(process.execPath, args);
@@ -579,7 +598,8 @@ function fakeCorpus({ mode = 'dry-run', mutate } = {}) {
     }
 
     files.set(`${c.caseId}.json`, {
-      schema: 'twixt-mcts-golden/1',
+      schema: STAGES[STAGE].artifactSchema,
+      stage: STAGE,
       status: mode === 'capture' ? 'captured' : 'dry-run',
       case_id: c.caseId,
       kind: c.kind,
@@ -596,8 +616,8 @@ function fakeCorpus({ mode = 'dry-run', mutate } = {}) {
       c_puct: 1.5,
       move_temp: 0,
       capture_commit: FAKE_COMMIT,
-      pinned_surface_commit: '74dca6e1535ee1e36d640dae3ba644c6c2ed2e5e',
-      execution_surface_sha256: PINNED_EXECUTION_SURFACE_SHA256,
+      pinned_surface_commit: STAGES[STAGE].surfaceCommit,
+      execution_surface_sha256: STAGES[STAGE].surfaceSha256,
       fixture: { ...DERIVED_FIXTURES.get(c.position.id) },
       pid: pid++,
       trace,
@@ -613,20 +633,93 @@ function fakeCorpus({ mode = 'dry-run', mutate } = {}) {
 const validate = (fs, mode = 'dry-run') =>
   validateCorpus('/fake', {
     mode,
+    stage: STAGE,
     expectedCaptureCommit: FAKE_COMMIT,
     expectedFixtures: DERIVED_FIXTURES,
     ...fs,
   });
 const codesFor = (fs, mode) => validate(fs, mode).map((f) => f.code);
 
+test('the COMMITTED eager corpus still validates, under the eager stage', () => {
+  // The requirement that made stages necessary: existing evidence is immutable
+  // and must keep validating under the surface it recorded, not under HEAD's.
+  const dir = join(REPO_ROOT, 'tests', 'mcts_golden', 'golden', '841df60', 'artifacts');
+  const failures = validateCorpus(dir, {
+    mode: 'capture',
+    stage: 'eager',
+    expectedCaptureCommit: '841df6040a740a4b9f1753253e0e8bfc63e15366',
+    expectedFixtures: DERIVED_FIXTURES,
+    readdirSync,
+    readFileSync,
+  });
+  assert.deepEqual(failures, [], 'the committed eager corpus no longer validates');
+  assert.equal(readdirSync(dir).length, 92);
+});
+
+test('the eager corpus is REJECTED when judged under the lazy stage', () => {
+  // Its schema, surface and pinned commit all belong to the eager stage, so
+  // judging it as lazy must fail rather than quietly accept.
+  const dir = join(REPO_ROOT, 'tests', 'mcts_golden', 'golden', '841df60', 'artifacts');
+  const failures = validateCorpus(dir, {
+    mode: 'capture',
+    stage: 'lazy',
+    expectedCaptureCommit: '841df6040a740a4b9f1753253e0e8bfc63e15366',
+    expectedFixtures: DERIVED_FIXTURES,
+    readdirSync,
+    readFileSync,
+  });
+  assert.ok(failures.length > 0, 'an eager corpus was accepted as lazy');
+  const fields = new Set(failures.map((f) => f.detail?.field));
+  assert.ok(fields.has('schema'));
+  assert.ok(fields.has('execution_surface_sha256'));
+});
+
+test('a NEW artifact records its stage, commit and surface', () => {
+  const artifact = buildArtifact({
+    testCase: caseById('G_P01_baseline_s1'),
+    captureCommit: HEAD,
+    fixture: DERIVED_FIXTURES.get('P01'),
+    status: 'dry-run',
+    stage: 'lazy',
+  });
+  assert.equal(artifact.stage, 'lazy');
+  assert.equal(artifact.schema, STAGES.lazy.artifactSchema);
+  assert.equal(artifact.capture_commit, HEAD);
+  assert.equal(artifact.execution_surface_sha256, STAGES[STAGE].surfaceSha256);
+  assert.equal(artifact.pinned_surface_commit, STAGES.lazy.surfaceCommit);
+
+  // The legacy eager schema carries no stage field at all — not an empty one.
+  const legacy = buildArtifact({
+    testCase: caseById('G_P01_baseline_s1'),
+    captureCommit: HEAD,
+    fixture: DERIVED_FIXTURES.get('P01'),
+    status: 'dry-run',
+    stage: 'eager',
+  });
+  assert.equal('stage' in legacy, false);
+  assert.equal(legacy.schema, STAGES.eager.artifactSchema);
+});
+
 test('validateCorpus THROWS if either mandatory binding is omitted', () => {
   const fs = fakeCorpus();
   assert.throws(
-    () => validateCorpus('/fake', { mode: 'dry-run', expectedFixtures: DERIVED_FIXTURES, ...fs }),
+    () =>
+      validateCorpus('/fake', {
+        mode: 'dry-run',
+        stage: STAGE,
+        expectedFixtures: DERIVED_FIXTURES,
+        ...fs,
+      }),
     (e) => e.code === 'MISSING_EXPECTED_COMMIT'
   );
   assert.throws(
-    () => validateCorpus('/fake', { mode: 'dry-run', expectedCaptureCommit: FAKE_COMMIT, ...fs }),
+    () =>
+      validateCorpus('/fake', {
+        mode: 'dry-run',
+        stage: STAGE,
+        expectedCaptureCommit: FAKE_COMMIT,
+        ...fs,
+      }),
     (e) => e.code === 'MISSING_EXPECTED_FIXTURES'
   );
 });
@@ -652,6 +745,7 @@ test('validation rejects a stale execution-surface digest', () => {
 test('validation rejects a capture_commit that is not the preflighted commit', () => {
   const failures = validateCorpus('/fake', {
     mode: 'dry-run',
+    stage: STAGE,
     expectedCaptureCommit: 'd'.repeat(40),
     expectedFixtures: DERIVED_FIXTURES,
     ...fakeCorpus(),
@@ -1093,7 +1187,7 @@ test('LIFECYCLE: a release failure publishes NO artifact', async (t) => {
   await assert.rejects(
     () =>
       runCase(
-        { testCase, outDir: dir, mode: 'capture', expectCommit: HEAD },
+        { testCase, outDir: dir, mode: 'capture', stage: STAGE, expectCommit: HEAD },
         {
           // The REAL captureTrace, driven by a fake model — so the publication
           // consequence of a release failure is exercised, not assumed.
@@ -1140,7 +1234,7 @@ test('EXIT: mainWithCode returns the documented codes without terminating', asyn
 
   assert.equal(await mainWithCode(['A1']), 2, 'usage error');
   assert.equal(
-    await mainWithCode(['G_NOPE', OUT_DIR, '--expect-commit', HEAD, '--dry-run']),
+    await mainWithCode(['G_NOPE', OUT_DIR, '--expect-commit', HEAD, '--stage', STAGE, '--dry-run']),
     2,
     'unknown case'
   );
@@ -1150,13 +1244,15 @@ test('EXIT: mainWithCode returns the documented codes without terminating', asyn
       OUT_DIR,
       '--expect-commit',
       'b'.repeat(40),
+      '--stage',
+      STAGE,
       '--dry-run',
     ]),
     3,
     'refusal'
   );
   assert.equal(
-    await mainWithCode(['G_P01_baseline_s1', OUT_DIR, '--expect-commit', HEAD, '--dry-run']),
+    await mainWithCode(['G_P01_baseline_s1', OUT_DIR, '--expect-commit', HEAD, '--stage', STAGE, '--dry-run']),
     0,
     'success'
   );
@@ -1179,7 +1275,7 @@ test('runAll returns the full failure record for a refusing worker', (t) => {
   // Pre-place case 1's artifact so the first worker refuses with ARTIFACT_EXISTS.
   writeFileSync(join(dir, 'G_P01_baseline_s1.json'), '{"stale":true}\n');
 
-  const out = runAll({ outDir: dir, mode: 'dry-run', expectCommit: HEAD });
+  const out = runAll({ outDir: dir, mode: 'dry-run', stage: STAGE, expectCommit: HEAD });
   assert.equal(out.ok, false);
   assert.equal(out.failedAt, 'G_P01_baseline_s1');
   assert.equal(out.failure.status, 3);
@@ -1204,6 +1300,7 @@ test('INTEGRATION: real MCTS output satisfies the validator (normal case, A1, A2
         captureCommit: FAKE_COMMIT,
         fixture: describe,
         status: 'captured',
+        stage: STAGE,
         trace,
       })
     );

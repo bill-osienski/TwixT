@@ -18,18 +18,70 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(HERE, '..', '..');
 export const FIXTURE_RELDIR = 'tests/product_match/timing_failures/74dca6e';
 
-export const SCHEMA = 'twixt-mcts-golden/1';
+/**
+ * The two execution surfaces this programme compares, each a NAMED stage.
+ *
+ * Equality against a stage's digest IS the statement "every execution-surface
+ * file is byte-identical to that stage's commit" (§4.5), because the digest is
+ * taken over those ten blobs. It is not a proxy for it.
+ *
+ * A single pin was correct while only the eager surface existed; the moment
+ * `server/mcts.js` changed it made the harness inoperable at HEAD. Stages are
+ * how the same harness makes statements about two different surfaces without
+ * either statement drifting.
+ *
+ * **Callers name a stage. They never supply a digest** — an expected value the
+ * caller provides is not a binding, and `runFalsification`/`runCase` would
+ * otherwise be able to certify a measurement against whatever surface happened
+ * to be installed.
+ *
+ * `artifactSchema` differs on purpose: the eager corpus was captured before
+ * stages existed and carries no `stage` field. It is immutable evidence and
+ * must keep validating exactly as captured, so its schema is recorded here as
+ * the legacy one rather than the field being made optional — an optional field
+ * is a check that can be switched off by deleting its input.
+ */
+export const STAGES = Object.freeze({
+  eager: Object.freeze({
+    name: 'eager',
+    surfaceSha256: '228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd',
+    surfaceCommit: '74dca6e1535ee1e36d640dae3ba644c6c2ed2e5e',
+    falsificationOutcome: 'violated',
+    artifactSchema: 'twixt-mcts-golden/1',
+    carriesStageField: false,
+    note: 'the unmodified eager implementation; child states built per legal move',
+  }),
+  lazy: Object.freeze({
+    name: 'lazy',
+    surfaceSha256: 'd7fb6bc3fbc722e306940accadc2b8bdda6c92d125710b9b22c32d31dac4c769',
+    surfaceCommit: '85894b93392e63ce8f6e008f368ff7e798f91853',
+    falsificationOutcome: 'satisfied',
+    artifactSchema: 'twixt-mcts-golden/2',
+    carriesStageField: true,
+    note: 'lazy child-state materialization; a child state is built on first descent',
+  }),
+});
+
+export const STAGE_NAMES = Object.freeze(Object.keys(STAGES));
 
 /**
- * The execution surface these traces describe.
+ * Resolve a named stage, or refuse. Never accepts a digest.
  *
- * Equality against this digest IS the statement "every execution-surface file
- * is byte-identical to 74dca6e" (§4.5), because the digest is taken over those
- * ten blobs. It is not a proxy for it.
+ * Membership is tested with `Object.hasOwn`, NOT by indexing: `STAGES` is an
+ * ordinary object, so `STAGES['toString']`, `STAGES['constructor']` and
+ * `STAGES['__proto__']` all resolve through the prototype chain to something
+ * truthy. A truthiness check would have accepted those as stages and then read
+ * `undefined` surfaces off them.
  */
-export const PINNED_SURFACE_COMMIT = '74dca6e1535ee1e36d640dae3ba644c6c2ed2e5e';
-export const PINNED_EXECUTION_SURFACE_SHA256 =
-  '228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd';
+export function stageConfig(stage) {
+  if (typeof stage !== 'string' || !Object.hasOwn(STAGES, stage)) {
+    throw new CaptureError(
+      'UNKNOWN_STAGE',
+      `no such stage: ${String(stage)} (known: ${STAGE_NAMES.join(', ')})`
+    );
+  }
+  return STAGES[stage];
+}
 
 export const BASELINE_MODEL_ID = '1d64027db521a50f';
 export const CANDIDATE_MODEL_ID = 'c34b7ff3297c785a';
@@ -260,30 +312,41 @@ export function assertCleanWorktree() {
   }
 }
 
-/** Refuse unless every execution-surface file is byte-identical to 74dca6e. */
-export function assertPinnedExecutionSurface(executionSurfaceDigest) {
+/**
+ * Refuse unless the execution surface is the one this STAGE is about.
+ *
+ * The stage name selects the digest from the frozen table; no caller supplies
+ * one. Returns the head commit and the digest, both recorded in artifacts.
+ */
+export function assertStageSurface(stage, executionSurfaceDigest) {
+  const config = stageConfig(stage);
   const head = git('rev-parse', 'HEAD').toString().trim();
   const actual = executionSurfaceDigest(head, REPO_ROOT);
-  if (actual !== PINNED_EXECUTION_SURFACE_SHA256) {
+  if (actual !== config.surfaceSha256) {
     throw new CaptureError(
       'EXECUTION_SURFACE_MOVED',
-      `execution surface at ${head} is ${actual}, expected ` +
-        `${PINNED_EXECUTION_SURFACE_SHA256} (${PINNED_SURFACE_COMMIT})`
+      `execution surface at ${head} is ${actual}, but stage "${stage}" requires ` +
+        `${config.surfaceSha256} (${config.surfaceCommit})`
     );
   }
-  return head;
+  return { head, digest: actual, config };
 }
 
 /**
- * The full preflight, in the contractual order.
+ * The full preflight for a named stage, in the contractual order.
  *
- * Returns the capture commit. `executionSurfaceDigest` is passed in by the
- * caller so this module needs no import from the execution surface it is
- * checking.
+ * Returns `{head, digest, config}`. `executionSurfaceDigest` is passed in by
+ * the caller so this module needs no import from the execution surface it is
+ * checking — but the STAGE, and therefore the expected digest, is not the
+ * caller's to choose beyond naming one of the frozen entries.
+ *
+ * There is deliberately no default stage: at an operational entry point a
+ * defaulted stage would silently attribute a measurement to whichever surface
+ * happened to be the default.
  */
-export function preflight(executionSurfaceDigest) {
+export function preflightForStage(stage, executionSurfaceDigest) {
   assertCleanWorktree();
-  return assertPinnedExecutionSurface(executionSurfaceDigest);
+  return assertStageSurface(stage, executionSurfaceDigest);
 }
 
 // --- artifact ----------------------------------------------------------------
@@ -302,10 +365,15 @@ export function buildArtifact({
   captureCommit,
   fixture,
   status,
+  stage,
   trace = null,
 }) {
+  const config = stageConfig(stage);
   return {
-    schema: SCHEMA,
+    schema: config.artifactSchema,
+    // Recorded on every new artifact. The eager corpus predates this field and
+    // is validated under its own schema; see STAGES.
+    ...(config.carriesStageField ? { stage: config.name } : {}),
     status,
     case_id: testCase.caseId,
     kind: testCase.kind,
@@ -322,8 +390,8 @@ export function buildArtifact({
     c_puct: C_PUCT,
     move_temp: MOVE_TEMP,
     capture_commit: captureCommit,
-    pinned_surface_commit: PINNED_SURFACE_COMMIT,
-    execution_surface_sha256: PINNED_EXECUTION_SURFACE_SHA256,
+    pinned_surface_commit: config.surfaceCommit,
+    execution_surface_sha256: config.surfaceSha256,
     fixture,
     pid: process.pid,
     trace: trace === null ? null : {
@@ -391,8 +459,11 @@ export function recomputeSelectedMove(entries) {
  */
 export function validateCorpus(
   outDir,
-  { mode, expectedCaptureCommit, expectedFixtures, readdirSync, readFileSync }
+  { mode, stage, expectedCaptureCommit, expectedFixtures, readdirSync, readFileSync }
 ) {
+  // The stage is mandatory and names a frozen entry: it decides the schema, the
+  // surface and the pinned commit every artifact is judged against.
+  const stageCfg = stageConfig(stage);
   // Both bindings are MANDATORY, and missing them throws rather than returning
   // a failure: a truthy check would let a programmatic caller disable the
   // binding by omission, which is the "gate you can switch off by deleting its
@@ -452,7 +523,15 @@ export function validateCorpus(
     const bad = (field, found, want) =>
       fail('ARTIFACT_FIELD', { file: name, field, found, expected: want });
 
-    if (a.schema !== SCHEMA) bad('schema', a.schema, SCHEMA);
+    if (a.schema !== stageCfg.artifactSchema)
+      bad('schema', a.schema, stageCfg.artifactSchema);
+    // The stage field is REQUIRED where the schema carries it and FORBIDDEN
+    // where it does not — never optional, so it cannot be disabled by omission.
+    if (stageCfg.carriesStageField) {
+      if (a.stage !== stageCfg.name) bad('stage', a.stage, stageCfg.name);
+    } else if ('stage' in a) {
+      bad('stage', a.stage, `absent (${stageCfg.artifactSchema} predates stages)`);
+    }
     if (a.status !== expectedStatus) bad('status', a.status, expectedStatus);
     if (a.case_id !== testCase.caseId) bad('case_id', a.case_id, testCase.caseId);
     if (a.kind !== testCase.kind) bad('kind', a.kind, testCase.kind);
@@ -475,10 +554,10 @@ export function validateCorpus(
     if (p.immediate_win !== testCase.position.immediateWin)
       bad('position.immediate_win', p.immediate_win, testCase.position.immediateWin);
 
-    if (a.pinned_surface_commit !== PINNED_SURFACE_COMMIT)
-      bad('pinned_surface_commit', a.pinned_surface_commit, PINNED_SURFACE_COMMIT);
-    if (a.execution_surface_sha256 !== PINNED_EXECUTION_SURFACE_SHA256)
-      bad('execution_surface_sha256', a.execution_surface_sha256, PINNED_EXECUTION_SURFACE_SHA256);
+    if (a.pinned_surface_commit !== stageCfg.surfaceCommit)
+      bad('pinned_surface_commit', a.pinned_surface_commit, stageCfg.surfaceCommit);
+    if (a.execution_surface_sha256 !== stageCfg.surfaceSha256)
+      bad('execution_surface_sha256', a.execution_surface_sha256, stageCfg.surfaceSha256);
     // Exact identity, not "some uniform 40-character string": the commit the
     // orchestrator preflighted is passed in, so a corpus cannot agree with
     // itself about a commit nobody checked.
