@@ -10,6 +10,7 @@
  * Nothing here loads a model.
  */
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -17,12 +18,43 @@ import { test } from 'node:test';
 import { TwixtState } from '../../server/gameLogic.js';
 import { BASELINE_MODEL_ID, C_PUCT, REPO_ROOT } from './cases.mjs';
 import {
+  EXIT_ERROR,
+  EXIT_REFUSED,
   EXIT_SATISFIED,
+  EXIT_USAGE,
   EXIT_VIOLATED,
   FALSIFICATION,
+  STAGES,
+  assertStageSurface,
+  codeOfThrown,
+  describeThrown,
+  exitCodeForError,
   falsificationFixture,
+  mainWithCode,
   measureCopies,
+  parseArgs,
+  runFalsification,
 } from './falsify.mjs';
+
+const gitClean = () =>
+  execFileSync('git', ['status', '--porcelain'], { cwd: REPO_ROOT }).toString().trim() === '';
+
+const PINNED_EAGER_SURFACE =
+  '228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd';
+
+/** A model whose session records that release() was called. */
+function fakeModel({ modelId, log }) {
+  return {
+    modelId,
+    inference: {
+      evaluate: async (_b, moves) => ({
+        priors: new Map(moves.map((m, i) => [`${m[0]},${m[1]}`, 1 / moves.length + i * 0])),
+        value: 0.1,
+      }),
+      session: { release: async () => log.push('release') },
+    },
+  };
+}
 
 test('the falsification parameters are exactly those frozen in §5', () => {
   assert.deepEqual({ ...FALSIFICATION }, {
@@ -157,6 +189,186 @@ test('the falsification CLI is NOT part of the ordinary suite', () => {
     pkg.scripts['test:golden']?.includes('mcts_golden/test_falsify.mjs'),
     'test:golden must run the falsification LOGIC tests'
   );
+});
+
+// --- stage binding -----------------------------------------------------------
+
+test('the eager stage is BOUND to the 74dca6e execution surface', () => {
+  assert.equal(STAGES.eager.expectedSurfaceSha256, PINNED_EAGER_SURFACE);
+  assert.equal(STAGES.eager.requiredOutcome, 'violated');
+  assert.throws(() => {
+    STAGES.eager.expectedSurfaceSha256 = '0'.repeat(64);
+  }, TypeError);
+});
+
+test('there is deliberately NO lazy stage yet', () => {
+  // Its digest cannot be honestly preregistered before server/mcts.js changes;
+  // a placeholder would be a gate that binds nothing.
+  assert.equal(STAGES.lazy, undefined);
+  assert.deepEqual(Object.keys(STAGES), ['eager']);
+});
+
+test('assertStageSurface refuses a surface that is not the stage&apos;s, and accepts the right one', (t) => {
+  if (!gitClean()) return t.skip('worktree dirty');
+  assert.throws(
+    () => assertStageSurface('0'.repeat(64)),
+    (err) => err.code === 'SURFACE_MISMATCH'
+  );
+  const ok = assertStageSurface(PINNED_EAGER_SURFACE);
+  assert.match(ok.head, /^[0-9a-f]{40}$/);
+  assert.equal(ok.digest, PINNED_EAGER_SURFACE);
+});
+
+test('an unknown stage is refused', async () => {
+  await assert.rejects(
+    () => runFalsification({ stage: 'lazy' }),
+    (err) => err.code === 'UNKNOWN_STAGE'
+  );
+});
+
+// --- model identity ----------------------------------------------------------
+
+test('a loader supplying a DIFFERENT model is refused, and the session is released', async (t) => {
+  if (!gitClean()) return t.skip('worktree dirty');
+  const log = [];
+  await assert.rejects(
+    () =>
+      runFalsification({
+        stage: 'eager',
+        loadFn: async () => fakeModel({ modelId: 'c34b7ff3297c785a', log }),
+      }),
+    (err) => err.code === 'MODEL_ROLE'
+  );
+  assert.deepEqual(log, ['release'], 'the session was not released on the role-refusal path');
+});
+
+test('MODEL_ROLE is refused BEFORE the search, so no count is produced', async (t) => {
+  if (!gitClean()) return t.skip('worktree dirty');
+  const log = [];
+  let evaluated = 0;
+  await assert.rejects(
+    () =>
+      runFalsification({
+        stage: 'eager',
+        loadFn: async () => ({
+          modelId: 'not-the-baseline',
+          inference: {
+            evaluate: async () => {
+              evaluated += 1;
+              throw new Error('should not be reached');
+            },
+            session: { release: async () => log.push('release') },
+          },
+        }),
+      }),
+    (err) => err.code === 'MODEL_ROLE'
+  );
+  assert.equal(evaluated, 0, 'the search ran despite the wrong model');
+  assert.deepEqual(log, ['release']);
+});
+
+// --- thrown-value classification ---------------------------------------------
+
+test('describeThrown and codeOfThrown handle any value', () => {
+  assert.equal(describeThrown(null), 'null');
+  assert.equal(describeThrown(undefined), 'undefined');
+  assert.equal(describeThrown(0), '0');
+  assert.equal(describeThrown(''), '');
+  assert.equal(describeThrown(false), 'false');
+  assert.equal(describeThrown(new Error('boom')), 'boom');
+  assert.equal(describeThrown({}), '[object Object]');
+  assert.equal(codeOfThrown(null), null);
+  assert.equal(codeOfThrown(undefined), null);
+  assert.equal(codeOfThrown(7), null);
+  assert.equal(codeOfThrown({ code: 'X' }), 'X');
+});
+
+test('EVERY harness fault maps to EXIT_ERROR, never to the gate-violation code', () => {
+  for (const thrown of [null, undefined, 0, '', false, new Error('x'), { code: 'WEIRD' }]) {
+    const code = exitCodeForError(thrown);
+    assert.equal(code, EXIT_ERROR, `${String(thrown)} did not map to EXIT_ERROR`);
+    assert.notEqual(code, EXIT_VIOLATED, 'a fault was indistinguishable from a gate violation');
+  }
+  // Named refusals are the one distinct class.
+  assert.equal(exitCodeForError({ code: 'WORKTREE_DIRTY' }), EXIT_REFUSED);
+  assert.equal(exitCodeForError({ code: 'MODEL_ROLE' }), EXIT_REFUSED);
+  assert.equal(exitCodeForError({ code: 'SURFACE_MISMATCH' }), EXIT_REFUSED);
+});
+
+test('the CLI returns 4 for a thrown null, undefined or frozen Error — not 1', async () => {
+  const frozen = Object.freeze(new Error('frozen fault'));
+  for (const thrown of [null, undefined, 0, '', frozen]) {
+    const code = await mainWithCode(['--stage', 'eager'], {
+      runFn: async () => {
+        throw thrown;
+      },
+    });
+    assert.equal(code, EXIT_ERROR, `throwing ${String(thrown)} produced exit ${code}`);
+    assert.notEqual(code, EXIT_VIOLATED);
+  }
+});
+
+test('the CLI returns 3 for a named refusal and 1 only for a real gate violation', async () => {
+  assert.equal(
+    await mainWithCode(['--stage', 'eager'], {
+      runFn: async () => {
+        throw new (class extends Error {
+          code = 'WORKTREE_DIRTY';
+        })('dirty');
+      },
+    }),
+    EXIT_REFUSED
+  );
+  assert.equal(
+    await mainWithCode(['--stage', 'eager'], {
+      runFn: async () => ({
+        copy_count: 4500,
+        gateMaxCopies: 8,
+        n_legal: 500,
+        stage: 'eager',
+        satisfied: false,
+        required_outcome: 'violated',
+      }),
+    }),
+    EXIT_VIOLATED
+  );
+  assert.equal(
+    await mainWithCode(['--stage', 'eager'], {
+      runFn: async () => ({
+        copy_count: 8,
+        gateMaxCopies: 8,
+        n_legal: 500,
+        stage: 'eager',
+        satisfied: true,
+        required_outcome: 'violated',
+      }),
+    }),
+    EXIT_SATISFIED
+  );
+});
+
+// --- CLI arguments -----------------------------------------------------------
+
+test('parseArgs requires a known stage and rejects everything else', () => {
+  assert.deepEqual(parseArgs(['--stage', 'eager']), { stage: 'eager' });
+  for (const argv of [[], ['--stage'], ['--stage', 'lazy'], ['--stage', 'eager', '--stage', 'eager'], ['oops']]) {
+    assert.throws(() => parseArgs(argv), (err) => err.code === 'USAGE', JSON.stringify(argv));
+  }
+});
+
+test('the CLI returns 2 on a usage error', async () => {
+  assert.equal(await mainWithCode([]), EXIT_USAGE);
+  assert.equal(await mainWithCode(['--stage', 'nope']), EXIT_USAGE);
+});
+
+test('the verdict wording claims a copy-count gate, not a scaling law', () => {
+  const src = readFileSync(join(REPO_ROOT, 'tests', 'mcts_golden', 'falsify.mjs'), 'utf8');
+  // One position at one simulation count cannot establish how allocation
+  // scales; that argument belongs to design section 3.
+  assert.match(src, /COPY-COUNT GATE SATISFIED/);
+  assert.match(src, /COPY-COUNT GATE VIOLATED/);
+  const verdicts = src.slice(src.indexOf('if (result.satisfied)'));
+  assert.equal(/scales with/.test(verdicts), false, 'the verdict claims a scaling law');
 });
 
 test('falsify.mjs never calls process.exit', () => {

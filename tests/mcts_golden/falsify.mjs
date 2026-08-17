@@ -2,13 +2,12 @@
 /**
  * The preregistered falsification (design §5).
  *
- *   node tests/mcts_golden/falsify.mjs
+ *   node tests/mcts_golden/falsify.mjs --stage eager
  *
  * Counts `TwixtState` construction during ONE search and compares it to the
  * bound the lazy design actually claims. It must FAIL against the eager
- * implementation and pass only if allocation scales with simulations rather
- * than with simulations × legal moves. A test that passes against both would be
- * worthless.
+ * implementation and pass only if the copy count stays within that bound. A
+ * test that passes against both would be worthless.
  *
  * **RUNNING THIS IS SEPARATELY AUTHORIZED**, and it is deliberately NOT part of
  * `npm run test:golden`: while the eager implementation is installed this
@@ -19,11 +18,13 @@
  *   0  gate SATISFIED   (copyCount <= 8)
  *   1  gate VIOLATED    (copyCount > 8) — the REQUIRED outcome against eager code
  *   2  usage
- *   3  refused (dirty worktree, or the fixture is not the frozen one)
- *   4  error
+ *   3  refused (dirty worktree, wrong surface, wrong fixture, wrong model)
+ *   4  error — EVERY harness fault, so a fault can never be mistaken for a
+ *      gate violation
  *
  * Specification: docs/superpowers/2026-08-16-mcts-memory-remediation-design.md §5
  */
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
 import { TwixtState } from '../../server/gameLogic.js';
@@ -61,6 +62,80 @@ export const FALSIFICATION = Object.freeze({
   // which would permit more than twice the copies the design predicts.
   gateMaxCopies: 8,
 });
+
+/**
+ * Stages, each BOUND to the execution surface it is a statement about.
+ *
+ * Recording the digest is not enough for the pre-change run: it would let the
+ * harness produce an apparently valid eager falsification against any committed
+ * surface at all. Each stage therefore pins the surface it may run against.
+ *
+ * There is deliberately **no `lazy` stage yet**. Its digest cannot be honestly
+ * preregistered before `server/mcts.js` is changed, and inventing a placeholder
+ * would be a gate that binds nothing. It is added when that surface exists.
+ */
+export const STAGES = Object.freeze({
+  eager: Object.freeze({
+    expectedSurfaceSha256:
+      '228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd',
+    requiredOutcome: 'violated',
+    note: 'the unmodified eager implementation at 74dca6e',
+  }),
+});
+
+const git = (...args) => execFileSync('git', args, { cwd: REPO_ROOT }).toString().trim();
+
+/** Describe ANY thrown value safely — including null, undefined and primitives. */
+export function describeThrown(err) {
+  if (err === null) return 'null';
+  if (err === undefined) return 'undefined';
+  if (typeof err === 'object') {
+    const msg = typeof err.message === 'string' ? err.message : '';
+    return msg || Object.prototype.toString.call(err);
+  }
+  return String(err);
+}
+
+/** The `code` of a thrown value, if it safely has one. */
+export function codeOfThrown(err) {
+  if (err !== null && typeof err === 'object' && typeof err.code === 'string') return err.code;
+  return null;
+}
+
+const REFUSAL_CODES = new Set([
+  'WORKTREE_DIRTY',
+  'FIXTURE_DRIFT',
+  'SURFACE_MISMATCH',
+  'COMMIT_MOVED',
+  'MODEL_ROLE',
+  'UNKNOWN_POSITION',
+]);
+
+/**
+ * Map any thrown value to an exit code.
+ *
+ * EVERY harness fault becomes `EXIT_ERROR`. This matters more than it looks:
+ * `EXIT_VIOLATED` is 1, and an unhandled rejection also exits 1, so a thrown
+ * `null` reaching the runtime would be indistinguishable from the very result
+ * this harness exists to establish.
+ */
+export function exitCodeForError(err) {
+  const code = codeOfThrown(err);
+  return code !== null && REFUSAL_CODES.has(code) ? EXIT_REFUSED : EXIT_ERROR;
+}
+
+/** Assert the execution surface is the one this stage is a statement about. */
+export function assertStageSurface(expectedSurfaceSha256) {
+  const head = git('rev-parse', 'HEAD');
+  const digest = executionSurfaceDigest(head, REPO_ROOT);
+  if (digest !== expectedSurfaceSha256) {
+    throw new CaptureError(
+      'SURFACE_MISMATCH',
+      `execution surface at ${head} is ${digest}, this stage requires ${expectedSurfaceSha256}`
+    );
+  }
+  return { head, digest };
+}
 
 /**
  * Count `TwixtState.prototype.copy` calls across one measured window.
@@ -109,18 +184,25 @@ export function falsificationFixture() {
 }
 
 /**
- * Run the falsification.
+ * Run the falsification for one stage.
  *
- * The execution-surface digest is RECORDED, not pinned. This harness runs twice
- * in the remediation — against the eager implementation, where it must report a
- * violation, and against the lazy one, where it must not — and `server/mcts.js`
- * is an execution-surface file, so the digest necessarily differs between those
- * runs. Pinning it would make the second run impossible. A clean worktree is
- * still required, so the measurement describes committed code.
+ * Guards, in order and all before the search: clean worktree, the stage's
+ * execution surface, the frozen fixture, and the model's identity. The surface,
+ * commit and cleanliness are RE-CHECKED after the search, so a repository that
+ * moves mid-run cannot make the code that actually ran look attributable to a
+ * later commit.
  */
-export async function runFalsification({ loadFn = null } = {}) {
-  assertCleanWorktree();
+export async function runFalsification({ stage = 'eager', loadFn = null } = {}) {
+  const config = STAGES[stage];
+  if (!config) {
+    throw new CaptureError(
+      'UNKNOWN_STAGE',
+      `no such stage: ${stage} (known: ${Object.keys(STAGES).join(', ')})`
+    );
+  }
 
+  assertCleanWorktree();
+  const before = assertStageSurface(config.expectedSurfaceSha256);
   const { position, state, describe } = falsificationFixture();
 
   const load =
@@ -132,6 +214,15 @@ export async function runFalsification({ loadFn = null } = {}) {
   let primaryThrew = false;
   let primary;
   try {
+    // Identity BEFORE the search: the result reports the baseline model, so a
+    // loader returning something else must not be able to produce a number
+    // labelled as the baseline's.
+    if (model?.modelId !== FALSIFICATION.modelId) {
+      throw new CaptureError(
+        'MODEL_ROLE',
+        `models/${FALSIFICATION.modelId} resolved to ${model?.modelId}`
+      );
+    }
     const mcts = new MCTS(model.inference, {
       nSimulations: FALSIFICATION.nSimulations,
       cPuct: FALSIFICATION.cPuct,
@@ -143,8 +234,9 @@ export async function runFalsification({ loadFn = null } = {}) {
     primary = err;
   }
 
-  // Same release discipline as the capture worker: a measurement taken from a
-  // session that could not be released has not demonstrated a clean run.
+  // Same release discipline as the capture worker, on every path including the
+  // model-role refusal: a measurement from a session that could not be released
+  // has not demonstrated a clean run.
   let releaseError = null;
   const release = model?.inference?.session?.release;
   if (typeof release !== 'function') {
@@ -158,7 +250,7 @@ export async function runFalsification({ loadFn = null } = {}) {
     } catch (err) {
       releaseError = new CaptureError(
         'SESSION_RELEASE_FAILED',
-        `session.release() rejected: ${err?.message ?? err}`
+        `session.release() rejected: ${describeThrown(err)}`
       );
     }
   }
@@ -176,48 +268,97 @@ export async function runFalsification({ loadFn = null } = {}) {
   }
   if (releaseError) throw releaseError;
 
+  // The repository must not have moved under the measurement.
+  assertCleanWorktree();
+  const after = assertStageSurface(config.expectedSurfaceSha256);
+  if (after.head !== before.head) {
+    throw new CaptureError(
+      'COMMIT_MOVED',
+      `HEAD moved from ${before.head} to ${after.head} during the measurement`
+    );
+  }
+
   return {
     schema: 'twixt-mcts-falsification/1',
+    stage,
     ...FALSIFICATION,
+    loaded_model_id: model.modelId,
     position: { id: position.id, sidecar: position.sidecar, prefix_plies: position.prefixPlies },
     n_legal: describe.n_legal,
     copy_count: copyCount,
     gate: `copyCount <= ${FALSIFICATION.gateMaxCopies}`,
     satisfied: copyCount <= FALSIFICATION.gateMaxCopies,
-    execution_surface_sha256: executionSurfaceDigest('HEAD', REPO_ROOT),
+    required_outcome: config.requiredOutcome,
+    execution_commit: after.head,
+    execution_surface_sha256: after.digest,
   };
 }
 
 // --- CLI ---------------------------------------------------------------------
 
-export async function mainWithCode(argv) {
-  if (argv.length > 0) {
-    console.error('usage: falsify.mjs   (no arguments; every parameter is frozen by §5)');
+const USAGE = `usage: falsify.mjs --stage <${Object.keys(STAGES).join('|')}>`;
+
+export function parseArgs(argv) {
+  let stage = null;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--stage') {
+      if (stage !== null) throw new CaptureError('USAGE', '--stage given twice');
+      stage = argv[++i];
+      if (!stage) throw new CaptureError('USAGE', `--stage needs a value: ${USAGE}`);
+    } else {
+      throw new CaptureError('USAGE', `unrecognised argument ${argv[i]}: ${USAGE}`);
+    }
+  }
+  if (stage === null) throw new CaptureError('USAGE', `--stage is required: ${USAGE}`);
+  if (!STAGES[stage]) throw new CaptureError('USAGE', `unknown stage ${stage}: ${USAGE}`);
+  return { stage };
+}
+
+export async function mainWithCode(argv, { runFn = runFalsification } = {}) {
+  let parsed;
+  try {
+    parsed = parseArgs(argv);
+  } catch (err) {
+    console.error(`${codeOfThrown(err) ?? 'ERROR'}: ${describeThrown(err)}`);
     return EXIT_USAGE;
   }
+
   let result;
   try {
-    result = await runFalsification();
+    result = await runFn({ stage: parsed.stage });
   } catch (err) {
-    console.error(`${err.code ?? 'ERROR'}: ${err.message}`);
-    return err.code === 'WORKTREE_DIRTY' || err.code === 'FIXTURE_DRIFT'
-      ? EXIT_REFUSED
-      : EXIT_ERROR;
+    // Any thrown value at all, including null/undefined/primitives.
+    console.error(`${codeOfThrown(err) ?? 'ERROR'}: ${describeThrown(err)}`);
+    return exitCodeForError(err);
   }
 
   console.log(JSON.stringify(result, null, 2));
   console.log('');
   console.log(
-    `copyCount ${result.copy_count} vs gate ${result.gateMaxCopies} at ${result.n_legal} legal moves`
+    `copyCount ${result.copy_count} vs gate ${result.gateMaxCopies} ` +
+      `at ${result.n_legal} legal moves (stage: ${result.stage})`
   );
+  // The verdict is about THIS measurement only: one position, one simulation
+  // count. Whether allocation scales with simulations rather than with
+  // simulations x legal moves is a structural claim argued in design §3, not
+  // something a single copy count establishes.
   if (result.satisfied) {
-    console.log('GATE SATISFIED — allocation scales with simulations');
+    console.log('COPY-COUNT GATE SATISFIED');
     return EXIT_SATISFIED;
   }
-  console.log('GATE VIOLATED — allocation scales with simulations x legal moves');
-  console.log('(against the EAGER implementation this is the required outcome)');
+  console.log('COPY-COUNT GATE VIOLATED');
+  console.log(`(this stage requires: ${result.required_outcome})`);
   return EXIT_VIOLATED;
 }
 
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
-if (isMain) process.exitCode = await mainWithCode(process.argv.slice(2));
+if (isMain) {
+  // Even the top-level call is guarded: an escaping rejection would exit 1,
+  // which is the code reserved for a gate violation.
+  try {
+    process.exitCode = await mainWithCode(process.argv.slice(2));
+  } catch (err) {
+    console.error(`ERROR: ${describeThrown(err)}`);
+    process.exitCode = EXIT_ERROR;
+  }
+}
