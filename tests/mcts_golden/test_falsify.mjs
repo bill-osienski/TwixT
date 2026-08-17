@@ -208,7 +208,21 @@ test('there is deliberately NO lazy stage yet', () => {
   assert.deepEqual(Object.keys(STAGES), ['eager']);
 });
 
-test('assertStageSurface refuses a surface that is not the stage&apos;s, and accepts the right one', (t) => {
+test('the golden suite runs its files SEQUENTIALLY', () => {
+  // `node --test` runs files in parallel by default. test_capture.mjs's N1-N3
+  // deliberately dirty the worktree, and several tests here and there skip when
+  // the tree is dirty — so in parallel a guard test skips NONDETERMINISTICALLY,
+  // and a skipped guard proves nothing. Observed as "skipped 1" with no stable
+  // cause until the files were run separately.
+  const pkg = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8'));
+  assert.match(
+    pkg.scripts['test:golden'],
+    /--test-concurrency=1/,
+    'test:golden must serialise its files, or cleanliness guards skip at random'
+  );
+});
+
+test("assertStageSurface refuses a surface that is not the stage's, and accepts the right one", (t) => {
   if (!gitClean()) return t.skip('worktree dirty');
   assert.throws(
     () => assertStageSurface('0'.repeat(64)),
