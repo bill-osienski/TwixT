@@ -51,25 +51,50 @@ line and no abort.
 | against the gate of 8 | 561.3× over | at it |
 | exit status | `1` (violated) | `0` (satisfied) |
 
-Position, model, simulation count, `cPuct` and gate are identical across both runs; only the
-execution surface differs. **561× fewer state constructions.**
+Position, model, simulation count, `cPuct` and gate are identical across both runs. **561× fewer
+state constructions.**
+
+> **Correction (see `CORRECTIONS.md`).** An earlier revision said "only the execution surface
+> differs". That is false: the falsification harness itself was revised between the two runs —
+> stage selection, the surface guards and attribution plumbing — so `falsify.mjs`, `cases.mjs`
+> and `worker.mjs` all differ alongside `server/mcts.js`.
+>
+> What makes the two counts comparable is narrower and verifiable: the **measurement window**
+> (`measureCopies`) is byte-unchanged, the **frozen `FALSIFICATION` parameters** are
+> byte-unchanged, `readFixture`'s body is unchanged, and the fixture resolves identically
+> (`P11` @ 28, `n_legal` 500). This is a comparison of two measurements taken the same way, not a
+> single-variable experiment.
 
 ## `copy_count` landed exactly on the structural ceiling
 
 Design §3 argues the root is not copied and each simulation materializes **at most one** child,
 making `S` an exact ceiling rather than an approximation. The observed count is **8 for S = 8** —
-at the ceiling, not merely under it. Every one of the eight simulations materialized exactly one
-new child: none terminated early at an already-materialized node and none reached a terminal leaf.
+at the ceiling, not merely under it. Combined with that at-most-one bound, this establishes that
+**every one of the eight simulations materialized exactly one new child.**
 
 That is a stronger observation than `≤ 8` alone. It is **not** a proof that the ceiling is
 attained everywhere: it describes this position at this simulation count.
+
+> **Correction (see `CORRECTIONS.md`).** An earlier revision added "none terminated early at an
+> already-materialized node and none reached a terminal leaf". Both are withdrawn — a copy count
+> says nothing about traversal shape:
+>
+> - a simulation may descend through **any number of already-materialized nodes** before
+>   materializing one new child at the leaf, and still contribute exactly one copy;
+> - a **newly materialized child may itself be terminal**, which also costs exactly one copy.
+>
+> The count is consistent with both, so it cannot exclude either.
 
 ## What this establishes
 
 - The falsification **binds and now passes**: it failed against the pre-change code and succeeds
   against the changed code, which is what makes the pass non-vacuous.
-- For this position and simulation count, state construction is bounded by the simulation count
-  rather than scaling with the 500 legal moves.
+- **The observation**, stated as an observation: **8 copies for 8 simulations at a position with
+  500 legal moves.** Whether that reflects a general bound — allocation scaling with simulations
+  rather than with simulations × legal moves — is the **structural argument in §3**, not something
+  this single measurement establishes. An earlier revision phrased this as "state construction is
+  bounded by the simulation count rather than scaling with the 500 legal moves", which is a
+  general claim and contradicted the "no scaling law" statement below it.
 
 ## What this does NOT establish
 
