@@ -87,14 +87,36 @@ export function exitCodeForError(err) {
 }
 
 /**
- * Flags that would change the heap from Node's default.
+ * V8 flags that change heap or GC sizing.
  *
- * Pure, so it can be tested without spawning a process under a flag. "Default
- * heap" is the whole point of M1: a run that only completes because it was
- * given more headroom measures nothing.
+ * Not just the `--max-*` family: `--initial-*`, `--min-*` and
+ * `--preconfigured-*` reconfigure the heap too, and a run under any of them is
+ * not at Node's default however it finishes. "Default heap" is the whole point
+ * of M1 — a run that only completes because it was given different headroom
+ * measures nothing.
+ *
+ * Both `-` and `_` spellings are accepted by V8, so both are matched.
  */
+export const HEAP_SIZING_FLAG_STEMS = Object.freeze([
+  'max-old-space-size',
+  'min-old-space-size',
+  'initial-old-space-size',
+  'preconfigured-old-space-size',
+  'max-semi-space-size',
+  'min-semi-space-size',
+  'max-young-generation-size',
+  'max-heap-size',
+  'initial-heap-size',
+]);
+
+const HEAP_SIZING_RE = new RegExp(
+  `^--(?:${HEAP_SIZING_FLAG_STEMS.map((s) => s.replace(/-/g, '[-_]')).join('|')})\\b`,
+  'i'
+);
+
+/** Pure, so it can be tested without spawning a process under a flag. */
 export function heapOverrideFlags(flags) {
-  return flags.filter((f) => /^--(max[-_]old[-_]space|max[-_]semi[-_]space|max[-_]heap)/i.test(f));
+  return flags.filter((f) => HEAP_SIZING_RE.test(f));
 }
 
 export function assertDefaultHeap() {
@@ -142,6 +164,39 @@ export function summarize(observations) {
     if (o.heapUsed > max) max = o.heapUsed;
   }
   return { maxHeapUsedBytes: observations.length ? max : null, seamCounts: bySeam };
+}
+
+/**
+ * Refuse an INCOMPLETE observation set.
+ *
+ * M2 is a maximum over whatever was sampled, so a run missing H3 samples — or
+ * one side of H2 — can report an artificially low maximum and pass. That is a
+ * broken measurement, not a ceiling result, so it throws rather than returning
+ * a verdict, and maps to EXIT_ERROR.
+ *
+ * H2 is bounded rather than fixed: one root expansion plus at most one leaf
+ * expansion per simulation, and a simulation reaching a terminal leaf performs
+ * none.
+ */
+export function assertObservationsComplete(seamCounts, nSimulations) {
+  const h2Max = 1 + nSimulations;
+  const problems = [];
+  if (seamCounts.H1 !== 1) problems.push(`H1=${seamCounts.H1}, expected 1`);
+  if (seamCounts.H4 !== 1) problems.push(`H4=${seamCounts.H4}, expected 1`);
+  if (seamCounts.H3 !== nSimulations)
+    problems.push(`H3=${seamCounts.H3}, expected ${nSimulations}`);
+  if (seamCounts['H2.before'] !== seamCounts['H2.after'])
+    problems.push(
+      `H2.before=${seamCounts['H2.before']} != H2.after=${seamCounts['H2.after']}`
+    );
+  if (seamCounts['H2.before'] < 1 || seamCounts['H2.before'] > h2Max)
+    problems.push(`H2=${seamCounts['H2.before']}, expected 1..${h2Max}`);
+  if (problems.length) {
+    throw new CaptureError(
+      'INCOMPLETE_SAMPLING',
+      `the observation set is incomplete, so its maximum is not the measurement: ${problems.join('; ')}`
+    );
+  }
 }
 
 /** Both criteria, applied to a completed run. Pure. */
@@ -229,6 +284,9 @@ export async function runHeapProbe({ loadFn = null } = {}) {
   if (releaseError) throw releaseError;
 
   const { maxHeapUsedBytes, seamCounts } = summarize(observations);
+  // Completeness BEFORE any verdict: an incomplete set has no maximum worth
+  // comparing to a ceiling.
+  assertObservationsComplete(seamCounts, HEAP_PROBE.nSimulations);
   const criteria = evaluateCriteria({ completed, maxHeapUsedBytes });
 
   return {
@@ -244,6 +302,10 @@ export async function runHeapProbe({ loadFn = null } = {}) {
     observation_count: observations.length,
     seam_counts: seamCounts,
     heap_size_limit_bytes: getHeapStatistics().heap_size_limit,
+    // The actual launch configuration, so the preserved evidence shows it
+    // rather than resting on the guard having passed.
+    exec_argv: [...process.execArgv],
+    node_options: process.env.NODE_OPTIONS ?? null,
     m1_completed: criteria.m1,
     m2_within_ceiling: criteria.m2,
     passed: criteria.passed,
