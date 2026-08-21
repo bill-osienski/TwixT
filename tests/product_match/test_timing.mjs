@@ -52,7 +52,6 @@ import { analyse, analyseEvidence, FROZEN_SPEC } from './analyse.mjs';
 import {
   BASELINE_MODEL_ID,
   CANDIDATE_MODEL_ID,
-  runMatchFromCommittedDecision,
 } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -540,30 +539,56 @@ describe('nothing may run a match without the committed decision', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it('no decision is committed in THIS repository, and that is the intended state', () => {
-    assert.throws(
-      () => readCommittedBlob(P_DECISION_RELPATH, 'HEAD', REPO_ROOT),
-      (e) => e.code === 'NOT_COMMITTED'
-    );
+  it('the decision IS committed in this repository, and reads as a blob', () => {
+    // Inverted deliberately. This asserted the opposite for five days, which
+    // was correct until the timing smoke produced a decision and it was
+    // committed. The blob read is the form that matters: section 7.3 reads the
+    // decision through `git show`, because a working-tree file is not a
+    // commitment.
+    const bytes = readCommittedBlob(P_DECISION_RELPATH, 'HEAD', REPO_ROOT);
+    const decision = JSON.parse(bytes.toString('utf8'));
+    assert.strictEqual(decision.selected_p, 100);
   });
 
-  it('the production match entry point refuses, before loading a model', async () => {
-    // Either refusal is correct and both are fatal: no decision is committed,
-    // and the execution surface may also be dirty during development. Asserted
-    // as a set so the test is never flaky and never vacuous.
-    await assert.rejects(
-      runMatchFromCommittedDecision({ runDir: join(dir, 'run') }),
-      (e) =>
-        e instanceof PDecisionError &&
-        ['NOT_COMMITTED', 'EXECUTION_SURFACE_DIRTY'].includes(e.code)
-    );
-    await assert.rejects(
-      readdir(join(dir, 'run')),
-      'no run directory may be created'
-    );
+  it('the committed decision loads and validates as P = 100', async () => {
+    // Replaces a test that asserted the match entry point REFUSES because no
+    // decision was committed. That premise held for five days and is now
+    // permanently false: once a valid decision exists and the surface is
+    // clean, that entry point PROCEEDS and plays 200 games, so calling it here
+    // turned `npm run test:match` into a 29-hour match run. The suite no longer
+    // imports it at all; what the decision means is asserted instead.
+    const decision = await loadCommittedDecision({
+      expected: {
+        baseline_model_id: BASELINE_MODEL_ID,
+        candidate_model_id: CANDIDATE_MODEL_ID,
+        n_simulations: 800,
+        c_puct: 1.5,
+        move_temp: 0,
+      },
+    });
+    assert.strictEqual(decision.selected_p, 100);
+    assert.strictEqual(decision.threshold_games_per_hour, 8.8);
+    assert.strictEqual(decision.measured.timing_games, 10);
+    assert.ok(decision.measured.games_per_hour < 8.8, 'P=100 requires < 8.8');
+    assert.strictEqual(decision.timing_evidence.length, 10);
   });
 
-  it('the production analyser refuses when no decision is committed', async () => {
+  it('the working-tree decision is byte-identical to the committed blob', async () => {
+    // The validator reads the blob; the file on disk is what a careless edit
+    // would change. They must agree, or the two differ silently.
+    const onDisk = await readFile(join(REPO_ROOT, P_DECISION_RELPATH));
+    const committed = execFileSync('git', ['show', `HEAD:${P_DECISION_RELPATH}`], {
+      cwd: REPO_ROOT,
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    assert.strictEqual(onDisk.toString('utf8'), committed.toString('utf8'));
+  });
+
+  it('the production analyser refuses an empty run even with a decision committed', async () => {
+    // This previously asserted the refusal came from there being NO committed
+    // decision. One now exists, so that reason is gone -- but the analyser must
+    // still refuse this run, and the point is that it does so on the run's own
+    // merits rather than on the decision's absence.
     const runDir = join(dir, 'analysed');
     await mkdir(join(runDir, 'match'), { recursive: true });
     await writeFile(
@@ -572,15 +597,20 @@ describe('nothing may run a match without the committed decision', () => {
     );
     const r = await analyse(runDir);
     assert.strictEqual(r.verdict, 'REJECTED');
-    // P_DECISION_UNAVAILABLE when the tree is clean; the surface guard fires
-    // first when it is not. Both are refusals to analyse.
-    assert.ok(
-      [
-        'P_DECISION_UNAVAILABLE',
-        'EXECUTION_SURFACE_CHANGED_SINCE_RUN',
-      ].includes(r.failures[0].code),
-      r.failures[0].code
+    assert.ok(r.failures.length > 0);
+    // The decision is now FOUND and read; it is rejected because this run's
+    // fingerprint carries no ort_version to bind it against. The outer code is
+    // still P_DECISION_UNAVAILABLE -- analyse.mjs wraps every decision-loading
+    // failure under it -- so the distinction lives in the detail.
+    const [first] = r.failures;
+    assert.strictEqual(first.code, 'P_DECISION_UNAVAILABLE');
+    assert.strictEqual(first.detail.code, 'DECISION_INVALID');
+    assert.notStrictEqual(
+      first.detail.code,
+      'NOT_COMMITTED',
+      'the decision exists now; absence may not be the reason'
     );
+    assert.match(first.detail.message, /BINDING_MISMATCH/);
   });
 
   it('the production analyser refuses a run with no commit in its fingerprint', async () => {
@@ -765,12 +795,39 @@ describe('scope: this test file runs no timing game', () => {
       'no model is loaded by these tests'
     );
     assert.ok(!named.includes('runMatchWithExplicitP'), 'no match is run here');
+    // The OPERATIONAL entry point must not be imported either. Once a valid
+    // decision is committed it no longer refuses -- it plays 200 games -- so an
+    // ordinary test importing it turns this suite into a 29-hour match.
+    assert.ok(
+      !named.includes('runMatchFromCommittedDecision'),
+      'the operational match entry point must not be imported by the suite'
+    );
+    // Deliberately NOT a source-grep for a call. This file legitimately
+    // MENTIONS the name inside source-inspection string literals, and every
+    // attempt to strip those before grepping was either self-matching or
+    // fragile -- exactly the trap the comment above warns about. The import
+    // list is the unambiguous property: the symbol is not bound in this
+    // module, and the one dynamic import of harness.mjs binds `h` and reads
+    // only frozen constants from it, so the entry point cannot be invoked.
   });
 
-  it('no decision artifact was created at the committed path', async () => {
+  it('the suite creates no match output in the repository', async () => {
+    // A match writes match/ sidecars into its run directory. These tests write
+    // only into their own temp directories, so nothing of the sort may appear
+    // under the repository's runs/.
     await assert.rejects(
-      readFile(join(REPO_ROOT, P_DECISION_RELPATH)),
-      (e) => e.code === 'ENOENT'
+      readdir(join(REPO_ROOT, 'runs', 'run')),
+      (e) => e.code === 'ENOENT',
+      'the conventional default run directory must not exist'
     );
+    const runsRoot = join(REPO_ROOT, 'runs');
+    const entries = await readdir(runsRoot).catch(() => []);
+    for (const entry of entries) {
+      await assert.rejects(
+        readdir(join(runsRoot, entry, 'match')),
+        (e) => e.code === 'ENOENT' || e.code === 'ENOTDIR',
+        `runs/${entry}/match must not exist`
+      );
+    }
   });
 });
