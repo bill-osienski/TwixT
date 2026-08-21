@@ -1,0 +1,12 @@
+ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+
+throughput 6.89 games/hour
+selected P = 100
+surface    d7fb6bc3fbc722e3 over 10 files
+
+wrote tests/product_match/p_decision.json — COMMIT IT before any match game.
