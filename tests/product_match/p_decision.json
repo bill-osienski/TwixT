@@ -1,0 +1,95 @@
+{
+  "schema": "twixt-p-decision/1",
+  "specification": "docs/superpowers/2026-08-14-product-stack-comparison-specification.md",
+  "selected_p": 100,
+  "threshold_games_per_hour": 8.8,
+  "derivation": "games_per_hour >= 8.8 -> P=200, else P=100",
+  "measured": {
+    "timing_games": 10,
+    "total_sequential_wall_ms": 5223525.364999771,
+    "games_per_hour": 6.891897231172262
+  },
+  "measurement_note": "One monotonic wall-clock span, started immediately before game 1 first MCTS search and stopped immediately after game 10 atomic rename. Evidence digests are computed after the clock stops. Both sessions were loaded and both contracts asserted before it started.",
+  "opening_pool_sha256": "f14e80163910694bc48b04552dad529465f2fafb0aaeb4b49e522281d9c65a10",
+  "opening_mapping": {
+    "baseline_self_play": [
+      200,
+      201,
+      202,
+      203,
+      204
+    ],
+    "candidate_self_play": [
+      205,
+      206,
+      207,
+      208,
+      209
+    ]
+  },
+  "timing_evidence": [
+    {
+      "file": "timing_00_opening_200.json",
+      "sha256": "c6a308be2b35299f58c4f7865d1758b423dbec142529a4170c44180eaa228d9f"
+    },
+    {
+      "file": "timing_01_opening_201.json",
+      "sha256": "62e6acd1c8b117e4eabb4fc60b12b8e351264cca74a2b8a6a2f1fd62c968c800"
+    },
+    {
+      "file": "timing_02_opening_202.json",
+      "sha256": "8fb4da89b332c159ebe9333042f4a9359bc483478293dea041d48d91c7ad3ce7"
+    },
+    {
+      "file": "timing_03_opening_203.json",
+      "sha256": "1db659246845172f01ce718254fa0074d77b218077c441065746b40499859e94"
+    },
+    {
+      "file": "timing_04_opening_204.json",
+      "sha256": "459bf11b10178da7c36c36774c5f27caca0783dd5327c45e788beb3e5075ddbe"
+    },
+    {
+      "file": "timing_05_opening_205.json",
+      "sha256": "2f269c7bb7fc0c4746fd6569be8361025727d87d91a666c359fe02546b913bb3"
+    },
+    {
+      "file": "timing_06_opening_206.json",
+      "sha256": "dd453a0388e5b67d900fc945e1c1b03ea67f58fba0ca3aefe235b882552b622f"
+    },
+    {
+      "file": "timing_07_opening_207.json",
+      "sha256": "d3b0800a02a883d32a93c384713b8876a6e67d962efd89774164e6a6dc96624d"
+    },
+    {
+      "file": "timing_08_opening_208.json",
+      "sha256": "815bb96a0d1dfb4499105f1be170ac3dcfdc5b594e31e802b1f87377b4d2c70b"
+    },
+    {
+      "file": "timing_09_opening_209.json",
+      "sha256": "af13f46186f5115f7f44524ac1024bbc21514718141370d5f1251283326b4ffd"
+    }
+  ],
+  "execution_commit": "ff400a49ab94138a1f403f31b977e9483f119967",
+  "execution_surface_sha256": "d7fb6bc3fbc722e306940accadc2b8bdda6c92d125710b9b22c32d31dac4c769",
+  "execution_surface_files": [
+    "server/gameLogic.js",
+    "tests/product_match/analyse.mjs",
+    "server/inference.js",
+    "server/mcts.js",
+    "server/model_manifest.js",
+    "server/readout_policy.js",
+    "tests/product_match/generate_openings.mjs",
+    "tests/product_match/harness.mjs",
+    "tests/product_match/p_decision.mjs",
+    "tests/product_match/timing.mjs"
+  ],
+  "baseline_model_id": "1d64027db521a50f",
+  "candidate_model_id": "c34b7ff3297c785a",
+  "ort_version": "1.23.2",
+  "ort_config": "no options supplied",
+  "n_simulations": 800,
+  "c_puct": 1.5,
+  "move_temp": 0,
+  "execution_mode": "one process, sequential, no concurrency",
+  "outcome_blind_note": "Both timing arms are self-play, so the measurement carries no comparative information and P cannot have been chosen with knowledge of the matchup."
+}
