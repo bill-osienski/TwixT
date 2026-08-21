@@ -1,0 +1,50 @@
+
+> twixt_game@1.0.0 heap-probe
+> node tests/mcts_golden/heap_probe.mjs
+
+ONNX model loaded: /Users/bill/projects/TwixT_Game/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+{
+  "schema": "twixt-mcts-heap-probe/1",
+  "positionId": "P11",
+  "sidecar": "timing_02_opening_202.json",
+  "prefixPlies": 28,
+  "modelId": "1d64027db521a50f",
+  "nSimulations": 800,
+  "cPuct": 1.5,
+  "stage": "lazy",
+  "ceilingBytes": 536870912,
+  "loaded_model_id": "1d64027db521a50f",
+  "position": {
+    "id": "P11",
+    "sidecar": "timing_02_opening_202.json",
+    "prefix_plies": 28
+  },
+  "n_legal": 500,
+  "completed": true,
+  "max_heap_used_bytes": 89031752,
+  "max_heap_used_mib": 84.91,
+  "ceiling_bytes": 536870912,
+  "observation_count": 2404,
+  "seam_counts": {
+    "H1": 1,
+    "H2.before": 801,
+    "H2.after": 801,
+    "H3": 800,
+    "H4": 1
+  },
+  "heap_size_limit_bytes": 4395630592,
+  "exec_argv": [],
+  "node_options": null,
+  "m1_completed": true,
+  "m2_within_ceiling": true,
+  "passed": true,
+  "execution_commit": "5e2b37217ce179aa37670853b8d17a9f2f3c6a89",
+  "execution_surface_sha256": "d7fb6bc3fbc722e306940accadc2b8bdda6c92d125710b9b22c32d31dac4c769",
+  "measurement_note": "Maximum OBSERVED heapUsed at the H1-H4 seams. A timer cannot observe the peak, because the selection and expansion loops block the event loop."
+}
+
+max observed heapUsed 84.91 MiB vs ceiling 512 MiB over 2404 observations
+M1 completed: true   M2 within ceiling: true
+HEAP PROBE PASSED
