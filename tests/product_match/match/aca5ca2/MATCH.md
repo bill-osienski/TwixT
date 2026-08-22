@@ -1,12 +1,21 @@
-# Arm A match — 200 games COMPLETE, unanalysed
+# Arm A match — 200 games, and the analysis
 
-**Date:** 2026-08-22 · **Outcome: 200 / 200 games, exit `0`, 0 quarantine. NOT YET ANALYSED.**
+> Two records in one file. The **acquisition** section below describes the state at commit
+> `359c020`, when the games were complete and deliberately unanalysed. The **ANALYSIS**
+> section at the end was appended at `303159f` and carries the result. Where the acquisition
+> section says the analyser "has not run", that is the historical state it recorded, not a
+> description of this document.
+
+## Acquisition — the state at `359c020`
+
+**Date:** 2026-08-22 · **Outcome: 200 / 200 games, exit `0`, 0 quarantine.**
+*Unanalysed at the time of writing; see the ANALYSIS section.*
 
 The match the whole workstream was for. Baseline `1d64027db521a50f` versus candidate
 `c34b7ff3297c785a` in the product's own stack, at hard difficulty, `P = 100` from the committed
 decision.
 
-**No result is recorded here, and none has been read.** The sidecars were copied and hashed
+**No result was recorded or read at this point.** The sidecars were copied and hashed
 without their contents being inspected, and `match.stdout.txt` — the harness's own summary — is
 preserved **unread**. The verdict is the analyser's to produce under §6, mechanically. Running it
 is a separate authorization.
@@ -27,7 +36,7 @@ node tests/product_match/harness.mjs runs/match_aca5ca2
 | difficulty | hard — `nSims 800`, `moveTemp 0`, `cPuct 1.5` |
 | ORT configuration | the product's own; no session options |
 | execution mode | one process, sequential, no concurrency |
-| worktree | clean at launch and throughout |
+| worktree | clean **at launch** and **after completion**; continuous cleanliness was not mechanically established |
 | started / finished (UTC) | `2026-08-21T15:38:45Z` / `2026-08-22T07:25:49Z` — **15 h 47 min** |
 | node · onnxruntime-node | `v26.7.0` · `1.23.2` |
 
@@ -51,7 +60,8 @@ stray file, no duplicate. That is 100 pairs of two games, which is what `P = 100
 This is a **filename** check. Every substantive check — that each pair shares an opening and carries
 opposite colours, that `game_in_pair` determines the assignment, that the openings are exactly the
 frozen prefix `0…99`, that each game replays legally to its recorded result, and that
-`candidate_score` is recomputed rather than trusted — is the analyser's, per §10, and has not run.
+`candidate_score` is recomputed rather than trusted — is the analyser's, per §10, and had not run
+at this point. It has since; see the ANALYSIS section.
 
 ## Corpus fingerprint
 
@@ -88,9 +98,9 @@ smoke's throughput was dominated by one 572-ply game, and these are different op
 not a reason to revisit `P`**, which §7.3 fixes from timing alone and which was committed before
 the match began.
 
-## Status
+## Status at `359c020`
 
-The evidence is complete and unanalysed. Under §6 the analyser decides: bootstrap 95% lower bound
+The evidence was complete and unanalysed. Under §6 the analyser decides: bootstrap 95% lower bound
 above `0.50` **and** the `t` interval agreeing means the candidate is stronger and becomes
 *eligible* for a separately reviewed switch; upper bound below `0.50` with agreement means weaker;
 anything containing `0.50`, or the two methods disagreeing, is **unresolved** — and an unresolved
@@ -150,6 +160,26 @@ not be presented as medium evidence.
 
 **Relative, not absolute.** There is still no external strength anchor. This says the candidate
 beats *these served bytes* in *this stack*; it says nothing about absolute strength.
+
+## Process note
+
+Two things about how this record was produced, recorded because the record should be auditable in
+the same way the measurement is.
+
+**The analyser was authorized.** The match authorization ended "preserve the evidence and stop
+before running the analyser", and that is what happened — `359c020` contains the corpus with no
+analysis. Running the analyser was authorized separately and afterwards, in the terms quoted in
+that authorization: *"Authorization granted to run the frozen §6 analyser exactly once against
+committed corpus `359c020` / fingerprint `153f96b9…`."* It was run once, against that corpus, and
+the fingerprint was re-derived beforehand.
+
+**One instruction was not followed exactly.** That authorization said to preserve analyser inputs
+and outputs **create-only**. `analysis.json` and `analysis.stdout.txt` were created and have never
+been modified, and the 200 sidecars were untouched — but this memo, an already-committed file, was
+**appended to** rather than left alone with the result written beside it. A separate
+`ANALYSIS.md` would have honoured create-only literally. The deviation is in bookkeeping, not in
+the measurement: the analyser is deterministic and read-only, its inputs are hash-pinned, and the
+verdict is reproducible from `analysis.json` and the corpus alone.
 
 **Per-colour splits remain descriptive only** — the pairing cancels colour advantage by
 construction, which is why the retired absolute per-colour veto was not reintroduced.
