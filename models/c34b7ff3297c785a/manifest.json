@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "model_id": "c34b7ff3297c785a",
-  "description": "Phase 2 parity candidate: ONNX export of calib020_0001, the best-supported research checkpoint. Staged for numerical parity measurement only. NOT the served model, NOT promoted, and carrying no strength claim. See docs/superpowers/2026-08-13-phase2-parity-specification.md.",
+  "description": "ONNX export of the research checkpoint recorded in provenance (calib020_0001). This manifest records what these bytes ARE and where they came from. It deliberately records nothing about how they perform or whether they are in use, because those change without these bytes changing.",
   "model_id_note": "sha256(graph_sha256 + ':' + external_data_sha256), first 16 hex. Addresses the PAIR. Note that this candidate's graph differs from the baseline's despite an identical 82855-byte size, because 20 of the 53 initializers are small enough to be stored inline and therefore carry weight values into the graph bytes; that is an artifact of the exporter's external-data threshold and is not something a content address may rely on.",
   "graph": {
     "filename": "model.onnx",
@@ -37,5 +37,5 @@
     "onnxruntime_node": "^1.20.0"
   },
   "contract_note": "Transcribed from onnxruntime-node session metadata for this artifact and enforced at load time against the manifest, its own internal consistency, and the fixed application contract derived from gameLogic NUM_CHANNELS and BOARD_SIZE plus AlphaZeroInference.maxMoves.",
-  "claims": "Identity only. This manifest asserts that these are the exported bytes and where they came from, and nothing more. NO parity claim: parity against native MLX has not been measured at the time of writing, and this artifact is staged precisely so that it can be. NO strength claim: it has never been played in the product stack. It is not the served model and DEFAULT_MODEL_ID is unchanged."
+  "claims": "Identity and provenance only. This manifest asserts that model.onnx and model.onnx.data are the bytes described by graph, external_data and contract, and that they were exported from the checkpoint recorded in provenance. It makes NO parity, strength, serving-status or deployment-status claim of its own. Those are properties of a programme and of a deployment rather than of an artifact: they change while these bytes stay identical, so a manifest that encoded them would go stale silently and without any signal. Whether this pair is served is determined solely by DEFAULT_MODEL_ID in server/model_manifest.js, and what is actually running is a fact about a deployment, not about this file. The separately reviewed records own those conclusions: parity, docs/superpowers/2026-08-13-phase2-parity-specification.md; product-stack comparison, docs/superpowers/2026-08-14-product-stack-comparison-specification.md with evidence under tests/product_match/match/aca5ca2/; served-default switch, docs/superpowers/2026-08-22-default-model-switch.md."
 }
