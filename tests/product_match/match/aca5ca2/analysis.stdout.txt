@@ -1,0 +1,5 @@
+
+CANDIDATE_STRONGER   P=100
+  mean pair score 0.8475
+  bootstrap 95%   [0.7975, 0.8950]
+  t 95%           [0.7962, 0.8988]

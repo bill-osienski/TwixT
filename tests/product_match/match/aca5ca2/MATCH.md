@@ -95,3 +95,61 @@ above `0.50` **and** the `t` interval agreeing means the candidate is stronger a
 *eligible* for a separately reviewed switch; upper bound below `0.50` with agreement means weaker;
 anything containing `0.50`, or the two methods disagreeing, is **unresolved** — and an unresolved
 result **does not authorize a larger match**.
+
+---
+
+# ANALYSIS — `CANDIDATE_STRONGER`
+
+**Date:** 2026-08-22 · Ran once, against this committed corpus.
+
+```
+node tests/product_match/analyse.mjs tests/product_match/match/aca5ca2 \
+     tests/product_match/match/aca5ca2/analysis.json
+```
+
+| | |
+|---|---|
+| exit status | **`0`** · stderr 0 bytes |
+| analyser commit | `359c020e43009baab986fa1bd1cd18530f1c37ef` |
+| corpus fingerprint | `153f96b9…`, re-derived before the run |
+| `verdict` | **`ACCEPTED`** — 0 failures |
+| **`decision`** | **`CANDIDATE_STRONGER`** |
+| `analysis.json` | 1,922 bytes, sha256 `df17f955549ca0506f77e835c531ff066039fd7b983445f02ace6b1794855ba4` |
+| `analysis.stdout.txt` | preserved |
+
+## The statistic
+
+| | |
+|---|---:|
+| pairs | **100** (= `P`) |
+| **mean pair score** | **`0.8475`** |
+| sd | `0.2584` |
+| bootstrap 95% | **`[0.7975, 0.8950]`** |
+| `t` 95% | **`[0.7962, 0.8988]`** |
+| pair tally | **76 win · 20 draw · 4 loss** |
+| methods agree | **true** (`stronger` / `stronger`) |
+
+Both lower bounds sit far above `0.50` and the two methods agree in the same direction, which is
+§6.2's condition for **candidate stronger**. Re-derived independently from the report's own
+`pair_scores`: 100 entries, mean `0.847500`, tally reproducing `76/20/4`.
+
+The observed `sd` of `0.2584` is well below the worst-case `0.5` §7 planned with, and the observed
+mean of `0.8475` is far above the `0.598` planning resolution threshold for `P = 100`. The design
+was powered only for a large effect; the effect is large.
+
+## What this means, and what it does not
+
+**Eligibility, not a switch.** §6.2: *"candidate stronger. Eligible for a separate, reviewed
+switch. Not automatic."* Nothing has been deployed, `DEFAULT_MODEL_ID` is untouched, and
+switching remains a separate reviewed action with before/after hashes, backup, rollback and a
+startup check.
+
+**Hard difficulty only.** `medium` is `DEFAULT_DIFFICULTY` and was never measured. §5.2 states it
+directly: **a hard-arm pass cannot support any claim about the default user experience**, and may
+not be presented as medium evidence.
+
+**Relative, not absolute.** There is still no external strength anchor. This says the candidate
+beats *these served bytes* in *this stack*; it says nothing about absolute strength.
+
+**Per-colour splits remain descriptive only** — the pairing cancels colour advantage by
+construction, which is why the retired absolute per-colour veto was not reintroduced.
