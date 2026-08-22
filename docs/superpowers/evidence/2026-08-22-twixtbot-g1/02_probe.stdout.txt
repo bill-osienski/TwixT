@@ -1,0 +1,56 @@
+{
+  "clone": "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/twixtbot-ui",
+  "python": "3.13.15",
+  "platform": "Darwin arm64",
+  "numpy": "2.5.2",
+  "tensorflow": "2.21.0",
+  "position": {
+    "moves": [
+      [
+        12,
+        12
+      ],
+      [
+        10,
+        11
+      ],
+      [
+        13,
+        10
+      ],
+      [
+        11,
+        13
+      ]
+    ],
+    "board_size": 24,
+    "allow_scl": false,
+    "turn": 1
+  },
+  "use_recents": false,
+  "pwin": {
+    "shape": [
+      1,
+      3
+    ],
+    "dtype": "float32",
+    "all_finite": true,
+    "min": -3.0964651107788086,
+    "max": 2.4478209018707275
+  },
+  "movelogits": {
+    "shape": [
+      1,
+      528
+    ],
+    "dtype": "float32",
+    "all_finite": true,
+    "min": -21.516162872314453,
+    "max": -2.57499623298645
+  },
+  "pwin_value": [
+    0.6499252915382385,
+    -3.0964651107788086,
+    2.4478209018707275
+  ]
+}

@@ -1,0 +1,26 @@
+# G1 evidence — twixtbot anchor pilot, 2026-08-22 — RESULT: PASS (exit 0)
+
+Gate G1 of docs/superpowers/2026-08-22-twixtbot-anchor-pilot-card.md: isolated
+install, import backend.nneval, load the pinned SavedModel, one fixed-position
+eval_one. Nothing else ran. The engine and its requirements.txt were NOT
+modified; the clone was git-clean afterwards.
+
+Anchor: github.com/stevens68/twixtbot-ui @ 83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+Weights blob sha256: 1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab
+
+g1_probe.py is the EXACT script that ran, preserved as evidence. It derives the
+clone path from its own location and so does not run from this directory; it is
+a record, not a tool. The virtual environment is deliberately not committed --
+05_pip_freeze.txt records it instead.
+
+Covers the seven evidence files only. This manifest does not list itself: a file
+cannot contain its own hash, and an entry claiming to would be unverifiable.
+Verify with:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+d344e06b45051c8d740803f03b117b8d24f06e0ad1a37d5a90a3ed7ef76de615  00_environment.txt
+a284981bdaa62503942db93f0beb0525866c0bc7c3349743ee054d6721bcf2b1  01_install.log
+3dc4adb30347fa10a02abea008d3dc61b933a308f111c79ee5bce12e21590135  02_probe.stdout.txt
+e0f9146d4605c47b000d1e749b3dc5c90a284df6ba42fc6cbc2ba949f450fc3a  03_probe.stderr.txt
+418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b  04_exit.txt
+1270c802f317e9e193cd832cbb506650cc6e1b55253d601d50743e042f078a47  05_pip_freeze.txt
+492cd9de8bf8dc9260cb92ad49b4a15b89dccf73e321b781f3d09ae7d87edb99  g1_probe.py
