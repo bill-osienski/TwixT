@@ -1,0 +1,185 @@
+{
+  "kind": "match",
+  "schema": "twixt-product-match/1",
+  "opening_id": 37,
+  "opening_sha256": "c3053b650830185cbfd72ad711d4f10fdbcc55b5a67f3dcafb4b2a968f19078d",
+  "pair_index": 37,
+  "game_in_pair": 1,
+  "baseline_model_id": "1d64027db521a50f",
+  "candidate_model_id": "c34b7ff3297c785a",
+  "red_model_id": "1d64027db521a50f",
+  "black_model_id": "c34b7ff3297c785a",
+  "moves": [
+    [
+      20,
+      1
+    ],
+    [
+      5,
+      10
+    ],
+    [
+      13,
+      22
+    ],
+    [
+      15,
+      13
+    ],
+    [
+      18,
+      2
+    ],
+    [
+      4,
+      18
+    ],
+    [
+      16,
+      3
+    ],
+    [
+      13,
+      4
+    ],
+    [
+      15,
+      10
+    ],
+    [
+      11,
+      9
+    ],
+    [
+      14,
+      4
+    ],
+    [
+      11,
+      5
+    ],
+    [
+      13,
+      2
+    ],
+    [
+      12,
+      2
+    ],
+    [
+      13,
+      11
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      10,
+      15
+    ],
+    [
+      6,
+      15
+    ],
+    [
+      7,
+      13
+    ],
+    [
+      7,
+      14
+    ],
+    [
+      11,
+      1
+    ],
+    [
+      10,
+      1
+    ],
+    [
+      5,
+      14
+    ],
+    [
+      9,
+      13
+    ],
+    [
+      12,
+      7
+    ],
+    [
+      10,
+      7
+    ],
+    [
+      9,
+      17
+    ],
+    [
+      6,
+      17
+    ],
+    [
+      14,
+      9
+    ],
+    [
+      8,
+      0
+    ],
+    [
+      8,
+      15
+    ],
+    [
+      8,
+      16
+    ],
+    [
+      4,
+      21
+    ],
+    [
+      3,
+      20
+    ],
+    [
+      2,
+      22
+    ],
+    [
+      5,
+      21
+    ],
+    [
+      6,
+      22
+    ],
+    [
+      7,
+      22
+    ],
+    [
+      0,
+      21
+    ],
+    [
+      5,
+      23
+    ]
+  ],
+  "result": "black",
+  "candidate_score": 1,
+  "termination": "win",
+  "ply_count": 40,
+  "n_simulations": 800,
+  "c_puct": 1.5,
+  "move_temp": 0,
+  "ort_version": "1.23.2",
+  "ort_config": "no options supplied",
+  "execution_commit": "aca5ca2a4dc724269c91c481d4a58a372ca1c178",
+  "elapsed_ms": 129921
+}

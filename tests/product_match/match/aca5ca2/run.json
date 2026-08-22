@@ -1,0 +1,15 @@
+{
+  "fingerprint": {
+    "execution_commit": "aca5ca2a4dc724269c91c481d4a58a372ca1c178",
+    "schema": "twixt-product-match/1",
+    "ort_version": "1.23.2",
+    "ort_config": "no options supplied",
+    "n_simulations": 800,
+    "c_puct": 1.5,
+    "move_temp": 0,
+    "baseline_model_id": "1d64027db521a50f",
+    "candidate_model_id": "c34b7ff3297c785a"
+  },
+  "P": 100,
+  "started_pairs": 0
+}

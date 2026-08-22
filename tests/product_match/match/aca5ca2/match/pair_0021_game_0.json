@@ -1,0 +1,181 @@
+{
+  "kind": "match",
+  "schema": "twixt-product-match/1",
+  "opening_id": 21,
+  "opening_sha256": "f8109ae6e8cda9f3a639c05f6b510eb65b10e054d527bf740b3a076d9a2fdf8d",
+  "pair_index": 21,
+  "game_in_pair": 0,
+  "baseline_model_id": "1d64027db521a50f",
+  "candidate_model_id": "c34b7ff3297c785a",
+  "red_model_id": "c34b7ff3297c785a",
+  "black_model_id": "1d64027db521a50f",
+  "moves": [
+    [
+      0,
+      21
+    ],
+    [
+      5,
+      19
+    ],
+    [
+      16,
+      20
+    ],
+    [
+      7,
+      21
+    ],
+    [
+      6,
+      16
+    ],
+    [
+      9,
+      15
+    ],
+    [
+      9,
+      11
+    ],
+    [
+      8,
+      13
+    ],
+    [
+      7,
+      10
+    ],
+    [
+      13,
+      11
+    ],
+    [
+      13,
+      7
+    ],
+    [
+      10,
+      8
+    ],
+    [
+      11,
+      8
+    ],
+    [
+      11,
+      10
+    ],
+    [
+      10,
+      13
+    ],
+    [
+      14,
+      14
+    ],
+    [
+      9,
+      7
+    ],
+    [
+      8,
+      7
+    ],
+    [
+      7,
+      6
+    ],
+    [
+      6,
+      6
+    ],
+    [
+      5,
+      5
+    ],
+    [
+      16,
+      8
+    ],
+    [
+      15,
+      8
+    ],
+    [
+      18,
+      9
+    ],
+    [
+      17,
+      7
+    ],
+    [
+      19,
+      6
+    ],
+    [
+      20,
+      6
+    ],
+    [
+      20,
+      8
+    ],
+    [
+      18,
+      5
+    ],
+    [
+      21,
+      5
+    ],
+    [
+      22,
+      5
+    ],
+    [
+      4,
+      7
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      6,
+      23
+    ],
+    [
+      23,
+      3
+    ]
+  ],
+  "result": "red",
+  "candidate_score": 1,
+  "termination": "win",
+  "ply_count": 39,
+  "n_simulations": 800,
+  "c_puct": 1.5,
+  "move_temp": 0,
+  "ort_version": "1.23.2",
+  "ort_config": "no options supplied",
+  "execution_commit": "aca5ca2a4dc724269c91c481d4a58a372ca1c178",
+  "elapsed_ms": 122508
+}

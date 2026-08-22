@@ -1,0 +1,169 @@
+{
+  "kind": "match",
+  "schema": "twixt-product-match/1",
+  "opening_id": 88,
+  "opening_sha256": "4773cb54e186f70ef1ebd4eb7dfa07577bfa8c7cef141bb3b39c1bcb4a11467f",
+  "pair_index": 88,
+  "game_in_pair": 1,
+  "baseline_model_id": "1d64027db521a50f",
+  "candidate_model_id": "c34b7ff3297c785a",
+  "red_model_id": "1d64027db521a50f",
+  "black_model_id": "c34b7ff3297c785a",
+  "moves": [
+    [
+      6,
+      12
+    ],
+    [
+      12,
+      22
+    ],
+    [
+      19,
+      5
+    ],
+    [
+      11,
+      0
+    ],
+    [
+      17,
+      4
+    ],
+    [
+      13,
+      5
+    ],
+    [
+      15,
+      5
+    ],
+    [
+      14,
+      7
+    ],
+    [
+      14,
+      10
+    ],
+    [
+      11,
+      10
+    ],
+    [
+      12,
+      9
+    ],
+    [
+      10,
+      8
+    ],
+    [
+      10,
+      14
+    ],
+    [
+      12,
+      13
+    ],
+    [
+      12,
+      15
+    ],
+    [
+      14,
+      14
+    ],
+    [
+      13,
+      17
+    ],
+    [
+      15,
+      17
+    ],
+    [
+      16,
+      17
+    ],
+    [
+      17,
+      16
+    ],
+    [
+      15,
+      18
+    ],
+    [
+      16,
+      19
+    ],
+    [
+      13,
+      4
+    ],
+    [
+      12,
+      3
+    ],
+    [
+      16,
+      20
+    ],
+    [
+      17,
+      21
+    ],
+    [
+      15,
+      14
+    ],
+    [
+      16,
+      15
+    ],
+    [
+      18,
+      16
+    ],
+    [
+      10,
+      12
+    ],
+    [
+      11,
+      7
+    ],
+    [
+      11,
+      6
+    ],
+    [
+      17,
+      22
+    ],
+    [
+      18,
+      23
+    ],
+    [
+      18,
+      15
+    ],
+    [
+      13,
+      1
+    ]
+  ],
+  "result": "black",
+  "candidate_score": 1,
+  "termination": "win",
+  "ply_count": 36,
+  "n_simulations": 800,
+  "c_puct": 1.5,
+  "move_temp": 0,
+  "ort_version": "1.23.2",
+  "ort_config": "no options supplied",
+  "execution_commit": "aca5ca2a4dc724269c91c481d4a58a372ca1c178",
+  "elapsed_ms": 111009
+}
