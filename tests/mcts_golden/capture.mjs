@@ -3,8 +3,11 @@
  * Golden-trace capture orchestrator.
  *
  *   node tests/mcts_golden/capture.mjs list
- *   node tests/mcts_golden/capture.mjs dry-run <out_dir> --stage <eager|lazy>
- *   node tests/mcts_golden/capture.mjs capture <out_dir> --stage <eager|lazy>
+ *   node tests/mcts_golden/capture.mjs dry-run <out_dir> --stage <name>
+ *   node tests/mcts_golden/capture.mjs capture <out_dir> --stage <name>
+ *
+ * `<name>` is one of the frozen stages in cases.mjs. The usage error prints the
+ * current list, derived from that table rather than repeated here.
  *
  * `--stage` names the execution surface the run is a statement about, and has
  * no default: a defaulted stage would attribute artifacts to whichever surface

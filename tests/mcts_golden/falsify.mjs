@@ -71,8 +71,8 @@ export const FALSIFICATION = Object.freeze({
 /**
  * Stages come from `cases.mjs`, so the capture harness and this one cannot
  * disagree about which surface a stage names. Each stage also fixes the outcome
- * this falsification is REQUIRED to produce there: `violated` for eager,
- * `satisfied` for lazy.
+ * this falsification is REQUIRED to produce there: `violated` for eager, and
+ * `satisfied` for every lazy-materialization surface.
  */
 export { STAGES, STAGE_NAMES };
 

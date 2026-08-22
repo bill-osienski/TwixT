@@ -19,7 +19,7 @@ export const REPO_ROOT = join(HERE, '..', '..');
 export const FIXTURE_RELDIR = 'tests/product_match/timing_failures/74dca6e';
 
 /**
- * The two execution surfaces this programme compares, each a NAMED stage.
+ * The frozen execution surfaces this harness can attribute, each a NAMED stage.
  *
  * Equality against a stage's digest IS the statement "every execution-surface
  * file is byte-identical to that stage's commit" (§4.5), because the digest is
@@ -27,8 +27,10 @@ export const FIXTURE_RELDIR = 'tests/product_match/timing_failures/74dca6e';
  *
  * A single pin was correct while only the eager surface existed; the moment
  * `server/mcts.js` changed it made the harness inoperable at HEAD. Stages are
- * how the same harness makes statements about two different surfaces without
- * either statement drifting.
+ * how the same harness makes statements about several different surfaces
+ * without any of those statements drifting. Adding a stage NEVER re-attributes
+ * an existing one: `eager` and `lazy` still carry the digests their evidence
+ * was taken under, and that evidence still validates only under them.
  *
  * **Callers name a stage. They never supply a digest** — an expected value the
  * caller provides is not a binding, and `runFalsification`/`runCase` would
@@ -59,6 +61,24 @@ export const STAGES = Object.freeze({
     artifactSchema: 'twixt-mcts-golden/2',
     carriesStageField: true,
     note: 'lazy child-state materialization; a child state is built on first descent',
+  }),
+  'candidate-default': Object.freeze({
+    name: 'candidate-default',
+    surfaceSha256: 'ff80f895cecd4a491e27329ba6026862bf7507852c4672108dccb73a33528047',
+    surfaceCommit: '879b67cb3dbbddd18827b14067cb65038fe93c59',
+    // NOT re-measured. `879b67c` changes exactly one execution-surface byte
+    // range — `DEFAULT_MODEL_ID` in server/model_manifest.js — and both
+    // `server/mcts.js` and `server/gameLogic.js` are byte-identical to the lazy
+    // stage's commit, so the copy-count behaviour cannot differ. The
+    // falsification harness also pins its model by directory
+    // (`models/<BASELINE_MODEL_ID>`) rather than taking the served default, so
+    // the switched pin does not reach it either.
+    falsificationOutcome: 'satisfied',
+    artifactSchema: 'twixt-mcts-golden/2',
+    carriesStageField: true,
+    note:
+      'lazy child-state materialization with the CANDIDATE served by default; ' +
+      'identical to the lazy stage except DEFAULT_MODEL_ID',
   }),
 });
 

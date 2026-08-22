@@ -57,6 +57,17 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, '..', '..');
 
+/**
+ * The commit the authorized 200-game match ran at — the same name as its
+ * evidence directory, `tests/product_match/match/aca5ca2/`.
+ *
+ * The P decision binds an execution surface, and this is the commit that
+ * carries it. Written out in full rather than resolved from the evidence
+ * directory name: an abbreviation on disk is not an identifier, and resolving
+ * it at test time would let the binding follow whatever happened to be there.
+ */
+const MATCH_COMMIT = 'aca5ca2a4dc724269c91c481d4a58a372ca1c178';
+
 /** A wall time that yields exactly `gamesPerHour` for ten games. */
 const wallMsFor = (gamesPerHour) => (TIMING_GAMES * 3_600_000) / gamesPerHour;
 
@@ -550,14 +561,20 @@ describe('nothing may run a match without the committed decision', () => {
     assert.strictEqual(decision.selected_p, 100);
   });
 
-  it('the committed decision loads and validates as P = 100', async () => {
+  it('the committed decision loads and validates as P = 100 at the MATCH commit', async () => {
     // Replaces a test that asserted the match entry point REFUSES because no
     // decision was committed. That premise held for five days and is now
     // permanently false: once a valid decision exists and the surface is
     // clean, that entry point PROCEEDS and plays 200 games, so calling it here
     // turned `npm run test:match` into a 29-hour match run. The suite no longer
     // imports it at all; what the decision means is asserted instead.
+    //
+    // Validated at MATCH_COMMIT, not at HEAD. The decision binds an execution
+    // surface, and the surface it binds is the one the 200 games were played
+    // on; that is where the binding genuinely holds, and where its meaning is
+    // therefore testable. At HEAD it must refuse — see the next test.
     const decision = await loadCommittedDecision({
+      commit: MATCH_COMMIT,
       expected: {
         baseline_model_id: BASELINE_MODEL_ID,
         candidate_model_id: CANDIDATE_MODEL_ID,
@@ -571,6 +588,34 @@ describe('nothing may run a match without the committed decision', () => {
     assert.strictEqual(decision.measured.timing_games, 10);
     assert.ok(decision.measured.games_per_hour < 8.8, 'P=100 requires < 8.8');
     assert.strictEqual(decision.timing_evidence.length, 10);
+    // The binding is to a surface, so name it: this decision describes the
+    // pre-switch surface and nothing else.
+    assert.strictEqual(
+      decision.execution_surface_sha256,
+      executionSurfaceDigest(MATCH_COMMIT, REPO_ROOT)
+    );
+  });
+
+  it('at HEAD the completed decision REFUSES — it cannot authorize another match', async () => {
+    // The served pin moved at 879b67c, which is an execution-surface file, so
+    // the surface HEAD carries is not the one this decision was made for. A
+    // spent decision that still validated at HEAD would silently authorize a
+    // second match against different serving bytes; it must refuse instead.
+    // This is a refusal to REUSE the authorization, not a defect: the P
+    // decision, the timing evidence and the 200-game match remain valid for
+    // the surface they were taken on.
+    assert.notStrictEqual(
+      executionSurfaceDigest('HEAD', REPO_ROOT),
+      executionSurfaceDigest(MATCH_COMMIT, REPO_ROOT),
+      'premise: HEAD must carry a different surface than the match commit'
+    );
+    await assert.rejects(
+      loadCommittedDecision({}),
+      (e) =>
+        e instanceof PDecisionError &&
+        e.code === 'DECISION_INVALID' &&
+        /EXECUTION_SURFACE_MISMATCH/.test(e.message)
+    );
   });
 
   it('the working-tree decision is byte-identical to the committed blob', async () => {

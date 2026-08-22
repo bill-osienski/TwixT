@@ -42,8 +42,14 @@ const gitClean = () =>
 
 const EAGER_SURFACE = '228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd8ef77bd';
 const LAZY_SURFACE = 'd7fb6bc3fbc722e306940accadc2b8bdda6c92d125710b9b22c32d31dac4c769';
-/** HEAD carries the LAZY surface. */
-const STAGE = 'lazy';
+const CANDIDATE_DEFAULT_SURFACE =
+  'ff80f895cecd4a491e27329ba6026862bf7507852c4672108dccb73a33528047';
+/**
+ * HEAD carries the CANDIDATE-DEFAULT surface. Test attribution only — the
+ * committed falsification records still belong to `eager` and `lazy`, and
+ * nothing here re-runs a falsification.
+ */
+const STAGE = 'candidate-default';
 
 /** A model whose session records that release() was called. */
 function fakeModel({ modelId, log }) {
@@ -196,22 +202,31 @@ test('the falsification CLI is NOT part of the ordinary suite', () => {
 
 // --- stage binding -----------------------------------------------------------
 
-test('both stages are frozen, with their own surface and required outcome', () => {
+test('every stage is frozen, with its own surface and required outcome', () => {
   assert.equal(STAGES.eager.surfaceSha256, EAGER_SURFACE);
   assert.equal(STAGES.eager.falsificationOutcome, 'violated');
   assert.equal(STAGES.lazy.surfaceSha256, LAZY_SURFACE);
   assert.equal(STAGES.lazy.falsificationOutcome, 'satisfied');
-  assert.notEqual(STAGES.eager.surfaceSha256, STAGES.lazy.surfaceSha256);
+  assert.equal(STAGES['candidate-default'].surfaceSha256, CANDIDATE_DEFAULT_SURFACE);
+  assert.equal(STAGES['candidate-default'].falsificationOutcome, 'satisfied');
+  // No two stages may share a surface: a duplicate would let a measurement be
+  // attributed to either one.
+  const surfaces = Object.values(STAGES).map((s) => s.surfaceSha256);
+  assert.equal(new Set(surfaces).size, surfaces.length, 'two stages share a surface digest');
   assert.throws(() => {
     STAGES.eager.surfaceSha256 = '0'.repeat(64);
   }, TypeError);
 });
 
-test('the eager stage keeps its own surface, unaffected by the lazy change', () => {
-  // The eager corpus and falsification evidence are immutable and remain valid
-  // under the surface they recorded — not under HEAD's.
+test('the older stages keep their own surfaces, unaffected by later ones', () => {
+  // The eager and lazy corpora and falsification records are immutable and
+  // remain valid under the surfaces they recorded — not under HEAD's.
   assert.equal(STAGES.eager.surfaceSha256, EAGER_SURFACE);
   assert.equal(STAGES.eager.surfaceCommit, '74dca6e1535ee1e36d640dae3ba644c6c2ed2e5e');
+  assert.equal(STAGES.lazy.surfaceSha256, LAZY_SURFACE);
+  assert.equal(STAGES.lazy.surfaceCommit, '85894b93392e63ce8f6e008f368ff7e798f91853');
+  assert.equal(STAGES.eager.artifactSchema, 'twixt-mcts-golden/1');
+  assert.equal(STAGES.eager.carriesStageField, false);
 });
 
 test('the golden suite runs its files SEQUENTIALLY', () => {
@@ -228,19 +243,24 @@ test('the golden suite runs its files SEQUENTIALLY', () => {
   );
 });
 
-test('at the CURRENT HEAD, the lazy stage is accepted and the eager stage is refused', (t) => {
+test('at the CURRENT HEAD only candidate-default is accepted; eager and lazy refuse', (t) => {
   if (!gitClean()) return t.skip('worktree dirty');
-  // HEAD carries the lazy surface, so `lazy` is the only stage that may make a
-  // measurement here. `eager` must refuse rather than silently attribute a
-  // measurement of this code to the surface the eager corpus describes.
-  const ok = assertStageSurface('lazy', executionSurfaceDigest);
+  // HEAD carries the candidate-default surface, so that is the only stage that
+  // may make a measurement here. Both older stages must REFUSE rather than
+  // silently attribute a measurement of this code to the surface their
+  // committed evidence describes — including `lazy`, which was HEAD's stage
+  // until the served pin moved.
+  const ok = assertStageSurface('candidate-default', executionSurfaceDigest);
   assert.match(ok.head, /^[0-9a-f]{40}$/);
-  assert.equal(ok.digest, LAZY_SURFACE);
+  assert.equal(ok.digest, CANDIDATE_DEFAULT_SURFACE);
 
-  assert.throws(
-    () => assertStageSurface('eager', executionSurfaceDigest),
-    (err) => err.code === 'EXECUTION_SURFACE_MOVED'
-  );
+  for (const stale of ['eager', 'lazy']) {
+    assert.throws(
+      () => assertStageSurface(stale, executionSurfaceDigest),
+      (err) => err.code === 'EXECUTION_SURFACE_MOVED',
+      `stage "${stale}" did not refuse at the moved surface`
+    );
+  }
 });
 
 test('a stage NAME is required, and only a frozen name is accepted', async () => {
@@ -285,7 +305,7 @@ test('INHERITED property names are not stages', async () => {
 
 test('each stage’s commit actually PRODUCES its recorded surface digest', (t) => {
   if (!gitClean()) return t.skip('worktree dirty');
-  // Both pairs are correct today, but nothing forced them to stay paired: a
+  // Every pair is correct today, but nothing forced them to stay paired: a
   // typo in either field would leave the digest gate working while every
   // artifact misattributed its provenance. Re-derive from git instead.
   for (const name of Object.keys(STAGES)) {

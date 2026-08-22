@@ -70,8 +70,13 @@ const WORKER_MJS = join(REPO_ROOT, 'tests', 'mcts_golden', 'worker.mjs');
 const git = (...a) => execFileSync('git', a, { cwd: REPO_ROOT }).toString().trim();
 const gitClean = () => git('status', '--porcelain') === '';
 const HEAD = git('rev-parse', 'HEAD');
-/** HEAD carries the LAZY surface now, so operational calls name that stage. */
-const STAGE = 'lazy';
+/**
+ * HEAD carries the CANDIDATE-DEFAULT surface now, so operational calls name
+ * that stage. This is TEST ATTRIBUTION ONLY: no corpus was recaptured, and the
+ * committed eager and lazy corpora are still judged under their own stages
+ * below.
+ */
+const STAGE = 'candidate-default';
 
 /** Derived once from the pinned sidecars; the validator's independent target. */
 const DERIVED_FIXTURES = deriveExpectedFixtures();
@@ -685,7 +690,10 @@ test('a NEW artifact records its stage, commit and surface', () => {
   assert.equal(artifact.stage, 'lazy');
   assert.equal(artifact.schema, STAGES.lazy.artifactSchema);
   assert.equal(artifact.capture_commit, HEAD);
-  assert.equal(artifact.execution_surface_sha256, STAGES[STAGE].surfaceSha256);
+  // STAGES.lazy, not STAGES[STAGE]: the artifact above was built under `lazy`.
+  // While STAGE was also 'lazy' these agreed by coincidence, so the assertion
+  // could not have caught the artifact being stamped with the wrong surface.
+  assert.equal(artifact.execution_surface_sha256, STAGES.lazy.surfaceSha256);
   assert.equal(artifact.pinned_surface_commit, STAGES.lazy.surfaceCommit);
 
   // The legacy eager schema carries no stage field at all — not an empty one.
