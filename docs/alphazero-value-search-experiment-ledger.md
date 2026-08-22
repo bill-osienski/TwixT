@@ -56,7 +56,7 @@ knob) is not a new hypothesis.
 
 > **Frozen-parent opponent, 2026-08-12 — BAR NOT MET, PARITY NOT RESOLVED, line CLOSED.** The successor mechanism to closed ordinary continuation (learner plays the frozen best parent; only learner-to-move positions train) finally RAN, from execution commit `13dd72f`, after an earlier attempt aborted on the two-server Metal defect. **184–211 with 5 state caps: score rate `0.46625`, CI95 `[0.4177, 0.5148]`, Elo `−23.5`, CI95 `[−57.7, +10.3]`.** The lower bound is not above `0.50`, so **the promotion bar was NOT met** — but unlike `cont5` and `warm5` this is **not a decisive rejection**: **both the score and Elo intervals include parity**, so the candidate is **not statistically distinguishable from the parent**. It was not shown stronger; it was also not shown weaker at this dose. **Do not write this as "equal".** The preregistered prediction (`0.47–0.51`, ~10% chance of clearing the bar), written before the implementation existed, matched **approximately in direction and magnitude** — `0.46625` falls just below the band's lower edge — and **a single non-pass cannot validate the 10% probability**. The `cont5 0.31375` → `warm5 0.4325` → `fp6 0.46625` progression is **descriptive across three separate runs** with different mechanisms, seeds and evaluation intervals, **not a paired causal estimate**. Per-colour figures are descriptive only per the 2026-08-10 erratum. Dose confirmed by measurement: 9,085–9,858 learner rows per iteration. **Keep `calib020_0001`.** See do-not-repeat **#51**; `#50` is unchanged and vindicated at scale — the single arbiter served ~1,500 games at 400 simulations without a driver abort.
 
-> **Product-model alignment, Phase 3 — ANSWERED 2026-08-22 (updates the "only open workstream" row above).** The product-stack comparison ran and selected the candidate `c34b7ff3297c785a` as the served default; the baseline is retained as rollback. This is an engineering result about served bytes, not a research one — it authorizes nothing here and `calib020_0001` is unaffected. Full entry: [Product-model alignment, Phase 3](#product-model-alignment-phase-3--candidate-selected-and-served-2026-08-22).
+> **Product-model alignment, Phase 3 — ANSWERED 2026-08-22 (updates the "only open workstream" row above).** The product-stack comparison ran and selected the candidate `c34b7ff3297c785a` as the served default; the baseline is retained as rollback. This is an engineering result about served bytes, not a research one — it authorizes nothing here and `calib020_0001` is unaffected. **Merged, deployed and verified 2026-08-22; the workstream is now CLOSED.** Full entry and deployment closeout: [Product-model alignment, Phase 3](#product-model-alignment-phase-3--candidate-selected-and-served-2026-08-22).
 
 ## Historical proposal check — programme now closed
 
@@ -1333,6 +1333,51 @@ relative to *these served bytes in this stack*. What produced the incumbent arti
 | §6 heap probe | `tests/mcts_golden/heap_probe/5e2b372/` |
 | switch audit | `docs/superpowers/2026-08-22-default-model-switch.md` |
 | Phase 2 parity PASS | `docs/superpowers/2026-08-13-phase2-parity-specification.md` |
+
+### Deployment closeout, 2026-08-22 — WORKSTREAM CLOSED
+
+Deployed from `main@fd59619` through the established launcher (`npm start` →
+`scripts/startServer.js`; game on `:5500`, AI on `:3001`). Startup clean: no fallback, no
+validation warning, no stderr. The launcher and the inference server report the served model
+independently, because the launcher hands the child `MODEL_MANIFEST` rather than its own verdict:
+
+```
+Model id:   c34b7ff3297c785a
+Provenance: source_checkpoint=checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+```
+
+Manifest, graph, sidecar hashes, the structural graph-to-sidecar binding and the application
+tensor contract all passed the normal loader. That is not a separate check to report: `resolveModel`
+and `assertSessionContract` are fail-closed with 13 fatal codes and no fallback, so a listening
+server printing that banner **is** the evidence they passed.
+
+Service verification, ten checks, all green — `/api/health` reporting `modelLoaded`,
+`/api/model-info` naming the candidate graph and not the baseline, deterministic
+`/api/analyze-position` returning a finite `root_value` with every candidate legal in the queried
+position, `/api/evaluate` finite, and `:5500` serving the app. Re-run after a restart with
+byte-identical values.
+
+**Rollback is unchanged and independently validated.** `1d64027db521a50f` is retained in full and
+the loader accepts it through the documented `MODEL_MANIFEST` path, so the rollback target is
+known-good rather than assumed. Reverting remains one constant.
+
+**Manifest hygiene — the durable lesson.** Both manifests carried temporal claims that had silently
+become false: "NOT the served model", parity unmeasured, "never been played in the product stack",
+`DEFAULT_MODEL_ID` unchanged, and — in the rollback manifest — a strength claim of "never measured
+in the product stack" when it had been the match's baseline arm. **An identity manifest must not
+encode mutable programme or deployment state:** those facts change while the bytes stay identical,
+so the file rots with no signal and nothing to catch it. Both now assert identity and provenance
+only and link the reviewed records instead of restating them. Selection is described as determined
+by repository and deployment configuration rather than by any single constant, because
+`MODEL_MANIFEST` is a supported override.
+
+**Deployment changes no evidence boundary.** Serving the candidate creates no evidence about
+`medium`, which is `DEFAULT_DIFFICULTY` and remains unmeasured, and there is still no external
+anchor. Deployment is an operational fact, not a strength result.
+
+**The product-model alignment workstream is CLOSED.** Its successors — a seeded-RNG `medium` arm,
+and recovering the incumbent's provenance — are not open, not authorized, and each would need its
+own scope.
 
 ## What got better vs worse
 
