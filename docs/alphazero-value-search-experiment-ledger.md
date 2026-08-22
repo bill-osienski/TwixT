@@ -56,6 +56,8 @@ knob) is not a new hypothesis.
 
 > **Frozen-parent opponent, 2026-08-12 — BAR NOT MET, PARITY NOT RESOLVED, line CLOSED.** The successor mechanism to closed ordinary continuation (learner plays the frozen best parent; only learner-to-move positions train) finally RAN, from execution commit `13dd72f`, after an earlier attempt aborted on the two-server Metal defect. **184–211 with 5 state caps: score rate `0.46625`, CI95 `[0.4177, 0.5148]`, Elo `−23.5`, CI95 `[−57.7, +10.3]`.** The lower bound is not above `0.50`, so **the promotion bar was NOT met** — but unlike `cont5` and `warm5` this is **not a decisive rejection**: **both the score and Elo intervals include parity**, so the candidate is **not statistically distinguishable from the parent**. It was not shown stronger; it was also not shown weaker at this dose. **Do not write this as "equal".** The preregistered prediction (`0.47–0.51`, ~10% chance of clearing the bar), written before the implementation existed, matched **approximately in direction and magnitude** — `0.46625` falls just below the band's lower edge — and **a single non-pass cannot validate the 10% probability**. The `cont5 0.31375` → `warm5 0.4325` → `fp6 0.46625` progression is **descriptive across three separate runs** with different mechanisms, seeds and evaluation intervals, **not a paired causal estimate**. Per-colour figures are descriptive only per the 2026-08-10 erratum. Dose confirmed by measurement: 9,085–9,858 learner rows per iteration. **Keep `calib020_0001`.** See do-not-repeat **#51**; `#50` is unchanged and vindicated at scale — the single arbiter served ~1,500 games at 400 simulations without a driver abort.
 
+> **Product-model alignment, Phase 3 — ANSWERED 2026-08-22 (updates the "only open workstream" row above).** The product-stack comparison ran and selected the candidate `c34b7ff3297c785a` as the served default; the baseline is retained as rollback. This is an engineering result about served bytes, not a research one — it authorizes nothing here and `calib020_0001` is unaffected. Full entry: [Product-model alignment, Phase 3](#product-model-alignment-phase-3--candidate-selected-and-served-2026-08-22).
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1284,6 +1286,53 @@ unchanged.
 | evaluation stdout | `6dd40a97c312d224b829e5ea33369b6c65deea20` |
 | evaluation exit | `09d2af8dd22201dd8d48e5dcfcaed281ff9422c7` |
 | candidate provenance | `f58b49db67d0bcfa079bc433298a6ce99b6e7c23` |
+
+## Product-model alignment, Phase 3 — CANDIDATE SELECTED AND SERVED, 2026-08-22
+
+**A PRODUCT result, not a research one.** It changes which bytes the web app serves. It does not
+reopen the closed programme, revalidate any rejected line, or bear on `calib020_0001`'s standing.
+
+**Result.** A preregistered 200-game match in the product's own stack (Node ORT,
+`server/mcts.js`, and the shipped readout), at **hard**, `P = 100`, analysed once by the frozen
+§6 analyser:
+**`ACCEPTED` / `CANDIDATE_STRONGER`**. Mean pair score **`0.8475`**, bootstrap 95%
+**`[0.7975, 0.8950]`**, `t` 95% **`[0.7962, 0.8988]`**, both methods agreeing; **76 win / 20 draw /
+4 loss** over 100 pairs. `P` was fixed from timing alone, and committed, before the first game
+(`6.8919` games/h `< 8.8` → `100`).
+
+**Selection.** `c34b7ff3297c785a` is the served `DEFAULT_MODEL_ID` as of commit **`879b67c`**.
+`1d64027db521a50f` is **retained byte-identical as the rollback**; reverting is that one line.
+
+**MCTS OOM — remedied and validated.** Lazy child-state materialization replaced the eager
+build-per-legal-move. Falsification **`4490` → `8`** copies against a `≤ 8` gate, failing on eager
+and passing on lazy as required. Equivalence **92/92 cases, 0 mismatches**, exact on `visit_counts`
+(values and order), `root_value`, `selected_move` and `progress`. Default-heap probe: completes at
+Node's default heap, maximum observed **84.91 MiB ≤ 512 MiB**.
+
+**Boundary — what this does NOT establish.** `medium` is `DEFAULT_DIFFICULTY` and **was never
+measured**; §5.2 forbids presenting a hard-arm result as evidence about the default user
+experience, and that arm is blocked on seeded RNG (`server/mcts.js` calls bare `Math.random()` in
+`selectMove`'s stochastic branch). There is **no external strength anchor**, so the result is
+relative to *these served bytes in this stack*. What produced the incumbent artifact remains
+**unknown** and was deliberately not pursued.
+
+**Current state.** The switch and its test repair are committed and **pushed** on
+`codex/product-stack-comparison-spec` (`879b67c`, `a4efff8`). **Not merged, not deployed.**
+
+### Evidence of record
+
+| artifact | path |
+|---|---|
+| spec (rev 6, frozen) | `docs/superpowers/2026-08-14-product-stack-comparison-specification.md` |
+| decision memo | `docs/superpowers/2026-08-13-product-model-alignment-decision-memo.md` |
+| the match, and its single analysis | `tests/product_match/match/aca5ca2/` |
+| `P` decision, committed pre-match | `tests/product_match/p_decision.json` |
+| OOM remediation design | `docs/superpowers/2026-08-16-mcts-memory-remediation-design.md` |
+| golden corpora, eager and lazy | `tests/mcts_golden/golden/{841df60,lazy_aad5796}/` |
+| falsification, eager and lazy | `tests/mcts_golden/falsification/{eager_481f9bd,lazy_3189187}/` |
+| §6 heap probe | `tests/mcts_golden/heap_probe/5e2b372/` |
+| switch audit | `docs/superpowers/2026-08-22-default-model-switch.md` |
+| Phase 2 parity PASS | `docs/superpowers/2026-08-13-phase2-parity-specification.md` |
 
 ## What got better vs worse
 
