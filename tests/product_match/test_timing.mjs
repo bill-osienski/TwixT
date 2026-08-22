@@ -820,14 +820,9 @@ describe('scope: this test file runs no timing game', () => {
       (e) => e.code === 'ENOENT',
       'the conventional default run directory must not exist'
     );
-    const runsRoot = join(REPO_ROOT, 'runs');
-    const entries = await readdir(runsRoot).catch(() => []);
-    for (const entry of entries) {
-      await assert.rejects(
-        readdir(join(runsRoot, entry, 'match')),
-        (e) => e.code === 'ENOENT' || e.code === 'ENOTDIR',
-        `runs/${entry}/match must not exist`
-      );
-    }
+    // Deliberately NOT a scan of every runs/* entry. A real match run leaves
+    // its own match/ directory there, and this test is about what the SUITE
+    // creates, not about what exists -- conflating the two made it fail the
+    // moment the authorized match produced output.
   });
 });

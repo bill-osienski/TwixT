@@ -46,7 +46,7 @@ const APP_ROOT = fileURLToPath(new URL('..', import.meta.url));
  * an environment variable, because each of those is how the previous design
  * changed the served model without anyone deciding to.
  */
-export const DEFAULT_MODEL_ID = '1d64027db521a50f';
+export const DEFAULT_MODEL_ID = 'c34b7ff3297c785a';
 export const DEFAULT_MANIFEST_PATH = join(
   APP_ROOT,
   'models',

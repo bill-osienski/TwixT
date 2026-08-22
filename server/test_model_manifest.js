@@ -289,13 +289,32 @@ describe('committed baseline artifact', () => {
     );
   });
 
-  it('records provenance as unknown rather than guessing it', async () => {
-    const { manifest } = await resolveModel({}, REPO_ROOT);
-    for (const key of Object.keys(manifest.provenance)) {
+  it('the BASELINE manifest still records provenance as unknown, not reconstructed', async () => {
+    // The point of this test is that the baseline's unknown provenance was
+    // never replaced by the audit's circumstantial guess. That property belongs
+    // to the baseline artifact, and survives it no longer being the served one.
+    const baseline = JSON.parse(
+      await readFile(join(REPO_ROOT, 'models', '1d64027db521a50f', 'manifest.json'), 'utf8')
+    );
+    for (const key of Object.keys(baseline.provenance)) {
       assert.strictEqual(
-        manifest.provenance[key],
+        baseline.provenance[key],
         'unknown',
         `${key} must be "unknown" for the baseline, not reconstructed`
+      );
+    }
+  });
+
+  it('the SERVED default now records complete provenance', async () => {
+    // The served pin moved to the candidate, whose provenance is fully known.
+    // Asserted as "no unknowns" rather than against literal strings, so this
+    // keeps meaning whatever is pinned next.
+    const { manifest } = await resolveModel({}, REPO_ROOT);
+    for (const [key, value] of Object.entries(manifest.provenance)) {
+      assert.notStrictEqual(
+        value,
+        'unknown',
+        `${key} is "unknown" for the served model`
       );
     }
   });
@@ -834,7 +853,14 @@ describe('inference server entry point', () => {
       until: /Server running/,
     });
     assert.match(stdout, new RegExp(`Model id:\\s+${DEFAULT_MODEL_ID}`));
-    assert.match(stdout, /source_checkpoint=unknown/);
+    // The banner must state the SERVED model's real provenance, whatever is
+    // pinned. Previously this asserted the literal "unknown", which stopped
+    // being true when the pin moved to the candidate.
+    const { manifest } = await resolveModel({}, REPO_ROOT);
+    assert.ok(
+      stdout.includes(`source_checkpoint=${manifest.provenance.source_checkpoint_path}`),
+      `banner must name the served provenance, got: ${stdout.slice(0, 300)}`
+    );
   });
 
   it('resolves the same artifact when started from a foreign cwd', async () => {
