@@ -1379,6 +1379,60 @@ anchor. Deployment is an operational fact, not a strength result.
 and recovering the incumbent's provenance — are not open, not authorized, and each would need its
 own scope.
 
+## Benchmark reset for any future AlphaZero training programme, 2026-08-22
+
+**Interpretive clarification, not a new experiment or authorization.** The research and product
+workstreams answered different questions, and their sequence can otherwise make it appear that the
+product comparison was the training hypothesis. It was not. The winning network already existed;
+the product work established that its export was faithful, that the product stack could run it, and
+that it was stronger than the previously served bytes at hard difficulty.
+
+### What the completed sequence actually tested
+
+| stage | hypothesis / reason for testing | outcome | durable consequence |
+|---|---|---|---|
+| `0409` → `calib020_0001` | The narrow goal-line repair in `0409` was insufficient because the broader post-opening sharp-drop family still failed. Broad post-opening calibration might repair that family without losing the goal-line fix. | `calib020_0001` passed the goal-line and broad post-opening gates, then beat prior promoted best `0379` in both 800-game directions: about `+80 Elo` each way. | This was the successful **training hypothesis**. `calib020_0001` became and remains the best-supported research checkpoint. |
+| Successor programme centered on A/B/C/D | A remaining black pre-drop overvalue at 400 simulations might be correctable while preserving goal-line, broad post-opening and red-position guardrails. | No trained or search-policy successor met its promotion bar. Increasing search budget moved A mean `+0.2570 → +0.0626 → −0.0451` at 400/1600/6400 simulations, showing that much of A was a shallow-search selection artifact rather than a stable value-head defect. | The later experiments did **not** produce the winner; they established that nearby attempts to improve it should stop. The calibration, continuation, readout, FPU, tree-local and frozen-parent families listed in this ledger remain closed. |
+| Product-model alignment | The verified ONNX export of the research winner might be stronger than the unknown-provenance artifact the product actually served, but the research result against `0379` could not answer that across a different runtime and search implementation. | Native↔ONNX parity passed; the Node MCTS OOM was remedied without a frozen-corpus behavior change; the 200-game hard match classified the candidate `CANDIDATE_STRONGER` with mean pair score `0.8475`; the candidate was deployed. | This was **deployment validation**, not another training hypothesis and not evidence about `medium` or absolute playing strength. |
+
+### Benchmark hierarchy from this point forward
+
+| role | frozen reference | rule |
+|---|---|---|
+| **Starting checkpoint** | `checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors`, SHA-1 `209cf2d4fd24a48553d259dd71b4954867b9473e` | A future trained successor starts from this checkpoint unless a new card explicitly justifies training from scratch. |
+| **Primary research promotion benchmark** | The unchanged `calib020_0001` parent under the native MLX evaluation stack | Equal checkpoint-independent configuration, equal 400-simulation search, balanced colours, fresh frozen seeds, and a preregistered aggregate confidence rule. A candidate must beat the current best, not merely an older checkpoint. |
+| **Historical/generalization control** | staged `model_iter_0379.safetensors`, SHA-1 `8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1` | `0379` is no longer a promotion benchmark. Beating it is insufficient because the current best already does so by about `+80 Elo`; it may be used only if a future card gives it a specific secondary role. |
+| **Product rollback artifact** | `1d64027db521a50f` | Not a research checkpoint benchmark: its source checkpoint is unknown. It remains an operational rollback target only. |
+| **Post-promotion product validation** | The model served when a research successor becomes eligible | Export parity and a separately reviewed product-stack comparison occur only after research promotion evidence; they do not substitute for the native parent match. |
+| **External anchor** | none currently exists | Any reopened, ongoing strength programme must define an external anchor before making an absolute-progress claim. Internal head-to-heads establish relative improvement only. |
+
+### What “continue training” may and may not mean
+
+The existence of a proven checkpoint and a working four-worker MLX pipeline is **not** itself a
+training hypothesis. Ordinary self-play continuation (cold or warm replay), nearby dose or
+learning-rate changes, frozen-parent opposition, opponent pools as a rescue, and inspection of
+previously rejected intermediate checkpoints remain closed under do-not-repeat `#48–#51`.
+`0379` must not be restored as the primary bar merely because it is easier to beat.
+
+A reopened training programme therefore requires, before code or compute:
+
+1. a genuinely new mechanism — for example a justified architecture/capacity change or a new
+   data/objective source, not another local continuation of a closed recipe;
+2. a directional prediction explaining why that mechanism can improve on `calib020_0001` rather
+   than repeat the observed collateral tradeoffs;
+3. the smallest cheap falsification that can reject the mechanism before a full run;
+4. a committed experiment card freezing starting checkpoint, code and data identity, budget,
+   seeds, worker/arbiter configuration, checkpoint-selection rule, guardrails and stopping rules;
+5. only after those gates pass, a balanced native-stack parent match against frozen
+   `calib020_0001`; and
+6. an external anchor if the intended conclusion is broader than “stronger than this parent in
+   this internal stack.”
+
+The historically proven generation configuration is **four workers behind one Metal-owning
+inference arbiter**. That is a candidate configuration for a future card, not standing permission
+to launch a run. **No training is active or authorized by this section.** The next activity, if the
+programme is intentionally reopened, is hypothesis selection and preregistration—not training.
+
 ## What got better vs worse
 
 **Improved — A (black pre-drop):** targeted correction is **real**. The strongest A correction so far is **v4 teacher-retention**: mean **−0.305**, over **13.3%**, severe **6.7%** (from baseline mean +0.257 / over 50.0% / severe 43.3%). This is an A-only success, not a promotion candidate, because B/C/D failed.
