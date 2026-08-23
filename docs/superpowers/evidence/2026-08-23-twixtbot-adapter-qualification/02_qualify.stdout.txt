@@ -1,0 +1,25 @@
+index mapping:
+  PASS  round trips — 1056 index round trips over both colours
+  PASS  agrees with naf.policy_index_point — 528 x 2 agree with naf.policy_index_point
+  PASS  edge exclusions and padded cells — 48 excluded per colour; 576 padded bijection
+  PASS  exclusions match our engine — playable sets equal our is_valid_placement for both colours
+
+per-ply state equivalence:
+  PASS  opening, no bridges — 4 plies, all fields equal at every ply
+  PASS  automatic bridges — 6 plies, all fields equal at every ply
+  PASS  boundary moves (red row 0/23, black col 0/23) — 6 plies, all fields equal at every ply
+  PASS  dense centre, crossing pressure — 10 plies, all fields equal at every ply
+
+bridges, crossings and terminal:
+  PASS  blocked crossing agrees — 2 bridges agree under crossing pressure
+  PASS  terminal state and winner agree — winner=red, agreed by both engines, terminal
+
+end-to-end move smoke (one fixed position, no game played):
+  PASS  twixtbot move is legal and leaves states identical — move (9, 9) legal and states identical after; 5 progress events preserved in full, pwin(3-class)->value -0.7663
+
+negative control:
+  PASS  state checker detects a real divergence — 3 divergences detected on a deliberately desynced pair
+
+12/12 checks passed
+
+ADAPTER QUALIFICATION PASSED

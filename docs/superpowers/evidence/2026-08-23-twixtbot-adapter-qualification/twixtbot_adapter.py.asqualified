@@ -1,0 +1,287 @@
+"""Adapter between our TwixtState and the pinned twixtbot engine.
+
+Pilot card: docs/superpowers/2026-08-22-twixtbot-anchor-pilot-card.md.
+Scope is the adapter and its pre-G3 qualification ONLY. No games, no G3, no
+calibration. The twixtbot engine is imported, never modified.
+
+WHY THIS DRIVES FROM A MOVE SEQUENCE. Our TwixtState stores pegs, bridges and
+ply but no move history; twixtbot's Game needs ordered play() calls to build its
+links, reachability and history. A bare state therefore cannot be translated
+into a twixtbot Game. Both engines are instead advanced in lockstep from the
+same move list, and compared after every ply.
+
+COORDINATES, verified against both engines rather than assumed:
+  ours          twixtbot
+  (row, col)    Point(x=col, y=row)
+  "red"         WHITE (1)   barred from col/x in {0, 23}; connects row 0 <-> 23
+  "black"       BLACK (0)   barred from row/y in {0, 23}; connects col 0 <-> 23
+  red moves first                    Game.turn starts at WHITE
+Our extra "corners forbidden" rule is redundant, not a difference: a corner
+always has col in {0,23} (excluded for red) and row in {0,23} (excluded for
+black).
+
+POLICY INDEX SPACES. twixtbot's is fixed, dense and COLOUR-DEPENDENT: 528 =
+22*24, via naf.policy_index_point. Ours is not a cell space at all -- our policy
+head emits one logit per legal move, gathered in legal_moves() order, padded to
+576. 576 here is therefore the neutral padded BOARD index row*24+col, which is
+what our ONNX move_rows/move_cols express. 48 of the 576 cells are unplayable
+for each colour and have no twixtbot index.
+"""
+from __future__ import annotations
+
+from typing import Dict, List, Optional, Sequence, Set, Tuple
+
+BOARD_SIZE = 24
+PADDED_N = BOARD_SIZE * BOARD_SIZE          # 576, board cells
+POLICY_N = (BOARD_SIZE - 2) * BOARD_SIZE    # 528, twixtbot policy slots per colour
+
+RED, BLACK = "red", "black"
+TB_BLACK, TB_WHITE = 0, 1                   # twixt.Game.BLACK / .WHITE
+COLOUR_TO_TB = {RED: TB_WHITE, BLACK: TB_BLACK}
+TB_TO_COLOUR = {v: k for k, v in COLOUR_TO_TB.items()}
+
+
+class AdapterError(Exception):
+    """Any adapter-detected inconsistency. Never swallowed."""
+
+
+# --- coordinates -------------------------------------------------------------
+
+def rc_to_xy(row: int, col: int) -> Tuple[int, int]:
+    return col, row
+
+
+def xy_to_rc(x: int, y: int) -> Tuple[int, int]:
+    return y, x
+
+
+def padded_index(row: int, col: int) -> int:
+    """Neutral 576 board index. Colour-independent, total over all cells."""
+    if not (0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE):
+        raise AdapterError(f"({row},{col}) is off the {BOARD_SIZE}x{BOARD_SIZE} board")
+    return row * BOARD_SIZE + col
+
+
+def padded_index_to_rc(index: int) -> Tuple[int, int]:
+    if not (0 <= index < PADDED_N):
+        raise AdapterError(f"padded index {index} outside [0,{PADDED_N})")
+    return divmod(index, BOARD_SIZE)
+
+
+def is_playable(colour: str, row: int, col: int) -> bool:
+    """Whether `colour` may ever place here. Mirrors both engines' edge bars."""
+    if not (0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE):
+        return False
+    if colour == RED:
+        return col not in (0, BOARD_SIZE - 1)
+    if colour == BLACK:
+        return row not in (0, BOARD_SIZE - 1)
+    raise AdapterError(f"unknown colour {colour!r}")
+
+
+def policy_index(colour: str, row: int, col: int) -> int:
+    """(row, col) -> twixtbot policy slot in [0, 528). Raises on excluded cells.
+
+    Derived from naf.policy_index_point, inverted:
+      WHITE/red   Point(major+1, minor) = (x=col, y=row) => major=col-1, minor=row
+      BLACK/black Point(minor, major+1) = (x=col, y=row) => major=row-1, minor=col
+    """
+    if not is_playable(colour, row, col):
+        raise AdapterError(
+            f"({row},{col}) is not playable for {colour}; it has no policy index"
+        )
+    if colour == RED:
+        major, minor = col - 1, row
+    else:
+        major, minor = row - 1, col
+    return major * BOARD_SIZE + minor
+
+
+def policy_index_to_rc(colour: str, index: int) -> Tuple[int, int]:
+    if not (0 <= index < POLICY_N):
+        raise AdapterError(f"policy index {index} outside [0,{POLICY_N})")
+    major, minor = divmod(index, BOARD_SIZE)
+    return (minor, major + 1) if colour == RED else (major + 1, minor)
+
+
+def excluded_cells(colour: str) -> List[Tuple[int, int]]:
+    """The 48 padded cells with no policy index for this colour."""
+    return [(r, c) for r in range(BOARD_SIZE) for c in range(BOARD_SIZE)
+            if not is_playable(colour, r, c)]
+
+
+# --- value head --------------------------------------------------------------
+
+def pwin_to_value(pwin_raw, naf) -> float:
+    """Three-class head -> a SIGNED SCORE in [-1, 1], via twixtbot's own naf.three_to_one.
+
+    NOT a probability, and deliberately not named as one. naf.three_to_one is
+    documented as returning "a score between -1 and 1" and computes p_win - p_loss
+    over the softmax of (loss, draw, win) logits, discarding draw mass. That is the
+    same convention as our own value head, which is why no rescaling is applied
+    here. Reading any raw component as a probability would be wrong on two counts:
+    they are logits, and the head is three-class.
+
+    The conversion is delegated to the engine, never reimplemented.
+    """
+    import numpy as np
+
+    a = np.asarray(pwin_raw)
+    flat = a.reshape(-1)
+    if flat.size != 3:
+        raise AdapterError(f"pwin has {flat.size} components, expected 3")
+    out = float(np.asarray(naf.three_to_one(flat)).reshape(-1)[0])
+    if not -1.0 <= out <= 1.0:
+        raise AdapterError(f"three_to_one returned {out}, outside [-1, 1]")
+    return out
+
+
+# --- lockstep construction ---------------------------------------------------
+
+def build_pair(moves: Sequence[Tuple[int, int]], twixt, Point, TwixtState):
+    """Replay `moves` in BOTH engines. Returns (our_state, tb_game)."""
+    our = TwixtState()
+    tb = twixt.Game(allow_scl=False)
+    for row, col in moves:
+        if (row, col) not in our.legal_moves():
+            raise AdapterError(f"({row},{col}) is not legal in our engine at ply {our.ply}")
+        our = our.apply_move((row, col))
+        x, y = rc_to_xy(row, col)
+        tb.play(Point(x, y))
+    return our, tb
+
+
+def tb_pegs(tb_game) -> Dict[Tuple[int, int], str]:
+    out = {}
+    for tb_colour in (TB_BLACK, TB_WHITE):
+        plane = tb_game.pegs[tb_colour]
+        for x in range(BOARD_SIZE):
+            for y in range(BOARD_SIZE):
+                if plane[x, y]:
+                    out[xy_to_rc(x, y)] = TB_TO_COLOUR[tb_colour]
+    return out
+
+
+def tb_bridges(tb_game, twixt) -> Dict[str, Set[Tuple[Tuple[int, int], Tuple[int, int]]]]:
+    """Every set link, as canonical ((r,c),(r,c)) pairs per colour.
+
+    Enumerated through the engine's own describe_link so the plane encoding is
+    never reimplemented here.
+    """
+    out = {RED: set(), BLACK: set()}
+    for plane_ix in range(len(tb_game.links)):
+        plane = tb_game.links[plane_ix]
+        for x in range(BOARD_SIZE):
+            for y in range(BOARD_SIZE):
+                if not plane[x, y]:
+                    continue
+                d = twixt.Game.describe_link(plane_ix, x, y)
+                a, b = xy_to_rc(d.p1.x, d.p1.y), xy_to_rc(d.p2.x, d.p2.y)
+                out[TB_TO_COLOUR[d.owner]].add(tuple(sorted((a, b))))
+    return out
+
+
+def tb_side_to_move(tb_game) -> str:
+    return TB_TO_COLOUR[tb_game.turn]
+
+
+def tb_legal_moves(tb_game) -> Set[Tuple[int, int]]:
+    """Cells the side to move may play: open for that colour and not occupied."""
+    colour = tb_side_to_move(tb_game)
+    occupied = set(tb_pegs(tb_game))
+    return {(r, c) for r in range(BOARD_SIZE) for c in range(BOARD_SIZE)
+            if is_playable(colour, r, c) and (r, c) not in occupied}
+
+
+def tb_winner(tb_game) -> Optional[str]:
+    for tb_colour in (TB_BLACK, TB_WHITE):
+        if tb_game.is_winning(tb_colour):
+            return TB_TO_COLOUR[tb_colour]
+    return None
+
+
+# --- the state-equivalence check --------------------------------------------
+
+def state_divergences(our_state, tb_game, twixt) -> List[str]:
+    """Every compared field. Returns [] only on full agreement.
+
+    Move legality alone would not detect a divergent bridge graph, which is
+    exactly where the crossing-rules difference could split the two engines.
+    """
+    bad: List[str] = []
+
+    ours_pegs = dict(our_state.pegs)
+    theirs_pegs = tb_pegs(tb_game)
+    for colour in (RED, BLACK):
+        a = {p for p, c in ours_pegs.items() if c == colour}
+        b = {p for p, c in theirs_pegs.items() if c == colour}
+        if a != b:
+            bad.append(f"pegs[{colour}]: ours-only={sorted(a - b)} theirs-only={sorted(b - a)}")
+
+    ours_bridges = {RED: set(), BLACK: set()}
+    for p1, p2 in our_state.bridges:
+        owner = ours_pegs.get(p1)
+        ours_bridges[owner].add(tuple(sorted((p1, p2))))
+    theirs_bridges = tb_bridges(tb_game, twixt)
+    for colour in (RED, BLACK):
+        a, b = ours_bridges[colour], theirs_bridges[colour]
+        if a != b:
+            bad.append(f"bridges[{colour}]: ours-only={sorted(a - b)} theirs-only={sorted(b - a)}")
+
+    if our_state.to_move != tb_side_to_move(tb_game):
+        bad.append(f"side to move: ours={our_state.to_move} theirs={tb_side_to_move(tb_game)}")
+
+    a, b = set(our_state.legal_moves()), tb_legal_moves(tb_game)
+    if a != b:
+        bad.append(f"legal moves: ours-only={sorted(a - b)[:8]} theirs-only={sorted(b - a)[:8]} "
+                   f"(|ours|={len(a)} |theirs|={len(b)})")
+
+    ours_winner = our_state.winner()
+    theirs_winner = tb_winner(tb_game)
+    if ours_winner != theirs_winner:
+        bad.append(f"winner: ours={ours_winner} theirs={theirs_winner}")
+
+    ours_terminal = our_state.is_terminal()
+    theirs_terminal = theirs_winner is not None or tb_game.result is not None
+    if ours_terminal != theirs_terminal:
+        bad.append(f"terminal: ours={ours_terminal} theirs={theirs_terminal}")
+
+    return bad
+
+
+# --- engine invocation -------------------------------------------------------
+
+class ProgressSink:
+    """The engine's `window` collaborator. Records EVERY event, complete.
+
+    Injected through twixtbot's own parameter; the engine is not modified.
+    `send_message` has no None guard and fires every MCTS_TRIAL_CHUNK trials, so
+    a sink is required for any trials >= 20. Complete records, not a head slice:
+    a truncated transcript reads as a whole one.
+    """
+
+    def __init__(self):
+        self.events: List[dict] = []
+
+    def write_event_value(self, key, value):
+        self.events.append({
+            "key": key,
+            "status": value.get("status"),
+            "current": value.get("current"),
+            "max": value.get("max"),
+            "proven": value.get("proven"),
+            "n_moves": len(value.get("moves", [])),
+        })
+
+
+def move_from_response(resp, our_state) -> Tuple[int, int]:
+    """twixtbot response -> our (row, col), validated against OUR legal moves."""
+    if not resp.get("moves"):
+        raise AdapterError("twixtbot returned no moves")
+    top = resp["moves"][0]
+    if not hasattr(top, "x"):
+        raise AdapterError(f"twixtbot returned a non-Point move: {top!r} (swap/resign?)")
+    rc = xy_to_rc(int(top.x), int(top.y))
+    if rc not in our_state.legal_moves():
+        raise AdapterError(f"twixtbot chose {rc}, illegal in our engine at ply {our_state.ply}")
+    return rc

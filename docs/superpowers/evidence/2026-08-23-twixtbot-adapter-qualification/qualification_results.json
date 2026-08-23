@@ -1,0 +1,121 @@
+{
+ "checks": [
+  {
+   "name": "round trips",
+   "ok": true,
+   "detail": "1056 index round trips over both colours"
+  },
+  {
+   "name": "agrees with naf.policy_index_point",
+   "ok": true,
+   "detail": "528 x 2 agree with naf.policy_index_point"
+  },
+  {
+   "name": "edge exclusions and padded cells",
+   "ok": true,
+   "detail": "48 excluded per colour; 576 padded bijection"
+  },
+  {
+   "name": "exclusions match our engine",
+   "ok": true,
+   "detail": "playable sets equal our is_valid_placement for both colours"
+  },
+  {
+   "name": "opening, no bridges",
+   "ok": true,
+   "detail": "4 plies, all fields equal at every ply"
+  },
+  {
+   "name": "automatic bridges",
+   "ok": true,
+   "detail": "6 plies, all fields equal at every ply"
+  },
+  {
+   "name": "boundary moves (red row 0/23, black col 0/23)",
+   "ok": true,
+   "detail": "6 plies, all fields equal at every ply"
+  },
+  {
+   "name": "dense centre, crossing pressure",
+   "ok": true,
+   "detail": "10 plies, all fields equal at every ply"
+  },
+  {
+   "name": "blocked crossing agrees",
+   "ok": true,
+   "detail": "2 bridges agree under crossing pressure"
+  },
+  {
+   "name": "terminal state and winner agree",
+   "ok": true,
+   "detail": "winner=red, agreed by both engines, terminal"
+  },
+  {
+   "name": "twixtbot move is legal and leaves states identical",
+   "ok": true,
+   "detail": "move (9, 9) legal and states identical after; 5 progress events preserved in full, pwin(3-class)->value -0.7663"
+  },
+  {
+   "name": "state checker detects a real divergence",
+   "ok": true,
+   "detail": "3 divergences detected on a deliberately desynced pair"
+  }
+ ],
+ "failures": [],
+ "end_to_end": {
+  "chosen_move_rc": [
+   9,
+   9
+  ],
+  "legal_in_ours": true,
+  "progress_events": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 60,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 80,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 100,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ],
+  "n_progress_events": 5,
+  "top3_visits": [
+   100,
+   0,
+   0
+  ]
+ },
+ "qualified": true
+}
