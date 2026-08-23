@@ -1,0 +1,76 @@
+POST-RUN ADDENDUM — added 2026-08-23 during review. NOT captured at run time.
+
+The G1 run of 2026-08-22 recorded only the weights-blob hash and did not
+preserve the exact command lines. Everything below was reconstructed afterwards:
+the hashes were re-derived from the same pinned clone, which is still at commit
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a and still `git status` clean, so they
+describe the same bytes the run used. The command lines were transcribed from
+the session record. Treat this file as a reconstruction, not as run-time
+evidence; the seven files under MANIFEST.sha256 are the run-time evidence.
+
+=== 1. PINNED ANCHOR IDENTITIES (re-derived) ===================================
+
+repository : github.com/stevens68/twixtbot-ui
+commit     : 83749f230a0bae1766b46a05bfde0ed87f0a9a0a  (2026-02-21 14:08:13 +0100)
+licence    : MIT (upstream github.com/BonyJordan/twixtbot also MIT; upstream is
+             PROVENANCE only — the executed bytes are this clone's bundled
+             backend/ and model/)
+model dir loaded by the probe: model/pb   (NNEvaluater joins os.getcwd())
+
+sha256 of every file under model/ :
+  1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab  model/meta/six-917000.data-00000-of-00001
+  1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd  model/meta/six-917000.index
+  e862b0ccfc0dd0ed2a7c487fcacead1e06f1a6e80d307094c6d10a4722be0ef2  model/meta/six-917000.meta
+  e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b  model/pb/saved_model.pb
+  1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab  model/pb/variables/variables.data-00000-of-00001
+  1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd  model/pb/variables/variables.index
+  2e1045f56ed43961d7bde3af78db0c473ae1e6a2b105dbb37bb967e10f986233  model/pbtxt/saved_model.pbtxt
+  1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab  model/pbtxt/variables/variables.data-00000-of-00001
+  1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd  model/pbtxt/variables/variables.index
+
+  Note: the three variables.data-00000-of-00001 copies (pb/, pbtxt/, meta/ as
+  six-917000.data-00000-of-00001) share one hash — one weight blob, three
+  packagings. The card pinned only that blob plus pb/saved_model.pb and
+  pb/variables/variables.index; the full listing is given here.
+
+=== 2. EXACT COMMANDS, IN ORDER (transcribed post-run) =========================
+
+  CLONE=<scratch>/twixtbot-ui
+  VENV=<scratch>/g1venv
+  EVID=<scratch>/g1_evidence          # now docs/superpowers/evidence/2026-08-22-twixtbot-g1/
+
+  # a. acquire the anchor
+  cd <scratch> && timeout 120 git clone --depth 1 https://github.com/stevens68/twixtbot-ui.git
+
+  # b. isolated environment. python3.13, NOT the machine default 3.14, which is
+  #    outside upstream's declared 3.11-3.13 CI matrix.
+  python3.13 -m venv $VENV
+
+  # c. declared dependencies, verbatim and unmodified -> 01_install.log
+  cd $CLONE && nohup $VENV/bin/pip install -r requirements.txt > $EVID/01_install.log 2>&1 &
+
+  # d. the probe. cwd MUST be the clone root: NNEvaluater does
+  #    os.path.join(os.getcwd(), model) with model="model/pb".
+  cd $CLONE && timeout 600 $VENV/bin/python $EVID/g1_probe.py \
+      > $EVID/02_probe.stdout.txt 2> $EVID/03_probe.stderr.txt
+  echo "EXIT=$?" > $EVID/04_exit.txt
+
+  # e. environment record
+  $VENV/bin/pip freeze > $EVID/05_pip_freeze.txt
+
+  # f. POST-RUN, 2026-08-23, added during review:
+  $VENV/bin/python $EVID/07_POSTRUN_verify_criteria.py $CLONE \
+      > $EVID/08_POSTRUN_verify_criteria.out.txt 2>&1
+
+=== 3. KNOWN GAP IN THE RUN-TIME EVIDENCE =====================================
+
+g1_probe.py RECORDS shapes and finiteness but never ASSERTS them, so its exit 0
+means "the process completed", not "the G1 criteria held". It would have exited 0
+on non-finite values or a wrong movelogits shape. The run's recorded values do
+satisfy every criterion, but that is established by
+07_POSTRUN_verify_criteria.py — which asserts them against the recorded outputs
+and proves it binds via a negative self-test — NOT by the exit code.
+
+The probe was deliberately NOT edited: it is the exact script that ran and its
+hash is in MANIFEST.sha256. Rewriting it would falsify the record. The lesson
+belongs to G2 and G3: a gate probe must assert its own pass criteria.

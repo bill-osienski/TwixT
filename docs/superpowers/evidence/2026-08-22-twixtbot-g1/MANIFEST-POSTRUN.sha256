@@ -1,0 +1,21 @@
+# POST-RUN additions — 2026-08-23, added during review of the G1 evidence
+
+Separate from MANIFEST.sha256 on purpose. That manifest covers the seven
+RUN-TIME artifacts of 2026-08-22 and is unchanged. These three files were
+created AFTER the run and are not run-time evidence:
+
+  06_POSTRUN_provenance.txt          identities re-derived from the still-clean
+                                     pinned clone, plus the exact command lines
+                                     transcribed from the session record
+  07_POSTRUN_verify_criteria.py      asserts the G1 criteria against the
+                                     RECORDED outputs; loads no model, imports
+                                     no TensorFlow, re-runs nothing
+  08_POSTRUN_verify_criteria.out.txt its output: 7/7 negative self-test
+                                     mutations rejected, then PASS
+
+Neither manifest lists itself. Verify with:
+  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST-POSTRUN.sha256)
+
+2f0950b4069cb09d4c10fa7f2b717d44ab99e0f6920d4e8790c0da24a86c05d9  06_POSTRUN_provenance.txt
+6a54bd8b5dc0b189332dde93e81374f9ab87622a76982d56871d5c5025788792  07_POSTRUN_verify_criteria.py
+61b157411fe746a5c4cdd853b95eadada936338ca17d4989fb2f6c23de4b050c  08_POSTRUN_verify_criteria.out.txt

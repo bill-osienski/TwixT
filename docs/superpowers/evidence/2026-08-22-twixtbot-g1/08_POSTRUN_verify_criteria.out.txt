@@ -1,0 +1,18 @@
+move-space width derived from the rules engine: 528
+
+negative self-test (each mutation must be rejected):
+  rejected         pwin.all_finite=False
+  rejected         movelogits.all_finite=False
+  rejected         pwin.shape=[1, 2]
+  rejected         movelogits.shape=[1, 529]
+  rejected         position.board_size=19
+  rejected         position.allow_scl=True
+  rejected         exit=1
+
+G1 criteria against the recorded outputs:
+  exit code            0
+  pwin                 shape [1, 3], all finite
+  movelogits           shape [1, 528], all finite
+  board / allow_scl    24 / False
+
+PASS: every G1 criterion holds on the recorded outputs.
