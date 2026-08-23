@@ -76,6 +76,14 @@ visit counts exist to compare. Query **20 times in one process** and **5 times i
 5 fresh processes** — a within-process loop alone would miss framework-level nondeterminism.
 **Pass:** all 25 return an identical move *and* identical top-3 visit counts.
 **Fail → stop** and report the observed variation. Do not average it away.
+
+**The probe must ASSERT this internally and exit non-zero on any mismatch.** G1's probe recorded
+its criteria but never asserted them, so its exit 0 evidenced only that the process completed — a
+gate that does not bind. A G2 probe that printed 25 results for a human to compare would repeat
+that mistake on the criterion where it matters most, since near-identical output reads as
+identical. Each query must also run under a **fresh `Player`** (a shared evaluator is fine):
+`NeuralMCTS` caches `self.root` between calls, so a reused player would accumulate a tree and the
+comparison would test caching rather than determinism.
 (The only `random.*` call in the engine is under `ROT_RAND`, `nnmplayer.py:65`; `temperature` accepts
 only 0/0.5/1.0; first move and swap bypass NN+MCTS entirely, so openings are supplied by us.)
 
