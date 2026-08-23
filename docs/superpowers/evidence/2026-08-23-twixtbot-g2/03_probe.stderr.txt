@@ -1,0 +1,21 @@
+WARNING:tensorflow:From /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/twixtbot-ui/src/backend/nneval.py:21: load (from tensorflow.python.saved_model.loader_impl) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use `tf.saved_model.load` instead.
+Traceback (most recent call last):
+  File "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/g2_evidence/g2_probe.py", line 137, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/g2_evidence/g2_probe.py", line 101, in main
+    results = [make_result(player, twixt, Point) for _ in range(N_IN_PROCESS)]
+               ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/g2_evidence/g2_probe.py", line 30, in make_result
+    resp = player().pick_move(game)
+  File "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/twixtbot-ui/src/backend/nnmplayer.py", line 145, in pick_move
+    n = self.nm.mcts(game, self.num_trials, window, event)
+  File "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/twixtbot-ui/src/backend/nnmcts.py", line 353, in mcts
+    send_message(window, resp)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/twixtbot-ui/src/backend/nnmcts.py", line 28, in send_message
+    window.write_event_value("THREAD", response)
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'write_event_value'

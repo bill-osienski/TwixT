@@ -1,0 +1,5 @@
+comparator self-test (a mismatch in any field must be caught):
+  ok                 identical
+  ok                 move
+  ok                 top3_moves
+  ok                 top3_visits

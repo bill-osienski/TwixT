@@ -1,0 +1,26 @@
+# G2 evidence — twixtbot anchor pilot, 2026-08-23 — RESULT: BLOCKED (exit 1)
+
+Gate G2 of docs/superpowers/2026-08-22-twixtbot-anchor-pilot-card.md, run at the
+frozen settings (trials=100, temperature=0, add_noise=0, rotation=ROT_OFF) in the
+existing Python 3.13 G1 environment against the pinned clone
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a.
+
+DETERMINISM WAS NEITHER ESTABLISHED NOR REFUTED. The run stopped before any of
+the 25 queries completed, on an engine defect: nnmcts.send_message() dereferences
+`window` with no None guard, and it is called every MCTS_TRIAL_CHUNK = 20 trials,
+so pick_move(game, window=None) raises for ANY trials >= 20. No result was
+collected, so g2_raw_results.json does not exist -- its absence is part of the
+record.
+
+The probe FAILED CLOSED (exit 1) and its comparator self-test passed 4/4 before
+the engine raised. The engine was NOT modified; the clone is git-clean.
+
+Covers the six files listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+1c4a551f650dfd679b5a037f84f091663ec13a50ac871c593d10ffbd91f4775b  00_environment.txt
+142bed1ce09769b3f401d180c43562ba4ec9bb7a7509a411cc5d4688171a1f40  02_probe.stdout.txt
+64433a0b1cc997ae13a7350643a39276cfcb1a59654e66c77a057b6e46bf5d20  03_probe.stderr.txt
+4bf4fca02e6eeaf7f1c510b82c756e7f8a3c567a230bae1094b254adc774f38b  04_exit.txt
+1270c802f317e9e193cd832cbb506650cc6e1b55253d601d50743e042f078a47  05_pip_freeze.txt
+09be82cd1245caf3f009697da9aa50e9f1ad8f83d6f8c06ba475482da3efc51a  g2_probe.py

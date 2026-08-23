@@ -1,0 +1,22 @@
+=== host ===
+Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+arch: arm64
+=== interpreter (the EXISTING G1 environment, unchanged) ===
+Python 3.13.15
+=== clone: still pinned and clean? ===
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+  CLEAN — engine unmodified
+=== exact command ===
+  CLONE=<scratch>/twixtbot-ui ; VENV=<scratch>/g1venv ; EVID=<scratch>/g2_evidence
+  cd $CLONE && timeout 900 $VENV/bin/python $EVID/g2_probe.py $CLONE all \
+      > $EVID/02_probe.stdout.txt 2> $EVID/03_probe.stderr.txt
+  echo "EXIT=$?" > $EVID/04_exit.txt
+=== frozen G2 settings as coded in the probe ===
+18:TRIALS, TEMPERATURE, ADD_NOISE = 100, 0, 0
+19:MOVES = [(12, 12), (10, 11), (13, 10), (11, 13)]   # same fixed position as G1
+20:N_IN_PROCESS, N_SUBPROCESS = 20, 5
+=== the blocking engine fact (read from the pinned clone, not inferred) ===
+  constants.py:233  MCTS_TRIAL_CHUNK = 20
+  nnmcts.py:27-28   def send_message(window, response): window.write_event_value(...)  <- NO None guard
+  nnmcts.py:349     if (i + 1) % ct.MCTS_TRIAL_CHUNK == 0:  -> first fires at trial 20
+  => pick_move(game, window=None) raises for ANY trials >= 20. Frozen G2 setting is trials=100.
