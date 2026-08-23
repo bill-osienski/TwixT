@@ -1,0 +1,21 @@
+=== host ===
+Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+arch: arm64
+=== interpreter ===
+Python 3.13.15
+=== clone pinned + clean ===
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+  CLEAN — twixtbot unmodified
+=== repo HEAD at qualification ===
+d5784bbb258ba995ffd404266f05342d75b05035
+=== exact command ===
+  cd $CLONE && timeout 1800 $VENV/bin/python $EVID/qualify_adapter.py $CLONE $REPO > 02 2> 03; echo EXIT=$? > 04
+=== what changed vs attempt 2 ===
+  state_divergences(our, tb, twixt, *, ply_cap) — None default REMOVED, keyword-only
+  8 bare call sites now pass an explicit ply_cap=None (no cap in force in those fixtures)
+  new check 'ply_cap is required and keyword-only': omission raises TypeError naming ply_cap,
+    positional passing raises, both explicit choices work, and inspect confirms KEYWORD_ONLY
+    with no default
+  the other 16 checks are unchanged and re-run
+=== scope ===
+  no games, no G3, no calibration; [202611000,202611400) untouched

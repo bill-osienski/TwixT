@@ -1,0 +1,147 @@
+{
+ "checks": [
+  {
+   "name": "round trips",
+   "ok": true,
+   "detail": "1056 index round trips over both colours"
+  },
+  {
+   "name": "agrees with naf.policy_index_point",
+   "ok": true,
+   "detail": "528 x 2 agree with naf.policy_index_point"
+  },
+  {
+   "name": "edge exclusions and padded cells",
+   "ok": true,
+   "detail": "48 excluded per colour; 576 padded bijection"
+  },
+  {
+   "name": "exclusions match our engine",
+   "ok": true,
+   "detail": "playable sets equal our is_valid_placement for both colours"
+  },
+  {
+   "name": "opening, no bridges",
+   "ok": true,
+   "detail": "4 plies, all fields equal at every ply"
+  },
+  {
+   "name": "automatic bridges",
+   "ok": true,
+   "detail": "6 plies, all fields equal at every ply"
+  },
+  {
+   "name": "boundary moves (red row 0/23, black col 0/23)",
+   "ok": true,
+   "detail": "6 plies, all fields equal at every ply"
+  },
+  {
+   "name": "dense centre, crossing pressure",
+   "ok": true,
+   "detail": "10 plies, all fields equal at every ply"
+  },
+  {
+   "name": "crossing fixture really crosses",
+   "ok": true,
+   "detail": "segments properly intersect (our oracle); parallel pair does not; twixtbot do_links_cross returns False here due to its equal-|slope| carve-out"
+  },
+  {
+   "name": "blocked crossing: specific bridge absent in both",
+   "ok": true,
+   "detail": "red ((5, 5), (7, 6)) accepted; black ((5, 6), (7, 5)) blocked in both; 1 bridge total"
+  },
+  {
+   "name": "terminal state and winner agree",
+   "ok": true,
+   "detail": "winner=red, agreed by both engines, terminal under natural rules"
+  },
+  {
+   "name": "twixtbot move is legal and leaves states identical",
+   "ok": true,
+   "detail": "move (9, 9) legal and states identical after; 5 progress events preserved in full, pwin(3-class)->value -0.7663"
+  },
+  {
+   "name": "cap applied identically to both engines",
+   "ok": true,
+   "detail": "cap applied identically at ply<cap, ply==cap, and the empty/cap-0 repro"
+  },
+  {
+   "name": "normalisation is load-bearing",
+   "ok": true,
+   "detail": "our is_terminal()=True vs twixtbot=False; natural terminality agrees (False, False)"
+  },
+  {
+   "name": "ply mismatch is detected",
+   "ok": true,
+   "detail": "a one-ply desync is reported as a ply divergence"
+  },
+  {
+   "name": "ply_cap is required and keyword-only",
+   "ok": true,
+   "detail": "omission and positional both raise TypeError; keyword-only, no default"
+  },
+  {
+   "name": "state checker detects a real divergence",
+   "ok": true,
+   "detail": "4 divergences detected on a deliberately desynced pair"
+  }
+ ],
+ "failures": [],
+ "do_links_cross_equal_slope_carveout": true,
+ "end_to_end": {
+  "chosen_move_rc": [
+   9,
+   9
+  ],
+  "legal_in_ours": true,
+  "progress_events": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 60,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 80,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 100,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ],
+  "n_progress_events": 5,
+  "top3_visits": [
+   100,
+   0,
+   0
+  ]
+ },
+ "qualified": true
+}

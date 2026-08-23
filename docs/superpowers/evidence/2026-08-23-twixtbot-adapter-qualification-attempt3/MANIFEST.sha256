@@ -1,0 +1,27 @@
+# Adapter pre-G3 qualification, attempt 3 — 2026-08-23 — RESULT: PASSED (exit 0, 17/17)
+
+Card: docs/superpowers/2026-08-22-twixtbot-anchor-pilot-card.md.
+Attempts 1 (12/12, inadequate) and 2 (16/16) are preserved unaltered at
+  docs/superpowers/evidence/2026-08-23-twixtbot-adapter-qualification/
+  docs/superpowers/evidence/2026-08-23-twixtbot-adapter-qualification-attempt2/
+
+Change under test: state_divergences' ply_cap is now REQUIRED and KEYWORD-ONLY.
+The 16 checks of attempt 2 are re-run unchanged, plus one binding check proving
+omission raises TypeError. This makes ply_cap=280 an enforced caller decision
+rather than a convention G3 has to remember.
+
+Scope: adapter + qualification ONLY. No game, no G3, no calibration.
+Reserved seeds [202611000, 202611400) untouched. twixtbot NOT patched; the
+pinned clone 83749f2 is git-clean.
+
+Covers the eight files listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+70e0374f5f4b1ff8c4a0efcd348469b7e626612784565aa8efeb2b01f3c96682  00_environment.txt
+567cd931a3814e2415f78dfa3b3af2cdacd336389796ea94d8f6f3352f5399f3  02_qualify.stdout.txt
+4e1ad36fb4a623209408659694e86a13c5791a45a59053617a0fb0651a6860ce  03_qualify.stderr.txt
+418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b  04_exit.txt
+1270c802f317e9e193cd832cbb506650cc6e1b55253d601d50743e042f078a47  05_pip_freeze.txt
+883996b3fc7a31afc2b99c70124693546ff5cce54c37ee63a31e887f603b74f6  qualify_adapter.py
+98911f9f51db68b72e6acc9c28842a91cf47c79401a297b370ab1c4534ed48ac  qualification_results.json
+f0f2dfdee202c9f33a0575315e248746d318599bd170405b0a785d7ded806a2c  twixtbot_adapter.py.asqualified
