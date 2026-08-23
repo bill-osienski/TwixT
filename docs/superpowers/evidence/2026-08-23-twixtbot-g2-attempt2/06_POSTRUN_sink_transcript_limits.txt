@@ -1,0 +1,46 @@
+POST-RUN NOTE — added 2026-08-23 during review. NOT captured at run time.
+
+The card requires the sink's emitted progress events to be preserved. They are
+preserved only PARTIALLY, and an earlier description of this evidence overstated
+what they show. This note records the limit. The probe was NOT modified and G2
+was NOT re-run: g2_probe.py is the exact script that ran and its hash is in
+MANIFEST.sha256; editing it would falsify the record, and re-running would
+replace a completed authorized attempt.
+
+=== WHAT THE PROBE ACTUALLY SERIALIZED (g2_probe.py:61-63) ====================
+
+    "progress_events":   len(sink.events)              -> the COUNT only
+    "progress_currents": [e["current"] for e in ...]   -> ALL five current values
+    "progress_sample":   sink.events[:2]               -> the FIRST TWO full records
+
+The ProgressSink itself recorded all five complete events per query, in memory.
+Only the three fields above were written to g2_raw_results.json, so the last
+three events survive as their `current` value alone.
+
+=== WHAT THE PRESERVED TRANSCRIPT THEREFORE PROVES ============================
+
+Across all 25 results, identically:
+  * exactly 5 progress events per query
+  * currents [20, 40, 60, 80, 100] -- consistent with MCTS_TRIAL_CHUNK = 20 and
+    trials = 100, and showing the loop reached trial 100
+  * for the events at current 20 and 40 ONLY: key "THREAD", status
+    "in-progress", max 100, proven false, n_moves 528
+
+=== WHAT IT DOES NOT PROVE ====================================================
+
+For the events at current 60, 80 and 100, only `current` is preserved. Their
+key, status, max, proven and n_moves are NOT in the evidence. Any claim that
+"max=100 and n_moves=528 were observed on all five events" is UNSUPPORTED by
+this package; it holds for the first two events only.
+
+This narrows what may be said about the sink transcript. It does NOT weaken the
+G2 PASS: the gate is the identity of move and top-three visit counts across all
+25 queries, which is fully recorded in g2_raw_results.json and was asserted by
+the probe. The sink transcript is corroborating context, never a pass criterion
+-- 02_probe.stdout.txt labels it "(recorded, NOT a pass criterion)".
+
+=== FOR ANY FUTURE PROBE ======================================================
+
+Serialize the complete event list, not a head slice. A truncated transcript
+looks like a full one in summary output: the count and the currents were both
+complete, which is exactly what made the omission easy to miss.

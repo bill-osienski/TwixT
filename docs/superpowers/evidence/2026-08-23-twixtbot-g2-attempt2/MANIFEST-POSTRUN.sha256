@@ -1,0 +1,14 @@
+# POST-RUN additions — 2026-08-23, added during review of the G2 attempt-2 evidence
+
+Separate from MANIFEST.sha256 on purpose. That manifest covers the seven
+RUN-TIME artifacts and is unchanged. This file was created AFTER the run:
+
+  06_POSTRUN_sink_transcript_limits.txt   records that only the first two full
+                                          progress-event records were serialized,
+                                          and corrects an overstatement about
+                                          what the sink transcript shows
+
+Neither manifest lists itself. Verify with:
+  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST-POSTRUN.sha256)
+
+32b2c458be5bc30ac3d3edc1a260f2919b7a6be4ffba902f9127277c860627b8  06_POSTRUN_sink_transcript_limits.txt
