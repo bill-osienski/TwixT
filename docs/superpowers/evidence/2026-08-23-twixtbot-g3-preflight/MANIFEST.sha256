@@ -1,0 +1,25 @@
+# G3 PREFLIGHT — 2026-08-23 — RESULT: PASSED (exit 0, 14/14)
+
+Preparation and preflight ONLY. No G3 game was played, no reserved seed was
+consumed, no calibration score computed, no training, no archives, and the
+product service was not touched. play_game was invoked exactly once on a
+SYNTHETIC task (seed -1) with fake engines, to observe abort behaviour.
+
+Combined runtime: a NEW isolated Python 3.13 venv holding TensorFlow 2.21.0 and
+MLX 0.32.1 together. Both pinned models were loaded and evaluated on one fixed
+position IN ONE PROCESS. The project environment and the retained twixtbot clone
+(83749f2, git-clean) were not modified.
+
+Covers the ten files listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+39f94ecaf4745e0f1dd5ff8a1447dcca69f636177e7f60476044f68a62ca5de8  00_environment.txt
+ed0aebdf260b44973f3dbd654716b61a8a05f3417c9cde0e355d0d14c39c6738  01_install.log
+8a1a6bc6f546324a64d078c6c8089672d614c88e64553ff9d3ea39bf7dff8461  02_preflight.stdout.txt
+82313257c67c0f8f366468f1abccbcb91b04d1b114cca99b9a42d41a902f89a1  03_preflight.stderr.txt
+418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b  04_exit.txt
+4fff54407c8da367ed324a12c5fa3fb3884cb0d228e572056bf5f1a13481e124  05_pip_freeze.txt
+9809f060f86a037d34ddd865de2adcfd7372ba937c49f6a975713cc9c5a997a1  g3_preflight.py
+62b72699eda25e1f1de71f4f13de3eb6b5e3a2b2fd89ac5dbe5b6161fb785e59  g3_preflight_results.json
+58ad5f00ad29033afdf299a21190f898e3fd1622ebce672ad5976ab8fcabff0a  openings_and_settings.json
+c8d7e765c797eb094dd4083853da5bdbf11fa0a31128a9841dac6db714f2de83  schedule_128_tasks.json

@@ -1,0 +1,19 @@
+=== host ===
+Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+arch: arm64
+=== NEW combined runtime (isolated; project env and clone untouched) ===
+  venv: <scratch>/g3venv
+Python 3.13.15
+  installed: twixtbot requirements.txt verbatim + mlx>=0.20.0, safetensors>=0.4.0, numpy>=1.24.0
+  torch/onnx from our requirements.txt were OMITTED: they serve ONNX EXPORT,
+  which is not in G3's scope. Recorded so the omission is a decision, not a gap.
+=== clone pinned + clean ===
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+  CLEAN
+=== repo HEAD ===
+640752735a9bb214e0c6ba286be86cef32b38114
+=== exact command ===
+  cd $CLONE && timeout 1800 $G3VENV/bin/python $EVID/g3_preflight.py $CLONE $REPO > 02 2> 03; echo EXIT=$? > 04
+=== scope ===
+  no G3 game, no reserved seed consumed, no calibration score, no training,
+  no archives, product service untouched
