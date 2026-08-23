@@ -70,6 +70,33 @@ Import `backend.nneval`, load the SavedModel, run one `eval_one` on one fixed po
 (`tf.disable_v2_behavior()`, `tf.saved_model.loader.load`) against `tensorflow>=2.20`.
 **Fail → stop.** Report the error; do not patch the engine.
 
+### Correction (2026-08-23) — the engine is NOT headless as this card first claimed
+
+An earlier revision said `pick_move(game, window=None, event=None)` makes the engine drivable
+headlessly. **That is false for every MCTS setting this pilot uses.** The first G2 attempt proved
+it (`docs/superpowers/evidence/2026-08-23-twixtbot-g2/`, BLOCKED, exit 1):
+
+```
+nnmcts.py:27-28   def send_message(window, response): window.write_event_value(...)   <- no None guard
+constants.py:233  MCTS_TRIAL_CHUNK = 20
+nnmcts.py:349     if (i + 1) % ct.MCTS_TRIAL_CHUNK == 0: send_message(window, resp)
+```
+
+`window=None` therefore raises for **any `trials >= 20`** — G2's `trials=100` and three of G3's
+four ladder settings. Nothing in `backend/` guards `window`.
+
+**AUTHORIZED RESOLUTION: inject a progress sink through the existing `window` parameter.** This is
+dependency injection through a documented parameter, not a modification: the GUI passes a
+FreeSimpleGUI window, we pass a sink. Verified by inspection that it is safe — `window` occurs
+exactly six times in `backend/` (`pick_move` → `mcts` → `send_message` → `write_event_value`), its
+return value is never assigned or returned, and it reaches no MCTS state or move selection.
+
+The sink implements **only** `write_event_value("THREAD", response)` and **records** what it
+receives; a silent stub would discard observable evidence that the injection changed nothing.
+Emitted progress events are preserved with the run. **`trials=100` and every other frozen setting
+are unchanged** — lowering trials below 20 to dodge this would invalidate the MCTS test the gate
+exists to perform.
+
 **G2 — determinism, measured not assumed.** One fixed position, settings `temperature=0`,
 `add_noise=0`, `rotation=ROT_OFF`, **`trials=100`** — cheap, and it exercises the MCTS path so that
 visit counts exist to compare. Query **20 times in one process** and **5 times in
@@ -81,9 +108,11 @@ visit counts exist to compare. Query **20 times in one process** and **5 times i
 its criteria but never asserted them, so its exit 0 evidenced only that the process completed — a
 gate that does not bind. A G2 probe that printed 25 results for a human to compare would repeat
 that mistake on the criterion where it matters most, since near-identical output reads as
-identical. Each query must also run under a **fresh `Player`** (a shared evaluator is fine):
-`NeuralMCTS` caches `self.root` between calls, so a reused player would accumulate a tree and the
-comparison would test caching rather than determinism.
+identical. Each query must also run under a **fresh `Player` and a fresh `Game`** (evaluator reuse within
+the 20-query process is fine): `NeuralMCTS` caches `self.root` between calls, so a reused player
+would accumulate a tree and the comparison would test caching rather than determinism. The probe
+must **catch engine exceptions, report them clearly and exit non-zero** rather than propagating a
+traceback — the first attempt failed closed only by crashing, which diagnoses badly.
 (The only `random.*` call in the engine is under `ROT_RAND`, `nnmplayer.py:65`; `temperature` accepts
 only 0/0.5/1.0; first move and swap bypass NN+MCTS entirely, so openings are supplied by us.)
 
