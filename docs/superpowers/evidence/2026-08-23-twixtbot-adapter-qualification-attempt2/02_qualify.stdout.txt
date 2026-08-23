@@ -1,0 +1,31 @@
+index mapping:
+  PASS  round trips — 1056 index round trips over both colours
+  PASS  agrees with naf.policy_index_point — 528 x 2 agree with naf.policy_index_point
+  PASS  edge exclusions and padded cells — 48 excluded per colour; 576 padded bijection
+  PASS  exclusions match our engine — playable sets equal our is_valid_placement for both colours
+
+per-ply state equivalence:
+  PASS  opening, no bridges — 4 plies, all fields equal at every ply
+  PASS  automatic bridges — 6 plies, all fields equal at every ply
+  PASS  boundary moves (red row 0/23, black col 0/23) — 6 plies, all fields equal at every ply
+  PASS  dense centre, crossing pressure — 10 plies, all fields equal at every ply
+
+bridges, crossings and terminal:
+  PASS  crossing fixture really crosses — segments properly intersect (our oracle); parallel pair does not; twixtbot do_links_cross returns False here due to its equal-|slope| carve-out
+  PASS  blocked crossing: specific bridge absent in both — red ((5, 5), (7, 6)) accepted; black ((5, 6), (7, 5)) blocked in both; 1 bridge total
+  PASS  terminal state and winner agree — winner=red, agreed by both engines, terminal under natural rules
+
+end-to-end move smoke (one fixed position, no game played):
+  PASS  twixtbot move is legal and leaves states identical — move (9, 9) legal and states identical after; 5 progress events preserved in full, pwin(3-class)->value -0.7663
+
+state-cap normalisation:
+  PASS  cap applied identically to both engines — cap applied identically at ply<cap, ply==cap, and the empty/cap-0 repro
+  PASS  normalisation is load-bearing — our is_terminal()=True vs twixtbot=False; natural terminality agrees (False, False)
+  PASS  ply mismatch is detected — a one-ply desync is reported as a ply divergence
+
+negative control:
+  PASS  state checker detects a real divergence — 4 divergences detected on a deliberately desynced pair
+
+16/16 checks passed
+
+ADAPTER QUALIFICATION PASSED

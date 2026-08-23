@@ -1,0 +1,25 @@
+# Adapter pre-G3 qualification, attempt 2 — 2026-08-23 — RESULT: PASSED (exit 0, 16/16)
+
+Card: docs/superpowers/2026-08-22-twixtbot-anchor-pilot-card.md.
+Attempt 1 is preserved unaltered at
+docs/superpowers/evidence/2026-08-23-twixtbot-adapter-qualification/ (12/12, but
+two review findings made it inadequate -- see the commit message).
+
+Adapter under test: scripts/GPU/alphazero/twixtbot_adapter.py, byte copy kept
+here as twixtbot_adapter.py.asqualified.
+
+Scope: adapter + qualification ONLY. No complete game, no G3, no calibration.
+Reserved seeds [202611000, 202611400) untouched. twixtbot NOT patched; the pinned
+clone 83749f2 is git-clean.
+
+Covers the eight files listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+60b1288654dc952ea8d3ecf589d20427909576661b6a2a913c5c98a162e8ca1a  00_environment.txt
+1a9145782a121f89bbf3b5da681a241cbebd68e0352e37a4aead629910075889  02_qualify.stdout.txt
+4e1ad36fb4a623209408659694e86a13c5791a45a59053617a0fb0651a6860ce  03_qualify.stderr.txt
+418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b  04_exit.txt
+1270c802f317e9e193cd832cbb506650cc6e1b55253d601d50743e042f078a47  05_pip_freeze.txt
+09009fe60c39483c41e7560d8769b03322389f155985933388e336e3dea43e9b  qualify_adapter.py
+8a682af264fce7b6520e8398c471a49ee7aca1f664fe4cb098b5580bd28f5a7e  qualification_results.json
+eb90d6333d8196550e78f50fc91e98cb6b536105732017987cfb1d9624c89097  twixtbot_adapter.py.asqualified

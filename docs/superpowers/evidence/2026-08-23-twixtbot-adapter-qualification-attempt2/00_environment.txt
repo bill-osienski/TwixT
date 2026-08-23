@@ -1,0 +1,21 @@
+=== host ===
+Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+arch: arm64
+=== interpreter (existing G1 environment) ===
+Python 3.13.15
+=== clone pinned + clean ===
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+  CLEAN — engine unmodified
+=== repo HEAD at qualification ===
+a51b359b1dfe064ea6bb6aba437887831b27d8af
+=== exact command ===
+  cd $CLONE && timeout 1800 $VENV/bin/python $EVID/qualify_adapter.py $CLONE $REPO > 02 2> 03; echo EXIT=$? > 04
+=== settings ===
+  trials=100, temperature=0, add_noise=0, rotation=ROT_OFF, allow_swap=0, allow_scl=False
+=== what changed vs attempt 1 ===
+  [P1] genuine blocked-crossing fixture (rectangle diagonals), specific missing bridge asserted
+  [P1] external ply-cap normalisation + ply-count equality; 3 new cap checks
+  crossing guard re-based on OUR _proper_intersect_knight (twixtbot's do_links_cross
+  has an equal-|slope| carve-out and is NOT a general crossing predicate)
+=== no games, no seeds ===
+  no complete game played; [202611000,202611400) untouched
