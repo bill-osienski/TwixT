@@ -1,0 +1,1302 @@
+[
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ },
+ {
+  "move": [
+   11,
+   14
+  ],
+  "top3_moves": [
+   [
+    11,
+    14
+   ],
+   [
+    22,
+    23
+   ],
+   [
+    8,
+    10
+   ]
+  ],
+  "top3_visits": [
+   100,
+   0,
+   0
+  ],
+  "proven": false,
+  "progress_events": 5,
+  "progress_currents": [
+   20,
+   40,
+   60,
+   80,
+   100
+  ],
+  "progress_sample": [
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 20,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   },
+   {
+    "key": "THREAD",
+    "status": "in-progress",
+    "current": 40,
+    "max": 100,
+    "proven": false,
+    "n_moves": 528
+   }
+  ]
+ }
+]

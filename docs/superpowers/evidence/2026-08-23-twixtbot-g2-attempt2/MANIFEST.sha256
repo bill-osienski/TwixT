@@ -1,0 +1,28 @@
+# G2 evidence, attempt 2 — twixtbot anchor pilot, 2026-08-23 — RESULT: PASS (exit 0)
+
+Gate G2 of docs/superpowers/2026-08-22-twixtbot-anchor-pilot-card.md.
+Frozen settings UNCHANGED from the blocked attempt: trials=100, temperature=0,
+add_noise=0, rotation=ROT_OFF, same fixed position, existing Python 3.13 G1
+environment, pinned clone 83749f230a0bae1766b46a05bfde0ed87f0a9a0a.
+
+Attempt 1 is preserved separately and unaltered at
+docs/superpowers/evidence/2026-08-23-twixtbot-g2/ (BLOCKED, exit 1).
+
+RESULT: all 25 queries (20 in one process + 5 in fresh processes) returned the
+identical move AND identical top-three visit counts. The probe asserts this
+internally and exits non-zero on any mismatch; its comparator self-test passed
+4/4 first.
+
+The engine was NOT modified. A recording progress sink was injected through the
+engine's own `window` parameter; the clone is git-clean.
+
+Covers the seven files listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+855be95a17da6585cecd20c9fe62a0d72db0ff734ac28ba43a42e46d5c14cb32  00_environment.txt
+ae8fe6918649971e11ca1e4a4dfa16ba5a6bb7ef14f02268215b60c8ecf184ea  02_probe.stdout.txt
+4e1ad36fb4a623209408659694e86a13c5791a45a59053617a0fb0651a6860ce  03_probe.stderr.txt
+418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b  04_exit.txt
+1270c802f317e9e193cd832cbb506650cc6e1b55253d601d50743e042f078a47  05_pip_freeze.txt
+800b72c79271a0edc3e9f5a1101dada7b11ed87b6a79c7ceb19903e549e15a83  g2_probe.py
+ab22460b16576fdac55a54d5f65713c19682cca9d904ce43da7540ff7acc55ab  g2_raw_results.json

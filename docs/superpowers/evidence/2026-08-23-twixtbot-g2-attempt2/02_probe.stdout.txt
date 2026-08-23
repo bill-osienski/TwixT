@@ -1,0 +1,20 @@
+comparator self-test (each field mismatch must be caught):
+  ok       identical
+  ok       move
+  ok       top3_moves
+  ok       top3_visits
+
+20 in-process results collected
+5 fresh-process results collected; 25 total
+
+all 25 identical on ('move', 'top3_moves', 'top3_visits'):
+  move          [11, 14]
+  top3 moves    [[11, 14], [22, 23], [8, 10]]
+  top3 visits   [100, 0, 0]
+  proven        False
+
+progress sink (recorded, NOT a pass criterion):
+  events/query  [5]
+  currents      [20, 40, 60, 80, 100]
+
+G2 PASS
