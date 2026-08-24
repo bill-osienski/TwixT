@@ -1,0 +1,26 @@
+=== host ===
+Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+arch: arm64
+Python 3.13.15
+=== clone pinned + clean ===
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+  CLEAN
+=== repo HEAD ===
+944e505feff9b35200c587d423b1e3ef9a405b03
+=== what changed vs attempt 3 (three gate-integrity gaps) ===
+  [P1] run_g3 is no longer injectable: no tasks / play_game / cleanup parameters.
+       It enumerates + validates the canonical 128 itself, uses the real seams, and
+       REQUIRES a new durable results_path. Injection moved to private _run_tasks.
+  [P1] summarise() now requires the EXACT canonical 128-identity result set:
+       no duplicates, no missing cells, 16 per (trials,reference), only
+       anchor/reference/draw/draw_ply_cap. The old all()-over-present-references was
+       vacuous — one draw vs 0379 alone selected trials=100 as passing 'BOTH'.
+  [P1] cleanup failures are caught as a RUN-level abort, persisted durably, stop the
+       run, and block the summary. Previously the game record was fsynced first and a
+       cleanup failure raised afterwards, leaving that task recorded as successful.
+=== SEED RECORD ===
+  CONSUMED: 202611000 (burnt by the attempt-2 preflight). Schedule on [202611128, 202611256).
+  This attempt drove exactly ONE seed through an engine: synthetic 999000001, outside
+  the reservation. Scheduled task dicts appear only as inert data in fake-seam tests.
+=== scope ===
+  no G3 game, no reserved seed driven, no calibration score, no training

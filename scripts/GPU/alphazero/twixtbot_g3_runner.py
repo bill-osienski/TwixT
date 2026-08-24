@@ -96,20 +96,101 @@ def _append_durably(path: Optional[str], record: dict) -> None:
         os.fsync(f.fileno())
 
 
-def run_g3(
-    *,
-    tasks: Sequence[dict],
-    twixt,
-    Point,
-    ct,
-    TwixtState,
-    nnmplayer,
-    repo_root: str,
-    results_path: Optional[str] = None,
-    play_game: Callable = H.play_game,
-    cleanup: Callable[[], None] = RF.between_games_cleanup,
+#: The only results a finished game may carry.
+VALID_RESULTS = ("anchor", "reference", "draw", "draw_ply_cap")
+
+
+def _identity(rec: dict) -> tuple:
+    return (rec.get("task_index"), rec.get("seed"), rec.get("trials"),
+            rec.get("reference"), rec.get("opening_id"), rec.get("colour_arm"))
+
+
+def canonical_identities() -> set:
+    """The exact 128 result identities a complete G3 run must produce."""
+    from .twixtbot_g3_schedule import enumerate_tasks
+    return {_identity(t) for t in enumerate_tasks()}
+
+
+def assert_canonical_results(results: Sequence[dict]) -> None:
+    """The result set must BE the canonical schedule. Nothing less counts.
+
+    An earlier summarise() checked only for aborted records, so `all()` over the
+    references actually present was vacuously true: a single draw against 0379
+    selected trials=100 as passing "against BOTH references". Presence is now
+    required, not assumed.
+    """
+    from .twixtbot_g3_schedule import REFERENCES, TRIALS_LADDER
+
+    ids = [_identity(r) for r in results]
+    dupes = sorted({i for i in ids if ids.count(i) > 1})
+    if dupes:
+        raise RunnerError(f"duplicate result identities: {dupes[:3]}")
+    got, want = set(ids), canonical_identities()
+    if got != want:
+        raise RunnerError(
+            f"result set is not the canonical schedule: {len(want - got)} missing, "
+            f"{len(got - want)} unexpected (have {len(got)} of {len(want)})"
+        )
+    for r in results:
+        if r.get("aborted"):
+            raise RunnerError(f"task {r.get('task_index')} aborted: {r.get('abort_reason')}")
+        if r.get("result") not in VALID_RESULTS:
+            raise RunnerError(
+                f"task {r.get('task_index')} has result {r.get('result')!r}, "
+                f"expected one of {VALID_RESULTS}"
+            )
+    for trials in TRIALS_LADDER:
+        for ref in REFERENCES:
+            n = len([r for r in results if r["trials"] == trials and r["reference"] == ref])
+            if n != 16:
+                raise RunnerError(f"trials={trials} ref={ref}: {n} games, expected 16")
+
+
+def _prepare_results_path(results_path) -> str:
+    """A NEW durable path is mandatory. No silent in-memory-only run."""
+    if not isinstance(results_path, str) or not results_path:
+        raise RunnerError("results_path is required; a run that persists nothing is not a run")
+    if os.path.exists(results_path):
+        raise RunnerError(f"results_path already exists: {results_path}")
+    parent = os.path.dirname(os.path.abspath(results_path))
+    if not os.path.isdir(parent):
+        raise RunnerError(f"results directory does not exist: {parent}")
+    return results_path
+
+
+def run_g3(*, twixt, Point, ct, TwixtState, nnmplayer, repo_root: str, results_path: str) -> dict:
+    """THE production entry point. NOT authorized to run.
+
+    Deliberately takes no task list, no play function and no cleanup function.
+    The previous signature accepted an arbitrary task subset, a fake play_game,
+    a disabled cleanup and results_path=None, so a caller could run one task with
+    neither engine nor persistence and still be handed completed=True. Those
+    switches now live only in the private helper below, which tests use.
+
+    The canonical 128 tasks are enumerated and validated here, and a NEW durable
+    output path is required.
+    """
+    from .twixtbot_g3_schedule import enumerate_tasks, schedule_invariants
+
+    tasks = enumerate_tasks()
+    bad = schedule_invariants(tasks)
+    if bad:
+        raise RunnerError(f"the schedule is not valid: {bad}")
+    path = _prepare_results_path(results_path)
+
+    return _run_tasks(
+        tasks=tasks, twixt=twixt, Point=Point, ct=ct, TwixtState=TwixtState,
+        nnmplayer=nnmplayer, repo_root=repo_root, results_path=path,
+        play_game=H.play_game, cleanup=RF.between_games_cleanup,
+        require_canonical=True,
+    )
+
+
+def _run_tasks(
+    *, tasks, twixt, Point, ct, TwixtState, nnmplayer, repo_root, results_path,
+    play_game=H.play_game, cleanup=RF.between_games_cleanup, require_canonical=True,
 ) -> dict:
-    """Run the schedule. Stops at the FIRST aborted task. Not authorized to run."""
+    """Private. Injectable ONLY so the gates above can be negative-tested."""
     evaluator_cache: Dict = {}
     results: List[dict] = []
 
@@ -120,17 +201,7 @@ def run_g3(
                 evaluator_cache=evaluator_cache, repo_root=repo_root,
             )
         except BaseException as e:                              # noqa: BLE001
-            # Construction sits OUTSIDE play_game, so without this a binding
-            # failure would escape with no record at all.
-            rec = {
-                "task_index": task.get("task_index"), "seed": task.get("seed"),
-                "trials": task.get("trials"), "reference": task.get("reference"),
-                "opening_id": task.get("opening_id"),
-                "colour_arm": task.get("colour_arm"),
-                "aborted": True, "abort_reason": "engine_exception",
-                "abort_detail": f"binding: {type(e).__name__}: {e}",
-                "result": None, "winner": None, "plies": 0, "moves": [],
-            }
+            rec = _abort_record(task, "engine_exception", f"binding: {type(e).__name__}: {e}")
             results.append(rec)
             _append_durably(results_path, rec)
             return _stopped(results, task, rec, tasks)
@@ -141,14 +212,37 @@ def run_g3(
         )
         results.append(rec)
         _append_durably(results_path, rec)
-        cleanup()                                # Metal buffers, every game
 
         if rec.get("aborted"):
             return _stopped(results, task, rec, tasks)
 
+        try:
+            cleanup()
+        except BaseException as e:                              # noqa: BLE001
+            # The game record is already fsynced, so without this the process
+            # would raise AFTER preserving that task as successful, leaving no
+            # stop record and no summary. Recorded as a RUN-level abort.
+            stop = _abort_record(task, "engine_exception",
+                                 f"between-game cleanup: {type(e).__name__}: {e}")
+            stop["cleanup_failure"] = True
+            results.append(stop)
+            _append_durably(results_path, stop)
+            return _stopped(results, task, stop, tasks)
+
+    summary = summarise(results) if require_canonical else summarise(results, strict=False)
     return {"completed": True, "stopped_at_task_index": None, "stopped_reason": None,
             "n_played": len(results), "n_remaining": 0, "results": results,
-            "summary": summarise(results)}
+            "results_path": results_path, "summary": summary}
+
+
+def _abort_record(task: dict, reason: str, detail: str) -> dict:
+    return {
+        "task_index": task.get("task_index"), "seed": task.get("seed"),
+        "trials": task.get("trials"), "reference": task.get("reference"),
+        "opening_id": task.get("opening_id"), "colour_arm": task.get("colour_arm"),
+        "aborted": True, "abort_reason": reason, "abort_detail": detail,
+        "result": None, "winner": None, "plies": 0, "moves": [],
+    }
 
 
 def _stopped(results, task, rec, tasks) -> dict:
@@ -166,14 +260,18 @@ def _stopped(results, task, rec, tasks) -> dict:
     }
 
 
-def summarise(results: Sequence[dict]) -> dict:
+def summarise(results: Sequence[dict], *, strict: bool = True) -> dict:
     """The two score rates per trials setting, and the lowest passing setting.
 
-    Score is the ANCHOR's, from the anchor's perspective: win 1, draw 0.5,
-    loss 0. Pass = non-saturation against BOTH references. Ordering is recorded
-    DESCRIPTIVELY and is not part of the pass condition.
+    Score is the ANCHOR's: win 1, draw 0.5, loss 0. Pass = non-saturation against
+    BOTH references. Ordering is recorded DESCRIPTIVELY and is not a gate.
+
+    `strict` requires the result set to BE the canonical 128-task schedule. It
+    defaults to True and is set False only by the private test helper.
     """
-    if any(r.get("aborted") for r in results):
+    if strict:
+        assert_canonical_results(results)
+    elif any(r.get("aborted") for r in results):
         raise RunnerError("refusing to summarise a run containing an aborted game")
 
     per: Dict[int, Dict[str, dict]] = {}
