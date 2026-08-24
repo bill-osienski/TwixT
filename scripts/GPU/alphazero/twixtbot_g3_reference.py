@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from typing import Callable, Dict, Optional, Tuple
 
-from .twixtbot_g3_schedule import OUR_SETTINGS, REFERENCE_CHECKPOINTS
+from .twixtbot_g3_schedule import CONSUMED_SEEDS, OUR_SETTINGS, REFERENCE_CHECKPOINTS
 
 
 class ReferenceError(Exception):
@@ -81,9 +81,32 @@ def load_reference_evaluator(reference: str, repo_root: str):
     from .local_evaluator import LocalGPUEvaluator
     from .probe_eval import load_network_for_scoring
 
-    network, *_ = load_network_for_scoring(path)
+    network, *_ = load_network_for_scoring(path, verbose=False)
     network.eval()
-    return LocalGPUEvaluator(network)
+    # compile=True is REQUIRED for a long sequential run, matching
+    # eval_runner._default_evaluator_factory. Without it MLX re-traces the graph
+    # on every infer() call, creating ~84 Metal buffers each time; they
+    # accumulate and hit the ~499k Metal resource limit after roughly TWO eval
+    # games (local_evaluator module docstring). A one-move smoke would pass
+    # happily and the 128-game run would die early.
+    ev = LocalGPUEvaluator(network, compile=True)
+    # Identity tag, set ONLY here, so a builder can assert the evaluator actually
+    # came from this task's checkpoint instead of trusting the caller.
+    ev._g3_reference = reference
+    ev._g3_sha1 = meta["sha1"]
+    return ev
+
+
+def between_games_cleanup() -> None:
+    """Flush MLX lazy ops and release cached Metal buffers, as eval_runner does
+    between games (eval_runner.py:407-409). Required at 128 games."""
+    import gc
+
+    import mlx.core as mx
+
+    mx.eval()
+    gc.collect()
+    mx.clear_cache()
 
 
 class SeededReferenceAgent:
@@ -136,9 +159,41 @@ class SeededReferenceAgent:
 
 
 def build_reference_agent(*, task: dict, evaluator, colour: str, config=None) -> SeededReferenceAgent:
-    """The one construction path. Binds the SCHEDULED seed, not an arbitrary one."""
+    """The one construction path. Binds the SCHEDULED seed AND asserts identity.
+
+    An earlier version accepted any evaluator and any config and checked only the
+    seed, so a calib020_0001 task could silently be played by the 0379 network,
+    or with a non-frozen EvalConfig. Both are now refused.
+    """
     if "seed" not in task:
         raise ReferenceError("task carries no seed")
+    if task["seed"] in CONSUMED_SEEDS:
+        raise ReferenceError(f"seed {task['seed']} is recorded as already consumed")
+
+    tag = getattr(evaluator, "_g3_reference", None)
+    if tag is None:
+        raise ReferenceError(
+            "evaluator carries no checkpoint identity; it was not built by "
+            "load_reference_evaluator, so its checkpoint cannot be verified"
+        )
+    if tag != task["reference"]:
+        raise ReferenceError(
+            f"evaluator is {tag} but the task's reference is {task['reference']}"
+        )
+    if getattr(evaluator, "_g3_sha1", None) != task.get("reference_sha1"):
+        raise ReferenceError("evaluator sha1 does not match the task's reference_sha1")
+
+    expected_colour = "black" if task["anchor_colour"] == "red" else "red"
+    if colour != expected_colour:
+        raise ReferenceError(
+            f"reference colour {colour} contradicts anchor_colour {task['anchor_colour']}"
+        )
+
+    cfg = config or eval_config()
+    frozen = eval_config()
+    if cfg != frozen:
+        raise ReferenceError(f"config is not the frozen research configuration: {cfg}")
+
     return SeededReferenceAgent(
-        evaluator=evaluator, colour=colour, seed=task["seed"], config=config
+        evaluator=evaluator, colour=colour, seed=task["seed"], config=cfg
     )

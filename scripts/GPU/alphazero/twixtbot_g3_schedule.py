@@ -27,8 +27,19 @@ TRIALS_LADDER: Tuple[int, ...] = (0, 100, 400, 1000)
 REFERENCES: Tuple[str, ...] = ("0379", "calib020_0001")
 COLOUR_ARMS: Tuple[str, ...] = ("anchor_red", "anchor_black")
 
-SEED_BASE = 202611000
+#: SEEDS CONSUMED OUTSIDE A G3 GAME. These may never be used for a scheduled task.
+#: 202611000 was spent on 2026-08-23 by the attempt-2 preflight, which played one
+#: REAL 400-simulation reference move (both search and readout RNG streams) using
+#: task 0's scheduled seed. The move was a smoke, not a game, but the seed is
+#: burnt either way, and the attempt-2 evidence claim that "all 400 reserved seeds
+#: are untouched" is FALSE. That package is preserved unaltered; this is the
+#: correction. See docs/superpowers/evidence/2026-08-23-twixtbot-g3-preflight-attempt2/.
+CONSUMED_SEEDS = (202611000,)
+
+#: The schedule was re-frozen onto a block disjoint from every consumed seed.
+SEED_BASE = 202611128
 RESERVED_SEEDS = (202611000, 202611400)      # half-open, the reserved interval
+SCHEDULE_SEEDS = (SEED_BASE, SEED_BASE + 128)   # [202611128, 202611256)
 
 REFERENCE_CHECKPOINTS: Dict[str, Dict[str, str]] = {
     "0379": {
@@ -91,8 +102,9 @@ def opening_hash(moves: Sequence[Tuple[int, int]]) -> str:
 def seed_for(trial_index: int, reference_index: int, opening_index: int, colour_arm: int) -> int:
     """The frozen seed formula. Every task gets exactly one seed, and no two share.
 
-    202611000 + (((t*2 + r)*8 + o)*2 + c), which enumerates [202611000, 202611128)
-    exactly once. The rest of the reserved interval stays unused.
+    SEED_BASE + (((t*2 + r)*8 + o)*2 + c), which enumerates a 128-wide block
+    exactly once. SEED_BASE moved from 202611000 to 202611128 after 202611000 was
+    burnt by a preflight smoke; see CONSUMED_SEEDS.
     """
     for name, value, limit in (
         ("trial_index", trial_index, len(TRIALS_LADDER)),
@@ -170,8 +182,11 @@ def schedule_invariants(tasks: Sequence[dict]) -> List[str]:
         bad.append(f"{len(outside)} seeds outside the reserved interval: {outside[:5]}")
     if seeds and (min(seeds), max(seeds)) != (SEED_BASE, SEED_BASE + 127):
         bad.append(f"seed span {min(seeds)}..{max(seeds)}, expected {SEED_BASE}..{SEED_BASE+127}")
-    if sorted(seeds) != list(range(SEED_BASE, SEED_BASE + 128)):
-        bad.append("seeds are not exactly [202611000, 202611128)")
+    if sorted(seeds) != list(range(*SCHEDULE_SEEDS)):
+        bad.append(f"seeds are not exactly [{SCHEDULE_SEEDS[0]}, {SCHEDULE_SEEDS[1]})")
+    burnt = sorted(set(seeds) & set(CONSUMED_SEEDS))
+    if burnt:
+        bad.append(f"schedule reuses already-consumed seed(s): {burnt}")
 
     # An opening must be byte-identical wherever it appears, both colour arms included.
     by_id: Dict[str, set] = {}

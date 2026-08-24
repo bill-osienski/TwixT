@@ -1,0 +1,24 @@
+# G3 PREFLIGHT attempt 3 — 2026-08-23 — RESULT: PASSED (exit 0, 23/23)
+
+Attempts 1 and 2 are preserved unaltered. Attempt 2 CONSUMED reserved seed
+202611000 on a real 400-simulation reference move, so its claim that all 400
+reserved seeds were untouched is FALSE; the schedule here is re-frozen onto
+[202611128, 202611256) and every real move in this attempt used the synthetic
+seed 999000001, outside the reservation.
+
+Preparation and preflight ONLY. No G3 game, no calibration score, no training,
+no archives, product service untouched.
+
+Covers the ten files listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+32f86014825dd7fd05c264dc77560fcb404cfbcf1c56b728065aed4c027deaf3  00_environment.txt
+ed0aebdf260b44973f3dbd654716b61a8a05f3417c9cde0e355d0d14c39c6738  01_install.log
+2bbce58b4d54acaff3c5d0733cb1163b329c8ca22003c587d3591c6501e6c291  02_preflight.stdout.txt
+b555dd3e45c25cf03c514432a61a0ea98e572a1f568b21a2d9006a3505649704  03_preflight.stderr.txt
+418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b  04_exit.txt
+4fff54407c8da367ed324a12c5fa3fb3884cb0d228e572056bf5f1a13481e124  05_pip_freeze.txt
+414f36330f4d9b99e3bec9b3027e45993f020b5338aa8af45830dd98355451c7  g3_preflight.py
+eb05d682c4cf0fae4143296b76fc5ef27fcb86640c74cd9c78e9708dae47f365  g3_preflight_results.json
+05ca81e136580e613ae8b9d0e14a6a6defd813cea8ce0f52d2e0c3e0f61f01f6  openings_and_settings.json
+1d2f5aa5453764f617ba96ab5a0e4c2e2dd2d700d2ba5860e8bba0f5d39edb6c  schedule_128_tasks.json

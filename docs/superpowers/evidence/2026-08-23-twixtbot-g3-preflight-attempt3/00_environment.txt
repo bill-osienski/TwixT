@@ -1,0 +1,28 @@
+=== host ===
+Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+arch: arm64
+=== combined runtime ===
+Python 3.13.15
+=== clone pinned + clean ===
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+  CLEAN
+=== repo HEAD ===
+c73fd4c1601bc7675d2285742569297f15ea6f31
+=== SEED RECORD ===
+  CONSUMED: 202611000 — spent by the ATTEMPT-2 preflight on a real 400-sim reference move.
+  Attempt 2's claim that all 400 reserved seeds were untouched is FALSE; that package is
+  preserved unaltered and this is the correction.
+  Schedule RE-FROZEN onto [202611128, 202611256), disjoint from every consumed seed.
+  This attempt used SYNTHETIC seed 999000001, outside the reservation, for every real move.
+=== what changed vs attempt 2 ===
+  [P1] seed record corrected + fresh 128-seed block
+  [P1] LocalGPUEvaluator(compile=True) + between_games_cleanup (mx.eval/gc.collect/mx.clear_cache)
+       — uncompiled hits the ~499k Metal limit after ~2 eval games
+  [P1] build_reference_agent asserts checkpoint identity/colour/frozen config/consumed seed;
+       new twixtbot_g3_runner.py binds each task, cleans between games, writes durably (fsync),
+       computes the two score rates + lowest passing trials, and records construction failures
+=== observations (descriptive, NOT gates) ===
+  anchor trials=100: 3 of 528 visit slots non-zero
+  one reference move at 400 sims: 1.07 s with compile=True (single observation, NOT extrapolated)
+=== scope ===
+  no G3 game, no reserved seed consumed by THIS attempt, no calibration score, no training
