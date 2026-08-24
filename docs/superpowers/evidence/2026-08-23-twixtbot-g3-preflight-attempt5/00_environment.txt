@@ -1,0 +1,25 @@
+=== host ===
+Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+arch: arm64
+Python 3.13.15
+=== clone pinned + clean ===
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+  CLEAN
+=== repo HEAD ===
+a915c0d7af2b8aa6d1a2e4910ae21b75389c1bdb
+=== what changed vs attempt 4 ===
+  [P1] run_g3 now takes ONLY clone_root/repo_root/results_path. It verifies the anchor
+       clone's commit, cleanliness and 3 model hashes, imports the engines FROM that
+       clone, proves module origins, and sets cwd to the clone root (NNEvaluater joins
+       cwd). One SHARED anchor evaluator replaces a per-game SavedModel/session rebuild.
+  [P1] The verdict is durable and exit-bound: a terminal record is appended+fsynced, and
+       main() exits 0 PASSED / 1 FAILED / 2 ABORTED / 3 precondition-refused.
+  [P2] Counts are of GAMES: games_played / tasks_attempted / tasks_remaining. A cleanup
+       stop no longer inflates them (was n_played=2 / n_remaining=1 for one game played).
+=== SEED ACCOUNTING ===
+  driven through an engine : 999000001 (synthetic, outside the reservation)
+  RNG constructed, never drawn : 202611300 (reserved but UNSCHEDULED)
+  scheduled seeds           : untouched, not even seeded
+  consumed (attempt 2)      : 202611000; schedule sits on [202611128, 202611256)
+=== scope ===
+  no G3 game, no scheduled seed, no calibration score, no training

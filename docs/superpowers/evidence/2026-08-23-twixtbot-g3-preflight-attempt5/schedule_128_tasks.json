@@ -1,0 +1,4098 @@
+[
+ {
+  "task_index": 0,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611128,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 1,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611129,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 2,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611130,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 3,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611131,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 4,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611132,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 5,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611133,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 6,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611134,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 7,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611135,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 8,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611136,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 9,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611137,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 10,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611138,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 11,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611139,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 12,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611140,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 13,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611141,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 14,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611142,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 15,
+  "trials": 0,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611143,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 16,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611144,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 17,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611145,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 18,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611146,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 19,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611147,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 20,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611148,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 21,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611149,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 22,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611150,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 23,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611151,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 24,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611152,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 25,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611153,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 26,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611154,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 27,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611155,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 28,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611156,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 29,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611157,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 30,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611158,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 31,
+  "trials": 0,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611159,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 32,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611160,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 33,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611161,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 34,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611162,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 35,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611163,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 36,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611164,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 37,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611165,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 38,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611166,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 39,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611167,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 40,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611168,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 41,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611169,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 42,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611170,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 43,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611171,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 44,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611172,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 45,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611173,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 46,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611174,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 47,
+  "trials": 100,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611175,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 48,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611176,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 49,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611177,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 50,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611178,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 51,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611179,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 52,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611180,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 53,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611181,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 54,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611182,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 55,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611183,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 56,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611184,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 57,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611185,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 58,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611186,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 59,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611187,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 60,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611188,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 61,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611189,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 62,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611190,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 63,
+  "trials": 100,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611191,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 64,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611192,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 65,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611193,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 66,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611194,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 67,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611195,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 68,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611196,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 69,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611197,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 70,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611198,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 71,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611199,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 72,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611200,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 73,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611201,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 74,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611202,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 75,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611203,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 76,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611204,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 77,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611205,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 78,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611206,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 79,
+  "trials": 400,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611207,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 80,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611208,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 81,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611209,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 82,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611210,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 83,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611211,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 84,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611212,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 85,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611213,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 86,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611214,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 87,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611215,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 88,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611216,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 89,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611217,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 90,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611218,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 91,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611219,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 92,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611220,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 93,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611221,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 94,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611222,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 95,
+  "trials": 400,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611223,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 96,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611224,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 97,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611225,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 98,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611226,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 99,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611227,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 100,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611228,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 101,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611229,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 102,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611230,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 103,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611231,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 104,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611232,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 105,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611233,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 106,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611234,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 107,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611235,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 108,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611236,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 109,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611237,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 110,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611238,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 111,
+  "trials": 1000,
+  "reference": "0379",
+  "reference_checkpoint": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+  "reference_sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611239,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 112,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611240,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 113,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O1_centre",
+  "opening_moves": [
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    10,
+    11
+   ]
+  ],
+  "opening_sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611241,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 114,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611242,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 115,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O2_centre_mirror",
+  "opening_moves": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ]
+  ],
+  "opening_sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611243,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 116,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611244,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 117,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O3_high",
+  "opening_moves": [
+   [
+    6,
+    12
+   ],
+   [
+    7,
+    10
+   ],
+   [
+    8,
+    13
+   ],
+   [
+    5,
+    11
+   ]
+  ],
+  "opening_sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611245,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 118,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611246,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 119,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O4_low",
+  "opening_moves": [
+   [
+    17,
+    11
+   ],
+   [
+    16,
+    13
+   ],
+   [
+    15,
+    10
+   ],
+   [
+    18,
+    12
+   ]
+  ],
+  "opening_sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611247,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 120,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611248,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 121,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O5_left",
+  "opening_moves": [
+   [
+    12,
+    6
+   ],
+   [
+    11,
+    8
+   ],
+   [
+    13,
+    5
+   ],
+   [
+    10,
+    7
+   ]
+  ],
+  "opening_sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611249,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 122,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611250,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 123,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O6_right",
+  "opening_moves": [
+   [
+    12,
+    17
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    11,
+    18
+   ],
+   [
+    14,
+    16
+   ]
+  ],
+  "opening_sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611251,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 124,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611252,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 125,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O7_diag",
+  "opening_moves": [
+   [
+    8,
+    8
+   ],
+   [
+    9,
+    10
+   ],
+   [
+    10,
+    10
+   ],
+   [
+    7,
+    9
+   ]
+  ],
+  "opening_sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611253,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 126,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_red",
+  "anchor_colour": "red",
+  "seed": 202611254,
+  "ply_cap": 280,
+  "workers": 1
+ },
+ {
+  "task_index": 127,
+  "trials": 1000,
+  "reference": "calib020_0001",
+  "reference_checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "opening_id": "O8_wide",
+  "opening_moves": [
+   [
+    5,
+    5
+   ],
+   [
+    18,
+    18
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    17,
+    16
+   ]
+  ],
+  "opening_sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70",
+  "colour_arm": "anchor_black",
+  "anchor_colour": "black",
+  "seed": 202611255,
+  "ply_cap": 280,
+  "workers": 1
+ }
+]

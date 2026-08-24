@@ -55,7 +55,8 @@ def assert_anchor_settings(kwargs: Dict, task: dict, ct) -> None:
         raise RunnerError(f"anchor kwargs carry unfrozen keys: {sorted(extra)}")
 
 
-def build_task_bindings(*, task, ct, nnmplayer, evaluator_cache: Dict, repo_root: str):
+def build_task_bindings(*, task, ct, nnmplayer, evaluator_cache: Dict, repo_root: str,
+                        anchor_evaluator=None):
     """Construct BOTH sides from the task, asserting every identity.
 
     Returns (player_factory, reference_agent). Raises RunnerError/ReferenceError
@@ -83,6 +84,12 @@ def build_task_bindings(*, task, ct, nnmplayer, evaluator_cache: Dict, repo_root
     agent = RF.build_reference_agent(
         task=task, evaluator=evaluator, colour=reference_colour
     )
+    # One shared anchor evaluator when the production path supplies it: a fresh
+    # NNEvaluater per game would rebuild a TensorFlow SavedModel and session each
+    # time. `evaluator` is a collaborator, not a frozen SETTING, so it is passed
+    # separately and assert_anchor_settings still sees only the frozen keys.
+    if anchor_evaluator is not None:
+        return (lambda: nnmplayer.Player(evaluator=anchor_evaluator, **kwargs)), agent
     return (lambda: nnmplayer.Player(**kwargs)), agent
 
 
@@ -158,19 +165,105 @@ def _prepare_results_path(results_path) -> str:
     return results_path
 
 
-def run_g3(*, twixt, Point, ct, TwixtState, nnmplayer, repo_root: str, results_path: str) -> dict:
+# --- anchor runtime identity -------------------------------------------------
+
+def verify_anchor_runtime(clone_root: str) -> dict:
+    """Prove the anchor runtime is the PINNED one, before any seed is touched.
+
+    run_g3 previously accepted twixt/Point/ct/TwixtState/nnmplayer from its
+    caller while loading the anchor from the relative path "model/pb". Nothing
+    checked that those modules came from the pinned clone, that cwd was the clone
+    root, or that the model bytes still matched -- so a different checkout or a
+    fake Player satisfied the "production" entry point.
+    """
+    import hashlib
+    import subprocess
+
+    from .twixtbot_g3_schedule import ANCHOR
+
+    root = os.path.realpath(clone_root)
+    if not os.path.isdir(os.path.join(root, ".git")):
+        raise RunnerError(f"not a git checkout: {root}")
+
+    def git(*args):
+        return subprocess.run(["git", "-C", root, *args], capture_output=True,
+                              text=True, check=True).stdout.strip()
+
+    head = git("rev-parse", "HEAD")
+    if head != ANCHOR["commit"]:
+        raise RunnerError(f"anchor clone is at {head}, pinned commit is {ANCHOR['commit']}")
+    dirty = git("status", "--porcelain")
+    if dirty:
+        raise RunnerError(f"anchor clone is not clean:\n{dirty}")
+
+    hashes = {
+        "model/pb/variables/variables.data-00000-of-00001": ANCHOR["weights_sha256"],
+        "model/pb/saved_model.pb": ANCHOR["saved_model_sha256"],
+        "model/pb/variables/variables.index": ANCHOR["variables_index_sha256"],
+    }
+    for rel, want in hashes.items():
+        h = hashlib.sha256()
+        with open(os.path.join(root, rel), "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        if h.hexdigest() != want:
+            raise RunnerError(f"{rel}: {h.hexdigest()} != pinned {want}")
+
+    return {"clone_root": root, "commit": head, "model_artifacts": len(hashes)}
+
+
+def _import_anchor_runtime(clone_root: str, repo_root: str):
+    """Import the engine modules FROM the verified clone, and prove their origin."""
+    import importlib
+    import sys
+
+    root = os.path.realpath(clone_root)
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    # NNEvaluater does os.path.join(os.getcwd(), model), so cwd IS part of the
+    # anchor's identity. Set it here rather than trusting the caller's shell.
+    os.chdir(root)
+
+    twixt = importlib.import_module("src.backend.twixt")
+    point = importlib.import_module("src.backend.point")
+    ct = importlib.import_module("src.constants")
+    nnmplayer = importlib.import_module("src.backend.nnmplayer")
+    nneval = importlib.import_module("src.backend.nneval")
+    state_mod = importlib.import_module("scripts.GPU.alphazero.game.twixt_state")
+
+    for mod, base, label in ((twixt, root, "twixt"), (ct, root, "constants"),
+                             (nnmplayer, root, "nnmplayer"), (nneval, root, "nneval"),
+                             (state_mod, os.path.realpath(repo_root), "TwixtState")):
+        origin = os.path.realpath(getattr(mod, "__file__", "") or "")
+        if not origin.startswith(base + os.sep):
+            raise RunnerError(f"{label} was imported from {origin}, not from {base}")
+    if os.path.realpath(os.getcwd()) != root:
+        raise RunnerError(f"cwd is {os.getcwd()}, expected the clone root {root}")
+
+    return {"twixt": twixt, "Point": point.Point, "ct": ct, "nnmplayer": nnmplayer,
+            "nneval": nneval, "TwixtState": state_mod.TwixtState}
+
+
+# --- the production entry point ----------------------------------------------
+
+#: Exit codes for the qualified command. The gate outcome IS the exit status.
+EXIT_GATE_PASSED = 0
+EXIT_GATE_FAILED = 1        # completed, but no trials setting passes
+EXIT_RUN_ABORTED = 2        # stopped early; no verdict
+EXIT_PRECONDITION = 3       # runtime identity / path / schedule refused
+
+
+def run_g3(*, clone_root: str, repo_root: str, results_path: str) -> dict:
     """THE production entry point. NOT authorized to run.
 
-    Deliberately takes no task list, no play function and no cleanup function.
-    The previous signature accepted an arbitrary task subset, a fake play_game,
-    a disabled cleanup and results_path=None, so a caller could run one task with
-    neither engine nor persistence and still be handed completed=True. Those
-    switches now live only in the private helper below, which tests use.
-
-    The canonical 128 tasks are enumerated and validated here, and a NEW durable
-    output path is required.
+    Takes only paths. It verifies the anchor runtime, imports the engines from
+    the verified clone, enumerates and validates the canonical 128 tasks, loads
+    ONE shared anchor evaluator, and requires a new durable results path.
     """
     from .twixtbot_g3_schedule import enumerate_tasks, schedule_invariants
+
+    identity = verify_anchor_runtime(clone_root)
+    rt = _import_anchor_runtime(clone_root, repo_root)
 
     tasks = enumerate_tasks()
     bad = schedule_invariants(tasks)
@@ -178,33 +271,99 @@ def run_g3(*, twixt, Point, ct, TwixtState, nnmplayer, repo_root: str, results_p
         raise RunnerError(f"the schedule is not valid: {bad}")
     path = _prepare_results_path(results_path)
 
-    return _run_tasks(
-        tasks=tasks, twixt=twixt, Point=Point, ct=ct, TwixtState=TwixtState,
-        nnmplayer=nnmplayer, repo_root=repo_root, results_path=path,
-        play_game=H.play_game, cleanup=RF.between_games_cleanup,
-        require_canonical=True,
+    # ONE shared anchor evaluator for the whole run. The old factory built a new
+    # NNEvaluater -- a fresh TensorFlow SavedModel and session -- for every game,
+    # unlike G2's qualified evaluator-reuse path.
+    shared_anchor_eval = rt["nneval"].NNEvaluater(ANCHOR_MODEL_DIR)
+
+    out = _run_tasks(
+        tasks=tasks, twixt=rt["twixt"], Point=rt["Point"], ct=rt["ct"],
+        TwixtState=rt["TwixtState"], nnmplayer=rt["nnmplayer"], repo_root=repo_root,
+        results_path=path, play_game=H.play_game, cleanup=RF.between_games_cleanup,
+        require_canonical=True, anchor_evaluator=shared_anchor_eval,
     )
+    out["anchor_identity"] = identity
+    _write_terminal_record(path, out)
+    return out
+
+
+ANCHOR_MODEL_DIR = "model/pb"
+
+
+def _write_terminal_record(path: str, out: dict) -> None:
+    """Persist the VERDICT, not just the games.
+
+    Without this the canonical assertion and the summary -- including
+    selected_trials=None when nothing passes -- existed only in a returned Python
+    object, which a caller could ignore.
+    """
+    _append_durably(path, {
+        "record_type": "terminal",
+        "completed": out.get("completed"),
+        "stopped_at_task_index": out.get("stopped_at_task_index"),
+        "stopped_reason": out.get("stopped_reason"),
+        "games_played": out.get("games_played"),
+        "tasks_remaining": out.get("tasks_remaining"),
+        "summary": out.get("summary"),
+        "gate": gate_verdict(out),
+    })
+
+
+def gate_verdict(out: dict) -> str:
+    if not out.get("completed"):
+        return "ABORTED"
+    summary = out.get("summary") or {}
+    return "PASSED" if summary.get("selected_trials") is not None else "FAILED"
+
+
+def exit_code_for(out: dict) -> int:
+    return {"PASSED": EXIT_GATE_PASSED, "FAILED": EXIT_GATE_FAILED,
+            "ABORTED": EXIT_RUN_ABORTED}[gate_verdict(out)]
+
+
+def main(argv=None) -> int:
+    """The qualified command. Its EXIT STATUS binds the G3 outcome."""
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Run the G3 anchor calibration schedule.")
+    ap.add_argument("--clone-root", required=True)
+    ap.add_argument("--repo-root", required=True)
+    ap.add_argument("--results-path", required=True)
+    args = ap.parse_args(argv)
+    try:
+        out = run_g3(clone_root=args.clone_root, repo_root=args.repo_root,
+                     results_path=args.results_path)
+    except (RunnerError, RF.ReferenceError) as e:
+        print(f"PRECONDITION REFUSED: {e}")
+        return EXIT_PRECONDITION
+    verdict = gate_verdict(out)
+    print(f"G3 {verdict}: games_played={out.get('games_played')} "
+          f"selected_trials={(out.get('summary') or {}).get('selected_trials')}")
+    return exit_code_for(out)
 
 
 def _run_tasks(
     *, tasks, twixt, Point, ct, TwixtState, nnmplayer, repo_root, results_path,
     play_game=H.play_game, cleanup=RF.between_games_cleanup, require_canonical=True,
+    anchor_evaluator=None,
 ) -> dict:
     """Private. Injectable ONLY so the gates above can be negative-tested."""
     evaluator_cache: Dict = {}
     results: List[dict] = []
+    games_played = 0
 
     for task in tasks:
         try:
             player_factory, agent = build_task_bindings(
                 task=task, ct=ct, nnmplayer=nnmplayer,
                 evaluator_cache=evaluator_cache, repo_root=repo_root,
+                anchor_evaluator=anchor_evaluator,
             )
         except BaseException as e:                              # noqa: BLE001
             rec = _abort_record(task, "engine_exception", f"binding: {type(e).__name__}: {e}")
             results.append(rec)
             _append_durably(results_path, rec)
-            return _stopped(results, task, rec, tasks)
+            return _stopped(results, task, rec, tasks, games_played)
 
         rec = play_game(
             task=task, twixt=twixt, Point=Point, ct=ct, TwixtState=TwixtState,
@@ -212,26 +371,26 @@ def _run_tasks(
         )
         results.append(rec)
         _append_durably(results_path, rec)
+        if not rec.get("aborted"):
+            games_played += 1
 
         if rec.get("aborted"):
-            return _stopped(results, task, rec, tasks)
+            return _stopped(results, task, rec, tasks, games_played)
 
         try:
             cleanup()
         except BaseException as e:                              # noqa: BLE001
-            # The game record is already fsynced, so without this the process
-            # would raise AFTER preserving that task as successful, leaving no
-            # stop record and no summary. Recorded as a RUN-level abort.
             stop = _abort_record(task, "engine_exception",
                                  f"between-game cleanup: {type(e).__name__}: {e}")
             stop["cleanup_failure"] = True
+            stop["record_type"] = "run_stop"
             results.append(stop)
             _append_durably(results_path, stop)
-            return _stopped(results, task, stop, tasks)
+            return _stopped(results, task, stop, tasks, games_played)
 
     summary = summarise(results) if require_canonical else summarise(results, strict=False)
     return {"completed": True, "stopped_at_task_index": None, "stopped_reason": None,
-            "n_played": len(results), "n_remaining": 0, "results": results,
+            "games_played": games_played, "tasks_remaining": 0, "results": results,
             "results_path": results_path, "summary": summary}
 
 
@@ -245,14 +404,24 @@ def _abort_record(task: dict, reason: str, detail: str) -> dict:
     }
 
 
-def _stopped(results, task, rec, tasks) -> dict:
+def _stopped(results, task, rec, tasks, games_played: int) -> dict:
+    """Counts are of GAMES, not records.
+
+    A cleanup failure appends both the completed game and a run-level stop record
+    for the same task, so len(results) over-counts: with three tasks and cleanup
+    failing after task 0 it reported n_played=2 / n_remaining=1, when one game had
+    been played and two tasks remained. Stop records are excluded here.
+    """
+    stops = sum(1 for r in results if r.get("record_type") == "run_stop")
+    tasks_attempted = len(results) - stops
     return {
         "completed": False,
         "stopped_at_task_index": task.get("task_index"),
         "stopped_reason": rec.get("abort_reason"),
         "stopped_detail": rec.get("abort_detail"),
-        "n_played": len(results),
-        "n_remaining": len(tasks) - len(results),
+        "games_played": games_played,
+        "tasks_attempted": tasks_attempted,
+        "tasks_remaining": len(tasks) - tasks_attempted,
         "results": results,
         # No summary on an incomplete run: scoring a filtered sample would read
         # as a result.

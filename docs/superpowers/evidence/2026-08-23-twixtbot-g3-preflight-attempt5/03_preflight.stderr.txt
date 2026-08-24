@@ -1,0 +1,7 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1787538106.869370 60642531 service.cc:153] XLA service 0x9fb590700 initialized for platform Host (this does not guarantee that XLA will be used). Devices:
+I0000 00:00:1787538106.869422 60642531 service.cc:161]   StreamExecutor [0]: Host, Default Version (Driver: 0.0.0; Runtime: 0.0.0; Toolkit: 0.0.0; DNN: 0.0.0)
+WARNING:tensorflow:From /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/twixtbot-ui/src/backend/nneval.py:21: load (from tensorflow.python.saved_model.loader_impl) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use `tf.saved_model.load` instead.
+I0000 00:00:1787538107.422513 60642531 mlir_graph_optimization_pass.cc:437] MLIR V1 optimization pass is not enabled

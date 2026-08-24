@@ -1,0 +1,23 @@
+# G3 PREFLIGHT attempt 5 — 2026-08-23 — RESULT: PASSED (exit 0, 30/30)
+
+Attempts 1-4 preserved unaltered. Closes two P1 production gaps (injectable
+anchor runtime identity; a gate decision that was neither durable nor
+exit-bound) and one P2 accounting defect (cleanup stops inflating progress
+counts).
+
+Preparation and preflight ONLY. No scheduled seed was driven or even used to
+seed an RNG.
+
+Covers the ten files listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+e988a5e16e83a809cc737558f7389fb0152b90efc574e4c815d7771f7e676d39  00_environment.txt
+ed0aebdf260b44973f3dbd654716b61a8a05f3417c9cde0e355d0d14c39c6738  01_install.log
+c8fcc35d2e0b47c950a3b47d7c59a699e20681ab1d5d3bc5cbc84cee2353a288  02_preflight.stdout.txt
+90abca9740d7732d181a0e814f9845e9ea0739b13dee565556523fe84280903a  03_preflight.stderr.txt
+418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b  04_exit.txt
+4fff54407c8da367ed324a12c5fa3fb3884cb0d228e572056bf5f1a13481e124  05_pip_freeze.txt
+268a2649d07536936db749656440201c70667814d5faac2387045799c05f49cb  g3_preflight.py
+daef7be25d0dc3ffcc09b23bbc85896939b01028eb008ca46bc9a319f9fec354  g3_preflight_results.json
+05ca81e136580e613ae8b9d0e14a6a6defd813cea8ce0f52d2e0c3e0f61f01f6  openings_and_settings.json
+1d2f5aa5453764f617ba96ab5a0e4c2e2dd2d700d2ba5860e8bba0f5d39edb6c  schedule_128_tasks.json
