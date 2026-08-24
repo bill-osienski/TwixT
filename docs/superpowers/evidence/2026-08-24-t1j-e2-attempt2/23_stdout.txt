@@ -1,0 +1,17 @@
+== 0. environment, BEFORE any T1j class is touched ==
+  java.version               = 17.0.20.1
+  java.awt.headless          = true
+  PreferencesFactory prop    = e2probe.ScratchPrefsFactory
+  Preferences.userRoot class = e2probe.ScratchPrefs
+  ok: isolated Preferences implementation is active
+  ok: JVM is headless (java.awt.GraphicsEnvironment.isHeadless())
+
+== 1. GeneralSettings: first T1j class touched; reads Preferences ==
+  mdFixedPly = true   mdPly = 3   (pinned, fixed ply 3)
+  ok: fixed ply pinned to 3
+
+== 2. Match: GUI-free constructor, wires FindMove ==
+  board = 24x24
+  ok: board configured 24x24 via public Board API
+
+== 3. one fixed legal position: 6 pins, 3 per colour ==

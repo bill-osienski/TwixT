@@ -1,0 +1,8 @@
+host preference store fingerprint — AFTER
+  dir: /Users/bill/Library/Preferences
+  com.apple.java.util.prefs.plist EXISTS  sha256=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  bytes=95  mtime=2025-08-07T23:41:41Z
+  any schwagereit/t1j prefs files: 0
+  entry count: 523
+  listing sha256: 8a111b76dbd59fbae4047af53526e8a4aa3d8c480c447e0b9aafd27d81305fe5
+  java-ish entries: 1
+    com.apple.java.util.prefs.plist

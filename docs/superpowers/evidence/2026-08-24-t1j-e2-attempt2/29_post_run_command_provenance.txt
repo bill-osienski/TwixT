@@ -1,0 +1,114 @@
+POST-RUN COMMAND PROVENANCE RECONSTRUCTION — review round 1, 2026-08-24
+(command lines corrected in review round 2: placeholders resolved)
+
+20_provenance.txt preserved the Java RUN command only. The authorization
+required preservation of commands generally, so the remaining steps are
+reconstructed here.
+
+WHAT THIS FILE IS, precisely:
+  - The command lines below are a RECONSTRUCTION, not a captured transcript.
+    They were composed inline during the session; no transcript wrapper recorded
+    them at the time.
+  - Round 1 of this file called them "verbatim" while still containing
+    <scratch>, <t1j.jar>, <classes> and "..." placeholders, and a bare
+    "mkdir -p home" with no stated working directory. That label was wrong.
+    ALL PATHS ARE NOW RESOLVED and every step states its working directory.
+  - [AS OBSERVED] = what the step printed when it ran.
+  - [RE-DERIVED NOW] = recomputed while writing this file, from artifacts still
+    present in scratch. Live measurements.
+  - THE PROBE WAS NOT RERUN.
+
+Resolved path roots used throughout:
+  E1_SCRATCH = /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1
+  E2_SCRATCH = /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2
+  JAVA_HOME  = /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home
+  T1J_JAR    = /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar
+
+=============== 1. JDK release metadata retrieval ===============
+working directory: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk
+$ curl -sS "https://api.adoptium.net/v3/assets/feature_releases/17/ga?architecture=aarch64&image_type=jdk&os=mac&jvm_impl=hotspot&page_size=1&vendor=eclipse" -o /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/api.json
+  [AS OBSERVED] release_name jdk-17.0.20.1+1 ; semver 17.0.20+101
+  [AS OBSERVED] package OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.20.1_1.tar.gz, size 185851019
+  [AS OBSERVED] published checksum 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8
+  [RE-DERIVED NOW] api.json sha256 dd0b9f08254c88e1fdd199c5f43e0339b687af8df79599bd980f99a00ae8e00d
+
+=============== 2. archive download and verification ===============
+working directory: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk
+$ curl -sSL -o /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.20.1%2B1/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.20.1_1.tar.gz"
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz
+  [AS OBSERVED] curl exit 0 ; bytes 185851019 (matches published size)
+  [RE-DERIVED NOW] sha256 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8
+  published      196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8
+  MATCH: yes
+
+=============== 3. extraction into scratch (no system install) ===============
+working directory: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk
+$ mkdir -p /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home
+$ tar -xzf /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -version
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac -version
+$ ls /Library/Java/JavaVirtualMachines | wc -l
+  [RE-DERIVED NOW] java -version:
+    openjdk version "17.0.20.1" 2026-08-18
+    OpenJDK Runtime Environment Temurin-17.0.20.1+1 (build 17.0.20.1+1)
+    OpenJDK 64-Bit Server VM Temurin-17.0.20.1+1 (build 17.0.20.1+1, mixed mode, sharing)
+  [RE-DERIVED NOW] javac -version:
+    javac 17.0.20.1
+  [RE-DERIVED NOW] /Library/Java/JavaVirtualMachines entries: 0
+  [RE-DERIVED NOW] system java still stubbed: The operation couldn’t be completed. Unable to locate a Java Runtime.
+
+=============== 4. retained T1j artifact gate ===============
+working directory: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j rev-parse HEAD
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j status --porcelain
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar
+  [RE-DERIVED NOW] HEAD   b572ed21f1f6b08491f69db32f531fc4b5f50fcd
+  [RE-DERIVED NOW] status []
+  [RE-DERIVED NOW] jar    53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+
+=============== 5. probe compilation ===============
+working directory: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac -Xlint:-options -encoding UTF-8 -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar -d /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/src/e2probe/ScratchPrefs.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/src/e2probe/ScratchPrefsFactory.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/src/net/schwagereit/t1j/E2Probe.java
+  [AS OBSERVED] exit 0, no diagnostics
+  [RE-DERIVED NOW] class files produced (scratch only; NO T1j source compiled):
+    /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/classes/e2probe/ScratchPrefs.class
+    /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/classes/e2probe/ScratchPrefsFactory.class
+    /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/classes/net/schwagereit/t1j/E2Probe.class
+  [RE-DERIVED NOW] source hashes:
+    559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/src/e2probe/ScratchPrefs.java
+    09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/src/e2probe/ScratchPrefsFactory.java
+    ab8a67c921d283a4a0d3308ef62e6f868a73613d6277dbbe54362c3d7cb4ece8  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/src/net/schwagereit/t1j/E2Probe.java
+  [RE-DERIVED NOW] class hashes:
+    aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/classes/e2probe/ScratchPrefs.class
+    dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/classes/e2probe/ScratchPrefsFactory.class
+    d4a1c627b75364265746898fa99bfd5b7c598d1126dcd236048686c08035eb4e  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/classes/net/schwagereit/t1j/E2Probe.class
+
+=============== 6. preference fingerprints and the run ===============
+working directory: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh BEFORE > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/evidence2/10_prefs_before.txt
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -Xlog:class+load=info:file=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/evidence2/13_classload.log -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/classes net.schwagereit.t1j.E2Probe > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/evidence2/14_stdout.txt 2> /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/evidence2/15_stderr.txt ; echo $? > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/evidence2/16_exit.txt
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh AFTER > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/evidence2/17_prefs_after.txt
+$ diff /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/evidence2/10_prefs_before.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/evidence2/17_prefs_after.txt
+  [AS OBSERVED] run exit status 1 (uncaught NullPointerException)
+  [AS OBSERVED] diff BEFORE/AFTER: differs on line 1 only, the BEFORE/AFTER label
+  The Java run command is also preserved, independently, in 20_provenance.txt.
+  THE PROBE WAS NOT RERUN FOR THIS FILE.
+
+=============== 7. what prefsfp.sh checks, exactly ===============
+  Its coverage is narrower than 'the whole preference store'. Full text:
+    #!/bin/bash
+    # Fingerprint the HOST user preference store (macOS java.util.prefs backing).
+    P="$HOME/Library/Preferences"
+    echo "host preference store fingerprint — $1"
+    echo "  dir: $P"
+    F="$P/com.apple.java.util.prefs.plist"
+    if [ -f "$F" ]; then
+      echo "  com.apple.java.util.prefs.plist EXISTS  sha256=$(shasum -a 256 "$F" | cut -d' ' -f1)  bytes=$(wc -c < "$F" | tr -d ' ')  mtime=$(stat -f '%Sm' -t '%Y-%m-%dT%H:%M:%SZ' "$F")"
+    else
+      echo "  com.apple.java.util.prefs.plist ABSENT"
+    fi
+    echo "  any schwagereit/t1j prefs files: $(ls "$P" 2>/dev/null | grep -ci 'schwagereit\|t1j')"
+    echo "  entry count: $(ls -1 "$P" 2>/dev/null | wc -l | tr -d ' ')"
+    echo "  listing sha256: $(ls -1 "$P" 2>/dev/null | sort | shasum -a 256 | cut -d' ' -f1)"
+    echo "  java-ish entries: $(ls -1 "$P" 2>/dev/null | grep -ci 'java')"
+    ls -1 "$P" 2>/dev/null | grep -i 'java' | sed 's/^/    /'

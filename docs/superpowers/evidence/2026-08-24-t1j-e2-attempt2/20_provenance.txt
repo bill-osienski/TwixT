@@ -1,0 +1,37 @@
+E2 attempt 2 — artifact, toolchain and RUN-command provenance, 2026-08-24
+
+NOTE (added review round 1): this file preserves the JAVA RUN COMMAND only.
+The commands for JDK acquisition, hash retrieval, archive verification and
+extraction, probe compilation, preference fingerprinting and the class-file /
+source checks are reconstructed in 29_post_run_command_provenance.txt.
+
+== retained T1j artifacts (gate, re-verified) ==
+clone HEAD  b572ed21f1f6b08491f69db32f531fc4b5f50fcd   (status: clean)
+jar sha256  53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7   83990 bytes
+
+== JDK, acquired as an archive into scratch only ==
+source      Eclipse Temurin via api.adoptium.net (feature_releases/17/ga, mac/aarch64/jdk/hotspot)
+release     jdk-17.0.20.1+1
+archive     OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.20.1_1.tar.gz   185851019 bytes
+sha256 pub  196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8
+sha256 dl   196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8
+MATCH       yes
+extracted   <scratch>/e2/jdk/home/  — NOT installed system-wide
+java -version:
+  openjdk version "17.0.20.1" 2026-08-18
+  OpenJDK Runtime Environment Temurin-17.0.20.1+1 (build 17.0.20.1+1)
+  OpenJDK 64-Bit Server VM Temurin-17.0.20.1+1 (build 17.0.20.1+1, mixed mode, sharing)
+javac -version:
+  javac 17.0.20.1
+system JDK dir after run: /Library/Java/JavaVirtualMachines entries = 0
+
+== scratch sources compiled (probe + Preferences ONLY; no T1j source) ==
+  559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  ScratchPrefs.java
+  09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  ScratchPrefsFactory.java
+  ab8a67c921d283a4a0d3308ef62e6f868a73613d6277dbbe54362c3d7cb4ece8  E2Probe.java
+
+== exact run command ==
+  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -Xlog:class+load=info:file=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/evidence2/13_classload.log -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/classes net.schwagereit.t1j.E2Probe
+
+== exit status ==
+  1   (1 = uncaught exception; the probe's own fail-closed code is 3)

@@ -1,0 +1,119 @@
+package net.schwagereit.t1j;
+
+import java.lang.reflect.Field;
+import java.util.prefs.Preferences;
+
+/**
+ * E2 attempt 2 — one headless load and one computeMove() against the official
+ * T1j release JAR. Lives in net.schwagereit.t1j ONLY because Match()'s
+ * constructor is package-private. Compiled against the JAR; T1j itself is
+ * untouched.
+ *
+ * Reflection is used for exactly two things, both recorded at runtime:
+ *   WRITE Match.moveNr = 6            -- forces the alpha-beta path
+ *   READ  FindMove.usealphabeta       -- proves alpha-beta actually ran
+ *   READ  FindMove.currentMaxPly      -- proves the deepening loop executed
+ *
+ * Exit 0 = all requirements met, 3 = a requirement failed. Fail-closed.
+ */
+public final class E2Probe {
+
+    private static void req(boolean cond, String what) {
+        if (!cond) { System.out.println("REQUIREMENT FAILED: " + what); System.exit(3); }
+        System.out.println("  ok: " + what);
+    }
+
+    public static void main(String[] args) throws Exception {
+        System.out.println("== 0. environment, BEFORE any T1j class is touched ==");
+        System.out.println("  java.version               = " + System.getProperty("java.version"));
+        System.out.println("  java.awt.headless          = " + System.getProperty("java.awt.headless"));
+        System.out.println("  PreferencesFactory prop    = " + System.getProperty("java.util.prefs.PreferencesFactory"));
+
+        Preferences userRoot = Preferences.userRoot();
+        System.out.println("  Preferences.userRoot class = " + userRoot.getClass().getName());
+        req("e2probe.ScratchPrefs".equals(userRoot.getClass().getName()),
+            "isolated Preferences implementation is active");
+        req(java.awt.GraphicsEnvironment.isHeadless(),
+            "JVM is headless (java.awt.GraphicsEnvironment.isHeadless())");
+
+        System.out.println();
+        System.out.println("== 1. GeneralSettings: first T1j class touched; reads Preferences ==");
+        GeneralSettings gs = GeneralSettings.getInstance();
+        gs.mdFixedPly = true;
+        gs.mdPly = 3;
+        System.out.println("  mdFixedPly = " + gs.mdFixedPly + "   mdPly = " + gs.mdPly + "   (pinned, fixed ply 3)");
+        req(gs.mdFixedPly && gs.mdPly == 3, "fixed ply pinned to 3");
+
+        System.out.println();
+        System.out.println("== 2. Match: GUI-free constructor, wires FindMove ==");
+        Match match = new Match();
+        Board bY = match.getBoardY();
+        Board bX = match.getBoardX();
+        bY.clearBoard(); bX.clearBoard();
+        bY.setSize(24, 24); bX.setSize(24, 24);
+        bY.getEval().setupForY(); bX.getEval().setupForY();
+        System.out.println("  board = " + bY.getXsize() + "x" + bY.getYsize());
+        req(bY.getXsize() == 24 && bY.getYsize() == 24, "board configured 24x24 via public Board API");
+
+        System.out.println();
+        System.out.println("== 3. one fixed legal position: 6 pins, 3 per colour ==");
+        int[][] yPins = { {10, 10}, {12, 12}, {14, 10} };
+        int[][] xPins = { {11, 13}, {13, 11}, { 9, 12} };
+        for (int[] p : yPins) {
+            req(bY.setPin(p[0], p[1], Board.YPLAYER), "Y pin accepted at (" + p[0] + "," + p[1] + ")");
+            req(bX.setPin(p[1], p[0], Board.XPLAYER), "  mirrored on boardX");
+        }
+        for (int[] p : xPins) {
+            req(bY.setPin(p[0], p[1], Board.XPLAYER), "X pin accepted at (" + p[0] + "," + p[1] + ")");
+            req(bX.setPin(p[1], p[0], Board.YPLAYER), "  mirrored on boardX");
+        }
+
+        System.out.println();
+        System.out.println("== 4. reflection: the ONE authorized write ==");
+        Field moveNr = Match.class.getDeclaredField("moveNr");
+        moveNr.setAccessible(true);
+        moveNr.setInt(match, 6);
+        System.out.println("  REFLECT-WRITE  Match.moveNr <- 6");
+        System.out.println("  readback via public getMoveNr() = " + match.getMoveNr());
+        req(match.getMoveNr() >= 6, "moveNr >= 6 so InitialMoves cannot short-circuit the search");
+
+        System.out.println();
+        System.out.println("== 5. exactly one computeMove() ==");
+        FindMove fm = FindMove.getFindMove();
+        long t0 = System.nanoTime();
+        Move mv = fm.computeMove(Board.YPLAYER);
+        long ms = (System.nanoTime() - t0) / 1000000L;
+        System.out.println("  computeMove(YPLAYER) returned in " + ms + " ms");
+
+        System.out.println();
+        System.out.println("== 6. the move, reported NUMERICALLY (Move.toString() is never called) ==");
+        req(mv != null, "computeMove returned a non-null Move");
+        int mx = mv.getX();
+        int my = mv.getY();
+        System.out.println("  MOVE x=" + mx + " y=" + my);
+        req(mx >= 0 && mx < 24 && my >= 0 && my < 24, "move is in range for a 24x24 board");
+        req(bY.getPin(mx, my) == 0, "target intersection is empty");
+        req(bY.pinAllowed(mx, my, Board.YPLAYER), "move is legal per T1j's own Board.pinAllowed");
+
+        System.out.println();
+        System.out.println("== 7. reflection: reads proving alpha-beta executed ==");
+        Field uab = FindMove.class.getDeclaredField("usealphabeta");
+        uab.setAccessible(true);
+        Field cmp = FindMove.class.getDeclaredField("currentMaxPly");
+        cmp.setAccessible(true);
+        boolean usedAlphaBeta = uab.getBoolean(fm);
+        int currentMaxPly = cmp.getInt(null);
+        System.out.println("  REFLECT-READ   FindMove.usealphabeta  = " + usedAlphaBeta);
+        System.out.println("  REFLECT-READ   FindMove.currentMaxPly = " + currentMaxPly);
+        req(usedAlphaBeta, "alpha-beta search ran (usealphabeta true)");
+        req(currentMaxPly > 3, "iterative-deepening loop advanced past its starting ply of 3");
+
+        System.out.println();
+        System.out.println("REFLECTED FIELDS USED (complete list):");
+        System.out.println("  write  net.schwagereit.t1j.Match.moveNr           int");
+        System.out.println("  read   net.schwagereit.t1j.FindMove.usealphabeta  boolean (instance)");
+        System.out.println("  read   net.schwagereit.t1j.FindMove.currentMaxPly int (static)");
+        System.out.println();
+        System.out.println("PROBE-OK");
+    }
+}

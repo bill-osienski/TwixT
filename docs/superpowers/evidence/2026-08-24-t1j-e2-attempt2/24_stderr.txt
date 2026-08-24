@@ -1,0 +1,5 @@
+Exception in thread "main" java.lang.NullPointerException: Cannot read field "valueY" because "<parameter1>" is null
+	at net.schwagereit.t1j.Zobrist$Node.access$200(Unknown Source)
+	at net.schwagereit.t1j.Zobrist.getPinValue(Unknown Source)
+	at net.schwagereit.t1j.Board.setPin(Unknown Source)
+	at net.schwagereit.t1j.E2Probe.main(E2Probe.java:63)
