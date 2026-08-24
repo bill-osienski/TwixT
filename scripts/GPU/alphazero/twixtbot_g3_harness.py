@@ -62,20 +62,35 @@ def anchor_player_kwargs(trials: int, ct) -> Dict:
     )
 
 
-def anchor_move(player_factory, tb_game, our_state, ply: int) -> Tuple[Tuple[int, int], Dict]:
-    """One anchor move under a FRESH Player, with its full visit array preserved.
+def anchor_move(player, tb_game, our_state, ply: int, trials: int) -> Tuple[Tuple[int, int], Dict]:
+    """One anchor move from the game's SINGLE Player instance.
 
-    A fresh Player per move is required: NeuralMCTS caches `self.root`, so a
-    reused player would accumulate a tree across moves.
+    The authorization freezes a fresh Player per GAME, not per move. An earlier
+    version constructed one per move, which threw away NeuralMCTS's intended
+    within-game root reuse (it caches `self.root` and inherits the subtree after
+    a move). Fresh-per-query was right for G2, where independent queries were
+    being compared; inside a game it is wrong.
     """
     sink = A.ProgressSink()
     try:
-        resp = player_factory().pick_move(tb_game, window=sink)
+        resp = player.pick_move(tb_game, window=sink)
     except Exception as e:                                   # noqa: BLE001
         raise HarnessAbort("engine_exception", f"{type(e).__name__}: {e}", ply) from e
 
-    if not isinstance(resp, dict) or "moves" not in resp or "Y" not in resp:
-        raise HarnessAbort("malformed_output", f"response keys {sorted(resp) if isinstance(resp, dict) else type(resp)}", ply)
+    if not isinstance(resp, dict) or "moves" not in resp:
+        raise HarnessAbort(
+            "malformed_output",
+            f"response keys {sorted(resp) if isinstance(resp, dict) else type(resp)}",
+            ply,
+        )
+    # trials=0 is the RAW-POLICY path: nnmplayer returns moves/P/Pscew and NO Y,
+    # because no search ran and there are no visit counts to report. Demanding Y
+    # unconditionally aborted all 32 trials=0 tasks on the anchor's first move.
+    # Visits are required only when a search actually happened.
+    if trials > 0 and "Y" not in resp:
+        raise HarnessAbort("malformed_output", f"trials={trials} but no Y array", ply)
+    if trials == 0 and "P" not in resp:
+        raise HarnessAbort("malformed_output", "trials=0 but no P array", ply)
 
     top = resp["moves"][0] if resp["moves"] else None
     if top is None:
@@ -92,9 +107,12 @@ def anchor_move(player_factory, tb_game, our_state, ply: int) -> Tuple[Tuple[int
         "ply": ply,
         "mover": "anchor",
         "move": list(rc),
-        # FULL array, never a head slice: a truncated transcript reads as a
+        "trials": trials,
+        # FULL arrays, never a head slice: a truncated transcript reads as a
         # complete one, and this is the observation G2 asked us to characterise.
-        "visits": [int(v) for v in resp["Y"]],
+        "visits": [int(v) for v in resp["Y"]] if trials > 0 else None,
+        "visits_available": trials > 0,
+        "policy": [float(x) for x in resp["P"]] if trials == 0 else None,
         "moves_order": [[int(m.x), int(m.y)] for m in resp["moves"]],
         "proven": bool(resp.get("proven")),
         "progress_events": list(sink.events),
@@ -124,7 +142,7 @@ def play_game(
     ct,
     TwixtState,
     player_factory: Callable,
-    reference_fn: Callable,
+    reference_agent,
     ply_cap: int = PLY_CAP,
 ) -> dict:
     """Play ONE game. NOT called by the preflight; G3 games are unauthorized.
@@ -151,6 +169,21 @@ def play_game(
             raise HarnessAbort("state_divergence", f"{label}: {d}", ply)
 
     try:
+        # ONE Player for the whole game (fresh per game, evaluator reuse
+        # allowed). Constructed INSIDE the try: an earlier version built it and
+        # checked the seed above the try, so a failure there escaped without
+        # producing an aborted record -- the exact gap this contract forbids.
+        player = player_factory()
+        # The reference agent must be bound to THIS task's scheduled seed; a bare
+        # callable would let the seed go unused.
+        ref_seed = getattr(reference_agent, "seed", None)
+        if ref_seed is None:
+            raise HarnessAbort("malformed_output",
+                               "reference agent exposes no seed; it is not seed-bound", 0)
+        if ref_seed != task["seed"]:
+            raise HarnessAbort("malformed_output",
+                               f"reference seed {ref_seed} != task seed {task['seed']}", 0)
+
         for i, (r, c) in enumerate(task["opening_moves"]):
             rc = (int(r), int(c))
             if rc not in our.legal_moves():
@@ -163,9 +196,9 @@ def play_game(
         while not our.is_terminal():
             ply = our.ply
             if our.to_move == anchor_colour:
-                rc, mrec = anchor_move(player_factory, tb, our, ply)
+                rc, mrec = anchor_move(player, tb, our, ply, task["trials"])
             else:
-                rc, mrec = reference_move(reference_fn, our, ply)
+                rc, mrec = reference_move(reference_agent, our, ply)
             our = our.apply_move(rc)
             tb.play(Point(*A.rc_to_xy(*rc)))
             moves.append(mrec)
@@ -182,6 +215,39 @@ def play_game(
     except HarnessAbort as e:
         record.update(aborted=True, abort_reason=e.reason,
                       abort_detail=e.detail, plies=our.ply, result=None, winner=None)
+    except BaseException as e:                                   # noqa: BLE001
+        # [P1] Anything else -- TwixtState.apply_move, twixtbot Game.play,
+        # state_divergences, terminal evaluation -- must still produce a
+        # STRUCTURED aborted record. Letting it propagate left a game with no
+        # record at all, contrary to the fail-closed contract. Not retried.
+        record.update(aborted=True, abort_reason="engine_exception",
+                      abort_detail=f"{type(e).__name__}: {e}",
+                      plies=our.ply, result=None, winner=None)
 
     record["moves"] = moves
     return record
+
+
+def run_schedule(tasks: Sequence[dict], play: Callable[[dict], dict]) -> dict:
+    """Run tasks in order and STOP on the first aborted game.
+
+    Fail-closed at the schedule level, not just the game level: continuing past
+    an abort would produce a partial result set that looks complete, and the
+    surviving games would silently be a filtered sample. `play` is injected so
+    this is testable without engines.
+    """
+    results: List[Dict] = []
+    for task in tasks:
+        rec = play(task)
+        results.append(rec)
+        if rec.get("aborted"):
+            return {
+                "completed": False,
+                "stopped_at_task_index": task.get("task_index"),
+                "stopped_reason": rec.get("abort_reason"),
+                "n_played": len(results),
+                "n_remaining": len(tasks) - len(results),
+                "results": results,
+            }
+    return {"completed": True, "stopped_at_task_index": None, "stopped_reason": None,
+            "n_played": len(results), "n_remaining": 0, "results": results}

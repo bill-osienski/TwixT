@@ -1,0 +1,24 @@
+=== host ===
+Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+arch: arm64
+=== combined runtime ===
+  venv <scratch>/g3venv
+Python 3.13.15
+=== clone pinned + clean ===
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+  CLEAN
+=== repo HEAD ===
+06916160a4d1fbe54b1dca7345c6844c449d3ab0
+=== what changed vs attempt 1 (all four P1 execution-path blockers) ===
+  [P1] trials=0 has NO Y array -> visits required only when trials>0; full P preserved
+  [P1] ONE Player per GAME (was per move), so NeuralMCTS root reuse is kept
+  [P1] seeded reference agent BUILT (twixtbot_g3_reference.py): binds scheduled seed,
+       checkpoint sha1, 400 sims / batch 14 / flush 48 / opening-temperature readout,
+       and eval_runner's per-colour search+readout RNG masks
+  [P1] unexpected exceptions at the game boundary -> structured engine_exception record
+  plus run_schedule(): stops on the FIRST aborted task
+=== observations (descriptive, NOT gates) ===
+  anchor at trials=100 on a frozen opening: 3 of 528 visit slots non-zero
+  one reference move at 400 sims took 1.37 s (single observation; NOT extrapolated)
+=== scope ===
+  no G3 game, no reserved seed consumed, no calibration, no training, no archives

@@ -1,0 +1,24 @@
+# G3 PREFLIGHT attempt 2 — 2026-08-23 — RESULT: PASSED (exit 0, 20/20)
+
+Attempt 1 is preserved unaltered at
+docs/superpowers/evidence/2026-08-23-twixtbot-g3-preflight/ (14/14, but four P1
+execution-path blockers made it inadequate; see the commit message).
+
+Preparation and preflight ONLY. No G3 game, no reserved seed consumed, no
+calibration score, no training, no archives, product service untouched. Single
+real moves were played by each engine to qualify the execution paths; play_game
+was invoked twice on one SYNTHETIC task (seed -1) with fake engines.
+
+Covers the ten files listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+906f9be0e6dfaa31432cfb76ffdb5ae98722115f97889e6ccf795c88ec3eaf69  00_environment.txt
+ed0aebdf260b44973f3dbd654716b61a8a05f3417c9cde0e355d0d14c39c6738  01_install.log
+c0faa82ccd7338b4bed84fc97d46635c8834190ab153090554bb6f4febb87b2f  02_preflight.stdout.txt
+3bff37e334946b6ec9dff747d786836ad207a47a0ad71006d865880024a25321  03_preflight.stderr.txt
+418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b  04_exit.txt
+4fff54407c8da367ed324a12c5fa3fb3884cb0d228e572056bf5f1a13481e124  05_pip_freeze.txt
+21c7e262795bc75322ed83116e1e71cbf548da54628c2d1f75f78e4f79381f02  g3_preflight.py
+a9547f3f4bcd4b4568047f56fb28856446c455c1525a04fe3aee4afad7e41f2f  g3_preflight_results.json
+58ad5f00ad29033afdf299a21190f898e3fd1622ebce672ad5976ab8fcabff0a  openings_and_settings.json
+c8d7e765c797eb094dd4083853da5bdbf11fa0a31128a9841dac6db714f2de83  schedule_128_tasks.json
