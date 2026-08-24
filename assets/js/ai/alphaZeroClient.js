@@ -23,8 +23,23 @@
 
 import TwixTAI from './search.js';
 
+/**
+ * Use the same hostname as the page for the local inference server.
+ *
+ * Browsers may resolve localhost and 127.0.0.1 differently. Keeping the page
+ * and API on the same hostname prevents a working 127.0.0.1 game page from
+ * silently falling back to heuristics when localhost is unavailable.
+ */
+export function defaultServerUrl(locationLike = globalThis.location) {
+  const hostname = locationLike?.hostname || 'localhost';
+  const urlHostname = hostname.includes(':') && !hostname.startsWith('[')
+    ? `[${hostname}]`
+    : hostname;
+  return `http://${urlHostname}:3001`;
+}
+
 export class AlphaZeroClient {
-  constructor(serverUrl = 'http://localhost:3001') {
+  constructor(serverUrl = defaultServerUrl()) {
     this.serverUrl = serverUrl;
     this.timeout = 30000; // 30 second timeout for WebSocket moves
     // Hard mode runs 800 MCTS sims and contends the single ONNX session.
