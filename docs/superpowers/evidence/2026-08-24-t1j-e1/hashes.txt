@@ -1,0 +1,214 @@
+T1j E1 artifact hashes — recorded 2026-08-24
+Repository: https://github.com/johannesSchwagereit/T1j
+Clone verified clean (git status empty, git fsck clean).
+refs: main = current(tag, lightweight) = b572ed21f1f6b08491f69db32f531fc4b5f50fcd
+      parent 61c81173b967bfa29b92c5eec69c8ad036ed607a
+      tree   6f1adcd6a3449a026c8c69b799248b6819017448
+      no 'master' ref exists
+
+== git object identity (independent of file hashing) ==
+100644 blob f288702d2fa16d3cdf0035b15a9fcbc552cd88e7 LICENSE
+100644 blob 3feffb1a01c6631b9a5cf22d9463e3f78dd5ca36 README.md
+100644 blob 6abf12d4d5be292ca93a3457c76b145d135791c6 build.xml
+100644 blob d75ccfb144920f274e320a94b35b0ec7de9d1c5a src/Manifest.mf
+100644 blob 07d62cfa45ad3775a4f1e57d6245c2b2954589be src/net/schwagereit/t1j/Board.java
+100644 blob e5fb2be3b994847cb96d81f7a0aa07d313a2cf08 src/net/schwagereit/t1j/CheckPattern.java
+100644 blob e5c8b6993058af67e608d73bb4fd267865b2f639 src/net/schwagereit/t1j/Control.java
+100644 blob b9a4735177363cbdc11fc0e0b19b3286c27f0995 src/net/schwagereit/t1j/Evaluation.java
+100644 blob a5ccc7869ff53713c61df1870eac7dcc4755d6fe src/net/schwagereit/t1j/FindMove.java
+100644 blob 2a63154b1c161e17cd1c0a67e1ae823e95e5a315 src/net/schwagereit/t1j/GeneralSettings.java
+100644 blob 0188f9dd6efd2a7f188c97a0ee4676dba42a5f40 src/net/schwagereit/t1j/GuiBoard.java
+100644 blob 2cbbfb904525e785b774114498029ce323fe1e3a src/net/schwagereit/t1j/GuiMainWindow.java
+100644 blob 46e3102f3c766aa18ce6ddc8f0dd893c2082b23f src/net/schwagereit/t1j/InitialMoves.java
+100644 blob 3e76faf42df7e8b41bbb515433c3ff22ae8c987d src/net/schwagereit/t1j/LoadSave.java
+100644 blob bc58ea35dff8f85c5f3587af213600f7a5ad539d src/net/schwagereit/t1j/Match.java
+100644 blob 8ec82c977e1b233114517b14852f66c2ecc83a3b src/net/schwagereit/t1j/MatchData.java
+100644 blob 1f56205fe6d8d3323cf62aaee3448f9dab2629b9 src/net/schwagereit/t1j/Messages.java
+100644 blob 5d4eab57589b060100783a8c640279b954a36c75 src/net/schwagereit/t1j/Move.java
+100644 blob 84f74c1d9a36e6a91f79271a1194deedcc688d6d src/net/schwagereit/t1j/NewDialog.java
+100644 blob 8059bad9c877fc3e3c96e1d61867ce4d984a4591 src/net/schwagereit/t1j/OrderedMoves.java
+100644 blob 71ba5098123a0729b337b084f75f60bbf9b13d2b src/net/schwagereit/t1j/Races.java
+100644 blob 1c46c56eafec1ad1fae58ff6d172cc129ff5dab4 src/net/schwagereit/t1j/RightPanel.java
+100644 blob 4670774a856db2a5aa191124543cc98fd4f52053 src/net/schwagereit/t1j/Stopwatch.java
+100644 blob 12db80aed085253405d425f4eba5b0c37c778797 src/net/schwagereit/t1j/StrengthDialog.java
+100644 blob 2fae960120620d31afceba7eb74213765c421d42 src/net/schwagereit/t1j/Zobrist.java
+100644 blob f2168e4113cf687f219c254721970b535da71f16 src/net/schwagereit/t1j/images/t1j.png
+100644 blob 280bf333d0da2623027f1986d5a300fac4bd531b src/net/schwagereit/t1j/images/t1jIcon.gif
+100644 blob 62ca025b6ea5da61af12c913f496104939337f0b src/net/schwagereit/t1j/messages.properties
+100644 blob 43ef0e17102da1db69567882e54805d61193d340 src/net/schwagereit/t1j/messages_de.properties
+100644 blob a1bc1a3f3f1f14930e71e1cd7ee4aec40ccac99d src/net/schwagereit/t1j/patterns.properties
+100644 blob d1fe302f374fd34954559748ee0645b4a44f8791 src/net/schwagereit/t1j/t1j.gif
+
+== sha256 of every tracked file at b572ed2 ==
+3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986  LICENSE
+c7e1e0f426b7e4daa47d9757c10476e4dbf108c0300e84670f6f318f45b213e7  README.md
+aaafc5e2ec9b2cd91a166c074fd52bbdfee0df48a020becea1784b43646c45e2  build.xml
+0bd77a8e70c1ac84afbdf8d0014e8f7acc3ffc2b7ec9fe1c02bcb0c7be297da8  src/Manifest.mf
+b4052d14b65a7a35e02237bab05b3da837b6fe29dd6d9c0f6311b5892100297a  src/net/schwagereit/t1j/Board.java
+dd383476bc60a9dd8f1bc3bd8c7e06fe0fffb74df4798d2b9245f51b0bc6f67e  src/net/schwagereit/t1j/CheckPattern.java
+1712f9fa2dc0e7993f9526a7f37e340a4c01957121e927bc1960ad3792368308  src/net/schwagereit/t1j/Control.java
+1013a20449495dccc08c054d84410e9ddb172214861a9190aaee85871d91e003  src/net/schwagereit/t1j/Evaluation.java
+e0da9bf5fe758c30113017e53d1319df23dedd1aa41b8ec847e18d9ac992d68c  src/net/schwagereit/t1j/FindMove.java
+fda4423c1f56cade118b3d7ddb3820fd204cd14bc1ebbf9d8015f07486a5e7ce  src/net/schwagereit/t1j/GeneralSettings.java
+e29da4ae8814f3df2aca08be9ce8a4dd07f03547faa57975627bfb52b20cc250  src/net/schwagereit/t1j/GuiBoard.java
+fa7d327650b4df9540154411041e5ce45ea43d6d7373944ee7ae2c0923059e3a  src/net/schwagereit/t1j/GuiMainWindow.java
+7cc3008d8604173f3164637eb57207581acdb86098c70003284840a14f4c84fb  src/net/schwagereit/t1j/InitialMoves.java
+dec2e8e50c2ee8071f142a2a7e32efec6d3b547738891490d3d9278097dd2a4c  src/net/schwagereit/t1j/LoadSave.java
+b5ac165009b3e3f56cea3f6f61c51db43aed7776e43175a1b757266fe4db7977  src/net/schwagereit/t1j/Match.java
+578c20326f17b6f21a8b30c64351939035b04f95e37b704620f182bfde4aeabd  src/net/schwagereit/t1j/MatchData.java
+bc25bd425e0cad04d0b3d98f3103fccec22051d0a8837a75aadbd17296902dbc  src/net/schwagereit/t1j/Messages.java
+6b52fb734010b668e65cce95e7e29a427728b986965182005076030ef04ec4c0  src/net/schwagereit/t1j/Move.java
+8b8d75d7f6dc50485b9966900fa782be8c0091d25dda2b740a5d4e81120fdff5  src/net/schwagereit/t1j/NewDialog.java
+546bbae8ca4d0cfe13302288e4bb141bddea05fa046cf88d8b96d664b085fcc6  src/net/schwagereit/t1j/OrderedMoves.java
+ebb1fbd8d61302aa349f39a4b3f9dc2c1371aca04cb459f493af6801cf931638  src/net/schwagereit/t1j/Races.java
+89faa31aa6886fffb5e1e24d042de1e4697284f18b07e406738d98228d1dff08  src/net/schwagereit/t1j/RightPanel.java
+79a42380040a3ffb287ae38ada343bd44971eb6492fc01bc44aa8d36bcaaed27  src/net/schwagereit/t1j/Stopwatch.java
+3dcdb4f6dd83778cdf8112f5964c58b40035f390a222d99e7e28d9ff5a8d039f  src/net/schwagereit/t1j/StrengthDialog.java
+bd9d01817fae037eae30fbe93bec6e46e5a5b4049bce1ec6f4ecb3435927192a  src/net/schwagereit/t1j/Zobrist.java
+30e79827f191096c63a037ac79ee6f022206fdb7dfc82632a62854cb051c3c81  src/net/schwagereit/t1j/images/t1j.png
+ae4ec7ddcbc5fe4f961fcd8d21543d14dc91328d87ad5ed3ff9e1e3066921873  src/net/schwagereit/t1j/images/t1jIcon.gif
+97f0d74c703e52a51d20485fe049f36a28e9a389bf9e9093e1764a28aa9da34b  src/net/schwagereit/t1j/messages.properties
+150bf3cc86881063564f097ac0af340e3dd64f5598877d13268bcc8d681a4b89  src/net/schwagereit/t1j/messages_de.properties
+7b7b21e15a2ccdd9ebd597e3e6f466df8895bd7c38f4cbef27ce168d9a892992  src/net/schwagereit/t1j/patterns.properties
+124b56b82a3066cc62cf07338a3d3f5b4542cc865cf45ccfc9056742c251fda1  src/net/schwagereit/t1j/t1j.gif
+
+== release artifact ==
+tag:        current  (release name 'v0.2')
+created_at: 2022-01-09T08:51:04Z   published_at: 2022-01-09T08:59:12Z
+asset:      t1j.jar  83990 bytes  asset updated_at 2022-01-09T08:56:56Z
+url:        https://github.com/johannesSchwagereit/T1j/releases/download/current/t1j.jar
+53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7  t1j.jar
+064370a89b8361cdb400732d8942b2cc31d31437  t1j.jar
+
+== JAR internal manifest ==
+CORRECTED IN REVIEW ROUND 1: this block previously embedded the manifest verbatim,
+which carried its raw CRLF line endings into this file and failed `git diff --check`.
+The byte claim is preserved below without raw carriage returns.
+
+The JAR's META-INF/MANIFEST.MF and the committed src/Manifest.mf are BYTE-IDENTICAL:
+  bytes           192  (both)
+  sha256          0bd77a8e70c1ac84afbdf8d0014e8f7acc3ffc2b7ec9fe1c02bcb0c7be297da8  (both)
+  line endings    CRLF throughout -- 7 CR and 7 LF in each copy
+
+What that shows: the source tree CONTAINS A COPY of this manifest. It does NOT
+establish which build produced the JAR -- src/Manifest.mf is an ordinary text
+file in the tree, and a matching copy is consistent with several histories.
+
+Content, rendered with escaped line endings (no raw CR in this file):
+  Manifest-Version: 1.0\r\n
+  Ant-Version: Apache Ant 1.6.5\r\n
+  Created-By: 1.5.0_09-b03 (Sun Microsystems Inc.)\r\n
+  Built-by: johannes\r\n
+  Built-On: March 30 2007\r\n
+  Main-Class: net.schwagereit.t1j.Control\r\n
+  \r\n
+
+== resource correspondence: pinned source vs JAR, sha256, hashed in place ==
+t1j.gif                    src=124b56b82a3066cc62cf07338a3d3f5b4542cc865cf45ccfc9056742c251fda1
+                           jar=124b56b82a3066cc62cf07338a3d3f5b4542cc865cf45ccfc9056742c251fda1   IDENTICAL
+images/t1j.png             src=30e79827f191096c63a037ac79ee6f022206fdb7dfc82632a62854cb051c3c81
+                           jar=30e79827f191096c63a037ac79ee6f022206fdb7dfc82632a62854cb051c3c81   IDENTICAL
+images/t1jIcon.gif         src=ae4ec7ddcbc5fe4f961fcd8d21543d14dc91328d87ad5ed3ff9e1e3066921873
+                           jar=ae4ec7ddcbc5fe4f961fcd8d21543d14dc91328d87ad5ed3ff9e1e3066921873   IDENTICAL
+messages.properties        src=97f0d74c703e52a51d20485fe049f36a28e9a389bf9e9093e1764a28aa9da34b
+                           jar=97f0d74c703e52a51d20485fe049f36a28e9a389bf9e9093e1764a28aa9da34b   IDENTICAL
+messages_de.properties     src=150bf3cc86881063564f097ac0af340e3dd64f5598877d13268bcc8d681a4b89
+                           jar=150bf3cc86881063564f097ac0af340e3dd64f5598877d13268bcc8d681a4b89   IDENTICAL
+patterns.properties        src=7b7b21e15a2ccdd9ebd597e3e6f466df8895bd7c38f4cbef27ce168d9a892992
+                           jar=7b7b21e15a2ccdd9ebd597e3e6f466df8895bd7c38f4cbef27ce168d9a892992   IDENTICAL
+
+================================================================
+APPENDED POST-RUN, review round 1, 2026-08-24.
+The class-inventory comparison is one of the three qualification
+levels but was originally asserted without retained output. It is
+re-derived here from the same scratch clone and release JAR.
+================================================================
+
+== A. source top-level classes (basename of src/net/schwagereit/t1j/*.java) ==
+Board
+CheckPattern
+Control
+Evaluation
+FindMove
+GeneralSettings
+GuiBoard
+GuiMainWindow
+InitialMoves
+LoadSave
+Match
+MatchData
+Messages
+Move
+NewDialog
+OrderedMoves
+Races
+RightPanel
+Stopwatch
+StrengthDialog
+Zobrist
+count: 21
+
+== B. JAR top-level classes (entries matching net/schwagereit/t1j/<Name>.class, no inner '$') ==
+Board
+CheckPattern
+Control
+Evaluation
+FindMove
+GeneralSettings
+GuiBoard
+GuiMainWindow
+InitialMoves
+LoadSave
+Match
+MatchData
+Messages
+Move
+NewDialog
+OrderedMoves
+Races
+RightPanel
+Stopwatch
+StrengthDialog
+Zobrist
+count: 21
+
+== C. normalized diff (A vs B). Empty output below == exact match both directions ==
+diff exit status: 0   (0 = identical)
+
+== D. inner/anonymous classes in the JAR (not compared to source; recorded only) ==
+Board$1.class
+Board$Node.class
+CheckPattern$Pattern.class
+CheckPattern$PatternElement.class
+Evaluation$CritPos.class
+Evaluation$FieldData.class
+Evaluation$PinPosition.class
+GuiMainWindow$1.class
+GuiMainWindow$2.class
+GuiMainWindow$3.class
+GuiMainWindow$4.class
+GuiMainWindow$5.class
+GuiMainWindow$6.class
+GuiMainWindow$7.class
+GuiMainWindow$8.class
+GuiMainWindow$9.class
+GuiMainWindow$ColorActionListener.class
+GuiMainWindow$MouseMotionHandler.class
+GuiMainWindow$MyMouseListener.class
+LoadSave$1.class
+LoadSave$2.class
+NewDialog$1.class
+NewDialog$2.class
+NewDialog$PlayerPanel.class
+OrderedMoves$1.class
+OrderedMoves$2.class
+OrderedMoves$ValuedMove.class
+RightPanel$ListenerBack.class
+RightPanel$ListenerForward.class
+RightPanel$ListenerQuit.class
+StrengthDialog$1.class
+StrengthDialog$2.class
+StrengthDialog$3.class
+Zobrist$1.class
+Zobrist$Node.class
+count: 35
