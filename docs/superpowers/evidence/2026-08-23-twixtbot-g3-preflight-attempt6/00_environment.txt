@@ -1,0 +1,29 @@
+=== host ===
+Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+Python 3.13.15
+=== clone pinned + clean ===
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+  CLEAN
+=== repo HEAD ===
+960ac5c5f317eff38ae65ce814951c39d6efff12
+=== what changed vs attempt 5 ===
+  [P1] the module had NO __main__ guard: 'python3 -m ...twixtbot_g3_runner --help' printed
+       nothing and exited 0. Guard added; the command is now qualified as a SUBPROCESS.
+  [P1] main() caught only RunnerError/ReferenceError, so git/import/TensorFlow/serialisation
+       failures escaped with Python's exit 1 -- the code reserved for a COMPLETED gate that
+       failed. Split into preconditions()/execute(); every failure is classified through the
+       pure classify_failure(): pre-run -> 3, post-start -> 2, never 1.
+  [P2] the fsynced evidence omitted the identity. A run_header is now written+fsynced BEFORE
+       the first task with the commit, clone root and all three ACTUAL artifact hashes; the
+       terminal record carries the identity too.
+  also: _prepare_results_path now probes writability, so an unwritable output is a
+       PRECONDITION caught before anything is announced.
+=== COVERAGE LIMIT, stated plainly ===
+  The pre-run failure branch is exercised END-TO-END as a fresh subprocess (two cases).
+  The post-start branch cannot be reached in a subprocess without playing a scheduled game,
+  which is unauthorized, so it is covered at UNIT level via classify_failure. This is a real
+  limit of the preflight, not a claim of end-to-end coverage.
+=== SEED ACCOUNTING ===
+  driven through an engine: 999000001 (synthetic, outside the reservation)
+  RNG constructed never drawn: 202611300 (reserved, unscheduled)
+  scheduled seeds: untouched. consumed: 202611000 (attempt 2).

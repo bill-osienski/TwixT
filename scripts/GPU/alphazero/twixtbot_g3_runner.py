@@ -162,6 +162,8 @@ def _prepare_results_path(results_path) -> str:
     parent = os.path.dirname(os.path.abspath(results_path))
     if not os.path.isdir(parent):
         raise RunnerError(f"results directory does not exist: {parent}")
+    if not os.access(parent, os.W_OK | os.X_OK):
+        raise RunnerError(f"results directory is not writable: {parent}")
     return results_path
 
 
@@ -209,7 +211,15 @@ def verify_anchor_runtime(clone_root: str) -> dict:
         if h.hexdigest() != want:
             raise RunnerError(f"{rel}: {h.hexdigest()} != pinned {want}")
 
-    return {"clone_root": root, "commit": head, "model_artifacts": len(hashes)}
+    verified = {}
+    for rel, want in hashes.items():
+        h = hashlib.sha256()
+        with open(os.path.join(root, rel), "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        verified[rel] = h.hexdigest()
+    return {"clone_root": root, "commit": head, "model_artifacts": len(hashes),
+            "artifact_sha256": verified}
 
 
 def _import_anchor_runtime(clone_root: str, repo_root: str):
@@ -253,38 +263,71 @@ EXIT_RUN_ABORTED = 2        # stopped early; no verdict
 EXIT_PRECONDITION = 3       # runtime identity / path / schedule refused
 
 
-def run_g3(*, clone_root: str, repo_root: str, results_path: str) -> dict:
-    """THE production entry point. NOT authorized to run.
+def preconditions(*, clone_root: str, repo_root: str, results_path: str) -> dict:
+    """PHASE 1. Everything that must hold before the run is announced.
 
-    Takes only paths. It verifies the anchor runtime, imports the engines from
-    the verified clone, enumerates and validates the canonical 128 tasks, loads
-    ONE shared anchor evaluator, and requires a new durable results path.
+    Verifies the anchor runtime, imports the engines from it, validates the
+    canonical schedule, prepares a new writable output path, and writes the run
+    header. A failure anywhere here means nothing started: PRECONDITION.
     """
-    from .twixtbot_g3_schedule import enumerate_tasks, schedule_invariants
+    from .twixtbot_g3_schedule import (
+        SCHEDULE_SEEDS, enumerate_tasks, schedule_invariants,
+    )
 
     identity = verify_anchor_runtime(clone_root)
     rt = _import_anchor_runtime(clone_root, repo_root)
-
     tasks = enumerate_tasks()
     bad = schedule_invariants(tasks)
     if bad:
         raise RunnerError(f"the schedule is not valid: {bad}")
     path = _prepare_results_path(results_path)
 
-    # ONE shared anchor evaluator for the whole run. The old factory built a new
-    # NNEvaluater -- a fresh TensorFlow SavedModel and session -- for every game,
-    # unlike G2's qualified evaluator-reuse path.
-    shared_anchor_eval = rt["nneval"].NNEvaluater(ANCHOR_MODEL_DIR)
+    # The verified identity is written DURABLY, before the first task, so the
+    # evidence records WHICH clone and model produced the verdict.
+    _append_durably(path, {
+        "record_type": "run_header",
+        "anchor_commit": identity["commit"],
+        "anchor_clone_root": identity["clone_root"],
+        "anchor_artifact_sha256": identity["artifact_sha256"],
+        "repo_root": os.path.realpath(repo_root),
+        "n_tasks": len(tasks),
+        "schedule_seed_block": list(SCHEDULE_SEEDS),
+    })
+    return {"identity": identity, "rt": rt, "tasks": tasks, "path": path,
+            "repo_root": repo_root}
 
+
+def execute(prepared: dict) -> dict:
+    """PHASE 2. The run itself. A failure here means it HAD started: ABORTED."""
+    rt, path = prepared["rt"], prepared["path"]
+    shared_anchor_eval = rt["nneval"].NNEvaluater(ANCHOR_MODEL_DIR)
     out = _run_tasks(
-        tasks=tasks, twixt=rt["twixt"], Point=rt["Point"], ct=rt["ct"],
-        TwixtState=rt["TwixtState"], nnmplayer=rt["nnmplayer"], repo_root=repo_root,
-        results_path=path, play_game=H.play_game, cleanup=RF.between_games_cleanup,
+        tasks=prepared["tasks"], twixt=rt["twixt"], Point=rt["Point"], ct=rt["ct"],
+        TwixtState=rt["TwixtState"], nnmplayer=rt["nnmplayer"],
+        repo_root=prepared["repo_root"], results_path=path,
+        play_game=H.play_game, cleanup=RF.between_games_cleanup,
         require_canonical=True, anchor_evaluator=shared_anchor_eval,
     )
-    out["anchor_identity"] = identity
+    out["anchor_identity"] = prepared["identity"]
     _write_terminal_record(path, out)
     return out
+
+
+def run_g3(*, clone_root: str, repo_root: str, results_path: str) -> dict:
+    """THE production entry point. NOT authorized to run. Paths only."""
+    return execute(preconditions(clone_root=clone_root, repo_root=repo_root,
+                                 results_path=results_path))
+
+
+def classify_failure(started: bool) -> tuple:
+    """(verdict, exit code) for an UNEXPECTED failure.
+
+    Pure and testable. Catching only RunnerError/ReferenceError let git
+    subprocess errors, missing files, TensorFlow import failures and
+    serialization errors escape with Python's ordinary exit 1 -- the code
+    reserved for a COMPLETED gate in which no setting passed.
+    """
+    return ("ABORTED", EXIT_RUN_ABORTED) if started else ("PRECONDITION", EXIT_PRECONDITION)
 
 
 ANCHOR_MODEL_DIR = "model/pb"
@@ -306,6 +349,7 @@ def _write_terminal_record(path: str, out: dict) -> None:
         "tasks_remaining": out.get("tasks_remaining"),
         "summary": out.get("summary"),
         "gate": gate_verdict(out),
+        "anchor_identity": out.get("anchor_identity"),
     })
 
 
@@ -330,12 +374,29 @@ def main(argv=None) -> int:
     ap.add_argument("--repo-root", required=True)
     ap.add_argument("--results-path", required=True)
     args = ap.parse_args(argv)
+
+    started = False
+    path = None
     try:
-        out = run_g3(clone_root=args.clone_root, repo_root=args.repo_root,
-                     results_path=args.results_path)
-    except (RunnerError, RF.ReferenceError) as e:
-        print(f"PRECONDITION REFUSED: {e}")
-        return EXIT_PRECONDITION
+        prepared = preconditions(clone_root=args.clone_root, repo_root=args.repo_root,
+                                 results_path=args.results_path)
+        path = prepared["path"]
+        started = True
+        out = execute(prepared)
+    except BaseException as e:                                   # noqa: BLE001
+        verdict, code = classify_failure(started)
+        detail = f"{type(e).__name__}: {e}"
+        if path:
+            try:
+                _append_durably(path, {
+                    "record_type": "terminal", "completed": False,
+                    "stopped_reason": "unexpected_failure", "stopped_detail": detail,
+                    "summary": None, "gate": verdict,
+                })
+            except BaseException:                                # noqa: BLE001
+                pass          # never let evidence-writing mask the real failure
+        print(f"{verdict}: {detail}")
+        return code
     verdict = gate_verdict(out)
     print(f"G3 {verdict}: games_played={out.get('games_played')} "
           f"selected_trials={(out.get('summary') or {}).get('selected_trials')}")
@@ -481,3 +542,7 @@ def _ordering(rates: Dict[str, Optional[float]]) -> str:
     return ("anchor scores higher vs 0379 than vs calib020_0001"
             if a > b else
             "anchor scores higher vs calib020_0001 than vs 0379") + " (descriptive only)"
+
+
+if __name__ == "__main__":                    # pragma: no cover
+    raise SystemExit(main())

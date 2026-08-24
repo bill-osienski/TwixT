@@ -1,0 +1,243 @@
+{
+ "schema": "twixt-g3-schedule/2",
+ "card": "docs/superpowers/2026-08-22-twixtbot-anchor-pilot-card.md",
+ "note": "PREPARATION ONLY. Re-frozen onto a fresh seed block after 202611000 was consumed by the attempt-2 preflight.",
+ "consumed_seeds": [
+  202611000
+ ],
+ "consumed_note": "202611000 was spent on 2026-08-23 by a real 400-simulation reference move in the attempt-2 preflight (both RNG streams). It may never be used for a scheduled task.",
+ "anchor": {
+  "repo": "github.com/stevens68/twixtbot-ui",
+  "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+  "model_dir": "model/pb",
+  "weights_sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab",
+  "saved_model_sha256": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+  "variables_index_sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+ },
+ "anchor_settings": {
+  "temperature": 0,
+  "add_noise": 0,
+  "rotation": "off",
+  "allow_swap": 0,
+  "allow_scl": false
+ },
+ "our_settings": {
+  "mcts_sims": 400,
+  "mcts_eval_batch_size": 14,
+  "mcts_stall_flush_sims": 48,
+  "selection_mode": "opening_temperature",
+  "opening_temp_plies": 20,
+  "temp_high": 1.0,
+  "temp_low": 0.1,
+  "max_moves": 280,
+  "workers": 1
+ },
+ "references": {
+  "0379": {
+   "path": "checkpoints/alphazero-v2-staged/model_iter_0379.safetensors",
+   "sha1": "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1"
+  },
+  "calib020_0001": {
+   "path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+  }
+ },
+ "ply_cap": 280,
+ "trials_ladder": [
+  0,
+  100,
+  400,
+  1000
+ ],
+ "colour_arms": [
+  "anchor_red",
+  "anchor_black"
+ ],
+ "reserved_seed_interval": [
+  202611000,
+  202611400
+ ],
+ "schedule_seed_block": [
+  202611128,
+  202611256
+ ],
+ "seed_formula": "202611128 + (((trial_index*2 + reference_index)*8 + opening_index)*2 + colour_arm)",
+ "openings": [
+  {
+   "opening_id": "O1_centre",
+   "moves": [
+    [
+     12,
+     12
+    ],
+    [
+     11,
+     10
+    ],
+    [
+     13,
+     13
+    ],
+    [
+     10,
+     11
+    ]
+   ],
+   "sha256": "849d56fe027d8c2a07e26d6a0be94dd014fbbd583df88cb73bb15a99ead5f0eb"
+  },
+  {
+   "opening_id": "O2_centre_mirror",
+   "moves": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     10,
+     12
+    ],
+    [
+     13,
+     10
+    ]
+   ],
+   "sha256": "559b466d180a8b8d3bed284256f83789408810912d5ddf383162e8213a43590a"
+  },
+  {
+   "opening_id": "O3_high",
+   "moves": [
+    [
+     6,
+     12
+    ],
+    [
+     7,
+     10
+    ],
+    [
+     8,
+     13
+    ],
+    [
+     5,
+     11
+    ]
+   ],
+   "sha256": "86a26cbf71e249d5875da4912bf2be7db08dc3b95816db1b8a9f0c56a7ddd99a"
+  },
+  {
+   "opening_id": "O4_low",
+   "moves": [
+    [
+     17,
+     11
+    ],
+    [
+     16,
+     13
+    ],
+    [
+     15,
+     10
+    ],
+    [
+     18,
+     12
+    ]
+   ],
+   "sha256": "8f92b303b638475a6cadcd5b84edb60dc71440cc8d1d5ebd7c82784a3b6ac3d3"
+  },
+  {
+   "opening_id": "O5_left",
+   "moves": [
+    [
+     12,
+     6
+    ],
+    [
+     11,
+     8
+    ],
+    [
+     13,
+     5
+    ],
+    [
+     10,
+     7
+    ]
+   ],
+   "sha256": "020ceea32aaa0cd73a6c0ba1c8e6e4d23e1d85e85bd3711e09bf3712a73dc33c"
+  },
+  {
+   "opening_id": "O6_right",
+   "moves": [
+    [
+     12,
+     17
+    ],
+    [
+     13,
+     15
+    ],
+    [
+     11,
+     18
+    ],
+    [
+     14,
+     16
+    ]
+   ],
+   "sha256": "95a7a285a09f3001e0b32d89040de79795523dec503007be60f8b2482917df7f"
+  },
+  {
+   "opening_id": "O7_diag",
+   "moves": [
+    [
+     8,
+     8
+    ],
+    [
+     9,
+     10
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     7,
+     9
+    ]
+   ],
+   "sha256": "c5850e6b0228b4ea81ab636c5f9acc1f5d001e6b8027956fcdafbbc5a6c23f41"
+  },
+  {
+   "opening_id": "O8_wide",
+   "moves": [
+    [
+     5,
+     5
+    ],
+    [
+     18,
+     18
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     17,
+     16
+    ]
+   ],
+   "sha256": "efe34bd3e6890833d814cbc3901b06c6d6975fa586c1da33ef1dd40ca9159b70"
+  }
+ ]
+}

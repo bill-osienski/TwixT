@@ -1,0 +1,22 @@
+# G3 PREFLIGHT attempt 6 — 2026-08-23 — RESULT: PASSED (exit 0, 33/33)
+
+Attempts 1-5 preserved unaltered. Closes two P1 defects in the qualified
+command (it never ran; unexpected failures masqueraded as gate failure) and
+one P2 provenance gap (the durable verdict omitted the verified identity).
+
+The command is qualified as a FRESH SUBPROCESS. Preparation only: no
+scheduled game, no scheduled seed driven or seeded.
+
+Covers the ten files listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+df9bb97800d123801d96c8c756d3182461ac8322fb4ab2b90fa3e726bfca3a16  00_environment.txt
+ed0aebdf260b44973f3dbd654716b61a8a05f3417c9cde0e355d0d14c39c6738  01_install.log
+0ccaf799b9b149d956960baf138110e50ab0733fffc99af3c361b7763fcd22d1  02_preflight.stdout.txt
+b6e37e885996b724651ecbe69efa728ce6ee9f50ea6d88037d17aae75558060b  03_preflight.stderr.txt
+418a5c17f33c70e99b0cc0a07fce69191489cfedc94164bfa903785777c5bd4b  04_exit.txt
+4fff54407c8da367ed324a12c5fa3fb3884cb0d228e572056bf5f1a13481e124  05_pip_freeze.txt
+03dc8f7c9951cffa99a7ddfebd18c813d6f553914c9e523383296505afa6c67b  g3_preflight.py
+05d0b4361866edcdd694a67d5cee8e81772a1ec2e59d5d846382430e57d5e5e7  g3_preflight_results.json
+05ca81e136580e613ae8b9d0e14a6a6defd813cea8ce0f52d2e0c3e0f61f01f6  openings_and_settings.json
+1d2f5aa5453764f617ba96ab5a0e4c2e2dd2d700d2ba5860e8bba0f5d39edb6c  schedule_128_tasks.json
