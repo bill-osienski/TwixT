@@ -1,0 +1,125 @@
+POST-RUN LITERAL COMMAND TRANSCRIPT — review round 2, 2026-08-24
+
+Every line below is the exact command as executed, with raw stdout, raw
+stderr and exit status. No placeholders, no normalization. This replaces
+the normalized summary in 02_post_run_correction.txt section D, which used
+<candidate JDK locations> / <bin dirs> stand-ins and bare count lines.
+01_blocked.txt remains byte-unchanged.
+
+shell: 5.3.15(1)-release   user: bill   host-arch: arm64
+date:  2026-08-24T22:07:10Z
+
+=============== A. toolchain commands ===============
+$ java -version
+    [stdout] <empty>
+    [stderr] The operation couldn’t be completed. Unable to locate a Java Runtime.
+    [stderr] Please visit http://www.java.com for information on installing Java.
+    [stderr]
+    [exit] 1
+
+$ javac -version
+    [stdout] <empty>
+    [stderr] The operation couldn’t be completed. Unable to locate a Java Runtime.
+    [stderr] Please visit http://www.java.com for information on installing Java.
+    [stderr]
+    [exit] 1
+
+$ /usr/libexec/java_home -V
+    [stdout] <empty>
+    [stderr] The operation couldn’t be completed. Unable to locate a Java Runtime.
+    [stderr] Please visit http://www.java.com for information on installing Java.
+    [stderr]
+    [exit] 1
+
+$ printenv JAVA_HOME
+    [stdout] <empty>
+    [stderr] <empty>
+    [exit] 1
+
+$ echo "${JAVA_HOME:-<unset>}"
+    [stdout] <unset>
+    [stderr] <empty>
+    [exit] 0
+
+=============== B. candidate JDK directories ===============
+$ ls -la /Library/Java/JavaVirtualMachines
+    [stdout] total 0
+    [stdout] drwxr-xr-x  2 root  wheel   64 May 21 04:57 .
+    [stdout] drwxr-xr-x  4 root  wheel  128 May 21 04:57 ..
+    [stderr] <empty>
+    [exit] 0
+
+$ ls -d /System/Library/Java/JavaVirtualMachines
+    [stdout] <empty>
+    [stderr] ls: /System/Library/Java/JavaVirtualMachines: No such file or directory
+    [exit] 1
+
+$ ls -d /Users/bill/Library/Java/JavaVirtualMachines
+    [stdout] <empty>
+    [stderr] ls: /Users/bill/Library/Java/JavaVirtualMachines: No such file or directory
+    [exit] 1
+
+$ ls -d /opt/homebrew/opt/openjdk
+    [stdout] <empty>
+    [stderr] ls: /opt/homebrew/opt/openjdk: No such file or directory
+    [exit] 1
+
+$ ls -d /usr/local/opt/openjdk
+    [stdout] <empty>
+    [stderr] ls: /usr/local/opt/openjdk: No such file or directory
+    [exit] 1
+
+$ ls -d /Users/bill/.sdkman/candidates/java
+    [stdout] <empty>
+    [stderr] ls: /Users/bill/.sdkman/candidates/java: No such file or directory
+    [exit] 1
+
+$ ls -d /opt/homebrew/Cellar/openjdk
+    [stdout] <empty>
+    [stderr] ls: /opt/homebrew/Cellar/openjdk: No such file or directory
+    [exit] 1
+
+=============== C. PATH bin directories ===============
+$ ls /opt/homebrew/bin | grep -xE "java|javac|jshell"
+    [stdout] <empty>
+    [stderr] <empty>
+    [exit] 1
+
+$ ls /usr/local/bin | grep -xE "java|javac|jshell"
+    [stdout] <empty>
+    [stderr] <empty>
+    [exit] 1
+
+$ ls /opt/local/bin | grep -xE "java|javac|jshell"
+    [stdout] <empty>
+    [stderr] ls: /opt/local/bin: No such file or directory
+    [exit] 1
+
+$ ls /Users/bill/bin | grep -xE "java|javac|jshell"
+    [stdout] <empty>
+    [stderr] ls: /Users/bill/bin: No such file or directory
+    [exit] 1
+
+=============== D. Homebrew formulae ===============
+$ brew list --formula | grep -iE "jdk|java|temurin|zulu|corretto"
+    [stdout] <empty>
+    [stderr] <empty>
+    [exit] 1
+
+=============== E. what the stubs actually are ===============
+$ ls -l /usr/bin/java /usr/bin/javac
+    [stdout] -rwxr-xr-x  37 root  wheel  135664 May 21 04:57 /usr/bin/java
+    [stdout] -rwxr-xr-x  37 root  wheel  135664 May 21 04:57 /usr/bin/javac
+    [stderr] <empty>
+    [exit] 0
+
+$ file /usr/bin/java
+    [stdout] /usr/bin/java: Mach-O universal binary with 2 architectures: [x86_64:Mach-O 64-bit executable x86_64] [arm64e:Mach-O 64-bit executable arm64e]
+    [stdout] /usr/bin/java (for architecture x86_64):	Mach-O 64-bit executable x86_64
+    [stdout] /usr/bin/java (for architecture arm64e):	Mach-O 64-bit executable arm64e
+    [stderr] <empty>
+    [exit] 0
+
+NOTE ON EXIT CODES: grep exits 1 when it matches nothing, and ls exits 1
+when a path is absent. Those non-zero statuses ARE the finding, not errors
+in the check.

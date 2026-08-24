@@ -1,0 +1,121 @@
+POST-RUN CORRECTION to 01_blocked.txt — review round 1, 2026-08-24.
+
+01_blocked.txt is preserved BYTE-UNCHANGED as the original record. This file
+adds what that record lost or omitted. Everything below is re-derived from the
+same pinned source (T1j main@b572ed21f1f6b08491f69db32f531fc4b5f50fcd).
+
+==============================================================
+A. REPAIRING THE DAMAGED EXCERPT
+==============================================================
+01_blocked.txt lines 87-90 contain two stray lines reading
+"(eval):48: command not found: moves", and the sentence below them lost both of
+its references to the moves list. Cause: the text was written through an
+unquoted shell heredoc, so the backticks around the word moves were taken as
+command substitution and executed. The intended sentence was:
+
+    redoSingleMove() needs a populated `moves` list; `moves` is mutated in
+    exactly two places:
+
+The two mutation sites quoted there were correct and are unaffected.
+
+==============================================================
+B. CORRECTION: the opening-book condition was overstated
+==============================================================
+01_blocked.txt and the first draft of the card said initialMove() returns null
+"only when moveNr > 5". That is wrong: the final expression can also yield null
+for plies 0-5, when the chosen branch produces no move or one with x < 0.
+
+What is actually true, and all the argument needs:
+  moveNr > 5 GUARANTEES the opening book is bypassed, so setting moveNr >= 6 is
+  a SUFFICIENT way to force the search path. It is not the only way null can
+  arise.
+
+Exact source, InitialMoves.java lines 55-74:
+       public Move initialMove(final Match matchIn, int player)
+       {
+          match = matchIn;
+          currentPlayer = player;
+          Move retMove = null;
+
+          if (match.getMoveNr() == 0)
+          {
+             retMove = firstMove();
+          }
+          else if (match.getMoveNr() <= 3) // simple answer with predefined moves
+          {
+             retMove = secondToFourthMove();
+          }
+          else if (match.getMoveNr() <= 5)
+          {
+             retMove = fifthOrMoreMove();
+          }
+          return (retMove != null && retMove.getX() >= 0) ? retMove : null;
+       }
+
+==============================================================
+C. OMITTED LOAD-BEARING FACT: the engine-path classes are final
+==============================================================
+The argument "every relevant Match field is private, so same-package code
+cannot set them" is incomplete on its own: a same-package SUBCLASS could
+override getMoveNr() to return 6 and bypass the opening book without touching
+any private field. That route is closed only because Match cannot be subclassed.
+
+Exact declarations at the pinned revision:
+    Match.java         24:public final class Match extends Observable implements Runnable
+    Board.java         17:public final class Board
+    FindMove.java      20:public final class FindMove
+    InitialMoves.java  21:public final class InitialMoves
+    GeneralSettings.java 14:public class GeneralSettings
+
+  Match, Board, FindMove and InitialMoves are all `public final class`, so none
+  can be subclassed. GeneralSettings is not final, but its constructor is
+  private and its sole instance is a static final field created eagerly, so a
+  subclass cannot be created or substituted either.
+
+  => No subclass route exists anywhere on the engine path. The conclusion in
+     01_blocked.txt stands, but for this reason in addition to field privacy.
+
+==============================================================
+D. BOUNDING THE JAVA-ENVIRONMENT CLAIM
+==============================================================
+01_blocked.txt retained only: java/javac/java_home failing, JAVA_HOME unset,
+/Library/Java/JavaVirtualMachines empty, and a summarised Homebrew count. It did
+NOT retain the per-location searches, so the claim "no JDK under any user path"
+exceeded its evidence. The correct scope is:
+
+    No usable Java toolchain was found by the recorded checks.
+
+The location searches are re-run here, POST-RUN, as a NORMALIZED SUMMARY.
+The command lines below use <candidate JDK locations> / <bin dirs> stand-ins
+and collapsed counts -- they are NOT a literal transcript, and this section
+should not be read as one. The exact literal commands, raw stdout, raw stderr
+and exit status for every check are in:
+
+    03_post_run_environment_commands.txt   (added review round 2)
+
+Summary form:
+
+    $ for d in <candidate JDK locations>; do ls -d "$d" 2>&1; done
+      EXISTS  /Library/Java/JavaVirtualMachines  -> entries: 0
+      absent  /System/Library/Java/JavaVirtualMachines
+      absent  /Users/bill/Library/Java/JavaVirtualMachines
+      absent  /opt/homebrew/opt/openjdk
+      absent  /usr/local/opt/openjdk
+      absent  /Users/bill/.sdkman/candidates/java
+      absent  /opt/homebrew/Cellar/openjdk
+
+    $ ls <bin dirs> | grep -xE "java|javac|jshell"
+      /opt/homebrew/bin        matches: 0
+0
+      /usr/local/bin           matches: 0
+0
+      /opt/local/bin           matches: 0
+      /Users/bill/bin          matches: 0
+
+    $ brew list --formula | grep -icE "jdk|java|temurin|zulu|corretto"
+      0
+
+    These checks are bounded: they cover the standard system location, the
+    common package-manager prefixes and PATH bin dirs. They are not an
+    exhaustive filesystem search, and they do not prove no JDK exists
+    anywhere on this machine.

@@ -1,0 +1,122 @@
+E2 BLOCKED — preconditions, recorded 2026-08-24T20:54:10Z
+repo HEAD e1103b996c774dff45a95d82c3265d2963d0771d
+
+==============================================================
+GATE 1 — retained artifacts: PASSED
+==============================================================
+clone HEAD  b572ed21f1f6b08491f69db32f531fc4b5f50fcd   expected b572ed21f1f6b08491f69db32f531fc4b5f50fcd
+clone status []  (empty = clean)
+jar sha256  53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+            expected 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+jar bytes   83990
+
+==============================================================
+BLOCKER A — no Java toolchain on this machine
+==============================================================
+$ java -version
+  The operation couldn’t be completed. Unable to locate a Java Runtime.
+  Please visit http://www.java.com for information on installing Java.
+
+$ javac -version
+  The operation couldn’t be completed. Unable to locate a Java Runtime.
+  Please visit http://www.java.com for information on installing Java.
+
+$ /usr/libexec/java_home -V
+  The operation couldn’t be completed. Unable to locate a Java Runtime.
+  Please visit http://www.java.com for information on installing Java.
+
+$ ls -la /Library/Java/JavaVirtualMachines
+  total 0
+  drwxr-xr-x  2 root  wheel   64 May 21 04:57 .
+  drwxr-xr-x  4 root  wheel  128 May 21 04:57 ..
+JAVA_HOME: <unset>
+brew java formulae installed: 0
+/usr/bin/java and /usr/bin/javac exist but are the macOS stubs, not a JDK.
+Installing one is excluded by the E2 authorization (no dependency installation).
+
+==============================================================
+BLOCKER B — no GUI-free route reaches a searching computeMove()
+==============================================================
+Static, from the pinned source at b572ed2. Found BEFORE blocker A surfaced;
+it survives any JDK being installed.
+
+1. FindMove.computeMove() first calls InitialMoves.initialMove(match, player)
+   and RETURNS ITS RESULT without searching when that is non-null.
+   InitialMoves.initialMove returns null only when match.getMoveNr() > 5:
+        public Move initialMove(final Match matchIn, int player)
+        {
+           match = matchIn;
+           currentPlayer = player;
+           Move retMove = null;
+
+           if (match.getMoveNr() == 0)
+           {
+              retMove = firstMove();
+           }
+           else if (match.getMoveNr() <= 3) // simple answer with predefined moves
+           {
+              retMove = secondToFourthMove();
+           }
+           else if (match.getMoveNr() <= 5)
+           {
+              retMove = fifthOrMoreMove();
+           }
+           return (retMove != null && retMove.getX() >= 0) ? retMove : null;
+        }
+
+2. At moveNr == 0 it takes firstMove(), which dereferences matchData:
+        private Move firstMove()
+        {
+           Random rand = new Random();
+
+           int[][] startPos = {{2, 10}, {3, 4}, {3, FIVE}, {3, SIX}, {4, 3}, {FIVE, 3}, {SIX, 3}};
+           //int[][] startPos = { { 4, 11 }, { 4, 10 }, { FIVE, 10 }, { FIVE, 9 }, { SIX, 8 },
+           //      { 6, 6 }, { 5, 6 }, { 6, 5 }, { 9, SIX }, { 4, TWELVE } };
+
+           int bx;
+           int by;
+           if (match.getMatchData().mdPieRule) // first move with pie-rule
+           {
+   Match()'s constructor sets matchData = null, so this is an NPE.
+   (Note also: firstMove() uses an UNSEEDED new Random() — the opening-book
+    branch is nondeterministic. Relevant to E3.)
+
+3. moveNr is private and incremented in exactly two places:
+     line 230  in    boolean setlastMove(final int xin, final int yin)
+     line 492  in    private void redoSingleMove()
+(eval):48: command not found: moves
+(eval):48: command not found: moves
+   redoSingleMove() needs a populated  list;  is mutated in
+   exactly two places:
+     112:      moves.clear();
+     228:            moves.add(moveNr, new Move(xin, yin));
+   moves.clear() is in prepareNewMatch() -> RightPanel.getInstance()
+   moves.add()   is in setlastMove()     -> appendLastMoveList()
+
+4. setlastMove() reaches a forbidden GUI class:
+        private void appendLastMoveList()
+        {
+           moveList += getMoveString(getMoveNr());
+        }
+        private String getMoveString(final int nr)
+        {
+           int x, y;
+           x = getMoveX(nr);
+           y = getMoveY(nr);
+
+           return new StringBuffer()
+                 .append(getMoveNr() <= 1 ? "" : System.getProperty("line.separator")).append(
+                 getMoveNr()).append(".  ").append(GuiBoard.getHoleName(x, y, true)).toString();
+        }
+
+
+5. Every Match field is private, so same-package code cannot set them:
+     35:   private MatchData matchData;
+     38:   private int nextPlayer;
+     46:   private int highestMoveNr;
+     49:   private int moveNr;
+
+CONCLUSION: reaching a search-exercising computeMove() requires EITHER
+reflection into private state OR loading a GUI class. The authorization
+forbids the GUI class and does not contemplate reflection, so E2 stops
+here rather than choosing between them.

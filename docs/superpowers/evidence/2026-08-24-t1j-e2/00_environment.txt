@@ -1,0 +1,16 @@
+E2 environment — recorded 2026-08-24T20:52:48Z
+platform: Darwin 25.5.0 arm64  macOS 26.5.1
+
+== java ==
+  The operation couldn’t be completed. Unable to locate a Java Runtime.
+  Please visit http://www.java.com for information on installing Java.
+
+== javac ==
+  The operation couldn’t be completed. Unable to locate a Java Runtime.
+  Please visit http://www.java.com for information on installing Java.
+
+== which ==
+  java:  /usr/bin/java
+  javac: /usr/bin/javac
+== JAVA_HOME ==
+  <unset>
