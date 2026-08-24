@@ -58,6 +58,8 @@ knob) is not a new hypothesis.
 
 > **Product-model alignment, Phase 3 — ANSWERED 2026-08-22 (updates the "only open workstream" row above).** The product-stack comparison ran and selected the candidate `c34b7ff3297c785a` as the served default; the baseline is retained as rollback. This is an engineering result about served bytes, not a research one — it authorizes nothing here and `calib020_0001` is unaffected. **Merged, deployed and verified 2026-08-22; the workstream is now CLOSED.** Full entry and deployment closeout: [Product-model alignment, Phase 3](#product-model-alignment-phase-3--candidate-selected-and-served-2026-08-22).
 
+> **External anchor — SOUGHT, QUALIFIED, RUN AND REJECTED 2026-08-24 (updates the "external anchor" row of the benchmark hierarchy).** An independently trained engine (twixtbot, MIT) was configured to our exact rules and run over 128 games; it won **all of them**, scoring **1.000 against both `0379` and `calib020_0001` at every `trials` setting**, including with no search at all. No setting was unsaturated, so the anchor is **rejected** and **no usable external strength anchor exists**. This does not disturb any internal result: both checkpoints were decisively weaker than twixtbot **under the tested protocol**, an external ORDERING that sibling-vs-sibling Elo could not reveal — not a statement about absolute strength, since the anchor was never calibrated either. See do-not-repeat **#52** and [External anchor — twixtbot](#external-anchor--twixtbot-run-2026-08-24--rejected-no-usable-external-anchor-exists).
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1433,6 +1435,69 @@ inference arbiter**. That is a candidate configuration for a future card, not st
 to launch a run. **No training is active or authorized by this section.** The next activity, if the
 programme is intentionally reopened, is hypothesis selection and preregistration—not training.
 
+## External anchor — twixtbot, RUN 2026-08-24 — REJECTED; NO USABLE EXTERNAL ANCHOR EXISTS
+
+**This closes the question the whole programme deferred.** Every Elo in this ledger is
+sibling-vs-sibling; the closeout table says an ongoing programme needs an **external strength
+anchor** before any absolute-progress claim. One was found, qualified and run. It failed.
+
+**The anchor.** `github.com/stevens68/twixtbot-ui` @ `83749f230a0bae1766b46a05bfde0ed87f0a9a0a`
+(MIT; wraps `BonyJordan/twixtbot`), an independently trained TwixT AlphaZero engine. Configured to
+our exact rules — 24×24, automatic links, no link removal, own-link crossing **off**, swap **off**
+— and driven through an adapter that asserts **per-ply state equivalence** (pegs, bridges as
+order-independent endpoint pairs, side to move, full legal-move set, terminal status, winner) with
+an external 280-ply cap applied identically to both engines.
+
+**The run.** One authorized execution, repo `bcb72bf`, 3h 28m 49s, **128/128 games, 0 aborts**,
+seeds `[202611128, 202611256)` each used exactly once. 8 openings × both colour arms × 4 `trials`
+settings × 2 references, 16 games per cell.
+
+| `trials` | vs `0379` | vs `calib020_0001` | non-saturated? |
+|---|---|---|---|
+| 0 — raw policy, **no search** | **1.000** (16) | **1.000** (16) | ✗ |
+| 100 | **1.000** (16) | **1.000** (16) | ✗ |
+| 400 | **1.000** (16) | **1.000** (16) | ✗ |
+| 1000 | **1.000** (16) | **1.000** (16) | ✗ |
+
+**The anchor won all 128 games**, 64/64 as red and 64/64 as black. Mean game length 35 plies
+(min 27, max 49); the 280-ply cap was never approached. Pass condition was **non-saturation only**
+— score rate within `[0.15, 0.85]` against BOTH references — deliberately *not* agreement with our
+internal ordering, since requiring an external reference to reproduce our own result would make it
+incapable of contradicting us. `passing_trials: []`, `selected_trials: null`.
+
+**Verdict: the anchor is REJECTED, and no usable external anchor exists.** It cannot calibrate
+against our checkpoints because it never loses to them — at `trials=0` it uses **raw policy with no
+search at all** and still beat `calib020_0001` at 400 simulations 16 times out of 16.
+
+**What this establishes.** Both checkpoints were decisively weaker than twixtbot under the tested protocol; sibling-vs-sibling Elo could not reveal that external ordering. It is an ORDERING under this frozen protocol, not a
+statement about absolute strength: **the anchor itself was never calibrated against anything**, so
+its own strength is unknown and our checkpoints inherit no absolute placement from losing to it.
+The programme's internal results remain valid as *relative* statements and are unaffected —
+`calib020_0001` still stands as the best-supported checkpoint by the evidence that selected it.
+
+**What it does NOT establish.** No Elo, no absolute strength number, and no lower bound on the size
+of the gap — a 1.000 score rate bounds nothing. No rules-matched comparison either: the anchor's
+network was trained with own-link crossings **allowed** and played here with them **forbidden**, a
+limitation recorded from the feasibility audit onward and never measured. And nothing about
+`calib020_0001` versus `0379`: the anchor is **flat** at 1.000 against both, so the descriptive
+ordering read-out returned no information.
+
+**Seed accounting.** Reserved `[202611000, 202611400)` = 400. Consumed: `202611000` (a preflight
+smoke that played one real 400-simulation move) and `[202611128, 202611256)` (G3). **271 remain
+unused.** See do-not-repeat **#52**.
+
+**Evidence.** `docs/superpowers/evidence/2026-08-24-twixtbot-g3/` — the runtime artifacts
+byte-for-byte, including the untouched `g3_results.jsonl` (130 records: header, 128 games with full
+move lists and complete anchor visit arrays, terminal verdict). Card:
+`docs/superpowers/2026-08-22-twixtbot-anchor-pilot-card.md`. Six preflight packages under
+`docs/superpowers/evidence/2026-08-23-twixtbot-g3-preflight*/`.
+
+**Descriptive by-product — visit concentration.** Non-zero visit slots per anchor move averaged
+**5.1 / 9.2 / 17.3** at `trials` 100/400/1000, while the top-move visit share stayed **~0.83** at
+every setting. Concentration is real and *widens* with search. Recorded because it was an open
+question; it is not a gate and did not affect the ladder or the verdict.
+
+
 ## What got better vs worse
 
 **Improved — A (black pre-drop):** targeted correction is **real**. The strongest A correction so far is **v4 teacher-retention**: mean **−0.305**, over **13.3%**, severe **6.7%** (from baseline mean +0.257 / over 50.0% / severe 43.3%). This is an A-only success, not a promotion candidate, because B/C/D failed.
@@ -1520,6 +1585,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 **#50 addendum (2026-08-11, second) — the single-owner arbiter survived REAL MCTS COMPOSITION; the two-server prohibition is UNCHANGED.** The first addendum recorded the arbiter passing synthetic load. The composition smoke (`docs/superpowers/2026-08-11-frozen-opponent-flag-lift-card.md`, execution commit `50324a45`) then drove the real path — `run_parallel_selfplay` → `self_play_worker` → dual-root `play_game` → MCTS → two `RemoteEvaluator`s → the arbiter — with real games: **4/4 generated, exactly one observed inference thread, learner-only buffered rows with an exact 2/2 colour split, server thread recorded and confirmed stopped, and `mixed_model_flushes = 38`.** That last figure matters most: **mixed-model grouping inside one flush has now actually executed on the device**, which neither the arbiter smoke (where `B` equalled the row cap, so every request was its own batch) nor any stub test could reach. Traffic was **ragged and partially coalesced** — 360 vs 320 requests, 2,231 vs 1,668 rows, batches below request counts — i.e. the real variable-size behaviour. **Nothing about the prohibition changes:** two independent servers remain forbidden, and this smoke tested neither that nor routing correctness (both instances loaded the SAME checkpoint, so a crossed response would be invisible — routing rests on the two-checkpoint arbiter smoke `9c5847a0`). `--frozen-opponent-checkpoint` remained blocked throughout and after; lifting it is a separate reviewed diff, and no training is authorized.
 
 51. **Frozen-parent opposition from `calib020_0001`, in any dose or shape — the mechanism is CLOSED.** The `fp6` run (execution commit `13dd72f`, 2026-08-12) scored `0.46625`, CI95 `[0.4177, 0.5148]`, Elo `−23.5`, CI95 `[−57.7, +10.3]`. **The bar was not met.** Do **not** change the dose or warmup size, add a second opponent or an opponent pool, extend beyond five iterations, evaluate or select from iterations 1–4, run a larger match to "resolve" the parity, or run the **0379 generalization match** — that was conditional on a bar-met result and is not licensed by a non-pass. **Keep `calib020_0001`.** Read the result exactly: the candidate was **not shown stronger and not shown weaker at this dose** — both intervals include parity, so it is **not statistically distinguishable** from the parent, which is **not** the same as equal. The unresolved parity is **not** an invitation to buy resolution with more games; that would be a post-hoc power increase chosen after seeing the interval. The preregistered `0.47–0.51` / ~10% forecast matched **approximately**, and **one non-pass validates no probability**. The `cont5`→`warm5`→`fp6` improvement is **descriptive across separate runs, not paired or causal**. Iteration 1's anomalous 8,114.9 s is an **infrastructure observation** and carries no scientific weight. **`#50` is unchanged** — two independent inference servers on one Metal device remain forbidden; the single arbiter is what made this run possible and it held at full scale.
+
+52. **The twixtbot external-anchor pilot, in this shape — RUN AND REJECTED 2026-08-24; do not retry it.** One authorized 128-game run (repo `bcb72bf`, clone `83749f2`, seeds `[202611128, 202611256)`) returned **1.000 for the anchor against BOTH references at EVERY `trials` setting**, including `trials=0` where it uses raw policy and no search. `passing_trials: []`. Do **not** alter the `trials` ladder, relax the `[0.15, 0.85]` band, change or add openings, grant the anchor a rules change or handicap, add games, or hunt a weaker anchor configuration — every one of those was excluded before the result, and choosing any of them now is post-hoc selection against a recorded outcome. Do **not** re-run this pilot to "confirm" a 128/128 sweep. **Read the result exactly:** **both checkpoints were decisively weaker than twixtbot under the tested protocol, and sibling-vs-sibling Elo could not reveal that external ordering** — an ordering, NOT a statement about absolute strength, since the anchor was itself never calibrated; it gives **no Elo, no absolute number and no lower bound on the gap**, and it is **not** a rules-matched comparison, because the anchor's net was trained with own-link crossings allowed and played with them forbidden. It says **nothing** about `calib020_0001` versus `0379` — the anchor is flat against both. **`calib020_0001` is unaffected and still stands.** A future external anchor must be a *different* engine or a rules-matched one, and needs its own scope; the recorded fallback for strength work is the capacity-headroom probe on the existing replay corpus, which is unauthorized. Infrastructure that survives and is qualified: the adapter with per-ply state equivalence (`scripts/GPU/alphazero/twixtbot_adapter.py`), the seeded reference agent, and a fail-closed runner whose **exit status is the gate** (0 pass / 1 fail / 2 aborted / 3 precondition).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 

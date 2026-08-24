@@ -1,0 +1,26 @@
+# G3 — the single authorized run, 2026-08-24 — RESULT: FAILED (exit 1)
+
+THE ANCHOR IS REJECTED. twixtbot won all 128 games: score rate 1.000 against
+BOTH references at EVERY trials setting, including trials=0 (raw policy, no
+search). No setting is unsaturated, so per the pilot card's stopping rule the
+anchor is rejected and no external anchor is available.
+
+Run from repo bcb72bf against pinned clone 83749f2, 3h 28m 49s, 128/128 games,
+0 aborts. Seeds [202611128, 202611256) consumed exactly once each.
+
+These are the RUNTIME artifacts, copied byte-for-byte and not regenerated.
+g3_results.jsonl holds 130 records: 1 run header, 128 games (each with its full
+move list, and the complete anchor visit array per searched move), 1 terminal
+verdict. It is the untouched output of the run.
+
+Covers the eight artifacts listed. This manifest does not list itself.
+Verify:  shasum -a 256 -c <(grep -E '^[0-9a-f]{64}  ' MANIFEST.sha256)
+
+e87fc8d307af9096bbafb1d6bcc8e04e48fa98108e6fc8775a45fd9867351684  00_environment.txt
+3fd248232681330d190108bf92051d6cfe127cbd8de26b3132a493f84a88327a  02_run.stdout.txt
+4e1ad36fb4a623209408659694e86a13c5791a45a59053617a0fb0651a6860ce  03_run.stderr.txt
+4bf4fca02e6eeaf7f1c510b82c756e7f8a3c567a230bae1094b254adc774f38b  04_exit.txt
+4fff54407c8da367ed324a12c5fa3fb3884cb0d228e572056bf5f1a13481e124  05_pip_freeze.txt
+f207be52fcfddce2f831007b65b517a1d6091219889e85519fddc4151441d965  g3_results.jsonl
+2be02e5984fb8c6a35e75f08d67d95913ff56540d54feaf744fcf440e574cc9b  _start_epoch
+9b6f8723d90b328c7edaaa01cb9511ef55fe0f4cad1783f5b33e86010050ab19  _end_utc

@@ -1,0 +1,24 @@
+=== G3 RUN — the single authorized execution ===
+date_utc_start: 2026-08-24T02:40:25Z
+host: Darwin Mac.router0017e4.com 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:06 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6030 arm64
+arch: arm64
+interpreter: Python 3.13.15 at /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/329eff18-2b64-4ac5-ad21-b60447810721/scratchpad/g3venv/bin/python3.13
+cwd: /Users/bill/projects/TwixT_Game
+repo HEAD: bcb72bf6fbdfea1e86dd363b1f536973a5ad7e43
+repo clean: yes
+clone HEAD: 83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+clone clean: yes
+
+=== EXACT COMMAND ===
+<scratchpad>/g3venv/bin/python3.13 -m scripts.GPU.alphazero.twixtbot_g3_runner \
+  --clone-root <scratchpad>/twixtbot-ui \
+  --repo-root /Users/bill/projects/TwixT_Game \
+  --results-path <scratchpad>/g3_run/g3_results.jsonl
+
+=== AUTHORIZATION ===
+canonical 128 games; seeds [202611128, 202611256); run exactly once;
+no retry, repair, threshold change, extra game or alternate setting.
+exit 0 = PASS | 1 = completed FAIL, anchor rejected | 2 = aborted | 3 = precondition refused
+date_utc_end: 2026-08-24T06:09:14Z
+elapsed_seconds: 12529   (3h 28m 49s; mean 97s/game over 128 games)
+exit_code: 1  = completed G3 FAIL, anchor REJECTED

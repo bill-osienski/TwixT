@@ -1,6 +1,70 @@
 # Pilot card — twixtbot as an external strength anchor
 
-**Date:** 2026-08-22 · **Status: DRAFT, nothing authorized to run.** · **Scope: anchor calibration only.**
+**Date:** 2026-08-22 · **Status: CLOSED 2026-08-24 — G3 RAN AND FAILED; the anchor is REJECTED.**
+· **Scope: anchor calibration only.**
+
+---
+
+## RESULT (2026-08-24) — G3 FAILED, exit 1, twixtbot rejected
+
+One authorized run from repo `bcb72bf` against pinned clone `83749f2`.
+**128/128 games, 0 aborts, 3h 28m 49s** = 12,529 s (mean **97.9 s/game**; the run's own
+`00_environment.txt` records `97` from integer division and is left untouched as an artifact).
+Evidence:
+`docs/superpowers/evidence/2026-08-24-twixtbot-g3/`.
+
+**The anchor won every game.**
+
+| `trials` | vs `0379` | vs `calib020_0001` | non-saturated? |
+|---|---|---|---|
+| 0 — raw policy, **no search** | **1.000** (16) | **1.000** (16) | ✗ |
+| 100 | **1.000** (16) | **1.000** (16) | ✗ |
+| 400 | **1.000** (16) | **1.000** (16) | ✗ |
+| 1000 | **1.000** (16) | **1.000** (16) | ✗ |
+
+`passing_trials: []`, `selected_trials: null`, band `[0.15, 0.85]`. Colour arms balanced 64/64;
+the anchor won all 64 as red and all 64 as black. Games were short — mean **35 plies**
+(min 27, max 49); the 280-ply cap was never approached.
+
+**DECISION, by this card's own stopping rule: no setting is unsaturated → REJECT twixtbot as an
+anchor.** It cannot calibrate against our checkpoints because it never loses to them. **No usable
+external strength anchor exists.** The recorded fallback is the capacity-headroom probe on the
+existing replay corpus — a separate, unauthorized piece of work.
+
+### What this establishes, and what it does not
+
+**Establishes:** an independently trained engine, playing our exact rules with per-ply state
+equivalence enforced, beats both `0379` and `calib020_0001` in every one of 128 games — including
+at `trials=0`, where it uses **raw policy and no search at all** against our 400-simulation
+reference. Both checkpoints were decisively weaker than twixtbot under the tested protocol; sibling-vs-sibling Elo could not reveal that external ordering.
+
+That is a statement about an **ordering under this frozen protocol**, not about absolute strength.
+The anchor itself was never calibrated against anything, so "how strong is twixtbot" is unknown and
+our checkpoints inherit no absolute placement from losing to it.
+
+**Does NOT establish:** any Elo, any absolute strength number, or any rules-matched comparison —
+twixtbot's network was trained with own-link crossings ALLOWED and played here with them forbidden,
+a limitation recorded since the feasibility audit and never measured. It says nothing about
+`calib020_0001` versus `0379`: the anchor is **flat** at 1.000 against both, so the ordering
+read-out this card deliberately kept descriptive returned no information — which is exactly why it
+was never a gate. A 1.000 score rate also places no lower bound on the size of the gap.
+
+### Seed accounting (final)
+
+| | |
+|---|---|
+| reserved | `[202611000, 202611400)` — 400 seeds |
+| consumed by a preflight smoke | `202611000` (attempt 2, a real 400-sim move) |
+| consumed by G3 | `[202611128, 202611256)` — 128, each exactly once |
+| **remaining unused** | **271** |
+
+### Do not retry
+
+Excluded before the result and still excluded: altered `trials`, a relaxed band, different or extra
+openings, a rules change or handicap for the anchor, additional games, or any hunt for a weaker
+anchor configuration. Each would be post-hoc selection against a recorded outcome.
+
+---
 
 This card **cannot** promote a checkpoint, produce a strength claim, or authorize training. Its only
 output is a yes/no on whether twixtbot is usable as an external anchor, and if yes, at which setting.
