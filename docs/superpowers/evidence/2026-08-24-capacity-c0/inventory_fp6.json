@@ -1,0 +1,314 @@
+{
+ "distributions": {
+  "board_size": {
+   "24": 1500
+  },
+  "config_hash": {
+   "alphazero": 1500
+  },
+  "depth": {
+   "400": 1500
+  },
+  "mode": {
+   "alphazero": 1500
+  },
+  "move_key_signature": {
+   "bridges_created|col|heuristics|player|root_top1_share|row|search_score|turn": 1500
+  },
+  "reason": {
+   "state_cap": 24,
+   "win": 1476
+  },
+  "simulations": {
+   "400": 1500
+  },
+  "starting_player": {
+   "black": 762,
+   "red": 738
+  },
+  "timestamp_date": {
+   "2026-08-11": 1106,
+   "2026-08-12": 394
+  },
+  "top_key_signature": {
+   "config_hash|depth|goal_completion_diagnostics|goal_completion_diagnostics_meta|goal_completion_record|id|meta|moves|opening_diagnostics|opening_diagnostics_meta|recovery_retargeting_record|seed|starting_player|timestamp|winner": 1500
+  },
+  "winner": {
+   "black": 725,
+   "draw": 24,
+   "red": 751
+  }
+ },
+ "eligible": {
+  "digest": "6b7f040e76153a840d68ab3fafa7a54f4372c4fb26f2fa76c385ef35beb77390",
+  "games": 1476,
+  "iteration_max": 4,
+  "iteration_min": 0,
+  "iterations_present": 5,
+  "plies_per_game": {
+   "max": 159,
+   "median": 59,
+   "min": 33,
+   "p05": 42,
+   "p95": 84
+  },
+  "positions": 89285,
+  "predicate": {
+   "board_size": 24,
+   "iteration_in_intact_suffix": true,
+   "reason": "win"
+  },
+  "winner": {
+   "black": 725,
+   "red": 751
+  }
+ },
+ "files": {
+  "directory_digest": "ba0a2865cd3029018ded1bab0ad9eea875a213efd3e2150e17f1c3afdc60f6e9",
+  "n_games": 1500,
+  "n_json": 1505,
+  "n_stats": 5,
+  "total_bytes": 93200863
+ },
+ "iterations": {
+  "count": 5,
+  "games_per_iteration": {
+   "200": 4,
+   "700": 1
+  },
+  "max": 4,
+  "min": 0
+ },
+ "leakage_lower_bound_exact_prefix": {
+  "by_ply": {
+   "0": [
+    146,
+    146
+   ],
+   "1": [
+    146,
+    146
+   ],
+   "10": [
+    0,
+    146
+   ],
+   "11": [
+    0,
+    146
+   ],
+   "12": [
+    0,
+    146
+   ],
+   "13": [
+    0,
+    146
+   ],
+   "14": [
+    0,
+    146
+   ],
+   "15": [
+    0,
+    146
+   ],
+   "2": [
+    146,
+    146
+   ],
+   "3": [
+    116,
+    146
+   ],
+   "4": [
+    23,
+    146
+   ],
+   "5": [
+    3,
+    146
+   ],
+   "6": [
+    0,
+    146
+   ],
+   "7": [
+    0,
+    146
+   ],
+   "8": [
+    0,
+    146
+   ],
+   "9": [
+    0,
+    146
+   ]
+  },
+  "first_ply_with_zero_overlap": 6,
+  "matched_in_train": 580,
+  "ply_ge_16": [
+   0,
+   6311
+  ],
+  "test_positions": 8647
+ },
+ "leakage_upper_bound_pegset": {
+  "by_ply": {
+   "0": [
+    146,
+    146
+   ],
+   "1": [
+    146,
+    146
+   ],
+   "10": [
+    0,
+    146
+   ],
+   "11": [
+    0,
+    146
+   ],
+   "12": [
+    0,
+    146
+   ],
+   "13": [
+    0,
+    146
+   ],
+   "14": [
+    0,
+    146
+   ],
+   "15": [
+    0,
+    146
+   ],
+   "2": [
+    146,
+    146
+   ],
+   "3": [
+    122,
+    146
+   ],
+   "4": [
+    35,
+    146
+   ],
+   "5": [
+    6,
+    146
+   ],
+   "6": [
+    1,
+    146
+   ],
+   "7": [
+    1,
+    146
+   ],
+   "8": [
+    0,
+    146
+   ],
+   "9": [
+    0,
+    146
+   ]
+  },
+  "first_ply_with_zero_overlap": 8,
+  "matched_in_train": 603,
+  "ply_ge_16": [
+   0,
+   6311
+  ],
+  "test_positions": 8647
+ },
+ "provenance": {
+  "excluded_games": 0,
+  "excluded_iterations": [],
+  "intact_iterations": [
+   0,
+   4
+  ],
+  "iteration_timestamp_windows": {
+   "0": [
+    "2026-08-11T20:45:53.812141+00:00",
+    "2026-08-11T22:59:01.931682+00:00"
+   ],
+   "1": [
+    "2026-08-11T23:00:48.221379+00:00",
+    "2026-08-11T23:27:25.679834+00:00"
+   ],
+   "2": [
+    "2026-08-11T23:29:11.368029+00:00",
+    "2026-08-11T23:57:13.342861+00:00"
+   ],
+   "3": [
+    "2026-08-11T23:58:55.809199+00:00",
+    "2026-08-12T00:35:50.308312+00:00"
+   ],
+   "4": [
+    "2026-08-12T00:37:56.061110+00:00",
+    "2026-08-12T01:11:39.952173+00:00"
+   ]
+  },
+  "rule": "longest increasing-timestamp suffix of iterations"
+ },
+ "root": "logs/selfplay/fp6_from_calib020",
+ "schema_version": 1,
+ "split": {
+  "arms": {
+   "test": {
+    "games": 146,
+    "iterations_present": 5,
+    "min_games_per_iteration": 10,
+    "positions": 8647,
+    "winner": {
+     "black": 68,
+     "red": 78
+    }
+   },
+   "train": {
+    "games": 1191,
+    "iterations_present": 5,
+    "min_games_per_iteration": 154,
+    "positions": 72197,
+    "winner": {
+     "black": 592,
+     "red": 599
+    }
+   },
+   "val": {
+    "games": 139,
+    "iterations_present": 5,
+    "min_games_per_iteration": 13,
+    "positions": 8441,
+    "winner": {
+     "black": 65,
+     "red": 74
+    }
+   }
+  },
+  "bounds": {
+   "test": 100,
+   "train": 80,
+   "val": 90
+  },
+  "rule": "sha1(game_id) % 100"
+ },
+ "structural": {
+  "distinct_move_sequences": 1500,
+  "duplicate_ids_extra": 0,
+  "duplicate_move_sequences_extra": 0,
+  "files_with_policy_targets": 0,
+  "n_moves_field_mismatch": 0,
+  "positions_total": 96005,
+  "turn_sequence_anomaly": 0
+ }
+}

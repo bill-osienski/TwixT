@@ -1,0 +1,77 @@
+Prior references to each replay corpus -- C0, read-only, enumerated by grep.
+repo HEAD d8ea09313b4a65309af765f6edeb16541d9cda35
+
+This lists where each corpus PATH is named in tracked files. It records what
+reads or documents the corpus; it is not a claim about which experiments
+consumed which games.
+
+==============================================================
+PATH: scripts/GPU/logs/games
+--- tracked files naming it (git ls-files scope):
+    docs/analysis-metrics-guide.md
+    docs/archived-plans/2026-04-12-opening-penalty-diagnostics.md
+    docs/archived-plans/resign-feature-selfplay.md
+    docs/post-game-analysis.md
+    docs/probe-suite-generation.md
+    docs/superpowers/plans/2026-04-19-connectivity-retrain.md
+    docs/superpowers/plans/2026-04-21-probes-and-calibration-closure.md
+    docs/superpowers/plans/2026-04-28-probe-phase2-parallel-labeling.md
+    docs/superpowers/plans/2026-04-28-strong-advantage-probe-tier.md
+    docs/superpowers/plans/2026-04-29-analyzer-per-game-stats.md
+    docs/superpowers/plans/2026-04-29-per-game-stats-persistence.md
+    docs/superpowers/plans/2026-05-03-goal-completion-diagnostics.md
+    docs/superpowers/plans/2026-05-05-goal-completion-inline-records.md
+    docs/superpowers/plans/2026-05-10-closeout-tail-correction.md
+    docs/superpowers/plans/2026-05-12-recovery-retargeting-diagnostic.md
+    docs/superpowers/plans/2026-05-13-recovery-retargeting-filtered-view.md
+    docs/superpowers/plans/2026-05-19-marathon-termination-tuning.md
+    docs/superpowers/plans/2026-06-25-targeted-value-calibration-v3-tag-stratified-sampling.md
+    docs/superpowers/specs/2026-04-19-connectivity-retrain-design.md
+    docs/superpowers/specs/2026-04-21-probes-and-calibration-closure-design.md
+    docs/superpowers/specs/2026-04-28-probe-phase2-parallel-labeling-design.md
+    docs/superpowers/specs/2026-04-28-strong-advantage-probe-tier-design.md
+    docs/superpowers/specs/2026-04-29-analyzer-per-game-stats-design.md
+    docs/superpowers/specs/2026-04-29-per-game-stats-persistence-design.md
+    docs/train-cli.md
+    scripts/GPU/alphazero/game_saver.py
+    scripts/GPU/alphazero/opening_diagnostics.py
+    scripts/GPU/alphazero/train.py
+    scripts/GPU/debug_game_replay.py
+    scripts/GPU/replay/opening_book.py
+    scripts/GPU/replay/recorder.py
+    scripts/build_probe_candidates.py
+    scripts/build_probe_suite.py
+    scripts/probes/benchmark_phase2_knobs.py
+    scripts/probes/generate_golden_phase2_serial_fixture.py
+    scripts/probes/verify_parallel_equivalence.py
+    tests/probes/README.md
+    tests/test_analyzer_phase2_smoke.py
+    tests/test_probe_phase2_parallel.py
+    tests/test_probe_suite_forced_parity.py
+    tests/test_probe_suite_schema.py
+    tests/test_strong_advantage_diversity_selector.py
+    tests/test_strong_advantage_probe_suite.py
+    tests/test_strong_advantage_smoke_live.py
+    tests/test_trainer_forced_probe_live.py
+    tests/test_training.py
+
+==============================================================
+PATH: logs/selfplay/cont5_from_calib020
+--- tracked files naming it (git ls-files scope):
+    docs/superpowers/2026-08-08-training-continuation-experiment-card.md
+
+==============================================================
+PATH: logs/selfplay/warm5_from_calib020
+--- tracked files naming it (git ls-files scope):
+    docs/superpowers/2026-08-08-parent-replay-bootstrap-experiment-card.md
+
+==============================================================
+PATH: logs/selfplay/fp5_from_calib020
+--- tracked files naming it (git ls-files scope):
+    docs/superpowers/2026-08-10-frozen-parent-opponent-experiment-card.md
+    docs/superpowers/2026-08-11-frozen-opponent-acceptance-card.md
+
+==============================================================
+PATH: logs/selfplay/fp6_from_calib020
+--- tracked files naming it (git ls-files scope):
+    docs/superpowers/2026-08-11-frozen-parent-training-experiment-card.md

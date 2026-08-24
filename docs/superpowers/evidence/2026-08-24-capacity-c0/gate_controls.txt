@@ -1,0 +1,51 @@
+capacity_c0_inventory gate controls - 2026-08-24T14:43:12Z
+repo HEAD d8ea09313b4a65309af765f6edeb16541d9cda35  python Python 3.14.7
+
+--- P1 verify true corpus vs its own inventory -> expect 0
+    exit=1
+    Traceback (most recent call last):
+      File "<frozen runpy>", line 203, in _run_module_as_main
+      File "<frozen runpy>", line 88, in _run_code
+      File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/capacity_c0_inventory.py", line 459, in <module>
+--- N1 one eligible-game count incremented -> expect 3
+    exit=1
+    Traceback (most recent call last):
+      File "<frozen runpy>", line 203, in _run_module_as_main
+      File "<frozen runpy>", line 88, in _run_code
+      File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/capacity_c0_inventory.py", line 459, in <module>
+--- N2 directory digest replaced -> expect 3
+    exit=1
+    Traceback (most recent call last):
+      File "<frozen runpy>", line 203, in _run_module_as_main
+      File "<frozen runpy>", line 88, in _run_code
+      File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/capacity_c0_inventory.py", line 459, in <module>
+--- N3 provenance range widened to include clobbered iters -> expect 3
+    exit=1
+    Traceback (most recent call last):
+      File "<frozen runpy>", line 203, in _run_module_as_main
+      File "<frozen runpy>", line 88, in _run_code
+      File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/capacity_c0_inventory.py", line 459, in <module>
+--- N4 a whole section deleted from the inventory -> expect 3
+    exit=1
+    Traceback (most recent call last):
+      File "<frozen runpy>", line 203, in _run_module_as_main
+      File "<frozen runpy>", line 88, in _run_code
+      File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/capacity_c0_inventory.py", line 459, in <module>
+--- N5 correct inventory pointed at a DIFFERENT corpus -> expect 3
+    exit=1
+    Traceback (most recent call last):
+      File "<frozen runpy>", line 203, in _run_module_as_main
+      File "<frozen runpy>", line 88, in _run_code
+      File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/capacity_c0_inventory.py", line 459, in <module>
+--- N6 nonexistent root -> expect 2
+    exit=2
+    PRECONDITION: scripts/GPU/logs/no_such_dir
+--- N7 corrupt inventory file -> expect 2
+    exit=2
+    PRECONDITION: JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+--- N8 emit refuses to overwrite existing evidence -> expect 2
+    exit=2
+    REFUSING: docs/superpowers/evidence/2026-08-24-capacity-c0/inventory_games.json exists; evidence is create-only
+--- P2 selftest -> expect 0
+    exit=0
+    selftest OK

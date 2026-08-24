@@ -1,0 +1,54 @@
+Architecture history and measured training throughput -- C0, read-only.
+Source: checkpoints/**/metrics.csv, written by trainer.py per iteration.
+repo HEAD d8ea09313b4a65309af765f6edeb16541d9cda35
+
+metrics.csv files scanned: 39
+iteration rows scanned:    655
+
+(network_hidden, network_blocks) over every recorded run:
+    hidden=128 blocks=6  rows=655
+
+Recorded training throughput (rows with train_wall_s > 0 and a step count).
+Rows with wall < 1 s are DEGENERATE -- the timer bracketed no work -- and are
+shown but excluded from the summary below. That exclusion is a property of the
+timer, decided before looking at any rate, not a filter on the rates themselves.
+
+    alphazero-v2-cont5-from-calib020             iter=  1 wall=   56.12s steps=   160 batch=64 ->     2.851 steps/s,        182.5 positions/s
+    alphazero-v2-cont5-from-calib020             iter=  2 wall=   56.56s steps=   160 batch=64 ->     2.829 steps/s,        181.0 positions/s
+    alphazero-v2-cont5-from-calib020             iter=  3 wall=   56.31s steps=   160 batch=64 ->     2.841 steps/s,        181.9 positions/s
+    alphazero-v2-cont5-from-calib020             iter=  4 wall=   56.30s steps=   160 batch=64 ->     2.842 steps/s,        181.9 positions/s
+    alphazero-v2-cont5-from-calib020             iter=  5 wall=   56.48s steps=   160 batch=64 ->     2.833 steps/s,        181.3 positions/s
+    alphazero-v2-fp6-from-calib020               iter=  1 wall=   55.03s steps=   160 batch=64 ->     2.908 steps/s,        186.1 positions/s
+    alphazero-v2-fp6-from-calib020               iter=  2 wall=   54.95s steps=   160 batch=64 ->     2.912 steps/s,        186.4 positions/s
+    alphazero-v2-fp6-from-calib020               iter=  3 wall=   55.32s steps=   160 batch=64 ->     2.892 steps/s,        185.1 positions/s
+    alphazero-v2-fp6-from-calib020               iter=  4 wall=   62.75s steps=   160 batch=64 ->     2.550 steps/s,        163.2 positions/s
+    alphazero-v2-fp6-from-calib020               iter=  5 wall=   55.70s steps=   160 batch=64 ->     2.873 steps/s,        183.9 positions/s
+    alphazero-v2-staged                          iter=  1 wall=    0.00s steps=   200 batch=64 -> 700218.838 steps/s,   44814005.6 positions/s  <-- DEGENERATE, excluded
+    alphazero-v2-warm5-from-calib020             iter=  1 wall=   56.84s steps=   160 batch=64 ->     2.815 steps/s,        180.1 positions/s
+    alphazero-v2-warm5-from-calib020             iter=  2 wall=   56.48s steps=   160 batch=64 ->     2.833 steps/s,        181.3 positions/s
+    alphazero-v2-warm5-from-calib020             iter=  3 wall=   56.89s steps=   160 batch=64 ->     2.812 steps/s,        180.0 positions/s
+    alphazero-v2-warm5-from-calib020             iter=  4 wall=   56.73s steps=   160 batch=64 ->     2.820 steps/s,        180.5 positions/s
+    alphazero-v2-warm5-from-calib020             iter=  5 wall=   57.46s steps=   160 batch=64 ->     2.785 steps/s,        178.2 positions/s
+
+    kept n=15 of 16; every kept row is hidden=128 blocks=6, batch=64
+    steps/s:     min=2.550 median=2.833 max=2.912
+    positions/s: min=163.2 median=181.3 max=186.4
+
+Analytic parameter count for AlphaZeroNetwork(in_channels=30, hidden=H, n_blocks=B),
+summed from network.py: conv1 + bn1 + B x ResBlock + PolicyHead + ValueHead.
+No network is instantiated to produce this -- it is arithmetic, cross-checked
+below against the byte size of the shipped 128x6 checkpoint.
+    params(H,B) = 18*B*H^2 + (787 + 6*B)*H + 772
+
+     hidden  blocks      params  x params  x trunk FLOPs
+         96       6   1,075,108    0.573x         0.562x
+        128       6   1,875,588    1.000x         1.000x
+        181       6   3,687,923    1.966x         2.000x
+        256       6   7,289,348    3.886x         4.000x
+
+Cross-check of the formula against the shipped 128x6 checkpoint:
+    checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+    sha1 209cf2d4fd24a48553d259dd71b4954867b9473e  bytes 7,524,333
+    params(128,6) * 4 bytes              = 7,502,352
+    + BatchNorm running mean/var (13 BN) = 7,515,664
+    residual vs file size                = 8,669 bytes (safetensors JSON header)

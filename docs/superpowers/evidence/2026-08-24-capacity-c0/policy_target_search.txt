@@ -1,0 +1,62 @@
+Where the MCTS policy target lives -- C0, read-only.
+repo HEAD d8ea09313b4a65309af765f6edeb16541d9cda35
+
+The AlphaZero policy target is PositionRecord.visit_counts, built in
+scripts/GPU/alphazero/self_play.py:1090 from the search's root visit counts,
+held in ReplayBuffer (trainer.py:1793) and consumed by train_step.
+
+--- (1) Is the replay buffer ever written to disk?
+    NO HITS for any serialisation path -- the buffer is RAM-only.
+
+--- (2) What GameSaver writes per move (game_saver.py):
+    99:            "turn": i + 1,
+    100:            "player": player,
+    101:            "row": int(row),
+    102:            "col": int(col),
+    103:            "bridges_created": [],
+    104:            "heuristics": {},
+    105:            "search_score": rv,
+    106:            "root_top1_share": ts,
+
+--- (3) Files holding a real visit DISTRIBUTION, matched on the JSON key token.
+    Counted separately for per-game replay files and per-iteration stats
+    sidecars, because a bare substring search conflates them: a stats
+    sidecar matches on metric NAMES like best_by_visit while carrying only
+    aggregate region percentages, and the tests/ hits are fixtures.
+    scripts/GPU/logs/games     {'stats sidecar': 414}
+    logs/selfplay              {'stats sidecar': 15}
+    logs/eval                  {'game/other': 929}
+    Replays                    {'summary': 32}
+    runs                       {'game/other': 186}
+    checkpoints                no hits
+    models                     no hits
+    tests                      {'game/other': 188}
+
+--- (4) What the hits actually contain -- opened and counted, not assumed:
+    logs/eval/*_replays  (eval_replay.py schema 2, 928 games in 3 dirs):
+      per ply: selected_visit_count, root_total_visits, n_legal, and `top2`.
+      children recorded per ply over all 43567 plies of the 800-game
+      decisive match: {2: 43567} -- the top 2 of ~500 legal moves.
+      A 2-point summary of the distribution, not the distribution.
+    logs/eval/atlas_pilot2/pilot_run/pilot_artifact.json: 24 rows,
+      96 legs carrying a visit_counts dict of 3-509 entries.
+      These are the 24 atlas pilot games recorded PHASE_GEOMETRY_NO_GO and retired.
+    scripts/GPU/logs/games/iter_NNNN_stats.json (414 of them):
+      occurrences of "visit_counts": 0; of "completed_visit_count": 0.
+      The match is the metric name best_by_visit inside root_child_diagnostics,
+      which holds per-ply REGION PERCENTAGES aggregated over 100 games.
+    runs/mcts_golden_* and runs/probe_lifecycle_*: 279 files -- golden
+      determinism fixtures over 16 fixed probe positions, not games.
+
+--- (5) Cross-check against the committed inventories, which open every game
+        file individually and count the ones carrying a policy target:
+    inventory_cont5.json     games=   500 files_with_policy_targets=0
+    inventory_fp5.json       games=   500 files_with_policy_targets=0
+    inventory_fp6.json       games=  1500 files_with_policy_targets=0
+    inventory_games.json     games= 41400 files_with_policy_targets=0
+    inventory_warm5.json     games=  1000 files_with_policy_targets=0
+
+CONCLUSION: no game corpus on disk carries the MCTS visit distribution.
+A capacity probe on the existing replays therefore cannot use the AlphaZero
+policy target pi. It can use the terminal outcome, and the move the search
+actually played -- a temperature sample from that distribution.
