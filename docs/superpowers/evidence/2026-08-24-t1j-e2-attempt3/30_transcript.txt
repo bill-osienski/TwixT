@@ -1,0 +1,217 @@
+E2 ATTEMPT 3 — execution transcript, commands captured as they ran
+date 2026-08-24T23:59:54Z   host Darwin 25.5.0 arm64   shell 5.3.15(1)-release
+
+########## 1. IDENTITY GATE ##########
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j rev-parse HEAD
+    | b572ed21f1f6b08491f69db32f531fc4b5f50fcd
+    [exit 0]
+
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j status --porcelain
+    | <no stdout>
+    [exit 0]
+
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar
+    | 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar
+    [exit 0]
+
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz
+    | 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz
+    [exit 0]
+
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -version
+    | <no stdout>
+    ! openjdk version "17.0.20.1" 2026-08-18
+    ! OpenJDK Runtime Environment Temurin-17.0.20.1+1 (build 17.0.20.1+1)
+    ! OpenJDK 64-Bit Server VM Temurin-17.0.20.1+1 (build 17.0.20.1+1, mixed mode, sharing)
+    [exit 0]
+
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac -version
+    | javac 17.0.20.1
+    [exit 0]
+
+IDENTITY GATE PASSED
+
+########## 2. HOST PREFERENCE FINGERPRINT — BEFORE ##########
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh BEFORE | tee /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/31_prefs_before.txt
+    | host preference store fingerprint — BEFORE
+    |   dir: /Users/bill/Library/Preferences
+    |   com.apple.java.util.prefs.plist EXISTS  sha256=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  bytes=95  mtime=2025-08-07T23:41:41Z
+    |   any schwagereit/t1j prefs files: 0
+    |   entry count: 523
+    |   listing sha256: 8a111b76dbd59fbae4047af53526e8a4aa3d8c480c447e0b9aafd27d81305fe5
+    |   java-ish entries: 1
+    |     com.apple.java.util.prefs.plist
+    [exit 0]
+
+
+########## 3. SOURCE HASHES ##########
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/src/e2probe/ScratchPrefs.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/src/e2probe/ScratchPrefsFactory.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/src/net/schwagereit/t1j/E3Probe.java
+    | 559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/src/e2probe/ScratchPrefs.java
+    | 09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/src/e2probe/ScratchPrefsFactory.java
+    | 12d7a831dd269a55d3a5154c18b2d03d5855969ff1d0ea314a9b5c7f09d2fca9  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/src/net/schwagereit/t1j/E3Probe.java
+    [exit 0]
+
+
+########## 4. COMPILE (probe + Preferences only; no T1j source) ##########
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac -Xlint:-options -encoding UTF-8 -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar -d /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/src/e2probe/ScratchPrefs.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/src/e2probe/ScratchPrefsFactory.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/src/net/schwagereit/t1j/E3Probe.java
+    | <no stdout>
+    [exit 0]
+
+$ find /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes -name '*.class' | sort
+    | /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes/e2probe/ScratchPrefs.class
+    | /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes/e2probe/ScratchPrefsFactory.class
+    | /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes/net/schwagereit/t1j/E3Probe.class
+    [exit 0]
+
+$ find /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes -name '*.class' | sort | xargs shasum -a 256
+    | aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes/e2probe/ScratchPrefs.class
+    | dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes/e2probe/ScratchPrefsFactory.class
+    | 2ed2d22e21ca1ef7ecd14ebe9ae2e6b08114c3bb1fed9522b4faf76cded2a6e1  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes/net/schwagereit/t1j/E3Probe.class
+    [exit 0]
+
+
+########## 5. THE SINGLE PROBE RUN ##########
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -Xlog:class+load=info:file=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/35_classload.log -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/classes net.schwagereit.t1j.E3Probe > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/33_stdout.txt 2> /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/34_stderr.txt; echo $? > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/36_exit.txt
+    | <no stdout>
+    [exit 0]
+
+--- probe exit status ---
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/36_exit.txt
+    | 4
+    [exit 0]
+
+--- probe stdout ---
+    | == 0. environment, before any T1j class is touched ==
+    |   java.version            = 17.0.20.1
+    |   java.awt.headless       = true
+    |   PreferencesFactory prop = e2probe.ScratchPrefsFactory
+    |   Preferences.userRoot    = e2probe.ScratchPrefs
+    |   PASS   isolated Preferences implementation active before any T1j load
+    |   PASS   headless mode active at start
+    |   host plist sha256 BEFORE = 6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d
+    |   host prefs entries BEFORE = 526
+    |   Window count BEFORE = 0 ; Frame count BEFORE = 0
+    |   PASS   zero java.awt.Window instances before
+    |   PASS   zero java.awt.Frame instances before
+    |
+    | == 1. the two public initialization routines, called exactly once each ==
+    |   patterns.properties reachable on classpath = true
+    |   PASS   patterns.properties present for loadPattern()
+    |   CheckPattern.getInstance().loadPattern() returned normally
+    |   PASS   CheckPattern.loadPattern() completed without throwing
+    |   Zobrist.getInstance().initialize() returned normally
+    |   PASS   Zobrist.initialize() completed without throwing
+    |
+    | == 2. settings and match ==
+    |   PASS   fixed ply pinned to 3
+    |   PASS   board configured 24x24 via public Board API
+    |
+    | == 3. the same fixed six-pin position as attempt 2 ==
+    |   PASS   Y pin at (10,10)
+    |   PASS     mirrored on boardX
+    |   PASS   Y pin at (12,12)
+    |   PASS     mirrored on boardX
+    |   PASS   Y pin at (14,10)
+    |   PASS     mirrored on boardX
+    |   PASS   X pin at (11,13)
+    |   PASS     mirrored on boardX
+    |   PASS   X pin at (13,11)
+    |   PASS     mirrored on boardX
+    |   PASS   X pin at (9,12)
+    |   PASS     mirrored on boardX
+    |
+    | == 4. reflective write: Match.moveNr = 6 ==
+    |   readback via public getMoveNr() = 6
+    |   PASS   moveNr == 6 so InitialMoves cannot short-circuit the search
+    |
+    | == 5. exactly one computeMove() ==
+    | THREW: java.lang.IndexOutOfBoundsException: Index 5 out of bounds for length 0
+    | java.lang.IndexOutOfBoundsException: Index 5 out of bounds for length 0
+    | 	at java.base/jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:64)
+    | 	at java.base/jdk.internal.util.Preconditions.outOfBoundsCheckIndex(Preconditions.java:70)
+    | 	at java.base/jdk.internal.util.Preconditions.checkIndex(Preconditions.java:266)
+    | 	at java.base/java.util.Objects.checkIndex(Objects.java:361)
+    | 	at java.base/java.util.ArrayList.get(ArrayList.java:427)
+    | 	at net.schwagereit.t1j.Match.getMoveX(Unknown Source)
+    | 	at net.schwagereit.t1j.OrderedMoves.generateNewMoves(Unknown Source)
+    | 	at net.schwagereit.t1j.OrderedMoves.generateMoves(Unknown Source)
+    | 	at net.schwagereit.t1j.FindMove.alphaBeta(Unknown Source)
+    | 	at net.schwagereit.t1j.FindMove.alphaBeta(Unknown Source)
+    | 	at net.schwagereit.t1j.FindMove.alphaBeta(Unknown Source)
+    | 	at net.schwagereit.t1j.FindMove.internalComputeMove(Unknown Source)
+    | 	at net.schwagereit.t1j.FindMove.computeMove(Unknown Source)
+    | 	at net.schwagereit.t1j.E3Probe.run(E3Probe.java:161)
+    | 	at net.schwagereit.t1j.E3Probe.main(E3Probe.java:79)
+
+--- probe stderr ---
+    | <empty>
+
+########## 6. HOST PREFERENCE FINGERPRINT — AFTER ##########
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh AFTER | tee /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/32_prefs_after.txt
+    | host preference store fingerprint — AFTER
+    |   dir: /Users/bill/Library/Preferences
+    |   com.apple.java.util.prefs.plist EXISTS  sha256=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  bytes=95  mtime=2025-08-07T23:41:41Z
+    |   any schwagereit/t1j prefs files: 0
+    |   entry count: 523
+    |   listing sha256: 8a111b76dbd59fbae4047af53526e8a4aa3d8c480c447e0b9aafd27d81305fe5
+    |   java-ish entries: 1
+    |     com.apple.java.util.prefs.plist
+    [exit 0]
+
+$ diff /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/31_prefs_before.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/32_prefs_after.txt
+    | 1c1
+    | < host preference store fingerprint — BEFORE
+    | ---
+    | > host preference store fingerprint — AFTER
+    [exit 1]
+
+
+########## 7. CLASS-LOAD OBSERVATIONS ##########
+$ grep -c . /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/35_classload.log
+    | 1169
+    [exit 0]
+
+$ grep -oE 'net\.schwagereit\.t1j\.[A-Za-z0-9_$]+' /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/35_classload.log | sort -u
+    | net.schwagereit.t1j.Board
+    | net.schwagereit.t1j.Board$Node
+    | net.schwagereit.t1j.CheckPattern
+    | net.schwagereit.t1j.CheckPattern$Pattern
+    | net.schwagereit.t1j.CheckPattern$PatternElement
+    | net.schwagereit.t1j.E3Probe
+    | net.schwagereit.t1j.Evaluation
+    | net.schwagereit.t1j.Evaluation$CritPos
+    | net.schwagereit.t1j.Evaluation$FieldData
+    | net.schwagereit.t1j.Evaluation$PinPosition
+    | net.schwagereit.t1j.FindMove
+    | net.schwagereit.t1j.GeneralSettings
+    | net.schwagereit.t1j.GuiMainWindow
+    | net.schwagereit.t1j.InitialMoves
+    | net.schwagereit.t1j.Match
+    | net.schwagereit.t1j.MatchData
+    | net.schwagereit.t1j.Move
+    | net.schwagereit.t1j.OrderedMoves
+    | net.schwagereit.t1j.OrderedMoves$1
+    | net.schwagereit.t1j.OrderedMoves$ValuedMove
+    | net.schwagereit.t1j.Races
+    | net.schwagereit.t1j.Stopwatch
+    | net.schwagereit.t1j.Zobrist
+    | net.schwagereit.t1j.Zobrist$Node
+    [exit 0]
+
+$ grep -cE 'net\.schwagereit\.t1j\.(GuiMainWindow|GuiBoard|RightPanel|NewDialog|StrengthDialog|Control)\b' /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/35_classload.log
+    | 1
+    [exit 0]
+
+
+########## 8. loadPattern() SILENT-FAILURE CHECK (stdout must contain none) ##########
+$ grep -cE "Can't read resource|not found|IO-Error|Illegal syntax" /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3/evidence3/33_stdout.txt
+    | 0
+    [exit 1]
+
+
+########## 9. SYSTEM UNTOUCHED ##########
+$ ls /Library/Java/JavaVirtualMachines | wc -l
+    |        0
+    [exit 0]
+
+TRANSCRIPT COMPLETE

@@ -1,0 +1,83 @@
+#!/bin/bash
+# E2 attempt 3 driver. Every command is captured AT EXECUTION TIME by run().
+E1=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1
+E2=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2
+E3=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3
+EV="$E3/evidence3"
+JH="$E2/jdk/home/jdk-17.0.20.1+1/Contents/Home"
+JAR="$E1/acq/release/t1j.jar"
+TMPERR=$(mktemp)
+
+run() {
+  printf '$ %s\n' "$1"
+  out=$(eval "$1" 2>"$TMPERR"); rc=$?
+  if [ -n "$out" ]; then printf '%s\n' "$out" | sed 's/^/    | /'; else echo "    | <no stdout>"; fi
+  if [ -s "$TMPERR" ]; then sed 's/^/    ! /' "$TMPERR"; fi
+  printf '    [exit %d]\n\n' "$rc"
+  return $rc
+}
+die() { echo "*** $1 — STOPPING ***"; exit 9; }
+
+echo "E2 ATTEMPT 3 — execution transcript, commands captured as they ran"
+echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)   host $(uname -srm)   shell $BASH_VERSION"
+echo
+
+echo "########## 1. IDENTITY GATE ##########"
+run "git -C $E1/acq/t1j rev-parse HEAD"
+[ "$out" = "b572ed21f1f6b08491f69db32f531fc4b5f50fcd" ] || die "clone HEAD mismatch"
+run "git -C $E1/acq/t1j status --porcelain"
+[ -z "$out" ] || die "clone not clean"
+run "shasum -a 256 $JAR"
+case "$out" in 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7*) ;; *) die "JAR hash mismatch";; esac
+run "shasum -a 256 $E2/jdk/jdk.tar.gz"
+case "$out" in 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8*) ;; *) die "JDK archive hash mismatch";; esac
+run "$JH/bin/java -version"
+run "$JH/bin/javac -version"
+echo "IDENTITY GATE PASSED"
+echo
+
+echo "########## 2. HOST PREFERENCE FINGERPRINT — BEFORE ##########"
+run "bash $E2/prefsfp.sh BEFORE | tee $EV/31_prefs_before.txt"
+echo
+
+echo "########## 3. SOURCE HASHES ##########"
+run "shasum -a 256 $E3/src/e2probe/ScratchPrefs.java $E3/src/e2probe/ScratchPrefsFactory.java $E3/src/net/schwagereit/t1j/E3Probe.java"
+echo
+
+echo "########## 4. COMPILE (probe + Preferences only; no T1j source) ##########"
+run "$JH/bin/javac -Xlint:-options -encoding UTF-8 -cp $JAR -d $E3/classes $E3/src/e2probe/ScratchPrefs.java $E3/src/e2probe/ScratchPrefsFactory.java $E3/src/net/schwagereit/t1j/E3Probe.java"
+[ $rc -eq 0 ] || die "compile failed"
+run "find $E3/classes -name '*.class' | sort"
+run "find $E3/classes -name '*.class' | sort | xargs shasum -a 256"
+echo
+
+echo "########## 5. THE SINGLE PROBE RUN ##########"
+run "$JH/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -Xlog:class+load=info:file=$EV/35_classload.log -cp $JAR:$E3/classes net.schwagereit.t1j.E3Probe > $EV/33_stdout.txt 2> $EV/34_stderr.txt; echo \$? > $EV/36_exit.txt"
+echo "--- probe exit status ---"
+run "cat $EV/36_exit.txt"
+echo "--- probe stdout ---"
+sed 's/^/    | /' "$EV/33_stdout.txt"
+echo
+echo "--- probe stderr ---"
+if [ -s "$EV/34_stderr.txt" ]; then sed 's/^/    ! /' "$EV/34_stderr.txt"; else echo "    | <empty>"; fi
+echo
+
+echo "########## 6. HOST PREFERENCE FINGERPRINT — AFTER ##########"
+run "bash $E2/prefsfp.sh AFTER | tee $EV/32_prefs_after.txt"
+run "diff $EV/31_prefs_before.txt $EV/32_prefs_after.txt"
+echo
+
+echo "########## 7. CLASS-LOAD OBSERVATIONS ##########"
+run "grep -c . $EV/35_classload.log"
+run "grep -oE 'net\.schwagereit\.t1j\.[A-Za-z0-9_$]+' $EV/35_classload.log | sort -u"
+run "grep -cE 'net\.schwagereit\.t1j\.(GuiMainWindow|GuiBoard|RightPanel|NewDialog|StrengthDialog|Control)\b' $EV/35_classload.log"
+echo
+
+echo "########## 8. loadPattern() SILENT-FAILURE CHECK (stdout must contain none) ##########"
+run "grep -cE \"Can't read resource|not found|IO-Error|Illegal syntax\" $EV/33_stdout.txt"
+echo
+
+echo "########## 9. SYSTEM UNTOUCHED ##########"
+run "ls /Library/Java/JavaVirtualMachines | wc -l"
+rm -f "$TMPERR"
+echo "TRANSCRIPT COMPLETE"

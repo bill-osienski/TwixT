@@ -1,0 +1,61 @@
+== 0. environment, before any T1j class is touched ==
+  java.version            = 17.0.20.1
+  java.awt.headless       = true
+  PreferencesFactory prop = e2probe.ScratchPrefsFactory
+  Preferences.userRoot    = e2probe.ScratchPrefs
+  PASS   isolated Preferences implementation active before any T1j load
+  PASS   headless mode active at start
+  host plist sha256 BEFORE = 6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d
+  host prefs entries BEFORE = 526
+  Window count BEFORE = 0 ; Frame count BEFORE = 0
+  PASS   zero java.awt.Window instances before
+  PASS   zero java.awt.Frame instances before
+
+== 1. the two public initialization routines, called exactly once each ==
+  patterns.properties reachable on classpath = true
+  PASS   patterns.properties present for loadPattern()
+  CheckPattern.getInstance().loadPattern() returned normally
+  PASS   CheckPattern.loadPattern() completed without throwing
+  Zobrist.getInstance().initialize() returned normally
+  PASS   Zobrist.initialize() completed without throwing
+
+== 2. settings and match ==
+  PASS   fixed ply pinned to 3
+  PASS   board configured 24x24 via public Board API
+
+== 3. the same fixed six-pin position as attempt 2 ==
+  PASS   Y pin at (10,10)
+  PASS     mirrored on boardX
+  PASS   Y pin at (12,12)
+  PASS     mirrored on boardX
+  PASS   Y pin at (14,10)
+  PASS     mirrored on boardX
+  PASS   X pin at (11,13)
+  PASS     mirrored on boardX
+  PASS   X pin at (13,11)
+  PASS     mirrored on boardX
+  PASS   X pin at (9,12)
+  PASS     mirrored on boardX
+
+== 4. reflective write: Match.moveNr = 6 ==
+  readback via public getMoveNr() = 6
+  PASS   moveNr == 6 so InitialMoves cannot short-circuit the search
+
+== 5. exactly one computeMove() ==
+THREW: java.lang.IndexOutOfBoundsException: Index 5 out of bounds for length 0
+java.lang.IndexOutOfBoundsException: Index 5 out of bounds for length 0
+	at java.base/jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:64)
+	at java.base/jdk.internal.util.Preconditions.outOfBoundsCheckIndex(Preconditions.java:70)
+	at java.base/jdk.internal.util.Preconditions.checkIndex(Preconditions.java:266)
+	at java.base/java.util.Objects.checkIndex(Objects.java:361)
+	at java.base/java.util.ArrayList.get(ArrayList.java:427)
+	at net.schwagereit.t1j.Match.getMoveX(Unknown Source)
+	at net.schwagereit.t1j.OrderedMoves.generateNewMoves(Unknown Source)
+	at net.schwagereit.t1j.OrderedMoves.generateMoves(Unknown Source)
+	at net.schwagereit.t1j.FindMove.alphaBeta(Unknown Source)
+	at net.schwagereit.t1j.FindMove.alphaBeta(Unknown Source)
+	at net.schwagereit.t1j.FindMove.alphaBeta(Unknown Source)
+	at net.schwagereit.t1j.FindMove.internalComputeMove(Unknown Source)
+	at net.schwagereit.t1j.FindMove.computeMove(Unknown Source)
+	at net.schwagereit.t1j.E3Probe.run(E3Probe.java:161)
+	at net.schwagereit.t1j.E3Probe.main(E3Probe.java:79)

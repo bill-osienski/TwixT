@@ -1,0 +1,209 @@
+package net.schwagereit.t1j;
+
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HexFormat;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.prefs.Preferences;
+import java.util.stream.Stream;
+
+/**
+ * E2 attempt 3 — one headless load and one computeMove() against the official
+ * T1j release JAR, with the class-load criterion relaxed to "no window is
+ * instantiated or displayed" and the two public initialization routines called.
+ *
+ * In package net.schwagereit.t1j ONLY because Match()'s constructor is
+ * package-private. Compiled against the JAR; T1j itself is untouched.
+ *
+ * Exactly three reflective accesses are permitted, and the probe asserts that
+ * it performed exactly those and no others.
+ *
+ * Exit 0 = every requirement met. 3 = a requirement failed. 4 = threw.
+ */
+public final class E3Probe {
+
+    private static final List<String> REFLECTED = new ArrayList<String>();
+    private static final Set<String> AUTHORIZED = new LinkedHashSet<String>(Arrays.asList(
+        "net.schwagereit.t1j.Match.moveNr(write)",
+        "net.schwagereit.t1j.FindMove.usealphabeta(read)",
+        "net.schwagereit.t1j.FindMove.currentMaxPly(read)"));
+
+    private static int failures = 0;
+
+    private static void req(boolean cond, String what) {
+        System.out.println((cond ? "  PASS   " : "  FAIL   ") + what);
+        if (!cond) { failures++; }
+    }
+
+    /** Every reflective access goes through here so the probe can audit itself. */
+    private static Field reflect(Class<?> owner, String name, String mode) throws Exception {
+        REFLECTED.add(owner.getName() + "." + name + "(" + mode + ")");
+        Field f = owner.getDeclaredField(name);
+        f.setAccessible(true);
+        return f;
+    }
+
+    private static Path prefsDir() {
+        return Paths.get(System.getProperty("user.home"), "Library", "Preferences");
+    }
+
+    private static String plistHash() throws Exception {
+        Path p = prefsDir().resolve("com.apple.java.util.prefs.plist");
+        if (!Files.exists(p)) { return "ABSENT"; }
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        return HexFormat.of().formatHex(md.digest(Files.readAllBytes(p)));
+    }
+
+    private static long prefsEntryCount() throws Exception {
+        try (Stream<Path> s = Files.list(prefsDir())) { return s.count(); }
+    }
+
+    private static int windowCount() {
+        try { return java.awt.Window.getWindows().length; }
+        catch (Throwable t) { System.out.println("  NOTE   Window.getWindows() threw: " + t); return -1; }
+    }
+
+    private static int frameCount() {
+        try { return java.awt.Frame.getFrames().length; }
+        catch (Throwable t) { System.out.println("  NOTE   Frame.getFrames() threw: " + t); return -1; }
+    }
+
+    public static void main(String[] args) {
+        try { run(); }
+        catch (Throwable t) { System.out.println("THREW: " + t); t.printStackTrace(System.out); System.exit(4); }
+        System.out.println();
+        System.out.println(failures == 0 ? "PROBE-OK  (all requirements met)"
+                                         : ("PROBE-FAILED  (" + failures + " requirement(s) failed)"));
+        System.exit(failures == 0 ? 0 : 3);
+    }
+
+    private static void run() throws Exception {
+        System.out.println("== 0. environment, before any T1j class is touched ==");
+        System.out.println("  java.version            = " + System.getProperty("java.version"));
+        System.out.println("  java.awt.headless       = " + System.getProperty("java.awt.headless"));
+        System.out.println("  PreferencesFactory prop = " + System.getProperty("java.util.prefs.PreferencesFactory"));
+        Preferences userRoot = Preferences.userRoot();
+        System.out.println("  Preferences.userRoot    = " + userRoot.getClass().getName());
+        req("e2probe.ScratchPrefs".equals(userRoot.getClass().getName()),
+            "isolated Preferences implementation active before any T1j load");
+        req(java.awt.GraphicsEnvironment.isHeadless(), "headless mode active at start");
+
+        String plistBefore = plistHash();
+        long entriesBefore = prefsEntryCount();
+        int winBefore = windowCount();
+        int frmBefore = frameCount();
+        System.out.println("  host plist sha256 BEFORE = " + plistBefore);
+        System.out.println("  host prefs entries BEFORE = " + entriesBefore);
+        System.out.println("  Window count BEFORE = " + winBefore + " ; Frame count BEFORE = " + frmBefore);
+        req(winBefore == 0, "zero java.awt.Window instances before");
+        req(frmBefore == 0, "zero java.awt.Frame instances before");
+
+        System.out.println();
+        System.out.println("== 1. the two public initialization routines, called exactly once each ==");
+        boolean patternResourcePresent =
+            CheckPattern.class.getResourceAsStream("patterns.properties") != null;
+        System.out.println("  patterns.properties reachable on classpath = " + patternResourcePresent);
+        req(patternResourcePresent, "patterns.properties present for loadPattern()");
+
+        CheckPattern.getInstance().loadPattern();
+        System.out.println("  CheckPattern.getInstance().loadPattern() returned normally");
+        req(true, "CheckPattern.loadPattern() completed without throwing");
+
+        Zobrist.getInstance().initialize();
+        System.out.println("  Zobrist.getInstance().initialize() returned normally");
+        req(true, "Zobrist.initialize() completed without throwing");
+
+        System.out.println();
+        System.out.println("== 2. settings and match ==");
+        GeneralSettings gs = GeneralSettings.getInstance();
+        gs.mdFixedPly = true;
+        gs.mdPly = 3;
+        req(gs.mdFixedPly && gs.mdPly == 3, "fixed ply pinned to 3");
+
+        Match match = new Match();
+        Board bY = match.getBoardY();
+        Board bX = match.getBoardX();
+        bY.clearBoard(); bX.clearBoard();
+        bY.setSize(24, 24); bX.setSize(24, 24);
+        bY.getEval().setupForY(); bX.getEval().setupForY();
+        req(bY.getXsize() == 24 && bY.getYsize() == 24, "board configured 24x24 via public Board API");
+
+        System.out.println();
+        System.out.println("== 3. the same fixed six-pin position as attempt 2 ==");
+        int[][] yPins = { {10, 10}, {12, 12}, {14, 10} };
+        int[][] xPins = { {11, 13}, {13, 11}, { 9, 12} };
+        for (int[] p : yPins) {
+            req(bY.setPin(p[0], p[1], Board.YPLAYER), "Y pin at (" + p[0] + "," + p[1] + ")");
+            req(bX.setPin(p[1], p[0], Board.XPLAYER), "  mirrored on boardX");
+        }
+        for (int[] p : xPins) {
+            req(bY.setPin(p[0], p[1], Board.XPLAYER), "X pin at (" + p[0] + "," + p[1] + ")");
+            req(bX.setPin(p[1], p[0], Board.YPLAYER), "  mirrored on boardX");
+        }
+
+        System.out.println();
+        System.out.println("== 4. reflective write: Match.moveNr = 6 ==");
+        reflect(Match.class, "moveNr", "write").setInt(match, 6);
+        System.out.println("  readback via public getMoveNr() = " + match.getMoveNr());
+        req(match.getMoveNr() == 6, "moveNr == 6 so InitialMoves cannot short-circuit the search");
+
+        System.out.println();
+        System.out.println("== 5. exactly one computeMove() ==");
+        FindMove fm = FindMove.getFindMove();
+        long t0 = System.nanoTime();
+        Move mv = fm.computeMove(Board.YPLAYER);
+        long ms = (System.nanoTime() - t0) / 1000000L;
+        System.out.println("  computeMove(YPLAYER) returned in " + ms + " ms");
+
+        System.out.println();
+        System.out.println("== 6. the move, reported numerically (Move.toString() never called) ==");
+        req(mv != null, "computeMove returned a non-null Move");
+        if (mv != null) {
+            int mx = mv.getX();
+            int my = mv.getY();
+            System.out.println("  MOVE x=" + mx + " y=" + my);
+            req(mx >= 0 && mx < 24 && my >= 0 && my < 24, "move in range for a 24x24 board");
+            req(bY.getPin(mx, my) == 0, "target intersection empty");
+            req(bY.pinAllowed(mx, my, Board.YPLAYER), "move legal per T1j's own Board.pinAllowed");
+        }
+
+        System.out.println();
+        System.out.println("== 7. reflective reads: proof alpha-beta ran and reached ply 3 ==");
+        boolean usedAlphaBeta = reflect(FindMove.class, "usealphabeta", "read").getBoolean(fm);
+        int currentMaxPly = reflect(FindMove.class, "currentMaxPly", "read").getInt(null);
+        System.out.println("  FindMove.usealphabeta  = " + usedAlphaBeta);
+        System.out.println("  FindMove.currentMaxPly = " + currentMaxPly);
+        req(usedAlphaBeta, "alpha-beta search executed");
+        req(currentMaxPly == 4,
+            "deepening loop ran its body at the pinned ply 3 and terminated (currentMaxPly == 4)");
+
+        System.out.println();
+        System.out.println("== 8. no window created, host preferences untouched ==");
+        int winAfter = windowCount();
+        int frmAfter = frameCount();
+        String plistAfter = plistHash();
+        long entriesAfter = prefsEntryCount();
+        System.out.println("  Window count AFTER = " + winAfter + " ; Frame count AFTER = " + frmAfter);
+        System.out.println("  host plist sha256 AFTER = " + plistAfter);
+        System.out.println("  host prefs entries AFTER = " + entriesAfter);
+        req(winAfter == 0, "zero java.awt.Window instances after");
+        req(frmAfter == 0, "zero java.awt.Frame instances after");
+        req(java.awt.GraphicsEnvironment.isHeadless(), "headless mode still active at end");
+        req(plistBefore.equals(plistAfter), "host java prefs plist unchanged");
+        req(entriesBefore == entriesAfter, "host prefs directory entry count unchanged");
+
+        System.out.println();
+        System.out.println("== 9. reflection audit ==");
+        for (String r : REFLECTED) { System.out.println("  REFLECTED " + r); }
+        req(new LinkedHashSet<String>(REFLECTED).equals(AUTHORIZED)
+            && REFLECTED.size() == AUTHORIZED.size(),
+            "exactly the three authorized reflective accesses, no others");
+    }
+}
