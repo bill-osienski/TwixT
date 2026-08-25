@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+"""E4 preflight determinism stage — the E3a structure at the SELECTED endpoint.
+
+Attempt 1 asserted "25 records" in memory and persisted only an aggregate, and it
+threw away all 25 state dumps instead of re-binding them. This version:
+
+  * persists EVERY one of the 25 records individually, before the aggregate;
+  * asserts the 20+5 PROCESS STRUCTURE from the helper's OWN PROC lines -- one
+    pid across the 20 shared records, five DISTINCT pids across the fresh ones --
+    rather than trusting how the harness believes it invoked them;
+  * re-binds EVERY returned state dump through the same searched-versus-bound
+    E3b comparison the sweep uses, before the aggregate may pass.
+
+NO GAMES; one position, one fixed depth. The endpoint is READ FROM THE SWEEP'S
+results, never passed in by hand.
+"""
+import json, sys, time
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+sys.path.insert(0, __file__.rsplit("/", 1)[0])
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import t1j_adapter as A
+import preflight_lib as L
+
+java, jar, classes, prereg_path, prereg_sha, positions_path, results_path, pos_name = sys.argv[1:9]
+P = L.load_prereg(prereg_path, prereg_sha)
+CAP = P["binding"]["ply_cap"]
+
+sel = None
+for line in open(results_path):
+    r = json.loads(line)
+    if r.get("record_type") == "selection":
+        sel = r
+if sel is None:
+    print("FAIL no selection record in the sweep results"); sys.exit(3)
+depth = sel["strong_endpoint"]
+print(f"selected strong endpoint read from the sweep: mdPly={depth} "
+      f"(weak={sel['weak_endpoint']}, coincide={sel['endpoints_coincide']})")
+if depth is None:
+    print("FAIL no depth qualified; nothing to run determinism against"); sys.exit(3)
+
+positions = json.load(open(positions_path))
+moves = [tuple(m) for m in positions[pos_name]["moves"]]
+s = TwixtState(active_size=A.BOARD_N, to_move="red")
+for mv in moves:
+    s = s.apply_move(mv)
+print(f"position {pos_name}: {len(moves)} plies, to_move={s.to_move}, "
+      f"regime={positions[pos_name]['eval_regime']}")
+
+# bind the position through the E3b-qualified path; every dump is compared to THIS
+plies, rc0, _ = A.replay(moves, ply_cap=CAP, java=java, jar=jar, classes=classes)
+if rc0 != 0 or len(plies) != len(moves) + 1:
+    print(f"FAIL binding replay: exit {rc0}, {len(plies)} plies"); sys.exit(3)
+bound = plies[-1]
+print(f"position bound through the E3b adapter at ply_cap={CAP}")
+
+results = open(results_path, "a", buffering=1)
+TIMEOUT = P["budgets"]["per_query_timeout_s"]
+BUDGET = P["budgets"]["determinism_budget_s"]
+records, spent, fails = [], 0.0, []
+
+print(f"\n20 independent constructions in ONE jvm at mdPly={depth}")
+t0 = time.monotonic()
+recs, dumps, rc, out = A.query(moves, depth=depth, java=java, jar=jar, classes=classes,
+                               repeats=20, timeout_s=TIMEOUT * 20)
+spent += time.monotonic() - t0
+procs = A.parse_procs(out)
+if rc != 0 or len(recs) != 20 or len(dumps) != 20:
+    print(f"FAIL shared jvm: exit {rc}, {len(recs)} query / {len(dumps)} dump records"); sys.exit(3)
+for i, (rec, dmp) in enumerate(zip(recs, dumps)):
+    records.append(("shared", procs[0].pid if procs else -1, rec, dmp))
+print(f"  {len(recs)} records from {len(procs)} process(es), pid(s) "
+      f"{sorted({p.pid for p in procs})}, {spent:.1f}s")
+
+print(f"\n5 FRESH jvms, one query each at mdPly={depth}")
+fresh_pids = []
+for k in range(1, 6):
+    t1 = time.monotonic()
+    recs1, dumps1, rc1, out1 = A.query(moves, depth=depth, java=java, jar=jar,
+                                       classes=classes, timeout_s=TIMEOUT)
+    spent += time.monotonic() - t1
+    procs1 = A.parse_procs(out1)
+    if rc1 != 0 or len(recs1) != 1 or len(dumps1) != 1 or len(procs1) != 1:
+        print(f"FAIL fresh jvm {k}: exit {rc1}, {len(recs1)} query / {len(dumps1)} dump / "
+              f"{len(procs1)} proc records"); sys.exit(3)
+    fresh_pids.append(procs1[0].pid)
+    records.append((f"fresh{k}", procs1[0].pid, recs1[0], dumps1[0]))
+    print(f"  fresh jvm {k}: pid={procs1[0].pid} move={recs1[0].move} "
+          f"completed_depth={recs1[0].completed_depth}")
+
+# ---- persist EVERY record, and re-bind EVERY dump, before any aggregate -----
+print(f"\nre-binding all {len(records)} returned dumps against the E3b-bound position")
+rebind_fail = 0
+for idx, (group, pid, rec, dmp) in enumerate(records):
+    div = L.check_query(rec, depth=depth, our_state=s, searched=dmp, bound=bound)
+    results.write(json.dumps({
+        "record_type": "determinism_query", "position": pos_name, "depth": depth,
+        "index": idx, "group": group, "pid": pid, "q": rec.q,
+        "move_ours": list(rec.move) if rec.move else None,
+        "to_move": rec.to_move, "completed": rec.completed,
+        "completed_depth": rec.completed_depth, "current_max_ply": rec.current_max_ply,
+        "usealphabeta": rec.usealphabeta, "legal": rec.legal,
+        "engine_ms": round(rec.elapsed_us / 1000.0, 3),
+        "searched_pegs": len(dmp.pegs), "searched_bridges": len(dmp.bridges),
+        "searched_ply": dmp.ply, "searched_next": dmp.next_player,
+        "searched_legal_n": len(dmp.legal),
+        "rebind_divergences": div}, sort_keys=True) + "\n")
+    if div:
+        rebind_fail += 1
+        if rebind_fail == 1:
+            print(f"  FIRST DIVERGENCE at record {idx} ({group}): {div[0]}")
+print(f"  {len(records) - rebind_fail}/{len(records)} dumps re-bound with zero divergences")
+
+shared_pids = {pid for g, pid, _, _ in records if g == "shared"}
+fresh_pid_set = set(fresh_pids)
+moves_seen = {r.move for _, _, r, _ in records}
+depths_seen = {r.completed_depth for _, _, r, _ in records}
+legal_all = all(r.legal and not r.null_sentinel for _, _, r, _ in records)
+in_our_engine = all(r.move in set(s.legal_moves()) for _, _, r, _ in records if r.move)
+q_ids = sorted(r.q for g, _, r, _ in records if g == "shared")
+
+if len(records) != 25: fails.append(f"expected 25 records, got {len(records)}")
+if len(shared_pids) != 1: fails.append(f"shared group spans {len(shared_pids)} pids, want 1")
+if len(fresh_pid_set) != 5: fails.append(f"fresh group has {len(fresh_pid_set)} distinct pids, want 5")
+if shared_pids & fresh_pid_set: fails.append("a fresh jvm reused the shared jvm's pid")
+if q_ids != list(range(1, 21)): fails.append(f"shared query ids {q_ids[:3]}... != 1..20")
+if len(moves_seen) != 1: fails.append(f"moves not identical: {sorted(str(m) for m in moves_seen)}")
+if depths_seen != {depth}: fails.append(f"completed depths not identical: {sorted(depths_seen)}")
+if not legal_all: fails.append("a query returned an illegal move or the null sentinel")
+if not in_our_engine: fails.append("a returned move is not legal in OUR engine")
+if rebind_fail: fails.append(f"{rebind_fail} dump(s) failed the searched-versus-bound rebinding")
+if spent > BUDGET: fails.append(f"determinism budget {BUDGET}s exceeded ({spent:.0f}s)")
+
+print(f"\n25 queries, {spent:.1f}s of {BUDGET}s budget")
+print(f"  process structure        1 shared pid {sorted(shared_pids)} + "
+      f"{len(fresh_pid_set)} distinct fresh pids {sorted(fresh_pid_set)}")
+print(f"  distinct moves           {sorted(str(m) for m in moves_seen)}   (want exactly one)")
+print(f"  distinct completed depth {sorted(depths_seen)}  (want exactly {{{depth}}})")
+print(f"  dumps re-bound clean     {len(records) - rebind_fail}/{len(records)}")
+print(f"  all legal, no sentinel   {legal_all}      legal in OUR engine  {in_our_engine}")
+results.write(json.dumps({
+    "record_type": "determinism_aggregate", "position": pos_name, "depth": depth,
+    "n": len(records), "shared_pids": sorted(shared_pids), "fresh_pids": sorted(fresh_pid_set),
+    "distinct_moves": sorted(str(m) for m in moves_seen),
+    "distinct_completed_depths": sorted(depths_seen), "all_legal": legal_all,
+    "legal_in_our_engine": in_our_engine, "dumps_rebound_clean": len(records) - rebind_fail,
+    "wall_s": round(spent, 3), "passed": not fails, "failures": fails}, sort_keys=True) + "\n")
+results.close()
+
+if fails:
+    print("\nDETERMINISM FAIL — the pilot stops:")
+    for f in fails: print("  " + f)
+    sys.exit(3)
+print("\nDETERMINISM PASS — 25/25 identical legal move and completed depth, "
+      "20+5 process structure asserted, all 25 dumps re-bound")
+sys.exit(0)

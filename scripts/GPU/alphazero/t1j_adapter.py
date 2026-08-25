@@ -357,3 +357,29 @@ def query(
     ] + mode + [f"{x},{y}" for (x, y) in xy]
     p = subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
     return parse_queries(p.stdout, transform=transform), parse_dump(p.stdout), p.returncode, p.stdout
+
+
+@dataclass(frozen=True)
+class ProcRecord:
+    """The helper's PROC line -- process identity for one jvm."""
+    pid: int
+    java_version: str
+    vm: str
+    headless: str
+    prefs_factory: str
+
+
+def parse_procs(text: str) -> List[ProcRecord]:
+    """Parse PROC lines. One per jvm, so the count IS the process count."""
+    out: List[ProcRecord] = []
+    for line in text.splitlines():
+        if not line.startswith("PROC "):
+            continue
+        kv = dict(_KV_RE.findall(line))
+        missing = {"pid", "java_version", "vm", "headless", "prefs_factory"} - set(kv)
+        if missing:
+            raise ValueError(f"PROC line missing fields {sorted(missing)}: {line!r}")
+        out.append(ProcRecord(pid=int(kv["pid"]), java_version=kv["java_version"],
+                              vm=kv["vm"], headless=kv["headless"],
+                              prefs_factory=kv["prefs_factory"]))
+    return out

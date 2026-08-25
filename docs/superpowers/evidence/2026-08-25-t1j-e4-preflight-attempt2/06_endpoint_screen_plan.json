@@ -1,0 +1,808 @@
+{
+ "schema": "e4-endpoint-screen-plan/2",
+ "status": "FROZEN, NOT EXECUTED \u2014 no game played, no seed consumed, no model loaded",
+ "authorization": "the endpoint screen is UNAUTHORIZED; this schedule exists so that authorizing it later cannot become an occasion to choose parameters",
+ "preregistration_sha256": "67f353bdcb138dffad484c5450dce13b23e4464954024d3a06e01cd95d520652",
+ "endpoints": {
+  "weak": 3,
+  "strong": 6
+ },
+ "endpoints_source": "read from the sweep's selection record, not restated by hand",
+ "reference": {
+  "name": "calib020_0001",
+  "path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "bytes": 7524333,
+  "sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+  "sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "sha1_cross_check": "matches the value the twixtbot G3 preflight recorded for the same checkpoint, independently confirming these are the same bytes",
+  "why_this_one": "the standing anchor of the closed AlphaZero programme; also the reference the twixtbot G3 calibration used, so the two anchor attempts are comparable",
+  "git_blob_id": "829fcb19d708f007650bb1ad02f9beda0c38639c"
+ },
+ "our_settings": {
+  "mcts_defaults_from": "scripts/GPU/alphazero/mcts.py::MCTSConfig",
+  "defaults_snapshot": {
+   "c_puct": 1.5,
+   "fpu_value": 0.0,
+   "fpu_policy_mass_reduction": null,
+   "n_simulations": 800,
+   "dirichlet_alpha": 0.3,
+   "dirichlet_eps": 0.25,
+   "temp_threshold_ply": 20,
+   "temp_high": 1.0,
+   "temp_low": 0.1,
+   "eval_batch_size": 14,
+   "pending_virtual_visits": 8,
+   "stall_flush_sims": 16,
+   "opening_noise_ply": 0,
+   "root_edge_band_penalty": 0.0,
+   "root_near_corner_penalty": 0.0
+  },
+  "overrides": {
+   "n_simulations": 400,
+   "eval_batch_size": 14,
+   "stall_flush_sims": 48,
+   "dirichlet_eps": 0.0
+  },
+  "overrides_rationale": {
+   "n_simulations": "400, matching the twixtbot G3 reference arm",
+   "eval_batch_size": "14, the shipped default; 16 has hung the Metal GPU",
+   "stall_flush_sims": "48, matching the G3 reference arm",
+   "dirichlet_eps": "0.0 \u2014 root noise OFF. A screen measures playing strength, not exploration; noise would add variance the seeds cannot remove."
+  },
+  "selection": {
+   "mode": "temperature",
+   "temp_threshold_ply": 20,
+   "temp_high": 1.0,
+   "temp_low": 0.1,
+   "note": "temperature keeps our side stochastic, which is what makes the per-task seed load-bearing; T1j at fixed ply is deterministic"
+  },
+  "workers": 1,
+  "max_moves": 280
+ },
+ "openings": {
+  "o1_center": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    13,
+    12
+   ],
+   [
+    10,
+    13
+   ],
+   [
+    12,
+    10
+   ],
+   [
+    14,
+    14
+   ]
+  ],
+  "o2_offcenter": [
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    11,
+    9
+   ],
+   [
+    14,
+    12
+   ],
+   [
+    9,
+    11
+   ]
+  ],
+  "o3_low": [
+   [
+    15,
+    11
+   ],
+   [
+    12,
+    12
+   ],
+   [
+    13,
+    10
+   ],
+   [
+    14,
+    14
+   ],
+   [
+    11,
+    11
+   ],
+   [
+    16,
+    13
+   ]
+  ],
+  "o4_high": [
+   [
+    8,
+    12
+   ],
+   [
+    11,
+    11
+   ],
+   [
+    10,
+    13
+   ],
+   [
+    9,
+    9
+   ],
+   [
+    12,
+    12
+   ],
+   [
+    13,
+    14
+   ]
+  ],
+  "o5_wide_left": [
+   [
+    11,
+    7
+   ],
+   [
+    12,
+    10
+   ],
+   [
+    13,
+    8
+   ],
+   [
+    10,
+    11
+   ],
+   [
+    15,
+    9
+   ],
+   [
+    14,
+    12
+   ]
+  ],
+  "o6_wide_right": [
+   [
+    11,
+    16
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    15,
+    14
+   ],
+   [
+    14,
+    11
+   ]
+  ],
+  "o7_diagonal": [
+   [
+    9,
+    9
+   ],
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    14,
+    13
+   ],
+   [
+    13,
+    11
+   ],
+   [
+    16,
+    14
+   ]
+  ],
+  "o8_contact": [
+   [
+    12,
+    11
+   ],
+   [
+    11,
+    12
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    12,
+    14
+   ],
+   [
+    14,
+    12
+   ],
+   [
+    10,
+    10
+   ]
+  ]
+ },
+ "opening_plies": 6,
+ "opening_plies_reason": "moveNr >= 6 keeps T1j's UNSEEDED InitialMoves.firstMove() unreached; a correctness requirement, not a preference",
+ "colour_arms": [
+  "t1j_red",
+  "t1j_black"
+ ],
+ "design": "8 openings x 2 colours x 2 endpoints = 32 games, 16 per endpoint",
+ "tasks": [
+  {
+   "task_id": "e4screen-000-strong6-o1_center-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o1_center",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612000
+  },
+  {
+   "task_id": "e4screen-001-strong6-o1_center-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o1_center",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612001
+  },
+  {
+   "task_id": "e4screen-002-strong6-o2_offcenter-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o2_offcenter",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612002
+  },
+  {
+   "task_id": "e4screen-003-strong6-o2_offcenter-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o2_offcenter",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612003
+  },
+  {
+   "task_id": "e4screen-004-strong6-o3_low-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o3_low",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612004
+  },
+  {
+   "task_id": "e4screen-005-strong6-o3_low-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o3_low",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612005
+  },
+  {
+   "task_id": "e4screen-006-strong6-o4_high-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o4_high",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612006
+  },
+  {
+   "task_id": "e4screen-007-strong6-o4_high-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o4_high",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612007
+  },
+  {
+   "task_id": "e4screen-008-strong6-o5_wide_left-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o5_wide_left",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612008
+  },
+  {
+   "task_id": "e4screen-009-strong6-o5_wide_left-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o5_wide_left",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612009
+  },
+  {
+   "task_id": "e4screen-010-strong6-o6_wide_right-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o6_wide_right",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612010
+  },
+  {
+   "task_id": "e4screen-011-strong6-o6_wide_right-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o6_wide_right",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612011
+  },
+  {
+   "task_id": "e4screen-012-strong6-o7_diagonal-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o7_diagonal",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612012
+  },
+  {
+   "task_id": "e4screen-013-strong6-o7_diagonal-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o7_diagonal",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612013
+  },
+  {
+   "task_id": "e4screen-014-strong6-o8_contact-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o8_contact",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612014
+  },
+  {
+   "task_id": "e4screen-015-strong6-o8_contact-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o8_contact",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612015
+  },
+  {
+   "task_id": "e4screen-016-weak3-o1_center-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o1_center",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612016
+  },
+  {
+   "task_id": "e4screen-017-weak3-o1_center-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o1_center",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612017
+  },
+  {
+   "task_id": "e4screen-018-weak3-o2_offcenter-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o2_offcenter",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612018
+  },
+  {
+   "task_id": "e4screen-019-weak3-o2_offcenter-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o2_offcenter",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612019
+  },
+  {
+   "task_id": "e4screen-020-weak3-o3_low-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o3_low",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612020
+  },
+  {
+   "task_id": "e4screen-021-weak3-o3_low-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o3_low",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612021
+  },
+  {
+   "task_id": "e4screen-022-weak3-o4_high-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o4_high",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612022
+  },
+  {
+   "task_id": "e4screen-023-weak3-o4_high-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o4_high",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612023
+  },
+  {
+   "task_id": "e4screen-024-weak3-o5_wide_left-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o5_wide_left",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612024
+  },
+  {
+   "task_id": "e4screen-025-weak3-o5_wide_left-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o5_wide_left",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612025
+  },
+  {
+   "task_id": "e4screen-026-weak3-o6_wide_right-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o6_wide_right",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612026
+  },
+  {
+   "task_id": "e4screen-027-weak3-o6_wide_right-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o6_wide_right",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612027
+  },
+  {
+   "task_id": "e4screen-028-weak3-o7_diagonal-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o7_diagonal",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612028
+  },
+  {
+   "task_id": "e4screen-029-weak3-o7_diagonal-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o7_diagonal",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612029
+  },
+  {
+   "task_id": "e4screen-030-weak3-o8_contact-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o8_contact",
+   "colour_arm": "t1j_red",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612030
+  },
+  {
+   "task_id": "e4screen-031-weak3-o8_contact-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o8_contact",
+   "colour_arm": "t1j_black",
+   "reference": "calib020_0001",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612031
+  }
+ ],
+ "n_tasks": 32,
+ "seed_block": {
+  "interval": [
+   202612000,
+   202612512
+  ],
+  "status": "RESERVED, UNSPENT",
+  "half_open": true,
+  "seeds_used": [
+   202612000,
+   202612031
+  ],
+  "prior_intervals": [
+   [
+    202608060,
+    202608124
+   ],
+   [
+    202608124,
+    202608188
+   ],
+   [
+    202608188,
+    202608988
+   ],
+   [
+    202608988,
+    202609388
+   ],
+   [
+    202609388,
+    202609788
+   ],
+   [
+    202609788,
+    202610188
+   ],
+   [
+    202611000,
+    202611400
+   ],
+   [
+    202611128,
+    202611256
+   ]
+  ],
+  "disjointness": "asserted against every prior interval at freeze time"
+ },
+ "ply_cap": 280,
+ "per_ply_binding": "every ply of every game binds both engines through the E3b-qualified adapter; ABORT ON THE FIRST DIVERGENCE",
+ "scoring": {
+  "t1j_win": 1.0,
+  "t1j_loss": 0.0,
+  "draw": 0.5,
+  "draw_definition": "the game reached ply_cap 280 with no winner. TwixT cannot draw by rule; a draw here is ALWAYS a cap termination and is recorded as terminal_reason='cap'.",
+  "cap_saturation_abort": "if more than half the games at an endpoint terminate by cap, that endpoint is INCOMPLETE: the positions are not resolving and a score rate over them means little"
+ },
+ "band": [
+  0.05,
+  0.95
+ ],
+ "per_endpoint_decision": {
+  "SATURATED_STRONG": "score rate >= 0.95, i.e. T1j score >= 15.2 of 16",
+  "SATURATED_WEAK": "score rate <= 0.05, i.e. T1j score <= 0.8 of 16",
+  "IN_BAND": "0.05 < score rate < 0.95",
+  "INCOMPLETE": "fewer than 16 games resolved at this endpoint, or the cap-saturation abort fired"
+ },
+ "early_stop": {
+  "check_after_every_game": true,
+  "rule": "stop this endpoint as soon as BOTH saturation verdicts are arithmetically unreachable, and record IN_BAND. Unreachable means: SATURATED_STRONG needs score + (16 - played) >= 15.2, and SATURATED_WEAK needs score <= 0.8.",
+  "reachability": "This CAN fire early and does so quickly: one win and one loss gives score 1 after 2 games, whence 1 + 14 = 15 < 15.2 and 1 > 0.8, so IN_BAND is forced after TWO games.",
+  "asymmetry_stated_plainly": "A SATURATED verdict can never be reached before all 16 games at that endpoint, because 0.95 of 16 exceeds 15 whole points. Only the IN_BAND verdict can stop early. Attempt 1 claimed a saturation early-stop checked every 4 games; with this band and this n that rule could never fire, which is exactly the defect review identified."
+ },
+ "joint_outcome": {
+  "note": "computed from the pair (decision_weak, decision_strong); the classifier is total over all 16 combinations and asserts so",
+  "IN_BAND": "at least one endpoint IN_BAND and neither INCOMPLETE -- a larger match may be proposed AT THE IN-BAND ENDPOINT(S)",
+  "BRACKETED": "one endpoint SATURATED_WEAK and the other SATURATED_STRONG -- the dial spans the band without landing in it, so a usable depth plausibly lies between them; a larger match may be proposed at an intermediate depth",
+  "T1J_TOO_STRONG": "both endpoints SATURATED_STRONG -- stop; T1j cannot calibrate against us",
+  "T1J_TOO_WEAK": "both endpoints SATURATED_WEAK -- stop; T1j cannot calibrate against us",
+  "INCONCLUSIVE": "either endpoint INCOMPLETE -- a larger match may be proposed only after the incompleteness is understood"
+ },
+ "joint_truth_table": {
+  "SATURATED_STRONG|SATURATED_STRONG": "T1J_TOO_STRONG",
+  "SATURATED_STRONG|SATURATED_WEAK": "BRACKETED",
+  "SATURATED_STRONG|IN_BAND": "IN_BAND",
+  "SATURATED_STRONG|INCOMPLETE": "INCONCLUSIVE",
+  "SATURATED_WEAK|SATURATED_STRONG": "BRACKETED",
+  "SATURATED_WEAK|SATURATED_WEAK": "T1J_TOO_WEAK",
+  "SATURATED_WEAK|IN_BAND": "IN_BAND",
+  "SATURATED_WEAK|INCOMPLETE": "INCONCLUSIVE",
+  "IN_BAND|SATURATED_STRONG": "IN_BAND",
+  "IN_BAND|SATURATED_WEAK": "IN_BAND",
+  "IN_BAND|IN_BAND": "IN_BAND",
+  "IN_BAND|INCOMPLETE": "INCONCLUSIVE",
+  "INCOMPLETE|SATURATED_STRONG": "INCONCLUSIVE",
+  "INCOMPLETE|SATURATED_WEAK": "INCONCLUSIVE",
+  "INCOMPLETE|IN_BAND": "INCONCLUSIVE",
+  "INCOMPLETE|INCOMPLETE": "INCONCLUSIVE"
+ },
+ "larger_match_permitted_after": [
+  "IN_BAND",
+  "BRACKETED",
+  "INCONCLUSIVE"
+ ],
+ "abort_rules": [
+  "any per-ply state divergence between the engines",
+  "any T1j query that does not complete its requested depth",
+  "any illegal or null-sentinel move from either side",
+  "any postcondition failure: a Window/Frame, a non-headless jvm, a mutated host preference store, or an unauthorized reflective access",
+  "any seed outside the reserved block, or any repeated seed",
+  "more than half the games at an endpoint terminating by ply cap"
+ ],
+ "durable_result_format": {
+  "file": "e4_screen_results.jsonl",
+  "mode": "append-only, line-buffered, never rewritten",
+  "records": [
+   "run_header",
+   "task_start",
+   "ply",
+   "task_result",
+   "endpoint_decision",
+   "stop_decision",
+   "joint_outcome"
+  ],
+  "task_result_fields": [
+   "task_id",
+   "endpoint",
+   "t1j_mdPly",
+   "opening",
+   "colour_arm",
+   "reference",
+   "reference_sha256",
+   "seed",
+   "winner",
+   "t1j_points",
+   "plies",
+   "terminal_reason",
+   "wall_s"
+  ]
+ },
+ "runtime_estimate": {
+  "basis": "maximum per-query WALL ms measured in this preflight's sweep, per endpoint",
+  "per_query_wall_ms_max": {
+   "weak": 224,
+   "strong": 2789
+  },
+  "games_per_endpoint": 16,
+  "moves_per_game_is_NOT_measured": "This preflight measured single queries from 6-14 ply positions. It measured no game and no game length. The only defensible bound is the ply cap: at most 280 plies, so at most 140 T1j moves per game.",
+  "ceiling_from_ply_cap": {
+   "weak": 8.4,
+   "strong": 104.1
+  },
+  "ceiling_units": "minutes of T1j search time per endpoint, at the measured maximum per-query wall time and the ply-cap ceiling on moves",
+  "illustrative_only": {
+   "20_moves_per_game": {
+    "weak": 1.2,
+    "strong": 14.9
+   },
+   "60_moves_per_game": {
+    "weak": 3.6,
+    "strong": 44.6
+   }
+  },
+  "illustrative_warning": "the 20- and 60-move rows are ILLUSTRATIVE ONLY; no measurement supports any particular moves-per-game figure. Attempt 1 asserted 60 and that assumption is withdrawn.",
+  "excludes": "our side's search time entirely; the screen is not authorized and our side has never been timed in this configuration"
+ },
+ "claim_discipline": {
+  "move_response_ordering": "descriptive only",
+  "forbidden": [
+   "any claim of strength monotonicity from move differences",
+   "any claim of strength from timing",
+   "any absolute strength placement: T1j is uncalibrated, so even a passing screen yields an ORDERING, not a placement",
+   "any per-game runtime figure that assumes a moves-per-game count no measurement supports"
+  ]
+ }
+}

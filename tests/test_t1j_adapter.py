@@ -241,3 +241,20 @@ def test_compile_helper_still_defaults_to_the_e3b_set(tmp_path, monkeypatch):
     assert sum(a.endswith(".java") for a in seen["args"]) == 3
     A.compile_helper("javac", "t1j.jar", str(tmp_path), sources=A.PREFLIGHT_SOURCES)
     assert sum(a.endswith(".java") for a in seen["args"]) == 4
+
+
+PROC_LINE = ("PROC pid=1234 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM "
+             "headless=true prefs_factory=e2probe.ScratchPrefs")
+
+
+def test_parse_procs_reads_identity_and_counts_processes():
+    (p,) = A.parse_procs(PROC_LINE + "\n" + QUERY_LINE + "\n")
+    assert p.pid == 1234 and p.java_version == "17.0.20.1"
+    assert p.prefs_factory == "e2probe.ScratchPrefs" and p.headless == "true"
+    assert len(A.parse_procs(PROC_LINE + "\n" + PROC_LINE.replace("1234", "9") + "\n")) == 2
+    assert A.parse_procs("QUERY q=1\n") == []
+
+
+def test_parse_procs_rejects_a_missing_field():
+    with pytest.raises(ValueError):
+        A.parse_procs(PROC_LINE.replace(" headless=true", ""))
