@@ -37,6 +37,34 @@ from typing import Any, Dict, List, Sequence, Tuple
 from .twixtbot_g3_reference import SeededReferenceAgent, build_reference_agent, eval_config
 from .twixtbot_g3_schedule import CONSUMED_SEEDS, REFERENCE_CHECKPOINTS
 
+#: Every seed interval this workstream has reserved, consumed, or EXPOSED.
+#: Half-open [start, end). `rng_witness` DRAWS from a generator, and under this
+#: workstream's accounting drawing exposes the seed even with no model and no
+#: game -- so a witness may never be taken from a seed inside these.
+ACCOUNTED_SEED_INTERVALS = (
+    (202608060, 202608124), (202608124, 202608188), (202608188, 202608988),
+    (202608988, 202609388), (202609388, 202609788), (202609788, 202610188),
+    (202611000, 202611400),          # twixtbot G3 declared block
+    (202612000, 202612512),          # the E4 screen's reservation, see EXPOSED below
+)
+
+#: Seeds already burnt without a game. E4 preflight attempt 3 froze an rng witness
+#: for all 32 scheduled tasks, which constructed both derived generators and drew
+#: four values from each. No model ran and no game was played, but the seeds are
+#: spent under this workstream's boundary and must never be scheduled.
+EXPOSED_SEED_INTERVALS = (
+    (202612000, 202612032),          # E4 preflight attempt 3 witnesses
+)
+
+
+def seed_is_accounted(seed: int) -> bool:
+    return any(lo <= int(seed) < hi for lo, hi in ACCOUNTED_SEED_INTERVALS)
+
+
+def seed_is_exposed(seed: int) -> bool:
+    return any(lo <= int(seed) < hi for lo, hi in EXPOSED_SEED_INTERVALS)
+
+
 #: Exactly the fields `build_reference_agent` reads off a task.
 REQUIRED_TASK_FIELDS = ("seed", "reference", "reference_sha1", "anchor_colour")
 
@@ -72,11 +100,22 @@ def rng_stream_seeds(task: Dict[str, Any]) -> Dict[str, int]:
 
 
 def rng_witness(task: Dict[str, Any], draws: int = 4) -> Dict[str, Any]:
-    """First `draws` values of each stream -- a checkable seed-to-RNG binding.
+    """First `draws` values of each stream, for a SYNTHETIC seed only.
 
-    Freezing these lets a later run be verified to have used the scheduled seed
-    without replaying a game or loading a network.
+    This demonstrates the seed-to-generator derivation. It also SPENDS the seed:
+    it constructs both real generators and draws from them, which under this
+    workstream's accounting exposes that seed even though no model is loaded and
+    no game is played. E4 preflight attempt 3 learned this the expensive way, by
+    taking witnesses over its own 32 scheduled seeds and burning them.
+
+    So this refuses any seed inside a reserved, consumed or exposed interval.
+    Demonstrate the mechanism on a seed no schedule will ever use.
     """
+    seed = int(task["seed"])
+    if seed_is_accounted(seed) or seed_is_exposed(seed):
+        raise E4ReferenceError(
+            f"refusing to draw from scheduled seed {seed}: drawing spends it. "
+            f"Use a synthetic seed outside ACCOUNTED_SEED_INTERVALS.")
     s = rng_stream_seeds(task)
     return {
         **s,
@@ -104,6 +143,9 @@ def validate_task(task: Dict[str, Any]) -> None:
             f"task reference_sha1 {task['reference_sha1']} != pinned {pinned}")
     if int(task["seed"]) in CONSUMED_SEEDS:
         raise E4ReferenceError(f"seed {task['seed']} is recorded as already consumed")
+    if seed_is_exposed(task["seed"]):
+        raise E4ReferenceError(
+            f"seed {task['seed']} was EXPOSED by an earlier witness and cannot be scheduled")
     reference_colour(task)          # raises on a bad anchor_colour
 
 
@@ -120,6 +162,8 @@ def validate_schedule(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
     seeds = [int(t["seed"]) for t in tasks]
     if len(set(seeds)) != len(seeds):
         raise E4ReferenceError("duplicate task seeds")
+    # XOR only -- deriving the integer does NOT draw from a generator and does
+    # not spend the seed. Never call rng_witness on a scheduled task.
     streams = [(rng_stream_seeds(t)["search_seed"], rng_stream_seeds(t)["readout_seed"])
                for t in tasks]
     if len(set(streams)) != len(streams):

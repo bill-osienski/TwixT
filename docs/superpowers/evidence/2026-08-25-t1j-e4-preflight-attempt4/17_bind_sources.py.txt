@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""Bind the run's recorded digests to the committed objects.
+
+THREE independent facts per path, not one:
+
+  * transcript   -- the digest recorded AS THE RUN HAPPENED (compile inputs only)
+  * manifest     -- what file 15 asserts, both sha256 and a git blob id
+  * on disk      -- sha256 of the worktree file
+  * OBJECT STORE -- the git blob id git actually holds for that path
+
+Attempt 3 parsed the blob id and never compared it, so its evidence claimed a
+committed-source binding while only ever checking sha256 against the worktree.
+That column is now load-bearing.
+
+TRACKED vs UNTRACKED. The reference checkpoint lives under `checkpoints/`, which
+is gitignored, so it has NO object in any commit and `git rev-parse <commit>:<path>`
+cannot succeed for it. It is therefore reported explicitly as manifest+disk only,
+never folded in with the tracked sources.
+
+The object id is read from the INDEX (`git ls-files -s`), which is the blob the
+pending commit will contain, so this can run before committing. After committing,
+`git rev-parse <commit>:<path>` must return the same id.
+"""
+import hashlib, re, subprocess, sys
+
+REPO = "/Users/bill/projects/TwixT_Game/"
+LINE_RE = re.compile(r"compile input\s+([0-9a-f]{64})\s+(/\S+)")
+ROW_RE = re.compile(r"^([0-9a-f]{64})\s+([0-9a-f]{40})\s+(\S+)\s*$")
+UNTRACKED_EXPECTED = {"checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"}
+
+#: The manifest must name EXACTLY these. Without this, dropping a row makes the
+#: path invisible to the checker rather than failing -- a control caught that.
+EXPECT_PATHS = {
+    "scripts/GPU/alphazero/t1j_adapter.py",
+    "scripts/GPU/alphazero/e4_screen_reference.py",
+    "tests/test_t1j_adapter.py",
+    "tests/test_e4_screen_reference.py",
+    "scripts/GPU/alphazero/twixtbot_g3_reference.py",
+    "scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java",
+    "scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java",
+    "scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java",
+    "scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java",
+} | UNTRACKED_EXPECTED
+
+
+def transcript_inputs(text):
+    out = {}
+    for m in LINE_RE.finditer(text):
+        path = m.group(2)
+        rel = path[len(REPO):] if path.startswith(REPO) else path
+        out.setdefault(rel, set()).add(m.group(1))
+    return out
+
+
+def manifest_rows(text):
+    return {m.group(3): (m.group(1), m.group(2))
+            for m in (ROW_RE.match(l) for l in text.splitlines()) if m}
+
+
+def index_blob(path):
+    """The blob id git holds for `path`, or None if the path is untracked."""
+    r = subprocess.run(["git", "-C", REPO, "ls-files", "-s", "--", path],
+                       capture_output=True, text=True)
+    if r.returncode != 0 or not r.stdout.strip():
+        return None
+    return r.stdout.split()[1]
+
+
+def check(transcript_text, manifest_text, disk_reader, object_reader):
+    log, bad = [], 0
+    tr, rows = transcript_inputs(transcript_text), manifest_rows(manifest_text)
+    if not rows:
+        return 1, ["FAIL manifest has no parsable rows"]
+    if set(rows) != EXPECT_PATHS:
+        log.append(f"FAIL manifest paths differ from the expected set: "
+                   f"missing {sorted(EXPECT_PATHS - set(rows))}, "
+                   f"unexpected {sorted(set(rows) - EXPECT_PATHS)}")
+        bad += 1
+    if not tr:
+        log.append("FAIL transcript records no compile inputs"); bad += 1
+    unknown = sorted(set(tr) - set(rows))
+    if unknown:
+        log.append(f"FAIL transcript names paths absent from the manifest: {unknown}")
+        bad += 1
+
+    for path in sorted(set(rows) | set(tr)):
+        row = rows.get(path)
+        digests = tr.get(path, set())
+        if len(digests) > 1:
+            log.append(f"FAIL  {path}: transcript carries {len(digests)} distinct digests")
+            bad += 1
+            continue
+        t = digests.pop() if digests else None
+        m_sha, m_blob = row if row else (None, None)
+        try:
+            disk = hashlib.sha256(disk_reader(path)).hexdigest()
+        except Exception as e:                                   # noqa: BLE001
+            disk = f"UNREADABLE {e}"
+        obj = object_reader(path)
+        tracked = obj is not None
+
+        checks = [m_sha == disk, t is None or t == m_sha]
+        if tracked:
+            checks.append(m_blob == obj)
+            what = ("transcript+manifest+disk+object-store" if t
+                    else "manifest+disk+object-store")
+        else:
+            if path not in UNTRACKED_EXPECTED:
+                log.append(f"FAIL  {path}: untracked but not on the expected list")
+                bad += 1
+            what = "manifest+disk ONLY — UNTRACKED (gitignored), no commit object exists"
+        agree = all(checks)
+        log.append(f"{'PASS' if agree else 'FAIL'}  {path}   [{what}]")
+        log.append(f"        transcript   {t}")
+        log.append(f"        manifest     {m_sha}")
+        log.append(f"        on disk      {disk}")
+        log.append(f"        manifest blob {m_blob}")
+        log.append(f"        object store  {obj if tracked else '(untracked)'}")
+        if not agree:
+            bad += 1
+    return bad, log
+
+
+if __name__ == "__main__":
+    d = sys.argv[1]
+    tx = open(f"{d}/00_transcript.txt").read()
+    mf = open(f"{d}/15_committed_sources.sha256.txt").read()
+    disk = lambda p: open(REPO + p, "rb").read()          # noqa: E731
+
+    print("SOURCE BINDING — transcript vs manifest vs disk vs the git OBJECT STORE")
+    print("object ids read from the INDEX, which is the blob the pending commit will hold\n")
+    bad, log = check(tx, mf, disk, index_blob)
+    print("\n".join(log))
+    rows = manifest_rows(mf)
+    tracked = [p for p in rows if index_blob(p) is not None]
+    print(f"BINDING {'OK' if not bad else f'FAILED ({bad})'} — "
+          f"{len(tracked)} tracked paths bound to the object store, "
+          f"{len(rows) - len(tracked)} untracked reported as such")
+
+    print("\nnegative controls — the SAME checker, run against tampered evidence:")
+    JAVA = "scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java"
+    MOD = "scripts/GPU/alphazero/e4_screen_reference.py"
+    real_sha, real_blob = rows[JAVA]
+    flip = lambda h: ("f" if h[0] != "f" else "0") + h[1:]     # noqa: E731
+    ctl = 0
+
+    def control(name, want_reject, tx_=None, mf_=None, dk=None, ob=None):
+        global ctl
+        if want_reject:
+            moved = (transcript_inputs(tx_ or tx) != transcript_inputs(tx),
+                     manifest_rows(mf_ or mf) != manifest_rows(mf),
+                     (dk or disk) is not disk, (ob or index_blob) is not index_blob)
+            if not any(moved):
+                print(f"  FAIL  {name}: INVALID CONTROL — nothing the checker parses changed")
+                ctl += 1
+                return
+        n, lines = check(tx_ or tx, mf_ or mf, dk or disk, ob or index_blob)
+        rejected = n > 0
+        ok = rejected == want_reject
+        first = next((l for l in lines if l.startswith("FAIL")), "")
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: "
+              f"{'rejected' if rejected else 'accepted'} ({n})"
+              + (f"   [{first[:80]}]" if rejected else ""))
+        if not ok: ctl += 1
+
+    control("untouched evidence accepted (the acceptance control)", False)
+    control("transcript digest flipped on the COMPILE-INPUT line", True,
+            tx_=LINE_RE.sub(lambda m: m.group(0).replace(m.group(1), flip(m.group(1)))
+                            if m.group(2).endswith("E4Preflight.java") else m.group(0), tx))
+    control("manifest sha256 flipped", True, mf_=mf.replace(real_sha, flip(real_sha)))
+    control("manifest BLOB ID flipped — the column attempt 3 never checked", True,
+            mf_=mf.replace(real_blob, flip(real_blob)))
+    control("blob id flipped for the NEW module", True,
+            mf_=mf.replace(rows[MOD][1], flip(rows[MOD][1])))
+    control("object store disagrees with the manifest", True,
+            ob=lambda p: None if index_blob(p) is None else flip(index_blob(p)))
+    control("a tracked file reported as untracked", True, ob=lambda p: None)
+    control("file on disk tampered", True, dk=lambda p: disk(p) + b"\n")
+    control("manifest row dropped", True,
+            mf_="".join(l for l in mf.splitlines(True) if MOD not in l))
+    print("CONTROLS " + ("OK" if not ctl else f"FAILED ({ctl})"))
+    sys.exit(0 if not bad and not ctl else 3)

@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+"""FREEZE the endpoint-screen schedule. NOTHING HERE IS EXECUTED.
+
+No game is played, no seed consumed, no model loaded. This writes an EXECUTABLE
+schedule and asserts its internal consistency. Attempt 1's plan was not
+executable: tasks named no endpoint and no opponent, draws were undefined, and
+the outcome rules had no reachable numeric condition.
+"""
+import hashlib, json, subprocess, sys
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+sys.path.insert(0, __file__.rsplit("/", 1)[0])
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import e4_screen_reference as E4REF
+import preflight_lib as L
+
+REPO = "/Users/bill/projects/TwixT_Game/"
+out_path, results_path, prereg_path, prereg_sha = sys.argv[1:5]
+P = L.load_prereg(prereg_path, prereg_sha)
+R = P["endpoint_screen_decision_rules"]
+
+# ---- the endpoints come FROM THE SWEEP, never restated by hand --------------
+sel = None
+for line in open(results_path):
+    r = json.loads(line)
+    if r.get("record_type") == "selection":
+        sel = r
+assert sel is not None, "no selection record in the sweep results"
+WEAK, STRONG = sel["weak_endpoint"], sel["strong_endpoint"]
+assert STRONG is not None and STRONG != WEAK, "the endpoints must differ to be screened"
+ENDPOINTS = {"weak": WEAK, "strong": STRONG}
+
+# ---- our side: a reproducible agent identity --------------------------------
+REF_NAME = "calib020_0001"
+REF_PATH = E4REF.REFERENCE_CHECKPOINTS[REF_NAME]["path"]
+REF_SHA1_PINNED = E4REF.REFERENCE_CHECKPOINTS[REF_NAME]["sha1"]
+blob = open(REPO + REF_PATH, "rb").read()
+assert hashlib.sha1(blob).hexdigest() == REF_SHA1_PINNED, "checkpoint does not match its pin"
+REFERENCE = {
+    "name": REF_NAME,
+    "path": REF_PATH,
+    "bytes": len(blob),
+    "sha256": hashlib.sha256(blob).hexdigest(),
+    "sha1": hashlib.sha1(blob).hexdigest(),
+    "sha1_pinned_in": "twixtbot_g3_schedule.REFERENCE_CHECKPOINTS — the SAME pin the qualified "
+                      "reference construction verifies at load time, checked here at freeze time",
+    "why_this_one": "the standing anchor of the closed AlphaZero programme; also the "
+                    "reference the twixtbot G3 calibration used, so the two anchor "
+                    "attempts are comparable",
+    "git_blob_id": subprocess.run(["git", "-C", REPO, "hash-object", REF_PATH],
+                                  capture_output=True, text=True).stdout.strip(),
+}
+
+# Frozen search settings for OUR side. Defaults are read from the dataclass so the
+# record cannot drift from the code; overrides are stated explicitly.
+# READ from the qualified construction, not transcribed. Attempt 2 declared a
+# dirichlet_eps=0 override that cfg_from never propagates; that is withdrawn.
+OUR_SETTINGS = E4REF.frozen_settings()
+OUR_SETTINGS["source"] = ("scripts/GPU/alphazero/e4_screen_reference.py::frozen_settings, which "
+                          "reads eval_config() and the masks from the qualified G3 path")
+OUR_SETTINGS["withdrawn"] = ("attempt 2's `dirichlet_eps: 0.0` override — cfg_from does not pass "
+                             "dirichlet_eps, so it was never in force; noise is suppressed by "
+                             + E4REF.NOISE_SUPPRESSION)
+OUR_SETTINGS["stochasticity"] = ("temperature keeps our side stochastic, which is what makes the "
+                                 "per-task seed load-bearing; T1j at fixed ply is deterministic")
+OUR_SETTINGS["workers"] = 1
+assert OUR_SETTINGS["eval_config"]["max_moves"] == P["binding"]["ply_cap"], "max_moves must equal the ply cap"
+
+# ---- openings ---------------------------------------------------------------
+OPENINGS = {
+    "o1_center":     [(11, 11), (12, 13), (13, 12), (10, 13), (12, 10), (14, 14)],
+    "o2_offcenter":  [(10, 12), (13, 10), (12, 13), (11, 9), (14, 12), (9, 11)],
+    "o3_low":        [(15, 11), (12, 12), (13, 10), (14, 14), (11, 11), (16, 13)],
+    "o4_high":       [(8, 12), (11, 11), (10, 13), (9, 9), (12, 12), (13, 14)],
+    "o5_wide_left":  [(11, 7), (12, 10), (13, 8), (10, 11), (15, 9), (14, 12)],
+    "o6_wide_right": [(11, 16), (12, 13), (13, 15), (10, 12), (15, 14), (14, 11)],
+    "o7_diagonal":   [(9, 9), (12, 12), (11, 10), (14, 13), (13, 11), (16, 14)],
+    "o8_contact":    [(12, 11), (11, 12), (13, 13), (12, 14), (14, 12), (10, 10)],
+}
+for name, mv in OPENINGS.items():
+    st = TwixtState(active_size=24, to_move="red")
+    for m in mv:
+        assert tuple(m) in set(st.legal_moves()), f"{name}: illegal {m}"
+        st = st.apply_move(tuple(m))
+    assert len(mv) >= 6, f"{name}: {len(mv)} plies, need >= 6"
+    assert st.winner() is None and not st.is_terminal(), f"{name}: already decided"
+
+COLOUR_ARMS = ["t1j_red", "t1j_black"]
+PRIOR_INTERVALS = [
+    (202608060, 202608124), (202608124, 202608188), (202608188, 202608988),
+    (202608988, 202609388), (202609388, 202609788), (202609788, 202610188),
+    (202611000, 202611400), (202611128, 202611256),
+]
+# [202612000, 202612032) was BURNT by attempt 3, which took an rng witness over
+# every scheduled task -- constructing both generators and drawing from each. No
+# model ran and no game was played, but those seeds are spent. The schedule moves
+# past the burnt prefix, leaving a gap, as the twixtbot G3 line did when it burnt
+# 202611000 and re-froze to [202611128, 202611256).
+BURNT_BY_ATTEMPT_3 = (202612000, 202612032)
+SEED_BLOCK = (202612128, 202612160)
+for lo, hi in PRIOR_INTERVALS + [BURNT_BY_ATTEMPT_3]:
+    assert not (SEED_BLOCK[0] < hi and lo < SEED_BLOCK[1]), f"seed block overlaps {(lo, hi)}"
+assert BURNT_BY_ATTEMPT_3 in [tuple(i) for i in E4REF.EXPOSED_SEED_INTERVALS], \
+    "the burnt interval must be registered in e4_screen_reference.EXPOSED_SEED_INTERVALS"
+
+# ---- tasks: EVERY dimension is in the identity ------------------------------
+tasks = []
+for ei, (ekey, mdply) in enumerate(sorted(ENDPOINTS.items())):
+    for oi, opening in enumerate(sorted(OPENINGS)):
+        for ci, arm in enumerate(COLOUR_ARMS):
+            idx = len(tasks)
+            anchor_colour = "red" if arm == "t1j_red" else "black"
+            task = {
+                "task_id": f"e4screen-{idx:03d}-{ekey}{mdply}-{opening}-{arm}",
+                "endpoint": ekey, "t1j_mdPly": mdply, "t1j_mdFixedPly": True,
+                "opening": opening, "colour_arm": arm,
+                "anchor_colour": anchor_colour,           # T1j's colour
+                "reference": REFERENCE["name"],
+                "reference_sha1": REFERENCE["sha1"],      # the field the builder READS
+                "reference_sha256": REFERENCE["sha256"],  # recorded alongside
+                "seed": SEED_BLOCK[0] + idx,
+            }
+            task["reference_colour"] = E4REF.reference_colour(task)
+            # XOR-derived stream seeds ONLY. Deriving the integer does not draw
+            # from a generator and does not spend the seed; taking a witness
+            # would, which is exactly how attempt 3 burnt its own schedule.
+            task["rng_streams"] = E4REF.rng_stream_seeds(task)
+            tasks.append(task)
+
+N_PER_ENDPOINT = len(OPENINGS) * len(COLOUR_ARMS)
+assert len(tasks) == len(ENDPOINTS) * len(OPENINGS) * len(COLOUR_ARMS) == 32, len(tasks)
+assert N_PER_ENDPOINT == R["games_per_endpoint"] == 16
+assert len({t["task_id"] for t in tasks}) == len(tasks), "task ids must be unique"
+assert len({t["seed"] for t in tasks}) == len(tasks), "seeds must be unique"
+assert max(t["seed"] for t in tasks) < SEED_BLOCK[1], "seeds must fit the block"
+for ekey in ENDPOINTS:
+    sub = [t for t in tasks if t["endpoint"] == ekey]
+    assert len(sub) == N_PER_ENDPOINT
+    assert sum(1 for t in sub if t["colour_arm"] == "t1j_red") == \
+           sum(1 for t in sub if t["colour_arm"] == "t1j_black"), f"{ekey} arms unbalanced"
+    assert len({t["opening"] for t in sub}) == len(OPENINGS), f"{ekey} openings unbalanced"
+
+# ---- the reference construction must ACCEPT this schedule --------------------
+SCHEDULE_CHECK = E4REF.validate_schedule(tasks)
+for t in tasks:
+    assert not E4REF.seed_is_exposed(t["seed"]), f"{t['task_id']} uses a burnt seed"
+    assert "rng" not in t, "a scheduled task must carry no drawn witness"
+
+# The witness MECHANISM is still evidenced -- on a synthetic seed no schedule will
+# ever use, so demonstrating it costs nothing.
+SYNTHETIC_SEED = 90000001
+assert not E4REF.seed_is_accounted(SYNTHETIC_SEED)
+WITNESS_DEMO = {
+    "why": "rng_witness draws from both generators and therefore SPENDS a seed. It is "
+           "demonstrated here on a synthetic seed outside every accounted interval, and is "
+           "refused outright on any scheduled seed.",
+    "synthetic_seed": SYNTHETIC_SEED,
+    "witness": E4REF.rng_witness({"seed": SYNTHETIC_SEED, "anchor_colour": "red"}),
+}
+try:
+    E4REF.rng_witness({"seed": tasks[0]["seed"], "anchor_colour": "red"})
+    raise AssertionError("rng_witness must refuse a scheduled seed")
+except E4REF.E4ReferenceError as exc:
+    WITNESS_DEMO["refused_on_scheduled_seed"] = str(exc)
+for t in tasks:
+    E4REF.validate_task(t)
+    assert t["reference_colour"] != t["anchor_colour"], "our side must not share T1j's colour"
+for ekey in ENDPOINTS:
+    sub = [t for t in tasks if t["endpoint"] == ekey]
+    assert sum(1 for t in sub if t["reference_colour"] == "red") == \
+           sum(1 for t in sub if t["reference_colour"] == "black"), \
+        f"{ekey}: our side must play each colour equally often"
+
+# ---- runtime, DERIVED from measured wall time; no moves-per-game assumed -----
+wall_by_depth = {}
+for line in open(results_path):
+    r = json.loads(line)
+    if r.get("record_type") == "depth_summary":
+        wall_by_depth[r["depth"]] = r["max_wall_ms"]
+per_query = {k: wall_by_depth[v] for k, v in ENDPOINTS.items() if v in wall_by_depth}
+CAP_MOVES = P["binding"]["ply_cap"] // 2      # a HARD ceiling, from the ply cap
+runtime = {
+    "basis": "maximum per-query WALL ms measured in this preflight's sweep, per endpoint",
+    "per_query_wall_ms_max": per_query,
+    "games_per_endpoint": N_PER_ENDPOINT,
+    "moves_per_game_is_NOT_measured": (
+        "This preflight measured single queries from 6-14 ply positions. It measured no "
+        "game and no game length. The only defensible bound is the ply cap: at most "
+        f"{P['binding']['ply_cap']} plies, so at most {CAP_MOVES} T1j moves per game."),
+    "ceiling_from_ply_cap": {
+        k: round(per_query[k] * CAP_MOVES * N_PER_ENDPOINT / 1000.0 / 60.0, 1)
+        for k in per_query},
+    "ceiling_units": "minutes of T1j search time per endpoint, at the measured maximum "
+                     "per-query wall time and the ply-cap ceiling on moves",
+    "illustrative_only": {
+        f"{m}_moves_per_game": {
+            k: round(per_query[k] * m * N_PER_ENDPOINT / 1000.0 / 60.0, 1) for k in per_query}
+        for m in (20, 60)},
+    "illustrative_warning": "the 20- and 60-move rows are ILLUSTRATIVE ONLY; no measurement "
+                            "supports any particular moves-per-game figure. Attempt 1 asserted "
+                            "60 and that assumption is withdrawn.",
+    "excludes": "our side's search time entirely; the screen is not authorized and our "
+                "side has never been timed in this configuration",
+}
+
+plan = {
+    "schema": "e4-endpoint-screen-plan/2",
+    "status": "FROZEN, NOT EXECUTED — no game played, no seed consumed, no model loaded",
+    "authorization": "the endpoint screen is UNAUTHORIZED; this schedule exists so that "
+                     "authorizing it later cannot become an occasion to choose parameters",
+    "preregistration_sha256": prereg_sha,
+    "endpoints": ENDPOINTS,
+    "endpoints_source": "read from the sweep's selection record, not restated by hand",
+    "reference": REFERENCE,
+    "our_settings": OUR_SETTINGS,
+    "reference_agent": P["reference_agent"],
+    "schedule_check": SCHEDULE_CHECK,
+    "openings": {k: [list(m) for m in v] for k, v in OPENINGS.items()},
+    "opening_plies": 6,
+    "opening_plies_reason": "moveNr >= 6 keeps T1j's UNSEEDED InitialMoves.firstMove() "
+                            "unreached; a correctness requirement, not a preference",
+    "colour_arms": COLOUR_ARMS,
+    "design": f"{len(OPENINGS)} openings x {len(COLOUR_ARMS)} colours x {len(ENDPOINTS)} "
+              f"endpoints = {len(tasks)} games, {N_PER_ENDPOINT} per endpoint",
+    "tasks": tasks,
+    "n_tasks": len(tasks),
+    "seed_accounting": {
+        "burnt_without_a_game": {
+            "interval": list(BURNT_BY_ATTEMPT_3), "n": 32,
+            "spent_by": "E4 preflight attempt 3, commit 73b4119",
+            "how": "freeze_screen_plan called rng_witness on every scheduled task, which "
+                   "constructs both derived generators and draws four values from each",
+            "no_model_no_game": True,
+            "status": "EXPOSED — registered in e4_screen_reference.EXPOSED_SEED_INTERVALS and "
+                      "refused by validate_task, so it can never be scheduled again",
+        },
+        "witness_demonstration": WITNESS_DEMO,
+    },
+    "seed_block": {"interval": list(SEED_BLOCK), "status": "RESERVED, UNSPENT",
+                   "half_open": True, "seeds_used": [tasks[0]["seed"], tasks[-1]["seed"]],
+                   "prior_intervals": [list(i) for i in PRIOR_INTERVALS + [BURNT_BY_ATTEMPT_3]],
+                   "disjointness": "asserted against every prior interval at freeze time"},
+    "ply_cap": P["binding"]["ply_cap"],
+    "per_ply_binding": "every ply of every game binds both engines through the E3b-qualified "
+                       "adapter; ABORT ON THE FIRST DIVERGENCE",
+    "scoring": R["scoring"],
+    "band": R["band"],
+    "per_endpoint_decision": R["per_endpoint_decision"],
+    "early_stop": R["early_stop"],
+    "earliest_early_stop_computed": dict(zip(("game", "score"),
+                                             L.earliest_early_stop(N_PER_ENDPOINT, R["band"]))),
+    "joint_outcome": R["joint_outcome"],
+    "joint_truth_table": L.joint_truth_table(),
+    "larger_match_permitted_after": list(L.LARGER_MATCH_PERMITTED),
+    "abort_rules": [
+        "any per-ply state divergence between the engines",
+        "any T1j query that does not complete its requested depth",
+        "any illegal or null-sentinel move from either side",
+        "any postcondition failure: a Window/Frame, a non-headless jvm, a mutated host "
+        "preference store, or an unauthorized reflective access",
+        "any seed outside the reserved block, or any repeated seed",
+        "more than half the games at an endpoint terminating by ply cap",
+    ],
+    "durable_result_format": {
+        "file": "e4_screen_results.jsonl", "mode": "append-only, line-buffered, never rewritten",
+        "records": ["run_header", "task_start", "ply", "task_result", "endpoint_decision",
+                    "stop_decision", "joint_outcome"],
+        "task_result_fields": ["task_id", "endpoint", "t1j_mdPly", "opening", "colour_arm",
+                               "reference", "reference_sha1", "anchor_colour",
+                               "reference_colour", "seed", "winner",
+                               "t1j_points", "plies", "terminal_reason", "wall_s"],
+    },
+    "runtime_estimate": runtime,
+    "claim_discipline": P["claim_discipline"],
+}
+json.dump(plan, open(out_path, "w"), indent=1)
+
+print(f"FROZEN, NOT EXECUTED: {len(tasks)} tasks = {len(OPENINGS)} openings x "
+      f"{len(COLOUR_ARMS)} colours x {len(ENDPOINTS)} endpoints ({N_PER_ENDPOINT}/endpoint)")
+print(f"endpoints: weak mdPly={WEAK}, strong mdPly={STRONG} (read from the sweep)")
+print(f"reference: {REFERENCE['name']}  sha256 {REFERENCE['sha256'][:16]}...  "
+      f"{REFERENCE['bytes']} bytes")
+ec = OUR_SETTINGS["eval_config"]
+print(f"our side: {ec['mcts_sims']} sims, batch {ec['mcts_eval_batch_size']}, "
+      f"stall_flush {ec['mcts_stall_flush_sims']}, max_moves {ec['max_moves']}")
+print(f"  noise suppressed by {OUR_SETTINGS['noise_suppression']} — NOT by a dirichlet_eps field")
+print(f"  schedule accepted by the qualified reference construction: {SCHEDULE_CHECK}")
+g, sc = L.earliest_early_stop(N_PER_ENDPOINT, R["band"])
+print(f"  earliest reachable early stop: game {g} of {N_PER_ENDPOINT} at score {sc} "
+      f"(attempt 2 claimed game 2; withdrawn)")
+print(f"seed block {SEED_BLOCK} RESERVED/UNSPENT, seeds {tasks[0]['seed']}..{tasks[-1]['seed']}")
+print(f"  BURNT by attempt 3 and now unschedulable: {BURNT_BY_ATTEMPT_3} (32 seeds, no game ran)")
+print(f"  witness mechanism demonstrated on synthetic seed {SYNTHETIC_SEED}; "
+      f"refused on a scheduled seed")
+print(f"joint classifier TOTAL over {len(plan['joint_truth_table'])} combinations")
+print(f"runtime ceiling (ply-cap bound, T1j side only): {runtime['ceiling_from_ply_cap']} minutes/endpoint")

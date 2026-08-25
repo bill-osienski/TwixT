@@ -1,0 +1,76 @@
+SOURCE BINDING — transcript vs manifest vs disk vs the git OBJECT STORE
+object ids read from the INDEX, which is the blob the pending commit will hold
+
+PASS  checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors   [manifest+disk ONLY — UNTRACKED (gitignored), no commit object exists]
+        transcript   None
+        manifest     34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26
+        on disk      34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26
+        manifest blob 829fcb19d708f007650bb1ad02f9beda0c38639c
+        object store  (untracked)
+PASS  scripts/GPU/alphazero/e4_screen_reference.py   [manifest+disk+object-store]
+        transcript   None
+        manifest     f13acd2ea78ec832613fb7bae56666c194fb6ec4ed762166495f6f8a2576224f
+        on disk      f13acd2ea78ec832613fb7bae56666c194fb6ec4ed762166495f6f8a2576224f
+        manifest blob ce4e74e5147234318a6b9081881996fbca5ea456
+        object store  ce4e74e5147234318a6b9081881996fbca5ea456
+PASS  scripts/GPU/alphazero/t1j_adapter.py   [manifest+disk+object-store]
+        transcript   None
+        manifest     1db2ff102b322f559218239d5423623bd058c8709c17a746001ef3680280388c
+        on disk      1db2ff102b322f559218239d5423623bd058c8709c17a746001ef3680280388c
+        manifest blob bedcf2ac8a701f9c5f8164399364dd679490f391
+        object store  bedcf2ac8a701f9c5f8164399364dd679490f391
+PASS  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java   [transcript+manifest+disk+object-store]
+        transcript   559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03
+        manifest     559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03
+        on disk      559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03
+        manifest blob ef7914891ad6ea8be29fd70cee657a23190f00d7
+        object store  ef7914891ad6ea8be29fd70cee657a23190f00d7
+PASS  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java   [transcript+manifest+disk+object-store]
+        transcript   09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244
+        manifest     09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244
+        on disk      09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244
+        manifest blob 9c10fbbb14f4f6a74a07c404c0499d16ae0bd119
+        object store  9c10fbbb14f4f6a74a07c404c0499d16ae0bd119
+PASS  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java   [transcript+manifest+disk+object-store]
+        transcript   281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+        manifest     281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+        on disk      281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+        manifest blob 9cc72ae10b089e5e9e5df60abb310e9dec69725f
+        object store  9cc72ae10b089e5e9e5df60abb310e9dec69725f
+PASS  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java   [transcript+manifest+disk+object-store]
+        transcript   23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3
+        manifest     23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3
+        on disk      23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3
+        manifest blob 4a9f2a68103a7bbc16f89b0bf1744e00196e2fe3
+        object store  4a9f2a68103a7bbc16f89b0bf1744e00196e2fe3
+PASS  scripts/GPU/alphazero/twixtbot_g3_reference.py   [manifest+disk+object-store]
+        transcript   None
+        manifest     80d646287099f11734b2500bd998ac9066537abb0b08a47df1541281a7b2530b
+        on disk      80d646287099f11734b2500bd998ac9066537abb0b08a47df1541281a7b2530b
+        manifest blob 56f9d308b13221b7d265c7ef4c608047ac8da777
+        object store  56f9d308b13221b7d265c7ef4c608047ac8da777
+PASS  tests/test_e4_screen_reference.py   [manifest+disk+object-store]
+        transcript   None
+        manifest     7ce9dc85c9c93a19d379b288c2652d523e4e6da342d06848a9c520d22e9881e1
+        on disk      7ce9dc85c9c93a19d379b288c2652d523e4e6da342d06848a9c520d22e9881e1
+        manifest blob 988dcd2067d0eea3163d88e6e2452c9132ebb505
+        object store  988dcd2067d0eea3163d88e6e2452c9132ebb505
+PASS  tests/test_t1j_adapter.py   [manifest+disk+object-store]
+        transcript   None
+        manifest     6fa18efed16127589be85de63d464b64b4618c26663a4be16e51eabd8e2b7d10
+        on disk      6fa18efed16127589be85de63d464b64b4618c26663a4be16e51eabd8e2b7d10
+        manifest blob 45a20c0954ce13b48435ef8890bf5648f06588ce
+        object store  45a20c0954ce13b48435ef8890bf5648f06588ce
+BINDING OK — 9 tracked paths bound to the object store, 1 untracked reported as such
+
+negative controls — the SAME checker, run against tampered evidence:
+  PASS  untouched evidence accepted (the acceptance control): accepted (0)
+  PASS  transcript digest flipped on the COMPILE-INPUT line: rejected (1)   [FAIL  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java   [tra]
+  PASS  manifest sha256 flipped: rejected (1)   [FAIL  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java   [tra]
+  PASS  manifest BLOB ID flipped — the column attempt 3 never checked: rejected (1)   [FAIL  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java   [tra]
+  PASS  blob id flipped for the NEW module: rejected (1)   [FAIL  scripts/GPU/alphazero/e4_screen_reference.py   [manifest+disk+object-store]
+  PASS  object store disagrees with the manifest: rejected (9)   [FAIL  scripts/GPU/alphazero/e4_screen_reference.py   [manifest+disk+object-store]
+  PASS  a tracked file reported as untracked: rejected (9)   [FAIL  scripts/GPU/alphazero/e4_screen_reference.py: untracked but not on the exp]
+  PASS  file on disk tampered: rejected (10)   [FAIL  checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors   []
+  PASS  manifest row dropped: rejected (1)   [FAIL manifest paths differ from the expected set: missing ['scripts/GPU/alphazer]
+CONTROLS OK
