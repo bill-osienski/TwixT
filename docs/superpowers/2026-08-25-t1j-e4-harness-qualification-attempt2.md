@@ -93,5 +93,20 @@ the canonical schedule still cannot be injected or reshaped.
 position**; anything about T1j — **the per-ply binder is a refusing stub here**, so nothing binds
 two engines yet; game length or screen runtime; and absolute placement.
 
-**Still open:** the post-run provenance binding of `06_committed_sources.sha256.txt` to this
-commit's objects, which follows this commit.
+## Post-run provenance (added after `ed48f7a`)
+
+C-series evidence added separately; no runtime artifact changed and `08_MANIFEST` still verifies
+7/7. `C1_post_run_provenance.txt` binds `06_committed_sources.sha256.txt` to the **commit's**
+objects, not the index:
+
+- **A** — all **8 tracked rows** match `git rev-parse ed48f7a:<path>`; the checkpoint has no object
+  in `ed48f7a` and is reported *UNTRACKED (gitignored), disk-only*.
+- **B** — every file under all prior evidence directories and cards, compared against the commit
+  that added **that file**: **zero changed**.
+- **B2 — declared amendments.** The E4 preflight attempt-4 card was deliberately amended by
+  `fee7a3b` (section 4 plus two visible correction blocks). Rather than let it read as a violation
+  *or* be quietly excused, it is declared: checked against the **amending** commit, and **required
+  to actually differ from its origin** — a declaration that changed nothing would be a way to exempt
+  a file from checking altogether.
+
+Nine controls, all invoking the real checkers, all passing.

@@ -1,0 +1,235 @@
+#!/usr/bin/env python3
+"""POST-RUN provenance for the E4 HARNESS QUALIFICATION attempt 2, after commit ed48f7a.
+
+Adds nothing to the run and changes no runtime artifact. It closes two provenance
+gaps that review found in attempt 4's evidence.
+
+A. THE INDEX IS NOT THE COMMIT. `bind_sources.py` read blob ids with
+   `git ls-files -s`, which proves what was STAGED, and its docstring called that
+   "the blob the pending commit will contain". Whether it did depends on what was
+   eventually committed. Every tracked manifest row is therefore compared here
+   DIRECTLY against `git rev-parse <COMMIT>:<path>`. The reference checkpoint is
+   under gitignored `checkpoints/`, so it has no object in any commit and is
+   reported disk-only -- never folded in with the tracked rows.
+
+B. `git status --porcelain` IS NOT BYTE IDENTITY. The driver checked the prior
+   evidence paths with `git status --porcelain`, which proves only that they had
+   no worktree or index changes against the then-current tree. It does NOT compare
+   them with the attempt commits that introduced them. That comparison is made
+   here: for every file under every prior evidence path, the blob id at the commit
+   that ADDED it is compared with the blob id at COMMIT, and the file sets are
+   required to match exactly.
+"""
+import hashlib, re, subprocess, sys
+
+REPO = "/Users/bill/projects/TwixT_Game"
+ROW_RE = re.compile(r"^([0-9a-f]{64})\s+([0-9a-f]{40})\s+(\S+)\s*$")
+UNTRACKED_EXPECTED = {"checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"}
+EXPECT_N_ROWS = 9
+
+#: Paths DELIBERATELY amended after the commit that added them. Each is checked
+#: against the amending commit instead, AND required to actually differ from its
+#: origin -- a declaration that changed nothing would be a way to excuse a file
+#: from checking altogether.
+AMENDED = {
+    "docs/superpowers/2026-08-25-t1j-e4-preflight-attempt4.md": (
+        "d3f9a4b", "fee7a3b",
+        "the post-run provenance correction added section 4 and two visible correction "
+        "blocks; disclosed in fee7a3b's message as 3 files added and 1 modified"),
+}
+
+PRIOR_PATHS = [
+    "docs/superpowers/evidence/2026-08-24-capacity-c0",
+    "docs/superpowers/evidence/2026-08-24-t1j-e1",
+    "docs/superpowers/evidence/2026-08-24-t1j-e2",
+    "docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2",
+    "docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3",
+    "docs/superpowers/evidence/2026-08-24-t1j-e2-attempt4",
+    "docs/superpowers/evidence/2026-08-24-t1j-e3a",
+    "docs/superpowers/evidence/2026-08-24-t1j-e3b",
+    "docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt2",
+    "docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3",
+    "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight",
+    "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt2",
+    "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt3",
+    "docs/superpowers/2026-08-25-t1j-e4-preflight.md",
+    "docs/superpowers/2026-08-25-t1j-e4-preflight-attempt2.md",
+    "docs/superpowers/2026-08-25-t1j-e4-preflight-attempt3.md",
+    "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4",
+    "docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification",
+    "docs/superpowers/2026-08-25-t1j-e4-harness-qualification.md",
+]
+
+
+def git(*args):
+    r = subprocess.run(["git", "-C", REPO, *args], capture_output=True, text=True)
+    return r.returncode, r.stdout.strip()
+
+
+def commit_blob(commit, fpath):
+    """Blob id `commit` holds for fpath, or None if it holds no such object."""
+    rc, out = git("rev-parse", f"{commit}:{fpath}")
+    return out if rc == 0 else None
+
+
+def files_at(commit, prefix):
+    rc, out = git("ls-tree", "-r", "--format=%(objectname) %(path)", commit, "--", prefix)
+    if rc != 0 or not out:
+        return {}
+    return {ln.split(" ", 1)[1]: ln.split(" ", 1)[0] for ln in out.splitlines()}
+
+
+def added_in(fpath):
+    rc, out = git("log", "--diff-filter=A", "--format=%H", "-1", "--", fpath)
+    return out.splitlines()[0] if rc == 0 and out else None
+
+
+def check_a(manifest_text, commit, blob_of):
+    """Every tracked manifest row must match the COMMIT's object, not the index."""
+    log, bad = [], 0
+    rows = {m.group(3): (m.group(1), m.group(2))
+            for m in (ROW_RE.match(l) for l in manifest_text.splitlines()) if m}
+    if not rows:
+        return 1, ["FAIL manifest has no parsable rows"]
+    if len(rows) != EXPECT_N_ROWS:
+        log.append(f"FAIL manifest has {len(rows)} rows, expected {EXPECT_N_ROWS}")
+        bad += 1
+    for fpath in sorted(rows):
+        sha, manifest_blob = rows[fpath]
+        obj = blob_of(commit, fpath)
+        if obj is None:
+            ok = fpath in UNTRACKED_EXPECTED
+            log.append(f"{'PASS' if ok else 'FAIL'}  {fpath}")
+            log.append(f"        no object in {commit} — UNTRACKED (gitignored), disk-only"
+                       f"{'' if ok else '  <-- but NOT on the untracked list'}")
+            if not ok:
+                bad += 1
+            continue
+        if fpath in UNTRACKED_EXPECTED:
+            log.append(f"FAIL  {fpath}: expected untracked but {commit} holds an object")
+            bad += 1
+            continue
+        ok = obj == manifest_blob
+        log.append(f"{'PASS' if ok else 'FAIL'}  {fpath}")
+        log.append(f"        manifest blob     {manifest_blob}")
+        log.append(f"        {commit}:<path>   {obj}")
+        if not ok:
+            bad += 1
+    return bad, log
+
+
+def check_b(commit, paths, files_fn, added_fn):
+    """Prior evidence must be byte-identical to the commit that introduced it.
+
+    PER FILE, not per directory. A directory-level anchor would bind
+    2026-08-24-t1j-e3b-attempt3 to ef81bbd -- the post-run correction that added
+    its B-series -- rather than to 6377ae5, which added the other nineteen. Each
+    file is compared against the commit that added THAT file.
+    """
+    log, bad = [], 0
+    for prefix in paths:
+        now = files_fn(commit, prefix)
+        if not now:
+            log.append(f"FAIL  {prefix}: absent from {commit}")
+            bad += 1
+            continue
+        origins, changed, unfound = {}, [], []
+        for fpath, blob_now in sorted(now.items()):
+            origin = added_fn(fpath)
+            if origin is None:
+                unfound.append(fpath)
+                continue
+            origins.setdefault(origin[:7], 0)
+            origins[origin[:7]] += 1
+            then = files_fn(origin, fpath).get(fpath)
+            if then != blob_now:
+                changed.append(fpath)
+        ok = not changed and not unfound
+        log.append(f"{'PASS' if ok else 'FAIL'}  {prefix}")
+        log.append(f"        {len(now)} files, each vs the commit that added it: "
+                   + ", ".join(f"{c}x{n}" for c, n in sorted(origins.items()))
+                   + f"  changed {len(changed)}")
+        if not ok:
+            log.append(f"        changed={changed[:3]} origin_not_found={unfound[:3]}")
+            bad += 1
+    return bad, log
+
+
+if __name__ == "__main__":
+    commit, manifest_path = sys.argv[1], sys.argv[2]
+    mf = open(manifest_path).read()
+    print(f"POST-RUN PROVENANCE — commit {commit}\n")
+
+    print("A. tracked manifest rows vs the COMMIT's objects (not the index)")
+    bad_a, log_a = check_a(mf, commit, commit_blob)
+    print("\n".join(log_a))
+    print(f"A: {'OK' if not bad_a else f'FAILED ({bad_a})'}\n")
+
+    print("B. prior evidence vs the commit that introduced it (byte identity)")
+    bad_b, log_b = check_b(commit, PRIOR_PATHS, files_at, added_in)
+    print("\n".join(log_b))
+    print(f"B: {'OK' if not bad_b else f'FAILED ({bad_b})'}\n")
+
+    print("B2. DECLARED amendments — checked against the amending commit, and required")
+    print("    to actually differ from their origin")
+    bad_b2 = 0
+    for fpath, (origin, amender, why) in sorted(AMENDED.items()):
+        at_origin = commit_blob(origin, fpath)
+        at_amend = commit_blob(amender, fpath)
+        now = commit_blob(commit, fpath)
+        differs = at_origin is not None and at_amend is not None and at_origin != at_amend
+        stable = at_amend is not None and at_amend == now
+        ok = differs and stable
+        print(f"  {'PASS' if ok else 'FAIL'}  {fpath}")
+        print(f"        added {origin} {at_origin}")
+        print(f"        amended {amender} {at_amend}   (differs from origin: {differs})")
+        print(f"        at {commit} {now}   (unchanged since the amendment: {stable})")
+        print(f"        why: {why}")
+        if not ok:
+            bad_b2 += 1
+    print(f"B2: {'OK' if not bad_b2 else f'FAILED ({bad_b2})'}\n")
+
+    print("negative controls — the SAME checkers, run against tampered inputs:")
+    ctl = 0
+    rows = {m.group(3): (m.group(1), m.group(2))
+            for m in (ROW_RE.match(l) for l in mf.splitlines()) if m}
+    tracked = sorted(p for p in rows if p not in UNTRACKED_EXPECTED)
+    flip = lambda h: ("f" if h[0] != "f" else "0") + h[1:]        # noqa: E731
+
+    def ctl_a(name, want_reject, mf_=None, blob_of=None):
+        global ctl
+        n, _ = check_a(mf_ or mf, commit, blob_of or commit_blob)
+        ok = (n > 0) == want_reject
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: {'rejected' if n else 'accepted'} ({n})")
+        if not ok: ctl += 1
+
+    ctl_a("A untouched accepted (acceptance control)", False)
+    ctl_a("A manifest blob flipped for a tracked row", True,
+          mf_=mf.replace(rows[tracked[0]][1], flip(rows[tracked[0]][1])))
+    ctl_a("A commit holds a different object", True,
+          blob_of=lambda c, p: None if commit_blob(c, p) is None else flip(commit_blob(c, p)))
+    ctl_a("A a tracked path missing from the commit", True,
+          blob_of=lambda c, p: None)
+    ctl_a("A the checkpoint unexpectedly tracked", True,
+          blob_of=lambda c, p: "a" * 40 if p in UNTRACKED_EXPECTED else commit_blob(c, p))
+
+    def ctl_b(name, want_reject, files_fn=None, added_fn=None):
+        global ctl
+        n, _ = check_b(commit, PRIOR_PATHS[:3], files_fn or files_at, added_fn or added_in)
+        ok = (n > 0) == want_reject
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: {'rejected' if n else 'accepted'} ({n})")
+        if not ok: ctl += 1
+
+    ctl_b("B untouched accepted (acceptance control)", False)
+    ctl_b("B one file's blob differs from its origin commit", True,
+          files_fn=lambda c, p: ({k: (flip(v) if i == 0 else v)
+                                  for i, (k, v) in enumerate(sorted(files_at(c, p).items()))}
+                                 if c == commit else files_at(c, p)))
+    ctl_b("B a file was removed after its origin commit", True,
+          files_fn=lambda c, p: (dict(sorted(files_at(c, p).items())[1:])
+                                 if c == commit else files_at(c, p)))
+    ctl_b("B an extra file appeared after its origin commit", True,
+          files_fn=lambda c, p: ({**files_at(c, p), p + "/EXTRA": "b" * 40}
+                                 if c == commit else files_at(c, p)))
+    print(f"CONTROLS {'OK' if not ctl else f'FAILED ({ctl})'}")
+    sys.exit(0 if not (bad_a or bad_b or bad_b2 or ctl) else 3)
