@@ -1,0 +1,13 @@
+=== A. does a FAILING pytest run actually report failure? ===
+  attempt-3 shape (no pipe)            exit 1   <- must be nonzero
+  attempt-2 shape (| tail, no pipefail) exit 0   <- REPORTS 0: the defect, reproduced
+  same pipe WITH pipefail               exit 1   <- nonzero once pipefail is set
+
+=== B. the final gate expression, with each input flipped ===
+  qual smoke tests ctrl prefs -> GATE
+   0    0     0     0    0   ->  0   (the run: PASS)
+   1    0     0     0    0   ->  3   (qual failed)
+   0    1     0     0    0   ->  3   (smoke failed)
+   0    0     1     0    0   ->  3   (tests failed)
+   0    0     0     1    0   ->  3   (prefsctrl failed)
+   0    0     0     0    1   ->  3   (prefs failed)

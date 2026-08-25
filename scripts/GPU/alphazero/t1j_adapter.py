@@ -1,8 +1,10 @@
 """Adapter for the external T1j engine, qualified by E3b.
 
 This is the reusable product of E3b: the coordinate/player mapping, the process
-driver, and the external ply-cap semantics. E4 and anything after it should
-import this rather than rebuild it.
+driver, the external ply-cap semantics, and -- under ``t1j_java/`` -- the Java
+helper sources themselves. E4 and anything after it should import this rather
+than rebuild it. Given a JDK and the T1j jar, ``compile_helper()`` builds the
+helper from the committed sources, so nothing outside the repository is needed.
 
 WHAT THIS IS NOT
 ----------------
@@ -33,9 +35,23 @@ from __future__ import annotations
 import re
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 BOARD_N = 24
+LEGAL_BITS = BOARD_N * BOARD_N   # the serialized legal-cell map is exactly this wide
+
+# The Java helper is COMMITTED, so this module is runnable from a checkout plus a
+# JDK and the T1j jar -- nothing has to be reconstructed. compile_helper() builds
+# from exactly these paths.
+JAVA_SRC_ROOT = Path(__file__).resolve().parent / "t1j_java"
+JAVA_SOURCES = (
+    JAVA_SRC_ROOT / "e2probe" / "ScratchPrefs.java",
+    JAVA_SRC_ROOT / "e2probe" / "ScratchPrefsFactory.java",
+    JAVA_SRC_ROOT / "net" / "schwagereit" / "t1j" / "E3bDump.java",
+)
+HELPER_MAIN = "net.schwagereit.t1j.E3bDump"
+PREFS_FACTORY = "e2probe.ScratchPrefsFactory"
 
 Pos = Tuple[int, int]      # ours: (row, col)
 T1jXY = Tuple[int, int]    # T1j:  (x, y)
@@ -116,6 +132,24 @@ class PlyState:
 _PLY_RE = re.compile(r"^PLY (\d+) ")
 
 
+def parse_legal_bits(bits: str) -> Set[T1jXY]:
+    """Decode the serialized legal-cell map, REQUIRING the full board width.
+
+    Without the width check a truncated serialization decodes to the identical
+    set whenever the dropped tail is all zeroes -- and on this board the tail can
+    be up to a full column of 24 -- so a silently short dump would qualify. The
+    width is therefore part of what is compared, not an incidental detail.
+    """
+    if len(bits) != LEGAL_BITS:
+        raise ValueError(
+            f"legal map is {len(bits)} bits, expected exactly {LEGAL_BITS}"
+        )
+    bad = set(bits) - {"0", "1"}
+    if bad:
+        raise ValueError(f"legal map has non-binary characters {sorted(bad)}")
+    return {(i // BOARD_N, i % BOARD_N) for i, b in enumerate(bits) if b == "1"}
+
+
 def parse_dump(text: str) -> List[PlyState]:
     """Parse the helper's per-ply dump. Unknown lines are ignored."""
     out: List[PlyState] = []
@@ -153,10 +187,27 @@ def parse_dump(text: str) -> List[PlyState]:
                 (int(p.split(",")[0]), int(p.split(",")[1])) for p in line[7:].split()
             )
         elif line.startswith("  LEGAL "):
-            bits = line[8:].strip()
-            legal = {(i // BOARD_N, i % BOARD_N) for i, b in enumerate(bits) if b == "1"}
+            legal = parse_legal_bits(line[8:].strip())
     flush()
     return out
+
+
+def compile_helper(javac: str, jar: str, out_dir: str) -> subprocess.CompletedProcess:
+    """Compile the COMMITTED helper sources into ``out_dir``.
+
+    T1j itself is neither modified nor rebuilt -- its jar is only a classpath
+    entry. Raises if any committed source is missing, so a partial checkout fails
+    loudly instead of compiling something else.
+    """
+    missing = [str(p) for p in JAVA_SOURCES if not p.is_file()]
+    if missing:
+        raise FileNotFoundError(f"committed helper sources missing: {missing}")
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    return subprocess.run(
+        [javac, "-Xlint:-options", "-encoding", "UTF-8", "-cp", jar, "-d", out_dir]
+        + [str(p) for p in JAVA_SOURCES],
+        capture_output=True, text=True,
+    )
 
 
 def replay(
@@ -178,10 +229,10 @@ def replay(
     xy = [to_t1j(r, c, transform=transform) for (r, c) in moves]
     args = [
         java,
-        "-Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory",
+        f"-Djava.util.prefs.PreferencesFactory={PREFS_FACTORY}",
         "-Djava.awt.headless=true",
         "-cp", f"{jar}:{classes}",
-        "net.schwagereit.t1j.E3bDump", "replay", str(ply_cap),
+        HELPER_MAIN, "replay", str(ply_cap),
     ] + [f"{x},{y}" for (x, y) in xy]
     p = subprocess.run(args, capture_output=True, text=True)
     return parse_dump(p.stdout), p.returncode, p.stdout

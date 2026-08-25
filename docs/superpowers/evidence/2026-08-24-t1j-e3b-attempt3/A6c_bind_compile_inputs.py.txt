@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Bind the hashes the RUN recorded as compile inputs to the COMMITTED files.
+
+Strict: exactly three compile-input lines, each a 64-hex digest with an absolute
+path inside the repo; each digest must equal the sha256 of the committed file at
+that path AND the digest A6 records for it. A loose substring check would pass on
+any digit, which is how the first cut of this check reported a false match.
+"""
+import hashlib, re, sys
+d = sys.argv[1]
+REPO = "/Users/bill/projects/TwixT_Game/"
+line_re = re.compile(r"^\s*\|\s+compile input\s+([0-9a-f]{64})\s+(/\S+)$")
+
+rows = [m.groups() for m in
+        (line_re.match(l) for l in open(f"{d}/90_transcript.txt")) if m]
+a6 = {}
+for l in open(f"{d}/A6_committed_sources.sha256.txt"):
+    if re.match(r"^[0-9a-f]{64}\s", l):
+        h, p = l.split()[:2]
+        a6[p] = h
+
+bad = 0
+print(f"compile-input lines parsed from the transcript: {len(rows)}")
+print(f"digests recorded in A6: {len(a6)}")
+if len(rows) != 3:
+    print("FAIL expected exactly 3 compile-input lines"); bad += 1
+for h, abspath in rows:
+    inside = abspath.startswith(REPO)
+    rel = abspath[len(REPO):] if inside else abspath
+    try:
+        actual = hashlib.sha256(open(abspath, "rb").read()).hexdigest()
+    except OSError as e:
+        actual = f"UNREADABLE {e}"
+    ok = inside and actual == h and a6.get(rel) == h
+    print(f"  {'PASS' if ok else 'FAIL'}  {rel}")
+    print(f"        transcript {h}")
+    print(f"        on disk    {actual}")
+    print(f"        in A6      {a6.get(rel)}")
+    if not ok: bad += 1
+print("COMPILE-INPUT BINDING " + ("OK" if not bad else f"FAILED ({bad})"))
+
+print("\nnegative controls — the same comparison must REJECT tampering:")
+h0, p0 = rows[0]
+rel0 = p0[len(REPO):]
+for nm, digest in (("all-zero digest", "0" * 64),
+                   ("one flipped hex character", ("f" if h0[0] != "f" else "0") + h0[1:])):
+    rejected = a6.get(rel0) != digest
+    print(f"  {'PASS' if rejected else 'FAIL'}  {nm} rejected for {rel0}")
+    if not rejected: bad += 1
+sys.exit(0 if not bad else 3)

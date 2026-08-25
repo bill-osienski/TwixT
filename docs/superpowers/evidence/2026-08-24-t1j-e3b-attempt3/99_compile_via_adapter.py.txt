@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+"""Compile the helper THROUGH THE COMMITTED ADAPTER, from the committed sources.
+
+This is the check that attempt 2 could not make: the adapter is independently
+runnable, because it ships the Java it needs. Nothing is compiled from scratch.
+"""
+import hashlib, sys
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero import t1j_adapter as A
+
+javac, jar, out = sys.argv[1:4]
+print(f"adapter JAVA_SRC_ROOT = {A.JAVA_SRC_ROOT}")
+if not str(A.JAVA_SRC_ROOT).startswith("/Users/bill/projects/TwixT_Game/"):
+    print("FAIL helper sources are not inside the repository"); sys.exit(3)
+for p in A.JAVA_SOURCES:
+    if not p.is_file():
+        print(f"FAIL missing committed source {p}"); sys.exit(3)
+    print(f"  compile input  {hashlib.sha256(p.read_bytes()).hexdigest()}  {p}")
+r = A.compile_helper(javac, jar, out)
+if r.stdout.strip(): print("  javac stdout:", r.stdout.strip())
+if r.stderr.strip(): print("  javac stderr:", r.stderr.strip())
+print(f"COMPILE rc={r.returncode}")
+sys.exit(0 if r.returncode == 0 else 3)

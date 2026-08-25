@@ -1,0 +1,37 @@
+#!/bin/bash
+# Negative controls for the DRIVER GATE itself. Attempt 2's unit-test step was
+# piped through `tail` with no pipefail and was absent from the final gate, so a
+# failing test run could have been reported as exit 0. Both halves are shown here.
+set -o pipefail
+REPO=/Users/bill/projects/TwixT_Game
+TMP=$(mktemp -d)
+cat > "$TMP/test_deliberately_failing.py" <<'PY'
+def test_this_must_fail():
+    assert 1 == 2, "deliberate failure, to prove the gate binds"
+PY
+
+echo "=== A. does a FAILING pytest run actually report failure? ==="
+"$REPO/.venv/bin/python" -m pytest "$TMP/test_deliberately_failing.py" -q --no-header -p no:cacheprovider >/dev/null 2>&1
+echo "  attempt-3 shape (no pipe)            exit $?   <- must be nonzero"
+
+set +o pipefail
+"$REPO/.venv/bin/python" -m pytest "$TMP/test_deliberately_failing.py" -q --no-header -p no:cacheprovider 2>&1 | tail -3 >/dev/null
+echo "  attempt-2 shape (| tail, no pipefail) exit $?   <- REPORTS 0: the defect, reproduced"
+set -o pipefail
+"$REPO/.venv/bin/python" -m pytest "$TMP/test_deliberately_failing.py" -q --no-header -p no:cacheprovider 2>&1 | tail -3 >/dev/null
+echo "  same pipe WITH pipefail               exit $?   <- nonzero once pipefail is set"
+
+echo
+echo "=== B. the final gate expression, with each input flipped ==="
+gate() { local QUAL=$1 SMOKE=$2 TESTS=$3 PREFSCTRL=$4 PREFS=$5 GATE=0
+  [ "$QUAL" = "0" ] && [ "$SMOKE" = "0" ] && [ "$TESTS" = "0" ] \
+    && [ "$PREFSCTRL" = "0" ] && [ "$PREFS" = "0" ] || GATE=3
+  echo "$GATE"; }
+printf "  qual smoke tests ctrl prefs -> GATE\n"
+printf "   %s    %s     %s     %s    %s   ->  %s   (the run: PASS)\n" 0 0 0 0 0 "$(gate 0 0 0 0 0)"
+i=0
+for pos in qual smoke tests prefsctrl prefs; do
+  a=(0 0 0 0 0); a[$i]=1; i=$((i+1))
+  printf "   %s    %s     %s     %s    %s   ->  %s   (%s failed)\n" "${a[0]}" "${a[1]}" "${a[2]}" "${a[3]}" "${a[4]}" "$(gate "${a[@]}")" "$pos"
+done
+rm -rf "$TMP"

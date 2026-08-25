@@ -68,19 +68,25 @@ def test_negative_cap_rejected():
         A.terminal_with_cap(0, False, ply_cap=-1)
 
 
+def bits(*cells):
+    """A full-width legal map with exactly `cells` set."""
+    on = {r * A.BOARD_N + c for (r, c) in cells}
+    return "".join("1" if i in on else "0" for i in range(A.LEGAL_BITS))
+
+
 DUMP = """SIZE x=24 y=24
 CAP 280
 PLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0
   PEGS
   BRIDGES
   HIST
-  LEGAL 11
+  LEGAL {full}
 PLY 1 mover=Y move=10,10 next=X moveNr=1 termY=false termX=true pegs=1 bridges=0
   PEGS 10,10,Y
   BRIDGES 1,1|2,3|Y
   HIST 10,10
-  LEGAL 01
-"""
+  LEGAL {one}
+""".format(full=bits((0, 0), (0, 1)), one=bits((0, 1)))
 
 
 def test_parse_dump_reads_every_field():
@@ -101,7 +107,8 @@ def test_parse_dump_reads_every_field():
 def test_parse_dump_winner_prefers_y_then_x_then_none():
     def one(ty, tx):
         return A.parse_dump(
-            f"PLY 0 next=Y moveNr=0 termY={ty} termX={tx}\n  PEGS\n  BRIDGES\n  HIST\n  LEGAL 0\n"
+            f"PLY 0 next=Y moveNr=0 termY={ty} termX={tx}\n"
+            f"  PEGS\n  BRIDGES\n  HIST\n  LEGAL {bits()}\n"
         )[0].winner
     assert one("true", "false") == "Y"
     assert one("false", "true") == "X"
@@ -116,3 +123,56 @@ def test_our_snapshot_maps_pegs_and_bridges():
     # identity transform sends (row, col) -> (col, row)
     assert pegs == {"2,1,Y", "4,3,X"}
     assert bridges == {"2,1|4,3|Y"}
+
+
+# --- the serialized legal map must be exactly BOARD_N**2 wide ---------------
+
+def test_legal_bits_round_trip_full_width():
+    cells = {(0, 0), (5, 7), (23, 23)}
+    assert A.parse_legal_bits(bits(*cells)) == cells
+
+
+def test_truncated_legal_map_rejected_even_though_the_set_is_identical():
+    """The control is only meaningful because truncation is otherwise invisible."""
+    cells = {(0, 0), (5, 7)}
+    full = bits(*cells)
+    short = full.rstrip("0")
+    assert len(short) < A.LEGAL_BITS - A.BOARD_N   # a whole column of tail dropped
+    # decoded leniently, the truncated form is the SAME set -- only width catches it
+    lenient = {(i // A.BOARD_N, i % A.BOARD_N) for i, b in enumerate(short) if b == "1"}
+    assert lenient == cells
+    with pytest.raises(ValueError):
+        A.parse_legal_bits(short)
+
+
+def test_extended_legal_map_rejected():
+    with pytest.raises(ValueError):
+        A.parse_legal_bits(bits((0, 0)) + "0")
+
+
+def test_non_binary_legal_map_rejected():
+    with pytest.raises(ValueError):
+        A.parse_legal_bits("2" + bits((0, 0))[1:])
+
+
+def test_parse_dump_rejects_a_truncated_legal_line():
+    tampered = DUMP.replace("  LEGAL " + bits((0, 1)), "  LEGAL " + bits((0, 1)).rstrip("0"))
+    assert tampered != DUMP
+    with pytest.raises(ValueError):
+        A.parse_dump(tampered)
+
+
+# --- the Java helper ships with the adapter --------------------------------
+
+def test_committed_java_sources_are_present():
+    assert len(A.JAVA_SOURCES) == 3
+    for src in A.JAVA_SOURCES:
+        assert src.is_file(), src
+    names = {p.name for p in A.JAVA_SOURCES}
+    assert names == {"ScratchPrefs.java", "ScratchPrefsFactory.java", "E3bDump.java"}
+
+
+def test_compile_helper_refuses_when_a_source_is_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(A, "JAVA_SOURCES", A.JAVA_SOURCES + (tmp_path / "Absent.java",))
+    with pytest.raises(FileNotFoundError):
+        A.compile_helper("javac", "t1j.jar", str(tmp_path / "out"))

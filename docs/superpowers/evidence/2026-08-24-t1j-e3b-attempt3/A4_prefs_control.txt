@@ -1,0 +1,6 @@
+  PASS  mutated field value rejected: exit 3 (want 3)
+        PREFS CHECK FAIL |   dir: BEFORE '/Users/bill/Library/Preferences' != AFTER 'MUTATED-/Users/bill/Library/Preferences'
+  PASS  dropped field rejected: exit 3 (want 3)
+        PREFS CHECK FAIL |   dir: BEFORE '/Users/bill/Library/Preferences' != AFTER None
+  PASS  untouched AFTER accepted (the control control): exit 0 (want 0)
+        PREFS CHECK PASS — 7 normalized fields identical (label line excluded by design)

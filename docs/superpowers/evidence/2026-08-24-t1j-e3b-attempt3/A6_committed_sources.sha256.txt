@@ -1,0 +1,9 @@
+The Java helper and the adapter are COMMITTED REPO CODE, not evidence copies.
+They are bound here by hash instead of duplicated, so no second copy can drift
+from the bytes that actually compiled and ran. Paths are repo-relative.
+
+281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+988d9ee9b8384eb88d894206a30428ad57eca252b961c48719a8728d4731340b  scripts/GPU/alphazero/t1j_adapter.py
+d8456c79455f357f0a0ba26cc8b8dfe2b28f7d1a9c061160b5b896589338b0d0  tests/test_t1j_adapter.py
