@@ -1,0 +1,6 @@
+POST-RUN MANIFEST — covers ONLY the C-series added after commit b020b0e.
+The attempt-4 runtime artifacts are covered by 08_MANIFEST.sha256.txt, which
+is NOT regenerated: all 7 entries still verify. This manifest excludes itself.
+
+1173674d0e1c46df96cd78cfa56b455e380930aa26c54d07d2a4681e6c52b283       11831  C0_post_run_provenance.py.txt
+e14e2003147f57fb104c25cdc3be928b97bddcdb644c0358c76e7c5f79733684        6936  C1_post_run_provenance.txt

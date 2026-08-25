@@ -64,6 +64,21 @@ PASS  NEGATIVE CONTROL: a STARTED task with no evaluator aborts on the reference
 
 A task that names no `reference_colour` is refused outright rather than defaulting.
 
+## Post-run provenance (added after `b020b0e`)
+
+C-series evidence added separately; the card is amended only with this section. No runtime artifact
+changed and `08_MANIFEST` still verifies 7/7.
+
+- **A** — all 8 tracked rows match `git rev-parse b020b0e:<path>`; the checkpoint has no object in
+  the commit and is reported *UNTRACKED (gitignored), disk-only*.
+- **B** — every file under all prior evidence directories and cards, against the commit that added
+  **that file**: **zero changed**.
+- **B2 — declared amendments**, now three: the preflight attempt-4 card (`fee7a3b`), the harness
+  attempt-2 card (`0a441eb`) and the harness attempt-3 card (`904d7d6`). Each is checked against its
+  amending commit **and required to actually differ from its origin**.
+
+Nine controls, all invoking the real checkers, all passing.
+
 ---
 
 ## What this establishes, and what it does not
