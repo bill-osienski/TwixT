@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+"""E3b adapter + lockstep comparator.
+
+Source-only adapter. Derives the coordinate/player mapping from OBSERVED
+legality maps, then advances T1j and TwixtState in lockstep from the same
+ordered move sequence and compares every engine-owned observable after each ply.
+
+ply_cap is a REQUIRED KEYWORD-ONLY argument with no default, applied identically
+and externally to both engines. Nothing about it is read from or attributed to
+T1j.
+
+Self-tests first and refuses to qualify unless every negative control is
+rejected. Exits nonzero on any failure.
+"""
+import itertools, json, re, subprocess, sys
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+
+N = 24
+FAILS = []
+
+def fail(msg):
+    FAILS.append(msg)
+
+# ---------------------------------------------------------------- adapter
+TRANSFORMS = {
+    "identity":      lambda r, c: (c, r),
+    "flip_x":        lambda r, c: (N - 1 - c, r),
+    "flip_y":        lambda r, c: (c, N - 1 - r),
+    "flip_both":     lambda r, c: (N - 1 - c, N - 1 - r),
+    "T_identity":    lambda r, c: (r, c),
+    "T_flip_x":      lambda r, c: (N - 1 - r, c),
+    "T_flip_y":      lambda r, c: (r, N - 1 - c),
+    "T_flip_both":   lambda r, c: (N - 1 - r, N - 1 - c),
+}
+PLAYER_MAPS = {"Y=red": {"red": "Y", "black": "X"},
+               "Y=black": {"red": "X", "black": "Y"}}
+
+def our_legal_map(colour):
+    """Our forbidden/allowed map as a set of allowed (row,col)."""
+    s = TwixtState(active_size=N, to_move=colour)
+    return {(r, c) for r in range(N) for c in range(N) if s.is_valid_placement(r, c)}
+
+def parse_legality(text):
+    out = {}
+    m = re.search(r"SIZE x=(\d+) y=(\d+)", text)
+    out["size"] = (int(m.group(1)), int(m.group(2)))
+    out["first"] = re.search(r"FIRSTMOVER (\w)", text).group(1)
+    out["allowed"] = {}
+    for mm in re.finditer(r"LEGALMAP player=(\w) order=x_major (\d+)", text):
+        p, bits = mm.group(1), mm.group(2)
+        out["allowed"][p] = {(i // N, i % N) for i, b in enumerate(bits) if b == "1"}  # (x,y)
+    return out
+
+def derive_candidates(t1j):
+    """Return the transforms+player-maps consistent with the OBSERVED legality maps."""
+    survivors = []
+    ours = {c: our_legal_map(c) for c in ("red", "black")}
+    for tname, tf in TRANSFORMS.items():
+        for pname, pm in PLAYER_MAPS.items():
+            ok = True
+            for colour in ("red", "black"):
+                mapped = {tf(r, c) for (r, c) in ours[colour]}
+                if mapped != t1j["allowed"][pm[colour]]:
+                    ok = False
+                    break
+            if ok:
+                survivors.append((tname, pname))
+    return survivors
+
+# ---------------------------------------------------------------- lockstep
+def t1j_replay(java, jar, classes, moves_t1j, *, ply_cap):
+    """ply_cap is keyword-only with no default and applied by the HARNESS."""
+    if ply_cap is None:
+        raise TypeError("ply_cap is required")
+    capped = moves_t1j[:ply_cap]
+    args = [java, "-Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory",
+            "-Djava.awt.headless=true", "-cp", f"{jar}:{classes}",
+            "net.schwagereit.t1j.E3bDump", "replay", str(ply_cap)] + \
+           [f"{x},{y}" for (x, y) in capped]
+    p = subprocess.run(args, capture_output=True, text=True)
+    return p.stdout, p.returncode
+
+def parse_plies(text):
+    plies = []
+    cur = None
+    for line in text.splitlines():
+        if line.startswith("PLY "):
+            f = dict(kv.split("=", 1) for kv in line[4:].split() if "=" in kv)
+            f["n"] = int(line[4:].split()[0])
+            cur = {"hdr": f, "pegs": set(), "bridges": set()}
+            plies.append(cur)
+        elif line.startswith("  PEGS ") and cur is not None:
+            cur["pegs"] = set(line[7:].split())
+        elif line.startswith("  BRIDGES ") and cur is not None:
+            cur["bridges"] = set(line[10:].split())
+    return plies
+
+def our_snapshot(state, tf, pm):
+    pegs = {f"{tf(r,c)[0]},{tf(r,c)[1]},{pm[o]}" for (r, c), o in state.pegs.items()}
+    br = set()
+    for b in state.bridges:
+        (r1, c1), (r2, c2) = b
+        owner = state.pegs[(r1, c1)]
+        a = "%d,%d" % tf(r1, c1); z = "%d,%d" % tf(r2, c2)
+        lo, hi = (a, z) if a <= z else (z, a)
+        br.add(f"{lo}|{hi}|{pm[owner]}")
+    return pegs, br
+
+def compare_fixture(name, moves, t1j_text, tf, pm, *, ply_cap):
+    """Compare both engines after EVERY ply. Returns list of divergences."""
+    if ply_cap is None:
+        raise TypeError("ply_cap is required")
+    div = []
+    t = parse_plies(t1j_text)
+    s = TwixtState(active_size=N, to_move="red")
+    ours = [(s, "-", "-")]
+    for mv in moves[:ply_cap]:
+        s = s.apply_move(tuple(mv))
+        ours.append((s, pm["red"], mv))
+    if len(t) != len(ours):
+        div.append(f"{name}: ply count {len(t)} != {len(ours)}")
+        return div
+    for i, (st, _, _) in enumerate(ours):
+        tp = t[i]
+        opegs, obr = our_snapshot(st, tf, pm)
+        if opegs != tp["pegs"]:
+            div.append(f"{name} ply {i}: pegs differ "
+                       f"(ours-only {sorted(opegs - tp['pegs'])[:3]}, "
+                       f"t1j-only {sorted(tp['pegs'] - opegs)[:3]})")
+        if obr != tp["bridges"]:
+            div.append(f"{name} ply {i}: bridges differ "
+                       f"(ours-only {sorted(obr - tp['bridges'])[:3]}, "
+                       f"t1j-only {sorted(tp['bridges'] - obr)[:3]})")
+        want_next = pm[st.to_move]
+        if tp["hdr"].get("next") != want_next:
+            div.append(f"{name} ply {i}: side to move {tp['hdr'].get('next')} != {want_next}")
+        if int(tp["hdr"].get("moveNr", -1)) != st.ply:
+            div.append(f"{name} ply {i}: ply {tp['hdr'].get('moveNr')} != {st.ply}")
+        # terminal + winner, from each engine's own predicate
+        t_term = {"Y": tp["hdr"].get("termY") == "true", "X": tp["hdr"].get("termX") == "true"}
+        o_win = st.winner()
+        o_term = {pm["red"]: o_win == "red", pm["black"]: o_win == "black"}
+        if t_term != o_term:
+            div.append(f"{name} ply {i}: terminal/winner T1j {t_term} != ours {o_term}")
+    return div
+
+# ---------------------------------------------------------------- self-test
+def _synth(pegs, bridges, nxt, moveNr, termY="false", termX="false", n=0):
+    return (f"PLY {n} mover=Y move=- next={nxt} moveNr={moveNr} "
+            f"termY={termY} termX={termX} pegs={len(pegs)} bridges={len(bridges)}\n"
+            f"  PEGS {' '.join(sorted(pegs))}\n  BRIDGES {' '.join(sorted(bridges))}\n")
+
+def selftest():
+    print("comparator self-test (negative controls)")
+    tf, pm = TRANSFORMS["identity"], PLAYER_MAPS["Y=red"]
+    moves = [(5, 5), (20, 20)]
+    s0 = TwixtState(active_size=N, to_move="red")
+    s1 = s0.apply_move((5, 5)); s2 = s1.apply_move((20, 20))
+    states = [s0, s1, s2]
+    def txt(mut=None):
+        out = ""
+        for i, st in enumerate(states):
+            p, b = our_snapshot(st, tf, pm)
+            nxt, mn, tY, tX = pm[st.to_move], st.ply, "false", "false"
+            if mut and mut[0] == i:
+                kind = mut[1]
+                if kind == "peg":    p = {x for x in p} | {"1,1,Y"}
+                if kind == "coord":  p = {("9,9,Y" if x.endswith(",Y") else x) for x in p}
+                if kind == "player": p = {x.replace(",Y", ",X") for x in p}
+                if kind == "bridge": b = set(b) | {"1,1|2,3|Y"}
+                if kind == "hist":   mn = st.ply + 1
+                if kind == "side":   nxt = "X" if nxt == "Y" else "Y"
+                if kind == "term":   tY = "true"
+            out += _synth(p, b, nxt, mn, tY, tX, i)
+        return out
+    cases = [("baseline accepted", txt(), True)]
+    for i, kind in ((2, "peg"), (1, "coord"), (2, "player"), (2, "bridge"),
+                    (2, "hist"), (2, "side"), (2, "term")):
+        cases.append((f"{kind} divergence rejected", txt((i, kind)), False))
+    # cap divergence: T1j reports more plies than the cap allows
+    cases.append(("cap divergence rejected", txt() + _synth(set(), set(), "Y", 3, n=3), False))
+    bad = 0
+    for name, t, want_ok in cases:
+        d = compare_fixture("selftest", moves, t, tf, pm, ply_cap=280)
+        ok = (len(d) == 0)
+        good = (ok == want_ok)
+        print(f"  {'PASS' if good else 'FAIL'}  {name}" + ("" if ok else f"   [{d[0][:74]}]"))
+        if not good: bad += 1
+    # ply_cap must be keyword-only with no default
+    try:
+        compare_fixture("x", moves, txt(), tf, pm)   # type: ignore
+        print("  FAIL  ply_cap is required"); bad += 1
+    except TypeError:
+        print("  PASS  ply_cap is required (keyword-only, no default)")
+    try:
+        t1j_replay("j", "j", "c", [(0, 0)])           # type: ignore
+        print("  FAIL  t1j_replay ply_cap is required"); bad += 1
+    except TypeError:
+        print("  PASS  t1j_replay ply_cap is required (keyword-only, no default)")
+    if bad:
+        print(f"SELFTEST FAILED ({bad}) — refusing to qualify"); return False
+    print("SELFTEST OK — every injected divergence rejected")
+    return True
+
+# ---------------------------------------------------------------- main
+if __name__ == "__main__":
+    java, jar, classes, legality_file, fixtures_file = sys.argv[1:6]
+    PLY_CAP = 280                      # EXTERNAL harness cap; never read from T1j
+    if not selftest(): sys.exit(2)
+
+    t1j = parse_legality(open(legality_file).read())
+    fixtures = json.load(open(fixtures_file))
+    print()
+    print(f"T1j board {t1j['size']}, first mover {t1j['first']}; harness ply_cap={PLY_CAP}")
+    cands = derive_candidates(t1j)
+    print(f"derivation stage 1 — legality maps admit {len(cands)} candidate mapping(s)")
+
+    print()
+    print("derivation stage 2 — lockstep over every fixture, all candidates")
+    survivors = []
+    for tname, pname in cands:
+        tf, pm = TRANSFORMS[tname], PLAYER_MAPS[pname]
+        allok, first = True, ""
+        for fname, fx in fixtures.items():
+            mvs = [tuple(m) for m in fx["moves"]]
+            t_moves = [tf(r, c) for (r, c) in mvs]
+            out, rc = t1j_replay(java, jar, classes, t_moves, ply_cap=PLY_CAP)
+            if rc != 0:
+                allok = False; first = f"{fname}: T1j exit {rc}"; break
+            d = compare_fixture(fname, mvs, out, tf, pm, ply_cap=PLY_CAP)
+            if d:
+                allok = False; first = d[0]; break
+        print(f"  {'SURVIVES' if allok else 'rejected'}  {tname:12s} {pname:8s}"
+              + ("" if allok else f"   [{first[:70]}]"))
+        if allok: survivors.append((tname, pname))
+
+    print()
+    if not survivors:
+        fail("no candidate mapping survives lockstep comparison")
+    else:
+        print(f"{len(survivors)} mapping(s) survive full lockstep comparison: "
+              f"{[s[0] for s in survivors]}")
+        print("  These form a symmetry orbit of the board; TwixT is invariant under them,")
+        print("  so they are indistinguishable by state comparison BY CONSTRUCTION.")
+        print("  Qualification needs A correct mapping, not a unique one.")
+
+    # per-fixture detail under the canonical survivor
+    if survivors:
+        tname, pname = survivors[0]
+        tf, pm = TRANSFORMS[tname], PLAYER_MAPS[pname]
+        print()
+        print(f"per-fixture detail under {tname} / {pname}")
+        for fname, fx in fixtures.items():
+            mvs = [tuple(m) for m in fx["moves"]]
+            out, rc = t1j_replay(java, jar, classes, [tf(r, c) for (r, c) in mvs], ply_cap=PLY_CAP)
+            plies = parse_plies(out)
+            last = plies[-1]["hdr"]
+            print(f"  {fname:10s} plies={len(mvs):3d} ours_winner={fx['winner']!s:6s} "
+                  f"t1j_termY={last.get('termY')} t1j_termX={last.get('termX')} "
+                  f"pegs={last.get('pegs')} bridges={last.get('bridges')}  DIVERGENCES=0")
+            if fname == "crossing":
+                bp = fx.get("blocked_pair")
+                print(f"    blocked crossing verified in ours: absent={fx.get('blocked_absent')} "
+                      f"pair={bp}")
+
+    print()
+    if FAILS:
+        print(f"E3b QUALIFICATION FAIL — {len(FAILS)} problem(s):")
+        for f in FAILS: print("  " + f)
+        sys.exit(3)
+    print("E3b QUALIFICATION PASS — lockstep agreement on every observable, every ply")
+    sys.exit(0)

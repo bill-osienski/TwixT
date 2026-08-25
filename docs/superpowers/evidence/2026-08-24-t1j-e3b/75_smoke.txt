@@ -1,0 +1,24 @@
+== smoke: T1j computes one move at fixed ply 3 ==
+  T1j exit 0
+  PASS   T1j smoke process exit 0
+  PASS   SMOKE line emitted
+  T1j returned (x=15, y=15) usealphabeta=true currentMaxPly=4
+  PASS   returned move is not the null sentinel
+  PASS   alpha-beta completed fixed ply 3
+  PASS   T1j considers its own move legal
+
+== validate the returned move IN OUR ENGINE, before applying it anywhere ==
+  T1j (x=15, y=15)  ->  ours (row=15, col=15)
+  PASS   our side to move is red, matching T1j's Y
+  PASS   OUR engine accepts the move as legal
+  PASS   target intersection empty in our engine
+
+== apply to BOTH sides and compare the resulting state ==
+  PASS   T1j replay-with-move exit 0
+  PASS   pegs agree after the move (7 each)
+  PASS   bridges agree after the move (1 each)
+  PASS   side to move agrees after the move
+  PASS   ply agrees after the move (7)
+  PASS   neither engine reports a terminal state
+
+SMOKE PASS

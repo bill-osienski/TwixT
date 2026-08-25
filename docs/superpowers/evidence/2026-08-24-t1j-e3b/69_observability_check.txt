@@ -1,0 +1,81 @@
+E3b STEP 1 — OBSERVABILITY CHECK (the authorized first act)
+date 2026-08-25T02:33:36Z   pinned T1j source at b572ed2
+
+QUESTION: can every invariant E3b must compare be observed authoritatively
+using ONLY public/package-visible state plus the three already-qualified
+reflective fields (Match.nextPlayer write; FindMove.usealphabeta and
+currentMaxPly reads)? If not, E3b is BLOCKED and stops.
+
+=============== T1j side ===============
+INVARIANT                T1j OBSERVABLE                                 VISIBILITY
+------------------------ ---------------------------------------------- ----------
+peg occupancy            Board.getPin(x,y)                              public
+legal cells              Board.pinAllowed(x,y,player)                   public
+edge restrictions        Board.pinAllowed over the whole board          public
+automatic bridges        Board.isBridged(x,y,direction)                 public
+bridge endpoints         Board.bridgeEnd(x,y,direction) [static]        public
+crossing behaviour       Board.bridgeAllowed(x,y,direction)             public
+                         Board.isBridgeAllowed(xa,ya,xb,yb)             public
+connectivity             Board.isConnected(xa,ya,xb,yb)                 public
+terminal + winner        Board.checkGameOver() per board                public
+side to move             Match.getNextPlayer()                          public
+ply                      Match.getMoveNr()                              package
+history                  Match.getMoveX(n) / getMoveY(n)                package
+board size               Board.getXsize() / getYsize()                  public
+player constants         Board.XPLAYER / YPLAYER                        public
+
+The two at risk were BRIDGES and WINNER. Both are available:
+
+  BRIDGES — Board.isBridged is public and reads the engine's own array:
+         public boolean isBridged(final int x, final int y, final int direction)
+         {
+            //the input data is corrected to reflect the margin
+            return field[x + MARGIN][y + MARGIN].bridge[direction] >= Board.BRIDGED;
+         }
+
+    bridge[] has 4 directions (Board.java:24) and BRIDGED = 10 (Board.java:76),
+    and the public static Board.bridgeEnd(x,y,direction) yields the far
+    endpoint, so the complete bridge set is enumerable from public calls.
+
+  WINNER — Match.checkForGameOver() is private and pops a JOptionPane, so it
+    is unusable here. But it decides the winner purely by calling the PUBLIC
+    Board.checkGameOver() on each board:
+            // check for finished match
+            String matchOverMessage = "";
+            if (boardY.checkGameOver())
+            {
+               matchOverMessage = matchData.mdPlayerY + " "
+               + Messages.getString("Match.topDown");
+            }
+            else if (boardX.checkGameOver())
+            {
+               matchOverMessage = matchData.mdPlayerX + " "
+    boardY.checkGameOver() => Y (top-down) has connected
+    boardX.checkGameOver() => X (left-right) has connected
+    Calling those two directly uses T1j'S OWN PREDICATE — it is not a
+    reimplementation of its rules — and never touches the GUI path.
+
+    Board.checkGameOver() body, for the record:
+         public boolean checkGameOver()
+         {
+            eval.evaluateY(Board.XPLAYER);
+            return (eval.valueOfY(false, Board.XPLAYER) == 0);
+         }
+
+    NOTE: it calls eval.evaluateY(...), so it MUTATES evaluator state. The
+    search recomputes evaluation on entry (FindMove.evaluate), so this is
+    safe to call as an observable, and is recorded here rather than assumed.
+
+=============== our side ===============
+peg occupancy            GameState.pegs : Dict[(row,col) -> 'red'|'black']
+bridges                  GameState.bridges : Set[((r1,c1),(r2,c2))] ordered
+legal cells              TwixtState.legal_moves() / is_valid_placement()
+side to move             GameState.to_move
+history                  GameState.move_history : [(player,row,col)]
+winner / terminal        TwixtState.winner() / is_terminal() / game_result()
+
+=============== RESULT ===============
+OBSERVABILITY CHECK: PASS.
+Every invariant E3b must compare is reachable within the permitted limit.
+NO additional reflection is required, and NO rule of T1j needs recreating.
+E3b proceeds.

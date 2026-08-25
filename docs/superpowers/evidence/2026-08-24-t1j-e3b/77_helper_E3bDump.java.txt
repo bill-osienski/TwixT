@@ -1,0 +1,212 @@
+package net.schwagereit.t1j;
+
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HexFormat;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.prefs.Preferences;
+import java.util.stream.Stream;
+
+/**
+ * E3b — T1j state dumper for lockstep rules/state qualification.
+ *
+ * Emits ONLY engine-owned observables, all read through T1j's own public or
+ * package-visible API. No rule of T1j is recreated here.
+ *
+ * modes:
+ *   legality                 dump pinAllowed over the empty board, both players
+ *   replay <cap> <x,y ...>   advance one ply at a time, dumping full state each ply
+ *   smoke                    the E2/E3a fixed six-move position, one ply-3 computeMove
+ *
+ * Reflection is limited to the three already-qualified fields and is audited in
+ * a finally path. Exit 0 = ok, 3 = a requirement failed, 4 = threw.
+ */
+public final class E3bDump {
+
+    private static final List<String> REFLECTED = new ArrayList<String>();
+    private static final List<String> AUTHORIZED = Arrays.asList(
+        "net.schwagereit.t1j.Match.nextPlayer(write)",
+        "net.schwagereit.t1j.FindMove.usealphabeta(read)",
+        "net.schwagereit.t1j.FindMove.currentMaxPly(read)");
+    private static int failures = 0;
+    private static String plistBefore;
+    private static long countBefore;
+
+    private static void req(boolean c, String what) {
+        if (!c) { System.out.println("FAIL " + what); failures++; }
+    }
+    private static Field reflect(Class<?> o, String n, String m) throws Exception {
+        REFLECTED.add(o.getName() + "." + n + "(" + m + ")");
+        Field f = o.getDeclaredField(n); f.setAccessible(true); return f;
+    }
+    private static Path prefsDir() {
+        return Paths.get(System.getProperty("user.home"), "Library", "Preferences");
+    }
+    private static String plistHash() {
+        try {
+            Path p = prefsDir().resolve("com.apple.java.util.prefs.plist");
+            if (!Files.exists(p)) return "ABSENT";
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(md.digest(Files.readAllBytes(p)));
+        } catch (Exception e) { return "ERROR"; }
+    }
+    private static long prefsCount() {
+        try (Stream<Path> s = Files.list(prefsDir())) { return s.count(); }
+        catch (Exception e) { return -1L; }
+    }
+    private static int windows() { try { return java.awt.Window.getWindows().length; } catch (Throwable t) { return -1; } }
+    private static int frames()  { try { return java.awt.Frame.getFrames().length;  } catch (Throwable t) { return -1; } }
+
+    public static void main(String[] args) {
+        Throwable thrown = null;
+        try {
+            plistBefore = plistHash(); countBefore = prefsCount();
+            req("e2probe.ScratchPrefs".equals(Preferences.userRoot().getClass().getName()),
+                "isolated Preferences active");
+            req(java.awt.GraphicsEnvironment.isHeadless(), "headless at start");
+            req(windows() == 0 && frames() == 0, "zero Window/Frame at start");
+            req(CheckPattern.class.getResourceAsStream("patterns.properties") != null,
+                "patterns.properties present");
+            CheckPattern.getInstance().loadPattern();
+            Zobrist.getInstance().initialize();
+            GeneralSettings gs = GeneralSettings.getInstance();
+            gs.mdFixedPly = true; gs.mdPly = 3;
+
+            String mode = args.length > 0 ? args[0] : "legality";
+            if ("legality".equals(mode))      legality();
+            else if ("replay".equals(mode))   replay(args);
+            else if ("smoke".equals(mode))    smoke();
+            else { System.out.println("FAIL unknown mode " + mode); failures++; }
+        } catch (Throwable t) {
+            thrown = t;
+            System.out.println("THREW: " + t);
+            t.printStackTrace(System.out);
+        } finally {
+            post(thrown);
+        }
+        System.exit(failures == 0 ? 0 : 3);
+    }
+
+    private static Match freshMatch() throws Exception {
+        Match m = new Match();
+        Board bY = m.getBoardY(), bX = m.getBoardX();
+        bY.clearBoard(); bX.clearBoard();
+        bY.setSize(24, 24); bX.setSize(24, 24);
+        bY.getEval().setupForY(); bX.getEval().setupForY();
+        reflect(Match.class, "nextPlayer", "write").setInt(m, Board.YPLAYER);
+        return m;
+    }
+
+    /** pinAllowed over the empty board, for both players — the mapping evidence. */
+    private static void legality() throws Exception {
+        Match m = freshMatch();
+        Board bY = m.getBoardY();
+        System.out.println("SIZE x=" + bY.getXsize() + " y=" + bY.getYsize());
+        System.out.println("PLAYERS YPLAYER=" + Board.YPLAYER + " XPLAYER=" + Board.XPLAYER);
+        System.out.println("FIRSTMOVER " + (m.getNextPlayer() == Board.YPLAYER ? "Y" : "X"));
+        for (int p : new int[]{Board.YPLAYER, Board.XPLAYER}) {
+            StringBuilder sb = new StringBuilder();
+            for (int x = 0; x < bY.getXsize(); x++)
+                for (int y = 0; y < bY.getYsize(); y++)
+                    sb.append(bY.pinAllowed(x, y, p) ? '1' : '0');
+            System.out.println("LEGALMAP player=" + (p == Board.YPLAYER ? "Y" : "X")
+                + " order=x_major " + sb);
+        }
+    }
+
+    /** Advance ply by ply through T1j's own setlastMove, dumping state each time. */
+    private static void replay(String[] args) throws Exception {
+        int cap = Integer.parseInt(args[1]);
+        Match m = freshMatch();
+        Board bY = m.getBoardY(), bX = m.getBoardX();
+        System.out.println("SIZE x=" + bY.getXsize() + " y=" + bY.getYsize());
+        dump(m, bY, bX, 0, "-", "-");
+        for (int i = 2; i < args.length; i++) {
+            int ply = i - 1;
+            if (ply > cap) { System.out.println("CAP reached at ply " + ply); break; }
+            String[] xy = args[i].split(",");
+            int x = Integer.parseInt(xy[0]), y = Integer.parseInt(xy[1]);
+            int mover = m.getNextPlayer();
+            boolean ok = m.setlastMove(x, y);
+            req(ok, "ply " + ply + ": setlastMove(" + x + "," + y + ") accepted");
+            if (!ok) break;
+            dump(m, bY, bX, ply, (mover == Board.YPLAYER ? "Y" : "X"), x + "," + y);
+        }
+    }
+
+    private static void dump(Match m, Board bY, Board bX, int ply, String mover, String mv) {
+        int n = bY.getXsize();
+        Set<String> pegs = new TreeSet<String>();
+        for (int x = 0; x < n; x++)
+            for (int y = 0; y < n; y++) {
+                int v = bY.getPin(x, y);
+                if (v != 0) pegs.add(x + "," + y + "," + (v == Board.YPLAYER ? "Y" : "X"));
+            }
+        Set<String> br = new TreeSet<String>();
+        for (int x = 0; x < n; x++)
+            for (int y = 0; y < n; y++)
+                for (int d = 0; d < 4; d++)
+                    if (bY.isBridged(x, y, d)) {
+                        int e = Board.bridgeEnd(x, y, d);
+                        int tx = e / 1000, ty = e % 1000;
+                        int owner = bY.getPin(x, y);
+                        String a = x + "," + y, b = tx + "," + ty;
+                        String lo = a.compareTo(b) <= 0 ? a : b, hi = a.compareTo(b) <= 0 ? b : a;
+                        br.add(lo + "|" + hi + "|" + (owner == Board.YPLAYER ? "Y" : "X"));
+                    }
+        System.out.println("PLY " + ply + " mover=" + mover + " move=" + mv
+            + " next=" + (m.getNextPlayer() == Board.YPLAYER ? "Y" : "X")
+            + " moveNr=" + m.getMoveNr()
+            + " termY=" + bY.checkGameOver() + " termX=" + bX.checkGameOver()
+            + " pegs=" + pegs.size() + " bridges=" + br.size());
+        System.out.println("  PEGS " + String.join(" ", pegs));
+        System.out.println("  BRIDGES " + String.join(" ", br));
+    }
+
+    /** The E2/E3a fixed six-move position, one fixed-ply-3 computeMove. */
+    private static void smoke() throws Exception {
+        Match m = freshMatch();
+        Board bY = m.getBoardY(), bX = m.getBoardX();
+        int[][] seq = { {10,10},{11,13},{12,12},{13,11},{14,10},{9,12} };
+        for (int[] s : seq) req(m.setlastMove(s[0], s[1]), "smoke move " + s[0] + "," + s[1]);
+        req(m.getMoveNr() == 6 && m.getNextPlayer() == Board.YPLAYER, "smoke position coherent");
+        FindMove fm = FindMove.getFindMove();
+        Move mv = fm.computeMove(Board.YPLAYER);
+        req(mv != null, "smoke returned non-null move");
+        int mx = mv == null ? -1 : mv.getX(), my = mv == null ? -1 : mv.getY();
+        boolean uab = reflect(FindMove.class, "usealphabeta", "read").getBoolean(fm);
+        int cmp = reflect(FindMove.class, "currentMaxPly", "read").getInt(null);
+        req(uab && cmp == 4, "smoke alpha-beta completed ply 3");
+        System.out.println("SMOKE move_x=" + mx + " move_y=" + my
+            + " usealphabeta=" + uab + " currentMaxPly=" + cmp
+            + " legal=" + (mv != null && bY.getPin(mx,my) == 0
+                           && bY.pinAllowed(mx, my, Board.YPLAYER)));
+    }
+
+    private static void post(Throwable thrown) {
+        int w = windows(), f = frames();
+        boolean headless = java.awt.GraphicsEnvironment.isHeadless();
+        boolean prefsOk = plistBefore != null && plistBefore.equals(plistHash())
+                          && countBefore == prefsCount();
+        Set<String> names = new LinkedHashSet<String>(REFLECTED);
+        boolean reflOk = !REFLECTED.isEmpty()
+            && new LinkedHashSet<String>(AUTHORIZED).containsAll(names);
+        req(thrown == null, "no unexpected exception");
+        req(w == 0 && f == 0, "zero Window/Frame at end");
+        req(headless, "headless at end");
+        req(prefsOk, "preference surfaces unchanged");
+        req(reflOk, "only authorized reflective fields used");
+        System.out.println("POSTCOND no_throw=" + (thrown == null) + " windows=" + w
+            + " frames=" + f + " headless=" + headless + " prefs_ok=" + prefsOk
+            + " refl_ok=" + reflOk + " refl_n=" + REFLECTED.size()
+            + " failures=" + failures);
+    }
+}

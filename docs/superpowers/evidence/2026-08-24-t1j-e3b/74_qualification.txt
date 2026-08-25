@@ -1,0 +1,39 @@
+comparator self-test (negative controls)
+  PASS  baseline accepted
+  PASS  peg divergence rejected   [selftest ply 2: pegs differ (ours-only [], t1j-only ['1,1,Y'])]
+  PASS  coord divergence rejected   [selftest ply 1: pegs differ (ours-only ['5,5,Y'], t1j-only ['9,9,Y'])]
+  PASS  player divergence rejected   [selftest ply 2: pegs differ (ours-only ['5,5,Y'], t1j-only ['5,5,X'])]
+  PASS  bridge divergence rejected   [selftest ply 2: bridges differ (ours-only [], t1j-only ['1,1|2,3|Y'])]
+  PASS  hist divergence rejected   [selftest ply 2: ply 3 != 2]
+  PASS  side divergence rejected   [selftest ply 2: side to move X != Y]
+  PASS  term divergence rejected   [selftest ply 2: terminal/winner T1j {'Y': True, 'X': False} != ours {'Y': ]
+  PASS  cap divergence rejected   [selftest: ply count 4 != 3]
+  PASS  ply_cap is required (keyword-only, no default)
+  PASS  t1j_replay ply_cap is required (keyword-only, no default)
+SELFTEST OK — every injected divergence rejected
+
+T1j board (24, 24), first mover Y; harness ply_cap=280
+derivation stage 1 — legality maps admit 8 candidate mapping(s)
+
+derivation stage 2 — lockstep over every fixture, all candidates
+  SURVIVES  identity     Y=red
+  SURVIVES  flip_x       Y=red
+  SURVIVES  flip_y       Y=red
+  SURVIVES  flip_both    Y=red
+  rejected  T_identity   Y=black    [crossing ply 0: side to move Y != X]
+  rejected  T_flip_x     Y=black    [crossing ply 0: side to move Y != X]
+  rejected  T_flip_y     Y=black    [crossing ply 0: side to move Y != X]
+  rejected  T_flip_both  Y=black    [crossing ply 0: side to move Y != X]
+
+4 mapping(s) survive full lockstep comparison: ['identity', 'flip_x', 'flip_y', 'flip_both']
+  These form a symmetry orbit of the board; TwixT is invariant under them,
+  so they are indistinguishable by state comparison BY CONSTRUCTION.
+  Qualification needs A correct mapping, not a unique one.
+
+per-fixture detail under identity / Y=red
+  crossing   plies=  7 ours_winner=None   t1j_termY=false t1j_termX=false pegs=7 bridges=1  DIVERGENCES=0
+    blocked crossing verified in ours: absent=True pair=[[5, 6], [7, 5]]
+  red_win    plies= 26 ours_winner=red    t1j_termY=true t1j_termX=false pegs=26 bridges=12  DIVERGENCES=0
+  black_win  plies= 27 ours_winner=black  t1j_termY=false t1j_termX=true pegs=27 bridges=12  DIVERGENCES=0
+
+E3b QUALIFICATION PASS — lockstep agreement on every observable, every ply

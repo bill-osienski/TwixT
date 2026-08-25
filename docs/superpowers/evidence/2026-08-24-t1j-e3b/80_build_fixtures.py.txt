@@ -1,0 +1,74 @@
+"""Construct E3b fixtures and verify them against OUR engine before either
+engine is driven. Deterministic scripted sequences: no agent, no search, no seed."""
+import json, sys
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+
+def play(moves):
+    s = TwixtState(active_size=24, to_move="red")
+    for mv in moves:
+        s = s.apply_move(tuple(mv))
+    return s
+
+def alternate(primary, filler):
+    """Interleave primary(red) and filler(black) strictly alternating from red."""
+    out, i, j = [], 0, 0
+    while i < len(primary) or j < len(filler):
+        if i < len(primary): out.append(primary[i]); i += 1
+        if j < len(filler):  out.append(filler[j]);  j += 1
+    return out
+
+# ---- red chain: rows 0..23 stepping by 2 with dcol +-1, final step dr=1 dc=2
+red_chain, col = [], 10
+for r in range(0, 23, 2):
+    red_chain.append((r, col))
+    col += 1 if (r // 2) % 2 == 0 else -1
+red_chain.append((23, red_chain[-1][1] + 2))     # dr=1, dc=2 knight step
+# black filler kept >=4 columns away so no knight bridge can reach the red chain
+black_filler = [(r, c) for r in range(2, 22, 2) for c in (1, 3)][:len(red_chain)]
+
+# ---- black chain: cols 0..23 stepping by 2 with drow +-1, final step dc=1 dr=2
+blk_chain, row = [], 11
+for c in range(0, 23, 2):
+    blk_chain.append((row, c))
+    row += 1 if (c // 2) % 2 == 0 else -1
+blk_chain.append((blk_chain[-1][0] + 2, 23))     # dc=1, dr=2 knight step
+red_filler = [(r, c) for r in (1, 3) for c in range(2, 22, 2)][:len(blk_chain) + 1]
+
+fixtures = {}
+
+# A. blocked crossing: two red pegs bridge; a later red pair would cross it
+cross = [(5,5),(20,20),(7,6),(20,18),(5,6),(18,20),(7,5)]
+fixtures["crossing"] = cross
+
+# B. red (top-down) win
+fixtures["red_win"] = alternate(red_chain, black_filler)
+
+# C. black (left-right) win
+fixtures["black_win"] = alternate(red_filler, blk_chain)[:2*len(blk_chain)+1]
+
+report = {}
+for name, mvs in fixtures.items():
+    s = play(mvs)
+    report[name] = {
+        "moves": [list(m) for m in mvs],
+        "plies": len(mvs),
+        "winner": s.winner(),
+        "terminal": s.is_terminal(),
+        "pegs": len(s.pegs),
+        "bridges": len(s.bridges),
+        "to_move": s.to_move,
+    }
+    print(f"{name:12s} plies={len(mvs):3d} winner={s.winner()!s:6s} "
+          f"terminal={s.is_terminal()!s:5s} pegs={len(s.pegs):3d} bridges={len(s.bridges):3d}")
+
+# the crossing fixture must actually have a BLOCKED bridge
+s = play(fixtures["crossing"])
+have = {tuple(sorted(b)) for b in s.bridges}
+blocked = tuple(sorted(((5,6),(7,5))))
+print()
+print(f"crossing fixture: bridge {blocked} present? {blocked in have}  (must be False to be a genuine block)")
+print(f"  bridges actually formed: {sorted(have)}")
+report["crossing"]["blocked_pair"] = [list(blocked[0]), list(blocked[1])]
+report["crossing"]["blocked_absent"] = blocked not in have
+json.dump(report, open(sys.argv[1], "w"), indent=1)
