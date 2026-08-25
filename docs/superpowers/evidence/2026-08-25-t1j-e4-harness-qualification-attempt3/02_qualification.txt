@@ -1,0 +1,57 @@
+== 0. artifacts identified by hash; NOTHING IS LOADED ==
+  PASS   checkpoint sha1 209cf2d4fd24a485... (hashed, not loaded)
+  PASS   canonical plan matches its pin
+  PASS   a real SeededReferenceAgent builds on a TAGGED FAKE evaluator, with no model
+
+== 1. THE OPENING IS BOUND FIRST ==
+  PASS   the opening was bound first, at ply 0
+  PASS   then every applied move: [0, 1, 2, 3, 4, 5, 6, 7]
+  PASS   the opening bind is recorded
+  PASS   NEGATIVE CONTROL: an opening divergence aborts
+  PASS   ...and NO agent was constructed before the opening was bound
+
+== 2. THE IDENTITY GATE APPLIES TO THE REFERENCE SIDE ONLY ==
+  PASS   a CLASSICAL anchor agent with NO evaluator is accepted alongside the reference
+  PASS   NEGATIVE CONTROL: the REFERENCE side rejects no evaluator at all
+  PASS   ...and the SAME agent is accepted on the anchor side (no evaluator at all)
+  PASS   NEGATIVE CONTROL: the REFERENCE side rejects a rebuilt evaluator
+  PASS   ...and the SAME agent is accepted on the anchor side (a rebuilt evaluator)
+
+== 3. BINDER FAILURES ARE CLASSIFIED, CLEANUP STILL RUNS ==
+  PASS   a PLAIN ValueError from the binder is classified as PHASE_BIND
+  PASS   ...and a durable abort record was written
+  PASS   cleanup ran for the STARTED task even though it aborted
+  PASS   a cleanup failure does NOT mask the abort that preceded it
+  PASS   ...and the cleanup failure is recorded separately
+
+== 4. NO SCREEN VERDICT FROM AN INCOMPLETE RESULT SET ==
+  PASS   the public zero-task path still exits 0
+  PASS   ZERO GAMES PRODUCE NO SCREEN VERDICT
+  PASS   a qualification receipt is emitted instead
+  PASS   the receipt carries NO joint outcome and NO larger-match permission
+  withheld because: no tasks were scheduled; a screen verdict needs a screen
+  PASS   verdict allowed=False for zero tasks
+  PASS   verdict allowed=False for a missing result
+  PASS   verdict allowed=False for a duplicated result
+  PASS   verdict allowed=False for an alien result
+  PASS   verdict allowed=False for an UNJUSTIFIED skip
+  PASS   verdict allowed=True for a justified skip
+  PASS   verdict allowed=True for a complete set
+  PASS   a STRUCTURALLY COMPLETE run still gets a verdict
+  PASS   an EARLY-STOPPED skip is justified, so the verdict still stands
+  PASS   ...and a verdict was emitted
+
+== 5. the command entry point, in FRESH SUBPROCESSES ==
+  PASS   --help exits 0
+  PASS   clean run exits 0 (got 0)
+  PASS   the CLI's zero-task run emits a RECEIPT, not a verdict
+  PASS   --mode screen exits 2 (got 2)
+  PASS   existing results exits 2 (got 2)
+  PASS   tampered plan exits 2 (got 2)
+
+== 6. postconditions ==
+  PASS   the screen's seed block is still unspent
+  PASS   synthetic seeds allowed
+  PASS   all 32 scheduled seeds still refused by the runner
+
+QUALIFICATION PASS — NO MODEL WAS LOADED

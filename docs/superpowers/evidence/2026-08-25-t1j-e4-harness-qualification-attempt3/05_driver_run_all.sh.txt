@@ -1,0 +1,58 @@
+#!/bin/bash
+set -o pipefail
+SPD=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad
+E4Q=$SPD/e4q3; EV="$E4Q/evidence"; REPO=/Users/bill/projects/TwixT_Game
+PLAN="$REPO/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json"
+CKPT="$REPO/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+TMPERR=$(mktemp); GATE=0
+run() { printf '$ %s\n' "$1"; out=$(eval "$1" 2>"$TMPERR"); rc=$?
+  if [ -n "$out" ]; then printf '%s\n' "$out" | sed 's/^/    | /'; else echo "    | <no stdout>"; fi
+  if [ -s "$TMPERR" ]; then sed 's/^/    ! /' "$TMPERR"; fi
+  printf '    [exit %d]\n\n' "$rc"; return $rc; }
+die() { echo "*** $1 — STOPPING ***"; exit 9; }
+expect() { if [ "$2" = "$3" ]; then echo "    MATCH  $1"; else echo "    *** MISMATCH $1 ***"; die "$1"; fi; }
+
+echo "E4 EXECUTION-HARNESS QUALIFICATION ATTEMPT 3 — CORRECTIVE."
+echo "NO MODEL IS LOADED. No T1j, no game, no scheduled seed."
+echo "Attempt 2's single real reference-agent call stands and is NOT repeated."
+echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)   host $(uname -srm)"; echo
+
+echo "########## 1. REPOSITORY AND ARTIFACT IDENTITY ##########"
+run "git -C $REPO rev-parse HEAD"; expect "HEAD" "$out" "0a441eb357659930b185de768cf4aab7e55521a8"
+run "shasum -a 256 $CKPT | cut -d' ' -f1"; expect "checkpoint sha256" "$out" "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26"
+run "shasum -a 256 $PLAN | cut -d' ' -f1"; expect "canonical plan"    "$out" "10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8"
+echo "    NOTE: the checkpoint is HASHED, never loaded, in this attempt."
+echo "IDENTITY GATE PASSED"; echo
+
+echo "########## 2. PRIOR EVIDENCE AND ATTEMPTS 1-2 BYTE-UNCHANGED ##########"
+run "git -C $REPO status --porcelain docs/superpowers/evidence docs/superpowers/*.md"
+[ -z "$out" ] || die "prior evidence or cards dirty"; echo
+
+echo "########## 3. MANIFEST OF EVERY SOURCE ##########"
+run "shasum -a 256 $REPO/scripts/GPU/alphazero/e4_screen_runner.py $REPO/scripts/GPU/alphazero/e4_screen_rules.py $REPO/scripts/GPU/alphazero/e4_screen_reference.py $REPO/scripts/GPU/alphazero/twixtbot_g3_reference.py $REPO/tests/test_e4_screen_runner.py $REPO/tests/test_e4_screen_rules.py $REPO/tests/test_e4_screen_reference.py $E4Q/qualify.py $E4Q/run_all.sh"
+echo
+
+echo "########## 4. HARNESS UNIT TESTS — real exit status, GATED ##########"
+run "$REPO/.venv/bin/python -m pytest $REPO/tests/test_e4_screen_runner.py $REPO/tests/test_e4_screen_rules.py $REPO/tests/test_e4_screen_reference.py -q --no-header -p no:cacheprovider"
+TESTS=$rc; echo "    unit-test exit: $TESTS (no pipe: this IS pytest's status)"; echo
+
+echo "########## 5. QUALIFICATION — NO MODEL LOAD ##########"
+run "$REPO/.venv/bin/python $E4Q/qualify.py > $EV/02_qualification.txt 2>$EV/03_qualification_stderr.txt; echo \$?"
+QUAL=$(echo "$out" | tail -1)
+run "cat $EV/02_qualification.txt"
+run "wc -c < $EV/03_qualification_stderr.txt | tr -d ' '"; echo "    stderr bytes: $out"; echo
+
+echo "########## 6. POSTCONDITION — no MLX inference happened in this attempt ##########"
+run "grep -c 'compiled graph' $EV/02_qualification.txt || true"
+echo "    (attempt 3 loads no model; the compiled-graph evidence belongs to attempt 2)"
+run "$REPO/.venv/bin/python -c \"
+import sys; sys.path.insert(0,'$REPO')
+from scripts.GPU.alphazero import e4_screen_reference as R
+print('screen block exposed?', any(R.seed_is_exposed(s) for s in range(202612128,202612160)))\""
+[ "$(echo "$out" | tail -1)" = "screen block exposed? False" ] || die "screen seeds marked exposed"
+rm -f "$TMPERR"
+echo
+echo "TRANSCRIPT COMPLETE — unit tests $TESTS, qualification $QUAL"
+[ "$TESTS" = "0" ] && [ "$QUAL" = "0" ] || GATE=3
+echo "GATE $GATE"
+exit $GATE

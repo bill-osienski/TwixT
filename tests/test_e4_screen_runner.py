@@ -176,10 +176,10 @@ def test_loop_validates_the_move_before_applying_it():
         play([(99, 99)])                                  # off board
 
 
-def test_loop_calls_the_binder_after_every_applied_move():
+def test_loop_binds_the_opening_first_then_every_applied_move():
     seen = []
     play([(5, 5), (6, 7)], ply_cap=8, binder=lambda t, s, p: seen.append(p))
-    assert seen == [7, 8]
+    assert seen == [6, 7, 8]          # 6 is the OPENING, bound before any move
 
 
 def test_a_binder_divergence_aborts_in_the_binding_phase():
@@ -233,9 +233,9 @@ def test_one_evaluator_is_accepted(tmp_path):
 
 
 def test_a_rebuilt_evaluator_ABORTS_with_no_verdict(tmp_path):
-    """NEGATIVE CONTROL. A rebuild must fail the gate, not be counted."""
+    """NEGATIVE CONTROL. A rebuild on the REFERENCE side must fail the gate."""
     with pytest.raises(H.AbortError) as e:
-        run_stub(tmp_path, [synthetic_task(0, "weak")],
+        run_stub(tmp_path, [synthetic_task(0, "weak", anchor="black")],   # reference plays red
                  lambda t, m, ev: _Agent(object(), [(5, 5)]), cap=7)
     assert e.value.phase == H.PHASE_FACTORY
     rows = [json.loads(l) for l in open(tmp_path / "r.jsonl")]
@@ -388,3 +388,151 @@ def test_each_side_is_built_once_per_task_not_once_per_ply():
     assert out["winner"] == "red" and out["plies"] == 7
     assert sorted(builds) == ["black", "red"]          # exactly one of each, for 7 plies
     assert out["agents_built"] == 2
+
+
+# --- the identity gate belongs to the REFERENCE side only -------------------
+
+class _NoEvaluatorAgent:
+    """A classical engine: it holds no MLX evaluator and never will."""
+    def __init__(self, moves): self._it = iter(moves)
+    def __call__(self, state): return next(self._it)
+
+
+def test_the_anchor_side_may_hold_no_evaluator():
+    """T1j is classical. Gating both colours would abort on its first construction."""
+    task = synthetic_task(anchor="red")            # anchor red, reference black
+    built = []
+
+    def factory(t, mover):
+        built.append(mover)
+        if mover == t["reference_colour"]:
+            return _Agent(EV, list(SMALL_WIN_BY_COLOUR[mover]))
+        return _NoEvaluatorAgent(list(SMALL_WIN_BY_COLOUR[mover]))
+
+    def agent_for(t, mover):
+        a = factory(t, mover)
+        H._enforce_evaluator(a, EV, t, mover)
+        return a
+
+    out = H.play_task(task=task, agent_for=agent_for, state_factory=small_state,
+                      binder=null_binder, rec=_Rec())
+    assert out["winner"] == "red" and sorted(built) == ["black", "red"]
+
+
+@pytest.mark.parametrize("agent,label", [
+    (_NoEvaluatorAgent([(0, 0)]), "no evaluator at all"),
+    (_Agent(object(), [(0, 0)]), "a rebuilt evaluator"),
+])
+def test_the_reference_side_rejects_a_missing_or_rebuilt_evaluator(agent, label):
+    task = synthetic_task(anchor="red")            # reference plays black
+    with pytest.raises(H.AbortError) as e:
+        H._enforce_evaluator(agent, EV, task, "black")
+    assert e.value.phase == H.PHASE_FACTORY
+    # ...and the same agent is fine on the anchor side
+    H._enforce_evaluator(agent, EV, task, "red")
+
+
+# --- the opening is bound before anything else -----------------------------
+
+def test_an_opening_divergence_aborts_before_either_agent_is_built():
+    built = []
+
+    def diverging(task, state, ply):
+        raise H.AbortError(H.PHASE_BIND, f"opening divergence at ply {ply}")
+
+    def counting(t, m):
+        built.append(m)
+        return _Agent(EV, [(5, 5)])
+
+    with pytest.raises(H.AbortError) as e:
+        H.play_task(task=synthetic_task(), agent_for=counting, state_factory=small_state,
+                    binder=diverging, rec=_Rec())
+    assert e.value.phase == H.PHASE_BIND
+    assert built == [], "no agent may be constructed before the opening is bound"
+
+
+def test_the_opening_bind_is_recorded():
+    rec = _Rec()
+    H.play_task(task=synthetic_task(anchor="red"), agent_for=lambda t, m: win_factory(t, m),
+                state_factory=small_state, binder=null_binder, rec=rec)
+    assert rec.rows[0]["record_type"] == "opening_bound" and rec.rows[0]["ply"] == 0
+
+
+# --- binder failures are classified, cleanup still runs --------------------
+
+def test_a_plain_exception_from_the_binder_is_classified_and_recorded(tmp_path):
+    def sloppy(task, state, ply):
+        raise ValueError("t1j replay exit 3")
+    cleanups = []
+    with pytest.raises(H.AbortError) as e:
+        run_stub(tmp_path, [synthetic_task(0, "weak")],
+                 lambda t, m, ev: _Agent(EV, [(5, 5)]), cap=7,
+                 cleanup=lambda: cleanups.append(1), binder=sloppy)
+    assert e.value.phase == H.PHASE_BIND and "ValueError" in e.value.message
+    rows = [json.loads(l) for l in open(tmp_path / "r.jsonl")]
+    kinds = [r["record_type"] for r in rows]
+    assert "abort" in kinds and rows[-1]["phase"] == H.PHASE_BIND
+    assert len(cleanups) == 1, "cleanup runs for a STARTED task even when it aborts"
+
+
+def test_a_cleanup_failure_after_an_abort_does_not_mask_the_abort(tmp_path):
+    def sloppy(task, state, ply):
+        raise ValueError("t1j replay exit 3")
+
+    def boom():
+        raise RuntimeError("cleanup also failed")
+
+    with pytest.raises(H.AbortError) as e:
+        run_stub(tmp_path, [synthetic_task(0, "weak")],
+                 lambda t, m, ev: _Agent(EV, [(5, 5)]), cap=7, cleanup=boom, binder=sloppy)
+    assert e.value.phase == H.PHASE_BIND          # the ORIGINAL failure survives
+    rows = [json.loads(l) for l in open(tmp_path / "r.jsonl")]
+    assert any(r["record_type"] == "cleanup_failure_after_abort" for r in rows)
+
+
+# --- no screen verdict from an incomplete result set -----------------------
+
+def test_zero_games_get_a_RECEIPT_not_a_verdict(tmp_path):
+    out = tmp_path / "empty.jsonl"
+    rc = H.run(PLAN, str(out), mode="qualify")
+    rows = [json.loads(l) for l in open(out)]
+    kinds = [r["record_type"] for r in rows]
+    assert rc == H.EXIT_OK
+    assert "verdict" not in kinds, "zero games must not produce a screen verdict"
+    assert kinds[-1] == "qualification_receipt"
+    assert "no tasks were scheduled" in rows[-1]["verdict_withheld"]
+    assert "joint" not in rows[-1] and "larger_match_permitted" not in rows[-1]
+
+
+def test_cli_zero_games_emits_no_verdict(tmp_path):
+    out = tmp_path / "cli_empty.jsonl"
+    r = cli("--plan", PLAN, "--results", str(out))
+    assert r.returncode == H.EXIT_OK
+    kinds = [json.loads(l)["record_type"] for l in open(out)]
+    assert "verdict" not in kinds and kinds[-1] == "qualification_receipt"
+
+
+@pytest.mark.parametrize("tasks,results,skipped,stopped,ok", [
+    ([], [], [], {}, False),                                            # zero
+    ([{"task_id": "a"}], [], [], {}, False),                            # missing
+    ([{"task_id": "a"}], [{"task_id": "a"}], [], {}, True),             # complete
+    ([{"task_id": "a"}], [{"task_id": "a"}, {"task_id": "a"}], [], {}, False),   # duplicate
+    ([{"task_id": "a"}], [{"task_id": "zzz"}], [], {}, False),          # alien
+    ([{"task_id": "a"}, {"task_id": "b"}], [{"task_id": "a"}],
+     [{"task_id": "b", "endpoint": "weak"}], {"weak": "stopped"}, True),  # justified skip
+    ([{"task_id": "a"}, {"task_id": "b"}], [{"task_id": "a"}],
+     [{"task_id": "b", "endpoint": "weak"}], {}, False),                # UNjustified skip
+])
+def test_screen_verdict_requires_a_complete_result_set(tasks, results, skipped, stopped, ok):
+    allowed, why = H.screen_verdict_allowed(tasks, results, skipped, stopped)
+    assert allowed is ok, why
+
+
+def test_a_complete_run_still_gets_a_verdict(tmp_path):
+    tasks = [synthetic_task(0, "weak", anchor="red"), synthetic_task(1, "weak", anchor="black")]
+    out = tmp_path / "full.jsonl"
+    rc = H._run(PLAN, str(out), mode="qualify", _tasks=tasks, _agent_factory=win_factory,
+                _state_factory=small_state, _binder=null_binder, _evaluator=EV,
+                _cleanup=lambda: None, _n_per_endpoint=2)
+    rows = [json.loads(l) for l in open(out)]
+    assert rc == H.EXIT_OK and rows[-1]["record_type"] == "verdict"

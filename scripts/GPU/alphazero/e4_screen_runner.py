@@ -170,9 +170,30 @@ def _refuse_binder(task, state, ply_index):
                      "no per-ply binder configured; the screen must bind both engines every ply")
 
 
+def _bind(binder: Callable, task: Dict[str, Any], state, ply: int, where: str) -> None:
+    """Every binder call goes through here, so NO binder failure escapes unclassified.
+
+    An earlier version only handled AbortError, so a plain ValueError from a
+    binder propagated as an unexpected error and left no durable abort record.
+    """
+    try:
+        binder(task, state, ply)
+    except AbortError:
+        raise
+    except Exception as e:                                    # noqa: BLE001
+        raise AbortError(PHASE_BIND,
+                         f"{task['task_id']} {where}: binder raised "
+                         f"{type(e).__name__}: {e}") from None
+
+
 def play_task(*, task: Dict[str, Any], agent_for: Callable, state_factory: Callable,
               binder: Callable, rec: Recorder, ply_cap: int = PLY_CAP) -> Dict[str, Any]:
     """Play ONE task to a terminal state. The loop lives here, not in a caller.
+
+    THE OPENING IS BOUND FIRST. The scripted opening is a position both engines
+    must already agree on; binding only from ply 7 would let a divergent opening
+    run a whole game before anyone noticed. It is bound before the terminal check
+    and before either agent is constructed.
 
     Per ply: pick the agent whose colour is to move, ask it for a move, VALIDATE
     the move before applying it, apply it, then bind both engines' states. The
@@ -184,6 +205,10 @@ def play_task(*, task: Dict[str, Any], agent_for: Callable, state_factory: Calla
         raise
     except Exception as e:                                    # noqa: BLE001
         raise AbortError(PHASE_PRECONDITION, f"cannot build the opening state: {e}") from None
+
+    _bind(binder, task, state, state.ply, "opening")          # BEFORE anything else
+    rec.emit({"record_type": "opening_bound", "task_id": task["task_id"],
+              "ply": state.ply, "opening": task.get("opening")})
 
     anchor_colour = task["anchor_colour"]
     # ONE agent per colour per task, built on first use and reused for the whole
@@ -225,7 +250,7 @@ def play_task(*, task: Dict[str, Any], agent_for: Callable, state_factory: Calla
                              f"{task['task_id']} ply {state.ply}: {mover} returned {move}, "
                              f"which is not legal")
         state = state.apply_move(move)
-        binder(task, state, state.ply)                        # raises AbortError on divergence
+        _bind(binder, task, state, state.ply, f"ply {state.ply}")
         rec.emit({"record_type": "ply", "task_id": task["task_id"], "ply": state.ply,
                   "mover": mover, "move": list(move)})
 
@@ -251,6 +276,35 @@ def classify_run(results: Sequence[Dict[str, Any]], *, n_per_endpoint: int,
     joint = classify_joint(out["weak"]["decision"], out["strong"]["decision"])
     return {"per_endpoint": out, "joint": joint,
             "larger_match_permitted": joint in LARGER_MATCH_PERMITTED}
+
+
+def screen_verdict_allowed(tasks, results, skipped, stopped):
+    """May a SCREEN VERDICT be drawn from this result set? Structural only.
+
+    A verdict requires the scheduled task identities to be accounted for EXACTLY:
+    every task either produced a result or was skipped by a recorded early stop
+    for its own endpoint. Zero, missing, duplicated and alien results all get a
+    receipt instead -- classifying nothing yields INCONCLUSIVE, which reads as a
+    permissive screen outcome and is not one.
+    """
+    if not tasks:
+        return False, "no tasks were scheduled; a screen verdict needs a screen"
+    expected = [t["task_id"] for t in tasks]
+    if len(set(expected)) != len(expected):
+        return False, "the scheduled tasks contain duplicate identities"
+    got = [r["task_id"] for r in results] + [s["task_id"] for s in skipped]
+    if len(set(got)) != len(got):
+        return False, "a task identity appears more than once in the results"
+    alien = sorted(set(got) - set(expected))
+    if alien:
+        return False, f"results contain identities that were never scheduled: {alien}"
+    missing = sorted(set(expected) - set(got))
+    if missing:
+        return False, f"{len(missing)} scheduled task(s) neither played nor skipped: {missing[:3]}"
+    for s in skipped:
+        if s["endpoint"] not in stopped:
+            return False, (f"{s['task_id']} was skipped but its endpoint recorded no early stop")
+    return True, None
 
 
 def run(plan_path: str, results_path: str, *, mode: str = "qualify") -> int:
@@ -287,6 +341,8 @@ def _run(plan_path: str, results_path: str, *, mode: str,
     rec = Recorder(results_path)
     results: List[Dict[str, Any]] = []
     stopped: Dict[str, str] = {}
+    skipped: List[Dict[str, str]] = []
+    cleanups = 0
     try:
         rec.emit({"record_type": "run_header", "mode": mode,
                   "plan_sha256": CANONICAL_PLAN_SHA256,
@@ -299,6 +355,7 @@ def _run(plan_path: str, results_path: str, *, mode: str,
             if endpoint in stopped:
                 rec.emit({"record_type": "task_skipped", "task_id": task["task_id"],
                           "endpoint": endpoint, "reason": stopped[endpoint]})
+                skipped.append({"task_id": task["task_id"], "endpoint": endpoint})
                 continue
             rec.emit({"record_type": "task_start", "task_id": task["task_id"],
                       "endpoint": endpoint, "seed": task["seed"]})
@@ -308,17 +365,36 @@ def _run(plan_path: str, results_path: str, *, mode: str,
                 _enforce_evaluator(agent, _evaluator, _task, mover)
                 return agent
 
-            outcome = play_task(task=task, agent_for=agent_for,
-                                state_factory=_state_factory or _refuse_state_factory,
-                                binder=binder, rec=rec, ply_cap=_ply_cap)
+            # cleanup runs ONCE PER STARTED TASK, including one that aborted --
+            # an aborted game has already allocated whatever the cleanup releases
+            play_error = None
+            outcome = None
+            try:
+                outcome = play_task(task=task, agent_for=agent_for,
+                                    state_factory=_state_factory or _refuse_state_factory,
+                                    binder=binder, rec=rec, ply_cap=_ply_cap)
+            except BaseException as e:                        # noqa: BLE001
+                play_error = e
+            cleanup_error = None
+            try:
+                cleanup()
+                cleanups += 1
+            except Exception as e:                            # noqa: BLE001
+                cleanup_error = e
+            if play_error is not None:
+                if cleanup_error is not None:
+                    # recorded, never allowed to replace the failure that caused it
+                    rec.emit_terminal({"record_type": "cleanup_failure_after_abort",
+                                       "task_id": task["task_id"],
+                                       "cleanup_error": f"{type(cleanup_error).__name__}: "
+                                                        f"{cleanup_error}"})
+                raise play_error
+            if cleanup_error is not None:
+                raise AbortError(PHASE_CLEANUP, f"after {task['task_id']}: {cleanup_error}")
             row = {"record_type": "task_result", "task_id": task["task_id"],
                    "endpoint": endpoint, "seed": task["seed"], **outcome}
             rec.emit(row)
             results.append(row)
-            try:
-                cleanup()
-            except Exception as e:                            # noqa: BLE001
-                raise AbortError(PHASE_CLEANUP, f"after {task['task_id']}: {e}") from None
 
             rows = [r for r in results if r["endpoint"] == endpoint]
             score = sum(r["t1j_points"] for r in rows)
@@ -329,12 +405,22 @@ def _run(plan_path: str, results_path: str, *, mode: str,
                 rec.emit({"record_type": "early_stop", "endpoint": endpoint,
                           "played": len(rows), "score": score, "reason": stopped[endpoint]})
 
+        allowed, why = screen_verdict_allowed(tasks, results, skipped, stopped)
+        if not allowed:
+            # A RECEIPT, NOT A VERDICT. An earlier version classified zero results
+            # and emitted joint=INCONCLUSIVE with larger_match_permitted=true --
+            # a screen conclusion drawn from no games at all.
+            rec.emit({"record_type": "qualification_receipt", "mode": mode,
+                      "verdict_withheld": why, "tasks_scheduled": len(tasks),
+                      "tasks_played": len(results), "tasks_skipped": len(skipped),
+                      "cleanups": cleanups})
+            return EXIT_OK
         try:
             verdict = classify_run(results, n_per_endpoint=n_per, band=_band)
         except Exception as e:                                # noqa: BLE001
             raise AbortError(PHASE_CLASSIFY, str(e)) from None
         rec.emit({"record_type": "verdict", **verdict, "early_stopped": stopped,
-                  "tasks_played": len(results)})
+                  "tasks_played": len(results), "cleanups": cleanups})
         return EXIT_OK
     except AbortError as e:
         note = rec.emit_terminal({"record_type": "abort", "phase": e.phase,
@@ -347,14 +433,22 @@ def _run(plan_path: str, results_path: str, *, mode: str,
 
 
 def _enforce_evaluator(agent, expected, task, mover) -> None:
-    """Identity, checked at construction. A rebuild ABORTS; it is not counted."""
+    """Identity, checked at construction, for the REFERENCE SIDE ONLY.
+
+    T1j is a classical engine: it holds no MLX evaluator and never will, so
+    applying this gate to both colours would abort on the first T1j construction.
+    The gate belongs to the side that actually loads the network.
+    """
     if expected is None:
         return
+    if mover != task.get("reference_colour"):
+        return                                                # the anchor side, by design
     got = _evaluator_of(agent, None)
     if got is not expected:
         raise AbortError(
             PHASE_FACTORY,
-            f"{task['task_id']} ({mover}): the agent holds a DIFFERENT evaluator object than "
+            f"{task['task_id']} ({mover}, the reference side): the agent holds "
+            f"{'no evaluator' if got is None else 'a DIFFERENT evaluator object'} rather than "
             f"the one loaded for this run; the reference must be loaded once and reused")
 
 

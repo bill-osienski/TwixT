@@ -1,0 +1,239 @@
+#!/usr/bin/env python3
+"""E4 execution-harness qualification, attempt 3 — corrective. NO MODEL IS LOADED.
+
+Attempt 2's single real reference-agent call stands and is NOT repeated: the four
+defects corrected here are all in the harness, and every one is exercisable with a
+TAGGED FAKE EVALUATOR. No model, no T1j, no game, no scheduled seed.
+
+  1. zero games produced a permissive screen verdict (INCONCLUSIVE,
+     larger_match_permitted=true, exit 0) -- now a RECEIPT, and a verdict requires
+     a structurally complete result set;
+  2. the evaluator identity gate applied to BOTH colours, so the first T1j
+     construction would have aborted -- now the REFERENCE SIDE only;
+  3. the six-ply opening was never bound -- now bound before the terminal check
+     and before either agent is constructed;
+  4. a non-AbortError from the binder escaped unclassified with no durable record
+     -- now wrapped as PHASE_BIND, and cleanup runs for every STARTED task.
+
+Exit 0 = every requirement met, 3 = one or more failed.
+"""
+import hashlib, json, os, subprocess, sys, tempfile
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import e4_screen_reference as REF
+from scripts.GPU.alphazero import e4_screen_runner as H
+from scripts.GPU.alphazero.twixtbot_g3_schedule import REFERENCE_CHECKPOINTS
+
+REPO = "/Users/bill/projects/TwixT_Game"
+EVID = f"{REPO}/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4"
+PLAN = f"{EVID}/06_endpoint_screen_plan.json"
+CKPT = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+SHA1 = REFERENCE_CHECKPOINTS["calib020_0001"]["sha1"]
+SYNTHETIC = 90000001
+
+fails = []
+def req(c, w):
+    print(("  PASS   " if c else "  FAIL   ") + w)
+    if not c: fails.append(w)
+
+def fresh(name):
+    return os.path.join(tempfile.mkdtemp(), name)
+
+
+class FakeEvaluator:
+    """Carries the identity tags load_reference_evaluator sets. NEVER called."""
+    _g3_reference = "calib020_0001"
+    _g3_sha1 = SHA1
+
+EV = FakeEvaluator()
+
+SMALL_WIN = [(0, 2), (2, 0), (2, 3), (3, 0), (4, 2), (4, 0), (5, 4)]
+BY_COLOUR = {"red": SMALL_WIN[0::2], "black": SMALL_WIN[1::2]}
+
+class FakeAgent:
+    def __init__(self, moves, evaluator=EV):
+        if evaluator is not None: self.evaluator = evaluator
+        self._it = iter(moves)
+    def __call__(self, state): return next(self._it)
+
+class ClassicalAgent:
+    """A T1j stand-in: no evaluator attribute at all."""
+    def __init__(self, moves): self._it = iter(moves)
+    def __call__(self, state): return next(self._it)
+
+class Rec:
+    def __init__(self): self.rows = []
+    def emit(self, r): self.rows.append(r)
+    def emit_terminal(self, r): self.rows.append(r); return None
+
+def small_state(task): return TwixtState(active_size=6, to_move="red")
+def stask(i, endpoint="weak", anchor="red"):
+    return {"task_id": f"stub-{endpoint}-{i:02d}", "endpoint": endpoint,
+            "seed": SYNTHETIC + 300 + i, "anchor_colour": anchor,
+            "reference_colour": "black" if anchor == "red" else "red",
+            "opening": "o1_center"}
+
+
+print("== 0. artifacts identified by hash; NOTHING IS LOADED ==")
+blob = open(f"{REPO}/{CKPT}", "rb").read()
+req(hashlib.sha1(blob).hexdigest() == SHA1, f"checkpoint sha1 {SHA1[:16]}... (hashed, not loaded)")
+req(hashlib.sha256(open(PLAN, 'rb').read()).hexdigest() == H.CANONICAL_PLAN_SHA256,
+    "canonical plan matches its pin")
+req(REF.build({"task_id": "t", "seed": SYNTHETIC, "reference": "calib020_0001",
+               "reference_sha1": SHA1, "anchor_colour": "red"},
+              evaluator=EV).mcts.evaluator is EV,
+    "a real SeededReferenceAgent builds on a TAGGED FAKE evaluator, with no model")
+
+print("\n== 1. THE OPENING IS BOUND FIRST ==")
+seen, built = [], []
+rec = Rec()
+H.play_task(task=stask(0), agent_for=lambda t, m: (built.append(m) or FakeAgent(BY_COLOUR[m])),
+            state_factory=small_state, binder=lambda t, s, p: seen.append(p), rec=rec)
+req(seen and seen[0] == 0, f"the opening was bound first, at ply {seen[0] if seen else None}")
+req(seen == [0, 1, 2, 3, 4, 5, 6, 7], f"then every applied move: {seen}")
+req(rec.rows[0]["record_type"] == "opening_bound", "the opening bind is recorded")
+
+built2 = []
+def diverging_opening(task, state, ply):
+    raise H.AbortError(H.PHASE_BIND, f"opening divergence at ply {ply}")
+try:
+    H.play_task(task=stask(1), agent_for=lambda t, m: (built2.append(m) or FakeAgent(BY_COLOUR[m])),
+                state_factory=small_state, binder=diverging_opening, rec=Rec())
+    ok = False
+except H.AbortError as e:
+    ok = e.phase == H.PHASE_BIND
+req(ok, "NEGATIVE CONTROL: an opening divergence aborts")
+req(built2 == [], "...and NO agent was constructed before the opening was bound")
+
+print("\n== 2. THE IDENTITY GATE APPLIES TO THE REFERENCE SIDE ONLY ==")
+task = stask(2, anchor="red")            # anchor red -> reference plays black
+def mixed(t, m):
+    a = FakeAgent(BY_COLOUR[m]) if m == t["reference_colour"] else ClassicalAgent(BY_COLOUR[m])
+    H._enforce_evaluator(a, EV, t, m)
+    return a
+out = H.play_task(task=task, agent_for=mixed, state_factory=small_state,
+                  binder=lambda t, s, p: None, rec=Rec())
+req(out["winner"] == "red" and out["agents_built"] == 2,
+    "a CLASSICAL anchor agent with NO evaluator is accepted alongside the reference")
+for label, agent in (("no evaluator at all", ClassicalAgent([(0, 0)])),
+                     ("a rebuilt evaluator", FakeAgent([(0, 0)], evaluator=FakeEvaluator()))):
+    try:
+        H._enforce_evaluator(agent, EV, task, task["reference_colour"]); ok = False
+    except H.AbortError as e:
+        ok = e.phase == H.PHASE_FACTORY
+    req(ok, f"NEGATIVE CONTROL: the REFERENCE side rejects {label}")
+    H._enforce_evaluator(agent, EV, task, task["anchor_colour"])
+    req(True, f"...and the SAME agent is accepted on the anchor side ({label})")
+
+print("\n== 3. BINDER FAILURES ARE CLASSIFIED, CLEANUP STILL RUNS ==")
+def sloppy(task, state, ply):
+    raise ValueError("t1j replay exit 3")
+cleanups = []
+out3 = fresh("binderfail.jsonl")
+try:
+    H._run(PLAN, out3, mode="qualify", _tasks=[stask(3)],
+           _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]), _state_factory=small_state,
+           _binder=sloppy, _evaluator=EV, _cleanup=lambda: cleanups.append(1), _n_per_endpoint=2)
+    ok = False
+except H.AbortError as e:
+    ok = e.phase == H.PHASE_BIND and "ValueError" in e.message
+rows3 = [json.loads(l) for l in open(out3)]
+req(ok, "a PLAIN ValueError from the binder is classified as PHASE_BIND")
+req(any(r["record_type"] == "abort" for r in rows3), "...and a durable abort record was written")
+req(len(cleanups) == 1, "cleanup ran for the STARTED task even though it aborted")
+
+out4 = fresh("bothfail.jsonl")
+def boom(): raise RuntimeError("cleanup also failed")
+try:
+    H._run(PLAN, out4, mode="qualify", _tasks=[stask(4)],
+           _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]), _state_factory=small_state,
+           _binder=sloppy, _evaluator=EV, _cleanup=boom, _n_per_endpoint=2)
+    ok = False
+except H.AbortError as e:
+    ok = e.phase == H.PHASE_BIND
+rows4 = [json.loads(l) for l in open(out4)]
+req(ok, "a cleanup failure does NOT mask the abort that preceded it")
+req(any(r["record_type"] == "cleanup_failure_after_abort" for r in rows4),
+    "...and the cleanup failure is recorded separately")
+
+print("\n== 4. NO SCREEN VERDICT FROM AN INCOMPLETE RESULT SET ==")
+out5 = fresh("zero.jsonl")
+rc = H.run(PLAN, out5, mode="qualify")
+rows5 = [json.loads(l) for l in open(out5)]
+kinds5 = [r["record_type"] for r in rows5]
+req(rc == H.EXIT_OK, "the public zero-task path still exits 0")
+req("verdict" not in kinds5, "ZERO GAMES PRODUCE NO SCREEN VERDICT")
+req(kinds5[-1] == "qualification_receipt", "a qualification receipt is emitted instead")
+req("joint" not in rows5[-1] and "larger_match_permitted" not in rows5[-1],
+    "the receipt carries NO joint outcome and NO larger-match permission")
+print(f"  withheld because: {rows5[-1]['verdict_withheld']}")
+
+for label, tasks_, results_, skipped_, stopped_, want in (
+    ("zero tasks", [], [], [], {}, False),
+    ("a missing result", [{"task_id": "a"}], [], [], {}, False),
+    ("a duplicated result", [{"task_id": "a"}], [{"task_id": "a"}, {"task_id": "a"}], [], {}, False),
+    ("an alien result", [{"task_id": "a"}], [{"task_id": "zz"}], [], {}, False),
+    ("an UNJUSTIFIED skip", [{"task_id": "a"}, {"task_id": "b"}], [{"task_id": "a"}],
+     [{"task_id": "b", "endpoint": "weak"}], {}, False),
+    ("a justified skip", [{"task_id": "a"}, {"task_id": "b"}], [{"task_id": "a"}],
+     [{"task_id": "b", "endpoint": "weak"}], {"weak": "stopped"}, True),
+    ("a complete set", [{"task_id": "a"}], [{"task_id": "a"}], [], {}, True),
+):
+    allowed, why = H.screen_verdict_allowed(tasks_, results_, skipped_, stopped_)
+    req(allowed is want, f"verdict allowed={allowed} for {label}")
+
+out6 = fresh("complete.jsonl")
+rc = H._run(PLAN, out6, mode="qualify",
+            _tasks=[stask(5, "weak", "red"), stask(6, "weak", "black")],
+            _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]), _state_factory=small_state,
+            _binder=lambda t, s, p: None, _evaluator=EV, _cleanup=lambda: None, _n_per_endpoint=2)
+rows6 = [json.loads(l) for l in open(out6)]
+req(rc == H.EXIT_OK and rows6[-1]["record_type"] == "verdict",
+    "a STRUCTURALLY COMPLETE run still gets a verdict")
+
+out7 = fresh("earlystop.jsonl")
+rc = H._run(PLAN, out7, mode="qualify",
+            _tasks=[stask(7, "weak", "red"), stask(8, "weak", "black"), stask(9, "weak", "red")],
+            _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]), _state_factory=small_state,
+            _binder=lambda t, s, p: None, _evaluator=EV, _cleanup=lambda: None, _n_per_endpoint=4)
+rows7 = [json.loads(l) for l in open(out7)]
+k7 = [r["record_type"] for r in rows7]
+req(rc == H.EXIT_OK and "early_stop" in k7 and k7.count("task_skipped") == 1,
+    "an EARLY-STOPPED skip is justified, so the verdict still stands")
+req(rows7[-1]["record_type"] == "verdict", "...and a verdict was emitted")
+
+print("\n== 5. the command entry point, in FRESH SUBPROCESSES ==")
+def cli(*a):
+    return subprocess.run([sys.executable, "-m", "scripts.GPU.alphazero.e4_screen_runner", *a],
+                          capture_output=True, text=True, cwd=REPO)
+r = cli("--help"); req(r.returncode == 0 and "UNAUTHORIZED" in r.stdout, "--help exits 0")
+o = fresh("cli_ok.jsonl"); r = cli("--plan", PLAN, "--results", o)
+req(r.returncode == H.EXIT_OK, f"clean run exits 0 (got {r.returncode})")
+req([json.loads(l)["record_type"] for l in open(o)][-1] == "qualification_receipt",
+    "the CLI's zero-task run emits a RECEIPT, not a verdict")
+r = cli("--plan", PLAN, "--results", fresh("s.jsonl"), "--mode", "screen")
+req(r.returncode == H.EXIT_PRECONDITION, f"--mode screen exits 2 (got {r.returncode})")
+stale = fresh("stale.jsonl"); open(stale, "w").write("x\n")
+r = cli("--plan", PLAN, "--results", stale)
+req(r.returncode == H.EXIT_PRECONDITION, f"existing results exits 2 (got {r.returncode})")
+bad = fresh("bad.json"); d = json.load(open(PLAN)); d["note"] = "t"; open(bad, "w").write(json.dumps(d))
+r = cli("--plan", bad, "--results", fresh("b.jsonl"))
+req(r.returncode == H.EXIT_PRECONDITION, f"tampered plan exits 2 (got {r.returncode})")
+
+print("\n== 6. postconditions ==")
+req(not any(REF.seed_is_exposed(s) for s in range(202612128, 202612160)),
+    "the screen's seed block is still unspent")
+req(all(H._assert_not_scheduled(t) is None or True for t in [stask(0)]), "synthetic seeds allowed")
+refused = 0
+for t in json.load(open(PLAN))["tasks"]:
+    try: H._assert_not_scheduled(t)
+    except H.HarnessError: refused += 1
+req(refused == 32, "all 32 scheduled seeds still refused by the runner")
+
+print()
+if fails:
+    print(f"QUALIFICATION FAIL — {len(fails)}:")
+    for f_ in fails: print("  " + f_)
+    sys.exit(3)
+print("QUALIFICATION PASS — NO MODEL WAS LOADED")
+sys.exit(0)
