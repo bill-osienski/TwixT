@@ -1,0 +1,1476 @@
+{
+ "schema": "e4-endpoint-screen-plan/2",
+ "status": "FROZEN, NOT EXECUTED \u2014 no game played, no seed consumed, no model loaded",
+ "authorization": "the endpoint screen is UNAUTHORIZED; this schedule exists so that authorizing it later cannot become an occasion to choose parameters",
+ "preregistration_sha256": "8aae49d0ab6ffeecf6551626d1830ffc9fe71d8ce2242e232c471fa04296d816",
+ "endpoints": {
+  "weak": 3,
+  "strong": 6
+ },
+ "endpoints_source": "read from the sweep's selection record, not restated by hand",
+ "reference": {
+  "name": "calib020_0001",
+  "path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "bytes": 7524333,
+  "sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+  "sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "sha1_pinned_in": "twixtbot_g3_schedule.REFERENCE_CHECKPOINTS \u2014 the SAME pin the qualified reference construction verifies at load time, checked here at freeze time",
+  "why_this_one": "the standing anchor of the closed AlphaZero programme; also the reference the twixtbot G3 calibration used, so the two anchor attempts are comparable",
+  "git_blob_id": "829fcb19d708f007650bb1ad02f9beda0c38639c"
+ },
+ "our_settings": {
+  "eval_config": {
+   "board_size": 24,
+   "mcts_sims": 400,
+   "mcts_eval_batch_size": 14,
+   "mcts_stall_flush_sims": 48,
+   "selection_mode": "opening_temperature",
+   "opening_temp_plies": 20,
+   "temp_high": 1.0,
+   "temp_low": 0.1,
+   "max_moves": 280
+  },
+  "noise_suppression": "search_with_root(state, add_noise=False)",
+  "noise_note": "cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.",
+  "search_mask": {
+   "red": 10855845,
+   "black": 5921370
+  },
+  "readout_mask": {
+   "red": 12829635,
+   "black": 3947580
+  },
+  "readout_path": "eval_readout.select, never mcts.select_move",
+  "agent_lifetime": "one instance per game; both streams advance across the game",
+  "source": "scripts/GPU/alphazero/e4_screen_reference.py::frozen_settings, which reads eval_config() and the masks from the qualified G3 path",
+  "withdrawn": "attempt 2's `dirichlet_eps: 0.0` override \u2014 cfg_from does not pass dirichlet_eps, so it was never in force; noise is suppressed by search_with_root(state, add_noise=False)",
+  "stochasticity": "temperature keeps our side stochastic, which is what makes the per-task seed load-bearing; T1j at fixed ply is deterministic",
+  "workers": 1
+ },
+ "reference_agent": {
+  "status": "FROZEN and QUALIFIED; no model is loaded and no game played by this preflight",
+  "construction_path": "scripts/GPU/alphazero/e4_screen_reference.py::build, which DELEGATES to twixtbot_g3_reference.build_reference_agent -- the construction already qualified for the twixtbot G3 calibration. It is not reimplemented.",
+  "required_task_fields": [
+   "seed",
+   "reference",
+   "reference_sha1",
+   "anchor_colour"
+  ],
+  "attempt_2_gap": "attempt 2's tasks carried reference and reference_sha256 but NOT reference_sha1 nor anchor_colour, so build_reference_agent would have refused every one of them at construction time",
+  "seed_to_moves": {
+   "search_rng": "random.Random(seed ^ SEARCH_MASK[colour])",
+   "readout_rng": "random.Random(seed ^ READOUT_MASK[colour])",
+   "masks_source": "imported from SeededReferenceAgent, never re-typed, so they cannot drift",
+   "why_two_streams": "MCTS shares one self.rng across prior shuffle, PUCT tie-break and readout; drawing readout numbers from it would change the generator state entering every later search",
+   "witness": "the schedule freezes both derived stream seeds and their first draws per task, so a later run can be checked to have used the scheduled seed without replaying a game or loading a network"
+  },
+  "noise": {
+   "mechanism": "search_with_root(state, add_noise=False)",
+   "not_a_config_field": "eval_runner.cfg_from builds MCTSConfig WITHOUT passing dirichlet_eps, so the field keeps its dataclass default of 0.25. Declaring dirichlet_eps=0 in a schedule declares nothing.",
+   "checked_not_asserted": "tests/test_e4_screen_reference.py asserts cfg_from's output against MCTSConfig's default rather than restating the claim"
+  },
+  "readout": "eval_readout.select, never mcts.select_move",
+  "agent_lifetime": "one instance per game; both streams advance across the game",
+  "schedule_level_check": "validate_schedule asserts seeds are unique, the derived (search, readout) stream pairs are unique, and no search stream collides with any readout stream -- two tasks sharing a stream would silently correlate games the schedule presents as independent"
+ },
+ "schedule_check": {
+  "n_tasks": 32,
+  "distinct_seeds": 32,
+  "distinct_stream_pairs": 32,
+  "search_readout_disjoint": true
+ },
+ "openings": {
+  "o1_center": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    13,
+    12
+   ],
+   [
+    10,
+    13
+   ],
+   [
+    12,
+    10
+   ],
+   [
+    14,
+    14
+   ]
+  ],
+  "o2_offcenter": [
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    11,
+    9
+   ],
+   [
+    14,
+    12
+   ],
+   [
+    9,
+    11
+   ]
+  ],
+  "o3_low": [
+   [
+    15,
+    11
+   ],
+   [
+    12,
+    12
+   ],
+   [
+    13,
+    10
+   ],
+   [
+    14,
+    14
+   ],
+   [
+    11,
+    11
+   ],
+   [
+    16,
+    13
+   ]
+  ],
+  "o4_high": [
+   [
+    8,
+    12
+   ],
+   [
+    11,
+    11
+   ],
+   [
+    10,
+    13
+   ],
+   [
+    9,
+    9
+   ],
+   [
+    12,
+    12
+   ],
+   [
+    13,
+    14
+   ]
+  ],
+  "o5_wide_left": [
+   [
+    11,
+    7
+   ],
+   [
+    12,
+    10
+   ],
+   [
+    13,
+    8
+   ],
+   [
+    10,
+    11
+   ],
+   [
+    15,
+    9
+   ],
+   [
+    14,
+    12
+   ]
+  ],
+  "o6_wide_right": [
+   [
+    11,
+    16
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    15,
+    14
+   ],
+   [
+    14,
+    11
+   ]
+  ],
+  "o7_diagonal": [
+   [
+    9,
+    9
+   ],
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    14,
+    13
+   ],
+   [
+    13,
+    11
+   ],
+   [
+    16,
+    14
+   ]
+  ],
+  "o8_contact": [
+   [
+    12,
+    11
+   ],
+   [
+    11,
+    12
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    12,
+    14
+   ],
+   [
+    14,
+    12
+   ],
+   [
+    10,
+    10
+   ]
+  ]
+ },
+ "opening_plies": 6,
+ "opening_plies_reason": "moveNr >= 6 keeps T1j's UNSEEDED InitialMoves.firstMove() unreached; a correctness requirement, not a preference",
+ "colour_arms": [
+  "t1j_red",
+  "t1j_black"
+ ],
+ "design": "8 openings x 2 colours x 2 endpoints = 32 games, 16 per endpoint",
+ "tasks": [
+  {
+   "task_id": "e4screen-000-strong6-o1_center-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o1_center",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612000,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161786,
+    "readout_seed": 204448028,
+    "search_first": [
+     0.3247633103357658,
+     0.3603526642845779,
+     0.4165360072818387,
+     0.8472503824437704
+    ],
+    "readout_first": [
+     0.5721088744838434,
+     0.30738542666797253,
+     0.4127452770322104,
+     0.7661709603460283
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-001-strong6-o1_center-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o1_center",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612001,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268612,
+    "readout_seed": 214982370,
+    "search_first": [
+     0.5927998000186951,
+     0.6809990183799917,
+     0.5170947957192747,
+     0.19379350682092655
+    ],
+    "readout_first": [
+     0.4400308125985134,
+     0.105453720791306,
+     0.6286775478486076,
+     0.7272590833289291
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-002-strong6-o2_offcenter-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o2_offcenter",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612002,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161784,
+    "readout_seed": 204448030,
+    "search_first": [
+     0.048985147546040664,
+     0.38383899393284227,
+     0.5997355289517616,
+     0.8115243054338217
+    ],
+    "readout_first": [
+     0.9556318247253488,
+     0.4819999534602958,
+     0.7995790087834146,
+     0.940983866894141
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-003-strong6-o2_offcenter-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o2_offcenter",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612003,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268614,
+    "readout_seed": 214982368,
+    "search_first": [
+     0.5850001027792103,
+     0.0569543601233955,
+     0.14401136146826454,
+     0.6529810155752228
+    ],
+    "readout_first": [
+     0.3543973086110186,
+     0.8965318369191253,
+     0.03355375408043115,
+     0.12290299753767886
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-004-strong6-o3_low-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o3_low",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612004,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161790,
+    "readout_seed": 204448024,
+    "search_first": [
+     0.15414510992946462,
+     0.7370982878638608,
+     0.8009670271709809,
+     0.36199829167562003
+    ],
+    "readout_first": [
+     0.5158671234618815,
+     0.1683924855800587,
+     0.6857603794916889,
+     0.5304415883824589
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-005-strong6-o3_low-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o3_low",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612005,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268608,
+    "readout_seed": 214982374,
+    "search_first": [
+     0.22736276979781667,
+     0.482374147790668,
+     0.04247280623632832,
+     0.49946945046199265
+    ],
+    "readout_first": [
+     0.1433333448683014,
+     0.714615351447939,
+     0.7039633173407757,
+     0.39544106227245424
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-006-strong6-o4_high-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o4_high",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612006,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161788,
+    "readout_seed": 204448026,
+    "search_first": [
+     0.053520537000038004,
+     0.5061421919624659,
+     0.2641770984025912,
+     0.3533770643895251
+    ],
+    "readout_first": [
+     0.4340855725339485,
+     0.4260730531524448,
+     0.362131575839691,
+     0.8312470725289226
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-007-strong6-o4_high-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o4_high",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612007,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268610,
+    "readout_seed": 214982372,
+    "search_first": [
+     0.553303765576162,
+     0.3545786132833352,
+     0.9229751050833254,
+     0.10760940696409171
+    ],
+    "readout_first": [
+     0.35935768330043194,
+     0.6593892355928813,
+     0.39009261296894837,
+     0.8207956372580157
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-008-strong6-o5_wide_left-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o5_wide_left",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612008,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161778,
+    "readout_seed": 204448020,
+    "search_first": [
+     0.9834955426149239,
+     0.8485647266450065,
+     0.9441521696596424,
+     0.21947427607367365
+    ],
+    "readout_first": [
+     0.4338045933878597,
+     0.6063180903190354,
+     0.5805830177818437,
+     0.3013888617976732
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-009-strong6-o5_wide_left-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o5_wide_left",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612009,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268620,
+    "readout_seed": 214982378,
+    "search_first": [
+     0.8643421920823884,
+     0.2680460800011285,
+     0.060591250548347464,
+     0.9845007205941594
+    ],
+    "readout_first": [
+     0.875652248197885,
+     0.408554006470111,
+     0.28348721006726285,
+     0.3373261233049457
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-010-strong6-o6_wide_right-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o6_wide_right",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612010,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161776,
+    "readout_seed": 204448022,
+    "search_first": [
+     0.5385433216508059,
+     0.6571017535960689,
+     0.4460576196463617,
+     0.452802077073556
+    ],
+    "readout_first": [
+     0.4917375244424014,
+     0.11355737064921112,
+     0.6719653741070486,
+     0.7177157959837854
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-011-strong6-o6_wide_right-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o6_wide_right",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612011,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268622,
+    "readout_seed": 214982376,
+    "search_first": [
+     0.48936429020753336,
+     0.3400526576747793,
+     0.5160772096728784,
+     0.943738362221818
+    ],
+    "readout_first": [
+     0.8973370940610393,
+     0.1395541480777831,
+     0.47890863047475607,
+     0.351636636293312
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-012-strong6-o7_diagonal-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o7_diagonal",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612012,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161782,
+    "readout_seed": 204448016,
+    "search_first": [
+     0.8047936524600813,
+     0.6365681366337433,
+     0.10567929554926359,
+     0.17666883551204227
+    ],
+    "readout_first": [
+     0.60178606733172,
+     0.03445603939217312,
+     0.8229362327017307,
+     0.6862503351402589
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-013-strong6-o7_diagonal-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o7_diagonal",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612013,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268616,
+    "readout_seed": 214982382,
+    "search_first": [
+     0.7746587182971361,
+     0.7476887125232655,
+     0.8660825003706902,
+     0.8292256844180153
+    ],
+    "readout_first": [
+     0.764616846018032,
+     0.22431304119713058,
+     0.14814735783119815,
+     0.37983766157656407
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-014-strong6-o8_contact-t1j_red",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o8_contact",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612014,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161780,
+    "readout_seed": 204448018,
+    "search_first": [
+     0.735658833777982,
+     0.7529907315481853,
+     0.3027904087900728,
+     0.2064005045328693
+    ],
+    "readout_first": [
+     0.2977206851227049,
+     0.7670959362533778,
+     0.576036557570703,
+     0.9179125608399541
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-015-strong6-o8_contact-t1j_black",
+   "endpoint": "strong",
+   "t1j_mdPly": 6,
+   "t1j_mdFixedPly": true,
+   "opening": "o8_contact",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612015,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268618,
+    "readout_seed": 214982380,
+    "search_first": [
+     0.4451592675346906,
+     0.6611911121123604,
+     0.5101150947047569,
+     0.9903496931890421
+    ],
+    "readout_first": [
+     0.4285342309711244,
+     0.665234046489979,
+     0.0013863951505277416,
+     0.652237431656496
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-016-weak3-o1_center-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o1_center",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612016,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161770,
+    "readout_seed": 204448012,
+    "search_first": [
+     0.20660698080858997,
+     0.38185872469599136,
+     0.33067960988412903,
+     0.9163153996023833
+    ],
+    "readout_first": [
+     0.06841770108215028,
+     0.38324685275899084,
+     0.9914545434345542,
+     0.3027232494225681
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-017-weak3-o1_center-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o1_center",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612017,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268628,
+    "readout_seed": 214982386,
+    "search_first": [
+     0.2985818904614561,
+     0.7204841566254112,
+     0.03892890177777897,
+     0.6400106332295245
+    ],
+    "readout_first": [
+     0.016204371227799497,
+     0.07154628996451662,
+     0.2044342177913474,
+     0.6632521175602614
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-018-weak3-o2_offcenter-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o2_offcenter",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612018,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161768,
+    "readout_seed": 204448014,
+    "search_first": [
+     0.9851650092230707,
+     0.6362507612689926,
+     0.6651401252828179,
+     0.453760819803519
+    ],
+    "readout_first": [
+     0.07490529899350096,
+     0.5451703747237393,
+     0.5355130973233935,
+     0.6844310682438088
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-019-weak3-o2_offcenter-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o2_offcenter",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612019,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268630,
+    "readout_seed": 214982384,
+    "search_first": [
+     0.8788756987038716,
+     0.9404799390804998,
+     0.6179911127747635,
+     0.34247950032077634
+    ],
+    "readout_first": [
+     0.12048748201172743,
+     0.8285877948298015,
+     0.7705667149577123,
+     0.30730867026655484
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-020-weak3-o3_low-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o3_low",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612020,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161774,
+    "readout_seed": 204448008,
+    "search_first": [
+     0.7941850763473317,
+     0.45918201912222745,
+     0.21797997198900532,
+     0.17162851728307327
+    ],
+    "readout_first": [
+     0.6187548487594218,
+     0.02941724418874725,
+     0.5914110434798391,
+     0.2844835093671224
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-021-weak3-o3_low-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o3_low",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612021,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268624,
+    "readout_seed": 214982390,
+    "search_first": [
+     0.8627157154594194,
+     0.7180502959870535,
+     0.547390574460455,
+     0.5089346918806803
+    ],
+    "readout_first": [
+     0.2099005170919318,
+     0.07109963611325476,
+     0.7098848589272594,
+     0.887606246882552
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-022-weak3-o4_high-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o4_high",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612022,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161772,
+    "readout_seed": 204448010,
+    "search_first": [
+     0.5860588897317479,
+     0.45256352996831284,
+     0.8387408764797413,
+     0.8452579023721898
+    ],
+    "readout_first": [
+     0.8440193813187937,
+     0.5549360349722848,
+     0.6580284788409971,
+     0.90839113992741
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-023-weak3-o4_high-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o4_high",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612023,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268626,
+    "readout_seed": 214982388,
+    "search_first": [
+     0.38854316894117724,
+     0.603964967712964,
+     0.5610496571667302,
+     0.4981159838068341
+    ],
+    "readout_first": [
+     0.9143821159851739,
+     0.29930988096142375,
+     0.05756412465657035,
+     0.0007472558917525074
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-024-weak3-o5_wide_left-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o5_wide_left",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612024,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161762,
+    "readout_seed": 204448004,
+    "search_first": [
+     0.8975059399765496,
+     0.5407271197925934,
+     0.24362289376758872,
+     0.78695004038445
+    ],
+    "readout_first": [
+     0.09157224964487676,
+     0.35761356165570757,
+     0.19709406573257449,
+     0.3992505102399635
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-025-weak3-o5_wide_left-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o5_wide_left",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612025,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268636,
+    "readout_seed": 214982394,
+    "search_first": [
+     0.9727617263509764,
+     0.03086513172123817,
+     0.4559212219986566,
+     0.12296182185367388
+    ],
+    "readout_first": [
+     0.7972278956502498,
+     0.17964435771083886,
+     0.5839491869608269,
+     0.5040115309082621
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-026-weak3-o6_wide_right-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o6_wide_right",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612026,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161760,
+    "readout_seed": 204448006,
+    "search_first": [
+     0.18928804565353297,
+     0.1738646620078651,
+     0.012881347608019178,
+     0.4195383430545978
+    ],
+    "readout_first": [
+     0.3921016721947951,
+     0.5423898867302905,
+     0.15312821366049845,
+     0.7674260255460835
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-027-weak3-o6_wide_right-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o6_wide_right",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612027,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268638,
+    "readout_seed": 214982392,
+    "search_first": [
+     0.5553456210738227,
+     0.6355532140882441,
+     0.8226144677890694,
+     0.6926044645329537
+    ],
+    "readout_first": [
+     0.2316364667862587,
+     0.36830574235223357,
+     0.9338736595361301,
+     0.4036371151618735
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-028-weak3-o7_diagonal-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o7_diagonal",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612028,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161766,
+    "readout_seed": 204448000,
+    "search_first": [
+     0.7907144617355427,
+     0.8820177770719072,
+     0.37933991768208863,
+     0.03357917728777948
+    ],
+    "readout_first": [
+     0.9249893664909553,
+     0.07525184788194117,
+     0.9115568996375613,
+     0.2809719243378477
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-029-weak3-o7_diagonal-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o7_diagonal",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612029,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268632,
+    "readout_seed": 214982398,
+    "search_first": [
+     0.43282555741113793,
+     0.08791970945257732,
+     0.45004534934210494,
+     0.5836730530149109
+    ],
+    "readout_first": [
+     0.7473557001158583,
+     0.9373011439647919,
+     0.9582524422691225,
+     0.6301863057653594
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-030-weak3-o8_contact-t1j_red",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o8_contact",
+   "colour_arm": "t1j_red",
+   "anchor_colour": "red",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612030,
+   "reference_colour": "black",
+   "rng": {
+    "colour": "black",
+    "search_seed": 206161764,
+    "readout_seed": 204448002,
+    "search_first": [
+     0.4267826326319737,
+     0.6567020103141065,
+     0.20950813714117433,
+     0.7382970095834657
+    ],
+    "readout_first": [
+     0.8725924439126803,
+     0.0024331254079024145,
+     0.8486679955414513,
+     0.32780875945805266
+    ]
+   }
+  },
+  {
+   "task_id": "e4screen-031-weak3-o8_contact-t1j_black",
+   "endpoint": "weak",
+   "t1j_mdPly": 3,
+   "t1j_mdFixedPly": true,
+   "opening": "o8_contact",
+   "colour_arm": "t1j_black",
+   "anchor_colour": "black",
+   "reference": "calib020_0001",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "seed": 202612031,
+   "reference_colour": "red",
+   "rng": {
+    "colour": "red",
+    "search_seed": 213268634,
+    "readout_seed": 214982396,
+    "search_first": [
+     0.291579821537989,
+     0.9735580624708097,
+     0.3467110543848636,
+     0.5303246984219631
+    ],
+    "readout_first": [
+     0.9362804835997889,
+     0.7954646990162811,
+     0.5897608630363078,
+     0.0037965412888116834
+    ]
+   }
+  }
+ ],
+ "n_tasks": 32,
+ "seed_block": {
+  "interval": [
+   202612000,
+   202612512
+  ],
+  "status": "RESERVED, UNSPENT",
+  "half_open": true,
+  "seeds_used": [
+   202612000,
+   202612031
+  ],
+  "prior_intervals": [
+   [
+    202608060,
+    202608124
+   ],
+   [
+    202608124,
+    202608188
+   ],
+   [
+    202608188,
+    202608988
+   ],
+   [
+    202608988,
+    202609388
+   ],
+   [
+    202609388,
+    202609788
+   ],
+   [
+    202609788,
+    202610188
+   ],
+   [
+    202611000,
+    202611400
+   ],
+   [
+    202611128,
+    202611256
+   ]
+  ],
+  "disjointness": "asserted against every prior interval at freeze time"
+ },
+ "ply_cap": 280,
+ "per_ply_binding": "every ply of every game binds both engines through the E3b-qualified adapter; ABORT ON THE FIRST DIVERGENCE",
+ "scoring": {
+  "t1j_win": 1.0,
+  "t1j_loss": 0.0,
+  "draw": 0.5,
+  "draw_definition": "the game reached ply_cap 280 with no winner. TwixT cannot draw by rule; a draw here is ALWAYS a cap termination and is recorded as terminal_reason='cap'.",
+  "cap_saturation_abort": "if more than half the games at an endpoint terminate by cap, that endpoint is INCOMPLETE: the positions are not resolving and a score rate over them means little"
+ },
+ "band": [
+  0.05,
+  0.95
+ ],
+ "per_endpoint_decision": {
+  "SATURATED_STRONG": "score rate >= 0.95, i.e. T1j score >= 15.2 of 16",
+  "SATURATED_WEAK": "score rate <= 0.05, i.e. T1j score <= 0.8 of 16",
+  "IN_BAND": "0.05 < score rate < 0.95",
+  "INCOMPLETE": "fewer than 16 games resolved at this endpoint, or the cap-saturation abort fired"
+ },
+ "early_stop": {
+  "check_after_every_game": true,
+  "rule": "stop this endpoint and record IN_BAND only when IN_BAND is the ONLY reachable outcome, which requires BOTH: (a) score saturation unreachable -- score + (n - played) < 0.95*n AND score > 0.05*n; and (b) cap-based incompleteness unreachable -- cap_terminations + (n - played) <= n // 2, since every unplayed game could still terminate at the ply cap and fire the cap-saturation abort",
+  "earliest_reachable": "game 8 of 16, with zero cap terminations and a score in [1.0, 7.0]; computed by earliest_early_stop(n, band), not asserted",
+  "attempt_2_error_withdrawn": "attempt 2 claimed IN_BAND is forced after two games. That considered only score saturation and is WRONG: at game 2 the cap route is wide open (0 caps + 14 unplayed > 8).",
+  "asymmetry_stated_plainly": "A SATURATED verdict can never be reached before all 16 games at an endpoint, because 0.95 of 16 exceeds 15 whole points. Only the IN_BAND verdict can stop early, and not before game 8."
+ },
+ "earliest_early_stop_computed": {
+  "game": 8,
+  "score": 1.0
+ },
+ "joint_outcome": {
+  "note": "computed from the pair (decision_weak, decision_strong); the classifier is total over all 16 combinations and asserts so",
+  "IN_BAND": "at least one endpoint IN_BAND and neither INCOMPLETE -- a larger match may be proposed AT THE IN-BAND ENDPOINT(S)",
+  "BRACKETED": "one endpoint SATURATED_WEAK and the other SATURATED_STRONG -- the dial spans the band without landing in it, so a usable depth plausibly lies between them; a larger match may be proposed at an intermediate depth",
+  "T1J_TOO_STRONG": "both endpoints SATURATED_STRONG -- stop; T1j cannot calibrate against us",
+  "T1J_TOO_WEAK": "both endpoints SATURATED_WEAK -- stop; T1j cannot calibrate against us",
+  "INCONCLUSIVE": "either endpoint INCOMPLETE -- a larger match may be proposed only after the incompleteness is understood"
+ },
+ "joint_truth_table": {
+  "SATURATED_STRONG|SATURATED_STRONG": "T1J_TOO_STRONG",
+  "SATURATED_STRONG|SATURATED_WEAK": "BRACKETED",
+  "SATURATED_STRONG|IN_BAND": "IN_BAND",
+  "SATURATED_STRONG|INCOMPLETE": "INCONCLUSIVE",
+  "SATURATED_WEAK|SATURATED_STRONG": "BRACKETED",
+  "SATURATED_WEAK|SATURATED_WEAK": "T1J_TOO_WEAK",
+  "SATURATED_WEAK|IN_BAND": "IN_BAND",
+  "SATURATED_WEAK|INCOMPLETE": "INCONCLUSIVE",
+  "IN_BAND|SATURATED_STRONG": "IN_BAND",
+  "IN_BAND|SATURATED_WEAK": "IN_BAND",
+  "IN_BAND|IN_BAND": "IN_BAND",
+  "IN_BAND|INCOMPLETE": "INCONCLUSIVE",
+  "INCOMPLETE|SATURATED_STRONG": "INCONCLUSIVE",
+  "INCOMPLETE|SATURATED_WEAK": "INCONCLUSIVE",
+  "INCOMPLETE|IN_BAND": "INCONCLUSIVE",
+  "INCOMPLETE|INCOMPLETE": "INCONCLUSIVE"
+ },
+ "larger_match_permitted_after": [
+  "IN_BAND",
+  "BRACKETED",
+  "INCONCLUSIVE"
+ ],
+ "abort_rules": [
+  "any per-ply state divergence between the engines",
+  "any T1j query that does not complete its requested depth",
+  "any illegal or null-sentinel move from either side",
+  "any postcondition failure: a Window/Frame, a non-headless jvm, a mutated host preference store, or an unauthorized reflective access",
+  "any seed outside the reserved block, or any repeated seed",
+  "more than half the games at an endpoint terminating by ply cap"
+ ],
+ "durable_result_format": {
+  "file": "e4_screen_results.jsonl",
+  "mode": "append-only, line-buffered, never rewritten",
+  "records": [
+   "run_header",
+   "task_start",
+   "ply",
+   "task_result",
+   "endpoint_decision",
+   "stop_decision",
+   "joint_outcome"
+  ],
+  "task_result_fields": [
+   "task_id",
+   "endpoint",
+   "t1j_mdPly",
+   "opening",
+   "colour_arm",
+   "reference",
+   "reference_sha1",
+   "anchor_colour",
+   "reference_colour",
+   "seed",
+   "winner",
+   "t1j_points",
+   "plies",
+   "terminal_reason",
+   "wall_s"
+  ]
+ },
+ "runtime_estimate": {
+  "basis": "maximum per-query WALL ms measured in this preflight's sweep, per endpoint",
+  "per_query_wall_ms_max": {
+   "weak": 215,
+   "strong": 2845
+  },
+  "games_per_endpoint": 16,
+  "moves_per_game_is_NOT_measured": "This preflight measured single queries from 6-14 ply positions. It measured no game and no game length. The only defensible bound is the ply cap: at most 280 plies, so at most 140 T1j moves per game.",
+  "ceiling_from_ply_cap": {
+   "weak": 8.0,
+   "strong": 106.2
+  },
+  "ceiling_units": "minutes of T1j search time per endpoint, at the measured maximum per-query wall time and the ply-cap ceiling on moves",
+  "illustrative_only": {
+   "20_moves_per_game": {
+    "weak": 1.1,
+    "strong": 15.2
+   },
+   "60_moves_per_game": {
+    "weak": 3.4,
+    "strong": 45.5
+   }
+  },
+  "illustrative_warning": "the 20- and 60-move rows are ILLUSTRATIVE ONLY; no measurement supports any particular moves-per-game figure. Attempt 1 asserted 60 and that assumption is withdrawn.",
+  "excludes": "our side's search time entirely; the screen is not authorized and our side has never been timed in this configuration"
+ },
+ "claim_discipline": {
+  "move_response_ordering": "descriptive only",
+  "forbidden": [
+   "any claim of strength monotonicity from move differences",
+   "any claim of strength from timing",
+   "any absolute strength placement: T1j is uncalibrated, so even a passing screen yields an ORDERING, not a placement",
+   "any per-game runtime figure that assumes a moves-per-game count no measurement supports",
+   "any statement that a schedule setting is in force without checking the path that would apply it"
+  ]
+ }
+}

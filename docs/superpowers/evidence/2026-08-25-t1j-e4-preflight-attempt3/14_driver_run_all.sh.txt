@@ -1,0 +1,125 @@
+#!/bin/bash
+set -o pipefail
+SPD=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad
+E1=$SPD/e1; E2=$SPD/e2; E4=$SPD/e4pre3
+EV="$E4/evidence"; JH="$E2/jdk/home/jdk-17.0.20.1+1/Contents/Home"
+JAR="$E1/acq/release/t1j.jar"; REPO=/Users/bill/projects/TwixT_Game
+JSRC="$REPO/scripts/GPU/alphazero/t1j_java"
+PREREG="$E4/preregistration.json"
+PREREG_SHA=8aae49d0ab6ffeecf6551626d1830ffc9fe71d8ce2242e232c471fa04296d816
+TMPERR=$(mktemp); GATE=0
+run() { printf '$ %s\n' "$1"; out=$(eval "$1" 2>"$TMPERR"); rc=$?
+  if [ -n "$out" ]; then printf '%s\n' "$out" | sed 's/^/    | /'; else echo "    | <no stdout>"; fi
+  if [ -s "$TMPERR" ]; then sed 's/^/    ! /' "$TMPERR"; fi
+  printf '    [exit %d]\n\n' "$rc"; return $rc; }
+die() { echo "*** $1 — STOPPING ***"; exit 9; }
+expect() { if [ "$2" = "$3" ]; then echo "    MATCH  $1"; else echo "    *** MISMATCH $1 ***"; die "$1"; fi; }
+
+echo "E4 PREFLIGHT ATTEMPT 3 — NO GAMES ARE AUTHORIZED OR PLAYED."
+echo "Substantive commands captured as they ran."
+echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)   host $(uname -srm)"; echo
+
+echo "########## 1. IDENTITY GATE (compared) ##########"
+run "git -C $E1/acq/t1j rev-parse HEAD"; expect "clone" "$out" "b572ed21f1f6b08491f69db32f531fc4b5f50fcd"
+run "git -C $E1/acq/t1j status --porcelain"; [ -z "$out" ] || die "clone dirty"
+run "shasum -a 256 $JAR | cut -d' ' -f1"; expect "jar" "$out" "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7"
+run "shasum -a 256 $E2/jdk/jdk.tar.gz | cut -d' ' -f1"; expect "jdk archive" "$out" "196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8"
+run "shasum -a 256 $JH/bin/java | cut -d' ' -f1"; expect "jvm bin/java" "$out" "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0"
+echo "IDENTITY GATE PASSED"; echo
+
+echo "########## 2. T1j IS NOT MODIFIED; ALL PRIOR EVIDENCE BYTE-UNCHANGED ##########"
+run "git -C $REPO status --porcelain docs/superpowers/evidence/2026-08-24-t1j-e1 docs/superpowers/evidence/2026-08-24-t1j-e2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt4 docs/superpowers/evidence/2026-08-24-t1j-e3a docs/superpowers/evidence/2026-08-24-t1j-e3b docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt2 docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3 docs/superpowers/evidence/2026-08-25-t1j-e4-preflight docs/superpowers/2026-08-25-t1j-e4-preflight.md docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt2 docs/superpowers/2026-08-25-t1j-e4-preflight-attempt2.md"
+[ -z "$out" ] || die "prior evidence or E4 preflight attempts 1-2 dirty"
+run "shasum -a 256 $JSRC/net/schwagereit/t1j/E3bDump.java | cut -d' ' -f1"
+expect "E3bDump.java unchanged since E3b attempt 3" "$out" "281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc"
+echo
+
+echo "########## 3. PREFS BEFORE ##########"
+run "bash $E2/prefsfp.sh BEFORE | tee $EV/01_prefs_before.txt"; echo
+
+echo "########## 4. PREREGISTRATION — HASHED BEFORE ANY MEASUREMENT ##########"
+run "shasum -a 256 $PREREG | cut -d' ' -f1"; expect "preregistration" "$out" "$PREREG_SHA"
+echo "    thresholds are read FROM THIS FILE by the measuring code; none is inlined."
+run "python3 -c \"import json;d=json.load(open('$PREREG'));print(json.dumps(d['budgets'],indent=1));print(json.dumps(d['strong_endpoint_selection_rule'],indent=1))\""
+echo
+
+echo "########## 5. MANIFEST OF EVERY SOURCE AND COMPILE INPUT ##########"
+run "shasum -a 256 $REPO/scripts/GPU/alphazero/t1j_adapter.py $REPO/tests/test_t1j_adapter.py $JSRC/net/schwagereit/t1j/E4Preflight.java $JSRC/net/schwagereit/t1j/E3bDump.java $JSRC/e2probe/ScratchPrefs.java $JSRC/e2probe/ScratchPrefsFactory.java $PREREG $E4/preflight_lib.py $E4/sweep.py $E4/determinism.py $E4/build_positions.py $E4/freeze_screen_plan.py $E4/run_all.sh"
+echo
+
+echo "########## 6. ADAPTER UNIT TESTS — REAL EXIT STATUS, GATED ##########"
+run "$REPO/.venv/bin/python -m pytest $REPO/tests/test_t1j_adapter.py $REPO/tests/test_e4_screen_reference.py -q --no-header -p no:cacheprovider"
+TESTS=$rc; echo "    unit-test exit: $TESTS (no pipe: this IS pytest's status)"; echo
+
+echo "########## 7. COMPILE THROUGH THE COMMITTED ADAPTER, FROM COMMITTED SOURCES ##########"
+run "rm -rf $E4/classes && $REPO/.venv/bin/python -c \"
+import sys; sys.path.insert(0,'$REPO')
+from scripts.GPU.alphazero import t1j_adapter as A
+import hashlib
+for p in A.PREFLIGHT_SOURCES:
+    print('  compile input ', hashlib.sha256(p.read_bytes()).hexdigest(), p)
+r = A.compile_helper('$JH/bin/javac', '$JAR', '$E4/classes', sources=A.PREFLIGHT_SOURCES)
+print('javac stderr:', r.stderr.strip() or '<none>')
+print('COMPILE rc=', r.returncode)
+sys.exit(r.returncode)\""
+[ $rc -eq 0 ] || die "compile failed"
+run "find $E4/classes -name '*.class' | sort | xargs shasum -a 256"; echo
+
+echo "########## 8. FREEZE THE QUERY POSITIONS (verified in OUR engine first) ##########"
+run "$REPO/.venv/bin/python $E4/build_positions.py $EV/02_positions.json"
+[ $rc -eq 0 ] || die "positions failed"; echo
+
+echo "########## 9. DEPTH SWEEP — ascending 3,4,5,6,7, SELECTED ON WALL MS; NO GAMES ##########"
+rm -f "$EV/03_results.jsonl"
+run "$REPO/.venv/bin/python $E4/sweep.py $JH/bin/java $JAR $E4/classes $PREREG $PREREG_SHA $EV/02_positions.json $EV/03_results.jsonl > $EV/04_sweep.txt 2>&1; echo \$?"
+SWEEP=$(echo "$out" | tail -1); run "cat $EV/04_sweep.txt"; echo
+
+echo "########## 10. DETERMINISM — 20+5 PROCESS STRUCTURE, ALL 25 PERSISTED AND RE-BOUND ##########"
+if [ "$SWEEP" = "0" ]; then
+  run "$REPO/.venv/bin/python $E4/determinism.py $JH/bin/java $JAR $E4/classes $PREREG $PREREG_SHA $EV/02_positions.json $EV/03_results.jsonl p06_e3a_center > $EV/05_determinism.txt 2>&1; echo \$?"
+  DET=$(echo "$out" | tail -1); run "cat $EV/05_determinism.txt"
+else
+  DET=skipped; echo "    SKIPPED — the sweep did not pass, so there is no endpoint to test"
+fi
+echo
+
+echo "########## 11. FREEZE THE ENDPOINT-SCREEN PLAN — NOT EXECUTED ##########"
+run "$REPO/.venv/bin/python $E4/freeze_screen_plan.py $EV/06_endpoint_screen_plan.json $EV/03_results.jsonl $PREREG $PREREG_SHA"
+FREEZE=$rc
+run "python3 -c \"import json;d=json.load(open('$EV/06_endpoint_screen_plan.json'));print('status:',d['status']);print('tasks:',d['n_tasks'],'=',d['design']);print('endpoints:',d['endpoints']);print('reference:',d['reference']['name'],d['reference']['sha256'][:16]);print('seed block:',d['seed_block']['interval'],d['seed_block']['status']);print('joint table size:',len(d['joint_truth_table']));print('earliest early stop:',d['earliest_early_stop_computed']);print('schedule check:',d['schedule_check']);print('task0 fields:',sorted(d['tasks'][0]));print('runtime ceiling min/endpoint:',d['runtime_estimate']['ceiling_from_ply_cap'])\""
+echo
+
+echo "########## 12. PREFS AFTER — REJECTION CONTROLS FIRST, THEN THE REAL PAIR ##########"
+run "bash $E2/prefsfp.sh AFTER | tee $EV/07_prefs_after.txt"
+run "python3 - $EV/01_prefs_before.txt $EV/07_prefs_after.txt <<'PYCTL'
+import subprocess, sys
+before, after = sys.argv[1:3]
+lines = open(after).read().splitlines(True)
+i = next(j for j, l in enumerate(lines) if ':' in l and not l.startswith('host preference store fingerprint'))
+k, v = lines[i].split(':', 1)
+bad = 0
+def case(name, text, want):
+    global bad
+    open('/tmp/.e4pre_ctl', 'w').write(text)
+    r = subprocess.run([sys.executable, '$SPD/e3b3/check_prefs.py', before, '/tmp/.e4pre_ctl'],
+                       capture_output=True, text=True)
+    ok = r.returncode == want
+    print(f\"  {'PASS' if ok else 'FAIL'}  {name}: exit {r.returncode} (want {want})\")
+    if not ok: bad += 1
+mut = list(lines); mut[i] = f'{k}: MUTATED-{v.strip()}\n'
+case('mutated field rejected', ''.join(mut), 3)
+case('dropped field rejected', ''.join(l for j, l in enumerate(lines) if j != i), 3)
+case('untouched AFTER accepted', ''.join(lines), 0)
+print('PREFS CONTROLS ' + ('OK' if not bad else f'FAILED ({bad})'))
+sys.exit(0 if not bad else 3)
+PYCTL"
+PREFSCTRL=$rc
+run "python3 $SPD/e3b3/check_prefs.py $EV/01_prefs_before.txt $EV/07_prefs_after.txt; echo \$?"
+PREFS=$(echo "$out" | tail -1)
+rm -f "$TMPERR" /tmp/.e4pre_ctl
+echo
+echo "TRANSCRIPT COMPLETE — tests $TESTS, sweep $SWEEP, determinism $DET, freeze $FREEZE, prefs-controls $PREFSCTRL, prefs $PREFS"
+[ "$TESTS" = "0" ] && [ "$SWEEP" = "0" ] && [ "$DET" = "0" ] && [ "$FREEZE" = "0" ] \
+  && [ "$PREFSCTRL" = "0" ] && [ "$PREFS" = "0" ] || GATE=3
+echo "GATE $GATE"
+exit $GATE

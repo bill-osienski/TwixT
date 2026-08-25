@@ -1,0 +1,157 @@
+{
+ "schema": "e4-preflight-preregistration/3",
+ "supersedes": "attempt 2, sha256 67f353bdcb138dffad484c5450dce13b23e4464954024d3a06e01cd95d520652; attempt 1, sha256 9bddafe382407268f75ee1bf8dd9df8328900efe7104b289fcd9f273d2f9f910",
+ "frozen_before_any_measurement": true,
+ "thresholds_carried_over_unchanged": true,
+ "what_changed": "TWO CORRECTIONS, NO THRESHOLD CHANGED. (1) The early IN_BAND stop was WRONG, not merely unreachable: attempt 2 ruled out SCORE saturation and stopped there, but an endpoint can also end INCOMPLETE through ply-cap terminations, and with 14 games unplayed nine of them could still hit the cap. Attempt 2's claim that IN_BAND is forced after two games is WITHDRAWN. Both routes out of IN_BAND must be closed, and the earliest reachable early stop is now COMPUTED rather than asserted. (2) The schedule recorded a seed but froze no execution path from that seed to a move, and its tasks lacked two fields the qualified reference construction demands. The reference-agent contract is now part of this preregistration and is qualified by committed code and tests. Attempt 2's declared dirichlet_eps=0 override is WITHDRAWN as cosmetic: eval_runner.cfg_from never passes dirichlet_eps, so MCTSConfig keeps its 0.25 default and root noise is suppressed at the call site instead.",
+ "note": "No games are authorized by this document. The endpoint screen it describes is FROZEN, NOT EXECUTED.",
+ "engine_settings": {
+  "mdFixedPly": true,
+  "mdTime_excluded": "wall-clock search mode is excluded: mdFixedPly=false sets maxPly=Integer.MAX_VALUE and terminates on elapsed time, which is not reproducible",
+  "weak_endpoint_mdPly": 3,
+  "candidate_depths": [
+   3,
+   4,
+   5,
+   6,
+   7
+  ],
+  "depth_4_behaviour": "FindMove.internalComputeMove iterates currentMaxPly from 3 and executes a depth only when (currentMaxPly != 4 || currentMaxPly == maxPly). Depth 4 RUNS when it is the requested terminal depth and is SKIPPED only as an intermediate iteration. Executed ladders: 3 -> {3}; 4 -> {3,4}; 5 -> {3,5}; 6 -> {3,5,6}; 7 -> {3,5,6,7}.",
+  "completion_predicate": "requested depth d completed <=> usealphabeta == true AND currentMaxPly == d + 1. Under mdFixedPly=true the loop's only break is guarded by maxTime > 0 and maxTime is -1, so it always runs to completion and exits at maxPly + 1."
+ },
+ "budgets": {
+  "per_query_timeout_s": 120,
+  "sweep_budget_s": 3600,
+  "determinism_budget_s": 900,
+  "on_timeout": "record the query as TIMEOUT, stop measuring deeper depths, and LOG that deeper depths were not measured; never silently truncate"
+ },
+ "cost_metric": {
+  "selector_metric": "wall_ms",
+  "selector_metric_definition": "wall-clock milliseconds measured by the HARNESS around the whole child process, including jvm start, class loading and the search",
+  "descriptive_only": "engine_ms",
+  "descriptive_only_definition": "System.nanoTime around computeMove inside the jvm; recorded per query but NEVER an input to any gate",
+  "why_wall": "the screen's cost is what the harness must actually wait for, which includes process start; engine time understates it"
+ },
+ "strong_endpoint_selection_rule": {
+  "statement": "The strong endpoint is the DEEPEST candidate depth d satisfying all three conditions. Selection is by COST ONLY, measured in WALL milliseconds. The moves returned are not an input to this rule.",
+  "conditions": [
+   "every frozen position completed at d, per completion_predicate, within per_query_timeout_s",
+   "max observed per-query WALL time across all positions at d <= max_query_ms",
+   "projected determinism cost (25 * max observed per-query WALL time at d) <= determinism_budget_s"
+  ],
+  "max_query_ms": 30000,
+  "if_only_depth_3_qualifies": "strong endpoint == weak endpoint; record that the endpoints coincide as a FINDING, since an endpoint screen between identical settings measures nothing"
+ },
+ "dial_response_classification": {
+  "note": "Identical moves are NOT proof the dial is dead: a deeper search can correctly re-select the same move.",
+  "observable_move_response": "at least one (position, depth) returns a move different from that position's depth-3 move, and every compared query completed its requested depth",
+  "no_observed_move_response_inconclusive": "every move identical across all measured depths AND every requested depth demonstrably completed",
+  "dial_failure_stop": "any requested depth not completed, or the setting ignored (usealphabeta false, or currentMaxPly != d+1)"
+ },
+ "positions": {
+  "count_min": 5,
+  "min_plies": 6,
+  "min_plies_reason": "moveNr >= 6 bypasses InitialMoves, whose firstMove() path uses an UNSEEDED Random",
+  "evaluation_regime_note": "Evaluation.evaluatePosition zeroes one side's value while match.getMoveNr() < 8, so positions at 6-7 plies sit in a different evaluation regime from positions at 8+. Both regimes are represented.",
+  "construction": "deterministic scripted sequences verified in our engine before T1j is driven. No agent chooses a move, no search runs during construction, no seeds are consumed."
+ },
+ "binding": {
+  "ply_cap": 280,
+  "ply_cap_origin": "entirely external to T1j; applied identically to both engines, each engine's ply derived independently",
+  "adapter": "scripts/GPU/alphazero/t1j_adapter.py, as qualified by E3b attempt 3",
+  "abort_on_first_divergence": true
+ },
+ "determinism_stage": {
+  "structure": "the E3a structure at the SELECTED strong endpoint: 20 independent constructions in ONE jvm plus 5 FRESH jvms, 25 queries total",
+  "process_structure_required": "exactly 1 distinct pid across the 20 shared records, exactly 5 DISTINCT pids across the fresh records, 6 processes in all -- asserted from the helper's own PROC lines, not from how the harness believes it invoked them",
+  "per_record_requirements": [
+   "all 25 records persisted individually, not only an aggregate",
+   "every record returns the identical legal move and the identical completed depth",
+   "EVERY returned state dump re-bound through the same searched-versus-bound E3b comparison used by the sweep, before the aggregate may pass"
+  ],
+  "on_failure": "the pilot stops"
+ },
+ "endpoint_screen_decision_rules": {
+  "status": "FROZEN, NOT EXECUTED",
+  "games_per_endpoint": 16,
+  "endpoints_screened": 2,
+  "total_games": 32,
+  "scoring": {
+   "t1j_win": 1.0,
+   "t1j_loss": 0.0,
+   "draw": 0.5,
+   "draw_definition": "the game reached ply_cap 280 with no winner. TwixT cannot draw by rule; a draw here is ALWAYS a cap termination and is recorded as terminal_reason='cap'.",
+   "cap_saturation_abort": "if more than half the games at an endpoint terminate by cap, that endpoint is INCOMPLETE: the positions are not resolving and a score rate over them means little"
+  },
+  "band": [
+   0.05,
+   0.95
+  ],
+  "per_endpoint_decision": {
+   "SATURATED_STRONG": "score rate >= 0.95, i.e. T1j score >= 15.2 of 16",
+   "SATURATED_WEAK": "score rate <= 0.05, i.e. T1j score <= 0.8 of 16",
+   "IN_BAND": "0.05 < score rate < 0.95",
+   "INCOMPLETE": "fewer than 16 games resolved at this endpoint, or the cap-saturation abort fired"
+  },
+  "early_stop": {
+   "check_after_every_game": true,
+   "rule": "stop this endpoint and record IN_BAND only when IN_BAND is the ONLY reachable outcome, which requires BOTH: (a) score saturation unreachable -- score + (n - played) < 0.95*n AND score > 0.05*n; and (b) cap-based incompleteness unreachable -- cap_terminations + (n - played) <= n // 2, since every unplayed game could still terminate at the ply cap and fire the cap-saturation abort",
+   "earliest_reachable": "game 8 of 16, with zero cap terminations and a score in [1.0, 7.0]; computed by earliest_early_stop(n, band), not asserted",
+   "attempt_2_error_withdrawn": "attempt 2 claimed IN_BAND is forced after two games. That considered only score saturation and is WRONG: at game 2 the cap route is wide open (0 caps + 14 unplayed > 8).",
+   "asymmetry_stated_plainly": "A SATURATED verdict can never be reached before all 16 games at an endpoint, because 0.95 of 16 exceeds 15 whole points. Only the IN_BAND verdict can stop early, and not before game 8."
+  },
+  "joint_outcome": {
+   "note": "computed from the pair (decision_weak, decision_strong); the classifier is total over all 16 combinations and asserts so",
+   "IN_BAND": "at least one endpoint IN_BAND and neither INCOMPLETE -- a larger match may be proposed AT THE IN-BAND ENDPOINT(S)",
+   "BRACKETED": "one endpoint SATURATED_WEAK and the other SATURATED_STRONG -- the dial spans the band without landing in it, so a usable depth plausibly lies between them; a larger match may be proposed at an intermediate depth",
+   "T1J_TOO_STRONG": "both endpoints SATURATED_STRONG -- stop; T1j cannot calibrate against us",
+   "T1J_TOO_WEAK": "both endpoints SATURATED_WEAK -- stop; T1j cannot calibrate against us",
+   "INCONCLUSIVE": "either endpoint INCOMPLETE -- a larger match may be proposed only after the incompleteness is understood"
+  },
+  "larger_match_permitted_after": [
+   "IN_BAND",
+   "BRACKETED",
+   "INCONCLUSIVE"
+  ],
+  "larger_match_forbidden_after": [
+   "T1J_TOO_STRONG",
+   "T1J_TOO_WEAK"
+  ]
+ },
+ "claim_discipline": {
+  "move_response_ordering": "descriptive only",
+  "forbidden": [
+   "any claim of strength monotonicity from move differences",
+   "any claim of strength from timing",
+   "any absolute strength placement: T1j is uncalibrated, so even a passing screen yields an ORDERING, not a placement",
+   "any per-game runtime figure that assumes a moves-per-game count no measurement supports",
+   "any statement that a schedule setting is in force without checking the path that would apply it"
+  ]
+ },
+ "reference_agent": {
+  "status": "FROZEN and QUALIFIED; no model is loaded and no game played by this preflight",
+  "construction_path": "scripts/GPU/alphazero/e4_screen_reference.py::build, which DELEGATES to twixtbot_g3_reference.build_reference_agent -- the construction already qualified for the twixtbot G3 calibration. It is not reimplemented.",
+  "required_task_fields": [
+   "seed",
+   "reference",
+   "reference_sha1",
+   "anchor_colour"
+  ],
+  "attempt_2_gap": "attempt 2's tasks carried reference and reference_sha256 but NOT reference_sha1 nor anchor_colour, so build_reference_agent would have refused every one of them at construction time",
+  "seed_to_moves": {
+   "search_rng": "random.Random(seed ^ SEARCH_MASK[colour])",
+   "readout_rng": "random.Random(seed ^ READOUT_MASK[colour])",
+   "masks_source": "imported from SeededReferenceAgent, never re-typed, so they cannot drift",
+   "why_two_streams": "MCTS shares one self.rng across prior shuffle, PUCT tie-break and readout; drawing readout numbers from it would change the generator state entering every later search",
+   "witness": "the schedule freezes both derived stream seeds and their first draws per task, so a later run can be checked to have used the scheduled seed without replaying a game or loading a network"
+  },
+  "noise": {
+   "mechanism": "search_with_root(state, add_noise=False)",
+   "not_a_config_field": "eval_runner.cfg_from builds MCTSConfig WITHOUT passing dirichlet_eps, so the field keeps its dataclass default of 0.25. Declaring dirichlet_eps=0 in a schedule declares nothing.",
+   "checked_not_asserted": "tests/test_e4_screen_reference.py asserts cfg_from's output against MCTSConfig's default rather than restating the claim"
+  },
+  "readout": "eval_readout.select, never mcts.select_move",
+  "agent_lifetime": "one instance per game; both streams advance across the game",
+  "schedule_level_check": "validate_schedule asserts seeds are unique, the derived (search, readout) stream pairs are unique, and no search stream collides with any readout stream -- two tasks sharing a stream would silently correlate games the schedule presents as independent"
+ }
+}

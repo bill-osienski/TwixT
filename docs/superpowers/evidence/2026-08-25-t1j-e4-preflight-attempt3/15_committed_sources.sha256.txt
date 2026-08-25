@@ -1,0 +1,18 @@
+Committed repo code and the reference checkpoint, bound by hash rather than
+duplicated. e4_screen_reference.py is NEW in attempt 3: it is the construction
+path the frozen schedule must satisfy, and it delegates to the already-qualified
+twixtbot_g3_reference.build_reference_agent rather than reimplementing it.
+
+sha256                                                            git-blob-id                               path
+1db2ff102b322f559218239d5423623bd058c8709c17a746001ef3680280388c  bedcf2ac8a701f9c5f8164399364dd679490f391  scripts/GPU/alphazero/t1j_adapter.py
+3a3f4af7d80aad666148d208f373fb059524f59c31a0712e39bc68acbe7fbc87  b159fe1e3090f31a4404fdf90413a9b7d38e073f  scripts/GPU/alphazero/e4_screen_reference.py
+6fa18efed16127589be85de63d464b64b4618c26663a4be16e51eabd8e2b7d10  45a20c0954ce13b48435ef8890bf5648f06588ce  tests/test_t1j_adapter.py
+44bdf6b8beac6551bc368b162ce12315a0c30b44cb33a3e4a290b7ceea9c419f  8bd5d29fd09f2e8e41df40477b9bafc9dc0fd639  tests/test_e4_screen_reference.py
+80d646287099f11734b2500bd998ac9066537abb0b08a47df1541281a7b2530b  56f9d308b13221b7d265c7ef4c608047ac8da777  scripts/GPU/alphazero/twixtbot_g3_reference.py
+23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3  4a9f2a68103a7bbc16f89b0bf1744e00196e2fe3  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc  9cc72ae10b089e5e9e5df60abb310e9dec69725f  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  ef7914891ad6ea8be29fd70cee657a23190f00d7  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  9c10fbbb14f4f6a74a07c404c0499d16ae0bd119  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26  829fcb19d708f007650bb1ad02f9beda0c38639c  checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+
+git rev-parse <commit>:<path> must equal the blob id on that row.

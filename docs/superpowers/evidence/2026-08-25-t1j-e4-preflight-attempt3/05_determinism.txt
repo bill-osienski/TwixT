@@ -1,0 +1,25 @@
+selected strong endpoint read from the sweep: mdPly=6 (weak=3, coincide=False)
+position p06_e3a_center: 6 plies, to_move=red, regime=early_moveNr_lt_8
+position bound through the E3b adapter at ply_cap=280
+
+20 independent constructions in ONE jvm at mdPly=6
+  20 records from 1 process(es), pid(s) [69219], 11.0s
+
+5 FRESH jvms, one query each at mdPly=6
+  fresh jvm 1: pid=69221 move=(14, 11) completed_depth=6
+  fresh jvm 2: pid=69222 move=(14, 11) completed_depth=6
+  fresh jvm 3: pid=69223 move=(14, 11) completed_depth=6
+  fresh jvm 4: pid=69224 move=(14, 11) completed_depth=6
+  fresh jvm 5: pid=69225 move=(14, 11) completed_depth=6
+
+re-binding all 25 returned dumps against the E3b-bound position
+  25/25 dumps re-bound with zero divergences
+
+25 queries, 14.9s of 900s budget
+  process structure        1 shared pid [69219] + 5 distinct fresh pids [69221, 69222, 69223, 69224, 69225]
+  distinct moves           ['(14, 11)']   (want exactly one)
+  distinct completed depth [6]  (want exactly {6})
+  dumps re-bound clean     25/25
+  all legal, no sentinel   True      legal in OUR engine  True
+
+DETERMINISM PASS — 25/25 identical legal move and completed depth, 20+5 process structure asserted, all 25 dumps re-bound
