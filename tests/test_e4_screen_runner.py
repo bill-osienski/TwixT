@@ -229,7 +229,9 @@ def test_one_evaluator_is_accepted(tmp_path):
     rc, rows = run_stub(tmp_path, [synthetic_task(0, "weak"), synthetic_task(1, "strong")],
                         lambda t, m, ev: _Agent(EV, [(5, 5)]), cap=7)
     assert rc == H.EXIT_OK
-    assert rows[-1]["record_type"] == "verdict"
+    # a synthetic run is not the canonical schedule, so it earns a RECEIPT
+    assert rows[-1]["record_type"] == "qualification_receipt"
+    assert [r["record_type"] for r in rows].count("task_result") == 2
 
 
 def test_a_rebuilt_evaluator_ABORTS_with_no_verdict(tmp_path):
@@ -337,8 +339,9 @@ def test_endpoint_stops_early_and_later_tasks_are_skipped(tmp_path):
     assert kinds.count("task_skipped") == 1
     stop = [r for r in rows if r["record_type"] == "early_stop"][0]
     assert stop["played"] == 2 and stop["score"] == 1.0
-    assert rows[-1]["record_type"] == "verdict"
-    assert rows[-1]["per_endpoint"]["weak"]["decision"] == "IN_BAND"
+    # the early stop fired and was recorded; the VERDICT is still withheld,
+    # because synthetic identities are not the canonical schedule
+    assert rows[-1]["record_type"] == "qualification_receipt"
 
 
 def verdict(weak, strong, n=16):
@@ -512,27 +515,107 @@ def test_cli_zero_games_emits_no_verdict(tmp_path):
     assert "verdict" not in kinds and kinds[-1] == "qualification_receipt"
 
 
-@pytest.mark.parametrize("tasks,results,skipped,stopped,ok", [
-    ([], [], [], {}, False),                                            # zero
-    ([{"task_id": "a"}], [], [], {}, False),                            # missing
-    ([{"task_id": "a"}], [{"task_id": "a"}], [], {}, True),             # complete
-    ([{"task_id": "a"}], [{"task_id": "a"}, {"task_id": "a"}], [], {}, False),   # duplicate
-    ([{"task_id": "a"}], [{"task_id": "zzz"}], [], {}, False),          # alien
-    ([{"task_id": "a"}, {"task_id": "b"}], [{"task_id": "a"}],
-     [{"task_id": "b", "endpoint": "weak"}], {"weak": "stopped"}, True),  # justified skip
-    ([{"task_id": "a"}, {"task_id": "b"}], [{"task_id": "a"}],
-     [{"task_id": "b", "endpoint": "weak"}], {}, False),                # UNjustified skip
+CANON = canonical_tasks()
+
+
+def res(t):
+    return {"task_id": t["task_id"], "endpoint": t["endpoint"], "t1j_points": 0.5,
+            "terminal_reason": "win"}
+
+
+def test_a_full_canonical_result_set_gets_a_verdict():
+    allowed, why = H.screen_verdict_allowed(CANON, CANON, [res(t) for t in CANON], [], {})
+    assert allowed, why
+
+
+def test_a_canonical_run_with_justified_skips_gets_a_verdict():
+    played = [res(t) for t in CANON if t["endpoint"] == "strong"]
+    skipped = [{"task_id": t["task_id"], "endpoint": "weak"}
+               for t in CANON if t["endpoint"] == "weak"]
+    allowed, why = H.screen_verdict_allowed(CANON, CANON, played, skipped, {"weak": "stopped"})
+    assert allowed, why
+
+
+@pytest.mark.parametrize("label,tasks,results,skipped,stopped", [
+    ("zero tasks", [], [], [], {}),
+    ("ONE endpoint only", [t for t in CANON if t["endpoint"] == "weak"],
+     [res(t) for t in CANON if t["endpoint"] == "weak"], [], {}),
+    ("a subset of the schedule", CANON[:4], [res(t) for t in CANON[:4]], [], {}),
+    ("a single synthetic task", [{"task_id": "synthetic-000", "endpoint": "weak"}],
+     [{"task_id": "synthetic-000", "endpoint": "weak", "t1j_points": 1.0,
+       "terminal_reason": "win"}], [], {}),
+    ("a missing result", CANON, [res(t) for t in CANON[:-1]], [], {}),
+    ("a duplicated result", CANON, [res(t) for t in CANON] + [res(CANON[0])], [], {}),
+    ("an alien identity", CANON,
+     [res(t) for t in CANON[:-1]] + [{"task_id": "zz", "endpoint": "weak",
+                                      "t1j_points": 1.0, "terminal_reason": "win"}], [], {}),
+    ("an UNJUSTIFIED skip", CANON, [res(t) for t in CANON[:-1]],
+     [{"task_id": CANON[-1]["task_id"], "endpoint": CANON[-1]["endpoint"]}], {}),
 ])
-def test_screen_verdict_requires_a_complete_result_set(tasks, results, skipped, stopped, ok):
-    allowed, why = H.screen_verdict_allowed(tasks, results, skipped, stopped)
-    assert allowed is ok, why
+def test_no_screen_verdict_unless_it_binds_the_canonical_schedule(
+        label, tasks, results, skipped, stopped):
+    allowed, why = H.screen_verdict_allowed(CANON, tasks, results, skipped, stopped)
+    assert not allowed, f"{label} was wrongly accepted"
+    assert why
 
 
-def test_a_complete_run_still_gets_a_verdict(tmp_path):
-    tasks = [synthetic_task(0, "weak", anchor="red"), synthetic_task(1, "weak", anchor="black")]
-    out = tmp_path / "full.jsonl"
+def test_a_synthetic_run_gets_a_RECEIPT_not_a_verdict(tmp_path):
+    """Synthetic identities are not the canonical schedule, so a screen verdict
+    can never be drawn from a qualification run."""
+    tasks = [synthetic_task(0, "weak", anchor="red"), synthetic_task(1, "strong", anchor="black")]
+    out = tmp_path / "synthetic.jsonl"
     rc = H._run(PLAN, str(out), mode="qualify", _tasks=tasks, _agent_factory=win_factory,
                 _state_factory=small_state, _binder=null_binder, _evaluator=EV,
                 _cleanup=lambda: None, _n_per_endpoint=2)
     rows = [json.loads(l) for l in open(out)]
-    assert rc == H.EXIT_OK and rows[-1]["record_type"] == "verdict"
+    assert rc == H.EXIT_OK
+    assert rows[-1]["record_type"] == "qualification_receipt"
+    assert "not the canonical schedule" in rows[-1]["verdict_withheld"]
+    assert [r["record_type"] for r in rows].count("task_result") == 2
+
+
+# --- a completed game survives a cleanup failure ---------------------------
+
+def test_a_cleanup_failure_does_not_erase_a_completed_game(tmp_path):
+    """The game finished. Its record must be durable BEFORE cleanup runs."""
+    def boom():
+        raise RuntimeError("metal cache wedged")
+
+    out = tmp_path / "cleanup_after_win.jsonl"
+    with pytest.raises(H.AbortError) as e:
+        H._run(PLAN, str(out), mode="qualify", _tasks=[synthetic_task(0, "weak", anchor="red")],
+               _agent_factory=win_factory, _state_factory=small_state, _binder=null_binder,
+               _evaluator=EV, _cleanup=boom, _n_per_endpoint=4)
+    assert e.value.phase == H.PHASE_CLEANUP
+    rows = [json.loads(l) for l in open(out)]
+    kinds = [r["record_type"] for r in rows]
+    result = [r for r in rows if r["record_type"] == "task_result"]
+    assert len(result) == 1, "the completed game must survive the cleanup failure"
+    assert result[0]["winner"] == "red" and result[0]["plies"] == 7
+    assert kinds.index("task_result") < kinds.index("abort")
+    assert rows[-1]["record_type"] == "abort" and rows[-1]["tasks_played"] == 1
+
+
+# --- the identity gate has no off switch -----------------------------------
+
+def test_the_reference_side_rejects_a_MISSING_expected_evaluator():
+    """Forgetting to pass the evaluator must not look like disabling the check."""
+    task = synthetic_task(anchor="red")               # reference plays black
+    with pytest.raises(H.AbortError) as e:
+        H._enforce_evaluator(_Agent(EV, [(0, 0)]), None, task, "black")
+    assert e.value.phase == H.PHASE_FACTORY and "no expected evaluator" in e.value.message
+    H._enforce_evaluator(_NoEvaluatorAgent([(0, 0)]), None, task, "red")   # anchor side is fine
+
+
+def test_a_task_without_a_reference_colour_is_refused():
+    with pytest.raises(H.AbortError):
+        H._enforce_evaluator(_Agent(EV, [(0, 0)]), EV, {"task_id": "x"}, "red")
+
+
+def test_a_run_with_no_evaluator_aborts_on_the_reference_side(tmp_path):
+    out = tmp_path / "noev.jsonl"
+    with pytest.raises(H.AbortError) as e:
+        H._run(PLAN, str(out), mode="qualify", _tasks=[synthetic_task(0, "weak", anchor="red")],
+               _agent_factory=win_factory, _state_factory=small_state, _binder=null_binder,
+               _evaluator=None, _cleanup=lambda: None, _n_per_endpoint=4)
+    assert e.value.phase == H.PHASE_FACTORY

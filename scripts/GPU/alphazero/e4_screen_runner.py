@@ -278,32 +278,46 @@ def classify_run(results: Sequence[Dict[str, Any]], *, n_per_endpoint: int,
             "larger_match_permitted": joint in LARGER_MATCH_PERMITTED}
 
 
-def screen_verdict_allowed(tasks, results, skipped, stopped):
-    """May a SCREEN VERDICT be drawn from this result set? Structural only.
+def screen_verdict_allowed(canonical_tasks, tasks, results, skipped, stopped):
+    """May a SCREEN VERDICT be drawn? It must bind to the CANONICAL SCHEDULE.
 
-    A verdict requires the scheduled task identities to be accounted for EXACTLY:
-    every task either produced a result or was skipped by a recorded early stop
-    for its own endpoint. Zero, missing, duplicated and alien results all get a
-    receipt instead -- classifying nothing yields INCONCLUSIVE, which reads as a
-    permissive screen outcome and is not one.
+    An earlier version checked completeness against whatever task list it was
+    handed, so ONE weak task and its result counted as a complete screen. A
+    verdict now requires the run to have executed the verified canonical schedule
+    itself -- both endpoints, the frozen identities -- with every task either
+    played or skipped by a recorded early stop for its own endpoint.
+
+    Synthetic qualification runs therefore get a RECEIPT, always: their
+    identities are not the canonical ones, and that is the point.
     """
     if not tasks:
         return False, "no tasks were scheduled; a screen verdict needs a screen"
-    expected = [t["task_id"] for t in tasks]
-    if len(set(expected)) != len(expected):
+    canonical = [t["task_id"] for t in canonical_tasks]
+    scheduled = [t["task_id"] for t in tasks]
+    if len(set(scheduled)) != len(scheduled):
         return False, "the scheduled tasks contain duplicate identities"
-    got = [r["task_id"] for r in results] + [s["task_id"] for s in skipped]
+    if set(scheduled) != set(canonical) or len(scheduled) != len(canonical):
+        extra = sorted(set(scheduled) - set(canonical))[:2]
+        return False, (
+            f"the run executed {len(scheduled)} task(s) that are not the canonical schedule "
+            f"of {len(canonical)}"
+            + (f" (e.g. {extra})" if extra else "")
+            + "; a screen verdict binds to the frozen schedule only")
+    endpoints = {t["endpoint"] for t in tasks}
+    if endpoints != {"weak", "strong"}:
+        return False, f"a screen needs BOTH endpoints; this run covered {sorted(endpoints)}"
+    got = [r["task_id"] for r in results] + [k["task_id"] for k in skipped]
     if len(set(got)) != len(got):
         return False, "a task identity appears more than once in the results"
-    alien = sorted(set(got) - set(expected))
+    alien = sorted(set(got) - set(canonical))
     if alien:
-        return False, f"results contain identities that were never scheduled: {alien}"
-    missing = sorted(set(expected) - set(got))
+        return False, f"results contain identities that are not in the schedule: {alien[:3]}"
+    missing = sorted(set(canonical) - set(got))
     if missing:
         return False, f"{len(missing)} scheduled task(s) neither played nor skipped: {missing[:3]}"
-    for s in skipped:
-        if s["endpoint"] not in stopped:
-            return False, (f"{s['task_id']} was skipped but its endpoint recorded no early stop")
+    for k in skipped:
+        if k["endpoint"] not in stopped:
+            return False, f"{k['task_id']} was skipped but its endpoint recorded no early stop"
     return True, None
 
 
@@ -375,6 +389,16 @@ def _run(plan_path: str, results_path: str, *, mode: str,
                                     binder=binder, rec=rec, ply_cap=_ply_cap)
             except BaseException as e:                        # noqa: BLE001
                 play_error = e
+            # A COMPLETED GAME IS PERSISTED AND COUNTED BEFORE CLEANUP RUNS.
+            # Recording it afterwards meant a cleanup failure erased a game that
+            # had already finished: every ply in the log, then an abort, and
+            # tasks_played = 0.
+            if play_error is None:
+                row = {"record_type": "task_result", "task_id": task["task_id"],
+                       "endpoint": endpoint, "seed": task["seed"], **outcome}
+                rec.emit(row)
+                results.append(row)
+
             cleanup_error = None
             try:
                 cleanup()
@@ -390,11 +414,10 @@ def _run(plan_path: str, results_path: str, *, mode: str,
                                                         f"{cleanup_error}"})
                 raise play_error
             if cleanup_error is not None:
-                raise AbortError(PHASE_CLEANUP, f"after {task['task_id']}: {cleanup_error}")
-            row = {"record_type": "task_result", "task_id": task["task_id"],
-                   "endpoint": endpoint, "seed": task["seed"], **outcome}
-            rec.emit(row)
-            results.append(row)
+                # the game record above is already durable; this is a RUN-level abort
+                raise AbortError(PHASE_CLEANUP,
+                                 f"after {task['task_id']} (whose result is recorded): "
+                                 f"{cleanup_error}")
 
             rows = [r for r in results if r["endpoint"] == endpoint]
             score = sum(r["t1j_points"] for r in rows)
@@ -405,7 +428,7 @@ def _run(plan_path: str, results_path: str, *, mode: str,
                 rec.emit({"record_type": "early_stop", "endpoint": endpoint,
                           "played": len(rows), "score": score, "reason": stopped[endpoint]})
 
-        allowed, why = screen_verdict_allowed(tasks, results, skipped, stopped)
+        allowed, why = screen_verdict_allowed(plan["tasks"], tasks, results, skipped, stopped)
         if not allowed:
             # A RECEIPT, NOT A VERDICT. An earlier version classified zero results
             # and emitted joint=INCONCLUSIVE with larger_match_permitted=true --
@@ -439,10 +462,19 @@ def _enforce_evaluator(agent, expected, task, mover) -> None:
     applying this gate to both colours would abort on the first T1j construction.
     The gate belongs to the side that actually loads the network.
     """
+    reference_colour = task.get("reference_colour")
+    if reference_colour is None:
+        raise AbortError(PHASE_FACTORY,
+                         f"{task.get('task_id')}: the task names no reference_colour, so the "
+                         f"reference side cannot be identified")
+    if mover != reference_colour:
+        return                                                # the classical anchor side
     if expected is None:
-        return
-    if mover != task.get("reference_colour"):
-        return                                                # the anchor side, by design
+        # NO OFF SWITCH. Forgetting to load or pass the evaluator must not look
+        # the same as deliberately disabling the check.
+        raise AbortError(PHASE_FACTORY,
+                         f"{task.get('task_id')} ({mover}, the reference side): no expected "
+                         f"evaluator was supplied, so identity cannot be checked")
     got = _evaluator_of(agent, None)
     if got is not expected:
         raise AbortError(

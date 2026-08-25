@@ -1,0 +1,69 @@
+== 0. artifacts identified by hash; NOTHING IS LOADED ==
+  PASS   checkpoint sha1 209cf2d4fd24a485... (hashed, not loaded)
+  PASS   canonical plan matches its pin
+  PASS   a real SeededReferenceAgent builds on a TAGGED FAKE evaluator, with no model
+
+== 1. THE OPENING IS BOUND FIRST ==
+  PASS   the opening was bound first, at ply 0
+  PASS   then every applied move: [0, 1, 2, 3, 4, 5, 6, 7]
+  PASS   the opening bind is recorded
+  PASS   NEGATIVE CONTROL: an opening divergence aborts
+  PASS   ...and NO agent was constructed before the opening was bound
+
+== 2. THE IDENTITY GATE APPLIES TO THE REFERENCE SIDE ONLY ==
+  PASS   a CLASSICAL anchor agent with NO evaluator is accepted alongside the reference
+  PASS   NEGATIVE CONTROL: the REFERENCE side rejects no evaluator at all
+  PASS   ...and the SAME agent is accepted on the anchor side (no evaluator at all)
+  PASS   NEGATIVE CONTROL: the REFERENCE side rejects a rebuilt evaluator
+  PASS   ...and the SAME agent is accepted on the anchor side (a rebuilt evaluator)
+
+== 3. BINDER FAILURES ARE CLASSIFIED, CLEANUP STILL RUNS ==
+  PASS   a PLAIN ValueError from the binder is classified as PHASE_BIND
+  PASS   ...and a durable abort record was written
+  PASS   cleanup ran for the STARTED task even though it aborted
+  PASS   a cleanup failure does NOT mask the abort that preceded it
+  PASS   ...and the cleanup failure is recorded separately
+
+== 4. A VERDICT BINDS TO THE CANONICAL SCHEDULE ==
+  PASS   a FULL canonical result set earns a verdict
+  PASS   a canonical run whose weak endpoint EARLY-STOPPED earns a verdict
+  PASS   NEGATIVE CONTROL: zero tasks earns NO verdict
+  PASS   NEGATIVE CONTROL: ONE endpoint only earns NO verdict
+  PASS   NEGATIVE CONTROL: a subset of the schedule earns NO verdict
+  PASS   NEGATIVE CONTROL: a single synthetic task earns NO verdict
+  PASS   NEGATIVE CONTROL: a missing result earns NO verdict
+  PASS   NEGATIVE CONTROL: a duplicated result earns NO verdict
+  PASS   NEGATIVE CONTROL: an alien identity earns NO verdict
+  PASS   NEGATIVE CONTROL: an UNJUSTIFIED skip earns NO verdict
+  PASS   the synthetic run completed
+  PASS   a SYNTHETIC run earns a RECEIPT even with both endpoints and every task played
+  PASS   withheld because: the run executed 2 task(s) that are not the canonical schedule of 32 (
+  PASS   ...and both completed games are still recorded
+  PASS   the public zero-task path still earns a receipt, not a verdict
+
+== 5. A COMPLETED GAME SURVIVES A CLEANUP FAILURE ==
+  PASS   the cleanup failure aborts the run
+  PASS   THE COMPLETED GAME SURVIVES — its record is durable
+  PASS   the win is recorded in full
+  PASS   the result was written BEFORE the abort
+  PASS   tasks_played = 1, not 0
+
+== 6. THE IDENTITY GATE HAS NO OFF SWITCH ==
+  PASS   NEGATIVE CONTROL: a MISSING expected evaluator is REFUSED on the reference side
+  PASS   ...and the classical anchor side still bypasses evaluator identity
+  PASS   NEGATIVE CONTROL: a task naming no reference_colour is refused
+  PASS   NEGATIVE CONTROL: a STARTED task with no evaluator aborts on the reference side
+
+== 7. the command entry point, in FRESH SUBPROCESSES ==
+  PASS   --help exits 0
+  PASS   clean run exits 0 (got 0)
+  PASS   the CLI's zero-task run emits a RECEIPT
+  PASS   --mode screen exits 2 (got 2)
+  PASS   existing results exits 2 (got 2)
+  PASS   tampered plan exits 2 (got 2)
+
+== 8. postconditions ==
+  PASS   the screen's seed block is still unspent
+  PASS   all 32 scheduled seeds still refused by the runner
+
+QUALIFICATION PASS — NO MODEL WAS LOADED

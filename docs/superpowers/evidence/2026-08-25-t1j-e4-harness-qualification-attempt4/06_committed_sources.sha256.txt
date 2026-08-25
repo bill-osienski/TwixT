@@ -1,0 +1,16 @@
+Committed repo code, the pinned reference checkpoint and the canonical plan.
+
+The checkpoint is HASHED here, never loaded: attempt 4 runs no model.
+It is under gitignored checkpoints/ — UNTRACKED, no commit object.
+Blob ids are content ids; the binding TO THE COMMIT follows post-run.
+
+sha256                                                            git-blob-id                               path
+e4a85af637fe4f58aec4b646478a2366e7167e4813504a5f9f9000e1f84b2aec  ac3de6bbedc2066fcf88706b823bd5e82108782a  scripts/GPU/alphazero/e4_screen_runner.py
+4c12bf2189cf42dc1345c839b8c694f0090bc4be470c5b84226792e93a383a84  8274a51e53e819aa96f38b7bf0df56564564e3e9  scripts/GPU/alphazero/e4_screen_rules.py
+f13acd2ea78ec832613fb7bae56666c194fb6ec4ed762166495f6f8a2576224f  ce4e74e5147234318a6b9081881996fbca5ea456  scripts/GPU/alphazero/e4_screen_reference.py
+80d646287099f11734b2500bd998ac9066537abb0b08a47df1541281a7b2530b  56f9d308b13221b7d265c7ef4c608047ac8da777  scripts/GPU/alphazero/twixtbot_g3_reference.py
+44311cc0e281b96ddbe9a66936424fc0d37207aed32d117a82ab93cc0858a303  5877d8fa6697e162edb915b1da7c4c1285c738ed  tests/test_e4_screen_runner.py
+20b594e326a64f1d38cd505c9a815bd89db2dec25326cb241a68025c81f87a4e  a8f0f325c51045b4309ca29d4cbb36cf1a20f33e  tests/test_e4_screen_rules.py
+7ce9dc85c9c93a19d379b288c2652d523e4e6da342d06848a9c520d22e9881e1  988dcd2067d0eea3163d88e6e2452c9132ebb505  tests/test_e4_screen_reference.py
+10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8  32ca8fd1b43384d21b1849583d76c08daa9cf4bc  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json
+34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26  829fcb19d708f007650bb1ad02f9beda0c38639c  checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors

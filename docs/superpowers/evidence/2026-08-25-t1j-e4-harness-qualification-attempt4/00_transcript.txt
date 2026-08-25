@@ -1,0 +1,158 @@
+E4 EXECUTION-HARNESS QUALIFICATION ATTEMPT 4 — CORRECTIVE.
+NO MODEL IS LOADED. No T1j, no game, no scheduled seed.
+Attempt 2's single real reference-agent call stands and is NOT repeated.\nAttempts 1-3 preserved.
+date 2026-08-25T23:28:14Z   host Darwin 25.5.0 arm64
+
+########## 1. REPOSITORY AND ARTIFACT IDENTITY ##########
+$ git -C /Users/bill/projects/TwixT_Game rev-parse HEAD
+    | 904d7d63968bc984a64fed442eb15202fec296fe
+    [exit 0]
+
+    MATCH  HEAD
+$ shasum -a 256 /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors | cut -d' ' -f1
+    | 34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26
+    [exit 0]
+
+    MATCH  checkpoint sha256
+$ shasum -a 256 /Users/bill/projects/TwixT_Game/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json | cut -d' ' -f1
+    | 10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8
+    [exit 0]
+
+    MATCH  canonical plan
+    NOTE: the checkpoint is HASHED, never loaded, in this attempt.
+IDENTITY GATE PASSED
+
+########## 2. PRIOR EVIDENCE AND ATTEMPTS 1-2 BYTE-UNCHANGED ##########
+$ git -C /Users/bill/projects/TwixT_Game status --porcelain docs/superpowers/evidence docs/superpowers/*.md
+    | <no stdout>
+    [exit 0]
+
+
+########## 3. MANIFEST OF EVERY SOURCE ##########
+$ shasum -a 256 /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_runner.py /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_rules.py /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_reference.py /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/twixtbot_g3_reference.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_runner.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_rules.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_reference.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/qualify.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/run_all.sh
+    | e4a85af637fe4f58aec4b646478a2366e7167e4813504a5f9f9000e1f84b2aec  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_runner.py
+    | 4c12bf2189cf42dc1345c839b8c694f0090bc4be470c5b84226792e93a383a84  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_rules.py
+    | f13acd2ea78ec832613fb7bae56666c194fb6ec4ed762166495f6f8a2576224f  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_reference.py
+    | 80d646287099f11734b2500bd998ac9066537abb0b08a47df1541281a7b2530b  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/twixtbot_g3_reference.py
+    | 44311cc0e281b96ddbe9a66936424fc0d37207aed32d117a82ab93cc0858a303  /Users/bill/projects/TwixT_Game/tests/test_e4_screen_runner.py
+    | 20b594e326a64f1d38cd505c9a815bd89db2dec25326cb241a68025c81f87a4e  /Users/bill/projects/TwixT_Game/tests/test_e4_screen_rules.py
+    | 7ce9dc85c9c93a19d379b288c2652d523e4e6da342d06848a9c520d22e9881e1  /Users/bill/projects/TwixT_Game/tests/test_e4_screen_reference.py
+    | 36d67ec5acfa2509c29ff12edd5955849cc262eb24b3b2540d07307cb509d1a4  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/qualify.py
+    | c753339fb07120be651c7635a51fbbbea19a59b80e75fcbeedc7247da7d82f0f  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/run_all.sh
+    [exit 0]
+
+
+########## 4. HARNESS UNIT TESTS — real exit status, GATED ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python -m pytest /Users/bill/projects/TwixT_Game/tests/test_e4_screen_runner.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_rules.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_reference.py -q --no-header -p no:cacheprovider
+    | ============================= test session starts ==============================
+    | collected 109 items
+    | 
+    | tests/test_e4_screen_runner.py ......................................... [ 37%]
+    | .........................                                                [ 60%]
+    | tests/test_e4_screen_rules.py ........................                   [ 82%]
+    | tests/test_e4_screen_reference.py ...................                    [100%]
+    | 
+    | ============================= 109 passed in 0.35s ==============================
+    [exit 0]
+
+    unit-test exit: 0 (no pipe: this IS pytest's status)
+
+########## 5. QUALIFICATION — NO MODEL LOAD ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/qualify.py > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/evidence/02_qualification.txt 2>/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/evidence/03_qualification_stderr.txt; echo $?
+    | 0
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/evidence/02_qualification.txt
+    | == 0. artifacts identified by hash; NOTHING IS LOADED ==
+    |   PASS   checkpoint sha1 209cf2d4fd24a485... (hashed, not loaded)
+    |   PASS   canonical plan matches its pin
+    |   PASS   a real SeededReferenceAgent builds on a TAGGED FAKE evaluator, with no model
+    | 
+    | == 1. THE OPENING IS BOUND FIRST ==
+    |   PASS   the opening was bound first, at ply 0
+    |   PASS   then every applied move: [0, 1, 2, 3, 4, 5, 6, 7]
+    |   PASS   the opening bind is recorded
+    |   PASS   NEGATIVE CONTROL: an opening divergence aborts
+    |   PASS   ...and NO agent was constructed before the opening was bound
+    | 
+    | == 2. THE IDENTITY GATE APPLIES TO THE REFERENCE SIDE ONLY ==
+    |   PASS   a CLASSICAL anchor agent with NO evaluator is accepted alongside the reference
+    |   PASS   NEGATIVE CONTROL: the REFERENCE side rejects no evaluator at all
+    |   PASS   ...and the SAME agent is accepted on the anchor side (no evaluator at all)
+    |   PASS   NEGATIVE CONTROL: the REFERENCE side rejects a rebuilt evaluator
+    |   PASS   ...and the SAME agent is accepted on the anchor side (a rebuilt evaluator)
+    | 
+    | == 3. BINDER FAILURES ARE CLASSIFIED, CLEANUP STILL RUNS ==
+    |   PASS   a PLAIN ValueError from the binder is classified as PHASE_BIND
+    |   PASS   ...and a durable abort record was written
+    |   PASS   cleanup ran for the STARTED task even though it aborted
+    |   PASS   a cleanup failure does NOT mask the abort that preceded it
+    |   PASS   ...and the cleanup failure is recorded separately
+    | 
+    | == 4. A VERDICT BINDS TO THE CANONICAL SCHEDULE ==
+    |   PASS   a FULL canonical result set earns a verdict
+    |   PASS   a canonical run whose weak endpoint EARLY-STOPPED earns a verdict
+    |   PASS   NEGATIVE CONTROL: zero tasks earns NO verdict
+    |   PASS   NEGATIVE CONTROL: ONE endpoint only earns NO verdict
+    |   PASS   NEGATIVE CONTROL: a subset of the schedule earns NO verdict
+    |   PASS   NEGATIVE CONTROL: a single synthetic task earns NO verdict
+    |   PASS   NEGATIVE CONTROL: a missing result earns NO verdict
+    |   PASS   NEGATIVE CONTROL: a duplicated result earns NO verdict
+    |   PASS   NEGATIVE CONTROL: an alien identity earns NO verdict
+    |   PASS   NEGATIVE CONTROL: an UNJUSTIFIED skip earns NO verdict
+    |   PASS   the synthetic run completed
+    |   PASS   a SYNTHETIC run earns a RECEIPT even with both endpoints and every task played
+    |   PASS   withheld because: the run executed 2 task(s) that are not the canonical schedule of 32 (
+    |   PASS   ...and both completed games are still recorded
+    |   PASS   the public zero-task path still earns a receipt, not a verdict
+    | 
+    | == 5. A COMPLETED GAME SURVIVES A CLEANUP FAILURE ==
+    |   PASS   the cleanup failure aborts the run
+    |   PASS   THE COMPLETED GAME SURVIVES — its record is durable
+    |   PASS   the win is recorded in full
+    |   PASS   the result was written BEFORE the abort
+    |   PASS   tasks_played = 1, not 0
+    | 
+    | == 6. THE IDENTITY GATE HAS NO OFF SWITCH ==
+    |   PASS   NEGATIVE CONTROL: a MISSING expected evaluator is REFUSED on the reference side
+    |   PASS   ...and the classical anchor side still bypasses evaluator identity
+    |   PASS   NEGATIVE CONTROL: a task naming no reference_colour is refused
+    |   PASS   NEGATIVE CONTROL: a STARTED task with no evaluator aborts on the reference side
+    | 
+    | == 7. the command entry point, in FRESH SUBPROCESSES ==
+    |   PASS   --help exits 0
+    |   PASS   clean run exits 0 (got 0)
+    |   PASS   the CLI's zero-task run emits a RECEIPT
+    |   PASS   --mode screen exits 2 (got 2)
+    |   PASS   existing results exits 2 (got 2)
+    |   PASS   tampered plan exits 2 (got 2)
+    | 
+    | == 8. postconditions ==
+    |   PASS   the screen's seed block is still unspent
+    |   PASS   all 32 scheduled seeds still refused by the runner
+    | 
+    | QUALIFICATION PASS — NO MODEL WAS LOADED
+    [exit 0]
+
+$ wc -c < /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/evidence/03_qualification_stderr.txt | tr -d ' '
+    | 0
+    [exit 0]
+
+    stderr bytes: 0
+
+########## 6. POSTCONDITION — no MLX inference happened in this attempt ##########
+$ grep -c 'compiled graph' /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q4/evidence/02_qualification.txt || true
+    | 0
+    [exit 0]
+
+    (attempt 3 loads no model; the compiled-graph evidence belongs to attempt 2)
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python -c "
+import sys; sys.path.insert(0,'/Users/bill/projects/TwixT_Game')
+from scripts.GPU.alphazero import e4_screen_reference as R
+print('screen block exposed?', any(R.seed_is_exposed(s) for s in range(202612128,202612160)))"
+    | screen block exposed? False
+    [exit 0]
+
+
+TRANSCRIPT COMPLETE — unit tests 0, qualification 0
+GATE 0
