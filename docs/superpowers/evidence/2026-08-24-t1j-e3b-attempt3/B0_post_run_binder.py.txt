@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""POST-RUN CORRECTION to E3b attempt 3. Written 2026-08-25, AFTER commit 6377ae5.
+
+This adds nothing to the attempt-3 run and changes none of its artifacts. It
+corrects two PACKAGING defects in A6b/A6c, both found in review:
+
+  1. A6c bound only the THREE Java compile inputs, while the card and the commit
+     message said "the adapter" was bound. The adapter and its test file appear
+     in the transcript's section-4 manifest and in A6, but A6c never compared
+     them. This binds all FIVE repository paths A6 records.
+
+  2. A6c's so-called negative controls never ran the checker. They compared a
+     deliberately different string against A6 by hand, which can only show that
+     two unequal strings are unequal. Here every control calls check() itself,
+     on tampered copies of the transcript, of A6, or of the committed blob, and
+     an untouched acceptance control runs alongside them.
+
+The underlying data was correct both times; only the checking was not.
+
+Binding rule, per path: the digest RECORDED IN THE TRANSCRIPT AS IT RAN must
+equal the digest A6 records AND the sha256 of the bytes actually committed
+(read from the git object store, not the worktree, so a dirty checkout cannot
+launder a mismatch).
+"""
+import hashlib, re, subprocess, sys
+
+REPO_PREFIX = "/Users/bill/projects/TwixT_Game/"
+COMMIT = "6377ae5"
+
+# any transcript line carrying a 64-hex digest followed by an absolute repo path,
+# whether it came from the section-4 manifest or from a "compile input" line
+TRANSCRIPT_RE = re.compile(
+    r"[0-9a-f]{64}\s+" + re.escape(REPO_PREFIX) + r"\S+")
+A6_RE = re.compile(r"^([0-9a-f]{64})\s+(\S+)\s*$")
+
+
+def transcript_digests(text):
+    """path -> {digest, ...}. A path seen twice with two digests keeps both, so
+    an inconsistent transcript cannot silently collapse to one value."""
+    out = {}
+    for line in text.splitlines():
+        m = TRANSCRIPT_RE.search(line)
+        if not m:
+            continue
+        digest, abspath = m.group(0).split()
+        out.setdefault(abspath[len(REPO_PREFIX):], set()).add(digest)
+    return out
+
+
+def a6_digests(text):
+    out = {}
+    for line in text.splitlines():
+        m = A6_RE.match(line)
+        if m:
+            out[m.group(2)] = m.group(1)
+    return out
+
+
+def git_blob(path):
+    return subprocess.run(["git", "show", f"{COMMIT}:{path}"],
+                          capture_output=True, check=True).stdout
+
+
+def check(transcript_text, a6_text, blob_reader, expected_n=5):
+    """Return (failures, log). Every control below calls exactly this."""
+    log, bad = [], 0
+    tr, a6 = transcript_digests(transcript_text), a6_digests(a6_text)
+
+    if len(a6) != expected_n:
+        log.append(f"FAIL A6 records {len(a6)} paths, expected exactly {expected_n}")
+        bad += 1
+    if set(tr) != set(a6):
+        only_tr, only_a6 = sorted(set(tr) - set(a6)), sorted(set(a6) - set(tr))
+        log.append(f"FAIL path sets differ — transcript-only {only_tr}, A6-only {only_a6}")
+        bad += 1
+
+    for path in sorted(set(tr) | set(a6)):
+        digests = tr.get(path, set())
+        if len(digests) != 1:
+            log.append(f"FAIL  {path}: transcript carries {len(digests)} distinct digests {sorted(digests)}")
+            bad += 1
+            continue
+        t = digests.pop()
+        a = a6.get(path)
+        try:
+            c = hashlib.sha256(blob_reader(path)).hexdigest()
+        except Exception as e:                       # noqa: BLE001 - reported, not raised
+            c = f"UNREADABLE {e}"
+        ok = (t == a == c)
+        log.append(f"{'PASS' if ok else 'FAIL'}  {path}")
+        log.append(f"        transcript {t}")
+        log.append(f"        A6         {a}")
+        log.append(f"        committed  {c}")
+        if not ok:
+            bad += 1
+    return bad, log
+
+
+def flip(digest):
+    return ("f" if digest[0] != "f" else "0") + digest[1:]
+
+
+if __name__ == "__main__":
+    d = sys.argv[1]
+    transcript = open(f"{d}/90_transcript.txt").read()
+    a6 = open(f"{d}/A6_committed_sources.sha256.txt").read()
+    ADAPTER = "scripts/GPU/alphazero/t1j_adapter.py"
+    TESTS = "tests/test_t1j_adapter.py"
+
+    print("POST-RUN BINDING — five repository paths, transcript vs A6 vs committed blob")
+    print(f"commit under test: {COMMIT}\n")
+    bad, log = check(transcript, a6, git_blob)
+    print("\n".join(log))
+    print("BINDING " + ("OK" if not bad else f"FAILED ({bad})"))
+    print()
+
+    # ---- controls: each one calls check() on tampered inputs -----------------
+    print("negative controls — the SAME checker, run against tampered evidence:")
+    real_adapter_digest = a6_digests(a6)[ADAPTER]
+    ctl_bad = 0
+
+    def control(name, want_reject, **kw):
+        global ctl_bad
+        n, lines = check(kw.get("transcript", transcript), kw.get("a6", a6),
+                         kw.get("blob", git_blob), kw.get("expected_n", 5))
+        rejected = n > 0
+        ok = rejected == want_reject
+        first = next((l for l in lines if l.startswith("FAIL")), "")
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: "
+              f"{'rejected' if rejected else 'accepted'} ({n} failure(s))"
+              + (f"   [{first[:88]}]" if rejected else ""))
+        if not ok:
+            ctl_bad += 1
+
+    control("untouched evidence accepted (the acceptance control)", False)
+    control("transcript digest flipped for the ADAPTER", True,
+            transcript=transcript.replace(real_adapter_digest, flip(real_adapter_digest), 1))
+    control("A6 digest flipped for the ADAPTER", True,
+            a6=a6.replace(real_adapter_digest, flip(real_adapter_digest)))
+    control("A6 row for the TESTS file dropped", True,
+            a6="".join(l for l in a6.splitlines(True) if TESTS not in l), expected_n=5)
+    control("transcript line for the ADAPTER removed", True,
+            transcript="".join(l for l in transcript.splitlines(True)
+                               if not (ADAPTER in l and re.search(r"[0-9a-f]{64}", l))))
+    control("committed blob tampered (one byte appended)", True,
+            blob=lambda p: git_blob(p) + b"\n")
+    control("transcript carries TWO different digests for the adapter", True,
+            transcript=transcript + f"\n    | {flip(real_adapter_digest)}  {REPO_PREFIX}{ADAPTER}\n")
+
+    print("CONTROLS " + ("OK" if not ctl_bad else f"FAILED ({ctl_bad})"))
+    sys.exit(0 if not bad and not ctl_bad else 3)

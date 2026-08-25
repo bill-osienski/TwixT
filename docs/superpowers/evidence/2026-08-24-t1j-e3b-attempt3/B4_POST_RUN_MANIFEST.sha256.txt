@@ -1,0 +1,10 @@
+POST-RUN MANIFEST — covers ONLY the B-series files added on 2026-08-25.
+The attempt-3 artifacts are covered by A7_MANIFEST.sha256.txt, which is
+NOT regenerated: all 19 of its entries still verify OK, so the run's
+artifacts are byte-for-byte as committed at 6377ae5.
+This manifest excludes itself.
+
+e1deb7f7385209ec212f32ce73ce9686f222ca59f79500e3f1e27bfe6c652206        6385  B0_post_run_binder.py.txt
+6cda925a389100e853f3e899a3018213227824ec873b4363410d819a4973f8b4        2949  B1_post_run_binding.txt
+6a8a6a0e0e9905cb143ae1f9bb5e5d8a425357cbbd41c8407f71c44955827b99       23149  B2_full_suite_rerun.txt
+cdf601fcf974097ce8c956b444b2ae3787f289cb0e7d200a22f6db290917b92d        1694  B3_git_diff_check.txt

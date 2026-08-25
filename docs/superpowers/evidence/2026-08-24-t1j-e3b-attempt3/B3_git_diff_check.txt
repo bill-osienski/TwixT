@@ -1,0 +1,37 @@
+POST-RUN CORRECTION, 2026-08-25. RECORD-WIDTH FIX for the attempt-3 report.
+
+The attempt-3 commit message said: 'git diff --check reports 18 lines in
+90_transcript.txt'. That conflated OUTPUT LINES with FINDINGS.
+git diff --check prints TWO lines per finding: the location, then the
+offending source line. The correct statement is 9 FINDINGS, rendered as
+18 output lines, all in one file.
+
+$ git diff --check 3e0e9b7 6377ae5
+docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3/90_transcript.txt:77: trailing whitespace.
++    | 
+docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3/90_transcript.txt:79: trailing whitespace.
++    | 
+docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3/90_transcript.txt:111: trailing whitespace.
++    | 
+docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3/90_transcript.txt:144: trailing whitespace.
++    | 
+docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3/90_transcript.txt:146: trailing whitespace.
++    | 
+docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3/90_transcript.txt:169: trailing whitespace.
++    | 
+docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3/90_transcript.txt:185: trailing whitespace.
++    | 
+docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3/90_transcript.txt:190: trailing whitespace.
++    | 
+docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3/90_transcript.txt:201: trailing whitespace.
++    | 
+[exit 2]
+
+counts, computed rather than eyeballed:
+  total output lines      18
+  findings (location lines) 9
+  distinct files affected  1
+  distinct source lines    9
+
+All nine are the transcript's own '    | ' indent prefix applied to blank
+lines of captured output. Evidence is create-only; they stand as they ran.

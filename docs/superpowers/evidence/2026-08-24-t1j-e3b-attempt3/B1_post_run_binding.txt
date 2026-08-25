@@ -1,0 +1,39 @@
+POST-RUN CORRECTION, 2026-08-25, AFTER commit 6377ae5. No attempt-3 artifact
+is modified by this; A6b/A6c/A7 and the transcript are byte-for-byte unchanged.
+Run as: python3 post_run_binder.py <attempt-3 evidence dir>
+----------------------------------------------------------------------
+POST-RUN BINDING — five repository paths, transcript vs A6 vs committed blob
+commit under test: 6377ae5
+
+PASS  scripts/GPU/alphazero/t1j_adapter.py
+        transcript 988d9ee9b8384eb88d894206a30428ad57eca252b961c48719a8728d4731340b
+        A6         988d9ee9b8384eb88d894206a30428ad57eca252b961c48719a8728d4731340b
+        committed  988d9ee9b8384eb88d894206a30428ad57eca252b961c48719a8728d4731340b
+PASS  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+        transcript 559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03
+        A6         559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03
+        committed  559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03
+PASS  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+        transcript 09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244
+        A6         09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244
+        committed  09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244
+PASS  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+        transcript 281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+        A6         281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+        committed  281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+PASS  tests/test_t1j_adapter.py
+        transcript d8456c79455f357f0a0ba26cc8b8dfe2b28f7d1a9c061160b5b896589338b0d0
+        A6         d8456c79455f357f0a0ba26cc8b8dfe2b28f7d1a9c061160b5b896589338b0d0
+        committed  d8456c79455f357f0a0ba26cc8b8dfe2b28f7d1a9c061160b5b896589338b0d0
+BINDING OK
+
+negative controls — the SAME checker, run against tampered evidence:
+  PASS  untouched evidence accepted (the acceptance control): accepted (0 failure(s))
+  PASS  transcript digest flipped for the ADAPTER: rejected (1 failure(s))   [FAIL  scripts/GPU/alphazero/t1j_adapter.py]
+  PASS  A6 digest flipped for the ADAPTER: rejected (1 failure(s))   [FAIL  scripts/GPU/alphazero/t1j_adapter.py]
+  PASS  A6 row for the TESTS file dropped: rejected (3 failure(s))   [FAIL A6 records 4 paths, expected exactly 5]
+  PASS  transcript line for the ADAPTER removed: rejected (2 failure(s))   [FAIL path sets differ — transcript-only [], A6-only ['scripts/GPU/alphazero/t1j_adapter.]
+  PASS  committed blob tampered (one byte appended): rejected (5 failure(s))   [FAIL  scripts/GPU/alphazero/t1j_adapter.py]
+  PASS  transcript carries TWO different digests for the adapter: rejected (1 failure(s))   [FAIL  scripts/GPU/alphazero/t1j_adapter.py: transcript carries 2 distinct digests ['988d]
+CONTROLS OK
+[exit 0]
