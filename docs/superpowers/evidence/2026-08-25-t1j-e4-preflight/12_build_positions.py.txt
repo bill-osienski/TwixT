@@ -1,0 +1,75 @@
+"""Freeze the E4-preflight query positions.
+
+Deterministic scripted sequences. No agent chooses a move, no search runs during
+construction, no seeds are consumed. Every position is verified in OUR engine
+before T1j is ever driven: all moves legal, no winner, not terminal.
+
+Coverage the preflight needs:
+  * >= 5 positions, each >= 6 plies so moveNr >= 6 and T1j's InitialMoves path --
+    whose firstMove() uses an UNSEEDED Random -- is never reached;
+  * BOTH of T1j's evaluation regimes, since Evaluation.evaluatePosition zeroes one
+    side's value while match.getMoveNr() < 8;
+  * BOTH sides to move, so computeMove is exercised for Y and for X.
+"""
+import json, sys
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+
+N = 24
+
+# our coordinates, (row, col); red moves first, red and black alternate
+POSITIONS = {
+    "p06_e3a_center": [(10, 10), (13, 11), (12, 12), (11, 13), (10, 14), (12, 9)],
+    "p07_offset":     [(9, 9), (14, 12), (11, 10), (12, 14), (13, 8), (10, 16), (8, 12)],
+    "p08_spread":     [(6, 11), (12, 4), (9, 12), (14, 6), (12, 10), (10, 8), (15, 11), (8, 5)],
+    "p09_contact":    [(11, 11), (12, 13), (13, 12), (10, 13), (9, 10), (14, 14),
+                       (15, 11), (8, 15), (7, 12)],
+    "p12_two_wings":  [(5, 10), (11, 3), (7, 11), (13, 5), (9, 10), (12, 7),
+                       (11, 11), (10, 9), (13, 10), (14, 11), (15, 11), (9, 13)],
+    "p14_bridged":    [(4, 12), (10, 4), (6, 13), (12, 6), (8, 12), (14, 8),
+                       (10, 13), (16, 10), (12, 12), (11, 16), (14, 13), (13, 18),
+                       (16, 12), (15, 20)],
+}
+
+
+def states(moves):
+    s = TwixtState(active_size=N, to_move="red")
+    out = [s]
+    for mv in moves:
+        assert tuple(mv) in set(s.legal_moves()), f"illegal move {mv} at ply {s.ply}"
+        s = s.apply_move(tuple(mv))
+        out.append(s)
+    return out
+
+
+report = {}
+for name, moves in POSITIONS.items():
+    st = states(moves)
+    s = st[-1]
+    assert len(moves) >= 6, f"{name}: {len(moves)} plies, need >= 6 to bypass InitialMoves"
+    assert s.winner() is None, f"{name}: already won; computeMove would be meaningless"
+    assert not s.is_terminal(), f"{name}: terminal"
+    for i, x in enumerate(st):
+        assert x.winner() is None, f"{name}: winner at ply {i}"
+    report[name] = {
+        "moves": [list(m) for m in moves],
+        "plies": len(moves),
+        "to_move": s.to_move,
+        "eval_regime": "early_moveNr_lt_8" if len(moves) < 8 else "normal",
+        "pegs": len(s.pegs),
+        "bridges": len(s.bridges),
+        "n_legal": len(s.legal_moves()),
+        "winner": s.winner(),
+        "terminal": s.is_terminal(),
+    }
+    print(f"{name:16s} plies={len(moves):3d} to_move={s.to_move:5s} "
+          f"regime={report[name]['eval_regime']:18s} pegs={len(s.pegs):3d} "
+          f"bridges={len(s.bridges):2d} legal={len(s.legal_moves()):3d}")
+
+regimes = {r["eval_regime"] for r in report.values()}
+movers = {r["to_move"] for r in report.values()}
+assert regimes == {"early_moveNr_lt_8", "normal"}, f"both regimes required, got {regimes}"
+assert movers == {"red", "black"}, f"both sides to move required, got {movers}"
+assert len(report) >= 5, "at least five positions required"
+print(f"\n{len(report)} positions; regimes {sorted(regimes)}; sides to move {sorted(movers)}")
+json.dump(report, open(sys.argv[1], "w"), indent=1)

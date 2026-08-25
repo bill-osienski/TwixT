@@ -1,0 +1,348 @@
+E4 PREFLIGHT — NO GAMES ARE AUTHORIZED OR PLAYED.
+Substantive commands captured as they ran.
+date 2026-08-25T15:19:57Z   host Darwin 25.5.0 arm64
+
+########## 1. IDENTITY GATE (compared) ##########
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j rev-parse HEAD
+    | b572ed21f1f6b08491f69db32f531fc4b5f50fcd
+    [exit 0]
+
+    MATCH  clone
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j status --porcelain
+    | <no stdout>
+    [exit 0]
+
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar | cut -d' ' -f1
+    | 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+    [exit 0]
+
+    MATCH  jar
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz | cut -d' ' -f1
+    | 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8
+    [exit 0]
+
+    MATCH  jdk archive
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java | cut -d' ' -f1
+    | af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0
+    [exit 0]
+
+    MATCH  jvm bin/java
+IDENTITY GATE PASSED
+
+########## 2. T1j IS NOT MODIFIED; ALL PRIOR EVIDENCE BYTE-UNCHANGED ##########
+$ git -C /Users/bill/projects/TwixT_Game status --porcelain docs/superpowers/evidence/2026-08-24-t1j-e1 docs/superpowers/evidence/2026-08-24-t1j-e2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt4 docs/superpowers/evidence/2026-08-24-t1j-e3a docs/superpowers/evidence/2026-08-24-t1j-e3b docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt2 docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3
+    | <no stdout>
+    [exit 0]
+
+$ shasum -a 256 /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java | cut -d' ' -f1
+    | 281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+    [exit 0]
+
+    MATCH  E3bDump.java unchanged since E3b attempt 3
+
+########## 3. PREFS BEFORE ##########
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh BEFORE | tee /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/01_prefs_before.txt
+    | host preference store fingerprint — BEFORE
+    |   dir: /Users/bill/Library/Preferences
+    |   com.apple.java.util.prefs.plist EXISTS  sha256=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  bytes=95  mtime=2025-08-07T23:41:41Z
+    |   any schwagereit/t1j prefs files: 0
+    |   entry count: 523
+    |   listing sha256: 8a111b76dbd59fbae4047af53526e8a4aa3d8c480c447e0b9aafd27d81305fe5
+    |   java-ish entries: 1
+    |     com.apple.java.util.prefs.plist
+    [exit 0]
+
+
+########## 4. PREREGISTRATION — HASHED BEFORE ANY MEASUREMENT ##########
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/preregistration.json | cut -d' ' -f1
+    | 9bddafe382407268f75ee1bf8dd9df8328900efe7104b289fcd9f273d2f9f910
+    [exit 0]
+
+    MATCH  preregistration
+    thresholds are read FROM THIS FILE by the measuring code; none is inlined.
+$ python3 -c "import json;d=json.load(open('/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/preregistration.json'));print(json.dumps(d['budgets'],indent=1));print(json.dumps(d['strong_endpoint_selection_rule'],indent=1))"
+    | {
+    |  "per_query_timeout_s": 120,
+    |  "sweep_budget_s": 3600,
+    |  "determinism_budget_s": 900,
+    |  "on_timeout": "record the query as TIMEOUT, stop measuring deeper depths, and LOG that deeper depths were not measured; never silently truncate"
+    | }
+    | {
+    |  "statement": "The strong endpoint is the DEEPEST candidate depth d that satisfies all three conditions below. Selection is by COST ONLY. The moves returned are not an input to this rule.",
+    |  "conditions": [
+    |   "every frozen position completed at d, per completion_predicate, within per_query_timeout_s",
+    |   "max observed per-query wall time across all positions at d <= max_query_ms",
+    |   "projected determinism cost (25 * max observed per-query wall time at d) <= determinism_budget_s"
+    |  ],
+    |  "max_query_ms": 30000,
+    |  "if_only_depth_3_qualifies": "strong endpoint == weak endpoint; record that the endpoints coincide as a FINDING, since an endpoint screen between identical settings measures nothing"
+    | }
+    [exit 0]
+
+
+########## 5. MANIFEST OF EVERY SOURCE AND COMPILE INPUT ##########
+$ shasum -a 256 /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_adapter.py /Users/bill/projects/TwixT_Game/tests/test_t1j_adapter.py /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/preregistration.json /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/preflight_lib.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/sweep.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/determinism.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/build_positions.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/freeze_screen_plan.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/run_all.sh
+    | 8a81b72a1a3b695024aa5230ac644f78ff76c07354896fc4e52ac71fead94676  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_adapter.py
+    | 9bc77b56e5dc5aabadaf8b1ad18a10430b5d35a8f1edf9898060ff4fa36b2624  /Users/bill/projects/TwixT_Game/tests/test_t1j_adapter.py
+    | 23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+    | 281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+    | 559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+    | 09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+    | 9bddafe382407268f75ee1bf8dd9df8328900efe7104b289fcd9f273d2f9f910  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/preregistration.json
+    | adc9a42c6bbcae7d5d9a50414fe3190602a694ca313bee6a4142dc4ab4153e52  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/preflight_lib.py
+    | ae293d29beb441b14a85c69a8218c8fe99f5b58ceb51347883c3132fafcbb439  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/sweep.py
+    | 67529d5fdf522edc0c509cfc18c045c84df1b0afe380d70e7b34048fce366631  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/determinism.py
+    | 766be79d7ad0aa3b117c05b54c6fb629363099b772526bffb937a8257f7650ea  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/build_positions.py
+    | 623f008fe31cfe0e3a6e65113658df20f49b894dcf16e5874d95d1cf43b0a355  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/freeze_screen_plan.py
+    | c6c091c1f0fe35bf551c4ff056a9aec197d2fca1ccafa46a0bcf8d7525ff45f4  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/run_all.sh
+    [exit 0]
+
+
+########## 6. ADAPTER UNIT TESTS — REAL EXIT STATUS, GATED ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python -m pytest /Users/bill/projects/TwixT_Game/tests/test_t1j_adapter.py -q --no-header -p no:cacheprovider
+    | ============================= test session starts ==============================
+    | collected 30 items
+    | 
+    | tests/test_t1j_adapter.py ..............................                 [100%]
+    | 
+    | ============================== 30 passed in 0.03s ==============================
+    [exit 0]
+
+    unit-test exit: 0 (no pipe: this IS pytest's status)
+
+########## 7. COMPILE THROUGH THE COMMITTED ADAPTER, FROM COMMITTED SOURCES ##########
+$ rm -rf /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/classes && /Users/bill/projects/TwixT_Game/.venv/bin/python -c "
+import sys; sys.path.insert(0,'/Users/bill/projects/TwixT_Game')
+from scripts.GPU.alphazero import t1j_adapter as A
+import hashlib
+for p in A.PREFLIGHT_SOURCES:
+    print('  compile input ', hashlib.sha256(p.read_bytes()).hexdigest(), p)
+r = A.compile_helper('/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac', '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar', '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/classes', sources=A.PREFLIGHT_SOURCES)
+print('javac stderr:', r.stderr.strip() or '<none>')
+print('COMPILE rc=', r.returncode)
+sys.exit(r.returncode)"
+    |   compile input  559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03 /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+    |   compile input  09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244 /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+    |   compile input  281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+    |   compile input  23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3 /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+    | javac stderr: <none>
+    | COMPILE rc= 0
+    [exit 0]
+
+$ find /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/classes -name '*.class' | sort | xargs shasum -a 256
+    | aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/classes/e2probe/ScratchPrefs.class
+    | dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/classes/e2probe/ScratchPrefsFactory.class
+    | d4c796067ed4ece22f8255821c87364225a3407951585664ee9a58a6407b0516  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/classes/net/schwagereit/t1j/E3bDump.class
+    | f7a9038cbd866556f07137d930e75014a4e9baabbaf979c50de86354f7b4ca9d  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/classes/net/schwagereit/t1j/E4Preflight.class
+    [exit 0]
+
+
+########## 8. FREEZE THE QUERY POSITIONS (verified in OUR engine first) ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/build_positions.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/02_positions.json
+    | p06_e3a_center   plies=  6 to_move=red   regime=early_moveNr_lt_8  pegs=  6 bridges= 1 legal=522
+    | p07_offset       plies=  7 to_move=black regime=early_moveNr_lt_8  pegs=  7 bridges= 1 legal=521
+    | p08_spread       plies=  8 to_move=red   regime=normal             pegs=  8 bridges= 0 legal=520
+    | p09_contact      plies=  9 to_move=black regime=normal             pegs=  9 bridges= 4 legal=519
+    | p12_two_wings    plies= 12 to_move=red   regime=normal             pegs= 12 bridges= 6 legal=516
+    | p14_bridged      plies= 14 to_move=red   regime=normal             pegs= 14 bridges= 6 legal=514
+    | 
+    | 6 positions; regimes ['early_moveNr_lt_8', 'normal']; sides to move ['black', 'red']
+    [exit 0]
+
+
+########## 9. DEPTH SWEEP — ascending 3,4,5,6,7; NO GAMES ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/sweep.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/preregistration.json 9bddafe382407268f75ee1bf8dd9df8328900efe7104b289fcd9f273d2f9f910 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/02_positions.json /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/03_results.jsonl > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/04_sweep.txt 2>&1; echo $?
+    | 0
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/04_sweep.txt
+    | preregistration verified: 9bddafe382407268f75ee1bf8dd9df8328900efe7104b289fcd9f273d2f9f910
+    |   per-query timeout 120s   sweep budget 3600s   max_query_ms 30000
+    | 
+    | preflight comparator self-test (negative controls)
+    |   PASS  baseline accepted
+    |   PASS  wrong requested depth rejected   [requested_depth 4 != 5]
+    |   PASS  usealphabeta false rejected   [usealphabeta false — no search ran]
+    |   PASS  currentMaxPly != depth+1 rejected (depth NOT completed)   [currentMaxPly 4 != 6 — depth not completed]
+    |   PASS  completed=false rejected   [helper reported completed=false]
+    |   PASS  null sentinel rejected   [returned the null sentinel (-1,-1)]
+    |   PASS  T1j-illegal move rejected   [T1j reports its own move illegal]
+    |   PASS  move illegal in OUR engine rejected   [move (23, 23) is not legal in OUR engine]
+    |   PASS  side-to-move divergence rejected   [side to move X != Y]
+    |   PASS  ply divergence rejected   [moveNr 7 != our ply 6]
+    |   PASS  searched != bound position rejected   [searched position differs from the bound position on pegs]
+    | dial classification
+    |   PASS  all identical + completed -> INCONCLUSIVE, not 'dead': no_observed_move_response_inconclusive
+    |   PASS  one changed move -> observable response: observable_move_response
+    |   PASS  a depth did not complete -> dial failure: dial_failure
+    | strong-endpoint selection (cost only)
+    |   PASS  deepest qualifying depth chosen: chose 5
+    |   PASS  a depth that did not complete is rejected: chose 3
+    |   PASS  over max_query_ms rejected: chose 3
+    |   PASS  determinism projection over budget rejected (25 * 36001ms > 900s): chose 3
+    |   PASS  nothing qualifies -> None: chose None
+    |   PASS  selection rule takes no move input (params ['measured_depths', 'prereg', 'stats'])
+    | SELFTEST OK
+    | 
+    | binding every position through the E3b adapter at ply_cap=280
+    |   OK  p06_e3a_center     6 plies  to_move=red   regime=early_moveNr_lt_8
+    |   OK  p07_offset         7 plies  to_move=black regime=early_moveNr_lt_8
+    |   OK  p08_spread         8 plies  to_move=red   regime=normal
+    |   OK  p09_contact        9 plies  to_move=black regime=normal
+    |   OK  p12_two_wings     12 plies  to_move=red   regime=normal
+    |   OK  p14_bridged       14 plies  to_move=red   regime=normal
+    | 
+    | ascending depth sweep — one query per (position, depth)
+    |   p06_e3a_center   depth=3  move=(15, 15)  completed_depth=3  engine=     37.8ms  wall=  0.15s
+    |   p07_offset       depth=3  move=(17, 15)  completed_depth=3  engine=     41.7ms  wall=  0.17s
+    |   p08_spread       depth=3  move=(15, 13)  completed_depth=3  engine=    120.8ms  wall=  0.24s
+    |   p09_contact      depth=3  move=(19, 11)  completed_depth=3  engine=     39.3ms  wall=  0.16s
+    |   p12_two_wings    depth=3  move=(19, 11)  completed_depth=3  engine=     12.2ms  wall=  0.14s
+    |   p14_bridged      depth=3  move=(20, 12)  completed_depth=3  engine=     11.9ms  wall=  0.14s
+    |   p06_e3a_center   depth=4  move=(14, 11)  completed_depth=4  engine=     68.8ms  wall=  0.20s
+    |   p07_offset       depth=4  move=(11, 9)  completed_depth=4  engine=     77.8ms  wall=  0.20s
+    |   p08_spread       depth=4  move=(10, 11)  completed_depth=4  engine=    203.3ms  wall=  0.33s
+    |   p09_contact      depth=4  move=(5, 12)  completed_depth=4  engine=     76.1ms  wall=  0.19s
+    |   p12_two_wings    depth=4  move=(17, 10)  completed_depth=4  engine=     19.9ms  wall=  0.14s
+    |   p14_bridged      depth=4  move=(20, 12)  completed_depth=4  engine=     21.8ms  wall=  0.15s
+    |   p06_e3a_center   depth=5  move=(14, 11)  completed_depth=5  engine=    191.6ms  wall=  0.32s
+    |   p07_offset       depth=5  move=(11, 9)  completed_depth=5  engine=    255.2ms  wall=  0.37s
+    |   p08_spread       depth=5  move=(8, 10)  completed_depth=5  engine=    506.5ms  wall=  0.63s
+    |   p09_contact      depth=5  move=(19, 11)  completed_depth=5  engine=    190.5ms  wall=  0.31s
+    |   p12_two_wings    depth=5  move=(19, 11)  completed_depth=5  engine=     44.9ms  wall=  0.16s
+    |   p14_bridged      depth=5  move=(20, 12)  completed_depth=5  engine=     42.2ms  wall=  0.16s
+    |   p06_e3a_center   depth=6  move=(14, 11)  completed_depth=6  engine=    677.6ms  wall=  0.80s
+    |   p07_offset       depth=6  move=(11, 9)  completed_depth=6  engine=   1197.1ms  wall=  1.32s
+    |   p08_spread       depth=6  move=(8, 10)  completed_depth=6  engine=   2749.3ms  wall=  2.88s
+    |   p09_contact      depth=6  move=(19, 11)  completed_depth=6  engine=    539.9ms  wall=  0.67s
+    |   p12_two_wings    depth=6  move=(19, 11)  completed_depth=6  engine=    101.3ms  wall=  0.23s
+    |   p14_bridged      depth=6  move=(20, 12)  completed_depth=6  engine=     94.0ms  wall=  0.21s
+    |   p06_e3a_center   depth=7  move=(13, 13)  completed_depth=7  engine=   4124.9ms  wall=  4.24s
+    |   p07_offset       depth=7  move=(17, 9)  completed_depth=7  engine=   7616.5ms  wall=  7.74s
+    |   p08_spread       depth=7  move=(8, 10)  completed_depth=7  engine=  32054.5ms  wall= 32.18s
+    |   p09_contact      depth=7  move=(19, 11)  completed_depth=7  engine=   2295.5ms  wall=  2.41s
+    |   p12_two_wings    depth=7  move=(19, 11)  completed_depth=7  engine=    247.2ms  wall=  0.36s
+    |   p14_bridged      depth=7  move=(20, 12)  completed_depth=7  engine=    223.8ms  wall=  0.34s
+    | 
+    | sweep wall time 57.5s of 3600s budget; depths measured [3, 4, 5, 6, 7]
+    | 
+    | DIAL RESPONSE: observable_move_response
+    |   p06_e3a_center: depth 4 -> (14, 11) vs depth 3 -> (15, 15)
+    |   p06_e3a_center: depth 5 -> (14, 11) vs depth 3 -> (15, 15)
+    |   p06_e3a_center: depth 6 -> (14, 11) vs depth 3 -> (15, 15)
+    |   p06_e3a_center: depth 7 -> (13, 13) vs depth 3 -> (15, 15)
+    |   p07_offset: depth 4 -> (11, 9) vs depth 3 -> (17, 15)
+    |   p07_offset: depth 5 -> (11, 9) vs depth 3 -> (17, 15)
+    |   p07_offset: depth 6 -> (11, 9) vs depth 3 -> (17, 15)
+    |   p07_offset: depth 7 -> (17, 9) vs depth 3 -> (17, 15)
+    |   p08_spread: depth 4 -> (10, 11) vs depth 3 -> (15, 13)
+    |   p08_spread: depth 5 -> (8, 10) vs depth 3 -> (15, 13)
+    |   p08_spread: depth 6 -> (8, 10) vs depth 3 -> (15, 13)
+    |   p08_spread: depth 7 -> (8, 10) vs depth 3 -> (15, 13)
+    |   p09_contact: depth 4 -> (5, 12) vs depth 3 -> (19, 11)
+    |   p12_two_wings: depth 4 -> (17, 10) vs depth 3 -> (19, 11)
+    | 
+    | STRONG-ENDPOINT SELECTION (cost only; moves are not an input)
+    |   depth 3: QUALIFIES — ok every position completed; ok max 121ms <= timeout 120000ms; ok max 121ms <= max_query_ms 30000ms; ok projected determinism 25*121ms <= 900000ms
+    |   depth 4: QUALIFIES — ok every position completed; ok max 203ms <= timeout 120000ms; ok max 203ms <= max_query_ms 30000ms; ok projected determinism 25*203ms <= 900000ms
+    |   depth 5: QUALIFIES — ok every position completed; ok max 507ms <= timeout 120000ms; ok max 507ms <= max_query_ms 30000ms; ok projected determinism 25*507ms <= 900000ms
+    |   depth 6: QUALIFIES — ok every position completed; ok max 2749ms <= timeout 120000ms; ok max 2749ms <= max_query_ms 30000ms; ok projected determinism 25*2749ms <= 900000ms
+    |   depth 7: rejected — ok every position completed; ok max 32055ms <= timeout 120000ms; NO max 32055ms <= max_query_ms 30000ms; ok projected determinism 25*32055ms <= 900000ms
+    |   -> weak endpoint mdPly=3   strong endpoint mdPly=6
+    | 
+    | SWEEP OK
+    [exit 0]
+
+
+########## 10. DETERMINISM AT THE SELECTED ENDPOINT (E3a structure) ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/determinism.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/preregistration.json 9bddafe382407268f75ee1bf8dd9df8328900efe7104b289fcd9f273d2f9f910 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/02_positions.json /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/03_results.jsonl p06_e3a_center > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/05_determinism.txt 2>&1; echo $?
+    | 0
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/05_determinism.txt
+    | selected strong endpoint read from the sweep: mdPly=6 (weak endpoint mdPly=3, coincide=False)
+    | position p06_e3a_center: 6 plies, to_move=red, regime=early_moveNr_lt_8
+    | 
+    | 20 independent constructions in ONE jvm at mdPly=6
+    |   20 records, exit 0, 11.0s
+    | 
+    | 5 FRESH jvms, one query each at mdPly=6
+    |   fresh jvm 1: move=(14, 11) completed_depth=6
+    |   fresh jvm 2: move=(14, 11) completed_depth=6
+    |   fresh jvm 3: move=(14, 11) completed_depth=6
+    |   fresh jvm 4: move=(14, 11) completed_depth=6
+    |   fresh jvm 5: move=(14, 11) completed_depth=6
+    | 
+    | 25 queries, 15.0s of 900s budget
+    |   distinct moves           [(14, 11)]   (want exactly one)
+    |   distinct completed depth [6]  (want exactly {6})
+    |   all legal, no sentinel   True
+    |   all legal in OUR engine  True
+    | 
+    | DETERMINISM PASS — 25/25 identical legal move and completed depth
+    [exit 0]
+
+
+########## 11. FREEZE THE ENDPOINT-SCREEN PLAN — NOT EXECUTED ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/freeze_screen_plan.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/06_endpoint_screen_plan.json
+    | FROZEN, NOT EXECUTED: 16 tasks, 8 openings x 2 arms
+    | seed block (202612000, 202612512) RESERVED and UNSPENT; disjoint from 8 prior intervals
+    | seeds used by the plan: 202612000..202612015 (block ends 202612512)
+    [exit 0]
+
+$ python3 -c "import json;d=json.load(open('/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/06_endpoint_screen_plan.json'));print('status:',d['status']);print('tasks:',d['n_tasks']);print('seed block:',d['seed_block']['interval'],d['seed_block']['status']);print('outcomes:',list(d['stopping_rules']['outcomes']))"
+    | status: FROZEN, NOT EXECUTED — no game has been played and no seed consumed
+    | tasks: 16
+    | seed block: [202612000, 202612512] RESERVED, UNSPENT
+    | outcomes: ['IN_BAND', 'SATURATED_T1J_TOO_STRONG', 'SATURATED_T1J_TOO_WEAK', 'INCONCLUSIVE']
+    [exit 0]
+
+
+########## 12. PREFS AFTER — REJECTION CONTROLS FIRST, THEN THE REAL PAIR ##########
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh AFTER | tee /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/07_prefs_after.txt
+    | host preference store fingerprint — AFTER
+    |   dir: /Users/bill/Library/Preferences
+    |   com.apple.java.util.prefs.plist EXISTS  sha256=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  bytes=95  mtime=2025-08-07T23:41:41Z
+    |   any schwagereit/t1j prefs files: 0
+    |   entry count: 523
+    |   listing sha256: 8a111b76dbd59fbae4047af53526e8a4aa3d8c480c447e0b9aafd27d81305fe5
+    |   java-ish entries: 1
+    |     com.apple.java.util.prefs.plist
+    [exit 0]
+
+$ python3 - /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/01_prefs_before.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/07_prefs_after.txt <<'PYCTL'
+import subprocess, sys
+before, after = sys.argv[1:3]
+lines = open(after).read().splitlines(True)
+i = next(j for j, l in enumerate(lines) if ':' in l and not l.startswith('host preference store fingerprint'))
+k, v = lines[i].split(':', 1)
+bad = 0
+def case(name, text, want):
+    global bad
+    open('/tmp/.e4pre_ctl', 'w').write(text)
+    r = subprocess.run([sys.executable, '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b3/check_prefs.py', before, '/tmp/.e4pre_ctl'],
+                       capture_output=True, text=True)
+    ok = r.returncode == want
+    print(f"  {'PASS' if ok else 'FAIL'}  {name}: exit {r.returncode} (want {want})")
+    if not ok: bad += 1
+mut = list(lines); mut[i] = f'{k}: MUTATED-{v.strip()}\n'
+case('mutated field rejected', ''.join(mut), 3)
+case('dropped field rejected', ''.join(l for j, l in enumerate(lines) if j != i), 3)
+case('untouched AFTER accepted', ''.join(lines), 0)
+print('PREFS CONTROLS ' + ('OK' if not bad else f'FAILED ({bad})'))
+sys.exit(0 if not bad else 3)
+PYCTL
+    |   PASS  mutated field rejected: exit 3 (want 3)
+    |   PASS  dropped field rejected: exit 3 (want 3)
+    |   PASS  untouched AFTER accepted: exit 0 (want 0)
+    | PREFS CONTROLS OK
+    [exit 0]
+
+$ python3 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b3/check_prefs.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/01_prefs_before.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4pre/evidence/07_prefs_after.txt; echo $?
+    | PREFS CHECK PASS — 7 normalized fields identical (label line excluded by design)
+    | 0
+    [exit 0]
+
+
+TRANSCRIPT COMPLETE — tests 0, sweep 0, determinism 0, freeze 0, prefs-controls 0, prefs 0
+GATE 0

@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""E4 preflight depth sweep. NO GAMES: one move query per (position, depth).
+
+Order is fixed and enforced:
+  1. verify the preregistration hash -- thresholds must predate measurement
+  2. self-test the comparators, refusing to measure unless every control rejects
+  3. bind every position through the E3b-qualified adapter at ply_cap=280,
+     ABORTING ON THE FIRST DIVERGENCE
+  4. sweep depths 3,4,5,6,7 ASCENDING, appending each query durably as it happens
+  5. classify the dial response and select the strong endpoint BY COST ONLY
+
+Exit 0 = swept cleanly, 2 = self-test failed, 3 = divergence or dial failure.
+"""
+import json, subprocess, sys, time
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+sys.path.insert(0, __file__.rsplit("/", 1)[0])
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import t1j_adapter as A
+import preflight_lib as L
+
+java, jar, classes, prereg_path, prereg_sha, positions_path, results_path = sys.argv[1:8]
+P = L.load_prereg(prereg_path, prereg_sha)
+print(f"preregistration verified: {prereg_sha}")
+print(f"  per-query timeout {P['budgets']['per_query_timeout_s']}s   "
+      f"sweep budget {P['budgets']['sweep_budget_s']}s   "
+      f"max_query_ms {P['strong_endpoint_selection_rule']['max_query_ms']}")
+print()
+
+if not L.selftest():
+    sys.exit(2)
+print()
+
+CAP = P["binding"]["ply_cap"]
+positions = json.load(open(positions_path))
+results = open(results_path, "a", buffering=1)          # append-only, line-buffered
+
+
+def emit(rec):
+    results.write(json.dumps(rec, sort_keys=True) + "\n")
+
+
+emit({"record_type": "run_header", "preregistration_sha256": prereg_sha,
+      "ply_cap": CAP, "depths": list(L.DEPTHS), "positions": sorted(positions),
+      "no_games": True, "seeds_consumed": 0})
+
+# ---- 3. bind every position through the E3b-qualified path -----------------
+print(f"binding every position through the E3b adapter at ply_cap={CAP}")
+bound, ours = {}, {}
+for name in sorted(positions):
+    moves = [tuple(m) for m in positions[name]["moves"]]
+    plies, rc, _ = A.replay(moves, ply_cap=CAP, java=java, jar=jar, classes=classes)
+    if rc != 0:
+        print(f"  ABORT {name}: replay exit {rc}"); sys.exit(3)
+    s = TwixtState(active_size=A.BOARD_N, to_move="red")
+    states = [s]
+    for mv in moves:
+        s = s.apply_move(mv); states.append(s)
+    if len(plies) != len(states):
+        print(f"  ABORT {name}: ply count {len(plies)} != {len(states)}"); sys.exit(3)
+    for i, (st, tp) in enumerate(zip(states, plies)):
+        opegs, obr = A.our_snapshot(st)
+        div = []
+        if opegs != tp.pegs: div.append("pegs")
+        if obr != tp.bridges: div.append("bridges")
+        if tp.next_player != A.PLAYER_TO_T1J[st.to_move]: div.append("side to move")
+        if tp.ply != st.ply: div.append("ply")
+        if {A.to_t1j(r, c) for (r, c) in st.legal_moves()} != tp.legal: div.append("legal set")
+        ow = st.winner()
+        if {"Y": tp.term_y, "X": tp.term_x} != {"Y": ow == "red", "X": ow == "black"}:
+            div.append("terminal")
+        if div:                                   # abort on the FIRST divergence
+            print(f"  ABORT {name} ply {i}: {', '.join(div)}")
+            emit({"record_type": "abort", "position": name, "ply": i, "divergence": div})
+            sys.exit(3)
+    bound[name], ours[name] = plies[-1], states[-1]
+    print(f"  OK  {name:16s} {len(moves):3d} plies  to_move={states[-1].to_move:5s} "
+          f"regime={positions[name]['eval_regime']}")
+print()
+
+# ---- 4. ascending depth sweep ----------------------------------------------
+TIMEOUT = P["budgets"]["per_query_timeout_s"]
+BUDGET = P["budgets"]["sweep_budget_s"]
+moves_by_pos, stats, measured, spent = {n: {} for n in positions}, {}, [], 0.0
+all_completed, stopped = True, None
+
+print("ascending depth sweep — one query per (position, depth)")
+for depth in L.DEPTHS:
+    if stopped:
+        print(f"  depth {depth}: NOT MEASURED — {stopped}")
+        emit({"record_type": "depth_not_measured", "depth": depth, "reason": stopped})
+        continue
+    per_depth_ms, completed_here = [], True
+    for name in sorted(positions):
+        mvs = [tuple(m) for m in positions[name]["moves"]]
+        t0 = time.monotonic()
+        try:
+            recs, dumps, rc, out = A.query(mvs, depth=depth, java=java, jar=jar,
+                                           classes=classes, timeout_s=TIMEOUT)
+        except subprocess.TimeoutExpired:
+            wall = time.monotonic() - t0; spent += wall
+            stopped = (f"per-query timeout {TIMEOUT}s hit at depth {depth} on {name}; "
+                       f"deeper depths NOT measured")
+            print(f"  TIMEOUT {name} depth={depth} after {wall:.1f}s — {stopped}")
+            emit({"record_type": "timeout", "position": name, "depth": depth,
+                  "wall_s": round(wall, 3)})
+            all_completed = completed_here = False
+            break
+        wall = time.monotonic() - t0; spent += wall
+        if rc != 0 or len(recs) != 1 or len(dumps) != 1:
+            print(f"  ABORT {name} depth={depth}: exit {rc}, {len(recs)} query / {len(dumps)} dump records")
+            emit({"record_type": "abort", "position": name, "depth": depth, "exit": rc})
+            sys.exit(3)
+        rec = recs[0]
+        div = L.check_query(rec, depth=depth, our_state=ours[name],
+                            searched=dumps[0], bound=bound[name])
+        emit({"record_type": "query", "position": name, "depth": depth,
+              "move_ours": list(rec.move) if rec.move else None,
+              "to_move": rec.to_move, "completed": rec.completed,
+              "completed_depth": rec.completed_depth, "current_max_ply": rec.current_max_ply,
+              "usealphabeta": rec.usealphabeta, "legal": rec.legal,
+              "eval_regime": rec.eval_regime, "elapsed_us": rec.elapsed_us,
+              "wall_s": round(wall, 3), "divergences": div})
+        if div:                                    # abort on the FIRST divergence
+            print(f"  ABORT {name} depth={depth}: {div[0]}")
+            sys.exit(3)
+        moves_by_pos[name][depth] = rec.move
+        per_depth_ms.append(rec.elapsed_us / 1000.0)
+        print(f"  {name:16s} depth={depth}  move={rec.move}  completed_depth={rec.completed_depth}  "
+              f"engine={rec.elapsed_us/1000.0:9.1f}ms  wall={wall:6.2f}s")
+        if spent > BUDGET:
+            stopped = f"sweep budget {BUDGET}s exhausted ({spent:.0f}s spent); deeper depths NOT measured"
+            print(f"  BUDGET {stopped}"); break
+    if per_depth_ms and completed_here and not stopped:
+        measured.append(depth)
+        stats[depth] = {"max_ms": int(round(max(per_depth_ms))), "all_completed": True,
+                        "n": len(per_depth_ms)}
+        emit({"record_type": "depth_summary", "depth": depth, **stats[depth]})
+    elif per_depth_ms:
+        stats[depth] = {"max_ms": int(round(max(per_depth_ms))), "all_completed": completed_here,
+                        "n": len(per_depth_ms)}
+        emit({"record_type": "depth_summary", "depth": depth, **stats[depth]})
+print(f"\nsweep wall time {spent:.1f}s of {BUDGET}s budget; depths measured {measured}")
+if stopped:
+    print(f"NOT SILENTLY TRUNCATED — {stopped}")
+print()
+
+# ---- 5. classification and selection ---------------------------------------
+label, detail = L.classify_dial(moves_by_pos, all_completed)
+print(f"DIAL RESPONSE: {label}")
+for line in (detail if isinstance(detail, list) else [detail]):
+    print(f"  {line}")
+emit({"record_type": "dial_classification", "label": label,
+      "detail": detail if isinstance(detail, list) else [detail]})
+print()
+
+strong, reasons = L.select_strong_endpoint(stats, P, measured)
+print("STRONG-ENDPOINT SELECTION (cost only; moves are not an input)")
+for r in reasons:
+    print(f"  {r}")
+weak = P["engine_settings"]["weak_endpoint_mdPly"]
+print(f"  -> weak endpoint mdPly={weak}   strong endpoint mdPly={strong}")
+if strong == weak:
+    print("  FINDING: the endpoints COINCIDE — an endpoint screen between identical "
+          "settings measures nothing")
+emit({"record_type": "selection", "weak_endpoint": weak, "strong_endpoint": strong,
+      "reasons": reasons, "endpoints_coincide": strong == weak})
+results.close()
+
+if label == "dial_failure":
+    print("\nPREFLIGHT STOP — dial failure"); sys.exit(3)
+print("\nSWEEP OK")
+sys.exit(0)

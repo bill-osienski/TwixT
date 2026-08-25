@@ -176,3 +176,68 @@ def test_compile_helper_refuses_when_a_source_is_missing(tmp_path, monkeypatch):
     monkeypatch.setattr(A, "JAVA_SOURCES", A.JAVA_SOURCES + (tmp_path / "Absent.java",))
     with pytest.raises(FileNotFoundError):
         A.compile_helper("javac", "t1j.jar", str(tmp_path / "out"))
+
+
+# --- E4 preflight: the generic fixed-position query path --------------------
+
+QUERY_LINE = (
+    "QUERY q=1 requested_depth=5 mdFixedPly=true mdPly=5 move_x=15 move_y=15 "
+    "to_move=Y usealphabeta=true currentMaxPly=6 completed_depth=5 completed=true "
+    "legal=true null_sentinel=false moveNr=6 eval_regime=early_moveNr_lt_8 elapsed_us=1234"
+)
+
+
+def test_parse_queries_reads_every_field_and_maps_the_move():
+    (r,) = A.parse_queries("PROC pid=1\n" + QUERY_LINE + "\nPOSTCOND x=1\n")
+    assert (r.q, r.requested_depth, r.to_move) == (1, 5, "Y")
+    assert r.move == A.to_ours(15, 15)          # identity transform -> (15, 15)
+    assert r.usealphabeta and r.completed and r.legal
+    assert (r.current_max_ply, r.completed_depth) == (6, 5)
+    assert not r.null_sentinel
+    assert (r.move_nr, r.eval_regime, r.elapsed_us) == (6, "early_moveNr_lt_8", 1234)
+
+
+def test_parse_queries_null_sentinel_has_no_move():
+    line = QUERY_LINE.replace("move_x=15 move_y=15", "move_x=-1 move_y=-1") \
+                     .replace("null_sentinel=false", "null_sentinel=true")
+    (r,) = A.parse_queries(line)
+    assert r.move is None and r.null_sentinel
+
+
+def test_parse_queries_rejects_a_missing_field():
+    with pytest.raises(ValueError):
+        A.parse_queries(QUERY_LINE.replace(" completed_depth=5", ""))
+
+
+def test_parse_queries_ignores_non_query_lines():
+    assert A.parse_queries("PROC pid=7\nPOSTCOND failures=0\n") == []
+
+
+def test_query_rejects_a_depth_below_the_deepening_floor():
+    for bad in (0, 1, 2):
+        with pytest.raises(ValueError):
+            A.query([], depth=bad, java="j", jar="j", classes="c")
+
+
+def test_preflight_sources_extend_the_e3b_set_without_changing_it():
+    assert len(A.JAVA_SOURCES) == 3                      # E3b's qualified set, untouched
+    assert A.PREFLIGHT_SOURCES[:3] == A.JAVA_SOURCES
+    assert A.PREFLIGHT_SOURCES[3].name == "E4Preflight.java"
+    for src in A.PREFLIGHT_SOURCES:
+        assert src.is_file(), src
+    assert A.PREFLIGHT_MAIN == "net.schwagereit.t1j.E4Preflight"
+
+
+def test_compile_helper_still_defaults_to_the_e3b_set(tmp_path, monkeypatch):
+    seen = {}
+
+    def fake_run(args, **kw):
+        seen["args"] = args
+        class R: returncode = 0; stdout = ""; stderr = ""
+        return R()
+
+    monkeypatch.setattr(A.subprocess, "run", fake_run)
+    A.compile_helper("javac", "t1j.jar", str(tmp_path))
+    assert sum(a.endswith(".java") for a in seen["args"]) == 3
+    A.compile_helper("javac", "t1j.jar", str(tmp_path), sources=A.PREFLIGHT_SOURCES)
+    assert sum(a.endswith(".java") for a in seen["args"]) == 4

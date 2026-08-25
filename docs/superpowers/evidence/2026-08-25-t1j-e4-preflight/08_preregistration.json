@@ -1,0 +1,69 @@
+{
+  "schema": "e4-preflight-preregistration/1",
+  "frozen_before_any_measurement": true,
+  "note": "Written and hashed BEFORE the depth sweep runs. The selection code reads its thresholds from THIS FILE; no threshold is inlined in the measuring code. No games are authorized by this document.",
+
+  "engine_settings": {
+    "mdFixedPly": true,
+    "mdTime_excluded": "wall-clock mode is excluded: mdFixedPly=false sets maxPly=Integer.MAX_VALUE and terminates on elapsed time, which is not reproducible",
+    "weak_endpoint_mdPly": 3,
+    "candidate_depths": [3, 4, 5, 6, 7],
+    "depth_4_behaviour": "FindMove.internalComputeMove iterates currentMaxPly from 3 and executes a depth only when (currentMaxPly != 4 || currentMaxPly == maxPly). Depth 4 therefore RUNS when it is the requested terminal depth and is SKIPPED only as an intermediate iteration. Executed ladders: mdPly=3 -> {3}; 4 -> {3,4}; 5 -> {3,5}; 6 -> {3,5,6}; 7 -> {3,5,6,7}.",
+    "completion_predicate": "requested depth d completed  <=>  usealphabeta == true AND currentMaxPly == d + 1. Under mdFixedPly=true the only break in the loop is guarded by maxTime > 0, and maxTime is -1, so the loop always runs to completion and exits with currentMaxPly == maxPly + 1."
+  },
+
+  "budgets": {
+    "per_query_timeout_s": 120,
+    "sweep_budget_s": 3600,
+    "determinism_budget_s": 900,
+    "on_timeout": "record the query as TIMEOUT, stop measuring deeper depths, and LOG that deeper depths were not measured; never silently truncate"
+  },
+
+  "strong_endpoint_selection_rule": {
+    "statement": "The strong endpoint is the DEEPEST candidate depth d that satisfies all three conditions below. Selection is by COST ONLY. The moves returned are not an input to this rule.",
+    "conditions": [
+      "every frozen position completed at d, per completion_predicate, within per_query_timeout_s",
+      "max observed per-query wall time across all positions at d <= max_query_ms",
+      "projected determinism cost (25 * max observed per-query wall time at d) <= determinism_budget_s"
+    ],
+    "max_query_ms": 30000,
+    "if_only_depth_3_qualifies": "strong endpoint == weak endpoint; record that the endpoints coincide as a FINDING, since an endpoint screen between identical settings measures nothing"
+  },
+
+  "dial_response_classification": {
+    "note": "Identical moves are NOT proof the dial is dead: a deeper search can correctly re-select the same move.",
+    "observable_move_response": "at least one (position, depth) returns a move different from that position's depth-3 move, and every compared query completed its requested depth",
+    "no_observed_move_response_inconclusive": "every move is identical across all measured depths AND every requested depth demonstrably completed",
+    "dial_failure_stop": "any requested depth not completed, or the setting ignored (usealphabeta false, or currentMaxPly != d+1)"
+  },
+
+  "positions": {
+    "count_min": 5,
+    "min_plies": 6,
+    "min_plies_reason": "moveNr >= 6 bypasses InitialMoves, whose firstMove() path uses an UNSEEDED Random",
+    "evaluation_regime_note": "Evaluation.evaluatePosition zeroes one side's value while match.getMoveNr() < 8, so positions at 6-7 plies sit in a different evaluation regime from positions at 8+. Both regimes are represented and each position records which it is in.",
+    "construction": "deterministic scripted sequences, verified in our engine before T1j is driven. No agent chooses a move, no search runs during construction, no seeds are consumed."
+  },
+
+  "binding": {
+    "ply_cap": 280,
+    "ply_cap_origin": "entirely external to T1j; applied identically to both engines, each engine's ply derived independently",
+    "adapter": "scripts/GPU/alphazero/t1j_adapter.py, as qualified by E3b attempt 3",
+    "abort_on_first_divergence": true
+  },
+
+  "determinism_stage": {
+    "structure": "the E3a structure at the SELECTED strong endpoint: 20 independent constructions in one JVM plus 5 fresh JVMs, 25 queries total",
+    "requirement": "all 25 queries return the identical legal move and the identical completed depth",
+    "on_failure": "the pilot stops"
+  },
+
+  "claim_discipline": {
+    "move_response_ordering": "descriptive only",
+    "forbidden": [
+      "any claim of strength monotonicity from move differences",
+      "any claim of strength from timing",
+      "any absolute strength placement: T1j is uncalibrated, so even a passing screen yields an ORDERING, not a placement"
+    ]
+  }
+}

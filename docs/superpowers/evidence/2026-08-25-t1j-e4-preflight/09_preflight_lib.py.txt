@@ -1,0 +1,224 @@
+"""E4 preflight — the decision logic, and the controls that prove it rejects.
+
+Every threshold comes from the PREREGISTRATION FILE, never from a literal here;
+`load_prereg` refuses to run if the file's hash does not match the one frozen
+before measurement began.
+
+NO GAMES. Nothing in this module plays, scores, or consumes a seed.
+"""
+import hashlib, json, sys
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero import t1j_adapter as A
+
+DEPTHS = (3, 4, 5, 6, 7)
+
+
+def load_prereg(path, expected_sha256):
+    raw = open(path, "rb").read()
+    got = hashlib.sha256(raw).hexdigest()
+    if got != expected_sha256:
+        raise SystemExit(f"PREREGISTRATION HASH MISMATCH: {got} != {expected_sha256}")
+    return json.loads(raw)
+
+
+# ---------------------------------------------------------------- per query
+
+def check_query(rec, *, depth, our_state, searched, bound, transform=A.CANONICAL):
+    """Divergences for one query. Empty list == acceptable."""
+    d = []
+    if rec.requested_depth != depth:
+        d.append(f"requested_depth {rec.requested_depth} != {depth}")
+    if not rec.usealphabeta:
+        d.append("usealphabeta false — no search ran")
+    if rec.current_max_ply != depth + 1:
+        d.append(f"currentMaxPly {rec.current_max_ply} != {depth + 1} — depth not completed")
+    if not rec.completed:
+        d.append("helper reported completed=false")
+    if rec.null_sentinel or rec.move is None:
+        d.append("returned the null sentinel (-1,-1)")
+    if not rec.legal:
+        d.append("T1j reports its own move illegal")
+    if rec.to_move != A.PLAYER_TO_T1J[our_state.to_move]:
+        d.append(f"side to move {rec.to_move} != {A.PLAYER_TO_T1J[our_state.to_move]}")
+    if rec.move is not None and rec.move not in set(our_state.legal_moves()):
+        d.append(f"move {rec.move} is not legal in OUR engine")
+    if rec.move_nr != our_state.ply:
+        d.append(f"moveNr {rec.move_nr} != our ply {our_state.ply}")
+    # the query process must have searched the position we bound through E3b
+    for field in ("pegs", "bridges", "next_player", "ply", "legal", "term_y", "term_x"):
+        a, b = getattr(searched, field), getattr(bound, field)
+        if a != b:
+            d.append(f"searched position differs from the bound position on {field}")
+    return d
+
+
+# ------------------------------------------------------------ dial response
+
+def classify_dial(by_depth_moves, completed_all):
+    """by_depth_moves: {position: {depth: move}}. Returns (label, detail).
+
+    Identical moves are NOT proof the dial is dead -- a deeper search can
+    correctly re-select the same move -- so that case is INCONCLUSIVE, not a
+    negative result.
+    """
+    if not completed_all:
+        return "dial_failure", "at least one requested depth did not complete"
+    changed = []
+    for pos, by_d in sorted(by_depth_moves.items()):
+        if 3 not in by_d:
+            return "dial_failure", f"{pos}: depth 3 baseline missing"
+        base = by_d[3]
+        for d in sorted(by_d):
+            if d != 3 and by_d[d] != base:
+                changed.append(f"{pos}: depth {d} -> {by_d[d]} vs depth 3 -> {base}")
+    if changed:
+        return "observable_move_response", changed
+    return "no_observed_move_response_inconclusive", (
+        "every move identical across all measured depths, and every requested "
+        "depth demonstrably completed")
+
+
+# ------------------------------------------------- strong-endpoint selection
+
+def select_strong_endpoint(stats, prereg, measured_depths):
+    """stats: {depth: {'max_ms': int, 'all_completed': bool, 'n': int}}.
+
+    COST ONLY. The moves returned are not an input, and are not passed in.
+    """
+    rule = prereg["strong_endpoint_selection_rule"]
+    max_ms = rule["max_query_ms"]
+    det_budget_ms = prereg["budgets"]["determinism_budget_s"] * 1000
+    timeout_ms = prereg["budgets"]["per_query_timeout_s"] * 1000
+    reasons, ok = [], []
+    for d in sorted(measured_depths):
+        s = stats.get(d)
+        if s is None:
+            reasons.append(f"depth {d}: not measured"); continue
+        conds = [
+            (s["all_completed"], "every position completed"),
+            (s["max_ms"] <= timeout_ms, f"max {s['max_ms']}ms <= timeout {timeout_ms}ms"),
+            (s["max_ms"] <= max_ms, f"max {s['max_ms']}ms <= max_query_ms {max_ms}ms"),
+            (25 * s["max_ms"] <= det_budget_ms,
+             f"projected determinism 25*{s['max_ms']}ms <= {det_budget_ms}ms"),
+        ]
+        passed = all(c for c, _ in conds)
+        reasons.append(f"depth {d}: {'QUALIFIES' if passed else 'rejected'} — "
+                       + "; ".join(f"{'ok' if c else 'NO'} {t}" for c, t in conds))
+        if passed:
+            ok.append(d)
+    if not ok:
+        return None, reasons
+    return max(ok), reasons
+
+
+# ------------------------------------------------------------------ selftest
+
+class _Rec:
+    def __init__(self, **kw):
+        base = dict(q=1, requested_depth=5, move=(15, 15), to_move="Y", usealphabeta=True,
+                    current_max_ply=6, completed_depth=5, completed=True, legal=True,
+                    null_sentinel=False, move_nr=6, eval_regime="normal", elapsed_us=10)
+        base.update(kw)
+        self.__dict__.update(base)
+
+
+class _State:
+    to_move = "red"
+    ply = 6
+    def legal_moves(self): return [(15, 15), (1, 1)]
+
+
+class _Dump:
+    def __init__(self, **kw):
+        base = dict(pegs={"a"}, bridges=set(), next_player="Y", ply=6,
+                    legal={(0, 0)}, term_y=False, term_x=False)
+        base.update(kw)
+        self.__dict__.update(base)
+
+
+def selftest():
+    bad = 0
+
+    def case(name, got_bad, want_bad):
+        nonlocal bad
+        ok = bool(got_bad) == want_bad
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}"
+              + (f"   [{got_bad[0][:76]}]" if got_bad else ""))
+        if not ok: bad += 1
+
+    st, dump = _State(), _Dump()
+    print("preflight comparator self-test (negative controls)")
+    case("baseline accepted", check_query(_Rec(), depth=5, our_state=st, searched=dump, bound=dump), False)
+    case("wrong requested depth rejected",
+         check_query(_Rec(requested_depth=4), depth=5, our_state=st, searched=dump, bound=dump), True)
+    case("usealphabeta false rejected",
+         check_query(_Rec(usealphabeta=False), depth=5, our_state=st, searched=dump, bound=dump), True)
+    case("currentMaxPly != depth+1 rejected (depth NOT completed)",
+         check_query(_Rec(current_max_ply=4), depth=5, our_state=st, searched=dump, bound=dump), True)
+    case("completed=false rejected",
+         check_query(_Rec(completed=False), depth=5, our_state=st, searched=dump, bound=dump), True)
+    case("null sentinel rejected",
+         check_query(_Rec(move=None, null_sentinel=True), depth=5, our_state=st, searched=dump, bound=dump), True)
+    case("T1j-illegal move rejected",
+         check_query(_Rec(legal=False), depth=5, our_state=st, searched=dump, bound=dump), True)
+    case("move illegal in OUR engine rejected",
+         check_query(_Rec(move=(23, 23)), depth=5, our_state=st, searched=dump, bound=dump), True)
+    case("side-to-move divergence rejected",
+         check_query(_Rec(to_move="X"), depth=5, our_state=st, searched=dump, bound=dump), True)
+    case("ply divergence rejected",
+         check_query(_Rec(move_nr=7), depth=5, our_state=st, searched=dump, bound=dump), True)
+    case("searched != bound position rejected",
+         check_query(_Rec(), depth=5, our_state=st, searched=_Dump(pegs={"b"}), bound=dump), True)
+
+    print("dial classification")
+    for name, moves, comp, want in (
+        ("all identical + completed -> INCONCLUSIVE, not 'dead'",
+         {"p": {3: (1, 1), 5: (1, 1), 7: (1, 1)}}, True, "no_observed_move_response_inconclusive"),
+        ("one changed move -> observable response",
+         {"p": {3: (1, 1), 5: (2, 2)}}, True, "observable_move_response"),
+        ("a depth did not complete -> dial failure",
+         {"p": {3: (1, 1), 5: (1, 1)}}, False, "dial_failure"),
+    ):
+        got, _ = classify_dial(moves, comp)
+        ok = got == want
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: {got}")
+        if not ok: bad += 1
+
+    print("strong-endpoint selection (cost only)")
+    prereg = {"strong_endpoint_selection_rule": {"max_query_ms": 30000},
+              "budgets": {"determinism_budget_s": 900, "per_query_timeout_s": 120}}
+    checks = [
+        ("deepest qualifying depth chosen",
+         {3: dict(max_ms=10, all_completed=True, n=6), 5: dict(max_ms=900, all_completed=True, n=6)},
+         [3, 5], 5),
+        ("a depth that did not complete is rejected",
+         {3: dict(max_ms=10, all_completed=True, n=6), 5: dict(max_ms=10, all_completed=False, n=6)},
+         [3, 5], 3),
+        ("over max_query_ms rejected",
+         {3: dict(max_ms=10, all_completed=True, n=6), 5: dict(max_ms=30001, all_completed=True, n=6)},
+         [3, 5], 3),
+        ("determinism projection over budget rejected (25 * 36001ms > 900s)",
+         {3: dict(max_ms=10, all_completed=True, n=6), 5: dict(max_ms=36001, all_completed=True, n=6)},
+         [3, 5], 3),
+        ("nothing qualifies -> None",
+         {3: dict(max_ms=99999999, all_completed=True, n=6)}, [3], None),
+    ]
+    for name, stats, measured, want in checks:
+        got, _ = select_strong_endpoint(stats, prereg, measured)
+        ok = got == want
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: chose {got}")
+        if not ok: bad += 1
+
+    # the rule must be blind to moves: it takes no move argument at all
+    import inspect
+    params = set(inspect.signature(select_strong_endpoint).parameters)
+    ok = params == {"stats", "prereg", "measured_depths"}
+    print(f"  {'PASS' if ok else 'FAIL'}  selection rule takes no move input (params {sorted(params)})")
+    if not ok: bad += 1
+
+    print("SELFTEST " + ("OK" if not bad else f"FAILED ({bad})"))
+    return bad == 0
+
+
+if __name__ == "__main__":
+    sys.exit(0 if selftest() else 2)

@@ -53,6 +53,13 @@ JAVA_SOURCES = (
 HELPER_MAIN = "net.schwagereit.t1j.E3bDump"
 PREFS_FACTORY = "e2probe.ScratchPrefsFactory"
 
+# The E4 preflight's GENERIC fixed-position query path: position and depth both
+# come from argv. Additive -- the E3b surface above is unchanged.
+PREFLIGHT_SOURCES = JAVA_SOURCES + (
+    JAVA_SRC_ROOT / "net" / "schwagereit" / "t1j" / "E4Preflight.java",
+)
+PREFLIGHT_MAIN = "net.schwagereit.t1j.E4Preflight"
+
 Pos = Tuple[int, int]      # ours: (row, col)
 T1jXY = Tuple[int, int]    # T1j:  (x, y)
 
@@ -192,20 +199,26 @@ def parse_dump(text: str) -> List[PlyState]:
     return out
 
 
-def compile_helper(javac: str, jar: str, out_dir: str) -> subprocess.CompletedProcess:
+def compile_helper(javac: str, jar: str, out_dir: str,
+                   sources: Optional[Sequence[Path]] = None) -> subprocess.CompletedProcess:
     """Compile the COMMITTED helper sources into ``out_dir``.
 
     T1j itself is neither modified nor rebuilt -- its jar is only a classpath
     entry. Raises if any committed source is missing, so a partial checkout fails
-    loudly instead of compiling something else.
+    loudly instead of compiling something else. ``sources`` defaults to the E3b
+    set (resolved at call time); pass ``PREFLIGHT_SOURCES`` to include the E4
+    preflight query path.
     """
-    missing = [str(p) for p in JAVA_SOURCES if not p.is_file()]
+    # resolved here, not in the signature: a def-time default would silently
+    # ignore a caller that reassigns JAVA_SOURCES
+    sources = JAVA_SOURCES if sources is None else sources
+    missing = [str(p) for p in sources if not p.is_file()]
     if missing:
         raise FileNotFoundError(f"committed helper sources missing: {missing}")
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     return subprocess.run(
         [javac, "-Xlint:-options", "-encoding", "UTF-8", "-cp", jar, "-d", out_dir]
-        + [str(p) for p in JAVA_SOURCES],
+        + [str(p) for p in sources],
         capture_output=True, text=True,
     )
 
@@ -252,3 +265,95 @@ def our_snapshot(state, *, transform: str = CANONICAL):
         lo, hi = (sa, sb) if sa <= sb else (sb, sa)
         bridges.add(f"{lo}|{hi}|{PLAYER_TO_T1J[owner]}")
     return pegs, bridges
+
+
+# --------------------------------------------------------------- E4 preflight
+
+@dataclass(frozen=True)
+class QueryRecord:
+    """One fixed-position query: what T1j returned, and whether the depth ran."""
+    q: int
+    requested_depth: int
+    move: Optional[Pos]          # ours (row, col); None only for the null sentinel
+    to_move: str                 # "Y" or "X"
+    usealphabeta: bool
+    current_max_ply: int
+    completed_depth: int
+    completed: bool
+    legal: bool
+    null_sentinel: bool
+    move_nr: int
+    eval_regime: str
+    elapsed_us: int
+
+
+_KV_RE = re.compile(r"(\w+)=(\S+)")
+
+
+def parse_queries(text: str, *, transform: str = CANONICAL) -> List[QueryRecord]:
+    """Parse QUERY lines. Unknown lines are ignored; malformed ones raise."""
+    out: List[QueryRecord] = []
+    for line in text.splitlines():
+        if not line.startswith("QUERY "):
+            continue
+        kv = dict(_KV_RE.findall(line))
+        missing = {"q", "requested_depth", "move_x", "move_y", "to_move", "usealphabeta",
+                   "currentMaxPly", "completed_depth", "completed", "legal",
+                   "null_sentinel", "moveNr", "eval_regime", "elapsed_us"} - set(kv)
+        if missing:
+            raise ValueError(f"QUERY line missing fields {sorted(missing)}: {line!r}")
+        x, y = int(kv["move_x"]), int(kv["move_y"])
+        sentinel = kv["null_sentinel"] == "true"
+        out.append(QueryRecord(
+            q=int(kv["q"]),
+            requested_depth=int(kv["requested_depth"]),
+            move=None if sentinel else to_ours(x, y, transform=transform),
+            to_move=kv["to_move"],
+            usealphabeta=kv["usealphabeta"] == "true",
+            current_max_ply=int(kv["currentMaxPly"]),
+            completed_depth=int(kv["completed_depth"]),
+            completed=kv["completed"] == "true",
+            legal=kv["legal"] == "true",
+            null_sentinel=sentinel,
+            move_nr=int(kv["moveNr"]),
+            eval_regime=kv["eval_regime"],
+            elapsed_us=int(kv["elapsed_us"]),
+        ))
+    return out
+
+
+def query(
+    moves: Sequence[Pos],
+    *,
+    depth: int,
+    java: str,
+    jar: str,
+    classes: str,
+    repeats: int = 1,
+    timeout_s: Optional[float] = None,
+    transform: str = CANONICAL,
+) -> Tuple[List[QueryRecord], List[PlyState], int, str]:
+    """Ask T1j for a move at ``depth`` from the frozen position ``moves``.
+
+    ``repeats`` > 1 rebuilds the position from scratch that many times inside ONE
+    jvm -- the E3a structure. Returns (query records, the position T1j searched
+    as parsed by :func:`parse_dump`, exit status, raw stdout).
+
+    ``depth`` is the requested FIXED ply. Wall-clock mode is not reachable from
+    here: the helper forces ``mdFixedPly = true``.
+    """
+    if depth < 3:
+        raise ValueError(
+            "T1j's deepening loop starts at currentMaxPly=3, so a requested depth "
+            f"below 3 executes no search at all; got {depth}")
+    xy = [to_t1j(r, c, transform=transform) for (r, c) in moves]
+    mode = ["query", str(depth)] if repeats == 1 else ["determinism", str(repeats), str(depth)]
+    args = [
+        java,
+        f"-Djava.util.prefs.PreferencesFactory={PREFS_FACTORY}",
+        "-Djava.awt.headless=true",
+        "-cp", f"{jar}:{classes}",
+        PREFLIGHT_MAIN,
+    ] + mode + [f"{x},{y}" for (x, y) in xy]
+    p = subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
+    return parse_queries(p.stdout, transform=transform), parse_dump(p.stdout), p.returncode, p.stdout

@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""Bind the compile-input digests the RUN recorded to the committed sources.
+
+Strict: every "compile input" line in the transcript must be a 64-hex digest with
+an absolute path inside the repo, and that digest must equal BOTH the digest file
+15 records for the path AND the sha256 of the file on disk. The four Java sources
+are the compile inputs; the adapter and its tests are additionally required to be
+present in 15, so the set is the full six.
+
+Every negative control CALLS check() on tampered inputs -- comparing two strings
+by hand would only show that unequal strings are unequal.
+"""
+import hashlib, re, sys
+
+REPO = "/Users/bill/projects/TwixT_Game/"
+LINE_RE = re.compile(r"compile input\s+([0-9a-f]{64})\s+(/\S+)")
+ROW_RE = re.compile(r"^([0-9a-f]{64})\s+([0-9a-f]{40})\s+(\S+)\s*$")
+EXPECT_PATHS = {
+    "scripts/GPU/alphazero/t1j_adapter.py",
+    "tests/test_t1j_adapter.py",
+    "scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java",
+    "scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java",
+    "scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java",
+    "scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java",
+}
+
+
+def transcript_inputs(text):
+    out = {}
+    for m in LINE_RE.finditer(text):
+        digest, path = m.group(1), m.group(2)
+        rel = path[len(REPO):] if path.startswith(REPO) else path
+        out.setdefault(rel, set()).add(digest)
+    return out
+
+
+def manifest_rows(text):
+    out = {}
+    for line in text.splitlines():
+        m = ROW_RE.match(line)
+        if m:
+            out[m.group(3)] = (m.group(1), m.group(2))
+    return out
+
+
+def check(transcript_text, manifest_text, reader):
+    log, bad = [], 0
+    tr, rows = transcript_inputs(transcript_text), manifest_rows(manifest_text)
+
+    if set(rows) != EXPECT_PATHS:
+        log.append(f"FAIL manifest paths {sorted(set(rows) ^ EXPECT_PATHS)} unexpected/missing")
+        bad += 1
+    if not tr:
+        log.append("FAIL transcript records no compile inputs"); bad += 1
+    if not set(tr) <= set(rows):
+        log.append(f"FAIL transcript names paths absent from the manifest: {sorted(set(tr) - set(rows))}")
+        bad += 1
+
+    for path in sorted(set(rows) | set(tr)):
+        row = rows.get(path)
+        digests = tr.get(path, set())
+        if len(digests) > 1:
+            log.append(f"FAIL  {path}: transcript carries {len(digests)} distinct digests")
+            bad += 1
+            continue
+        t = digests.pop() if digests else None
+        m = row[0] if row else None
+        try:
+            disk = hashlib.sha256(reader(path)).hexdigest()
+        except Exception as e:                       # noqa: BLE001
+            disk = f"UNREADABLE {e}"
+        agree = (m == disk) and (t is None or t == m)
+        log.append(f"{'PASS' if agree else 'FAIL'}  {path}"
+                   f"{'' if t else '   (not a compile input; manifest+disk only)'}")
+        log.append(f"        transcript {t}")
+        log.append(f"        manifest   {m}")
+        log.append(f"        on disk    {disk}")
+        if not agree: bad += 1
+    return bad, log
+
+
+if __name__ == "__main__":
+    d = sys.argv[1]
+    tx = open(f"{d}/00_transcript.txt").read()
+    mf = open(f"{d}/15_committed_sources.sha256.txt").read()
+    reader = lambda p: open(REPO + p, "rb").read()   # noqa: E731
+
+    print("SOURCE BINDING — transcript compile inputs vs manifest vs the files on disk\n")
+    bad, log = check(tx, mf, reader)
+    print("\n".join(log))
+    print("BINDING " + ("OK" if not bad else f"FAILED ({bad})"))
+
+    print("\nnegative controls — the SAME checker, run against tampered evidence:")
+    ADAPTER = "scripts/GPU/alphazero/t1j_adapter.py"
+    JAVA = "scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java"
+    real = manifest_rows(mf)[JAVA][0]
+    flip = ("f" if real[0] != "f" else "0") + real[1:]
+    ctl = 0
+
+    def control(name, want_reject, tx_=None, mf_=None, rd=None):
+        """A control that does not change ANY input the checker reads is not a
+        control. The first cut of this file flipped a digest with str.replace(_,1)
+        and hit the section-5 manifest block, which the checker never parses, so
+        it "passed" while testing nothing. Every tamper is now verified to move a
+        parsed field before its verdict counts."""
+        global ctl
+        if want_reject:
+            moved = (transcript_inputs(tx_ or tx) != transcript_inputs(tx),
+                     manifest_rows(mf_ or mf) != manifest_rows(mf),
+                     (rd or reader) is not reader)
+            if not any(moved):
+                print(f"  FAIL  {name}: INVALID CONTROL — the tamper changed nothing "
+                      f"the checker parses")
+                ctl += 1
+                return
+        n, lines = check(tx_ or tx, mf_ or mf, rd or reader)
+        rejected = n > 0
+        ok = rejected == want_reject
+        first = next((l for l in lines if l.startswith("FAIL")), "")
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: "
+              f"{'rejected' if rejected else 'accepted'} ({n})"
+              + (f"   [{first[:84]}]" if rejected else ""))
+        if not ok: ctl += 1
+
+    control("untouched evidence accepted (the acceptance control)", False)
+    # target the COMPILE-INPUT line specifically: the same digest also appears in
+    # the section-5 manifest block, which the checker deliberately does not parse
+    tampered_tx = LINE_RE.sub(
+        lambda m: m.group(0).replace(m.group(1), flip) if m.group(2).endswith("E4Preflight.java")
+        else m.group(0), tx)
+    control("transcript digest flipped on the COMPILE-INPUT line", True, tx_=tampered_tx)
+    control("manifest digest flipped for E4Preflight", True, mf_=mf.replace(real, flip))
+    control("manifest row for the ADAPTER dropped", True,
+            mf_="".join(l for l in mf.splitlines(True) if ADAPTER not in l))
+    control("file on disk tampered (one byte appended)", True,
+            rd=lambda p: reader(p) + b"\n")
+    control("transcript carries two digests for one path", True,
+            tx_=tx + f"\n  compile input  {flip}  {REPO}{JAVA}\n")
+    print("CONTROLS " + ("OK" if not ctl else f"FAILED ({ctl})"))
+    sys.exit(0 if not bad and not ctl else 3)

@@ -1,0 +1,36 @@
+SOURCE BINDING — transcript compile inputs vs manifest vs the files on disk
+
+PASS  scripts/GPU/alphazero/t1j_adapter.py   (not a compile input; manifest+disk only)
+        transcript None
+        manifest   8a81b72a1a3b695024aa5230ac644f78ff76c07354896fc4e52ac71fead94676
+        on disk    8a81b72a1a3b695024aa5230ac644f78ff76c07354896fc4e52ac71fead94676
+PASS  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+        transcript 559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03
+        manifest   559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03
+        on disk    559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03
+PASS  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+        transcript 09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244
+        manifest   09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244
+        on disk    09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244
+PASS  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+        transcript 281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+        manifest   281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+        on disk    281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc
+PASS  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+        transcript 23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3
+        manifest   23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3
+        on disk    23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3
+PASS  tests/test_t1j_adapter.py   (not a compile input; manifest+disk only)
+        transcript None
+        manifest   9bc77b56e5dc5aabadaf8b1ad18a10430b5d35a8f1edf9898060ff4fa36b2624
+        on disk    9bc77b56e5dc5aabadaf8b1ad18a10430b5d35a8f1edf9898060ff4fa36b2624
+BINDING OK
+
+negative controls — the SAME checker, run against tampered evidence:
+  PASS  untouched evidence accepted (the acceptance control): accepted (0)
+  PASS  transcript digest flipped on the COMPILE-INPUT line: rejected (1)   [FAIL  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java]
+  PASS  manifest digest flipped for E4Preflight: rejected (1)   [FAIL  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java]
+  PASS  manifest row for the ADAPTER dropped: rejected (1)   [FAIL manifest paths ['scripts/GPU/alphazero/t1j_adapter.py'] unexpected/missing]
+  PASS  file on disk tampered (one byte appended): rejected (6)   [FAIL  scripts/GPU/alphazero/t1j_adapter.py   (not a compile input; manifest+disk onl]
+  PASS  transcript carries two digests for one path: rejected (1)   [FAIL  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java: transcrip]
+CONTROLS OK

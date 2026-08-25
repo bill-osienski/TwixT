@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""E4 preflight determinism stage — the E3a structure at the SELECTED endpoint.
+
+20 independent constructions in one JVM plus 5 fresh JVMs = 25 queries. Every
+query must return the IDENTICAL LEGAL MOVE and the IDENTICAL COMPLETED DEPTH.
+Failure stops the pilot. NO GAMES; one position, one fixed depth.
+
+The endpoint is READ FROM THE SWEEP'S RESULTS, never passed in by hand, so it
+cannot drift from the cost rule that chose it.
+"""
+import json, subprocess, sys, time
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+sys.path.insert(0, __file__.rsplit("/", 1)[0])
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import t1j_adapter as A
+import preflight_lib as L
+
+java, jar, classes, prereg_path, prereg_sha, positions_path, results_path, pos_name = sys.argv[1:9]
+P = L.load_prereg(prereg_path, prereg_sha)
+
+sel = None
+for line in open(results_path):
+    r = json.loads(line)
+    if r.get("record_type") == "selection":
+        sel = r
+if sel is None:
+    print("FAIL no selection record in the sweep results"); sys.exit(3)
+depth = sel["strong_endpoint"]
+print(f"selected strong endpoint read from the sweep: mdPly={depth} "
+      f"(weak endpoint mdPly={sel['weak_endpoint']}, coincide={sel['endpoints_coincide']})")
+if depth is None:
+    print("FAIL no depth qualified; nothing to run determinism against"); sys.exit(3)
+
+positions = json.load(open(positions_path))
+moves = [tuple(m) for m in positions[pos_name]["moves"]]
+s = TwixtState(active_size=A.BOARD_N, to_move="red")
+for mv in moves:
+    s = s.apply_move(mv)
+print(f"position {pos_name}: {len(moves)} plies, to_move={s.to_move}, "
+      f"regime={positions[pos_name]['eval_regime']}")
+
+results = open(results_path, "a", buffering=1)
+TIMEOUT = P["budgets"]["per_query_timeout_s"]
+BUDGET = P["budgets"]["determinism_budget_s"]
+
+records, spent, fails = [], 0.0, []
+t0 = time.monotonic()
+print(f"\n20 independent constructions in ONE jvm at mdPly={depth}")
+recs, dumps, rc, _ = A.query(moves, depth=depth, java=java, jar=jar, classes=classes,
+                             repeats=20, timeout_s=TIMEOUT * 20)
+spent += time.monotonic() - t0
+if rc != 0 or len(recs) != 20:
+    print(f"FAIL shared jvm: exit {rc}, {len(recs)} records"); sys.exit(3)
+for r in recs:
+    records.append(("shared", r))
+print(f"  {len(recs)} records, exit 0, {spent:.1f}s")
+
+print(f"\n5 FRESH jvms, one query each at mdPly={depth}")
+for k in range(1, 6):
+    t1 = time.monotonic()
+    recs1, _, rc1, _ = A.query(moves, depth=depth, java=java, jar=jar, classes=classes,
+                               timeout_s=TIMEOUT)
+    spent += time.monotonic() - t1
+    if rc1 != 0 or len(recs1) != 1:
+        print(f"FAIL fresh jvm {k}: exit {rc1}, {len(recs1)} records"); sys.exit(3)
+    records.append((f"fresh{k}", recs1[0]))
+    print(f"  fresh jvm {k}: move={recs1[0].move} completed_depth={recs1[0].completed_depth}")
+
+moves_seen = {r.move for _, r in records}
+depths_seen = {r.completed_depth for _, r in records}
+legal_all = all(r.legal and not r.null_sentinel for _, r in records)
+in_our_engine = all(r.move in set(s.legal_moves()) for _, r in records if r.move)
+if len(records) != 25: fails.append(f"expected 25 records, got {len(records)}")
+if len(moves_seen) != 1: fails.append(f"moves not identical: {sorted(moves_seen)}")
+if depths_seen != {depth}: fails.append(f"completed depths not identical: {sorted(depths_seen)}")
+if not legal_all: fails.append("a query returned an illegal move or the null sentinel")
+if not in_our_engine: fails.append("a returned move is not legal in OUR engine")
+if spent > BUDGET: fails.append(f"determinism budget {BUDGET}s exceeded ({spent:.0f}s)")
+
+print(f"\n25 queries, {spent:.1f}s of {BUDGET}s budget")
+print(f"  distinct moves           {sorted(moves_seen)}   (want exactly one)")
+print(f"  distinct completed depth {sorted(depths_seen)}  (want exactly {{{depth}}})")
+print(f"  all legal, no sentinel   {legal_all}")
+print(f"  all legal in OUR engine  {in_our_engine}")
+results.write(json.dumps({
+    "record_type": "determinism", "position": pos_name, "depth": depth,
+    "n": len(records), "distinct_moves": sorted(str(m) for m in moves_seen),
+    "distinct_completed_depths": sorted(depths_seen), "all_legal": legal_all,
+    "legal_in_our_engine": in_our_engine, "wall_s": round(spent, 3),
+    "passed": not fails, "failures": fails}, sort_keys=True) + "\n")
+results.close()
+
+if fails:
+    print("\nDETERMINISM FAIL — the pilot stops:")
+    for f in fails: print("  " + f)
+    sys.exit(3)
+print("\nDETERMINISM PASS — 25/25 identical legal move and completed depth")
+sys.exit(0)

@@ -1,0 +1,20 @@
+selected strong endpoint read from the sweep: mdPly=6 (weak endpoint mdPly=3, coincide=False)
+position p06_e3a_center: 6 plies, to_move=red, regime=early_moveNr_lt_8
+
+20 independent constructions in ONE jvm at mdPly=6
+  20 records, exit 0, 11.0s
+
+5 FRESH jvms, one query each at mdPly=6
+  fresh jvm 1: move=(14, 11) completed_depth=6
+  fresh jvm 2: move=(14, 11) completed_depth=6
+  fresh jvm 3: move=(14, 11) completed_depth=6
+  fresh jvm 4: move=(14, 11) completed_depth=6
+  fresh jvm 5: move=(14, 11) completed_depth=6
+
+25 queries, 15.0s of 900s budget
+  distinct moves           [(14, 11)]   (want exactly one)
+  distinct completed depth [6]  (want exactly {6})
+  all legal, no sentinel   True
+  all legal in OUR engine  True
+
+DETERMINISM PASS — 25/25 identical legal move and completed depth

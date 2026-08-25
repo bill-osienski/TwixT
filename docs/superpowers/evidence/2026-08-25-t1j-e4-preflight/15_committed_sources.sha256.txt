@@ -1,0 +1,14 @@
+The adapter, its tests and all four Java sources are COMMITTED REPO CODE.
+They are bound here by hash rather than duplicated, so no second copy can
+drift from the bytes that compiled and ran. Paths are repo-relative.
+
+sha256                                                            git-blob-id                               path
+8a81b72a1a3b695024aa5230ac644f78ff76c07354896fc4e52ac71fead94676  6cf14f5ded26e5bc9ed589199e4e7deb2025f9b8  scripts/GPU/alphazero/t1j_adapter.py
+9bc77b56e5dc5aabadaf8b1ad18a10430b5d35a8f1edf9898060ff4fa36b2624  3a6b0bf779c1fa37d7b6289004ad064c6275b916  tests/test_t1j_adapter.py
+23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3  4a9f2a68103a7bbc16f89b0bf1744e00196e2fe3  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc  9cc72ae10b089e5e9e5df60abb310e9dec69725f  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  ef7914891ad6ea8be29fd70cee657a23190f00d7  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  9c10fbbb14f4f6a74a07c404c0499d16ae0bd119  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+
+The git-blob-id column lets the COMMIT be checked later with no rerun:
+  git rev-parse <commit>:<path>   must equal the blob id on that row.

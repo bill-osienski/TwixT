@@ -1,0 +1,95 @@
+preregistration verified: 9bddafe382407268f75ee1bf8dd9df8328900efe7104b289fcd9f273d2f9f910
+  per-query timeout 120s   sweep budget 3600s   max_query_ms 30000
+
+preflight comparator self-test (negative controls)
+  PASS  baseline accepted
+  PASS  wrong requested depth rejected   [requested_depth 4 != 5]
+  PASS  usealphabeta false rejected   [usealphabeta false — no search ran]
+  PASS  currentMaxPly != depth+1 rejected (depth NOT completed)   [currentMaxPly 4 != 6 — depth not completed]
+  PASS  completed=false rejected   [helper reported completed=false]
+  PASS  null sentinel rejected   [returned the null sentinel (-1,-1)]
+  PASS  T1j-illegal move rejected   [T1j reports its own move illegal]
+  PASS  move illegal in OUR engine rejected   [move (23, 23) is not legal in OUR engine]
+  PASS  side-to-move divergence rejected   [side to move X != Y]
+  PASS  ply divergence rejected   [moveNr 7 != our ply 6]
+  PASS  searched != bound position rejected   [searched position differs from the bound position on pegs]
+dial classification
+  PASS  all identical + completed -> INCONCLUSIVE, not 'dead': no_observed_move_response_inconclusive
+  PASS  one changed move -> observable response: observable_move_response
+  PASS  a depth did not complete -> dial failure: dial_failure
+strong-endpoint selection (cost only)
+  PASS  deepest qualifying depth chosen: chose 5
+  PASS  a depth that did not complete is rejected: chose 3
+  PASS  over max_query_ms rejected: chose 3
+  PASS  determinism projection over budget rejected (25 * 36001ms > 900s): chose 3
+  PASS  nothing qualifies -> None: chose None
+  PASS  selection rule takes no move input (params ['measured_depths', 'prereg', 'stats'])
+SELFTEST OK
+
+binding every position through the E3b adapter at ply_cap=280
+  OK  p06_e3a_center     6 plies  to_move=red   regime=early_moveNr_lt_8
+  OK  p07_offset         7 plies  to_move=black regime=early_moveNr_lt_8
+  OK  p08_spread         8 plies  to_move=red   regime=normal
+  OK  p09_contact        9 plies  to_move=black regime=normal
+  OK  p12_two_wings     12 plies  to_move=red   regime=normal
+  OK  p14_bridged       14 plies  to_move=red   regime=normal
+
+ascending depth sweep — one query per (position, depth)
+  p06_e3a_center   depth=3  move=(15, 15)  completed_depth=3  engine=     37.8ms  wall=  0.15s
+  p07_offset       depth=3  move=(17, 15)  completed_depth=3  engine=     41.7ms  wall=  0.17s
+  p08_spread       depth=3  move=(15, 13)  completed_depth=3  engine=    120.8ms  wall=  0.24s
+  p09_contact      depth=3  move=(19, 11)  completed_depth=3  engine=     39.3ms  wall=  0.16s
+  p12_two_wings    depth=3  move=(19, 11)  completed_depth=3  engine=     12.2ms  wall=  0.14s
+  p14_bridged      depth=3  move=(20, 12)  completed_depth=3  engine=     11.9ms  wall=  0.14s
+  p06_e3a_center   depth=4  move=(14, 11)  completed_depth=4  engine=     68.8ms  wall=  0.20s
+  p07_offset       depth=4  move=(11, 9)  completed_depth=4  engine=     77.8ms  wall=  0.20s
+  p08_spread       depth=4  move=(10, 11)  completed_depth=4  engine=    203.3ms  wall=  0.33s
+  p09_contact      depth=4  move=(5, 12)  completed_depth=4  engine=     76.1ms  wall=  0.19s
+  p12_two_wings    depth=4  move=(17, 10)  completed_depth=4  engine=     19.9ms  wall=  0.14s
+  p14_bridged      depth=4  move=(20, 12)  completed_depth=4  engine=     21.8ms  wall=  0.15s
+  p06_e3a_center   depth=5  move=(14, 11)  completed_depth=5  engine=    191.6ms  wall=  0.32s
+  p07_offset       depth=5  move=(11, 9)  completed_depth=5  engine=    255.2ms  wall=  0.37s
+  p08_spread       depth=5  move=(8, 10)  completed_depth=5  engine=    506.5ms  wall=  0.63s
+  p09_contact      depth=5  move=(19, 11)  completed_depth=5  engine=    190.5ms  wall=  0.31s
+  p12_two_wings    depth=5  move=(19, 11)  completed_depth=5  engine=     44.9ms  wall=  0.16s
+  p14_bridged      depth=5  move=(20, 12)  completed_depth=5  engine=     42.2ms  wall=  0.16s
+  p06_e3a_center   depth=6  move=(14, 11)  completed_depth=6  engine=    677.6ms  wall=  0.80s
+  p07_offset       depth=6  move=(11, 9)  completed_depth=6  engine=   1197.1ms  wall=  1.32s
+  p08_spread       depth=6  move=(8, 10)  completed_depth=6  engine=   2749.3ms  wall=  2.88s
+  p09_contact      depth=6  move=(19, 11)  completed_depth=6  engine=    539.9ms  wall=  0.67s
+  p12_two_wings    depth=6  move=(19, 11)  completed_depth=6  engine=    101.3ms  wall=  0.23s
+  p14_bridged      depth=6  move=(20, 12)  completed_depth=6  engine=     94.0ms  wall=  0.21s
+  p06_e3a_center   depth=7  move=(13, 13)  completed_depth=7  engine=   4124.9ms  wall=  4.24s
+  p07_offset       depth=7  move=(17, 9)  completed_depth=7  engine=   7616.5ms  wall=  7.74s
+  p08_spread       depth=7  move=(8, 10)  completed_depth=7  engine=  32054.5ms  wall= 32.18s
+  p09_contact      depth=7  move=(19, 11)  completed_depth=7  engine=   2295.5ms  wall=  2.41s
+  p12_two_wings    depth=7  move=(19, 11)  completed_depth=7  engine=    247.2ms  wall=  0.36s
+  p14_bridged      depth=7  move=(20, 12)  completed_depth=7  engine=    223.8ms  wall=  0.34s
+
+sweep wall time 57.5s of 3600s budget; depths measured [3, 4, 5, 6, 7]
+
+DIAL RESPONSE: observable_move_response
+  p06_e3a_center: depth 4 -> (14, 11) vs depth 3 -> (15, 15)
+  p06_e3a_center: depth 5 -> (14, 11) vs depth 3 -> (15, 15)
+  p06_e3a_center: depth 6 -> (14, 11) vs depth 3 -> (15, 15)
+  p06_e3a_center: depth 7 -> (13, 13) vs depth 3 -> (15, 15)
+  p07_offset: depth 4 -> (11, 9) vs depth 3 -> (17, 15)
+  p07_offset: depth 5 -> (11, 9) vs depth 3 -> (17, 15)
+  p07_offset: depth 6 -> (11, 9) vs depth 3 -> (17, 15)
+  p07_offset: depth 7 -> (17, 9) vs depth 3 -> (17, 15)
+  p08_spread: depth 4 -> (10, 11) vs depth 3 -> (15, 13)
+  p08_spread: depth 5 -> (8, 10) vs depth 3 -> (15, 13)
+  p08_spread: depth 6 -> (8, 10) vs depth 3 -> (15, 13)
+  p08_spread: depth 7 -> (8, 10) vs depth 3 -> (15, 13)
+  p09_contact: depth 4 -> (5, 12) vs depth 3 -> (19, 11)
+  p12_two_wings: depth 4 -> (17, 10) vs depth 3 -> (19, 11)
+
+STRONG-ENDPOINT SELECTION (cost only; moves are not an input)
+  depth 3: QUALIFIES — ok every position completed; ok max 121ms <= timeout 120000ms; ok max 121ms <= max_query_ms 30000ms; ok projected determinism 25*121ms <= 900000ms
+  depth 4: QUALIFIES — ok every position completed; ok max 203ms <= timeout 120000ms; ok max 203ms <= max_query_ms 30000ms; ok projected determinism 25*203ms <= 900000ms
+  depth 5: QUALIFIES — ok every position completed; ok max 507ms <= timeout 120000ms; ok max 507ms <= max_query_ms 30000ms; ok projected determinism 25*507ms <= 900000ms
+  depth 6: QUALIFIES — ok every position completed; ok max 2749ms <= timeout 120000ms; ok max 2749ms <= max_query_ms 30000ms; ok projected determinism 25*2749ms <= 900000ms
+  depth 7: rejected — ok every position completed; ok max 32055ms <= timeout 120000ms; NO max 32055ms <= max_query_ms 30000ms; ok projected determinism 25*32055ms <= 900000ms
+  -> weak endpoint mdPly=3   strong endpoint mdPly=6
+
+SWEEP OK
