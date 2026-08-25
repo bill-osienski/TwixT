@@ -1,0 +1,85 @@
+== 1. checkpoint identity, both digests, before anything is loaded ==
+  PASS   sha1 209cf2d4fd24a48553d259dd71b4954867b9473e
+  PASS   sha256 34c79c0d85a837f0281e90bb...
+  PASS   size 7524333 bytes
+
+== 2. load the pinned reference ONCE, with compile=True ==
+  evaluator LocalGPUEvaluator id=0x10a7af620
+  PASS   carries its checkpoint identity
+  PASS   carries the pinned sha1
+  PASS   compile=True
+  PASS   graph not yet compiled (lazy, before any inference)
+
+== 3. ONE evaluator serves every synthetic construction ==
+  PASS   6 agents, 1 evaluator, identical object
+  PASS   each agent seeded distinctly
+  PASS   NEGATIVE CONTROL: a rebuilt evaluator is not mistaken for the reused one
+
+== 4. THE ONE REAL CALL — synthetic seed, one frozen position ==
+  position p06_e3a_center: 6 plies, to_move=red, ply=6
+  PASS   agent colour red matches side to move
+  PASS   the single real call completed (validate_ply passed)
+  PASS   returned move (14, 13) is legal in our engine
+  PASS   search RNG advanced
+  PASS   readout RNG advanced
+  PASS   exactly one move made by this agent
+  PASS   the compiled graph was built by that inference
+  move=(14, 13)  evaluator id still 0x10a7af620  agent evaluator is EV: True
+  PASS   the call used the ONE loaded evaluator
+
+== 5. scheduled seeds are inert ==
+  PASS   canonical plan carries 32 tasks
+  PASS   all 32 scheduled seeds refused by the runner
+  PASS   rng_witness refuses to draw from a scheduled seed
+
+== 6. the canonical schedule cannot be injected or reshaped ==
+  PASS   plan verifies against its pinned sha256
+  PASS   public run() accepts paths only
+  PASS   NEGATIVE CONTROL: addition refused
+  PASS   NEGATIVE CONTROL: removal refused
+  PASS   NEGATIVE CONTROL: reordering refused
+  PASS   NEGATIVE CONTROL: duplicate refused
+  PASS   NEGATIVE CONTROL: seed edit refused
+  PASS   NEGATIVE CONTROL: reference edit refused
+  PASS   NEGATIVE CONTROL: mode 'screen' refused — the 32-game screen is unauthorized
+  PASS   NEGATIVE CONTROL: mode 'games' refused — the 32-game screen is unauthorized
+
+== 7. THE PRODUCTION PLAY LOOP, with fake agents on the real evaluator ==
+  PASS   loop reached a real terminal win
+  PASS   plies and anchor points correct
+  PASS   ONE agent per colour per task, not one per ply
+  PASS   the loop alternated colours
+  PASS   the per-ply binder was called after every applied move
+  PASS   the external ply cap applied
+  PASS   a cap termination scores as a draw
+  PASS   NEGATIVE CONTROL: an illegal move is refused BEFORE it is applied
+  PASS   NEGATIVE CONTROL: the default binder refuses — the screen must bind every ply
+
+== 8. the runner end to end: recording, abort, cleanup, early stop ==
+  PASS   runner completed
+  PASS   EARLY STOP fired: 2 played, 1 skipped
+  PASS   the early stop was recorded
+  PASS   cleanup called once per PLAYED task
+  PASS   verdict IN_BAND
+  PASS   NEGATIVE CONTROL: a REBUILT evaluator ABORTS the run
+  PASS   the abort is durably recorded
+  PASS   NO verdict after an abort
+  PASS   NEGATIVE CONTROL: a cleanup failure aborts, classified as such
+  PASS   a NEW results file is accepted
+  PASS   NEGATIVE CONTROL: an EXISTING results file is refused (no silent append)
+  PASS   the existing file was left untouched
+
+== 9. THE COMMAND ENTRY POINT, qualified in FRESH SUBPROCESSES ==
+  PASS   --help exits 0 and documents the ban
+  PASS   a clean public run exits 0 (got 0)
+  PASS   --mode screen exits 2 (got 2)
+  PASS   an existing results file exits 2 (got 2)
+  PASS   a tampered plan exits 2 (got 2)
+  PASS   a missing plan exits 2 (got 2)
+
+== 10. postconditions ==
+  PASS   evaluator identity intact after cleanup
+  PASS   still exactly ONE real agent call in this process
+  PASS   the screen's seed block is still unspent
+
+QUALIFICATION PASS
