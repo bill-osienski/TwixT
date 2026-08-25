@@ -1,0 +1,44 @@
+comparator self-test (negative controls)
+  PASS  baseline accepted
+  PASS  peg divergence rejected   [st[cap=280] ply 3: pegs differ (ours-only [], t1j-only ['1,1,Y'])]
+  PASS  coordinate divergence rejected   [st[cap=280] ply 2: pegs differ (ours-only ['5,5,Y'], t1j-only ['9,9,Y'])]
+  PASS  player divergence rejected   [st[cap=280] ply 3: pegs differ (ours-only ['5,5,Y', '6,7,Y'], t1j-only ['5,5,X]
+  PASS  bridge/crossing divergence rejected   [st[cap=280] ply 3: bridges differ (ours-only [], t1j-only ['1,1|2,3|Y'])]
+  PASS  HISTORY divergence rejected   [st[cap=280] ply 3: T1j history [(20, 20), (6, 7)] != submitted [(20, 20), (6, ]
+  PASS  LEGAL-SET divergence rejected   [st[cap=280] ply 2: legal set differs (|ours|=526 |t1j|=525, ours-only [(7, 8)]]
+  PASS  side-to-move divergence rejected   [st[cap=280] ply 3: side to move Y != X]
+  PASS  ply divergence rejected   [st[cap=280] ply 3: ply T1j 4 != ours 3]
+  PASS  terminal divergence rejected   [st[cap=280] ply 3: terminal/winner T1j Y=True X=False != ours None]
+  PASS  truncated dump rejected   [st[cap=280]: ply-count T1j 3 != ours 4]
+  PASS  MUTATED CAP rejected (T1j ran to 280, compared at cap 2)   [st[cap=2]: ply-count T1j 4 != ours 3]
+  PASS  compare ply_cap is required (keyword-only, no default)
+  PASS  replay ply_cap is required (keyword-only, no default)
+  PASS  terminal_with_cap ply_cap is required (keyword-only, no default)
+SELFTEST OK — every injected divergence rejected
+
+adapter: scripts.GPU.alphazero.t1j_adapter  canonical transform=identity  surviving orbit=['identity', 'flip_x', 'flip_y', 'flip_both']
+
+lockstep over every fixture, at MULTIPLE EXTERNAL CAPS
+  OK  crossing   cap=0    plies_t1j=0   plies_ours=0   term_with_cap t1j=True  ours=True  winner=None
+  OK  crossing   cap=1    plies_t1j=1   plies_ours=1   term_with_cap t1j=True  ours=True  winner=None
+  OK  crossing   cap=3    plies_t1j=3   plies_ours=3   term_with_cap t1j=True  ours=True  winner=None
+  OK  crossing   cap=6    plies_t1j=6   plies_ours=6   term_with_cap t1j=True  ours=True  winner=None
+  OK  crossing   cap=7    plies_t1j=7   plies_ours=7   term_with_cap t1j=True  ours=True  winner=None
+  OK  crossing   cap=12   plies_t1j=7   plies_ours=7   term_with_cap t1j=False ours=False winner=None
+  OK  crossing   cap=280  plies_t1j=7   plies_ours=7   term_with_cap t1j=False ours=False winner=None
+  OK  red_win    cap=0    plies_t1j=0   plies_ours=0   term_with_cap t1j=True  ours=True  winner=None
+  OK  red_win    cap=1    plies_t1j=1   plies_ours=1   term_with_cap t1j=True  ours=True  winner=None
+  OK  red_win    cap=3    plies_t1j=3   plies_ours=3   term_with_cap t1j=True  ours=True  winner=None
+  OK  red_win    cap=24   plies_t1j=24  plies_ours=24  term_with_cap t1j=True  ours=True  winner=None
+  OK  red_win    cap=25   plies_t1j=25  plies_ours=25  term_with_cap t1j=True  ours=True  winner=red
+  OK  red_win    cap=30   plies_t1j=25  plies_ours=25  term_with_cap t1j=True  ours=True  winner=red
+  OK  red_win    cap=280  plies_t1j=25  plies_ours=25  term_with_cap t1j=True  ours=True  winner=red
+  OK  black_win  cap=0    plies_t1j=0   plies_ours=0   term_with_cap t1j=True  ours=True  winner=None
+  OK  black_win  cap=1    plies_t1j=1   plies_ours=1   term_with_cap t1j=True  ours=True  winner=None
+  OK  black_win  cap=3    plies_t1j=3   plies_ours=3   term_with_cap t1j=True  ours=True  winner=None
+  OK  black_win  cap=25   plies_t1j=25  plies_ours=25  term_with_cap t1j=True  ours=True  winner=None
+  OK  black_win  cap=26   plies_t1j=26  plies_ours=26  term_with_cap t1j=True  ours=True  winner=black
+  OK  black_win  cap=31   plies_t1j=26  plies_ours=26  term_with_cap t1j=True  ours=True  winner=black
+  OK  black_win  cap=280  plies_t1j=26  plies_ours=26  term_with_cap t1j=True  ours=True  winner=black
+
+E3b-2 QUALIFICATION PASS — agreement on every observable, every ply, every cap

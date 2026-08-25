@@ -1,0 +1,23 @@
+  PASS   T1j smoke exit 0
+  PASS   SMOKE line emitted
+  T1j returned (x=15, y=15) usealphabeta=true currentMaxPly=4
+  PASS   not the null sentinel
+  PASS   alpha-beta completed fixed ply 3
+
+== validate in OUR engine BEFORE applying anywhere ==
+  T1j (x=15, y=15) -> ours (row=15, col=15)
+  PASS   our side to move red, matching T1j Y
+  PASS   OUR engine accepts the move as legal
+
+== apply to BOTH sides, compare resulting state ==
+  PASS   T1j replay-with-move exit 0
+  PASS   pegs agree (7)
+  PASS   bridges agree (1)
+  PASS   side to move agrees
+  PASS   ply agrees (7), each derived independently
+  PASS   T1j ordered history matches submitted sequence
+  PASS   legal sets agree (521)
+  PASS   neither engine terminal
+  PASS   cap-aware terminality agrees
+
+SMOKE PASS

@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""Asserting preference-fingerprint comparison. Exits nonzero on any real
+difference. The BEFORE/AFTER label line is normalized away deliberately -- it is
+the only field expected to differ, and a plain `diff` fails on it, which is why
+attempt 1's check could not bind."""
+import sys
+def fields(path):
+    out = {}
+    for line in open(path):
+        line = line.rstrip("\n")
+        if line.startswith("host preference store fingerprint"):
+            continue                      # the BEFORE/AFTER label, normalized away
+        if ":" in line:
+            k, v = line.split(":", 1)
+            out[k.strip()] = v.strip()
+        elif line.strip():
+            out.setdefault("_extra", []).append(line.strip())
+    return out
+a, b = fields(sys.argv[1]), fields(sys.argv[2])
+bad = []
+for k in sorted(set(a) | set(b)):
+    if a.get(k) != b.get(k):
+        bad.append(f"{k}: BEFORE {a.get(k)!r} != AFTER {b.get(k)!r}")
+if not a:
+    bad.append("no fields parsed from BEFORE fingerprint")
+if bad:
+    print("PREFS CHECK FAIL")
+    for x in bad: print("  " + x)
+    sys.exit(3)
+print(f"PREFS CHECK PASS — {len(a)} normalized fields identical "
+      f"(label line excluded by design)")
+sys.exit(0)

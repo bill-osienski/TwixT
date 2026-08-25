@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""E3b attempt 2 — lockstep comparator, built on the COMMITTED adapter module.
+
+Closes attempt 1's binding gaps:
+  * CAP SEMANTICS are compared, not assumed. Neither side is pre-truncated;
+    each engine stops by its OWN ply against the same external cap, and
+    terminal_with_cap is derived independently per engine, at several caps
+    including 0 and exactly at the natural win ply.
+  * T1j's ORDERED HISTORY is read back through Match.getMoveX/getMoveY and
+    compared against the submitted sequence -- not echoed from the arguments.
+    LIMITATION, stated: our TwixtState keeps no ordered history (only pegs,
+    bridges, ply), so this binds T1J'S RECORD against the sequence both engines
+    were given; it is not a cross-check of two independent histories.
+  * The full LEGAL-MOVE SET is compared after every ply.
+  * Fixtures end exactly on the winning move.
+"""
+import json, sys
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import t1j_adapter as A
+
+N = A.BOARD_N
+FAILS = []
+def fail(m): FAILS.append(m)
+
+def our_states(moves, *, ply_cap):
+    """Advance OUR engine, stopping by OUR OWN ply against the same external cap."""
+    if ply_cap is None: raise TypeError("ply_cap is required")
+    s = TwixtState(active_size=N, to_move="red")
+    out = [s]
+    for mv in moves:
+        if s.ply >= ply_cap:
+            break
+        s = s.apply_move(tuple(mv))
+        out.append(s)
+    return out
+
+def compare(name, moves, plies, *, ply_cap, transform):
+    if ply_cap is None: raise TypeError("ply_cap is required")
+    d = []
+    ours = our_states(moves, ply_cap=ply_cap)
+    if len(plies) != len(ours):
+        return [f"{name}[cap={ply_cap}]: ply-count T1j {len(plies)} != ours {len(ours)}"]
+    submitted = []
+    for i, (st, tp) in enumerate(zip(ours, plies)):
+        tag = f"{name}[cap={ply_cap}] ply {i}"
+        opegs, obr = A.our_snapshot(st, transform=transform)
+        if opegs != tp.pegs:
+            d.append(f"{tag}: pegs differ (ours-only {sorted(opegs-tp.pegs)[:2]}, t1j-only {sorted(tp.pegs-opegs)[:2]})")
+        if obr != tp.bridges:
+            d.append(f"{tag}: bridges differ (ours-only {sorted(obr-tp.bridges)[:2]}, t1j-only {sorted(tp.bridges-obr)[:2]})")
+        if tp.next_player != A.PLAYER_TO_T1J[st.to_move]:
+            d.append(f"{tag}: side to move {tp.next_player} != {A.PLAYER_TO_T1J[st.to_move]}")
+        if tp.ply != st.ply:                       # derived independently on each side
+            d.append(f"{tag}: ply T1j {tp.ply} != ours {st.ply}")
+        if i > 0:
+            submitted.append(A.to_t1j(*moves[i-1], transform=transform))
+        if list(tp.history) != submitted:
+            d.append(f"{tag}: T1j history {list(tp.history)[-2:]} != submitted {submitted[-2:]}")
+        ol = {A.to_t1j(r, c, transform=transform) for (r, c) in st.legal_moves()}
+        if ol != tp.legal:
+            d.append(f"{tag}: legal set differs (|ours|={len(ol)} |t1j|={len(tp.legal)}, "
+                     f"ours-only {sorted(ol-tp.legal)[:2]}, t1j-only {sorted(tp.legal-ol)[:2]})")
+        ow = st.winner()
+        if {"Y": tp.term_y, "X": tp.term_x} != {"Y": ow == "red", "X": ow == "black"}:
+            d.append(f"{tag}: terminal/winner T1j Y={tp.term_y} X={tp.term_x} != ours {ow}")
+        t_cap = A.terminal_with_cap(tp.ply, tp.term_y or tp.term_x, ply_cap=ply_cap)
+        o_cap = A.terminal_with_cap(st.ply, ow is not None, ply_cap=ply_cap)
+        if t_cap != o_cap:
+            d.append(f"{tag}: terminal_with_cap T1j {t_cap} != ours {o_cap}")
+    return d
+
+# ------------------------------------------------------------------ self-test
+def selftest(java, jar, classes):
+    print("comparator self-test (negative controls)")
+    tf = A.CANONICAL
+    moves = [(5,5),(20,20),(7,6)]
+    plies, rc, _ = A.replay(moves, ply_cap=280, java=java, jar=jar, classes=classes, transform=tf)
+    bad = 0
+    def case(nm, mutate, want_ok):
+        nonlocal bad
+        import copy, dataclasses
+        pl = [dataclasses.replace(p) for p in plies]
+        mutate(pl)
+        d = compare("st", moves, pl, ply_cap=280, transform=tf)
+        ok = not d
+        good = (ok == want_ok)
+        print(f"  {'PASS' if good else 'FAIL'}  {nm}" + ("" if ok else f"   [{d[0][:78]}]"))
+        if not good: bad += 1
+    import dataclasses
+    case("baseline accepted", lambda p: None, True)
+    case("peg divergence rejected",      lambda p: p.__setitem__(3, dataclasses.replace(p[3], pegs=p[3].pegs | {"1,1,Y"})), False)
+    case("coordinate divergence rejected", lambda p: p.__setitem__(2, dataclasses.replace(p[2], pegs={"9,9,Y" if s.endswith(",Y") else s for s in p[2].pegs})), False)
+    case("player divergence rejected",   lambda p: p.__setitem__(3, dataclasses.replace(p[3], pegs={s.replace(",Y", ",X") for s in p[3].pegs})), False)
+    case("bridge/crossing divergence rejected", lambda p: p.__setitem__(3, dataclasses.replace(p[3], bridges=p[3].bridges | {"1,1|2,3|Y"})), False)
+    case("HISTORY divergence rejected",  lambda p: p.__setitem__(3, dataclasses.replace(p[3], history=((9,9),)+p[3].history[1:])), False)
+    case("LEGAL-SET divergence rejected", lambda p: p.__setitem__(2, dataclasses.replace(p[2], legal=set(list(p[2].legal)[:-1]))), False)
+    case("side-to-move divergence rejected", lambda p: p.__setitem__(3, dataclasses.replace(p[3], next_player="Y" if p[3].next_player=="X" else "X")), False)
+    case("ply divergence rejected",      lambda p: p.__setitem__(3, dataclasses.replace(p[3], ply=p[3].ply + 1)), False)
+    case("terminal divergence rejected", lambda p: p.__setitem__(3, dataclasses.replace(p[3], term_y=True)), False)
+    case("truncated dump rejected",      lambda p: p.pop(), False)
+    # cap semantics: a MUTATED cap on one side only must be caught
+    d = compare("st", moves, plies, ply_cap=2, transform=tf)
+    ok = bool(d)
+    print(f"  {'PASS' if ok else 'FAIL'}  MUTATED CAP rejected (T1j ran to 280, compared at cap 2)"
+          + (f"   [{d[0][:70]}]" if d else ""))
+    if not ok: bad += 1
+    for fn, nm in ((lambda: compare("x", moves, plies, transform=tf), "compare"),
+                   (lambda: A.replay(moves, java=java, jar=jar, classes=classes), "replay"),
+                   (lambda: A.terminal_with_cap(1, False), "terminal_with_cap")):
+        try:
+            fn(); print(f"  FAIL  {nm} ply_cap is required"); bad += 1
+        except TypeError:
+            print(f"  PASS  {nm} ply_cap is required (keyword-only, no default)")
+    if bad: print(f"SELFTEST FAILED ({bad})"); return False
+    print("SELFTEST OK — every injected divergence rejected")
+    return True
+
+# ------------------------------------------------------------------ main
+if __name__ == "__main__":
+    java, jar, classes, fixtures_file = sys.argv[1:5]
+    if not selftest(java, jar, classes): sys.exit(2)
+    fixtures = json.load(open(fixtures_file))
+    print()
+    print(f"adapter: {A.__name__}  canonical transform={A.CANONICAL}  "
+          f"surviving orbit={list(A.SURVIVING_TRANSFORMS)}")
+    print()
+    print("lockstep over every fixture, at MULTIPLE EXTERNAL CAPS")
+    for fname, fx in fixtures.items():
+        mvs = [tuple(m) for m in fx["moves"]]
+        n = len(mvs)
+        caps = sorted({0, 1, 3, n - 1, n, n + 5, 280})
+        for cap in caps:
+            if cap < 0: continue
+            plies, rc, out = A.replay(mvs, ply_cap=cap, java=java, jar=jar,
+                                      classes=classes, transform=A.CANONICAL)
+            if rc != 0:
+                fail(f"{fname}[cap={cap}]: T1j exit {rc}"); continue
+            d = compare(fname, mvs, plies, ply_cap=cap, transform=A.CANONICAL)
+            last_t = plies[-1]
+            ours = our_states(mvs, ply_cap=cap)[-1]
+            tc = A.terminal_with_cap(last_t.ply, last_t.term_y or last_t.term_x, ply_cap=cap)
+            oc = A.terminal_with_cap(ours.ply, ours.winner() is not None, ply_cap=cap)
+            status = "OK " if not d else "DIV"
+            print(f"  {status} {fname:10s} cap={cap:<4d} plies_t1j={last_t.ply:<3d} plies_ours={ours.ply:<3d} "
+                  f"term_with_cap t1j={str(tc):5s} ours={str(oc):5s} winner={ours.winner()}")
+            for x in d: fail(x)
+    print()
+    if FAILS:
+        print(f"E3b-2 QUALIFICATION FAIL — {len(FAILS)} divergence(s):")
+        for f in FAILS[:15]: print("  " + f)
+        sys.exit(3)
+    print("E3b-2 QUALIFICATION PASS — agreement on every observable, every ply, every cap")
+    sys.exit(0)

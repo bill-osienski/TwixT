@@ -1,0 +1,20 @@
+E3b attempt 2 evidence manifest — SELF-EXCLUDING
+This manifest covers every file in this directory EXCEPT itself; a
+manifest cannot contain its own hash. Verify with:
+  cd docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt2 && shasum -a 256 -c <(grep -E '^[0-9a-f]{64}' A3_MANIFEST.sha256.txt | awk '{print $1"  "$3}')
+
+files covered: 13   generated: 2026-08-24
+
+9383519e9dc4ffd940f145334c7ce3e41e439d903f8b0e976e96c2aeb3c9c3b2     17465  90_transcript.txt
+ea59770ebae4c92d68ea98db5e8db22e258c54488b84227b255cf622f58ae321       433  91_prefs_before.txt
+ee2c5f0f81f0338a6d62bfde10dab4c5df65b4c2fdec48b45bd2f23eb218c85b      1378  92_legality.txt
+2ad568a14a48e89407add44193d4114efe777c6fe927d254dfc0612d2fc25709      2018  93_fixtures.json
+ecb2af4bd7ecdf82525277813238eb5d01c1280677e4bebc2d5a0c42cffb1bb7      3878  94_qualification.txt
+0fd024d0ae9f40874f201f3cd8195abdfca2cf9cdc324e91b38f212e62ca87ee       772  95_smoke.txt
+cb8ca8199677b329ea9b29cd193963ec0152a90ba555facd3a8e3a71d2b4bf19       432  96_prefs_after.txt
+bc4408f51808f35d4b2a8af8ae50f37e913997f380e060856f7821b9ac96725f     11089  97_helper_E3bDump.java.txt
+20bf91a75bc5c3babe4501db45daeb8cd3f2c4d971997d0e406d5b6f56e68eec      8532  98_comparator_e3b2_compare.py.txt
+e7518accc825115821f8518725036b96c46369f9f7a1383d9aa4deffe240a9eb      2998  99_smoke_e3b2_smoke.py.txt
+e350a36f9706e1a1b41d281b20e6cfaa83153a1439d0a45a9ab230d5670acf8d      3317  A0_build_fixtures.py.txt
+8ab023371146513959765cc9bd59f4b1b8785ef11b185b9620e899d01b241816      1221  A1_check_prefs.py.txt
+e951b41b5cd234c69df9422bbe1f69e0111f63059d090ed2ed2ce0a2c3c72bcf      4780  A2_driver_run_all.sh.txt

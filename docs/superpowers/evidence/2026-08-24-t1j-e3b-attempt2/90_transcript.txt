@@ -1,0 +1,209 @@
+E3b ATTEMPT 2 — ADAPTER QUALIFICATION. Substantive commands captured as they ran.
+date 2026-08-25T02:54:01Z   host Darwin 25.5.0 arm64
+
+########## 1. IDENTITY GATE (compared) ##########
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j rev-parse HEAD
+    | b572ed21f1f6b08491f69db32f531fc4b5f50fcd
+    [exit 0]
+
+    MATCH  clone
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j status --porcelain
+    | <no stdout>
+    [exit 0]
+
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar | cut -d' ' -f1
+    | 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+    [exit 0]
+
+    MATCH  jar
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz | cut -d' ' -f1
+    | 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8
+    [exit 0]
+
+    MATCH  jdk archive
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java | cut -d' ' -f1
+    | af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0
+    [exit 0]
+
+    MATCH  jvm bin/java
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/lib/modules | cut -d' ' -f1
+    | 28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951
+    [exit 0]
+
+    MATCH  jvm lib/modules
+IDENTITY GATE PASSED
+
+########## 2. ATTEMPT 1 AND ALL PRIOR EVIDENCE MUST BE BYTE-UNCHANGED ##########
+$ git -C /Users/bill/projects/TwixT_Game status --porcelain docs/superpowers/evidence/2026-08-24-t1j-e1 docs/superpowers/evidence/2026-08-24-t1j-e2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt4 docs/superpowers/evidence/2026-08-24-t1j-e3a docs/superpowers/evidence/2026-08-24-t1j-e3b
+    | <no stdout>
+    [exit 0]
+
+
+########## 3. PREFS BEFORE ##########
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh BEFORE | tee /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/91_prefs_before.txt
+    | host preference store fingerprint — BEFORE
+    |   dir: /Users/bill/Library/Preferences
+    |   com.apple.java.util.prefs.plist EXISTS  sha256=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  bytes=95  mtime=2025-08-07T23:41:41Z
+    |   any schwagereit/t1j prefs files: 0
+    |   entry count: 523
+    |   listing sha256: 8a111b76dbd59fbae4047af53526e8a4aa3d8c480c447e0b9aafd27d81305fe5
+    |   java-ish entries: 1
+    |     com.apple.java.util.prefs.plist
+    [exit 0]
+
+
+########## 4. MANIFEST OF SOURCES UNDER TEST ##########
+$ shasum -a 256 /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_adapter.py /Users/bill/projects/TwixT_Game/tests/test_t1j_adapter.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/src/net/schwagereit/t1j/E3bDump.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/e3b2_compare.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/e3b2_smoke.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/build_fixtures.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/check_prefs.py
+    | 688aec06d30ced98be60f893546b1c45dac284cb10fd7e5aeca6238a1b6a6421  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_adapter.py
+    | ba99c189627424fe4836ced0bbdb6c127ab9cd63a7395e21f5ec17181558274a  /Users/bill/projects/TwixT_Game/tests/test_t1j_adapter.py
+    | bc4408f51808f35d4b2a8af8ae50f37e913997f380e060856f7821b9ac96725f  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/src/net/schwagereit/t1j/E3bDump.java
+    | 20bf91a75bc5c3babe4501db45daeb8cd3f2c4d971997d0e406d5b6f56e68eec  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/e3b2_compare.py
+    | e7518accc825115821f8518725036b96c46369f9f7a1383d9aa4deffe240a9eb  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/e3b2_smoke.py
+    | e350a36f9706e1a1b41d281b20e6cfaa83153a1439d0a45a9ab230d5670acf8d  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/build_fixtures.py
+    | 8ab023371146513959765cc9bd59f4b1b8785ef11b185b9620e899d01b241816  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/check_prefs.py
+    [exit 0]
+
+
+########## 5. ADAPTER UNIT TESTS (repo code, no Java) ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python -m pytest /Users/bill/projects/TwixT_Game/tests/test_t1j_adapter.py -q 2>&1 | tail -3
+    | tests/test_t1j_adapter.py ................                               [100%]
+    |
+    | ============================== 16 passed in 0.02s ==============================
+    [exit 0]
+
+
+########## 6. COMPILE HELPER (T1j untouched) ##########
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac -Xlint:-options -encoding UTF-8 -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar -d /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/src/e2probe/ScratchPrefs.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/src/e2probe/ScratchPrefsFactory.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/src/net/schwagereit/t1j/E3bDump.java
+    | <no stdout>
+    [exit 0]
+
+$ find /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/classes -name '*.class' | sort | xargs shasum -a 256
+    | aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/classes/e2probe/ScratchPrefs.class
+    | dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/classes/e2probe/ScratchPrefsFactory.class
+    | 751b1a6d76ceb4834527a0144caa78e8df3d755eb52d1c1d202add020c3219ce  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/classes/net/schwagereit/t1j/E3bDump.class
+    [exit 0]
+
+
+########## 7. LEGALITY DUMP + FIXTURES (fixtures end ON the winning move) ##########
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/classes net.schwagereit.t1j.E3bDump legality > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/92_legality.txt; echo $?
+    | 0
+    [exit 0]
+
+$ python3 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/build_fixtures.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/93_fixtures.json
+    | crossing    plies=  7 winner=None   pegs=  7 bridges=  1 earlier_winner_plies=[]
+    | red_win     plies= 25 winner=red    pegs= 25 bridges= 12 earlier_winner_plies=[]
+    | black_win   plies= 26 winner=black  pegs= 26 bridges= 12 earlier_winner_plies=[]
+    |
+    | crossing: blocked pair ((5, 6), (7, 5)) absent? True   formed: [((5, 5), (7, 6))]
+    | red first wins at ply 25 (fixture now 25 moves) ; black first wins at ply 26 (fixture now 26 moves)
+    [exit 0]
+
+
+########## 8. QUALIFICATION: self-test, then lockstep at MULTIPLE CAPS ##########
+$ python3 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/e3b2_compare.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/93_fixtures.json > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/94_qualification.txt 2>&1; echo $?
+    | 0
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/94_qualification.txt
+    | comparator self-test (negative controls)
+    |   PASS  baseline accepted
+    |   PASS  peg divergence rejected   [st[cap=280] ply 3: pegs differ (ours-only [], t1j-only ['1,1,Y'])]
+    |   PASS  coordinate divergence rejected   [st[cap=280] ply 2: pegs differ (ours-only ['5,5,Y'], t1j-only ['9,9,Y'])]
+    |   PASS  player divergence rejected   [st[cap=280] ply 3: pegs differ (ours-only ['5,5,Y', '6,7,Y'], t1j-only ['5,5,X]
+    |   PASS  bridge/crossing divergence rejected   [st[cap=280] ply 3: bridges differ (ours-only [], t1j-only ['1,1|2,3|Y'])]
+    |   PASS  HISTORY divergence rejected   [st[cap=280] ply 3: T1j history [(20, 20), (6, 7)] != submitted [(20, 20), (6, ]
+    |   PASS  LEGAL-SET divergence rejected   [st[cap=280] ply 2: legal set differs (|ours|=526 |t1j|=525, ours-only [(7, 8)]]
+    |   PASS  side-to-move divergence rejected   [st[cap=280] ply 3: side to move Y != X]
+    |   PASS  ply divergence rejected   [st[cap=280] ply 3: ply T1j 4 != ours 3]
+    |   PASS  terminal divergence rejected   [st[cap=280] ply 3: terminal/winner T1j Y=True X=False != ours None]
+    |   PASS  truncated dump rejected   [st[cap=280]: ply-count T1j 3 != ours 4]
+    |   PASS  MUTATED CAP rejected (T1j ran to 280, compared at cap 2)   [st[cap=2]: ply-count T1j 4 != ours 3]
+    |   PASS  compare ply_cap is required (keyword-only, no default)
+    |   PASS  replay ply_cap is required (keyword-only, no default)
+    |   PASS  terminal_with_cap ply_cap is required (keyword-only, no default)
+    | SELFTEST OK — every injected divergence rejected
+    |
+    | adapter: scripts.GPU.alphazero.t1j_adapter  canonical transform=identity  surviving orbit=['identity', 'flip_x', 'flip_y', 'flip_both']
+    |
+    | lockstep over every fixture, at MULTIPLE EXTERNAL CAPS
+    |   OK  crossing   cap=0    plies_t1j=0   plies_ours=0   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  crossing   cap=1    plies_t1j=1   plies_ours=1   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  crossing   cap=3    plies_t1j=3   plies_ours=3   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  crossing   cap=6    plies_t1j=6   plies_ours=6   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  crossing   cap=7    plies_t1j=7   plies_ours=7   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  crossing   cap=12   plies_t1j=7   plies_ours=7   term_with_cap t1j=False ours=False winner=None
+    |   OK  crossing   cap=280  plies_t1j=7   plies_ours=7   term_with_cap t1j=False ours=False winner=None
+    |   OK  red_win    cap=0    plies_t1j=0   plies_ours=0   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  red_win    cap=1    plies_t1j=1   plies_ours=1   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  red_win    cap=3    plies_t1j=3   plies_ours=3   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  red_win    cap=24   plies_t1j=24  plies_ours=24  term_with_cap t1j=True  ours=True  winner=None
+    |   OK  red_win    cap=25   plies_t1j=25  plies_ours=25  term_with_cap t1j=True  ours=True  winner=red
+    |   OK  red_win    cap=30   plies_t1j=25  plies_ours=25  term_with_cap t1j=True  ours=True  winner=red
+    |   OK  red_win    cap=280  plies_t1j=25  plies_ours=25  term_with_cap t1j=True  ours=True  winner=red
+    |   OK  black_win  cap=0    plies_t1j=0   plies_ours=0   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  black_win  cap=1    plies_t1j=1   plies_ours=1   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  black_win  cap=3    plies_t1j=3   plies_ours=3   term_with_cap t1j=True  ours=True  winner=None
+    |   OK  black_win  cap=25   plies_t1j=25  plies_ours=25  term_with_cap t1j=True  ours=True  winner=None
+    |   OK  black_win  cap=26   plies_t1j=26  plies_ours=26  term_with_cap t1j=True  ours=True  winner=black
+    |   OK  black_win  cap=31   plies_t1j=26  plies_ours=26  term_with_cap t1j=True  ours=True  winner=black
+    |   OK  black_win  cap=280  plies_t1j=26  plies_ours=26  term_with_cap t1j=True  ours=True  winner=black
+    |
+    | E3b-2 QUALIFICATION PASS — agreement on every observable, every ply, every cap
+    [exit 0]
+
+
+########## 9. MOVE SMOKE ##########
+$ python3 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/e3b2_smoke.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/classes > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/95_smoke.txt 2>&1; echo $?
+    | 0
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/95_smoke.txt
+    |   PASS   T1j smoke exit 0
+    |   PASS   SMOKE line emitted
+    |   T1j returned (x=15, y=15) usealphabeta=true currentMaxPly=4
+    |   PASS   not the null sentinel
+    |   PASS   alpha-beta completed fixed ply 3
+    |
+    | == validate in OUR engine BEFORE applying anywhere ==
+    |   T1j (x=15, y=15) -> ours (row=15, col=15)
+    |   PASS   our side to move red, matching T1j Y
+    |   PASS   OUR engine accepts the move as legal
+    |
+    | == apply to BOTH sides, compare resulting state ==
+    |   PASS   T1j replay-with-move exit 0
+    |   PASS   pegs agree (7)
+    |   PASS   bridges agree (1)
+    |   PASS   side to move agrees
+    |   PASS   ply agrees (7), each derived independently
+    |   PASS   T1j ordered history matches submitted sequence
+    |   PASS   legal sets agree (521)
+    |   PASS   neither engine terminal
+    |   PASS   cap-aware terminality agrees
+    |
+    | SMOKE PASS
+    [exit 0]
+
+
+########## 10. PREFS AFTER — ASSERTING CHECK, GATED ##########
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh AFTER | tee /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/96_prefs_after.txt
+    | host preference store fingerprint — AFTER
+    |   dir: /Users/bill/Library/Preferences
+    |   com.apple.java.util.prefs.plist EXISTS  sha256=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  bytes=95  mtime=2025-08-07T23:41:41Z
+    |   any schwagereit/t1j prefs files: 0
+    |   entry count: 523
+    |   listing sha256: 8a111b76dbd59fbae4047af53526e8a4aa3d8c480c447e0b9aafd27d81305fe5
+    |   java-ish entries: 1
+    |     com.apple.java.util.prefs.plist
+    [exit 0]
+
+$ python3 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/check_prefs.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/91_prefs_before.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2/evidence7/96_prefs_after.txt; echo $?
+    | PREFS CHECK PASS — 7 normalized fields identical (label line excluded by design)
+    | 0
+    [exit 0]
+
+    prefs check exit: 0
+$ ls /Library/Java/JavaVirtualMachines | wc -l
+    |        0
+    [exit 0]
+
+TRANSCRIPT COMPLETE — qualification 0, smoke 0, prefs 0

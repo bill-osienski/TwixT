@@ -1,0 +1,69 @@
+#!/bin/bash
+E1=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1
+E2=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2
+E7=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3b2
+EV="$E7/evidence7"; JH="$E2/jdk/home/jdk-17.0.20.1+1/Contents/Home"
+JAR="$E1/acq/release/t1j.jar"; REPO=/Users/bill/projects/TwixT_Game
+TMPERR=$(mktemp); GATE=0
+run() { printf '$ %s\n' "$1"; out=$(eval "$1" 2>"$TMPERR"); rc=$?
+  if [ -n "$out" ]; then printf '%s\n' "$out" | sed 's/^/    | /'; else echo "    | <no stdout>"; fi
+  if [ -s "$TMPERR" ]; then sed 's/^/    ! /' "$TMPERR"; fi
+  printf '    [exit %d]\n\n' "$rc"; return $rc; }
+die() { echo "*** $1 — STOPPING ***"; exit 9; }
+expect() { if [ "$2" = "$3" ]; then echo "    MATCH  $1"; else echo "    *** MISMATCH $1 ***"; die "$1"; fi; }
+
+echo "E3b ATTEMPT 2 — ADAPTER QUALIFICATION. Substantive commands captured as they ran."
+echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)   host $(uname -srm)"; echo
+
+echo "########## 1. IDENTITY GATE (compared) ##########"
+run "git -C $E1/acq/t1j rev-parse HEAD"; expect "clone" "$out" "b572ed21f1f6b08491f69db32f531fc4b5f50fcd"
+run "git -C $E1/acq/t1j status --porcelain"; [ -z "$out" ] || die "clone dirty"
+run "shasum -a 256 $JAR | cut -d' ' -f1"; expect "jar" "$out" "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7"
+run "shasum -a 256 $E2/jdk/jdk.tar.gz | cut -d' ' -f1"; expect "jdk archive" "$out" "196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8"
+run "shasum -a 256 $JH/bin/java | cut -d' ' -f1"; expect "jvm bin/java" "$out" "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0"
+run "shasum -a 256 $JH/lib/modules | cut -d' ' -f1"; expect "jvm lib/modules" "$out" "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951"
+echo "IDENTITY GATE PASSED"; echo
+
+echo "########## 2. ATTEMPT 1 AND ALL PRIOR EVIDENCE MUST BE BYTE-UNCHANGED ##########"
+run "git -C $REPO status --porcelain docs/superpowers/evidence/2026-08-24-t1j-e1 docs/superpowers/evidence/2026-08-24-t1j-e2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt4 docs/superpowers/evidence/2026-08-24-t1j-e3a docs/superpowers/evidence/2026-08-24-t1j-e3b"
+[ -z "$out" ] || die "prior evidence dirty"; echo
+
+echo "########## 3. PREFS BEFORE ##########"
+run "bash $E2/prefsfp.sh BEFORE | tee $EV/91_prefs_before.txt"; echo
+
+echo "########## 4. MANIFEST OF SOURCES UNDER TEST ##########"
+run "shasum -a 256 $REPO/scripts/GPU/alphazero/t1j_adapter.py $REPO/tests/test_t1j_adapter.py $E7/src/net/schwagereit/t1j/E3bDump.java $E7/e3b2_compare.py $E7/e3b2_smoke.py $E7/build_fixtures.py $E7/check_prefs.py"
+echo
+
+echo "########## 5. ADAPTER UNIT TESTS (repo code, no Java) ##########"
+run "$REPO/.venv/bin/python -m pytest $REPO/tests/test_t1j_adapter.py -q 2>&1 | tail -3"
+echo
+
+echo "########## 6. COMPILE HELPER (T1j untouched) ##########"
+run "$JH/bin/javac -Xlint:-options -encoding UTF-8 -cp $JAR -d $E7/classes $E7/src/e2probe/ScratchPrefs.java $E7/src/e2probe/ScratchPrefsFactory.java $E7/src/net/schwagereit/t1j/E3bDump.java"
+[ $rc -eq 0 ] || die "compile failed"
+run "find $E7/classes -name '*.class' | sort | xargs shasum -a 256"; echo
+
+echo "########## 7. LEGALITY DUMP + FIXTURES (fixtures end ON the winning move) ##########"
+run "$JH/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -cp $JAR:$E7/classes net.schwagereit.t1j.E3bDump legality > $EV/92_legality.txt; echo \$?"
+[ "$out" = "0" ] || die "legality failed"
+run "python3 $E7/build_fixtures.py $EV/93_fixtures.json"; echo
+
+echo "########## 8. QUALIFICATION: self-test, then lockstep at MULTIPLE CAPS ##########"
+run "python3 $E7/e3b2_compare.py $JH/bin/java $JAR $E7/classes $EV/93_fixtures.json > $EV/94_qualification.txt 2>&1; echo \$?"
+QUAL=$out; run "cat $EV/94_qualification.txt"; echo
+
+echo "########## 9. MOVE SMOKE ##########"
+run "python3 $E7/e3b2_smoke.py $JH/bin/java $JAR $E7/classes > $EV/95_smoke.txt 2>&1; echo \$?"
+SMOKE=$out; run "cat $EV/95_smoke.txt"; echo
+
+echo "########## 10. PREFS AFTER — ASSERTING CHECK, GATED ##########"
+run "bash $E2/prefsfp.sh AFTER | tee $EV/96_prefs_after.txt"
+run "python3 $E7/check_prefs.py $EV/91_prefs_before.txt $EV/96_prefs_after.txt; echo \$?"
+PREFS=$(echo "$out" | tail -1)
+echo "    prefs check exit: $PREFS"
+run "ls /Library/Java/JavaVirtualMachines | wc -l"
+rm -f "$TMPERR"
+echo "TRANSCRIPT COMPLETE — qualification $QUAL, smoke $SMOKE, prefs $PREFS"
+[ "$QUAL" = "0" ] && [ "$SMOKE" = "0" ] && [ "$PREFS" = "0" ] || GATE=3
+exit $GATE
