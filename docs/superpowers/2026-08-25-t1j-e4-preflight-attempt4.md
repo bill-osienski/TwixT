@@ -3,8 +3,14 @@
 **Date:** 2026-08-25 · **Status:** attempt 4 **RAN and PASSED.** Driver gate exit **0**.
 **No game played, NO MODEL LOADED, no T1j source modified. 32 scheduled seeds were spent by
 attempt 3 and are recorded below.**
-**Supersedes [attempt 3](2026-08-25-t1j-e4-preflight-attempt3.md)**; attempts 1–3 preserved
-unchanged and asserted byte-for-byte by the driver. · **The endpoint screen remains UNAUTHORIZED.**
+**Supersedes [attempt 3](2026-08-25-t1j-e4-preflight-attempt3.md)**; attempts 1–3 are preserved
+unchanged. · **The endpoint screen remains UNAUTHORIZED.**
+
+> **Corrected post-run (see §4).** This line first read "asserted byte-for-byte by the driver".
+> It was not. The driver ran `git status --porcelain` on the prior paths, which proves only that
+> they had no worktree or index changes against the then-current tree — **not** that they match the
+> attempt commits that introduced them. That comparison is made in `C1_post_run_provenance.txt`,
+> per file, and it passes.
 
 Basis: `main` @ `73b4119`. Evidence: `evidence/2026-08-25-t1j-e4-preflight-attempt4/` — 20 files
 plus a **self-excluding manifest**. Full suite: **2932 passed, 4 skipped, 0 failed**.
@@ -81,6 +87,12 @@ Nine controls, all invoking the real checker, all passing — including **manife
 **object store disagrees with the manifest**, **a tracked file reported as untracked**, and an
 acceptance control.
 
+> **Corrected post-run (see §4).** The binder reads blob ids with `git ls-files -s`, and its
+> docstring called that "the blob the pending commit will contain". That is the **index**, and
+> whether the commit contains it depends on what was eventually committed. The real binding —
+> every tracked manifest row against `git rev-parse d3f9a4b:<path>` — is in
+> `C1_post_run_provenance.txt`, and it passes.
+
 > **A control caught my own checker again.** The first rewrite dropped the expected-path set, so
 > *dropping a manifest row* made that path invisible rather than failing — the control reported
 > `accepted (0)`. The set is restored and the control now rejects. That is the second time this
@@ -93,6 +105,34 @@ Wall ms by depth: 3→213, 4→330, 5→588, **6→2735 selected**, 7→30749 **
 at `mdPly = 6`: 25/25 identical `(14,11)`, 1 shared pid + 5 distinct fresh pids, 25/25 dumps
 re-bound. Schedule accepted: 32 tasks, 32 distinct seeds, 32 distinct stream pairs, streams disjoint.
 Earliest early stop **game 8**, computed. Runtime ceiling: weak **8.1 min**, strong **102.1 min**.
+
+## 4 — Post-run provenance package (added after `d3f9a4b`)
+
+C-series evidence added separately; the card was amended only with visible correction blocks.
+No runtime artifact changed, and `18_MANIFEST` still verifies 20/20.
+`C0_post_run_provenance.py.txt` / `C1_post_run_provenance.txt` close the two claims above.
+
+**A — the commit, not the index.** Every tracked manifest row compared directly against
+`git rev-parse d3f9a4b:<path>`: **9 tracked rows match**. The checkpoint has **no object in
+`d3f9a4b`** and is reported *UNTRACKED (gitignored), disk-only* — never folded in with the tracked
+rows.
+
+**B — byte identity against the origin commit, per file.** Every file under all thirteen prior
+evidence directories and the three prior cards, compared against the commit that added **that
+file** — not the directory, which would have anchored `t1j-e3b-attempt3` to `ef81bbd` (the
+post-run correction that added its B-series) instead of `6377ae5`. The split is now visible and
+**zero files changed**:
+
+| path | files vs their origin commits | changed |
+|---|---|---:|
+| `capacity-c0` … `t1j-e3b-attempt2` | `8dbfe53`×11, `e1103b9`×1, `220d7e6`×5, `226c9fa`×10, `b2003fe`×9, `0c808b6`×10, `624eb96`×17, `29eae41`×13, `3e0e9b7`×14 | **0** |
+| `t1j-e3b-attempt3` | **`6377ae5`×20 + `ef81bbd`×5** | **0** |
+| `e4-preflight` / `-attempt2` / `-attempt3` (+ cards) | `4bb4639`×22, `9370225`×22, `73b4119`×22 | **0** |
+
+Nine controls, all invoking the real checkers: acceptance controls for both sections, plus a
+flipped manifest blob, a commit holding a different object, a tracked path missing from the commit,
+the checkpoint unexpectedly tracked, a file differing from its origin, a file removed, and an extra
+file appearing.
 
 ---
 

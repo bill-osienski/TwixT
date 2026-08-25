@@ -1,0 +1,80 @@
+POST-RUN PROVENANCE — commit d3f9a4b
+
+A. tracked manifest rows vs the COMMIT's objects (not the index)
+PASS  checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+        no object in d3f9a4b — UNTRACKED (gitignored), disk-only
+PASS  scripts/GPU/alphazero/e4_screen_reference.py
+        manifest blob     ce4e74e5147234318a6b9081881996fbca5ea456
+        d3f9a4b:<path>   ce4e74e5147234318a6b9081881996fbca5ea456
+PASS  scripts/GPU/alphazero/t1j_adapter.py
+        manifest blob     bedcf2ac8a701f9c5f8164399364dd679490f391
+        d3f9a4b:<path>   bedcf2ac8a701f9c5f8164399364dd679490f391
+PASS  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+        manifest blob     ef7914891ad6ea8be29fd70cee657a23190f00d7
+        d3f9a4b:<path>   ef7914891ad6ea8be29fd70cee657a23190f00d7
+PASS  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+        manifest blob     9c10fbbb14f4f6a74a07c404c0499d16ae0bd119
+        d3f9a4b:<path>   9c10fbbb14f4f6a74a07c404c0499d16ae0bd119
+PASS  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+        manifest blob     9cc72ae10b089e5e9e5df60abb310e9dec69725f
+        d3f9a4b:<path>   9cc72ae10b089e5e9e5df60abb310e9dec69725f
+PASS  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+        manifest blob     4a9f2a68103a7bbc16f89b0bf1744e00196e2fe3
+        d3f9a4b:<path>   4a9f2a68103a7bbc16f89b0bf1744e00196e2fe3
+PASS  scripts/GPU/alphazero/twixtbot_g3_reference.py
+        manifest blob     56f9d308b13221b7d265c7ef4c608047ac8da777
+        d3f9a4b:<path>   56f9d308b13221b7d265c7ef4c608047ac8da777
+PASS  tests/test_e4_screen_reference.py
+        manifest blob     988dcd2067d0eea3163d88e6e2452c9132ebb505
+        d3f9a4b:<path>   988dcd2067d0eea3163d88e6e2452c9132ebb505
+PASS  tests/test_t1j_adapter.py
+        manifest blob     45a20c0954ce13b48435ef8890bf5648f06588ce
+        d3f9a4b:<path>   45a20c0954ce13b48435ef8890bf5648f06588ce
+A: OK
+
+B. prior evidence vs the commit that introduced it (byte identity)
+PASS  docs/superpowers/evidence/2026-08-24-capacity-c0
+        11 files, each vs the commit that added it: 8dbfe53x11  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e1
+        1 files, each vs the commit that added it: e1103b9x1  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e2
+        5 files, each vs the commit that added it: 220d7e6x5  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2
+        10 files, each vs the commit that added it: 226c9fax10  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3
+        9 files, each vs the commit that added it: b2003fex9  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e2-attempt4
+        10 files, each vs the commit that added it: 0c808b6x10  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e3a
+        17 files, each vs the commit that added it: 624eb96x17  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e3b
+        13 files, each vs the commit that added it: 29eae41x13  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt2
+        14 files, each vs the commit that added it: 3e0e9b7x14  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3
+        25 files, each vs the commit that added it: 6377ae5x20, ef81bbdx5  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight
+        21 files, each vs the commit that added it: 4bb4639x21  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt2
+        21 files, each vs the commit that added it: 9370225x21  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt3
+        21 files, each vs the commit that added it: 73b4119x21  changed 0
+PASS  docs/superpowers/2026-08-25-t1j-e4-preflight.md
+        1 files, each vs the commit that added it: 4bb4639x1  changed 0
+PASS  docs/superpowers/2026-08-25-t1j-e4-preflight-attempt2.md
+        1 files, each vs the commit that added it: 9370225x1  changed 0
+PASS  docs/superpowers/2026-08-25-t1j-e4-preflight-attempt3.md
+        1 files, each vs the commit that added it: 73b4119x1  changed 0
+B: OK
+
+negative controls — the SAME checkers, run against tampered inputs:
+  PASS  A untouched accepted (acceptance control): accepted (0)
+  PASS  A manifest blob flipped for a tracked row: rejected (1)
+  PASS  A commit holds a different object: rejected (9)
+  PASS  A a tracked path missing from the commit: rejected (9)
+  PASS  A the checkpoint unexpectedly tracked: rejected (1)
+  PASS  B untouched accepted (acceptance control): accepted (0)
+  PASS  B one file's blob differs from its origin commit: rejected (3)
+  PASS  B a file was removed after its origin commit: rejected (1)
+  PASS  B an extra file appeared after its origin commit: rejected (3)
+CONTROLS OK
