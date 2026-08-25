@@ -1,0 +1,259 @@
+package net.schwagereit.t1j;
+
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.prefs.Preferences;
+import java.util.stream.Stream;
+
+/**
+ * E2 attempt 4 — terminal load/move qualification.
+ *
+ * Builds a COHERENT position by submitting six alternating moves through T1j's
+ * own Match.setlastMove(), so the engine populates both boards, the move list,
+ * moveNr and player state together. No pins are pre-placed and moveNr is never
+ * written.
+ *
+ * Exactly three reflective accesses are permitted:
+ *   WRITE Match.nextPlayer = Board.YPLAYER
+ *   READ  FindMove.usealphabeta
+ *   READ  FindMove.currentMaxPly
+ *
+ * Postconditions run in a finally path so an exception cannot skip them, and
+ * they affect the exit status.
+ *
+ * Exit 0 = every requirement met, 3 = one or more failed.
+ */
+public final class E4Probe {
+
+    private static final List<String> REFLECTED = new ArrayList<String>();
+    private static final List<String> AUTHORIZED = Arrays.asList(
+        "net.schwagereit.t1j.Match.nextPlayer(write)",
+        "net.schwagereit.t1j.FindMove.usealphabeta(read)",
+        "net.schwagereit.t1j.FindMove.currentMaxPly(read)");
+
+    private static int failures = 0;
+
+    private static void req(boolean cond, String what) {
+        System.out.println((cond ? "  PASS   " : "  FAIL   ") + what);
+        if (!cond) { failures++; }
+    }
+
+    private static Field reflect(Class<?> owner, String name, String mode) throws Exception {
+        REFLECTED.add(owner.getName() + "." + name + "(" + mode + ")");
+        Field f = owner.getDeclaredField(name);
+        f.setAccessible(true);
+        return f;
+    }
+
+    private static Path prefsDir() {
+        return Paths.get(System.getProperty("user.home"), "Library", "Preferences");
+    }
+
+    private static String plistHash() {
+        try {
+            Path p = prefsDir().resolve("com.apple.java.util.prefs.plist");
+            if (!Files.exists(p)) { return "ABSENT"; }
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(md.digest(Files.readAllBytes(p)));
+        } catch (Exception e) { return "ERROR:" + e; }
+    }
+
+    private static long prefsEntryCount() {
+        try (Stream<Path> s = Files.list(prefsDir())) { return s.count(); }
+        catch (Exception e) { return -1L; }
+    }
+
+    private static int windowCount() {
+        try { return java.awt.Window.getWindows().length; }
+        catch (Throwable t) { System.out.println("  NOTE   Window.getWindows() threw: " + t); return -1; }
+    }
+
+    private static int frameCount() {
+        try { return java.awt.Frame.getFrames().length; }
+        catch (Throwable t) { System.out.println("  NOTE   Frame.getFrames() threw: " + t); return -1; }
+    }
+
+    // captured before anything T1j is touched, so the finally path can compare
+    private static String plistBefore;
+    private static long entriesBefore;
+    private static int winBefore;
+    private static int frmBefore;
+
+    // the returned move, reported numerically only
+    private static Move returned = null;
+    private static Board boardY = null;
+
+    public static void main(String[] args) {
+        Throwable thrown = null;
+        try {
+            captureBefore();
+            runProbe();
+        } catch (Throwable t) {
+            thrown = t;
+            System.out.println();
+            System.out.println("THREW: " + t);
+            t.printStackTrace(System.out);
+        } finally {
+            postconditions(thrown);
+        }
+        System.out.println();
+        System.out.println(failures == 0 ? "PROBE-OK  (all requirements met)"
+                                         : ("PROBE-FAILED  (" + failures + " requirement(s) failed)"));
+        System.exit(failures == 0 ? 0 : 3);
+    }
+
+    private static void captureBefore() {
+        System.out.println("== 0. environment, before any T1j class is touched ==");
+        System.out.println("  java.version            = " + System.getProperty("java.version"));
+        System.out.println("  java.awt.headless       = " + System.getProperty("java.awt.headless"));
+        System.out.println("  PreferencesFactory prop = " + System.getProperty("java.util.prefs.PreferencesFactory"));
+        Preferences userRoot = Preferences.userRoot();
+        System.out.println("  Preferences.userRoot    = " + userRoot.getClass().getName());
+        req("e2probe.ScratchPrefs".equals(userRoot.getClass().getName()),
+            "isolated Preferences implementation active before any T1j load");
+        req(java.awt.GraphicsEnvironment.isHeadless(), "headless mode active at start");
+
+        plistBefore = plistHash();
+        entriesBefore = prefsEntryCount();
+        winBefore = windowCount();
+        frmBefore = frameCount();
+        System.out.println("  host plist sha256 BEFORE  = " + plistBefore);
+        System.out.println("  host prefs entries BEFORE = " + entriesBefore);
+        System.out.println("  Window BEFORE = " + winBefore + " ; Frame BEFORE = " + frmBefore);
+        req(winBefore == 0, "zero java.awt.Window instances before");
+        req(frmBefore == 0, "zero java.awt.Frame instances before");
+    }
+
+    private static void runProbe() throws Exception {
+        System.out.println();
+        System.out.println("== 1. the two public initialization routines, exactly once each ==");
+        req(CheckPattern.class.getResourceAsStream("patterns.properties") != null,
+            "patterns.properties present for loadPattern()");
+        CheckPattern.getInstance().loadPattern();
+        System.out.println("  CheckPattern.getInstance().loadPattern() returned normally");
+        Zobrist.getInstance().initialize();
+        System.out.println("  Zobrist.getInstance().initialize() returned normally");
+
+        System.out.println();
+        System.out.println("== 2. settings and match ==");
+        GeneralSettings gs = GeneralSettings.getInstance();
+        gs.mdFixedPly = true;
+        gs.mdPly = 3;
+        req(gs.mdFixedPly && gs.mdPly == 3, "fixed ply pinned to 3");
+
+        Match match = new Match();
+        Board bY = match.getBoardY();
+        Board bX = match.getBoardX();
+        boardY = bY;
+        bY.clearBoard(); bX.clearBoard();
+        bY.setSize(24, 24); bX.setSize(24, 24);
+        bY.getEval().setupForY(); bX.getEval().setupForY();
+        req(bY.getXsize() == 24 && bY.getYsize() == 24, "board configured 24x24 via public Board API");
+        req(match.getMoveNr() == 0, "no moves recorded before the sequence");
+
+        System.out.println();
+        System.out.println("== 3. reflective write: Match.nextPlayer = YPLAYER (the only write) ==");
+        reflect(Match.class, "nextPlayer", "write").setInt(match, Board.YPLAYER);
+        System.out.println("  match.getNextPlayer() = " + match.getNextPlayer());
+        req(match.getNextPlayer() == Board.YPLAYER, "Y to move before the first submitted move");
+
+        System.out.println();
+        System.out.println("== 4. six alternating moves through Match.setlastMove() ==");
+        int[][] seq = { {10, 10}, {11, 13}, {12, 12}, {13, 11}, {14, 10}, {9, 12} };
+        int[] mover = { Board.YPLAYER, Board.XPLAYER, Board.YPLAYER,
+                        Board.XPLAYER, Board.YPLAYER, Board.XPLAYER };
+        for (int k = 0; k < seq.length; k++) {
+            int x = seq[k][0];
+            int y = seq[k][1];
+            int p = mover[k];
+            int expectedMoveNr = k + 1;
+            int expectedNext = -p;
+            String tag = "move " + expectedMoveNr + " (" + (p == Board.YPLAYER ? "Y" : "X")
+                       + " at " + x + "," + y + ")";
+            req(p == match.getNextPlayer(), tag + ": correct player to move before submitting");
+            req(match.setlastMove(x, y), tag + ": accepted by setlastMove()");
+            req(match.getMoveNr() == expectedMoveNr, tag + ": moveNr == " + expectedMoveNr);
+            req(match.getNextPlayer() == expectedNext,
+                tag + ": next player is " + (expectedNext == Board.YPLAYER ? "Y" : "X"));
+            req(match.getMoveX(expectedMoveNr) == x && match.getMoveY(expectedMoveNr) == y,
+                tag + ": history records (" + x + "," + y + ")");
+            req(bY.getPin(x, y) == p, tag + ": boardY occupancy is the mover");
+            req(bX.getPin(y, x) == -p, tag + ": boardX mirrored occupancy is the opponent");
+        }
+
+        System.out.println();
+        System.out.println("== 5. final coherent state ==");
+        req(match.getMoveNr() == 6, "history has six moves");
+        req(match.getNextPlayer() == Board.YPLAYER, "Y to move");
+
+        System.out.println();
+        System.out.println("== 6. exactly one computeMove(YPLAYER) ==");
+        FindMove fm = FindMove.getFindMove();
+        long t0 = System.nanoTime();
+        returned = fm.computeMove(Board.YPLAYER);
+        long ms = (System.nanoTime() - t0) / 1000000L;
+        System.out.println("  computeMove returned in " + ms + " ms");
+
+        System.out.println();
+        System.out.println("== 7. the move, numerically (Move.toString() never called) ==");
+        req(returned != null, "computeMove returned a non-null Move");
+        if (returned != null) {
+            int mx = returned.getX();
+            int my = returned.getY();
+            System.out.println("  MOVE x=" + mx + " y=" + my);
+            req(mx >= 0 && mx < 24 && my >= 0 && my < 24, "move in range for a 24x24 board");
+            req(bY.getPin(mx, my) == 0, "target intersection empty");
+            req(bY.pinAllowed(mx, my, Board.YPLAYER), "move legal per T1j's own Board.pinAllowed");
+        }
+
+        System.out.println();
+        System.out.println("== 8. reflective reads: alpha-beta completion at fixed ply 3 ==");
+        boolean usedAlphaBeta = reflect(FindMove.class, "usealphabeta", "read").getBoolean(fm);
+        int currentMaxPly = reflect(FindMove.class, "currentMaxPly", "read").getInt(null);
+        System.out.println("  FindMove.usealphabeta  = " + usedAlphaBeta);
+        System.out.println("  FindMove.currentMaxPly = " + currentMaxPly);
+        req(usedAlphaBeta, "alpha-beta search executed");
+        req(currentMaxPly == 4,
+            "deepening loop ran its body at the pinned ply 3 and terminated (currentMaxPly == 4)");
+    }
+
+    /** Runs after success OR exception. Its results affect the exit status. */
+    private static void postconditions(Throwable thrown) {
+        System.out.println();
+        System.out.println("== 9. POSTCONDITIONS (finally path — always runs) ==");
+        req(thrown == null, "no unexpected exception"
+            + (thrown == null ? "" : " [" + thrown.getClass().getName() + "]"));
+
+        int winAfter = windowCount();
+        int frmAfter = frameCount();
+        System.out.println("  Window AFTER = " + winAfter + " ; Frame AFTER = " + frmAfter);
+        req(winAfter == 0, "zero java.awt.Window instances after");
+        req(frmAfter == 0, "zero java.awt.Frame instances after");
+        req(java.awt.GraphicsEnvironment.isHeadless(), "headless mode still active at end");
+
+        String plistAfter = plistHash();
+        long entriesAfter = prefsEntryCount();
+        System.out.println("  host plist sha256 AFTER  = " + plistAfter);
+        System.out.println("  host prefs entries AFTER = " + entriesAfter);
+        req(plistBefore != null && plistBefore.equals(plistAfter), "host java prefs plist unchanged");
+        req(entriesBefore == entriesAfter, "host prefs directory entry count unchanged");
+
+        System.out.println("  reflective accesses performed, in order:");
+        for (String r : REFLECTED) { System.out.println("    " + r); }
+        req(REFLECTED.equals(AUTHORIZED),
+            "exactly the three authorized reflective accesses, in order, and no others");
+
+        if (returned != null && boardY != null) {
+            System.out.println("  returned move (numeric): x=" + returned.getX() + " y=" + returned.getY());
+        } else {
+            System.out.println("  returned move (numeric): <none>");
+        }
+    }
+}

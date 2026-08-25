@@ -1,0 +1,117 @@
+POST-RUN EXTRACTED-JVM BINDING — review round 1, 2026-08-24
+
+WHY. The attempt-4 driver verified the JDK ARCHIVE hash, then merely RECORDED
+hashes and version text for the extracted JVM without comparing them to any
+expected value. Its guard after 'java -version' —
+    case "$out$( : )" in *) ;; esac
+— was vacuous, and doubly so because java -version writes to STDERR, leaving
+$out empty. So the extracted JVM was DESCRIBED, not BOUND.
+
+WHAT THIS FILE DOES. Re-extracts the SAME pinned archive (sha256 already
+verified against Adoptium's published value) to a NEW location and compares
+release, bin/java, bin/javac and lib/modules against the JVM that actually
+ran attempt 4. The probe was NOT rerun; runtime artifacts 40-48 are unchanged.
+date 2026-08-25T01:57:29Z
+
+=============== 1. the archive, re-verified ===============
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz
+    | 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz
+    [exit 0]
+
+  expected (Adoptium published): 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8
+
+=============== 2. fresh extraction to a NEW location ===============
+$ rm -rf /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify && mkdir -p /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify
+    | <no stdout>
+    [exit 0]
+
+$ tar -xzf /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify
+    | <no stdout>
+    [exit 0]
+
+$ test -d /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home && echo present
+    | present
+    [exit 0]
+
+
+=============== 3. hashes: JVM USED vs FRESH EXTRACTION ===============
+--- release
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/release
+    | cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/release
+    [exit 0]
+
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/release
+    | cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/release
+    [exit 0]
+
+$ cmp -s /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/release /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/release && echo IDENTICAL || echo DIFFERENT
+    | IDENTICAL
+    [exit 0]
+
+--- bin/java
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java
+    | af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java
+    [exit 0]
+
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/bin/java
+    | af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/bin/java
+    [exit 0]
+
+$ cmp -s /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/bin/java && echo IDENTICAL || echo DIFFERENT
+    | IDENTICAL
+    [exit 0]
+
+--- bin/javac
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac
+    | 6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac
+    [exit 0]
+
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/bin/javac
+    | 6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/bin/javac
+    [exit 0]
+
+$ cmp -s /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/bin/javac && echo IDENTICAL || echo DIFFERENT
+    | IDENTICAL
+    [exit 0]
+
+--- lib/modules
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/lib/modules
+    | 28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/lib/modules
+    [exit 0]
+
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/lib/modules
+    | 28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/lib/modules
+    [exit 0]
+
+$ cmp -s /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/lib/modules /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/lib/modules && echo IDENTICAL || echo DIFFERENT
+    | IDENTICAL
+    [exit 0]
+
+=============== 4. binding verdict ===============
+  release        IDENTICAL
+  bin/java       IDENTICAL
+  bin/javac      IDENTICAL
+  lib/modules    IDENTICAL
+  => The JVM that ran attempt 4 is BYTE-IDENTICAL, on all four checked
+     components, to a fresh extraction of the pinned archive.
+
+=============== 5. version text, from the correct stream ===============
+(java -version writes to stderr; captured explicitly here)
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -version 2>&1
+    | openjdk version "17.0.20.1" 2026-08-18
+    | OpenJDK Runtime Environment Temurin-17.0.20.1+1 (build 17.0.20.1+1)
+    | OpenJDK 64-Bit Server VM Temurin-17.0.20.1+1 (build 17.0.20.1+1, mixed mode, sharing)
+    [exit 0]
+
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify/jdk-17.0.20.1+1/Contents/Home/bin/java -version 2>&1
+    | openjdk version "17.0.20.1" 2026-08-18
+    | OpenJDK Runtime Environment Temurin-17.0.20.1+1 (build 17.0.20.1+1)
+    | OpenJDK 64-Bit Server VM Temurin-17.0.20.1+1 (build 17.0.20.1+1, mixed mode, sharing)
+    [exit 0]
+
+=============== 6. cleanup of the fresh extraction ===============
+$ rm -rf /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4/jdk_verify && echo removed
+    | removed
+    [exit 0]
+
+COMPLETE

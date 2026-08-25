@@ -1,0 +1,83 @@
+#!/bin/bash
+E1=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1
+E2=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2
+E4=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4
+EV="$E4/evidence4"
+JH="$E2/jdk/home/jdk-17.0.20.1+1/Contents/Home"
+JAR="$E1/acq/release/t1j.jar"
+TMPERR=$(mktemp)
+run() {
+  printf '$ %s\n' "$1"
+  out=$(eval "$1" 2>"$TMPERR"); rc=$?
+  if [ -n "$out" ]; then printf '%s\n' "$out" | sed 's/^/    | /'; else echo "    | <no stdout>"; fi
+  if [ -s "$TMPERR" ]; then sed 's/^/    ! /' "$TMPERR"; fi
+  printf '    [exit %d]\n\n' "$rc"; return $rc
+}
+die() { echo "*** $1 — STOPPING ***"; exit 9; }
+
+echo "E2 ATTEMPT 4 (TERMINAL) — execution transcript, substantive commands captured as they ran"
+echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)   host $(uname -srm)   shell $BASH_VERSION"
+echo
+
+echo "########## 1. IDENTITY GATE — clone, JAR, JDK archive, extracted JVM ##########"
+run "git -C $E1/acq/t1j rev-parse HEAD"
+[ "$out" = "b572ed21f1f6b08491f69db32f531fc4b5f50fcd" ] || die "clone HEAD mismatch"
+run "git -C $E1/acq/t1j status --porcelain"
+[ -z "$out" ] || die "clone not clean"
+run "shasum -a 256 $JAR"
+case "$out" in 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7*) ;; *) die "JAR hash mismatch";; esac
+run "shasum -a 256 $E2/jdk/jdk.tar.gz"
+case "$out" in 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8*) ;; *) die "JDK archive hash mismatch";; esac
+run "$JH/bin/java -version"
+case "$out$( : )" in *) ;; esac
+run "cat $JH/release | grep -E '^(JAVA_VERSION|IMPLEMENTOR|OS_ARCH)='"
+run "shasum -a 256 $JH/bin/java $JH/bin/javac $JH/lib/modules"
+echo "IDENTITY GATE PASSED"
+echo
+
+echo "########## 2. EARLIER E2 EVIDENCE DIRECTORIES — must be byte-unchanged ##########"
+run "git -C /Users/bill/projects/TwixT_Game status --porcelain docs/superpowers/evidence/2026-08-24-t1j-e2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3"
+[ -z "$out" ] || die "an earlier E2 evidence directory is dirty"
+echo
+
+echo "########## 3. HOST PREFERENCE FINGERPRINT — BEFORE ##########"
+run "bash $E2/prefsfp.sh BEFORE | tee $EV/41_prefs_before.txt"
+echo
+
+echo "########## 4. SOURCE HASHES ##########"
+run "shasum -a 256 $E4/src/e2probe/ScratchPrefs.java $E4/src/e2probe/ScratchPrefsFactory.java $E4/src/net/schwagereit/t1j/E4Probe.java"
+echo
+
+echo "########## 5. COMPILE (probe + Preferences only; no T1j source) ##########"
+run "$JH/bin/javac -Xlint:-options -encoding UTF-8 -cp $JAR -d $E4/classes $E4/src/e2probe/ScratchPrefs.java $E4/src/e2probe/ScratchPrefsFactory.java $E4/src/net/schwagereit/t1j/E4Probe.java"
+[ $rc -eq 0 ] || die "compile failed"
+run "find $E4/classes -name '*.class' | sort | xargs shasum -a 256"
+echo
+
+echo "########## 6. THE SINGLE PROBE RUN ##########"
+run "$JH/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -Xlog:class+load=info:file=$EV/45_classload.log -cp $JAR:$E4/classes net.schwagereit.t1j.E4Probe > $EV/43_stdout.txt 2> $EV/44_stderr.txt; echo \$? > $EV/46_exit.txt"
+run "cat $EV/46_exit.txt"
+echo "--- probe stdout ---"; sed 's/^/    | /' "$EV/43_stdout.txt"; echo
+echo "--- probe stderr ---"
+if [ -s "$EV/44_stderr.txt" ]; then sed 's/^/    ! /' "$EV/44_stderr.txt"; else echo "    | <empty>"; fi
+echo
+
+echo "########## 7. HOST PREFERENCE FINGERPRINT — AFTER ##########"
+run "bash $E2/prefsfp.sh AFTER | tee $EV/42_prefs_after.txt"
+run "diff $EV/41_prefs_before.txt $EV/42_prefs_after.txt"
+echo
+
+echo "########## 8. CLASS-LOAD OBSERVATIONS ##########"
+run "grep -c . $EV/45_classload.log"
+run "grep -oE 'net\.schwagereit\.t1j\.[A-Za-z0-9_$]+' $EV/45_classload.log | sort -u"
+run "grep -oE 'net\.schwagereit\.t1j\.[A-Za-z0-9_$]+' $EV/45_classload.log | sort -u | grep -vc E4Probe"
+echo
+
+echo "########## 9. loadPattern() SILENT-FAILURE CHECK ##########"
+run "grep -cE \"Can't read resource|not found|IO-Error|Illegal syntax\" $EV/43_stdout.txt"
+echo
+
+echo "########## 10. SYSTEM UNTOUCHED ##########"
+run "ls /Library/Java/JavaVirtualMachines | wc -l"
+rm -f "$TMPERR"
+echo "TRANSCRIPT COMPLETE"

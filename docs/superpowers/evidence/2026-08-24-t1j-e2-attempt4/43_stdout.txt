@@ -1,0 +1,110 @@
+== 0. environment, before any T1j class is touched ==
+  java.version            = 17.0.20.1
+  java.awt.headless       = true
+  PreferencesFactory prop = e2probe.ScratchPrefsFactory
+  Preferences.userRoot    = e2probe.ScratchPrefs
+  PASS   isolated Preferences implementation active before any T1j load
+  PASS   headless mode active at start
+  host plist sha256 BEFORE  = 6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d
+  host prefs entries BEFORE = 526
+  Window BEFORE = 0 ; Frame BEFORE = 0
+  PASS   zero java.awt.Window instances before
+  PASS   zero java.awt.Frame instances before
+
+== 1. the two public initialization routines, exactly once each ==
+  PASS   patterns.properties present for loadPattern()
+  CheckPattern.getInstance().loadPattern() returned normally
+  Zobrist.getInstance().initialize() returned normally
+
+== 2. settings and match ==
+  PASS   fixed ply pinned to 3
+  PASS   board configured 24x24 via public Board API
+  PASS   no moves recorded before the sequence
+
+== 3. reflective write: Match.nextPlayer = YPLAYER (the only write) ==
+  match.getNextPlayer() = -1
+  PASS   Y to move before the first submitted move
+
+== 4. six alternating moves through Match.setlastMove() ==
+  PASS   move 1 (Y at 10,10): correct player to move before submitting
+  PASS   move 1 (Y at 10,10): accepted by setlastMove()
+  PASS   move 1 (Y at 10,10): moveNr == 1
+  PASS   move 1 (Y at 10,10): next player is X
+  PASS   move 1 (Y at 10,10): history records (10,10)
+  PASS   move 1 (Y at 10,10): boardY occupancy is the mover
+  PASS   move 1 (Y at 10,10): boardX mirrored occupancy is the opponent
+  PASS   move 2 (X at 11,13): correct player to move before submitting
+  PASS   move 2 (X at 11,13): accepted by setlastMove()
+  PASS   move 2 (X at 11,13): moveNr == 2
+  PASS   move 2 (X at 11,13): next player is Y
+  PASS   move 2 (X at 11,13): history records (11,13)
+  PASS   move 2 (X at 11,13): boardY occupancy is the mover
+  PASS   move 2 (X at 11,13): boardX mirrored occupancy is the opponent
+  PASS   move 3 (Y at 12,12): correct player to move before submitting
+  PASS   move 3 (Y at 12,12): accepted by setlastMove()
+  PASS   move 3 (Y at 12,12): moveNr == 3
+  PASS   move 3 (Y at 12,12): next player is X
+  PASS   move 3 (Y at 12,12): history records (12,12)
+  PASS   move 3 (Y at 12,12): boardY occupancy is the mover
+  PASS   move 3 (Y at 12,12): boardX mirrored occupancy is the opponent
+  PASS   move 4 (X at 13,11): correct player to move before submitting
+  PASS   move 4 (X at 13,11): accepted by setlastMove()
+  PASS   move 4 (X at 13,11): moveNr == 4
+  PASS   move 4 (X at 13,11): next player is Y
+  PASS   move 4 (X at 13,11): history records (13,11)
+  PASS   move 4 (X at 13,11): boardY occupancy is the mover
+  PASS   move 4 (X at 13,11): boardX mirrored occupancy is the opponent
+  PASS   move 5 (Y at 14,10): correct player to move before submitting
+  PASS   move 5 (Y at 14,10): accepted by setlastMove()
+  PASS   move 5 (Y at 14,10): moveNr == 5
+  PASS   move 5 (Y at 14,10): next player is X
+  PASS   move 5 (Y at 14,10): history records (14,10)
+  PASS   move 5 (Y at 14,10): boardY occupancy is the mover
+  PASS   move 5 (Y at 14,10): boardX mirrored occupancy is the opponent
+  PASS   move 6 (X at 9,12): correct player to move before submitting
+  PASS   move 6 (X at 9,12): accepted by setlastMove()
+  PASS   move 6 (X at 9,12): moveNr == 6
+  PASS   move 6 (X at 9,12): next player is Y
+  PASS   move 6 (X at 9,12): history records (9,12)
+  PASS   move 6 (X at 9,12): boardY occupancy is the mover
+  PASS   move 6 (X at 9,12): boardX mirrored occupancy is the opponent
+
+== 5. final coherent state ==
+  PASS   history has six moves
+  PASS   Y to move
+
+== 6. exactly one computeMove(YPLAYER) ==
+Elapsed: 32 msec.
+  computeMove returned in 33 ms
+
+== 7. the move, numerically (Move.toString() never called) ==
+  PASS   computeMove returned a non-null Move
+  MOVE x=15 y=15
+  PASS   move in range for a 24x24 board
+  PASS   target intersection empty
+  PASS   move legal per T1j's own Board.pinAllowed
+
+== 8. reflective reads: alpha-beta completion at fixed ply 3 ==
+  FindMove.usealphabeta  = true
+  FindMove.currentMaxPly = 4
+  PASS   alpha-beta search executed
+  PASS   deepening loop ran its body at the pinned ply 3 and terminated (currentMaxPly == 4)
+
+== 9. POSTCONDITIONS (finally path — always runs) ==
+  PASS   no unexpected exception
+  Window AFTER = 0 ; Frame AFTER = 0
+  PASS   zero java.awt.Window instances after
+  PASS   zero java.awt.Frame instances after
+  PASS   headless mode still active at end
+  host plist sha256 AFTER  = 6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d
+  host prefs entries AFTER = 526
+  PASS   host java prefs plist unchanged
+  PASS   host prefs directory entry count unchanged
+  reflective accesses performed, in order:
+    net.schwagereit.t1j.Match.nextPlayer(write)
+    net.schwagereit.t1j.FindMove.usealphabeta(read)
+    net.schwagereit.t1j.FindMove.currentMaxPly(read)
+  PASS   exactly the three authorized reflective accesses, in order, and no others
+  returned move (numeric): x=15 y=15
+
+PROBE-OK  (all requirements met)
