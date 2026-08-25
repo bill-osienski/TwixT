@@ -1,0 +1,7 @@
+b39addcd5ee8e52bf7ce0f2baf6d803f1429b272636e172526400f8d3d5e5225       10071  00_transcript.txt
+7b3999ee0975034f4d20ea4ee0d8a9f31604dc6b6e2e6972ff9625b4d90700a3        2903  02_qualification.txt
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855           0  03_qualification_stderr.txt
+ba51aa230a0dc4b924d145ab18bcedf6a8ce4f69dbd21cf067e83b18c086b9e9        9683  04_qualify.py.txt
+722efe1299b38e419e52da3c564a2b93692aedaa0ec9e67139c8cda5aa3c4fc2        4337  05_driver_run_all.sh.txt
+daa7c33f12f250019012f78c4ff67137b87fd489b60e193906232f90389ae339        1761  06_committed_sources.sha256.txt
+93aaf41bb1b6e38d4e8d86f2a92beea8fe5db990a7bfc1e14ca0148856b06f49       23168  07_full_suite.txt

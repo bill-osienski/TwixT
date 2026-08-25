@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""E4 execution-harness qualification. ONE model load, ONE real agent call.
+
+NO GAMES, NO T1J, NO SCHEDULED SEED. The canonical plan is loaded and verified
+but never executed; every agent here is built on synthetic seed 90000001.
+
+Exit 0 = every requirement met, 3 = one or more failed. Any failure of the single
+real call IS the qualification result: there is no retry and no workaround.
+"""
+import hashlib, json, sys, tempfile
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import e4_screen_reference as REF
+from scripts.GPU.alphazero import e4_screen_runner as H
+from scripts.GPU.alphazero import e4_screen_rules as RULES
+from scripts.GPU.alphazero.twixtbot_g3_reference import (
+    load_reference_evaluator, between_games_cleanup)
+
+REPO = "/Users/bill/projects/TwixT_Game"
+EVID = f"{REPO}/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4"
+PLAN = f"{EVID}/06_endpoint_screen_plan.json"
+POSITIONS = f"{EVID}/02_positions.json"
+CKPT = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+SHA1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
+SHA256 = "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26"
+SYNTHETIC = 90000001
+
+fails = []
+def req(cond, what):
+    print(("  PASS   " if cond else "  FAIL   ") + what)
+    if not cond: fails.append(what)
+
+
+print("== 1. checkpoint identity, both digests, before anything is loaded ==")
+blob = open(f"{REPO}/{CKPT}", "rb").read()
+req(hashlib.sha1(blob).hexdigest() == SHA1, f"sha1 {SHA1}")
+req(hashlib.sha256(blob).hexdigest() == SHA256, f"sha256 {SHA256[:24]}...")
+req(len(blob) == 7524333, f"size {len(blob)} bytes")
+
+print("\n== 2. load the pinned reference ONCE, with compile=True ==")
+EV = load_reference_evaluator("calib020_0001", REPO)
+print(f"  evaluator {type(EV).__name__} id={id(EV):#x}")
+req(getattr(EV, "_g3_reference", None) == "calib020_0001", "carries its checkpoint identity")
+req(getattr(EV, "_g3_sha1", None) == SHA1, "carries the pinned sha1")
+req(getattr(EV, "_use_compile", None) is True, "compile=True")
+req(EV._compiled_forward is None, "graph not yet compiled (lazy, before any inference)")
+
+print("\n== 3. ONE evaluator serves every synthetic construction ==")
+def task(i, anchor="black"):
+    return {"task_id": f"synthetic-{i:03d}", "seed": SYNTHETIC + i,
+            "reference": "calib020_0001", "reference_sha1": SHA1, "anchor_colour": anchor}
+agents = [REF.build(task(i, "black" if i % 2 else "red"), evaluator=EV) for i in range(6)]
+distinct = []
+for a in agents:
+    if not any(a.mcts.evaluator is e for e in distinct):
+        distinct.append(a.mcts.evaluator)
+req(len(distinct) == 1 and distinct[0] is EV, f"{len(agents)} agents, 1 evaluator, identical object")
+req(len({a.mcts.rng.getstate() for a in agents}) == len(agents), "each agent seeded distinctly")
+rebuilt = object()
+req(not any(rebuilt is e for e in distinct),
+    "NEGATIVE CONTROL: a rebuilt evaluator is not mistaken for the reused one")
+
+print("\n== 4. THE ONE REAL CALL — synthetic seed, one frozen position ==")
+positions = json.load(open(POSITIONS))
+moves = [tuple(m) for m in positions["p06_e3a_center"]["moves"]]
+s = TwixtState(active_size=24, to_move="red")
+for mv in moves:
+    s = s.apply_move(mv)
+print(f"  position p06_e3a_center: {len(moves)} plies, to_move={s.to_move}, ply={s.ply}")
+agent = REF.build(task(0, "black"), evaluator=EV)          # our side is red
+req(agent.colour == s.to_move, f"agent colour {agent.colour} matches side to move")
+before_search = agent.mcts.rng.getstate()
+before_readout = agent.readout_rng.getstate()
+try:
+    move = agent(s)
+    threw = None
+except Exception as e:                                      # noqa: BLE001
+    move, threw = None, e
+if threw is not None:
+    print(f"  THREW: {type(threw).__name__}: {threw}")
+req(threw is None, "the single real call completed (validate_ply passed)")
+req(move is not None and tuple(move) in set(s.legal_moves()),
+    f"returned move {move} is legal in our engine")
+req(agent.mcts.rng.getstate() != before_search, "search RNG advanced")
+req(agent.readout_rng.getstate() != before_readout, "readout RNG advanced")
+req(agent.moves_made == 1, "exactly one move made by this agent")
+req(EV._compiled_forward is not None, "the compiled graph was built by that inference")
+print(f"  move={move}  evaluator id still {id(EV):#x}  agent evaluator is EV: "
+      f"{agent.mcts.evaluator is EV}")
+req(agent.mcts.evaluator is EV, "the call used the ONE loaded evaluator")
+
+print("\n== 5. scheduled seeds are inert ==")
+canon = json.load(open(PLAN))["tasks"]
+req(len(canon) == 32, "canonical plan carries 32 tasks")
+refused = 0
+for t in canon:
+    try:
+        H._assert_not_scheduled(t)
+    except H.HarnessError:
+        refused += 1
+req(refused == 32, "all 32 scheduled seeds refused by the runner")
+try:
+    REF.rng_witness(canon[0]); drew = True
+except REF.E4ReferenceError:
+    drew = False
+req(not drew, "rng_witness refuses to draw from a scheduled seed")
+
+print("\n== 6. the canonical schedule cannot be injected or reshaped ==")
+req(H.load_canonical_plan(PLAN)["n_tasks"] == 32, "plan verifies against its pinned sha256")
+import inspect
+req(set(inspect.signature(H.run).parameters) == {"plan_path", "results_path", "mode"},
+    "public run() accepts paths only")
+for label, mutate in (
+    ("addition", lambda t: t + [dict(t[0], task_id="extra")]),
+    ("removal", lambda t: t[:-1]),
+    ("reordering", lambda t: [t[1], t[0]] + t[2:]),
+    ("duplicate", lambda t: t[:-1] + [dict(t[0])]),
+    ("seed edit", lambda t: [dict(t[0], seed=202612999)] + t[1:]),
+    ("reference edit", lambda t: [dict(t[0], reference="0379")] + t[1:]),
+):
+    try:
+        H.verify_tasks(mutate(list(canon))); ok = False
+    except H.HarnessError:
+        ok = True
+    req(ok, f"NEGATIVE CONTROL: {label} refused")
+for bad in ("screen", "games"):
+    try:
+        H.run(PLAN, "/dev/null", mode=bad); ok = False
+    except H.HarnessError:
+        ok = True
+    req(ok, f"NEGATIVE CONTROL: mode {bad!r} refused — the 32-game screen is unauthorized")
+
+print("\n== 7. stub loop end to end, on the REAL evaluator ==")
+cleanups = []
+def factory(t, ev):
+    return REF.build(t, evaluator=EV)          # real construction, no inference
+def opponent(t, agent_, rec):
+    if t.get("_abort"):
+        return {"abort": t["_abort"]}
+    rec.emit({"record_type": "ply", "task_id": t["task_id"], "ply": 0})
+    return {"t1j_points": t["_points"], "terminal_reason": t["_reason"], "plies": 1}
+
+def stub_task(i, endpoint, points, reason="win", abort=None):
+    t = task(100 + i, "black" if endpoint == "weak" else "red")
+    t.update({"task_id": f"stub-{endpoint}-{i:02d}", "endpoint": endpoint,
+              "_points": points, "_reason": reason, "_abort": abort})
+    return t
+
+with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
+    out = f.name
+tasks = [stub_task(i, "weak", 0.5) for i in range(2)] + [stub_task(i, "strong", 0.5) for i in range(2)]
+rc = H._run(PLAN, out, mode="qualify", _tasks=tasks, _agent_factory=factory,
+            _opponent=opponent, _cleanup=lambda: cleanups.append(1), _n_per_endpoint=2)
+rows = [json.loads(l) for l in open(out)]
+kinds = [r["record_type"] for r in rows]
+req(rc == 0, "stub loop completed")
+req(kinds.count("task_result") == 4, "four task results recorded")
+req(len(cleanups) == 4, "cleanup called once per task")
+req(rows[-1]["distinct_evaluators"] == 1, "one evaluator across the whole loop")
+req(rows[-1]["joint"] == "IN_BAND", f"verdict {rows[-1]['joint']}")
+req(kinds.index("task_start") < kinds.index("ply") < kinds.index("task_result"),
+    "records appended in order, as they happened")
+
+print("\n  abort path:")
+with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
+    out2 = f.name
+try:
+    H._run(PLAN, out2, mode="qualify",
+           _tasks=[stub_task(0, "weak", 1.0), stub_task(1, "weak", 1.0, abort="divergence at ply 7")],
+           _agent_factory=factory, _opponent=opponent, _cleanup=lambda: None, _n_per_endpoint=2)
+    aborted = False
+except H.HarnessError:
+    aborted = True
+rows2 = [json.loads(l) for l in open(out2)]
+k2 = [r["record_type"] for r in rows2]
+req(aborted, "abort raised and stopped the run")
+req("abort" in k2 and k2.count("task_result") == 1, "partial records kept, the abort recorded")
+req("verdict" not in k2, "NO verdict emitted from a partial run")
+
+print("\n  every joint outcome, through the runner's own classifier:")
+def verdict_for(weak, strong, n=16):
+    rows_ = ([{"endpoint": "weak", "t1j_points": p, "terminal_reason": "win"} for p in weak]
+             + [{"endpoint": "strong", "t1j_points": p, "terminal_reason": "win"} for p in strong])
+    return H.classify_run(rows_, n_per_endpoint=n, band=[0.05, 0.95])["joint"]
+for label, w, st, want in (
+    ("T1J_TOO_STRONG", [1.0]*16, [1.0]*16, "T1J_TOO_STRONG"),
+    ("T1J_TOO_WEAK", [0.0]*16, [0.0]*16, "T1J_TOO_WEAK"),
+    ("BRACKETED", [0.0]*16, [1.0]*16, "BRACKETED"),
+    ("IN_BAND", [0.5]*16, [0.5]*16, "IN_BAND"),
+    ("INCONCLUSIVE (partial)", [1.0]*3, [0.5]*16, "INCONCLUSIVE"),
+):
+    req(verdict_for(w, st) == want, f"{label} reachable")
+req(RULES.earliest_early_stop(16, [0.05, 0.95]) == (8, 1.0), "earliest early stop is game 8")
+
+print("\n== 8. postconditions ==")
+between_games_cleanup()
+req(EV._g3_reference == "calib020_0001", "evaluator identity intact after cleanup")
+req(agent.moves_made == 1, "still exactly ONE real agent call in this process")
+
+print()
+if fails:
+    print(f"QUALIFICATION FAIL — {len(fails)}:")
+    for f_ in fails: print("  " + f_)
+    sys.exit(3)
+print("QUALIFICATION PASS")
+sys.exit(0)

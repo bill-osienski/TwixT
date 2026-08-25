@@ -1,0 +1,66 @@
+#!/bin/bash
+set -o pipefail
+SPD=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad
+E4Q=$SPD/e4q; EV="$E4Q/evidence"; REPO=/Users/bill/projects/TwixT_Game
+PLAN="$REPO/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json"
+CKPT="$REPO/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+TMPERR=$(mktemp); GATE=0
+run() { printf '$ %s\n' "$1"; out=$(eval "$1" 2>"$TMPERR"); rc=$?
+  if [ -n "$out" ]; then printf '%s\n' "$out" | sed 's/^/    | /'; else echo "    | <no stdout>"; fi
+  if [ -s "$TMPERR" ]; then sed 's/^/    ! /' "$TMPERR"; fi
+  printf '    [exit %d]\n\n' "$rc"; return $rc; }
+die() { echo "*** $1 — STOPPING ***"; exit 9; }
+expect() { if [ "$2" = "$3" ]; then echo "    MATCH  $1"; else echo "    *** MISMATCH $1 ***"; die "$1"; fi; }
+
+echo "E4 EXECUTION-HARNESS QUALIFICATION — NO GAMES, NO T1J, NO SCHEDULED SEED."
+echo "One model load. Exactly one real reference-agent call, on synthetic seed 90000001."
+echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)   host $(uname -srm)"; echo
+
+echo "########## 1. REPOSITORY AND ARTIFACT IDENTITY ##########"
+run "git -C $REPO rev-parse HEAD"; expect "HEAD" "$out" "fee7a3b34b5d734ff3026bb262905298f1b9345a"
+run "git -C $REPO status --porcelain | grep -vE 'e4_screen_(runner|rules)|test_e4_screen_(runner|rules)' | wc -l | tr -d ' '"
+expect "no unrelated worktree changes" "$out" "0"
+run "shasum -a 256 $CKPT | cut -d' ' -f1"; expect "checkpoint sha256" "$out" "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26"
+run "shasum -a 1   $CKPT | cut -d' ' -f1"; expect "checkpoint sha1"   "$out" "209cf2d4fd24a48553d259dd71b4954867b9473e"
+run "shasum -a 256 $PLAN | cut -d' ' -f1"; expect "canonical plan"    "$out" "10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8"
+echo "IDENTITY GATE PASSED"; echo
+
+echo "########## 2. PRIOR EVIDENCE BYTE-UNCHANGED ##########"
+run "git -C $REPO status --porcelain docs/superpowers/evidence docs/superpowers/*.md"
+[ -z "$out" ] || die "prior evidence or cards dirty"; echo
+
+echo "########## 3. ENVIRONMENT — a model is loaded, so record it ##########"
+run "$REPO/.venv/bin/python -c \"import sys, mlx.core as mx, platform; print('python', sys.version.split()[0]); print('mlx', mx.__version__ if hasattr(mx,'__version__') else 'n/a'); print('platform', platform.platform())\""
+echo "    NOTE: no JVM runs in this qualification, so there is no Preferences surface to check."
+echo
+
+echo "########## 4. MANIFEST OF EVERY SOURCE ##########"
+run "shasum -a 256 $REPO/scripts/GPU/alphazero/e4_screen_runner.py $REPO/scripts/GPU/alphazero/e4_screen_rules.py $REPO/scripts/GPU/alphazero/e4_screen_reference.py $REPO/scripts/GPU/alphazero/twixtbot_g3_reference.py $REPO/tests/test_e4_screen_runner.py $REPO/tests/test_e4_screen_rules.py $REPO/tests/test_e4_screen_reference.py $E4Q/qualify.py $E4Q/run_all.sh"
+echo
+
+echo "########## 5. HARNESS UNIT TESTS — no model, real exit status, GATED ##########"
+run "$REPO/.venv/bin/python -m pytest $REPO/tests/test_e4_screen_runner.py $REPO/tests/test_e4_screen_rules.py $REPO/tests/test_e4_screen_reference.py -q --no-header -p no:cacheprovider"
+TESTS=$rc; echo "    unit-test exit: $TESTS (no pipe: this IS pytest's status)"; echo
+
+echo "########## 6. QUALIFICATION — ONE model load, ONE real agent call ##########"
+run "$REPO/.venv/bin/python $E4Q/qualify.py > $EV/02_qualification.txt 2>$EV/03_qualification_stderr.txt; echo \$?"
+QUAL=$(echo "$out" | tail -1)
+run "cat $EV/02_qualification.txt"
+run "wc -c < $EV/03_qualification_stderr.txt | tr -d ' '"
+echo "    stderr bytes: $out"
+echo
+
+echo "########## 7. POSTCONDITION — the scheduled seeds are still unspent ##########"
+run "$REPO/.venv/bin/python -c \"
+import sys; sys.path.insert(0,'$REPO')
+from scripts.GPU.alphazero import e4_screen_reference as R
+print('exposed intervals:', R.EXPOSED_SEED_INTERVALS)
+print('screen block 202612128..202612159 exposed?', any(R.seed_is_exposed(s) for s in range(202612128,202612160)))
+\""
+[ "$(echo "$out" | tail -1)" = "screen block 202612128..202612159 exposed? False" ] || die "screen seeds marked exposed"
+rm -f "$TMPERR"
+echo
+echo "TRANSCRIPT COMPLETE — unit tests $TESTS, qualification $QUAL"
+[ "$TESTS" = "0" ] && [ "$QUAL" = "0" ] || GATE=3
+echo "GATE $GATE"
+exit $GATE
