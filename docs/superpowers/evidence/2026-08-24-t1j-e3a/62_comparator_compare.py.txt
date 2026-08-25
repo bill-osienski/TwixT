@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""E3a comparator. Fail-closed gate over the collected RECORD / POSTCOND lines.
+
+Runs its own self-test first and refuses to evaluate real data unless every
+injected defect is rejected. Timing is descriptive only and never gates.
+"""
+import re, sys
+
+EXPECT_TOTAL   = 25
+EXPECT_GROUPS  = {"shared": 20, "fresh": 5}
+EXPECT_PLY     = 4          # deepening loop terminates at maxPly(3) + 1
+
+def parse(text):
+    rec, post = [], []
+    for line in text.splitlines():
+        if line.startswith("RECORD "):
+            rec.append(dict(kv.split("=", 1) for kv in line[7:].split()))
+        elif line.startswith("POSTCOND "):
+            post.append(dict(kv.split("=", 1) for kv in line[9:].split()))
+    return rec, post
+
+def evaluate(records, posts):
+    """Return (ok, [reasons]). Fail-closed: any problem -> not ok."""
+    r = []
+    if len(records) != EXPECT_TOTAL:
+        r.append(f"expected {EXPECT_TOTAL} records, got {len(records)}")
+    counts = {}
+    for x in records:
+        counts[x.get("group")] = counts.get(x.get("group"), 0) + 1
+    if counts != EXPECT_GROUPS:
+        r.append(f"group counts {counts} != {EXPECT_GROUPS}")
+    moves = {(x.get("move_x"), x.get("move_y")) for x in records}
+    if len(moves) != 1:
+        r.append(f"moves not identical across queries: {sorted(moves)}")
+    elif ("-1", "-1") in moves:
+        r.append("move is the null sentinel (-1,-1)")
+    for x in records:
+        q = f"{x.get('group')}/{x.get('query')}"
+        if x.get("currentMaxPly") != str(EXPECT_PLY):
+            r.append(f"{q}: currentMaxPly {x.get('currentMaxPly')} != {EXPECT_PLY}")
+        if x.get("usealphabeta") != "true":
+            r.append(f"{q}: usealphabeta not true")
+        if x.get("coherent") != "true":
+            r.append(f"{q}: position not coherent")
+        if x.get("legal") != "true":
+            r.append(f"{q}: move not legal")
+    if not posts:
+        r.append("no POSTCOND records")
+    for p in posts:
+        g = p.get("group")
+        for key, want in (("no_throw","true"), ("headless","true"), ("prefs_ok","true"),
+                          ("refl_fields_ok","true"), ("windows","0"), ("frames","0"),
+                          ("failures","0")):
+            if p.get(key) != want:
+                r.append(f"postcond[{g}]: {key}={p.get(key)} != {want}")
+        try:
+            qn = int(p.get("queries")); w = int(p.get("refl_writes")); rd = int(p.get("refl_reads"))
+            if w != qn or rd != 2 * qn:
+                r.append(f"postcond[{g}]: reflection counts {w}/{rd} != {qn}/{2*qn}")
+        except (TypeError, ValueError):
+            r.append(f"postcond[{g}]: unparseable reflection counts")
+    return (len(r) == 0), r
+
+# ---------------------------------------------------------------- self-test
+def _rec(group, q, x=15, y=15, ply=4, coh="true", legal="true", uab="true"):
+    return {"group":group,"query":str(q),"move_x":str(x),"move_y":str(y),
+            "coherent":coh,"legal":legal,"usealphabeta":uab,
+            "currentMaxPly":str(ply),"elapsed_ms":"30"}
+
+def _post(group, queries, **over):
+    p = {"group":group,"queries":str(queries),"no_throw":"true","windows":"0","frames":"0",
+         "headless":"true","prefs_ok":"true","refl_fields_ok":"true",
+         "refl_writes":str(queries),"refl_reads":str(2*queries),"failures":"0"}
+    p.update({k:str(v) for k,v in over.items()})
+    return p
+
+def good():
+    recs = [_rec("shared", i) for i in range(1,21)] + [_rec("fresh", i) for i in range(1,6)]
+    posts = [_post("shared",20)] + [_post("fresh",1) for _ in range(5)]
+    # five fresh JVMs each report queries=1
+    return recs, posts
+
+def selftest():
+    print("comparator self-test")
+    cases = []
+    recs, posts = good()
+    cases.append(("baseline accepted", recs, posts, True))
+
+    r2, p2 = good(); r2[7]["move_x"] = "16"
+    cases.append(("changed move rejected", r2, p2, False))
+
+    r3, p3 = good(); r3.pop(3)
+    cases.append(("missing record rejected", r3, p3, False))
+
+    r4, p4 = good(); r4[0]["group"] = "fresh"
+    cases.append(("wrong group count rejected", r4, p4, False))
+
+    r5, p5 = good(); r5[19]["currentMaxPly"] = "3"
+    cases.append(("wrong ply rejected", r5, p5, False))
+
+    r6, p6 = good(); p6[0]["windows"] = "1"
+    cases.append(("failed postcondition rejected", r6, p6, False))
+
+    r7, p7 = good(); p7[0]["refl_writes"] = "19"
+    cases.append(("wrong reflection count rejected", r7, p7, False))
+
+    r8, p8 = good(); r8[5]["coherent"] = "false"
+    cases.append(("incoherent position rejected", r8, p8, False))
+
+    r9, p9 = good(); p9 = []
+    cases.append(("missing POSTCOND rejected", r9, p9, False))
+
+    bad = 0
+    for name, rr, pp, want_ok in cases:
+        ok, reasons = evaluate(rr, pp)
+        good_result = (ok == want_ok)
+        print(f"  {'PASS' if good_result else 'FAIL'}  {name}"
+              + ("" if ok else f"   [{reasons[0]}]"))
+        if not good_result: bad += 1
+    if bad:
+        print(f"SELFTEST FAILED ({bad}) — refusing to evaluate real data")
+        return False
+    print("SELFTEST OK — comparator rejects every injected defect")
+    return True
+
+if __name__ == "__main__":
+    if not selftest():
+        sys.exit(2)
+    if len(sys.argv) < 2:
+        print("no input file given"); sys.exit(2)
+    text = open(sys.argv[1]).read()
+    records, posts = parse(text)
+    print()
+    print(f"parsed {len(records)} RECORD and {len(posts)} POSTCOND lines")
+    ok, reasons = evaluate(records, posts)
+    print()
+    if ok:
+        m = next(iter({(x['move_x'], x['move_y']) for x in records}))
+        times = sorted(int(x['elapsed_ms']) for x in records)
+        print(f"GATE PASS — {len(records)} records, identical move ({m[0]},{m[1]}), "
+              f"ply {EXPECT_PLY} throughout, all postconditions met")
+        print(f"  elapsed_ms (DESCRIPTIVE ONLY, not a gate): "
+              f"min={times[0]} median={times[len(times)//2]} max={times[-1]}")
+        sys.exit(0)
+    print(f"GATE FAIL — {len(reasons)} problem(s):")
+    for x in reasons: print("  " + x)
+    sys.exit(3)

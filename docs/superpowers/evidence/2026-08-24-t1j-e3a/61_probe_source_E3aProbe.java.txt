@@ -1,0 +1,196 @@
+package net.schwagereit.t1j;
+
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.prefs.Preferences;
+import java.util.stream.Stream;
+
+/**
+ * E3a — determinism only. Same pinned artifacts, same fixed six-move position,
+ * same fixed ply 3, same reflection contract as E2 attempt 4.
+ *
+ * args: <group> <queries>
+ *   Global tables (CheckPattern, Zobrist) are initialized ONCE per process.
+ *   A FRESH coherent Match is constructed and fully validated for EVERY query.
+ *
+ * Emits one machine-readable RECORD line per query and one POSTCOND line, both
+ * consumed by the comparator. Exit 0 = all in-process requirements met, 3 = not.
+ */
+public final class E3aProbe {
+
+    private static final List<String> REFLECTED = new ArrayList<String>();
+    private static final Set<String> AUTHORIZED_FIELDS = new LinkedHashSet<String>();
+    static {
+        AUTHORIZED_FIELDS.add("net.schwagereit.t1j.Match.nextPlayer(write)");
+        AUTHORIZED_FIELDS.add("net.schwagereit.t1j.FindMove.usealphabeta(read)");
+        AUTHORIZED_FIELDS.add("net.schwagereit.t1j.FindMove.currentMaxPly(read)");
+    }
+
+    private static final int[][] SEQ  = { {10,10},{11,13},{12,12},{13,11},{14,10},{9,12} };
+    private static final int[]  MOVER = { Board.YPLAYER, Board.XPLAYER, Board.YPLAYER,
+                                          Board.XPLAYER, Board.YPLAYER, Board.XPLAYER };
+
+    private static int failures = 0;
+    private static String group = "?";
+
+    private static void req(boolean cond, String what) {
+        if (!cond) { System.out.println("  FAIL   " + what); failures++; }
+    }
+
+    private static Field reflect(Class<?> owner, String name, String mode) throws Exception {
+        REFLECTED.add(owner.getName() + "." + name + "(" + mode + ")");
+        Field f = owner.getDeclaredField(name);
+        f.setAccessible(true);
+        return f;
+    }
+
+    private static Path prefsDir() {
+        return Paths.get(System.getProperty("user.home"), "Library", "Preferences");
+    }
+    private static String plistHash() {
+        try {
+            Path p = prefsDir().resolve("com.apple.java.util.prefs.plist");
+            if (!Files.exists(p)) { return "ABSENT"; }
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(md.digest(Files.readAllBytes(p)));
+        } catch (Exception e) { return "ERROR"; }
+    }
+    private static long prefsCount() {
+        try (Stream<Path> s = Files.list(prefsDir())) { return s.count(); }
+        catch (Exception e) { return -1L; }
+    }
+    private static int windows() {
+        try { return java.awt.Window.getWindows().length; } catch (Throwable t) { return -1; }
+    }
+    private static int frames() {
+        try { return java.awt.Frame.getFrames().length; } catch (Throwable t) { return -1; }
+    }
+
+    private static String plistBefore;
+    private static long countBefore;
+
+    public static void main(String[] args) {
+        group = args.length > 0 ? args[0] : "?";
+        int queries = args.length > 1 ? Integer.parseInt(args[1]) : 1;
+        Throwable thrown = null;
+        try {
+            plistBefore = plistHash();
+            countBefore = prefsCount();
+            req("e2probe.ScratchPrefs".equals(Preferences.userRoot().getClass().getName()),
+                "isolated Preferences active");
+            req(java.awt.GraphicsEnvironment.isHeadless(), "headless at start");
+            req(windows() == 0 && frames() == 0, "zero Window/Frame at start");
+
+            // global tables: ONCE per process
+            req(CheckPattern.class.getResourceAsStream("patterns.properties") != null,
+                "patterns.properties present");
+            CheckPattern.getInstance().loadPattern();
+            Zobrist.getInstance().initialize();
+            System.out.println("INIT group=" + group + " queries=" + queries + " tables=once");
+
+            GeneralSettings gs = GeneralSettings.getInstance();
+            gs.mdFixedPly = true;
+            gs.mdPly = 3;
+            req(gs.mdFixedPly && gs.mdPly == 3, "fixed ply 3 pinned");
+
+            for (int q = 1; q <= queries; q++) { oneQuery(q); }
+        } catch (Throwable t) {
+            thrown = t;
+            System.out.println("THREW: " + t);
+            t.printStackTrace(System.out);
+        } finally {
+            postconditions(thrown, queries);
+        }
+        System.exit(failures == 0 ? 0 : 3);
+    }
+
+    /** Builds a FRESH, fully validated coherent Match, then runs exactly one query. */
+    private static void oneQuery(int q) throws Exception {
+        boolean coherent = true;
+        Match match = new Match();
+        Board bY = match.getBoardY();
+        Board bX = match.getBoardX();
+        bY.clearBoard(); bX.clearBoard();
+        bY.setSize(24, 24); bX.setSize(24, 24);
+        bY.getEval().setupForY(); bX.getEval().setupForY();
+        coherent &= bY.getXsize() == 24 && bY.getYsize() == 24;
+        coherent &= match.getMoveNr() == 0;
+
+        reflect(Match.class, "nextPlayer", "write").setInt(match, Board.YPLAYER);
+        coherent &= match.getNextPlayer() == Board.YPLAYER;
+
+        for (int k = 0; k < SEQ.length; k++) {
+            int x = SEQ[k][0], y = SEQ[k][1], p = MOVER[k], n = k + 1;
+            coherent &= p == match.getNextPlayer();
+            coherent &= match.setlastMove(x, y);
+            coherent &= match.getMoveNr() == n;
+            coherent &= match.getNextPlayer() == -p;
+            coherent &= match.getMoveX(n) == x && match.getMoveY(n) == y;
+            coherent &= bY.getPin(x, y) == p;
+            coherent &= bX.getPin(y, x) == -p;
+        }
+        coherent &= match.getMoveNr() == 6;
+        coherent &= match.getNextPlayer() == Board.YPLAYER;
+        req(coherent, "query " + q + ": position coherence");
+
+        FindMove fm = FindMove.getFindMove();
+        long t0 = System.nanoTime();
+        Move mv = fm.computeMove(Board.YPLAYER);
+        long ms = (System.nanoTime() - t0) / 1000000L;
+
+        req(mv != null, "query " + q + ": non-null move");
+        int mx = mv == null ? -1 : mv.getX();
+        int my = mv == null ? -1 : mv.getY();
+        boolean legal = mv != null && mx >= 0 && mx < 24 && my >= 0 && my < 24
+                        && bY.getPin(mx, my) == 0 && bY.pinAllowed(mx, my, Board.YPLAYER);
+        req(legal, "query " + q + ": legal move");
+
+        boolean uab = reflect(FindMove.class, "usealphabeta", "read").getBoolean(fm);
+        int cmp = reflect(FindMove.class, "currentMaxPly", "read").getInt(null);
+
+        System.out.println("RECORD group=" + group + " query=" + q
+            + " move_x=" + mx + " move_y=" + my
+            + " coherent=" + coherent + " legal=" + legal
+            + " usealphabeta=" + uab + " currentMaxPly=" + cmp
+            + " elapsed_ms=" + ms);
+    }
+
+    private static void postconditions(Throwable thrown, int queries) {
+        boolean noThrow = thrown == null;
+        int w = windows(), f = frames();
+        boolean headless = java.awt.GraphicsEnvironment.isHeadless();
+        String plistAfter = plistHash();
+        long countAfter = prefsCount();
+        boolean prefsOk = plistBefore != null && plistBefore.equals(plistAfter)
+                          && countBefore == countAfter;
+
+        Set<String> names = new LinkedHashSet<String>(REFLECTED);
+        long writes = REFLECTED.stream().filter(s -> s.endsWith("nextPlayer(write)")).count();
+        long reads  = REFLECTED.size() - writes;
+        boolean reflOk = names.equals(AUTHORIZED_FIELDS)
+                         && writes == queries && reads == 2L * queries;
+        if (REFLECTED.isEmpty()) { reflOk = false; }
+
+        req(noThrow, "no unexpected exception");
+        req(w == 0 && f == 0, "zero Window/Frame at process end");
+        req(headless, "headless at end");
+        req(prefsOk, "preference surfaces unchanged");
+        req(reflOk, "reflection contract: authorized fields only, "
+                    + queries + " writes / " + (2 * queries) + " reads");
+
+        System.out.println("POSTCOND group=" + group + " queries=" + queries
+            + " no_throw=" + noThrow + " windows=" + w + " frames=" + f
+            + " headless=" + headless + " prefs_ok=" + prefsOk
+            + " refl_fields_ok=" + names.equals(AUTHORIZED_FIELDS)
+            + " refl_writes=" + writes + " refl_reads=" + reads
+            + " failures=" + failures);
+    }
+}

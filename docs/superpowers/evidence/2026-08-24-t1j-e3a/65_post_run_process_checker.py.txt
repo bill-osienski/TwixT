@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""E3a POST-RUN per-process checker (review round 1).
+
+The runtime comparator (62_comparator_compare.py) validated the POOLED records
+and every POSTCOND it found, but never required HOW MANY processes reported:
+five valid POSTCONDs would have passed. This checker binds the process
+structure instead — the exact file set, per-file record counts and query
+identities, and exactly one POSTCOND per file.
+
+Operates on the preserved per-process stdout files. Does not rerun anything.
+Self-tests first, including negative controls for a missing or duplicated
+process file and a missing or duplicated postcondition.
+
+Review round 2: added the runtime comparator's rejection of the null sentinel
+move (-1,-1), which this checker previously omitted while the report claimed it
+reapplied every comparator condition. A negative self-test covers it.
+"""
+import os, sys
+
+EXPECT = {
+    "53_shared_stdout.txt":  ("shared", 20),
+    "57_fresh_1_stdout.txt": ("fresh", 1),
+    "57_fresh_2_stdout.txt": ("fresh", 1),
+    "57_fresh_3_stdout.txt": ("fresh", 1),
+    "57_fresh_4_stdout.txt": ("fresh", 1),
+    "57_fresh_5_stdout.txt": ("fresh", 1),
+}
+EXPECT_PLY = "4"
+
+def parse(text):
+    rec, post = [], []
+    for line in text.splitlines():
+        if line.startswith("RECORD "):
+            rec.append(dict(kv.split("=", 1) for kv in line[7:].split()))
+        elif line.startswith("POSTCOND "):
+            post.append(dict(kv.split("=", 1) for kv in line[9:].split()))
+    return rec, post
+
+def check(files):
+    """files: {name: text}. Returns (ok, reasons). Fail-closed."""
+    r = []
+    if set(files) != set(EXPECT):
+        missing = sorted(set(EXPECT) - set(files))
+        extra   = sorted(set(files) - set(EXPECT))
+        if missing: r.append(f"missing process file(s): {missing}")
+        if extra:   r.append(f"unexpected process file(s): {extra}")
+    all_moves, total = set(), 0
+    for name in sorted(set(EXPECT) & set(files)):
+        group, n = EXPECT[name]
+        rec, post = parse(files[name])
+        total += len(rec)
+        if len(rec) != n:
+            r.append(f"{name}: {len(rec)} RECORD lines, expected {n}")
+        if len(post) != 1:
+            r.append(f"{name}: {len(post)} POSTCOND lines, expected exactly 1")
+        ids = [x.get("query") for x in rec]
+        if ids != [str(i) for i in range(1, n + 1)]:
+            r.append(f"{name}: query identities {ids} != 1..{n}")
+        for x in rec:
+            if x.get("group") != group:
+                r.append(f"{name}: record group {x.get('group')} != {group}")
+            if x.get("currentMaxPly") != EXPECT_PLY:
+                r.append(f"{name}: currentMaxPly {x.get('currentMaxPly')} != {EXPECT_PLY}")
+            for k in ("coherent", "legal", "usealphabeta"):
+                if x.get(k) != "true":
+                    r.append(f"{name}: {k} != true")
+            all_moves.add((x.get("move_x"), x.get("move_y")))
+        for p in post:
+            if p.get("group") != group:
+                r.append(f"{name}: postcond group {p.get('group')} != {group}")
+            if p.get("queries") != str(n):
+                r.append(f"{name}: postcond queries {p.get('queries')} != {n}")
+            for key, want in (("no_throw","true"),("headless","true"),("prefs_ok","true"),
+                              ("refl_fields_ok","true"),("windows","0"),("frames","0"),
+                              ("failures","0")):
+                if p.get(key) != want:
+                    r.append(f"{name}: postcond {key}={p.get(key)} != {want}")
+            if p.get("refl_writes") != str(n) or p.get("refl_reads") != str(2 * n):
+                r.append(f"{name}: reflection {p.get('refl_writes')}/{p.get('refl_reads')}"
+                         f" != {n}/{2*n}")
+    if total != 25:
+        r.append(f"total records {total} != 25")
+    if len(all_moves) != 1:
+        r.append(f"moves not identical across processes: {sorted(all_moves)}")
+    elif ("-1", "-1") in all_moves:
+        # mirrors the runtime comparator: a unanimous null sentinel is identical
+        # but not a move, and must not satisfy the identity requirement
+        r.append("move is the null sentinel (-1,-1)")
+    return (len(r) == 0), r
+
+# --------------------------------------------------------------- self-test
+def _mk(group, n, ply="4", move=("15","15"), posts=1, ids=None):
+    ids = ids or list(range(1, n + 1))
+    lines = [f"RECORD group={group} query={i} move_x={move[0]} move_y={move[1]}"
+             f" coherent=true legal=true usealphabeta=true currentMaxPly={ply}"
+             f" elapsed_ms=11" for i in ids]
+    for _ in range(posts):
+        lines.append(f"POSTCOND group={group} queries={n} no_throw=true windows=0 frames=0"
+                     f" headless=true prefs_ok=true refl_fields_ok=true"
+                     f" refl_writes={n} refl_reads={2*n} failures=0")
+    return "\n".join(lines) + "\n"
+
+def good():
+    f = {"53_shared_stdout.txt": _mk("shared", 20)}
+    for i in range(1, 6):
+        f[f"57_fresh_{i}_stdout.txt"] = _mk("fresh", 1)
+    return f
+
+def selftest():
+    print("per-process checker self-test")
+    cases = [("baseline accepted", good(), True)]
+
+    f = good(); del f["57_fresh_3_stdout.txt"]
+    cases.append(("MISSING process file rejected", f, False))
+
+    f = good(); f["57_fresh_6_stdout.txt"] = _mk("fresh", 1)
+    cases.append(("DUPLICATED/extra process file rejected", f, False))
+
+    f = good(); f["57_fresh_2_stdout.txt"] = _mk("fresh", 1, posts=0)
+    cases.append(("MISSING postcondition rejected", f, False))
+
+    f = good(); f["57_fresh_4_stdout.txt"] = _mk("fresh", 1, posts=2)
+    cases.append(("DUPLICATED postcondition rejected", f, False))
+
+    f = good(); f["53_shared_stdout.txt"] = _mk("shared", 20, ids=list(range(2, 22)))
+    cases.append(("wrong query identities rejected", f, False))
+
+    f = good(); f["57_fresh_5_stdout.txt"] = _mk("fresh", 1, move=("16","15"))
+    cases.append(("changed move rejected", f, False))
+
+    f = good(); f["57_fresh_1_stdout.txt"] = _mk("fresh", 1, ply="3")
+    cases.append(("wrong ply rejected", f, False))
+
+    f = {"53_shared_stdout.txt": _mk("shared", 20, move=("-1","-1"))}
+    for i in range(1, 6):
+        f[f"57_fresh_{i}_stdout.txt"] = _mk("fresh", 1, move=("-1","-1"))
+    cases.append(("unanimous null sentinel (-1,-1) rejected", f, False))
+
+    bad = 0
+    for name, files, want in cases:
+        ok, reasons = check(files)
+        good_result = (ok == want)
+        print(f"  {'PASS' if good_result else 'FAIL'}  {name}"
+              + ("" if ok else f"   [{reasons[0]}]"))
+        if not good_result: bad += 1
+    if bad:
+        print(f"SELFTEST FAILED ({bad}) — refusing to check real data"); return False
+    print("SELFTEST OK — checker rejects every injected structural defect")
+    return True
+
+if __name__ == "__main__":
+    if not selftest(): sys.exit(2)
+    if len(sys.argv) < 2: print("no evidence directory given"); sys.exit(2)
+    d = sys.argv[1]
+    names = [n for n in os.listdir(d) if n.endswith("_stdout.txt")]
+    files = {n: open(os.path.join(d, n)).read() for n in names}
+    print()
+    print(f"checking {len(files)} per-process stdout file(s) in {d}")
+    for n in sorted(files): print("  " + n)
+    ok, reasons = check(files)
+    print()
+    if ok:
+        print("PROCESS-STRUCTURE CHECK PASS — exactly 6 processes, 20+1x5 records,")
+        print("  one POSTCOND each, correct query identities, identical move, all conditions met")
+        sys.exit(0)
+    print(f"PROCESS-STRUCTURE CHECK FAIL — {len(reasons)} problem(s):")
+    for x in reasons: print("  " + x)
+    sys.exit(3)

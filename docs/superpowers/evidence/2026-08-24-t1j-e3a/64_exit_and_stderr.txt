@@ -1,0 +1,16 @@
+exit statuses
+  shared: 0
+  fresh_1: 0
+  fresh_2: 0
+  fresh_3: 0
+  fresh_4: 0
+  fresh_5: 0
+  comparator gate: 0
+
+stderr byte counts (all zero = no stderr from any process)
+  shared: 0
+  fresh_1: 0
+  fresh_2: 0
+  fresh_3: 0
+  fresh_4: 0
+  fresh_5: 0

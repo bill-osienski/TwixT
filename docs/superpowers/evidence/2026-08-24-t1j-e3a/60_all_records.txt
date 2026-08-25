@@ -1,0 +1,62 @@
+INIT group=shared queries=20 tables=once
+Elapsed: 34 msec.
+RECORD group=shared query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=33
+Elapsed: 17 msec.
+RECORD group=shared query=2 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=17
+Elapsed: 16 msec.
+RECORD group=shared query=3 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=16
+Elapsed: 12 msec.
+RECORD group=shared query=4 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=12
+Elapsed: 12 msec.
+RECORD group=shared query=5 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=12
+Elapsed: 12 msec.
+RECORD group=shared query=6 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+Elapsed: 11 msec.
+RECORD group=shared query=7 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+Elapsed: 11 msec.
+RECORD group=shared query=8 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+Elapsed: 11 msec.
+RECORD group=shared query=9 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+Elapsed: 10 msec.
+RECORD group=shared query=10 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+Elapsed: 11 msec.
+RECORD group=shared query=11 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+Elapsed: 11 msec.
+RECORD group=shared query=12 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+Elapsed: 11 msec.
+RECORD group=shared query=13 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+Elapsed: 11 msec.
+RECORD group=shared query=14 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+Elapsed: 11 msec.
+RECORD group=shared query=15 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+Elapsed: 11 msec.
+RECORD group=shared query=16 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+Elapsed: 11 msec.
+RECORD group=shared query=17 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+Elapsed: 10 msec.
+RECORD group=shared query=18 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+Elapsed: 10 msec.
+RECORD group=shared query=19 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+Elapsed: 11 msec.
+RECORD group=shared query=20 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+POSTCOND group=shared queries=20 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=20 refl_reads=40 failures=0
+INIT group=fresh queries=1 tables=once
+Elapsed: 38 msec.
+RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=37
+POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
+INIT group=fresh queries=1 tables=once
+Elapsed: 33 msec.
+RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=33
+POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
+INIT group=fresh queries=1 tables=once
+Elapsed: 32 msec.
+RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=32
+POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
+INIT group=fresh queries=1 tables=once
+Elapsed: 35 msec.
+RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=34
+POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
+INIT group=fresh queries=1 tables=once
+Elapsed: 32 msec.
+RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=32
+POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0

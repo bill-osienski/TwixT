@@ -1,0 +1,42 @@
+POST-RUN PER-PROCESS STRUCTURE CHECK — review round 1, 2026-08-24
+(checker extended in review round 2: null-sentinel rejection added)
+
+WHY. The runtime comparator (62) validated the POOLED records and every
+POSTCOND it found, but never required HOW MANY processes reported: five
+valid POSTCONDs would have passed it. This binds the process structure
+instead — exact file set, per-file record counts and query identities,
+and exactly one POSTCOND per file.
+
+ROUND 2. The checker originally omitted the runtime comparator's explicit
+rejection of the null sentinel move (-1,-1), while the report claimed it
+reapplied every comparator condition. A unanimous (-1,-1) is identical
+across processes but is not a move. The guard and a negative self-test
+are now present, so the 'every condition' statement holds.
+
+E3a was NOT rerun. Artifacts 50-64 are unchanged. Only this checker was
+re-executed, over the preserved per-process stdout files.
+
+$ python3 65_post_run_process_checker.py docs/superpowers/evidence/2026-08-24-t1j-e3a
+    | per-process checker self-test
+    |   PASS  baseline accepted
+    |   PASS  MISSING process file rejected   [missing process file(s): ['57_fresh_3_stdout.txt']]
+    |   PASS  DUPLICATED/extra process file rejected   [unexpected process file(s): ['57_fresh_6_stdout.txt']]
+    |   PASS  MISSING postcondition rejected   [57_fresh_2_stdout.txt: 0 POSTCOND lines, expected exactly 1]
+    |   PASS  DUPLICATED postcondition rejected   [57_fresh_4_stdout.txt: 2 POSTCOND lines, expected exactly 1]
+    |   PASS  wrong query identities rejected   [53_shared_stdout.txt: query identities ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21'] != 1..20]
+    |   PASS  changed move rejected   [moves not identical across processes: [('15', '15'), ('16', '15')]]
+    |   PASS  wrong ply rejected   [57_fresh_1_stdout.txt: currentMaxPly 3 != 4]
+    |   PASS  unanimous null sentinel (-1,-1) rejected   [move is the null sentinel (-1,-1)]
+    | SELFTEST OK — checker rejects every injected structural defect
+    |
+    | checking 6 per-process stdout file(s) in docs/superpowers/evidence/2026-08-24-t1j-e3a
+    |   53_shared_stdout.txt
+    |   57_fresh_1_stdout.txt
+    |   57_fresh_2_stdout.txt
+    |   57_fresh_3_stdout.txt
+    |   57_fresh_4_stdout.txt
+    |   57_fresh_5_stdout.txt
+    |
+    | PROCESS-STRUCTURE CHECK PASS — exactly 6 processes, 20+1x5 records,
+    |   one POSTCOND each, correct query identities, identical move, all conditions met
+    [exit 0]

@@ -1,0 +1,103 @@
+#!/bin/bash
+E1=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1
+E2=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2
+E5=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a
+EV="$E5/evidence5"
+JH="$E2/jdk/home/jdk-17.0.20.1+1/Contents/Home"
+JAR="$E1/acq/release/t1j.jar"
+REPO=/Users/bill/projects/TwixT_Game
+TMPERR=$(mktemp)
+run() {
+  printf '$ %s\n' "$1"
+  out=$(eval "$1" 2>"$TMPERR"); rc=$?
+  if [ -n "$out" ]; then printf '%s\n' "$out" | sed 's/^/    | /'; else echo "    | <no stdout>"; fi
+  if [ -s "$TMPERR" ]; then sed 's/^/    ! /' "$TMPERR"; fi
+  printf '    [exit %d]\n\n' "$rc"; return $rc
+}
+die() { echo "*** $1 — STOPPING ***"; exit 9; }
+expect() { # expect <label> <actual> <expected>
+  if [ "$2" = "$3" ]; then echo "    MATCH  $1"; else echo "    *** MISMATCH $1: got $2 want $3 ***"; die "$1 mismatch"; fi
+}
+
+echo "E3a — DETERMINISM ONLY. Execution transcript; substantive commands captured as they ran."
+echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)   host $(uname -srm)   shell $BASH_VERSION"
+echo
+
+echo "########## 1. IDENTITY GATE — compared, not merely recorded ##########"
+run "git -C $E1/acq/t1j rev-parse HEAD"
+expect "clone HEAD" "$out" "b572ed21f1f6b08491f69db32f531fc4b5f50fcd"
+run "git -C $E1/acq/t1j status --porcelain"
+[ -z "$out" ] || die "clone not clean"
+run "shasum -a 256 $JAR | cut -d' ' -f1"
+expect "t1j.jar" "$out" "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7"
+run "shasum -a 256 $E2/jdk/jdk.tar.gz | cut -d' ' -f1"
+expect "jdk archive" "$out" "196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8"
+echo "  extracted JVM components, compared against the values bound in E2 attempt 4"
+echo "  (evidence/2026-08-24-t1j-e2-attempt4/49_post_run_jvm_binding.txt):"
+run "shasum -a 256 $JH/release | cut -d' ' -f1"
+expect "jvm release"    "$out" "cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b"
+run "shasum -a 256 $JH/bin/java | cut -d' ' -f1"
+expect "jvm bin/java"   "$out" "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0"
+run "shasum -a 256 $JH/bin/javac | cut -d' ' -f1"
+expect "jvm bin/javac"  "$out" "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab"
+run "shasum -a 256 $JH/lib/modules | cut -d' ' -f1"
+expect "jvm lib/modules" "$out" "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951"
+echo "IDENTITY GATE PASSED"
+echo
+
+echo "########## 2. ALL E1/E2 EVIDENCE MUST BE BYTE-UNCHANGED ##########"
+run "git -C $REPO status --porcelain docs/superpowers/evidence/2026-08-24-t1j-e1 docs/superpowers/evidence/2026-08-24-t1j-e2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt4"
+[ -z "$out" ] || die "E1/E2 evidence is dirty"
+echo
+
+echo "########## 3. PREFS BEFORE ##########"
+run "bash $E2/prefsfp.sh BEFORE | tee $EV/51_prefs_before.txt"
+echo
+
+echo "########## 4. COMPILE ##########"
+run "shasum -a 256 $E5/src/net/schwagereit/t1j/E3aProbe.java $E5/compare.py"
+run "$JH/bin/javac -Xlint:-options -encoding UTF-8 -cp $JAR -d $E5/classes $E5/src/e2probe/ScratchPrefs.java $E5/src/e2probe/ScratchPrefsFactory.java $E5/src/net/schwagereit/t1j/E3aProbe.java"
+[ $rc -eq 0 ] || die "compile failed"
+echo
+
+JOPTS="-Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true"
+CP="$JAR:$E5/classes"
+
+echo "########## 5. SHARED JVM — 20 independent queries in ONE process ##########"
+run "$JH/bin/java $JOPTS -Xlog:class+load=info:file=$EV/55_classload_shared.log -cp $CP net.schwagereit.t1j.E3aProbe shared 20 > $EV/53_shared.txt 2>$EV/54_shared_err.txt; echo \$? > $EV/56_shared_exit.txt"
+run "cat $EV/56_shared_exit.txt"
+[ "$out" = "0" ] || die "shared-JVM probe exited $out"
+run "grep -c '^RECORD ' $EV/53_shared.txt"
+echo
+
+echo "########## 6. FIVE FRESH JVMs — 1 query each ##########"
+for i in 1 2 3 4 5; do
+  run "$JH/bin/java $JOPTS -cp $CP net.schwagereit.t1j.E3aProbe fresh 1 > $EV/57_fresh_$i.txt 2>$EV/58_fresh_${i}_err.txt; echo \$? > $EV/59_fresh_${i}_exit.txt"
+  run "cat $EV/59_fresh_${i}_exit.txt"
+  [ "$out" = "0" ] || die "fresh JVM $i exited $out"
+done
+echo
+
+echo "########## 7. COLLECT RAW PER-QUERY RESULTS ##########"
+run "cat $EV/53_shared.txt $EV/57_fresh_1.txt $EV/57_fresh_2.txt $EV/57_fresh_3.txt $EV/57_fresh_4.txt $EV/57_fresh_5.txt > $EV/60_all_records.txt; grep -c '^RECORD ' $EV/60_all_records.txt"
+run "grep '^RECORD ' $EV/60_all_records.txt"
+run "grep '^POSTCOND ' $EV/60_all_records.txt"
+echo
+
+echo "########## 8. COMPARATOR — self-test, then the real gate ##########"
+run "python3 $E5/compare.py $EV/60_all_records.txt"
+GATE=$rc
+echo "COMPARATOR EXIT: $GATE"
+echo
+
+echo "########## 9. PREFS AFTER ##########"
+run "bash $E2/prefsfp.sh AFTER | tee $EV/52_prefs_after.txt"
+run "diff $EV/51_prefs_before.txt $EV/52_prefs_after.txt"
+echo
+
+echo "########## 10. CLASS-LOAD + SYSTEM ##########"
+run "grep -oE 'net\.schwagereit\.t1j\.[A-Za-z0-9_$]+' $EV/55_classload_shared.log | sort -u | wc -l"
+run "ls /Library/Java/JavaVirtualMachines | wc -l"
+rm -f "$TMPERR"
+echo "TRANSCRIPT COMPLETE — comparator gate exit $GATE"
+exit $GATE

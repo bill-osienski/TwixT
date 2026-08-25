@@ -1,0 +1,228 @@
+E3a — DETERMINISM ONLY. Execution transcript; substantive commands captured as they ran.
+date 2026-08-25T02:09:07Z   host Darwin 25.5.0 arm64   shell 5.3.15(1)-release
+
+########## 1. IDENTITY GATE — compared, not merely recorded ##########
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j rev-parse HEAD
+    | b572ed21f1f6b08491f69db32f531fc4b5f50fcd
+    [exit 0]
+
+    MATCH  clone HEAD
+$ git -C /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/t1j status --porcelain
+    | <no stdout>
+    [exit 0]
+
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar | cut -d' ' -f1
+    | 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+    [exit 0]
+
+    MATCH  t1j.jar
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/jdk.tar.gz | cut -d' ' -f1
+    | 196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8
+    [exit 0]
+
+    MATCH  jdk archive
+  extracted JVM components, compared against the values bound in E2 attempt 4
+  (evidence/2026-08-24-t1j-e2-attempt4/49_post_run_jvm_binding.txt):
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/release | cut -d' ' -f1
+    | cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b
+    [exit 0]
+
+    MATCH  jvm release
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java | cut -d' ' -f1
+    | af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0
+    [exit 0]
+
+    MATCH  jvm bin/java
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac | cut -d' ' -f1
+    | 6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab
+    [exit 0]
+
+    MATCH  jvm bin/javac
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/lib/modules | cut -d' ' -f1
+    | 28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951
+    [exit 0]
+
+    MATCH  jvm lib/modules
+IDENTITY GATE PASSED
+
+########## 2. ALL E1/E2 EVIDENCE MUST BE BYTE-UNCHANGED ##########
+$ git -C /Users/bill/projects/TwixT_Game status --porcelain docs/superpowers/evidence/2026-08-24-t1j-e1 docs/superpowers/evidence/2026-08-24-t1j-e2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3 docs/superpowers/evidence/2026-08-24-t1j-e2-attempt4
+    | <no stdout>
+    [exit 0]
+
+
+########## 3. PREFS BEFORE ##########
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh BEFORE | tee /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/51_prefs_before.txt
+    | host preference store fingerprint — BEFORE
+    |   dir: /Users/bill/Library/Preferences
+    |   com.apple.java.util.prefs.plist EXISTS  sha256=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  bytes=95  mtime=2025-08-07T23:41:41Z
+    |   any schwagereit/t1j prefs files: 0
+    |   entry count: 523
+    |   listing sha256: 8a111b76dbd59fbae4047af53526e8a4aa3d8c480c447e0b9aafd27d81305fe5
+    |   java-ish entries: 1
+    |     com.apple.java.util.prefs.plist
+    [exit 0]
+
+
+########## 4. COMPILE ##########
+$ shasum -a 256 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/src/net/schwagereit/t1j/E3aProbe.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/compare.py
+    | f4476446e2eaeefd1d88cf88d3501dbd862cadbb361532095fba3bc9d869a778  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/src/net/schwagereit/t1j/E3aProbe.java
+    | bd85034d3c1d645122484aab6e9e101899187d2b26bca98bd143e843d11bc33f  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/compare.py
+    [exit 0]
+
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac -Xlint:-options -encoding UTF-8 -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar -d /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/src/e2probe/ScratchPrefs.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/src/e2probe/ScratchPrefsFactory.java /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/src/net/schwagereit/t1j/E3aProbe.java
+    | <no stdout>
+    [exit 0]
+
+
+########## 5. SHARED JVM — 20 independent queries in ONE process ##########
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -Xlog:class+load=info:file=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/55_classload_shared.log -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/classes net.schwagereit.t1j.E3aProbe shared 20 > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/53_shared.txt 2>/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/54_shared_err.txt; echo $? > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/56_shared_exit.txt
+    | <no stdout>
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/56_shared_exit.txt
+    | 0
+    [exit 0]
+
+$ grep -c '^RECORD ' /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/53_shared.txt
+    | 20
+    [exit 0]
+
+
+########## 6. FIVE FRESH JVMs — 1 query each ##########
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/classes net.schwagereit.t1j.E3aProbe fresh 1 > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_1.txt 2>/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/58_fresh_1_err.txt; echo $? > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_1_exit.txt
+    | <no stdout>
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_1_exit.txt
+    | 0
+    [exit 0]
+
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/classes net.schwagereit.t1j.E3aProbe fresh 1 > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_2.txt 2>/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/58_fresh_2_err.txt; echo $? > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_2_exit.txt
+    | <no stdout>
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_2_exit.txt
+    | 0
+    [exit 0]
+
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/classes net.schwagereit.t1j.E3aProbe fresh 1 > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_3.txt 2>/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/58_fresh_3_err.txt; echo $? > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_3_exit.txt
+    | <no stdout>
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_3_exit.txt
+    | 0
+    [exit 0]
+
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/classes net.schwagereit.t1j.E3aProbe fresh 1 > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_4.txt 2>/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/58_fresh_4_err.txt; echo $? > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_4_exit.txt
+    | <no stdout>
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_4_exit.txt
+    | 0
+    [exit 0]
+
+$ /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java -Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory -Djava.awt.headless=true -cp /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar:/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/classes net.schwagereit.t1j.E3aProbe fresh 1 > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_5.txt 2>/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/58_fresh_5_err.txt; echo $? > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_5_exit.txt
+    | <no stdout>
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/59_fresh_5_exit.txt
+    | 0
+    [exit 0]
+
+
+########## 7. COLLECT RAW PER-QUERY RESULTS ##########
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/53_shared.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_1.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_2.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_3.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_4.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/57_fresh_5.txt > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/60_all_records.txt; grep -c '^RECORD ' /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/60_all_records.txt
+    | 25
+    [exit 0]
+
+$ grep '^RECORD ' /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/60_all_records.txt
+    | RECORD group=shared query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=33
+    | RECORD group=shared query=2 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=17
+    | RECORD group=shared query=3 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=16
+    | RECORD group=shared query=4 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=12
+    | RECORD group=shared query=5 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=12
+    | RECORD group=shared query=6 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+    | RECORD group=shared query=7 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+    | RECORD group=shared query=8 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+    | RECORD group=shared query=9 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=shared query=10 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=shared query=11 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=shared query=12 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=shared query=13 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=shared query=14 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=shared query=15 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=shared query=16 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+    | RECORD group=shared query=17 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=11
+    | RECORD group=shared query=18 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=shared query=19 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=shared query=20 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=10
+    | RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=37
+    | RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=33
+    | RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=32
+    | RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=34
+    | RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=32
+    [exit 0]
+
+$ grep '^POSTCOND ' /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/60_all_records.txt
+    | POSTCOND group=shared queries=20 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=20 refl_reads=40 failures=0
+    | POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
+    | POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
+    | POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
+    | POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
+    | POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
+    [exit 0]
+
+
+########## 8. COMPARATOR — self-test, then the real gate ##########
+$ python3 /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/compare.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/60_all_records.txt
+    | comparator self-test
+    |   PASS  baseline accepted
+    |   PASS  changed move rejected   [moves not identical across queries: [('15', '15'), ('16', '15')]]
+    |   PASS  missing record rejected   [expected 25 records, got 24]
+    |   PASS  wrong group count rejected   [group counts {'fresh': 6, 'shared': 19} != {'shared': 20, 'fresh': 5}]
+    |   PASS  wrong ply rejected   [shared/20: currentMaxPly 3 != 4]
+    |   PASS  failed postcondition rejected   [postcond[shared]: windows=1 != 0]
+    |   PASS  wrong reflection count rejected   [postcond[shared]: reflection counts 19/40 != 20/40]
+    |   PASS  incoherent position rejected   [shared/6: position not coherent]
+    |   PASS  missing POSTCOND rejected   [no POSTCOND records]
+    | SELFTEST OK — comparator rejects every injected defect
+    |
+    | parsed 25 RECORD and 6 POSTCOND lines
+    |
+    | GATE PASS — 25 records, identical move (15,15), ply 4 throughout, all postconditions met
+    |   elapsed_ms (DESCRIPTIVE ONLY, not a gate): min=10 median=11 max=37
+    [exit 0]
+
+COMPARATOR EXIT: 0
+
+########## 9. PREFS AFTER ##########
+$ bash /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/prefsfp.sh AFTER | tee /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/52_prefs_after.txt
+    | host preference store fingerprint — AFTER
+    |   dir: /Users/bill/Library/Preferences
+    |   com.apple.java.util.prefs.plist EXISTS  sha256=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  bytes=95  mtime=2025-08-07T23:41:41Z
+    |   any schwagereit/t1j prefs files: 0
+    |   entry count: 523
+    |   listing sha256: 8a111b76dbd59fbae4047af53526e8a4aa3d8c480c447e0b9aafd27d81305fe5
+    |   java-ish entries: 1
+    |     com.apple.java.util.prefs.plist
+    [exit 0]
+
+$ diff /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/51_prefs_before.txt /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/52_prefs_after.txt
+    | 1c1
+    | < host preference store fingerprint — BEFORE
+    | ---
+    | > host preference store fingerprint — AFTER
+    [exit 1]
+
+
+########## 10. CLASS-LOAD + SYSTEM ##########
+$ grep -oE 'net\.schwagereit\.t1j\.[A-Za-z0-9_$]+' /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e3a/evidence5/55_classload_shared.log | sort -u | wc -l
+    |       26
+    [exit 0]
+
+$ ls /Library/Java/JavaVirtualMachines | wc -l
+    |        0
+    [exit 0]
+
+TRANSCRIPT COMPLETE — comparator gate exit 0

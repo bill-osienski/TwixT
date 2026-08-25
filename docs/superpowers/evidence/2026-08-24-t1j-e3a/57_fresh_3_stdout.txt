@@ -1,0 +1,4 @@
+INIT group=fresh queries=1 tables=once
+Elapsed: 32 msec.
+RECORD group=fresh query=1 move_x=15 move_y=15 coherent=true legal=true usealphabeta=true currentMaxPly=4 elapsed_ms=32
+POSTCOND group=fresh queries=1 no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_fields_ok=true refl_writes=1 refl_reads=2 failures=0
