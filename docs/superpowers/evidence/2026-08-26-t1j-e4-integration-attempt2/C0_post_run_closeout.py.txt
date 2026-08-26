@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""POST-RUN CLOSEOUT for the E4 integration, written AFTER commit e979e56.
+
+Adds nothing to either run and changes no runtime artifact. It binds the passing
+run's manifest to the COMMIT's objects, confirms the untracked checkpoint and the
+byte identity of every prior package, and records one limitation the passing run
+did not invalidate but the eventual screen must not inherit.
+"""
+import hashlib, re, subprocess, sys
+
+REPO = "/Users/bill/projects/TwixT_Game"
+ROW_RE = re.compile(r"^([0-9a-f]{64})\s+([0-9a-f]{40})\s+(\S+)\s*$")
+CKPT = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+
+PRIOR_PATHS = [
+    "docs/superpowers/evidence/2026-08-25-t1j-e4-integration",
+    "docs/superpowers/2026-08-25-t1j-e4-integration.md",
+    "docs/superpowers/evidence/2026-08-26-t1j-e4-integration-attempt2",
+    "docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification-attempt5",
+    "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4",
+    "docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3",
+]
+AMENDED = {
+    "docs/superpowers/2026-08-25-t1j-e4-preflight-attempt4.md": ("d3f9a4b", "fee7a3b"),
+    "docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt2.md": ("ed48f7a", "0a441eb"),
+    "docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt3.md": ("88d36ea", "904d7d6"),
+    "docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt4.md": ("b020b0e", "2723d0e"),
+    "docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt5.md": ("f6c8b07", "2b8b3aa"),
+}
+
+
+def git(*a):
+    r = subprocess.run(["git", "-C", REPO, *a], capture_output=True, text=True)
+    return r.returncode, r.stdout.strip()
+
+
+def commit_blob(commit, path):
+    rc, out = git("rev-parse", f"{commit}:{path}")
+    return out if rc == 0 else None
+
+
+def files_at(commit, prefix):
+    rc, out = git("ls-tree", "-r", "--format=%(objectname) %(path)", commit, "--", prefix)
+    if rc != 0 or not out:
+        return {}
+    return {l.split(" ", 1)[1]: l.split(" ", 1)[0] for l in out.splitlines()}
+
+
+def added_in(path):
+    rc, out = git("log", "--diff-filter=A", "--format=%H", "-1", "--", path)
+    return out.splitlines()[0] if rc == 0 and out else None
+
+
+def rows_of(text):
+    return {m.group(3): (m.group(1), m.group(2))
+            for m in (ROW_RE.match(l) for l in text.splitlines()) if m}
+
+
+def check_a(manifest_text, commit, blob_of):
+    """Tracked rows bind to the COMMIT's objects; the checkpoint must be absent."""
+    log, bad = [], 0
+    rows = rows_of(manifest_text)
+    if not rows:
+        return 1, ["FAIL manifest has no parsable rows"]
+    for path in sorted(rows):
+        _, manifest_blob = rows[path]
+        obj = blob_of(commit, path)
+        ok = obj is not None and obj == manifest_blob
+        log.append(f"{'PASS' if ok else 'FAIL'}  {path}")
+        log.append(f"        manifest blob   {manifest_blob}")
+        log.append(f"        {commit}:<path> {obj}")
+        if not ok:
+            bad += 1
+    return bad, log
+
+
+def check_b(commit, blob_of):
+    """The checkpoint has NO object in any commit: gitignored, disk-only."""
+    obj = blob_of(commit, CKPT)
+    ok = obj is None
+    return (0 if ok else 1), [
+        f"{'PASS' if ok else 'FAIL'}  {CKPT}",
+        f"        object in {commit}: {obj if obj else 'NONE — untracked (gitignored), disk-only'}"]
+
+
+def check_c(commit, paths, files_fn, added_fn):
+    """Every file, against the commit that added THAT file."""
+    log, bad = [], 0
+    for prefix in paths:
+        now = files_fn(commit, prefix)
+        if not now:
+            log.append(f"FAIL  {prefix}: absent from {commit}")
+            bad += 1
+            continue
+        origins, changed = {}, []
+        for path, blob in sorted(now.items()):
+            origin = added_fn(path)
+            if origin is None:
+                changed.append(path)
+                continue
+            origins[origin[:7]] = origins.get(origin[:7], 0) + 1
+            if files_fn(origin, path).get(path) != blob:
+                changed.append(path)
+        ok = not changed
+        log.append(f"{'PASS' if ok else 'FAIL'}  {prefix}")
+        log.append(f"        {len(now)} files vs their origin commits: "
+                   + ", ".join(f"{c}x{n}" for c, n in sorted(origins.items()))
+                   + f"  changed {len(changed)}")
+        if not ok:
+            log.append(f"        changed={changed[:3]}")
+            bad += 1
+    return bad, log
+
+
+if __name__ == "__main__":
+    commit, manifest = sys.argv[1], sys.argv[2]
+    mf = open(manifest).read()
+    print(f"E4 INTEGRATION POST-RUN CLOSEOUT — commit {commit}\n")
+
+    print("A. tracked manifest rows vs the COMMIT's objects")
+    bad_a, log_a = check_a(mf, commit, commit_blob)
+    print("\n".join(log_a)); print(f"A: {'OK' if not bad_a else f'FAILED ({bad_a})'}\n")
+
+    print("B. the reference checkpoint is untracked, disk-only")
+    bad_b, log_b = check_b(commit, commit_blob)
+    print("\n".join(log_b)); print(f"B: {'OK' if not bad_b else f'FAILED ({bad_b})'}\n")
+
+    print("C. both integration packages and every prior package, byte-identical")
+    bad_c, log_c = check_c(commit, PRIOR_PATHS, files_at, added_in)
+    print("\n".join(log_c)); print(f"C: {'OK' if not bad_c else f'FAILED ({bad_c})'}\n")
+
+    print("C2. declared amendments: checked against the AMENDING commit, and required")
+    print("    to actually differ from their origin")
+    bad_c2 = 0
+    for path, (origin, amender) in sorted(AMENDED.items()):
+        a, b, now = commit_blob(origin, path), commit_blob(amender, path), commit_blob(commit, path)
+        ok = a and b and a != b and b == now
+        print(f"  {'PASS' if ok else 'FAIL'}  {path}  ({origin} -> {amender})")
+        if not ok:
+            bad_c2 += 1
+    print(f"C2: {'OK' if not bad_c2 else f'FAILED ({bad_c2})'}\n")
+
+    print("D. RECORDED LIMITATION — identity checks that accumulate instead of stopping")
+    src = open(f"{REPO}/docs/superpowers/evidence/2026-08-26-t1j-e4-integration-attempt2/"
+               f"12_integrate.py.txt").read().splitlines()
+    def line_of(pat):
+        return next((i + 1 for i, l in enumerate(src) if pat in l), None)
+    jdk_exit = line_of("JDK IDENTITY FAILED")
+    jar_req = line_of("req(sha(JAR) == JAR_SHA")
+    load = line_of("EV = load_reference_evaluator")
+    accumulates = "fails.append(w)" in "\n".join(src)
+    bad_d = 0
+    print(f"  the JDK gate STOPS immediately            -> sys.exit at line {jdk_exit}")
+    print(f"  the jar/checkpoint gate uses req()        -> line {jar_req}")
+    print(f"  req() only accumulates (fails.append)     -> {accumulates}")
+    print(f"  the model is loaded regardless            -> line {load}")
+    ok = bool(jdk_exit and jar_req and load and accumulates and jar_req < load)
+    if not ok:
+        bad_d = 1
+    print(f"  {'PASS' if ok else 'FAIL'}  the limitation is present as described and is recorded")
+    print("  STATEMENT: a jar or checkpoint hash MISMATCH would not have stopped this")
+    print("  script. It would have proceeded to compile, LOAD THE MODEL, BUILD AGENTS and")
+    print("  SPEND SEEDS, reporting FAIL only at the end. Those hashes PASSED here, so this")
+    print("  run stands. THE EVENTUAL SCREEN COMMAND MUST MAKE EVERY IDENTITY CHECK FATAL")
+    print("  BEFORE MODEL LOADING, AGENT CONSTRUCTION OR SEED USE -- as the JDK gate")
+    print("  already is, and the other identity checks are not.")
+    print(f"D: {'OK' if not bad_d else 'FAILED (1)'}\n")
+
+    print("negative controls — the SAME checkers, against tampered inputs:")
+    ctl = 0
+    tracked = sorted(rows_of(mf))
+    flip = lambda h: ("f" if h[0] != "f" else "0") + h[1:]      # noqa: E731
+
+    def ctl_run(name, fn, want_reject):
+        global ctl
+        n, _ = fn()
+        ok = (n > 0) == want_reject
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: {'rejected' if n else 'accepted'} ({n})")
+        if not ok: ctl += 1
+
+    ctl_run("A untouched accepted", lambda: check_a(mf, commit, commit_blob), False)
+    ctl_run("A a flipped manifest blob", lambda: check_a(
+        mf.replace(rows_of(mf)[tracked[0]][1], flip(rows_of(mf)[tracked[0]][1])),
+        commit, commit_blob), True)
+    ctl_run("A the commit holds a different object", lambda: check_a(
+        mf, commit, lambda c, p: None if commit_blob(c, p) is None else flip(commit_blob(c, p))),
+        True)
+    ctl_run("A a tracked path missing from the commit",
+            lambda: check_a(mf, commit, lambda c, p: None), True)
+    ctl_run("B untouched accepted", lambda: check_b(commit, commit_blob), False)
+    ctl_run("B the checkpoint unexpectedly tracked",
+            lambda: check_b(commit, lambda c, p: "a" * 40), True)
+    ctl_run("C untouched accepted",
+            lambda: check_c(commit, PRIOR_PATHS[:2], files_at, added_in), False)
+    ctl_run("C a file differs from its origin", lambda: check_c(
+        commit, PRIOR_PATHS[:2],
+        lambda c, p: ({k: (flip(v) if i == 0 else v)
+                       for i, (k, v) in enumerate(sorted(files_at(c, p).items()))}
+                      if c == commit else files_at(c, p)), added_in), True)
+    print(f"CONTROLS {'OK' if not ctl else f'FAILED ({ctl})'}")
+    sys.exit(0 if not (bad_a or bad_b or bad_c or bad_c2 or bad_d or ctl) else 3)

@@ -73,6 +73,31 @@ legal-move set, terminal state with winner attribution, T1j's **ordered history*
 accessors, and the POSTCOND surface — headless, zero `Window`/`Frame`, host preferences unchanged,
 authorized reflection **at the exact expected count**.
 
+## Post-run closeout (added after `e979e56`)
+
+C-series evidence added separately; the card is amended only with this section. No runtime artifact
+changed and `16_MANIFEST` still verifies 10/10.
+
+- **A** — all **10 tracked rows** match `git rev-parse e979e56:<path>`.
+- **B** — the reference checkpoint has **no object in the commit**: gitignored, disk-only.
+- **C** — both integration packages, attempt 1 included, and every prior package: **zero changed
+  files**, each compared against the commit that added *that file*.
+- **C2** — five declared amendments, each checked against its amending commit and required to
+  actually differ from its origin.
+
+Eight controls, all invoking the real checkers, all passing.
+
+### Recorded limitation — identity checks that accumulate instead of stopping
+
+The qualification script's **JDK gate stops immediately** (`sys.exit` at line 63). Its
+**jar and checkpoint gates do not**: they route through `req()` (line 67), which only appends to a
+list, and the script proceeds to compile, **load the model at line 81**, build agents and **spend
+seeds**, reporting `FAIL` only at the end.
+
+**Those hashes passed here, so this run stands.** But it is the wrong shape, and the eventual screen
+command **must make every identity check fatal before model loading, agent construction or seed
+use** — as the JDK gate already is, and the others are not.
+
 ---
 
 ## What this establishes, and what it does not

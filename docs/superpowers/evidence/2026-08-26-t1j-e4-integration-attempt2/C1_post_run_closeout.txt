@@ -1,0 +1,88 @@
+E4 INTEGRATION POST-RUN CLOSEOUT — commit e979e56
+
+A. tracked manifest rows vs the COMMIT's objects
+PASS  scripts/GPU/alphazero/e4_screen_integration.py
+        manifest blob   4d98c746e6b7afec1de07add361323772c619ef4
+        e979e56:<path> 4d98c746e6b7afec1de07add361323772c619ef4
+PASS  scripts/GPU/alphazero/e4_screen_reference.py
+        manifest blob   db10031148d6cfaac5f715e40a5e276ab2519350
+        e979e56:<path> db10031148d6cfaac5f715e40a5e276ab2519350
+PASS  scripts/GPU/alphazero/e4_screen_rules.py
+        manifest blob   8274a51e53e819aa96f38b7bf0df56564564e3e9
+        e979e56:<path> 8274a51e53e819aa96f38b7bf0df56564564e3e9
+PASS  scripts/GPU/alphazero/e4_screen_runner.py
+        manifest blob   fdf40aad09f2d4f5c20754cfe0900c4b1d28a1b5
+        e979e56:<path> fdf40aad09f2d4f5c20754cfe0900c4b1d28a1b5
+PASS  scripts/GPU/alphazero/t1j_adapter.py
+        manifest blob   e48cc23383554caa30861ab0f80ff48712ae27bb
+        e979e56:<path> e48cc23383554caa30861ab0f80ff48712ae27bb
+PASS  scripts/GPU/alphazero/twixtbot_g3_reference.py
+        manifest blob   56f9d308b13221b7d265c7ef4c608047ac8da777
+        e979e56:<path> 56f9d308b13221b7d265c7ef4c608047ac8da777
+PASS  tests/test_e4_screen_integration.py
+        manifest blob   ffdc8873549ceefaea5706b11183ceddd9d3004e
+        e979e56:<path> ffdc8873549ceefaea5706b11183ceddd9d3004e
+PASS  tests/test_e4_screen_reference.py
+        manifest blob   c8846b69af0e25eca977b93d9b1da7a91d113124
+        e979e56:<path> c8846b69af0e25eca977b93d9b1da7a91d113124
+PASS  tests/test_e4_screen_runner.py
+        manifest blob   bd889f061ec7230e95fa07f018d0d3c0ee7abdca
+        e979e56:<path> bd889f061ec7230e95fa07f018d0d3c0ee7abdca
+PASS  tests/test_t1j_adapter.py
+        manifest blob   37f9c10eb8088ddded64cbfdb302a488ebd9d640
+        e979e56:<path> 37f9c10eb8088ddded64cbfdb302a488ebd9d640
+A: OK
+
+B. the reference checkpoint is untracked, disk-only
+PASS  checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+        object in e979e56: NONE — untracked (gitignored), disk-only
+B: OK
+
+C. both integration packages and every prior package, byte-identical
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-integration
+        8 files vs their origin commits: 1063c07x8  changed 0
+PASS  docs/superpowers/2026-08-25-t1j-e4-integration.md
+        1 files vs their origin commits: 1063c07x1  changed 0
+PASS  docs/superpowers/evidence/2026-08-26-t1j-e4-integration-attempt2
+        11 files vs their origin commits: e979e56x11  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification-attempt5
+        11 files vs their origin commits: 2b8b3aax3, f6c8b07x8  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4
+        24 files vs their origin commits: d3f9a4bx21, fee7a3bx3  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3
+        25 files vs their origin commits: 6377ae5x20, ef81bbdx5  changed 0
+C: OK
+
+C2. declared amendments: checked against the AMENDING commit, and required
+    to actually differ from their origin
+  PASS  docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt2.md  (ed48f7a -> 0a441eb)
+  PASS  docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt3.md  (88d36ea -> 904d7d6)
+  PASS  docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt4.md  (b020b0e -> 2723d0e)
+  PASS  docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt5.md  (f6c8b07 -> 2b8b3aa)
+  PASS  docs/superpowers/2026-08-25-t1j-e4-preflight-attempt4.md  (d3f9a4b -> fee7a3b)
+C2: OK
+
+D. RECORDED LIMITATION — identity checks that accumulate instead of stopping
+  the JDK gate STOPS immediately            -> sys.exit at line 63
+  the jar/checkpoint gate uses req()        -> line 67
+  req() only accumulates (fails.append)     -> True
+  the model is loaded regardless            -> line 81
+  PASS  the limitation is present as described and is recorded
+  STATEMENT: a jar or checkpoint hash MISMATCH would not have stopped this
+  script. It would have proceeded to compile, LOAD THE MODEL, BUILD AGENTS and
+  SPEND SEEDS, reporting FAIL only at the end. Those hashes PASSED here, so this
+  run stands. THE EVENTUAL SCREEN COMMAND MUST MAKE EVERY IDENTITY CHECK FATAL
+  BEFORE MODEL LOADING, AGENT CONSTRUCTION OR SEED USE -- as the JDK gate
+  already is, and the other identity checks are not.
+D: OK
+
+negative controls — the SAME checkers, against tampered inputs:
+  PASS  A untouched accepted: accepted (0)
+  PASS  A a flipped manifest blob: rejected (1)
+  PASS  A the commit holds a different object: rejected (10)
+  PASS  A a tracked path missing from the commit: rejected (10)
+  PASS  B untouched accepted: accepted (0)
+  PASS  B the checkpoint unexpectedly tracked: rejected (1)
+  PASS  C untouched accepted: accepted (0)
+  PASS  C a file differs from its origin: rejected (2)
+CONTROLS OK
