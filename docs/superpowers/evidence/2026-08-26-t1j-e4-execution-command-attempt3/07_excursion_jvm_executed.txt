@@ -1,0 +1,31 @@
+EXCURSION RECORD — a JVM was executed during this attempt's development.
+
+WHAT HAPPENED. While writing the test that proves the REAL harness accepts the
+command's arguments, I substituted the harness's collaborators but NOT the
+command's own state factory and binder. _execute_screen therefore built the REAL
+E3b binder, the harness reached it, and t1j_adapter.replay spawned the pinned
+JVM with a classpath pointing at a classes directory that a no-op _compile had
+never created. I then reproduced it once deliberately, to establish the bound
+below. So: TWO jvm executions, neither authorized.
+
+THE AUTHORIZATION EXCLUDED RUNNING JAVA. This is a scope excursion, not a
+technicality, and it is recorded rather than folded into the narrative.
+
+WHAT IT COULD AND COULD NOT DO.
+  * The JVM dies at main-class resolution, before ANY T1j code runs:
+        Error: Could not find or load main class net.schwagereit.t1j.E3bDump
+        Caused by: java.lang.ClassNotFoundException
+  * java.util.prefs is consulted only when Preferences.userRoot() is first
+    called, which requires code to run. It never ran.
+  * No T1j state was built, no move computed, no seed drawn, no file written.
+
+BOUND, MEASURED AFTERWARDS:
+  host java prefs plist sha256 now      6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d
+  the value E2 attempt 4 recorded       6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d
+  plist mtime                           2025-08-07T23:41:41Z
+  T1j clone dirty lines                 0
+  T1j jar sha256                        53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+
+THE FIX. _execute_screen now takes private _state_factory and _binder seams, so a
+qualification stops the harness BEFORE the binder and no test can reach a jvm.
+This attempt's own run confirms it: 'NO compile ran, so NO jvm was launched'.

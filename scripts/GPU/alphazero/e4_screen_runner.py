@@ -48,7 +48,16 @@ TASK_DIMENSIONS = ("task_id", "endpoint", "t1j_mdPly", "t1j_mdFixedPly", "openin
                    "colour_arm", "anchor_colour", "reference", "reference_sha1",
                    "reference_colour", "seed")
 
-MODES = ("qualify",)                 # "screen" is absent: it is UNAUTHORIZED
+#: Modes the PUBLIC entry point and the CLI will accept. "screen" is absent from
+#: both: it is reachable only through the private path, which the screen command
+#: is the one authorized caller of.
+MODES = ("qualify",)
+SCREEN_MODE = "screen"
+_ALL_MODES = MODES + (SCREEN_MODE,)
+
+#: The live block the canonical schedule reserves. Screen mode permits exactly
+#: these; qualify mode refuses them, as it always has.
+SCREEN_SEED_BLOCK = (202612128, 202612160)
 
 EXIT_OK, EXIT_PRECONDITION, EXIT_ABORT, EXIT_UNEXPECTED = 0, 2, 3, 4
 
@@ -114,6 +123,31 @@ def verify_tasks(tasks: Sequence[Dict[str, Any]]) -> None:
             f"task digest {got} != pinned {CANONICAL_TASK_DIGEST}: the schedule has been "
             f"added to, removed from, reordered or edited")
     REF.validate_schedule(tasks)
+
+
+def count_canonical(tasks, canonical) -> int:
+    """Tasks whose FULL verified content matches the canonical task of that id.
+
+    Counting matching task_ids was a proxy: canonical NAMES attached to synthetic
+    CONTENT counted, and one of my own tests proved exactly that.
+    """
+    by_id = {t["task_id"]: t for t in canonical}
+    n = 0
+    for t in tasks:
+        c = by_id.get(t.get("task_id"))
+        if c is not None and all(t.get(k) == c.get(k) for k in TASK_DIMENSIONS):
+            n += 1
+    return n
+
+
+def _assert_screen_seed(task: Dict[str, Any]) -> None:
+    """Screen mode permits exactly the reserved live block, and nothing else."""
+    lo, hi = SCREEN_SEED_BLOCK
+    seed = int(task["seed"])
+    if not (lo <= seed < hi):
+        raise HarnessError(
+            f"{task['task_id']} carries seed {seed}, outside the reserved screen block "
+            f"[{lo}, {hi})")
 
 
 def _assert_not_scheduled(task: Dict[str, Any]) -> None:
@@ -353,8 +387,13 @@ def run(plan_path: str, results_path: str, *, mode: str = "qualify") -> int:
     """PUBLIC ENTRY POINT. Paths only.
 
     No task, callable, evaluator, cleanup hook, classifier or schedule can be
-    injected. The private `_run` carries those, for fail-closed tests only.
+    injected, and SCREEN MODE IS NOT SELECTABLE HERE: the screen is reachable
+    only through the private path, whose one authorized caller is the screen
+    command.
     """
+    if mode not in MODES:
+        raise HarnessError(
+            f"mode {mode!r} is not permitted; the 32-game screen is UNAUTHORIZED")
     return _run(plan_path, results_path, mode=mode)
 
 
@@ -370,13 +409,22 @@ def _run(plan_path: str, results_path: str, *, mode: str,
          _ply_budget: Optional[int] = None,
          _band: Sequence[float] = BAND) -> int:
     """PRIVATE. The underscore parameters exist ONLY to drive fail-closed tests."""
-    if mode not in MODES:
+    if mode not in _ALL_MODES:
         raise HarnessError(
             f"mode {mode!r} is not permitted; the 32-game screen is UNAUTHORIZED")
-    plan = load_canonical_plan(plan_path)          # verified, then inert
+    plan = load_canonical_plan(plan_path)
     tasks = list(_tasks) if _tasks is not None else []
-    for t in tasks:
-        _assert_not_scheduled(t)
+    screen = mode == SCREEN_MODE
+    if screen:
+        # THE canonical schedule, fully verified, and only the reserved live seeds.
+        verify_tasks(tasks)
+        if count_canonical(tasks, plan["tasks"]) != CANONICAL_N_TASKS:
+            raise HarnessError("screen mode requires the fully verified canonical schedule")
+        for t in tasks:
+            _assert_screen_seed(t)
+    else:
+        for t in tasks:
+            _assert_not_scheduled(t)
 
     n_per = _n_per_endpoint or CANONICAL_N_PER_ENDPOINT
     binder = _binder or _refuse_binder
@@ -387,18 +435,16 @@ def _run(plan_path: str, results_path: str, *, mode: str,
     skipped: List[Dict[str, str]] = []
     cleanups = 0
     try:
+        verified = count_canonical(tasks, plan["tasks"])
         rec.emit({"record_type": "run_header", "mode": mode,
                   "plan_sha256": CANONICAL_PLAN_SHA256,
                   "task_digest": CANONICAL_TASK_DIGEST,
                   "canonical_tasks": len(plan["tasks"]),
-                  # COUNTED, not asserted: a header that always says 0 would keep
-                  # saying 0 on the day the canonical schedule really is executed.
-                  "canonical_tasks_executed": len(
-                      {t["task_id"] for t in tasks}
-                      & {t["task_id"] for t in plan["tasks"]}),
-                  "synthetic_tasks": len(tasks), "ply_cap": _ply_cap,
-                  "ply_budget": _ply_budget,
-                  "n_per_endpoint": n_per, "no_games": True})
+                  # COUNTED by FULL VERIFIED CONTENT, not by task_id.
+                  "canonical_tasks_executed": verified,
+                  "synthetic_tasks": 0 if screen else len(tasks),
+                  "ply_cap": _ply_cap, "ply_budget": _ply_budget,
+                  "n_per_endpoint": n_per, "no_games": not screen})
         for task in tasks:
             endpoint = task["endpoint"]
             if endpoint in stopped:

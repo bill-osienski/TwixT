@@ -713,19 +713,97 @@ def test_an_unrecorded_game_is_not_counted(tmp_path, monkeypatch):
     assert rows[-1]["record_type"] == "abort" and rows[-1]["tasks_played"] == 0
 
 
-def test_the_header_counts_canonical_tasks_actually_scheduled(tmp_path):
-    """A literal 0 would still say 0 on the day the real schedule runs."""
-    out = tmp_path / "hdr.jsonl"
-    H.run(PLAN, str(out), mode="qualify")
-    assert json.loads(open(out).readline())["canonical_tasks_executed"] == 0
-
-    # canonical SEEDS are refused outright, so borrow canonical task IDS with
-    # synthetic seeds: the header counts by identity, which is what matters here
+def test_the_header_counts_canonical_tasks_by_CONTENT_not_by_name(tmp_path):
+    """Counting task_ids was a proxy: canonical NAMES on synthetic CONTENT counted."""
     borrowed = [dict(synthetic_task(i, "weak", anchor="red"), task_id=CANON[i]["task_id"])
                 for i in range(2)]
-    out2 = tmp_path / "hdr2.jsonl"
-    rc = H._run(PLAN, str(out2), mode="qualify", _tasks=borrowed, _agent_factory=win_factory,
+    assert [t["task_id"] for t in borrowed] == [CANON[i]["task_id"] for i in range(2)]
+    assert H.count_canonical(borrowed, CANON) == 0, "borrowed NAMES must not count"
+    assert H.count_canonical(CANON, CANON) == 32
+    assert H.count_canonical(CANON[:5], CANON) == 5
+    assert H.count_canonical([dict(CANON[0], seed=1)], CANON) == 0, "an edited seed must not count"
+
+    out = tmp_path / "hdr.jsonl"
+    rc = H._run(PLAN, str(out), mode="qualify", _tasks=borrowed, _agent_factory=win_factory,
                 _state_factory=small_state, _binder=null_binder, _evaluator=EV,
                 _cleanup=lambda: None, _n_per_endpoint=16)
+    hdr = json.loads(open(out).readline())
     assert rc == H.EXIT_OK
-    assert json.loads(open(out2).readline())["canonical_tasks_executed"] == 2
+    assert hdr["canonical_tasks_executed"] == 0
+    assert hdr["no_games"] is True and hdr["synthetic_tasks"] == 2
+
+
+# --- screen mode: reachable only privately, and only with the real schedule -
+
+def test_screen_mode_is_not_selectable_from_the_public_entry_point(tmp_path):
+    with pytest.raises(H.HarnessError):
+        H.run(PLAN, str(tmp_path / "s.jsonl"), mode="screen")
+    assert not (tmp_path / "s.jsonl").exists()
+
+
+def test_the_cli_still_refuses_screen_mode(tmp_path):
+    r = cli("--plan", PLAN, "--results", str(tmp_path / "s.jsonl"), "--mode", "screen")
+    assert r.returncode == H.EXIT_PRECONDITION and "UNAUTHORIZED" in r.stderr
+
+
+class _StopAtStateFactory(Exception):
+    pass
+
+
+def refusing_state_factory(task):
+    """Aborts before any agent is built, so no RNG and no move can occur."""
+    raise H.AbortError(H.PHASE_PRECONDITION, "qualification stop: no game may be played")
+
+
+def test_the_REAL_harness_accepts_the_canonical_schedule_in_screen_mode(tmp_path):
+    """Proves the seed gate and schedule verification PASS, without playing.
+
+    The state factory aborts on the first task, which happens before any agent is
+    constructed -- so no RNG, no move, no game.
+    """
+    out = tmp_path / "screen.jsonl"
+    built = []
+    with pytest.raises(H.AbortError) as e:
+        H._run(PLAN, str(out), mode=H.SCREEN_MODE, _tasks=CANON,
+               _agent_factory=lambda t, m, ev: built.append(m),
+               _state_factory=refusing_state_factory, _binder=null_binder, _evaluator=EV,
+               _cleanup=lambda: None, _n_per_endpoint=16, _ply_cap=280)
+    assert e.value.phase == H.PHASE_PRECONDITION
+    assert built == [], "no agent may be constructed"
+    hdr = json.loads(open(out).readline())
+    assert hdr["mode"] == "screen"
+    assert hdr["no_games"] is False
+    assert hdr["synthetic_tasks"] == 0
+    assert hdr["canonical_tasks_executed"] == 32
+    assert hdr["ply_budget"] is None and hdr["ply_cap"] == 280
+
+
+def test_qualify_mode_still_refuses_every_canonical_seed(tmp_path):
+    with pytest.raises(H.HarnessError) as e:
+        H._run(PLAN, str(tmp_path / "q.jsonl"), mode="qualify", _tasks=CANON[:1],
+               _agent_factory=win_factory, _state_factory=small_state, _binder=null_binder,
+               _evaluator=EV, _cleanup=lambda: None)
+    assert "accounted or exposed" in str(e.value)
+
+
+@pytest.mark.parametrize("mutate,label", [
+    (lambda t: t[:31], "a short schedule"),
+    (lambda t: list(reversed(t)), "a reordered schedule"),
+    (lambda t: [dict(t[0], seed=999)] + t[1:], "an off-block seed"),
+    (lambda t: [dict(t[0], opening="o9_fake")] + t[1:], "edited content"),
+])
+def test_screen_mode_refuses_anything_but_the_verified_canonical_schedule(
+        tmp_path, mutate, label):
+    with pytest.raises(H.HarnessError):
+        H._run(PLAN, str(tmp_path / f"x.jsonl"), mode=H.SCREEN_MODE, _tasks=mutate(list(CANON)),
+               _agent_factory=win_factory, _state_factory=refusing_state_factory,
+               _binder=null_binder, _evaluator=EV, _cleanup=lambda: None, _n_per_endpoint=16)
+
+
+def test_screen_mode_refuses_a_seed_outside_the_reserved_block():
+    assert H.SCREEN_SEED_BLOCK == (202612128, 202612160)
+    with pytest.raises(H.HarnessError):
+        H._assert_screen_seed({"task_id": "x", "seed": 202612127})
+    with pytest.raises(H.HarnessError):
+        H._assert_screen_seed({"task_id": "x", "seed": 202612160})
+    H._assert_screen_seed({"task_id": "x", "seed": 202612128})

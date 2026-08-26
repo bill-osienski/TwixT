@@ -124,13 +124,20 @@ def _sha1(path: str) -> str:
 # ------------------------------------------------------------ preconditions
 
 def check_plan(plan_path: str) -> Dict[str, Any]:
-    """The canonical ordered 32-task schedule. No injection, no reshaping."""
+    """The canonical ordered 32-task schedule. No injection, no reshaping.
+
+    RETAINS the verified plan under "plan". An earlier version returned only
+    metadata and the authorized branch then referred to a `plan` that did not
+    exist -- flipping the constant would have raised NameError. The verified
+    object is carried forward from here; it is never re-read later.
+    """
     try:
         plan = H.load_canonical_plan(plan_path)
     except H.HarnessError as e:
         raise PreconditionError("plan", str(e)) from None
     return {"plan_sha256": H.CANONICAL_PLAN_SHA256,
-            "task_digest": H.CANONICAL_TASK_DIGEST, "n_tasks": len(plan["tasks"])}
+            "task_digest": H.CANONICAL_TASK_DIGEST, "n_tasks": len(plan["tasks"]),
+            "plan": plan}
 
 
 def check_repository(repo_root: str, plan_path: str) -> Dict[str, Any]:
@@ -245,7 +252,8 @@ def _run_screen(*, plan_path: str, results_path: str, repo_root: str, jdk_home: 
 
     # ---- nothing below this line runs while the screen is unauthorized -------
     return _execute_screen(
-        plan=plan, plan_path=plan_path, results_path=results_path, repo_root=repo_root,
+        plan=records["plan"]["plan"],               # the object check_plan verified
+        plan_path=plan_path, results_path=results_path, repo_root=repo_root,
         jdk_home=jdk_home, jar_path=jar_path, records=records, trace=trace,
         _load_evaluator=_load_evaluator, _build_agent=_build_agent,
         _run_harness=_run_harness, _cleanup=_cleanup, _compile=_compile)
@@ -258,7 +266,9 @@ def _execute_screen(*, plan: Dict[str, Any], plan_path: str, results_path: str,
                     _build_agent: Optional[Callable] = None,
                     _run_harness: Optional[Callable] = None,
                     _cleanup: Optional[Callable] = None,
-                    _compile: Optional[Callable] = None) -> int:
+                    _compile: Optional[Callable] = None,
+                    _state_factory: Optional[Callable] = None,
+                    _binder: Optional[Callable] = None) -> int:
     """The authorized execution path. REACHED ONLY when SCREEN_AUTHORIZED is True.
 
     Complete production wiring, dormant: it builds the T1j runtime and context, the
@@ -272,9 +282,12 @@ def _execute_screen(*, plan: Dict[str, Any], plan_path: str, results_path: str,
     reference agent derives from its own bound task seed, inside
     SeededReferenceAgent -- there is no run-level RNG to seed.
 
-    It is the one authorized caller of the harness's private `_run`: the screen
-    must supply real collaborators, and this command's own public surface exposes
-    none of them.
+    It is the one authorized caller of the harness's private `_run`, and the only
+    caller that may use SCREEN mode: the screen must supply real collaborators,
+    and this command's own public surface exposes none of them. Screen mode makes
+    the harness verify the full canonical schedule by CONTENT, permit exactly the
+    reserved live seed block, and write a header that says what it is --
+    mode="screen", no_games=False, synthetic_tasks=0.
     """
     from . import e4_screen_integration as _INT
     from . import e4_screen_reference as _REF
@@ -288,8 +301,11 @@ def _execute_screen(*, plan: Dict[str, Any], plan_path: str, results_path: str,
     runtime = _INT.T1jRuntime(java=os.path.join(jdk_home, "bin", "java"), jar=jar_path,
                               classes=classes_dir, ply_cap=H.PLY_CAP)
     ctx = _INT.IntegrationContext()
-    state_factory = _INT.make_state_factory(plan["openings"], ctx)
-    binder = _INT.make_binder(runtime, ctx)
+    state_factory = _state_factory or _INT.make_state_factory(plan["openings"], ctx)
+    # A qualification substitutes these to stop the harness BEFORE the binder --
+    # otherwise a test reaches A.replay and spawns a jvm, which is exactly what
+    # happened once while building this.
+    binder = _binder or _INT.make_binder(runtime, ctx)
 
     trace.append("load_evaluator")
     evaluator = (_load_evaluator or _default_load_evaluator)(repo_root)
@@ -303,7 +319,7 @@ def _execute_screen(*, plan: Dict[str, Any], plan_path: str, results_path: str,
     trace.append("run_harness")
     run_harness = _run_harness or H._run
     rc = run_harness(
-        plan_path, results_path, mode="qualify",
+        plan_path, results_path, mode=H.SCREEN_MODE,
         _tasks=plan["tasks"],                       # THE CANONICAL 32, in order
         _agent_factory=agent_factory,
         _state_factory=state_factory,

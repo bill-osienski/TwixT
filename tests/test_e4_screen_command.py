@@ -427,3 +427,104 @@ def test_the_real_defaults_are_the_qualified_ones():
     assert "compile_helper" in inspect.getsource(C._default_compile)
     assert "REF.build" in inspect.getsource(C._default_build_agent)
     assert "H._run" in inspect.getsource(C._execute_screen)
+
+
+# --- the NameError class of defect cannot recur ----------------------------
+
+def _post_gate_unbound_names():
+    """Every name loaded after the authorization gate must already be bound.
+
+    Attempt 2 passed `plan=plan` after the gate while no such local existed:
+    flipping the constant would have raised NameError before the screen started.
+    Tests that substitute the branch cannot see that, because they call it
+    directly.
+    """
+    import ast, builtins
+
+    tree = ast.parse(SOURCE)
+    fn = next(n for n in ast.walk(tree)
+              if isinstance(n, ast.FunctionDef) and n.name == "_run_screen")
+    gate = next(i for i, st in enumerate(fn.body)
+                if isinstance(st, ast.If) and "SCREEN_AUTHORIZED" in ast.dump(st.test))
+    bound = {a.arg for a in fn.args.args} | {a.arg for a in fn.args.kwonlyargs}
+    for st in fn.body[:gate + 1]:
+        for n in ast.walk(st):
+            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store):
+                bound.add(n.id)
+    mod = {n.targets[0].id for n in tree.body
+           if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name)}
+    mod |= {n.name for n in tree.body if isinstance(n, (ast.FunctionDef, ast.ClassDef))}
+    mod |= {a.asname or a.name.split(".")[0] for n in tree.body
+            if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}
+    known = bound | mod | set(dir(builtins))
+    unbound = []
+    for st in fn.body[gate + 1:]:
+        for n in ast.walk(st):
+            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load) and n.id not in known:
+                unbound.append(f"{n.id}@{n.lineno}")
+            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store):
+                known.add(n.id)
+    return unbound
+
+
+def test_no_name_used_after_the_gate_is_unbound():
+    assert _post_gate_unbound_names() == []
+
+
+def test_the_verified_plan_is_carried_forward_not_reloaded():
+    rec = C.check_plan(PLAN)
+    assert "plan" in rec and isinstance(rec["plan"], dict)
+    assert len(rec["plan"]["tasks"]) == 32
+    assert "load_canonical_plan" not in inspect.getsource(C._execute_screen), \
+        "the authorized branch must not re-read the plan"
+
+
+# --- the REAL harness accepts what the command hands it --------------------
+
+def test_the_command_asks_the_harness_for_SCREEN_mode():
+    src = inspect.getsource(C._execute_screen)
+    assert "mode=H.SCREEN_MODE" in src
+    assert '"qualify"' not in src
+
+
+def test_the_real_harness_accepts_the_commands_arguments(tmp_path, clean_repo):
+    """No substitute harness. The real _run runs, and aborts in the state factory
+    -- which is before any agent, so no RNG, no move, no game."""
+    import json as _j
+
+    cap = _Captured()
+    plan = _j.load(open(PLAN))
+    built = []
+
+    def refusing_state_factory(task):
+        raise H.AbortError(H.PHASE_PRECONDITION, "qualification stop: no game may be played")
+
+    out = tmp_path / "real.jsonl"
+    with pytest.raises(H.AbortError) as e:
+        C._execute_screen(
+            plan=plan, plan_path=str(clean_repo / PLAN), results_path=str(out),
+            repo_root=str(clean_repo), jdk_home=JDK, jar_path=JAR, records={}, trace=[],
+            _load_evaluator=lambda repo: object(),
+            _build_agent=lambda task, *, evaluator: built.append(task),
+            _cleanup=lambda: None,
+            _compile=lambda javac, jar, o: None,
+            _state_factory=refusing_state_factory,   # stop BEFORE the binder: no jvm
+            _binder=lambda *a, **k: None)
+    assert e.value.phase == H.PHASE_PRECONDITION
+    assert built == [], "no agent was constructed"
+    assert not os.path.isdir(os.path.join(str(tmp_path), "t1j_classes")), "no compile ran"
+    hdr = _j.loads(open(out).readline())
+    assert hdr["mode"] == "screen" and hdr["no_games"] is False
+    assert hdr["synthetic_tasks"] == 0 and hdr["canonical_tasks_executed"] == 32
+    assert hdr["ply_budget"] is None and hdr["ply_cap"] == 280
+
+
+def test_the_real_harness_would_refuse_the_canonical_seeds_in_qualify_mode(tmp_path):
+    """Which is why the command must ask for screen mode, not qualify."""
+    import json as _j
+    with pytest.raises(H.HarnessError) as e:
+        H._run(PLAN, str(tmp_path / "q.jsonl"), mode="qualify",
+               _tasks=_j.load(open(PLAN))["tasks"][:1],
+               _agent_factory=lambda t, m, ev: None, _state_factory=lambda t: None,
+               _binder=lambda *a: None, _evaluator=object(), _cleanup=lambda: None)
+    assert "accounted or exposed" in str(e.value)
