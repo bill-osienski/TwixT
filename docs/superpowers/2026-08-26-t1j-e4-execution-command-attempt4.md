@@ -76,6 +76,29 @@ public entry point and the runner CLI still refuse screen mode.
 **No JVM was launched in this attempt.** The host Java preferences plist remains `6cb3a052…`,
 byte-identical to E2 attempt 4's recorded value.
 
+## Post-run closeout (added after `a68de55`)
+
+C-series evidence added separately. No runtime artifact changed and `09_MANIFEST` still verifies
+8/8. Full suite after the test correction: **3130 passed, 4 skipped, 0 failed**.
+
+- **A** — all **7 tracked rows** match `git rev-parse a68de55:<path>`.
+- **B** — the checkpoint has **no object in the commit**: gitignored, disk-only.
+- **C** — all six prior evidence packages, per file, against the commit that added *that file*:
+  **zero changed**.
+- **D** — two **declared amendments**: the attempt-3 card, relabelled by `a68de55`; and
+  `tests/test_e4_screen_command.py`, corrected by this closeout.
+
+Four controls, all invoking the real checker, all passing.
+
+### The test correction
+
+One assertion checked the **retired** `<parent>/t1j_classes` path, which is never created any more,
+so it passed vacuously. The compile seam is faked in that test, so setup *does* run and *does* create
+the directory — what must not happen is a `javac` or `java` subprocess. The test now asserts the fake
+seam ran **exactly once**, the run-specific `<results>.t1j_classes` **was** created, the retired
+location was not, and — by watching `subprocess.run` — that **no javac or JVM subprocess was
+spawned**. Watched, not asserted.
+
 ---
 
 ## What this establishes, and what it does not

@@ -1,0 +1,66 @@
+E4 EXECUTION-COMMAND POST-RUN CLOSEOUT — commit a68de55
+
+A. attempt-4 tracked manifest rows vs the COMMIT's objects
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json
+        manifest blob    32ca8fd1b43384d21b1849583d76c08daa9cf4bc
+        a68de55:<path>  32ca8fd1b43384d21b1849583d76c08daa9cf4bc
+PASS  scripts/GPU/alphazero/e4_screen_command.py
+        manifest blob    b01f89b8b941019e4f7918e67766aa8b7d0f6c44
+        a68de55:<path>  b01f89b8b941019e4f7918e67766aa8b7d0f6c44
+PASS  scripts/GPU/alphazero/e4_screen_integration.py
+        manifest blob    4d98c746e6b7afec1de07add361323772c619ef4
+        a68de55:<path>  4d98c746e6b7afec1de07add361323772c619ef4
+PASS  scripts/GPU/alphazero/e4_screen_reference.py
+        manifest blob    db10031148d6cfaac5f715e40a5e276ab2519350
+        a68de55:<path>  db10031148d6cfaac5f715e40a5e276ab2519350
+PASS  scripts/GPU/alphazero/e4_screen_rules.py
+        manifest blob    8274a51e53e819aa96f38b7bf0df56564564e3e9
+        a68de55:<path>  8274a51e53e819aa96f38b7bf0df56564564e3e9
+PASS  scripts/GPU/alphazero/e4_screen_runner.py
+        manifest blob    c5d14328349e8415866b657f372397a6ebb49067
+        a68de55:<path>  c5d14328349e8415866b657f372397a6ebb49067
+PASS  tests/test_e4_screen_command.py  (amended by the closeout; see below)
+        manifest blob    dedfadaa2f39a5b1183798f83eb4ad0f2cc8b266
+        a68de55:<path>  dedfadaa2f39a5b1183798f83eb4ad0f2cc8b266
+A: OK
+
+B. the reference checkpoint is untracked, disk-only
+  PASS  checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+        object in a68de55: NONE — gitignored, disk-only
+B: OK
+
+C. every prior evidence package, byte-identical, per file
+PASS  docs/superpowers/evidence/2026-08-26-t1j-e4-execution-command
+        9 files vs their origin commits: 26426cdx9  changed 0
+PASS  docs/superpowers/evidence/2026-08-26-t1j-e4-execution-command-attempt2
+        9 files vs their origin commits: 45baab2x9  changed 0
+PASS  docs/superpowers/evidence/2026-08-26-t1j-e4-execution-command-attempt3
+        10 files vs their origin commits: 5481965x10  changed 0
+PASS  docs/superpowers/evidence/2026-08-26-t1j-e4-execution-command-attempt4
+        9 files vs their origin commits: a68de55x9  changed 0
+PASS  docs/superpowers/evidence/2026-08-26-t1j-e4-integration-attempt2
+        14 files vs their origin commits: 48f83d0x3, e979e56x11  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-integration
+        8 files vs their origin commits: 1063c07x8  changed 0
+C: OK
+
+D. DECLARED amendments — checked against the amending commit, and required
+   to actually differ from their origin
+  PASS  docs/superpowers/2026-08-26-t1j-e4-execution-command-attempt3.md  (5481965 -> a68de55)
+        why: relabelled 'technical checks passed; AUTHORIZATION COMPLIANCE FAILED' with a visible correction block; two jvm executions cannot sit under an unqualified PASSED
+
+   AMENDED BY THIS CLOSEOUT -- its commit hash cannot be known while it is
+   being written, so the worktree blob is recorded and must differ from the
+   committed one. Verify after committing: git rev-parse <closeout>:<path>
+  PASS  tests/test_e4_screen_command.py
+        at a68de55   dedfadaa2f39a5b1183798f83eb4ad0f2cc8b266
+        worktree     ca62b513edc04d118a128eb4d33c1dab1097d3a9
+        why: one assertion checked the RETIRED <parent>/t1j_classes path and so passed vacuously; it now asserts the fake compile seam ran once, the run-specific <results>.t1j_classes was created, and NO javac/jvm subprocess was spawned
+D: OK
+
+negative controls — the SAME checker, tampered:
+  PASS  untouched accepted: accepted (0)
+  PASS  a flipped manifest blob: rejected (1)
+  PASS  the commit holds a different object: rejected (7)
+  PASS  a tracked path missing from the commit: rejected (7)
+CONTROLS OK

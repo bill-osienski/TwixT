@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""POST-RUN CLOSEOUT for the E4 execution command, after commit a68de55.
+
+Binds attempt 4's tracked manifest rows to that commit's objects, confirms the
+untracked checkpoint, confirms every prior evidence package is byte-identical,
+and DECLARES the two intentional amendments -- the attempt-3 card, and the test
+file corrected in this closeout.
+
+Adds nothing to any run and changes no runtime artifact.
+"""
+import hashlib, re, subprocess, sys
+
+REPO = "/Users/bill/projects/TwixT_Game"
+COMMIT = "a68de55"
+ROW_RE = re.compile(r"^([0-9a-f]{64})\s+([0-9a-f]{40})\s+(\S+)\s*$")
+CKPT = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+
+PRIOR = [
+    "docs/superpowers/evidence/2026-08-26-t1j-e4-execution-command",
+    "docs/superpowers/evidence/2026-08-26-t1j-e4-execution-command-attempt2",
+    "docs/superpowers/evidence/2026-08-26-t1j-e4-execution-command-attempt3",
+    "docs/superpowers/evidence/2026-08-26-t1j-e4-execution-command-attempt4",
+    "docs/superpowers/evidence/2026-08-26-t1j-e4-integration-attempt2",
+    "docs/superpowers/evidence/2026-08-25-t1j-e4-integration",
+]
+#: Intentional, disclosed changes to files after the commit that added them.
+AMENDED = {
+    "docs/superpowers/2026-08-26-t1j-e4-execution-command-attempt3.md": (
+        "5481965", COMMIT,
+        "relabelled 'technical checks passed; AUTHORIZATION COMPLIANCE FAILED' with a "
+        "visible correction block; two jvm executions cannot sit under an unqualified PASSED"),
+}
+#: Amended by THIS closeout, whose own hash cannot be known while it is being written.
+AMENDED_BY_THIS_COMMIT = {
+    "tests/test_e4_screen_command.py":
+        "one assertion checked the RETIRED <parent>/t1j_classes path and so passed "
+        "vacuously; it now asserts the fake compile seam ran once, the run-specific "
+        "<results>.t1j_classes was created, and NO javac/jvm subprocess was spawned",
+}
+
+
+def git(*a):
+    r = subprocess.run(["git", "-C", REPO, *a], capture_output=True, text=True)
+    return r.returncode, r.stdout.strip()
+
+
+def blob(commit, path):
+    rc, out = git("rev-parse", f"{commit}:{path}")
+    return out if rc == 0 else None
+
+
+def files_at(commit, prefix):
+    rc, out = git("ls-tree", "-r", "--format=%(objectname) %(path)", commit, "--", prefix)
+    if rc != 0 or not out:
+        return {}
+    return {l.split(" ", 1)[1]: l.split(" ", 1)[0] for l in out.splitlines()}
+
+
+def added_in(path):
+    rc, out = git("log", "--diff-filter=A", "--format=%H", "-1", "--", path)
+    return out.splitlines()[0] if rc == 0 and out else None
+
+
+def check_rows(manifest_text, commit, blob_of, amended_here):
+    log, bad = [], 0
+    rows = {m.group(3): (m.group(1), m.group(2))
+            for m in (ROW_RE.match(l) for l in manifest_text.splitlines()) if m}
+    if not rows:
+        return 1, ["FAIL manifest has no parsable rows"]
+    for path in sorted(rows):
+        _, want = rows[path]
+        got = blob_of(commit, path)
+        ok = got is not None and got == want
+        note = "  (amended by the closeout; see below)" if path in amended_here else ""
+        log.append(f"{'PASS' if ok else 'FAIL'}  {path}{note}")
+        log.append(f"        manifest blob    {want}")
+        log.append(f"        {commit}:<path>  {got}")
+        if not ok:
+            bad += 1
+    return bad, log
+
+
+if __name__ == "__main__":
+    manifest = sys.argv[1]
+    mf = open(manifest).read()
+    print(f"E4 EXECUTION-COMMAND POST-RUN CLOSEOUT — commit {COMMIT}\n")
+
+    print("A. attempt-4 tracked manifest rows vs the COMMIT's objects")
+    bad_a, log_a = check_rows(mf, COMMIT, blob, AMENDED_BY_THIS_COMMIT)
+    print("\n".join(log_a)); print(f"A: {'OK' if not bad_a else f'FAILED ({bad_a})'}\n")
+
+    print("B. the reference checkpoint is untracked, disk-only")
+    obj = blob(COMMIT, CKPT)
+    ok_b = obj is None
+    print(f"  {'PASS' if ok_b else 'FAIL'}  {CKPT}")
+    print(f"        object in {COMMIT}: {obj or 'NONE — gitignored, disk-only'}")
+    print(f"B: {'OK' if ok_b else 'FAILED (1)'}\n")
+
+    print("C. every prior evidence package, byte-identical, per file")
+    bad_c = 0
+    for prefix in PRIOR:
+        now = files_at(COMMIT, prefix)
+        if not now:
+            print(f"FAIL  {prefix}: absent"); bad_c += 1; continue
+        origins, changed = {}, []
+        for path, b in sorted(now.items()):
+            o = added_in(path)
+            if o is None or files_at(o, path).get(path) != b:
+                changed.append(path)
+            elif o:
+                origins[o[:7]] = origins.get(o[:7], 0) + 1
+        ok = not changed
+        print(f"{'PASS' if ok else 'FAIL'}  {prefix}")
+        print(f"        {len(now)} files vs their origin commits: "
+              + ", ".join(f"{c}x{n}" for c, n in sorted(origins.items()))
+              + f"  changed {len(changed)}")
+        if not ok:
+            print(f"        changed={changed[:3]}"); bad_c += 1
+    print(f"C: {'OK' if not bad_c else f'FAILED ({bad_c})'}\n")
+
+    print("D. DECLARED amendments — checked against the amending commit, and required")
+    print("   to actually differ from their origin")
+    bad_d = 0
+    for path, (origin, amender, why) in sorted(AMENDED.items()):
+        a, b, now = blob(origin, path), blob(amender, path), blob(COMMIT, path)
+        ok = a and b and a != b and b == now
+        print(f"  {'PASS' if ok else 'FAIL'}  {path}  ({origin} -> {amender})")
+        print(f"        why: {why}")
+        if not ok:
+            bad_d += 1
+    print()
+    print("   AMENDED BY THIS CLOSEOUT -- its commit hash cannot be known while it is")
+    print("   being written, so the worktree blob is recorded and must differ from the")
+    print("   committed one. Verify after committing: git rev-parse <closeout>:<path>")
+    for path, why in sorted(AMENDED_BY_THIS_COMMIT.items()):
+        at_commit = blob(COMMIT, path)
+        rc, wt = git("hash-object", path)
+        ok = rc == 0 and wt and at_commit and wt != at_commit
+        print(f"  {'PASS' if ok else 'FAIL'}  {path}")
+        print(f"        at {COMMIT}   {at_commit}")
+        print(f"        worktree     {wt}")
+        print(f"        why: {why}")
+        if not ok:
+            bad_d += 1
+    print(f"D: {'OK' if not bad_d else f'FAILED ({bad_d})'}\n")
+
+    print("negative controls — the SAME checker, tampered:")
+    ctl = 0
+    rows = {m.group(3): (m.group(1), m.group(2))
+            for m in (ROW_RE.match(l) for l in mf.splitlines()) if m}
+    first = sorted(rows)[0]
+    flip = lambda h: ("f" if h[0] != "f" else "0") + h[1:]      # noqa: E731
+    for name, args, want in (
+        ("untouched accepted", (mf, COMMIT, blob), False),
+        ("a flipped manifest blob",
+         (mf.replace(rows[first][1], flip(rows[first][1])), COMMIT, blob), True),
+        ("the commit holds a different object",
+         (mf, COMMIT, lambda c, p: None if blob(c, p) is None else flip(blob(c, p))), True),
+        ("a tracked path missing from the commit", (mf, COMMIT, lambda c, p: None), True),
+    ):
+        n, _ = check_rows(*args, AMENDED_BY_THIS_COMMIT)
+        ok = (n > 0) == want
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: {'rejected' if n else 'accepted'} ({n})")
+        if not ok: ctl += 1
+    print(f"CONTROLS {'OK' if not ctl else f'FAILED ({ctl})'}")
+    sys.exit(0 if not (bad_a or not ok_b or bad_c or bad_d or ctl) else 3)

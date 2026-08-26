@@ -544,14 +544,25 @@ def test_the_command_asks_the_harness_for_SCREEN_mode():
     assert '"qualify"' not in src
 
 
-def test_the_real_harness_accepts_the_commands_arguments(tmp_path, clean_repo):
+def test_the_real_harness_accepts_the_commands_arguments(tmp_path, clean_repo, monkeypatch):
     """No substitute harness. The real _run runs, and aborts in the state factory
-    -- which is before any agent, so no RNG, no move, no game."""
+    -- which is before any agent, so no RNG, no move, no game.
+
+    The compile seam is faked, so setup DOES run and DOES create the run-specific
+    class directory; what must not happen is a javac or java subprocess. That is
+    watched rather than asserted.
+    """
     import json as _j
+    import subprocess as _sub
+
+    spawned = []
+    real_run = _sub.run
+    monkeypatch.setattr(_sub, "run",
+                        lambda *a, **k: (spawned.append(a[0] if a else k.get("args")), real_run(*a, **k))[1])
 
     cap = _Captured()
     plan = _j.load(open(PLAN))
-    built = []
+    built, compiles = [], []
 
     def refusing_state_factory(task):
         raise H.AbortError(H.PHASE_PRECONDITION, "qualification stop: no game may be played")
@@ -564,12 +575,18 @@ def test_the_real_harness_accepts_the_commands_arguments(tmp_path, clean_repo):
             _load_evaluator=lambda repo: object(),
             _build_agent=lambda task, *, evaluator: built.append(task),
             _cleanup=lambda: None,
-            _compile=lambda javac, jar, o: None,
+            _compile=lambda javac, jar, o: compiles.append(o) or {},
             _state_factory=refusing_state_factory,   # stop BEFORE the binder: no jvm
             _binder=lambda *a, **k: None)
     assert e.value.phase == H.PHASE_PRECONDITION
     assert built == [], "no agent was constructed"
-    assert not os.path.isdir(os.path.join(str(tmp_path), "t1j_classes")), "no compile ran"
+    assert compiles == [str(out) + ".t1j_classes"], "the fake compile seam ran exactly once"
+    assert os.path.isdir(str(out) + ".t1j_classes"), "the RUN-SPECIFIC directory was created"
+    assert not os.path.isdir(os.path.join(str(tmp_path), "t1j_classes")), \
+        "and never the retired shared location"
+    launched = [c for c in spawned
+                if c and any("javac" in str(x) or str(x).endswith("/java") for x in c)]
+    assert launched == [], f"no javac or jvm subprocess may run: {launched}"
     hdr = _j.loads(open(out).readline())
     assert hdr["mode"] == "screen" and hdr["no_games"] is False
     assert hdr["synthetic_tasks"] == 0 and hdr["canonical_tasks_executed"] == 32
