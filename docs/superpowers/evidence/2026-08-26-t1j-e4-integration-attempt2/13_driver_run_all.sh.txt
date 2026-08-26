@@ -1,0 +1,18 @@
+#!/bin/bash
+set -o pipefail
+SPD=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad
+E=$SPD/e4int2; EV="$E/evidence"; REPO=/Users/bill/projects/TwixT_Game
+echo "E4 INTEGRATION QUALIFICATION ATTEMPT 2 — CORRECTIVE. ONE ATTEMPT."
+echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)   host $(uname -srm)"
+echo "HEAD $(git -C $REPO rev-parse HEAD)"
+echo
+CMD="$REPO/.venv/bin/python $E/integrate.py"
+echo "COMMAND: $CMD"
+echo "stdout -> $EV/02_stdout.txt    stderr -> $EV/03_stderr.txt    exit -> $EV/04_exit.txt"
+echo "----------------------------------------------------------------------"
+$CMD > "$EV/02_stdout.txt" 2> "$EV/03_stderr.txt"
+RC=$?
+echo "$RC" > "$EV/04_exit.txt"
+echo "EXIT STATUS: $RC"
+echo "stdout bytes: $(wc -c < "$EV/02_stdout.txt" | tr -d ' ')   stderr bytes: $(wc -c < "$EV/03_stderr.txt" | tr -d ' ')"
+exit $RC

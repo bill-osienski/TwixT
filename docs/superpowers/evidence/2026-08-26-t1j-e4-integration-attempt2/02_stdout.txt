@@ -1,0 +1,77 @@
+== 1. JDK IDENTITY — all four pinned components, before anything is compiled ==
+    af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0  bin/java
+    6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab  bin/javac
+    28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951  lib/modules
+    cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b  release
+  PASS   the runtime is the qualified Temurin 17 (4 components bound)
+
+== 2. artifact identity ==
+  PASS   T1j jar sha256 53ec95e421db2531...
+  PASS   checkpoint sha256 34c79c0d85a837f0...
+  PASS   checkpoint sha1 209cf2d4fd24a485...
+  PASS   seed 90002000 is outside every reserved and exposed interval
+  PASS   seed 90002001 is outside every reserved and exposed interval
+  PASS   seed 90002002 is outside every reserved and exposed interval
+  PASS   seed 90002003 is outside every reserved and exposed interval
+
+== 3. compile the committed helper sources through the adapter ==
+  PASS   javac exit 0 
+    compile input  559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  ScratchPrefs.java
+    compile input  09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  ScratchPrefsFactory.java
+    compile input  281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc  E3bDump.java
+    compile input  23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3  E4Preflight.java
+
+== 4. load the pinned reference ONCE ==
+  PASS   evaluator carries its identity
+  PASS   compile=True
+
+== 5. four SHORT tasks: both colour arms x depths 3 and 6 ==
+  PASS   o1_center is 6 plies
+    integ2-weak3-t1j_red: mdPly=3 anchor=red reference=black seed=90002000
+    integ2-weak3-t1j_black: mdPly=3 anchor=black reference=red seed=90002001
+    integ2-strong6-t1j_red: mdPly=6 anchor=red reference=black seed=90002002
+    integ2-strong6-t1j_black: mdPly=6 anchor=black reference=red seed=90002003
+  PASS   BOTH colour arms
+  PASS   BOTH depths
+
+== 6. wire the real components and run ==
+    ply_cap=280 (explicit)   ply_budget=10 (SHORT, never a game)
+  PASS   the integration run completed without divergence
+  PASS   runner exit 0
+
+== 7. per-task records, and totals from NON-RESETTING counters ==
+  PASS   4 task results
+    integ2-weak3-t1j_red: binds=5 t1j_queries=2 searched_binds=2 plies=[7, 8, 9, 10] reason=qualification_budget points=None
+  PASS   integ2-weak3-t1j_red: 5 binder comparisons (opening + 4 moves)
+  PASS   integ2-weak3-t1j_red: 2 T1j searches, each with its SEARCHED POSITION re-bound
+    integ2-weak3-t1j_black: binds=5 t1j_queries=2 searched_binds=2 plies=[7, 8, 9, 10] reason=qualification_budget points=None
+  PASS   integ2-weak3-t1j_black: 5 binder comparisons (opening + 4 moves)
+  PASS   integ2-weak3-t1j_black: 2 T1j searches, each with its SEARCHED POSITION re-bound
+    integ2-strong6-t1j_red: binds=5 t1j_queries=2 searched_binds=2 plies=[7, 8, 9, 10] reason=qualification_budget points=None
+  PASS   integ2-strong6-t1j_red: 5 binder comparisons (opening + 4 moves)
+  PASS   integ2-strong6-t1j_red: 2 T1j searches, each with its SEARCHED POSITION re-bound
+    integ2-strong6-t1j_black: binds=5 t1j_queries=2 searched_binds=2 plies=[7, 8, 9, 10] reason=qualification_budget points=None
+  PASS   integ2-strong6-t1j_black: 5 binder comparisons (opening + 4 moves)
+  PASS   integ2-strong6-t1j_black: 2 T1j searches, each with its SEARCHED POSITION re-bound
+  PASS   per-task stats kept for all 4 tasks, never reset
+  PASS   TOTAL binder comparisons 20 (want 20)
+  PASS   TOTAL T1j searches 8 (want 8)
+  PASS   TOTAL searched-position re-bindings 8 (want 8)
+
+== 8. the run's shape ==
+  PASS   every task stopped on the QUALIFICATION BUDGET — none is a game
+  PASS   an unfinished task scores NOTHING
+  PASS   every task ran 10 plies with one agent per colour
+  PASS   the opening was bound once per task, before any agent moved
+  PASS   16 real plies recorded
+  PASS   ply_cap and ply_budget recorded in the run header
+  PASS   cleanup ran once per task
+  PASS   a durable RECEIPT and NO SCREEN VERDICT
+  PASS   the receipt carries no joint outcome and no permission
+
+== 9. postconditions ==
+  PASS   the screen's seed block is untouched
+  PASS   this run used synthetic seeds only
+    SEEDS CONSUMED BY THIS RUN (RNGs were drawn): [90002000, 90002001, 90002002, 90002003]
+
+INTEGRATION QUALIFICATION PASS

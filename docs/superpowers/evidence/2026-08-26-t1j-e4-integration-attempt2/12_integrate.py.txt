@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""E4 INTEGRATION qualification, attempt 2 — corrective. ONE ATTEMPT.
+
+Attempt 1 (1063c07) ran with zero engine divergences but FAILED its gate on two
+defects of mine, and review found three more bindings missing. All five are closed:
+
+  1. the position the SEARCH jvm reconstructed was never compared -- the replay
+     binder proves another jvm can rebuild the history, not that the searching one
+     did. T1jAgent now re-binds the query dump before accepting the move;
+  2. the JDK was checked for PRESENCE, not identity -- all four pinned components
+     are now compared before compilation or any seed use;
+  3. the reflection COUNT was parsed and ignored -- replay must report exactly 1
+     and a query exactly 3, enforced at each caller;
+  4. totals were read from counters the state factory RESET PER TASK -- stats are
+     now per-task and never cleared;
+  5. stdout was never captured -- the driver redirects command, stdout, stderr and
+     exit status from process start.
+
+NO canonical seed, NO completed game, NO screen verdict. Any failure is the result.
+Exit 0 = every requirement met, 3 = one or more failed.
+"""
+import hashlib, json, os, sys, tempfile
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero import t1j_adapter as A
+from scripts.GPU.alphazero import e4_screen_reference as REF
+from scripts.GPU.alphazero import e4_screen_runner as H
+from scripts.GPU.alphazero import e4_screen_integration as INT
+from scripts.GPU.alphazero.twixtbot_g3_reference import load_reference_evaluator
+from scripts.GPU.alphazero.twixtbot_g3_schedule import REFERENCE_CHECKPOINTS
+
+REPO = "/Users/bill/projects/TwixT_Game"
+SPD = "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad"
+EVID = f"{REPO}/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4"
+PLAN = f"{EVID}/06_endpoint_screen_plan.json"
+JH = f"{SPD}/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home"
+JAR = f"{SPD}/e1/acq/release/t1j.jar"
+CLASSES = f"{SPD}/e4int2/classes"
+CKPT = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+SHA1 = REFERENCE_CHECKPOINTS["calib020_0001"]["sha1"]
+SHA256 = "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26"
+JAR_SHA = "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7"
+PLY_CAP, OPENING_PLIES = 280, 6
+PLY_BUDGET = OPENING_PLIES + 4
+SEEDS = (90002000, 90002001, 90002002, 90002003)     # NEW, outside every interval
+
+fails = []
+def req(c, w):
+    print(("  PASS   " if c else "  FAIL   ") + w, flush=True)
+    if not c: fails.append(w)
+
+def sha(path, algo="sha256"):
+    h = hashlib.new(algo); h.update(open(path, "rb").read()); return h.hexdigest()
+
+
+print("== 1. JDK IDENTITY — all four pinned components, before anything is compiled ==", flush=True)
+try:
+    seen = INT.verify_jdk_identity(JH)
+    for rel, got in sorted(seen.items()):
+        print(f"    {got}  {rel}", flush=True)
+    req(True, f"the runtime is the qualified Temurin 17 ({len(seen)} components bound)")
+except H.AbortError as e:
+    req(False, f"JDK identity: {e}")
+    print("\nJDK IDENTITY FAILED — stopping before any seed is touched.", flush=True)
+    sys.exit(3)
+
+print("\n== 2. artifact identity ==", flush=True)
+req(sha(JAR) == JAR_SHA, f"T1j jar sha256 {JAR_SHA[:16]}...")
+req(sha(f"{REPO}/{CKPT}") == SHA256, f"checkpoint sha256 {SHA256[:16]}...")
+req(sha(f"{REPO}/{CKPT}", "sha1") == SHA1, f"checkpoint sha1 {SHA1[:16]}...")
+for s_ in SEEDS:
+    req(not REF.seed_is_accounted(s_) and not REF.seed_is_exposed(s_),
+        f"seed {s_} is outside every reserved and exposed interval")
+
+print("\n== 3. compile the committed helper sources through the adapter ==", flush=True)
+r = A.compile_helper(f"{JH}/bin/javac", JAR, CLASSES, sources=A.PREFLIGHT_SOURCES)
+req(r.returncode == 0, f"javac exit {r.returncode} {r.stderr.strip()[:80]}")
+for src in A.PREFLIGHT_SOURCES:
+    print(f"    compile input  {sha(str(src))}  {src.name}", flush=True)
+
+print("\n== 4. load the pinned reference ONCE ==", flush=True)
+EV = load_reference_evaluator("calib020_0001", REPO)
+req(getattr(EV, "_g3_reference", None) == "calib020_0001", "evaluator carries its identity")
+req(getattr(EV, "_use_compile", None) is True, "compile=True")
+
+print("\n== 5. four SHORT tasks: both colour arms x depths 3 and 6 ==", flush=True)
+openings = json.load(open(PLAN))["openings"]
+OPENING = "o1_center"
+req(len(openings[OPENING]) == OPENING_PLIES, f"{OPENING} is {OPENING_PLIES} plies")
+tasks = []
+for i, (endpoint, depth, anchor) in enumerate([("weak", 3, "red"), ("weak", 3, "black"),
+                                               ("strong", 6, "red"), ("strong", 6, "black")]):
+    tasks.append({"task_id": f"integ2-{endpoint}{depth}-t1j_{anchor}", "endpoint": endpoint,
+                  "t1j_mdPly": depth, "t1j_mdFixedPly": True, "opening": OPENING,
+                  "colour_arm": f"t1j_{anchor}", "anchor_colour": anchor,
+                  "reference_colour": "black" if anchor == "red" else "red",
+                  "reference": "calib020_0001", "reference_sha1": SHA1, "seed": SEEDS[i]})
+for t in tasks:
+    print(f"    {t['task_id']}: mdPly={t['t1j_mdPly']} anchor={t['anchor_colour']} "
+          f"reference={t['reference_colour']} seed={t['seed']}", flush=True)
+req(len({t["anchor_colour"] for t in tasks}) == 2, "BOTH colour arms")
+req({t["t1j_mdPly"] for t in tasks} == {3, 6}, "BOTH depths")
+
+print("\n== 6. wire the real components and run ==", flush=True)
+ctx = INT.IntegrationContext()
+runtime = INT.T1jRuntime(java=f"{JH}/bin/java", jar=JAR, classes=CLASSES, ply_cap=PLY_CAP)
+agent_factory = INT.make_agent_factory(
+    runtime=runtime, ctx=ctx, evaluator=EV,
+    reference_build=lambda t, evaluator: REF.build(t, evaluator=evaluator))
+cleanups = []
+def cleanup():
+    from scripts.GPU.alphazero.twixtbot_g3_reference import between_games_cleanup
+    between_games_cleanup(); cleanups.append(1)
+
+out = os.path.join(tempfile.mkdtemp(), "integration2.jsonl")
+print(f"    ply_cap={PLY_CAP} (explicit)   ply_budget={PLY_BUDGET} (SHORT, never a game)",
+      flush=True)
+try:
+    rc = H._run(PLAN, out, mode="qualify", _tasks=tasks, _agent_factory=agent_factory,
+                _state_factory=INT.make_state_factory({OPENING: openings[OPENING]}, ctx),
+                _binder=INT.make_binder(runtime, ctx), _evaluator=EV, _cleanup=cleanup,
+                _n_per_endpoint=16, _ply_cap=PLY_CAP, _ply_budget=PLY_BUDGET)
+    threw = None
+except Exception as e:                                          # noqa: BLE001
+    rc, threw = None, e
+rows = [json.loads(l) for l in open(out)]
+kinds = [r["record_type"] for r in rows]
+if threw is not None:
+    print(f"    ABORTED: {type(threw).__name__}: {threw}", flush=True)
+req(threw is None, "the integration run completed without divergence")
+req(rc == H.EXIT_OK, f"runner exit {rc}")
+
+print("\n== 7. per-task records, and totals from NON-RESETTING counters ==", flush=True)
+results = [r for r in rows if r["record_type"] == "task_result"]
+req(len(results) == 4, f"{len(results)} task results")
+for t in tasks:
+    tid = t["task_id"]
+    st = ctx.stats.get(tid, {})
+    pl = [r for r in rows if r["record_type"] == "ply" and r["task_id"] == tid]
+    tr = [r for r in results if r["task_id"] == tid]
+    print(f"    {tid}: binds={st.get('binds')} t1j_queries={st.get('t1j_queries')} "
+          f"searched_binds={st.get('searched_binds')} plies={[p['ply'] for p in pl]} "
+          f"reason={tr[0]['terminal_reason']} points={tr[0]['t1j_points']}", flush=True)
+    req(st.get("binds") == 5, f"{tid}: 5 binder comparisons (opening + 4 moves)")
+    req(st.get("t1j_queries") == 2 and st.get("searched_binds") == 2,
+        f"{tid}: 2 T1j searches, each with its SEARCHED POSITION re-bound")
+req(len(ctx.stats) == 4, f"per-task stats kept for all {len(ctx.stats)} tasks, never reset")
+req(ctx.total("binds") == 20, f"TOTAL binder comparisons {ctx.total('binds')} (want 20)")
+req(ctx.total("t1j_queries") == 8, f"TOTAL T1j searches {ctx.total('t1j_queries')} (want 8)")
+req(ctx.total("searched_binds") == 8,
+    f"TOTAL searched-position re-bindings {ctx.total('searched_binds')} (want 8)")
+
+print("\n== 8. the run's shape ==", flush=True)
+req(all(r["terminal_reason"] == H.TERMINAL_QUALIFICATION_BUDGET for r in results),
+    "every task stopped on the QUALIFICATION BUDGET — none is a game")
+req(all(r["t1j_points"] is None for r in results), "an unfinished task scores NOTHING")
+req(all(r["plies"] == PLY_BUDGET and r["agents_built"] == 2 for r in results),
+    f"every task ran {PLY_BUDGET} plies with one agent per colour")
+ob = [r for r in rows if r["record_type"] == "opening_bound"]
+req(len(ob) == 4 and all(r["ply"] == OPENING_PLIES for r in ob),
+    "the opening was bound once per task, before any agent moved")
+req(len([r for r in rows if r["record_type"] == "ply"]) == 16, "16 real plies recorded")
+req(rows[0]["ply_cap"] == PLY_CAP and rows[0]["ply_budget"] == PLY_BUDGET,
+    "ply_cap and ply_budget recorded in the run header")
+req(len(cleanups) == 4, "cleanup ran once per task")
+req(rows[-1]["record_type"] == "qualification_receipt" and "verdict" not in kinds,
+    "a durable RECEIPT and NO SCREEN VERDICT")
+req("joint" not in rows[-1] and "larger_match_permitted" not in rows[-1],
+    "the receipt carries no joint outcome and no permission")
+
+print("\n== 9. postconditions ==", flush=True)
+req(not any(REF.seed_is_exposed(s_) for s_ in range(202612128, 202612160)),
+    "the screen's seed block is untouched")
+req(not any(REF.seed_is_accounted(s_) for s_ in SEEDS), "this run used synthetic seeds only")
+print(f"    SEEDS CONSUMED BY THIS RUN (RNGs were drawn): {list(SEEDS)}", flush=True)
+
+import shutil
+shutil.copy(out, f"{SPD}/e4int2/evidence/10_integration_results.jsonl")
+json.dump({t: dict(v) for t, v in ctx.stats.items()},
+          open(f"{SPD}/e4int2/evidence/11_per_task_stats.json", "w"), indent=1)
+print(flush=True)
+if fails:
+    print(f"INTEGRATION QUALIFICATION FAIL — {len(fails)}:", flush=True)
+    for f_ in fails: print("  " + f_, flush=True)
+    sys.exit(3)
+print("INTEGRATION QUALIFICATION PASS", flush=True)
+sys.exit(0)

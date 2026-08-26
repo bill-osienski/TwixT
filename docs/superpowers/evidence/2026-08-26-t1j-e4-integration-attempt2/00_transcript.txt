@@ -1,0 +1,9 @@
+E4 INTEGRATION QUALIFICATION ATTEMPT 2 — CORRECTIVE. ONE ATTEMPT.
+date 2026-08-26T01:06:32Z   host Darwin 25.5.0 arm64
+HEAD 1063c07b2b8074b1ec87bad345d9d975d9fb67d8
+
+COMMAND: /Users/bill/projects/TwixT_Game/.venv/bin/python /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4int2/integrate.py
+stdout -> /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4int2/evidence/02_stdout.txt    stderr -> /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4int2/evidence/03_stderr.txt    exit -> /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4int2/evidence/04_exit.txt
+----------------------------------------------------------------------
+EXIT STATUS: 0
+stdout bytes: 4361   stderr bytes: 0

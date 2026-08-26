@@ -186,13 +186,14 @@ def test_build_seeds_differ_by_colour():
     assert a.mcts.rng.getstate() != b.mcts.rng.getstate()
 
 
-def test_the_integration_qualification_seeds_are_recorded_as_consumed():
-    """E4 integration drew from both generators on these four seeds."""
-    for seed in range(90001000, 90001004):
+@pytest.mark.parametrize("lo", [90001000, 90002000])
+def test_the_integration_qualification_seeds_are_recorded_as_consumed(lo):
+    """Both E4 integration attempts drew from both generators on their seeds."""
+    for seed in range(lo, lo + 4):
         assert E.seed_is_exposed(seed)
         with pytest.raises(E.E4ReferenceError):
             E.validate_task(task(seed=seed))
         with pytest.raises(E.E4ReferenceError):
             E.rng_witness(task(seed=seed))
-    assert not E.seed_is_exposed(90000999) and not E.seed_is_exposed(90001004)
+    assert not E.seed_is_exposed(lo - 1) and not E.seed_is_exposed(lo + 4)
     assert not E.seed_is_exposed(SYNTHETIC), "the designated test seed stays usable"

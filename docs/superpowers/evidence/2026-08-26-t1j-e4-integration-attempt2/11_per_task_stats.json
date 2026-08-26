@@ -1,0 +1,22 @@
+{
+ "integ2-weak3-t1j_red": {
+  "binds": 5,
+  "t1j_queries": 2,
+  "searched_binds": 2
+ },
+ "integ2-weak3-t1j_black": {
+  "binds": 5,
+  "t1j_queries": 2,
+  "searched_binds": 2
+ },
+ "integ2-strong6-t1j_red": {
+  "binds": 5,
+  "t1j_queries": 2,
+  "searched_binds": 2
+ },
+ "integ2-strong6-t1j_black": {
+  "binds": 5,
+  "t1j_queries": 2,
+  "searched_binds": 2
+ }
+}
