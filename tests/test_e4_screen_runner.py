@@ -711,3 +711,21 @@ def test_an_unrecorded_game_is_not_counted(tmp_path, monkeypatch):
     kinds = [r["record_type"] for r in rows]
     assert "task_result" not in kinds
     assert rows[-1]["record_type"] == "abort" and rows[-1]["tasks_played"] == 0
+
+
+def test_the_header_counts_canonical_tasks_actually_scheduled(tmp_path):
+    """A literal 0 would still say 0 on the day the real schedule runs."""
+    out = tmp_path / "hdr.jsonl"
+    H.run(PLAN, str(out), mode="qualify")
+    assert json.loads(open(out).readline())["canonical_tasks_executed"] == 0
+
+    # canonical SEEDS are refused outright, so borrow canonical task IDS with
+    # synthetic seeds: the header counts by identity, which is what matters here
+    borrowed = [dict(synthetic_task(i, "weak", anchor="red"), task_id=CANON[i]["task_id"])
+                for i in range(2)]
+    out2 = tmp_path / "hdr2.jsonl"
+    rc = H._run(PLAN, str(out2), mode="qualify", _tasks=borrowed, _agent_factory=win_factory,
+                _state_factory=small_state, _binder=null_binder, _evaluator=EV,
+                _cleanup=lambda: None, _n_per_endpoint=16)
+    assert rc == H.EXIT_OK
+    assert json.loads(open(out2).readline())["canonical_tasks_executed"] == 2

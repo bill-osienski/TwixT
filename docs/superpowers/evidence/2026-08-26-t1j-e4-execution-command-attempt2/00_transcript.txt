@@ -1,0 +1,21 @@
+E4 EXECUTION-COMMAND QUALIFICATION ATTEMPT 2 — NO MODEL, NO AGENT, NO RNG, NO JVM, NO GAME.
+date 2026-08-26T11:16:52Z   host Darwin 25.5.0 arm64
+HEAD 26426cd61eb0262b93ae199c097a89729c56f70e
+
+########## unit tests — real exit status, GATED ##########
+============================= test session starts ==============================
+collected 43 items
+
+tests/test_e4_screen_command.py ........................................ [ 93%]
+...                                                                      [100%]
+
+============================== 43 passed in 2.85s ==============================
+    unit-test exit: 0
+
+COMMAND: /Users/bill/projects/TwixT_Game/.venv/bin/python /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4cmd2/qualify.py
+stdout -> /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4cmd2/evidence/02_stdout.txt   stderr -> /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4cmd2/evidence/03_stderr.txt   exit -> /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4cmd2/evidence/04_exit.txt
+----------------------------------------------------------------------
+QUALIFICATION EXIT: 0
+stdout bytes: 5081   stderr bytes: 0
+
+TRANSCRIPT COMPLETE — unit tests 0, qualification 0

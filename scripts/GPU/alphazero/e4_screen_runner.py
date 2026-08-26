@@ -390,7 +390,12 @@ def _run(plan_path: str, results_path: str, *, mode: str,
         rec.emit({"record_type": "run_header", "mode": mode,
                   "plan_sha256": CANONICAL_PLAN_SHA256,
                   "task_digest": CANONICAL_TASK_DIGEST,
-                  "canonical_tasks": len(plan["tasks"]), "canonical_tasks_executed": 0,
+                  "canonical_tasks": len(plan["tasks"]),
+                  # COUNTED, not asserted: a header that always says 0 would keep
+                  # saying 0 on the day the canonical schedule really is executed.
+                  "canonical_tasks_executed": len(
+                      {t["task_id"] for t in tasks}
+                      & {t["task_id"] for t in plan["tasks"]}),
                   "synthetic_tasks": len(tasks), "ply_cap": _ply_cap,
                   "ply_budget": _ply_budget,
                   "n_per_endpoint": n_per, "no_games": True})

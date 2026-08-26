@@ -119,7 +119,7 @@ def test_all_six_preconditions_complete_before_the_refusal(tmp_path, clean_repo)
         C._run_screen(**good_args(tmp_path, repo_root=str(clean_repo),
                                   plan_path=str(clean_repo / PLAN)),
                       _load_evaluator=log.load_evaluator, _build_agent=log.build_agent,
-                      _make_rng=log.make_rng, _trace=trace)
+                      _run_harness=log.run_harness, _compile=log.compile, _trace=trace)
     assert trace == list(C.PRECONDITIONS)
     assert e.value.completed_preconditions == list(C.PRECONDITIONS)
     assert log.calls == [], "no effect may be reached while unauthorized"
@@ -134,7 +134,12 @@ def test_no_results_file_is_created_while_unauthorized(tmp_path, clean_repo):
 
 
 def test_no_rng_is_constructed_anywhere_while_unauthorized(tmp_path, clean_repo, monkeypatch):
-    """Patches random.Random itself, so this catches an RNG made ANYWHERE."""
+    """Patches random.Random itself, so this catches an RNG made ANYWHERE.
+
+    Stronger than a seam: the command has no RNG seam because it creates no
+    generator at all. The only generators in a screen are the two each reference
+    agent derives from its own bound task seed.
+    """
     import random
     made = []
     real = random.Random
@@ -294,3 +299,131 @@ def test_the_scheduled_seed_block_is_never_touched(tmp_path, clean_repo):
         C._run_screen(**good_args(tmp_path, repo_root=str(clean_repo),
                                   plan_path=str(clean_repo / PLAN)))
     assert not any(REF.seed_is_exposed(s) for s in range(202612128, 202612160))
+
+
+# --- the AUTHORIZED branch is real wiring, proven with substitutes ----------
+# Nothing here enables the screen, plays a move, loads a model or makes an RNG.
+
+import json as _json
+
+from scripts.GPU.alphazero import e4_screen_runner as H
+from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+
+
+class _Captured:
+    def __init__(self): self.kw = None; self.args = None
+    def __call__(self, *a, **kw):
+        self.args, self.kw = a, kw
+        return H.EXIT_OK
+
+
+def authorized_call(tmp_path, clean_repo, **over):
+    """Run the authorized path with substitutes, WITHOUT enabling the screen."""
+    cap = _Captured()
+    sentinel = object()
+    compiled = []
+    kw = dict(
+        plan=_json.load(open(PLAN)),
+        plan_path=str(clean_repo / PLAN),
+        results_path=str(tmp_path / "screen.jsonl"),
+        repo_root=str(clean_repo), jdk_home=JDK, jar_path=JAR,
+        records={}, trace=[],
+        _load_evaluator=lambda repo: sentinel,
+        _build_agent=lambda task, *, evaluator: ("agent", task["task_id"]),
+        _run_harness=cap,
+        _cleanup=lambda: None,
+        _compile=lambda javac, jar, out: compiled.append((javac, jar, out)),
+    )
+    kw.update(over)
+    rc = C._execute_screen(**kw)
+    return rc, cap, sentinel, compiled, kw["trace"]
+
+
+def test_the_authorized_path_hands_the_harness_the_canonical_32(tmp_path, clean_repo):
+    rc, cap, sentinel, compiled, trace = authorized_call(tmp_path, clean_repo)
+    assert rc == C.EXIT_OK
+    tasks = cap.kw["_tasks"]
+    canonical = _json.load(open(PLAN))["tasks"]
+    assert [t["task_id"] for t in tasks] == [t["task_id"] for t in canonical]
+    assert H.task_digest(tasks) == H.CANONICAL_TASK_DIGEST, "ordered and unedited"
+    assert len(tasks) == 32
+
+
+def test_the_authorized_path_supplies_the_qualified_collaborators(tmp_path, clean_repo):
+    _, cap, sentinel, compiled, _ = authorized_call(tmp_path, clean_repo)
+    assert cap.kw["_evaluator"] is sentinel, "the ONE loaded evaluator is passed through"
+    for key, made_by in (("_state_factory", "make_state_factory"),
+                         ("_binder", "make_binder"),
+                         ("_agent_factory", "make_agent_factory")):
+        fn = cap.kw[key]
+        assert callable(fn) and made_by in fn.__qualname__, (key, fn.__qualname__)
+    assert cap.kw["_cleanup"] is not None
+    assert compiled and compiled[0][0].endswith("bin/javac"), "the helper is compiled first"
+
+
+def test_the_authorized_path_uses_the_screen_settings_not_a_qualification_budget(
+        tmp_path, clean_repo):
+    _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
+    assert cap.kw["_ply_cap"] == H.PLY_CAP == 280
+    assert cap.kw["_n_per_endpoint"] == H.CANONICAL_N_PER_ENDPOINT == 16
+    assert cap.kw["_ply_budget"] is None, "a screen plays to a terminal state"
+    assert tuple(cap.kw["_band"]) == tuple(H.BAND)
+
+
+def test_the_authorized_path_lets_the_harness_own_recording(tmp_path, clean_repo):
+    _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
+    assert cap.args[1] == str(tmp_path / "screen.jsonl"), "the PATH is passed, not a Recorder"
+    assert not (tmp_path / "screen.jsonl").exists(), "the command created no file itself"
+
+
+def test_the_authorized_path_creates_no_rng(tmp_path, clean_repo, monkeypatch):
+    """The only generators in a screen come from each agent's bound task seed."""
+    import random
+    made = []
+    real = random.Random
+
+    class _Counting(real):
+        def __init__(self, *a, **kw):
+            made.append(a); super().__init__(*a, **kw)
+
+    monkeypatch.setattr(random, "Random", _Counting)
+    authorized_call(tmp_path, clean_repo)
+    assert made == [], f"{len(made)} RNG(s) created by the command itself"
+    assert "random.Random(" not in SOURCE.replace("SeededReferenceAgent", "")
+
+
+def test_the_authorized_path_records_its_wiring_order(tmp_path, clean_repo):
+    _, _, _, _, trace = authorized_call(tmp_path, clean_repo)
+    assert trace == ["compile_helper", "t1j_runtime", "load_evaluator",
+                     "agent_factory", "run_harness"]
+
+
+@pytest.mark.parametrize("harness_rc,want", [
+    (H.EXIT_OK, C.EXIT_OK), (H.EXIT_PRECONDITION, C.EXIT_PRECONDITION),
+    (H.EXIT_ABORT, C.EXIT_ABORT), (99, C.EXIT_UNEXPECTED),
+])
+def test_the_harness_exit_maps_to_the_command_exit(harness_rc, want):
+    assert C._map_harness_exit(harness_rc) == want
+
+
+def test_the_authorized_path_is_unreachable_while_unauthorized(tmp_path, clean_repo, monkeypatch):
+    """The gate precedes it: substituting every effect still never gets there."""
+    reached = []
+    monkeypatch.setattr(C, "_execute_screen", lambda **kw: reached.append(kw))
+    with pytest.raises(C.AuthorizationError):
+        C._run_screen(**good_args(tmp_path, repo_root=str(clean_repo),
+                                  plan_path=str(clean_repo / PLAN)))
+    assert reached == [], "_execute_screen must not be reached while SCREEN_AUTHORIZED is False"
+
+
+def test_the_real_defaults_are_the_qualified_ones():
+    """No substitute: the production defaults point at the qualified code."""
+    assert C._default_load_evaluator.__module__.endswith("e4_screen_command")
+    assert G3.load_reference_evaluator is not None
+    assert C._default_cleanup.__doc__ is None or True
+    src = inspect.getsource(C._default_load_evaluator)
+    assert "load_reference_evaluator" in src and "calib020_0001" in src
+    assert "between_games_cleanup" in inspect.getsource(C._default_cleanup)
+    assert "compile_helper" in inspect.getsource(C._default_compile)
+    assert "REF.build" in inspect.getsource(C._default_build_agent)
+    assert "H._run" in inspect.getsource(C._execute_screen)

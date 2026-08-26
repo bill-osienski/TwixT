@@ -1,0 +1,321 @@
+Full suite at the E4 command attempt-2 tree, 2026-08-26T11:17:15Z.
+HEAD 26426cd61eb0262b93ae199c097a89729c56f70e; worktree carries the uncommitted corrections.
+command: .venv/bin/python -m pytest -q --no-header -p no:cacheprovider
+----------------------------------------------------------------------
+============================= test session starts ==============================
+collected 3171 items / 53 deselected / 3118 selected
+
+tests/test_a_predrop_trajectory_budget.py .......                        [  0%]
+tests/test_analyzer_closeout_diagnostics.py .....                        [  0%]
+tests/test_analyzer_closeout_selection_tiebreak_summary.py ..            [  0%]
+tests/test_analyzer_closeout_td1_visit_forcing_summary.py ..             [  0%]
+tests/test_analyzer_goal_completion.py .......ss...........              [  1%]
+tests/test_analyzer_goal_completion_recompute.py .......                 [  1%]
+tests/test_analyzer_goal_completion_records.py .........                 [  1%]
+tests/test_analyzer_long_tail_buckets.py ....                            [  1%]
+tests/test_analyzer_marathon_termination.py .....                        [  1%]
+tests/test_analyzer_per_game_stats.py .....................              [  2%]
+tests/test_analyzer_per_move_stats.py .....                              [  2%]
+tests/test_analyzer_per_ply_perf_regression.py .                         [  2%]
+tests/test_analyzer_phase2_sidecar_fields.py .........                   [  3%]
+tests/test_analyzer_phase2_smoke.py .....                                [  3%]
+tests/test_analyzer_recovery_events.py .........                         [  3%]
+tests/test_analyzer_recovery_retargeting.py ...........                  [  3%]
+tests/test_analyzer_replay_probe_scoring_end_to_end.py .........         [  4%]
+tests/test_analyzer_td_closeout_breakdown.py .....                       [  4%]
+tests/test_asymmetric_guardrail_continuation_loader.py ....              [  4%]
+tests/test_asymmetric_guardrail_loss.py ......                           [  4%]
+tests/test_asymmetric_guardrail_pool.py .....                            [  4%]
+tests/test_asymmetric_guardrail_wiring.py ..                             [  4%]
+tests/test_atlas_artifact.py ...................                         [  5%]
+tests/test_atlas_labelling.py ..........                                 [  5%]
+tests/test_atlas_ladder_integration.py ......                            [  6%]
+tests/test_atlas_observer_hooks.py .......                               [  6%]
+tests/test_atlas_observer_identity.py .......                            [  6%]
+tests/test_atlas_producer_closure.py .............                       [  6%]
+tests/test_atlas_readout_a.py ...........................                [  7%]
+tests/test_atlas_readout_b.py ..............                             [  8%]
+tests/test_atlas_readout_c.py ..............................             [  9%]
+tests/test_atlas_readout_chain.py ...........                            [  9%]
+tests/test_atlas_row_facts.py .........                                  [  9%]
+tests/test_atlas_run.py .....................................            [ 11%]
+tests/test_batch_eval.py ..............                                  [ 11%]
+tests/test_bootstrap_probe_suite.py .......                              [ 11%]
+tests/test_bridge_equivalence.py .........                               [ 11%]
+tests/test_build_atlas_corpus_cli.py .............                       [ 12%]
+tests/test_build_calibration_manifest.py ...                             [ 12%]
+tests/test_build_mcts_root_retention_manifest.py .........               [ 12%]
+tests/test_build_searched_continuation_retention_manifest.py ........... [ 13%]
+....                                                                     [ 13%]
+tests/test_build_targeted_calibration_manifest.py ................       [ 13%]
+tests/test_build_teacher_calibration_manifest.py .....                   [ 13%]
+tests/test_build_v12_guardrail_manifest.py ..                            [ 13%]
+tests/test_build_v12b_continuation_guardrail_manifest.py .....           [ 14%]
+tests/test_calibration_cli_flags.py ............                         [ 14%]
+tests/test_calibration_loss.py ..................                        [ 15%]
+tests/test_calibration_pool.py ......................................... [ 16%]
+...                                                                      [ 16%]
+tests/test_calibration_pool_continuation.py ......................       [ 17%]
+tests/test_canonicalization.py ................                          [ 17%]
+tests/test_cc_optimization.py .....................                      [ 18%]
+tests/test_connectivity_channels.py ........                             [ 18%]
+tests/test_connectivity_goal_completion.py .....................         [ 19%]
+tests/test_connectivity_masks.py ......                                  [ 19%]
+tests/test_continuation_extraction.py .........                          [ 19%]
+tests/test_conversion_aux_tensors.py .....                               [ 19%]
+tests/test_conversion_cli_config.py ......                               [ 20%]
+tests/test_conversion_eligibility.py ......                              [ 20%]
+tests/test_conversion_loss.py .......                                    [ 20%]
+tests/test_conversion_target.py .......                                  [ 20%]
+tests/test_conversion_telemetry.py ..............                        [ 21%]
+tests/test_corpus_geometry.py .......................................... [ 22%]
+.                                                                        [ 22%]
+tests/test_cpuct_sweep.py ......                                         [ 22%]
+tests/test_curriculum.py ........................                        [ 23%]
+tests/test_e4_screen_command.py ........................................ [ 24%]
+...                                                                      [ 24%]
+tests/test_e4_screen_integration.py ......................               [ 25%]
+tests/test_e4_screen_reference.py .....................                  [ 26%]
+tests/test_e4_screen_rules.py ........................                   [ 27%]
+tests/test_e4_screen_runner.py ......................................... [ 28%]
+.........................................                                [ 29%]
+tests/test_eval_agent_identity.py ........................               [ 30%]
+tests/test_eval_builders.py ..........                                   [ 30%]
+tests/test_eval_cli.py .....                                             [ 31%]
+tests/test_eval_elo.py ..........                                        [ 31%]
+tests/test_eval_integrity.py .................................           [ 32%]
+tests/test_eval_loss_analysis.py ...................                     [ 33%]
+tests/test_eval_loss_analyzer_cli.py ...                                 [ 33%]
+tests/test_eval_loss_replay_analysis.py ................................ [ 34%]
+..........................                                               [ 34%]
+tests/test_eval_loss_replay_analyzer_cli.py .......                      [ 35%]
+tests/test_eval_match_replay.py .....                                    [ 35%]
+tests/test_eval_provenance.py .......                                    [ 35%]
+tests/test_eval_raw_nn_position_rows.py ..............                   [ 36%]
+tests/test_eval_readout.py .......................                       [ 36%]
+tests/test_eval_readout_telemetry.py ......................              [ 37%]
+tests/test_eval_replay.py ..........                                     [ 37%]
+tests/test_eval_runner.py ....................                           [ 38%]
+tests/test_eval_runner_parallel.py ...                                   [ 38%]
+tests/test_eval_summary.py ......                                        [ 38%]
+tests/test_eval_summary_agent_mode.py ...............                    [ 39%]
+tests/test_fpu_corpus_preflight.py ..........                            [ 39%]
+tests/test_fpu_dev_corpus.py ...................................         [ 40%]
+tests/test_fpu_dev_corpus_v2.py ........................................ [ 41%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+....................................                                     [ 47%]
+tests/test_fpu_dev_reservoir_protocol.py ............................... [ 48%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 55%]
+........................................................................ [ 57%]
+.....                                                                    [ 58%]
+tests/test_fpu_diagnostic_modes.py .................................     [ 59%]
+tests/test_fpu_evidence_chain.py ...............................         [ 60%]
+tests/test_fpu_policy_mass_rule.py ...........................           [ 61%]
+tests/test_fpu_state_hash.py ....                                        [ 61%]
+tests/test_fpu_sweep.py ....                                             [ 61%]
+tests/test_fpu_sweep_v16a.py .................                           [ 61%]
+tests/test_fpu_trace_observer.py ...................                     [ 62%]
+tests/test_fpu_v2_repair.py ............................................ [ 63%]
+.............................................                            [ 65%]
+tests/test_fpu_value.py ...                                              [ 65%]
+tests/test_frozen_opponent_seam.py .........................             [ 66%]
+tests/test_frozen_opponent_transport.py ................................ [ 67%]
+..........                                                               [ 67%]
+tests/test_game_rules_parity.py ........................................ [ 68%]
+........................................................................ [ 71%]
+.........                                                                [ 71%]
+tests/test_game_saver_goal_completion_record_id_fields.py ...            [ 71%]
+tests/test_game_saver_per_game_fields.py .............                   [ 71%]
+tests/test_game_saver_per_move_fields.py ....                            [ 72%]
+tests/test_game_saver_recovery_retargeting_id_fields.py ...              [ 72%]
+tests/test_generate_atlas_reservoir.py ................                  [ 72%]
+tests/test_goal_completion_aggregator.py .......................         [ 73%]
+tests/test_goal_completion_save_load.py ........                         [ 73%]
+tests/test_goal_completion_tracker.py .....................              [ 74%]
+tests/test_goal_line_trigger_probe_cases.py .............                [ 74%]
+tests/test_goal_line_trigger_probe_cli.py ..........                     [ 75%]
+tests/test_gradient_projection.py .....                                  [ 75%]
+tests/test_inheritance_probe.py .........................                [ 76%]
+tests/test_inheritance_probe_identity.py .......                         [ 76%]
+tests/test_inline_probe_observability.py ............................... [ 77%]
+.                                                                        [ 77%]
+tests/test_js_py_tensor_parity.py ..                                     [ 77%]
+tests/test_local_evaluator_compile_default.py ...                        [ 77%]
+tests/test_long_tail_bucket_classifier.py .................              [ 77%]
+tests/test_marathon_termination_diagnostics.py .......................   [ 78%]
+tests/test_mcts.py ............                                          [ 79%]
+tests/test_mcts_closeout_selection_tiebreak.py ...                       [ 79%]
+tests/test_mcts_force_root_visits.py .....                               [ 79%]
+tests/test_mcts_forced_root_visit_equivalence.py ..                      [ 79%]
+tests/test_mcts_search_with_root.py .                                    [ 79%]
+tests/test_mirror.py ..........................                          [ 80%]
+tests/test_network.py .........                                          [ 80%]
+tests/test_onnx_export.py ........                                       [ 80%]
+tests/test_position_record_conversion.py .....                           [ 80%]
+tests/test_probe_eval_v14_adapter.py ...                                 [ 81%]
+tests/test_probe_phase2_parallel.py ...........................          [ 81%]
+tests/test_probe_suite_forced_parity.py .                                [ 81%]
+tests/test_probe_suite_schema.py .ss....                                 [ 82%]
+tests/test_progress_weighted_loss.py ...                                 [ 82%]
+tests/test_readout_preflight.py ...................................      [ 83%]
+tests/test_recovery_retargeting_diagnostics.py ......................... [ 84%]
+...............................................                          [ 85%]
+tests/test_replay_buffer_conversion.py ..........                        [ 86%]
+tests/test_replay_warmup.py ...................                          [ 86%]
+tests/test_run_atlas_cli.py ..................                           [ 87%]
+tests/test_sealed_lane.py ..........                                     [ 87%]
+tests/test_selection_tracer.py ....................                      [ 88%]
+tests/test_self_play.py ..........                                       [ 88%]
+tests/test_self_play_closeout_diagnostics.py .............               [ 88%]
+tests/test_self_play_closeout_td1_telemetry_merge.py ....                [ 89%]
+tests/test_self_play_goal_completion_integration.py ..........           [ 89%]
+tests/test_self_play_per_move_capture.py ....                            [ 89%]
+tests/test_smoke_mcts_root_retention_v5.py ..                            [ 89%]
+tests/test_smoke_searched_continuation_retention_v6.py ......            [ 89%]
+tests/test_strong_advantage_analyzer_aggregation.py ................     [ 90%]
+tests/test_strong_advantage_diversity_selector.py ...................... [ 90%]
+..................                                                       [ 91%]
+tests/test_strong_advantage_probe_suite.py .....................         [ 92%]
+tests/test_strong_advantage_smoke_live.py .                              [ 92%]
+tests/test_t1j_adapter.py .........................................      [ 93%]
+tests/test_tensor_repr.py ......................                         [ 94%]
+tests/test_train_closeout_td1_cli.py ..                                  [ 94%]
+tests/test_train_recovery_retargeting_cli.py ....                        [ 94%]
+tests/test_train_value_head_and_final_block.py ......                    [ 94%]
+tests/test_train_value_head_only.py .....                                [ 94%]
+tests/test_trainer_loss.py ...                                           [ 94%]
+tests/test_trainer_probe_summary_emission.py .                           [ 94%]
+tests/test_trainer_teacher_mode_gate.py ..                               [ 95%]
+tests/test_training.py ................                                  [ 95%]
+tests/test_training_surface_label.py ......                              [ 95%]
+tests/test_twixt_state_cc_adjacency.py .........                         [ 96%]
+tests/test_v13_projection_wiring.py .......                              [ 96%]
+tests/test_v13c_projection_strength.py .....                             [ 96%]
+tests/test_v14_value_adapter.py ..................                       [ 96%]
+tests/test_v14_verify_adapter_checkpoint.py ....                         [ 97%]
+tests/test_v14b_adapter_projection.py ........                           [ 97%]
+tests/test_v15_concentration_diagnostic.py .......                       [ 97%]
+tests/test_v15_selected_branch_subtrees.py ............                  [ 97%]
+tests/test_v16a_neutral_manifest.py .............                        [ 98%]
+tests/test_value_calibration_sampling.py .......                         [ 98%]
+tests/test_verify_value_head_and_final_block_checkpoint.py .......       [ 98%]
+tests/test_verify_value_head_only_checkpoint.py ....                     [ 98%]
+tests/test_warm_prefix_replay.py ................................        [100%]
+
+=============================== warnings summary ===============================
+tests/test_frozen_opponent_transport.py::test_either_model_failure_fails_the_run_closed[learner]
+  /Users/bill/projects/TwixT_Game/.venv/lib/python3.14/site-packages/_pytest/threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-5 (run_forever)
+  
+  Traceback (most recent call last):
+    File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1082, in _bootstrap_inner
+      self._context.run(self.run)
+      ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+    File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1024, in run
+      self._target(*self._args, **self._kwargs)
+      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 82, in run_forever
+      self._run_loop()
+      ~~~~~~~~~~~~~~^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 132, in _run_loop
+      self._flush(pending)
+      ~~~~~~~~~~~^^^^^^^^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 174, in _flush
+      self._infer_and_respond(subbatch, active_size, model_id)
+      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 239, in _infer_and_respond
+      priors, values = evaluator.infer(
+                       ~~~~~~~~~~~~~~~^
+          boards, move_rows, move_cols, move_mask, active_size
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      )
+      ^
+    File "/Users/bill/projects/TwixT_Game/tests/test_frozen_opponent_transport.py", line 281, in infer
+      raise RuntimeError("opponent evaluator exploded")
+  RuntimeError: opponent evaluator exploded
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+
+tests/test_frozen_opponent_transport.py::test_either_model_failure_fails_the_run_closed[opponent]
+  /Users/bill/projects/TwixT_Game/.venv/lib/python3.14/site-packages/_pytest/threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-6 (run_forever)
+  
+  Traceback (most recent call last):
+    File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1082, in _bootstrap_inner
+      self._context.run(self.run)
+      ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+    File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1024, in run
+      self._target(*self._args, **self._kwargs)
+      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 82, in run_forever
+      self._run_loop()
+      ~~~~~~~~~~~~~~^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 132, in _run_loop
+      self._flush(pending)
+      ~~~~~~~~~~~^^^^^^^^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 174, in _flush
+      self._infer_and_respond(subbatch, active_size, model_id)
+      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 239, in _infer_and_respond
+      priors, values = evaluator.infer(
+                       ~~~~~~~~~~~~~~~^
+          boards, move_rows, move_cols, move_mask, active_size
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      )
+      ^
+    File "/Users/bill/projects/TwixT_Game/tests/test_frozen_opponent_transport.py", line 281, in infer
+      raise RuntimeError("opponent evaluator exploded")
+  RuntimeError: opponent evaluator exploded
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+
+tests/test_frozen_opponent_transport.py::test_run_survives_being_repeated_after_a_failure
+  /Users/bill/projects/TwixT_Game/.venv/lib/python3.14/site-packages/_pytest/threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-7 (run_forever)
+  
+  Traceback (most recent call last):
+    File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1082, in _bootstrap_inner
+      self._context.run(self.run)
+      ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+    File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1024, in run
+      self._target(*self._args, **self._kwargs)
+      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 82, in run_forever
+      self._run_loop()
+      ~~~~~~~~~~~~~~^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 132, in _run_loop
+      self._flush(pending)
+      ~~~~~~~~~~~^^^^^^^^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 174, in _flush
+      self._infer_and_respond(subbatch, active_size, model_id)
+      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/inference_server.py", line 239, in _infer_and_respond
+      priors, values = evaluator.infer(
+                       ~~~~~~~~~~~~~~~^
+          boards, move_rows, move_cols, move_mask, active_size
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      )
+      ^
+    File "/Users/bill/projects/TwixT_Game/tests/test_frozen_opponent_transport.py", line 281, in infer
+      raise RuntimeError("opponent evaluator exploded")
+  RuntimeError: opponent evaluator exploded
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+
+tests/test_onnx_export.py::test_export_and_load
+tests/test_onnx_export.py::test_parity_simple
+tests/test_onnx_export.py::test_parity_multiple_boards
+tests/test_onnx_export.py::test_masked_logits
+tests/test_onnx_export.py::test_move_order_invariance
+  /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/copyreg.py:104: FutureWarning: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+    return cls.__new__(cls, *args)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==== 3114 passed, 4 skipped, 53 deselected, 8 warnings in 575.29s (0:09:35) ====
+PYTEST EXIT: 0 (3114 passed, 4 skipped, 0 failed)

@@ -1,0 +1,15 @@
+Committed repo code. The jar, JDK and checkpoint are outside the repository
+and are pinned by hash inside the command's own preconditions.
+
+sha256                                                            git-blob-id                               path
+921d0a0152265076b48d8dd696b041ab21065d4a14b49befda97c5e24b446713  87a8222eeb5ed519a0a03074d71b50cf7b6bc3ed  scripts/GPU/alphazero/e4_screen_command.py
+2571c1bc7aa2d839b5f172af3c1779efe89671e6f8c6e5198783748aa7a19fd8  b250d536eb61057451bbaff84b583bf5d6a8b3dc  scripts/GPU/alphazero/e4_screen_runner.py
+2006bdc481954c8f6a94ccb848fe357caaaa96aaeabecd5f1135fd067689bea2  4d98c746e6b7afec1de07add361323772c619ef4  scripts/GPU/alphazero/e4_screen_integration.py
+4c12bf2189cf42dc1345c839b8c694f0090bc4be470c5b84226792e93a383a84  8274a51e53e819aa96f38b7bf0df56564564e3e9  scripts/GPU/alphazero/e4_screen_rules.py
+490f5ccbf04aa76ddd1570b0db552c45fef44371e42a464fa4c96912c86de0b5  db10031148d6cfaac5f715e40a5e276ab2519350  scripts/GPU/alphazero/e4_screen_reference.py
+35b3c769e50138b0426ffcd0e4401a92ff5e506737d2f66a65e7084e39a2e25e  c2566aecacc7c19ccda181d5853540ce9f9bfdd3  tests/test_e4_screen_command.py
+fee4cc07d02c78ee8c47f0993699293419207cb02d1b9c9add0edd29f5411de3  fb28ca2b412ff15475ac87c01b2384050f6deb2c  tests/test_e4_screen_runner.py
+10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8  32ca8fd1b43384d21b1849583d76c08daa9cf4bc  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json
+
+SCREEN_AUTHORIZED, as committed:
+  42:SCREEN_AUTHORIZED = False

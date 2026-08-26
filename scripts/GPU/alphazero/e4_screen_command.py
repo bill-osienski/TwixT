@@ -1,11 +1,15 @@
 """The E4 endpoint-screen command.
 
 **THE SCREEN IS NOT AUTHORIZED.** `SCREEN_AUTHORIZED` below is `False`, and there
-is deliberately no way to change that from outside this file: no command-line
-option, no environment variable, no configuration file, no import-time hook. The
-command refuses BEFORE it loads a model, constructs an agent or an RNG, starts a
-jvm, or creates a results file. Enabling the screen is a reviewed change to the
-line below plus a separate authorization -- not a flag someone can pass.
+is **no supported override**: no command-line option, no environment variable, no
+configuration file, no import-time hook. Stated precisely, because the stronger
+claim would be false: a Python module global is technically rebindable by any code
+that imports this module, so what is guaranteed is that no *supported* input
+changes it. Enabling the screen is a reviewed change to the line below plus a
+separate authorization.
+
+The command refuses BEFORE it loads a model, constructs an agent or an RNG, starts
+a jvm, or creates a results file.
 
 ORDER IS THE POINT. Every precondition -- plan, repository state, JDK components,
 jar, checkpoint, output path -- is checked FIRST and each is IMMEDIATELY FATAL.
@@ -32,8 +36,9 @@ from . import e4_screen_integration as INT
 from . import e4_screen_runner as H
 
 #: THE SCREEN IS UNAUTHORIZED. Changing this is a reviewed code change.
-#: It is read directly, in one place, and never from argv, os.environ, a config
-#: file, or any import-time hook.
+#: Read directly, in one place. NO SUPPORTED OVERRIDE exists -- not argv, not the
+#: environment, not a configuration file, not an import-time hook. It is not
+#: claimed to be immutable: an importer could rebind any module global.
 SCREEN_AUTHORIZED = False
 
 #: Pinned artifacts. The jar and checkpoint are outside the repository.
@@ -92,8 +97,12 @@ class EffectLog:
         return self._record("build_agent")
 
     @property
-    def make_rng(self) -> Callable:
-        return self._record("make_rng")
+    def run_harness(self) -> Callable:
+        return self._record("run_harness")
+
+    @property
+    def compile(self) -> Callable:
+        return self._record("compile")
 
 
 def _sha256(path: str) -> str:
@@ -209,7 +218,9 @@ def _run_screen(*, plan_path: str, results_path: str, repo_root: str, jdk_home: 
                 jar_path: str, checkpoint_path: str,
                 _load_evaluator: Optional[Callable] = None,
                 _build_agent: Optional[Callable] = None,
-                _make_rng: Optional[Callable] = None,
+                _run_harness: Optional[Callable] = None,
+                _cleanup: Optional[Callable] = None,
+                _compile: Optional[Callable] = None,
                 _trace: Optional[List[str]] = None) -> int:
     """PRIVATE. The underscore seams record attempted effects, for qualification."""
     trace = _trace if _trace is not None else []
@@ -233,19 +244,96 @@ def _run_screen(*, plan_path: str, results_path: str, repo_root: str, jdk_home: 
         raise AuthorizationError(trace)
 
     # ---- nothing below this line runs while the screen is unauthorized -------
-    trace.append("results_file")
-    rec = H.Recorder(results_path)             # the first effect: creates the file
-    try:
-        trace.append("load_evaluator")
-        evaluator = (_load_evaluator or _default_load_evaluator)(repo_root)
-        trace.append("build_agent")
-        build = _build_agent or _default_build_agent
-        trace.append("make_rng")
-        rng = (_make_rng or _default_make_rng)()
-        raise NotImplementedError(
-            "the screen's play wiring is deliberately not reachable in this build")
-    finally:
-        rec.close()
+    return _execute_screen(
+        plan=plan, plan_path=plan_path, results_path=results_path, repo_root=repo_root,
+        jdk_home=jdk_home, jar_path=jar_path, records=records, trace=trace,
+        _load_evaluator=_load_evaluator, _build_agent=_build_agent,
+        _run_harness=_run_harness, _cleanup=_cleanup, _compile=_compile)
+
+
+def _execute_screen(*, plan: Dict[str, Any], plan_path: str, results_path: str,
+                    repo_root: str, jdk_home: str, jar_path: str,
+                    records: Dict[str, Any], trace: List[str],
+                    _load_evaluator: Optional[Callable] = None,
+                    _build_agent: Optional[Callable] = None,
+                    _run_harness: Optional[Callable] = None,
+                    _cleanup: Optional[Callable] = None,
+                    _compile: Optional[Callable] = None) -> int:
+    """The authorized execution path. REACHED ONLY when SCREEN_AUTHORIZED is True.
+
+    Complete production wiring, dormant: it builds the T1j runtime and context, the
+    state factory, the E3b per-ply binder and the agent factory, loads the pinned
+    reference ONCE, and hands the CANONICAL 32 TASKS to the qualified harness.
+
+    THE HARNESS OWNS RECORDING. This function creates no Recorder of its own; it
+    passes the path and lets the harness open it exclusively and fsync each record.
+
+    NO RNG IS CREATED HERE. The only generators in a screen are the two each
+    reference agent derives from its own bound task seed, inside
+    SeededReferenceAgent -- there is no run-level RNG to seed.
+
+    It is the one authorized caller of the harness's private `_run`: the screen
+    must supply real collaborators, and this command's own public surface exposes
+    none of them.
+    """
+    from . import e4_screen_integration as _INT
+    from . import e4_screen_reference as _REF
+
+    trace.append("compile_helper")
+    classes_dir = os.path.join(os.path.dirname(os.path.abspath(results_path)), "t1j_classes")
+    compile_fn = _compile or _default_compile
+    compile_fn(os.path.join(jdk_home, "bin", "javac"), jar_path, classes_dir)
+
+    trace.append("t1j_runtime")
+    runtime = _INT.T1jRuntime(java=os.path.join(jdk_home, "bin", "java"), jar=jar_path,
+                              classes=classes_dir, ply_cap=H.PLY_CAP)
+    ctx = _INT.IntegrationContext()
+    state_factory = _INT.make_state_factory(plan["openings"], ctx)
+    binder = _INT.make_binder(runtime, ctx)
+
+    trace.append("load_evaluator")
+    evaluator = (_load_evaluator or _default_load_evaluator)(repo_root)
+
+    trace.append("agent_factory")
+    build = _build_agent or _default_build_agent
+    agent_factory = _INT.make_agent_factory(
+        runtime=runtime, ctx=ctx, evaluator=evaluator,
+        reference_build=lambda task, evaluator: build(task, evaluator=evaluator))
+
+    trace.append("run_harness")
+    run_harness = _run_harness or H._run
+    rc = run_harness(
+        plan_path, results_path, mode="qualify",
+        _tasks=plan["tasks"],                       # THE CANONICAL 32, in order
+        _agent_factory=agent_factory,
+        _state_factory=state_factory,
+        _binder=binder,
+        _evaluator=evaluator,
+        _cleanup=_cleanup or _default_cleanup,
+        _n_per_endpoint=H.CANONICAL_N_PER_ENDPOINT,
+        _ply_cap=H.PLY_CAP,
+        _ply_budget=None,                           # a screen plays to a terminal state
+        _band=H.BAND)
+    return _map_harness_exit(rc)
+
+
+def _map_harness_exit(rc: int) -> int:
+    """The harness's status is the command's, one for one."""
+    return {H.EXIT_OK: EXIT_OK, H.EXIT_PRECONDITION: EXIT_PRECONDITION,
+            H.EXIT_ABORT: EXIT_ABORT}.get(rc, EXIT_UNEXPECTED)
+
+
+def _default_compile(javac: str, jar: str, out_dir: str):
+    from . import t1j_adapter as A
+    r = A.compile_helper(javac, jar, out_dir, sources=A.PREFLIGHT_SOURCES)
+    if r.returncode != 0:
+        raise H.AbortError("compile", f"javac exit {r.returncode}: {r.stderr.strip()[:200]}")
+    return r
+
+
+def _default_cleanup() -> None:
+    from .twixtbot_g3_reference import between_games_cleanup
+    between_games_cleanup()
 
 
 def _default_load_evaluator(repo_root: str):
@@ -256,11 +344,6 @@ def _default_load_evaluator(repo_root: str):
 def _default_build_agent(task, *, evaluator):
     from . import e4_screen_reference as REF
     return REF.build(task, evaluator=evaluator)
-
-
-def _default_make_rng(seed: int = 0):
-    import random
-    return random.Random(seed)
 
 
 # --------------------------------------------------------------------- main

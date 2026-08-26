@@ -1,0 +1,8 @@
+b20aa4298cd6be33544b79d8514c291ae41e74db2ca903c7bebd31beecac3a10        1418  00_transcript.txt
+36f1edee4ca5b7c7a0fe5ed0d1524e6651c4613d814f20b5440316dbb43a0a3a        5081  02_stdout.txt
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855           0  03_stderr.txt
+9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa           2  04_exit.txt
+9bd8d3c8f4d86f2a7f0669625ce113b21f1833abe07b1772a1980eefbf517d80       14390  05_qualify.py.txt
+19fd536fc1c171a4e435a0eb640eca2f5d39a7049f1e2e8599124d13d94ff45b        1260  06_driver_run_all.sh.txt
+b4c64ea20150559c2f75dd4e0951e9d374f73f16f896cbee8016e6a812fe958a        1555  07_committed_sources.sha256.txt
+cdf53107e0fb63477f3e4e0d17778c8dc16f039ff2cadafe3abbbda4badb1638       23513  08_full_suite.txt
