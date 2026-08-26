@@ -12,6 +12,7 @@ import sys
 import pytest
 
 from scripts.GPU.alphazero import e4_screen_command as C
+from scripts.GPU.alphazero import e4_screen_reference as REF
 
 PLAN = "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json"
 REPO = os.path.abspath(".")
@@ -139,7 +140,65 @@ def repo_args(clean_repo, tmp_path, **over):
     return a
 
 
-def test_all_six_preconditions_complete_before_the_refusal(tmp_path, clean_repo):
+@pytest.fixture
+def unspent_block(monkeypatch):
+    """Lifts the canonical block's exposure and retirement, IN PROCESS ONLY.
+
+    WHY THIS IS NOT RELAXING A GATE. The screen ran on 2026-08-26, so the
+    `schedule` precondition now refuses the canonical plan before authorization
+    is ever consulted. Left alone, every test of the AUTHORIZATION gate would
+    stop passing for a reason that has nothing to do with authorization -- and a
+    safety gate whose tests all became vacuous is exactly the failure this
+    workstream keeps finding. So the tests whose SUBJECT is a later gate are
+    given a schedule that reaches it, and the earlier gate is asserted
+    separately, unpatched, in `test_the_spent_schedule_is_refused_*` below.
+
+    This changes only the seed registries, never SCREEN_AUTHORIZED, and never in
+    a subprocess. monkeypatch restores both on the way out.
+    """
+    keep = tuple(iv for iv in REF.EXPOSED_SEED_INTERVALS
+                 if iv[0] not in (202612128, 202612144))
+    monkeypatch.setattr(REF, "EXPOSED_SEED_INTERVALS", keep)
+    monkeypatch.setattr(REF, "RETIRED_SEED_INTERVALS", ())
+    assert not REF.seed_is_unavailable(202612128)
+    yield
+    # monkeypatch undoes both; the post-condition is asserted by every unpatched
+    # test in this file, which would fail loudly if the lift ever leaked.
+
+
+def test_the_spent_schedule_is_refused_before_authorization_is_consulted(
+        tmp_path, clean_repo):
+    """THE POST-RUN GATE, unpatched. Exit 2, and it fires FIRST.
+
+    A refusal the command fully understands must be a precondition, not an
+    unexpected error. This one used to escape as E4ReferenceError and print
+    UNEXPECTED with exit 4.
+    """
+    trace = []
+    log = C.EffectLog()
+    with pytest.raises(C.PreconditionError) as e:
+        C._run_screen(**repo_args(clean_repo, tmp_path),
+                      _load_evaluator=log.load_evaluator, _build_agent=log.build_agent,
+                      _run_harness=log.run_harness, _compile=log.compile, _trace=trace)
+    assert e.value.which == "schedule"
+    # trace records only COMPLETED preconditions: plan finished, schedule did not.
+    assert trace == ["plan"], "the plan still parses; the schedule is what refuses"
+    assert log.calls == []
+    assert not (tmp_path / "out.jsonl").exists()
+
+
+def test_the_plan_still_loads_although_its_schedule_may_not_run(clean_repo):
+    """Immutable historical evidence: parsing, digest and structure all survive."""
+    rec = C.check_plan(str(clean_repo / PLAN))
+    assert rec["n_tasks"] == 32
+    assert rec["plan_sha256"] == H.CANONICAL_PLAN_SHA256
+    assert rec["task_digest"] == H.CANONICAL_TASK_DIGEST
+    with pytest.raises(C.PreconditionError):
+        C.check_schedule(rec["plan"])
+
+
+def test_all_seven_preconditions_complete_before_the_refusal(
+        tmp_path, clean_repo, unspent_block):
     log = C.EffectLog()
     trace = []
     with pytest.raises(C.AuthorizationError) as e:
@@ -151,14 +210,15 @@ def test_all_six_preconditions_complete_before_the_refusal(tmp_path, clean_repo)
     assert log.calls == [], "no effect may be reached while unauthorized"
 
 
-def test_no_results_file_is_created_while_unauthorized(tmp_path, clean_repo):
+def test_no_results_file_is_created_while_unauthorized(tmp_path, clean_repo, unspent_block):
     out = tmp_path / "must_not_exist.jsonl"
     with pytest.raises(C.AuthorizationError):
         C._run_screen(**repo_args(clean_repo, tmp_path, results_path=str(out)))
     assert not out.exists()
 
 
-def test_no_rng_is_constructed_anywhere_while_unauthorized(tmp_path, clean_repo, monkeypatch):
+def test_no_rng_is_constructed_anywhere_while_unauthorized(
+        tmp_path, clean_repo, monkeypatch, unspent_block):
     """Patches random.Random itself, so this catches an RNG made ANYWHERE.
 
     Stronger than a seam: the command has no RNG seam because it creates no
@@ -192,57 +252,57 @@ def test_a_bad_plan_stops_at_the_first_precondition(tmp_path, clean_repo):
     assert e.value.which == "plan" and trace == []
 
 
-def test_a_dirty_worktree_is_refused(tmp_path, own_repo):
+def test_a_dirty_worktree_is_refused(tmp_path, own_repo, unspent_block):
     """Uses its OWN repo: dirtying the shared fixture would break every later test."""
     (own_repo / "scratch.txt").write_text("uncommitted")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
         C._run_screen(**repo_args(own_repo, tmp_path), _trace=trace)
     assert e.value.which == "repository" and "uncommitted" in e.value.message
-    assert trace == ["plan"], "the plan check ran; nothing after the failure did"
+    assert trace == ["plan", "schedule"], "plan and schedule ran; nothing after the failure did"
 
 
-def test_a_wrong_jdk_is_refused(tmp_path, clean_repo):
+def test_a_wrong_jdk_is_refused(tmp_path, clean_repo, unspent_block):
     fake = tmp_path / "jdk"
     (fake / "bin").mkdir(parents=True)
     (fake / "bin" / "java").write_bytes(b"not the qualified jvm")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
         C._run_screen(**repo_args(clean_repo, tmp_path, jdk_home=str(fake)), _trace=trace)
-    assert e.value.which == "jdk" and trace == ["plan", "repository"]
+    assert e.value.which == "jdk" and trace == ["plan", "schedule", "repository"]
 
 
-def test_a_wrong_jar_is_refused(tmp_path, clean_repo):
+def test_a_wrong_jar_is_refused(tmp_path, clean_repo, unspent_block):
     fake = tmp_path / "t1j.jar"
     fake.write_bytes(b"PK\x03\x04 not the pinned jar")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
         C._run_screen(**repo_args(clean_repo, tmp_path, jar_path=str(fake)), _trace=trace)
-    assert e.value.which == "jar" and trace == ["plan", "repository", "jdk"]
+    assert e.value.which == "jar" and trace == ["plan", "schedule", "repository", "jdk"]
 
 
-def test_a_wrong_checkpoint_is_refused_without_being_loaded(tmp_path, clean_repo):
+def test_a_wrong_checkpoint_is_refused_without_being_loaded(tmp_path, clean_repo, unspent_block):
     fake = tmp_path / "model.safetensors"
     fake.write_bytes(b"not the pinned checkpoint")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
         C._run_screen(**repo_args(clean_repo, tmp_path, checkpoint_path=str(fake)), _trace=trace)
     assert e.value.which == "checkpoint"
-    assert trace == ["plan", "repository", "jdk", "jar"]
+    assert trace == ["plan", "schedule", "repository", "jdk", "jar"]
 
 
-def test_an_existing_output_path_is_refused_and_left_alone(tmp_path, clean_repo):
+def test_an_existing_output_path_is_refused_and_left_alone(tmp_path, clean_repo, unspent_block):
     out = tmp_path / "stale.jsonl"
     out.write_text("stale\n")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
         C._run_screen(**repo_args(clean_repo, tmp_path, results_path=str(out)), _trace=trace)
     assert e.value.which == "output_path"
-    assert trace == ["plan", "repository", "jdk", "jar", "checkpoint"]
+    assert trace == ["plan", "schedule", "repository", "jdk", "jar", "checkpoint"]
     assert out.read_text() == "stale\n"
 
 
-def test_a_missing_output_directory_is_refused(tmp_path, clean_repo):
+def test_a_missing_output_directory_is_refused(tmp_path, clean_repo, unspent_block):
     with pytest.raises(C.PreconditionError) as e:
         C._run_screen(**repo_args(clean_repo, tmp_path,
                                   results_path=str(tmp_path / "nope" / "o.jsonl")))
@@ -281,11 +341,47 @@ def cli_args(tmp_path, repo):
             "--checkpoint", str(repo / C.CANONICAL_CHECKPOINT_REL))
 
 
-def test_cli_refuses_with_exit_5_after_every_precondition(tmp_path, clean_repo):
+def test_cli_refuses_the_spent_schedule_with_exit_2(tmp_path, clean_repo):
+    """THE REAL CLI, fresh subprocess, real registries: today's actual behaviour.
+
+    This asserted exit 5 until the screen ran. It now stops two gates earlier,
+    at `schedule`, and that is the correct answer -- but exit 5 must not become
+    untested as a side effect, so `authorized_gate_cli` below keeps qualifying it.
+    """
     r = cli(*cli_args(tmp_path, clean_repo))
-    assert r.returncode == C.EXIT_UNAUTHORIZED
+    assert r.returncode == C.EXIT_PRECONDITION, r.stderr[:300]
+    assert "PRECONDITION REFUSED" in r.stderr and "schedule" in r.stderr
+    assert "UNEXPECTED" not in r.stderr, "a refusal the command understands is not unexpected"
+    assert not (tmp_path / "o.jsonl").exists()
+
+
+#: Runs the REAL `main` in a FRESH process with the canonical block's exposure and
+#: retirement lifted, so the AUTHORIZATION gate is the thing that refuses. It
+#: never touches SCREEN_AUTHORIZED, which is read from the source file as always.
+_LIFT = (
+    "import sys;"
+    "from scripts.GPU.alphazero import e4_screen_reference as R;"
+    "from scripts.GPU.alphazero import e4_screen_command as C;"
+    "R.EXPOSED_SEED_INTERVALS=tuple(i for i in R.EXPOSED_SEED_INTERVALS"
+    " if i[0] not in (202612128,202612144));"
+    "R.RETIRED_SEED_INTERVALS=();"
+    "sys.exit(C.main(sys.argv[1:]))"
+)
+
+
+def authorized_gate_cli(*args, env=None):
+    e = dict(os.environ)
+    if env:
+        e.update(env)
+    return subprocess.run([sys.executable, "-c", _LIFT, *args],
+                          capture_output=True, text=True, env=e)
+
+
+def test_the_authorization_gate_still_exits_5_in_a_fresh_process(tmp_path, clean_repo):
+    r = authorized_gate_cli(*cli_args(tmp_path, clean_repo))
+    assert r.returncode == C.EXIT_UNAUTHORIZED, r.stderr[:300]
     assert "SCREEN NOT AUTHORIZED" in r.stderr
-    for name in C.PRECONDITIONS:
+    for name in C.PRECONDITIONS:                # all SEVEN completed first
         assert name in r.stderr
     assert not (tmp_path / "o.jsonl").exists()
 
@@ -295,8 +391,25 @@ def test_cli_refuses_with_exit_5_after_every_precondition(tmp_path, clean_repo):
     {"AUTHORIZED": "yes"}, {"FORCE": "1"}, {"PYTHONOPTIMIZE": "1"},
 ])
 def test_no_environment_variable_enables_the_screen(tmp_path, clean_repo, env):
-    r = cli(*cli_args(tmp_path, clean_repo), env=env)
-    assert r.returncode == C.EXIT_UNAUTHORIZED, (env, r.stderr[:200])
+    """Asserted against BOTH gates, so no env var can be excused by either.
+
+    The plain CLI stops at `schedule`; the lifted one reaches authorization. An
+    environment variable must change neither -- and the comparison is against the
+    unset baseline byte for byte, not merely against an expected exit code.
+    """
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    base = cli(*cli_args(tmp_path / "a", clean_repo))
+    with_env = cli(*cli_args(tmp_path / "a", clean_repo), env=env)
+    assert with_env.returncode == base.returncode == C.EXIT_PRECONDITION, (env, with_env.stderr[:200])
+    assert with_env.stderr == base.stderr, env
+
+    gate_base = authorized_gate_cli(*cli_args(tmp_path / "b", clean_repo))
+    gate_env = authorized_gate_cli(*cli_args(tmp_path / "b", clean_repo), env=env)
+    assert gate_env.returncode == gate_base.returncode == C.EXIT_UNAUTHORIZED, (env, gate_env.stderr[:200])
+    assert gate_env.stderr == gate_base.stderr, env
+    assert not (tmp_path / "a" / "o.jsonl").exists()
+    assert not (tmp_path / "b" / "o.jsonl").exists()
 
 
 @pytest.mark.parametrize("flag", [
@@ -314,11 +427,18 @@ def test_cli_precondition_failure_exits_2(tmp_path, clean_repo):
     assert r.returncode == C.EXIT_PRECONDITION and "PRECONDITION REFUSED" in r.stderr
 
 
-def test_the_scheduled_seed_block_is_never_touched(tmp_path, clean_repo):
-    from scripts.GPU.alphazero import e4_screen_reference as REF
+def test_the_scheduled_seed_block_is_never_touched(tmp_path, clean_repo, unspent_block):
+    """The command spends NOTHING: the registries are identical after the run.
+
+    This used to assert `not seed_is_exposed(...)` over the block, which the lift
+    fixture now makes true by construction -- it would have passed whatever the
+    command did. Comparing the registries before and against after tests the
+    command instead of the fixture, and holds whatever state they are lifted to.
+    """
+    before = (REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS)
     with pytest.raises(C.AuthorizationError):
         C._run_screen(**repo_args(clean_repo, tmp_path))
-    assert not any(REF.seed_is_exposed(s) for s in range(202612128, 202612160))
+    assert (REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS) == before
 
 
 # --- the AUTHORIZED branch is real wiring, proven with substitutes ----------
@@ -346,12 +466,14 @@ def authorized_call(tmp_path, clean_repo, **over):
     # the REAL precondition records, produced by the real checks
     records = {
         "plan": C.check_plan(str(clean_repo / PLAN)),
+        "schedule": None,                    # filled below, from the verified plan
         "repository": C.check_repository(str(clean_repo), str(clean_repo / PLAN)),
         "jdk": C.check_jdk(JDK),
         "jar": C.check_jar(JAR),
         "checkpoint": C.check_checkpoint(ck, str(clean_repo)),
         "output_path": C.check_output_path(str(tmp_path / "screen.jsonl")),
     }
+    records["schedule"] = C.check_schedule(records["plan"]["plan"])
     kw = dict(
         plan=records["plan"]["plan"],
         plan_path=str(clean_repo / PLAN),
@@ -369,7 +491,7 @@ def authorized_call(tmp_path, clean_repo, **over):
     return rc, cap, sentinel, compiled, kw["trace"]
 
 
-def test_the_authorized_path_hands_the_harness_the_canonical_32(tmp_path, clean_repo):
+def test_the_authorized_path_hands_the_harness_the_canonical_32(tmp_path, clean_repo, unspent_block):
     rc, cap, sentinel, compiled, trace = authorized_call(tmp_path, clean_repo)
     assert rc == C.EXIT_OK
     tasks = cap.kw["_tasks"]
@@ -379,7 +501,7 @@ def test_the_authorized_path_hands_the_harness_the_canonical_32(tmp_path, clean_
     assert len(tasks) == 32
 
 
-def test_the_authorized_path_supplies_the_qualified_collaborators(tmp_path, clean_repo):
+def test_the_authorized_path_supplies_the_qualified_collaborators(tmp_path, clean_repo, unspent_block):
     """The collaborators now arrive through _setup, which the HARNESS invokes
     after fsyncing the identity header."""
     _, cap, sentinel, compiled, _ = authorized_call(tmp_path, clean_repo)
@@ -397,7 +519,7 @@ def test_the_authorized_path_supplies_the_qualified_collaborators(tmp_path, clea
     assert collab["artifacts"]["classes_dir"].endswith(".t1j_classes")
 
 
-def test_the_identity_records_reach_the_harness(tmp_path, clean_repo):
+def test_the_identity_records_reach_the_harness(tmp_path, clean_repo, unspent_block):
     _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
     ident = cap.kw["_identity"]
     assert set(ident) == set(C.PRECONDITIONS)
@@ -408,7 +530,7 @@ def test_the_identity_records_reach_the_harness(tmp_path, clean_repo):
     assert ident["plan"]["task_digest"] == H.CANONICAL_TASK_DIGEST
 
 
-def test_the_class_directory_is_run_unique_and_exclusive(tmp_path, clean_repo):
+def test_the_class_directory_is_run_unique_and_exclusive(tmp_path, clean_repo, unspent_block):
     _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
     setup = cap.kw["_setup"]
     setup()                                    # first call creates it
@@ -418,7 +540,7 @@ def test_the_class_directory_is_run_unique_and_exclusive(tmp_path, clean_repo):
 
 
 def test_the_authorized_path_uses_the_screen_settings_not_a_qualification_budget(
-        tmp_path, clean_repo):
+        tmp_path, clean_repo, unspent_block):
     _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
     assert cap.kw["_ply_cap"] == H.PLY_CAP == 280
     assert cap.kw["_n_per_endpoint"] == H.CANONICAL_N_PER_ENDPOINT == 16
@@ -426,13 +548,13 @@ def test_the_authorized_path_uses_the_screen_settings_not_a_qualification_budget
     assert tuple(cap.kw["_band"]) == tuple(H.BAND)
 
 
-def test_the_authorized_path_lets_the_harness_own_recording(tmp_path, clean_repo):
+def test_the_authorized_path_lets_the_harness_own_recording(tmp_path, clean_repo, unspent_block):
     _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
     assert cap.args[1] == str(tmp_path / "screen.jsonl"), "the PATH is passed, not a Recorder"
     assert not (tmp_path / "screen.jsonl").exists(), "the command created no file itself"
 
 
-def test_the_authorized_path_creates_no_rng(tmp_path, clean_repo, monkeypatch):
+def test_the_authorized_path_creates_no_rng(tmp_path, clean_repo, monkeypatch, unspent_block):
     """The only generators in a screen come from each agent's bound task seed."""
     import random
     made = []
@@ -448,7 +570,7 @@ def test_the_authorized_path_creates_no_rng(tmp_path, clean_repo, monkeypatch):
     assert "random.Random(" not in SOURCE.replace("SeededReferenceAgent", "")
 
 
-def test_the_authorized_path_records_its_wiring_order(tmp_path, clean_repo):
+def test_the_authorized_path_records_its_wiring_order(tmp_path, clean_repo, unspent_block):
     _, cap, _, _, trace = authorized_call(tmp_path, clean_repo)
     assert trace == ["run_harness"], "nothing effectful happens before the harness"
     cap.kw["_setup"]()
@@ -464,7 +586,7 @@ def test_the_harness_exit_maps_to_the_command_exit(harness_rc, want):
     assert C._map_harness_exit(harness_rc) == want
 
 
-def test_the_authorized_path_is_unreachable_while_unauthorized(tmp_path, clean_repo, monkeypatch):
+def test_the_authorized_path_is_unreachable_while_unauthorized(tmp_path, clean_repo, monkeypatch, unspent_block):
     """The gate precedes it: substituting every effect still never gets there."""
     reached = []
     monkeypatch.setattr(C, "_execute_screen", lambda **kw: reached.append(kw))
@@ -544,7 +666,8 @@ def test_the_command_asks_the_harness_for_SCREEN_mode():
     assert '"qualify"' not in src
 
 
-def test_the_real_harness_accepts_the_commands_arguments(tmp_path, clean_repo, monkeypatch):
+def test_the_real_harness_accepts_the_commands_arguments(
+        tmp_path, clean_repo, monkeypatch, unspent_block):
     """No substitute harness. The real _run runs, and aborts in the state factory
     -- which is before any agent, so no RNG, no move, no game.
 
@@ -601,4 +724,57 @@ def test_the_real_harness_would_refuse_the_canonical_seeds_in_qualify_mode(tmp_p
                _tasks=_j.load(open(PLAN))["tasks"][:1],
                _agent_factory=lambda t, m, ev: None, _state_factory=lambda t: None,
                _binder=lambda *a: None, _evaluator=object(), _cleanup=lambda: None)
-    assert "accounted or exposed" in str(e.value)
+    assert "accounted, exposed or retired" in str(e.value)
+
+
+# --- the reconciliation's own controls -------------------------------------
+
+def test_check_schedule_accepts_a_runnable_schedule_and_reports_both_registries(
+        clean_repo, unspent_block):
+    """THE CONTROL. A gate that refuses everything proves nothing.
+
+    With the block's exposure and retirement lifted, the SAME plan object that
+    `check_schedule` refuses unpatched is accepted -- so the refusal is about
+    seed availability and not about the schedule being unacceptable in general.
+    """
+    plan = C.check_plan(str(clean_repo / PLAN))["plan"]
+    rec = C.check_schedule(plan)
+    assert rec == {"n_tasks": 32, "exposed": 0, "retired": 0, "executable": True}
+
+
+def test_check_schedule_counts_exposed_and_retired_separately(clean_repo):
+    """Unpatched. 24 drawn, 32 retired -- the numbers must not be collapsed."""
+    plan = C.check_plan(str(clean_repo / PLAN))["plan"]
+    seeds = [int(t["seed"]) for t in plan["tasks"]]
+    assert sum(REF.seed_is_exposed(s) for s in seeds) == 24
+    assert sum(REF.seed_is_retired(s) for s in seeds) == 32
+
+
+def test_the_schedule_check_refuses_rather_than_KeyError_if_it_runs_too_early():
+    """Reordering PRECONDITIONS must still exit 2, never UNEXPECTED/exit 4."""
+    with pytest.raises(C.PreconditionError) as e:
+        C._verified_plan({})                      # plan record absent
+    assert e.value.which == "schedule"
+
+
+def test_the_plan_precondition_catches_a_reference_error_too(monkeypatch):
+    """The exit-4 defect, at its source: E4ReferenceError must exit 2.
+
+    Raised from the plan loader itself, bypassing the runner's own conversion, so
+    this binds the command's `except` clause rather than the harness's.
+    """
+    def boom(_):
+        raise REF.E4ReferenceError("structural complaint from the reference module")
+
+    monkeypatch.setattr(C.H, "load_canonical_plan", boom)
+    with pytest.raises(C.PreconditionError) as e:
+        C.check_plan("ignored")
+    assert e.value.which == "plan" and "structural complaint" in e.value.message
+
+
+def test_zzz_the_lift_fixture_never_leaks_into_the_real_registries():
+    """Runs last in this file: any fixture that failed to restore is caught here."""
+    assert (202612128, 202612160) in REF.RETIRED_SEED_INTERVALS
+    assert (202612128, 202612136) in REF.EXPOSED_SEED_INTERVALS
+    assert (202612144, 202612160) in REF.EXPOSED_SEED_INTERVALS
+    assert REF.seed_is_unavailable(202612128) and REF.seed_is_unavailable(202612136)

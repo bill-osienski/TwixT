@@ -1,0 +1,36 @@
+THE SPLIT, AS SHIPPED — which function each caller asks
+======================================================
+
+STRUCTURAL (answers the same way forever):
+scripts/GPU/alphazero/e4_screen_runner.py:133:        REF.validate_schedule_structure(tasks)
+scripts/GPU/alphazero/e4_screen_reference.py:291:    validate_task_structure(task)
+scripts/GPU/alphazero/e4_screen_reference.py:331:        validate_task_structure(t)
+
+EXECUTABLE (answer changes once seeds are struck off):
+scripts/GPU/alphazero/e4_screen_runner.py:173:        REF.validate_schedule_executable(tasks)
+scripts/GPU/alphazero/e4_screen_reference.py:131:#: because no schedule may contain one -- `validate_schedule_executable` refuses
+scripts/GPU/alphazero/e4_screen_reference.py:346:        validate_task_executable(t)
+scripts/GPU/alphazero/e4_screen_reference.py:361:    validate_task_executable(task)
+scripts/GPU/alphazero/e4_screen_command.py:181:        REF.validate_schedule_executable(tasks)
+
+SIGNATURES — one required parameter each, no defaultable switch:
+  validate_task_structure(task: 'Dict[str, Any]') -> 'None'
+  validate_task_executable(task: 'Dict[str, Any]') -> 'None'
+  validate_schedule_structure(tasks: 'Sequence[Dict[str, Any]]') -> 'Dict[str, Any]'
+  validate_schedule_executable(tasks: 'Sequence[Dict[str, Any]]') -> 'Dict[str, Any]'
+
+PRECONDITION ORDER:
+  1. plan
+  2. schedule
+  3. repository
+  4. jdk
+  5. jar
+  6. checkpoint
+  7. output_path
+  then: the authorization gate (SCREEN_AUTHORIZED = False)
+
+WHERE EACH SEED QUESTION IS ASKED:
+  build / validate_task_executable  -> consumed, exposed, retired  (may this agent be built)
+  validate_schedule_executable      -> the above + TEST-ONLY        (may these games be played)
+  rng_witness                       -> ALLOWLIST: test namespace    (would a draw strike a
+                                       ONLY                          schedulable seed off?)

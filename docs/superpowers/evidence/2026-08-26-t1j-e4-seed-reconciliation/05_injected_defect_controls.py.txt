@@ -1,0 +1,74 @@
+"""Injected-defect controls for the reconciliation. Restores every file, verified by hash."""
+import hashlib, subprocess, sys, os
+R = "/Users/bill/projects/TwixT_Game"
+REF, RUN, CMD = (f"{R}/scripts/GPU/alphazero/e4_screen_{n}.py" for n in ("reference","runner","command"))
+
+CASES = [
+ ("plan check no longer catches E4ReferenceError", CMD,
+  "except (H.HarnessError, REF.E4ReferenceError) as e:", "except H.HarnessError as e:",
+  "tests/test_e4_screen_command.py::test_the_plan_precondition_catches_a_reference_error_too"),
+ ("the two registries are merged: all 32 called exposed", REF,
+  "    (202612128, 202612136),          # THE E4 CANONICAL SCREEN, strong endpoint,",
+  "    (202612128, 202612160),          # MERGED",
+  "tests/test_e4_screen_reference.py::test_the_canonical_screen_block_records_drawn_and_undrawn_separately"),
+ ("verify_tasks asks the EXECUTABLE question", RUN,
+  "        REF.validate_schedule_structure(tasks)", "        REF.validate_schedule_executable(tasks)",
+  "tests/test_e4_screen_reference.py::test_the_canonical_plan_still_loads_and_verifies_after_its_seeds_are_gone"),
+ ("the schedule precondition is dropped", CMD,
+  'PRECONDITIONS = ("plan", "schedule", "repository", "jdk", "jar", "checkpoint",\n                 "output_path")',
+  'PRECONDITIONS = ("plan", "repository", "jdk", "jar", "checkpoint", "output_path")',
+  "tests/test_e4_screen_command.py::test_the_spent_schedule_is_refused_before_authorization_is_consulted"),
+ ("a require_unspent switch is reintroduced", REF,
+  "def validate_task_executable(task: Dict[str, Any]) -> None:",
+  "def validate_task_executable(task: Dict[str, Any], require_unspent: bool = True) -> None:",
+  "tests/test_e4_screen_reference.py::test_there_is_no_switch_that_turns_the_seed_check_off"),
+ ("_verified_plan leaks a KeyError instead of refusing", CMD,
+  '    except KeyError:\n        # Only reachable by reordering PRECONDITIONS. A bare KeyError here would\n        # surface as UNEXPECTED/exit 4; this is a refusal, so it exits 2.\n        raise PreconditionError(\n            "schedule", "the schedule check ran before the plan was verified") from None',
+  '    except KeyError:\n        raise',
+  "tests/test_e4_screen_command.py::test_the_schedule_check_refuses_rather_than_KeyError_if_it_runs_too_early"),
+ ("the command MUTATES a seed registry", CMD,
+  '    status = [REF.seed_status(int(t["seed"])) for t in tasks]',
+  '    REF.RETIRED_SEED_INTERVALS = REF.RETIRED_SEED_INTERVALS + ((1, 2),)\n'
+  '    status = [REF.seed_status(int(t["seed"])) for t in tasks]',
+  "tests/test_e4_screen_command.py::test_the_scheduled_seed_block_is_never_touched"),
+ ("90000001 is dropped from the exposed registry", REF,
+  "    (90000001, 90000002),            # THE OLD `SYNTHETIC` TEST SEED, which was",
+  "    # REMOVED (defect)                THE OLD `SYNTHETIC` TEST SEED, which was",
+  "tests/test_e4_screen_reference.py::test_the_old_synthetic_seed_90000001_is_recorded_as_exposed"),
+ ("rng_witness reverts to a DENYLIST", REF,
+  "    if not seed_is_test_only(seed):",
+  "    if seed_is_accounted(seed) or seed_is_unavailable(seed):",
+  "tests/test_e4_screen_reference.py::test_rng_witness_is_an_ALLOWLIST_so_an_unknown_seed_is_refused"),
+ ("a test-only seed becomes schedulable", REF,
+  "        if seed_is_test_only(int(t[\"seed\"])):",
+  "        if False and seed_is_test_only(int(t[\"seed\"])):",
+  "tests/test_e4_screen_reference.py::test_a_test_seed_may_be_built_on_but_never_scheduled"),
+ ("screen mode stops asking execution eligibility", RUN,
+  "        _assert_screen_executable(tasks)", "        pass  # DEFECT: gate removed",
+  "tests/test_e4_screen_runner.py::test_the_REAL_harness_refuses_the_SPENT_canonical_schedule_in_screen_mode"),
+]
+
+def h(p): return hashlib.sha256(open(p,'rb').read()).hexdigest()
+
+ok = True
+for name, path, old, new, test in CASES:
+    before_h, before = h(path), open(path).read()
+    assert old in before, f"anchor not found for: {name}"
+    open(path, "w").write(before.replace(old, new, 1))
+    assert h(path) != before_h, f"injection changed nothing: {name}"
+    r = subprocess.run([f"{R}/.venv/bin/python", "-m", "pytest", test, "-q"],
+                       cwd=R, capture_output=True, text=True)
+    open(path, "w").write(before)
+    assert h(path) == before_h, f"RESTORE FAILED for {path}"
+    verdict = "REJECTED" if r.returncode != 0 else "*** NOT REJECTED ***"
+    ok &= r.returncode != 0
+    print(f"{verdict:22} {name}\n{'':22} -> {test.split('::')[-1]} exit {r.returncode}")
+
+print("\nbaseline (no defect):")
+r = subprocess.run([f"{R}/.venv/bin/python", "-m", "pytest",
+                    "tests/test_e4_screen_command.py", "tests/test_e4_screen_runner.py",
+                    "tests/test_e4_screen_reference.py", "-q"], cwd=R, capture_output=True, text=True)
+print("   ", r.stdout.strip().splitlines()[-1], "exit", r.returncode)
+ok &= r.returncode == 0
+print("\nALL CONTROLS BIND" if ok else "\nA CONTROL FAILED TO BIND")
+sys.exit(0 if ok else 1)

@@ -12,11 +12,12 @@ import sys
 
 import pytest
 
+from scripts.GPU.alphazero import e4_screen_reference as REF
 from scripts.GPU.alphazero import e4_screen_runner as H
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
 
 PLAN = "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json"
-SYNTHETIC = 90000001
+SYNTHETIC = 90009001                    # TEST_ONLY_SEED_INTERVALS: never schedulable
 OPENING = [(11, 11), (12, 13), (13, 12), (10, 13), (12, 10), (14, 14)]
 
 
@@ -755,27 +756,61 @@ def refusing_state_factory(task):
     raise H.AbortError(H.PHASE_PRECONDITION, "qualification stop: no game may be played")
 
 
-def test_the_REAL_harness_accepts_the_canonical_schedule_in_screen_mode(tmp_path):
-    """Proves the seed gate and schedule verification PASS, without playing.
+def test_the_REAL_harness_refuses_the_SPENT_canonical_schedule_in_screen_mode(tmp_path):
+    """POST-RUN STATE. The screen ran once on 2026-08-26; it may not run again.
 
-    The state factory aborts on the first task, which happens before any agent is
-    constructed -- so no RNG, no move, no game.
+    This test used to assert the opposite -- that the harness ACCEPTED this
+    schedule -- and it was right until the schedule was executed. Its premise
+    changed when the run happened, so the test changes with it rather than being
+    kept alive by relaxing what the harness enforces.
+
+    Every gate BEFORE seed availability is asserted to still pass, so the refusal
+    is proved to be about the seeds and not about a digest that quietly broke.
     """
     out = tmp_path / "screen.jsonl"
     built = []
-    with pytest.raises(H.AbortError) as e:
+
+    H.verify_tasks(CANON)                                 # structure: still binds
+    assert H.count_canonical(CANON, json.load(open(PLAN))["tasks"]) == H.CANONICAL_N_TASKS
+    for t in CANON:
+        H._assert_screen_seed(t)                          # still the reserved block
+
+    with pytest.raises(H.HarnessError, match="may not be executed"):
+        H._assert_screen_executable(CANON)                # THIS is what refuses now
+
+    with pytest.raises(H.HarnessError) as e:
         H._run(PLAN, str(out), mode=H.SCREEN_MODE, _tasks=CANON,
                _agent_factory=lambda t, m, ev: built.append(m),
                _state_factory=refusing_state_factory, _binder=null_binder, _evaluator=EV,
                _cleanup=lambda: None, _n_per_endpoint=16, _ply_cap=280)
-    assert e.value.phase == H.PHASE_PRECONDITION
+    assert "may not be executed" in str(e.value)
     assert built == [], "no agent may be constructed"
-    hdr = json.loads(open(out).readline())
-    assert hdr["mode"] == "screen"
-    assert hdr["no_games"] is False
-    assert hdr["synthetic_tasks"] == 0
-    assert hdr["canonical_tasks_executed"] == 32
-    assert hdr["ply_budget"] is None and hdr["ply_cap"] == 280
+    assert not out.exists(), "a refused screen creates no results file at all"
+
+
+def test_screen_mode_still_accepts_a_structurally_identical_UNSPENT_schedule(tmp_path):
+    """THE CONTROL. The refusal above must be the seeds, not screen mode itself.
+
+    A gate that rejects everything proves nothing. This rebuilds the canonical
+    tasks against seeds that are inside the reserved block but neither drawn from
+    nor retired -- which no longer exists, since the whole block retired -- so it
+    asserts the reachable half instead: with retirement lifted for this call, the
+    identical schedule passes the very check that just refused it.
+    """
+    unspent = [dict(t) for t in CANON]
+    original = REF.RETIRED_SEED_INTERVALS
+    original_exposed = REF.EXPOSED_SEED_INTERVALS
+    try:
+        REF.RETIRED_SEED_INTERVALS = ()
+        REF.EXPOSED_SEED_INTERVALS = tuple(
+            iv for iv in original_exposed if iv[0] not in (202612128, 202612144))
+        H._assert_screen_executable(unspent)              # passes, same tasks
+    finally:
+        REF.RETIRED_SEED_INTERVALS = original
+        REF.EXPOSED_SEED_INTERVALS = original_exposed
+    assert REF.RETIRED_SEED_INTERVALS == original
+    with pytest.raises(H.HarnessError):                   # and refuses again after
+        H._assert_screen_executable(unspent)
 
 
 def test_qualify_mode_still_refuses_every_canonical_seed(tmp_path):
@@ -783,7 +818,7 @@ def test_qualify_mode_still_refuses_every_canonical_seed(tmp_path):
         H._run(PLAN, str(tmp_path / "q.jsonl"), mode="qualify", _tasks=CANON[:1],
                _agent_factory=win_factory, _state_factory=small_state, _binder=null_binder,
                _evaluator=EV, _cleanup=lambda: None)
-    assert "accounted or exposed" in str(e.value)
+    assert "accounted, exposed or retired" in str(e.value)
 
 
 @pytest.mark.parametrize("mutate,label", [
@@ -807,3 +842,26 @@ def test_screen_mode_refuses_a_seed_outside_the_reserved_block():
     with pytest.raises(H.HarnessError):
         H._assert_screen_seed({"task_id": "x", "seed": 202612160})
     H._assert_screen_seed({"task_id": "x", "seed": 202612128})
+
+
+def test_the_completed_screen_can_still_be_reclassified_from_its_records():
+    """REPLAY ANALYSIS after the seeds are spent. 'Spent' must not mean unreadable.
+
+    The canonical run's durable JSONL is reclassified with the harness's own
+    classifier and must reproduce the verdict the run recorded. Nothing here
+    needs a seed, a model or a JVM -- which is the property the split protects.
+    """
+    run = ("docs/superpowers/evidence/2026-08-26-t1j-e4-canonical-screen/"
+           "07_e4_screen_results.jsonl")
+    rows = [json.loads(l) for l in open(run)]
+    results = [r for r in rows if r["record_type"] == "task_result"]
+    recorded = [r for r in rows if r["record_type"] == "verdict"][-1]
+
+    again = H.classify_run(results, n_per_endpoint=H.CANONICAL_N_PER_ENDPOINT, band=H.BAND)
+    assert again["per_endpoint"] == recorded["per_endpoint"]
+    assert again["joint"] == recorded["joint"] == "IN_BAND"
+    assert again["larger_match_permitted"] == recorded["larger_match_permitted"] is True
+    assert again["per_endpoint"]["weak"] == {
+        "played": 16, "score": 0.0, "cap_terminations": 0, "decision": "SATURATED_WEAK"}
+    assert again["per_endpoint"]["strong"] == {
+        "played": 8, "score": 7.0, "cap_terminations": 0, "decision": "IN_BAND"}

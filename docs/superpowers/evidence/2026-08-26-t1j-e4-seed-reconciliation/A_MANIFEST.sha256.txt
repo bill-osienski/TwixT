@@ -1,0 +1,11 @@
+5993c7f0cc432aa3a092e2e762d45c327f194e3481c12f34724d7114df1bec08       12330  00_card.md.txt
+dfe824a8d6126b81db0e9c4596ab0dc7fcd152b66e57001ce76f3c3a3a26ace6        2959  01_seed_taxonomy.txt
+67c9014721dc460c2d961a0c14015a1ddc2164add01a2e80f1073776a9be5e8a         878  02_cli_refusal.txt
+e8bcf5491dd83a76ea6462c7d45703035b00af4b54cb61a9448b56b1e1fc7526        1113  03_plan_still_loads.txt
+9b69ba02718da11e33477edfeac68da492c29eb8f95d1364625ff0faed7fcbd8       72516  04_reconciliation.diff.txt
+45698e7aa518601b79acef361ba9403a80fbda7378d4b3c65000f6f314be6135        4983  05_injected_defect_controls.py.txt
+5354ff837022e1eab48b4e788fd28887cce0120566eff2575c619f863afe3311        1923  06_injected_defect_controls_run.txt
+d0b3a3616a664b31963ee8c2a9c2cda55a705c284aeb48982ee2a45ab45a81fd        1900  07_call_sites.txt
+79cf7ae9e53aafb1969a320c2717841c4b97ad242269329e362a262cb50ecdf5       23300  08_full_suite.txt
+4af870d7d78fba222808c5d12c864bde650ccf29c32ef98cc7429ffdfefce594         731  09_run_artifacts_unchanged.txt
+60e86eabb421513674deb235266283782abd145f8e2e1b576a20f2dc60781846        5902  10_seed_90000001_correction.txt

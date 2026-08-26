@@ -1,0 +1,17 @@
+THE CLI, FRESH SUBPROCESS, REAL REGISTRIES — the exit-4 defect closed
+======================================================================
+
+BEFORE this change the same command printed:
+  UNEXPECTED E4ReferenceError: seed 202612128 was EXPOSED by an earlier
+  witness and cannot be scheduled
+  exit 4
+(reproduced at d50a244; see 60-failure breakdown in that commit's card)
+
+$ .venv/bin/python -m scripts.GPU.alphazero.e4_screen_command \
+    --plan docs/.../06_endpoint_screen_plan.json --results <new path> \
+    --repo . --jdk /nonexistent --jar '' --checkpoint <pinned>
+PRECONDITION REFUSED: [schedule] seed 202612128 was EXPOSED -- it has been drawn from -- and cannot be scheduled
+exit: 2
+
+results file created? 
+ls: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/never_created_2.jsonl: No such file or directory

@@ -1,0 +1,66 @@
+THE E4 CANONICAL SCREEN'S 32-SEED BLOCK, CLASSIFIED FROM THE RUN'S OWN RECORDS
+==============================================================================
+source of truth: docs/superpowers/evidence/2026-08-26-t1j-e4-canonical-screen/07_e4_screen_results.jsonl
+
+PLAYED  (a generator was built and drawn from)  24 seeds
+        202612128..202612135 and 202612144..202612159
+SKIPPED (early stop; never drawn from)          8 seeds
+        202612136..202612143
+
+REGISTRY AGREEMENT, seed by seed
+      seed   in run  exposed  retired  unavailable
+ 202612128   played     True     True         True
+ 202612129   played     True     True         True
+ 202612130   played     True     True         True
+ 202612131   played     True     True         True
+ 202612132   played     True     True         True
+ 202612133   played     True     True         True
+ 202612134   played     True     True         True
+ 202612135   played     True     True         True
+ 202612136  skipped    False     True         True
+ 202612137  skipped    False     True         True
+ 202612138  skipped    False     True         True
+ 202612139  skipped    False     True         True
+ 202612140  skipped    False     True         True
+ 202612141  skipped    False     True         True
+ 202612142  skipped    False     True         True
+ 202612143  skipped    False     True         True
+ 202612144   played     True     True         True
+ 202612145   played     True     True         True
+ 202612146   played     True     True         True
+ 202612147   played     True     True         True
+ 202612148   played     True     True         True
+ 202612149   played     True     True         True
+ 202612150   played     True     True         True
+ 202612151   played     True     True         True
+ 202612152   played     True     True         True
+ 202612153   played     True     True         True
+ 202612154   played     True     True         True
+ 202612155   played     True     True         True
+ 202612156   played     True     True         True
+ 202612157   played     True     True         True
+ 202612158   played     True     True         True
+ 202612159   played     True     True         True
+
+disagreements between the run record and the registries: 0
+exposed total: 24 (expect 24)
+retired total: 32 (expect 32)
+outside the block, 202612127: unavailable=False (expect False)
+outside the block, 202612160: unavailable=False (expect False)
+
+OK
+
+
+WORKSTREAM-WIDE REGISTRY INVENTORY (the 24/32 above are WITHIN the screen block)
+==============================================================================
+EXPOSED      65 seeds
+           [202612128, 202612136)    8
+           [202612144, 202612160)   16
+           [202612000, 202612032)   32
+           [90002000, 90002004)    4
+           [90001000, 90001004)    4
+           [90000001, 90000002)    1
+RETIRED      32 seeds
+           [202612128, 202612160)   32
+TEST_ONLY   100 seeds
+           [90009000, 90009100)  100

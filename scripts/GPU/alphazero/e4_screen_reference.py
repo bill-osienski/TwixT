@@ -21,6 +21,33 @@ of 0.25; root noise is suppressed instead at the call site, by
 The declaration was cosmetic. It is replaced here by a statement of the real
 mechanism, and by a check that reads the mechanism rather than the declaration.
 
+TWO SEED REGISTRIES, AND TWO VALIDATION QUESTIONS
+-------------------------------------------------
+`EXPOSED_SEED_INTERVALS` records EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE
+the permanently unschedulable test namespace, so a seed a schedule could have used
+has been struck off. `RETIRED_SEED_INTERVALS` records what MAY NOT BE USED -- a
+rule about the future.
+They are kept apart because merging them would overstate the record: the
+canonical screen drew from 24 of its 32 seeds and skipped 8 undrawn, and calling
+all 32 "exposed" claims a draw that never happened. Both refuse execution.
+
+A THIRD list, `TEST_ONLY_SEED_INTERVALS`, is neither: it is a band reserved for
+the seeds tests draw from, ineligible for any schedule by construction. Drawing
+from it creates NO experimental exposure -- not because the draw is unreal, but
+because no schedule may contain such a seed, so there is nothing to strike off.
+Witnesses may be taken ONLY from it -- an ALLOWLIST, because the old denylist
+silently drew from whatever nobody had thought to record, which is exactly what
+happened to the ad hoc test seed 90000001.
+
+Correspondingly there are TWO validation entry points, not one with a switch.
+`validate_*_structure` asks whether a schedule is WELL FORMED and answers the
+same way forever, so a completed run stays parseable, verifiable and analysable
+as historical evidence. `validate_*_executable` asks whether it may RUN NOW, and
+its answer changes the moment its seeds are spent. A `require_unspent=` keyword
+would have made the second question defaultable, and a default that can be
+switched off is exactly the gate-that-does-not-bind this workstream keeps
+finding. Callers must name which question they are asking.
+
 THE TWO STREAMS
 ---------------
 `eval_runner.play_eval_game` derives two independent generators from one seed,
@@ -38,9 +65,9 @@ from .twixtbot_g3_reference import SeededReferenceAgent, build_reference_agent, 
 from .twixtbot_g3_schedule import CONSUMED_SEEDS, REFERENCE_CHECKPOINTS
 
 #: Every seed interval this workstream has reserved, consumed, or EXPOSED.
-#: Half-open [start, end). `rng_witness` DRAWS from a generator, and under this
-#: workstream's accounting drawing exposes the seed even with no model and no
-#: game -- so a witness may never be taken from a seed inside these.
+#: Half-open [start, end). These are seeds a schedule could use, so a draw from
+#: one strikes it off even with no model and no game -- a witness may never be
+#: taken from a seed inside these.
 ACCOUNTED_SEED_INTERVALS = (
     (202608060, 202608124), (202608124, 202608188), (202608188, 202608988),
     (202608988, 202609388), (202609388, 202609788), (202609788, 202610188),
@@ -48,16 +75,23 @@ ACCOUNTED_SEED_INTERVALS = (
     (202612000, 202612512),          # the E4 screen's reservation, see EXPOSED below
 )
 
-#: Seeds already burnt without a game. E4 preflight attempt 3 froze an rng witness
-#: for all 32 scheduled tasks, which constructed both derived generators and drew
-#: four values from each. No model ran and no game was played, but the seeds are
-#: spent under this workstream's boundary and must never be scheduled.
+#: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
+#: test namespace below. Half-open [start, end).
+#:
+#: Drawing alone is not what this records, and saying so would contradict the test
+#: band: those are drawn from constantly and never appear here. What makes a draw
+#: an exposure is that it happened to a seed A SCHEDULE COULD HAVE USED, which
+#: strikes that seed off. A draw inside the test namespace strikes nothing off,
+#: because nothing there was ever available to schedule.
 EXPOSED_SEED_INTERVALS = (
-    (202612128, 202612160),          # THE E4 CANONICAL SCREEN, executed once from
-                                     # a8b3994 on 2026-08-26. 24 of the 32 tasks
-                                     # played; 8 skipped by a recorded early stop.
-                                     # The block is SPENT and the screen is not
-                                     # repeatable.
+    (202612128, 202612136),          # THE E4 CANONICAL SCREEN, strong endpoint,
+    (202612144, 202612160),          # tasks 000-007, and the weak endpoint, tasks
+                                     # 016-031: 24 tasks PLAYED on 2026-08-26 from
+                                     # a8b3994. Their seeds drove real generators.
+                                     # Tasks 008-015 (202612136..202612143) were
+                                     # SKIPPED by the recorded early stop and were
+                                     # never drawn from -- they are undrawn, and
+                                     # are retired below rather than claimed here.
     (202612000, 202612032),          # E4 preflight attempt 3 witnesses
     (90002000, 90002004),            # E4 integration qualification ATTEMPT 2,
                                      # 2026-08-26: the corrective run, same four
@@ -66,6 +100,50 @@ EXPOSED_SEED_INTERVALS = (
                                      # four synthetic tasks each built a real
                                      # SeededReferenceAgent and drew from both
                                      # generators. Spent, model or no model.
+    (90000001, 90000002),            # THE OLD `SYNTHETIC` TEST SEED, which was
+                                     # SCHEDULABLE. Drawn from TWICE, both draws
+                                     # preserved:
+                                     #  1) 2026-08-25-t1j-e4-preflight-attempt4/
+                                     #     06_endpoint_screen_plan.json, at
+                                     #     seed_accounting.witness_demonstration
+                                     #     -- an rng_witness frozen into the
+                                     #     canonical plan, four values per stream.
+                                     #  2) 2026-08-25-t1j-e4-harness-qualification/
+                                     #     04_qualify.py.txt:26,50,70 binds it to
+                                     #     the one real agent call, and
+                                     #     02_qualification.txt:18-28 is that call
+                                     #     RUNNING: completed, one move (14,13),
+                                     #     "search RNG advanced" + "readout RNG
+                                     #     advanced".
+                                     # It was absent from this registry anyway, and
+                                     # a test asserted it must stay usable -- the
+                                     # exact reuse this registry exists to prevent.
+                                     # Recorded 2026-08-26.
+)
+
+#: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
+#: a draw from a schedulable seed strikes that seed off. Naming a fresh
+#: "synthetic" seed each time is what put 90000001 above: it was schedulable, it
+#: was drawn from repeatedly, and nobody recorded it.
+#:
+#: So the tests draw from a band that is INELIGIBLE FOR SCHEDULING BY
+#: CONSTRUCTION. Draws here are just as real, and create NO experimental exposure,
+#: because no schedule may contain one -- `validate_schedule_executable` refuses
+#: them, and they lie outside the screen's reserved block, so the two barriers are
+#: independent. They are therefore NOT listed as exposed: there is nothing to
+#: strike off, not a draw to hide.
+TEST_ONLY_SEED_INTERVALS = (
+    (90009000, 90009100),
+)
+
+#: Seeds RETIRED ADMINISTRATIVELY. Not a claim that anything was drawn: a claim
+#: that the block may not be used again. The canonical screen was a preregistered
+#: ONE-SHOT schedule and it completed. Replaying its 8 undrawn seeds would select
+#: exactly the tasks the early stop declined to play -- a result chosen after
+#: seeing the first 24, which is selection bias however clean the RNG is. So the
+#: WHOLE block retires together, drawn and undrawn alike.
+RETIRED_SEED_INTERVALS = (
+    (202612128, 202612160),          # the canonical screen's 32-seed block
 )
 
 
@@ -74,7 +152,37 @@ def seed_is_accounted(seed: int) -> bool:
 
 
 def seed_is_exposed(seed: int) -> bool:
+    """Was this SCHEDULABLE seed drawn from, and so struck off? See the registry.
+
+    Not simply "was it drawn from": test-namespace seeds are drawn from constantly
+    and are never exposed, because they were never available to schedule.
+    """
     return any(lo <= int(seed) < hi for lo, hi in EXPOSED_SEED_INTERVALS)
+
+
+def seed_is_test_only(seed: int) -> bool:
+    """Reserved for tests: drawable without limit, schedulable never.
+
+    Drawing here is a real draw. It creates no exposure only because nothing in
+    this band could ever have entered a schedule.
+    """
+    return any(lo <= int(seed) < hi for lo, hi in TEST_ONLY_SEED_INTERVALS)
+
+
+def seed_is_retired(seed: int) -> bool:
+    """Is this seed administratively withdrawn? A rule about the future."""
+    return any(lo <= int(seed) < hi for lo, hi in RETIRED_SEED_INTERVALS)
+
+
+def seed_is_unavailable(seed: int) -> bool:
+    """Exposed OR retired: either way it may never be scheduled again."""
+    return seed_is_exposed(seed) or seed_is_retired(seed)
+
+
+def seed_status(seed: int) -> Dict[str, bool]:
+    """The two registries reported SEPARATELY, never merged into one word."""
+    return {"exposed": seed_is_exposed(seed), "retired": seed_is_retired(seed),
+            "accounted": seed_is_accounted(seed), "test_only": seed_is_test_only(seed)}
 
 
 #: Exactly the fields `build_reference_agent` reads off a task.
@@ -112,22 +220,32 @@ def rng_stream_seeds(task: Dict[str, Any]) -> Dict[str, int]:
 
 
 def rng_witness(task: Dict[str, Any], draws: int = 4) -> Dict[str, Any]:
-    """First `draws` values of each stream, for a SYNTHETIC seed only.
+    """First `draws` values of each stream, for a TEST-ONLY seed.
 
-    This demonstrates the seed-to-generator derivation. It also SPENDS the seed:
-    it constructs both real generators and draws from them, which under this
-    workstream's accounting exposes that seed even though no model is loaded and
-    no game is played. E4 preflight attempt 3 learned this the expensive way, by
-    taking witnesses over its own 32 scheduled seeds and burning them.
+    This is a REAL DRAW: it constructs both generators and takes values from them.
+    It creates no experimental exposure all the same, and not because the draw is
+    somehow lesser -- only because `TEST_ONLY_SEED_INTERVALS` can never enter a
+    schedule, so a draw there strikes nothing off. On a schedulable seed the same
+    call would strike that seed off permanently, with no model and no game. E4
+    preflight attempt 3 learned that the expensive way, by taking witnesses over
+    its own 32 scheduled seeds.
 
-    So this refuses any seed inside a reserved, consumed or exposed interval.
-    Demonstrate the mechanism on a seed no schedule will ever use.
+    THIS IS AN ALLOWLIST, NOT A DENYLIST, AND THAT IS THE POINT. The old version
+    refused seeds it had been told about -- accounted, exposed, retired -- so any
+    schedulable seed nobody had thought to list was drawn from and struck off in
+    silence. That is exactly how 90000001 was witnessed into the frozen plan, used
+    for the first real agent call, and still left absent from the registry. Now a
+    witness may be taken only from the band reserved for exactly this, and an
+    unrecognised seed is REFUSED rather than quietly consumed.
     """
     seed = int(task["seed"])
-    if seed_is_accounted(seed) or seed_is_exposed(seed):
+    if not seed_is_test_only(seed):
         raise E4ReferenceError(
-            f"refusing to draw from scheduled seed {seed}: drawing spends it. "
-            f"Use a synthetic seed outside ACCOUNTED_SEED_INTERVALS.")
+            f"refusing to draw from seed {seed}: a schedule could use it, so drawing "
+            f"would strike it off. Witnesses may be taken ONLY from "
+            f"TEST_ONLY_SEED_INTERVALS ({list(TEST_ONLY_SEED_INTERVALS)}), which no "
+            f"schedule may contain. Do not name a fresh 'synthetic' seed -- that is how "
+            f"90000001 was drawn from twice and never recorded.")
     s = rng_stream_seeds(task)
     return {
         **s,
@@ -141,8 +259,14 @@ def _first(seed: int, n: int) -> List[float]:
     return [r.random() for _ in range(n)]
 
 
-def validate_task(task: Dict[str, Any]) -> None:
-    """Everything `build_reference_agent` will check, checked BEFORE any model."""
+def validate_task_structure(task: Dict[str, Any]) -> None:
+    """Is this task WELL FORMED? Fields, pinned reference identity, colour.
+
+    STRUCTURE ONLY. It asks nothing about seed availability, so it answers the
+    same way forever: a schedule that was valid when it ran is still valid to
+    parse, verify, classify and analyse after its seeds are gone. This is what
+    lets a completed screen stay readable as historical evidence.
+    """
     missing = [f for f in REQUIRED_TASK_FIELDS if f not in task]
     if missing:
         raise E4ReferenceError(f"task is missing {missing}; build_reference_agent would refuse it")
@@ -153,29 +277,39 @@ def validate_task(task: Dict[str, Any]) -> None:
     if task["reference_sha1"] != pinned:
         raise E4ReferenceError(
             f"task reference_sha1 {task['reference_sha1']} != pinned {pinned}")
-    if int(task["seed"]) in CONSUMED_SEEDS:
-        raise E4ReferenceError(f"seed {task['seed']} is recorded as already consumed")
-    if seed_is_exposed(task["seed"]):
-        raise E4ReferenceError(
-            f"seed {task['seed']} was EXPOSED by an earlier witness and cannot be scheduled")
     reference_colour(task)          # raises on a bad anchor_colour
 
 
-def validate_schedule(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
-    """Validate every task, and assert the seed->stream mapping is injective.
+def validate_task_executable(task: Dict[str, Any]) -> None:
+    """May this task be PLAYED NOW? Structure, then seed availability.
+
+    A SEPARATE REQUIRED FUNCTION, deliberately not a `require_unspent=True`
+    keyword on the structural one. A switch defaults, and a default that can be
+    switched off is the failure mode this workstream keeps finding: every caller
+    here must name which question it is asking, and the name is the answer.
+    """
+    validate_task_structure(task)
+    seed = int(task["seed"])
+    if seed in CONSUMED_SEEDS:
+        raise E4ReferenceError(f"seed {seed} is recorded as already consumed")
+    if seed_is_exposed(seed):
+        raise E4ReferenceError(
+            f"seed {seed} was EXPOSED -- it has been drawn from -- and cannot be scheduled")
+    if seed_is_retired(seed):
+        raise E4ReferenceError(
+            f"seed {seed} belongs to a RETIRED block: its one-shot schedule completed, so "
+            f"reusing any part of it would select tasks after seeing the result")
+
+
+def _injective_streams(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """The seed->stream mapping must be injective, and structural.
 
     Two tasks sharing a generator stream would silently correlate two games that
-    the schedule presents as independent.
+    the schedule presents as independent. Nothing here draws: XOR only.
     """
-    if not tasks:
-        raise E4ReferenceError("empty schedule")
-    for t in tasks:
-        validate_task(t)
     seeds = [int(t["seed"]) for t in tasks]
     if len(set(seeds)) != len(seeds):
         raise E4ReferenceError("duplicate task seeds")
-    # XOR only -- deriving the integer does NOT draw from a generator and does
-    # not spend the seed. Never call rng_witness on a scheduled task.
     streams = [(rng_stream_seeds(t)["search_seed"], rng_stream_seeds(t)["readout_seed"])
                for t in tasks]
     if len(set(streams)) != len(streams):
@@ -189,9 +323,42 @@ def validate_schedule(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
             "search_readout_disjoint": True}
 
 
+def validate_schedule_structure(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """Is this schedule WELL FORMED? Independent of what has since been spent."""
+    if not tasks:
+        raise E4ReferenceError("empty schedule")
+    for t in tasks:
+        validate_task_structure(t)
+    return _injective_streams(tasks)
+
+
+def validate_schedule_executable(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """May this schedule be RUN NOW? Structure, availability, and no test seeds.
+
+    The test band is refused HERE rather than per task: building an agent on a
+    test seed is fine and unit tests do it constantly, but a SCHEDULE is a set of
+    games whose seeds must never have been drawn from -- and test seeds are drawn
+    from by design. Scheduling is the operation that must refuse them.
+    """
+    if not tasks:
+        raise E4ReferenceError("empty schedule")
+    for t in tasks:
+        validate_task_executable(t)
+    for t in tasks:
+        if seed_is_test_only(int(t["seed"])):
+            raise E4ReferenceError(
+                f"seed {t['seed']} is reserved for tests and is drawn from freely; it may "
+                f"never appear in a schedule")
+    return _injective_streams(tasks)
+
+
 def build(task: Dict[str, Any], *, evaluator, config=None) -> SeededReferenceAgent:
-    """The ONE construction path for the E4 screen. Delegates, never reimplements."""
-    validate_task(task)
+    """The ONE construction path for the E4 screen. Delegates, never reimplements.
+
+    AGENT CONSTRUCTION IS EXECUTION. It is the moment a seed becomes generators,
+    so it asks the executable question, never the structural one.
+    """
+    validate_task_executable(task)
     return build_reference_agent(
         task=task, evaluator=evaluator, colour=reference_colour(task), config=config
     )

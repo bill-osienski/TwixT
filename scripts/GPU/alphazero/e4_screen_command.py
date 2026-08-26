@@ -11,9 +11,10 @@ separate authorization.
 The command refuses BEFORE it loads a model, constructs an agent or an RNG, starts
 a jvm, or creates a results file.
 
-ORDER IS THE POINT. Every precondition -- plan, repository state, JDK components,
-jar, checkpoint, output path -- is checked FIRST and each is IMMEDIATELY FATAL.
-Only when all six have completed is the authorization gate consulted. Nothing
+ORDER IS THE POINT. Every precondition -- plan, schedule eligibility, repository
+state, JDK components, jar, checkpoint, output path -- is checked FIRST and each
+is IMMEDIATELY FATAL. Only when all seven have completed is the authorization
+gate consulted. Nothing
 effectful happens before both. The E4 integration script got this wrong in a way
 that mattered: its JDK gate stopped, but its jar and checkpoint gates merely
 accumulated, so a mismatch there would have loaded a model and spent seeds before
@@ -33,6 +34,7 @@ import sys
 from typing import Any, Callable, Dict, List, Optional
 
 from . import e4_screen_integration as INT
+from . import e4_screen_reference as REF
 from . import e4_screen_runner as H
 
 #: THE SCREEN IS UNAUTHORIZED. Changing this is a reviewed code change.
@@ -50,8 +52,15 @@ CHECKPOINT_SHA1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
 #: pass the precondition while different bytes were opened.
 CANONICAL_CHECKPOINT_REL = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
 
-#: The fixed order. Every one is fatal; the authorization gate follows all six.
-PRECONDITIONS = ("plan", "repository", "jdk", "jar", "checkpoint", "output_path")
+#: The fixed order. Every one is fatal; the authorization gate follows all seven.
+#:
+#: `plan` and `schedule` are two questions, not one. `plan` asks whether the
+#: canonical schedule parses and matches its pinned digests, and keeps answering
+#: yes forever -- a spent schedule is still evidence. `schedule` asks whether it
+#: may be RUN, and since 2026-08-26 the answer is no, because the block is spent.
+#: That refusal is a precondition, exit 2, not an unexpected error.
+PRECONDITIONS = ("plan", "schedule", "repository", "jdk", "jar", "checkpoint",
+                 "output_path")
 
 EXIT_OK = 0
 EXIT_PRECONDITION = 2
@@ -137,11 +146,46 @@ def check_plan(plan_path: str) -> Dict[str, Any]:
     """
     try:
         plan = H.load_canonical_plan(plan_path)
-    except H.HarnessError as e:
+    except (H.HarnessError, REF.E4ReferenceError) as e:
+        # BOTH. The harness converts what it sees, but a plan-path failure must
+        # exit 2 whichever module names it -- an E4ReferenceError escaping to the
+        # top made a fully understood refusal print UNEXPECTED and exit 4.
         raise PreconditionError("plan", str(e)) from None
     return {"plan_sha256": H.CANONICAL_PLAN_SHA256,
             "task_digest": H.CANONICAL_TASK_DIGEST, "n_tasks": len(plan["tasks"]),
             "plan": plan}
+
+
+def _verified_plan(records: Dict[str, Any]) -> Dict[str, Any]:
+    """The plan object check_plan verified. Never re-read, never re-parsed."""
+    try:
+        return records["plan"]["plan"]
+    except KeyError:
+        # Only reachable by reordering PRECONDITIONS. A bare KeyError here would
+        # surface as UNEXPECTED/exit 4; this is a refusal, so it exits 2.
+        raise PreconditionError(
+            "schedule", "the schedule check ran before the plan was verified") from None
+
+
+def check_schedule(plan: Dict[str, Any]) -> Dict[str, Any]:
+    """MAY THE VERIFIED SCHEDULE BE RUN? Asked separately from whether it parses.
+
+    check_plan answers identity and well-formedness, and keeps answering forever.
+    This answers availability, and its answer CHANGES: once the canonical screen
+    ran, its block became exposed-and-retired, so from then on this refuses --
+    as a precondition, exit 2, which is what a fully understood refusal is. It is
+    not an unexpected error, and it is not something to route around.
+    """
+    tasks = plan["tasks"]
+    try:
+        REF.validate_schedule_executable(tasks)
+    except REF.E4ReferenceError as e:
+        raise PreconditionError("schedule", str(e)) from None
+    status = [REF.seed_status(int(t["seed"])) for t in tasks]
+    return {"n_tasks": len(tasks),
+            "exposed": sum(x["exposed"] for x in status),
+            "retired": sum(x["retired"] for x in status),
+            "executable": True}
 
 
 def check_repository(repo_root: str, plan_path: str) -> Dict[str, Any]:
@@ -249,6 +293,7 @@ def _run_screen(*, plan_path: str, results_path: str, repo_root: str, jdk_home: 
     trace = _trace if _trace is not None else []
     checks = {
         "plan": lambda: check_plan(plan_path),
+        "schedule": lambda: check_schedule(_verified_plan(records)),
         "repository": lambda: check_repository(repo_root, plan_path),
         "jdk": lambda: check_jdk(jdk_home),
         "jar": lambda: check_jar(jar_path),
@@ -407,7 +452,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         prog="e4_screen_command",
         description="The E4 endpoint screen. IT IS NOT AUTHORIZED: SCREEN_AUTHORIZED is "
                     "False and no option, environment variable or configuration file can "
-                    "change that. Enabling it is a reviewed code change.",
+                    "change that. Enabling it is a reviewed code change. The canonical "
+                    "schedule is also SPENT -- it ran once on 2026-08-26 -- so this "
+                    "refuses at the `schedule` precondition with exit 2 before "
+                    "authorization is ever consulted. The plan itself still loads: spent "
+                    "prevents execution, not reading.",
         epilog="exit codes: 0 ok, 2 precondition refused, 3 aborted, 4 unexpected, "
                "5 screen not authorized")
     p.add_argument("--plan", required=True)

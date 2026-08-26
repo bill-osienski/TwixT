@@ -1,0 +1,19 @@
+00_launch.txt: OK
+01_stdout.txt: OK
+02_stderr.txt: OK
+03_exit.txt: OK
+04_timing.txt: OK
+05_driver.txt: OK
+06_run_once.sh.txt: OK
+07_e4_screen_results.jsonl: OK
+08_outcome_analysis.txt: OK
+09_full_suite_after_gate_restored.txt: OK
+10_seed_accounting_consequence.txt: OK
+
+checked       11 entries against 11_MANIFEST.sha256.txt (the manifest is self-excluding)
+git status for that directory: 0 changes
+
+NOTE: an earlier check in this session used the WRONG filename (A_MANIFEST) with
+stderr suppressed, so it printed nothing and a 'count non-OK lines' test read that
+as zero mismatches. The check had not run at all. Recorded because a verification
+that silently does not run is the exact defect class this workstream keeps finding.

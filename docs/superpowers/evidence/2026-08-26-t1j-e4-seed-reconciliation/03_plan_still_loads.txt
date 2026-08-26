@@ -1,0 +1,19 @@
+THE SPENT PLAN REMAINS IMMUTABLE HISTORICAL EVIDENCE
+====================================================
+Structure, digests and classification all still answer; only execution is refused.
+
+load_canonical_plan          OK       32 tasks
+verify_tasks (digest)        OK       f5a21395e67ad130...
+validate_schedule_structure  OK       {'n_tasks': 32, 'distinct_seeds': 32, 'distinct_stream_pairs': 32, 'search_readout_disjoint': True}
+validate_schedule_executable REFUSED  seed 202612128 was EXPOSED -- it has been drawn from -- and cannot be scheduled
+
+RECLASSIFICATION of the completed run (H.classify_run, no seeds needed):
+    weak  played=16  score= 0.0  caps=0  decision=SATURATED_WEAK  recorded=SATURATED_WEAK  MATCH
+  strong  played= 8  score= 7.0  caps=0  decision=IN_BAND         recorded=IN_BAND         MATCH
+  joint = IN_BAND   recorded = IN_BAND   MATCH
+  larger_match_permitted = True   recorded = True
+
+RECLASSIFIED VERDICT IS IDENTICAL TO THE RECORDED ONE: True
+
+The verdict is reproducible from the evidence after the seeds are gone.
+That is the whole point: 'spent' stops execution, not reading.

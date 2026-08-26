@@ -112,7 +112,13 @@ def load_canonical_plan(plan_path: str) -> Dict[str, Any]:
 
 
 def verify_tasks(tasks: Sequence[Dict[str, Any]]) -> None:
-    """Refuse additions, removals, reordering, duplicates and edits alike."""
+    """Refuse additions, removals, reordering, duplicates and edits alike.
+
+    STRUCTURAL. This is identity and well-formedness, and it must keep answering
+    after the schedule has been run: the canonical plan is historical evidence,
+    and evidence that stops parsing once it is spent is evidence you cannot
+    check. Execution eligibility is asked elsewhere, by name.
+    """
     if len(tasks) != CANONICAL_N_TASKS:
         raise HarnessError(f"{len(tasks)} tasks, expected exactly {CANONICAL_N_TASKS}")
     ids = [t.get("task_id") for t in tasks]
@@ -123,7 +129,13 @@ def verify_tasks(tasks: Sequence[Dict[str, Any]]) -> None:
         raise HarnessError(
             f"task digest {got} != pinned {CANONICAL_TASK_DIGEST}: the schedule has been "
             f"added to, removed from, reordered or edited")
-    REF.validate_schedule(tasks)
+    try:
+        REF.validate_schedule_structure(tasks)
+    except REF.E4ReferenceError as e:
+        # A structural complaint from the reference module IS a harness
+        # precondition failure. Letting it escape as itself made the CLI report
+        # UNEXPECTED and exit 4 for a condition it fully understood.
+        raise HarnessError(str(e)) from None
 
 
 def count_canonical(tasks, canonical) -> int:
@@ -151,11 +163,24 @@ def _assert_screen_seed(task: Dict[str, Any]) -> None:
             f"[{lo}, {hi})")
 
 
+def _assert_screen_executable(tasks: Sequence[Dict[str, Any]]) -> None:
+    """EXECUTION eligibility, asked only on the path that would actually play.
+
+    Structure is not permission. The canonical schedule stays verifiable forever;
+    running it again is what is forbidden, and this is where that is refused.
+    """
+    try:
+        REF.validate_schedule_executable(tasks)
+    except REF.E4ReferenceError as e:
+        raise HarnessError(f"the schedule may not be executed: {e}") from None
+
+
 def _assert_not_scheduled(task: Dict[str, Any]) -> None:
     seed = int(task["seed"])
-    if REF.seed_is_accounted(seed) or REF.seed_is_exposed(seed):
+    if REF.seed_is_accounted(seed) or REF.seed_is_unavailable(seed):
         raise HarnessError(
-            f"seed {seed} is accounted or exposed; qualification runs on synthetic seeds only")
+            f"seed {seed} is accounted, exposed or retired; qualification runs on "
+            f"synthetic seeds only")
 
 
 # ---------------------------------------------------------------- recording
@@ -425,6 +450,7 @@ def _run(plan_path: str, results_path: str, *, mode: str,
             raise HarnessError("screen mode requires the fully verified canonical schedule")
         for t in tasks:
             _assert_screen_seed(t)
+        _assert_screen_executable(tasks)
     else:
         for t in tasks:
             _assert_not_scheduled(t)

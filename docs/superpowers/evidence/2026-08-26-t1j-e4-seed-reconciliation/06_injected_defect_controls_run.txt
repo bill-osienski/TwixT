@@ -1,0 +1,28 @@
+REJECTED               plan check no longer catches E4ReferenceError
+                       -> test_the_plan_precondition_catches_a_reference_error_too exit 1
+REJECTED               the two registries are merged: all 32 called exposed
+                       -> test_the_canonical_screen_block_records_drawn_and_undrawn_separately exit 1
+REJECTED               verify_tasks asks the EXECUTABLE question
+                       -> test_the_canonical_plan_still_loads_and_verifies_after_its_seeds_are_gone exit 1
+REJECTED               the schedule precondition is dropped
+                       -> test_the_spent_schedule_is_refused_before_authorization_is_consulted exit 1
+REJECTED               a require_unspent switch is reintroduced
+                       -> test_there_is_no_switch_that_turns_the_seed_check_off exit 1
+REJECTED               _verified_plan leaks a KeyError instead of refusing
+                       -> test_the_schedule_check_refuses_rather_than_KeyError_if_it_runs_too_early exit 1
+REJECTED               the command MUTATES a seed registry
+                       -> test_the_scheduled_seed_block_is_never_touched exit 1
+REJECTED               90000001 is dropped from the exposed registry
+                       -> test_the_old_synthetic_seed_90000001_is_recorded_as_exposed exit 1
+REJECTED               rng_witness reverts to a DENYLIST
+                       -> test_rng_witness_is_an_ALLOWLIST_so_an_unknown_seed_is_refused exit 1
+REJECTED               a test-only seed becomes schedulable
+                       -> test_a_test_seed_may_be_built_on_but_never_scheduled exit 1
+REJECTED               screen mode stops asking execution eligibility
+                       -> test_the_REAL_harness_refuses_the_SPENT_canonical_schedule_in_screen_mode exit 1
+
+baseline (no defect):
+    ============================= 182 passed in 4.05s ============================== exit 0
+
+ALL CONTROLS BIND
+exit: 0

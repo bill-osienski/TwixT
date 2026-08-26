@@ -1,0 +1,90 @@
+SEED 90000001 — THE ENTRY THE REGISTRY WAS MISSING
+==============================================================================
+
+DRAW 1 — an rng_witness FROZEN INTO THE CANONICAL PLAN
+------------------------------------------------------------------------------
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json
+    seed_accounting.witness_demonstration.synthetic_seed = 90000001
+    colour       = black
+    search_seed  = 84349147   first 4 drawn = [0.3127913630039796, 0.5462393492575264, 0.2940318019993814, 0.38551725480225685]
+    readout_seed = 90273469   first 4 drawn = [0.3185493598022915, 0.3591625172816201, 0.8857031059546199, 0.11674306529955225]
+    Eight values are recorded. rng_witness constructs both generators and
+    draws from them; the values ARE the draw.
+
+DRAW 2 — the workstream's first real reference-agent call
+------------------------------------------------------------------------------
+  CONFIGURATION — the exact lines that bind the seed:
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/04_qualify.py.txt:26
+      SYNTHETIC = 90000001
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/04_qualify.py.txt:49
+      def task(i, anchor="black"):
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/04_qualify.py.txt:50
+          return {"task_id": f"synthetic-{i:03d}", "seed": SYNTHETIC + i,
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/04_qualify.py.txt:70
+      agent = REF.build(task(0, "black"), evaluator=EV)          # our side is red
+    task(0) => seed = SYNTHETIC + 0 = 90000001, and line 70 is the ONE call.
+
+  EXECUTION — the captured runtime record of that run:
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:18
+      == 4. THE ONE REAL CALL — synthetic seed, one frozen position ==
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:19
+        position p06_e3a_center: 6 plies, to_move=red, ply=6
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:20
+        PASS   agent colour red matches side to move
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:21
+        PASS   the single real call completed (validate_ply passed)
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:22
+        PASS   returned move (14, 13) is legal in our engine
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:23
+        PASS   search RNG advanced
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:24
+        PASS   readout RNG advanced
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:25
+        PASS   exactly one move made by this agent
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:26
+        PASS   the compiled graph was built by that inference
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:27
+        move=(14, 13)  evaluator id still 0x109bbacf0  agent evaluator is EV: True
+    docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification/02_qualification.txt:28
+        PASS   the call used the ONE loaded evaluator
+
+  Configuration alone would prove only which seed was written down. The
+  lines above are the RUN: the call completed, exactly one move was made,
+  and BOTH GENERATORS ADVANCED -- which is the draw itself, not a claim
+  about it. Earlier drafts of this file cited a wildcard directory and the
+  source line only; that proved the configured seed and nothing more.
+
+
+AFTER THE CORRECTION
+==============================================================================
+  90000000  {'exposed': False, 'retired': False, 'accounted': False, 'test_only': False}
+  90000001  {'exposed': True, 'retired': False, 'accounted': False, 'test_only': False}
+  90000002  {'exposed': False, 'retired': False, 'accounted': False, 'test_only': False}
+  validate_task_executable       REFUSED   seed 90000001 was EXPOSED -- it has been drawn from -- and cannot 
+  validate_schedule_executable   REFUSED   seed 90000001 was EXPOSED -- it has been drawn from -- and cannot 
+  rng_witness                    REFUSED   refusing to draw from seed 90000001: a schedule could use it, so d
+
+THE CLASS FIX: rng_witness is an ALLOWLIST, not a denylist
+------------------------------------------------------------------------------
+  A denylist draws from every seed nobody thought to list. That is how this
+  one was struck off without being recorded. Witnesses may now be taken ONLY
+  from the test namespace, which no schedule may contain.
+  TEST_ONLY_SEED_INTERVALS = [(90009000, 90009100)]
+
+      777777  test_only=False  REFUSED  (schedulable: a draw would strike it off)
+    12345678  test_only=False  REFUSED  (schedulable: a draw would strike it off)
+    91000001  test_only=False  REFUSED  (schedulable: a draw would strike it off)
+    90000000  test_only=False  REFUSED  (schedulable: a draw would strike it off)
+    90009100  test_only=False  REFUSED  (schedulable: a draw would strike it off)
+    90009001  test_only=True   ALLOWED  (test namespace: strikes nothing off)
+
+  A test seed is BUILDABLE but never SCHEDULABLE:
+    validate_task_executable(90009001)     accepted
+    validate_schedule_executable(90009001) REFUSED  seed 90009001 is reserved for tests and is drawn from fr
+
+
+REGISTRY TOTALS — workstream-wide, NOT the 24/32 within the screen block
+==============================================================================
+  EXPOSED     65  (24 screen + 32 preflight + 4 + 4 integration + 1)
+  RETIRED     32  (the canonical screen block)
+  TEST_ONLY  100  (ineligible for any schedule)
