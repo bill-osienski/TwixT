@@ -1,0 +1,54 @@
+E4 CANONICAL SCREEN — OUTCOME, read from the durable record.
+
+header: mode=screen  no_games=False  synthetic_tasks=0
+        canonical_tasks_executed=32  ply_cap=280
+        ply_budget=None  n_per_endpoint=16
+        repo HEAD a8b3994937c22f515cff9cc3f42fb4f852f4b045   plan digest f5a21395e67ad130...
+        jar 53ec95e421db2531...   checkpoint 34c79c0d85a837f0...
+        jdk components 4
+
+records: {'run_header': 1, 'setup_complete': 1, 'task_start': 24, 'opening_bound': 24, 'ply': 829, 'task_result': 24, 'early_stop': 1, 'task_skipped': 8, 'verdict': 1} 
+
+task                                           winner reason plies  t1j
+e4screen-000-strong6-o1_center-t1j_red         red    win       37  1.0
+e4screen-001-strong6-o1_center-t1j_black       red    win       57  0.0
+e4screen-002-strong6-o2_offcenter-t1j_red      red    win       25  1.0
+e4screen-003-strong6-o2_offcenter-t1j_black    black  win       64  1.0
+e4screen-004-strong6-o3_low-t1j_red            red    win       25  1.0
+e4screen-005-strong6-o3_low-t1j_black          black  win       30  1.0
+e4screen-006-strong6-o4_high-t1j_red           red    win       29  1.0
+e4screen-007-strong6-o4_high-t1j_black         black  win       44  1.0
+e4screen-016-weak3-o1_center-t1j_red           black  win       46  0.0
+e4screen-017-weak3-o1_center-t1j_black         red    win       35  0.0
+e4screen-018-weak3-o2_offcenter-t1j_red        black  win       30  0.0
+e4screen-019-weak3-o2_offcenter-t1j_black      red    win       45  0.0
+e4screen-020-weak3-o3_low-t1j_red              black  win       54  0.0
+e4screen-021-weak3-o3_low-t1j_black            red    win       33  0.0
+e4screen-022-weak3-o4_high-t1j_red             black  win       56  0.0
+e4screen-023-weak3-o4_high-t1j_black           red    win       31  0.0
+e4screen-024-weak3-o5_wide_left-t1j_red        black  win       52  0.0
+e4screen-025-weak3-o5_wide_left-t1j_black      red    win       39  0.0
+e4screen-026-weak3-o6_wide_right-t1j_red       black  win       52  0.0
+e4screen-027-weak3-o6_wide_right-t1j_black     red    win       33  0.0
+e4screen-028-weak3-o7_diagonal-t1j_red         black  win       36  0.0
+e4screen-029-weak3-o7_diagonal-t1j_black       red    win       37  0.0
+e4screen-030-weak3-o8_contact-t1j_red          black  win       42  0.0
+e4screen-031-weak3-o8_contact-t1j_black        red    win       41  0.0
+
+weak endpoint: 16 played, T1j score 0.0, cap terminations 0
+    t1j_red   : 8 games, T1j scored 0.0
+    t1j_black : 8 games, T1j scored 0.0
+strong endpoint: 8 played, T1j score 7.0, cap terminations 0
+    t1j_red   : 4 games, T1j scored 4.0
+    t1j_black : 4 games, T1j scored 3.0
+
+EARLY STOP (strong): IN_BAND forced after 8 of 16 games (score 7.0, 0 cap terminations)
+tasks skipped by that stop: 8
+
+game length: min 25  median 39  max 64
+the ply cap of 280 was never approached; EVERY game ended in a WIN, zero draws
+
+VERDICT: IN_BAND   larger_match_permitted=True
+  strong IN_BAND          played= 8 score=7.0 caps=0
+  weak   SATURATED_WEAK   played=16 score=0.0 caps=0
+  cleanups=24  tasks_played=24

@@ -197,3 +197,12 @@ def test_the_integration_qualification_seeds_are_recorded_as_consumed(lo):
             E.rng_witness(task(seed=seed))
     assert not E.seed_is_exposed(lo - 1) and not E.seed_is_exposed(lo + 4)
     assert not E.seed_is_exposed(SYNTHETIC), "the designated test seed stays usable"
+
+
+def test_the_canonical_screen_block_is_now_spent():
+    """The E4 screen ran once from a8b3994; its seeds can never be scheduled again."""
+    for seed in range(202612128, 202612160):
+        assert E.seed_is_exposed(seed)
+        with pytest.raises(E.E4ReferenceError):
+            E.validate_task(task(seed=seed))
+    assert not E.seed_is_exposed(202612127) and not E.seed_is_exposed(202612160)

@@ -1,0 +1,71 @@
+E4 CANONICAL SCREEN — ONE EXECUTION, NO RETRY.
+commit    a8b3994937c22f515cff9cc3f42fb4f852f4b045
+gate      SCREEN_AUTHORIZED = True
+host      Darwin 25.5.0 arm64
+cwd       /Users/bill/projects/TwixT_Game
+started   2026-08-26T17:57:15Z
+epoch     1787767035
+
+EXACT COMMAND:
+  /Users/bill/projects/TwixT_Game/.venv/bin/python -m scripts.GPU.alphazero.e4_screen_command \
+    --plan /Users/bill/projects/TwixT_Game/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json \
+    --results /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4screen/e4_screen_results.jsonl \
+    --repo /Users/bill/projects/TwixT_Game \
+    --jdk /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home \
+    --jar /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar \
+    --checkpoint /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+
+ARTIFACT IDENTITIES AT LAUNCH:
+  10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8  /Users/bill/projects/TwixT_Game/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json
+  53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7  e1/acq/release/t1j.jar
+  34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26  /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+  af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0  e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/java
+  6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab  e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/bin/javac
+  28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951  e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/lib/modules
+  cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b  e2/jdk/home/jdk-17.0.20.1+1/Contents/Home/release
+
+ENVIRONMENT (values of credential-like names redacted; they are not inputs to this run):
+  __CFBundleIdentifier=com.apple.Terminal
+  _=/usr/bin/env
+  AI_AGENT=claude-code_2-1-241_agent
+  CLAUDE_CODE_CHILD_SESSION=<redacted>
+  CLAUDE_CODE_ENTRYPOINT=cli
+  CLAUDE_CODE_EXECPATH=/Users/bill/.local/share/claude/versions/2.1.241
+  CLAUDE_CODE_MESSAGING_SOCKET=/tmp/cc-socks/75833.sock
+  CLAUDE_CODE_MESSAGING_TOKEN=<redacted>
+  CLAUDE_CODE_SESSION_ID=<redacted>
+  CLAUDE_EFFORT=max
+  CLAUDE_PID=75833
+  CLAUDECODE=1
+  COLORTERM=truecolor
+  COREPACK_ENABLE_AUTO_PIN=0
+  FPATH=/opt/homebrew/share/zsh/site-functions:/usr/local/share/zsh/site-functions:/usr/share/zsh/site-functions:/usr/share/zsh/5.9/functions
+  GIT_EDITOR=true
+  HOME=/Users/bill
+  HOMEBREW_CELLAR=/opt/homebrew/Cellar
+  HOMEBREW_PREFIX=/opt/homebrew
+  HOMEBREW_REPOSITORY=/opt/homebrew
+  INFOPATH=/opt/homebrew/share/info:
+  LANG=en_US.UTF-8
+  LOGNAME=bill
+  NoDefaultCurrentDirectoryInExePath=1
+  OLDPWD=/Users/bill/projects/TwixT_Game
+  OSLogRateLimit=64
+  PATH=/Users/bill/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Applications/Little Snitch.app/Contents/Components:/Users/bill/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin:/Users/bill/.claude/plugins/cache/claude-plugins-official/superpowers/6.3.0/bin:/Users/bill/.claude/plugins/cache/claude-plugins-official/code-simplifier/1.0.0/bin:/Users/bill/.claude/plugins/cache/claude-plugins-official/context7/unknown/bin:/Users/bill/.claude/plugins/cache/claude-plugins-official/swift-lsp/1.0.0/bin:/Users/bill/.claude/plugins/cache/ponytail/ponytail/4.8.4/bin
+  PWD=/Users/bill/projects/TwixT_Game
+  SHELL=/bin/zsh
+  SHLVL=3
+  SSH_AUTH_SOCK=<redacted>
+  TERM_PROGRAM_VERSION=470.2
+  TERM_PROGRAM=Apple_Terminal
+  TERM_SESSION_ID=<redacted>
+  TERM=xterm-256color
+  TMPDIR=/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/
+  USER=bill
+  XPC_FLAGS=0x0
+  XPC_SERVICE_NAME=0
+  (total variables: 39)
+
+python    3.14.7
+mlx       0.30.3
+----------------------------------------------------------------------

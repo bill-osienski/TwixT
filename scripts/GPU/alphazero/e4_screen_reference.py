@@ -53,6 +53,11 @@ ACCOUNTED_SEED_INTERVALS = (
 #: four values from each. No model ran and no game was played, but the seeds are
 #: spent under this workstream's boundary and must never be scheduled.
 EXPOSED_SEED_INTERVALS = (
+    (202612128, 202612160),          # THE E4 CANONICAL SCREEN, executed once from
+                                     # a8b3994 on 2026-08-26. 24 of the 32 tasks
+                                     # played; 8 skipped by a recorded early stop.
+                                     # The block is SPENT and the screen is not
+                                     # repeatable.
     (202612000, 202612032),          # E4 preflight attempt 3 witnesses
     (90002000, 90002004),            # E4 integration qualification ATTEMPT 2,
                                      # 2026-08-26: the corrective run, same four

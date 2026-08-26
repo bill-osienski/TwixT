@@ -1,0 +1,32 @@
+SEED ACCOUNTING CONSEQUENCE — read this with 09_full_suite_after_gate_restored.txt.
+
+Recording [202612128, 202612160) as EXPOSED — which is simply true, the screen
+ran and spent them — makes the CANONICAL PLAN ITSELF UNLOADABLE:
+
+  load_canonical_plan -> verify_tasks -> REF.validate_schedule -> validate_task
+  and validate_task refuses any EXPOSED seed.
+
+  E4ReferenceError: seed 202612128 was EXPOSED by an earlier witness and cannot be scheduled
+
+CONSEQUENCE MEASURED: 60 failures, ALL of them in the two E4 test files
+(29 command, 31 runner). ZERO failures anywhere else in the suite.
+
+TWO SEPARATE THINGS, and only one of them is clearly mine to fix:
+
+1. A DESIGN QUESTION, NOT MINE TO SETTLE. Should a spent canonical schedule
+   make its plan permanently unloadable? It is semantically defensible -- the
+   screen ran once and must never run again, and a system that refuses to load
+   the schedule enforces exactly that. But 60 qualified tests encode the
+   opposite premise, and choosing between 'the plan is now inert history' and
+   'exposure should block only NEW scheduling' changes what the code means. I
+   have NOT chosen. The tests are left failing rather than quietly rewritten to
+   match whichever answer I preferred.
+
+2. A DEFECT, UNAMBIGUOUS UNDER EITHER ANSWER. E4ReferenceError is NOT a
+   subclass of HarnessError, so check_plan's 'except H.HarnessError' does not
+   catch it and it escapes the CLI as:
+       UNEXPECTED E4ReferenceError: seed 202612128 was EXPOSED ...   exit 4
+   A refused plan is a PRECONDITION refusal (exit 2), not an unexpected error.
+   Flagged, not fixed: fixing it is a code change beyond this phase's scope.
+
+The seeds are spent either way. That record is not in question and is kept.

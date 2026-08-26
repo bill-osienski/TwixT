@@ -1,0 +1,9 @@
+started_epoch  1787767036
+ended_epoch    1787767624
+elapsed_s      588
+elapsed_hms    00:09:48
+ended          2026-08-26T18:07:04Z
+exit_status    0
+stdout_bytes   0
+stderr_bytes   0
+results_lines  913

@@ -1,0 +1,66 @@
+#!/bin/bash
+# THE E4 CANONICAL SCREEN. ONE EXECUTION. NO RETRY, WHATEVER THE OUTCOME.
+SPD=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad
+REPO=/Users/bill/projects/TwixT_Game
+E=$SPD/e4screen; EV="$E/evidence"
+PLAN="$REPO/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json"
+OUT="$E/e4_screen_results.jsonl"
+JH="$SPD/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home"
+JAR="$SPD/e1/acq/release/t1j.jar"
+CKPT="$REPO/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+PY="$REPO/.venv/bin/python"
+
+{
+  echo "E4 CANONICAL SCREEN — ONE EXECUTION, NO RETRY."
+  echo "commit    $(git -C "$REPO" rev-parse HEAD)"
+  echo "gate      $(git -C "$REPO" show HEAD:scripts/GPU/alphazero/e4_screen_command.py | grep '^SCREEN_AUTHORIZED')"
+  echo "host      $(uname -srm)"
+  echo "cwd       $REPO"
+  echo "started   $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "epoch     $(date +%s)"
+  echo
+  echo "EXACT COMMAND:"
+  printf '  %s -m scripts.GPU.alphazero.e4_screen_command \\\n' "$PY"
+  printf '    --plan %s \\\n    --results %s \\\n    --repo %s \\\n' "$PLAN" "$OUT" "$REPO"
+  printf '    --jdk %s \\\n    --jar %s \\\n    --checkpoint %s\n' "$JH" "$JAR" "$CKPT"
+  echo
+  echo "ARTIFACT IDENTITIES AT LAUNCH:"
+  for f in "$PLAN" "$JAR" "$CKPT" "$JH/bin/java" "$JH/bin/javac" "$JH/lib/modules" "$JH/release"; do
+    printf '  %s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "${f#$SPD/}"
+  done
+  echo
+  echo "ENVIRONMENT (values of credential-like names redacted; they are not inputs to this run):"
+  env | sort | awk -F= '{ n=$1; v=substr($0, index($0,"=")+1);
+      if (n ~ /TOKEN|KEY|SECRET|PASSWORD|PASSWD|AUTH|CREDENTIAL|COOKIE|SESSION/) v="<redacted>";
+      printf "  %s=%s\n", n, v }'
+  echo "  (total variables: $(env | wc -l | tr -d ' '))"
+  echo
+  echo "python    $("$PY" -c 'import sys;print(sys.version.split()[0])')"
+  echo "mlx       $("$PY" -c 'import mlx.core as mx;print(getattr(mx,"__version__","n/a"))' 2>/dev/null)"
+  echo "----------------------------------------------------------------------"
+} > "$EV/00_launch.txt" 2>&1
+
+START=$(date +%s)
+cd "$REPO" || exit 9
+"$PY" -m scripts.GPU.alphazero.e4_screen_command \
+  --plan "$PLAN" --results "$OUT" --repo "$REPO" \
+  --jdk "$JH" --jar "$JAR" --checkpoint "$CKPT" \
+  > "$EV/01_stdout.txt" 2> "$EV/02_stderr.txt"
+RC=$?
+END=$(date +%s)
+
+{
+  echo "$RC"
+} > "$EV/03_exit.txt"
+{
+  echo "started_epoch  $START"
+  echo "ended_epoch    $END"
+  echo "elapsed_s      $((END - START))"
+  echo "elapsed_hms    $(printf '%02d:%02d:%02d' $(( (END-START)/3600 )) $(( ((END-START)%3600)/60 )) $(( (END-START)%60 )))"
+  echo "ended          $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "exit_status    $RC"
+  echo "stdout_bytes   $(wc -c < "$EV/01_stdout.txt" | tr -d ' ')"
+  echo "stderr_bytes   $(wc -c < "$EV/02_stderr.txt" | tr -d ' ')"
+  echo "results_lines  $( [ -f "$OUT" ] && wc -l < "$OUT" | tr -d ' ' || echo 'NO RESULTS FILE')"
+} > "$EV/04_timing.txt"
+echo "RUN COMPLETE rc=$RC elapsed=$((END-START))s"
