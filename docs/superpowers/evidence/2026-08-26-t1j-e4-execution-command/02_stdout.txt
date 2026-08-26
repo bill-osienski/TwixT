@@ -1,0 +1,52 @@
+== 1. THE SCREEN IS UNAUTHORIZED, AND NOTHING OUTSIDE THE FILE CAN CHANGE THAT ==
+  PASS   SCREEN_AUTHORIZED is False
+  PASS   exactly ONE assignment in code (line 37)
+  PASS   exactly ONE read in code (line 232)
+  PASS   the CODE reads no environment (AST, not a text grep): []
+  PASS   no configuration reader is imported: []
+  PASS   the CLI exposes only path options: ['--checkpoint', '--jar', '--jdk', '--plan', '--repo', '--results']
+  PASS   the public entry point takes PATHS ONLY
+  PASS   no task, agent, evaluator, rng or callable is injectable publicly
+
+== 2. EVERY PRECONDITION COMPLETES BEFORE ANY EFFECTFUL SEAM ==
+  PASS   the command REFUSED
+  PASS   all six preconditions ran, in order: ['plan', 'repository', 'jdk', 'jar', 'checkpoint', 'output_path']
+  PASS   the refusal reports which preconditions completed
+  PASS   NO effectful seam was reached: []
+  PASS   NO RNG was constructed ANYWHERE (random.Random patched): 0
+  PASS   NO results file was created while unauthorized
+
+== 3. EVERY PRECONDITION IS IMMEDIATELY FATAL, IN ORDER ==
+  PASS   NEGATIVE CONTROL: a malformed plan -> fatal at 'plan', after []
+  PASS   NEGATIVE CONTROL: a RESHAPED plan (32 names, reversed) -> fatal at 'plan', after []
+  PASS   NEGATIVE CONTROL: a DIRTY worktree -> fatal at 'repository', after ['plan']
+  PASS   NEGATIVE CONTROL: a WRONG jdk -> fatal at 'jdk', after ['plan', 'repository']
+  PASS   NEGATIVE CONTROL: a WRONG jar -> fatal at 'jar', after ['plan', 'repository', 'jdk']
+  PASS   NEGATIVE CONTROL: a WRONG checkpoint -> fatal at 'checkpoint', after ['plan', 'repository', 'jdk', 'jar']
+  PASS   NEGATIVE CONTROL: an EXISTING output path -> fatal at 'output_path', after ['plan', 'repository', 'jdk', 'jar', 'checkpoint']
+  PASS   NEGATIVE CONTROL: a MISSING output directory -> fatal at 'output_path', after ['plan', 'repository', 'jdk', 'jar', 'checkpoint']
+  PASS   the existing output file was left untouched
+
+== 4. THE COMMAND ENTRY POINT, IN FRESH SUBPROCESSES ==
+  PASS   --help exits 0 and documents the ban
+  PASS   a fully valid invocation exits 5 (got 5)
+  PASS   ...saying so on stderr
+  PASS   ...and naming every completed precondition
+  PASS   ...having created NO results file
+  PASS   NEGATIVE CONTROL: env SCREEN_AUTHORIZED does not enable the screen
+  PASS   NEGATIVE CONTROL: env E4_SCREEN_AUTHORIZED does not enable the screen
+  PASS   NEGATIVE CONTROL: env AUTHORIZED does not enable the screen
+  PASS   NEGATIVE CONTROL: env FORCE does not enable the screen
+  PASS   NEGATIVE CONTROL: env E4_SCREEN_ENABLE does not enable the screen
+  PASS   NEGATIVE CONTROL: flag --authorized is rejected by the parser
+  PASS   NEGATIVE CONTROL: flag --force is rejected by the parser
+  PASS   NEGATIVE CONTROL: flag --yes is rejected by the parser
+  PASS   NEGATIVE CONTROL: flag --enable-screen is rejected by the parser
+  PASS   NEGATIVE CONTROL: flag --screen-authorized is rejected by the parser
+  PASS   a precondition failure exits 2
+
+== 5. postconditions ==
+  PASS   the screen's seed block [202612128, 202612160) is UNTOUCHED
+  PASS   SCREEN_AUTHORIZED is still False after every control
+
+EXECUTION-COMMAND QUALIFICATION PASS — no model, no agent, no RNG, no jvm, no game

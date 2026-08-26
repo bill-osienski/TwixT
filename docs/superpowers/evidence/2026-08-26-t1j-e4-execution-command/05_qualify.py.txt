@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+"""E4 EXECUTION-COMMAND qualification. NO MODEL, NO AGENT, NO RNG, NO JVM, NO GAME.
+
+The screen command exists and is complete up to the point it refuses. This proves:
+every precondition is immediately fatal and completes BEFORE anything effectful;
+the authorization gate is not overridable from outside the file; and no results
+file, model, agent or generator is ever reached while SCREEN_AUTHORIZED is False.
+
+Exit 0 = every requirement met, 3 = one or more failed.
+"""
+import ast, json, os, random, re, subprocess, sys, tempfile
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero import e4_screen_command as C
+from scripts.GPU.alphazero import e4_screen_reference as REF
+
+REPO = "/Users/bill/projects/TwixT_Game"
+SPD = "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad"
+PLAN_REL = "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json"
+JDK = f"{SPD}/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home"
+JAR = f"{SPD}/e1/acq/release/t1j.jar"
+CKPT = f"{REPO}/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+SRC = open(f"{REPO}/scripts/GPU/alphazero/e4_screen_command.py").read()
+
+fails = []
+def req(c, w):
+    print(("  PASS   " if c else "  FAIL   ") + w, flush=True)
+    if not c: fails.append(w)
+
+def tmpdir():
+    return tempfile.mkdtemp()
+
+def make_clean_repo():
+    """A committed tree holding the canonical plan at the same relative path."""
+    root = os.path.join(tmpdir(), "repo")
+    dest = os.path.join(root, os.path.dirname(PLAN_REL))
+    os.makedirs(dest)
+    open(os.path.join(root, PLAN_REL), "wb").write(open(f"{REPO}/{PLAN_REL}", "rb").read())
+    for cmd in (["init", "-q"], ["add", "-A"],
+                ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "plan"]):
+        subprocess.run(["git", "-C", root, *cmd], check=True, capture_output=True)
+    return root
+
+CLEAN = make_clean_repo()
+def args(**over):
+    a = dict(plan_path=os.path.join(CLEAN, PLAN_REL),
+             results_path=os.path.join(tmpdir(), "out.jsonl"),
+             repo_root=CLEAN, jdk_home=JDK, jar_path=JAR, checkpoint_path=CKPT)
+    a.update(over)
+    return a
+
+
+print("== 1. THE SCREEN IS UNAUTHORIZED, AND NOTHING OUTSIDE THE FILE CAN CHANGE THAT ==")
+req(C.SCREEN_AUTHORIZED is False, "SCREEN_AUTHORIZED is False")
+tree = ast.parse(SRC)
+names = [n for n in ast.walk(tree) if isinstance(n, ast.Name) and n.id == "SCREEN_AUTHORIZED"]
+stores = [n for n in names if isinstance(n.ctx, ast.Store)]
+loads = [n for n in names if isinstance(n.ctx, ast.Load)]
+req(len(stores) == 1, f"exactly ONE assignment in code (line {stores[0].lineno})")
+req(len(loads) == 1, f"exactly ONE read in code (line {loads[0].lineno})")
+env_hits = [f"{n.attr}@{n.lineno}" for n in ast.walk(tree)
+            if isinstance(n, ast.Attribute) and n.attr in {"environ", "environb", "getenv"}]
+req(env_hits == [], f"the CODE reads no environment (AST, not a text grep): {env_hits}")
+bad_imports = [a.name for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))
+               for a in n.names if any(b in a.name for b in ("configparser", "dotenv", "yaml", "toml"))]
+req(bad_imports == [], f"no configuration reader is imported: {bad_imports}")
+opts = re.findall(r'p\.add_argument\("(--[a-z-]+)"', SRC)
+req(set(opts) == {"--plan", "--results", "--repo", "--jdk", "--jar", "--checkpoint"},
+    f"the CLI exposes only path options: {sorted(opts)}")
+import inspect
+params = set(inspect.signature(C.run_screen).parameters)
+req(params == {"plan_path", "results_path", "repo_root", "jdk_home", "jar_path",
+               "checkpoint_path"}, "the public entry point takes PATHS ONLY")
+req(not any(b in n for n in params for b in ("task", "agent", "evaluator", "rng", "callable")),
+    "no task, agent, evaluator, rng or callable is injectable publicly")
+
+print("\n== 2. EVERY PRECONDITION COMPLETES BEFORE ANY EFFECTFUL SEAM ==")
+log, trace = C.EffectLog(), []
+made_rngs = []
+real_random = random.Random
+class CountingRandom(real_random):
+    def __init__(self, *a, **kw):
+        made_rngs.append(a); super().__init__(*a, **kw)
+random.Random = CountingRandom
+try:
+    try:
+        C._run_screen(**args(), _load_evaluator=log.load_evaluator,
+                      _build_agent=log.build_agent, _make_rng=log.make_rng, _trace=trace)
+        refused = False
+    except C.AuthorizationError as e:
+        refused = True
+        completed = e.completed_preconditions
+finally:
+    random.Random = real_random
+req(refused, "the command REFUSED")
+req(trace == list(C.PRECONDITIONS), f"all six preconditions ran, in order: {trace}")
+req(completed == list(C.PRECONDITIONS), "the refusal reports which preconditions completed")
+req(log.calls == [], f"NO effectful seam was reached: {log.calls}")
+req(made_rngs == [], f"NO RNG was constructed ANYWHERE (random.Random patched): {len(made_rngs)}")
+
+out = os.path.join(tmpdir(), "must_not_exist.jsonl")
+try:
+    C._run_screen(**args(results_path=out))
+except C.AuthorizationError:
+    pass
+req(not os.path.exists(out), "NO results file was created while unauthorized")
+
+print("\n== 3. EVERY PRECONDITION IS IMMEDIATELY FATAL, IN ORDER ==")
+d = tmpdir(); bad_plan = os.path.join(d, "bad.json"); open(bad_plan, "w").write("{}")
+plan2 = json.load(open(f"{REPO}/{PLAN_REL}")); plan2["tasks"] = list(reversed(plan2["tasks"]))
+reshaped = os.path.join(d, "reshaped.json"); open(reshaped, "w").write(json.dumps(plan2))
+dirty = make_clean_repo(); open(os.path.join(dirty, "scratch.txt"), "w").write("uncommitted")
+fake_jdk = os.path.join(d, "jdk"); os.makedirs(os.path.join(fake_jdk, "bin"))
+open(os.path.join(fake_jdk, "bin", "java"), "wb").write(b"not the qualified jvm")
+fake_jar = os.path.join(d, "t1j.jar"); open(fake_jar, "wb").write(b"PK\x03\x04 not the jar")
+fake_ck = os.path.join(d, "m.safetensors"); open(fake_ck, "wb").write(b"not the checkpoint")
+stale = os.path.join(d, "stale.jsonl"); open(stale, "w").write("stale\n")
+
+for label, over, which, want_trace in (
+    ("a malformed plan", dict(plan_path=bad_plan), "plan", []),
+    ("a RESHAPED plan (32 names, reversed)", dict(plan_path=reshaped), "plan", []),
+    ("a DIRTY worktree", dict(repo_root=dirty, plan_path=os.path.join(dirty, PLAN_REL)),
+     "repository", ["plan"]),
+    ("a WRONG jdk", dict(jdk_home=fake_jdk), "jdk", ["plan", "repository"]),
+    ("a WRONG jar", dict(jar_path=fake_jar), "jar", ["plan", "repository", "jdk"]),
+    ("a WRONG checkpoint", dict(checkpoint_path=fake_ck), "checkpoint",
+     ["plan", "repository", "jdk", "jar"]),
+    ("an EXISTING output path", dict(results_path=stale), "output_path",
+     ["plan", "repository", "jdk", "jar", "checkpoint"]),
+    ("a MISSING output directory", dict(results_path=os.path.join(d, "nope", "o.jsonl")),
+     "output_path", ["plan", "repository", "jdk", "jar", "checkpoint"]),
+):
+    t, lg = [], C.EffectLog()
+    try:
+        C._run_screen(**args(**over), _load_evaluator=lg.load_evaluator,
+                      _build_agent=lg.build_agent, _make_rng=lg.make_rng, _trace=t)
+        ok, which_got = False, None
+    except C.PreconditionError as e:
+        ok, which_got = True, e.which
+    except C.AuthorizationError:
+        ok, which_got = False, "REACHED THE GATE"
+    req(ok and which_got == which and t == want_trace and lg.calls == [],
+        f"NEGATIVE CONTROL: {label} -> fatal at '{which_got}', after {t}")
+req(open(stale).read() == "stale\n", "the existing output file was left untouched")
+
+print("\n== 4. THE COMMAND ENTRY POINT, IN FRESH SUBPROCESSES ==")
+def cli(*a, env=None):
+    e = dict(os.environ)
+    if env: e.update(env)
+    return subprocess.run([sys.executable, "-m", "scripts.GPU.alphazero.e4_screen_command", *a],
+                          capture_output=True, text=True, cwd=REPO, env=e)
+CLI_OK = ("--plan", os.path.join(CLEAN, PLAN_REL), "--repo", CLEAN,
+          "--jdk", JDK, "--jar", JAR, "--checkpoint", CKPT)
+r = cli("--help")
+req(r.returncode == 0 and "NOT AUTHORIZED" in r.stdout, "--help exits 0 and documents the ban")
+o = os.path.join(tmpdir(), "o.jsonl")
+r = cli(*CLI_OK, "--results", o)
+req(r.returncode == C.EXIT_UNAUTHORIZED, f"a fully valid invocation exits {C.EXIT_UNAUTHORIZED} "
+                                         f"(got {r.returncode})")
+req("SCREEN NOT AUTHORIZED" in r.stderr, "...saying so on stderr")
+req(all(n in r.stderr for n in C.PRECONDITIONS), "...and naming every completed precondition")
+req(not os.path.exists(o), "...having created NO results file")
+
+for env in ({"SCREEN_AUTHORIZED": "1"}, {"E4_SCREEN_AUTHORIZED": "true"},
+            {"AUTHORIZED": "yes"}, {"FORCE": "1"}, {"E4_SCREEN_ENABLE": "1"}):
+    r = cli(*CLI_OK, "--results", os.path.join(tmpdir(), "o.jsonl"), env=env)
+    req(r.returncode == C.EXIT_UNAUTHORIZED,
+        f"NEGATIVE CONTROL: env {list(env)[0]} does not enable the screen")
+for flag in ("--authorized", "--force", "--yes", "--enable-screen", "--screen-authorized"):
+    r = cli(*CLI_OK, "--results", os.path.join(tmpdir(), "o.jsonl"), flag)
+    req(r.returncode == 2 and "unrecognized arguments" in r.stderr,
+        f"NEGATIVE CONTROL: flag {flag} is rejected by the parser")
+r = cli("--plan", os.path.join(CLEAN, PLAN_REL), "--repo", CLEAN, "--jdk", "/nonexistent",
+        "--jar", JAR, "--checkpoint", CKPT, "--results", os.path.join(tmpdir(), "o.jsonl"))
+req(r.returncode == C.EXIT_PRECONDITION and "PRECONDITION REFUSED" in r.stderr,
+    f"a precondition failure exits {C.EXIT_PRECONDITION}")
+
+print("\n== 5. postconditions ==")
+req(not any(REF.seed_is_exposed(s) for s in range(202612128, 202612160)),
+    "the screen's seed block [202612128, 202612160) is UNTOUCHED")
+req(C.SCREEN_AUTHORIZED is False, "SCREEN_AUTHORIZED is still False after every control")
+
+print(flush=True)
+if fails:
+    print(f"EXECUTION-COMMAND QUALIFICATION FAIL — {len(fails)}:")
+    for f_ in fails: print("  " + f_)
+    sys.exit(3)
+print("EXECUTION-COMMAND QUALIFICATION PASS — no model, no agent, no RNG, no jvm, no game")
+sys.exit(0)
