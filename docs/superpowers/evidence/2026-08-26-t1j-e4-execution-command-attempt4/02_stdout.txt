@@ -1,0 +1,117 @@
+== 1. THE SCREEN IS UNAUTHORIZED, AND NOTHING OUTSIDE THE FILE CAN CHANGE THAT ==
+  PASS   SCREEN_AUTHORIZED is False
+  PASS   exactly ONE assignment in code (line 42)
+  PASS   exactly ONE read in code (line 266)
+  PASS   the CODE reads no environment (AST, not a text grep): []
+  PASS   the docstring claims NO SUPPORTED OVERRIDE, not immutability (a module global is rebindable)
+  PASS   no configuration reader is imported: []
+  PASS   the CLI exposes only path options: ['--checkpoint', '--jar', '--jdk', '--plan', '--repo', '--results']
+  PASS   the public entry point takes PATHS ONLY
+  PASS   no task, agent, evaluator, rng or callable is injectable publicly
+
+== 2. EVERY PRECONDITION COMPLETES BEFORE ANY EFFECTFUL SEAM ==
+  PASS   the command REFUSED
+  PASS   all six preconditions ran, in order: ['plan', 'repository', 'jdk', 'jar', 'checkpoint', 'output_path']
+  PASS   the refusal reports which preconditions completed
+  PASS   NO effectful seam was reached: []
+  PASS   NO RNG was constructed ANYWHERE (random.Random patched): 0
+  PASS   NO results file was created while unauthorized
+
+== 3. EVERY PRECONDITION IS IMMEDIATELY FATAL, IN ORDER ==
+  PASS   NEGATIVE CONTROL: a malformed plan -> fatal at 'plan', after []
+  PASS   NEGATIVE CONTROL: a RESHAPED plan (32 names, reversed) -> fatal at 'plan', after []
+  PASS   NEGATIVE CONTROL: a DIRTY worktree -> fatal at 'repository', after ['plan']
+  PASS   NEGATIVE CONTROL: a WRONG jdk -> fatal at 'jdk', after ['plan', 'repository']
+  PASS   NEGATIVE CONTROL: a WRONG jar -> fatal at 'jar', after ['plan', 'repository', 'jdk']
+  PASS   NEGATIVE CONTROL: a WRONG checkpoint -> fatal at 'checkpoint', after ['plan', 'repository', 'jdk', 'jar']
+  PASS   NEGATIVE CONTROL: an EXISTING output path -> fatal at 'output_path', after ['plan', 'repository', 'jdk', 'jar', 'checkpoint']
+  PASS   NEGATIVE CONTROL: a MISSING output directory -> fatal at 'output_path', after ['plan', 'repository', 'jdk', 'jar', 'checkpoint']
+  PASS   the existing output file was left untouched
+
+== 4. THE COMMAND ENTRY POINT, IN FRESH SUBPROCESSES ==
+  PASS   --help exits 0 and documents the ban
+  PASS   a fully valid invocation exits 5 (got 5)
+  PASS   ...saying so on stderr
+  PASS   ...and naming every completed precondition
+  PASS   ...having created NO results file
+  PASS   NEGATIVE CONTROL: env SCREEN_AUTHORIZED does not enable the screen
+  PASS   NEGATIVE CONTROL: env E4_SCREEN_AUTHORIZED does not enable the screen
+  PASS   NEGATIVE CONTROL: env AUTHORIZED does not enable the screen
+  PASS   NEGATIVE CONTROL: env FORCE does not enable the screen
+  PASS   NEGATIVE CONTROL: env E4_SCREEN_ENABLE does not enable the screen
+  PASS   NEGATIVE CONTROL: flag --authorized is rejected by the parser
+  PASS   NEGATIVE CONTROL: flag --force is rejected by the parser
+  PASS   NEGATIVE CONTROL: flag --yes is rejected by the parser
+  PASS   NEGATIVE CONTROL: flag --enable-screen is rejected by the parser
+  PASS   NEGATIVE CONTROL: flag --screen-authorized is rejected by the parser
+  PASS   a precondition failure exits 2
+
+== 5. THE AUTHORIZED BRANCH IS REAL WIRING (substitutes; nothing enabled) ==
+  PASS   the authorized path returns the harness's status
+  PASS   the harness receives the CANONICAL 32 tasks, in order
+  PASS   ...matching the pinned ordered, dimension-projected digest
+  PASS   collaborators arrive through _setup, which the HARNESS invokes after the header
+  PASS   NOTHING was compiled before the harness took over
+  PASS   the ONE loaded evaluator is passed through
+  PASS   state_factory is the qualified make_state_factory product
+  PASS   binder is the qualified make_binder product
+  PASS   agent_factory is the qualified make_agent_factory product
+  PASS   a cleanup hook is supplied
+  PASS   ply_cap 280
+  PASS   16 per endpoint
+  PASS   NO qualification budget — a screen plays to terminal
+  PASS   the harness is given the PATH; it owns recording
+  PASS   the command itself created NO results file
+  PASS   the T1j helper is compiled inside setup
+  PASS   wiring order recorded: ['run_harness', 'compile', 't1j_runtime', 'load_evaluator', 'agent_factory']
+  PASS   the command created NO RNG (random.Random patched): 0
+  PASS   harness 0 maps to command 0
+  PASS   harness 2 maps to command 2
+  PASS   harness 3 maps to command 3
+  PASS   harness 99 maps to command 4
+  PASS   the authorized branch really wires T1jRuntime
+  PASS   the authorized branch really wires IntegrationContext
+  PASS   the authorized branch really wires make_state_factory
+  PASS   the authorized branch really wires make_binder
+  PASS   the authorized branch really wires make_agent_factory
+  PASS   the authorized branch really wires H._run
+  PASS   the authorized branch really wires _tasks
+  PASS   the authorized branch really wires _identity
+  PASS   the authorized branch really wires _setup
+  PASS   the authorized branch contains no NotImplementedError
+  PASS   the authorized branch contains no Recorder(
+  PASS   the authorized branch is NOT REACHED while SCREEN_AUTHORIZED is False
+
+== 6. THE REAL HARNESS ACCEPTS WHAT THE COMMAND HANDS IT ==
+  PASS   no name used after the gate is unbound: []
+  PASS   the verified path is recorded
+  PASS   the decoy copy is BYTE-IDENTICAL
+  PASS   NEGATIVE CONTROL: a byte-identical copy ELSEWHERE is refused
+  PASS   the loader resolves the repository-relative checkpoint -- the one just verified
+  PASS   the REAL harness accepted the arguments and reached the play loop
+  PASS   no agent, no RNG
+  PASS   the header is the FIRST durable record
+  PASS   every verified identity is in the header: ['checkpoint', 'jar', 'jdk', 'output_path', 'plan', 'repository']
+  PASS   repo HEAD 9b2e2241158b recorded
+  PASS   four JDK component hashes recorded
+  PASS   jar hash recorded
+  PASS   checkpoint hashes recorded
+  PASS   plan digest recorded
+  PASS   the identity header is fsynced BEFORE setup runs
+  PASS   the header describes a SCREEN, not a qualification
+  PASS   a SETUP failure is classified as PHASE_SETUP
+  PASS   ...and the identity header survives it
+  PASS   ...with a durable abort record
+  PASS   the class directory is RUN-UNIQUE, tied to the new results path
+  PASS   NEGATIVE CONTROL: an EXISTING class directory is refused, never merged
+  PASS   the command creates the class directory EXCLUSIVELY: no makedirs(exist_ok=True) []
+  PASS   compiled source AND class identities are recorded
+  PASS   qualify mode STILL refuses every canonical seed
+  PASS   the harness's PUBLIC entry point refuses screen mode
+
+== 7. postconditions ==
+  PASS   the screen's seed block [202612128, 202612160) is UNTOUCHED
+  PASS   SCREEN_AUTHORIZED is still False after every control
+  PASS   NO jvm was launched at any point in this attempt (substitutes only)
+
+EXECUTION-COMMAND QUALIFICATION PASS — no model, no agent, no RNG, no jvm, no game

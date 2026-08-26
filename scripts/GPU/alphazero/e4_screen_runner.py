@@ -68,6 +68,7 @@ PHASE_BIND = "per_ply_binding"
 #: A task stopped by the qualification budget. NOT a game, never scored.
 TERMINAL_QUALIFICATION_BUDGET = "qualification_budget"
 
+PHASE_SETUP = "setup"
 PHASE_RECORD = "result_recording"
 PHASE_CLEANUP = "cleanup"
 PHASE_CLASSIFY = "classification"
@@ -404,6 +405,8 @@ def _run(plan_path: str, results_path: str, *, mode: str,
          _binder: Optional[Callable] = None,
          _evaluator: Any = None,
          _cleanup: Optional[Callable] = None,
+         _identity: Optional[Dict[str, Any]] = None,
+         _setup: Optional[Callable] = None,
          _n_per_endpoint: Optional[int] = None,
          _ply_cap: int = PLY_CAP,
          _ply_budget: Optional[int] = None,
@@ -444,7 +447,30 @@ def _run(plan_path: str, results_path: str, *, mode: str,
                   "canonical_tasks_executed": verified,
                   "synthetic_tasks": 0 if screen else len(tasks),
                   "ply_cap": _ply_cap, "ply_budget": _ply_budget,
-                  "n_per_endpoint": n_per, "no_games": not screen})
+                  "n_per_endpoint": n_per, "no_games": not screen,
+                  # THE VERIFIED IDENTITIES, fsynced BEFORE any setup runs, so a
+                  # setup failure still leaves a durable record of what this run
+                  # was: repo HEAD, plan blob, four JDK hashes, jar, checkpoint.
+                  "identity": _identity or {}})
+
+        if _setup is not None:
+            # Setup -- compilation, model loading, collaborator construction --
+            # runs AFTER the header is durable and UNDER the abort classification,
+            # so a failure is recorded rather than vanishing.
+            try:
+                collaborators = _setup()
+            except AbortError:
+                raise
+            except Exception as e:                            # noqa: BLE001
+                raise AbortError(PHASE_SETUP,
+                                 f"{type(e).__name__}: {e}") from None
+            _agent_factory = collaborators["agent_factory"]
+            _state_factory = collaborators["state_factory"]
+            binder = collaborators["binder"]
+            _evaluator = collaborators["evaluator"]
+            cleanup = collaborators.get("cleanup", cleanup)
+            rec.emit({"record_type": "setup_complete",
+                      "artifacts": collaborators.get("artifacts", {})})
         for task in tasks:
             endpoint = task["endpoint"]
             if endpoint in stopped:

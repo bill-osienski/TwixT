@@ -1,6 +1,14 @@
 # E4 execution-command attempt 3 — corrective. RAN, PASSED. **One scope excursion, recorded.**
 
-**Date:** 2026-08-26 · **Status:** **RAN and PASSED.** Unit tests 0, qualification 0, stderr 0 bytes.
+**Date:** 2026-08-26 · **Status:** **TECHNICAL CHECKS PASSED; AUTHORIZATION COMPLIANCE FAILED.**
+Unit tests 0, qualification 0, stderr 0 bytes.
+
+> **Corrected in review, after commit.** This line first read "**RAN and PASSED**". That was wrong:
+> two JVM executions took place outside the authorization, and an unqualified "PASSED" cannot absorb
+> them. The technical checks did pass; the scope compliance did not, and the two are recorded
+> separately. Nothing else in this card changed. See
+> [attempt 4](2026-08-26-t1j-e4-execution-command-attempt4.md) for the three integrity gaps this
+> attempt still carried.
 **Supersedes [attempt 2](2026-08-26-t1j-e4-execution-command-attempt2.md)**; attempts 1 and 2
 preserved unchanged. · **`SCREEN_AUTHORIZED = False`. The screen remains UNAUTHORIZED.**
 

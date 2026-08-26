@@ -1,0 +1,25 @@
+#!/bin/bash
+set -o pipefail
+SPD=/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad
+E=$SPD/e4cmd4; EV="$E/evidence"; REPO=/Users/bill/projects/TwixT_Game
+echo "E4 EXECUTION-COMMAND QUALIFICATION ATTEMPT 4 — NO MODEL, NO AGENT, NO RNG, NO JVM, NO GAME."
+echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)   host $(uname -srm)"
+echo "HEAD $(git -C $REPO rev-parse HEAD)"
+echo
+echo "########## unit tests — real exit status, GATED ##########"
+"$REPO/.venv/bin/python" -m pytest "$REPO/tests/test_e4_screen_command.py" -q --no-header -p no:cacheprovider
+TESTS=$?
+echo "    unit-test exit: $TESTS"
+echo
+CMD="$REPO/.venv/bin/python $E/qualify.py"
+echo "COMMAND: $CMD"
+echo "stdout -> $EV/02_stdout.txt   stderr -> $EV/03_stderr.txt   exit -> $EV/04_exit.txt"
+echo "----------------------------------------------------------------------"
+$CMD > "$EV/02_stdout.txt" 2> "$EV/03_stderr.txt"
+QUAL=$?
+echo "$QUAL" > "$EV/04_exit.txt"
+echo "QUALIFICATION EXIT: $QUAL"
+echo "stdout bytes: $(wc -c < "$EV/02_stdout.txt" | tr -d ' ')   stderr bytes: $(wc -c < "$EV/03_stderr.txt" | tr -d ' ')"
+echo
+echo "TRANSCRIPT COMPLETE — unit tests $TESTS, qualification $QUAL"
+[ "$TESTS" = "0" ] && [ "$QUAL" = "0" ] && exit 0 || exit 3

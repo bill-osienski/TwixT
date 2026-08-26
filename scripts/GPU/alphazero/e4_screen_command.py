@@ -45,6 +45,10 @@ SCREEN_AUTHORIZED = False
 JAR_SHA256 = "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7"
 CHECKPOINT_SHA256 = "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26"
 CHECKPOINT_SHA1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
+#: The loader resolves the checkpoint relative to the repository. The verified
+#: path must therefore BE that path, or a byte-identical copy elsewhere would
+#: pass the precondition while different bytes were opened.
+CANONICAL_CHECKPOINT_REL = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
 
 #: The fixed order. Every one is fatal; the authorization gate follows all six.
 PRECONDITIONS = ("plan", "repository", "jdk", "jar", "checkpoint", "output_path")
@@ -185,8 +189,20 @@ def check_jar(jar_path: str) -> Dict[str, Any]:
     return {"sha256": got}
 
 
-def check_checkpoint(checkpoint_path: str) -> Dict[str, Any]:
-    """Hashed, never opened as a model. Both digests, both fatal."""
+def check_checkpoint(checkpoint_path: str, repo_root: str) -> Dict[str, Any]:
+    """Hashed, never opened as a model. Both digests, both fatal.
+
+    AND it must be the very file the loader will open. `load_reference_evaluator`
+    resolves `calib020_0001` relative to the repository, so verifying some other
+    path -- even a byte-identical copy -- would check one file and load another.
+    """
+    expected = os.path.realpath(os.path.join(repo_root, CANONICAL_CHECKPOINT_REL))
+    got_path = os.path.realpath(checkpoint_path)
+    if got_path != expected:
+        raise PreconditionError(
+            "checkpoint",
+            f"the supplied path is not the one the loader will open:\n"
+            f"      supplied {got_path}\n      loader   {expected}")
     if not os.path.isfile(checkpoint_path):
         raise PreconditionError("checkpoint", f"missing: {checkpoint_path}")
     got256 = _sha256(checkpoint_path)
@@ -195,7 +211,7 @@ def check_checkpoint(checkpoint_path: str) -> Dict[str, Any]:
     got1 = _sha1(checkpoint_path)
     if got1 != CHECKPOINT_SHA1:
         raise PreconditionError("checkpoint", f"sha1 {got1} != pinned {CHECKPOINT_SHA1}")
-    return {"sha256": got256, "sha1": got1}
+    return {"sha256": got256, "sha1": got1, "path": got_path}
 
 
 def check_output_path(results_path: str) -> Dict[str, Any]:
@@ -236,7 +252,7 @@ def _run_screen(*, plan_path: str, results_path: str, repo_root: str, jdk_home: 
         "repository": lambda: check_repository(repo_root, plan_path),
         "jdk": lambda: check_jdk(jdk_home),
         "jar": lambda: check_jar(jar_path),
-        "checkpoint": lambda: check_checkpoint(checkpoint_path),
+        "checkpoint": lambda: check_checkpoint(checkpoint_path, repo_root),
         "output_path": lambda: check_output_path(results_path),
     }
     records: Dict[str, Any] = {}
@@ -290,42 +306,48 @@ def _execute_screen(*, plan: Dict[str, Any], plan_path: str, results_path: str,
     mode="screen", no_games=False, synthetic_tasks=0.
     """
     from . import e4_screen_integration as _INT
-    from . import e4_screen_reference as _REF
 
-    trace.append("compile_helper")
-    classes_dir = os.path.join(os.path.dirname(os.path.abspath(results_path)), "t1j_classes")
-    compile_fn = _compile or _default_compile
-    compile_fn(os.path.join(jdk_home, "bin", "javac"), jar_path, classes_dir)
+    # A RUN-UNIQUE, EXCLUSIVE class directory tied to the new results path. A
+    # shared <parent>/t1j_classes could be overwritten by, or shared with, another
+    # run -- and compile_helper's mkdir(exist_ok=True) would not notice.
+    classes_dir = os.path.abspath(results_path) + ".t1j_classes"
 
-    trace.append("t1j_runtime")
-    runtime = _INT.T1jRuntime(java=os.path.join(jdk_home, "bin", "java"), jar=jar_path,
-                              classes=classes_dir, ply_cap=H.PLY_CAP)
-    ctx = _INT.IntegrationContext()
-    state_factory = _state_factory or _INT.make_state_factory(plan["openings"], ctx)
-    # A qualification substitutes these to stop the harness BEFORE the binder --
-    # otherwise a test reaches A.replay and spawns a jvm, which is exactly what
-    # happened once while building this.
-    binder = _binder or _INT.make_binder(runtime, ctx)
-
-    trace.append("load_evaluator")
-    evaluator = (_load_evaluator or _default_load_evaluator)(repo_root)
-
-    trace.append("agent_factory")
-    build = _build_agent or _default_build_agent
-    agent_factory = _INT.make_agent_factory(
-        runtime=runtime, ctx=ctx, evaluator=evaluator,
-        reference_build=lambda task, evaluator: build(task, evaluator=evaluator))
+    def setup() -> Dict[str, Any]:
+        """Everything effectful. Runs inside the harness, AFTER the identity
+        header is fsynced and UNDER the harness's abort classification."""
+        if os.path.exists(classes_dir):
+            raise H.AbortError(H.PHASE_SETUP,
+                               f"the class directory already exists: {classes_dir}")
+        os.makedirs(classes_dir)                   # exclusive: raises if it appears
+        trace.append("compile")
+        artifacts = (_compile or _default_compile)(
+            os.path.join(jdk_home, "bin", "javac"), jar_path, classes_dir)
+        trace.append("t1j_runtime")
+        runtime = _INT.T1jRuntime(java=os.path.join(jdk_home, "bin", "java"), jar=jar_path,
+                                  classes=classes_dir, ply_cap=H.PLY_CAP)
+        ctx = _INT.IntegrationContext()
+        trace.append("load_evaluator")
+        evaluator = (_load_evaluator or _default_load_evaluator)(repo_root)
+        trace.append("agent_factory")
+        build = _build_agent or _default_build_agent
+        return {
+            "state_factory": _state_factory or _INT.make_state_factory(plan["openings"], ctx),
+            "binder": _binder or _INT.make_binder(runtime, ctx),
+            "agent_factory": _INT.make_agent_factory(
+                runtime=runtime, ctx=ctx, evaluator=evaluator,
+                reference_build=lambda task, evaluator: build(task, evaluator=evaluator)),
+            "evaluator": evaluator,
+            "cleanup": _cleanup or _default_cleanup,
+            "artifacts": dict(artifacts or {}, classes_dir=classes_dir),
+        }
 
     trace.append("run_harness")
     run_harness = _run_harness or H._run
     rc = run_harness(
         plan_path, results_path, mode=H.SCREEN_MODE,
         _tasks=plan["tasks"],                       # THE CANONICAL 32, in order
-        _agent_factory=agent_factory,
-        _state_factory=state_factory,
-        _binder=binder,
-        _evaluator=evaluator,
-        _cleanup=_cleanup or _default_cleanup,
+        _identity=records,                          # verified identities, fsynced first
+        _setup=setup,                               # effects, after the header
         _n_per_endpoint=H.CANONICAL_N_PER_ENDPOINT,
         _ply_cap=H.PLY_CAP,
         _ply_budget=None,                           # a screen plays to a terminal state
@@ -339,22 +361,33 @@ def _map_harness_exit(rc: int) -> int:
             H.EXIT_ABORT: EXIT_ABORT}.get(rc, EXIT_UNEXPECTED)
 
 
-def _default_compile(javac: str, jar: str, out_dir: str):
+def _default_compile(javac: str, jar: str, out_dir: str) -> Dict[str, Any]:
+    """Compile, and RETURN the identities of what went in and what came out."""
     from . import t1j_adapter as A
     r = A.compile_helper(javac, jar, out_dir, sources=A.PREFLIGHT_SOURCES)
     if r.returncode != 0:
-        raise H.AbortError("compile", f"javac exit {r.returncode}: {r.stderr.strip()[:200]}")
-    return r
+        raise H.AbortError(H.PHASE_SETUP,
+                           f"javac exit {r.returncode}: {r.stderr.strip()[:200]}")
+    sources = {p.name: _sha256(str(p)) for p in A.PREFLIGHT_SOURCES}
+    classes = {}
+    for root, _dirs, files in os.walk(out_dir):
+        for f in sorted(files):
+            if f.endswith(".class"):
+                full = os.path.join(root, f)
+                classes[os.path.relpath(full, out_dir)] = _sha256(full)
+    return {"compile_inputs": sources, "compiled_classes": classes}
+
+
+def _default_load_evaluator(repo_root: str):
+    """Loads the checkpoint the precondition verified -- the same path, by
+    construction: check_checkpoint refuses any other."""
+    from .twixtbot_g3_reference import load_reference_evaluator
+    return load_reference_evaluator("calib020_0001", repo_root)
 
 
 def _default_cleanup() -> None:
     from .twixtbot_g3_reference import between_games_cleanup
     between_games_cleanup()
-
-
-def _default_load_evaluator(repo_root: str):
-    from .twixtbot_g3_reference import load_reference_evaluator
-    return load_reference_evaluator("calib020_0001", repo_root)
 
 
 def _default_build_agent(task, *, evaluator):

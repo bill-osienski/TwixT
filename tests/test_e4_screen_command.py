@@ -99,25 +99,51 @@ def good_args(tmp_path, **over):
     return a
 
 
-@pytest.fixture
-def clean_repo(tmp_path):
-    """A committed tree holding the canonical plan at the same relative path."""
-    root = tmp_path / "repo"
+def _make_repo(root):
+    """A committed tree that MIRRORS the real repository where it matters."""
     dest = root / os.path.dirname(PLAN)
     dest.mkdir(parents=True)
     (dest / os.path.basename(PLAN)).write_bytes(open(PLAN, "rb").read())
+    (root / ".gitignore").write_text("checkpoints/\n")
     for cmd in (["init", "-q"], ["add", "-A"],
                 ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "plan"]):
         subprocess.run(["git", "-C", str(root), *cmd], check=True, capture_output=True)
+    ck = root / C.CANONICAL_CHECKPOINT_REL
+    ck.parent.mkdir(parents=True, exist_ok=True)
+    ck.write_bytes(open(CKPT, "rb").read())          # ignored: worktree stays clean
     return root
+
+
+@pytest.fixture
+def own_repo(tmp_path):
+    """A repo this test may dirty. NEVER the shared one."""
+    return _make_repo(tmp_path / "own_repo")
+
+
+@pytest.fixture(scope="module")
+def clean_repo(tmp_path_factory):
+    """A committed tree that MIRRORS the real repository where it matters.
+
+    It holds the canonical plan at the same relative path, and the checkpoint at
+    the path the loader resolves -- gitignored exactly as in the real repository,
+    so the worktree stays clean.
+    """
+    return _make_repo(tmp_path_factory.mktemp("repo") / "shared")
+
+
+def repo_args(clean_repo, tmp_path, **over):
+    a = dict(plan_path=str(clean_repo / PLAN), results_path=str(tmp_path / "out.jsonl"),
+             repo_root=str(clean_repo), jdk_home=JDK, jar_path=JAR,
+             checkpoint_path=str(clean_repo / C.CANONICAL_CHECKPOINT_REL))
+    a.update(over)
+    return a
 
 
 def test_all_six_preconditions_complete_before_the_refusal(tmp_path, clean_repo):
     log = C.EffectLog()
     trace = []
     with pytest.raises(C.AuthorizationError) as e:
-        C._run_screen(**good_args(tmp_path, repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)),
+        C._run_screen(**repo_args(clean_repo, tmp_path),
                       _load_evaluator=log.load_evaluator, _build_agent=log.build_agent,
                       _run_harness=log.run_harness, _compile=log.compile, _trace=trace)
     assert trace == list(C.PRECONDITIONS)
@@ -128,8 +154,7 @@ def test_all_six_preconditions_complete_before_the_refusal(tmp_path, clean_repo)
 def test_no_results_file_is_created_while_unauthorized(tmp_path, clean_repo):
     out = tmp_path / "must_not_exist.jsonl"
     with pytest.raises(C.AuthorizationError):
-        C._run_screen(**good_args(tmp_path, results_path=str(out), repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)))
+        C._run_screen(**repo_args(clean_repo, tmp_path, results_path=str(out)))
     assert not out.exists()
 
 
@@ -151,8 +176,7 @@ def test_no_rng_is_constructed_anywhere_while_unauthorized(tmp_path, clean_repo,
 
     monkeypatch.setattr(random, "Random", _Counting)
     with pytest.raises(C.AuthorizationError):
-        C._run_screen(**good_args(tmp_path, repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)))
+        C._run_screen(**repo_args(clean_repo, tmp_path))
     assert made == [], f"{len(made)} RNG(s) constructed before the refusal"
 
 
@@ -163,17 +187,17 @@ def test_a_bad_plan_stops_at_the_first_precondition(tmp_path, clean_repo):
     bad.write_text("{}")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
-        C._run_screen(**good_args(tmp_path, plan_path=str(bad), repo_root=str(clean_repo)),
+        C._run_screen(**repo_args(clean_repo, tmp_path, plan_path=str(bad)),
                       _trace=trace)
     assert e.value.which == "plan" and trace == []
 
 
-def test_a_dirty_worktree_is_refused(tmp_path, clean_repo):
-    (clean_repo / "scratch.txt").write_text("uncommitted")
+def test_a_dirty_worktree_is_refused(tmp_path, own_repo):
+    """Uses its OWN repo: dirtying the shared fixture would break every later test."""
+    (own_repo / "scratch.txt").write_text("uncommitted")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
-        C._run_screen(**good_args(tmp_path, repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)), _trace=trace)
+        C._run_screen(**repo_args(own_repo, tmp_path), _trace=trace)
     assert e.value.which == "repository" and "uncommitted" in e.value.message
     assert trace == ["plan"], "the plan check ran; nothing after the failure did"
 
@@ -184,8 +208,7 @@ def test_a_wrong_jdk_is_refused(tmp_path, clean_repo):
     (fake / "bin" / "java").write_bytes(b"not the qualified jvm")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
-        C._run_screen(**good_args(tmp_path, jdk_home=str(fake), repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)), _trace=trace)
+        C._run_screen(**repo_args(clean_repo, tmp_path, jdk_home=str(fake)), _trace=trace)
     assert e.value.which == "jdk" and trace == ["plan", "repository"]
 
 
@@ -194,8 +217,7 @@ def test_a_wrong_jar_is_refused(tmp_path, clean_repo):
     fake.write_bytes(b"PK\x03\x04 not the pinned jar")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
-        C._run_screen(**good_args(tmp_path, jar_path=str(fake), repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)), _trace=trace)
+        C._run_screen(**repo_args(clean_repo, tmp_path, jar_path=str(fake)), _trace=trace)
     assert e.value.which == "jar" and trace == ["plan", "repository", "jdk"]
 
 
@@ -204,8 +226,7 @@ def test_a_wrong_checkpoint_is_refused_without_being_loaded(tmp_path, clean_repo
     fake.write_bytes(b"not the pinned checkpoint")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
-        C._run_screen(**good_args(tmp_path, checkpoint_path=str(fake), repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)), _trace=trace)
+        C._run_screen(**repo_args(clean_repo, tmp_path, checkpoint_path=str(fake)), _trace=trace)
     assert e.value.which == "checkpoint"
     assert trace == ["plan", "repository", "jdk", "jar"]
 
@@ -215,8 +236,7 @@ def test_an_existing_output_path_is_refused_and_left_alone(tmp_path, clean_repo)
     out.write_text("stale\n")
     trace = []
     with pytest.raises(C.PreconditionError) as e:
-        C._run_screen(**good_args(tmp_path, results_path=str(out), repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)), _trace=trace)
+        C._run_screen(**repo_args(clean_repo, tmp_path, results_path=str(out)), _trace=trace)
     assert e.value.which == "output_path"
     assert trace == ["plan", "repository", "jdk", "jar", "checkpoint"]
     assert out.read_text() == "stale\n"
@@ -224,8 +244,8 @@ def test_an_existing_output_path_is_refused_and_left_alone(tmp_path, clean_repo)
 
 def test_a_missing_output_directory_is_refused(tmp_path, clean_repo):
     with pytest.raises(C.PreconditionError) as e:
-        C._run_screen(**good_args(tmp_path, results_path=str(tmp_path / "nope" / "o.jsonl"),
-                                  repo_root=str(clean_repo), plan_path=str(clean_repo / PLAN)))
+        C._run_screen(**repo_args(clean_repo, tmp_path,
+                                  results_path=str(tmp_path / "nope" / "o.jsonl")))
     assert e.value.which == "output_path"
 
 
@@ -236,7 +256,7 @@ def test_a_reshaped_plan_is_refused_by_the_plan_check(tmp_path, clean_repo):
     bad = tmp_path / "reshaped.json"
     bad.write_text(json.dumps(plan))
     with pytest.raises(C.PreconditionError) as e:
-        C._run_screen(**good_args(tmp_path, plan_path=str(bad), repo_root=str(clean_repo)))
+        C._run_screen(**repo_args(clean_repo, tmp_path, plan_path=str(bad)))
     assert e.value.which == "plan"
 
 
@@ -257,7 +277,8 @@ def test_cli_help_documents_the_ban():
 
 def cli_args(tmp_path, repo):
     return ("--plan", str(repo / PLAN), "--results", str(tmp_path / "o.jsonl"),
-            "--repo", str(repo), "--jdk", JDK, "--jar", JAR, "--checkpoint", CKPT)
+            "--repo", str(repo), "--jdk", JDK, "--jar", JAR,
+            "--checkpoint", str(repo / C.CANONICAL_CHECKPOINT_REL))
 
 
 def test_cli_refuses_with_exit_5_after_every_precondition(tmp_path, clean_repo):
@@ -289,15 +310,14 @@ def test_no_command_line_flag_is_accepted(tmp_path, clean_repo, flag):
 def test_cli_precondition_failure_exits_2(tmp_path, clean_repo):
     r = cli("--plan", str(clean_repo / PLAN), "--results", str(tmp_path / "o.jsonl"),
             "--repo", str(clean_repo), "--jdk", "/nonexistent", "--jar", JAR,
-            "--checkpoint", CKPT)
+            "--checkpoint", str(clean_repo / C.CANONICAL_CHECKPOINT_REL))
     assert r.returncode == C.EXIT_PRECONDITION and "PRECONDITION REFUSED" in r.stderr
 
 
 def test_the_scheduled_seed_block_is_never_touched(tmp_path, clean_repo):
     from scripts.GPU.alphazero import e4_screen_reference as REF
     with pytest.raises(C.AuthorizationError):
-        C._run_screen(**good_args(tmp_path, repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)))
+        C._run_screen(**repo_args(clean_repo, tmp_path))
     assert not any(REF.seed_is_exposed(s) for s in range(202612128, 202612160))
 
 
@@ -322,12 +342,22 @@ def authorized_call(tmp_path, clean_repo, **over):
     cap = _Captured()
     sentinel = object()
     compiled = []
+    ck = str(clean_repo / C.CANONICAL_CHECKPOINT_REL)
+    # the REAL precondition records, produced by the real checks
+    records = {
+        "plan": C.check_plan(str(clean_repo / PLAN)),
+        "repository": C.check_repository(str(clean_repo), str(clean_repo / PLAN)),
+        "jdk": C.check_jdk(JDK),
+        "jar": C.check_jar(JAR),
+        "checkpoint": C.check_checkpoint(ck, str(clean_repo)),
+        "output_path": C.check_output_path(str(tmp_path / "screen.jsonl")),
+    }
     kw = dict(
-        plan=_json.load(open(PLAN)),
+        plan=records["plan"]["plan"],
         plan_path=str(clean_repo / PLAN),
         results_path=str(tmp_path / "screen.jsonl"),
         repo_root=str(clean_repo), jdk_home=JDK, jar_path=JAR,
-        records={}, trace=[],
+        records=records, trace=[],
         _load_evaluator=lambda repo: sentinel,
         _build_agent=lambda task, *, evaluator: ("agent", task["task_id"]),
         _run_harness=cap,
@@ -350,15 +380,41 @@ def test_the_authorized_path_hands_the_harness_the_canonical_32(tmp_path, clean_
 
 
 def test_the_authorized_path_supplies_the_qualified_collaborators(tmp_path, clean_repo):
+    """The collaborators now arrive through _setup, which the HARNESS invokes
+    after fsyncing the identity header."""
     _, cap, sentinel, compiled, _ = authorized_call(tmp_path, clean_repo)
-    assert cap.kw["_evaluator"] is sentinel, "the ONE loaded evaluator is passed through"
-    for key, made_by in (("_state_factory", "make_state_factory"),
-                         ("_binder", "make_binder"),
-                         ("_agent_factory", "make_agent_factory")):
-        fn = cap.kw[key]
+    assert callable(cap.kw["_setup"]), "setup is handed to the harness, not pre-run"
+    assert compiled == [], "nothing was compiled before the harness took over"
+    collab = cap.kw["_setup"]()
+    assert collab["evaluator"] is sentinel, "the ONE loaded evaluator"
+    for key, made_by in (("state_factory", "make_state_factory"),
+                         ("binder", "make_binder"),
+                         ("agent_factory", "make_agent_factory")):
+        fn = collab[key]
         assert callable(fn) and made_by in fn.__qualname__, (key, fn.__qualname__)
-    assert cap.kw["_cleanup"] is not None
-    assert compiled and compiled[0][0].endswith("bin/javac"), "the helper is compiled first"
+    assert collab["cleanup"] is not None
+    assert compiled and compiled[0][0].endswith("bin/javac"), "the helper is compiled in setup"
+    assert collab["artifacts"]["classes_dir"].endswith(".t1j_classes")
+
+
+def test_the_identity_records_reach_the_harness(tmp_path, clean_repo):
+    _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
+    ident = cap.kw["_identity"]
+    assert set(ident) == set(C.PRECONDITIONS)
+    assert ident["repository"]["head"] and ident["repository"]["worktree"] == "clean"
+    assert len(ident["jdk"]["components"]) == 4
+    assert ident["jar"]["sha256"] == C.JAR_SHA256
+    assert ident["checkpoint"]["sha256"] == C.CHECKPOINT_SHA256
+    assert ident["plan"]["task_digest"] == H.CANONICAL_TASK_DIGEST
+
+
+def test_the_class_directory_is_run_unique_and_exclusive(tmp_path, clean_repo):
+    _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
+    setup = cap.kw["_setup"]
+    setup()                                    # first call creates it
+    with pytest.raises(H.AbortError) as e:
+        setup()                                # a second must refuse, not merge
+    assert e.value.phase == H.PHASE_SETUP and "already exists" in e.value.message
 
 
 def test_the_authorized_path_uses_the_screen_settings_not_a_qualification_budget(
@@ -393,9 +449,11 @@ def test_the_authorized_path_creates_no_rng(tmp_path, clean_repo, monkeypatch):
 
 
 def test_the_authorized_path_records_its_wiring_order(tmp_path, clean_repo):
-    _, _, _, _, trace = authorized_call(tmp_path, clean_repo)
-    assert trace == ["compile_helper", "t1j_runtime", "load_evaluator",
-                     "agent_factory", "run_harness"]
+    _, cap, _, _, trace = authorized_call(tmp_path, clean_repo)
+    assert trace == ["run_harness"], "nothing effectful happens before the harness"
+    cap.kw["_setup"]()
+    assert trace == ["run_harness", "compile", "t1j_runtime", "load_evaluator",
+                     "agent_factory"]
 
 
 @pytest.mark.parametrize("harness_rc,want", [
@@ -411,8 +469,7 @@ def test_the_authorized_path_is_unreachable_while_unauthorized(tmp_path, clean_r
     reached = []
     monkeypatch.setattr(C, "_execute_screen", lambda **kw: reached.append(kw))
     with pytest.raises(C.AuthorizationError):
-        C._run_screen(**good_args(tmp_path, repo_root=str(clean_repo),
-                                  plan_path=str(clean_repo / PLAN)))
+        C._run_screen(**repo_args(clean_repo, tmp_path))
     assert reached == [], "_execute_screen must not be reached while SCREEN_AUTHORIZED is False"
 
 

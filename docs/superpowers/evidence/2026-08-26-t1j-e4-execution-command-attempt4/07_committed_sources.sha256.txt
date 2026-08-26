@@ -1,0 +1,15 @@
+Committed repo code. The jar, JDK and checkpoint are outside the repository.
+
+sha256                                                            git-blob-id                               path
+bba0e1462dbb5a45f86fed409e839d5ddfb56af67b2f486db8a3d802c6005204  b01f89b8b941019e4f7918e67766aa8b7d0f6c44  scripts/GPU/alphazero/e4_screen_command.py
+e5e12ab9f1b1d864d8ffff799d4d7ba41dbc3cfb9835199c0515057980fbd2b4  c5d14328349e8415866b657f372397a6ebb49067  scripts/GPU/alphazero/e4_screen_runner.py
+2006bdc481954c8f6a94ccb848fe357caaaa96aaeabecd5f1135fd067689bea2  4d98c746e6b7afec1de07add361323772c619ef4  scripts/GPU/alphazero/e4_screen_integration.py
+4c12bf2189cf42dc1345c839b8c694f0090bc4be470c5b84226792e93a383a84  8274a51e53e819aa96f38b7bf0df56564564e3e9  scripts/GPU/alphazero/e4_screen_rules.py
+490f5ccbf04aa76ddd1570b0db552c45fef44371e42a464fa4c96912c86de0b5  db10031148d6cfaac5f715e40a5e276ab2519350  scripts/GPU/alphazero/e4_screen_reference.py
+003199ebcabfecc7ebcad98ead2322d0601c3ebd14574645b7b66a7fc3489fec  dedfadaa2f39a5b1183798f83eb4ad0f2cc8b266  tests/test_e4_screen_command.py
+10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8  32ca8fd1b43384d21b1849583d76c08daa9cf4bc  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json
+
+SCREEN_AUTHORIZED as committed:  42:SCREEN_AUTHORIZED = False
+
+NO JVM WAS LAUNCHED IN THIS ATTEMPT. Host java preferences plist, now:
+  6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d  (E2 attempt 4 recorded 6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d)
