@@ -56,6 +56,7 @@ PHASE_PRECONDITION = "precondition"
 PHASE_FACTORY = "agent_construction"
 PHASE_MOVE = "move"
 PHASE_BIND = "per_ply_binding"
+PHASE_RECORD = "result_recording"
 PHASE_CLEANUP = "cleanup"
 PHASE_CLASSIFY = "classification"
 
@@ -296,13 +297,19 @@ def screen_verdict_allowed(canonical_tasks, tasks, results, skipped, stopped):
     scheduled = [t["task_id"] for t in tasks]
     if len(set(scheduled)) != len(scheduled):
         return False, "the scheduled tasks contain duplicate identities"
-    if set(scheduled) != set(canonical) or len(scheduled) != len(canonical):
-        extra = sorted(set(scheduled) - set(canonical))[:2]
+    if len(scheduled) != len(canonical):
         return False, (
-            f"the run executed {len(scheduled)} task(s) that are not the canonical schedule "
-            f"of {len(canonical)}"
-            + (f" (e.g. {extra})" if extra else "")
-            + "; a screen verdict binds to the frozen schedule only")
+            f"the run executed {len(scheduled)} task(s), not the canonical schedule of "
+            f"{len(canonical)}; a screen verdict binds to the frozen schedule only")
+    # THE WHOLE SCHEDULE, ORDER AND CONTENTS. Comparing task_id SETS accepted the
+    # 32 canonical names in reverse order, and accepted them with a seed edited --
+    # both reproduced. verify_tasks re-runs the pinned ORDERED, dimension-projected
+    # digest, so endpoint, depth, opening, colours, reference identity and seed are
+    # all bound, not merely the names.
+    try:
+        verify_tasks(tasks)
+    except HarnessError as e:
+        return False, f"the run did not execute the canonical schedule: {e}"
     endpoints = {t["endpoint"] for t in tasks}
     if endpoints != {"weak", "strong"}:
         return False, f"a screen needs BOTH endpoints; this run covered {sorted(endpoints)}"
@@ -393,11 +400,19 @@ def _run(plan_path: str, results_path: str, *, mode: str,
             # Recording it afterwards meant a cleanup failure erased a game that
             # had already finished: every ply in the log, then an abort, and
             # tasks_played = 0.
+            # A failure to WRITE the result must not skip cleanup either: an
+            # earlier version emitted the row outside the cleanup structure, so a
+            # full disk or a bad descriptor left control immediately and cleanup
+            # never ran, contradicting the once-per-started-task guarantee.
+            record_error = None
             if play_error is None:
                 row = {"record_type": "task_result", "task_id": task["task_id"],
                        "endpoint": endpoint, "seed": task["seed"], **outcome}
-                rec.emit(row)
-                results.append(row)
+                try:
+                    rec.emit(row)
+                    results.append(row)          # counted only once it is durable
+                except Exception as e:                        # noqa: BLE001
+                    record_error = e
 
             cleanup_error = None
             try:
@@ -405,14 +420,20 @@ def _run(plan_path: str, results_path: str, *, mode: str,
                 cleanups += 1
             except Exception as e:                            # noqa: BLE001
                 cleanup_error = e
-            if play_error is not None:
+
+            primary = play_error if play_error is not None else record_error
+            if primary is not None:
                 if cleanup_error is not None:
                     # recorded, never allowed to replace the failure that caused it
                     rec.emit_terminal({"record_type": "cleanup_failure_after_abort",
                                        "task_id": task["task_id"],
                                        "cleanup_error": f"{type(cleanup_error).__name__}: "
                                                         f"{cleanup_error}"})
-                raise play_error
+                if primary is record_error:
+                    raise AbortError(PHASE_RECORD,
+                                     f"{task['task_id']} finished but its result could not be "
+                                     f"recorded: {type(record_error).__name__}: {record_error}")
+                raise primary
             if cleanup_error is not None:
                 # the game record above is already durable; this is a RUN-level abort
                 raise AbortError(PHASE_CLEANUP,

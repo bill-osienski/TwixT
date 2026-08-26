@@ -1,0 +1,160 @@
+E4 EXECUTION-HARNESS QUALIFICATION ATTEMPT 5 — CORRECTIVE.
+NO MODEL IS LOADED. No T1j, no game, no scheduled seed.
+Attempt 2's single real reference-agent call stands and is NOT repeated.\nAttempts 1-4 preserved.
+date 2026-08-26T00:13:08Z   host Darwin 25.5.0 arm64
+
+########## 1. REPOSITORY AND ARTIFACT IDENTITY ##########
+$ git -C /Users/bill/projects/TwixT_Game rev-parse HEAD
+    | 2723d0e85bcfe3b6650117ae2f12817b0466d4d3
+    [exit 0]
+
+    MATCH  HEAD
+$ shasum -a 256 /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors | cut -d' ' -f1
+    | 34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26
+    [exit 0]
+
+    MATCH  checkpoint sha256
+$ shasum -a 256 /Users/bill/projects/TwixT_Game/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json | cut -d' ' -f1
+    | 10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8
+    [exit 0]
+
+    MATCH  canonical plan
+    NOTE: the checkpoint is HASHED, never loaded, in this attempt.
+IDENTITY GATE PASSED
+
+########## 2. PRIOR EVIDENCE AND ATTEMPTS 1-2 BYTE-UNCHANGED ##########
+$ git -C /Users/bill/projects/TwixT_Game status --porcelain docs/superpowers/evidence docs/superpowers/*.md
+    | <no stdout>
+    [exit 0]
+
+
+########## 3. MANIFEST OF EVERY SOURCE ##########
+$ shasum -a 256 /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_runner.py /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_rules.py /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_reference.py /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/twixtbot_g3_reference.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_runner.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_rules.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_reference.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/qualify.py /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/run_all.sh
+    | fb2a0669c54019dffb72d853e2d2d63ea985db97308b03fb7661c46ad5fccec4  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_runner.py
+    | 4c12bf2189cf42dc1345c839b8c694f0090bc4be470c5b84226792e93a383a84  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_rules.py
+    | f13acd2ea78ec832613fb7bae56666c194fb6ec4ed762166495f6f8a2576224f  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_reference.py
+    | 80d646287099f11734b2500bd998ac9066537abb0b08a47df1541281a7b2530b  /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/twixtbot_g3_reference.py
+    | e2da8361807f8d1d1afd365c55d1ae4ecca9511abe4558d1b5d22dffdfad4329  /Users/bill/projects/TwixT_Game/tests/test_e4_screen_runner.py
+    | 20b594e326a64f1d38cd505c9a815bd89db2dec25326cb241a68025c81f87a4e  /Users/bill/projects/TwixT_Game/tests/test_e4_screen_rules.py
+    | 7ce9dc85c9c93a19d379b288c2652d523e4e6da342d06848a9c520d22e9881e1  /Users/bill/projects/TwixT_Game/tests/test_e4_screen_reference.py
+    | 2a1a05fe242fed840275ce33fa30685ac5d16e6df9c65c216fd1ac4a21e5875c  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/qualify.py
+    | 3d4cdc18eefa3059cf621dd6feaf721d486791a02fbf06e9dd95259171f1e510  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/run_all.sh
+    [exit 0]
+
+
+########## 4. HARNESS UNIT TESTS — real exit status, GATED ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python -m pytest /Users/bill/projects/TwixT_Game/tests/test_e4_screen_runner.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_rules.py /Users/bill/projects/TwixT_Game/tests/test_e4_screen_reference.py -q --no-header -p no:cacheprovider
+    | ============================= test session starts ==============================
+    | collected 124 items
+    | 
+    | tests/test_e4_screen_runner.py ......................................... [ 33%]
+    | ........................................                                 [ 65%]
+    | tests/test_e4_screen_rules.py ........................                   [ 84%]
+    | tests/test_e4_screen_reference.py ...................                    [100%]
+    | 
+    | ============================= 124 passed in 0.36s ==============================
+    [exit 0]
+
+    unit-test exit: 0 (no pipe: this IS pytest's status)
+
+########## 5. QUALIFICATION — NO MODEL LOAD ##########
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/qualify.py > /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/evidence/02_qualification.txt 2>/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/evidence/03_qualification_stderr.txt; echo $?
+    | 0
+    [exit 0]
+
+$ cat /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/evidence/02_qualification.txt
+    | == 0. artifacts identified by hash; NOTHING IS LOADED ==
+    |   PASS   checkpoint sha1 209cf2d4fd24a485... (hashed, not loaded)
+    |   PASS   canonical plan matches its pin
+    |   PASS   a real SeededReferenceAgent builds on a TAGGED FAKE evaluator, with no model
+    | 
+    | == 1. THE OPENING IS BOUND FIRST ==
+    |   PASS   the opening was bound first, at ply 0
+    |   PASS   then every applied move: [0, 1, 2, 3, 4, 5, 6, 7]
+    |   PASS   the opening bind is recorded
+    |   PASS   NEGATIVE CONTROL: an opening divergence aborts
+    |   PASS   ...and NO agent was constructed before the opening was bound
+    | 
+    | == 2. THE IDENTITY GATE APPLIES TO THE REFERENCE SIDE ONLY ==
+    |   PASS   a CLASSICAL anchor agent with NO evaluator is accepted alongside the reference
+    |   PASS   NEGATIVE CONTROL: the REFERENCE side rejects no evaluator at all
+    |   PASS   ...and the SAME agent is accepted on the anchor side (no evaluator at all)
+    |   PASS   NEGATIVE CONTROL: the REFERENCE side rejects a rebuilt evaluator
+    |   PASS   ...and the SAME agent is accepted on the anchor side (a rebuilt evaluator)
+    | 
+    | == 3. BINDER FAILURES ARE CLASSIFIED, CLEANUP STILL RUNS ==
+    |   PASS   a PLAIN ValueError from the binder is classified as PHASE_BIND
+    |   PASS   ...and a durable abort record was written
+    |   PASS   cleanup ran for the STARTED task even though it aborted
+    |   PASS   a cleanup failure does NOT mask the abort that preceded it
+    |   PASS   ...and the cleanup failure is recorded separately
+    | 
+    | == 4. THE VERDICT BINDS THE ORDERED SCHEDULE AND EVERY FROZEN DIMENSION ==
+    |   PASS   the UNTOUCHED canonical schedule earns a verdict
+    |   PASS   NEGATIVE CONTROL: the 32 canonical names in REVERSE ORDER earn NO verdict
+    |          because: the run did not execute the canonical schedule: task digest 1dab9ddfaaa261468d16eeeba16a
+    |   PASS   NEGATIVE CONTROL: an edited endpoint earns NO verdict (ids unchanged: True)
+    |   PASS   NEGATIVE CONTROL: an edited t1j_mdPly earns NO verdict (ids unchanged: True)
+    |   PASS   NEGATIVE CONTROL: an edited t1j_mdFixedPly earns NO verdict (ids unchanged: True)
+    |   PASS   NEGATIVE CONTROL: an edited opening earns NO verdict (ids unchanged: True)
+    |   PASS   NEGATIVE CONTROL: an edited colour_arm earns NO verdict (ids unchanged: True)
+    |   PASS   NEGATIVE CONTROL: an edited anchor_colour earns NO verdict (ids unchanged: True)
+    |   PASS   NEGATIVE CONTROL: an edited reference earns NO verdict (ids unchanged: True)
+    |   PASS   NEGATIVE CONTROL: an edited reference_sha1 earns NO verdict (ids unchanged: True)
+    |   PASS   NEGATIVE CONTROL: an edited reference_colour earns NO verdict (ids unchanged: True)
+    |   PASS   NEGATIVE CONTROL: an edited seed earns NO verdict (ids unchanged: True)
+    |   PASS   a canonical run whose weak endpoint EARLY-STOPPED still earns a verdict
+    |   PASS   NEGATIVE CONTROL: zero tasks earns NO verdict
+    |   PASS   NEGATIVE CONTROL: ONE endpoint only earns NO verdict
+    |   PASS   NEGATIVE CONTROL: a subset earns NO verdict
+    |   PASS   NEGATIVE CONTROL: a missing result earns NO verdict
+    |   PASS   NEGATIVE CONTROL: an UNJUSTIFIED skip earns NO verdict
+    |   PASS   a SYNTHETIC run still earns only a RECEIPT
+    | 
+    | == 5. A RESULT-WRITE FAILURE STILL RUNS CLEANUP ==
+    |   PASS   a result-write failure aborts, classified as PHASE_RECORD
+    |   PASS   CLEANUP RAN EXACTLY ONCE for the started task (got 1)
+    |   PASS   no task_result was written
+    |   PASS   an UNRECORDED game is not counted as played
+    |   PASS   when BOTH fail, the RECORDING failure is primary
+    |   PASS   cleanup was still attempted exactly once
+    |   PASS   the ordinary path still cleans up exactly once
+    |   PASS   ...and the result is recorded
+    | 
+    | == 6. the command entry point, in FRESH SUBPROCESSES ==
+    |   PASS   --help exits 0
+    |   PASS   clean run exits 0 (got 0)
+    |   PASS   the CLI's zero-task run emits a RECEIPT
+    |   PASS   --mode screen exits 2 (got 2)
+    |   PASS   an existing results file exits 2
+    |   PASS   a tampered plan exits 2
+    | 
+    | == 7. postconditions ==
+    |   PASS   the screen's seed block is still unspent
+    |   PASS   all 32 scheduled seeds still refused by the runner
+    | 
+    | QUALIFICATION PASS — NO MODEL WAS LOADED
+    [exit 0]
+
+$ wc -c < /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/evidence/03_qualification_stderr.txt | tr -d ' '
+    | 0
+    [exit 0]
+
+    stderr bytes: 0
+
+########## 6. POSTCONDITION — no MLX inference happened in this attempt ##########
+$ grep -c 'compiled graph' /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e4q5/evidence/02_qualification.txt || true
+    | 0
+    [exit 0]
+
+    (attempt 3 loads no model; the compiled-graph evidence belongs to attempt 2)
+$ /Users/bill/projects/TwixT_Game/.venv/bin/python -c "
+import sys; sys.path.insert(0,'/Users/bill/projects/TwixT_Game')
+from scripts.GPU.alphazero import e4_screen_reference as R
+print('screen block exposed?', any(R.seed_is_exposed(s) for s in range(202612128,202612160)))"
+    | screen block exposed? False
+    [exit 0]
+
+
+TRANSCRIPT COMPLETE — unit tests 0, qualification 0
+GATE 0

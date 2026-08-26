@@ -619,3 +619,95 @@ def test_a_run_with_no_evaluator_aborts_on_the_reference_side(tmp_path):
                _agent_factory=win_factory, _state_factory=small_state, _binder=null_binder,
                _evaluator=None, _cleanup=lambda: None, _n_per_endpoint=4)
     assert e.value.phase == H.PHASE_FACTORY
+
+
+# --- the verdict binds the ORDERED schedule and every frozen dimension ------
+
+def _canon_res():
+    return [res(t) for t in CANON]
+
+
+def test_reversed_canonical_order_earns_no_verdict():
+    """The 32 canonical names, all present, in reverse. Sets alone accepted this."""
+    rev = list(reversed(CANON))
+    allowed, why = H.screen_verdict_allowed(CANON, rev, [res(t) for t in rev], [], {})
+    assert not allowed and "canonical schedule" in why
+
+
+@pytest.mark.parametrize("field,value", [
+    ("endpoint", "weak"),
+    ("t1j_mdPly", 99),
+    ("t1j_mdFixedPly", False),
+    ("opening", "o9_fake"),
+    ("colour_arm", "flipped"),
+    ("anchor_colour", "black"),
+    ("reference", "0379"),
+    ("reference_sha1", "0" * 40),
+    ("reference_colour", "red"),
+    ("seed", 202612999),
+])
+def test_editing_any_frozen_dimension_earns_no_verdict(field, value):
+    """Task ids unchanged; one frozen dimension edited. Sets alone accepted this."""
+    edited = [dict(CANON[0], **{field: value})] + CANON[1:]
+    assert [t["task_id"] for t in edited] == [t["task_id"] for t in CANON]
+    if edited[0][field] == CANON[0][field]:
+        pytest.skip(f"{field} already equals {value!r}; not a control")
+    allowed, why = H.screen_verdict_allowed(CANON, edited, [res(t) for t in edited], [], {})
+    assert not allowed, f"an edited {field} was wrongly accepted"
+
+
+def test_the_untouched_canonical_schedule_still_earns_a_verdict():
+    allowed, why = H.screen_verdict_allowed(CANON, CANON, _canon_res(), [], {})
+    assert allowed, why
+
+
+# --- a failure to record the result must not skip cleanup ------------------
+
+class _FailOnTaskResult(H.Recorder):
+    """Durable for everything except the record that matters most."""
+
+    def emit(self, record):
+        if record.get("record_type") == "task_result":
+            raise OSError("no space left on device")
+        return super().emit(record)
+
+
+def test_a_result_write_failure_still_runs_cleanup_exactly_once(tmp_path, monkeypatch):
+    monkeypatch.setattr(H, "Recorder", _FailOnTaskResult)
+    cleanups = []
+    with pytest.raises(H.AbortError) as e:
+        H._run(PLAN, str(tmp_path / "wf.jsonl"), mode="qualify",
+               _tasks=[synthetic_task(0, "weak", anchor="red")],
+               _agent_factory=win_factory, _state_factory=small_state, _binder=null_binder,
+               _evaluator=EV, _cleanup=lambda: cleanups.append(1), _n_per_endpoint=4)
+    assert e.value.phase == H.PHASE_RECORD
+    assert "could not be recorded" in e.value.message
+    assert len(cleanups) == 1, "cleanup must run exactly once for a STARTED task"
+
+
+def test_a_result_write_failure_keeps_the_write_error_as_primary(tmp_path, monkeypatch):
+    """If cleanup ALSO fails, the recording failure is what surfaces."""
+    monkeypatch.setattr(H, "Recorder", _FailOnTaskResult)
+
+    def boom():
+        raise RuntimeError("cleanup also failed")
+
+    with pytest.raises(H.AbortError) as e:
+        H._run(PLAN, str(tmp_path / "wf2.jsonl"), mode="qualify",
+               _tasks=[synthetic_task(0, "weak", anchor="red")],
+               _agent_factory=win_factory, _state_factory=small_state, _binder=null_binder,
+               _evaluator=EV, _cleanup=boom, _n_per_endpoint=4)
+    assert e.value.phase == H.PHASE_RECORD
+
+
+def test_an_unrecorded_game_is_not_counted(tmp_path, monkeypatch):
+    monkeypatch.setattr(H, "Recorder", _FailOnTaskResult)
+    with pytest.raises(H.AbortError):
+        H._run(PLAN, str(tmp_path / "wf3.jsonl"), mode="qualify",
+               _tasks=[synthetic_task(0, "weak", anchor="red")],
+               _agent_factory=win_factory, _state_factory=small_state, _binder=null_binder,
+               _evaluator=EV, _cleanup=lambda: None, _n_per_endpoint=4)
+    rows = [json.loads(l) for l in open(tmp_path / "wf3.jsonl")]
+    kinds = [r["record_type"] for r in rows]
+    assert "task_result" not in kinds
+    assert rows[-1]["record_type"] == "abort" and rows[-1]["tasks_played"] == 0

@@ -1,0 +1,300 @@
+#!/usr/bin/env python3
+"""E4 execution-harness qualification, attempt 5 — corrective. NO MODEL IS LOADED.
+
+Attempt 2's single real reference-agent call stands and is NOT repeated: the four
+defects corrected here are all in the harness, and every one is exercisable with a
+TAGGED FAKE EVALUATOR. No model, no T1j, no game, no scheduled seed.
+
+  1. the verdict gate compared only SETS OF task_id, so the 32 canonical names in
+     REVERSE ORDER were accepted, and so were the 32 names with a SEED EDITED.
+     It now re-runs the pinned ORDERED, dimension-projected digest via
+     verify_tasks, binding endpoint, depth, opening, colours, reference identity
+     and seed -- not merely names;
+  2. a failure to WRITE the completed result skipped cleanup entirely, because
+     the emit sat outside the cleanup structure. Recording and cleanup are now
+     under one structure that ALWAYS attempts cleanup, with the recording failure
+     preserved as primary if cleanup fails too.
+
+Attempts 1-4 are preserved. Attempt 2's single real reference-agent call stands;
+attempt 5, like attempts 3 and 4, loads no model.
+
+Exit 0 = every requirement met, 3 = one or more failed.
+"""
+import hashlib, json, os, subprocess, sys, tempfile
+sys.path.insert(0, "/Users/bill/projects/TwixT_Game")
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import e4_screen_reference as REF
+from scripts.GPU.alphazero import e4_screen_runner as H
+from scripts.GPU.alphazero.twixtbot_g3_schedule import REFERENCE_CHECKPOINTS
+
+REPO = "/Users/bill/projects/TwixT_Game"
+EVID = f"{REPO}/docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4"
+PLAN = f"{EVID}/06_endpoint_screen_plan.json"
+CKPT = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+SHA1 = REFERENCE_CHECKPOINTS["calib020_0001"]["sha1"]
+SYNTHETIC = 90000001
+
+fails = []
+def req(c, w):
+    print(("  PASS   " if c else "  FAIL   ") + w)
+    if not c: fails.append(w)
+
+def fresh(name):
+    return os.path.join(tempfile.mkdtemp(), name)
+
+
+class FakeEvaluator:
+    """Carries the identity tags load_reference_evaluator sets. NEVER called."""
+    _g3_reference = "calib020_0001"
+    _g3_sha1 = SHA1
+
+EV = FakeEvaluator()
+
+SMALL_WIN = [(0, 2), (2, 0), (2, 3), (3, 0), (4, 2), (4, 0), (5, 4)]
+BY_COLOUR = {"red": SMALL_WIN[0::2], "black": SMALL_WIN[1::2]}
+
+class FakeAgent:
+    def __init__(self, moves, evaluator=EV):
+        if evaluator is not None: self.evaluator = evaluator
+        self._it = iter(moves)
+    def __call__(self, state): return next(self._it)
+
+class ClassicalAgent:
+    """A T1j stand-in: no evaluator attribute at all."""
+    def __init__(self, moves): self._it = iter(moves)
+    def __call__(self, state): return next(self._it)
+
+class Rec:
+    def __init__(self): self.rows = []
+    def emit(self, r): self.rows.append(r)
+    def emit_terminal(self, r): self.rows.append(r); return None
+
+def small_state(task): return TwixtState(active_size=6, to_move="red")
+def stask(i, endpoint="weak", anchor="red"):
+    return {"task_id": f"stub-{endpoint}-{i:02d}", "endpoint": endpoint,
+            "seed": SYNTHETIC + 300 + i, "anchor_colour": anchor,
+            "reference_colour": "black" if anchor == "red" else "red",
+            "opening": "o1_center"}
+
+
+print("== 0. artifacts identified by hash; NOTHING IS LOADED ==")
+blob = open(f"{REPO}/{CKPT}", "rb").read()
+req(hashlib.sha1(blob).hexdigest() == SHA1, f"checkpoint sha1 {SHA1[:16]}... (hashed, not loaded)")
+req(hashlib.sha256(open(PLAN, 'rb').read()).hexdigest() == H.CANONICAL_PLAN_SHA256,
+    "canonical plan matches its pin")
+req(REF.build({"task_id": "t", "seed": SYNTHETIC, "reference": "calib020_0001",
+               "reference_sha1": SHA1, "anchor_colour": "red"},
+              evaluator=EV).mcts.evaluator is EV,
+    "a real SeededReferenceAgent builds on a TAGGED FAKE evaluator, with no model")
+
+print("\n== 1. THE OPENING IS BOUND FIRST ==")
+seen, built = [], []
+rec = Rec()
+H.play_task(task=stask(0), agent_for=lambda t, m: (built.append(m) or FakeAgent(BY_COLOUR[m])),
+            state_factory=small_state, binder=lambda t, s, p: seen.append(p), rec=rec)
+req(seen and seen[0] == 0, f"the opening was bound first, at ply {seen[0] if seen else None}")
+req(seen == [0, 1, 2, 3, 4, 5, 6, 7], f"then every applied move: {seen}")
+req(rec.rows[0]["record_type"] == "opening_bound", "the opening bind is recorded")
+
+built2 = []
+def diverging_opening(task, state, ply):
+    raise H.AbortError(H.PHASE_BIND, f"opening divergence at ply {ply}")
+try:
+    H.play_task(task=stask(1), agent_for=lambda t, m: (built2.append(m) or FakeAgent(BY_COLOUR[m])),
+                state_factory=small_state, binder=diverging_opening, rec=Rec())
+    ok = False
+except H.AbortError as e:
+    ok = e.phase == H.PHASE_BIND
+req(ok, "NEGATIVE CONTROL: an opening divergence aborts")
+req(built2 == [], "...and NO agent was constructed before the opening was bound")
+
+print("\n== 2. THE IDENTITY GATE APPLIES TO THE REFERENCE SIDE ONLY ==")
+task = stask(2, anchor="red")            # anchor red -> reference plays black
+def mixed(t, m):
+    a = FakeAgent(BY_COLOUR[m]) if m == t["reference_colour"] else ClassicalAgent(BY_COLOUR[m])
+    H._enforce_evaluator(a, EV, t, m)
+    return a
+out = H.play_task(task=task, agent_for=mixed, state_factory=small_state,
+                  binder=lambda t, s, p: None, rec=Rec())
+req(out["winner"] == "red" and out["agents_built"] == 2,
+    "a CLASSICAL anchor agent with NO evaluator is accepted alongside the reference")
+for label, agent in (("no evaluator at all", ClassicalAgent([(0, 0)])),
+                     ("a rebuilt evaluator", FakeAgent([(0, 0)], evaluator=FakeEvaluator()))):
+    try:
+        H._enforce_evaluator(agent, EV, task, task["reference_colour"]); ok = False
+    except H.AbortError as e:
+        ok = e.phase == H.PHASE_FACTORY
+    req(ok, f"NEGATIVE CONTROL: the REFERENCE side rejects {label}")
+    H._enforce_evaluator(agent, EV, task, task["anchor_colour"])
+    req(True, f"...and the SAME agent is accepted on the anchor side ({label})")
+
+print("\n== 3. BINDER FAILURES ARE CLASSIFIED, CLEANUP STILL RUNS ==")
+def sloppy(task, state, ply):
+    raise ValueError("t1j replay exit 3")
+cleanups = []
+out3 = fresh("binderfail.jsonl")
+try:
+    H._run(PLAN, out3, mode="qualify", _tasks=[stask(3)],
+           _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]), _state_factory=small_state,
+           _binder=sloppy, _evaluator=EV, _cleanup=lambda: cleanups.append(1), _n_per_endpoint=2)
+    ok = False
+except H.AbortError as e:
+    ok = e.phase == H.PHASE_BIND and "ValueError" in e.message
+rows3 = [json.loads(l) for l in open(out3)]
+req(ok, "a PLAIN ValueError from the binder is classified as PHASE_BIND")
+req(any(r["record_type"] == "abort" for r in rows3), "...and a durable abort record was written")
+req(len(cleanups) == 1, "cleanup ran for the STARTED task even though it aborted")
+
+out4 = fresh("bothfail.jsonl")
+def boom(): raise RuntimeError("cleanup also failed")
+try:
+    H._run(PLAN, out4, mode="qualify", _tasks=[stask(4)],
+           _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]), _state_factory=small_state,
+           _binder=sloppy, _evaluator=EV, _cleanup=boom, _n_per_endpoint=2)
+    ok = False
+except H.AbortError as e:
+    ok = e.phase == H.PHASE_BIND
+rows4 = [json.loads(l) for l in open(out4)]
+req(ok, "a cleanup failure does NOT mask the abort that preceded it")
+req(any(r["record_type"] == "cleanup_failure_after_abort" for r in rows4),
+    "...and the cleanup failure is recorded separately")
+
+print("\n== 4. THE VERDICT BINDS THE ORDERED SCHEDULE AND EVERY FROZEN DIMENSION ==")
+CANON = json.load(open(PLAN))["tasks"]
+def res(t):
+    return {"task_id": t["task_id"], "endpoint": t["endpoint"], "t1j_points": 0.5,
+            "terminal_reason": "win"}
+allowed, why = H.screen_verdict_allowed(CANON, CANON, [res(t) for t in CANON], [], {})
+req(allowed, "the UNTOUCHED canonical schedule earns a verdict")
+
+rev = list(reversed(CANON))
+allowed, why = H.screen_verdict_allowed(CANON, rev, [res(t) for t in rev], [], {})
+req(not allowed, "NEGATIVE CONTROL: the 32 canonical names in REVERSE ORDER earn NO verdict")
+print(f"         because: {why[:88]}")
+
+for field, value in (("endpoint", "weak"), ("t1j_mdPly", 99), ("t1j_mdFixedPly", False),
+                     ("opening", "o9_fake"), ("colour_arm", "flipped"),
+                     ("anchor_colour", "black"), ("reference", "0379"),
+                     ("reference_sha1", "0" * 40), ("reference_colour", "red"),
+                     ("seed", 202612999)):
+    edited = [dict(CANON[0], **{field: value})] + CANON[1:]
+    if edited[0][field] == CANON[0][field]:
+        req(True, f"(skipped {field}: already {value!r}, not a control)"); continue
+    same_ids = [t["task_id"] for t in edited] == [t["task_id"] for t in CANON]
+    allowed, _ = H.screen_verdict_allowed(CANON, edited, [res(t) for t in edited], [], {})
+    req(same_ids and not allowed,
+        f"NEGATIVE CONTROL: an edited {field} earns NO verdict (ids unchanged: {same_ids})")
+
+played = [res(t) for t in CANON if t["endpoint"] == "strong"]
+skipped = [{"task_id": t["task_id"], "endpoint": "weak"} for t in CANON if t["endpoint"] == "weak"]
+allowed, _ = H.screen_verdict_allowed(CANON, CANON, played, skipped, {"weak": "stopped"})
+req(allowed, "a canonical run whose weak endpoint EARLY-STOPPED still earns a verdict")
+for label, tasks_, results_, skipped_, stopped_ in (
+    ("zero tasks", [], [], [], {}),
+    ("ONE endpoint only", [t for t in CANON if t["endpoint"] == "weak"],
+     [res(t) for t in CANON if t["endpoint"] == "weak"], [], {}),
+    ("a subset", CANON[:4], [res(t) for t in CANON[:4]], [], {}),
+    ("a missing result", CANON, [res(t) for t in CANON[:-1]], [], {}),
+    ("an UNJUSTIFIED skip", CANON, [res(t) for t in CANON[:-1]],
+     [{"task_id": CANON[-1]["task_id"], "endpoint": CANON[-1]["endpoint"]}], {}),
+):
+    allowed, _ = H.screen_verdict_allowed(CANON, tasks_, results_, skipped_, stopped_)
+    req(not allowed, f"NEGATIVE CONTROL: {label} earns NO verdict")
+
+out5 = fresh("synthetic.jsonl")
+rc = H._run(PLAN, out5, mode="qualify",
+            _tasks=[stask(5, "weak", "red"), stask(6, "strong", "black")],
+            _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]), _state_factory=small_state,
+            _binder=lambda t, s, p: None, _evaluator=EV, _cleanup=lambda: None, _n_per_endpoint=2)
+rows5 = [json.loads(l) for l in open(out5)]
+req(rc == H.EXIT_OK and rows5[-1]["record_type"] == "qualification_receipt",
+    "a SYNTHETIC run still earns only a RECEIPT")
+
+print("\n== 5. A RESULT-WRITE FAILURE STILL RUNS CLEANUP ==")
+class FailOnTaskResult(H.Recorder):
+    """Durable for everything except the record that matters most."""
+    def emit(self, record):
+        if record.get("record_type") == "task_result":
+            raise OSError("no space left on device")
+        return super().emit(record)
+
+real_recorder = H.Recorder
+H.Recorder = FailOnTaskResult
+try:
+    cleanups = []
+    out6 = fresh("writefail.jsonl")
+    try:
+        H._run(PLAN, out6, mode="qualify", _tasks=[stask(7, "weak", "red")],
+               _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]),
+               _state_factory=small_state, _binder=lambda t, s, p: None, _evaluator=EV,
+               _cleanup=lambda: cleanups.append(1), _n_per_endpoint=4)
+        ok = False
+    except H.AbortError as e:
+        ok = e.phase == H.PHASE_RECORD and "could not be recorded" in e.message
+    rows6 = [json.loads(l) for l in open(out6)]
+    req(ok, "a result-write failure aborts, classified as PHASE_RECORD")
+    req(len(cleanups) == 1, f"CLEANUP RAN EXACTLY ONCE for the started task (got {len(cleanups)})")
+    req("task_result" not in [r["record_type"] for r in rows6], "no task_result was written")
+    req(rows6[-1]["record_type"] == "abort" and rows6[-1]["tasks_played"] == 0,
+        "an UNRECORDED game is not counted as played")
+
+    cleanups2 = []
+    out7 = fresh("writefail_and_cleanupfail.jsonl")
+    def boom(): cleanups2.append(1); raise RuntimeError("cleanup also failed")
+    try:
+        H._run(PLAN, out7, mode="qualify", _tasks=[stask(8, "weak", "red")],
+               _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]),
+               _state_factory=small_state, _binder=lambda t, s, p: None, _evaluator=EV,
+               _cleanup=boom, _n_per_endpoint=4)
+        ok = False
+    except H.AbortError as e:
+        ok = e.phase == H.PHASE_RECORD
+    req(ok, "when BOTH fail, the RECORDING failure is primary")
+    req(len(cleanups2) == 1, "cleanup was still attempted exactly once")
+finally:
+    H.Recorder = real_recorder
+
+out8 = fresh("normal.jsonl")
+cleanups3 = []
+rc = H._run(PLAN, out8, mode="qualify", _tasks=[stask(9, "weak", "red")],
+            _agent_factory=lambda t, m, ev: FakeAgent(BY_COLOUR[m]), _state_factory=small_state,
+            _binder=lambda t, s, p: None, _evaluator=EV,
+            _cleanup=lambda: cleanups3.append(1), _n_per_endpoint=4)
+rows8 = [json.loads(l) for l in open(out8)]
+req(rc == H.EXIT_OK and len(cleanups3) == 1, "the ordinary path still cleans up exactly once")
+req(any(r["record_type"] == "task_result" for r in rows8), "...and the result is recorded")
+
+print("\n== 6. the command entry point, in FRESH SUBPROCESSES ==")
+def cli(*a):
+    return subprocess.run([sys.executable, "-m", "scripts.GPU.alphazero.e4_screen_runner", *a],
+                          capture_output=True, text=True, cwd=REPO)
+r = cli("--help"); req(r.returncode == 0 and "UNAUTHORIZED" in r.stdout, "--help exits 0")
+o = fresh("cli_ok.jsonl"); r = cli("--plan", PLAN, "--results", o)
+req(r.returncode == H.EXIT_OK, f"clean run exits 0 (got {r.returncode})")
+req([json.loads(l)["record_type"] for l in open(o)][-1] == "qualification_receipt",
+    "the CLI's zero-task run emits a RECEIPT")
+r = cli("--plan", PLAN, "--results", fresh("s.jsonl"), "--mode", "screen")
+req(r.returncode == H.EXIT_PRECONDITION, f"--mode screen exits 2 (got {r.returncode})")
+stale = fresh("stale.jsonl"); open(stale, "w").write("x\n")
+req(cli("--plan", PLAN, "--results", stale).returncode == H.EXIT_PRECONDITION,
+    "an existing results file exits 2")
+bad = fresh("bad.json"); d = json.load(open(PLAN)); d["note"] = "t"; open(bad, "w").write(json.dumps(d))
+req(cli("--plan", bad, "--results", fresh("b.jsonl")).returncode == H.EXIT_PRECONDITION,
+    "a tampered plan exits 2")
+
+print("\n== 7. postconditions ==")
+req(not any(REF.seed_is_exposed(s) for s in range(202612128, 202612160)),
+    "the screen's seed block is still unspent")
+refused = 0
+for t in CANON:
+    try: H._assert_not_scheduled(t)
+    except H.HarnessError: refused += 1
+req(refused == 32, "all 32 scheduled seeds still refused by the runner")
+
+print()
+if fails:
+    print(f"QUALIFICATION FAIL — {len(fails)}:")
+    for f_ in fails: print("  " + f_)
+    sys.exit(3)
+print("QUALIFICATION PASS — NO MODEL WAS LOADED")
+sys.exit(0)

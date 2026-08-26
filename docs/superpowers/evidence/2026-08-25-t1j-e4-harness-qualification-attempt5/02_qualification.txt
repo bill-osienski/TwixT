@@ -1,0 +1,71 @@
+== 0. artifacts identified by hash; NOTHING IS LOADED ==
+  PASS   checkpoint sha1 209cf2d4fd24a485... (hashed, not loaded)
+  PASS   canonical plan matches its pin
+  PASS   a real SeededReferenceAgent builds on a TAGGED FAKE evaluator, with no model
+
+== 1. THE OPENING IS BOUND FIRST ==
+  PASS   the opening was bound first, at ply 0
+  PASS   then every applied move: [0, 1, 2, 3, 4, 5, 6, 7]
+  PASS   the opening bind is recorded
+  PASS   NEGATIVE CONTROL: an opening divergence aborts
+  PASS   ...and NO agent was constructed before the opening was bound
+
+== 2. THE IDENTITY GATE APPLIES TO THE REFERENCE SIDE ONLY ==
+  PASS   a CLASSICAL anchor agent with NO evaluator is accepted alongside the reference
+  PASS   NEGATIVE CONTROL: the REFERENCE side rejects no evaluator at all
+  PASS   ...and the SAME agent is accepted on the anchor side (no evaluator at all)
+  PASS   NEGATIVE CONTROL: the REFERENCE side rejects a rebuilt evaluator
+  PASS   ...and the SAME agent is accepted on the anchor side (a rebuilt evaluator)
+
+== 3. BINDER FAILURES ARE CLASSIFIED, CLEANUP STILL RUNS ==
+  PASS   a PLAIN ValueError from the binder is classified as PHASE_BIND
+  PASS   ...and a durable abort record was written
+  PASS   cleanup ran for the STARTED task even though it aborted
+  PASS   a cleanup failure does NOT mask the abort that preceded it
+  PASS   ...and the cleanup failure is recorded separately
+
+== 4. THE VERDICT BINDS THE ORDERED SCHEDULE AND EVERY FROZEN DIMENSION ==
+  PASS   the UNTOUCHED canonical schedule earns a verdict
+  PASS   NEGATIVE CONTROL: the 32 canonical names in REVERSE ORDER earn NO verdict
+         because: the run did not execute the canonical schedule: task digest 1dab9ddfaaa261468d16eeeba16a
+  PASS   NEGATIVE CONTROL: an edited endpoint earns NO verdict (ids unchanged: True)
+  PASS   NEGATIVE CONTROL: an edited t1j_mdPly earns NO verdict (ids unchanged: True)
+  PASS   NEGATIVE CONTROL: an edited t1j_mdFixedPly earns NO verdict (ids unchanged: True)
+  PASS   NEGATIVE CONTROL: an edited opening earns NO verdict (ids unchanged: True)
+  PASS   NEGATIVE CONTROL: an edited colour_arm earns NO verdict (ids unchanged: True)
+  PASS   NEGATIVE CONTROL: an edited anchor_colour earns NO verdict (ids unchanged: True)
+  PASS   NEGATIVE CONTROL: an edited reference earns NO verdict (ids unchanged: True)
+  PASS   NEGATIVE CONTROL: an edited reference_sha1 earns NO verdict (ids unchanged: True)
+  PASS   NEGATIVE CONTROL: an edited reference_colour earns NO verdict (ids unchanged: True)
+  PASS   NEGATIVE CONTROL: an edited seed earns NO verdict (ids unchanged: True)
+  PASS   a canonical run whose weak endpoint EARLY-STOPPED still earns a verdict
+  PASS   NEGATIVE CONTROL: zero tasks earns NO verdict
+  PASS   NEGATIVE CONTROL: ONE endpoint only earns NO verdict
+  PASS   NEGATIVE CONTROL: a subset earns NO verdict
+  PASS   NEGATIVE CONTROL: a missing result earns NO verdict
+  PASS   NEGATIVE CONTROL: an UNJUSTIFIED skip earns NO verdict
+  PASS   a SYNTHETIC run still earns only a RECEIPT
+
+== 5. A RESULT-WRITE FAILURE STILL RUNS CLEANUP ==
+  PASS   a result-write failure aborts, classified as PHASE_RECORD
+  PASS   CLEANUP RAN EXACTLY ONCE for the started task (got 1)
+  PASS   no task_result was written
+  PASS   an UNRECORDED game is not counted as played
+  PASS   when BOTH fail, the RECORDING failure is primary
+  PASS   cleanup was still attempted exactly once
+  PASS   the ordinary path still cleans up exactly once
+  PASS   ...and the result is recorded
+
+== 6. the command entry point, in FRESH SUBPROCESSES ==
+  PASS   --help exits 0
+  PASS   clean run exits 0 (got 0)
+  PASS   the CLI's zero-task run emits a RECEIPT
+  PASS   --mode screen exits 2 (got 2)
+  PASS   an existing results file exits 2
+  PASS   a tampered plan exits 2
+
+== 7. postconditions ==
+  PASS   the screen's seed block is still unspent
+  PASS   all 32 scheduled seeds still refused by the runner
+
+QUALIFICATION PASS — NO MODEL WAS LOADED
