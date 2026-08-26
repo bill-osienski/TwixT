@@ -56,6 +56,21 @@ PASS  the ordinary path still cleans up exactly once
 A game whose result could not be written is **not counted as played** — `tasks_played` stays 0
 rather than claiming a game the log does not contain.
 
+## Post-run provenance (added after `f6c8b07`)
+
+C-series evidence added separately; the card is amended only with this section. No runtime artifact
+changed and `08_MANIFEST` still verifies 7/7.
+
+- **A** — all 8 tracked rows match `git rev-parse f6c8b07:<path>`; the checkpoint has no object in
+  the commit and is reported *UNTRACKED (gitignored), disk-only*.
+- **B** — every file under all prior evidence directories and cards, against the commit that added
+  **that file**: **zero changed**.
+- **B2 — declared amendments**, now four: the preflight attempt-4 card and the harness attempt-2,
+  attempt-3 and attempt-4 cards, each amended by its own post-run commit. Each is checked against
+  its amending commit **and required to actually differ from its origin**.
+
+Nine controls, all invoking the real checkers, all passing.
+
 ---
 
 ## What this establishes, and what it does not

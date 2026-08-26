@@ -1,0 +1,113 @@
+POST-RUN PROVENANCE — commit f6c8b07
+
+A. tracked manifest rows vs the COMMIT's objects (not the index)
+PASS  checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+        no object in f6c8b07 — UNTRACKED (gitignored), disk-only
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json
+        manifest blob     32ca8fd1b43384d21b1849583d76c08daa9cf4bc
+        f6c8b07:<path>   32ca8fd1b43384d21b1849583d76c08daa9cf4bc
+PASS  scripts/GPU/alphazero/e4_screen_reference.py
+        manifest blob     ce4e74e5147234318a6b9081881996fbca5ea456
+        f6c8b07:<path>   ce4e74e5147234318a6b9081881996fbca5ea456
+PASS  scripts/GPU/alphazero/e4_screen_rules.py
+        manifest blob     8274a51e53e819aa96f38b7bf0df56564564e3e9
+        f6c8b07:<path>   8274a51e53e819aa96f38b7bf0df56564564e3e9
+PASS  scripts/GPU/alphazero/e4_screen_runner.py
+        manifest blob     7a7c23db032ad04c0a3954da6620acb091fdbdfa
+        f6c8b07:<path>   7a7c23db032ad04c0a3954da6620acb091fdbdfa
+PASS  scripts/GPU/alphazero/twixtbot_g3_reference.py
+        manifest blob     56f9d308b13221b7d265c7ef4c608047ac8da777
+        f6c8b07:<path>   56f9d308b13221b7d265c7ef4c608047ac8da777
+PASS  tests/test_e4_screen_reference.py
+        manifest blob     988dcd2067d0eea3163d88e6e2452c9132ebb505
+        f6c8b07:<path>   988dcd2067d0eea3163d88e6e2452c9132ebb505
+PASS  tests/test_e4_screen_rules.py
+        manifest blob     a8f0f325c51045b4309ca29d4cbb36cf1a20f33e
+        f6c8b07:<path>   a8f0f325c51045b4309ca29d4cbb36cf1a20f33e
+PASS  tests/test_e4_screen_runner.py
+        manifest blob     680b718d006376422523f9ea3518a02c4e38458d
+        f6c8b07:<path>   680b718d006376422523f9ea3518a02c4e38458d
+A: OK
+
+B. prior evidence vs the commit that introduced it (byte identity)
+PASS  docs/superpowers/evidence/2026-08-24-capacity-c0
+        11 files, each vs the commit that added it: 8dbfe53x11  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e1
+        1 files, each vs the commit that added it: e1103b9x1  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e2
+        5 files, each vs the commit that added it: 220d7e6x5  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e2-attempt2
+        10 files, each vs the commit that added it: 226c9fax10  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e2-attempt3
+        9 files, each vs the commit that added it: b2003fex9  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e2-attempt4
+        10 files, each vs the commit that added it: 0c808b6x10  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e3a
+        17 files, each vs the commit that added it: 624eb96x17  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e3b
+        13 files, each vs the commit that added it: 29eae41x13  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt2
+        14 files, each vs the commit that added it: 3e0e9b7x14  changed 0
+PASS  docs/superpowers/evidence/2026-08-24-t1j-e3b-attempt3
+        25 files, each vs the commit that added it: 6377ae5x20, ef81bbdx5  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight
+        21 files, each vs the commit that added it: 4bb4639x21  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt2
+        21 files, each vs the commit that added it: 9370225x21  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt3
+        21 files, each vs the commit that added it: 73b4119x21  changed 0
+PASS  docs/superpowers/2026-08-25-t1j-e4-preflight.md
+        1 files, each vs the commit that added it: 4bb4639x1  changed 0
+PASS  docs/superpowers/2026-08-25-t1j-e4-preflight-attempt2.md
+        1 files, each vs the commit that added it: 9370225x1  changed 0
+PASS  docs/superpowers/2026-08-25-t1j-e4-preflight-attempt3.md
+        1 files, each vs the commit that added it: 73b4119x1  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4
+        24 files, each vs the commit that added it: d3f9a4bx21, fee7a3bx3  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification
+        8 files, each vs the commit that added it: c5730cfx8  changed 0
+PASS  docs/superpowers/2026-08-25-t1j-e4-harness-qualification.md
+        1 files, each vs the commit that added it: c5730cfx1  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification-attempt2
+        11 files, each vs the commit that added it: 0a441ebx3, ed48f7ax8  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification-attempt3
+        11 files, each vs the commit that added it: 88d36eax8, 904d7d6x3  changed 0
+PASS  docs/superpowers/evidence/2026-08-25-t1j-e4-harness-qualification-attempt4
+        11 files, each vs the commit that added it: 2723d0ex3, b020b0ex8  changed 0
+B: OK
+
+B2. DECLARED amendments — checked against the amending commit, and required
+    to actually differ from their origin
+  PASS  docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt2.md
+        added ed48f7a fd9bca24443495d2afbba6a01722bf363044bb12
+        amended 0a441eb 9c57d58c6c3bca274a6b2150af40b2c5fbef0f4c   (differs from origin: True)
+        at f6c8b07 9c57d58c6c3bca274a6b2150af40b2c5fbef0f4c   (unchanged since the amendment: True)
+        why: the post-run provenance commit replaced the card's 'still open' note with the results; disclosed in 0a441eb's message as 3 files added and 1 modified
+  PASS  docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt3.md
+        added 88d36ea df648da815f26baf6947ad625dd672e103d504f0
+        amended 904d7d6 b470d09bc76e92394309bd45d61f203c18b62947   (differs from origin: True)
+        at f6c8b07 b470d09bc76e92394309bd45d61f203c18b62947   (unchanged since the amendment: True)
+        why: the post-run provenance commit added the card's provenance section; disclosed in 904d7d6's message as 3 files added and 1 modified
+  PASS  docs/superpowers/2026-08-25-t1j-e4-harness-qualification-attempt4.md
+        added b020b0e df9ca56568542ce9a44ba66e363dc819045020d5
+        amended 2723d0e 16fddfb76b1aa17cc985f596d7ca809fac19c7a6   (differs from origin: True)
+        at f6c8b07 16fddfb76b1aa17cc985f596d7ca809fac19c7a6   (unchanged since the amendment: True)
+        why: the post-run provenance commit added the card's provenance section; disclosed in 2723d0e's message as 3 files added and 1 modified
+  PASS  docs/superpowers/2026-08-25-t1j-e4-preflight-attempt4.md
+        added d3f9a4b 85c1b1f26174f25822053cfb907d997410514b3d
+        amended fee7a3b f30be56605c5ad97937c48ebca3686b9be227b1e   (differs from origin: True)
+        at f6c8b07 f30be56605c5ad97937c48ebca3686b9be227b1e   (unchanged since the amendment: True)
+        why: the post-run provenance correction added section 4 and two visible correction blocks; disclosed in fee7a3b's message as 3 files added and 1 modified
+B2: OK
+
+negative controls — the SAME checkers, run against tampered inputs:
+  PASS  A untouched accepted (acceptance control): accepted (0)
+  PASS  A manifest blob flipped for a tracked row: rejected (1)
+  PASS  A commit holds a different object: rejected (8)
+  PASS  A a tracked path missing from the commit: rejected (8)
+  PASS  A the checkpoint unexpectedly tracked: rejected (1)
+  PASS  B untouched accepted (acceptance control): accepted (0)
+  PASS  B one file's blob differs from its origin commit: rejected (3)
+  PASS  B a file was removed after its origin commit: rejected (1)
+  PASS  B an extra file appeared after its origin commit: rejected (3)
+CONTROLS OK
