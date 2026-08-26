@@ -39,7 +39,7 @@ from . import e4_screen_runner as H
 #: Read directly, in one place. NO SUPPORTED OVERRIDE exists -- not argv, not the
 #: environment, not a configuration file, not an import-time hook. It is not
 #: claimed to be immutable: an importer could rebind any module global.
-SCREEN_AUTHORIZED = True
+SCREEN_AUTHORIZED = False
 
 #: Pinned artifacts. The jar and checkpoint are outside the repository.
 JAR_SHA256 = "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7"
