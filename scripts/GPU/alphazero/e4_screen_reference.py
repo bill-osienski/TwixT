@@ -54,6 +54,10 @@ ACCOUNTED_SEED_INTERVALS = (
 #: spent under this workstream's boundary and must never be scheduled.
 EXPOSED_SEED_INTERVALS = (
     (202612000, 202612032),          # E4 preflight attempt 3 witnesses
+    (90001000, 90001004),            # E4 INTEGRATION qualification, 2026-08-25:
+                                     # four synthetic tasks each built a real
+                                     # SeededReferenceAgent and drew from both
+                                     # generators. Spent, model or no model.
 )
 
 

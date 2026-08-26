@@ -1,0 +1,25 @@
+record types: {'run_header': 1, 'task_start': 4, 'opening_bound': 4, 'ply': 16, 'task_result': 4, 'qualification_receipt': 1}
+ply_cap=280  ply_budget=10  synthetic_tasks=4  canonical_executed=0
+
+PASS  integ-weak3-t1j_red
+        opening bound at ply 6, then plies [7, 8, 9, 10]
+        binder comparisons 5   T1j searches 2   reason qualification_budget  points None
+PASS  integ-weak3-t1j_black
+        opening bound at ply 6, then plies [7, 8, 9, 10]
+        binder comparisons 5   T1j searches 2   reason qualification_budget  points None
+PASS  integ-strong6-t1j_red
+        opening bound at ply 6, then plies [7, 8, 9, 10]
+        binder comparisons 5   T1j searches 2   reason qualification_budget  points None
+PASS  integ-strong6-t1j_black
+        opening bound at ply 6, then plies [7, 8, 9, 10]
+        binder comparisons 5   T1j searches 2   reason qualification_budget  points None
+
+TOTAL binder comparisons across 4 tasks: 20
+TOTAL real T1j searches:                          8
+
+The qualification script asserted these two TOTALS against per-task counters
+that its own state factory resets at the start of every task, so it read 5 and 2
+-- the LAST task's numbers -- and reported FAIL. The engines never disagreed:
+the binder aborts on the first divergence, and no abort record exists.
+abort records in the log: 0
+verdict records in the log: 0 (a screen verdict must not appear)

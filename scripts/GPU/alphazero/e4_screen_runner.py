@@ -56,6 +56,9 @@ PHASE_PRECONDITION = "precondition"
 PHASE_FACTORY = "agent_construction"
 PHASE_MOVE = "move"
 PHASE_BIND = "per_ply_binding"
+#: A task stopped by the qualification budget. NOT a game, never scored.
+TERMINAL_QUALIFICATION_BUDGET = "qualification_budget"
+
 PHASE_RECORD = "result_recording"
 PHASE_CLEANUP = "cleanup"
 PHASE_CLASSIFY = "classification"
@@ -171,14 +174,17 @@ def _refuse_binder(task, state, ply_index):
                      "no per-ply binder configured; the screen must bind both engines every ply")
 
 
-def _bind(binder: Callable, task: Dict[str, Any], state, ply: int, where: str) -> None:
+def _bind(binder: Callable, task: Dict[str, Any], state, ply: int, where: str,
+          move: Optional[Any] = None) -> None:
     """Every binder call goes through here, so NO binder failure escapes unclassified.
 
-    An earlier version only handled AbortError, so a plain ValueError from a
-    binder propagated as an unexpected error and left no durable abort record.
+    The MOVE is passed as well as the state. Our TwixtState keeps no ordered
+    history (E3b established that), so a binder driving a second engine cannot
+    recover the sequence from the state; it must be told each move as it is
+    applied. The opening bind passes move=None.
     """
     try:
-        binder(task, state, ply)
+        binder(task, state, ply, move)
     except AbortError:
         raise
     except Exception as e:                                    # noqa: BLE001
@@ -188,7 +194,8 @@ def _bind(binder: Callable, task: Dict[str, Any], state, ply: int, where: str) -
 
 
 def play_task(*, task: Dict[str, Any], agent_for: Callable, state_factory: Callable,
-              binder: Callable, rec: Recorder, ply_cap: int = PLY_CAP) -> Dict[str, Any]:
+              binder: Callable, rec: Recorder, ply_cap: int = PLY_CAP,
+              ply_budget: Optional[int] = None) -> Dict[str, Any]:
     """Play ONE task to a terminal state. The loop lives here, not in a caller.
 
     THE OPENING IS BOUND FIRST. The scripted opening is a position both engines
@@ -207,7 +214,7 @@ def play_task(*, task: Dict[str, Any], agent_for: Callable, state_factory: Calla
     except Exception as e:                                    # noqa: BLE001
         raise AbortError(PHASE_PRECONDITION, f"cannot build the opening state: {e}") from None
 
-    _bind(binder, task, state, state.ply, "opening")          # BEFORE anything else
+    _bind(binder, task, state, state.ply, "opening", None)    # BEFORE anything else
     rec.emit({"record_type": "opening_bound", "task_id": task["task_id"],
               "ply": state.ply, "opening": task.get("opening")})
 
@@ -224,6 +231,10 @@ def play_task(*, task: Dict[str, Any], agent_for: Callable, state_factory: Calla
             break
         if state.ply >= ply_cap:
             winner, reason = None, "cap"
+            break
+        if ply_budget is not None and state.ply >= ply_budget:
+            # QUALIFICATION ONLY. Not a game outcome and never scored as one.
+            winner, reason = None, TERMINAL_QUALIFICATION_BUDGET
             break
 
         mover = state.to_move
@@ -251,11 +262,16 @@ def play_task(*, task: Dict[str, Any], agent_for: Callable, state_factory: Calla
                              f"{task['task_id']} ply {state.ply}: {mover} returned {move}, "
                              f"which is not legal")
         state = state.apply_move(move)
-        _bind(binder, task, state, state.ply, f"ply {state.ply}")
+        _bind(binder, task, state, state.ply, f"ply {state.ply}", move)
         rec.emit({"record_type": "ply", "task_id": task["task_id"], "ply": state.ply,
                   "mover": mover, "move": list(move)})
 
-    points = 0.5 if reason == "cap" else (1.0 if winner == anchor_colour else 0.0)
+    if reason == TERMINAL_QUALIFICATION_BUDGET:
+        points = None                       # an unfinished task scores NOTHING
+    elif reason == "cap":
+        points = 0.5
+    else:
+        points = 1.0 if winner == anchor_colour else 0.0
     return {"winner": winner, "terminal_reason": reason, "plies": state.ply,
             "t1j_points": points, "agents_built": len(agents)}
 
@@ -325,6 +341,11 @@ def screen_verdict_allowed(canonical_tasks, tasks, results, skipped, stopped):
     for k in skipped:
         if k["endpoint"] not in stopped:
             return False, f"{k['task_id']} was skipped but its endpoint recorded no early stop"
+    unfinished = [r["task_id"] for r in results
+                  if r.get("terminal_reason") == TERMINAL_QUALIFICATION_BUDGET]
+    if unfinished:
+        return False, (f"{len(unfinished)} task(s) stopped on the qualification budget and are "
+                       f"not games: {unfinished[:3]}")
     return True, None
 
 
@@ -346,6 +367,7 @@ def _run(plan_path: str, results_path: str, *, mode: str,
          _cleanup: Optional[Callable] = None,
          _n_per_endpoint: Optional[int] = None,
          _ply_cap: int = PLY_CAP,
+         _ply_budget: Optional[int] = None,
          _band: Sequence[float] = BAND) -> int:
     """PRIVATE. The underscore parameters exist ONLY to drive fail-closed tests."""
     if mode not in MODES:
@@ -370,6 +392,7 @@ def _run(plan_path: str, results_path: str, *, mode: str,
                   "task_digest": CANONICAL_TASK_DIGEST,
                   "canonical_tasks": len(plan["tasks"]), "canonical_tasks_executed": 0,
                   "synthetic_tasks": len(tasks), "ply_cap": _ply_cap,
+                  "ply_budget": _ply_budget,
                   "n_per_endpoint": n_per, "no_games": True})
         for task in tasks:
             endpoint = task["endpoint"]
@@ -393,7 +416,8 @@ def _run(plan_path: str, results_path: str, *, mode: str,
             try:
                 outcome = play_task(task=task, agent_for=agent_for,
                                     state_factory=_state_factory or _refuse_state_factory,
-                                    binder=binder, rec=rec, ply_cap=_ply_cap)
+                                    binder=binder, rec=rec, ply_cap=_ply_cap,
+                                    ply_budget=_ply_budget)
             except BaseException as e:                        # noqa: BLE001
                 play_error = e
             # A COMPLETED GAME IS PERSISTED AND COUNTED BEFORE CLEANUP RUNS.
@@ -440,7 +464,8 @@ def _run(plan_path: str, results_path: str, *, mode: str,
                                  f"after {task['task_id']} (whose result is recorded): "
                                  f"{cleanup_error}")
 
-            rows = [r for r in results if r["endpoint"] == endpoint]
+            rows = [r for r in results if r["endpoint"] == endpoint
+                    and r["terminal_reason"] != TERMINAL_QUALIFICATION_BUDGET]
             score = sum(r["t1j_points"] for r in rows)
             caps = sum(1 for r in rows if r["terminal_reason"] == "cap")
             if early_in_band_forced(score, len(rows), n_per, list(_band), caps):

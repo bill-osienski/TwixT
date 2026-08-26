@@ -1,0 +1,30 @@
+{"canonical_tasks": 32, "canonical_tasks_executed": 0, "mode": "qualify", "n_per_endpoint": 16, "no_games": true, "plan_sha256": "10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8", "ply_budget": 10, "ply_cap": 280, "record_type": "run_header", "synthetic_tasks": 4, "task_digest": "f5a21395e67ad130a8e57d9219a435afce0be23cbc14828f56a22a70a842802b"}
+{"endpoint": "weak", "record_type": "task_start", "seed": 90001000, "task_id": "integ-weak3-t1j_red"}
+{"opening": "o1_center", "ply": 6, "record_type": "opening_bound", "task_id": "integ-weak3-t1j_red"}
+{"move": [15, 13], "mover": "red", "ply": 7, "record_type": "ply", "task_id": "integ-weak3-t1j_red"}
+{"move": [8, 11], "mover": "black", "ply": 8, "record_type": "ply", "task_id": "integ-weak3-t1j_red"}
+{"move": [19, 13], "mover": "red", "ply": 9, "record_type": "ply", "task_id": "integ-weak3-t1j_red"}
+{"move": [16, 13], "mover": "black", "ply": 10, "record_type": "ply", "task_id": "integ-weak3-t1j_red"}
+{"agents_built": 2, "endpoint": "weak", "plies": 10, "record_type": "task_result", "seed": 90001000, "t1j_points": null, "task_id": "integ-weak3-t1j_red", "terminal_reason": "qualification_budget", "winner": null}
+{"endpoint": "weak", "record_type": "task_start", "seed": 90001001, "task_id": "integ-weak3-t1j_black"}
+{"opening": "o1_center", "ply": 6, "record_type": "opening_bound", "task_id": "integ-weak3-t1j_black"}
+{"move": [15, 11], "mover": "red", "ply": 7, "record_type": "ply", "task_id": "integ-weak3-t1j_black"}
+{"move": [15, 16], "mover": "black", "ply": 8, "record_type": "ply", "task_id": "integ-weak3-t1j_black"}
+{"move": [17, 10], "mover": "red", "ply": 9, "record_type": "ply", "task_id": "integ-weak3-t1j_black"}
+{"move": [15, 20], "mover": "black", "ply": 10, "record_type": "ply", "task_id": "integ-weak3-t1j_black"}
+{"agents_built": 2, "endpoint": "weak", "plies": 10, "record_type": "task_result", "seed": 90001001, "t1j_points": null, "task_id": "integ-weak3-t1j_black", "terminal_reason": "qualification_budget", "winner": null}
+{"endpoint": "strong", "record_type": "task_start", "seed": 90001002, "task_id": "integ-strong6-t1j_red"}
+{"opening": "o1_center", "ply": 6, "record_type": "opening_bound", "task_id": "integ-strong6-t1j_red"}
+{"move": [15, 11], "mover": "red", "ply": 7, "record_type": "ply", "task_id": "integ-strong6-t1j_red"}
+{"move": [18, 11], "mover": "black", "ply": 8, "record_type": "ply", "task_id": "integ-strong6-t1j_red"}
+{"move": [17, 10], "mover": "red", "ply": 9, "record_type": "ply", "task_id": "integ-strong6-t1j_red"}
+{"move": [7, 11], "mover": "black", "ply": 10, "record_type": "ply", "task_id": "integ-strong6-t1j_red"}
+{"agents_built": 2, "endpoint": "strong", "plies": 10, "record_type": "task_result", "seed": 90001002, "t1j_points": null, "task_id": "integ-strong6-t1j_red", "terminal_reason": "qualification_budget", "winner": null}
+{"endpoint": "strong", "record_type": "task_start", "seed": 90001003, "task_id": "integ-strong6-t1j_black"}
+{"opening": "o1_center", "ply": 6, "record_type": "opening_bound", "task_id": "integ-strong6-t1j_black"}
+{"move": [9, 10], "mover": "red", "ply": 7, "record_type": "ply", "task_id": "integ-strong6-t1j_black"}
+{"move": [15, 12], "mover": "black", "ply": 8, "record_type": "ply", "task_id": "integ-strong6-t1j_black"}
+{"move": [16, 8], "mover": "red", "ply": 9, "record_type": "ply", "task_id": "integ-strong6-t1j_black"}
+{"move": [18, 9], "mover": "black", "ply": 10, "record_type": "ply", "task_id": "integ-strong6-t1j_black"}
+{"agents_built": 2, "endpoint": "strong", "plies": 10, "record_type": "task_result", "seed": 90001003, "t1j_points": null, "task_id": "integ-strong6-t1j_black", "terminal_reason": "qualification_budget", "winner": null}
+{"cleanups": 4, "mode": "qualify", "record_type": "qualification_receipt", "tasks_played": 4, "tasks_scheduled": 4, "tasks_skipped": 0, "verdict_withheld": "the run executed 4 task(s), not the canonical schedule of 32; a screen verdict binds to the frozen schedule only"}

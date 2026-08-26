@@ -1,0 +1,67 @@
+E4 INTEGRATION QUALIFICATION — CONSOLE OUTPUT, PARTIAL. READ THIS FIRST.
+
+⚠ THIS FILE IS AN EXCERPT, NOT A TRANSCRIPT, AND IT IS INCOMPLETE.
+
+I ran integrate.py WITHOUT redirecting its stdout to a file, and displayed it
+through `tail -45`. Sections 1-3 -- pinned artifact identity, the compile through
+the adapter, and the reference load -- scrolled off and ARE NOT RECOVERABLE.
+
+The run consumed four synthetic seeds (90001000-90001003) by drawing from both
+generators. RE-RUNNING TO PRODUCE A COMPLETE TRANSCRIPT WOULD EITHER REUSE SPENT
+SEEDS -- the contamination the accounting exists to prevent -- OR BE A DIFFERENT
+RUN PRESENTED AS THIS ONE. Neither is acceptable, so the gap stands.
+
+Nothing below is reconstructed. It is the output exactly as it was displayed,
+beginning where the display begins. The COMPLETE and durable record of what the
+run did is 10_integration_results.jsonl, written by the harness itself with an
+fsync per record; 11_record_analysis.txt measures that file.
+
+The gate exited 3. It failed on two of MY OWN counter assertions, not on any
+engine divergence -- see the card and 11_record_analysis.txt.
+
+----------------------------------------------------------------------
+== 4. four SHORT tasks: both colour arms x depths 3 and 6 ==
+  PASS   o1_center is 6 plies
+    integ-weak3-t1j_red: mdPly=3 anchor=red reference=black seed=90001000
+    integ-weak3-t1j_black: mdPly=3 anchor=black reference=red seed=90001001
+    integ-strong6-t1j_red: mdPly=6 anchor=red reference=black seed=90001002
+    integ-strong6-t1j_black: mdPly=6 anchor=black reference=red seed=90001003
+  PASS   BOTH colour arms exercised
+  PASS   BOTH depths exercised
+
+== 5. wire the real components and run ==
+    ply_cap=280 (explicit)   ply_budget=10 (SHORT, never a game)
+  PASS   the integration run completed without divergence
+  PASS   runner exit 0
+
+== 6. what the run shows ==
+  PASS   4 task results
+    integ-weak3-t1j_red: plies=10 reason=qualification_budget points=None agents=2
+    integ-weak3-t1j_black: plies=10 reason=qualification_budget points=None agents=2
+    integ-strong6-t1j_red: plies=10 reason=qualification_budget points=None agents=2
+    integ-strong6-t1j_black: plies=10 reason=qualification_budget points=None agents=2
+  PASS   every task stopped on the QUALIFICATION BUDGET — none is a game
+  PASS   an unfinished task scores NOTHING
+  PASS   every task ran exactly 10 plies
+  PASS   one agent per colour per task
+  PASS   16 real plies recorded
+  PASS   the opening was bound once per task, before play
+  PASS   ...at ply 6, before any agent moved
+  FAIL   5 binder comparisons: one opening plus every applied move, per task
+  FAIL   2 real T1j searches
+  PASS   ply_cap and ply_budget are recorded in the run header
+  PASS   cleanup ran once per task
+  PASS   a durable RECEIPT was emitted
+  PASS   NO SCREEN VERDICT
+  PASS   the receipt carries no joint outcome and no permission
+    withheld because: the run executed 4 task(s), not the canonical schedule of 32; a screen verdict b
+
+== 7. postconditions ==
+  PASS   the screen's seed block is untouched
+  PASS   every task used a synthetic seed
+    SEEDS CONSUMED BY THIS RUN (RNGs were drawn): [90001000, 90001001, 90001002, 90001003]
+
+INTEGRATION QUALIFICATION FAIL — 2:
+  5 binder comparisons: one opening plus every applied move, per task
+  2 real T1j searches
+EXIT: 3

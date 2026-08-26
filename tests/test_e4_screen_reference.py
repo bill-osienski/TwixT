@@ -184,3 +184,15 @@ def test_build_seeds_differ_by_colour():
     b = E.build(task(seed=SYNTHETIC, anchor="black"), evaluator=_FakeEvaluator())  # red
     assert a.colour != b.colour
     assert a.mcts.rng.getstate() != b.mcts.rng.getstate()
+
+
+def test_the_integration_qualification_seeds_are_recorded_as_consumed():
+    """E4 integration drew from both generators on these four seeds."""
+    for seed in range(90001000, 90001004):
+        assert E.seed_is_exposed(seed)
+        with pytest.raises(E.E4ReferenceError):
+            E.validate_task(task(seed=seed))
+        with pytest.raises(E.E4ReferenceError):
+            E.rng_witness(task(seed=seed))
+    assert not E.seed_is_exposed(90000999) and not E.seed_is_exposed(90001004)
+    assert not E.seed_is_exposed(SYNTHETIC), "the designated test seed stays usable"

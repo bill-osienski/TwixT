@@ -258,3 +258,31 @@ def test_parse_procs_reads_identity_and_counts_processes():
 def test_parse_procs_rejects_a_missing_field():
     with pytest.raises(ValueError):
         A.parse_procs(PROC_LINE.replace(" headless=true", ""))
+
+
+POSTCOND_LINE = ("POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
+                 "refl_ok=true refl_n=3 failures=0")
+
+
+def test_parse_postconds_reads_the_safety_surface():
+    (p,) = A.parse_postconds(POSTCOND_LINE + "\n")
+    assert p.clean and p.refl_n == 3 and p.windows == 0 and p.prefs_ok
+
+
+@pytest.mark.parametrize("field,bad", [
+    ("no_throw=true", "no_throw=false"),
+    ("windows=0", "windows=1"),
+    ("frames=0", "frames=2"),
+    ("headless=true", "headless=false"),
+    ("prefs_ok=true", "prefs_ok=false"),
+    ("refl_ok=true", "refl_ok=false"),
+    ("failures=0", "failures=1"),
+])
+def test_a_dirty_postcond_is_not_clean(field, bad):
+    (p,) = A.parse_postconds(POSTCOND_LINE.replace(field, bad) + "\n")
+    assert not p.clean
+
+
+def test_parse_postconds_rejects_a_missing_field():
+    with pytest.raises(ValueError):
+        A.parse_postconds(POSTCOND_LINE.replace(" prefs_ok=true", ""))

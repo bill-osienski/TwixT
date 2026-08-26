@@ -383,3 +383,40 @@ def parse_procs(text: str) -> List[ProcRecord]:
                               vm=kv["vm"], headless=kv["headless"],
                               prefs_factory=kv["prefs_factory"]))
     return out
+
+
+@dataclass(frozen=True)
+class PostCond:
+    """The helper's POSTCOND line: the safety surface, read rather than assumed."""
+    no_throw: bool
+    windows: int
+    frames: int
+    headless: bool
+    prefs_ok: bool
+    refl_ok: bool
+    refl_n: int
+    failures: int
+
+    @property
+    def clean(self) -> bool:
+        return (self.no_throw and self.windows == 0 and self.frames == 0 and self.headless
+                and self.prefs_ok and self.refl_ok and self.failures == 0)
+
+
+def parse_postconds(text: str) -> List[PostCond]:
+    """Parse POSTCOND lines. One per jvm run."""
+    out: List[PostCond] = []
+    for line in text.splitlines():
+        if not line.startswith("POSTCOND "):
+            continue
+        kv = dict(_KV_RE.findall(line))
+        missing = {"no_throw", "windows", "frames", "headless", "prefs_ok", "refl_ok",
+                   "refl_n", "failures"} - set(kv)
+        if missing:
+            raise ValueError(f"POSTCOND line missing fields {sorted(missing)}: {line!r}")
+        out.append(PostCond(
+            no_throw=kv["no_throw"] == "true", windows=int(kv["windows"]),
+            frames=int(kv["frames"]), headless=kv["headless"] == "true",
+            prefs_ok=kv["prefs_ok"] == "true", refl_ok=kv["refl_ok"] == "true",
+            refl_n=int(kv["refl_n"]), failures=int(kv["failures"])))
+    return out

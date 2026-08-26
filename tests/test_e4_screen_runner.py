@@ -37,7 +37,7 @@ def scripted_agent(moves):
     return lambda state: next(it)
 
 
-def null_binder(task, state, ply):
+def null_binder(task, state, ply, move=None):
     return None
 
 
@@ -178,12 +178,12 @@ def test_loop_validates_the_move_before_applying_it():
 
 def test_loop_binds_the_opening_first_then_every_applied_move():
     seen = []
-    play([(5, 5), (6, 7)], ply_cap=8, binder=lambda t, s, p: seen.append(p))
+    play([(5, 5), (6, 7)], ply_cap=8, binder=lambda t, s, p, m=None: seen.append(p))
     assert seen == [6, 7, 8]          # 6 is the OPENING, bound before any move
 
 
 def test_a_binder_divergence_aborts_in_the_binding_phase():
-    def diverging(task, state, ply):
+    def diverging(task, state, ply, move=None):
         raise H.AbortError(H.PHASE_BIND, f"state divergence at ply {ply}")
     with pytest.raises(H.AbortError) as e:
         play([(5, 5)], binder=diverging)
@@ -440,7 +440,7 @@ def test_the_reference_side_rejects_a_missing_or_rebuilt_evaluator(agent, label)
 def test_an_opening_divergence_aborts_before_either_agent_is_built():
     built = []
 
-    def diverging(task, state, ply):
+    def diverging(task, state, ply, move=None):
         raise H.AbortError(H.PHASE_BIND, f"opening divergence at ply {ply}")
 
     def counting(t, m):
@@ -464,7 +464,7 @@ def test_the_opening_bind_is_recorded():
 # --- binder failures are classified, cleanup still runs --------------------
 
 def test_a_plain_exception_from_the_binder_is_classified_and_recorded(tmp_path):
-    def sloppy(task, state, ply):
+    def sloppy(task, state, ply, move=None):
         raise ValueError("t1j replay exit 3")
     cleanups = []
     with pytest.raises(H.AbortError) as e:
@@ -479,7 +479,7 @@ def test_a_plain_exception_from_the_binder_is_classified_and_recorded(tmp_path):
 
 
 def test_a_cleanup_failure_after_an_abort_does_not_mask_the_abort(tmp_path):
-    def sloppy(task, state, ply):
+    def sloppy(task, state, ply, move=None):
         raise ValueError("t1j replay exit 3")
 
     def boom():

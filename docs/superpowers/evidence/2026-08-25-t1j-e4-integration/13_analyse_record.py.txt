@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""Establish the integration run's binding counts FROM THE DURABLE RECORD.
+
+The qualification script's own tally was wrong: it read counters on a context the
+state factory RESETS PER TASK, so they held the last task's numbers while the
+assertions expected cross-task totals. This reads the JSONL instead, which is
+what the run actually wrote, and computes the counts per task and in total.
+
+It measures; it does not re-run anything.
+"""
+import collections, json, sys
+
+rows = [json.loads(l) for l in open(sys.argv[1])]
+kinds = collections.Counter(r["record_type"] for r in rows)
+print("record types:", dict(kinds))
+header = rows[0]
+print(f"ply_cap={header['ply_cap']}  ply_budget={header['ply_budget']}  "
+      f"synthetic_tasks={header['synthetic_tasks']}  canonical_executed="
+      f"{header['canonical_tasks_executed']}")
+print()
+
+tasks = [r["task_id"] for r in rows if r["record_type"] == "task_start"]
+total_binds = total_t1j = 0
+bad = 0
+for tid in tasks:
+    ob = [r for r in rows if r["record_type"] == "opening_bound" and r["task_id"] == tid]
+    pl = [r for r in rows if r["record_type"] == "ply" and r["task_id"] == tid]
+    tr = [r for r in rows if r["record_type"] == "task_result" and r["task_id"] == tid]
+    anchor = "red" if "t1j_red" in tid else "black"
+    t1j_plies = [p for p in pl if p["mover"] == anchor]
+    binds = len(ob) + len(pl)               # the opening, then every applied move
+    total_binds += binds
+    total_t1j += len(t1j_plies)
+    ok = (len(ob) == 1 and ob[0]["ply"] == 6 and len(pl) == 4 and len(tr) == 1
+          and [p["ply"] for p in pl] == [7, 8, 9, 10]
+          and [p["mover"] for p in pl] == ["red", "black", "red", "black"]
+          and tr[0]["terminal_reason"] == "qualification_budget"
+          and tr[0]["t1j_points"] is None and tr[0]["agents_built"] == 2)
+    if not ok:
+        bad += 1
+    print(f"{'PASS' if ok else 'FAIL'}  {tid}")
+    print(f"        opening bound at ply {ob[0]['ply']}, then plies {[p['ply'] for p in pl]}")
+    print(f"        binder comparisons {binds}   T1j searches {len(t1j_plies)}   "
+          f"reason {tr[0]['terminal_reason']}  points {tr[0]['t1j_points']}")
+
+print()
+print(f"TOTAL binder comparisons across {len(tasks)} tasks: {total_binds}")
+print(f"TOTAL real T1j searches:                          {total_t1j}")
+print()
+print("The qualification script asserted these two TOTALS against per-task counters")
+print("that its own state factory resets at the start of every task, so it read 5 and 2")
+print("-- the LAST task's numbers -- and reported FAIL. The engines never disagreed:")
+print("the binder aborts on the first divergence, and no abort record exists.")
+print(f"abort records in the log: {kinds.get('abort', 0)}")
+print(f"verdict records in the log: {kinds.get('verdict', 0)} (a screen verdict must not appear)")
+sys.exit(0 if bad == 0 and kinds.get("abort", 0) == 0 and kinds.get("verdict", 0) == 0 else 3)
