@@ -1,0 +1,111 @@
+R0 CORRECTIONS — each verified against the cited source
+======================================================
+
+1. C0 TRAINED NOTHING. Scope line, verbatim:
+· **Scope: read-only. Nothing was trained, loaded, inferred or generated.**
+   every occurrence of L(96) in C0, with context:
+26:| 3 | "**96 is the positive control and it is binding**" | fewer parameters guarantee lower *nominal* capacity, not worse held-out loss. `L(96) ≈ L(128)` is consistent
+304:`L(96) − L(128) < δ` a VOID condition. **That was wrong.**
+307:loss** on this task. If `L(96) ≈ L(128)`, the most natural reading is that the task saturates at or
+371:1. ~~**VOID** if `L(96) − L(128) < δ` — the positive control failed.~~ **STRUCK, review round 1:
+372:   96 is not a positive control (§5). `L(96) ≈ L(128)` is a capacity result, not an instrument
+   => all conditional/hypothetical. 'already ran and pointed flat' is WITHDRAWN.
+
+2. twixtbot was TRAINED WITH CROSSINGS ALLOWED (E0 survey, criterion 2):
+| # | criterion | **T1j** | **OpenSpiel TwixT** | Ludii | Ai Ai | Polygames | twixtbot |
+|---|---|---|---|---|---|---|---|
+| 1 | Configurable rules compatibility | ✓ size/swap/side/start settable; **default board is 24** | ~ 24×24 + corners match; **no parameter disables swap** | ? TwixT presence unconfirmed | ? | ✗ no Tw
+| 2 | Rules used during training | **n/a — no net** | **n/a — no agent ships** | n/a | ? | — | ✗ **trained with crossings allowed** |
+
+3. #52 scope — it closes the ANCHOR PILOT, not training data:
+52. **The twixtbot external-anchor pilot, in this shape — RUN AND REJECTED 2026-08-24; do not retry it.** One authorized 128-game run (repo `bcb72bf`, clone `83749f2`, seeds `[202611128, 202611256)`) returned **1.000 for the ancho
+
+4. PRECISION != DETECTION. Half-width is not a detection threshold.
+   Rejection rule: the CI excludes 0, i.e. |dbar| > t = sqrt(R^2 ln(2/a)/(2n)).
+   Power side, Hoeffding again: P(dbar <= t | mu = D) <= exp(-2n(D-t)^2/R^2),
+   so power >= 1-b requires  D >= t + sqrt(R^2 ln(1/b)/(2n)).
+   At 48 GPU-hours (R=2, a=0.05, b=0.20, 28.609 s/game, 2 games per pair):
+     pairs               3019
+     precision           0.0494
+     detectable @ 80%    0.0821
+     ratio               1.66x
+   The earlier memo reported 0.0494 as the "detectable difference". WITHDRAWN.
+
+5. A 64-PAIR COMPARISON IS 128 GAMES, twice the L0 run of 64.
+
+6. cont5/warm5/fp6 CANNOT SERVE AS AN EFFECT-SIZE PRIOR. The ledger states they
+   are descriptive across separate runs with different mechanisms, seeds and
+   evaluation intervals -- "not a paired causal estimate" (#49, #51). Their
+   negative magnitudes say nothing about the plausible POSITIVE effect of a
+   capacity or data change. WITHDRAWN from the argument.
+
+7. "#49" MISAPPLIED TO CAPACITY. An earlier generator said a width change needs
+   new self-play data "which re-enters #49". It does not. #49 closes ORDINARY
+   SELF-PLAY CONTINUATION FROM calib020_0001 -- verbatim: "Ordinary self-play
+   continuation from `calib020_0001` in ANY dose, warm buffer included". Training
+   a DIFFERENT ARCHITECTURE from scratch is not continuation from the incumbent,
+   and #49 does not reach it. WITHDRAWN.
+
+8. "CANNOT INITIALIZE FROM INCUMBENT WEIGHTS" WAS TOO STRONG. What is supported
+   is that no qualified widening or initialization method has been SPECIFIED
+   here, and that the 2026-08-22 benchmark reset requires a new card to justify
+   training from scratch. Whether some method could exist was never examined.
+   CORRECTED to the supported width.
+
+9. pi IS ONE PREREQUISITE, NOT THE SINGLE BLOCKER. Candidate B carries four
+   independent blockers -- no eligible pi corpus, no qualified sensitivity
+   control, an invalid cost estimate, and unclosed confounds. Clearing pi alone
+   would not license the experiment. The memo's "what would change this answer"
+   entry has been corrected accordingly.
+
+10. COST CLAIM OUTRAN C0. An earlier generator said a wider net from scratch
+    "exceeds that, unbounded above". WITHDRAWN. C0's 4.45 GPU-h/1,000-step
+    figure prices ONLY the 128x6 final three-seed ladder and excludes the LR
+    grid and checkpoint selection. For a WIDER network the throughput, the LR
+    selection, the checkpoint selection and the total step count are all
+    UNMEASURED -- calibrating them is what C1 would have been for. C0 CANNOT
+    PRICE THIS CANDIDATE, in either direction.
+
+11. GENERATED EVIDENCE IS NOW NORMALIZED. Three whitespace findings
+    (git diff --check): a blank line at EOF in 01, trailing whitespace at
+    05:18, and a blank line at EOF in 05. These files are PRODUCED BY THE
+    SCRIPTS IN THIS PACKAGE, not captured from a run, so they are normalized at
+    generation -- trailing whitespace stripped per line, exactly one final
+    newline. PRESERVED RUNTIME ARTIFACTS ARE NEVER TOUCHED: the L0 canonical
+    JSONL, stdout, stderr, exit status and the 25-failure transcript keep their
+    bytes exactly as captured.
+    (git diff --check prints TWO lines for a trailing-whitespace finding, so the
+    four output lines were three findings.)
+
+12. THE SCOPE LINE ITSELF WAS SILENTLY TRUNCATED. 05_ledger_citations.txt cut the
+    ledger's 214-character status/scope line at 200, stopping mid-token at
+    'cali', while the file was headed "quoted verbatim". The truncation notice
+    covered only the numbered entries, not this line. CORRECTED: the scope line
+    is now recorded COMPLETE and verified byte-identical to ledger line 3, the
+    file header no longer says "verbatim" without qualification, and the
+    truncation notice states explicitly that the 700-character cut applies to
+    the entries ALONE.
+
+    This is the FIFTH instance of the same failure mode -- claiming more than
+    the source supports -- and it landed on the scope line whose full quotation
+    is the very check adopted to prevent the other four. A rule written into a
+    document does not enforce itself in the same document.
+
+13. LENGTH LABELLED IN THE WRONG UNIT. The scope line was recorded as "214
+    chars". It is 211 Unicode characters, 213 UTF-8 bytes, and 214 bytes only
+    when its terminating LF is counted -- the line holds two U+00B7 MIDDLE DOT,
+    two bytes each. 214 is what `wc -c` reports, which is BYTES INCLUDING THE
+    NEWLINE. CORRECTED: all three figures are now stated with their units, and
+    they are COMPUTED at generation rather than typed, so they cannot drift from
+    the line they describe.
+
+    Same family as #12, one level down: taking a tool's output and labelling it
+    as something the tool did not measure. `wc -c` never counted characters.
+
+    THE AUDIT THAT FOLLOWED FOUND A SECOND ONE. The entry truncation was labelled
+    "truncated at 700 chars". `cut -c` is character-based here (verified: cut -c1-4
+    of "a—b—c" returns 4 characters, 8 bytes), so 700 was right for #48, #51 and
+    #52 -- but #49 records 699, because the normalizer then strips a trailing
+    space that fell at the cut point. Every count in this file is now COMPUTED
+    PER ENTRY at generation and printed with its unit: full length, recorded
+    length, and recorded bytes. No count in this package is typed by hand.

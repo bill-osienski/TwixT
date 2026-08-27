@@ -1,0 +1,49 @@
+R0 — PAIRED BENCHMARK: PRECISION AND POWER
+==============================================================================
+
+DESIGN. Two checkpoints on the SAME opening/colour cells, fresh disjoint seeds.
+Statistic: mean per-cell difference, bounded in [-1, +1]. Method: Hoeffding, the
+interval this programme committed to in l0_match_rules -- distribution-free,
+valid for independent bounded outcomes.
+
+TWO DIFFERENT NUMBERS, AND THE MEMO PREVIOUSLY CONFLATED THEM:
+  PRECISION  = CI half-width at n. What the interval will look like.
+  DETECTION  = smallest TRUE difference found with probability >= 80%.
+Detection is strictly larger. alpha = 0.05, power = 80%.
+
+COST, MEASURED not assumed: 28.61 s/game (L0 run, 1831 s / 64 games).
+Each PAIR costs TWO games. Native parent match ~60 s/game; the
+anchor-referenced benchmark is cheaper because only one side pays 400 sims.
+
+A. WHAT A BUDGET BUYS
+ budget (h)   games  pairs   precision  detectable @80%
+          1     125     62      0.3450           0.5728
+          3     377    188      0.1981           0.3289
+          6     754    377      0.1399           0.2323
+         12    1509    754      0.0989           0.1643
+         24    3019   1509      0.0699           0.1161
+         48    6039   3019      0.0494           0.0821
+         96   12079   6039      0.0350           0.0580
+
+B. WHAT AN EFFECT COSTS -- priced for DETECTION, not precision
+ true diff   pairs   games  T1j hours  native hours
+      0.30     227     454        3.6           7.6
+      0.20     509    1018        8.1          17.0
+      0.15     905    1810       14.4          30.2
+      0.10    2035    4070       32.3          67.8
+      0.05    8138   16276      129.3         271.3
+
+C. THE CORRECTION, STATED PLAINLY
+At 48 GPU-hours the Hoeffding PRECISION is 0.0494. The earlier memo called
+that the "detectable difference". It is not: the 80%-power threshold at the same
+n is 0.0821, about 1.66x larger.
+
+D. WHAT THIS CALCULATION DOES AND DOES NOT DO
+It PRICES FUTURE PRECISION for a comparison that has not been designed yet. It
+does NOT reject any candidate. No plausible positive effect size has ever been
+measured in this stack -- cont5, warm5 and fp6 are DESCRIPTIVE results from
+different mechanisms, protocols, seeds and evaluation intervals, and the ledger
+states they are NOT a paired causal estimate. Their negative magnitudes cannot be
+turned into a prior for the positive effect of a capacity or data change.
+
+The candidates below are rejected on their own merits, not by this table.

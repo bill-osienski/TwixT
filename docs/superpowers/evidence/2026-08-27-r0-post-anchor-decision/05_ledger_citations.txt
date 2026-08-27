@@ -1,0 +1,37 @@
+LEDGER CITATIONS — quoted from the authority
+============================================
+source: docs/alphazero-value-search-experiment-ledger.md
+sha256: 405344854722d3bbf75396b69e389198fc4564f7416aaa0c5df01b24cbf8ceb9
+
+--- status / scope line, COMPLETE AND UNTRUNCATED ---
+length: 211 Unicode characters, 213 UTF-8 bytes, 214 bytes including its terminating LF
+(it holds two U+00B7 MIDDLE DOT, two bytes each, so characters and bytes
+differ. An earlier version labelled this '214 chars'. 214 is what `wc -c`
+reports, which is BYTES INCLUDING THE NEWLINE -- never characters.)
+**Created:** 2026-06-26 · **Status:** **CLOSED 2026-08-12** · **Scope:** the completed value-head calibration, search-reliability, competitive-readout and training-strength programme centered on `calib020_0001`.
+
+--- the do-not-repeat range actually present ---
+entries inside the "## Do-not-repeat" section: 52
+highest entry number: 52
+(a naive repo-wide regex for '^N. **' returns 64 -- it also matches numbered
+lists elsewhere in the ledger. The section-scoped count is the real one.)
+
+--- entries #48, #49, #51, #52 ---
+TRUNCATION NOTICE: each entry is cut to the first 700 UNICODE CHARACTERS,
+then trailing whitespace is stripped, so a recorded entry may be shorter than
+700 -- the exact recorded length is printed with each. This is the ONLY
+truncation in this file; the status/scope line above is complete. An earlier
+version silently cut that line at 200, mid-token at 'cali', while calling the
+file 'quoted verbatim'.
+
+--- #48 --- full entry 1038 chars; recorded 700 chars (704 UTF-8 bytes)
+48. **Rescuing the rejected five-iteration cold-buffer continuation with nearby endpoints, dose changes or more match games.** The frozen iteration-5 checkpoint lost clearly to its parent over 400 games: score `0.31375`, CI95 `[0.2687, 0.3588]`, about `−136` Elo. The preregistered absolute per-colour rule mechanically fired for red and black, but the 2026-08-10 erratum makes that non-diagnostic of independent colour harm; the aggregate loss alone closes the recipe. Do not evaluate iterations 1–4, extend the same run to 10 or 20 iterations, alter its learning rate or training steps, add games, or invoke the success-only replication. The result rejects the exact calibration-free, cold-buffer c
+
+--- #49 --- full entry 1919 chars; recorded 699 chars (709 UTF-8 bytes)
+49. **Ordinary self-play continuation from `calib020_0001` in ANY dose, warm buffer included — the family is closed.** Two runs now: cold buffer `0.31375` / `−136.0` Elo, and the parent-replay bootstrap `0.4325`, CI95 `[0.3843, 0.4807]`, `−47.2` Elo, CI95 `[−81.9, −13.4]`. The bootstrap's whole aggregate score interval sits below `0.50`, which is sufficient to close the family. Its preregistered absolute per-colour rule mechanically fired for black (`0.3650`, upper `0.4317`) but, per the 2026-08-10 erratum, this does **not** establish black-specific harm or an independent second rejection; the red raw score of `0.5000` (upper `0.5682`) likewise does not establish colour-specific neutrality.
+
+--- #51 --- full entry 1496 chars; recorded 700 chars (710 UTF-8 bytes)
+51. **Frozen-parent opposition from `calib020_0001`, in any dose or shape — the mechanism is CLOSED.** The `fp6` run (execution commit `13dd72f`, 2026-08-12) scored `0.46625`, CI95 `[0.4177, 0.5148]`, Elo `−23.5`, CI95 `[−57.7, +10.3]`. **The bar was not met.** Do **not** change the dose or warmup size, add a second opponent or an opponent pool, extend beyond five iterations, evaluate or select from iterations 1–4, run a larger match to "resolve" the parity, or run the **0379 generalization match** — that was conditional on a bar-met result and is not licensed by a non-pass. **Keep `calib020_0001`.** Read the result exactly: the candidate was **not shown stronger and not shown weaker at this
+
+--- #52 --- full entry 1889 chars; recorded 700 chars (704 UTF-8 bytes)
+52. **The twixtbot external-anchor pilot, in this shape — RUN AND REJECTED 2026-08-24; do not retry it.** One authorized 128-game run (repo `bcb72bf`, clone `83749f2`, seeds `[202611128, 202611256)`) returned **1.000 for the anchor against BOTH references at EVERY `trials` setting**, including `trials=0` where it uses raw policy and no search. `passing_trials: []`. Do **not** alter the `trials` ladder, relax the `[0.15, 0.85]` band, change or add openings, grant the anchor a rules change or handicap, add games, or hunt a weaker anchor configuration — every one of those was excluded before the result, and choosing any of them now is post-hoc selection against a recorded outcome. Do **not** re

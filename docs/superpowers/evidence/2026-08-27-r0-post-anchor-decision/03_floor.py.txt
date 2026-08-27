@@ -1,0 +1,104 @@
+"""R0: paired-benchmark PRECISION and POWER. Deterministic; no RNG, nothing run."""
+import math
+
+ALPHA, BETA = 0.05, 0.20            # two-sided 95%, preregistered 80% power
+S_PER_GAME_T1J = 1831 / 64          # MEASURED, L0 canonical run 2026-08-27
+S_PER_GAME_NATIVE = 60.0            # ledger: ~58-62 s/game at workers=1
+R = 2.0                             # a per-cell DIFFERENCE is bounded in [-1, +1]
+
+
+def precision(n, alpha=ALPHA):
+    """Hoeffding CI HALF-WIDTH. This is PRECISION, not a detection threshold."""
+    return math.sqrt(R * R * math.log(2.0 / alpha) / (2.0 * n))
+
+
+def detectable(n, alpha=ALPHA, beta=BETA):
+    """Smallest TRUE difference detected with probability >= 1 - beta.
+
+    Rejection rule: the CI excludes 0, i.e. |dbar| > t where t = precision(n).
+    Hoeffding again for the power side: P(dbar <= t | mu = D) <= exp(-2n(D-t)^2/R^2),
+    so power >= 1 - beta requires D >= t + sqrt(R^2 ln(1/beta) / (2n)).
+
+    THE HALF-WIDTH ALONE IS NOT A DETECTION THRESHOLD. An earlier version of this
+    memo reported precision as "detectable difference"; at 48 h that understated
+    the 80%-power threshold by roughly 1.66x.
+    """
+    return precision(n, alpha) + math.sqrt(R * R * math.log(1.0 / beta) / (2.0 * n))
+
+
+def n_for_precision(d, alpha=ALPHA):
+    return math.ceil(R * R * math.log(2.0 / alpha) / (2.0 * d * d))
+
+
+def n_for_power(d, alpha=ALPHA, beta=BETA):
+    n = 1
+    while detectable(n, alpha, beta) > d:
+        n *= 2
+    lo, hi = n // 2, n
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if detectable(mid, alpha, beta) <= d:
+            hi = mid
+        else:
+            lo = mid + 1
+    return lo
+
+
+import io, sys
+_buf = io.StringIO()
+_real = sys.stdout
+sys.stdout = _buf
+
+print("R0 — PAIRED BENCHMARK: PRECISION AND POWER")
+print("=" * 78)
+print(f"""
+DESIGN. Two checkpoints on the SAME opening/colour cells, fresh disjoint seeds.
+Statistic: mean per-cell difference, bounded in [-1, +1]. Method: Hoeffding, the
+interval this programme committed to in l0_match_rules -- distribution-free,
+valid for independent bounded outcomes.
+
+TWO DIFFERENT NUMBERS, AND THE MEMO PREVIOUSLY CONFLATED THEM:
+  PRECISION  = CI half-width at n. What the interval will look like.
+  DETECTION  = smallest TRUE difference found with probability >= {1-BETA:.0%}.
+Detection is strictly larger. alpha = {ALPHA}, power = {1-BETA:.0%}.
+
+COST, MEASURED not assumed: {S_PER_GAME_T1J:.2f} s/game (L0 run, 1831 s / 64 games).
+Each PAIR costs TWO games. Native parent match ~{S_PER_GAME_NATIVE:.0f} s/game; the
+anchor-referenced benchmark is cheaper because only one side pays 400 sims.
+""")
+
+print("A. WHAT A BUDGET BUYS")
+print(f"{'budget (h)':>11}{'games':>8}{'pairs':>7}{'precision':>12}{'detectable @80%':>17}")
+for hours in (1, 3, 6, 12, 24, 48, 96):
+    games = int(hours * 3600 / S_PER_GAME_T1J)
+    pairs = games // 2
+    print(f"{hours:>11}{games:>8}{pairs:>7}{precision(pairs):>12.4f}{detectable(pairs):>17.4f}")
+
+print("\nB. WHAT AN EFFECT COSTS -- priced for DETECTION, not precision")
+print(f"{'true diff':>10}{'pairs':>8}{'games':>8}{'T1j hours':>11}{'native hours':>14}")
+for d in (0.30, 0.20, 0.15, 0.10, 0.05):
+    n = n_for_power(d)
+    g = 2 * n
+    print(f"{d:>10.2f}{n:>8}{g:>8}{g*S_PER_GAME_T1J/3600:>11.1f}{g*S_PER_GAME_NATIVE/3600:>14.1f}")
+
+n48 = int(48 * 3600 / S_PER_GAME_T1J) // 2
+print(f"""
+C. THE CORRECTION, STATED PLAINLY
+At 48 GPU-hours the Hoeffding PRECISION is {precision(n48):.4f}. The earlier memo called
+that the "detectable difference". It is not: the 80%-power threshold at the same
+n is {detectable(n48):.4f}, about {detectable(n48)/precision(n48):.2f}x larger.
+
+D. WHAT THIS CALCULATION DOES AND DOES NOT DO
+It PRICES FUTURE PRECISION for a comparison that has not been designed yet. It
+does NOT reject any candidate. No plausible positive effect size has ever been
+measured in this stack -- cont5, warm5 and fp6 are DESCRIPTIVE results from
+different mechanisms, protocols, seeds and evaluation intervals, and the ledger
+states they are NOT a paired causal estimate. Their negative magnitudes cannot be
+turned into a prior for the positive effect of a capacity or data change.
+
+The candidates below are rejected on their own merits, not by this table.
+""")
+
+# GENERATED evidence is normalized before publication (see candidates.py).
+sys.stdout = _real
+sys.stdout.write("\n".join(l.rstrip() for l in _buf.getvalue().split("\n")).rstrip("\n") + "\n")
