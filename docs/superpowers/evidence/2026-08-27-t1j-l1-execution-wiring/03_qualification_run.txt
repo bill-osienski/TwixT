@@ -1,0 +1,27 @@
+A QUALIFICATION RUN — synthetic terminal states, TEST-ONLY seeds
+==============================================================================
+seeds 90009010..90009015, all inside TEST_ONLY_SEED_INTERVALS
+  test_only: True
+  reserved L0 block untouched: True
+
+No model, no jvm, no agent, no move, no game.
+
+exit status: 0 (0 = ok)
+
+record_type                count
+run_header                     1
+task_start                     6
+opening_bound                  6
+task_result                    6
+qualification_receipt          1
+
+run_header: mode=qualify no_games=True early_stop=None n_games=64
+            synthetic_tasks=6 frozen_tasks=64
+            plan_sha256=c8b9cba816852a67... task_digest=193d66bf5f1e4dca...
+
+RECEIPT, not a report: played=6 cleanups=6
+  withheld because: results contain identities not in the design: ['syn-000', 'syn-001', '
+
+no task_skipped records: True
+no early_stop records:   True
+no match_report record:  True

@@ -1,0 +1,13 @@
+THE L0 MATCH COMMAND, FRESH SUBPROCESS, REAL PINNED ARTIFACTS
+=============================================================
+All seven preconditions complete, THEN the gate refuses. No model loaded,
+no jvm started, no agent or RNG constructed, no results file created.
+
+L0 MATCH NOT AUTHORIZED: L0_EXECUTION_AUTHORIZED is False.
+  preconditions completed first: plan, schedule, repository, jdk, jar, checkpoint, output_path
+exit: 5
+
+results file created? 
+ls: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/l1repo.AkdY/o.jsonl: No such file or directory
+class dir created?    
+ls: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/l1repo.AkdY/o.jsonl.t1j_classes: No such file or directory

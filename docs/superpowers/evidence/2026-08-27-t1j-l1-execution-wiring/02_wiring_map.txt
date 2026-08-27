@@ -1,0 +1,53 @@
+WHAT L1 REUSES, AND WHAT IT DELIBERATELY DOES NOT
+==============================================================================
+
+REUSED FROM THE QUALIFIED SCREEN HARNESS (imported, not rebuilt):
+  H.play_task                  used: True
+  H.Recorder                   used: True
+  H.AbortError                 used: True
+  H._enforce_evaluator         used: True
+  H._assert_not_scheduled      used: True
+  H._refuse_binder             used: True
+  H._refuse_factory            used: True
+  H._refuse_state_factory      used: True
+  H._default_cleanup           used: True
+  H.HarnessError               used: True
+
+REUSED COLLABORATORS (in the dormant authorized branch):
+  E3b per-ply binder         INT.make_binder            used: True
+  T1j runtime                INT.T1jRuntime             used: True
+  state factory              INT.make_state_factory     used: True
+  agent factory              INT.make_agent_factory     used: True
+  reference construction     REF.build                  used: True
+  L0 harness                 L0R._run                   used: True
+  L0 match mode              L0R.MATCH_MODE             used: True
+
+NOT IMPORTED — the screen's decision rules (they must still exist for the screen):
+  early_in_band_forced             referenced by L0 runner: False   exists in screen rules: True
+  saturation_reachable             referenced by L0 runner: False   exists in screen rules: True
+  cap_incompleteness_reachable     referenced by L0 runner: False   exists in screen rules: True
+  per_endpoint_decision            referenced by L0 runner: False   exists in screen rules: True
+  classify_joint                   referenced by L0 runner: False   exists in screen rules: True
+  earliest_early_stop              referenced by L0 runner: False   exists in screen rules: True
+
+THE SCREEN'S FROZEN CONSTANTS, UNCHANGED BY L1:
+  H.CANONICAL_N_TASKS          32
+  H.CANONICAL_N_PER_ENDPOINT   16
+  H.BAND                       (0.05, 0.95)
+  H.MODES                      ('qualify',)
+  H.SCREEN_MODE                screen
+  H.SCREEN_SEED_BLOCK          (202612128, 202612160)
+
+THE TWO GATES ARE SEPARATE:
+  e4_screen_command.SCREEN_AUTHORIZED      = False
+  l0_match_command.L0_EXECUTION_AUTHORIZED = False
+  the L0 command reads the screen's gate:   False   (must be False)
+
+PRECONDITION ORDER (each immediately fatal, gate follows all seven):
+  1. plan
+  2. schedule
+  3. repository
+  4. jdk
+  5. jar
+  6. checkpoint
+  7. output_path

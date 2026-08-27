@@ -1,0 +1,57 @@
+REJECTED               the L0 execution gate is opened
+                       -> test_the_l0_execution_gate_is_false exit 1
+REJECTED               the L0 gate reads the SCREEN's gate instead
+                       -> test_the_l0_gate_does_not_read_the_screens_gate exit 1
+REJECTED               the gate is consulted BEFORE the preconditions
+                       -> test_all_seven_preconditions_complete_before_the_refusal exit 1
+REJECTED               match mode becomes publicly selectable
+                       -> test_match_mode_is_not_publicly_selectable exit 1
+REJECTED               the canonical schedule check is dropped
+                       -> test_match_mode_requires_the_frozen_schedule exit 1
+REJECTED               the schedule is bound by task_id only
+                       -> test_match_mode_binds_full_content_not_task_ids exit 1
+REJECTED               qualification accepts a reserved seed
+                       -> test_qualification_refuses_a_reserved_or_spent_seed exit 1
+REJECTED               the identity header moves AFTER setup
+                       -> test_the_identity_header_is_durable_before_setup_runs exit 1
+REJECTED               a setup failure is left unclassified
+                       -> test_a_setup_failure_is_classified_not_leaked exit 1
+REJECTED               the result is recorded AFTER cleanup
+                       -> test_a_cleanup_failure_after_a_recorded_game_is_a_run_level_abort exit 1
+REJECTED               the default binder stops refusing
+                       -> test_the_default_binder_refuses exit 1
+REJECTED               an early stop is introduced into the loop
+                       -> test_every_scheduled_task_is_played_and_none_is_skipped exit 1
+REJECTED               the runner computes its own statistic
+                       -> test_the_runner_computes_no_statistic_of_its_own exit 1
+REJECTED               MATCH mode emits a qualification receipt instead of aborting
+                       -> test_match_mode_aborts_on_any_other_reporting_refusal exit 1
+REJECTED               a cap-saturated MATCH is mislabelled as a receipt
+                       -> test_match_mode_records_cap_saturation_as_a_MATCH_OUTCOME_and_exits_0 exit 1
+REJECTED               the mirrored cap outcome string drifts
+                       -> test_the_cap_saturated_outcome_string_matches_what_the_rules_emit exit 1
+REJECTED               T1jRuntime is built with the wrong keywords
+                       -> test_the_enabled_path_setup_builds_the_qualified_collaborators exit 1
+REJECTED               the state factory loses its openings
+                       -> test_the_enabled_path_builds_the_REAL_state_factory_and_binder exit 1
+REJECTED               the enabled path hands over synthetic tasks
+                       -> test_the_enabled_path_hands_the_harness_the_frozen_64 exit 1
+REJECTED               the enabled path sets a qualification budget
+                       -> test_the_enabled_path_uses_the_frozen_settings_not_a_budget exit 1
+REJECTED               the enabled path drops the verified identities
+                       -> test_the_enabled_path_passes_the_verified_identities exit 1
+REJECTED               the class directory stops being exclusive
+                       -> test_the_enabled_path_setup_refuses_an_existing_class_directory exit 1
+REJECTED               a qualification run emits a REPORT not a receipt
+                       -> test_a_qualification_run_gets_a_RECEIPT_never_a_report exit 1
+REJECTED               delegated refusals are no longer translated
+                       -> test_a_delegated_refusal_is_translated_not_leaked exit 1
+REJECTED               the results file stops being exclusive-create
+                       -> test_the_results_file_is_exclusive_create exit 1
+REJECTED               the seed-block gate is removed
+                       -> test_the_seed_block_gate_is_defence_in_depth_and_binds_directly exit 1
+
+baseline (no defect):
+    ============================== 69 passed in 3.20s ============================== exit 0
+
+ALL CONTROLS BIND

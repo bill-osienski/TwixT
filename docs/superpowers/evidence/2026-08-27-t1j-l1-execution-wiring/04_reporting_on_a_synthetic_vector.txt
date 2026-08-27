@@ -1,0 +1,18 @@
+POST-RUN REPORTING — 64 synthetic rows bound to the FROZEN tasks
+==============================================================================
+No runner, no state, no agent, no seed: just rows shaped as play_task emits
+them. This is the only place L1 exercises the report path end to end.
+
+COMPLETE 64: reported=True  score=56.0  rate=0.8750
+  Hoeffding95 (PRIMARY) [0.7052, 1.0000]
+  Wilson95    (nominal) [0.7723, 0.9353]
+  cells: 8 openings x 2 arms, descriptive_only=['by_colour_arm', 'by_opening']
+  estimand present: True   independence stated as a model: True
+
+PARTIAL 63:   reported=False  (1 game(s) unplayed: ['l0match-063-strong6-o8)
+CAP-HEAVY 33: reported=False  outcome=CAP_SATURATED_NO_RATE
+CAPS 3:       reported=True  cap_warning=True  caps=3
+
+ALL-64 COMPLETENESS and the NO-EARLY-STOP rule are the same property here:
+  may_stop_early(anything) = False
+  a 63-row vector is REFUSED, so no run that stopped early could report.

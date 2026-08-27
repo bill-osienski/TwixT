@@ -1,0 +1,39 @@
+A. THE ENABLED PATH — gate opened IN PROCESS, every effect substituted
+==============================================================================
+Proving the locked side does nothing does not prove the enabled side is real.
+Three defects lived behind this gate until a test reached it:
+  * T1jRuntime was called with jdk_home=/jar_path=/classes_dir= -- it takes
+    java=/jar=/classes=/ply_cap=, so setup would have raised TypeError
+  * make_state_factory was called without the openings it requires
+  * nothing was traced, so the assembly order was unobservable
+No Java, no model load, no game, no RNG, no scheduled seed.
+
+exit status              0
+mode                     match
+tasks handed to harness  64  digest matches frozen: True
+ply_cap / ply_budget     280 / None
+band / n_per_endpoint    False / False  (both must be False)
+identities passed        ['checkpoint', 'jar', 'jdk', 'output_path', 'plan', 'repository', 'schedule']
+trace                    ['plan', 'schedule', 'repository', 'jdk', 'jar', 'checkpoint', 'output_path', 'run_harness', 'compile', 't1j_runtime', 'load_evaluator', 'agent_factory']
+collaborators            ['agent_factory', 'artifacts', 'binder', 'cleanup', 'evaluator', 'state_factory']
+evaluator handed through True
+class dir created        True
+processes spawned        ['git']  (git only; never javac or java)
+gate restored            False
+
+
+B. MODE DECIDES WHAT A REPORTING REFUSAL MEANS
+==============================================================================
+Every reported=False used to become a qualification_receipt with exit 0, in
+EVERY mode -- so an incomplete or malformed CANONICAL match would have failed
+reporting and still exited successfully, and the frozen CAP_SATURATED_NO_RATE
+outcome would have been mislabelled as a qualification artefact.
+
+scenario                          mode     record                  exit
+complete 64                       match    match_report            0
+33 caps (frozen no-rate rule)     match    match_outcome           0
+63 of 64 played                   match    (none)                  ABORT [classification]
+malformed score                   match    (none)                  ABORT [classification]
+synthetic (not the design)        qualify  qualification_receipt   0
+
+A qualification_receipt can never appear in a match run.
