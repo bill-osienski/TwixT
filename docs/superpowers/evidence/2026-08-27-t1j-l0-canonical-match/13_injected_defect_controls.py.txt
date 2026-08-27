@@ -1,0 +1,160 @@
+"""Injected-defect controls for L0. Every file restored and hash-verified."""
+import hashlib, os, shutil, subprocess, sys
+R = "/Users/bill/projects/TwixT_Game"
+RULES = f"{R}/scripts/GPU/alphazero/l0_match_rules.py"
+RUNNER = f"{R}/scripts/GPU/alphazero/l0_match_runner.py"
+CMD = f"{R}/scripts/GPU/alphazero/l0_match_command.py"
+SCMD = f"{R}/scripts/GPU/alphazero/e4_screen_command.py"
+PLAN  = f"{R}/scripts/GPU/alphazero/l0_match_plan.py"
+T = "tests/test_l0_match_runner.py"
+
+CASES = [
+ ("the SCREEN gate is opened (the child lift must notice)", SCMD,
+  "SCREEN_AUTHORIZED = False", "SCREEN_AUTHORIZED = True",
+  f"{T}::test_the_authorization_gate_still_exits_5_in_a_fresh_process"),
+ ("the schedule check moves AFTER the repository check", CMD,
+  'PRECONDITIONS = ("plan", "schedule", "repository", "jdk", "jar", "checkpoint",\n                 "output_path")',
+  'PRECONDITIONS = ("plan", "repository", "schedule", "jdk", "jar", "checkpoint",\n                 "output_path")',
+  f"{T}::test_the_spent_schedule_is_refused_with_exit_2_before_any_effect"),
+ ("the L0 execution gate is opened", CMD,
+  "L0_EXECUTION_AUTHORIZED = False", "L0_EXECUTION_AUTHORIZED = True",
+  f"{T}::test_the_l0_execution_gate_is_false"),
+ ("the L0 gate reads the SCREEN's gate instead", CMD,
+  "    if not L0_EXECUTION_AUTHORIZED:", "    if not SCREEN_CMD.SCREEN_AUTHORIZED:",
+  f"{T}::test_the_l0_gate_does_not_read_the_screens_gate"),
+ ("the gate is consulted BEFORE the preconditions", CMD,
+  "    records: Dict[str, Any] = {}\n    for name in PRECONDITIONS:",
+  "    if not L0_EXECUTION_AUTHORIZED:\n        raise AuthorizationError(trace)\n    records: Dict[str, Any] = {}\n    for name in PRECONDITIONS:",
+  f"{T}::test_all_seven_preconditions_complete_before_the_refusal"),
+ ("match mode becomes publicly selectable", RUNNER,
+  'MODES = ("qualify",)', 'MODES = ("qualify", "match")',
+  f"{T}::test_match_mode_is_not_publicly_selectable"),
+ ("the canonical schedule check is dropped", RUNNER,
+  "        _verify_match_schedule(tasks, plan)", "        pass  # DEFECT",
+  f"{T}::test_match_mode_requires_the_frozen_schedule"),
+ ("the schedule is bound by task_id only", RUNNER,
+  "        if c is None or any(t.get(k) != c.get(k) for k in RULES.L0_TASK_DIMENSIONS):",
+  "        if c is None:",
+  f"{T}::test_match_mode_binds_full_content_not_task_ids"),
+ ("qualification accepts a reserved seed", RUNNER,
+  "            H._assert_not_scheduled(t)", "            pass  # DEFECT",
+  f"{T}::test_qualification_refuses_a_reserved_or_spent_seed"),
+ ("the identity header moves AFTER setup", RUNNER,
+  '        rec.emit({"record_type": "run_header", "mode": mode,',
+  '        pass\n        _unused = ({"record_type": "run_header", "mode": mode,',
+  f"{T}::test_the_identity_header_is_durable_before_setup_runs"),
+ ("a setup failure is left unclassified", RUNNER,
+  "            except Exception as e:                            # noqa: BLE001\n                raise H.AbortError(H.PHASE_SETUP, f\"{type(e).__name__}: {e}\") from None",
+  "            except ZeroDivisionError as e:\n                raise H.AbortError(H.PHASE_SETUP, f\"{type(e).__name__}: {e}\") from None",
+  f"{T}::test_a_setup_failure_is_classified_not_leaked"),
+ ("the result is recorded AFTER cleanup", RUNNER,
+  "            record_error = None\n            if play_error is None:",
+  "            record_error = None\n            cleanup()  # DEFECT: cleanup first\n            if play_error is None:",
+  f"{T}::test_a_cleanup_failure_after_a_recorded_game_is_a_run_level_abort"),
+ ("the default binder stops refusing", RUNNER,
+  "    binder = _binder or H._refuse_binder", "    binder = _binder or (lambda *a, **k: None)",
+  f"{T}::test_the_default_binder_refuses"),
+ ("an early stop is introduced into the loop", RUNNER,
+  "            rec.emit({\"record_type\": \"task_start\", \"task_id\": task[\"task_id\"],",
+  "            if len(results) >= 3:\n                continue\n            rec.emit({\"record_type\": \"task_start\", \"task_id\": task[\"task_id\"],",
+  f"{T}::test_every_scheduled_task_is_played_and_none_is_skipped"),
+ ("the runner computes its own statistic", RUNNER,
+  "    try:\n        report = RULES.match_report(results, plan[\"tasks\"])",
+  "    _rate = sum(r.get(\"t1j_points\", 0) for r in results)\n    try:\n        report = RULES.match_report(results, plan[\"tasks\"])",
+  f"{T}::test_the_runner_computes_no_statistic_of_its_own"),
+ ("MATCH mode emits a qualification receipt instead of aborting", RUNNER,
+  "    if mode == MATCH_MODE:", "    if False and mode == MATCH_MODE:",
+  f"{T}::test_match_mode_aborts_on_any_other_reporting_refusal"),
+ ("a cap-saturated MATCH is mislabelled as a receipt", RUNNER,
+  '        if report.get("outcome") == CAP_SATURATED_NO_RATE:',
+  '        if False and report.get("outcome") == CAP_SATURATED_NO_RATE:',
+  f"{T}::test_match_mode_records_cap_saturation_as_a_MATCH_OUTCOME_and_exits_0"),
+ ("the mirrored cap outcome string drifts", RUNNER,
+  'CAP_SATURATED_NO_RATE = "CAP_SATURATED_NO_RATE"', 'CAP_SATURATED_NO_RATE = "CAP_SATURATED"',
+  f"{T}::test_the_cap_saturated_outcome_string_matches_what_the_rules_emit"),
+ ("T1jRuntime is built with the wrong keywords", CMD,
+  "        runtime = INT.T1jRuntime(java=os.path.join(jdk_home, \"bin\", \"java\"),",
+  "        runtime = INT.T1jRuntime(jdk_home=jdk_home,",
+  f"{T}::test_the_enabled_path_setup_builds_the_qualified_collaborators"),
+ ("the state factory loses its openings", CMD,
+  'INT.make_state_factory(plan["openings"], ctx)', "INT.make_state_factory(ctx)",
+  f"{T}::test_the_enabled_path_builds_the_REAL_state_factory_and_binder"),
+ ("the enabled path hands over synthetic tasks", CMD,
+  '        _tasks=plan["tasks"],                   # THE FROZEN 64, in order',
+  "        _tasks=plan['tasks'][:10],",
+  f"{T}::test_the_enabled_path_hands_the_harness_the_frozen_64"),
+ ("the enabled path sets a qualification budget", CMD,
+  "        _ply_budget=None)                       # a match plays to a terminal state",
+  "        _ply_budget=20)",
+  f"{T}::test_the_enabled_path_uses_the_frozen_settings_not_a_budget"),
+ ("the enabled path drops the verified identities", CMD,
+  "        _identity=records,                      # verified identities, fsynced first",
+  "        _identity={},",
+  f"{T}::test_the_enabled_path_passes_the_verified_identities"),
+ ("the class directory stops being exclusive", CMD,
+  "        if os.path.exists(classes_dir):", "        if False and os.path.exists(classes_dir):",
+  f"{T}::test_the_enabled_path_setup_refuses_an_existing_class_directory"),
+ ("a qualification run emits a REPORT not a receipt", RUNNER,
+  "    if report.get(\"reported\"):", "    if True:",
+  f"{T}::test_a_qualification_run_gets_a_RECEIPT_never_a_report"),
+ ("delegated refusals are no longer translated", CMD,
+  "    except SCREEN_CMD.PreconditionError as e:\n        raise PreconditionError(which, e.message) from None",
+  "    except ZeroDivisionError as e:\n        raise PreconditionError(which, str(e)) from None",
+  f"{T}::test_a_delegated_refusal_is_translated_not_leaked"),
+ ("the results file stops being exclusive-create", RUNNER,
+  "    rec = H.Recorder(results_path)",
+  "    import os as _os\n    if _os.path.exists(results_path): _os.remove(results_path)\n    rec = H.Recorder(results_path)",
+  f"{T}::test_the_results_file_is_exclusive_create"),
+ ("the seed-block gate is removed", RUNNER,
+  "    if not (lo <= seed < hi):", "    if False and not (lo <= seed < hi):",
+  f"{T}::test_the_seed_block_gate_is_defence_in_depth_and_binds_directly"),
+]
+def h(p): return hashlib.sha256(open(p, "rb").read()).hexdigest()
+
+
+def purge_bytecode():
+    """CPython invalidates a .pyc on (source mtime SECONDS, source size).
+
+    A same-length edit inside one second therefore leaves the stale .pyc valid
+    and the injected defect never reaches the interpreter -- the control then
+    passes vacuously. `N_REPS = 4` -> `N_REPS = 3` did exactly that. Purge, and
+    forbid writing new ones, so every run compiles the bytes on disk.
+    """
+    for root, dirs, _ in os.walk(R):
+        for d in list(dirs):
+            if d == "__pycache__":
+                shutil.rmtree(os.path.join(root, d), ignore_errors=True)
+                dirs.remove(d)
+
+
+ENV = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+
+ok = True
+for name, path, old, new, test in CASES:
+    before_h, before = h(path), open(path).read()
+    assert old in before, f"anchor not found for: {name}"
+    try:
+        open(path, "w").write(before.replace(old, new, 1))
+        assert h(path) != before_h, f"injection changed nothing: {name}"
+        purge_bytecode()
+        r = subprocess.run([f"{R}/.venv/bin/python", "-m", "pytest", test, "-q"],
+                           cwd=R, capture_output=True, text=True, env=ENV)
+    finally:
+        # ALWAYS restore, including on an exception. An earlier version restored
+        # only on the success path, and one crash left an injected defect sitting
+        # in a published module until git status caught it.
+        open(path, "w").write(before)
+        purge_bytecode()
+        assert h(path) == before_h, f"RESTORE FAILED for {path}"
+    verdict = "REJECTED" if r.returncode != 0 else "*** NOT REJECTED ***"
+    ok &= r.returncode != 0
+    print(f"{verdict:22} {name}\n{'':22} -> {test.split('::')[-1]} exit {r.returncode}")
+
+print("\nbaseline (no defect):")
+purge_bytecode()
+r = subprocess.run([f"{R}/.venv/bin/python", "-m", "pytest", T, "-q"],
+                   cwd=R, capture_output=True, text=True, env=ENV)
+print("   ", r.stdout.strip().splitlines()[-1], "exit", r.returncode)
+ok &= r.returncode == 0
+print("\nALL CONTROLS BIND" if ok else "\nA CONTROL FAILED TO BIND")
+sys.exit(0 if ok else 1)

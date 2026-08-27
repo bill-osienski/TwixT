@@ -1,8 +1,18 @@
 """L0 larger match: preregistration and design checks. NO EXECUTION.
 
-No model, no jvm, no generator, no move, no game, and NO DRAW FROM ANY SEED. The
-L0 block [202613000, 202613064) must still be reserved-and-unspent when this file
-finishes, and the last test asserts exactly that.
+No model, no jvm, no generator, no move, no game, and NO DRAW FROM ANY SEED.
+
+POST-RUN. The canonical match executed once on 2026-08-27 and played all 64 games,
+so [202613000, 202613064) is now EXPOSED and RETIRED, and its schedule may never
+be executed again. What these tests check is that the READ path survived: the
+plan still loads and verifies, and the durable results still reclassify to the
+identical verdict. The last test asserts the seed registries are unchanged by this
+file -- not that the block is unspent, which it no longer is.
+
+The frozen plan's own "RESERVED, UNSPENT" and "NOT EXECUTED" strings are asserted
+deliberately and must NOT be updated: they record the state at preregistration,
+and their survival is the evidence that the plan was not rewritten after the
+results were seen.
 """
 import copy
 import json
@@ -107,19 +117,29 @@ def test_a_tampered_source_plan_is_refused(tmp_path):
 
 # --- the seed block --------------------------------------------------------
 
-def test_the_seed_block_is_disjoint_from_every_seed_category():
-    def spread(iv):
-        return {s for lo, hi in iv for s in range(lo, hi)}
+def test_the_seed_block_remains_disjoint_from_every_OTHER_experiment():
+    """The block now appears in its OWN exposed and retired entries, by design.
+
+    What must still hold -- and is the property the pre-reservation proof
+    established -- is that it collides with NO OTHER workstream's seeds. So its
+    own two entries are excluded and everything else is checked.
+    """
+    def spread(iv, skip=()):
+        return {s for lo, hi in iv if (lo, hi) not in skip for s in range(lo, hi)}
 
     block = set(range(*P.L0_SEED_BLOCK))
+    own = (P.L0_SEED_BLOCK,)
     assert len(block) == 64
-    assert not (block & spread(REF.EXPOSED_SEED_INTERVALS))
-    assert not (block & spread(REF.RETIRED_SEED_INTERVALS))
+    assert not (block & spread(REF.EXPOSED_SEED_INTERVALS, own))
+    assert not (block & spread(REF.RETIRED_SEED_INTERVALS, own))
     assert not (block & spread(REF.TEST_ONLY_SEED_INTERVALS))
     assert not (block & set(CONSUMED_SEEDS))
     src = P.load_source_plan()
     assert not (block & spread([tuple(x) for x in src["seed_block"]["prior_intervals"]]))
     assert not (block & spread([tuple(src["seed_block"]["interval"])]))
+    # and it IS recorded in its own entries -- the run happened
+    assert P.L0_SEED_BLOCK in REF.EXPOSED_SEED_INTERVALS
+    assert P.L0_SEED_BLOCK in REF.RETIRED_SEED_INTERVALS
 
 
 def test_the_seed_block_is_disjoint_from_every_derived_rng_stream():
@@ -144,13 +164,22 @@ def test_the_seed_block_is_disjoint_from_every_derived_rng_stream():
     assert not (mine & theirs)
 
 
-def test_the_block_is_registered_as_reserved_and_is_not_exposed_or_retired():
+def test_all_64_seeds_are_now_EXPOSED_and_RETIRED():
+    """POST-RUN STATE. The match ran once on 2026-08-27 and played all 64 games.
+
+    L0 has no early stop, so every seed in the block drove real generators --
+    unlike the E4 screen, where 8 of 32 were skipped and are retired without ever
+    having been drawn. Here exposure and retirement cover the same range, and they
+    still mean different things: drawn, and withdrawn.
+    """
     for seed in range(*P.L0_SEED_BLOCK):
         st = REF.seed_status(seed)
-        assert st == {"exposed": False, "retired": False, "accounted": True,
+        assert st == {"exposed": True, "retired": True, "accounted": True,
                       "test_only": False}, seed
     assert not REF.seed_is_accounted(P.L0_SEED_BLOCK[0] - 1)
     assert not REF.seed_is_accounted(P.L0_SEED_BLOCK[1])
+    assert not REF.seed_is_exposed(P.L0_SEED_BLOCK[0] - 1)
+    assert not REF.seed_is_exposed(P.L0_SEED_BLOCK[1])
 
 
 def test_seeds_map_to_task_order_and_are_all_inside_the_block(tasks):
@@ -159,11 +188,54 @@ def test_seeds_map_to_task_order_and_are_all_inside_the_block(tasks):
     assert len({t["seed"] for t in tasks}) == 64
 
 
-def test_the_block_is_still_executable_because_nothing_has_been_drawn(tasks):
-    """RESERVED is not SPENT. L0 draws from nothing, so the block stays runnable."""
-    REF.validate_schedule_executable(tasks)
+def test_the_spent_schedule_may_never_be_executed_again(tasks):
+    """The one-shot completed, so execution is refused -- permanently."""
+    with pytest.raises(REF.E4ReferenceError, match="EXPOSED"):
+        REF.validate_schedule_executable(tasks)
     for t in tasks[:4]:
-        REF.validate_task_executable(t)
+        with pytest.raises(REF.E4ReferenceError):
+            REF.validate_task_executable(t)
+
+
+def test_the_spent_plan_REMAINS_STRUCTURALLY_VALID(tasks):
+    """Spent stops EXECUTION, not parsing, verification or classification."""
+    plan = P.load_l0_plan()                      # still loads
+    assert plan["n_tasks"] == 64
+    assert P.l0_task_digest(plan["tasks"]) == P.L0_TASK_DIGEST
+    summary = REF.validate_schedule_structure(plan["tasks"])
+    assert summary["n_tasks"] == 64 and summary["search_readout_disjoint"]
+    P.validate_l0_schedule(plan["tasks"])        # design rules still hold
+
+
+def test_the_canonical_RESULTS_RECLASSIFY_IDENTICALLY_from_evidence():
+    """The whole point of keeping the read path open: the verdict survives.
+
+    Recomputed from the durable JSONL with the frozen reporter, after the seeds
+    are gone -- score, BOTH intervals and every descriptive cell.
+    """
+    run = ("docs/superpowers/evidence/2026-08-27-t1j-l0-canonical-match/"
+           "06_l0_match_results.jsonl")
+    rows = [json.loads(l) for l in open(run)]
+    results = [r for r in rows if r["record_type"] == "task_result"]
+    recorded = [r for r in rows if r["record_type"] == "match_report"][-1]
+    assert len(results) == 64
+
+    again = L.match_report(results, P.load_l0_plan()["tasks"])
+    assert again["reported"] is True
+    assert again["overall"]["t1j_score"] == recorded["overall"]["t1j_score"] == 38.0
+    assert again["overall"]["t1j_rate"] == pytest.approx(0.59375)
+    assert again["overall"]["ci95_hoeffding"] == recorded["overall"]["ci95_hoeffding"]
+    assert again["overall"]["ci95_wilson"] == recorded["overall"]["ci95_wilson"]
+    assert again["by_opening"] == recorded["by_opening"]
+    assert again["by_colour_arm"] == recorded["by_colour_arm"]
+    assert again["overall"]["cap_terminations"] == 0
+
+    # BOTH INTERVALS INCLUDE 0.5. A higher point estimate is not evidence that
+    # T1j is stronger, and the claim discipline forbids saying otherwise.
+    lo_h, hi_h = again["overall"]["ci95_hoeffding"]
+    lo_w, hi_w = again["overall"]["ci95_wilson"]
+    assert lo_h < 0.5 < hi_h, "the Hoeffding bound includes parity"
+    assert lo_w < 0.5 < hi_w, "the nominal Wilson interval includes parity"
 
 
 def test_no_witness_may_be_taken_from_the_L0_block(tasks):
@@ -842,12 +914,15 @@ def test_the_plan_no_longer_claims_abort_rules_come_from_the_screen():
 
 # --- L0 spends nothing -----------------------------------------------------
 
-def test_zzz_the_L0_block_is_still_reserved_and_unspent_after_this_file():
-    """Runs last. If any test above drew from an L0 seed, this catches it."""
-    for seed in range(*P.L0_SEED_BLOCK):
-        assert not REF.seed_is_exposed(seed), f"{seed} became EXPOSED during L0"
-        assert not REF.seed_is_retired(seed)
+def test_zzz_the_registries_are_intact_after_this_file():
+    """Runs last. Catches any test that left the seed registries modified."""
     assert (202613000, 202613064) in REF.ACCOUNTED_SEED_INTERVALS
+    assert (202613000, 202613064) in REF.EXPOSED_SEED_INTERVALS
+    assert (202613000, 202613064) in REF.RETIRED_SEED_INTERVALS
+    for seed in (202613000, 202613031, 202613063):
+        assert REF.seed_is_exposed(seed) and REF.seed_is_retired(seed)
+    # the FROZEN plan is unchanged: it still describes the pre-run state, which is
+    # what a preregistration is. The run's outcome lives in the run's evidence.
     plan = P.load_l0_plan()
     assert plan["seed_block"]["status"].startswith("RESERVED, UNSPENT")
     assert "NOT EXECUTED" in plan["status"]

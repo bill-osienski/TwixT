@@ -1,4 +1,4 @@
-# The L0 canonical 64-game match — RAN ONCE. T1j scores 0.594.
+# The L0 canonical 64-game match — RAN ONCE. T1j's observed score: 0.594.
 
 **Date:** 2026-08-27 · **Status:** EXECUTED, once, exit **0**. Gate restored immediately.
 · Local, unpushed. · **`[202613000, 202613064)` is SPENT. The match will not run again.**
@@ -10,7 +10,7 @@ Evidence: `evidence/2026-08-27-t1j-l0-canonical-match/`.
 
 ## The result
 
-**T1j scored 38.0 of 64 = 0.5938** against `calib020_0001` at `mdPly` 6.
+**T1j's observed score was 38.0 of 64 = 0.5938** against `calib020_0001` at `mdPly` 6.
 
 | | |
 |---|---|
@@ -18,6 +18,11 @@ Evidence: `evidence/2026-08-27-t1j-l0-canonical-match/`.
 | Wilson 95% (nominal only) | [0.4715, 0.7054] |
 | cap terminations | **0** |
 | plies min / median / max | 25 / 41 / 88 (cap 280, never approached) |
+
+> **Both intervals include 0.5.** Hoeffding spans [0.4240, 0.7635] and the nominal Wilson interval
+> spans [0.4715, 0.7054]; parity sits inside both. So the match gives T1j a **higher point estimate**
+> at this setting and **does not establish that T1j is stronger**. Saying otherwise would be reading
+> a point estimate as a conclusion, which is precisely what the interval is there to prevent.
 
 All 64 games played. No early stop, no skips, no retries. Exit 0, **stdout and stderr both zero
 bytes**, 30m 31s, 2,411 durable records including **2,216 per-ply bindings with zero divergences**.
@@ -71,17 +76,43 @@ every cell — while `validate_schedule_executable` now refuses the schedule. Sp
 not reading. That property was designed in during the seed reconciliation and this is the first time
 it has been load-bearing on a fresh block.
 
-## 25 tests now fail, and I have not rewritten them
+## Post-run test reconciliation
+
+The 25 failures below were the honest immediate post-run state, and the transcript is preserved
+byte-unchanged in `09_full_suite_after_gate_restored.txt`. They were then reconciled on the same
+principle the E4 screen established — *spent stops execution, not reading*:
+
+- the four obsolete "reserved/unspent" assertions now check that all 64 seeds are **exposed and
+  retired**, that the plan is still **structurally valid**, and that the durable results
+  **reclassify identically** (score, both intervals, every cell) — including that both intervals
+  contain 0.5;
+- a **real-state** command test asserts the spent schedule exits **2** at `schedule` before any
+  results file, class directory, agent, RNG, model or Java — and asserts **`spawned == []`**, because
+  `repository` (the only check that shells out to git) runs *third* and never executes. An earlier
+  form asserted `programs <= {"git"}`, which is **vacuously true of an empty list**; the weaker check
+  would have passed however many git calls were made. A fresh-subprocess test confirms the real CLI
+  exits 2 and never reaches the authorization message;
+- tests of later preconditions, the authorization gate and the enabled-path wiring take an
+  `unspent_block` fixture that lifts **eligibility only** — two registry tuples, never either
+  authorization gate, asserted on entry and exit; the subprocess variant lifts the same two tuples in
+  the child and asserts **both** `L0_EXECUTION_AUTHORIZED` and `SCREEN_AUTHORIZED` are `False` there;
+- a registry **snapshot** taken at import, a last-in-file **restoration** test comparing against it,
+  and a **mutation control** proving that snapshot check binds.
+
+The real command stays at **exit 2** with the actual L0 block. That refusal is correct and permanent.
+
+The frozen plan's own `"RESERVED, UNSPENT"` and `"NOT EXECUTED"` strings are asserted **deliberately
+and left unchanged**: they record the state at preregistration, and their survival is the evidence
+that the plan was not rewritten after the results were seen.
+
+## The immediate post-run failures
 
 Recording the seeds makes the schedule unexecutable, which is correct. But 25 tests were written when
 the block was unspent. **All 25 are in the two L0/L1 test files; zero elsewhere.** One root cause:
 `check_schedule` now refuses, so the command exits 2 where the test expects 5, and the
 "still unspent" assertions are false.
 
-Whether a spent one-shot should make its own wiring tests unrunnable is a design question. It arose
-identically when the E4 screen spent its block, and there it was settled by an explicit ruling rather
-than by me choosing. **I have not chosen, and I have not rewritten the tests to match a preference.**
-The read path is unaffected and demonstrably works. The seeds are spent either way.
+That was the state I reported before reconciling, and the transcript stands as evidence of it.
 
 ## Where the ladder stands
 
@@ -89,7 +120,10 @@ The read path is unaffected and demonstrably works. The seeds are spent either w
 |---|---|---|
 | E1–E3b | artifact, headless, determinism, rules equivalence | PASSED |
 | E4 | is T1j in a usable band? | **IN_BAND** at `mdPly` 6 |
-| L0 | **what is the rate there?** | **0.594, Hoeffding95 [0.424, 0.764]** |
+| L0 | **what is the rate there?** | **observed 0.594, Hoeffding95 [0.424, 0.764] — includes 0.5** |
 
 The anchor programme's original question — *is there an external reference this stack can be ordered
-against* — now has a measured answer at one setting, with the caveat it started with intact.
+against* — now has a measured answer at one setting, with the caveat it started with intact. What it
+does **not** have is a separation: at 64 games the interval still contains parity, so the honest
+summary is that T1j and `calib020_0001` are **not distinguished** by this match, with T1j's point
+estimate the higher of the two.

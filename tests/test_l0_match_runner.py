@@ -14,6 +14,7 @@ import pytest
 
 from scripts.GPU.alphazero import e4_screen_reference as REF
 from scripts.GPU.alphazero import e4_screen_rules as SCREEN_RULES
+from scripts.GPU.alphazero import e4_screen_command as SCREEN_CMD
 from scripts.GPU.alphazero import e4_screen_runner as H
 from scripts.GPU.alphazero import l0_match_command as C
 from scripts.GPU.alphazero import l0_match_plan as P
@@ -490,7 +491,131 @@ def args(clean_repo, tmp_path, **over):
     return a
 
 
-def test_all_seven_preconditions_complete_before_the_refusal(tmp_path, clean_repo):
+#: A SNAPSHOT of the seed registries, taken at import. Every lift below is
+#: measured against this, and `test_zzz_the_registries_are_restored` compares the
+#: live registries to it at the end of the file.
+_REGISTRY_SNAPSHOT = {
+    "exposed": REF.EXPOSED_SEED_INTERVALS,
+    "retired": REF.RETIRED_SEED_INTERVALS,
+    "test_only": REF.TEST_ONLY_SEED_INTERVALS,
+    "accounted": REF.ACCOUNTED_SEED_INTERVALS,
+}
+
+
+def _registries_match_snapshot():
+    return (REF.EXPOSED_SEED_INTERVALS == _REGISTRY_SNAPSHOT["exposed"]
+            and REF.RETIRED_SEED_INTERVALS == _REGISTRY_SNAPSHOT["retired"]
+            and REF.TEST_ONLY_SEED_INTERVALS == _REGISTRY_SNAPSHOT["test_only"]
+            and REF.ACCOUNTED_SEED_INTERVALS == _REGISTRY_SNAPSHOT["accounted"])
+
+
+@pytest.fixture
+def unspent_block(monkeypatch):
+    """Lifts the L0 block's ELIGIBILITY in process, and nothing else.
+
+    WHY THIS IS NOT RELAXING A GATE. The match ran on 2026-08-27, so
+    `check_schedule` now refuses the spent block before authorization is ever
+    consulted. Left alone, every test of a LATER precondition, of the
+    AUTHORIZATION gate, and of the ENABLED-PATH wiring would stop passing for a
+    reason that has nothing to do with what it tests -- and a safety gate whose
+    tests all went vacuous is the failure this workstream keeps finding. The
+    real-state refusal is asserted separately and unpatched, in
+    `test_the_spent_schedule_is_refused_with_exit_2_before_any_effect`.
+
+    IT TOUCHES ELIGIBILITY ONLY. It never changes L0_EXECUTION_AUTHORIZED and
+    never changes SCREEN_AUTHORIZED -- asserted on the way in and on the way out.
+    """
+    gate_l0, gate_screen = C.L0_EXECUTION_AUTHORIZED, SCREEN_CMD.SCREEN_AUTHORIZED
+    keep_exposed = tuple(iv for iv in REF.EXPOSED_SEED_INTERVALS if iv != P.L0_SEED_BLOCK)
+    keep_retired = tuple(iv for iv in REF.RETIRED_SEED_INTERVALS if iv != P.L0_SEED_BLOCK)
+    monkeypatch.setattr(REF, "EXPOSED_SEED_INTERVALS", keep_exposed)
+    monkeypatch.setattr(REF, "RETIRED_SEED_INTERVALS", keep_retired)
+    assert not REF.seed_is_unavailable(P.L0_SEED_BLOCK[0])
+    assert C.L0_EXECUTION_AUTHORIZED is gate_l0 is False
+    assert SCREEN_CMD.SCREEN_AUTHORIZED is gate_screen is False
+    yield
+    # THE FIXTURE'S OWN CONTRACT, not the test's. It patched exactly the two
+    # eligibility registries and nothing else, so the screen's gate -- which no L0
+    # test ever touches -- must still be closed. The L0 gate is deliberately NOT
+    # asserted here: an enabled-path test may lift it in process, and
+    # `test_the_gate_is_restored_after_the_enabled_path_tests` plus the last-in-file
+    # restoration test cover that separately.
+    assert SCREEN_CMD.SCREEN_AUTHORIZED is False, "the lift must never touch a gate"
+    assert REF.TEST_ONLY_SEED_INTERVALS == _REGISTRY_SNAPSHOT["test_only"]
+    assert REF.ACCOUNTED_SEED_INTERVALS == _REGISTRY_SNAPSHOT["accounted"]
+
+
+def test_the_lift_fixture_changes_eligibility_and_nothing_else(unspent_block):
+    """The fixture's own contract, asserted rather than assumed."""
+    assert not REF.seed_is_exposed(P.L0_SEED_BLOCK[0])
+    assert not REF.seed_is_retired(P.L0_SEED_BLOCK[0])
+    assert REF.seed_is_accounted(P.L0_SEED_BLOCK[0]), "reservation is untouched"
+    assert REF.TEST_ONLY_SEED_INTERVALS == _REGISTRY_SNAPSHOT["test_only"]
+    # other experiments' seeds are unaffected
+    assert REF.seed_is_exposed(202612128) and REF.seed_is_retired(202612128)
+    assert REF.seed_is_exposed(90000001)
+    assert C.L0_EXECUTION_AUTHORIZED is False
+
+
+def test_the_spent_schedule_is_refused_with_exit_2_before_any_effect(
+        tmp_path, clean_repo):
+    """REAL STATE, UNPATCHED. The block is spent, so execution is refused.
+
+    This is now the command's permanent behaviour and it must NOT reach the
+    closed-gate exit 5 with the actual L0 block. Nothing effectful may happen
+    first: no results file, no class directory, no agent, no RNG, no model, no
+    Java.
+    """
+    import random
+    import subprocess as _sub
+    made, spawned = [], []
+
+    class _Counting(random.Random):
+        def __init__(self, *a, **kw):
+            made.append(a)
+            super().__init__(*a, **kw)
+
+    real_run = _sub.run
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(random, "Random", _Counting)
+        mp.setattr(_sub, "run", lambda *a, **k: (spawned.append(a[0] if a else k.get("args")),
+                                                 real_run(*a, **k))[1])
+        trace = []
+        log = []
+        out = tmp_path / "must_not_exist.jsonl"
+        with pytest.raises(C.PreconditionError) as e:
+            C._run_match(**args(clean_repo, tmp_path, results_path=str(out)),
+                         _trace=trace,
+                         _load_evaluator=lambda r: log.append("evaluator"),
+                         _build_agent=lambda *a, **k: log.append("agent"),
+                         _run_harness=lambda *a, **k: log.append("harness"),
+                         _compile=lambda *a, **k: log.append("compile"))
+    assert e.value.which == "schedule"
+    assert "EXPOSED" in e.value.message
+    assert trace == ["plan"], "the plan still parses; the schedule is what refuses"
+    assert log == [], "nothing effectful may be reached"
+    assert not out.exists() and not (tmp_path / "must_not_exist.jsonl.t1j_classes").exists()
+    assert made == [], "no RNG"
+    # NOTHING is spawned. The refusal happens at `schedule`, precondition 2, and
+    # `repository` -- the only check that shells out to git -- never runs. An
+    # earlier version asserted `programs <= {"git"}`, which is VACUOUSLY TRUE of
+    # an empty list and would have passed however many git calls were made.
+    assert spawned == [], f"no subprocess may run before the refusal: {spawned}"
+
+
+def test_the_real_cli_exits_2_not_5_on_the_spent_block(tmp_path, clean_repo):
+    """Fresh subprocess, real registries. Exit 2 is correct and permanent."""
+    r = cli(*cli_args(tmp_path, clean_repo))
+    assert r.returncode == C.EXIT_PRECONDITION, r.stderr[:300]
+    assert "PRECONDITION REFUSED" in r.stderr and "schedule" in r.stderr
+    assert "UNEXPECTED" not in r.stderr
+    assert "L0 MATCH NOT AUTHORIZED" not in r.stderr, (
+        "the spent block must not reach the authorization gate")
+    assert not (tmp_path / "o.jsonl").exists()
+
+
+def test_all_seven_preconditions_complete_before_the_refusal(tmp_path, clean_repo,
+                                                             unspent_block):
     trace = []
     calls = []
     with pytest.raises(C.AuthorizationError) as e:
@@ -504,7 +629,7 @@ def test_all_seven_preconditions_complete_before_the_refusal(tmp_path, clean_rep
     assert calls == [], "no effect may be reached while unauthorized"
 
 
-def test_no_results_file_or_class_dir_is_created_while_unauthorized(tmp_path, clean_repo):
+def test_no_results_file_or_class_dir_is_created_while_unauthorized(tmp_path, clean_repo, unspent_block):
     out = tmp_path / "must_not_exist.jsonl"
     with pytest.raises(C.AuthorizationError):
         C._run_match(**args(clean_repo, tmp_path, results_path=str(out)))
@@ -513,7 +638,7 @@ def test_no_results_file_or_class_dir_is_created_while_unauthorized(tmp_path, cl
 
 
 def test_no_rng_is_constructed_anywhere_while_unauthorized(tmp_path, clean_repo,
-                                                           monkeypatch):
+                                                           monkeypatch, unspent_block):
     import random
     made = []
 
@@ -534,7 +659,7 @@ def test_no_rng_is_constructed_anywhere_while_unauthorized(tmp_path, clean_repo,
     ({"jar_path": "/nonexistent"}, "jar", ["plan", "schedule", "repository", "jdk"]),
 ])
 def test_each_precondition_is_immediately_fatal_in_order(tmp_path, clean_repo,
-                                                         over, which, completed):
+                                                         over, which, completed, unspent_block):
     trace = []
     with pytest.raises(C.PreconditionError) as e:
         C._run_match(**args(clean_repo, tmp_path, **over), _trace=trace)
@@ -556,7 +681,7 @@ def test_a_delegated_refusal_is_translated_not_leaked(tmp_path, clean_repo):
         C.check_output_path(str(tmp_path))
 
 
-def test_the_verified_plan_object_is_carried_not_reread(tmp_path, clean_repo):
+def test_the_verified_plan_object_is_carried_not_reread(tmp_path, clean_repo, unspent_block):
     rec = C.check_plan(str(clean_repo / PLAN_PATH))
     assert rec["n_tasks"] == 64 and rec["plan"]["n_tasks"] == 64
     assert C.check_schedule(rec["plan"])["executable"] is True
@@ -587,8 +712,43 @@ def test_cli_help_documents_the_ban():
     assert r.returncode == 0 and "NOT AUTHORIZED" in r.stdout
 
 
-def test_cli_refuses_with_exit_5_after_every_precondition(tmp_path, clean_repo):
-    r = cli(*cli_args(tmp_path, clean_repo))
+#: Runs the REAL `main` in a FRESH process with the L0 block's ELIGIBILITY lifted,
+#: so the AUTHORIZATION gate is what refuses. It never touches
+#: L0_EXECUTION_AUTHORIZED or SCREEN_AUTHORIZED, which are read from source as
+#: always -- the lift is two registry tuples and nothing else.
+_LIFT = (
+    "import sys;"
+    "from scripts.GPU.alphazero import e4_screen_reference as R;"
+    "from scripts.GPU.alphazero import l0_match_plan as P;"
+    "from scripts.GPU.alphazero import l0_match_command as C;"
+    "from scripts.GPU.alphazero import e4_screen_command as SC;"
+    "R.EXPOSED_SEED_INTERVALS=tuple(i for i in R.EXPOSED_SEED_INTERVALS"
+    " if i != P.L0_SEED_BLOCK);"
+    "R.RETIRED_SEED_INTERVALS=tuple(i for i in R.RETIRED_SEED_INTERVALS"
+    " if i != P.L0_SEED_BLOCK);"
+    "assert C.L0_EXECUTION_AUTHORIZED is False;"
+    "assert SC.SCREEN_AUTHORIZED is False;"
+    "sys.exit(C.main(sys.argv[1:]))"
+)
+
+
+def gate_cli(*a, env=None):
+    import subprocess
+    import sys
+    e = dict(os.environ)
+    if env:
+        e.update(env)
+    return subprocess.run([sys.executable, "-c", _LIFT, *a], capture_output=True,
+                          text=True, env=e)
+
+
+def test_the_authorization_gate_still_exits_5_in_a_fresh_process(tmp_path, clean_repo):
+    """With eligibility lifted in the child, the GATE is what refuses.
+
+    The spent block otherwise stops the command two gates earlier, which would
+    leave exit 5 -- the primary safety property -- untested from a real process.
+    """
+    r = gate_cli(*cli_args(tmp_path, clean_repo))
     assert r.returncode == C.EXIT_UNAUTHORIZED, r.stderr[:300]
     assert "L0 MATCH NOT AUTHORIZED" in r.stderr
     for name in C.PRECONDITIONS:
@@ -601,11 +761,25 @@ def test_cli_refuses_with_exit_5_after_every_precondition(tmp_path, clean_repo):
     {"SCREEN_AUTHORIZED": "1"}, {"PYTHONOPTIMIZE": "1"},
 ])
 def test_no_environment_variable_enables_the_match(tmp_path, clean_repo, env):
+    """Asserted against BOTH refusals, so no env var can be excused by either.
+
+    The plain CLI stops at `schedule` (the block is spent); the lifted one reaches
+    authorization. An environment variable must change neither, and the
+    comparison is against the unset baseline BYTE FOR BYTE.
+    """
     (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
     base = cli(*cli_args(tmp_path / "a", clean_repo))
-    got = cli(*cli_args(tmp_path / "a", clean_repo), env=env)
-    assert got.returncode == base.returncode == C.EXIT_UNAUTHORIZED, (env, got.stderr[:200])
-    assert got.stderr == base.stderr, env
+    with_env = cli(*cli_args(tmp_path / "a", clean_repo), env=env)
+    assert with_env.returncode == base.returncode == C.EXIT_PRECONDITION, (env, with_env.stderr[:200])
+    assert with_env.stderr == base.stderr, env
+
+    gbase = gate_cli(*cli_args(tmp_path / "b", clean_repo))
+    genv = gate_cli(*cli_args(tmp_path / "b", clean_repo), env=env)
+    assert genv.returncode == gbase.returncode == C.EXIT_UNAUTHORIZED, (env, genv.stderr[:200])
+    assert genv.stderr == gbase.stderr, env
+    assert not (tmp_path / "a" / "o.jsonl").exists()
+    assert not (tmp_path / "b" / "o.jsonl").exists()
 
 
 @pytest.mark.parametrize("flag", ["--authorized", "--force", "--yes", "--enable-match"])
@@ -624,16 +798,6 @@ def test_cli_precondition_failure_exits_2_not_4(tmp_path, clean_repo):
 
 
 # --- L1 spends nothing -------------------------------------------------------
-
-def test_zzz_the_reserved_L0_block_is_untouched_by_this_file():
-    """Runs last. If anything above drew from a reserved seed, this catches it."""
-    for seed in range(*P.L0_SEED_BLOCK):
-        assert not REF.seed_is_exposed(seed), f"{seed} became EXPOSED during L1"
-        assert not REF.seed_is_retired(seed)
-        assert REF.seed_is_accounted(seed), "still reserved"
-    assert P.load_l0_plan()["seed_block"]["status"].startswith("RESERVED, UNSPENT")
-    assert C.L0_EXECUTION_AUTHORIZED is False
-
 
 # --- THE ENABLED PATH, with substitutes only ---------------------------------
 # Proving the locked side does nothing does not prove the enabled side is real.
@@ -672,7 +836,7 @@ def enabled(tmp_path, clean_repo, monkeypatch, **over):
 
 
 def test_the_enabled_path_hands_the_harness_the_frozen_64(tmp_path, clean_repo,
-                                                          monkeypatch, frozen):
+                                                          monkeypatch, frozen, unspent_block):
     rc, cap, sentinel, _ = enabled(tmp_path, clean_repo, monkeypatch)
     assert rc == C.EXIT_OK
     assert cap.args[2:] == () and len(cap.args) == 2, "paths are positional"
@@ -684,7 +848,7 @@ def test_the_enabled_path_hands_the_harness_the_frozen_64(tmp_path, clean_repo,
 
 
 def test_the_enabled_path_uses_the_frozen_settings_not_a_budget(tmp_path, clean_repo,
-                                                                monkeypatch):
+                                                                monkeypatch, unspent_block):
     _, cap, _, _ = enabled(tmp_path, clean_repo, monkeypatch)
     assert cap.kw["_ply_cap"] == RULES.PLY_CAP == 280
     assert cap.kw["_ply_budget"] is None, "a match plays to a terminal state"
@@ -693,7 +857,7 @@ def test_the_enabled_path_uses_the_frozen_settings_not_a_budget(tmp_path, clean_
 
 
 def test_the_enabled_path_passes_the_verified_identities(tmp_path, clean_repo,
-                                                         monkeypatch):
+                                                         monkeypatch, unspent_block):
     _, cap, _, _ = enabled(tmp_path, clean_repo, monkeypatch)
     ident = cap.kw["_identity"]
     assert set(ident) == set(C.PRECONDITIONS)
@@ -705,7 +869,7 @@ def test_the_enabled_path_passes_the_verified_identities(tmp_path, clean_repo,
 
 
 def test_the_enabled_path_setup_builds_the_qualified_collaborators(
-        tmp_path, clean_repo, monkeypatch):
+        tmp_path, clean_repo, monkeypatch, unspent_block):
     """The setup closure is CALLED. Three defects lived here behind the gate:
     T1jRuntime with wrong keywords, make_state_factory without its openings, and
     no trace at all."""
@@ -739,7 +903,7 @@ def test_the_enabled_path_setup_builds_the_qualified_collaborators(
 
 
 def test_the_enabled_path_builds_the_REAL_state_factory_and_binder(
-        tmp_path, clean_repo, monkeypatch):
+        tmp_path, clean_repo, monkeypatch, unspent_block):
     """Without substituting them, so the real constructors actually run.
 
     The previous test substituted `_state_factory` and `_binder`, and `or`
@@ -769,7 +933,7 @@ def test_the_enabled_path_builds_the_REAL_state_factory_and_binder(
 
 
 def test_the_enabled_path_setup_refuses_an_existing_class_directory(
-        tmp_path, clean_repo, monkeypatch):
+        tmp_path, clean_repo, monkeypatch, unspent_block):
     rc, cap, _, _ = enabled(tmp_path, clean_repo, monkeypatch)
     setup = cap.kw["_setup"]
     setup()
@@ -778,7 +942,7 @@ def test_the_enabled_path_setup_refuses_an_existing_class_directory(
     assert e.value.phase == H.PHASE_SETUP and "already exists" in e.value.message
 
 
-def test_the_enabled_path_constructs_no_rng(tmp_path, clean_repo, monkeypatch):
+def test_the_enabled_path_constructs_no_rng(tmp_path, clean_repo, monkeypatch, unspent_block):
     import random
     made = []
 
@@ -793,11 +957,18 @@ def test_the_enabled_path_constructs_no_rng(tmp_path, clean_repo, monkeypatch):
     assert made == [], f"{len(made)} RNG(s) constructed on the enabled path"
 
 
-def test_the_enabled_path_touches_no_scheduled_seed(tmp_path, clean_repo, monkeypatch):
+def test_the_enabled_path_touches_no_scheduled_seed(tmp_path, clean_repo, monkeypatch,
+                                                    unspent_block):
+    """It draws from nothing: the harness is substituted, so no game is played.
+
+    Under the lift the block reads unexposed, so exposure alone proves little
+    here. What binds is that the registries are exactly what the fixture set --
+    the enabled path modified neither.
+    """
+    before = (REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS)
     rc, cap, _, _ = enabled(tmp_path, clean_repo, monkeypatch)
     cap.kw["_setup"]()
-    for seed in range(*P.L0_SEED_BLOCK):
-        assert not REF.seed_is_exposed(seed)
+    assert (REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS) == before
 
 
 def test_the_gate_is_restored_after_the_enabled_path_tests():
@@ -902,3 +1073,32 @@ def test_qualify_mode_still_gets_a_receipt_and_exits_0(frozen):
     rc = R._report(rec, frozen, [syn(0)], [], "qualify", cleanups=0)
     assert rc == H.EXIT_OK
     assert [r["record_type"] for r in rec.records] == ["qualification_receipt"]
+
+
+def test_zzz_the_registries_are_restored(tmp_path, clean_repo):
+    """Runs last. Every lift above must have been undone, exactly.
+
+    Compared against the snapshot taken at import, not against a re-derived
+    expectation -- a check that recomputes what it is checking cannot fail.
+    """
+    assert _registries_match_snapshot(), "a lift leaked out of its fixture"
+    assert P.L0_SEED_BLOCK in REF.EXPOSED_SEED_INTERVALS
+    assert P.L0_SEED_BLOCK in REF.RETIRED_SEED_INTERVALS
+    for seed in range(*P.L0_SEED_BLOCK):
+        assert REF.seed_is_exposed(seed) and REF.seed_is_retired(seed)
+    assert C.L0_EXECUTION_AUTHORIZED is False
+    assert SCREEN_CMD.SCREEN_AUTHORIZED is False
+    # and the real command still refuses the spent block, unpatched
+    with pytest.raises(C.PreconditionError) as e:
+        C._run_match(**args(clean_repo, tmp_path))
+    assert e.value.which == "schedule"
+
+
+def test_zzz_the_snapshot_assertion_actually_binds(monkeypatch):
+    """THE MUTATION CONTROL. A snapshot check that cannot fail proves nothing."""
+    assert _registries_match_snapshot()
+    monkeypatch.setattr(REF, "EXPOSED_SEED_INTERVALS",
+                        REF.EXPOSED_SEED_INTERVALS + ((1, 2),))
+    assert not _registries_match_snapshot(), "the snapshot check must notice a change"
+    monkeypatch.undo()
+    assert _registries_match_snapshot()

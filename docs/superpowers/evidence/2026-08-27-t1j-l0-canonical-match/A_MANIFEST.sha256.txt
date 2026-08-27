@@ -1,4 +1,4 @@
-db6198d60e9eddd9ce0f9ee05fb0d411cc6b0f2a5d753bbc081d276b5bf69857        4758  00_card.md.txt
+d5bcdb722b79d3a84423f5111743d9d9526529cc3afde15072d1d52469f12e49        7213  00_card.md.txt
 3fb9a04369659c379145f3ffe404c7506748c4a615c7fb37847dc9582cb625a6        2740  00_prerun_verification.txt
 49ab568417de6ff49b6b76536261545e939e13101ac4bee6b3a0c6588fde03c7        3155  01_launch.txt
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855           0  02_stdout.txt
@@ -10,3 +10,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855           0  03
 5b1b3d7377deba93cbaa61342e22722c46d1143e988bd3dba1d93b9f026e6fe4        2502  08_outcome_analysis.txt
 8e44763bcf46c0d516754accbf41b0b7902b690864f1f27f39363773f7cbd0e5       45282  09_full_suite_after_gate_restored.txt
 6c6a163f140d05237c1a18bb0bbb8f8963ba0694b7366a70a1b2adcab4e96b00        3805  10_seed_accounting_consequence.txt
+ec4dc1f7454d1181659854b758c331b46325b560c433a8d06dc527aaba68a84f       23620  11_full_suite_after_reconciliation.txt
+f4fe5f50df0a32fb7df1e1489e103021a44444cc888ee3d05bc7477311813030        2633  12_reconciliation.txt
+bda41b9b5c146ba133aa9b6e70af3d3963d6946541a03c8dbf7b8ee48662082c        9703  13_injected_defect_controls.py.txt
+b563b2cc979ad7acbc81ab42afd3a753013efc7df0ba6025c589b2900cbc73e1        4408  14_injected_defect_controls_run.txt

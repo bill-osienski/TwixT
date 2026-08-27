@@ -1,0 +1,55 @@
+POST-RUN TEST RECONCILIATION — spent stops EXECUTION, not reading
+============================================================================
+
+A. THE READ PATH, unpatched, with the block spent
+  load_l0_plan                 OK   64 tasks
+  task digest binds            OK   193d66bf5f1e4dca...
+  validate_schedule_structure  OK
+  validate_l0_schedule         OK
+  reclassifies IDENTICALLY     True
+
+  observed score 38.0/64 = 0.593750
+  Hoeffding95 [0.4240, 0.7635]  contains 0.5: True
+  Wilson95    [0.4715, 0.7054]  contains 0.5: True
+  => a HIGHER POINT ESTIMATE, not evidence that T1j is stronger.
+     At 64 games T1j and calib020_0001 are NOT DISTINGUISHED.
+
+B. THE EXECUTION PATH, unpatched
+  validate_schedule_executable REFUSED  seed 202613000 was EXPOSED -- it has been draw
+  the real command exits 2 at `schedule`, precondition 2 of 7, and NEVER
+  reaches the closed-gate exit 5 with the actual L0 block.
+
+  NOTHING IS SPAWNED BY THAT REFUSAL. `repository` -- the only check that
+  shells out to git -- runs THIRD, so it never executes. The test asserts
+  `spawned == []`. An earlier version asserted `programs <= {'git'}`, which
+  is VACUOUSLY TRUE of an empty list; the correction is recorded because the
+  weaker form would have passed however many git calls were made.
+
+C. SEED STATE
+  all exposed True   all retired True   neighbours free True True
+  registries: EXPOSED 129  RETIRED 96  TEST_ONLY 100
+
+D. WHAT THE LIFT FIXTURE MAY AND MAY NOT DO
+  `unspent_block` removes the L0 block's EXPOSED and RETIRED entries and
+  nothing else. It asserts on entry that BOTH authorization gates are closed,
+  and on exit that the screen's gate and the untouched registries are intact.
+
+  THE CHILD-PROCESS LIFT, verbatim -- both gates asserted IN THE CHILD:
+    "import sys;"
+    "from scripts.GPU.alphazero import e4_screen_reference as R;"
+    "from scripts.GPU.alphazero import l0_match_plan as P;"
+    "from scripts.GPU.alphazero import l0_match_command as C;"
+    "from scripts.GPU.alphazero import e4_screen_command as SC;"
+    "assert C.L0_EXECUTION_AUTHORIZED is False;"
+    "assert SC.SCREEN_AUTHORIZED is False;"
+
+  asserts L0_EXECUTION_AUTHORIZED : True
+  asserts SCREEN_AUTHORIZED       : True
+
+  live values: L0_EXECUTION_AUTHORIZED = False   SCREEN_AUTHORIZED = False
+
+E. THE FROZEN PLAN'S OWN STRINGS ARE DELIBERATELY NOT UPDATED
+  plan.status      : FROZEN, NOT EXECUTED — no game played, no seed drawn, ...
+  seed_block.status: RESERVED, UNSPENT — nothing drawn
+  These record the state AT PREREGISTRATION. Their survival is the evidence
+  that the plan was not rewritten after the results were seen.
