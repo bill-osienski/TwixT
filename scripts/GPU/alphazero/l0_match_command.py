@@ -38,7 +38,7 @@ from . import l0_match_runner as L0R
 #: This is L0's OWN gate. e4_screen_command.SCREEN_AUTHORIZED is a DIFFERENT
 #: constant guarding a DIFFERENT experiment, and nothing here reads it: one gate
 #: must never be openable by opening the other.
-L0_EXECUTION_AUTHORIZED = True
+L0_EXECUTION_AUTHORIZED = False
 
 #: Pinned artifacts, reused from the screen's command so there is ONE source.
 JAR_SHA256 = SCREEN_CMD.JAR_SHA256
