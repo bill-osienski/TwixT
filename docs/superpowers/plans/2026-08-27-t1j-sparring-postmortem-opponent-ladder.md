@@ -212,6 +212,10 @@ actionable repeated weakness.
 
 ## 5. D1 — same-position interrogation, only after a separate authorization
 
+> **The D1 preregistration is frozen in §12.** This section's
+> requirements are unchanged; §12 fixes the selection rule, controls, budget,
+> seed interval, settings and abort conditions that satisfy them.
+
 D1 does not play games. It replays a frozen set of existing positions and asks
 both systems what they would do from the **same** state.
 
@@ -509,3 +513,159 @@ point-of-use text governs.
 7; 6 opening plies per game; reconstruction consistent in
 64/64 tasks; discovery half 32 games / 1,137
 recorded plies (1,329 with prefixes).
+
+---
+
+## 12. D1 preregistration — FROZEN, NOT EXECUTED
+
+**Status:** FROZEN 2026-08-27. **PLAN ONLY.** No model has been loaded, no JVM
+started, no T1j query issued, no seed registered or drawn, no game played. D1
+execution is a **separate authorization** that has not been given. §4.5 is
+unchanged by this section and D0's as-specified `GO` is not reinterpreted.
+
+### 12.0 What D1 tests — and what it does not
+
+> **D1 tests DECISION differences, not whether D0's structural rates were
+> asymmetric.** D0 measured structural *outcome* frequencies and found them
+> near-symmetric between the two engines. That symmetry is **not** the hypothesis
+> under test and its absence is **not** a prediction of this design. Structural
+> symmetry does not establish that the two systems make the same *choices* from
+> the same position — which is precisely what D1 interrogates. Any D1 result that
+> merely re-reports a structural rate answers the wrong question.
+
+**Sole question:** does either structural cohort expose a repeatable decision
+difference that is **specifically unfavourable to our incumbent**? A difference
+that is symmetric, or that favours the incumbent, does not advance the programme.
+
+### 12.1 Signatures and the discovery-position selection rule
+
+Frozen from D0's two gate-passing signatures. No third signature may be added,
+and no threshold is chosen — both columns are boolean, and
+`mover_more_fragmented` is comparative precisely so D1 inherits no cutoff.
+
+| Signature | Column (as produced by `ply_features`) | Positions | Matched controls | Cells | Openings | Arms |
+|---|---|---:|---:|---:|---:|---:|
+| `mover_fragmentation` | `mover_more_fragmented` | 101 | 60 | 36 | 8 | 2 |
+| `created_threat` | `created_threat` | 30 | 36 | 12 | 8 | 2 |
+
+Both column names were verified at freeze time against
+`d0_postmortem.ply_features`' actual output *and* against
+`d0_postmortem.CANDIDATE_SIGNATURES`, so this table names columns that exist
+rather than columns a reader might assume. D1's implementation should carry that
+check as a test: a frozen name that silently drifts from the code is a
+preregistration that no longer binds anything.
+
+The rule, applied to the **discovery half only** and to positions where **our
+incumbent is to move** (D1's question is about the incumbent's decisions):
+
+1. Take every discovery ply whose signature column is `True`.
+2. Deduplicate by canonical state digest (§12.2).
+3. Cap at **3 positions per cell**, a cell being (opening × colour arm ×
+   phase), taking the earliest by `(task_id, ply)`.
+
+Selection reads **D0 features only**. It never consults a model or T1j answer,
+because those do not exist yet when the rule is frozen — which is the point of
+freezing it here rather than after the queries return.
+
+### 12.2 Canonical digest, and the move prefix it must not replace
+
+Deduplication is by `sha256` over `to_move`, the sorted peg list and the sorted
+bridge list. **The digest is a deduplication LABEL, never replay input**
+(Amendment 1, [A1]-7). The E3b adapter advances T1j only by replaying an ordered
+move sequence through `setlastMove()` and cannot convert a bare `TwixtState`.
+
+Therefore each retained position carries its **full ordered move prefix** —
+the embedded frozen plan's opening prefix plus the recorded plies up to that ply,
+exactly as §4.1 reconstructs them. Where several distinct prefixes reach one
+digest, **exactly one canonical prefix is retained**, the earliest by
+`(task_id, ply)`; the same total order that drives selection, so no second tie-break
+rule exists to disagree with the first.
+
+### 12.3 Matched controls
+
+For each cohort, controls are drawn from the **same cells** as its selected
+positions, with the signature column `False`, under the identical dedup and
+per-cell cap. Controls are therefore matched on opening, colour arm and phase by
+construction, not by post-hoc pairing.
+
+⚠ **Controls are capped by availability, not padded.** The
+`mover_fragmentation` cohort yields fewer controls than positions
+(60 against 101) because some cells contain few
+non-signature plies. The imbalance is recorded here, before any query, so it
+cannot later be mistaken for a filtered result.
+
+### 12.4 Hard query budget
+
+**227 positions. 681 queries — 227 × 3: one incumbent readout, one T1j at
+`mdPly` 3, one T1j at `mdPly` 6.** This is a **hard ceiling fixed before any
+model or JVM load**, not an estimate. If the selection rule yields more, the
+excess is dropped by the frozen order and the drop is reported; the budget is
+never raised to fit the data.
+
+### 12.5 Diagnostic seed interval — RESERVED, UNSPENT, NOT REGISTERED
+
+**`[202614000, 202614227)`**, half-open, 227 seeds — one per position.
+
+Disjointness proved before reservation, against **3429 prior seeds** across
+every category **and every derived RNG stream** (a shared stream correlates
+queries even when the scheduled seeds differ):
+
+- direct overlap: ACCOUNTED **0** · EXPOSED **0** · RETIRED **0** · TEST_ONLY **0** · CONSUMED_SEEDS **0**
+- derived-stream collisions with any prior seed or stream: **0**
+- our own streams injective: **True** (1135 distinct values from
+  227 seeds × 5 derivations)
+- the enumeration is **exhaustive, not sampled**: the widest registered interval
+  is 800 seeds, so every prior seed was enumerated individually
+
+🔴 **This interval is NOT registered.** It appears in no registry tuple. Adding it
+to `ACCOUNTED_SEED_INTERVALS` is part of the D1 execution authorization, not of
+this preregistration — a reserved-on-paper block that is never authorized must
+cost nothing to abandon.
+
+### 12.6 Exact settings
+
+**Incumbent — `calib020_0001`, read from the frozen L0 plan, never retyped:**
+400 simulations · noise off via `search_with_root(state, add_noise=False)` ·
+readout `eval_readout.select, never mcts.select_move` · search masks
+red `10855845` / black `5921370` ·
+readout masks red `12829635` / black `3947580`.
+One agent instance per position; no run-level RNG.
+
+⚠ `cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.`
+
+**T1j:** `mdFixedPly` true, at **both** qualified depths `3` and `6`. One
+evaluator instance, compilation enabled, no rebuilding per query (§5.5).
+
+**Captured per position** — §5.2 from our side (chosen move, raw legal-move
+policy, 400-simulation root visit distribution, root value from the
+side-to-move perspective, the selected move's raw-policy and visit ranks, top
+children with visit count and root-perspective Q, exact evaluator/MCTS/RNG
+identities) and §5.3 from T1j (selected move, requested and completed depth,
+legality and searched-position dump, reflective surface, whether depths 3 and 6
+agree). **T1j supplies one selected move and no distribution; it is recorded as
+exactly that and never expanded into a synthetic π.**
+
+### 12.7 Integrity aborts
+
+Abort on the **first** occurrence, no retry, no partial-cohort rescue:
+
+- any E3b binder mismatch of state, legality, history, terminal or postcondition;
+- any T1j query that does not complete its requested depth;
+- any illegal move or null sentinel from either side;
+- any position whose retained prefix does not replay to its recorded digest;
+- any identity mismatch of checkpoint, JAR or JDK component hash;
+- any attempt to draw a seed outside `[202614000, 202614227)`.
+
+An abort is **not** a short D1: it voids the run, and §6's `VOID` rule applies —
+repair the instrument, never reinterpret the data already seen.
+
+### 12.8 Outcome
+
+- **`NO_GO`** — no cohort shows a repeatable decision difference unfavourable to
+  the incumbent. **D1 closes and no D2 follows.** This is a successful outcome.
+- **`GO`** — a cohort does. D2 then freezes hypothesis, metric, effect and power
+  *before* the confirmation half is opened.
+- **`VOID`** — instrumentation or identity failed. Repair only.
+
+Confirmation repetitions `2` and `3` stay closed throughout D1. Nothing in this
+section opens them.
