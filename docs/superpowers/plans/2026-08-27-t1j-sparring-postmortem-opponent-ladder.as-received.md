@@ -3,15 +3,6 @@
 **Status:** PLAN ONLY. This document authorizes no execution, model load, JVM,
 inference, new game, seed use, training, checkpoint selection, or push.
 
-**Amendment 1** (2026-08-27, plan-only). This is the **working plan**: modify this
-file. It supersedes the original as received, which is preserved byte-identical
-alongside it as `…-opponent-ladder.as-received.md`, sha256
-`1f0d0046f2a16276b1665775136c5c74952d76881fb98c62c0bf4f86924615b0`. That copy is
-evidence, not a working document — never edit it; the digest is what makes the
-supersession checkable rather than asserted. Nine corrections were applied here at
-their points of use after a review of the components the plan names; each is
-marked **[A1]** in place and listed in §11. D0 remains unstarted.
-
 **Goal:** Turn the already completed 64-game T1j match into a disciplined source
 of hypotheses about `calib020_0001`, test only hypotheses that repeat on held-out
 games, and—only if one survives—design a separately authorized improvement. T1j
@@ -31,10 +22,9 @@ becomes the first development opponent in a growing external-opponent ladder.
   from the winner.
 - The R0 research decision is `NO_GO`; `calib020_0001` remains incumbent. This
   plan does not reopen training by itself.
-- **[A1]** The local R1 report **has already been corrected** to the bounded
-  statement “the surveyed sources produced no qualifying corpus.” The amendment
-  is unpushed at local `HEAD`; `origin/main` does not yet carry it. Its withdrawn
-  universal SGF/π claims are not a premise of this plan.
+- The local R1 report must be corrected to the bounded statement “the surveyed
+  sources produced no qualifying corpus.” Its universal SGF/π claims are not a
+  premise of this plan.
 
 ---
 
@@ -82,18 +72,11 @@ No phase inherits authorization from the phase before it.
 
 ## 3. P0 — close the record before analysis
 
-- [ ] **[A1] VERIFY — do not re-amend —** that R1 says only what its bounded
-  survey established: confirm SGF’s standard TwixT profile defining no π property
-  is no longer presented as proof that SGF or every external corpus cannot carry
-  π. The correction already stands, unpushed, at local `HEAD`. Amending a second
-  time would rewrite a correction rather than check it, and would leave no record
-  of which version P0 actually verified.
+- [ ] Amend R1 so it says only what its bounded survey established. In
+  particular, SGF’s standard TwixT profile defining no π property must not be
+  presented as proof that SGF or every external corpus cannot carry π.
 - [ ] Preserve the canonical L0 match directory byte-for-byte.
-- [ ] **[A1]** Bind the analysis to the published match JSONL and its manifest by
-  digest **before any reconstruction reads a move**. The record is self-binding:
-  `run_header` carries `plan_sha256` and `task_digest` alongside the whole frozen
-  plan, so the opening prefix §4 replays is trustworthy only once those digests
-  are checked. This is a precondition of §4, not a parallel task.
+- [ ] Bind the analysis to the published match JSONL and its manifest by digest.
 - [ ] Record the exact repository commit, checkpoint hashes, T1j JAR/JDK hashes,
   and the 64 canonical task identities.
 - [ ] Reconcile the role change in the ledger: “T1j development opponent after
@@ -108,35 +91,14 @@ No phase inherits authorization from the phase before it.
 ### 4.1 Scope
 
 D0 reads the existing JSONL only. It may reconstruct our `TwixtState` from the
-recorded openings and moves to compute deterministic board facts.
-
-**[A1] Where the moves are.** The `ply` records begin at ply 7 in all
-64 tasks; the 6 opening plies are **not** in the ply stream. The
-sequence D0 replays is the embedded frozen plan's opening prefix
-(`run_header.identity.plan.plan.openings[opening]`) followed by the recorded `ply`
-rows in order. This reconstruction is verified consistent in 64 of
-64 tasks by `opening_bound.ply + len(ply records) == task_result.plies`,
-and is legitimate only under the digest binding required by §3.
-
-D0 must not:
+recorded openings and moves to compute deterministic board facts. It must not:
 
 - load `calib020_0001`;
 - launch Java or query T1j;
 - generate a move or game;
 - draw a seed;
 - infer a counterfactual result;
-- call a move “bad” solely because the mover later lost;
-- **[A1]** import `eval_loss_replay_analysis`, or otherwise adopt D1 telemetry
-  vocabulary.
-
-**[A1] Why that last one is a scope rule, not a style rule.** That module's
-features are `root_value`, `selected_visit_rank` and `root_top1_share` — exactly
-the observables this record does not contain and §4.4 forbids D0 from claiming.
-Importing the vocabulary is how a forbidden claim gets made by accident. Its
-feature-agnostic arithmetic (`phase_of`, `cohens_d`, `effect_sizes`) may be reused
-only if lifted free of the telemetry features; the module itself belongs to D1,
-whose §5.2 requires that visit rank, value perspective and policy alignment keep a
-single definition.
+- call a move “bad” solely because the mover later lost.
 
 ### 4.2 Freeze a discovery/confirmation split before inspecting diagnostics
 
@@ -158,20 +120,9 @@ recorded move sequence and rules engine:
 - board ply, legal-move count and remaining empty holes;
 - peg and bridge counts by colour;
 - connected-component counts and largest component size by colour;
-- **[A1]** minimum boundary distance of each component to its target sides — **a
-  new derivation, with no existing helper**. Tensor channels 19–22 are per-cell
-  geometric edge distance (`1.0 - r / max_idx`), and `connectivity_masks` reports
-  only whether a component touches a goal, giving no distance for one that touches
-  neither. Define it once, in D0, and state in the definition whether the metric
-  is graph distance or geometric;
+- minimum boundary distance of each component to its target sides;
 - newly created bridges, blocked bridge opportunities and immediate wins;
-- **[A1]** whether the move created, answered or ignored a one-ply terminal
-  threat — **cost must be measured before this feature is assumed cheap**. It
-  needs an `apply_move` + `winner` over every legal move at every ply, across
-  1,137 recorded discovery plies (1,329 including opening
-  prefixes) against several hundred legal moves in the early game. Measure on a
-  small sample first and record a stop rule; if measured cost exceeds it, narrow
-  the feature explicitly rather than dropping it silently;
+- whether the move created, answered or ignored a one-ply terminal threat;
 - distance from the terminal ply.
 
 Aggregate by opening, colour arm, winner and coarse game phase. Every aggregate
@@ -221,14 +172,7 @@ both systems what they would do from the **same** state.
   model/T1j answers.
 - Include matched controls from the same opening, colour and phase where the D0
   signature is absent.
-- **[A1]** Carry a deterministic ordered move prefix with every selected
-  position. The E3b adapter advances T1j only by replaying an ordered sequence
-  through `setlastMove()`; it cannot convert a bare `TwixtState`. Deduplicate
-  identical positions by a canonical state digest, but **the digest is a
-  deduplication label, never replay input** — collapsing distinct move orders onto
-  one state discards the only thing the adapter can consume. Retain exactly one
-  canonical prefix per surviving digest, chosen by a rule frozen with the
-  selection rule.
+- Deduplicate identical positions by a canonical state digest.
 - Fix a hard query budget before any model or JVM load.
 - Use a newly registered diagnostic seed interval for our search/readout. Never
   reuse L0’s retired seeds.
@@ -280,12 +224,6 @@ These are disagreement measurements, not move-quality labels.
 - One evaluator instance; compilation enabled; no rebuilding per query.
 - Append-only, exclusive-create, flushed and fsynced records.
 - No training file is emitted from D1.
-- **[A1]** Pass `ply_cap` explicitly at every call. `play_task` declares
-  `ply_cap: int = PLY_CAP` with `PLY_CAP = 280`, so an omitted cap is **silently
-  defaulted, not refused** — the hazard is silence, not absence. The no-default
-  protections sit further down the stack, in `t1j_adapter.replay`,
-  `t1j_adapter.terminal_with_cap` and `T1jRuntime.__init__`, each of which refuses
-  a missing cap; a caller that stops at `play_task` never reaches them.
 
 ---
 
@@ -358,11 +296,6 @@ Two possible labels must remain distinct:
 Training on T1j actions formally retires T1j as an untouched anchor. The card
 must say so and must include safeguards against learning only T1j’s style.
 
-**[A1]** This remains a **deferred, explicit decision, taken at D3 and nowhere
-else**. Because it changes T1j's standing status, it must never be reached by
-inheritance from an earlier phase. D0 does not take it, does not depend on it, and
-does not presuppose its outcome.
-
 ### D. Position-distribution gap
 
 Use when T1j cross-play reaches a repeated state family rarely represented in
@@ -373,13 +306,6 @@ our data, without a single move-level defect.
   directly exposes interaction failures.
 - T1j self-play is secondary and descriptive; it primarily samples T1j’s own
   style.
-- **[A1]** Any cross-play starting from an **empty board** must separately close
-  the unseeded-opening issue first. T1j's `InitialMoves.firstMove()` selects from a
-  seven-entry table using an unseeded `Random`, and is reached only below `moveNr`
-  6; every qualified game so far started at ply 6 precisely to avoid it, so the
-  path is **bypassed, not disproved**. Neither D0 nor D1 exercises it — D1 replays
-  positions from games that already began at ply 6 — so neither may be cited as
-  evidence about it.
 
 ### D3 gate
 
@@ -423,9 +349,7 @@ Use three distinct surfaces:
    product/engine correctness gates.
 2. **T1j development test:** unseen openings/seeds, both colours, paired incumbent
    and candidate measurements. This tests improvement against the known sparring
-   partner, not untouched external validity. **[A1]** If any of these games starts
-   from an empty board rather than a scripted opening, §7-D's unseeded-opening
-   precondition applies here too, and must be closed before the surface is scored.
+   partner, not untouched external validity.
 3. **Opponent-ladder regression:** every previously admitted opponent, under its
    frozen protocol, to catch style-specific regressions.
 
@@ -478,34 +402,8 @@ The next authorization should cover **D0 only**:
   diagnostics;
 - write tests and a docs/evidence package;
 - commit locally, do not push;
-- no model, JVM, T1j query, inference, new game, seed or training;
-- **[A1]** read the §3–§8 corrections as written. D0 inherits no authorization
-  from Amendment 1, which changed no file but this one.
+- no model, JVM, T1j query, inference, new game, seed or training.
 
 The D0 result may be `NO_GO`. That is a successful outcome if the recorded match
 does not contain a repeated, measurable weakness.
 
----
-
-## 11. Amendment 1 — the nine corrections
-
-Applied 2026-08-27, plan-only. Each is marked **[A1]** at its point of use;
-this list is an audit surface, not the authority. Where they disagree, the
-point-of-use text governs.
-
-| # | Correction | Section |
-|---|---|---|
-| 1 | P0 **verifies** the corrected R1; it does not amend it again | Current facts, §3 |
-| 2 | `play_task` defaults `ply_cap` to `PLY_CAP = 280` — the hazard is silent defaulting, not absence; the no-default refusals are in the adapter/runtime paths | §5.5 |
-| 3 | D0 reconstructs from the embedded frozen plan's opening prefix **plus** recorded plies, with digest binding established first | §3, §4.1 |
-| 4 | Per-component boundary distance is a **new derivation**; no existing helper supplies it | §4.3 |
-| 5 | One-ply terminal-threat detection needs a **measured** cost/stop check before being assumed cheap | §4.3 |
-| 6 | D0 must not import D1 telemetry vocabulary or `eval_loss_replay_analysis` | §4.1 |
-| 7 | D1 positions retain a deterministic ordered move prefix; a state digest is a deduplication label, not replay input | §5.1 |
-| 8 | Empty-board cross-play must separately close the unseeded-opening issue; D0 and D1 do not exercise it | §7-D, §8-T2 |
-| 9 | Training on T1j actions stays a deferred, explicit **D3** decision that changes T1j's status; D0 does not take it | §7-C |
-
-**Derived at generation, not typed:** 64 tasks; ply streams begin at ply
-7; 6 opening plies per game; reconstruction consistent in
-64/64 tasks; discovery half 32 games / 1,137
-recorded plies (1,329 with prefixes).
