@@ -1,0 +1,66 @@
+{
+ "created_threat": {
+  "games_where_ours_exceeds_t1j": 15,
+  "n_games": 32,
+  "ply_rate": {
+   "ours": {
+    "hits": 33,
+    "n_plies": 664,
+    "rate": 0.04969879518072289
+   },
+   "t1j": {
+    "hits": 34,
+    "n_plies": 665,
+    "rate": 0.05112781954887218
+   }
+  }
+ },
+ "ignored_threat": {
+  "games_where_ours_exceeds_t1j": 17,
+  "n_games": 32,
+  "ply_rate": {
+   "ours": {
+    "hits": 17,
+    "n_plies": 664,
+    "rate": 0.025602409638554216
+   },
+   "t1j": {
+    "hits": 15,
+    "n_plies": 665,
+    "rate": 0.022556390977443608
+   }
+  }
+ },
+ "immediate_win": {
+  "games_where_ours_exceeds_t1j": 15,
+  "n_games": 32,
+  "ply_rate": {
+   "ours": {
+    "hits": 15,
+    "n_plies": 664,
+    "rate": 0.022590361445783132
+   },
+   "t1j": {
+    "hits": 17,
+    "n_plies": 665,
+    "rate": 0.02556390977443609
+   }
+  }
+ },
+ "mover_more_fragmented": {
+  "games_where_ours_exceeds_t1j": 19,
+  "n_games": 32,
+  "ply_rate": {
+   "ours": {
+    "hits": 219,
+    "n_plies": 664,
+    "rate": 0.32981927710843373
+   },
+   "t1j": {
+    "hits": 257,
+    "n_plies": 665,
+    "rate": 0.38646616541353385
+   }
+  }
+ }
+}

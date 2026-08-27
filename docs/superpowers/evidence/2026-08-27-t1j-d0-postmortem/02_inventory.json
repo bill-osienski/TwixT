@@ -1,0 +1,31 @@
+{
+ "confirmation": {
+  "n_games": 32,
+  "plies_total": 1271,
+  "t1j_points": 21.0,
+  "terminal_reasons": {
+   "win": 32
+  },
+  "winners": {
+   "black": 11,
+   "red": 21
+  }
+ },
+ "discovery": {
+  "n_games": 32,
+  "plies_total": 1329,
+  "t1j_points": 17.0,
+  "terminal_reasons": {
+   "win": 32
+  },
+  "winners": {
+   "black": 9,
+   "red": 23
+  }
+ },
+ "n_games": 64,
+ "plan_sha256": "c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30",
+ "reconstructed_ok": 64,
+ "record_sha256": "42180c1f27406ad26e20d37247ee73184a3e48335b6aa97c6055af36a1f52369",
+ "task_digest": "193d66bf5f1e4dca52dd967530182566176466ef8ff79d5151b403b2634085bc"
+}

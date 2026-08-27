@@ -1,0 +1,71 @@
+{
+ "n_candidates": 3,
+ "signatures": [
+  {
+   "colour_arms": [
+    "t1j_black",
+    "t1j_red"
+   ],
+   "column": "ignored_threat",
+   "failed": [
+    "every hit sits at the same distance [2] from the terminal ply, so the signature restates the ending rather than a structural pattern"
+   ],
+   "n_hits": 32,
+   "name": "unanswered_immediate_threat",
+   "openings": [
+    "o1_center",
+    "o2_offcenter",
+    "o3_low",
+    "o4_high",
+    "o5_wide_left",
+    "o6_wide_right",
+    "o7_diagonal",
+    "o8_contact"
+   ],
+   "passes": false
+  },
+  {
+   "colour_arms": [
+    "t1j_black",
+    "t1j_red"
+   ],
+   "column": "mover_more_fragmented",
+   "failed": [],
+   "n_hits": 476,
+   "name": "mover_fragmentation",
+   "openings": [
+    "o1_center",
+    "o2_offcenter",
+    "o3_low",
+    "o4_high",
+    "o5_wide_left",
+    "o6_wide_right",
+    "o7_diagonal",
+    "o8_contact"
+   ],
+   "passes": true
+  },
+  {
+   "colour_arms": [
+    "t1j_black",
+    "t1j_red"
+   ],
+   "column": "created_threat",
+   "failed": [],
+   "n_hits": 67,
+   "name": "created_threat",
+   "openings": [
+    "o1_center",
+    "o2_offcenter",
+    "o3_low",
+    "o4_high",
+    "o5_wide_left",
+    "o6_wide_right",
+    "o7_diagonal",
+    "o8_contact"
+   ],
+   "passes": true
+  }
+ ],
+ "verdict": "GO"
+}
