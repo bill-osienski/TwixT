@@ -1,0 +1,29 @@
+WHY WILSON IS NOT THE PRIMARY INTERVAL — exact coverage, computed not quoted
+==============================================================================
+
+The withdrawn argument was:
+    Var(X) = 0.25b + P(X=1) - p^2 = p(1-p) - 0.25b <= p(1-p)
+so a binomial interval "can only be too wide". The identity is TRUE. The
+coverage conclusion DOES NOT FOLLOW: a variance inequality is not a coverage
+statement, and Wilson's coverage oscillates below nominal by itself.
+
+  true p      Wilson   Hoeffding   n=64, iid Bernoulli
+   0.002      87.97%     100.00%  <-- Wilson BELOW 95%
+   0.005      95.89%     100.00%
+    0.01      97.35%     100.00%
+    0.05      95.97%     100.00%
+     0.1      96.68%     100.00%
+    0.25      94.10%      99.76%  <-- Wilson BELOW 95%
+     0.5      94.01%      99.19%  <-- Wilson BELOW 95%
+    0.75      94.10%      99.76%  <-- Wilson BELOW 95%
+   0.875      96.51%      99.98%
+    0.95      95.97%     100.00%
+    0.99      97.35%     100.00%
+
+over p = 0.001..0.999:
+  Wilson    below 95% at 433/999 values (43.3%), worst 87.97%
+  Hoeffding below 95% at 0/999 values, worst 99.18%
+
+Hoeffding half-width at n=64, alpha=0.05: 0.16976268946757744
+It assumes independence and boundedness in [0,1] only -- no Bernoulli
+outcome, no identical distributions. This design needs both exemptions.

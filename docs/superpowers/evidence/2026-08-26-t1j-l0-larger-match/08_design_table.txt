@@ -1,0 +1,47 @@
+L0 DESIGN — the 64 tasks, as frozen
+===================================
+
+plan sha256 : a41ee25e8b20490fc7eec4e4cb10304cbe7d596471a7a5901dffc17c39748a16
+task digest : 193d66bf5f1e4dca52dd967530182566176466ef8ff79d5151b403b2634085bc
+seed block  : [202613000, 202613064]  RESERVED, UNSPENT — nothing drawn
+
+cell (opening, arm)                reps                     seeds
+o1_center, t1j_red                    4      202613000..202613003
+o1_center, t1j_black                  4      202613004..202613007
+o2_offcenter, t1j_red                 4      202613008..202613011
+o2_offcenter, t1j_black               4      202613012..202613015
+o3_low, t1j_red                       4      202613016..202613019
+o3_low, t1j_black                     4      202613020..202613023
+o4_high, t1j_red                      4      202613024..202613027
+o4_high, t1j_black                    4      202613028..202613031
+o5_wide_left, t1j_red                 4      202613032..202613035
+o5_wide_left, t1j_black               4      202613036..202613039
+o6_wide_right, t1j_red                4      202613040..202613043
+o6_wide_right, t1j_black              4      202613044..202613047
+o7_diagonal, t1j_red                  4      202613048..202613051
+o7_diagonal, t1j_black                4      202613052..202613055
+o8_contact, t1j_red                   4      202613056..202613059
+o8_contact, t1j_black                 4      202613060..202613063
+
+cells 16 x reps 4 = 64 games, all at mdPly 6
+colour balance: {'t1j_red': 32, 't1j_black': 32}
+
+WHAT THE INTERVALS WILL LOOK LIKE (closed form, no generator, no data yet)
+ T1j score     rate     Hoeffding95 (PRIMARY)      Wilson95 (nominal)
+         0   0.0000          [0.0000, 0.1698]        [0.0000, 0.0566]
+        16   0.2500          [0.0802, 0.4198]        [0.1601, 0.3682]
+        32   0.5000          [0.3302, 0.6698]        [0.3810, 0.6190]
+        48   0.7500          [0.5802, 0.9198]        [0.6318, 0.8399]
+        56   0.8750          [0.7052, 1.0000]        [0.7723, 0.9353]
+        60   0.9375          [0.7677, 1.0000]        [0.8500, 0.9754]
+        64   1.0000          [0.8302, 1.0000]        [0.9434, 1.0000]
+
+The screen's strong endpoint was 7.0/8. NOT an expectation for 64: n=8 is wide,
+  8 games at 7.0 -> rate 0.8750, Hoeffding95 [0.3948, 1.0000]
+  and it was EARLY-STOPPED at the earliest possible game, so it is not an
+  unbiased estimate of the 16-game rate, let alone of this design's.
+
+CAP POLICY (preregistered, applied only AFTER all 64 are played)
+  caps > 32  -> CAP_SATURATED_NO_RATE, no rate reported
+  caps 1..32 -> rate reported with cap_warning set
+  caps never stop the match; may_stop_early is a constant False

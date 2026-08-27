@@ -1,0 +1,36 @@
+A. THE PRODUCTION LOOP, PROBED BEHAVIOURALLY (not by grepping its source)
+==============================================================================
+e4_screen_runner.play_task checks state.winner() BEFORE the ply cap, so a
+natural win ON ply 280 is a WIN. Driven here with a synthetic terminal state;
+no model, no jvm, no agent, no seed.
+
+ state at ply  winner()   -> terminal_reason  t1j_points  agents
+          280       red                  win         1.0       0
+          280     black                  win         0.0       0
+          280      None                  cap         0.5       0
+
+Each outcome round-trips through the L0 validator:
+  winner=red    terminal_reason=win  ACCEPTED
+  winner=black  terminal_reason=win  ACCEPTED
+  winner=None   terminal_reason=cap  ACCEPTED
+
+
+B. t1j_points TYPE SAFETY — refuse, never raise
+==============================================================================
+float(got) accepted True and '1.0' as wins and raised TypeError on None/list.
+
+      t1j_points      type  reported   reason
+            True      bool     False   t1j_points True is a bool, not a score
+           False      bool     False   t1j_points False is a bool, not a score
+           '1.0'       str     False   t1j_points '1.0' is str, not a JSON number
+            None  NoneType     False   t1j_points None is NoneType, not a JSON numb
+           [1.0]      list     False   t1j_points [1.0] is list, not a JSON number
+        {'v': 1}      dict     False   t1j_points {'v': 1} is dict, not a JSON numb
+             nan     float     False   t1j_points nan is not finite
+             inf     float     False   t1j_points inf is not finite
+             1.0     float      True   
+               1       int      True   
+               0       int      True   
+             0.0     float      True   
+
+No call above raised: a malformed record yields a REFUSED REPORT.

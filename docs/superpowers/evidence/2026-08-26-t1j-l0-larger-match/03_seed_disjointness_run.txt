@@ -1,0 +1,22 @@
+L0 SEED-BLOCK DISJOINTNESS PROOF — set arithmetic only, NOTHING DRAWN
+==============================================================================
+candidate block : [202613000, 202613064)   n = 64
+
+category                            size   overlap
+ACCOUNTED_SEED_INTERVALS            3040         0
+CONSUMED_SEEDS                         1         0
+EXPOSED_SEED_INTERVALS                65         0
+RETIRED_SEED_INTERVALS                32         0
+TEST_ONLY_SEED_INTERVALS             100         0
+frozen plan prior_intervals         2560         0
+frozen plan seed_block                32         0
+UNION OF ALL CATEGORIES             3149         0
+
+TOTAL OVERLAP WITH SEED CATEGORIES: 0   (0 required)
+
+DERIVED RNG STREAMS (both colour assignments; XOR only, no generator built)
+  candidate streams : 256
+  existing streams  : 12596
+  OVERLAP           : 0   (0 required)
+
+VERDICT: DISJOINT — the block may be reserved

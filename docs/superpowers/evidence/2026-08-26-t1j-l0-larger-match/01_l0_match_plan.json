@@ -1,0 +1,1727 @@
+{
+ "abort_rules": [
+  "any per-ply state divergence between the two engines",
+  "any T1j query that does not complete its requested depth",
+  "any illegal move, or the null sentinel, from either side",
+  "any postcondition failure: a Window/Frame, a non-headless jvm, a mutated host preference store, or an unauthorized reflective access",
+  "any artifact identity mismatch: jar, JDK component, or checkpoint sha",
+  "any seed outside the reserved L0 block, or any seed used twice",
+  "any failure to write or fsync a durable record"
+ ],
+ "abort_rules_note": "L0's OWN list. The screen's abort_rules are deliberately NOT imported: they contain a STATISTICAL abort (more than half of an endpoint cap-terminating makes it INCOMPLETE) which contradicts L0's no-early-stop rule and would leave a runner with two conflicting authorities.",
+ "authorization": "L0 authorizes PREREGISTRATION AND QUALIFICATION ONLY. The 64-game execution is separately unauthorized. This schedule exists so that authorizing it later cannot become an occasion to choose parameters.",
+ "claim_discipline": {
+  "bounded_to": "these 8 openings, this colour balance, mdPly 6, 400 simulations, ply cap 280, one run",
+  "no_elo": "no Elo figure and no conversion into one",
+  "ordering_not_placement": "T1j is uncalibrated, so this is an ORDERING against calib020_0001 in this stack, not a placement. The E0 caveat is unchanged by more games.",
+  "what_more_games_do_not_buy": "64 games narrow the interval on THIS design. They do not widen what the design covers."
+ },
+ "colour_arms": [
+  "t1j_red",
+  "t1j_black"
+ ],
+ "design": {
+  "cells": 16,
+  "colour_arms": 2,
+  "n_games": 64,
+  "openings": 8,
+  "repetitions_per_cell": 4,
+  "statement": "8 openings x 2 colour arms x 4 repetitions = 64 games, all at mdPly 6"
+ },
+ "durable_result_format": {
+  "file": "e4_screen_results.jsonl",
+  "mode": "append-only, line-buffered, never rewritten",
+  "records": [
+   "run_header",
+   "task_start",
+   "ply",
+   "task_result",
+   "endpoint_decision",
+   "stop_decision",
+   "joint_outcome"
+  ],
+  "task_result_fields": [
+   "task_id",
+   "endpoint",
+   "t1j_mdPly",
+   "opening",
+   "colour_arm",
+   "reference",
+   "reference_sha1",
+   "anchor_colour",
+   "reference_colour",
+   "seed",
+   "winner",
+   "t1j_points",
+   "plies",
+   "terminal_reason",
+   "wall_s"
+  ]
+ },
+ "endpoint": {
+  "source": "the strong endpoint selected by the E4 preflight sweep",
+  "t1j_mdFixedPly": true,
+  "t1j_mdPly": 6,
+  "weak_endpoint_not_remeasured": "mdPly 3 scored 0.0/16 in the screen; a rate there needs no more precision"
+ },
+ "motivation": "The E4 canonical screen returned joint IN_BAND with the strong endpoint at 7.0/8 (early-stopped at the earliest possible game), which PERMITS a larger match at that endpoint. The screen answered a band question; L0 measures a rate.",
+ "n_tasks": 64,
+ "not_abort_rules": [
+  "cap-termination saturation: caps never stop an L0 match; see CAP_NO_RATE_THRESHOLD",
+  "score saturation: L0 measures a rate and has no band to saturate",
+  "any early stop of any kind"
+ ],
+ "opening_plies": 6,
+ "opening_plies_reason": "moveNr >= 6 keeps T1j's UNSEEDED InitialMoves.firstMove() unreached; a correctness requirement, not a preference",
+ "openings": {
+  "o1_center": [
+   [
+    11,
+    11
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    13,
+    12
+   ],
+   [
+    10,
+    13
+   ],
+   [
+    12,
+    10
+   ],
+   [
+    14,
+    14
+   ]
+  ],
+  "o2_offcenter": [
+   [
+    10,
+    12
+   ],
+   [
+    13,
+    10
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    11,
+    9
+   ],
+   [
+    14,
+    12
+   ],
+   [
+    9,
+    11
+   ]
+  ],
+  "o3_low": [
+   [
+    15,
+    11
+   ],
+   [
+    12,
+    12
+   ],
+   [
+    13,
+    10
+   ],
+   [
+    14,
+    14
+   ],
+   [
+    11,
+    11
+   ],
+   [
+    16,
+    13
+   ]
+  ],
+  "o4_high": [
+   [
+    8,
+    12
+   ],
+   [
+    11,
+    11
+   ],
+   [
+    10,
+    13
+   ],
+   [
+    9,
+    9
+   ],
+   [
+    12,
+    12
+   ],
+   [
+    13,
+    14
+   ]
+  ],
+  "o5_wide_left": [
+   [
+    11,
+    7
+   ],
+   [
+    12,
+    10
+   ],
+   [
+    13,
+    8
+   ],
+   [
+    10,
+    11
+   ],
+   [
+    15,
+    9
+   ],
+   [
+    14,
+    12
+   ]
+  ],
+  "o6_wide_right": [
+   [
+    11,
+    16
+   ],
+   [
+    12,
+    13
+   ],
+   [
+    13,
+    15
+   ],
+   [
+    10,
+    12
+   ],
+   [
+    15,
+    14
+   ],
+   [
+    14,
+    11
+   ]
+  ],
+  "o7_diagonal": [
+   [
+    9,
+    9
+   ],
+   [
+    12,
+    12
+   ],
+   [
+    11,
+    10
+   ],
+   [
+    14,
+    13
+   ],
+   [
+    13,
+    11
+   ],
+   [
+    16,
+    14
+   ]
+  ],
+  "o8_contact": [
+   [
+    12,
+    11
+   ],
+   [
+    11,
+    12
+   ],
+   [
+    13,
+    13
+   ],
+   [
+    12,
+    14
+   ],
+   [
+    14,
+    12
+   ],
+   [
+    10,
+    10
+   ]
+  ]
+ },
+ "our_settings": {
+  "agent_lifetime": "one instance per game; both streams advance across the game",
+  "eval_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "opening_temperature",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "noise_note": "cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.",
+  "noise_suppression": "search_with_root(state, add_noise=False)",
+  "readout_mask": {
+   "black": 3947580,
+   "red": 12829635
+  },
+  "readout_path": "eval_readout.select, never mcts.select_move",
+  "search_mask": {
+   "black": 5921370,
+   "red": 10855845
+  },
+  "source": "scripts/GPU/alphazero/e4_screen_reference.py::frozen_settings, which reads eval_config() and the masks from the qualified G3 path",
+  "stochasticity": "temperature keeps our side stochastic, which is what makes the per-task seed load-bearing; T1j at fixed ply is deterministic",
+  "withdrawn": "attempt 2's `dirichlet_eps: 0.0` override \u2014 cfg_from does not pass dirichlet_eps, so it was never in force; noise is suppressed by search_with_root(state, add_noise=False)",
+  "workers": 1
+ },
+ "parameter_source": {
+  "NOT_read_from_source": {
+   "abort_rules": "L0 carries its OWN; the screen's list contains a statistical cap-saturation abort that contradicts L0's no-early-stop rule. See abort_rules and abort_rules_note below."
+  },
+  "plan": "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json",
+  "read_from_source": [
+   "openings",
+   "opening_plies",
+   "reference identity",
+   "our_settings",
+   "ply_cap",
+   "scoring",
+   "per_ply_binding",
+   "durable_result_format"
+  ],
+  "sha256": "10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8",
+  "why": "every parameter shared with the screen is READ from that file, not retyped, so 'unchanged' is checkable rather than asserted"
+ },
+ "per_ply_binding": "every ply of every game binds both engines through the E3b-qualified adapter; ABORT ON THE FIRST DIVERGENCE",
+ "ply_cap": 280,
+ "protocol": {
+  "abort_is_not_a_short_match": true,
+  "cap_policy": {
+   "above_threshold": "more than 32 of 64 cap-terminated -> reported=False with outcome CAP_SATURATED_NO_RATE. A rate over mostly unresolved positions measures the cap, not the players.",
+   "all_64_are_always_played": true,
+   "at_or_below_threshold": "the rate IS reported, with cap_warning set and the cap count stated in the overall summary",
+   "caps_never_stop_the_match": true,
+   "decision_is_made_after_the_last_game": true,
+   "threshold": 32,
+   "why_not_the_screens_rule": "the screen ABORTED an endpoint early on cap saturation. L0 may not stop early at all, so the same concern is handled at REPORTING time instead."
+  },
+  "early_stop": null,
+  "no_early_stop_reason": "an early stop selects a stopping point on the data, which biases a RATE even where it cannot bias a band decision. l0_match_rules.may_stop_early always returns False.",
+  "only_early_termination": "a fail-closed integrity abort, which reports NO rate at all",
+  "retries": "none; a second run would need a second seed block and would turn one preregistered measurement into a choice among measurements",
+  "runs": 1,
+  "screen_rules_must_not_be_used": [
+   "early_in_band_forced",
+   "saturation_reachable",
+   "cap_incompleteness_reachable",
+   "per_endpoint_decision",
+   "classify_joint"
+  ]
+ },
+ "reference": {
+  "bytes": 7524333,
+  "git_blob_id": "829fcb19d708f007650bb1ad02f9beda0c38639c",
+  "name": "calib020_0001",
+  "path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "sha1_pinned_in": "twixtbot_g3_schedule.REFERENCE_CHECKPOINTS \u2014 the SAME pin the qualified reference construction verifies at load time, checked here at freeze time",
+  "sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+  "why_this_one": "the standing anchor of the closed AlphaZero programme; also the reference the twixtbot G3 calibration used, so the two anchor attempts are comparable"
+ },
+ "reference_agent_construction": "scripts/GPU/alphazero/e4_screen_reference.py::build, unchanged; it delegates to twixtbot_g3_reference.build_reference_agent",
+ "reporting": {
+  "both_are_closed_form": "no bootstrap, no resampling, no generator, no seed: the reported numbers are reproducible from the recorded scores alone.",
+  "corrected_claim": "an earlier version of this plan called Wilson 'provably conservative' here, arguing from Var(X) = p(1-p) - 0.25*P(draw) <= p(1-p). The variance identity is true; the coverage conclusion does NOT follow from it, and Wilson is not conservative at n=64 in any case. variance_deficit is retained as a DESCRIPTIVE property of the observed mix.",
+  "descriptive_carry_no_interval": true,
+  "descriptive_only": [
+   "by_colour_arm (32 games each)",
+   "by_opening (8 games each)",
+   "runtime breakdown",
+   "variance_deficit"
+  ],
+  "estimand": "the equally weighted mean, over the 16 opening/colour cells, of T1j's expected score against calib020_0001 at mdPly 6, the expectation being over ENGINE RANDOMNESS ONLY. The design is balanced (4 games x 16 cells), so the plain mean of the 64 scores is that equally weighted cell mean. It is NOT the expected score against TwixT openings in general: the 8 openings were fixed in advance and are part of the estimand, not a sample from a population of openings.",
+  "forbidden": [
+   "any Elo figure, or any conversion of this rate into one",
+   "any absolute strength placement -- T1j is uncalibrated, so this is an ORDERING against calib020_0001 in this stack, not a placement",
+   "any generalisation beyond these 8 openings or beyond mdPly 6",
+   "any per-cell comparison presented as a finding: 8 games per opening and 32 per colour arm carry no interval here and were not preregistered as tests",
+   "any claim that a wider or narrower interval would follow from more games not actually played",
+   "any description of the Wilson interval as conservative, exact or guaranteed; it is nominal, and hoeffding_interval is the primary",
+   "any re-run, pooled or otherwise, of this design on these seeds",
+   "any statement that the 64 games ARE independent, or that independence was verified; distinct streams rule out reuse, not dependence"
+  ],
+  "independence_note": "the 64 games are MODELLED as independent; this is an assumption, not a measurement. What was verified is that the tasks derive 128 distinct generator streams that collide with no stream used before, which rules out accidental stream REUSE only. The seeds are fixed consecutive integers, the derivation is a fixed XOR, and T1j seeds its own Zobrist table from an unseeded Random per process, which this design neither controls nor observes.",
+  "independence_note_2": "the games are also NOT identically distributed -- openings differ -- which is why Hoeffding rather than a binomial method is primary. The interval is over the 64 games of THIS fixed design, not a general population.",
+  "primary": "T1j overall score rate over 64 games with a 95% HOEFFDING interval (l0_match_rules.hoeffding_interval, half-width sqrt(ln(2/alpha)/(2n)) = 0.16976268946757744 at alpha=0.05, n=64). Valid for INDEPENDENT outcomes BOUNDED in [0,1]; it assumes neither a Bernoulli outcome nor identical distributions, which is what this design needs: a game scores 1.0/0.5/0.0 and the 8 openings are 8 different distributions. Coverage is at least nominal by construction.",
+  "results_are_bound_to_canonical_tasks": "every result is paired with its scheduled task and validated: seed, endpoint, mdPly and anchor colour must match, the score must equal the one implied by the winning COLOUR and the terminal reason, plies must lie in [1, 280] and agree with the cap, and the 16 cells must each hold 4 results. opening/colour_arm are taken FROM THE TASK, so a result cannot misreport its cell.",
+  "secondary": "Wilson score interval, reported as NOMINAL and APPROXIMATE only (z = 1.95996398454005). It assumes Bernoulli trials and its exact coverage dips below nominal by itself -- 87.97% at n=64, p=0.002, and 94.01% at p=0.5. It is tighter and conventional; it is NOT a guarantee.",
+  "within_cell_variation": "the 4 repetitions differ only in our agent's seed. That would isolate reference-agent sampling IF T1j were deterministic; E3a established determinism for ONE position at ONE ply and explicitly did not prove it generally (Zobrist self-seeds from an unseeded Random per process). T1j's contribution is UNKNOWN, not zero."
+ },
+ "runtime_estimate": {
+  "basis": "the E4 canonical screen's OWN measured games, not a per-query sweep",
+  "l0_projection": "NOT a promise. 64 strong-endpoint games at the screen's observed shape; the screen's whole run was 9m48s for 24 games of which 8 were strong. A bound, not an estimate: at most 280 plies per game by the cap.",
+  "measured_game_lengths_plies": {
+   "max": 64,
+   "median": 39,
+   "min": 25,
+   "source": "the canonical screen's 24 played games"
+  },
+  "moves_per_game_is_measured_here": "unlike the E4 preflight, which had no game measurements at all, these come from played games",
+  "screen_strong_endpoint": {
+   "games": 8,
+   "note": "that run also played 16 weak-endpoint games",
+   "wall_seconds_total_run": 588
+  }
+ },
+ "schedule_check": {
+  "cells": 16,
+  "n_tasks": 64,
+  "reps_per_cell": 4,
+  "seed_block": [
+   202613000,
+   202613064
+  ],
+  "task_digest": "193d66bf5f1e4dca52dd967530182566176466ef8ff79d5151b403b2634085bc"
+ },
+ "schema": "l0-larger-match-plan/1",
+ "scoring": {
+  "cap_saturation_abort": "if more than half the games at an endpoint terminate by cap, that endpoint is INCOMPLETE: the positions are not resolving and a score rate over them means little",
+  "draw": 0.5,
+  "draw_definition": "the game reached ply_cap 280 with no winner. TwixT cannot draw by rule; a draw here is ALWAYS a cap termination and is recorded as terminal_reason='cap'.",
+  "t1j_loss": 0.0,
+  "t1j_win": 1.0
+ },
+ "seed_block": {
+  "disjointness": "proved against ACCOUNTED, EXPOSED, RETIRED, TEST_ONLY, CONSUMED_SEEDS, the frozen plan's prior_intervals and its seed_block, AND against every derived RNG stream of all of them; 0 overlaps in every category",
+  "half_open": true,
+  "interval": [
+   202613000,
+   202613064
+  ],
+  "n": 64,
+  "registered_in": "e4_screen_reference.ACCOUNTED_SEED_INTERVALS",
+  "seed_to_task": "seed = 202613000 + task index, in the frozen task order",
+  "status": "RESERVED, UNSPENT \u2014 nothing drawn"
+ },
+ "status": "FROZEN, NOT EXECUTED \u2014 no game played, no seed drawn, no model loaded, no jvm started",
+ "tasks": [
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o1_center",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447028,
+    "search_seed": 206175058
+   },
+   "seed": 202613000,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o1_center",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447029,
+    "search_seed": 206175059
+   },
+   "seed": 202613001,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-001-strong6-o1_center-t1j_red-r1"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o1_center",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447030,
+    "search_seed": 206175056
+   },
+   "seed": 202613002,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-002-strong6-o1_center-t1j_red-r2"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o1_center",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447031,
+    "search_seed": 206175057
+   },
+   "seed": 202613003,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-003-strong6-o1_center-t1j_red-r3"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o1_center",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983375,
+    "search_seed": 213255337
+   },
+   "seed": 202613004,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-004-strong6-o1_center-t1j_black-r0"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o1_center",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983374,
+    "search_seed": 213255336
+   },
+   "seed": 202613005,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-005-strong6-o1_center-t1j_black-r1"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o1_center",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983373,
+    "search_seed": 213255339
+   },
+   "seed": 202613006,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-006-strong6-o1_center-t1j_black-r2"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o1_center",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983372,
+    "search_seed": 213255338
+   },
+   "seed": 202613007,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-007-strong6-o1_center-t1j_black-r3"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o2_offcenter",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447020,
+    "search_seed": 206175050
+   },
+   "seed": 202613008,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-008-strong6-o2_offcenter-t1j_red-r0"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o2_offcenter",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447021,
+    "search_seed": 206175051
+   },
+   "seed": 202613009,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-009-strong6-o2_offcenter-t1j_red-r1"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o2_offcenter",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447022,
+    "search_seed": 206175048
+   },
+   "seed": 202613010,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-010-strong6-o2_offcenter-t1j_red-r2"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o2_offcenter",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447023,
+    "search_seed": 206175049
+   },
+   "seed": 202613011,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-011-strong6-o2_offcenter-t1j_red-r3"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o2_offcenter",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983383,
+    "search_seed": 213255345
+   },
+   "seed": 202613012,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-012-strong6-o2_offcenter-t1j_black-r0"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o2_offcenter",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983382,
+    "search_seed": 213255344
+   },
+   "seed": 202613013,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-013-strong6-o2_offcenter-t1j_black-r1"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o2_offcenter",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983381,
+    "search_seed": 213255347
+   },
+   "seed": 202613014,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-014-strong6-o2_offcenter-t1j_black-r2"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o2_offcenter",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983380,
+    "search_seed": 213255346
+   },
+   "seed": 202613015,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-015-strong6-o2_offcenter-t1j_black-r3"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o3_low",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447012,
+    "search_seed": 206175042
+   },
+   "seed": 202613016,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o3_low",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447013,
+    "search_seed": 206175043
+   },
+   "seed": 202613017,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-017-strong6-o3_low-t1j_red-r1"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o3_low",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447014,
+    "search_seed": 206175040
+   },
+   "seed": 202613018,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-018-strong6-o3_low-t1j_red-r2"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o3_low",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447015,
+    "search_seed": 206175041
+   },
+   "seed": 202613019,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-019-strong6-o3_low-t1j_red-r3"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o3_low",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983391,
+    "search_seed": 213255353
+   },
+   "seed": 202613020,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-020-strong6-o3_low-t1j_black-r0"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o3_low",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983390,
+    "search_seed": 213255352
+   },
+   "seed": 202613021,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-021-strong6-o3_low-t1j_black-r1"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o3_low",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983389,
+    "search_seed": 213255355
+   },
+   "seed": 202613022,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-022-strong6-o3_low-t1j_black-r2"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o3_low",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983388,
+    "search_seed": 213255354
+   },
+   "seed": 202613023,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-023-strong6-o3_low-t1j_black-r3"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o4_high",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447004,
+    "search_seed": 206175098
+   },
+   "seed": 202613024,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o4_high",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447005,
+    "search_seed": 206175099
+   },
+   "seed": 202613025,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-025-strong6-o4_high-t1j_red-r1"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o4_high",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447006,
+    "search_seed": 206175096
+   },
+   "seed": 202613026,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-026-strong6-o4_high-t1j_red-r2"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o4_high",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447007,
+    "search_seed": 206175097
+   },
+   "seed": 202613027,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-027-strong6-o4_high-t1j_red-r3"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o4_high",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983399,
+    "search_seed": 213255297
+   },
+   "seed": 202613028,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-028-strong6-o4_high-t1j_black-r0"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o4_high",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983398,
+    "search_seed": 213255296
+   },
+   "seed": 202613029,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-029-strong6-o4_high-t1j_black-r1"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o4_high",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983397,
+    "search_seed": 213255299
+   },
+   "seed": 202613030,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-030-strong6-o4_high-t1j_black-r2"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o4_high",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983396,
+    "search_seed": 213255298
+   },
+   "seed": 202613031,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-031-strong6-o4_high-t1j_black-r3"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o5_wide_left",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446996,
+    "search_seed": 206175090
+   },
+   "seed": 202613032,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-032-strong6-o5_wide_left-t1j_red-r0"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o5_wide_left",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446997,
+    "search_seed": 206175091
+   },
+   "seed": 202613033,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-033-strong6-o5_wide_left-t1j_red-r1"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o5_wide_left",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446998,
+    "search_seed": 206175088
+   },
+   "seed": 202613034,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-034-strong6-o5_wide_left-t1j_red-r2"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o5_wide_left",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446999,
+    "search_seed": 206175089
+   },
+   "seed": 202613035,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-035-strong6-o5_wide_left-t1j_red-r3"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o5_wide_left",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983407,
+    "search_seed": 213255305
+   },
+   "seed": 202613036,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-036-strong6-o5_wide_left-t1j_black-r0"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o5_wide_left",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983406,
+    "search_seed": 213255304
+   },
+   "seed": 202613037,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-037-strong6-o5_wide_left-t1j_black-r1"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o5_wide_left",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983405,
+    "search_seed": 213255307
+   },
+   "seed": 202613038,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-038-strong6-o5_wide_left-t1j_black-r2"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o5_wide_left",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983404,
+    "search_seed": 213255306
+   },
+   "seed": 202613039,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-039-strong6-o5_wide_left-t1j_black-r3"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o6_wide_right",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446988,
+    "search_seed": 206175082
+   },
+   "seed": 202613040,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-040-strong6-o6_wide_right-t1j_red-r0"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o6_wide_right",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446989,
+    "search_seed": 206175083
+   },
+   "seed": 202613041,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-041-strong6-o6_wide_right-t1j_red-r1"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o6_wide_right",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446990,
+    "search_seed": 206175080
+   },
+   "seed": 202613042,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-042-strong6-o6_wide_right-t1j_red-r2"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o6_wide_right",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446991,
+    "search_seed": 206175081
+   },
+   "seed": 202613043,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-043-strong6-o6_wide_right-t1j_red-r3"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o6_wide_right",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983415,
+    "search_seed": 213255313
+   },
+   "seed": 202613044,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-044-strong6-o6_wide_right-t1j_black-r0"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o6_wide_right",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983414,
+    "search_seed": 213255312
+   },
+   "seed": 202613045,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-045-strong6-o6_wide_right-t1j_black-r1"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o6_wide_right",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983413,
+    "search_seed": 213255315
+   },
+   "seed": 202613046,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-046-strong6-o6_wide_right-t1j_black-r2"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o6_wide_right",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983412,
+    "search_seed": 213255314
+   },
+   "seed": 202613047,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-047-strong6-o6_wide_right-t1j_black-r3"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o7_diagonal",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446980,
+    "search_seed": 206175074
+   },
+   "seed": 202613048,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-048-strong6-o7_diagonal-t1j_red-r0"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o7_diagonal",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446981,
+    "search_seed": 206175075
+   },
+   "seed": 202613049,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-049-strong6-o7_diagonal-t1j_red-r1"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o7_diagonal",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446982,
+    "search_seed": 206175072
+   },
+   "seed": 202613050,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-050-strong6-o7_diagonal-t1j_red-r2"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o7_diagonal",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204446983,
+    "search_seed": 206175073
+   },
+   "seed": 202613051,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-051-strong6-o7_diagonal-t1j_red-r3"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o7_diagonal",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983423,
+    "search_seed": 213255321
+   },
+   "seed": 202613052,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-052-strong6-o7_diagonal-t1j_black-r0"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o7_diagonal",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983422,
+    "search_seed": 213255320
+   },
+   "seed": 202613053,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-053-strong6-o7_diagonal-t1j_black-r1"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o7_diagonal",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983421,
+    "search_seed": 213255323
+   },
+   "seed": 202613054,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-054-strong6-o7_diagonal-t1j_black-r2"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o7_diagonal",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983420,
+    "search_seed": 213255322
+   },
+   "seed": 202613055,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-055-strong6-o7_diagonal-t1j_black-r3"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o8_contact",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447100,
+    "search_seed": 206175002
+   },
+   "seed": 202613056,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-056-strong6-o8_contact-t1j_red-r0"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o8_contact",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447101,
+    "search_seed": 206175003
+   },
+   "seed": 202613057,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-057-strong6-o8_contact-t1j_red-r1"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o8_contact",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447102,
+    "search_seed": 206175000
+   },
+   "seed": 202613058,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-058-strong6-o8_contact-t1j_red-r2"
+  },
+  {
+   "anchor_colour": "red",
+   "colour_arm": "t1j_red",
+   "endpoint": "strong",
+   "opening": "o8_contact",
+   "reference": "calib020_0001",
+   "reference_colour": "black",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "black",
+    "readout_seed": 204447103,
+    "search_seed": 206175001
+   },
+   "seed": 202613059,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-059-strong6-o8_contact-t1j_red-r3"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o8_contact",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 0,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983303,
+    "search_seed": 213255393
+   },
+   "seed": 202613060,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-060-strong6-o8_contact-t1j_black-r0"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o8_contact",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 1,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983302,
+    "search_seed": 213255392
+   },
+   "seed": 202613061,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-061-strong6-o8_contact-t1j_black-r1"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o8_contact",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 2,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983301,
+    "search_seed": 213255395
+   },
+   "seed": 202613062,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-062-strong6-o8_contact-t1j_black-r2"
+  },
+  {
+   "anchor_colour": "black",
+   "colour_arm": "t1j_black",
+   "endpoint": "strong",
+   "opening": "o8_contact",
+   "reference": "calib020_0001",
+   "reference_colour": "red",
+   "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+   "reference_sha256": "34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26",
+   "rep": 3,
+   "rng_streams": {
+    "colour": "red",
+    "readout_seed": 214983300,
+    "search_seed": 213255394
+   },
+   "seed": 202613063,
+   "t1j_mdFixedPly": true,
+   "t1j_mdPly": 6,
+   "task_id": "l0match-063-strong6-o8_contact-t1j_black-r3"
+  }
+ ]
+}

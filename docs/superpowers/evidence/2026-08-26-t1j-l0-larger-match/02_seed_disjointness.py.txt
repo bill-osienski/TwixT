@@ -1,0 +1,60 @@
+"""L0 seed-block disjointness proof. NOTHING IS DRAWN: set arithmetic and XOR only."""
+import json
+from scripts.GPU.alphazero import e4_screen_reference as E
+from scripts.GPU.alphazero.twixtbot_g3_reference import SeededReferenceAgent as A
+from scripts.GPU.alphazero.twixtbot_g3_schedule import CONSUMED_SEEDS
+
+CANDIDATE = (202613000, 202613064)          # 64 seeds, half-open
+
+
+def spread(iv):
+    return {s for lo, hi in iv for s in range(lo, hi)}
+
+
+cats = {
+    "ACCOUNTED_SEED_INTERVALS": spread(E.ACCOUNTED_SEED_INTERVALS),
+    "EXPOSED_SEED_INTERVALS": spread(E.EXPOSED_SEED_INTERVALS),
+    "RETIRED_SEED_INTERVALS": spread(E.RETIRED_SEED_INTERVALS),
+    "TEST_ONLY_SEED_INTERVALS": spread(E.TEST_ONLY_SEED_INTERVALS),
+    "CONSUMED_SEEDS": set(CONSUMED_SEEDS),
+}
+plan = json.load(open("docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/"
+                      "06_endpoint_screen_plan.json"))
+cats["frozen plan prior_intervals"] = spread([tuple(x) for x in
+                                              plan["seed_block"]["prior_intervals"]])
+cats["frozen plan seed_block"] = spread([tuple(plan["seed_block"]["interval"])])
+
+cand = set(range(*CANDIDATE))
+print("L0 SEED-BLOCK DISJOINTNESS PROOF — set arithmetic only, NOTHING DRAWN")
+print("=" * 78)
+print(f"candidate block : [{CANDIDATE[0]}, {CANDIDATE[1]})   n = {len(cand)}\n")
+print(f"{'category':<32}{'size':>8}  {'overlap':>8}")
+bad = 0
+for name, s in sorted(cats.items()):
+    ov = cand & s
+    bad += len(ov)
+    print(f"{name:<32}{len(s):>8}  {len(ov):>8}{'' if not ov else '   <-- COLLISION'}")
+union = set().union(*cats.values())
+print(f"{'UNION OF ALL CATEGORIES':<32}{len(union):>8}  {len(cand & union):>8}")
+print(f"\nTOTAL OVERLAP WITH SEED CATEGORIES: {bad}   (0 required)")
+
+
+def streams(seed, anchor):
+    """XOR only. Deriving the integer builds no generator and draws nothing."""
+    colour = "black" if anchor == "red" else "red"
+    return (seed ^ A.SEARCH_MASK[colour], seed ^ A.READOUT_MASK[colour])
+
+
+cand_streams = {v for s in cand for a in ("red", "black") for v in streams(s, a)}
+existing_streams = {v for s in union for a in ("red", "black") for v in streams(s, a)}
+ov = cand_streams & existing_streams
+print("\nDERIVED RNG STREAMS (both colour assignments; XOR only, no generator built)")
+print(f"  candidate streams : {len(cand_streams)}")
+print(f"  existing streams  : {len(existing_streams)}")
+print(f"  OVERLAP           : {len(ov)}   (0 required)")
+if ov:
+    print("   <-- COLLISION", sorted(ov)[:5])
+bad += len(ov)
+
+print(f"\nVERDICT: {'DISJOINT — the block may be reserved' if bad == 0 else 'NOT DISJOINT'}")
+assert bad == 0, "candidate block is NOT disjoint"

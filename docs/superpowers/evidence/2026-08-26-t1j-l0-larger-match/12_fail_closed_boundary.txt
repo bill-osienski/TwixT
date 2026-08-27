@@ -1,0 +1,24 @@
+THE FAIL-CLOSED BOUNDARY WRAPS THE WHOLE BINDING PATH
+==============================================================================
+It previously guarded only validate_result, so malformed SHAPES escaped as
+tracebacks before reaching it. Every case below must return a REFUSED REPORT.
+No model, no jvm, no agent, no seed.
+
+malformed input                   raised?  reported   refusal
+a None result                          no     False   result 0 is NoneType, expected an object
+a non-dict task                        no     False   schedule entry 0 is str, expected an object
+a None task                            no     False   schedule entry 0 is NoneType, expected an ob
+task_ids None and 'alien'              no     False   result 0 has task_id None, expected a string
+task_id is a list                      no     False   result 0 has task_id [1], expected a string
+a result is a string                   no     False   result 0 is str, expected an object
+results is a dict                      no     False   the results are dict, expected a list of rec
+schedule is None                       no     False   the schedule is NoneType, expected a list of
+schedule is a dict                     no     False   the schedule is dict, expected a list of tas
+a task_id is an int                    no     False   schedule entry 0 has task_id 7, expected a s
+
+CONTROL — a valid match still reports:
+  reported=True  games=64  rate=1.0
+
+The three cases the earlier guard MISSED are rows 1, 2 and 4 above:
+  AttributeError at r.get(), TypeError building by_id, TypeError sorting
+  a set holding both None and a string.

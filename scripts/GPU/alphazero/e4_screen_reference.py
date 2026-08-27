@@ -73,6 +73,14 @@ ACCOUNTED_SEED_INTERVALS = (
     (202608988, 202609388), (202609388, 202609788), (202609788, 202610188),
     (202611000, 202611400),          # twixtbot G3 declared block
     (202612000, 202612512),          # the E4 screen's reservation, see EXPOSED below
+    (202613000, 202613064),          # L0 LARGER MATCH, reserved 2026-08-26 and
+                                     # UNSPENT. 64 seeds: 8 openings x 2 colour
+                                     # arms x 4 repetitions, all at mdPly 6.
+                                     # Proved disjoint from every seed category
+                                     # AND from every derived RNG stream before
+                                     # reservation -- see the L0 card. Nothing has
+                                     # been drawn from it; it is reserved, not
+                                     # exposed.
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable

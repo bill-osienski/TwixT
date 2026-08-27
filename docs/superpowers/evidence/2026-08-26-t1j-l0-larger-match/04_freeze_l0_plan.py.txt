@@ -1,0 +1,167 @@
+"""Freeze the L0 plan. Reads every shared parameter from the screen's frozen plan."""
+import hashlib, json, subprocess
+from scripts.GPU.alphazero import l0_match_plan as P, l0_match_rules as RULES
+from scripts.GPU.alphazero import e4_screen_reference as REF
+
+OUT = "docs/superpowers/evidence/2026-08-26-t1j-l0-larger-match/01_l0_match_plan.json"
+src = P.load_source_plan()
+tasks = P.build_tasks(src)
+check = P.validate_l0_schedule(tasks)
+
+def sha(p): return hashlib.sha256(open(p, "rb").read()).hexdigest()
+
+plan = {
+  "schema": "l0-larger-match-plan/1",
+  "status": "FROZEN, NOT EXECUTED — no game played, no seed drawn, no model loaded, no jvm started",
+  "authorization": ("L0 authorizes PREREGISTRATION AND QUALIFICATION ONLY. The 64-game "
+                    "execution is separately unauthorized. This schedule exists so that "
+                    "authorizing it later cannot become an occasion to choose parameters."),
+  "motivation": ("The E4 canonical screen returned joint IN_BAND with the strong endpoint "
+                 "at 7.0/8 (early-stopped at the earliest possible game), which PERMITS a "
+                 "larger match at that endpoint. The screen answered a band question; L0 "
+                 "measures a rate."),
+  "parameter_source": {
+      "plan": P.SOURCE_PLAN_REL, "sha256": P.SOURCE_PLAN_SHA256,
+      "why": ("every parameter shared with the screen is READ from that file, not retyped, "
+              "so 'unchanged' is checkable rather than asserted"),
+      "read_from_source": ["openings", "opening_plies", "reference identity",
+                           "our_settings", "ply_cap", "scoring", "per_ply_binding",
+                           "durable_result_format"],
+      "NOT_read_from_source": {
+          "abort_rules": ("L0 carries its OWN; the screen's list contains a statistical "
+                          "cap-saturation abort that contradicts L0's no-early-stop rule. "
+                          "See abort_rules and abort_rules_note below.")}},
+  "design": {"openings": RULES.N_OPENINGS, "colour_arms": RULES.N_ARMS,
+             "repetitions_per_cell": RULES.N_REPS, "n_games": RULES.N_GAMES,
+             "statement": "8 openings x 2 colour arms x 4 repetitions = 64 games, all at mdPly 6",
+             "cells": check["cells"]},
+  "endpoint": {"t1j_mdPly": RULES.T1J_MDPLY, "t1j_mdFixedPly": True,
+               "source": "the strong endpoint selected by the E4 preflight sweep",
+               "weak_endpoint_not_remeasured": ("mdPly 3 scored 0.0/16 in the screen; a "
+                                                "rate there needs no more precision")},
+  "openings": src["openings"], "opening_plies": src["opening_plies"],
+  "opening_plies_reason": src["opening_plies_reason"],
+  "colour_arms": list(P.COLOUR_ARMS),
+  "reference": src["reference"], "our_settings": src["our_settings"],
+  "reference_agent_construction": ("scripts/GPU/alphazero/e4_screen_reference.py::build, "
+                                   "unchanged; it delegates to twixtbot_g3_reference."
+                                   "build_reference_agent"),
+  "ply_cap": src["ply_cap"], "per_ply_binding": src["per_ply_binding"],
+  "scoring": src["scoring"],
+  "seed_block": {"interval": list(P.L0_SEED_BLOCK), "n": RULES.N_GAMES,
+                 "half_open": True, "status": "RESERVED, UNSPENT — nothing drawn",
+                 "registered_in": "e4_screen_reference.ACCOUNTED_SEED_INTERVALS",
+                 "disjointness": ("proved against ACCOUNTED, EXPOSED, RETIRED, TEST_ONLY, "
+                                  "CONSUMED_SEEDS, the frozen plan's prior_intervals and "
+                                  "its seed_block, AND against every derived RNG stream of "
+                                  "all of them; 0 overlaps in every category"),
+                 "seed_to_task": "seed = 202613000 + task index, in the frozen task order"},
+  "protocol": {
+      "runs": 1, "early_stop": None,
+      "no_early_stop_reason": ("an early stop selects a stopping point on the data, which "
+                               "biases a RATE even where it cannot bias a band decision. "
+                               "l0_match_rules.may_stop_early always returns False."),
+      "only_early_termination": "a fail-closed integrity abort, which reports NO rate at all",
+      "abort_is_not_a_short_match": True,
+      "retries": "none; a second run would need a second seed block and would turn one "
+                 "preregistered measurement into a choice among measurements",
+      "screen_rules_must_not_be_used": ["early_in_band_forced", "saturation_reachable",
+                                        "cap_incompleteness_reachable", "per_endpoint_decision",
+                                        "classify_joint"],
+      "cap_policy": {
+          "caps_never_stop_the_match": True,
+          "all_64_are_always_played": True,
+          "decision_is_made_after_the_last_game": True,
+          "threshold": RULES.CAP_NO_RATE_THRESHOLD,
+          "above_threshold": ("more than 32 of 64 cap-terminated -> reported=False with "
+                              "outcome CAP_SATURATED_NO_RATE. A rate over mostly "
+                              "unresolved positions measures the cap, not the players."),
+          "at_or_below_threshold": ("the rate IS reported, with cap_warning set and the "
+                                    "cap count stated in the overall summary"),
+          "why_not_the_screens_rule": ("the screen ABORTED an endpoint early on cap "
+                                       "saturation. L0 may not stop early at all, so the "
+                                       "same concern is handled at REPORTING time instead.")}},
+  "abort_rules": list(RULES.L0_ABORT_RULES),
+  "abort_rules_note": ("L0's OWN list. The screen's abort_rules are deliberately NOT "
+                       "imported: they contain a STATISTICAL abort (more than half of an "
+                       "endpoint cap-terminating makes it INCOMPLETE) which contradicts "
+                       "L0's no-early-stop rule and would leave a runner with two "
+                       "conflicting authorities."),
+  "not_abort_rules": list(RULES.NOT_ABORT_RULES),
+  "reporting": {
+      "primary": ("T1j overall score rate over 64 games with a 95% HOEFFDING interval "
+                  "(l0_match_rules.hoeffding_interval, half-width "
+                  "sqrt(ln(2/alpha)/(2n)) = 0.16976268946757744 at alpha=0.05, n=64). "
+                  "Valid for INDEPENDENT outcomes BOUNDED in [0,1]; it assumes neither a "
+                  "Bernoulli outcome nor identical distributions, which is what this "
+                  "design needs: a game scores 1.0/0.5/0.0 and the 8 openings are 8 "
+                  "different distributions. Coverage is at least nominal by construction."),
+      "secondary": ("Wilson score interval, reported as NOMINAL and APPROXIMATE only "
+                    "(z = %.15g). It assumes Bernoulli trials and its exact coverage dips "
+                    "below nominal by itself -- 87.97%% at n=64, p=0.002, and 94.01%% at "
+                    "p=0.5. It is tighter and conventional; it is NOT a guarantee." % RULES.Z_95),
+      "both_are_closed_form": ("no bootstrap, no resampling, no generator, no seed: the "
+                               "reported numbers are reproducible from the recorded scores "
+                               "alone."),
+      "corrected_claim": ("an earlier version of this plan called Wilson 'provably "
+                          "conservative' here, arguing from Var(X) = p(1-p) - 0.25*P(draw) "
+                          "<= p(1-p). The variance identity is true; the coverage "
+                          "conclusion does NOT follow from it, and Wilson is not "
+                          "conservative at n=64 in any case. variance_deficit is retained "
+                          "as a DESCRIPTIVE property of the observed mix."),
+      "descriptive_only": ["by_colour_arm (32 games each)", "by_opening (8 games each)",
+                           "runtime breakdown", "variance_deficit"],
+      "results_are_bound_to_canonical_tasks": ("every result is paired with its scheduled "
+                                               "task and validated: seed, endpoint, mdPly "
+                                               "and anchor colour must match, the score "
+                                               "must equal the one implied by the winning "
+                                               "COLOUR and the terminal reason, plies must "
+                                               "lie in [1, 280] and agree with the cap, and "
+                                               "the 16 cells must each hold 4 results. "
+                                               "opening/colour_arm are taken FROM THE TASK, "
+                                               "so a result cannot misreport its cell."),
+      "descriptive_carry_no_interval": True,
+      "estimand": RULES.ESTIMAND,
+      "independence_note": RULES.INDEPENDENCE_CAVEAT,
+      "independence_note_2": ("the games are also NOT identically distributed -- openings "
+                              "differ -- which is why Hoeffding rather than a binomial "
+                              "method is primary. The interval is over the 64 games of "
+                              "THIS fixed design, not a general population."),
+      "within_cell_variation": ("the 4 repetitions differ only in our agent's seed. That "
+                                "would isolate reference-agent sampling IF T1j were "
+                                "deterministic; E3a established determinism for ONE "
+                                "position at ONE ply and explicitly did not prove it "
+                                "generally (Zobrist self-seeds from an unseeded Random per "
+                                "process). T1j's contribution is UNKNOWN, not zero."),
+      "forbidden": list(RULES.FORBIDDEN_CLAIMS)},
+  "durable_result_format": src["durable_result_format"],
+  "runtime_estimate": {
+      "basis": "the E4 canonical screen's OWN measured games, not a per-query sweep",
+      "screen_strong_endpoint": {"games": 8, "wall_seconds_total_run": 588,
+                                 "note": "that run also played 16 weak-endpoint games"},
+      "measured_game_lengths_plies": {"min": 25, "median": 39, "max": 64,
+                                      "source": "the canonical screen's 24 played games"},
+      "l0_projection": ("NOT a promise. 64 strong-endpoint games at the screen's observed "
+                        "shape; the screen's whole run was 9m48s for 24 games of which 8 "
+                        "were strong. A bound, not an estimate: at most 280 plies per game "
+                        "by the cap."),
+      "moves_per_game_is_measured_here": ("unlike the E4 preflight, which had no game "
+                                          "measurements at all, these come from played games")},
+  "schedule_check": check,
+  "n_tasks": len(tasks), "tasks": tasks,
+  "claim_discipline": {
+      "no_elo": "no Elo figure and no conversion into one",
+      "ordering_not_placement": ("T1j is uncalibrated, so this is an ORDERING against "
+                                 "calib020_0001 in this stack, not a placement. The E0 "
+                                 "caveat is unchanged by more games."),
+      "bounded_to": ("these 8 openings, this colour balance, mdPly 6, 400 simulations, "
+                     "ply cap 280, one run"),
+      "what_more_games_do_not_buy": ("64 games narrow the interval on THIS design. They do "
+                                     "not widen what the design covers.")},
+}
+raw = json.dumps(plan, indent=1, sort_keys=True).encode()
+open(OUT, "wb").write(raw)
+print("wrote", OUT)
+print("plan sha256 :", hashlib.sha256(raw).hexdigest())
+print("task digest :", check["task_digest"])
+print("n_tasks     :", len(tasks))

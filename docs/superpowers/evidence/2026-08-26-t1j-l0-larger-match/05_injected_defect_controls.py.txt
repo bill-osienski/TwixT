@@ -1,0 +1,166 @@
+"""Injected-defect controls for L0. Every file restored and hash-verified."""
+import hashlib, os, shutil, subprocess, sys
+R = "/Users/bill/projects/TwixT_Game"
+RULES = f"{R}/scripts/GPU/alphazero/l0_match_rules.py"
+PLAN  = f"{R}/scripts/GPU/alphazero/l0_match_plan.py"
+T = "tests/test_l0_match.py"
+
+CASES = [
+ ("an early stop is reintroduced", RULES,
+  "    return False\n\n\ndef score_game", "    return True\n\n\ndef score_game",
+  f"{T}::test_there_is_no_early_stop_and_may_stop_early_is_constant"),
+ ("the seed block overlaps the spent screen block", PLAN,
+  "L0_SEED_BLOCK = (202613000, 202613064)", "L0_SEED_BLOCK = (202612128, 202612192)",
+  f"{T}::test_the_seed_block_is_disjoint_from_every_seed_category"),
+ ("repetitions per cell drop to 3", RULES,
+  "N_REPS = 4", "N_REPS = 3",
+  f"{T}::test_the_design_is_8x2x4_and_the_arithmetic_is_not_asserted_by_hand"),
+ ("an interval starts resampling with a generator", RULES,
+  "    lo, hi = centre - half, centre + half",
+  "    import random as _r; _g = _r.Random(1234)\n    lo, hi = centre - half, centre + half",
+  f"{T}::test_neither_interval_constructs_a_generator"),
+ ("WILSON is promoted back to the primary interval", RULES,
+  "    hl, hh = hoeffding_interval(score, N_GAMES)",
+  "    hl, hh = wilson_interval(score, N_GAMES)",
+  f"{T}::test_a_fully_valid_match_is_reported"),
+ ("the Hoeffding half-width loses its log term", RULES,
+  "    t = math.sqrt(math.log(2.0 / alpha) / (2.0 * n))",
+  "    t = math.sqrt(1.0 / (2.0 * n))",
+  f"{T}::test_hoeffding_actually_covers_at_least_95_percent_where_wilson_does_not"),
+ ("results are bound by NAME only, not validated", RULES,
+  "        try:\n            validate_result(row, task)\n        except ValueError as e:\n            return None, str(e)",
+  "        pass",
+  f"{T}::test_the_reviewers_payload_is_refused"),
+ ("a result may misreport its own cell", RULES,
+  '        out.setdefault(task[key], []).append((row, task))',
+  '        out.setdefault(row.get(key, task[key]), []).append((row, task))',
+  f"{T}::test_a_result_cannot_misreport_its_own_cell"),
+ ("score_game goes back to comparing winner to 't1j'", RULES,
+  '    return SCORE_T1J_WIN if winner == anchor_colour else SCORE_T1J_LOSS',
+  '    return SCORE_T1J_WIN if winner == "t1j" else SCORE_T1J_LOSS',
+  f"{T}::test_the_recorded_vocabulary_matches_the_screens_own_records"),
+ ("the cap policy silently reports a rate anyway", RULES,
+  "    if caps > CAP_NO_RATE_THRESHOLD:", "    if False and caps > CAP_NO_RATE_THRESHOLD:",
+  f"{T}::test_cap_heavy_results_return_a_preregistered_NO_RATE_outcome"),
+ ("the reporter stops verifying the canonical schedule digest", RULES,
+  "    if digest != L0_TASK_DIGEST:", "    if False and digest != L0_TASK_DIGEST:",
+  f"{T}::test_the_reporter_refuses_a_schedule_that_is_not_the_frozen_design"),
+ ("a cap is allowed to carry a winning colour", RULES,
+  "        if row[\"winner\"] is not None:", "        if False and row[\"winner\"] is not None:",
+  f"{T}::test_a_cap_must_be_at_the_cap_ply_and_have_no_winner"),
+ ("a win ON the cap ply is rejected as a cap again", RULES,
+  "    if row[\"terminal_reason\"] == \"cap\":",
+  "    if plies == PLY_CAP or row[\"terminal_reason\"] == \"cap\":",
+  f"{T}::test_a_natural_win_ON_the_cap_ply_is_a_WIN_not_a_cap"),
+ ("independence is asserted as measured fact again", RULES,
+  '    "the 64 games are MODELLED as independent; this is an assumption, not a "',
+  '    "the 64 games are independent, verified by distinct streams. "',
+  f"{T}::test_independence_is_reported_as_a_MODEL_not_a_measurement"),
+ ("the estimand is deleted", RULES,
+  '        "estimand": ESTIMAND,', "",
+  f"{T}::test_independence_is_reported_as_a_MODEL_not_a_measurement"),
+ ("t1j_points goes back to a bare float() coercion", RULES,
+  '    if isinstance(got, bool):', '    if False and isinstance(got, bool):',
+  f"{T}::test_t1j_points_is_type_safe_and_refuses_rather_than_raising"),
+ ("a string score is coerced by float() and counted as a win", RULES,
+  '    if not isinstance(got, (int, float)):', '    if False and not isinstance(got, (int, float)):',
+  f"{T}::test_t1j_points_is_type_safe_and_refuses_rather_than_raising"),
+ ("the fail-closed backstop is removed as well", RULES,
+  "        except Exception as e:                       # noqa: BLE001",
+  "        except ZeroDivisionError as e:",
+  f"{T}::test_the_fail_closed_backstop_converts_an_UNFORESEEN_exception_to_a_refusal"),
+ ("non-finite scores are allowed through", RULES,
+  '    if not math.isfinite(got):', '    if False and not math.isfinite(got):',
+  f"{T}::test_t1j_points_is_type_safe_and_refuses_rather_than_raising"),
+ ("the runner decides the cap BEFORE the winner", f"{R}/scripts/GPU/alphazero/e4_screen_runner.py",
+  "        winner = state.winner()\n        if winner is not None:\n            reason = \"win\"\n            break\n        if state.ply >= ply_cap:\n            winner, reason = None, \"cap\"\n            break",
+  "        if state.ply >= ply_cap:\n            winner, reason = None, \"cap\"\n            break\n        winner = state.winner()\n        if winner is not None:\n            reason = \"win\"\n            break",
+  f"{T}::test_the_production_loop_records_a_WIN_on_the_cap_ply"),
+ ("the shape checks are skipped entirely", RULES,
+  "    shape = _shape_errors(results, tasks)", "    shape = None",
+  f"{T}::test_malformed_shapes_are_refused_before_any_comprehension"),
+ ("the OUTER fail-closed boundary is removed", RULES,
+  "    try:\n        return _bind_results(results, tasks)\n    except Exception as e:                               # noqa: BLE001\n        return None, f\"malformed input rejected ({type(e).__name__}: {e})\"",
+  "    return _bind_results(results, tasks)",
+  f"{T}::test_the_outer_boundary_catches_what_the_shape_checks_do_not"),
+ ("results container type goes unchecked", RULES,
+  '    if not isinstance(results, (list, tuple)):', '    if False and not isinstance(results, (list, tuple)):',
+  f"{T}::test_malformed_shapes_are_refused_before_any_comprehension"),
+ ("task_id type goes unchecked", RULES,
+  '        if not isinstance(r.get("task_id"), str):', '        if False and not isinstance(r.get("task_id"), str):',
+  f"{T}::test_malformed_shapes_are_refused_before_any_comprehension"),
+ ("the screen's abort rules are imported again", RULES,
+  '    "any per-ply state divergence between the two engines",',
+  '    "more than half the games terminating by ply cap",',
+  f"{T}::test_the_frozen_plan_carries_L0s_OWN_abort_rules_not_the_screens"),
+ ("the endpoint drifts to the weak depth", RULES,
+  "T1J_MDPLY = 6", "T1J_MDPLY = 3",
+  f"{T}::test_both_colour_arms_are_balanced_and_every_game_is_at_mdPly_6"),
+ ("the Elo prohibition is dropped", RULES,
+  '    "any Elo figure, or any conversion of this rate into one",', "",
+  f"{T}::test_the_report_carries_its_own_claim_discipline"),
+ ("`rep` leaves the digest dimensions", RULES,
+  '"colour_arm", "rep", "anchor_colour"', '"colour_arm", "anchor_colour"',
+  f"{T}::test_the_digest_refuses_every_kind_of_edit"),
+ ("the plan loader stops checking the task digest", PLAN,
+  "    if digest != L0_TASK_DIGEST:", "    if False and digest != L0_TASK_DIGEST:",
+  f"{T}::test_the_task_digest_binds_even_when_the_file_hash_has_been_RE_PINNED"),
+ ("a partial match is reported anyway", RULES,
+  "    missing = sorted(set(by_id) - set(got))\n    if missing:",
+  "    missing = sorted(set(by_id) - set(got))\n    if False and missing:",
+  f"{T}::test_a_partial_match_is_not_reported"),
+ ("parameters are retyped instead of read from the frozen plan", PLAN,
+  "    openings = source_plan[\"openings\"]",
+  "    openings = {f'o{i}': [] for i in range(1, 9)}",
+  f"{T}::test_the_builder_actually_READS_the_source_plan_it_is_given"),
+]
+
+def h(p): return hashlib.sha256(open(p, "rb").read()).hexdigest()
+
+
+def purge_bytecode():
+    """CPython invalidates a .pyc on (source mtime SECONDS, source size).
+
+    A same-length edit inside one second therefore leaves the stale .pyc valid
+    and the injected defect never reaches the interpreter -- the control then
+    passes vacuously. `N_REPS = 4` -> `N_REPS = 3` did exactly that. Purge, and
+    forbid writing new ones, so every run compiles the bytes on disk.
+    """
+    for root, dirs, _ in os.walk(R):
+        for d in list(dirs):
+            if d == "__pycache__":
+                shutil.rmtree(os.path.join(root, d), ignore_errors=True)
+                dirs.remove(d)
+
+
+ENV = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+
+ok = True
+for name, path, old, new, test in CASES:
+    before_h, before = h(path), open(path).read()
+    assert old in before, f"anchor not found for: {name}"
+    try:
+        open(path, "w").write(before.replace(old, new, 1))
+        assert h(path) != before_h, f"injection changed nothing: {name}"
+        purge_bytecode()
+        r = subprocess.run([f"{R}/.venv/bin/python", "-m", "pytest", test, "-q"],
+                           cwd=R, capture_output=True, text=True, env=ENV)
+    finally:
+        # ALWAYS restore, including on an exception. An earlier version restored
+        # only on the success path, and one crash left an injected defect sitting
+        # in a published module until git status caught it.
+        open(path, "w").write(before)
+        purge_bytecode()
+        assert h(path) == before_h, f"RESTORE FAILED for {path}"
+    verdict = "REJECTED" if r.returncode != 0 else "*** NOT REJECTED ***"
+    ok &= r.returncode != 0
+    print(f"{verdict:22} {name}\n{'':22} -> {test.split('::')[-1]} exit {r.returncode}")
+
+print("\nbaseline (no defect):")
+purge_bytecode()
+r = subprocess.run([f"{R}/.venv/bin/python", "-m", "pytest", T, "-q"],
+                   cwd=R, capture_output=True, text=True, env=ENV)
+print("   ", r.stdout.strip().splitlines()[-1], "exit", r.returncode)
+ok &= r.returncode == 0
+print("\nALL CONTROLS BIND" if ok else "\nA CONTROL FAILED TO BIND")
+sys.exit(0 if ok else 1)

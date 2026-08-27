@@ -1,0 +1,67 @@
+REJECTED               an early stop is reintroduced
+                       -> test_there_is_no_early_stop_and_may_stop_early_is_constant exit 1
+REJECTED               the seed block overlaps the spent screen block
+                       -> test_the_seed_block_is_disjoint_from_every_seed_category exit 1
+REJECTED               repetitions per cell drop to 3
+                       -> test_the_design_is_8x2x4_and_the_arithmetic_is_not_asserted_by_hand exit 1
+REJECTED               an interval starts resampling with a generator
+                       -> test_neither_interval_constructs_a_generator exit 1
+REJECTED               WILSON is promoted back to the primary interval
+                       -> test_a_fully_valid_match_is_reported exit 1
+REJECTED               the Hoeffding half-width loses its log term
+                       -> test_hoeffding_actually_covers_at_least_95_percent_where_wilson_does_not exit 1
+REJECTED               results are bound by NAME only, not validated
+                       -> test_the_reviewers_payload_is_refused exit 4
+REJECTED               a result may misreport its own cell
+                       -> test_a_result_cannot_misreport_its_own_cell exit 1
+REJECTED               score_game goes back to comparing winner to 't1j'
+                       -> test_the_recorded_vocabulary_matches_the_screens_own_records exit 1
+REJECTED               the cap policy silently reports a rate anyway
+                       -> test_cap_heavy_results_return_a_preregistered_NO_RATE_outcome exit 1
+REJECTED               the reporter stops verifying the canonical schedule digest
+                       -> test_the_reporter_refuses_a_schedule_that_is_not_the_frozen_design exit 1
+REJECTED               a cap is allowed to carry a winning colour
+                       -> test_a_cap_must_be_at_the_cap_ply_and_have_no_winner exit 1
+REJECTED               a win ON the cap ply is rejected as a cap again
+                       -> test_a_natural_win_ON_the_cap_ply_is_a_WIN_not_a_cap exit 1
+REJECTED               independence is asserted as measured fact again
+                       -> test_independence_is_reported_as_a_MODEL_not_a_measurement exit 1
+REJECTED               the estimand is deleted
+                       -> test_independence_is_reported_as_a_MODEL_not_a_measurement exit 1
+REJECTED               t1j_points goes back to a bare float() coercion
+                       -> test_t1j_points_is_type_safe_and_refuses_rather_than_raising exit 1
+REJECTED               a string score is coerced by float() and counted as a win
+                       -> test_t1j_points_is_type_safe_and_refuses_rather_than_raising exit 1
+REJECTED               the fail-closed backstop is removed as well
+                       -> test_the_fail_closed_backstop_converts_an_UNFORESEEN_exception_to_a_refusal exit 1
+REJECTED               non-finite scores are allowed through
+                       -> test_t1j_points_is_type_safe_and_refuses_rather_than_raising exit 1
+REJECTED               the runner decides the cap BEFORE the winner
+                       -> test_the_production_loop_records_a_WIN_on_the_cap_ply exit 1
+REJECTED               the shape checks are skipped entirely
+                       -> test_malformed_shapes_are_refused_before_any_comprehension exit 1
+REJECTED               the OUTER fail-closed boundary is removed
+                       -> test_the_outer_boundary_catches_what_the_shape_checks_do_not exit 1
+REJECTED               results container type goes unchecked
+                       -> test_malformed_shapes_are_refused_before_any_comprehension exit 1
+REJECTED               task_id type goes unchecked
+                       -> test_malformed_shapes_are_refused_before_any_comprehension exit 1
+REJECTED               the screen's abort rules are imported again
+                       -> test_the_frozen_plan_carries_L0s_OWN_abort_rules_not_the_screens exit 1
+REJECTED               the endpoint drifts to the weak depth
+                       -> test_both_colour_arms_are_balanced_and_every_game_is_at_mdPly_6 exit 1
+REJECTED               the Elo prohibition is dropped
+                       -> test_the_report_carries_its_own_claim_discipline exit 4
+REJECTED               `rep` leaves the digest dimensions
+                       -> test_the_digest_refuses_every_kind_of_edit exit 1
+REJECTED               the plan loader stops checking the task digest
+                       -> test_the_task_digest_binds_even_when_the_file_hash_has_been_RE_PINNED exit 1
+REJECTED               a partial match is reported anyway
+                       -> test_a_partial_match_is_not_reported exit 1
+REJECTED               parameters are retyped instead of read from the frozen plan
+                       -> test_the_builder_actually_READS_the_source_plan_it_is_given exit 1
+
+baseline (no defect):
+    ============================= 110 passed in 0.15s ============================== exit 0
+
+ALL CONTROLS BIND
