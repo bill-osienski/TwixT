@@ -1,0 +1,59 @@
+R1 — RULES COMPATIBILITY: OUR CONFIGURATION vs THE NAMED TwixT RULESETS
+==============================================================================
+
+OUR RULES, pinned in the ledger (line 1446) and VERIFIED IN CODE:
+  board 24x24 | links AUTOMATIC | link removal NO | own-link crossing FORBIDDEN
+  swap OFF
+
+  scripts/GPU/alphazero/game/twixt_state.py::_crosses_existing_bridge iterates
+  `for (br1, bc1), (br2, bc2) in self.bridges` with NO OWNER FILTER, so ANY
+  existing bridge blocks a candidate bridge -- including the mover's own.
+
+THE NAMED RULESETS, from the SGF FF[4] TwixT profile (GM[21]):
+
+  STD  Randolph's original -- link removal AND manual link addition permitted.
+       MISMATCH: we have neither.
+
+  PP   Little Golem -- profile wording, quoted:
+         "Links are not removed, but your own links may cross each other.
+          This may result in a winning path which loops across itself."
+       MISMATCH: crossing is exactly what we forbid.
+
+  3M   vintage commercial -- profile wording, quoted:
+         "There are no recorded games, as far as David knows."
+         "David welcomes any counterexample."
+       This is AUTHOR-BOUNDED KNOWLEDGE WITH AN OPEN INVITATION, not a
+       specification finding. CORRECTED: an earlier draft wrote "the
+       specification states none exist", which stripped the qualifier.
+
+CORRECTED: WHAT A CROSSING PP LINK ACTUALLY DOES
+------------------------------------------------------------------------------
+An earlier draft said a self-crossing PP link "is placed but simply does not
+connect". THAT IS WRONG, and the profile I had already fetched says so: a
+crossing own link CAN form part of a winning path, which may loop across
+itself. The draft took a search snippet over the primary source.
+
+The gap is therefore LARGER than stated, not smaller:
+  under PP    the bridge FORMS and CONNECTS; paths may self-loop
+  under ours  the bridge NEVER FORMS at all
+The same move sequence yields different bridge sets and different connectivity,
+so PP records contain positions our engine cannot reach. The conclusion of the
+earlier draft survives; its explanation did not.
+
+A DOCUMENTATION CONFLICT THE EARLIER DRAFT MISSED
+------------------------------------------------------------------------------
+  SGF PP profile (older): "Links are not removed"
+  docs.littlegolem.net (current): "You may remove your own links as part of a
+                                   move to rearrange your network."
+These CONFLICT on link removal. The current documentation also offers THREE
+board sizes -- 24x24, 30x30, 48x48 -- and confirms the swap move is in use.
+
+CONSEQUENCE FOR PROVENANCE. An earlier draft credited Little Golem with GOOD
+provenance because SGF tags each game RU[PP]. That credit is WITHDRAWN: if the
+site's own current rules text contradicts the profile that RU[PP] points to,
+the tag does not pin the semantics of the recorded game. Provenance is WEAKER
+than the earlier draft allowed, not stronger.
+
+CONCLUSION. Our configuration matches no named ruleset, and the nearest one is
+documented inconsistently. Any use of such a corpus would require a semantic
+re-interpretation, not a format conversion.

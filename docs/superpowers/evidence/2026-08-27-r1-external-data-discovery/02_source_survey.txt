@@ -1,0 +1,74 @@
+R1 — SOURCE SURVEY. What was found, at the width the evidence supports.
+==============================================================================
+
+CONTENTS is graded three ways, as the authorization requires:
+  PI   full policy targets (visit distributions) -- what AlphaZero training needs
+  EXP  expert moves (a chosen move, no distribution)
+  BARE bare game histories (move sequence only)
+
+CAN SGF CARRY PI? YES -- and an earlier draft claimed otherwise.
+------------------------------------------------------------------------------
+  The TwixT profile defines no standard policy property, but SGF
+  FF[4] explicitly permits private properties: "Everybody is free to
+  define additional, private properties", which "may use one of the
+  value types defined in this document or define their own value
+  type", and unknown properties "should be preserved". A standard
+  general-purpose property V already carries a real-valued node score
+  across all games. A producer could therefore publish visit
+  distributions in SGF, in a sidecar, or in any other format entirely.
+
+  WITHDRAWN: "no corpus carries pi because the format cannot
+  represent it". That converted an absence in one profile into a
+  universal impossibility. The defensible claim is narrower and is
+  the one this report now makes: NO SURVEYED SOURCE PUBLISHES PI.
+
+Little Golem — the largest live TwixT archive
+------------------------------------------------------------------------------
+  rules         MISMATCH -- own links may cross (we forbid); swap in use (we
+                disable); current docs offer 24x24, 30x30 and 48x48.
+  provenance    WEAK, and weaker than an earlier draft allowed. SGF tags games
+                RU[PP], but the site's current rules text CONTRADICTS the PP
+                profile on link removal, so the tag does not pin the semantics.
+  contents      BARE -- no policy distribution in the records surveyed.
+  licence       NOT FOUND. The rules page carries '2002-2022 (c)LittleGolem' and no
+                reuse grant; the current docs page mentions no terms. R1 FOUND NO
+                EXPLICIT PERMISSION -- it did not establish that none exists.
+  access        NOT FOUND. No API or bulk export appears in the reviewed pages.
+                Inspecting rules pages cannot establish that no export exists.
+  independent   PASS -- human play, independent of T1j and of our stack.
+  verdict       COULD NOT BE QUALIFIED WITHIN R1.
+
+twixtbot (BonyJordan)
+------------------------------------------------------------------------------
+  contents      NO DATASET PUBLISHED -- the repository exposes models/ and src/
+                only; the README describes self-play training but ships no records.
+  rules         MISMATCH -- E0 recorded it trained with crossings allowed.
+  licence       MIT on the CODE. No data to licence.
+  verdict       NOTHING TO TAKE.
+
+Polygames
+------------------------------------------------------------------------------
+  contents      NONE -- E0, 2026-08-24: no TwixT implementation in src/games/, and
+                0 TwixT checkpoints among 1,133.
+  verdict       NOTHING TO TAKE.
+
+3M-ruleset corpora
+------------------------------------------------------------------------------
+  contents      NONE KNOWN TO THE PROFILE'S AUTHOR: "There are no recorded games,
+                as far as David knows", with "David welcomes any counterexample".
+                AUTHOR-BOUNDED, not established absence.
+  verdict       NOT FOUND; NOT SHOWN ABSENT.
+
+Kaggle / Zenodo / GitHub dataset repositories
+------------------------------------------------------------------------------
+  contents      NONE SURFACED by the queries listed in 03. A bounded search cannot
+                establish non-existence.
+  verdict       NOT FOUND; NOT SHOWN ABSENT.
+
+==============================================================================
+  NO SOURCE WAS QUALIFIED. The binding failures differ by source, and
+  INDEPENDENCE IS NOT AMONG THEM -- human Little Golem play is
+  genuinely independent of T1j and of our stack, satisfying the one
+  criterion R0 flagged as irreversible. What fails is rules match,
+  and -- for the only live archive -- licence and access that R1
+  COULD NOT FIND rather than showed to be absent.

@@ -1,0 +1,61 @@
+R1 — SEARCHES AND METADATA-PAGE FETCHES, so the negative is bounded and reproducible
+==============================================================================
+
+Read-only throughout. NO corpus, model or bulk data was downloaded; no training,
+inference, game, seed, JVM or T1j execution; no source, test or gate changed.
+Pages were fetched to read metadata ONLY.
+
+WEB SEARCHES (5)
+  1. TwixT game records archive database download corpus
+  2. Little Golem TwixT PP game archive rules crossing own links
+  3. twixtbot neural network training data self-play games source BonyJordan
+  4. Little Golem game archive export SGF download all games twixt
+  5. TwixT dataset games kaggle zenodo github "twixt" machine learning corpus SGF collection
+  (an earlier draft headed this list '(4)' while enumerating five. Counts in
+   this package are now COMPUTED from the list, not typed.)
+
+SUCCESSFUL CANDIDATE METADATA-PAGE FETCHES (3)
+  https://github.com/BonyJordan/twixtbot
+      models/ and src/ only; no dataset directory or game records
+      documented; MIT on code.
+  https://www.red-bean.com/sgf/twixt.html
+      the TwixT SGF profile. Three rulesets STD/PP/3M. PP: own links may
+      cross and "This may result in a winning path which loops across
+      itself". 3M: "There are no recorded games, as far as David knows" /
+      "David welcomes any counterexample".
+  https://www.littlegolem.net/jsp/games/gamedetail.jsp?gtid=twixt&page=rules
+      24x24; swap enabled; link removal no; own links may cross; no API or
+      bulk export on the page; footer '2002-2022 (c)LittleGolem' with no
+      reuse grant.
+
+SUPPORTING RULES AND FORMAT REFERENCES (not candidate metadata pages)
+  https://www.red-bean.com/sgf/sgf4.html
+      FF[4] permits private properties with custom value types; unknown
+      properties "should be preserved".
+  https://www.red-bean.com/sgf/properties.html
+      standard property V: real-valued node score, general-purpose across
+      games.
+  https://docs.littlegolem.net/games/twixt/
+      CURRENT docs: "You may remove your own links as part of a move to
+      rearrange your network"; board sizes 24x24 / 30x30 / 48x48; swap in
+      use. CONFLICTS with the SGF PP profile on link removal.
+
+FETCHES THAT FAILED (1)
+  https://www.bikeshed.net/sgf/twixt.html
+      TLS certificate hostname mismatch. Superseded by the canonical red-bean.com copy; nothing rests on it.
+
+WHAT THIS DOES AND DOES NOT ESTABLISH
+------------------------------------------------------------------------------
+ESTABLISHED: within scope, 5 searches and 3 successful candidate metadata-page
+fetches found no qualifying source. The two most likely candidates fail on
+DOCUMENTED grounds -- twixtbot publishes no dataset; Little Golem's rules
+differ from ours and its own documentation is internally inconsistent.
+
+The three supporting rules and format references above are evidence for the
+interpretation of those results. They are not additional candidate metadata
+pages and do not enlarge the bounded survey count.
+
+NOT ESTABLISHED: that no qualifying source exists. A bounded search cannot show
+non-existence. Nor did R1 establish that Little Golem has no export route or no
+licence -- only that neither was found in the reviewed pages. E0 recorded the
+same limitation for engines on 2026-08-24 and it applies here unchanged.

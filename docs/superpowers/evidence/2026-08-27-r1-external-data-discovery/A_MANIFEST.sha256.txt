@@ -1,0 +1,4 @@
+8f55ddf80950ae1bf53f69d0aad2a5e9238141967e83cff7f1f81fb3f85732e9        7993  00_report.md.txt
+f9818b9ae8d63d659e9c99daa6f59ba00939e11911555e5d91cbdd28967774fe        3169  01_rules_compatibility.txt
+f35362859a1e7f1b90daa717f50d51fa3c9c3e846ea7cd58de0e6f4ed85904ad        4252  02_source_survey.txt
+ad5c390e39db2340714e4d8f77ada3f1a8d067bcaea01f9710d9897c75dd8869        3333  03_queries_and_fetches.txt
